@@ -1,8 +1,4 @@
-"""Execute migrated public model-validation boundaries with real Pydantic types.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Execute migrated public model-validation boundaries with real Pydantic types."""
 
 from __future__ import annotations
 
@@ -36,7 +32,6 @@ class TestsModelFieldsCutover:
         tmp_path: Path,
         access: str,
     ) -> None:
-        """Test public boundary rejects non models without attribute access."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "validation.py"
         source = (
@@ -89,7 +84,6 @@ class TestsModelFieldsCutover:
     def test_ambiguous_rejection_keeps_the_source_untouched(
         tmp_path: Path,
     ) -> None:
-        """Test ambiguous rejection keeps the source untouched."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "validation.py"
         source = (
@@ -109,7 +103,6 @@ class TestsModelFieldsCutover:
 
     @staticmethod
     def test_conflicting_guard_binding_is_not_overwritten(tmp_path: Path) -> None:
-        """Test conflicting guard binding is not overwritten."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "validation.py"
         source = (
@@ -143,7 +136,6 @@ class TestsModelFieldsCutover:
         tmp_path: Path,
         declaration: str,
     ) -> None:
-        """Test shadowed contract is rejected."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "validation.py"
         source = declaration + (
@@ -180,7 +172,6 @@ class TestsModelFieldsCutover:
         tmp_path: Path,
         body: str,
     ) -> None:
-        """Test unsafe statement layout or receiver rebinding fails."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "validation.py"
         source = "def validate(candidate: object) -> None:\n" + body

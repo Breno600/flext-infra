@@ -1,8 +1,4 @@
-"""Contract tests for the generated documentation workflow projection.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Contract tests for the generated documentation workflow projection."""
 
 from __future__ import annotations
 
@@ -25,15 +21,7 @@ class TestsFlextInfraCodegenDocsWorkflowProfile:
 
     @staticmethod
     def _artifact(destination: str) -> m.Infra.TemplateEntrySpec:
-        """Return the declared render artifact for one destination.
-
-        Returns:
-            The declared render artifact for one destination.
-
-        Raises:
-            AssertionError: If artifact is not declared.
-
-        """
+        """Return the declared render artifact for one destination."""
         for entry in config.Infra.codegen.templates.entries:
             if entry.destination == destination:
                 return entry

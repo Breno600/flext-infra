@@ -31,8 +31,6 @@ from tests import t
 
 
 class TestsFlextInfraCustomHandlerPolicyIsProfileAware:
-    """Tests for ``FlextInfraCustomHandlerPolicyIsProfileAware``."""
-
     @staticmethod
     def test_every_declared_profile_has_a_custom_handler_policy() -> None:
         """Each Make profile declares the contract for its own custom surface."""

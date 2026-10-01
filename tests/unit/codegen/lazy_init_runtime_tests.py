@@ -1,8 +1,4 @@
-"""Runtime behavior tests for generated lazy package artifacts.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Runtime behavior tests for generated lazy package artifacts."""
 
 from __future__ import annotations
 
@@ -25,7 +21,6 @@ class TestsFlextInfraLazyInitRuntime:
     def test_pytest_private_source_is_not_reintroduced_by_typing_projection(
         tmp_path: Path,
     ) -> None:
-        """Test pytest private source is not reintroduced by typing projection."""
         repository, _ = u.Tests.create_lazy_init_workspace(
             tmp_path,
             project_name="flext-fixtures",
@@ -74,7 +69,6 @@ class TestsFlextInfraLazyInitRuntime:
         self,
         tmp_path: Path,
     ) -> None:
-        """Test generated root preserves lazy runtime contract."""
         repository_root, package_root = self._generate_package(tmp_path)
         with tm.scope(python_paths=[str(repository_root / c.Infra.DEFAULT_SRC_DIR)]):
             package = importlib.import_module("flext_lazy_demo")
@@ -92,7 +86,6 @@ class TestsFlextInfraLazyInitRuntime:
     def test_generated_root_never_invents_undeclared_api_alias(
         tmp_path: Path,
     ) -> None:
-        """Test generated root never invents undeclared api alias."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
             project_name="flext-bare",
@@ -113,7 +106,6 @@ class TestsFlextInfraLazyInitRuntime:
 
     @staticmethod
     def test_generated_root_preserves_import_failures(tmp_path: Path) -> None:
-        """Test generated root preserves import failures."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
             project_name="flext-failure",

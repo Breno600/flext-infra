@@ -1,8 +1,4 @@
-"""Offline contracts for generated Mise declarations and launchers.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Offline contracts for generated Mise declarations and launchers."""
 
 from __future__ import annotations
 
@@ -248,7 +244,6 @@ class TestsFlextInfraCodegenMiseArtifacts:
         self,
         tmp_path: Path,
     ) -> None:
-        """Test complete artifacts validate without running mise."""
         root = self._project(tmp_path / "project")
 
         service = FlextInfraCodegenMiseArtifacts.model_validate({
@@ -278,7 +273,6 @@ class TestsFlextInfraCodegenMiseArtifacts:
         tm.that((root / "bin").exists(), eq=False)
 
     def test_full_validation_requires_committed_launchers(self, tmp_path: Path) -> None:
-        """Test full validation requires committed launchers."""
         root = tmp_path / "project"
         root.mkdir()
         test_u.Tests.initialize_git_repo(root)
@@ -295,7 +289,6 @@ class TestsFlextInfraCodegenMiseArtifacts:
 
     @staticmethod
     def test_tools_section_is_mandatory(tmp_path: Path) -> None:
-        """Test tools section is mandatory."""
         root = tmp_path / "project"
         root.mkdir()
         (root / ".mise.toml").write_text("[settings]\n", encoding="utf-8")

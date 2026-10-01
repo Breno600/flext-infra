@@ -1,8 +1,5 @@
 """Behavior tests for docstring coverage in the docs audit pipeline.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 Real packages on disk (no mocks): a synthetic project with one documented
 and one undocumented public export must report 50% coverage through both
 the utility metric and the persisted audit reports.
@@ -74,7 +71,6 @@ __all__ = ["documented_fn", "undocumented_fn"]
         return project
 
     def test_partial_docstrings_report_ratio(self, tmp_path: Path) -> None:
-        """Test partial docstrings report ratio."""
         project = self._write_project(tmp_path)
         contract = u.Infra.public_contract(project, "flext_demo")
 
@@ -90,7 +86,6 @@ __all__ = ["documented_fn", "undocumented_fn"]
 
     @staticmethod
     def test_empty_contract_reports_full_coverage(tmp_path: Path) -> None:
-        """Test empty contract reports full coverage."""
         coverage = u.Infra.docstring_coverage(tmp_path, {})
 
         tm.that(coverage.checked, eq=0)
@@ -99,7 +94,6 @@ __all__ = ["documented_fn", "undocumented_fn"]
 
     @staticmethod
     def test_root_scope_has_no_coverage_metric(tmp_path: Path) -> None:
-        """Test root scope has no coverage metric."""
         scope = m.Infra.DocScope(
             name="root",
             path=tmp_path,
@@ -109,7 +103,6 @@ __all__ = ["documented_fn", "undocumented_fn"]
         tm.that(u.Infra.docs_public_docstring_coverage(scope), none=True)
 
     def test_project_scope_reports_include_coverage(self, tmp_path: Path) -> None:
-        """Test project scope reports include coverage."""
         project = self._write_project(tmp_path)
         report_dir = project / ".reports/docs"
         scope = m.Infra.DocScope(
@@ -143,7 +136,6 @@ __all__ = ["documented_fn", "undocumented_fn"]
         tm.that(0.0 <= percent < self._FULL_COVERAGE_PERCENT, eq=True)
 
     def test_checks_docstrings_runs_only_that_check(self, tmp_path: Path) -> None:
-        """Test checks docstrings runs only that check."""
         project = self._write_project(tmp_path)
 
         result = FlextInfraDocAuditor(
@@ -164,7 +156,6 @@ __all__ = ["documented_fn", "undocumented_fn"]
         tm.that(checked > 0, eq=True)
 
     def test_default_checks_runs_full_suite(self, tmp_path: Path) -> None:
-        """Test default checks runs full suite."""
         project = self._write_project(tmp_path)
 
         result = FlextInfraDocAuditor(repository_root=project).execute()
@@ -182,7 +173,6 @@ __all__ = ["documented_fn", "undocumented_fn"]
         self,
         tmp_path: Path,
     ) -> None:
-        """Test coverage below minimum follows configured posture."""
         project = self._write_project(tmp_path)
 
         result = FlextInfraDocAuditor(
@@ -207,7 +197,6 @@ __all__ = ["documented_fn", "undocumented_fn"]
         )
 
     def test_coverage_above_minimum_keeps_every_finding(self, tmp_path: Path) -> None:
-        """Test coverage above minimum keeps every finding."""
         project = self._write_project(tmp_path)
 
         result = FlextInfraDocAuditor(
@@ -223,7 +212,6 @@ __all__ = ["documented_fn", "undocumented_fn"]
         self,
         tmp_path: Path,
     ) -> None:
-        """Test no threshold still reports missing docstrings."""
         project = self._write_project(tmp_path)
 
         result = FlextInfraDocAuditor(

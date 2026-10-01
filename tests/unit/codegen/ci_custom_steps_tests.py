@@ -1,8 +1,5 @@
 """A project extends its generated CI through its own custom-steps file.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 The generator injects the declared block verbatim and never interprets it, so a
 project adds a step its pipeline needs — a credential, a service, a probe —
 without the generator carrying that project's concerns. This is the CI
@@ -15,8 +12,8 @@ from pathlib import Path
 
 from flext_tests import tm
 
+import tests.utilities
 from flext_infra import c, m
-from tests.unit.codegen._support import CodegenTestSupport
 
 
 class TestsFlextInfraCodegenCiCustomSteps:
@@ -24,11 +21,11 @@ class TestsFlextInfraCodegenCiCustomSteps:
 
     @staticmethod
     def _workflow_spec(*, custom_steps: str = "") -> m.Infra.GithubWorkflowRenderSpec:
-        return CodegenTestSupport.Ci.workflow_spec(
+        return tests.utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.workflow_spec(
             dist="mcb",
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch="main",
-            ci_trigger_branches=CodegenTestSupport.Ci.CI_TRIGGER_BASELINE_BRANCHES,
+            ci_trigger_branches=tests.utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.CI_TRIGGER_BASELINE_BRANCHES,
             custom_steps=custom_steps,
         )
 

@@ -1,8 +1,4 @@
-"""Public Bandit and Markdown gate behavior against the real lane tools.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Public Bandit and Markdown gate behavior against the real lane tools."""
 
 from __future__ import annotations
 
@@ -40,7 +36,6 @@ class TestsFlextInfraBanditAndMarkdownGates:
 
     @staticmethod
     def test_bandit_reports_real_finding(tmp_path: Path) -> None:
-        """Test bandit reports real finding."""
         project_dir = u.Tests.mk_project(tmp_path, "bandit-project")
         (project_dir / c.Infra.DEFAULT_SRC_DIR).mkdir()
         (project_dir / c.Infra.DEFAULT_SRC_DIR / "main.py").write_text(
@@ -131,7 +126,6 @@ class TestsFlextInfraBanditAndMarkdownGates:
         findings_block: bool,
         codes: t.StrSequence,
     ) -> None:
-        """Test markdown check."""
         project_dir = u.Tests.mk_project(tmp_path, "markdown-project")
         if markdown_text:
             (project_dir / "README.md").write_text(markdown_text, encoding="utf-8")

@@ -1,8 +1,4 @@
-"""Worktree ADD creates a checkout and leaves provisioning to the work saga.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Worktree ADD creates a checkout and leaves provisioning to the work saga."""
 
 from __future__ import annotations
 
@@ -19,7 +15,6 @@ class TestsFlextInfraWorktreeAddIsUnprovisioned:
 
     @staticmethod
     def test_worktree_add_does_not_run_setup(tmp_path: Path) -> None:
-        """Test worktree add does not run setup."""
         repository = tmp_path / "repository"
         repository.mkdir()
         (repository / "pyproject.toml").write_text(

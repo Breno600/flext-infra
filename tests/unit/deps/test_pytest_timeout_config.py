@@ -1,8 +1,4 @@
-"""Typed, config-derived pytest execution policy contracts.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Typed, config-derived pytest execution policy contracts."""
 
 from __future__ import annotations
 
@@ -18,7 +14,6 @@ class TestsFlextInfraPytestTimeoutConfig:
 
     @staticmethod
     def test_policy_round_trips_through_its_production_model() -> None:
-        """Test policy round trips through its production model."""
         policy = config.Infra.tooling.tools.pytest
 
         round_tripped = type(policy).model_validate(
@@ -43,7 +38,6 @@ class TestsFlextInfraPytestTimeoutConfig:
         termination_grace_seconds: int,
         parallel_workers: int,
     ) -> None:
-        """Test arbitrary valid execution policy round trips."""
         policy = config.Infra.tooling.tools.pytest
         payload = policy.model_dump(by_alias=True, exclude_computed_fields=True)
         slow_timeout_seconds = case_timeout_seconds + 1
@@ -73,7 +67,6 @@ class TestsFlextInfraPytestTimeoutConfig:
         ["case-timeout-seconds", "run-timeout-seconds", "termination-grace-seconds"],
     )
     def test_operator_caps_are_hard_typed_boundaries(self, field: str) -> None:
-        """Test operator caps are hard typed boundaries."""
         policy = config.Infra.tooling.tools.pytest
         payload = policy.model_dump(by_alias=True, exclude_computed_fields=True)
         payload[field] = 0
@@ -86,7 +79,6 @@ class TestsFlextInfraPytestTimeoutConfig:
         ["-o", "-o=addopts=", "--override-ini", "--override-ini=addopts="],
     )
     def test_pytest_ini_override_is_forbidden(self, override: str) -> None:
-        """Test pytest ini override is forbidden."""
         policy = config.Infra.tooling.tools.pytest
         payload = policy.model_dump(by_alias=True, exclude_computed_fields=True)
         payload["standard-addopts"] = [override]
@@ -144,7 +136,6 @@ class TestsFlextInfraPytestTimeoutConfig:
 
     @staticmethod
     def test_process_budget_is_derived_from_run_and_termination_windows() -> None:
-        """Test process budget is derived from run and termination windows."""
         policy = config.Infra.tooling.tools.pytest
         expected = policy.run_timeout_seconds + (policy.termination_grace_seconds * 2)
 
@@ -153,7 +144,6 @@ class TestsFlextInfraPytestTimeoutConfig:
 
     @staticmethod
     def test_project_run_budget_exceeds_the_derived_suite_stop_reserve() -> None:
-        """Test project run budget exceeds the derived suite stop reserve."""
         policy = config.Infra.tooling.tools.pytest
         payload = policy.model_dump(by_alias=True, exclude_computed_fields=True)
         payload["run-timeout-overrides"] = {
@@ -168,7 +158,6 @@ class TestsFlextInfraPytestTimeoutConfig:
 
     @staticmethod
     def test_progress_policy_cannot_hide_item_names() -> None:
-        """Test progress policy cannot hide item names."""
         policy = config.Infra.tooling.tools.pytest
         payload = policy.model_dump(by_alias=True, exclude_computed_fields=True)
         payload["progress-args"] = ["-q"]
@@ -198,7 +187,6 @@ class TestsFlextInfraPytestTimeoutConfig:
         self,
         argument: str,
     ) -> None:
-        """Test reporting policy cannot override runner owned argv."""
         policy = config.Infra.tooling.tools.pytest
         payload = policy.model_dump(by_alias=True, exclude_computed_fields=True)
         payload["report-args"] = [argument]

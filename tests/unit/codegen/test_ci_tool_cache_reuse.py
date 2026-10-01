@@ -1,15 +1,11 @@
-"""Verify ci.yml reuses the declared tool caches and saves them on failure.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Verify ci.yml reuses the declared tool caches and saves them on failure."""
 
 from __future__ import annotations
 
 from flext_tests import tm
 
+import tests.utilities
 from flext_infra import c, config, t
-from tests.unit.codegen._support import CodegenTestSupport
 from tests.unit.codegen.test_ci_integration_branch_triggers import (
     TestsFlextInfraCiIntegrationBranchTriggers,
 )
@@ -20,11 +16,12 @@ class TestsFlextInfraCiToolCacheReuse:
 
     @staticmethod
     def test_ci_reuses_and_saves_the_declared_tool_caches() -> None:
-        """Test ci reuses and saves the declared tool caches."""
-        steps = CodegenTestSupport.Ci.ci_job_steps(
-            TestsFlextInfraCiIntegrationBranchTriggers.render_ci(
-                repository_branch="0.12.0-dev",
-            ),
+        steps = (
+            tests.utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.ci_job_steps(
+                TestsFlextInfraCiIntegrationBranchTriggers.render_ci(
+                    repository_branch="0.12.0-dev",
+                ),
+            )
         )
         named = {}
         for step in steps:
@@ -50,10 +47,12 @@ class TestsFlextInfraCiToolCacheReuse:
         """No type checker runs in CI, so CI restores and saves no Mypy cache."""
         make = config.Infra.codegen.make
         tm.that(set(make.check_gates_ci) & c.Infra.TYPE_CHECKER_GATES, eq=set())
-        steps = CodegenTestSupport.Ci.ci_job_steps(
-            TestsFlextInfraCiIntegrationBranchTriggers.render_ci(
-                repository_branch="0.12.0-dev",
-            ),
+        steps = (
+            tests.utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.ci_job_steps(
+                TestsFlextInfraCiIntegrationBranchTriggers.render_ci(
+                    repository_branch="0.12.0-dev",
+                ),
+            )
         )
         mypy_storage = str(make.mypy_cache.external_storage_directory)
         for step in steps:

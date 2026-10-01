@@ -1,8 +1,5 @@
 """Performance benchmarks for the codegen gen pipeline.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 flext-perf.4 (agent: codex): guards lazy-init generation performance
 with wall-clock and peak-memory thresholds. Exercises _declared_exports
 caching (Step 1), _module_exports cache alignment (Step 2), and ruff
@@ -32,12 +29,7 @@ class TestsFlextInfraCodegenPipelinePerformance:
 
     @staticmethod
     def _build_synthetic_workspace(tmp_path: Path) -> Path:
-        """Create a workspace with N projects, each with M namespace modules.
-
-        Returns:
-            The resulting ``Path``.
-
-        """
+        """Create a workspace with N projects, each with M namespace modules."""
         repository_root = tmp_path / "gen-perf-workspace"
         repository_root.mkdir()
         for i in range(_PROJECT_COUNT):

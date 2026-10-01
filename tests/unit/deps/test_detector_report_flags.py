@@ -1,8 +1,4 @@
-"""Public report flags against real project discovery and installed tools.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Public report flags against real project discovery and installed tools."""
 
 from __future__ import annotations
 
@@ -19,8 +15,6 @@ pytestmark = [pytest.mark.slow, pytest.mark.remote]
 
 
 class TestsFlextInfraDepsDetectorReportFlags:
-    """Tests for ``FlextInfraDepsDetectorReportFlags``."""
-
     @pytest.mark.parametrize("no_fail", [False, True])
     def test_real_dependency_and_environment_issues_respect_no_fail(
         self,
@@ -28,7 +22,6 @@ class TestsFlextInfraDepsDetectorReportFlags:
         *,
         no_fail: bool,
     ) -> None:
-        """Test real dependency and environment issues respect no fail."""
         root = real_detector_project
         (root / "src/detector_fixture/undeclared.py").write_text(
             "import undeclared_detector_dependency\n",
@@ -75,7 +68,6 @@ class TestsFlextInfraDepsDetectorReportFlags:
 
     @staticmethod
     def test_run_with_json_stdout_flag(real_detector_project: Path) -> None:
-        """Test run with json stdout flag."""
         outcome = tm.ok(
             u.Tests.run_real_detector(
                 real_detector_project,

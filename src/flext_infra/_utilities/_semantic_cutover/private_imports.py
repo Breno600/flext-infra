@@ -1,8 +1,4 @@
-"""Semantic private-import cutover planning.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Semantic private-import cutover planning."""
 
 from __future__ import annotations
 
@@ -49,12 +45,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
         tree: ast.Module,
         plan: m.Infra.PrivateImportRewritePlan,
     ) -> frozenset[str]:
-        """Return facades required outside a ``TYPE_CHECKING`` boundary.
-
-        Returns:
-            Facades required outside a ``TYPE_CHECKING`` boundary.
-
-        """
+        """Return facades required outside a ``TYPE_CHECKING`` boundary."""
         parents = {
             child: parent
             for parent in ast.walk(tree)
@@ -105,18 +96,14 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
         sources: t.MappingKV[Path, str],
         findings: t.SequenceOf[m.Infra.ModScanFinding],
     ) -> t.Infra.PrivateImportReferences:
-        """Resolve every reported cross-owner private import to its public owner.
-
-        Returns:
-            The resulting ``t.Infra.PrivateImportReferences``.
-
-        Raises:
-            ValueError: If ambiguous private star import in; or if no public facade
-                exposes cross-owner private import.
-
-        """
+        """Resolve every reported cross-owner private import to its public owner."""
+        live_findings = tuple(
+            finding
+            for finding in findings
+            if cls._finding_is_live(root, sources, finding)
+        )
         cross_owner_statements: list[str] = []
-        for finding in findings:
+        for finding in live_findings:
             statement = cls._finding_statement(finding)
             if not isinstance(statement, ast.ImportFrom) or statement.level:
                 continue
@@ -157,7 +144,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
             )
         direct_specs: MutableMapping[Path, MutableMapping[str, t.Pair[str, str]]] = {}
         specs: MutableMapping[Path, list[t.Infra.PrivateImportSpec]] = {}
-        for finding in findings:
+        for finding in live_findings:
             statement = cls._finding_statement(finding)
             if not isinstance(statement, ast.ImportFrom) or statement.level:
                 continue
@@ -213,18 +200,38 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
         return specs, direct_specs, facades
 
     @classmethod
+    def _finding_is_live(
+        cls,
+        root: Path,
+        sources: t.MappingKV[Path, str],
+        finding: m.Infra.ModScanFinding,
+    ) -> bool:
+        """Reject a preflight import already moved by an earlier semantic phase."""
+        statement = cls._finding_statement(finding)
+        if not isinstance(statement, ast.ImportFrom):
+            return False
+        path = (root / finding.file).resolve()
+        source = sources.get(path)
+        if source is None:
+            msg = f"private import source missing from inventory: {path}"
+            raise ValueError(msg)
+        expected = tuple((alias.name, alias.asname) for alias in statement.names)
+        return any(
+            isinstance(node, ast.ImportFrom)
+            and node.module == statement.module
+            and node.level == statement.level
+            and tuple((alias.name, alias.asname) for alias in node.names) == expected
+            for node in ast.walk(ast.parse(source))
+        )
+
+    @classmethod
     def _plan_private_imports(
         cls,
         root: Path,
         sources: t.MappingKV[Path, str],
         findings: t.SequenceOf[m.Infra.ModScanFinding],
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
-        """Plan binding-aware public import rewrites.
-
-        Returns:
-            The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
-
-        """
+        """Plan binding-aware public import rewrites."""
         planned_edits = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
         specs, direct_specs, facades = cls._private_import_references(
             root,
@@ -261,15 +268,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
         direct_specs: t.MappingKV[str, t.Pair[str, str]],
         facades: t.MappingKV[str, t.VariadicTuple[t.Quad[ast.Module, str, str, str]]],
     ) -> t.Infra.TransformResult:
-        """Rewrite one module's private imports and prove zero residue.
-
-        Returns:
-            The resulting ``t.Infra.TransformResult``.
-
-        Raises:
-            ValueError: If ambiguous facade alias; or if ambiguous public reference for.
-
-        """
+        """Rewrite one module's private imports and prove zero residue."""
         tree = ast.parse(source, filename=str(file_path))
         removals: MutableMapping[str, set[str]] = {}
         obsolete_imports: MutableMapping[str, set[str]] = {}

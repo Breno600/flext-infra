@@ -1,8 +1,4 @@
-"""Public contract for governed repository-root artifact ownership.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Public contract for governed repository-root artifact ownership."""
 
 from __future__ import annotations
 
@@ -43,7 +39,6 @@ class TestsFlextInfraRootArtifactOwnership:
 
     @staticmethod
     def test_governed_artifacts_have_one_explicit_policy() -> None:
-        """Test governed artifacts have one explicit policy."""
         configured = config.Infra.codegen.managed_files
         paths = tuple(item.path.as_posix() for item in configured)
 
@@ -129,7 +124,6 @@ class TestsFlextInfraRootArtifactOwnership:
 
     @staticmethod
     def test_conform_uses_one_fixed_point_plan(infra_git_repo: Path) -> None:
-        """Test conform uses one fixed point plan."""
         root = infra_git_repo
         u.Tests.write_project_beads_config(root, "flext-demo")
         package_root = root / "src" / "flext_demo"

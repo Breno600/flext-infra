@@ -1,8 +1,4 @@
-"""``run_pip_check`` executes the environment's real ``pip`` executable.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""``run_pip_check`` executes the environment's real ``pip`` executable."""
 
 from __future__ import annotations
 
@@ -27,7 +23,6 @@ class TestsFlextInfraDepsDetectionPipCheck:
         return venv_bin
 
     def test_absent_pip_reports_no_conflicts(self, tmp_path: Path) -> None:
-        """Test absent pip reports no conflicts."""
         venv_bin = self._venv_bin(tmp_path, None)
 
         result = FlextInfraDependencyDetectionService().run_pip_check(
@@ -38,7 +33,6 @@ class TestsFlextInfraDepsDetectionPipCheck:
         tm.that(tm.ok(result), eq=([], 0))
 
     def test_conflicts_and_exit_code_are_reported(self, tmp_path: Path) -> None:
-        """Test conflicts and exit code are reported."""
         venv_bin = self._venv_bin(
             tmp_path,
             "printf 'pkg1 has requirement\\npkg2 conflict\\n'\nexit 1",
@@ -52,7 +46,6 @@ class TestsFlextInfraDepsDetectionPipCheck:
         tm.that(exit_code, eq=1)
 
     def test_clean_environment_reports_no_conflicts(self, tmp_path: Path) -> None:
-        """Test clean environment reports no conflicts."""
         venv_bin = self._venv_bin(tmp_path, "exit 0")
 
         result = FlextInfraDependencyDetectionService().run_pip_check(
@@ -64,7 +57,6 @@ class TestsFlextInfraDepsDetectionPipCheck:
 
     @staticmethod
     def test_unlaunchable_pip_is_a_failure(tmp_path: Path) -> None:
-        """Test unlaunchable pip is a failure."""
         venv_bin = tmp_path / "venv" / "bin"
         venv_bin.mkdir(parents=True)
         (venv_bin / "pip").write_text("", encoding="utf-8")

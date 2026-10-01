@@ -1,8 +1,4 @@
-"""The Make check partition derives from the gate kind in the registry.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""The Make check partition derives from the gate kind in the registry."""
 
 from __future__ import annotations
 
@@ -12,8 +8,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import config
-from tests import c, m, t, u
-from tests.unit.codegen._support import CodegenTestSupport
+from tests import c, m, t, u, utilities
 from tests.unit.codegen.test_ci_integration_branch_triggers import (
     TestsFlextInfraCiIntegrationBranchTriggers,
 )
@@ -77,7 +72,7 @@ class TestsFlextInfraCodegenMakeCheckPartition:
     def test_ci_workflow_runs_only_the_fast_partition() -> None:
         """The rendered CI job never runs the local check partition."""
         make = config.Infra.codegen.make
-        steps = CodegenTestSupport.Ci.ci_job_steps(
+        steps = utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.ci_job_steps(
             TestsFlextInfraCiIntegrationBranchTriggers.render_ci(
                 repository_branch="0.12.0-dev",
             ),

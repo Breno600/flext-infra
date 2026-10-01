@@ -1,8 +1,4 @@
-"""Dependency limits load from a real TOML file through the public service.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Dependency limits load from a real TOML file through the public service."""
 
 from __future__ import annotations
 
@@ -19,7 +15,6 @@ class TestsFlextInfraDepsDetectionTypings:
 
     @staticmethod
     def test_limits_file_values_are_returned(tmp_path: Path) -> None:
-        """Test limits file values are returned."""
         limits = tmp_path / "limits.toml"
         limits.write_text(
             'key = "value"\nnum = 42\nlisted = ["x"]\n'
@@ -36,7 +31,6 @@ class TestsFlextInfraDepsDetectionTypings:
 
     @staticmethod
     def test_missing_limits_file_fails_loud(tmp_path: Path) -> None:
-        """Test missing limits file fails loud."""
         with pytest.raises(RuntimeError, match="failed to load dependency limits"):
             FlextInfraDependencyDetectionService().load_dependency_limits(
                 tmp_path / "absent.toml",
@@ -44,7 +38,6 @@ class TestsFlextInfraDepsDetectionTypings:
 
     @staticmethod
     def test_invalid_limits_file_fails_loud(tmp_path: Path) -> None:
-        """Test invalid limits file fails loud."""
         limits = tmp_path / "limits.toml"
         limits.write_text("key = [unterminated\n", encoding="utf-8")
 

@@ -1,8 +1,5 @@
 """End-to-end docs serve test — real MkDocs dev server over HTTP.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 No mocks: starts the real ``FlextInfraDocServer`` flow against a synthetic
 single-scope workspace, then polls the bound address until the dev server
 answers an actual HTTP request. The blocking server runs in a managed child
@@ -47,24 +44,14 @@ class TestsFlextInfraIntegrationDocsServeE2e:
 
     @staticmethod
     def _free_local_port() -> int:
-        """Reserve and release an ephemeral localhost port for the dev server.
-
-        Returns:
-            The resulting ``int``.
-
-        """
+        """Reserve and release an ephemeral localhost port for the dev server."""
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
             probe.bind(("127.0.0.1", 0))
             return int(probe.getsockname()[1])
 
     @staticmethod
     def _http_get_body(host: str, port: int) -> p.Result[str]:
-        """Return the response body when the dev server answers HTTP 200, else fail.
-
-        Returns:
-            The response body when the dev server answers HTTP 200, else fail.
-
-        """
+        """Return the response body when the dev server answers HTTP 200, else fail."""
         connection = http.client.HTTPConnection(host, port, timeout=0.25)
         try:
             connection.request("GET", "/")
@@ -79,7 +66,6 @@ class TestsFlextInfraIntegrationDocsServeE2e:
 
     @pytest.mark.slow
     def test_serve_scope_serves_site_over_http(self, tmp_path: Path) -> None:
-        """Test serve scope serves site over http."""
         (tmp_path / "docs").mkdir()
         (tmp_path / "docs/index.md").write_text(
             "# Demo\n\nHello from the real dev server.\n",

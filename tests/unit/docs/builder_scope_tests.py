@@ -1,8 +1,4 @@
-"""Public build-workflow tests for docs services.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Public build-workflow tests for docs services."""
 
 from __future__ import annotations
 
@@ -24,7 +20,6 @@ class TestsFlextInfraBuilderScope:
     def test_build_returns_root_and_selected_project_reports(
         tmp_path: Path,
     ) -> None:
-        """Test build returns root and selected project reports."""
         workspace = u.Tests.create_docs_workspace(
             tmp_path,
             project_names=("flext-a", "flext-b"),
@@ -46,7 +41,6 @@ class TestsFlextInfraBuilderScope:
 
     @staticmethod
     def test_build_uses_custom_output_dir(tmp_path: Path) -> None:
-        """Test build uses custom output dir."""
         workspace = u.Tests.create_docs_workspace(tmp_path, project_names=("flext-a",))
 
         result = FlextInfraDocBuilder().build(
@@ -63,7 +57,6 @@ class TestsFlextInfraBuilderScope:
     def test_build_missing_settings_failure_has_empty_site_dir(
         tmp_path: Path,
     ) -> None:
-        """Test build missing settings failure has empty site dir."""
         workspace = u.Tests.create_docs_workspace(tmp_path)
 
         result = FlextInfraDocBuilder().build(workspace)

@@ -1,8 +1,4 @@
-"""Observable public cached-pytest runtime contract.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Observable public cached-pytest runtime contract."""
 
 from __future__ import annotations
 
@@ -221,12 +217,7 @@ class TestsFlextInfraPytestRunner:
 
     @staticmethod
     def _seed_cache(cached_runner_project: Path) -> Path:
-        """Seed the persistent cache through one public cold run.
-
-        Returns:
-            The resulting ``Path``.
-
-        """
+        """Seed the persistent cache through one public cold run."""
         tm.that(tm.ok(runner_for(cached_runner_project).execute()), eq=0)
         return (
             cached_runner_project
@@ -812,7 +803,6 @@ class TestsFlextInfraPytestRunner:
         self,
         cached_runner_project: Path,
     ) -> None:
-        """Test full stops at the first incremental failure."""
         runner = runner_for(cached_runner_project)
         (cached_runner_project / runner.target / "test_failure.py").write_text(
             "def test_failure():\n    assert False, 'full must not follow failure'\n",
@@ -842,7 +832,6 @@ class TestsFlextInfraPytestRunner:
     def test_full_preserves_corrupt_database_failure_before_execution(
         cached_runner_project: Path,
     ) -> None:
-        """Test full preserves corrupt database failure before execution."""
         runner = runner_for(cached_runner_project)
         runner.testmon_db.write_bytes(b"not a SQLite database")
 
@@ -859,7 +848,6 @@ class TestsFlextInfraPytestRunner:
         self,
         cached_runner_project: Path,
     ) -> None:
-        """Test full rejects an empty complete collection."""
         (cached_runner_project / "conftest.py").write_text(
             "from pathlib import Path\nfrom flext_infra import m\n\n"
             "def pytest_collection_modifyitems(config, items):\n"

@@ -1,8 +1,4 @@
-"""Public contracts for persistent release-addressed Mise runtime storage.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Public contracts for persistent release-addressed Mise runtime storage."""
 
 from __future__ import annotations
 
@@ -19,7 +15,6 @@ class TestsFlextInfraMiseRuntimeStorage:
 
     @staticmethod
     def test_runtime_storage_is_persistent_and_release_addressed() -> None:
-        """Test runtime storage is persistent and release addressed."""
         contract = u.Infra.mise_bootstrap_environment()
         storage = u.Infra.prepare_mise_runtime_storage(Path.cwd(), os.environ, contract)
         tm.ok(storage)
@@ -59,7 +54,6 @@ class TestsFlextInfraMiseRuntimeStorage:
 
     @staticmethod
     def test_checkout_storage_is_rejected_before_creation(tmp_path: Path) -> None:
-        """Test checkout storage is rejected before creation."""
         contract = u.Infra.mise_bootstrap_environment()
         candidate = tmp_path / contract.storage_root_variable.lower()
 

@@ -20,12 +20,10 @@ class TestsFlextInfraInfraConstantsCore:
 
     @staticmethod
     def test_paths_constants_are_strings() -> None:
-        """Test paths constants are strings."""
         tm.that(c.Infra.DEFAULT_SRC_DIR, is_=str)
 
     @staticmethod
     def test_files_constants_are_strings() -> None:
-        """Test files constants are strings."""
         tm.that(c.PYPROJECT_FILENAME, is_=str)
         tm.that(c.Infra.MAKEFILE_FILENAME, is_=str)
 
@@ -43,7 +41,6 @@ class TestsFlextInfraInfraConstantsCore:
 
     @staticmethod
     def test_status_constants_are_result_status_members() -> None:
-        """Test status constants are result status members."""
         tm.that(c.Infra.ResultStatus.PASSED, is_=c.Infra.ResultStatus)
         tm.that(c.Infra.ResultStatus.FAIL, is_=c.Infra.ResultStatus)
         tm.that(c.Infra.ResultStatus.OK, is_=c.Infra.ResultStatus)
@@ -51,13 +48,11 @@ class TestsFlextInfraInfraConstantsCore:
 
     @staticmethod
     def test_common_excluded_dirs_is_string() -> None:
-        """Test common excluded dirs is string."""
         excluded = c.Infra.COMMON_EXCLUDED_DIRS
         tm.that(excluded, is_=frozenset)
 
     @staticmethod
     def test_common_excluded_dirs_contains_standard_dirs() -> None:
-        """Test common excluded dirs contains standard dirs."""
         excluded = c.Infra.COMMON_EXCLUDED_DIRS
         tm.that(excluded, has=".git")
         tm.that(excluded, has=".venv")
@@ -68,26 +63,22 @@ class TestsFlextInfraInfraConstantsCore:
 
     @staticmethod
     def test_doc_excluded_dirs_includes_common() -> None:
-        """Test doc excluded dirs includes common."""
         doc_excluded = c.Infra.DOC_EXCLUDED_DIRS
         common = c.Infra.COMMON_EXCLUDED_DIRS
         tm.that(doc_excluded.issuperset(common), eq=True)
 
     @staticmethod
     def test_doc_excluded_dirs_includes_site() -> None:
-        """Test doc excluded dirs includes site."""
         tm.that(c.Infra.DOC_EXCLUDED_DIRS, has="site")
 
     @staticmethod
     def test_pyproject_skip_dirs_includes_common() -> None:
-        """Test pyproject skip dirs includes common."""
         skip_dirs = c.Infra.PYPROJECT_SKIP_DIRS
         common = c.Infra.COMMON_EXCLUDED_DIRS
         tm.that(skip_dirs.issuperset(common), eq=True)
 
     @staticmethod
     def test_pyproject_skip_dirs_includes_flext_dirs() -> None:
-        """Test pyproject skip dirs includes flext dirs."""
         skip_dirs = c.Infra.PYPROJECT_SKIP_DIRS
         tm.that(skip_dirs, has=".claude.disabled")
         tm.that(skip_dirs, has="context_test")
@@ -96,19 +87,16 @@ class TestsFlextInfraInfraConstantsCore:
 
     @staticmethod
     def test_check_excluded_dirs_includes_common() -> None:
-        """Test check excluded dirs includes common."""
         check_excluded = c.Infra.CHECK_EXCLUDED_DIRS
         common = c.Infra.COMMON_EXCLUDED_DIRS
         tm.that(check_excluded.issuperset(common), eq=True)
 
     @staticmethod
     def test_check_excluded_dirs_omit_operational_storage() -> None:
-        """Test check excluded dirs omit operational storage."""
         tm.that(c.Infra.CHECK_EXCLUDED_DIRS, has=".beads")
 
     @staticmethod
     def test_excluded_dirs_are_strings() -> None:
-        """Test excluded dirs are strings."""
         tm.that(c.Infra.DOC_EXCLUDED_DIRS, is_=frozenset)
         tm.that(c.Infra.PYPROJECT_SKIP_DIRS, is_=frozenset)
         tm.that(c.Infra.CHECK_EXCLUDED_DIRS, is_=frozenset)

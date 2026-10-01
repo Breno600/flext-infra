@@ -22,26 +22,14 @@ from tests import u as test_u
 
 
 class TestsFlextInfraGitignoreIsGeneratedFromSsot:
-    """Tests for ``FlextInfraGitignoreIsGeneratedFromSsot``."""
-
     @staticmethod
     def _repository_root() -> Path:
-        """Return the workspace root that owns this checkout.
-
-        Returns:
-            The workspace root that owns this checkout.
-
-        """
+        """Return the workspace root that owns this checkout."""
         return Path(flext_infra.__file__).resolve().parents[2]
 
     @staticmethod
     def _is_allowed_by_policy(rendered: str, relative_path: str) -> bool:
-        """Return whether one policy snapshot keeps *relative_path* trackable.
-
-        Returns:
-            Whether one policy snapshot keeps *relative_path* trackable.
-
-        """
+        """Return whether one policy snapshot keeps *relative_path* trackable."""
         return test_u.Tests.is_tracked_under(rendered, relative_path)
 
     def test_every_managed_file_survives_the_ignore_policy(self) -> None:

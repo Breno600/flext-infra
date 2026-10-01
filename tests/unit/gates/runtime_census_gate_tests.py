@@ -1,8 +1,4 @@
-"""Runtime census selection and blocking behavior.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Runtime census selection and blocking behavior."""
 
 from __future__ import annotations
 
@@ -61,12 +57,7 @@ _GENUINE_SOURCES: t.MappingKV[str, str] = {
 
 
 def _write_project(root: Path, sources: t.MappingKV[str, str]) -> Path:
-    """Materialize one fixture project and return its repository root.
-
-    Returns:
-        The resulting ``Path``.
-
-    """
+    """Materialize one fixture project and return its repository root."""
     for relative, text in sources.items():
         target = root / relative
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -76,35 +67,20 @@ def _write_project(root: Path, sources: t.MappingKV[str, str]) -> Path:
 
 @pytest.fixture
 def mixed_project(tmp_path: Path) -> Iterator[Path]:
-    """Importable project tripping several census rule families at once.
-
-    Yields:
-        Each ``Path``.
-
-    """
+    """Importable project tripping several census rule families at once."""
     root = _write_project(tmp_path / "mixed", _MIXED_SOURCES)
     yield from _importable_project(root)
 
 
 @pytest.fixture
 def genuine_project(tmp_path: Path) -> Iterator[Path]:
-    """Importable project tripping exactly one genuine census rule.
-
-    Yields:
-        Each ``Path``.
-
-    """
+    """Importable project tripping exactly one genuine census rule."""
     root = _write_project(tmp_path / "genuine", _GENUINE_SOURCES)
     yield from _importable_project(root)
 
 
 def _importable_project(root: Path) -> Iterator[Path]:
-    """Expose one fixture ``src`` tree to the import system for the census.
-
-    Yields:
-        Each ``Path``.
-
-    """
+    """Expose one fixture ``src`` tree to the import system for the census."""
     src = str(root / "src")
     sys.path.insert(0, src)
     importlib.invalidate_caches()
@@ -120,7 +96,6 @@ class TestRuntimeCensusSelection:
 
     @staticmethod
     def test_empty_checkout_fails_the_gate(tmp_path: Path) -> None:
-        """Test empty checkout fails the gate."""
         context = m.Infra.GateContext(
             repository_root=tmp_path,
             reports_dir=tmp_path / ".reports",
@@ -188,12 +163,7 @@ class TestsRuntimeCensusSmellOwnership:
 
     @staticmethod
     def _smell_tokens(violations: t.SequenceOf[str]) -> tuple[str, ...]:
-        """Violations whose trailing rule token is a flext-core smell tag.
-
-        Returns:
-            The resulting ``tuple[str, ...]``.
-
-        """
+        """Violations whose trailing rule token is a flext-core smell tag."""
         return tuple(
             violation
             for violation in violations

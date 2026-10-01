@@ -1,8 +1,4 @@
-"""Durable WIP capture through public Git boundaries and real repositories.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Durable WIP capture through public Git boundaries and real repositories."""
 
 from __future__ import annotations
 
@@ -252,12 +248,7 @@ class TestsFlextInfraGitStateCheckpoint:
 
     @staticmethod
     def _diverge_remote(checkpoint: m.Infra.GitWorktreeStateCheckpoint) -> str:
-        """Force-move the published remote ref to an unrelated capture.
-
-        Returns:
-            The resulting ``str``.
-
-        """
+        """Force-move the published remote ref to an unrelated capture."""
         source = checkpoint.snapshot.repo_root
         tree = test_u.Tests.git_capture(
             source,

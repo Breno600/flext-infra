@@ -67,7 +67,6 @@ class TestsFlextInfraCodegenCensus:
         self,
         tmp_path: Path,
     ) -> None:
-        """Test report violations carry rule location and fixability."""
         project = self._project(tmp_path)
         report = FlextInfraNamespaceValidator(repository_root=project).build_report()
 
@@ -99,7 +98,6 @@ class TestsFlextInfraCodegenCensus:
         ids=["empty", "no-brackets", "wrong-dash", "missing-rule", "non-numeric"],
     )
     def test_malformed_report_line_raises(self, tmp_path: Path, violation: str) -> None:
-        """Test malformed report line raises."""
         project = self._project(tmp_path)
         report = r[m.Infra.ValidationReport].ok(
             m.Infra.ValidationReport(passed=False, violations=[violation]),
@@ -109,7 +107,6 @@ class TestsFlextInfraCodegenCensus:
             u.Infra.parse_namespace_validation(report, project)
 
     def test_report_failure_propagates(self, tmp_path: Path) -> None:
-        """Test report failure propagates."""
         project = self._project(tmp_path)
         report = r[m.Infra.ValidationReport].fail("scan failed")
 
@@ -117,7 +114,6 @@ class TestsFlextInfraCodegenCensus:
 
     @staticmethod
     def test_execute_fails_when_apply_changes_requested(tmp_path: Path) -> None:
-        """Test execute fails when apply changes requested."""
         result = FlextInfraCodegenCensus(
             repository_root=tmp_path,
             apply_changes=True,

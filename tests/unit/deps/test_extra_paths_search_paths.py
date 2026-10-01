@@ -1,8 +1,4 @@
-"""Search-path contract tests for the dependency modernizer.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Search-path contract tests for the dependency modernizer."""
 
 from __future__ import annotations
 
@@ -18,13 +14,10 @@ if TYPE_CHECKING:
 
 
 class TestsFlextInfraExtraPathsSearchPaths:
-    """Tests for ``FlextInfraExtraPathsSearchPaths``."""
-
     @staticmethod
     def test_pyrefly_search_paths_include_declared_generated_roots(
         tmp_path: Path,
     ) -> None:
-        """Test pyrefly search paths include declared generated roots."""
         manager = FlextInfraExtraPathsManager(
             repository_root=tmp_path,
             generated_python_roots=("src", "tests"),

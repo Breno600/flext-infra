@@ -1,8 +1,4 @@
-"""Fail-closed public behavior for the qlty smells gate.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Fail-closed public behavior for the qlty smells gate."""
 
 from __future__ import annotations
 
@@ -32,10 +28,6 @@ def smells_project(tmp_path: Path) -> Iterator[Path]:
     either gap — exactly as in a real lane, whose package is importable from
     its environment. The package name is unique per test so no module cached
     by another test stands in for this one.
-
-    Yields:
-        Each ``Path``.
-
     """
     name = f"smells-{tmp_path.name}"
     project = u.Tests.mk_project(
@@ -67,7 +59,6 @@ class TestsFlextInfraSmellsGate:
 
     @staticmethod
     def test_registry_exposes_the_canonical_gate() -> None:
-        """Test registry exposes the canonical gate."""
         gate = FlextInfraGateRegistry.default().get("smells")
         tm.that(gate is FlextInfraSmellsGate, eq=True)
 
@@ -76,7 +67,6 @@ class TestsFlextInfraSmellsGate:
         tmp_path: Path,
         smells_project: Path,
     ) -> None:
-        """Test missing project configuration is a blocking failure."""
         execution = FlextInfraSmellsGate(tmp_path).check(
             smells_project,
             self._ctx(tmp_path),
@@ -110,7 +100,6 @@ class TestsFlextInfraSmellsGate:
         tmp_path: Path,
         smells_project: Path,
     ) -> None:
-        """Test zero findings scan is a pass."""
         self._configure(tmp_path)
 
         execution = FlextInfraSmellsGate(tmp_path).check(
@@ -126,7 +115,6 @@ class TestsFlextInfraSmellsGate:
         tmp_path: Path,
         smells_project: Path,
     ) -> None:
-        """Test finding states the concrete problem and the fix."""
         self._configure(tmp_path)
         params = ", ".join(
             f"p{index}" for index in range(c.SMELL_THRESHOLDS["params"] * 2)

@@ -1,15 +1,11 @@
-"""Verify ci.yml normalizes runner checkout modes before any gate runs.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Verify ci.yml normalizes runner checkout modes before any gate runs."""
 
 from __future__ import annotations
 
 from flext_tests import tm
 
+import tests.utilities
 from flext_infra import config
-from tests.unit.codegen._support import CodegenTestSupport
 from tests.unit.codegen.test_ci_integration_branch_triggers import (
     TestsFlextInfraCiIntegrationBranchTriggers,
 )
@@ -20,11 +16,12 @@ class TestsFlextInfraCiCheckoutModeNormalization:
 
     @staticmethod
     def test_ci_job_normalizes_checkout_modes_before_gates() -> None:
-        """Test ci job normalizes checkout modes before gates."""
-        steps = CodegenTestSupport.Ci.ci_job_steps(
-            TestsFlextInfraCiIntegrationBranchTriggers.render_ci(
-                repository_branch="0.12.0-dev",
-            ),
+        steps = (
+            tests.utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.ci_job_steps(
+                TestsFlextInfraCiIntegrationBranchTriggers.render_ci(
+                    repository_branch="0.12.0-dev",
+                ),
+            )
         )
         commands: list[str] = []
         for step in steps:

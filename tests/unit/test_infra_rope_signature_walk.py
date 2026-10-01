@@ -1,8 +1,4 @@
-"""Behavior tests for the rope signature patched-AST handlers.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Behavior tests for the rope signature patched-AST handlers."""
 
 from __future__ import annotations
 
@@ -131,12 +127,7 @@ class TestsFlextInfraRopeSignaturePatch:
 
     @staticmethod
     def test_rename_writes_pep701_nested_quote_expression(tmp_path: Path) -> None:
-        """Rope preserves f-string fragments while writing a renamed AST child.
-
-        Raises:
-            AssertionError: If Rope did not resolve the PEP 701 regression resource.
-
-        """
+        """Rope preserves f-string fragments while writing a renamed AST child."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
             project_name="flext-demo",
@@ -172,12 +163,7 @@ class TestsFlextInfraRopeSignaturePatch:
 
     @staticmethod
     def test_rename_writes_generator_inside_format_spec(tmp_path: Path) -> None:
-        """Rope patches generator scopes nested in an f-string format spec.
-
-        Raises:
-            AssertionError: If Rope did not resolve the format-spec regression resource.
-
-        """
+        """Rope patches generator scopes nested in an f-string format spec."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
             project_name="flext-demo",

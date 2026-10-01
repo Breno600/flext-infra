@@ -1,8 +1,4 @@
-"""Audit request contracts reject retired permissive controls at ingress.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Audit request contracts reject retired permissive controls at ingress."""
 
 from __future__ import annotations
 
@@ -18,7 +14,6 @@ class TestsFlextInfraAuditorContract:
 
     @staticmethod
     def test_default_request_has_no_permissive_controls() -> None:
-        """Test default request has no permissive controls."""
         params = m.Infra.AuditScopeParams()
         tm.that(params.check, eq="all")
         tm.that(params.docstring_min, none=True)
@@ -28,19 +23,16 @@ class TestsFlextInfraAuditorContract:
 
     @pytest.mark.parametrize("strict", [False, True])
     def test_retired_strict_control_is_rejected(self, *, strict: bool) -> None:
-        """Test retired strict control is rejected."""
         with pytest.raises(c.ValidationError, match="strict"):
             m.Infra.AuditScopeParams.model_validate({"strict": strict})
 
     @staticmethod
     def test_invalid_json_fails_at_request_ingress() -> None:
-        """Test invalid json fails at request ingress."""
         with pytest.raises(c.ValidationError, match="Invalid JSON"):
             m.Infra.AuditScopeParams.model_validate_json("{invalid json}")
 
     @pytest.mark.parametrize("budget", [0, 5, 5.5])
     def test_default_and_scope_budgets_are_rejected(self, budget: float) -> None:
-        """Test default and scope budgets are rejected."""
         with pytest.raises(c.ValidationError, match="budgets"):
             m.Infra.AuditScopeParams.model_validate({
                 "budgets": (budget, {"test-project": budget}),
@@ -48,7 +40,6 @@ class TestsFlextInfraAuditorContract:
 
     @staticmethod
     def test_scope_budget_without_default_is_rejected() -> None:
-        """Test scope budget without default is rejected."""
         with pytest.raises(c.ValidationError, match="budgets"):
             m.Infra.AuditScopeParams.model_validate({
                 "budgets": (None, {"test-project": 3}),

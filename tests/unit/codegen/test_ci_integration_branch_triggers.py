@@ -1,8 +1,4 @@
-"""Verify ci.yml branch-trigger generation matches the declared baseline.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Verify ci.yml branch-trigger generation matches the declared baseline."""
 
 from __future__ import annotations
 
@@ -11,8 +7,8 @@ from pathlib import Path
 
 from flext_tests import tm
 
+import tests.utilities
 from flext_infra import c, config, u
-from tests.unit.codegen._support import CodegenTestSupport
 
 
 class TestsFlextInfraCiIntegrationBranchTriggers:
@@ -26,13 +22,7 @@ class TestsFlextInfraCiIntegrationBranchTriggers:
 
     @classmethod
     def render_ci(cls, *, repository_branch: str) -> str:
-        """Provide ``render_ci``.
-
-        Returns:
-            The resulting ``str``.
-
-        """
-        spec = CodegenTestSupport.Ci.workflow_spec(
+        spec = tests.utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.workflow_spec(
             dist="mcb",
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch=repository_branch,
@@ -56,7 +46,6 @@ class TestsFlextInfraCiIntegrationBranchTriggers:
         return triggers.splitlines().count(f"      - {branch}")
 
     def test_ci_triggers_include_custom_workspace_integration_branch(self) -> None:
-        """Test ci triggers include custom workspace integration branch."""
         custom_branch = "feature/v0-4-0-multitenant-weaviate"
         triggers = self._trigger_section(
             self.render_ci(repository_branch=custom_branch),
@@ -67,7 +56,6 @@ class TestsFlextInfraCiIntegrationBranchTriggers:
             tm.that(self._branch_count(triggers, baseline), eq=2)
 
     def test_ci_triggers_deduplicate_integration_branch_against_baselines(self) -> None:
-        """Test ci triggers deduplicate integration branch against baselines."""
         triggers = self._trigger_section(self.render_ci(repository_branch="develop"))
 
         for branch in self.baseline_branches:

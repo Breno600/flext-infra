@@ -1,8 +1,4 @@
-"""Public entrypoint tests for ``FlextInfraDocAuditor.main``.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Public entrypoint tests for ``FlextInfraDocAuditor.main``."""
 
 from __future__ import annotations
 
@@ -25,14 +21,12 @@ class TestsFlextInfraAuditorCli:
 
     @staticmethod
     def test_auditor_main_help_exits_zero() -> None:
-        """Test auditor main help exits zero."""
         tm.that(main(["docs", "audit", "--help"]), eq=0)
 
     @staticmethod
     def test_auditor_main_writes_reports_for_selected_project(
         tmp_path: Path,
     ) -> None:
-        """Test auditor main writes reports for selected project."""
         workspace = u.Tests.create_docs_workspace(
             tmp_path,
             project_names=("flext-a", "flext-b"),
@@ -67,7 +61,6 @@ class TestsFlextInfraAuditorCli:
         *,
         package_entrypoint: bool,
     ) -> None:
-        """Test auditor main finding exits nonzero."""
         workspace = u.Tests.create_docs_workspace(tmp_path)
         (workspace / "docs/README.md").write_text(
             "# Docs\n\n[Broken](missing.md)\n",

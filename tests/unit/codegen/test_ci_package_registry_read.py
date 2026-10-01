@@ -1,8 +1,4 @@
-"""Verify ci.yml grants packages: read only to declared registry consumers.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Verify ci.yml grants packages: read only to declared registry consumers."""
 
 from __future__ import annotations
 
@@ -12,8 +8,7 @@ from pathlib import Path
 from flext_tests import tm
 
 from flext_infra import c, u
-from tests import t
-from tests.unit.codegen._support import CodegenTestSupport
+from tests import t, utilities
 
 
 class TestsFlextInfraCiPackageRegistryRead:
@@ -26,7 +21,7 @@ class TestsFlextInfraCiPackageRegistryRead:
 
     @classmethod
     def _job_permissions(cls, *, packages_read: bool) -> Mapping[str, t.JsonValue]:
-        spec = CodegenTestSupport.Ci.workflow_spec(
+        spec = utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.workflow_spec(
             dist="fixture-registry-consumer",
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch="develop",
@@ -43,7 +38,6 @@ class TestsFlextInfraCiPackageRegistryRead:
         return permissions
 
     def test_declared_consumer_ci_job_reads_packages(self) -> None:
-        """Test declared consumer ci job reads packages."""
         permissions = self._job_permissions(packages_read=True)
 
         tm.that(permissions["ci"], eq={"contents": "read", "packages": "read"})
@@ -51,7 +45,6 @@ class TestsFlextInfraCiPackageRegistryRead:
         tm.that(permissions["merge-guard"], eq={"contents": "read"})
 
     def test_undeclared_consumer_stays_contents_only(self) -> None:
-        """Test undeclared consumer stays contents only."""
         permissions = self._job_permissions(packages_read=False)
 
         for job_permissions in permissions.values():

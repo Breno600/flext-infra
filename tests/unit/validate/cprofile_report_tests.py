@@ -1,8 +1,4 @@
-"""Focused cProfile report service contracts.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Focused cProfile report service contracts."""
 
 from __future__ import annotations
 
@@ -24,7 +20,6 @@ class TestsFlextInfraCProfileReport:
 
     @staticmethod
     def test_real_profile_renders_bounded_text(tmp_path: Path) -> None:
-        """Test real profile renders bounded text."""
         policy = config.Infra.tooling.tools.pytest
         report_dir = tmp_path / ".reports" / "tests" / "profile"
         report_dir.mkdir(parents=True)
@@ -58,7 +53,6 @@ class TestsFlextInfraCProfileReport:
 
     @staticmethod
     def test_validate_route_uses_typed_profile_owner() -> None:
-        """Test validate route uses typed profile owner."""
         routes = {
             route.name: route.model_cls
             for route in FlextInfraValidationCommandRoutes.validate_command_routes
@@ -70,7 +64,6 @@ class TestsFlextInfraCProfileReport:
     def test_profile_artifacts_cannot_escape_workspace_reports(
         tmp_path: Path,
     ) -> None:
-        """Test profile artifacts cannot escape workspace reports."""
         policy = config.Infra.tooling.tools.pytest
 
         with pytest.raises(ValueError, match="cProfile path must stay under"):

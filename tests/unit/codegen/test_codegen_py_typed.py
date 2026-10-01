@@ -19,11 +19,8 @@ if TYPE_CHECKING:
 
 
 class TestsFlextInfraCodegenPyTyped:
-    """Tests for ``FlextInfraCodegenPyTyped``."""
-
     @staticmethod
     def test_creates_marker_in_dir_with_py_files(tmp_path: Path) -> None:
-        """Test creates marker in dir with py files."""
         pkg = tmp_path / "src" / "mypkg"
         pkg.mkdir(parents=True)
         (pkg / "__init__.py").write_text("", encoding="utf-8")
@@ -36,7 +33,6 @@ class TestsFlextInfraCodegenPyTyped:
 
     @staticmethod
     def test_removes_stale_marker_when_no_py_files(tmp_path: Path) -> None:
-        """Test removes stale marker when no py files."""
         pkg = tmp_path / "src" / "emptypkg"
         pkg.mkdir(parents=True)
         (pkg / c.Infra.PY_TYPED).touch()
@@ -49,7 +45,6 @@ class TestsFlextInfraCodegenPyTyped:
 
     @staticmethod
     def test_check_only_does_not_write_marker(tmp_path: Path) -> None:
-        """Test check only does not write marker."""
         pkg = tmp_path / "src" / "mypkg"
         pkg.mkdir(parents=True)
         (pkg / "__init__.py").write_text("", encoding="utf-8")
@@ -62,7 +57,6 @@ class TestsFlextInfraCodegenPyTyped:
 
     @staticmethod
     def test_check_only_does_not_remove_marker(tmp_path: Path) -> None:
-        """Test check only does not remove marker."""
         pkg = tmp_path / "src" / "emptypkg"
         pkg.mkdir(parents=True)
         (pkg / c.Infra.PY_TYPED).touch()
@@ -79,7 +73,6 @@ class TestsFlextInfraCodegenPyTyped:
         tmp_path: Path,
         skip_dir: str,
     ) -> None:
-        """Test skips known excluded directories."""
         skipped_pkg = tmp_path / "src" / skip_dir / "mypkg"
         skipped_pkg.mkdir(parents=True)
         (skipped_pkg / "__init__.py").write_text("", encoding="utf-8")
@@ -92,7 +85,6 @@ class TestsFlextInfraCodegenPyTyped:
 
     @staticmethod
     def test_no_change_when_marker_already_exists(tmp_path: Path) -> None:
-        """Test no change when marker already exists."""
         pkg = tmp_path / "src" / "mypkg"
         pkg.mkdir(parents=True)
         (pkg / "__init__.py").write_text("", encoding="utf-8")
@@ -105,7 +97,6 @@ class TestsFlextInfraCodegenPyTyped:
 
     @staticmethod
     def test_execute_returns_success(tmp_path: Path) -> None:
-        """Test execute returns success."""
         pkg = tmp_path / "src" / "mypkg"
         pkg.mkdir(parents=True)
         (pkg / "__init__.py").write_text("", encoding="utf-8")
@@ -117,7 +108,6 @@ class TestsFlextInfraCodegenPyTyped:
 
     @staticmethod
     def test_tests_dir_packages_also_scanned(tmp_path: Path) -> None:
-        """Test tests dir packages also scanned."""
         test_pkg = tmp_path / "tests" / "unit"
         test_pkg.mkdir(parents=True)
         (test_pkg / "__init__.py").write_text("", encoding="utf-8")
@@ -130,7 +120,6 @@ class TestsFlextInfraCodegenPyTyped:
 
     @staticmethod
     def test_skips_nested_hidden_virtualenv_directories(tmp_path: Path) -> None:
-        """Test skips nested hidden virtualenv directories."""
         venv_pkg = tmp_path / "src" / ".cache" / ".venv" / "mypkg"
         venv_pkg.mkdir(parents=True)
         (venv_pkg / "__init__.py").write_text("", encoding="utf-8")
@@ -142,7 +131,6 @@ class TestsFlextInfraCodegenPyTyped:
 
     @staticmethod
     def test_only_expected_namespace_marker_is_created(tmp_path: Path) -> None:
-        """Test only expected namespace marker is created."""
         pkg = tmp_path / "src" / "mypkg"
         pkg.mkdir(parents=True)
         (pkg / "__init__.py").write_text("", encoding="utf-8")
@@ -160,7 +148,6 @@ class TestsFlextInfraCodegenPyTyped:
 
     @staticmethod
     def test_multiple_packages_all_get_markers(tmp_path: Path) -> None:
-        """Test multiple packages all get markers."""
         for name in ("pkga", "pkgb", "pkgc"):
             pkg = tmp_path / "src" / name
             pkg.mkdir(parents=True)

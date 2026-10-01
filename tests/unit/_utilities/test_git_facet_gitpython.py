@@ -1,8 +1,4 @@
-"""Public u.Infra Git facet — GitPython-backed behavior.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Public u.Infra Git facet — GitPython-backed behavior."""
 
 from __future__ import annotations
 
@@ -103,12 +99,7 @@ class TestsFlextInfraGitFacet:
 
     @staticmethod
     def _add_lane(tmp_path: Path, repository: Path, branch: str) -> Path:
-        """Create one branch and check it out as a worktree lane under ``tmp_path``.
-
-        Returns:
-            The resulting ``Path``.
-
-        """
+        """Create one branch and check it out as a worktree lane under ``tmp_path``."""
         lane = tmp_path / branch
         _ = test_u.Tests.git_run(repository, "branch", branch)
         _ = test_u.Tests.git_run(repository, "worktree", "add", str(lane), branch)

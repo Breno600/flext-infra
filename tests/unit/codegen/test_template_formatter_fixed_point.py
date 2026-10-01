@@ -1,8 +1,4 @@
-"""Generated template formatter fixed-point contracts.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Generated template formatter fixed-point contracts."""
 
 from __future__ import annotations
 
@@ -10,8 +6,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from tests import c, m, t, u
-from tests.unit.codegen._support import CodegenTestSupport
+from tests import c, m, t, u, utilities
 
 
 class TestsFlextInfraTemplateFormatterFixedPoint:
@@ -50,11 +45,11 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
         workspace_repositories: t.VariadicTuple[m.Infra.RepositoryRef],
         has_devcontainer: bool,
     ) -> m.Infra.GithubWorkflowRenderSpec:
-        return CodegenTestSupport.Ci.workflow_spec(
+        return utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.workflow_spec(
             dist="demo",
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch="develop",
-            ci_trigger_branches=CodegenTestSupport.Ci.CI_TRIGGER_BASELINE_BRANCHES,
+            ci_trigger_branches=utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.CI_TRIGGER_BASELINE_BRANCHES,
             workspace_repositories=workspace_repositories,
             has_devcontainer=has_devcontainer,
         )
@@ -73,7 +68,6 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
         tm.that(rendered, lacks="[tool.uv.workspace]")
 
     def test_dependabot_render_has_one_terminal_newline(self) -> None:
-        """Test dependabot render has one terminal newline."""
         empty = tm.ok(
             u.Cli.template_render(
                 self._TEMPLATES / ".github/dependabot.yml.j2",
@@ -95,7 +89,6 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
             tm.that(rendered.endswith("\n") and not rendered.endswith("\n\n"), eq=True)
 
     def test_dependabot_projects_devcontainers_only_when_one_exists(self) -> None:
-        """Test dependabot projects devcontainers only when one exists."""
         without = tm.ok(
             u.Cli.template_render(
                 self._TEMPLATES / ".github/dependabot.yml.j2",

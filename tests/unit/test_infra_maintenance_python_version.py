@@ -27,12 +27,7 @@ class TestsFlextInfraInfraMaintenancePythonVersion:
     _BAD: int = _MINOR + 1
 
     def _ws(self, root: Path, *, minor: int | None = None) -> Path:
-        """Create repository root with required markers.
-
-        Returns:
-            The resulting ``Path``.
-
-        """
+        """Create repository root with required markers."""
         resolved_minor = self._MINOR if minor is None else minor
         root.mkdir(exist_ok=True)
         (root / ".git").mkdir(exist_ok=True)
@@ -79,7 +74,6 @@ class TestsFlextInfraInfraMaintenancePythonVersion:
         return _TestEnforcer()
 
     def test_check_only_success(self, tmp_path: Path) -> None:
-        """Test check only success."""
         tm.ok(
             self._svc(self._ws(tmp_path / "ws")).execute(
                 check_only=True,
@@ -89,7 +83,6 @@ class TestsFlextInfraInfraMaintenancePythonVersion:
         )
 
     def test_enforce_mode(self, tmp_path: Path) -> None:
-        """Test enforce mode."""
         tm.ok(
             self._svc(self._ws(tmp_path / "ws")).execute(
                 check_only=False,
@@ -99,13 +92,11 @@ class TestsFlextInfraInfraMaintenancePythonVersion:
         )
 
     def test_verbose_mode(self, tmp_path: Path) -> None:
-        """Test verbose mode."""
         svc = self._svc(self._ws(tmp_path / "ws"))
         tm.ok(svc.execute(check_only=True, verbose=True))
         tm.that(svc.verbose, eq=True)
 
     def test_failure_on_workspace_mismatch(self, tmp_path: Path) -> None:
-        """Test failure on workspace mismatch."""
         tm.fail(
             self._svc(self._ws(tmp_path / "ws", minor=self._BAD)).execute(
                 check_only=True,
@@ -113,21 +104,18 @@ class TestsFlextInfraInfraMaintenancePythonVersion:
         )
 
     def test_failure_on_project_mismatch(self, tmp_path: Path) -> None:
-        """Test failure on project mismatch."""
         ws = self._ws(tmp_path / "ws")
         self._proj(ws, "project-a", minor=self._BAD)
         u.Tests.declare_workspace_projects(ws, ("project-a",))
         tm.fail(self._svc(ws).execute(check_only=True, verbose=False))
 
     def test_empty_workspace(self, tmp_path: Path) -> None:
-        """Test empty workspace."""
         tm.ok(self._svc(self._ws(tmp_path / "ws")).execute(check_only=True))
 
     def test_check_only_fails_when_python_version_file_is_missing(
         self,
         tmp_path: Path,
     ) -> None:
-        """Test check only fails when python version file is missing."""
         ws = self._ws(tmp_path / "ws")
         (ws / ".python-version").unlink()
 
@@ -137,7 +125,6 @@ class TestsFlextInfraInfraMaintenancePythonVersion:
         self,
         tmp_path: Path,
     ) -> None:
-        """Test check only fails when python version file is stale."""
         ws = self._ws(tmp_path / "ws")
         (ws / ".python-version").write_text(f"3.{self._BAD}\n", encoding="utf-8")
 
@@ -147,7 +134,6 @@ class TestsFlextInfraInfraMaintenancePythonVersion:
         self,
         tmp_path: Path,
     ) -> None:
-        """Test apply mode conforms python version file and is idempotent."""
         ws = self._ws(tmp_path / "ws")
         version_file = ws / ".python-version"
         version_file.unlink()
@@ -163,7 +149,6 @@ class TestsFlextInfraInfraMaintenancePythonVersion:
 
     @staticmethod
     def test_empty_dir_returns_empty(tmp_path: Path) -> None:
-        """Test empty dir returns empty."""
         d = tmp_path / "empty"
         d.mkdir()
         result = u.Infra.discover_projects(d)

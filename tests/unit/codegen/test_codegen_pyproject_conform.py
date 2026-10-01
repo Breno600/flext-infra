@@ -1,8 +1,4 @@
-"""Public behavior tests for topology-aware pyproject conformance.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Public behavior tests for topology-aware pyproject conformance."""
 
 from __future__ import annotations
 
@@ -17,8 +13,6 @@ from tests import t, u as test_u
 
 
 class TestsFlextInfraCodegenPyprojectConform:
-    """Tests for ``FlextInfraCodegenPyprojectConform``."""
-
     @staticmethod
     def _repository(
         distribution: str,
@@ -62,12 +56,7 @@ class TestsFlextInfraCodegenPyprojectConform:
         toolchain: m.Infra.ToolchainSpec,
         exclusions: t.VariadicTuple[m.Infra.UvScopedDependencyExclusionSpec] = (),
     ) -> m.Infra.UvResolutionSpec:
-        """Route the toolchain's uv resolver keys the way conform declares them.
-
-        Returns:
-            The resulting ``m.Infra.UvResolutionSpec``.
-
-        """
+        """Route the toolchain's uv resolver keys the way conform declares them."""
         return m.Infra.UvResolutionSpec(
             link_mode=toolchain.uv_link_mode,
             constraint_dependencies=tuple(toolchain.uv_constraint_dependencies),
@@ -83,10 +72,6 @@ class TestsFlextInfraCodegenPyprojectConform:
         context root; every other project must carry its declared direct Git
         source (the scaffold seeds exactly this line), so the same SSOT floor
         set is rendered the way a real detached checkout declares it.
-
-        Returns:
-            The resulting ``t.StrSequence``.
-
         """
         branch = test_u.Tests.provider_branch()
         return tuple(
@@ -337,7 +322,6 @@ constraint-dependencies = ["uv>=0"]
         tm.that("constraint-dependencies" not in uv_config, eq=True)
 
     def test_standalone_rejects_non_https_manifest_provenance(self) -> None:
-        """Test standalone rejects non https manifest provenance."""
         workspace = self._workspace()
         member = workspace.subprojects[0]
         declared = (
@@ -361,7 +345,6 @@ constraint-dependencies = ["uv>=0"]
         tm.fail(result, has="internal dependency manifest provenance must be HTTPS")
 
     def test_full_conformance_is_idempotent_without_uv_version_pin(self) -> None:
-        """Test full conformance is idempotent without uv version pin."""
         workspace = self._workspace()
         toolchain = config.Infra.codegen.toolchain.model_copy(
             update={"uv_link_mode": "copy"},

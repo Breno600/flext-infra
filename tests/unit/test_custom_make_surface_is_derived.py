@@ -25,16 +25,9 @@ from tests import t
 
 
 class TestsFlextInfraCustomMakeSurfaceIsDerived:
-    """Tests for ``FlextInfraCustomMakeSurfaceIsDerived``."""
-
     @staticmethod
     def _engine_modules() -> t.VariadicTuple[Path]:
-        """Return every shipped engine module, excluding the template tree.
-
-        Returns:
-            Every shipped engine module, excluding the template tree.
-
-        """
+        """Return every shipped engine module, excluding the template tree."""
         root = Path(flext_infra.__file__).resolve().parent
         templates = root / "templates"
         return tuple(
@@ -49,12 +42,7 @@ class TestsFlextInfraCustomMakeSurfaceIsDerived:
         *,
         containing: str,
     ) -> t.VariadicTuple[str]:
-        """Return every string literal in *module*, excluding docstrings.
-
-        Returns:
-            Every string literal in *module*, excluding docstrings.
-
-        """
+        """Return every string literal in *module*, excluding docstrings."""
         source = module.read_text(encoding="utf-8")
         if containing not in source:
             return ()

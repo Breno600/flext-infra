@@ -20,7 +20,6 @@ class TestsFlextInfraCodegenCensusModels:
 
     @staticmethod
     def test_named_groups_present() -> None:
-        """Test named groups present."""
         match = c.Infra.VIOLATION_PATTERN.match(
             "[ban-cyclic-import] src/file.py:10 — msg",
         )
@@ -30,7 +29,6 @@ class TestsFlextInfraCodegenCensusModels:
 
     @staticmethod
     def test_model_fields() -> None:
-        """Test model fields."""
         v = m.Infra.CensusViolation(
             module="src/file.py",
             rule="NS-001",
@@ -46,7 +44,6 @@ class TestsFlextInfraCodegenCensusModels:
 
     @staticmethod
     def test_empty_report() -> None:
-        """Test empty report."""
         report = m.Infra.CensusReport(
             project="test-project",
             violations=[],
@@ -60,7 +57,6 @@ class TestsFlextInfraCodegenCensusModels:
 
     @staticmethod
     def test_report_with_mixed_violations() -> None:
-        """Test report with mixed violations."""
         violations = [
             m.Infra.CensusViolation(
                 module="src/a.py",

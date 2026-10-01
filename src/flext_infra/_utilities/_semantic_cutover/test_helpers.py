@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import ast
 from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING, override
@@ -29,7 +30,7 @@ if TYPE_CHECKING:
 class FlextInfraUtilitiesSemanticTestHelpers(
     FlextInfraUtilitiesSemanticHelperReferences,
 ):
-    """Discover live fixture helpers and move them to their tier utilities owner."""
+    """Discover shared test helpers and move them to their tier utilities owner."""
 
     @classmethod
     def _test_helper_edits(
@@ -73,7 +74,10 @@ class FlextInfraUtilitiesSemanticTestHelpers(
             path
             for path in sorted(editable)
             if c.Infra.DIR_TESTS in path.parts
-            and workspace.convention(path).module_policy.is_fixture_module
+            and (
+                workspace.convention(path).module_policy.is_fixture_module
+                or (path.stem.startswith("_") and path.stem != "__init__")
+            )
         )
         if not candidates:
             return ()
@@ -135,29 +139,29 @@ class FlextInfraUtilitiesSemanticTestHelpers(
     ) -> m.Infra.ClassMoveRequest | None:
         root = Path(project.root.real_path)
         resource = project.get_resource(path.relative_to(root).as_posix())
-        scope = project.get_pymodule(resource).get_scope()
-        if scope is None:
-            msg = f"shared test helper module has no Rope scope: {path}"
-            raise ValueError(msg)
         resources = tuple(
             project.get_resource(item.relative_to(root).as_posix())
             for item in sorted(editable)
         )
-        for child in scope.get_scopes():
-            if child.get_kind() != c.Infra.RopeScopeKind.CLASS:
-                continue
+        declarations = tuple(
+            node
+            for node in ast.parse(sources[path]).body
+            if isinstance(node, ast.ClassDef)
+        )
+        for declaration in declarations:
+            name = declaration.name
             if not any(
-                member.get_kind() == c.Infra.RopeScopeKind.FUNCTION
-                for member in child.get_scopes()
+                isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef))
+                for member in ast.walk(declaration)
             ) or any(
-                name.startswith(c.Infra.NAMESPACE_PYTEST_MODULE_PREFIX)
-                for name in child.pyobject.get_attributes()
+                member.name.startswith(c.Infra.NAMESPACE_PYTEST_MODULE_PREFIX)
+                for member in ast.walk(declaration)
+                if isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef))
             ):
                 continue
-            name = child.pyobject.get_name()
             offset = FlextInfraUtilitiesRopeCorePyModuleMixin.find_identifier_offset_in_lines(
                 sources[path].splitlines(keepends=True),
-                line=child.get_start(),
+                line=declaration.lineno,
                 symbol=name,
             )
             if offset is None:
@@ -186,7 +190,7 @@ class FlextInfraUtilitiesSemanticTestHelpers(
                 source_file=path,
                 target_file=target,
                 class_name=name,
-                line=child.get_start(),
+                line=declaration.lineno,
                 apply=False,
             )
         return None

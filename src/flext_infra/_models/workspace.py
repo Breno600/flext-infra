@@ -1,8 +1,4 @@
-"""Domain models for the workspace subpackage.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Domain models for the workspace subpackage."""
 
 from __future__ import annotations
 
@@ -13,6 +9,8 @@ from flext_cli import m
 
 from flext_infra import c, t
 from flext_infra._models._config.base import FlextInfraConfigModels
+from flext_infra._models._config.beads import FlextInfraConfigModelsBeads
+from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
 from flext_infra._models._git import FlextInfraModelsGitIdentity
 from flext_infra._models.mixins import FlextInfraModelsMixins as mm
 
@@ -24,6 +22,27 @@ class FlextInfraModelsWorkspace:
     - ``ArbitraryTypesModel`` for mutable discovery payloads.
     - ``ContractModel`` reserved for immutable workspace settings contracts.
     """
+
+    class SuperprojectGovernance(m.ArbitraryTypesModel):
+        """Superproject facts every member load validates against."""
+
+        root: Annotated[Path, m.Field(description="Superproject root path")]
+        integration_branch: Annotated[
+            str | None,
+            m.Field(description="Configured integration branch"),
+        ]
+        beads: Annotated[
+            FlextInfraConfigModelsBeads.BeadsProjectSpec | None,
+            m.Field(description="Configured central Beads route"),
+        ]
+        members: Annotated[
+            t.MappingKV[Path, FlextInfraConfigModelsContexts.RepositoryRef],
+            m.Field(description="Declared workspace member repositories"),
+        ]
+        allow_unprovisioned_members: Annotated[
+            bool,
+            m.Field(description="Permit declared members without checkouts"),
+        ]
 
     class WorkspaceEnvironmentRequest(m.ContractModel):
         """Read-only request for validating the active workspace environment."""

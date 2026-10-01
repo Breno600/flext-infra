@@ -14,8 +14,6 @@ from flext_infra import c, config, u
 
 
 class TestsFlextInfraPythonSelectorRender:
-    """Tests for ``FlextInfraPythonSelectorRender``."""
-
     @staticmethod
     def test_render_is_the_selector_and_nothing_else() -> None:
         """The generated consumer artifact equals its typed configuration owner."""

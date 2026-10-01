@@ -99,9 +99,9 @@ A member attached as a submodule uses the environment of its containing Git
 superproject; a standalone checkout or linked worktree has its own. The physical
 directory is `.venv` at the runtime root (`c.Infra.ENVIRONMENT_DIRECTORY`), never a
 configuration value. The generated Makefile, the generated `.envrc`, and
-`runtime_environment_dir` resolve that location from the same resolved runtime root, so
-entering the checkout through a symlink does not change the selected environment. No environment is borrowed from another checkout
-through a symlink.
+`runtime_environment_dir` resolve that location from the same resolved runtime root,
+so entering the checkout through a symlink does not change the selected environment.
+No environment is borrowed from another checkout through a symlink.
 
 ## Mise launchers
 
@@ -180,9 +180,9 @@ completion requires integration and runtime measured at the integrated SHA.
 
 For namespace automation, investigate catalog, classifier, transformation, publication,
 and consumers in that order. The namespace laws are codemod catalog rules, so the
-codemod gate is their one verdict. Preserve mutability, inheritance, imports, and collection; validate the
-transformation through the public interface before widening the batch. Structural
-refactors go through `make mod`.
+codemod gate is their one verdict. Preserve mutability, inheritance, imports, and
+collection; validate the transformation through the public interface before widening
+the batch. Structural refactors go through `make mod`.
 
 ## Check gate partitions
 
