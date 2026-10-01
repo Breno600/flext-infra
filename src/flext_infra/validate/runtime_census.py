@@ -48,9 +48,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
     ] = c.Infra.RUNTIME_CENSUS
 
     @classmethod
-    def for_project(
-        cls, project_dir: Path, *, census_gate: str
-    ) -> Self:
+    def for_project(cls, project_dir: Path, *, census_gate: str) -> Self:
         """Scope one census run to ``project_dir`` for ``census_gate``.
 
         The filter is the declared project name, never the checkout directory
@@ -376,10 +374,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
 
     def build_report(self) -> p.Result[m.Infra.ValidationReport]:
         """Build one validation report for the selected workspace projects."""
-        owning_gates = frozenset({
-            c.Infra.RUNTIME_CENSUS,
-            *self._gate_rule_families(),
-        })
+        owning_gates = frozenset({c.Infra.RUNTIME_CENSUS, *self._gate_rule_families()})
         if self.census_gate not in owning_gates:
             return r[m.Infra.ValidationReport].fail(
                 f"runtime census has no rule families for gate {self.census_gate!r}; "
@@ -411,7 +406,9 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
                 else f"runtime census ({self.census_gate}) passed"
             )
             return r[m.Infra.ValidationReport].ok(
-                m.Infra.ValidationReport(passed=passed, violations=kept, summary=summary)
+                m.Infra.ValidationReport(
+                    passed=passed, violations=kept, summary=summary
+                )
             )
         if routed_total:
             u.Cli.info(

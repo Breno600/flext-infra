@@ -237,10 +237,11 @@ findings residuais.
 `smells` não pertence às partições de `make check`. O comando selector-free
 `make smells` executa o mesmo gate de análise em separado e falha quando encontra
 defeitos. Seus achados são tratados em uma campanha posterior para todos os projetos.
-O verbo é dono de toda família de smell, do qlty e do runtime census: as famílias
-derivam do catálogo de smells do flext-core (cada tag de smell e o id de regra de cada
-linha que a carrega). O gate `runtime-census` de `make check` encaminha essas famílias ao
-gate `smells` com uma linha INFO e nunca as conta; nenhuma lista manual as declara.
+The verb owns every smell family, from qlty and from the runtime census alike. The
+families derive from the flext-core smell catalog: every smell tag plus the rule id of
+each catalog row that carries one. The `runtime-census` gate of `make check` routes those
+families to the `smells` gate under one INFO line and never counts them; no hand-written
+list declares them.
 
 O handoff final relaciona PRs, commits de merge e prova após integração aos Beads. Se
 algo permanece pendente, o texto deve nomeá-lo e oferecer a próxima ação executável, sem
