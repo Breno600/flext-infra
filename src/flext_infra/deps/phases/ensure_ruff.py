@@ -312,6 +312,7 @@ class FlextInfraEnsureRuffConfigPhase:
         *,
         path: Path,
         generated_python_roots: t.StrSequence = (),
+        analysis_exclusions: t.StrSequence | None = None,
     ) -> t.StrSequence:
         """Apply canonical Ruff settings directly to one normalized payload."""
         effective_ignores = self.compose_per_file_ignores(
@@ -333,6 +334,7 @@ class FlextInfraEnsureRuffConfigPhase:
                             payload,
                             path=path,
                         ),
+                        analysis_exclusions=analysis_exclusions,
                         stale_patterns=[
                             pattern
                             for pattern in current_ignores or ()
