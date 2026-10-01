@@ -192,10 +192,7 @@ class FlextInfraUtilitiesCodegenNamespace:
         if not file_path.is_file():
             return ()
         resolved = file_path.resolve()
-        try:
-            mtime_ns = resolved.stat().st_mtime_ns
-        except OSError:
-            mtime_ns = 0
+        mtime_ns = resolved.stat().st_mtime_ns
         cache_key = str(resolved)
         cached = cls._declared_exports_cache.get(cache_key)
         if cached is not None and cached[0] == mtime_ns:
@@ -380,10 +377,9 @@ class FlextInfraUtilitiesCodegenNamespace:
         if layout is None:
             return ""
         class_stem: str = layout.class_stem
-        try:
-            rel_parts = file_path.relative_to(project_root).parts
-        except ValueError:
+        if not file_path.is_relative_to(project_root):
             return class_stem
+        rel_parts = file_path.relative_to(project_root).parts
         surface_prefix = (
             rel_parts[0].title()
             if rel_parts and rel_parts[0] in c.Infra.NON_PUBLIC_LAZY_ROOTS

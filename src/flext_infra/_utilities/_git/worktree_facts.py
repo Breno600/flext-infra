@@ -154,22 +154,21 @@ class FlextInfraUtilitiesGitWorktreeFactsMixin(
 
     @staticmethod
     def _worktree_gitdir_pointer(entry: Path) -> Path | None:
-        """Read one registry ``gitdir`` pointer, or ``None`` when unreadable."""
-        text = ""
-        try:
-            text = (entry / "gitdir").read_text(encoding=c.Cli.ENCODING_DEFAULT).strip()
-        except (OSError, ValueError):
-            text = ""
+        """Read one registry ``gitdir`` pointer.
+
+        ``None`` means the registry entry carries no pointer file, which Git
+        itself treats as a prunable entry; any read error escapes.
+        """
+        pointer = entry / "gitdir"
+        if not pointer.is_file():
+            return None
+        text = pointer.read_text(encoding=c.Cli.ENCODING_DEFAULT).strip()
         return Path(text) if text else None
 
     @staticmethod
     def _worktree_registry_branch(entry: Path) -> str:
-        """Read the checked-out branch from a registry HEAD, else empty text."""
-        head = ""
-        try:
-            head = (entry / "HEAD").read_text(encoding=c.Cli.ENCODING_DEFAULT).strip()
-        except OSError:
-            head = ""
+        """Read the checked-out branch from a registry HEAD (empty when detached)."""
+        head = (entry / "HEAD").read_text(encoding=c.Cli.ENCODING_DEFAULT).strip()
         prefix = f"ref: {c.Infra.GIT_REFS_HEADS}"
         return head.removeprefix(prefix) if head.startswith(prefix) else ""
 

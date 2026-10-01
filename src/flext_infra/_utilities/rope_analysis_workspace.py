@@ -39,10 +39,9 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
         An empty string when the directory sits outside the project or under no
         recognised source root.
         """
-        try:
-            relative_parts = package_dir.relative_to(project_root).parts
-        except ValueError:
+        if not package_dir.is_relative_to(project_root):
             return ""
+        relative_parts = package_dir.relative_to(project_root).parts
         if not relative_parts:
             return ""
         root_name = relative_parts[0]

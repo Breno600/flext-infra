@@ -189,12 +189,12 @@ class FlextInfraUtilitiesDiscovery(
             policy_owner = cls.project_package_name(project_root)
         except TypeError:
             return m.Infra.AliasMigrationContext(policy_owner="", import_root="")
-        try:
-            relative_parts = (
-                file_path.resolve().relative_to(project_root.resolve()).parts
-            )
-        except ValueError:
-            relative_parts = ()
+        resolved_file, resolved_root = file_path.resolve(), project_root.resolve()
+        relative_parts = (
+            resolved_file.relative_to(resolved_root).parts
+            if resolved_file.is_relative_to(resolved_root)
+            else ()
+        )
         import_root = (
             c.Infra.DIR_TESTS
             if relative_parts and relative_parts[0] == c.Infra.DIR_TESTS

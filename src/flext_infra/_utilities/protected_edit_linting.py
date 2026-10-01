@@ -167,11 +167,10 @@ class FlextInfraUtilitiesProtectedEditLinting:
 
     @staticmethod
     def _relative_path(py_file: Path, workspace: Path) -> Path:
-        """Relative path."""
-        try:
+        """Return ``py_file`` relative to the workspace when it lies inside it."""
+        if py_file.is_relative_to(workspace):
             return py_file.relative_to(workspace)
-        except ValueError:
-            return py_file
+        return py_file
 
     @staticmethod
     def _command_cwd(py_file: Path, workspace: Path) -> Path:
