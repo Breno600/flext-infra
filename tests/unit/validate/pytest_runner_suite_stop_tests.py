@@ -79,9 +79,7 @@ class TestsFlextInfraPytestRunnerSuiteStop:
         than one worker executes serially and keeps only one in-flight item.
         """
         policy = config.Infra.tooling.tools.pytest
-        multi = [
-            f"tests/test_serial_{'x' * index}.py::test_one" for index in range(4)
-        ]
+        multi = [f"tests/test_serial_{'x' * index}.py::test_one" for index in range(4)]
         runner = runner_for(cached_runner_project)
         multi_command = runner.build_command(
             cached_runner_project / runner.reports, multi, manifest_path=Path("m.json")

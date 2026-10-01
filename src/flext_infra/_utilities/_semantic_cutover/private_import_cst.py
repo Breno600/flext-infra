@@ -51,9 +51,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
                         msg = "declared export import requires a static symbol name"
                         raise ValueError(msg)
                     destination = self.exports.get(f"{module}.{name}")
-                    replacement = imported.with_changes(
-                        comma=cst.MaybeSentinel.DEFAULT
-                    )
+                    replacement = imported.with_changes(comma=cst.MaybeSentinel.DEFAULT)
                     destination_module = updated_node.module
                     if destination is not None:
                         public_module, public_name = destination
@@ -218,9 +216,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
                 for alias, package in sorted(self.public_imports.items()):
                     grouped.setdefault(package, []).append(alias)
                 imports = tuple(
-                    cst.parse_statement(
-                        f"from {package} import {', '.join(aliases)}\n"
-                    )
+                    cst.parse_statement(f"from {package} import {', '.join(aliases)}\n")
                     for package, aliases in sorted(grouped.items())
                 )
                 self.inserted = True

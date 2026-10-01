@@ -199,9 +199,12 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
             # while its own ``.venv`` is provisioned by setup from the same
             # committed lock - the identical dependency set, so the probes
             # still grade the target against what it declares.
-            interpreter = self.repository_root / ".venv" / (
-                "Scripts" if sys.platform == "win32" else "bin"
-            ) / c.Infra.PYTHON
+            interpreter = (
+                self.repository_root
+                / ".venv"
+                / ("Scripts" if sys.platform == "win32" else "bin")
+                / c.Infra.PYTHON
+            )
         if not interpreter.is_file():
             return r[m.Infra.ValidationReport].fail(
                 f"fresh-import target interpreter is missing: {interpreter}; "
