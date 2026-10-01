@@ -151,28 +151,31 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
     def build_command(
         self,
         report_dir: Path,
-        plan: m.Infra.PytestSelectionPlan | None = None,
-        *,
-        serialize: bool = False,
-        execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
+        selected_node_ids: t.StrSequence | None = None,
+        invocation: m.Infra.PytestInvocation | None = None,
     ) -> t.VariadicTuple[str]:
         """Build the testmon suite argv (never the cov plugin).
 
-        A selection plan carries its own canonical manifest, so a nonempty
-        selection is always enforced from that manifest; ``None`` runs the
-        whole declared target.
+        A nonempty selection is enforced from its manifest, so it requires
+        ``manifest_path``.
         """
         pytest = config.Infra.tooling.tools.pytest
-        selection = tuple(plan.node_ids) if plan is not None else ()
-        manifest_path = plan.manifest_path if plan is not None else None
-        whole_target = plan.whole_target if plan is not None else False
+        invocation = invocation or m.Infra.PytestInvocation()
+        manifest_path = invocation.manifest_path
+        serialize = invocation.serialize
+        whole_target = invocation.whole_target
+        execution_mode = invocation.execution_mode
+        selection = selected_node_ids or None
+        if selection and manifest_path is None:
+            msg = "a runner selection requires its collection manifest path"
+            raise ValueError(msg)
         # An empty selection needs no workers, and a selection smaller than the
         # worker budget never needs more workers than items: every extra worker
         # only pays startup cost for an empty queue. Explicit serial execution
         # remains available to callers; cold and warm cache runs share the same
         # manifest.
         budget = self.parallel_worker_budget(pytest)
-        if serialize or (plan is not None and not selection):
+        if serialize or selected_node_ids == ():
             workers = "0"
         elif selection:
             workers = str(min(budget, len(selection)))
@@ -181,7 +184,9 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         return self._suite_argv(
             report_dir,
             targets=(
-                (str(self.target),) if whole_target or plan is None else selection
+                (str(self.target),)
+                if whole_target or selection is None
+                else tuple(selection)
             ),
             workers=workers,
             trailing=(

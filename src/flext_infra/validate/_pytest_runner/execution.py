@@ -444,7 +444,13 @@ class FlextInfraPytestRunnerExecution(
         # enforces that manifest for both cold and warm caches while testmon
         # continues to collect dependencies through its xdist integration.
         command = self.build_command(
-            report_dir, selection_plan, execution_mode=execution_mode
+            report_dir,
+            selection,
+            invocation=m.Infra.PytestInvocation(
+                manifest_path=selection_plan.manifest_path,
+                whole_target=selection_plan.whole_target,
+                execution_mode=execution_mode,
+            ),
         )
         outcome = self._run_suite(command, report_dir, execution_mode=execution_mode)
         cache_hit = (

@@ -46,24 +46,25 @@ class FlextInfraUtilitiesGitStateFilesMixin(
                 raise ValueError(msg)
 
     @classmethod
-    def _state_hash_payload(cls, root: Path, content: bytes) -> str:
-        """Hash observed bytes into the repository's object id."""
-        with FlextInfraUtilitiesGitWorktreeIO.git_stdin(content) as stream:
-            return str(cls._repo(root).git.hash_object("--stdin", istream=stream))
-
-    @classmethod
     def _state_require_payload(
         cls,
-        observed: m.Infra.GitWorktreeFileState | None,
+        root: Path,
+        path: Path,
+        observed: m.Infra.GitWorktreeObservedFile,
         allowed: t.SequenceOf[m.Infra.GitWorktreeFileState | None],
     ) -> None:
-        """Accept only an allowed captured state for the observed payload."""
-        if observed is None and None in allowed:
+        """Hash the observed bytes and accept only an allowed captured state."""
+        if observed.content is None and None in allowed:
             return
-        if observed is not None and observed in allowed:
-            return
-        where = observed.path if observed is not None else "(absent)"
-        msg = f"owned file changed before guarded effect: {where}"
+        if observed.content is not None:
+            with FlextInfraUtilitiesGitWorktreeIO.git_stdin(observed.content) as stream:
+                oid = cls._repo(root).git.hash_object("--stdin", istream=stream)
+            captured = m.Infra.GitWorktreeFileState(
+                path=path, mode=observed.mode, permissions=observed.permissions, oid=oid
+            )
+            if captured in allowed:
+                return
+        msg = f"owned file changed before guarded effect: {path}"
         raise ValueError(msg)
 
     @staticmethod
@@ -91,11 +92,12 @@ class FlextInfraUtilitiesGitStateFilesMixin(
                 msg = f"symlink disappeared before guarded effect: {path}"
                 raise ValueError(msg) from exc
             cls._state_require_payload(
-                m.Infra.GitWorktreeFileState(
-                    path=path,
+                root,
+                path,
+                m.Infra.GitWorktreeObservedFile(
+                    content=os.fsencode(raw_target),
                     mode="120000",
                     permissions=link_mode,
-                    oid=cls._state_hash_payload(root, os.fsencode(raw_target)),
                 ),
                 allowed,
             )
@@ -110,13 +112,12 @@ class FlextInfraUtilitiesGitStateFilesMixin(
             ).unwrap()
             permissions = before_file.mode if before_file.mode is not None else 0
             cls._state_require_payload(
-                None
-                if before_file.content is None
-                else m.Infra.GitWorktreeFileState(
-                    path=path,
+                root,
+                path,
+                m.Infra.GitWorktreeObservedFile(
+                    content=before_file.content,
                     mode="100755" if permissions & stat.S_IXUSR else "100644",
                     permissions=permissions,
-                    oid=cls._state_hash_payload(root, before_file.content),
                 ),
                 allowed,
             )
