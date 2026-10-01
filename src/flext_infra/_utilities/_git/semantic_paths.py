@@ -110,9 +110,7 @@ class FlextInfraUtilitiesGitSemanticPathsMixin(
         try:
             repo = cls._repo(request.repo_root)
             listed = repo.git.ls_files("-z", "--", request.relative_path)
-        except GitCommandError:
-            return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=False))
-        except (OSError, ValueError) as exc:
+        except (GitCommandError, OSError, ValueError) as exc:
             return r[m.Infra.GitBoolReport].fail(
                 f"failed to check tracked status: {exc}",
                 exception=exc,

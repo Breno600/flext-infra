@@ -29,7 +29,7 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
         candidates = tuple(
             path
             for path in sources
-            if path.parent.name in c.Infra.FAMILY_DIRECTORIES.values()
+            if u.Infra.facade_family_of_directory(path.parent.name) is not None
             and not sources[path].startswith(c.Infra.AUTOGEN_HEADERS)
         )
         if not candidates:

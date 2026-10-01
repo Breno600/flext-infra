@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Literal
 
 from flext_infra import c
 
+from .namespace import FlextInfraUtilitiesCodegenNamespace
 from .rope_core import FlextInfraUtilitiesRopeCore
 from .rope_module_patch import FlextInfraUtilitiesRopeModulePatch
 from .rope_runtime import FlextInfraUtilitiesRopeRuntime
@@ -60,7 +61,10 @@ class FlextInfraUtilitiesCodegenFacades:
         facade content remains unchanged except for missing imports and bases.
         """
         facade_path = cls.facade_module_path(pkg_dir, family)
-        owners_dir = pkg_dir / c.Infra.FAMILY_DIRECTORIES[family]
+        owners_dir = (
+            pkg_dir
+            / FlextInfraUtilitiesCodegenNamespace.facade_families()[family].directory
+        )
         owners_exist = owners_dir.is_dir()
         # Why: only owners-without-facade is incomplete -- the owners would have
         # no public surface at all. A facade with no owners directory is the
@@ -305,8 +309,11 @@ class FlextInfraUtilitiesCodegenFacades:
         # instead made every generated consumer facade import from flext-infra,
         # a module that does not exist in the consumer's own distribution.
         lines = source.splitlines(keepends=True)
+        directory = FlextInfraUtilitiesCodegenNamespace.facade_families()[
+            family
+        ].directory
         rendered = [
-            f"from {package}.{c.Infra.FAMILY_DIRECTORIES[family]}.{module} import (\n"
+            f"from {package}.{directory}.{module} import (\n"
             f"    {class_name},\n)\n"
             for module, class_name in additions
         ]

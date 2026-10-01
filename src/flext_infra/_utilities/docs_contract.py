@@ -138,9 +138,15 @@ class FlextInfraUtilitiesDocsContract:
         items: t.MutableSequenceOf[str],
         depth: int = 0,
     ) -> None:
-        """Serialize the renderer's own TOC without reparsing heading Markdown."""
+        """Serialize rendered TOC labels with the formatter's Markdown escapes."""
         for token in tokens:
-            title = unescape(token.name).replace("[", r"\[").replace("]", r"\]")
+            title = (
+                unescape(token.name)
+                .replace("[", r"\[")
+                .replace("]", r"\]")
+                .replace("*", r"\*")
+                .replace("_", r"\_")
+            )
             indent = "  " * depth
             items.append(f"{indent}- [{title}](#{token.id})")
             FlextInfraUtilitiesDocsContract._docs_contract_toc_items(

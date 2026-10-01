@@ -1,7 +1,8 @@
-"""Tests for FlextInfraCodegenCensus service.
+"""Census violations come from the one rule engine's namespace report.
 
-Validates violation parsing, fixability classification, and project exclusion
-logic without hitting the real workspace.
+The namespace report is the engine's catalog scan of one project; the census
+parses each report line into a typed violation whose fixability is the
+declaring rule's own fix or relocation in the project's rule plan.
 
 Copyright (c) 2025 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -16,146 +17,111 @@ from flext_tests import tm
 
 from flext_core import r
 from flext_infra.codegen.census import FlextInfraCodegenCensus
-from tests import m, u
+from flext_infra.validate.namespace_validator import FlextInfraNamespaceValidator
+from tests import c, m, u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p
-
 
 class TestsFlextInfraCodegenCensus:
-    def _parse_violation(self, violation: str) -> p.Result[m.Infra.CensusViolation]:
-        parsed = u.Infra.parse_namespace_validation(
-            r[m.Infra.ValidationReport].ok(
-                m.Infra.ValidationReport(passed=True, violations=[violation]),
-            ),
+    """Parse the engine's namespace report into census violations."""
+
+    _FIXABLE_RULE = "census-fixable"
+    _DETECT_RULE = "census-detect-only"
+
+    @classmethod
+    def _project(cls, tmp_path: Path) -> Path:
+        project = tmp_path / "census-contract"
+        config_path = project / c.Infra.CODEMOD_CONFIG_RELPATH
+        rules = config_path.parent / c.Cli.RULES_DIR_NAME
+        rules.mkdir(parents=True)
+        (project / "src").mkdir()
+        (project / c.PYPROJECT_FILENAME).write_text(
+            '[project]\nname = "census-contract"\nversion = "1.0.0"\n'
+            "dependencies = []\n",
+            encoding="utf-8",
         )
-        if parsed.failure:
-            return r[m.Infra.CensusViolation].from_failure(parsed)
-        violations = parsed.unwrap()
-        if not violations:
-            return r[m.Infra.CensusViolation].fail("no violations parsed from report")
-        return r[m.Infra.CensusViolation].ok(violations[0])
+        config_path.write_text(
+            f"ruleDirs: [{c.Cli.RULES_DIR_NAME}]\n", encoding="utf-8"
+        )
+        (rules / "fixable.yml").write_text(
+            f"id: {cls._FIXABLE_RULE}\nlanguage: Python\nseverity: error\n"
+            "message: Observed fixable\nrule:\n  pattern: first($VALUE)\n"
+            "fix: second($VALUE)\n",
+            encoding="utf-8",
+        )
+        (rules / "detect.yml").write_text(
+            f"id: {cls._DETECT_RULE}\nlanguage: Python\nseverity: error\n"
+            "message: Observed detect-only\nrule:\n  pattern: third($VALUE)\n",
+            encoding="utf-8",
+        )
+        (project / "src" / "subject.py").write_text(
+            "first(1)\nthird(2)\n",
+            encoding="utf-8",
+        )
+        return project
 
-    # Why: flattened nested TestParseViolationValid/Invalid/TestFixabilityClassification/
-    # TestCensusExecute sibling classes into this outer class — a nested class does not
-    # inherit the outer one, so calling _parse_violation via a throwaway instance was
-    # external private-member access (ruff SLF001).
-    @pytest.mark.parametrize(
-        (
-            "violation_str",
-            "expected_rule",
-            "expected_module",
-            "expected_line",
-            "expected_msg",
-        ),
-        [
-            (
-                "[NS-000-001] src/file.py:42 — Multiple outer classes found (expected 1, got 2)",
-                "NS-000",
-                "src/file.py",
-                42,
-                "Multiple outer classes found (expected 1, got 2)",
-            ),
-            (
-                "[NS-001-001] src/file.py:10 — Loose Final constant 'X' belongs in constants.py",
-                "NS-001",
-                "src/file.py",
-                10,
-                "Loose Final constant 'X' belongs in constants.py",
-            ),
-            (
-                "[NS-002-001] src/file.py:5 — TypeVar 'T' belongs in typings.py",
-                "NS-002",
-                "src/file.py",
-                5,
-                "TypeVar 'T' belongs in typings.py",
-            ),
-            (
-                "[NS-001-099] src/deep/nested/module.py:999 — Some long message with special chars: !@#",
-                "NS-001",
-                "src/deep/nested/module.py",
-                999,
-                "Some long message with special chars: !@#",
-            ),
-        ],
-        ids=["ns000", "ns001", "ns002", "deep-path"],
-    )
-    def test_parses_fields(
+    def test_report_violations_carry_rule_location_and_fixability(
         self,
-        violation_str: str,
-        expected_rule: str,
-        expected_module: str,
-        expected_line: int,
-        expected_msg: str,
+        tmp_path: Path,
     ) -> None:
-        result = self._parse_violation(violation_str)
-        violation = tm.ok(result)
-        tm.that(violation, is_=m.Infra.CensusViolation)
-        tm.that(violation.rule, eq=expected_rule)
-        tm.that(violation.module, eq=expected_module)
-        tm.that(violation.line, eq=expected_line)
-        tm.that(violation.message, eq=expected_msg)
+        project = self._project(tmp_path)
+        report = FlextInfraNamespaceValidator(repository_root=project).build_report()
+
+        violations = tm.ok(u.Infra.parse_namespace_validation(report, project))
+
+        observed = {
+            violation.rule: violation
+            for violation in violations
+            if violation.rule in {self._FIXABLE_RULE, self._DETECT_RULE}
+        }
+        tm.that(sorted(observed), eq=sorted((self._FIXABLE_RULE, self._DETECT_RULE)))
+        fixable = observed[self._FIXABLE_RULE]
+        detect = observed[self._DETECT_RULE]
+        tm.that((fixable.module, fixable.line), eq=("src/subject.py", 1))
+        tm.that((detect.module, detect.line), eq=("src/subject.py", 2))
+        tm.that(fixable.message, eq="Observed fixable")
+        tm.that(fixable.fixable, eq=True)
+        tm.that(detect.fixable, eq=False)
 
     @pytest.mark.parametrize(
-        "violation_str",
+        "violation",
         [
             "",
             "random text without brackets",
-            "[WRONG-FORMAT] missing fields",
-            "[NS-001] src/file.py:10 - wrong dash instead of em-dash",
+            "[census-fixable] src/file.py:10 - wrong dash instead of em-dash",
             "src/file.py:10 — Missing rule prefix",
-            "[NS-001-001] no-colon-line — message",
-            "[NS-001-001] src/file.py:notanumber — message",
+            "[census-fixable] src/file.py:notanumber — message",
         ],
-        ids=[
-            "empty",
-            "no-brackets",
-            "wrong-format",
-            "wrong-dash",
-            "missing-rule",
-            "no-line-number",
-            "non-numeric-line",
-        ],
+        ids=["empty", "no-brackets", "wrong-dash", "missing-rule", "non-numeric"],
     )
-    def test_returns_none(self, violation_str: str) -> None:
-        tm.that(self._parse_violation(violation_str), ok=False)
-
-    def test_ns000_not_fixable(self) -> None:
-        result = self._parse_violation(
-            "[NS-000-001] src/file.py:1 — Structure violation",
-        )
-        violation = tm.ok(result)
-        tm.that(not violation.fixable, eq=True)
-
-    def test_ns001_fixable(self) -> None:
-        result = self._parse_violation(
-            "[NS-001-001] src/file.py:1 — Constant violation",
-        )
-        violation = tm.ok(result)
-        tm.that(violation.fixable, eq=True)
-
-    def test_ns002_fixable(self) -> None:
-        result = self._parse_violation("[NS-002-001] src/file.py:1 — TypeVar violation")
-        violation = tm.ok(result)
-        tm.that(violation.fixable, eq=True)
-
-    def test_ns000_multiple_sub_rules_not_fixable(self) -> None:
-        for sub in ("001", "002", "099"):
-            result = self._parse_violation(f"[NS-000-{sub}] src/x.py:1 — msg")
-            violation = tm.ok(result)
-            tm.that(not violation.fixable, eq=True)
-
-    def test_execute_fails_when_apply_changes_requested(
+    def test_malformed_report_line_raises(
         self,
         tmp_path: Path,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
+        violation: str,
     ) -> None:
+        project = self._project(tmp_path)
+        report = r[m.Infra.ValidationReport].ok(
+            m.Infra.ValidationReport(passed=False, violations=[violation]),
+        )
+
+        with pytest.raises(ValueError, match="report format"):
+            u.Infra.parse_namespace_validation(report, project)
+
+    def test_report_failure_propagates(self, tmp_path: Path) -> None:
+        project = self._project(tmp_path)
+        report = r[m.Infra.ValidationReport].fail("scan failed")
+
+        tm.fail(
+            u.Infra.parse_namespace_validation(report, project),
+            has="scan failed",
+        )
+
+    def test_execute_fails_when_apply_changes_requested(self, tmp_path: Path) -> None:
         result = FlextInfraCodegenCensus(
             repository_root=tmp_path,
             apply_changes=True,
-            rope=rope_workspace,
         ).execute()
 
         tm.fail(
