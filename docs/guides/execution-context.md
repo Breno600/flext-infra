@@ -219,13 +219,11 @@ passando pelo `make mod`.
 Um WIP publicado preserva o trabalho e permite revisão. Conclusão exige os critérios do
 Bead ativo, integração e runtime medido no SHA integrado. Exceções registradas em
 handoffs históricos, incluindo aceite temporário com gates customizados vermelhos, não
-transferem para uma revisão ou Bead posterior. A autorização de 24/09/2026 em
-`flext-xp6ec`, sob `flext-itpd1.3`, suspende somente `duplication`, `codemod`,
-`boundary`, `namespace` e `runtime-census`. O responsável tipado
-`make.check_gate_suspensions` registra gate, autoridade e motivo. O Make emite um recibo
-explícito de cada suspensão, sem contabilizá-la como aprovação. Os gates de lint, format
-e type-checkers (`pyrefly`, `mypy`, `pyright`) nunca são suspensíveis: o modelo rejeita
-essa suspensão ao carregar a configuração. `make check` falha quando a seleção não
+transferem para uma revisão ou Bead posterior. A configuração atual mantém uma
+suspensão explícita do gate `namespace`; o responsável tipado valida sua autoridade
+e seu escopo. Os gates de lint, format e type-checkers
+(`pyrefly`, `mypy`, `pyright`) nunca são suspensíveis: o modelo rejeita essa
+suspensão ao carregar a configuração. `make check` falha quando a seleção não
 contém projetos ou quando um projeto selecionado não tem `pyproject.toml`; nenhum
 projeto é pulado em silêncio. Local, CI e hooks derivam seus gates do mesmo conjunto
 ativo, preservando a partição de tipagem já declarada: `CI=N make check` executa a
@@ -235,6 +233,10 @@ executar todos os gates ativos; os demais verbos do hook mantêm o token local. 
 workflow de CI executa as duas partições, sem sobreposição. Os validadores conservam sua
 severidade e os gates funcionais ativos continuam exigindo execução sem warnings ou
 findings residuais.
+
+`smells` não pertence às partições de `make check`. O comando selector-free
+`make smells` executa o mesmo gate de análise em separado e falha quando encontra
+defeitos. Seus achados são tratados em uma campanha posterior para todos os projetos.
 
 O handoff final relaciona PRs, commits de merge e prova após integração aos Beads. Se
 algo permanece pendente, o texto deve nomeá-lo e oferecer a próxima ação executável, sem
