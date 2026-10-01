@@ -104,10 +104,11 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
                         commit,
                         current.as_posix(),
                     )
-                except GitCommandError as exc:
-                    return r[bool].fail(str(exc), exception=exc)
-                except (OSError, ValueError) as exc:
-                    return r[bool].fail(f"failed to apply gitlink: {current}: {exc}")
+                except (GitCommandError, OSError, ValueError) as exc:
+                    return r[bool].fail(
+                        f"failed to apply gitlink: {current}: {exc}",
+                        exception=exc,
+                    )
         return r[bool].ok(True)
 
     @classmethod
@@ -126,23 +127,24 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
         original = {
             path: (delta.source_root / path).read_bytes() for path in collisions
         }
-        for path in collisions:
-            (delta.source_root / path).unlink()
         try:
+            for path in collisions:
+                (delta.source_root / path).unlink()
             repo = cls._repo(delta.source_root)
             with FlextInfraUtilitiesGitWorktreeIO.git_stdin(delta.patch) as istream:
                 repo.git.apply("--binary", "-", istream=istream)
-        except GitCommandError:
-            # Rollback: restore original ignored files.
+        except (GitCommandError, OSError, ValueError) as exc:
+            # Rollback restores the ignored files this invocation removed; the
+            # apply failure stays the reported cause.
             for path, content in original.items():
                 target = delta.source_root / path
-                if target.exists():
-                    target.unlink()
+                target.unlink(missing_ok=True)
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(content)
-            return r[bool].fail("git apply failed on ignored additions")
-        except (OSError, ValueError) as exc:
-            return r[bool].fail(f"git apply failed: {exc}", exception=exc)
+            return r[bool].fail(
+                f"git apply failed on ignored additions: {exc}",
+                exception=exc,
+            )
         return r[bool].ok(True)
 
     @classmethod
@@ -163,12 +165,7 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
             repo = cls._repo(delta.source_root)
             with FlextInfraUtilitiesGitWorktreeIO.git_stdin(delta.patch) as istream:
                 repo.git.apply("--binary", "-", istream=istream)
-        except GitCommandError:
-            converged_result = cls._git_source_has_patch(delta)
-            if converged_result.success:
-                return cls._git_apply_gitlinks(delta.source_root, delta.patch)
-            return r[bool].fail("git apply failed")
-        except (OSError, ValueError) as exc:
+        except (GitCommandError, OSError, ValueError) as exc:
             return r[bool].fail(f"git apply failed: {exc}", exception=exc)
         return cls._git_apply_gitlinks(delta.source_root, delta.patch)
 
