@@ -25,10 +25,7 @@ if TYPE_CHECKING:
     from ._wrapper_rewrite import FlextInfraWrapperRootNamespaceRewriteMixin
     from .accessor_migration import FlextInfraAccessorMigrationOrchestrator
     from .census import FlextInfraRefactorCensus
-    from .classvar_constant_autofix import FlextInfraRefactorClassvarConstantAutofix
     from .namespace_enforcer import FlextInfraNamespaceEnforcer
-    from .namespace_enforcer_phases import FlextInfraNamespaceEnforcerPhasesMixin
-    from .project_alias_migrator import FlextInfraRefactorProjectAliasMigrator
     from .project_classifier import FlextInfraProjectClassifier
     from .wrapper_root_namespace import FlextInfraWrapperRootNamespaceRefactor
 
@@ -38,7 +35,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraAccessorMigrationReportMixin",
     "FlextInfraAccessorMigrationRewriteMixin",
     "FlextInfraNamespaceEnforcer",
-    "FlextInfraNamespaceEnforcerPhasesMixin",
     "FlextInfraNamespaceEnforcerProjectMixin",
     "FlextInfraProjectClassifier",
     "FlextInfraProjectClassifierDepsMixin",
@@ -52,8 +48,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraRefactorCensusProjectMixin",
     "FlextInfraRefactorCensusRemovalMixin",
     "FlextInfraRefactorCensusRenderMixin",
-    "FlextInfraRefactorClassvarConstantAutofix",
-    "FlextInfraRefactorProjectAliasMigrator",
     "FlextInfraWrapperRootNamespaceRefactor",
     "FlextInfraWrapperRootNamespaceRewriteMixin",
 )
@@ -83,12 +77,7 @@ _LAZY_IMPORTS = MappingProxyType(
             "._wrapper_rewrite": ("FlextInfraWrapperRootNamespaceRewriteMixin",),
             ".accessor_migration": ("FlextInfraAccessorMigrationOrchestrator",),
             ".census": ("FlextInfraRefactorCensus",),
-            ".classvar_constant_autofix": (
-                "FlextInfraRefactorClassvarConstantAutofix",
-            ),
             ".namespace_enforcer": ("FlextInfraNamespaceEnforcer",),
-            ".namespace_enforcer_phases": ("FlextInfraNamespaceEnforcerPhasesMixin",),
-            ".project_alias_migrator": ("FlextInfraRefactorProjectAliasMigrator",),
             ".project_classifier": ("FlextInfraProjectClassifier",),
             ".wrapper_root_namespace": ("FlextInfraWrapperRootNamespaceRefactor",),
         }),

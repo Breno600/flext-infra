@@ -115,6 +115,7 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         inherited_facets: t.StrSequence = (),
         root_modules: t.StrSequence = (),
         root_packages: t.StrSequence = (),
+        repository_namespace_packages: t.StrSequence = (),
         packaged_data_paths: t.StrSequence = (),
         packaged_data_excludes: t.StrSequence = (),
         extra_verbs: t.VariadicTuple[m.Infra.MakeVerbSpec] = (),
@@ -162,6 +163,14 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                     "root_modules": tuple(root_modules),
                     "root_packages": tuple(root_packages),
                 },
+            )
+        if repository_namespace_packages:
+            project = project.model_copy(
+                update={
+                    "repository_namespace_packages": tuple(
+                        repository_namespace_packages
+                    )
+                }
             )
         if packaged_data_paths:
             project = project.model_copy(
