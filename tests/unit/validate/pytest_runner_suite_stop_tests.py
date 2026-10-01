@@ -94,15 +94,11 @@ class TestsFlextInfraPytestRunnerSuiteStop:
         runner = runner_for(cached_runner_project)
         multi_plan = dispatch_plan(multi)
         multi_command = runner.build_command(
-            cached_runner_project / runner.reports,
-            multi_plan.node_ids,
-            m.Infra.PytestInvocation(manifest_path=multi_plan.manifest_path),
+            cached_runner_project / runner.reports, multi_plan
         )
         serial_plan = dispatch_plan(multi[:1])
         serial_command = runner.build_command(
-            cached_runner_project / runner.reports,
-            serial_plan.node_ids,
-            m.Infra.PytestInvocation(manifest_path=serial_plan.manifest_path),
+            cached_runner_project / runner.reports, serial_plan
         )
 
         def stop_value(command: t.StrSequence) -> float:

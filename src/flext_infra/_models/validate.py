@@ -146,24 +146,6 @@ class FlextInfraModelsCore:
             ),
         )
 
-    class PytestInvocation(m.Value):
-        """How one suite invocation runs: manifest coupling and mode."""
-
-        manifest_path: Path | None = m.Field(
-            default=None,
-            description="Collection manifest enforcing a nonempty selection",
-        )
-        serialize: bool = m.Field(
-            default=False, description="Run serially without xdist workers"
-        )
-        whole_target: bool = m.Field(
-            default=False, description="Selection covers the complete test target"
-        )
-        execution_mode: c.Infra.PytestExecutionMode = m.Field(
-            default=c.Infra.PytestExecutionMode.INCREMENTAL,
-            description="Canonical execution mode for this invocation",
-        )
-
     class PytestRunContext(m.Value):
         """Immutable execution identity shared by a phase's native receipts."""
 
