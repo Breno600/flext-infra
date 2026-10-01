@@ -95,6 +95,14 @@ Infra:
       # cooldown passes that check.
       mise_selector: github:jdx/mise
       mise_version: "2026.9.16"
+      # The network bootstrap (make setup, make upg) selects its GitHub
+      # credential once, before any effect: the caller's GITHUB_TOKEN when it
+      # is set (ai-hub propagates it through .envrc.ai-hub); otherwise the first
+      # command below whose executable is on PATH. A selected command that fails
+      # or prints nothing stops the verb; it never degrades to anonymous. With
+      # no source present, mise reaches GitHub anonymously.
+      github_credential_commands:
+        - [gh, auth, token]
       # Projection: .mise.toml [tools] keys. Override the selector here.
       qlty_selector: github:qltysh/qlty
       qlty_version: latest

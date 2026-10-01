@@ -15,6 +15,15 @@
 {% for name in bootstrap.passthrough_environment if name != "PATH" -%}
 	caller_{{ name | lower }}="{{ '$${' ~ name ~ ':-}' }}"; \
 {% endfor -%}
+{% for command in bootstrap.credential_commands -%}
+	if [ -z "$$caller_github_token" ] && command -v {{ command[0] }} >/dev/null 2>&1; then \
+		caller_github_token="$$({{ command | join(' ') }})" \
+			|| { printf 'ERROR: the selected GitHub credential source failed: %s\n' '{{ command | join(' ') }}' >&2; exit 2; }; \
+		if [ -z "$$caller_github_token" ]; then \
+			printf 'ERROR: the selected GitHub credential source printed nothing: %s\n' '{{ command | join(' ') }}' >&2; exit 2; \
+		fi; \
+	fi; \
+{% endfor -%}
 	mise_pin_file="$(MISE_VERSION_PIN)"; \
 	mise_pin=; \
 	if [ -f "$$mise_pin_file" ]; then \

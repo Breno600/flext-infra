@@ -898,15 +898,16 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, lacks=["gen > /dev/null", "could not be staged"])
 
     @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
-    def test_bootstrap_reads_only_the_caller_github_token(
+    def test_bootstrap_selects_the_github_credential_from_declared_sources(
         self,
         tmp_path: Path,
         profile: c.Infra.MakeProfile,
     ) -> None:
-        """The one credential variable comes from the caller, never a store.
+        """The credential source is selected once; a selected source must deliver.
 
-        An absent ``GITHUB_TOKEN`` leaves mise anonymous; no recipe asks gh, a
-        keyring or netrc for a stored credential to fill it.
+        The caller's ``GITHUB_TOKEN`` wins; otherwise each declared command whose
+        executable is on PATH is consulted in order, and its failure or empty
+        output stops the verb instead of degrading to anonymous access.
         """
         project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path,
@@ -916,8 +917,22 @@ class TestsFlextInfraCodegenMakeEnvironment:
         makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
             encoding="utf-8",
         )
+        commands = config.Infra.codegen.toolchain.github_credential_commands
         tm.that(makefile, has="export GITHUB_TOKEN")
-        tm.that(makefile, lacks=["gh auth", "gh_auth_token"])
+        tm.that(bool(commands), eq=True)
+        for command in commands:
+            rendered = " ".join(command)
+            tm.that(
+                makefile,
+                has=[
+                    f"command -v {command[0]} >/dev/null 2>&1; then",
+                    f'caller_github_token="$$({rendered})"',
+                    "the selected GitHub credential source failed: %s\\n' "
+                    f"'{rendered}' >&2; exit 2;",
+                    "the selected GitHub credential source printed nothing",
+                ],
+            )
+            tm.that(makefile, lacks=f"$$({rendered} 2>/dev/null)")
 
     @staticmethod
     def test_public_gate_fails_closed_before_managed_environment_exists(
