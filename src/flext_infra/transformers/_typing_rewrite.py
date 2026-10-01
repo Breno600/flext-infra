@@ -52,8 +52,24 @@ class FlextInfraRefactorTypingUnifierRewriteMixin:
             self.module = cst.Module(body=())
 
         def qualified_name(self, node: cst.BaseExpression) -> str | None:
-            """Resolve one imported or builtin identity; reject competing bindings."""
-            names = self.scope.get_qualified_names_for(node)
+            """Resolve one imported or builtin identity; reject competing bindings.
+
+            Competing bindings resolve deterministically before failing loud:
+            an IMPORT-source candidate outranks a module-level rebinding, and a
+            fully-qualified name outranks a bare one — the binding actually
+            imported in the file is the identity the rewrite must honor
+            (flext-oolmd: facade aliases shadowed by their own constants
+            module, e.g. ``c = FlextDbOracleConstants`` beside
+            ``from flext_db_oracle import c``).
+            """
+            names = list(self.scope.get_qualified_names_for(node))
+            if len(names) > 1:
+                imported = [
+                    name for name in names if name.source == QualifiedNameSource.IMPORT
+                ]
+                candidates = imported or names
+                dotted = [name for name in candidates if "." in name.name]
+                names = dotted or candidates
             if len(names) > 1:
                 msg = f"ambiguous type binding: {sorted(name.name for name in names)}"
                 raise ValueError(msg)
@@ -67,45 +83,57 @@ class FlextInfraRefactorTypingUnifierRewriteMixin:
                 None,
             )
 
-        def rewrite(self, node: cst.BaseExpression) -> cst.BaseExpression:
+        def rewrite(
+            self,
+            node: cst.BaseExpression,
+            *,
+            allow_widen: bool | None = None,
+        ) -> cst.BaseExpression:
             """Rewrite types while leaving calls and non-type payloads untouched."""
+            widen = self.widen if allow_widen is None else allow_widen
             if isinstance(node, cst.SimpleString | cst.ConcatenatedString):
                 value = node.evaluated_value
                 if not isinstance(value, str):
                     return node
                 expression = cst.parse_expression(value)
-                rewritten = self.rewrite(expression)
+                rewritten = self.rewrite(expression, allow_widen=widen)
                 if rewritten.deep_equals(expression):
                     return node
                 return cst.SimpleString(repr(self.module.code_for_node(rewritten)))
             if isinstance(node, cst.Subscript):
-                return self._subscript(node)
+                return self._subscript(node, widen=widen)
             if isinstance(node, cst.BinaryOperation) and isinstance(
-                node.operator, cst.BitOr
+                node.operator,
+                cst.BitOr,
             ):
                 canonical = self._union(node)
                 if canonical is not None:
                     return canonical
                 return node.with_changes(
-                    left=self.rewrite(node.left), right=self.rewrite(node.right)
+                    left=self.rewrite(node.left, allow_widen=widen),
+                    right=self.rewrite(node.right, allow_widen=widen),
                 )
             if isinstance(node, cst.Tuple | cst.List):
                 return node.with_changes(
                     elements=tuple(
-                        element.with_changes(value=self.rewrite(element.value))
+                        element.with_changes(
+                            value=self.rewrite(element.value, allow_widen=False),
+                        )
                         for element in node.elements
-                    )
+                    ),
                 )
             if isinstance(node, cst.Name | cst.Attribute):
                 replacement = self.replacements.get(self.qualified_name(node) or "")
                 if replacement is not None:
                     self.replaced_symbols.append((node, replacement))
                     return self._changed(
-                        node, cst.parse_expression(replacement), "symbol"
+                        node,
+                        cst.parse_expression(replacement),
+                        "symbol",
                     )
             return node
 
-        def _subscript(self, node: cst.Subscript) -> cst.BaseExpression:
+        def _subscript(self, node: cst.Subscript, *, widen: bool) -> cst.BaseExpression:
             name = self.qualified_name(node.value)
             if name in {"typing.Literal", "typing_extensions.Literal"}:
                 return node
@@ -113,15 +141,18 @@ class FlextInfraRefactorTypingUnifierRewriteMixin:
             slices = tuple(
                 element.with_changes(
                     slice=element.slice.with_changes(
-                        value=self.rewrite(element.slice.value)
-                    )
+                        value=self.rewrite(
+                            element.slice.value,
+                            allow_widen=widen if annotated else False,
+                        ),
+                    ),
                 )
                 if isinstance(element.slice, cst.Index)
                 and (not annotated or index == 0)
                 else element
                 for index, element in enumerate(node.slice)
             )
-            value = self.rewrite(node.value)
+            value = self.rewrite(node.value, allow_widen=False)
             if self.containers and name in {"builtins.tuple", "typing.Tuple"}:
                 alias = self._tuple_alias(node)
                 if alias is not None:
@@ -133,7 +164,7 @@ class FlextInfraRefactorTypingUnifierRewriteMixin:
                         )
             elif (
                 self.containers
-                and self.widen
+                and widen
                 and (replacement := self._CONTAINERS.get(name or "")) is not None
             ):
                 self.requires_t = True
@@ -156,7 +187,8 @@ class FlextInfraRefactorTypingUnifierRewriteMixin:
             while pending:
                 member = pending.pop()
                 if isinstance(member, cst.BinaryOperation) and isinstance(
-                    member.operator, cst.BitOr
+                    member.operator,
+                    cst.BitOr,
                 ):
                     pending.extend((member.left, member.right))
                     continue
@@ -169,16 +201,21 @@ class FlextInfraRefactorTypingUnifierRewriteMixin:
                 return None
             self.requires_t = self.requires_t or replacement.startswith("t.")
             return self._changed(
-                node, cst.parse_expression(replacement), "inline union"
+                node,
+                cst.parse_expression(replacement),
+                "inline union",
             )
 
         def _changed(
-            self, original: cst.BaseExpression, updated: cst.BaseExpression, kind: str
+            self,
+            original: cst.BaseExpression,
+            updated: cst.BaseExpression,
+            kind: str,
         ) -> cst.BaseExpression:
             if not original.deep_equals(updated):
                 self.changes.append(
                     f"Canonicalized {kind} {self.module.code_for_node(original)} -> "
-                    f"{self.module.code_for_node(updated)}"
+                    f"{self.module.code_for_node(updated)}",
                 )
             return updated
 

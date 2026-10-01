@@ -22,7 +22,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import c, u
+from flext_infra import c
 
 from ._rope_import_boundary import FlextInfraRopeImportBoundaryBase
 
@@ -47,62 +47,12 @@ class FlextInfraValidateTierWhitelist(FlextInfraRopeImportBoundaryBase):
     _SCAN_KIND: ClassVar[str] = "tier-whitelist"
 
     @override
-    def _is_in_scope(self, _file_path: Path, *, repository_root: Path) -> bool:
-        """Skip files inside git submodule directories and cache/temp directories.
-
-        Submodule directories are independent projects with their own
-        tier-whitelist runs; scanning them from the workspace level is
-        redundant and produces cross-boundary false positives.
-
-        Cache/temp/state directories (virtual envs, tool caches, test temp dirs,
-        IDE/editor dirs, etc.) are not project source and must not be scanned.
-        """
-        # The checkout's ancestors do not belong to this scan. A linked lane
-        # under .claude/worktrees is still a complete project source root.
-        relative = _file_path.relative_to(repository_root)
-        excluded_dirs = {
-            ".test-tmp",
-            ".venv",
-            ".mypy_cache",
-            ".pytest_cache",
-            ".ruff_cache",
-            ".cache",
-            ".github",
-            ".kilo",
-            ".vscode",
-            ".worktrees",
-            "worktrees",
-            "flext-infra-worktrees",
-            "dist",
-            ".agents-sync-home",
-            ".beads",
-            ".benchmarks",
-            ".claude",
-            ".codex",
-            ".mimosa",
-            ".poolside",
-            ".qlty",
-            ".reports",
-            ".ropeproject",
-            ".rumdl_cache",
-            ".snapshots",
-            ".state",
-            ".gc",
-            ".agents",
-        }
-        for part in relative.parts:
-            if part in excluded_dirs:
-                return False
-
-        # Skip files owned by governed member repositories (submodules).
-        member_roots = frozenset(u.Infra.governed_project_roots(repository_root)) - {
-            repository_root.resolve()
-        }
-        return not any(parent in member_roots for parent in _file_path.parents)
-
-    @override
     def _is_allowlisted(
-        self, _file_path: Path, _module_name: str, *, repository_root: Path
+        self,
+        _file_path: Path,
+        _module_name: str,
+        *,
+        repository_root: Path,
     ) -> bool:
         """Return True iff ``file_path`` owns ``module_name`` per OWNERS SSOT.
 

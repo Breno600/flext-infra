@@ -44,11 +44,11 @@ class FlextInfraUtilitiesSignatureRules:
         listing = parsed.value.get(c.Infra.REFACTOR_SIGNATURE_RULES_KEY)
         if listing is None:
             return r[tuple[m.Infra.SignatureMigration, ...]].fail(
-                f"signature catalogue declares no migrations list: {source}"
+                f"signature catalogue declares no migrations list: {source}",
             )
         if not isinstance(listing, list):
             return r[tuple[m.Infra.SignatureMigration, ...]].fail(
-                f"signature catalogue migrations must be a list: {source}"
+                f"signature catalogue migrations must be a list: {source}",
             )
         migrations: list[m.Infra.SignatureMigration] = []
         seen: set[str] = set()
@@ -59,7 +59,7 @@ class FlextInfraUtilitiesSignatureRules:
             migration = built.value
             if migration.id in seen:
                 return r[tuple[m.Infra.SignatureMigration, ...]].fail(
-                    f"signature migration id is declared twice: {migration.id}"
+                    f"signature migration id is declared twice: {migration.id}",
                 )
             seen.add(migration.id)
             if migration.enabled:
@@ -68,22 +68,24 @@ class FlextInfraUtilitiesSignatureRules:
 
     @staticmethod
     def _build(
-        raw: p.AttributeProbe, source: Path
+        raw: p.AttributeProbe,
+        source: Path,
     ) -> p.Result[m.Infra.SignatureMigration]:
         """Validate one declared migration into its typed owner."""
         if not isinstance(raw, Mapping):
             return r[m.Infra.SignatureMigration].fail(
-                f"signature migration entry must be a mapping: {source}"
+                f"signature migration entry must be a mapping: {source}",
             )
         try:
             migration = m.Infra.SignatureMigration.model_validate(dict(raw))
         except c.ValidationError as error:
             return r[m.Infra.SignatureMigration].fail_op(
-                f"validate signature migration in {source}", error
+                f"validate signature migration in {source}",
+                error,
             )
         if not migration.target_qualified_names and not migration.target_simple_names:
             return r[m.Infra.SignatureMigration].fail(
-                f"signature migration {migration.id} targets no callable: {source}"
+                f"signature migration {migration.id} targets no callable: {source}",
             )
         if (
             not migration.keyword_renames
@@ -91,7 +93,7 @@ class FlextInfraUtilitiesSignatureRules:
             and not migration.add_keywords
         ):
             return r[m.Infra.SignatureMigration].fail(
-                f"signature migration {migration.id} declares no rewrite: {source}"
+                f"signature migration {migration.id} declares no rewrite: {source}",
             )
         return r[m.Infra.SignatureMigration].ok(migration)
 

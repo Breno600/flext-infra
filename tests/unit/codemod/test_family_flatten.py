@@ -19,7 +19,10 @@ class TestsFlextInfraFamilyFlatten:
 
     @pytest.mark.parametrize("collision", [False, True])
     def test_snapshot_rewrites_alias_and_inherited_consumers_without_effects(
-        self, tmp_path: Path, *, collision: bool
+        self,
+        tmp_path: Path,
+        *,
+        collision: bool,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         directory = c.Infra.FAMILY_DIRECTORIES["m"]
@@ -99,7 +102,9 @@ class TestsFlextInfraFamilyFlatten:
         ],
     )
     def test_entity_classes_are_not_namespace_wrappers(
-        self, tmp_path: Path, entity: str
+        self,
+        tmp_path: Path,
+        entity: str,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         family = package / c.Infra.FAMILY_DIRECTORIES["m"]
@@ -119,10 +124,13 @@ class TestsFlextInfraFamilyFlatten:
         tm.that(planned.value, empty=True)
 
     @pytest.mark.parametrize(
-        "reference", ["ALIAS = {owner}.Wrapper", 'alias: "{owner}.Wrapper"']
+        "reference",
+        ["ALIAS = {owner}.Wrapper", 'alias: "{owner}.Wrapper"'],
     )
     def test_wrapper_used_as_an_entity_is_preserved_without_edits(
-        self, tmp_path: Path, reference: str
+        self,
+        tmp_path: Path,
+        reference: str,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         directory = c.Infra.FAMILY_DIRECTORIES["c"]
@@ -145,3 +153,47 @@ class TestsFlextInfraFamilyFlatten:
         tm.ok(planned)
         tm.that(planned.value, empty=True)
         tm.that(path.read_text(encoding="utf-8"), eq=source)
+
+    def test_flatten_removes_wrapper_docstring_and_promotes_alias_member(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        root, package = u.Tests.create_lazy_init_workspace(tmp_path)
+        family = package / c.Infra.FAMILY_DIRECTORIES["m"]
+        family.mkdir()
+        (family / c.Infra.INIT_PY).write_text("", encoding="utf-8")
+        path = family / "payload.py"
+        owner = f"{u.derive_class_stem(root.name)}ModelsPayload"
+        source = (
+            "from enum import Enum\n\n"
+            f"class {owner}:\n"
+            '    """Owner doc."""\n'
+            "    class Wrapper:\n"
+            '        """Wrapper doc."""\n'
+            "        class Entity(Enum):\n"
+            "            VALUE = 'member'\n"
+            "        type Grouped = Entity\n"
+            f"\n__all__ = ['{owner}']\n"
+        )
+        path.write_text(source, encoding="utf-8")
+        consumer = package / "consumer.py"
+        references = (
+            f"from {package.name}.{c.Infra.FAMILY_DIRECTORIES['m']}.payload import "
+            f"{owner} as Part\n\nmember: Part.Wrapper.Grouped\n"
+        )
+        consumer.write_text(references, encoding="utf-8")
+        with infra.rope_workspace(root) as rope:
+            planned = u.Infra.plan_semantic_cutover(
+                c.Infra.SemanticCutoverPhase.CLASS_NESTING,
+                rope_workspace=rope,
+                sources={path: source, consumer: references},
+            )
+        tm.ok(planned)
+        flattened = {path: source, consumer: references}
+        flattened.update({
+            edit.file_path: edit.updated_source for edit in planned.value
+        })
+        tm.that(flattened[path], has='"""Owner doc."""')
+        tm.that(flattened[path], has="type WrapperGrouped = WrapperEntity")
+        tm.that(flattened[consumer], has="member: Part.WrapperGrouped")
+        assert '"""Wrapper doc."""' not in flattened[path], flattened[path]

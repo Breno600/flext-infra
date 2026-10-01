@@ -17,7 +17,10 @@ class TestsBatchReplacements:
 
     @staticmethod
     def _report(
-        path: Path, content: bytes, *, generated: bool = False
+        path: Path,
+        content: bytes,
+        *,
+        generated: bool = False,
     ) -> m.Infra.ModScanReport:
         path.write_bytes(content)
         state = tm.ok(u.Cli.atomic_read_binary_file_state(path, required=True))
@@ -55,7 +58,8 @@ class TestsBatchReplacements:
         tm.that(path.read_bytes(), eq=original.replace(b"before", b"after"))
 
     def test_generator_findings_remain_visible_and_unmodified(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         root = test_u.Tests.git_repository(tmp_path)
         path = root / "generated.py"
@@ -68,10 +72,13 @@ class TestsBatchReplacements:
         tm.that(path.read_bytes(), eq=original)
 
     @pytest.mark.parametrize(
-        "changed", [b'value = "before"\n\n', b'value = "third-party"\n']
+        "changed",
+        [b'value = "before"\n\n', b'value = "third-party"\n'],
     )
     def test_changed_source_is_not_overwritten(
-        self, tmp_path: Path, changed: bytes
+        self,
+        tmp_path: Path,
+        changed: bytes,
     ) -> None:
         root = test_u.Tests.git_repository(tmp_path)
         path = root / "subject.py"
@@ -87,3 +94,52 @@ class TestsBatchReplacements:
         finding = report.entries[0].model_copy(update={"source_state": None})
         invalid = report.model_copy(update={"entries": (finding,)})
         tm.fail(FlextInfraModReplacements.publish(root, invalid))
+
+    def test_emptied_statement_publishes_formatter_clean_file(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """An emptied statement fix publishes skeleton-free, format-clean bytes.
+
+        The ban-test-suite-module-all rule rewrites its match to ``""``; the
+        byte-splice leaves the source line blank and the mod circuit enforces
+        canonical formatting on the first pass after applying.
+        """
+        root = test_u.Tests.git_repository(tmp_path)
+        path = root / "tests" / "unit" / "test_demo.py"
+        path.parent.mkdir(parents=True)
+        original = (
+            b'"""Demo."""\n\n__all__ = ["X"]\n\n\ndef t() -> None:\n    assert True\n'
+        )
+        path.write_bytes(original)
+        state = tm.ok(u.Cli.atomic_read_binary_file_state(path, required=True))
+        statement = b'__all__ = ["X"]'
+        start = original.index(statement)
+        offsets = {"start": start, "end": start + len(statement)}
+        finding = m.Infra.ModScanFinding(
+            rule_file=str(root / "rule.yaml"),
+            rule_id="ban-test-suite-module-all",
+            repository=root.name,
+            file=path,
+            source_owner="authored",
+            source_state=state,
+            range={"byteOffset": offsets},
+            text=statement.decode(),
+            replacement="",
+            actionable=True,
+            classification=c.Infra.ModScanFindingClass.ACTIONABLE,
+            payload={"replacementOffsets": offsets, "severity": "error"},
+        )
+        report = m.Infra.ModScanReport(
+            findings=1,
+            actionable=1,
+            detection_only=0,
+            non_actionable_with_fix=0,
+            files=frozenset({path}),
+            entries=(finding,),
+        )
+        tm.ok(FlextInfraModReplacements.publish(root, report))
+        tm.that(
+            path.read_bytes(),
+            eq=b'"""Demo."""\n\n\ndef t() -> None:\n    assert True\n',
+        )

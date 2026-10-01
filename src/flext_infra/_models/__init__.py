@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from ._config.workspace import FlextInfraConfigModelsWorkspace
     from ._git.identity import FlextInfraModelsGitIdentity
     from ._git.worktree_facts import FlextInfraModelsGitWorktreeFacts
+    from ._git.worktree_state import FlextInfraModelsGitWorktreeState
     from .base import FlextInfraModelsBase
     from .census import FlextInfraModelsCensus
     from .check import FlextInfraModelsCheck
@@ -59,7 +60,6 @@ if TYPE_CHECKING:
     from .docs_collection import FlextInfraModelsDocsCollection
     from .docs_generation import FlextInfraModelsDocsGeneration
     from .duplication import FlextInfraModelsDuplication
-    from .enforcement import FlextInfraModelsEnforcement
     from .gates import FlextInfraModelsGates
     from .git import FlextInfraModelsGit
     from .layout import FlextInfraModelsLayout
@@ -73,7 +73,6 @@ if TYPE_CHECKING:
     from .release import FlextInfraModelsRelease
     from .rope import FlextInfraModelsRope
     from .rope_move import FlextInfraModelsRopeMove
-    from .rope_rules import FlextInfraModelsRopeRules
     from .scan import FlextInfraModelsScan
     from .settings import FlextInfraSettingsModels
     from .sonarcloud import FlextInfraModelsSonarcloud
@@ -127,11 +126,11 @@ __all__: tuple[str, ...] = (
     "FlextInfraModelsDocsCollection",
     "FlextInfraModelsDocsGeneration",
     "FlextInfraModelsDuplication",
-    "FlextInfraModelsEnforcement",
     "FlextInfraModelsGates",
     "FlextInfraModelsGit",
     "FlextInfraModelsGitIdentity",
     "FlextInfraModelsGitWorktreeFacts",
+    "FlextInfraModelsGitWorktreeState",
     "FlextInfraModelsLayout",
     "FlextInfraModelsMiseToolchain",
     "FlextInfraModelsMiseToolchainBase",
@@ -143,7 +142,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraModelsRelease",
     "FlextInfraModelsRope",
     "FlextInfraModelsRopeMove",
-    "FlextInfraModelsRopeRules",
     "FlextInfraModelsScan",
     "FlextInfraModelsSonarcloud",
     "FlextInfraModelsTestmon",
@@ -185,6 +183,7 @@ _LAZY_IMPORTS = MappingProxyType(
             "._git": ("_git",),
             "._git.identity": ("FlextInfraModelsGitIdentity",),
             "._git.worktree_facts": ("FlextInfraModelsGitWorktreeFacts",),
+            "._git.worktree_state": ("FlextInfraModelsGitWorktreeState",),
             ".base": ("FlextInfraModelsBase",),
             ".census": ("FlextInfraModelsCensus",),
             ".check": ("FlextInfraModelsCheck",),
@@ -215,7 +214,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".docs_collection": ("FlextInfraModelsDocsCollection",),
             ".docs_generation": ("FlextInfraModelsDocsGeneration",),
             ".duplication": ("FlextInfraModelsDuplication",),
-            ".enforcement": ("FlextInfraModelsEnforcement",),
             ".gates": ("FlextInfraModelsGates",),
             ".git": ("FlextInfraModelsGit",),
             ".layout": ("FlextInfraModelsLayout",),
@@ -229,7 +227,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".release": ("FlextInfraModelsRelease",),
             ".rope": ("FlextInfraModelsRope",),
             ".rope_move": ("FlextInfraModelsRopeMove",),
-            ".rope_rules": ("FlextInfraModelsRopeRules",),
             ".scan": ("FlextInfraModelsScan",),
             ".settings": ("FlextInfraSettingsModels",),
             ".sonarcloud": ("FlextInfraModelsSonarcloud",),

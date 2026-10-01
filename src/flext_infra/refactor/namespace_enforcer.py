@@ -20,7 +20,8 @@ if TYPE_CHECKING:
 
 
 class FlextInfraNamespaceEnforcer(
-    FlextInfraNamespaceEnforcerPhasesMixin, FlextInfraNamespaceEnforcerProjectMixin
+    FlextInfraNamespaceEnforcerPhasesMixin,
+    FlextInfraNamespaceEnforcerProjectMixin,
 ):
     """Orchestrate namespace enforcement across a workspace."""
 
@@ -29,7 +30,7 @@ class FlextInfraNamespaceEnforcer(
         super().__init__()
         self._repository_root = repository_root.resolve()
         self._rope_project: t.Infra.RopeProject = u.Infra.init_rope_project(
-            self._repository_root
+            self._repository_root,
         )
 
     @override
@@ -59,26 +60,29 @@ class FlextInfraNamespaceEnforcer(
             )
             project_reports.append(report)
         return m.Infra.WorkspaceEnforcementReport(
-            workspace=str(self._repository_root), projects=project_reports
+            workspace=str(self._repository_root),
+            projects=project_reports,
         )
 
     @override
     def _resolve_project_roots(
-        self, *, project_names: t.StrSequence | None = None
+        self,
+        *,
+        project_names: t.StrSequence | None = None,
     ) -> t.SequenceOf[Path]:
-        """Discover and optionally filter project roots."""
-        project_roots = u.Infra.discover_project_roots(
-            repository_root=self._repository_root
-        )
-        project_roots = [
-            project_root
-            for project_root in project_roots
-            if u.Infra.namespace_enabled(project_root)
+        """Resolve the selected namespace-enabled roots through the topology owner.
+
+        ``.`` names this repository itself; an unknown name is a caller error
+        and escapes loud instead of silently enforcing nothing.
+        """
+        resolved = u.Infra.resolve_projects(self._repository_root, project_names or ())
+        if resolved.failure:
+            raise ValueError(resolved.error or "project resolution failed")
+        return [
+            project.path
+            for project in resolved.value
+            if u.Infra.namespace_enabled(project.path)
         ]
-        if project_names:
-            name_set = set(project_names)
-            project_roots = [r for r in project_roots if r.name in name_set]
-        return project_roots
 
     @override
     def _detect_and_apply[V](
@@ -120,22 +124,12 @@ class FlextInfraNamespaceEnforcer(
             f"Namespace source violations: {sum(len(project.namespace_source_violations) for project in projects)}",
             f"Internal import violations: {sum(len(project.internal_import_violations) for project in projects)}",
             f"Private import bypass violations: {sum(len(project.private_import_bypass_violations) for project in projects)}",
-            f"Manual protocol violations: {sum(len(project.manual_protocol_violations) for project in projects)}",
             f"Cyclic imports: {sum(len(project.cyclic_imports) for project in projects)}",
             f"Runtime alias violations: {sum(len(project.runtime_alias_violations) for project in projects)}",
-            f"Future violations: {sum(len(project.future_violations) for project in projects)}",
-            f"Manual typing violations: {sum(len(project.manual_typing_violations) for project in projects)}",
+            f"Relocation findings: {sum(project.relocation_findings for project in projects)}",
             f"Compatibility alias violations: {sum(len(project.compatibility_alias_violations) for project in projects)}",
             f"Foreign canonical alias violations: {sum(len(project.foreign_canonical_alias_violations) for project in projects)}",
             f"Class placement violations: {sum(len(project.class_placement_violations) for project in projects)}",
-            f"Bare except violations: {sum(len(project.bare_except_violations) for project in projects)}",
-            f"Print violations: {sum(len(project.print_violations) for project in projects)}",
-            f"Breakpoint violations: {sum(len(project.breakpoint_violations) for project in projects)}",
-            f"Open-encoding violations: {sum(len(project.open_encoding_violations) for project in projects)}",
-            f"Dict annotation violations: {sum(len(project.dict_annotation_violations) for project in projects)}",
-            f"typing.Dict attr violations: {sum(len(project.typing_dict_attr_violations) for project in projects)}",
-            f"typing.Dict import violations: {sum(len(project.typing_dict_import_violations) for project in projects)}",
-            f"Hardcoded-version violations: {sum(len(project.hardcoded_version_violations) for project in projects)}",
             f"Parse failures: {sum(len(project.parse_failures) for project in projects)}",
             f"Files scanned: {sum(project.files_scanned for project in projects)}",
         ]
@@ -143,18 +137,21 @@ class FlextInfraNamespaceEnforcer(
 
     @classmethod
     def execute_command(
-        cls, params: m.Infra.RefactorNamespaceEnforceInput
+        cls,
+        params: m.Infra.RefactorNamespaceEnforceInput,
     ) -> p.Result[m.Infra.WorkspaceEnforcementReport]:
         """Execute namespace enforcement directly from the canonical payload."""
         enforcer = cls(repository_root=params.repository_root)
         report = enforcer.enforce(
-            apply=params.apply, project_names=params.project_names, gates=params.gates
+            apply=params.apply,
+            project_names=params.project_names,
+            gates=params.gates,
         )
         cli.display_text(cls.render_text(report))
         has_violations: bool = report.has_violations
         if has_violations:
             return r[m.Infra.WorkspaceEnforcementReport].fail(
-                "Namespace violations found"
+                "Namespace violations found",
             )
         return r[m.Infra.WorkspaceEnforcementReport].ok(report)
 

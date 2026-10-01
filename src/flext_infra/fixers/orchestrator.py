@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraEnforcementFixerOrchestrator(
-    FlextInfraProjectSelectionServiceBase[str]
+    FlextInfraProjectSelectionServiceBase[str],
 ):
     """Apply automatic fixes for enforcement-catalog rules across workspace projects.
 
@@ -41,16 +41,20 @@ class FlextInfraEnforcementFixerOrchestrator(
     )
 
     apply: Annotated[
-        bool, m.Field(description="Apply fixes instead of dry-run preview")
+        bool,
+        m.Field(description="Apply fixes instead of dry-run preview"),
     ] = False
     rules: Annotated[
-        t.VariadicTuple[str], m.Field(description="Enforcement rule IDs to fix")
+        t.VariadicTuple[str],
+        m.Field(description="Enforcement rule IDs to fix"),
     ] = ()
     safe_only: Annotated[
-        bool, m.Field(description="Only apply fixes marked safe in the catalog")
+        bool,
+        m.Field(description="Only apply fixes marked safe in the catalog"),
     ] = True
     check_after: Annotated[
-        bool, m.Field(description="Re-run the corresponding check after fixing")
+        bool,
+        m.Field(description="Re-run the corresponding check after fixing"),
     ] = True
 
     @classmethod
@@ -88,7 +92,8 @@ class FlextInfraEnforcementFixerOrchestrator(
         return r[str].ok(report)
 
     def _selected_rules(
-        self, catalog: m.EnforcementCatalog | None = None
+        self,
+        catalog: m.EnforcementCatalog | None = None,
     ) -> t.VariadicTuple[m.EnforcementRuleSpec]:
         """Return enabled rules with fix actions matching the CLI filter.
 
@@ -115,7 +120,9 @@ class FlextInfraEnforcementFixerOrchestrator(
             )
             raise ValueError(msg)
         return FlextInfraEnforcementEngine.selected_rules(
-            catalog=catalog, wanted=self.rules, safe_only=self.safe_only
+            catalog=catalog,
+            wanted=self.rules,
+            safe_only=self.safe_only,
         )
 
     def _has_adapter(self, rule: m.EnforcementRuleSpec) -> bool:
@@ -125,36 +132,20 @@ class FlextInfraEnforcementFixerOrchestrator(
             return False
         return self._adapter_for(fix_action) is not None
 
-    def _resolve_projects(self) -> p.Result[t.SequenceOf[p.Infra.ProjectInfo]]:
-        """Resolve the project list from CLI selection or workspace discovery."""
-        projects_result = u.Infra.projects(self.repository_root)
-        if projects_result.failure:
-            return r[t.SequenceOf[p.Infra.ProjectInfo]].from_failure(projects_result)
-        discovered = tuple(projects_result.unwrap())
-        selected_projects: t.StrSequence = (
-            self.project_names if self.project_names is not None else ()
+    def _resolve_projects(self) -> p.Result[t.SequenceOf[m.Infra.ProjectInfo]]:
+        """Resolve the selected projects through the one topology owner.
+
+        ``.`` names this repository itself; an unknown name fails loud.
+        """
+        return u.Infra.resolve_projects(
+            self.repository_root,
+            self.project_names if self.project_names is not None else (),
         )
-        scope: frozenset[str] = frozenset(selected_projects)
-        available_names = {
-            name
-            for project in discovered
-            for name in (project.name, project.path.name)
-            if name
-        }
-        missing = scope - available_names
-        if missing:
-            return r[t.SequenceOf[p.Infra.ProjectInfo]].fail(
-                f"Requested projects were not discovered: {', '.join(sorted(missing))}"
-            )
-        selected = (
-            tuple(p for p in discovered if p.name in scope or p.path.name in scope)
-            if scope
-            else discovered
-        )
-        return r[t.SequenceOf[p.Infra.ProjectInfo]].ok(selected)
 
     def _fix_project(
-        self, project: p.Infra.ProjectInfo, rules: t.SequenceOf[m.EnforcementRuleSpec]
+        self,
+        project: p.Infra.ProjectInfo,
+        rules: t.SequenceOf[m.EnforcementRuleSpec],
     ) -> t.SequenceOf[m.Infra.ProjectFixResult]:
         """Collect violations and apply fixes for one project.
 
@@ -170,15 +161,18 @@ class FlextInfraEnforcementFixerOrchestrator(
             if evaluation.failures:
                 results.append(
                     m.Infra.ProjectFixResult(
-                        project=project_dir.name, failed=evaluation.failures
-                    )
+                        project=project_dir.name,
+                        failed=evaluation.failures,
+                    ),
                 )
                 if self.fail_fast:
                     return tuple(results)
             if not evaluation.violations:
                 continue
             result = adapter.fix_project(
-                project_dir, evaluation.violations, self._command_ctx()
+                project_dir,
+                evaluation.violations,
+                self._command_ctx(),
             )
             results.append(result)
             if result.failed and self.fail_fast:
@@ -186,11 +180,13 @@ class FlextInfraEnforcementFixerOrchestrator(
         return tuple(results)
 
     def _group_by_adapter(
-        self, rules: t.SequenceOf[m.EnforcementRuleSpec]
+        self,
+        rules: t.SequenceOf[m.EnforcementRuleSpec],
     ) -> MutableMapping[type[FlextInfraFixerAdapter], list[m.EnforcementRuleSpec]]:
         """Group preflighted rules by the adapter that owns their fix_action."""
         grouped: MutableMapping[
-            type[FlextInfraFixerAdapter], list[m.EnforcementRuleSpec]
+            type[FlextInfraFixerAdapter],
+            list[m.EnforcementRuleSpec],
         ] = defaultdict(list)
         for rule in rules:
             fix_action = rule.fix_action
@@ -204,7 +200,8 @@ class FlextInfraEnforcementFixerOrchestrator(
         return grouped
 
     def _adapter_for(
-        self, fix_action: m.EnforcementFixAction
+        self,
+        fix_action: m.EnforcementFixAction,
     ) -> type[FlextInfraFixerAdapter] | None:
         """Return the first adapter class that accepts ``fix_action``."""
         for adapter_cls in self._ADAPTER_CLASSES:
@@ -213,7 +210,8 @@ class FlextInfraEnforcementFixerOrchestrator(
         return None
 
     def _instantiate_adapter(
-        self, adapter_cls: type[FlextInfraFixerAdapter]
+        self,
+        adapter_cls: type[FlextInfraFixerAdapter],
     ) -> FlextInfraFixerAdapter:
         """Create an adapter instance, injecting repository root."""
         return adapter_cls(self.repository_root)

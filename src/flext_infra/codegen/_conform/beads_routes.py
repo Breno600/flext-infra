@@ -15,7 +15,8 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
     """Beads ledger route reconciliation for composed repositories."""
 
     def conform_workspace_beads_routes(
-        self, request: m.Infra.CodegenConformRequest
+        self,
+        request: m.Infra.CodegenConformRequest,
     ) -> p.Result[bool]:
         """Reconcile private metadata directories without cross-project links.
 
@@ -38,25 +39,25 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
         if workspace.beads is None:
             if owner.exists() or owner.is_symlink():
                 return r[bool].fail(
-                    f"Beads-disabled repository still has Beads state: {owner}"
+                    f"Beads-disabled repository still has Beads state: {owner}",
                 )
             return r[bool].ok(True)
         # The ledger directory is a conform projection: absent before the
         # first render is normal; a link, or a non-directory, is not physical.
         if owner.is_symlink() or (owner.exists() and not owner.is_dir()):
             return r[bool].fail(
-                f"workspace Beads ledger owner is not physical: {owner}"
+                f"workspace Beads ledger owner is not physical: {owner}",
             )
         if owner.is_dir():
             owner.chmod(c.Infra.BEADS_DIRECTORY_MODE)
         for repository in workspace.subprojects:
-            state = self._beads_route_state((root / repository.path).resolve())
+            state = self.beads_route_state((root / repository.path).resolve())
             if state.failure:
                 return state
         return r[bool].ok(True)
 
     @staticmethod
-    def _beads_route_state(root: Path) -> p.Result[bool]:
+    def beads_route_state(root: Path) -> p.Result[bool]:
         """Prove one repository reaches the ledger through its own directory.
 
         The route used to be a symlink into the workspace, so the directory
@@ -68,42 +69,45 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
         ``.beads/config.yaml`` and ``.beads/metadata.json`` are rendered into
         it by generation, never copied and never linked.
         """
-        allowed_entries = frozenset({
-            Path(c.Infra.BEADS_CONFIG_RELPATH).name,
-            Path(c.Infra.BEADS_METADATA_RELPATH).name,
-            c.Infra.BEADS_LOCAL_VERSION_FILENAME,
-            c.Infra.BEADS_LAST_TOUCHED_FILENAME,
-            # Passive bd runtime exports: the bd client rewrites these from
-            # the rig's Dolt ledger on every interaction, so they are
-            # regenerable projections of ledger truth, never composed output.
-            "issues.jsonl",
-            "interactions.jsonl",
-        })
+        allowed_entries = (
+            frozenset({
+                Path(c.Infra.BEADS_CONFIG_RELPATH).name,
+                Path(c.Infra.BEADS_METADATA_RELPATH).name,
+                c.Infra.BEADS_LOCAL_VERSION_FILENAME,
+                c.Infra.BEADS_LAST_TOUCHED_FILENAME,
+                # Passive bd runtime exports: the bd client rewrites these from
+                # the rig's Dolt ledger on every interaction, so they are
+                # regenerable projections of ledger truth, never composed output.
+                "issues.jsonl",
+                "interactions.jsonl",
+            })
+            | c.Infra.BEADS_RUNTIME_ENTRY_NAMES
+        )
         route = root / c.Infra.BEADS_DIRNAME
         if route.is_symlink():
             return r[bool].fail(
                 "composed project reaches the workspace ledger through a "
-                f"cross-project symbolic link: {route}"
+                f"cross-project symbolic link: {route}",
             )
         if not route.exists():
             route.mkdir(mode=c.Infra.BEADS_DIRECTORY_MODE, parents=True)
             return r[bool].ok(True)
         if not route.is_dir():
             return r[bool].fail(
-                f"composed project Beads route is not a directory: {route}"
+                f"composed project Beads route is not a directory: {route}",
             )
         unexpected = sorted(
             entry.name
             for entry in route.iterdir()
             if entry.name not in allowed_entries
             and not FlextInfraCodegenConformBeadsRoutes.dry_run_config_backup(
-                entry.name
+                entry.name,
             )
         )
         if unexpected:
             return r[bool].fail(
                 f"composed project has unmerged Beads state at {route}: "
-                + ", ".join(unexpected)
+                + ", ".join(unexpected),
             )
         route.chmod(c.Infra.BEADS_DIRECTORY_MODE)
         return r[bool].ok(True)
@@ -112,13 +116,13 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
     def dry_run_config_backup(name: str) -> bool:
         """Return whether ``name`` is a dry-run ``config.yaml`` backup snapshot.
 
-        Why (cosmos-3flk9): the bd client rewrites ``last-touched`` on every
+        Why: the bd client rewrites ``last-touched`` on every
         write, and a dry-run ``make gen`` leaves ``config.yaml.<ts>.bak``
         snapshots behind — both are ephemeral tooling state, not unmerged
         ledger state, so they must not fail the composed-project verify.
         """
         return name.startswith(
-            f"{Path(c.Infra.BEADS_CONFIG_RELPATH).name}."
+            f"{Path(c.Infra.BEADS_CONFIG_RELPATH).name}.",
         ) and name.endswith(".bak")
 
 

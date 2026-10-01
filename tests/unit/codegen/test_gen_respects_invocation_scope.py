@@ -1,8 +1,7 @@
 """Every command in one verb recipe writes to the same root.
 
-Scope follows the invocation point: run a verb at the workspace and it works
-on the whole active workspace; run it in a project and it works on that
-project alone.
+Scope is the invocation point's own repository: every repository, the
+workspace root included, works on itself alone (operator ruling 2026-09-29).
 
 The ``gen`` recipe broke that by mixing two criteria in the same body:
 ``codegen conform`` received ``PROJECT_ROOT`` while dependency stages received
@@ -14,9 +13,9 @@ dirty without the caller ever touching it.
 The damage compounds: ``gen`` runs inside ``check``, and ``check`` runs in the
 pre-commit hook, so a single commit in any lane dirties every sibling.
 
-At the workspace root ``PROJECT_ROOT`` already *is* the workspace, so a single
-root keeps the fan-out where it belongs and restricts it everywhere else. No
-new flag is needed -- one rule, applied consistently.
+At the workspace root ``PROJECT_ROOT`` is the root repository itself, so one
+rule keeps every verb on its own repository everywhere. No flag is needed --
+one rule, applied consistently.
 
 Every contract is asserted on the Makefile the public conform owner renders
 for a workspace fixture composing one member.
@@ -45,7 +44,9 @@ class TestsFlextInfraGenRespectsInvocationScope:
     def rendered_makefile(self, tmp_path: Path) -> str:
         """Render the workspace Makefile through the conform owner."""
         return u.Tests.scaffold_text(
-            tmp_path / "fixture-project", c.Infra.MAKEFILE_FILENAME, members=(_MEMBER,)
+            tmp_path / "fixture-project",
+            c.Infra.MAKEFILE_FILENAME,
+            members=(_MEMBER,),
         )
 
     @staticmethod
@@ -68,7 +69,8 @@ class TestsFlextInfraGenRespectsInvocationScope:
         return bodies
 
     def test_no_recipe_mixes_project_and_repository_roots(
-        self, rendered_makefile: str
+        self,
+        rendered_makefile: str,
     ) -> None:
         """One rendered recipe never writes to two different roots.
 
@@ -105,12 +107,13 @@ class TestsFlextInfraGenRespectsInvocationScope:
         tm.that(len(conform_lines), eq=1)
         tm.that(conform_lines[0], has="--mode apply")
         tm.that(conform_lines[0], has='--root "$(PROJECT_ROOT)"')
-        tm.that(conform_lines[0], has='--scope "$(CODEGEN_SCOPE)"')
+        tm.that(conform_lines[0], lacks="--scope")
         tm.that(any("deps modernize" in line for line in body), eq=False)
         tm.that(any("deps extra-paths" in line for line in body), eq=False)
 
     def test_gen_init_uses_the_provisioned_owner_route(
-        self, rendered_makefile: str
+        self,
+        rendered_makefile: str,
     ) -> None:
         """Initialize uses its declared interpreter and one initializer owner."""
         init_lines = self._recipe_bodies(rendered_makefile)["_builtin_gen_init"]
@@ -125,7 +128,9 @@ class TestsFlextInfraGenRespectsInvocationScope:
         )
         tm.that(any("codegen conform" in line for line in init_lines), eq=False)
         for verb in config.Infra.codegen.make.verbs:
-            if verb.name in {"setup", "upg", "help", "clean"}:
+            if verb.name in {"setup", "upg", "help", "clean"} or (
+                verb.profiles and c.Infra.MakeProfile.WORKSPACE not in verb.profiles
+            ):
                 continue
             tm.that(
                 rendered_makefile,
@@ -146,7 +151,8 @@ class TestsFlextInfraGenRespectsInvocationScope:
         tm.that(rendered_makefile, lacks="INIT_FLEXT_INFRA")
 
     def test_project_selector_resolves_members_from_repository_root(
-        self, rendered_makefile: str
+        self,
+        rendered_makefile: str,
     ) -> None:
         """Workspace members are projected as declared gitlinks, not a WORKSPACE var.
 

@@ -1,0 +1,12 @@
+
+      - name: Restore tool caches
+        id: tool-cache
+        uses: {{ github_actions["cache"].repository }}/restore@{{ github_actions["cache"].version }}
+        with:
+          path: |
+            {{ make.clean.cache_dirs | join("\n            ") }}
+            ~/.cache/uv
+            ~/.local/share/mise
+          key: {% raw %}${{ runner.os }}-{% endraw %}{{ python_version }}{% raw %}-tools-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml') }}{% endraw %}
+          restore-keys: |
+            {% raw %}${{ runner.os }}-{% endraw %}{{ python_version }}{% raw %}-tools-{% endraw %}

@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Self
 
-from flext_infra import c, config, m, u
+from flext_infra import c, config, m, t, u
 from flext_infra.base import s
 
 type PytestPolicy = m.Infra.PytestConfig
@@ -17,7 +17,8 @@ class FlextInfraPytestRunnerBase(s[int]):
     """Own immutable inputs shared by all pytest runner phases."""
 
     started_at_monotonic: Annotated[
-        float, m.Field(gt=0, description="Clock captured before FLEXT imports.")
+        float,
+        m.Field(gt=0, description="Clock captured before FLEXT imports."),
     ]
     target: Annotated[Path, m.Field(description="Repository-relative test root.")]
     reports: Annotated[Path, m.Field(description="Repository-relative report root.")]
@@ -29,6 +30,12 @@ class FlextInfraPytestRunnerBase(s[int]):
         bool,
         m.Field(description="CI/pre-commit selection captured at the Make boundary."),
     ] = False
+    collection_command_prefix: Annotated[
+        t.StrTuple,
+        m.Field(
+            description="Explicit profiling child invocation from the outer boundary.",
+        ),
+    ] = ()
 
     @staticmethod
     def _environment_value(name: str) -> str:
@@ -36,19 +43,25 @@ class FlextInfraPytestRunnerBase(s[int]):
         return u.Cli.env_read(name, dict(os.environ)).unwrap().strip()
 
     @classmethod
-    def from_environment(cls, *, started_at_monotonic: float) -> Self:
+    def from_environment(
+        cls,
+        *,
+        started_at_monotonic: float,
+        collection_command_prefix: t.StrTuple = (),
+    ) -> Self:
         """Create the runner exclusively from generated Make inputs."""
         ci = config.Infra.codegen.make.ci
         return cls(
             repository_root=Path.cwd(),
             started_at_monotonic=started_at_monotonic,
+            collection_command_prefix=collection_command_prefix,
             ci_context=(u.Infra.env_lookup(ci.variable) or "").strip() == ci.value,
             target=Path(cls._environment_value(c.Infra.PYTEST_ENV_TARGET)),
             reports=Path(cls._environment_value(c.Infra.PYTEST_ENV_REPORTS)),
             testmon_db=Path(
                 cls._environment_value(
-                    config.Infra.codegen.make.testmon_cache.database_environment_variable
-                )
+                    config.Infra.codegen.make.testmon_cache.database_environment_variable,
+                ),
             ),
         )
 
@@ -89,47 +102,81 @@ class FlextInfraPytestRunnerBase(s[int]):
         if page_size <= 0 or pages <= 0:
             msg = "physical memory capacity is unavailable"
             raise ValueError(msg)
-        memory_gb = (page_size * pages) // (1024**3)
+        memory_gb = (page_size * pages) // c.Infra.BYTES_PER_GIB
         if memory_gb <= 0:
             msg = "physical memory is below one GiB"
             raise ValueError(msg)
         return memory_gb
 
-    def _declared_worker_ceiling(self, policy: PytestPolicy) -> int:
-        """Resolve the declared project's ceiling over the fleet default.
+    def _declared_project_name(self) -> str | None:
+        """Read the declared project identity shared by runtime policies."""
+        pyproject_path = self.root / c.PYPROJECT_FILENAME
+        payload = u.Infra.pyproject_payload(pyproject_path)
+        if "project" not in payload:
+            return None
+        return u.Infra.project_name_from_payload(pyproject_path, payload)
 
-        A tree without a declared ``[project].name`` (fixture projects, raw
-        workbenches) is an expected state and takes the fleet-wide default.
-        """
+    def run_timeout_seconds(self, policy: PytestPolicy) -> int:
+        """Resolve the declared project's measured wall over the fleet default."""
+        name = self._declared_project_name()
+        if name is None:
+            return policy.run_timeout_seconds
+        return policy.run_timeout_overrides.get(name, policy.run_timeout_seconds)
+
+    def _declared_worker_ceiling(
+        self,
+        policy: PytestPolicy,
+    ) -> int | m.Infra.PytestWorkerCeiling:
+        """Resolve the declared project's ceiling over the fleet default."""
         if not policy.parallel_worker_overrides:
             return policy.parallel_workers
         pyproject_path = self.root / c.PYPROJECT_FILENAME
-        try:
-            name = u.Infra.project_name_from_payload(
-                pyproject_path, u.Infra.pyproject_payload(pyproject_path)
-            )
-        except (TypeError, ValueError):
-            return policy.parallel_workers
+        name = u.Infra.project_name_from_payload(
+            pyproject_path,
+            u.Infra.pyproject_payload(pyproject_path),
+        )
         return policy.parallel_worker_overrides.get(name, policy.parallel_workers)
+
+    @staticmethod
+    def resolve_worker_ceiling(
+        ceiling: int | m.Infra.PytestWorkerCeiling,
+        cpu_count: int,
+    ) -> int:
+        """Resolve a declared ceiling against the process CPU count.
+
+        Absolute ``workers`` ceilings pass through; ``cpu_fraction`` ceilings
+        resolve to ``max(1, cpu_count * numerator // denominator)`` so the
+        fraction never yields zero workers on small hosts. The fleet-wide
+        default arrives as a bare int.
+        """
+        if isinstance(ceiling, int):
+            return ceiling
+        if ceiling.workers is not None:
+            return ceiling.workers
+        numerator_text, denominator_text = (ceiling.cpu_fraction or "1/1").split("/")
+        return max(1, cpu_count * int(numerator_text) // int(denominator_text))
 
     def parallel_worker_budget(self, policy: PytestPolicy) -> int:
         """Bound xdist by configuration, CPU, and physical memory.
 
-        The per-project override map (``[project].name`` → workers) is where
-        a consumer whose measured suite cannot fit the single-worker process
-        boundary declares its ceiling; the fleet-wide default stays one
-        worker so ``max-failures: 1`` remains exact everywhere else.
+        The per-project override map (``[project].name`` → absolute workers or
+        CPU fraction) is where a consumer whose measured suite cannot fit the
+        single-worker process boundary declares its ceiling; the fleet-wide
+        default stays one worker so ``max-failures: 1`` remains exact
+        everywhere else. CPU capacity is the process-scoped count (the cgroup
+        affinity the runner actually gets), not the host-wide count.
         """
         ceiling = self._declared_worker_ceiling(policy)
-        cpu_count = os.cpu_count()
-        if cpu_count is None or cpu_count <= 0:
+        cpu_count = os.process_cpu_count()
+        if cpu_count <= 0:
             msg = "CPU capacity is unavailable"
             raise ValueError(msg)
+        declared_workers = self.resolve_worker_ceiling(ceiling, cpu_count)
         memory_workers = self._memory_gb() // policy.parallel_worker_memory_gb
         if memory_workers <= 0:
             msg = "physical memory cannot support one pytest worker"
             raise ValueError(msg)
-        return min(ceiling, cpu_count, memory_workers)
+        return min(declared_workers, cpu_count, memory_workers)
 
     def _report_directory(self) -> Path:
         """Create a collision-resistant report directory."""

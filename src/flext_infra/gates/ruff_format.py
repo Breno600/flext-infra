@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar, override
 
+from flext_core import r
 from flext_infra import c, config, m, u
 
 from .base_gate import FlextInfraGate
@@ -23,7 +24,10 @@ class FlextInfraRuffFormatGate(FlextInfraGate):
 
     @override
     def _build_check_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        check_dirs: t.StrSequence,
     ) -> t.StrSequence:
         """Build the format verdict command from the config-owned flags."""
         _ = project_dir, ctx
@@ -36,7 +40,9 @@ class FlextInfraRuffFormatGate(FlextInfraGate):
 
     @override
     def _get_check_dirs(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
         """Get check dirs."""
         _ = ctx
@@ -44,7 +50,10 @@ class FlextInfraRuffFormatGate(FlextInfraGate):
 
     @override
     def _parse_check_output(
-        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        result: p.Cli.CommandOutput,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
         """Parse check output."""
         _ = project_dir, ctx
@@ -70,13 +79,16 @@ class FlextInfraRuffFormatGate(FlextInfraGate):
                             column=0,
                             code=c.Infra.FORMAT,
                             message="Would be reformatted",
-                        )
+                        ),
                     )
         return u.Cli.process_succeeded(result.outcome), issues
 
     @override
     def _build_fix_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, targets: t.StrSequence
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        targets: t.StrSequence,
     ) -> t.StrSequence:
         """Build fix command."""
         _ = project_dir, ctx
@@ -86,6 +98,35 @@ class FlextInfraRuffFormatGate(FlextInfraGate):
             *config.Infra.codegen.make.ruff.format_apply,
             *targets,
         )
+
+    @classmethod
+    def format_files(
+        cls,
+        repository_root: Path,
+        paths: t.SequenceOf[Path],
+    ) -> p.Result[bool]:
+        """Format an explicit path list with the config-owned apply flags.
+
+        One batched invocation over exactly the rewritten files: a rewrite
+        publisher (``make mod``) needs its output formatter-clean at write
+        time, because the mod circuit enforces canonical formatting on the
+        first pass after applying instead of deferring to a project-wide
+        ``make fmt`` sweep.
+        """
+        if not paths:
+            return r[bool].ok(True)
+        command = cls._python_module_command(
+            c.Infra.RUFF,
+            c.Infra.FORMAT,
+            *config.Infra.codegen.make.ruff.format_apply,
+            *(str(path) for path in paths),
+        )
+        run = u.Cli.run_raw(command, cwd=repository_root)
+        if run.failure:
+            return r[bool].from_failure(run)
+        if not u.Cli.process_succeeded(run.value.outcome):
+            return r[bool].fail(run.value.stdout)
+        return r[bool].ok(True)
 
 
 __all__: list[str] = ["FlextInfraRuffFormatGate"]

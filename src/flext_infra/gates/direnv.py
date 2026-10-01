@@ -29,9 +29,31 @@ class FlextInfraDirenvGate(FlextInfraGate):
     gate_name: ClassVar[str] = "DIRENV ENVIRONMENT CONTRACT"
     can_fix: ClassVar[bool] = False
 
+    @staticmethod
+    def _contract_boundary() -> type[p.Infra.WorkspaceEnvironmentContracts]:
+        """Return the contract owner typed at its published ``p.Infra`` boundary."""
+        return FlextInfraWorkspaceEnvironmentContracts
+
+    @staticmethod
+    def _contract_issue(
+        file: str,
+        violation: m.Infra.EnvironmentContractViolation,
+    ) -> m.Infra.Issue:
+        """Render one typed contract violation as a gate issue."""
+        return m.Infra.Issue(
+            file=file,
+            line=violation.line,
+            column=0,
+            code="DIRENV_CONTRACT",
+            message=f"line {violation.line}: {violation.message}",
+            severity="ERROR",
+        )
+
     @override
     def check(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
         """Run the static contracts, then the activation smoke."""
         started = time.monotonic()
@@ -55,18 +77,12 @@ class FlextInfraDirenvGate(FlextInfraGate):
                 raw_output=issue.message,
                 started=started,
             )
-        violations = FlextInfraWorkspaceEnvironmentContracts.envrc_contract_violations(
-            content.value, root=project_dir
+        violations = self._contract_boundary().envrc_contract_violations(
+            content.value,
+            root=project_dir,
         )
         issues = tuple(
-            m.Infra.Issue(
-                file=c.Infra.ENVRC_FILENAME,
-                line=0,
-                column=0,
-                code="DIRENV_CONTRACT",
-                message=violation,
-                severity="ERROR",
-            )
+            FlextInfraDirenvGate._contract_issue(c.Infra.ENVRC_FILENAME, violation)
             for violation in violations
         )
         local = project_dir / c.Infra.ENVRC_LOCAL_RELPATH
@@ -88,16 +104,14 @@ class FlextInfraDirenvGate(FlextInfraGate):
                 issues = (
                     *issues,
                     *(
-                        m.Infra.Issue(
-                            file=c.Infra.ENVRC_LOCAL_RELPATH,
-                            line=0,
-                            column=0,
-                            code="DIRENV_CONTRACT",
-                            message=violation,
-                            severity="ERROR",
+                        FlextInfraDirenvGate._contract_issue(
+                            c.Infra.ENVRC_LOCAL_RELPATH,
+                            violation,
                         )
-                        for violation in FlextInfraWorkspaceEnvironmentContracts.envrc_local_contract_violations(
-                            local_read.value
+                        for violation in (
+                            self._contract_boundary().envrc_local_contract_violations(
+                                local_read.value,
+                            )
                         )
                     ),
                 )
@@ -113,7 +127,9 @@ class FlextInfraDirenvGate(FlextInfraGate):
 
     @override
     def _get_check_dirs(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
         """One marker dir drives the base flow; the smoke targets the root."""
         _ = ctx
@@ -125,7 +141,10 @@ class FlextInfraDirenvGate(FlextInfraGate):
 
     @override
     def _build_check_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        check_dirs: t.StrSequence,
     ) -> t.StrSequence:
         """Activate the workspace environment for one no-op command."""
         _ = ctx, check_dirs
@@ -133,7 +152,10 @@ class FlextInfraDirenvGate(FlextInfraGate):
 
     @override
     def _parse_check_output(
-        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        result: p.Cli.CommandOutput,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
         """Pass only on a zero-exit activation."""
         _ = project_dir, ctx

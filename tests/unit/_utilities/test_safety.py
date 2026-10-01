@@ -25,7 +25,8 @@ class TestsFlextInfraUtilitiesSafety:
         self._run_git(repo, "commit", "-m", "initial commit")
 
     def test_create_checkpoint_returns_empty_for_clean_repo(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         self._init_git_repo(tmp_path)
 
@@ -44,7 +45,8 @@ class TestsFlextInfraUtilitiesSafety:
         tm.that((result.error or ""), has="dirty git worktree")
 
     def test_create_checkpoint_returns_empty_for_non_git_folder(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         result = u.Infra.create_checkpoint(tmp_path)
 
@@ -52,7 +54,8 @@ class TestsFlextInfraUtilitiesSafety:
         tm.that(result.value, eq="")
 
     def test_rollback_to_checkpoint_rejects_repository_checkpoint(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         self._init_git_repo(tmp_path)
 

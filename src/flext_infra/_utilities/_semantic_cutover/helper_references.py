@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import re
+from collections.abc import MutableMapping
 from pathlib import Path
 
 from flext_infra import m, p, t
@@ -14,23 +15,26 @@ from .nesting_types import FlextInfraUtilitiesSemanticNestingTypes
 
 
 class FlextInfraUtilitiesSemanticHelperReferences(
-    FlextInfraUtilitiesSemanticNestingTypes
+    FlextInfraUtilitiesSemanticNestingTypes,
 ):
     """Plan quoted references while the declaration still has its original identity."""
 
     @classmethod
     def _helper_move_plan(
-        cls, request: m.Infra.ClassMoveRequest, *, sources: t.MappingKV[Path, str]
+        cls,
+        request: m.Infra.ClassMoveRequest,
+        *,
+        sources: t.MappingKV[Path, str],
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         project = request.rope_project
         root = Path(project.root.real_path)
         origin = project.get_pymodule(
-            project.get_resource(request.source_file.relative_to(root).as_posix())
+            project.get_resource(request.source_file.relative_to(root).as_posix()),
         )
         expected = origin.get_attribute(request.class_name)
         target = project.get_pymodule(
-            project.get_resource(request.target_file.relative_to(root).as_posix())
+            project.get_resource(request.target_file.relative_to(root).as_posix()),
         )
         move = m.Infra.ResolvedClassMove(
             request=request,
@@ -47,7 +51,7 @@ class FlextInfraUtilitiesSemanticHelperReferences(
             msg = "shared helper declaration has no complete source range"
             raise ValueError(msg)
         prepared = dict(sources)
-        quoted_imports: dict[Path, str] = {}
+        quoted_imports: MutableMapping[Path, str] = {}
         for path, source in sources.items():
             resource = project.get_resource(path.relative_to(root).as_posix())
             module = project.get_pymodule(resource)
@@ -61,17 +65,25 @@ class FlextInfraUtilitiesSemanticHelperReferences(
             )
             if expression is not None and path != request.target_file:
                 changed = runtime.build_string_module(
-                    project, updated, resource=resource
+                    project,
+                    updated,
+                    resource=resource,
                 )
                 updated, binding = runtime.import_binding(
-                    project, changed, move.target_module, request.class_name
+                    project,
+                    changed,
+                    move.target_module,
+                    request.class_name,
                 )
                 if binding != expression:
                     msg = f"quoted helper import changed its elected binding: {path}"
                     raise ValueError(msg)
                 quoted_imports[path] = expression
             prepared[path] = cls._original_helper_imports(
-                move, resource, updated, module
+                move,
+                resource,
+                updated,
+                module,
             )
         cls._move_prepared_helper(move, prepared, quoted_imports)
         return tuple(
@@ -116,26 +128,36 @@ class FlextInfraUtilitiesSemanticHelperReferences(
             for edit in moved:
                 prepared[edit.file_path] = edit.updated_source
             target_resource = snapshot.get_resource(
-                request.target_file.relative_to(root).as_posix()
+                request.target_file.relative_to(root).as_posix(),
             )
             prepared[request.target_file] = (
                 FlextInfraUtilitiesSemanticHelperReferences._without_self_bindings(
-                    snapshot, target_resource, prepared[request.target_file]
+                    snapshot,
+                    target_resource,
+                    prepared[request.target_file],
                 )
             )
             for path, expression in quoted_imports.items():
                 resource = snapshot.get_resource(path.relative_to(root).as_posix())
                 module = runtime.build_string_module(
-                    snapshot, prepared[path], resource=resource
+                    snapshot,
+                    prepared[path],
+                    resource=resource,
                 )
                 prepared[path], binding = runtime.import_binding(
-                    snapshot, module, move.target_module, request.class_name
+                    snapshot,
+                    module,
+                    move.target_module,
+                    request.class_name,
                 )
                 if binding != expression:
                     msg = f"moved helper import changed its quoted binding: {path}"
                     raise ValueError(msg)
             FlextInfraUtilitiesSemanticHelperReferences._rebind_origin_imports(
-                move, snapshot, prepared, quoted_imports
+                move,
+                snapshot,
+                prepared,
+                quoted_imports,
             )
         finally:
             snapshot.close()
@@ -178,10 +200,15 @@ class FlextInfraUtilitiesSemanticHelperReferences(
             if expression is None:
                 resource = snapshot.get_resource(path.relative_to(root).as_posix())
                 module = runtime.build_string_module(
-                    snapshot, source, resource=resource
+                    snapshot,
+                    source,
+                    resource=resource,
                 )
                 _, expression = runtime.import_binding(
-                    snapshot, module, target, request.class_name
+                    snapshot,
+                    module,
+                    target,
+                    request.class_name,
                 )
 
             def _rebind(match: re.Match[str], expression: str = expression) -> str:
@@ -194,7 +221,9 @@ class FlextInfraUtilitiesSemanticHelperReferences(
 
     @staticmethod
     def _without_self_bindings(
-        project: p.Infra.RopeProject, resource: p.Infra.RopeResource, source: str
+        project: p.Infra.RopeProject,
+        resource: p.Infra.RopeResource,
+        source: str,
     ) -> str:
         """Drop imports a destination owner already declares for itself.
 
@@ -236,7 +265,9 @@ class FlextInfraUtilitiesSemanticHelperReferences(
             ]
             if len(kept) != len(info.names_and_aliases):
                 statement.import_info = runtime.from_import(
-                    info.module_name, info.level, kept
+                    info.module_name,
+                    info.level,
+                    kept,
                 )
                 changed = True
         return imports.get_changed_source() if changed else source
@@ -259,7 +290,8 @@ class FlextInfraUtilitiesSemanticHelperReferences(
         def replacement(scope: p.Infra.RopeScope, node: ast.expr) -> str | None:
             nonlocal expression
             if not runtime.same_name(
-                move.declaration, runtime.resolve_symbol(scope, node)
+                move.declaration,
+                runtime.resolve_symbol(scope, node),
             ):
                 return None
             if expression is None:
@@ -267,12 +299,19 @@ class FlextInfraUtilitiesSemanticHelperReferences(
                     expression = request.class_name
                 else:
                     _, expression = runtime.import_binding(
-                        project, module, move.target_module, request.class_name
+                        project,
+                        module,
+                        move.target_module,
+                        request.class_name,
                     )
             return cls._checked_type_reference(scope, expression)
 
         updated = cls._rewrite_quoted_types(
-            project, resource, source, replacement, protected=protected
+            project,
+            resource,
+            source,
+            replacement,
+            protected=protected,
         )
         return (updated, expression)
 
@@ -303,12 +342,17 @@ class FlextInfraUtilitiesSemanticHelperReferences(
             ):
                 continue
             kept, matched = cls._partition_helper_import(
-                info, names, move.declaration, move.request.class_name
+                info,
+                names,
+                move.declaration,
+                move.request.class_name,
             )
             moved.extend(matched)
             if len(kept) != len(info.names_and_aliases):
                 statement.import_info = runtime.from_import(
-                    info.module_name, info.level, kept
+                    info.module_name,
+                    info.level,
+                    kept,
                 )
         if not moved:
             return source
@@ -322,7 +366,8 @@ class FlextInfraUtilitiesSemanticHelperReferences(
         expected: p.Infra.RopePyName,
         name: str,
     ) -> t.Pair[
-        t.SequenceOf[t.Pair[str, str | None]], t.SequenceOf[t.Pair[str, str | None]]
+        t.SequenceOf[t.Pair[str, str | None]],
+        t.SequenceOf[t.Pair[str, str | None]],
     ]:
         """Separate imports of this declaration from unrelated bindings."""
         runtime = FlextInfraUtilitiesRopeRuntimeModules

@@ -65,8 +65,8 @@ class FlextInfraConstantsCodegen(
     """Bounded polite wait for a held lease before failing loud.
 
     A legitimate fleet ``make gen`` holds the lease for minutes; an immediate
-    non-blocking refusal turned ordinary multi-agent traffic into a spurious
-    ``JournalLeaseTimeoutError`` (flext-c2kp3). The wait is bounded so a truly
+    non-blocking refusal turned ordinary concurrent traffic into a spurious
+    ``JournalLeaseTimeoutError``. The wait is bounded so a truly
     wedged holder still fails loud instead of hanging forever.
     """
 
@@ -93,9 +93,9 @@ class FlextInfraConstantsCodegen(
         ("utilities.py", "Utilities", "FlextTestsUtilities", "Test utilities"),
     )
     "Base module definitions for tests/: (filename, class_suffix, base_class, docstring)."
-    # flext-wkii.14 (agent: codegen) — canonical root config/settings pair: a
+    # Canonical root config/settings pair: a
     # private `_config.py`/`_settings.py` module exporting the singleton.
-    # Consumed by the scaffold generator (flext-wkii.10).
+    # Consumed by the scaffold generator.
     RUNTIME_MODULES: ClassVar[t.VariadicTuple[t.Quad[str, str, str, str]]] = (
         ("_config.py", "Config", "FlextConfig", "Runtime config"),
         ("_settings.py", "Settings", "FlextSettings", "Runtime settings"),
@@ -103,9 +103,15 @@ class FlextInfraConstantsCodegen(
     "Runtime singleton modules for src/: (filename, class_suffix, base_class, docstring)."
     VIOLATION_PATTERN: ClassVar[t.RegexPattern] = re.compile(
         r"\[(?P<rule>NS-(?:[A-Z]+|\d{3}))-\d{3}\]\s+"
-        r"(?P<module>[^:]+):(?P<line>\d+)\s+\u2014\s+(?P<message>.+)"
+        r"(?P<module>[^:]+):(?P<line>\d+)\s+\u2014\s+(?P<message>.+)",
     )
     "Regex to parse violation strings: [NS-RULE-NNN] path:line — message."
+    PROTOCOL_MODEL_LINE_BUDGET: ClassVar[int] = 170
+    "Line budget of one generated structural-protocol module chunk."
+    PROTOCOL_MODEL_MINIMAL_BODY_LINES: ClassVar[int] = 3
+    "Header lines of a generated protocol class; at or below it the body is empty."
+    LAZY_IMPORTS_BINDING: ClassVar[str] = "_LAZY_IMPORTS"
+    "Module binding the flext-core lazy engine writes and resolves exports from."
     MISE_RELEASE_COMPONENT_COUNT: ClassVar[int] = 3
     "Number of numeric components in a generated Mise release version."
     MISE_RELEASE_PATTERN: ClassVar[str] = (
@@ -125,7 +131,13 @@ class FlextInfraConstantsCodegen(
     "Owner-private mode required for the generation lock."
     MISE_COLD_START_DIRECTORY: ClassVar[str] = "templates/bootstrap"
     "Package-local byte copy of flext-infra's own upg-written triple (cold start)."
-    MISE_RELEASE_SELECTOR: ClassVar[str] = "github:jdx/mise"
+
+    # 2026.9.17 crashes during the launcher generation (unwrap-on-None in its
+    # script builder); the fleet bootstrap stays on the last known good
+    # release until upstream ships a fixed one. Revert to the bare selector
+    # ("github:jdx/mise") when that release lands.
+    MISE_KNOWN_GOOD_RELEASE: ClassVar[str] = "2026.9.16"
+    MISE_RELEASE_SELECTOR: ClassVar[str] = f"github:jdx/mise@{MISE_KNOWN_GOOD_RELEASE}"
     "Tool selector `make upg` resolves through the pinned mise (`mise latest`)."
     MISE_LATEST_RESOLUTION_MARKER: ClassVar[str] = "releases/latest"
     "Live-resolution endpoint a pinned, offline launcher must never contain."
@@ -284,9 +296,6 @@ class FlextInfraConstantsCodegen(
     QG_REPORT_DIR: ClassVar[str] = ".reports/codegen/constants-quality-gate"
     "Report directory for constants quality gate."
     QG_CHECK_NAMESPACE_COMPLIANCE: ClassVar[str] = "namespace_compliance"
-    QG_CHECK_FLEXT_VALIDITY: ClassVar[str] = "flext_validity"
-    QG_CHECK_IMPORT_RESOLUTION: ClassVar[str] = "import_resolution"
-    QG_CHECK_LAYER_COMPLIANCE: ClassVar[str] = "layer_compliance"
     QG_CHECK_DUPLICATION_REDUCTION: ClassVar[str] = "duplication_reduction"
     QG_CHECK_TYPE_SAFETY: ClassVar[str] = "type_safety"
     QG_CHECK_LINT_CLEAN: ClassVar[str] = "lint_clean"

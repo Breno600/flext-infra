@@ -19,15 +19,11 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
 
     @classmethod
     def check_contracts(
-        cls, visit: m.Infra.RopeModuleVisit, filepath: Path
+        cls,
+        visit: m.Infra.RopeModuleVisit,
+        filepath: Path,
     ) -> t.StrSequence:
         """Return contract and clean-architecture violations."""
-        posix = filepath.as_posix()
-        if any(
-            frag in posix for frag in c.Infra.NAMESPACE_STDLIB_ISLAND_PATH_FRAGMENTS
-        ):
-            # ADR-0018 stdlib island: no flext typing surface is importable.
-            return []
         messages: list[str] = []
         tree = visit.tree
         for node in cls.walk(tree):
@@ -37,7 +33,7 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
                 for decorator in getattr(node, "decorator_list", ()) or ():
                     if cls.kind(decorator) != "Call":
                         messages.extend(
-                            cls._legacy_decorator(decorator, filepath, visit)
+                            cls._legacy_decorator(decorator, filepath, visit),
                         )
             if kind in {"AnnAssign", "arg", "FunctionDef", "AsyncFunctionDef"}:
                 messages.extend(cls._annotation_contract(node, filepath))
@@ -48,7 +44,9 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
 
     @classmethod
     def _function_contract(
-        cls, node: p.AttributeProbe, filepath: Path
+        cls,
+        node: p.AttributeProbe,
+        filepath: Path,
     ) -> t.StrSequence:
         """Require typed public input/output boundaries."""
         name = getattr(node, "name", "")
@@ -68,12 +66,12 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
             if getattr(argument, "annotation", None) is None:
                 messages.append(
                     f"{filepath}:{cls.line(argument)} — public input {argument_name!r} "
-                    "must use a typed model contract"
+                    "must use a typed model contract",
                 )
         if getattr(node, "returns", None) is None:
             messages.append(
                 f"{filepath}:{cls.line(node)} — public operation {name!r} must declare "
-                "a typed output"
+                "a typed output",
             )
         if name != "__init__" or "services" not in filepath.parts:
             return tuple(messages)
@@ -84,16 +82,18 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
             if annotation_name.startswith("Flext") and not dotted.startswith("p."):
                 messages.append(
                     f"{filepath}:{cls.line(argument)} — service dependency "
-                    f"{annotation_name!r} must be injected through p"
+                    f"{annotation_name!r} must be injected through p",
                 )
         return tuple(messages)
 
     @classmethod
     def _annotation_contract(
-        cls, node: p.AttributeProbe, filepath: Path
+        cls,
+        node: p.AttributeProbe,
+        filepath: Path,
     ) -> t.StrSequence:
         """Reject broad and legacy annotation vocabulary."""
-        annotations: list[object] = []
+        annotations: list[p.AttributeProbe] = []
         if cls.kind(node) == "AnnAssign" or cls.kind(node) == "arg":
             annotations.append(getattr(node, "annotation", None))
         else:
@@ -107,7 +107,7 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
             if banned:
                 messages.append(
                     f"{filepath}:{cls.line(node)} — banned annotation(s): "
-                    + ", ".join(banned)
+                    + ", ".join(banned),
                 )
         return tuple(messages)
 
@@ -136,7 +136,10 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
 
     @classmethod
     def _call_contract(
-        cls, node: p.AttributeProbe, filepath: Path, visit: m.Infra.RopeModuleVisit
+        cls,
+        node: p.AttributeProbe,
+        filepath: Path,
+        visit: m.Infra.RopeModuleVisit,
     ) -> t.StrSequence:
         """Reject legacy Pydantic calls and service-locator access."""
         callable_node = getattr(node, "func", None)
@@ -149,19 +152,22 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
         ):
             messages.append(
                 f"{filepath}:{cls.line(node)} — legacy Pydantic member {name!r}; "
-                "use Pydantic v2"
+                "use Pydantic v2",
             )
         messages.extend(cls._legacy_decorator(callable_node, filepath, visit))
         if name in c.Infra.NAMESPACE_SERVICE_LOCATOR_NAMES:
             messages.append(
                 f"{filepath}:{cls.line(node)} — service locator {name!r} is forbidden; "
-                "inject p contracts"
+                "inject p contracts",
             )
         return tuple(messages)
 
     @classmethod
     def _legacy_decorator(
-        cls, node: p.AttributeProbe, filepath: Path, visit: m.Infra.RopeModuleVisit
+        cls,
+        node: p.AttributeProbe,
+        filepath: Path,
+        visit: m.Infra.RopeModuleVisit,
     ) -> t.StrSequence:
         """Reject imported Pydantic v1 decorators, never same-spelled local bindings."""
         if cls.kind(node) not in {"Name", "Attribute"}:
@@ -221,7 +227,7 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
             if value is not None and cls.kind(value) == "Call":
                 messages.append(
                     f"{filepath}:{cls.line(node)} — import-time wiring is forbidden; "
-                    "compose dependencies in api.py"
+                    "compose dependencies in api.py",
                 )
         return tuple(messages)
 

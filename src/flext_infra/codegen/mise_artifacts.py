@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, MutableMapping
-from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
 
-from .. import c, config, m, t, u
+from .. import c, m, t, u
 from ._execution import FlextInfraCodegenExecutionBase
 from ._mise_artifacts_derivation import FlextInfraMiseArtifactsDerivation
 from .mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
@@ -63,7 +62,7 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
             version = cls._tool_version(raw_tool)
             if not version:
                 return r[t.StrMapping].fail(
-                    f".mise.toml tool lacks a version selector: {selector}"
+                    f".mise.toml tool lacks a version selector: {selector}",
                 )
             specifiers[selector] = version
         if not specifiers:
@@ -71,18 +70,23 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
         return r[t.StrMapping].ok(specifiers)
 
     @staticmethod
-    def _validate_suspended_selectors(configured_tools: t.StrMapping) -> p.Result[bool]:
-        """Reject dormant capabilities before download or publication."""
-        patterns = config.Infra.codegen.toolchain.suspended_mise_selector_patterns
-        suspended = tuple(
-            selector
-            for selector in configured_tools
-            if any(fnmatchcase(selector, pattern) for pattern in patterns)
+    def _validate_selector_integrity(configured_tools: t.StrMapping) -> p.Result[bool]:
+        """Reject a lockfile annotation leaking into a ``.mise.toml`` selector.
+
+        A generated selector is the declared release; the ``~<hash>`` fragment
+        belongs to the lockfile's cache key (``aube.path``). Copied into the
+        selector it makes ``mise install`` fail with "not in the lockfile" and
+        aborts the fleet's ``make setup`` before any verb can run.
+        """
+        annotated = tuple(
+            f"{selector}={version}"
+            for selector, version in sorted(configured_tools.items())
+            if c.Infra.MISE_LOCK_ANNOTATION in version
         )
-        if suspended:
+        if annotated:
             return r[bool].fail(
-                "Mise payload selects a suspended toolchain: "
-                f"{', '.join(sorted(suspended))}"
+                "Mise payload carries a lockfile annotation in the selector: "
+                f"{', '.join(annotated)}",
             )
         return r[bool].ok(True)
 
@@ -95,10 +99,12 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
         tools_result = cls._tool_specifiers(config_result.value)
         if tools_result.failure:
             return r[bool].from_failure(tools_result)
-        return cls._validate_suspended_selectors(tools_result.value)
+        return cls._validate_selector_integrity(tools_result.value)
 
     def validate_artifacts(
-        self, project_root: Path, runtime_root: Path
+        self,
+        project_root: Path,
+        runtime_root: Path,
     ) -> p.Result[bool]:
         """Validate one project's declaration, pin, and launchers offline.
 
@@ -121,7 +127,8 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
         if runtime_root.failure:
             return r[bool].from_failure(runtime_root)
         return FlextInfraMiseArtifactsDerivation.validate(
-            self.repository_root, runtime_root.value
+            self.repository_root,
+            runtime_root.value,
         )
 
 

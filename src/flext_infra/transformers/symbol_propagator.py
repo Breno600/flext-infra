@@ -42,14 +42,18 @@ class FlextInfraRefactorSymbolPropagator(FlextInfraRopeTransformer):
         # Phase 1: Rename module paths in from-imports
         for old_module, new_module in self._module_renames.items():
             updated = self._rename_module_in_imports(
-                updated, old_module=old_module, new_module=new_module
+                updated,
+                old_module=old_module,
+                new_module=new_module,
             )
 
         # Phase 2: Rename imported symbols in target modules
         local_renames: t.MutableStrMapping = {}
         for old_name, new_name in self._import_symbol_renames.items():
             updated, renamed = self._rename_import_symbol(
-                updated, old_name=old_name, new_name=new_name
+                updated,
+                old_name=old_name,
+                new_name=new_name,
             )
             if renamed:
                 local_renames[old_name] = new_name
@@ -57,12 +61,18 @@ class FlextInfraRefactorSymbolPropagator(FlextInfraRopeTransformer):
         # Phase 3: Propagate local reference renames
         for old_name, new_name in local_renames.items():
             updated = self._propagate_local_rename(
-                updated, old_name=old_name, new_name=new_name
+                updated,
+                old_name=old_name,
+                new_name=new_name,
             )
         return updated, list(self.changes)
 
     def _rename_module_in_imports(
-        self, source: str, *, old_module: str, new_module: str
+        self,
+        source: str,
+        *,
+        old_module: str,
+        new_module: str,
     ) -> str:
         """Replace ``from old_module import ...`` with ``from new_module import ...``."""
         pattern = c.Infra.compile_from_module_rename(old_module)
@@ -75,7 +85,11 @@ class FlextInfraRefactorSymbolPropagator(FlextInfraRopeTransformer):
         return source
 
     def _rename_import_symbol(
-        self, source: str, *, old_name: str, new_name: str
+        self,
+        source: str,
+        *,
+        old_name: str,
+        new_name: str,
     ) -> t.Pair[str, bool]:
         """Rename symbol in import statement within target modules."""
         # Match the symbol in from-import lines for any target module
@@ -84,13 +98,17 @@ class FlextInfraRefactorSymbolPropagator(FlextInfraRopeTransformer):
             new_source: str = pattern.sub(rf"\g<1>{new_name}", source)
             if new_source != source:
                 self._record_change(
-                    f"Renamed imported symbol: {old_name} -> {new_name}"
+                    f"Renamed imported symbol: {old_name} -> {new_name}",
                 )
                 return new_source, True
         return source, False
 
     def _propagate_local_rename(
-        self, source: str, *, old_name: str, new_name: str
+        self,
+        source: str,
+        *,
+        old_name: str,
+        new_name: str,
     ) -> str:
         """Replace bare references to old_name with new_name in non-import lines."""
         pattern = c.Infra.compile_bare_reference_rename(old_name)
@@ -99,7 +117,7 @@ class FlextInfraRefactorSymbolPropagator(FlextInfraRopeTransformer):
         count = replacement_result[1]
         if count > 0 and new_source != source:
             self._record_change(
-                f"Propagated local symbol rename: {old_name} -> {new_name}"
+                f"Propagated local symbol rename: {old_name} -> {new_name}",
             )
             return new_source
         return source

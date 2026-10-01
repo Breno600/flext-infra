@@ -8,8 +8,8 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import hashlib
 import os
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -50,7 +50,7 @@ def _write_modernizer_codegen_config(workspace: Path) -> None:
     (config_dir / c.Infra.CODEGEN_CONFIG_FILENAME).write_bytes(
         (
             _PROJECT_ROOT / c.Infra.CODEGEN_CONFIG_DIR / c.Infra.CODEGEN_CONFIG_FILENAME
-        ).read_bytes()
+        ).read_bytes(),
     )
 
 
@@ -71,16 +71,16 @@ _DETECTOR_PROJECT_NAME = "detector-fixture"
 _DETECTOR_UPGRADE_RECEIPT = "upgrade-receipt.json"
 
 
-def _detector_template_parent(modules: t.StrSequence) -> Path:
+def _detector_template_parent(run_root: Path, modules: t.StrSequence) -> Path:
     """Return the run-scoped home of one resolved detector consumer.
 
     The pytest invocation's temporary root is shared by every worker of one
     run and removed with it, so each run resolves its own environment once.
     """
-    return Path(tempfile.gettempdir()) / "detector-templates" / "-".join(modules)
+    return run_root / "detector-templates" / "-".join(modules)
 
 
-def _provision_detector_template(modules: t.StrSequence) -> None:
+def _provision_detector_template(run_root: Path, modules: t.StrSequence) -> None:
     """Resolve one detector consumer through ``make upg`` and commit its locks.
 
     ``make upg`` is the sole writer of a new consumer's locks; it resolves over
@@ -88,7 +88,7 @@ def _provision_detector_template(modules: t.StrSequence) -> None:
     item starts. The command output is kept as the receipt every consumer of
     the template asserts.
     """
-    parent = _detector_template_parent(modules)
+    parent = _detector_template_parent(run_root, modules)
     distributions = {"requests": "requests", "pytz": "pytz", "six": "six"}
     # A governed FLEXT consumer declares exactly one runtime upstream profile;
     # conform derives its project spec from it (context_render.py).
@@ -98,13 +98,15 @@ def _provision_detector_template(modules: t.StrSequence) -> None:
     )
     infrastructure = tm.ok(
         u.Infra.configured_repository_ref(
-            codegen=config.Infra.codegen, repository_root=_PROJECT_ROOT
-        )
+            codegen=config.Infra.codegen,
+            repository_root=_PROJECT_ROOT,
+        ),
     )
     integration = tm.ok(
         u.Infra.flext_integration_line(
-            codegen=config.Infra.codegen, repository_root=_PROJECT_ROOT
-        )
+            codegen=config.Infra.codegen,
+            repository_root=_PROJECT_ROOT,
+        ),
     )
     root = u.Tests.mk_project(
         parent,
@@ -133,32 +135,38 @@ def _provision_detector_template(modules: t.StrSequence) -> None:
     )
     u.Tests.copy_tracked_mise_seeds(root)
     repository = u.Tests.repository_ref(
-        root.name, role=c.Infra.MakeProfile.STANDALONE
+        root.name,
+        role=c.Infra.MakeProfile.STANDALONE,
     ).model_copy(update={"editable": True})
     u.Tests.initialize_git_repo(root, origin_url=repository.url)
     workspace = u.Tests.workspace_spec(
-        repository, project=u.Tests.project_spec(root.name)
+        repository,
+        project=u.Tests.project_spec(root.name),
     )
     conform_request = u.Tests.conform_request(
-        root, what=c.Infra.CodegenConformSurface.MAKEFILE
+        root,
+        what=c.Infra.CodegenConformSurface.MAKEFILE,
     )
     plan = tm.ok(
         FlextInfraCodegenConform(
-            repository_root=root, initial_workspace=workspace, request=conform_request
-        ).plan(conform_request)
+            repository_root=root,
+            initial_workspace=workspace,
+            request=conform_request,
+        ).plan(conform_request),
     )
     makefile = next(
         item for item in plan.files if item.path.name == c.Infra.MAKEFILE_FILENAME
     )
     tm.ok(
         u.Cli.atomic_write_text_file(
-            root / c.Infra.MAKEFILE_FILENAME, u.Tests.codegen_file_text(makefile)
-        )
+            root / c.Infra.MAKEFILE_FILENAME,
+            u.Tests.codegen_file_text(makefile),
+        ),
     )
     tm.ok(
         infra.sync_environment_files(
-            m.Infra.WorkspaceEnvironmentSyncRequest(repository_root=root, apply=True)
-        )
+            m.Infra.WorkspaceEnvironmentSyncRequest(repository_root=root, apply=True),
+        ),
     )
     # A newly scaffolded consumer has no committed locks yet. The public upgrade
     # lifecycle is their sole writer; frozen setup starts only after that first
@@ -173,6 +181,7 @@ def _provision_detector_template(modules: t.StrSequence) -> None:
 _MAKE_UPGRADE_RECEIPT = c.Tests.MAKE_TEMPLATE_UPG_RECEIPT
 _MAKE_CI_SETUP_RECEIPT = c.Tests.MAKE_TEMPLATE_CI_RECEIPT
 _INFRA_SETUP_RECEIPT = "setup-receipt.json"
+_GIT_MIRRORS_RECEIPT = "mirrors-receipt.txt"
 # Every scenario that provisions the candidate's own environment before `gen`.
 _INFRA_CHECKOUT_SCENARIOS = (
     "builtin",
@@ -182,9 +191,15 @@ _INFRA_CHECKOUT_SCENARIOS = (
 )
 
 
-def _run_scoped(kind: str, key: str) -> Path:
+def _run_root(factory: pytest.TempPathFactory) -> Path:
+    """Use pytest's invocation directory, shared across xdist workers."""
+    base = factory.getbasetemp()
+    return base.parent if os.environ.get("PYTEST_XDIST_WORKER") else base
+
+
+def _run_scoped(run_root: Path, kind: str, key: str) -> Path:
     """Return the run-scoped home of one provisioned consumer."""
-    return Path(tempfile.gettempdir()) / kind / key
+    return run_root / kind / key
 
 
 def _write_receipt(path: Path, output: p.Cli.CommandOutput) -> None:
@@ -193,20 +208,21 @@ def _write_receipt(path: Path, output: p.Cli.CommandOutput) -> None:
         u.Cli.atomic_write_text_file(
             path,
             m.Cli.CommandOutput.model_validate(
-                output, from_attributes=True
+                output,
+                from_attributes=True,
             ).model_dump_json(),
-        )
+        ),
     )
 
 
-def _provision_make_template(profile: c.Infra.MakeProfile) -> None:
+def _provision_make_template(run_root: Path, profile: c.Infra.MakeProfile) -> None:
     """Resolve one generated consumer through ``make upg`` once per run.
 
     The upgrade runs under a foreign uv environment with a declared post-upg
     hook, and a checkout of the resolved result installs every locked tool
     into cold CI storage; both receipts are what the consumers assert.
     """
-    parent = _run_scoped("make-templates", profile.value)
+    parent = _run_scoped(run_root, "make-templates", profile.value)
     root, _ = u.Tests.render_make_environment(parent, profile, bootstrap=True)
     hostile_venv = parent / c.Tests.MAKE_TEMPLATE_HOSTILE_VENV
     (hostile_venv / "bin").mkdir(parents=True)
@@ -222,13 +238,15 @@ def _provision_make_template(profile: c.Infra.MakeProfile) -> None:
             ["--no-print-directory", "upg"],
             cwd=root,
             env=u.Tests.hostile_uv_environment(hostile_venv),
-        )
+        ),
     )
     _write_receipt(parent / _MAKE_UPGRADE_RECEIPT, upgrade)
     if not u.Cli.process_succeeded(upgrade.outcome):
         return
     checkout = u.Tests.resolved_make_checkout(
-        root, parent / c.Tests.MAKE_TEMPLATE_CI_CHECKOUT, profile
+        root,
+        parent / c.Tests.MAKE_TEMPLATE_CI_CHECKOUT,
+        profile,
     )
     make = config.Infra.codegen.make
     (checkout / c.Infra.CUSTOM_MAKE_FILENAME).write_text(
@@ -247,26 +265,28 @@ def _provision_make_template(profile: c.Infra.MakeProfile) -> None:
                 **u.Tests.hostile_uv_environment(hostile_venv),
                 make.ci.variable: make.ci.value,
                 u.Infra.mise_bootstrap_environment().storage_root_variable: str(
-                    parent / c.Tests.COLD_MISE_STORAGE
+                    parent / c.Tests.COLD_MISE_STORAGE,
                 ),
             },
-        )
+        ),
     )
     _write_receipt(parent / _MAKE_CI_SETUP_RECEIPT, setup)
 
 
-def _provision_infra_checkout(scenario: str) -> None:
+def _provision_infra_checkout(run_root: Path, scenario: str) -> None:
     """Set up one candidate checkout from its committed locks before its item."""
-    parent = _run_scoped("infra-checkouts", scenario)
+    parent = _run_scoped(run_root, "infra-checkouts", scenario)
     root = u.Tests.infra_source_checkout(parent)
     setup = tm.ok(
-        u.Tests.run_isolated_make(["--no-print-directory", "setup"], cwd=root)
+        u.Tests.run_isolated_make(["--no-print-directory", "setup"], cwd=root),
     )
     _write_receipt(parent / _INFRA_SETUP_RECEIPT, setup)
 
 
 def _ensure_provisioned(
-    parent: Path, receipt: str, key: c.Infra.MakeProfile | str | t.StrSequence
+    parent: Path,
+    receipt: str,
+    key: c.Infra.MakeProfile | str | t.StrSequence,
 ) -> None:
     """Provision only a consumed fixture under the canonical filesystem lease.
 
@@ -280,15 +300,44 @@ def _ensure_provisioned(
             return
         match key:
             case c.Infra.MakeProfile():
-                _provision_make_template(key)
+                _provision_make_template(run_root, key)
             case str():
-                _provision_infra_checkout(key)
+                _provision_infra_checkout(run_root, key)
             case _:
-                _provision_detector_template(key)
+                _provision_detector_template(run_root, key)
 
 
 @pytest.fixture
-def resolved_make_templates() -> t.MappingKV[c.Infra.MakeProfile, Path]:
+def hermetic_git_environment(tmp_path_factory: pytest.TempPathFactory) -> t.StrMapping:
+    """Serve the fixture provider's Git sources from this run's local mirrors.
+
+    The mirrors are built once per locked-source set under the canonical
+    filesystem lease from objects this checkout already holds; the directory is
+    keyed by that set, so a relock never reuses mirrors of superseded commits.
+    The returned environment routes the provider to them and makes any network
+    transport fail.
+    """
+    sources = "\n".join(
+        "@".join(source) for source in u.Tests.locked_git_sources(_PROJECT_ROOT)
+    )
+    parent = _run_scoped(
+        "git-mirrors",
+        hashlib.sha256(sources.encode()).hexdigest()[:16],
+    )
+    parent.mkdir(parents=True, exist_ok=True)
+    receipt = parent / _GIT_MIRRORS_RECEIPT
+    mirrors = parent / "mirrors"
+    with u.Infra.codegen_transaction_lease(receipt):
+        if not receipt.is_file():
+            mirrored = u.Tests.build_git_mirrors(_PROJECT_ROOT, mirrors)
+            tm.ok(u.Cli.atomic_write_text_file(receipt, "\n".join(mirrored) + "\n"))
+    return u.Tests.hermetic_git_environment(mirrors)
+
+
+@pytest.fixture
+def resolved_make_templates(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> t.MappingKV[c.Infra.MakeProfile, Path]:
     """Return every profile's committed ``make upg`` template for this run.
 
     Consumers clone a template rather than resolving inside their budget; the
@@ -296,8 +345,9 @@ def resolved_make_templates() -> t.MappingKV[c.Infra.MakeProfile, Path]:
     """
     templates: dict[c.Infra.MakeProfile, Path] = {}
     for profile in c.Infra.MakeProfile:
-        parent = _run_scoped("make-templates", profile.value)
-        _ensure_provisioned(parent, _MAKE_UPGRADE_RECEIPT, profile)
+        run_root = _run_root(tmp_path_factory)
+        parent = _run_scoped(run_root, "make-templates", profile.value)
+        _ensure_provisioned(run_root, parent, _MAKE_UPGRADE_RECEIPT, profile)
         upgrade = u.Tests.command_receipt(parent / _MAKE_UPGRADE_RECEIPT)
         tm.that(
             u.Cli.process_succeeded(upgrade.outcome),
@@ -309,22 +359,31 @@ def resolved_make_templates() -> t.MappingKV[c.Infra.MakeProfile, Path]:
 
 
 @pytest.fixture(params=_INFRA_CHECKOUT_SCENARIOS)
-def provisioned_infra_checkout(request: pytest.FixtureRequest) -> t.Pair[str, Path]:
+def provisioned_infra_checkout(
+    request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory
+) -> t.Pair[str, Path]:
     """Return one scenario's candidate checkout, set up from committed locks."""
     scenario = str(request.param)
-    parent = _run_scoped("infra-checkouts", scenario)
-    _ensure_provisioned(parent, _INFRA_SETUP_RECEIPT, scenario)
+    run_root = _run_root(tmp_path_factory)
+    parent = _run_scoped(run_root, "infra-checkouts", scenario)
+    _ensure_provisioned(run_root, parent, _INFRA_SETUP_RECEIPT, scenario)
     setup = u.Tests.command_receipt(parent / _INFRA_SETUP_RECEIPT)
     tm.that(
-        u.Cli.process_succeeded(setup.outcome), eq=True, msg=setup.stdout + setup.stderr
+        u.Cli.process_succeeded(setup.outcome),
+        eq=True,
+        msg=setup.stdout + setup.stderr,
     )
     root = parent / config.Infra.name
-    tm.that((root / ".venv" / "pyvenv.cfg").is_file(), eq=True)
+    tm.that((u.Infra.runtime_environment_dir(root) / "pyvenv.cfg").is_file(), eq=True)
     return scenario, root
 
 
 @pytest.fixture(params=[("requests",)])
-def real_detector_project(tmp_path: Path, request: pytest.FixtureRequest) -> Path:
+def real_detector_project(
+    tmp_path: Path,
+    request: pytest.FixtureRequest,
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Path:
     """Check out the run's resolved detector consumer and set it up from its locks.
 
     The consumer clones the committed template exactly as a developer clones a
@@ -332,20 +391,23 @@ def real_detector_project(tmp_path: Path, request: pytest.FixtureRequest) -> Pat
     from the committed locks without resolving anything new.
     """
     modules = t.Infra.STR_SEQ_ADAPTER.validate_python(request.param)
-    parent = _detector_template_parent(modules)
-    _ensure_provisioned(parent, _DETECTOR_UPGRADE_RECEIPT, modules)
+    run_root = _run_root(tmp_path_factory)
+    parent = _detector_template_parent(run_root, modules)
+    _ensure_provisioned(run_root, parent, _DETECTOR_UPGRADE_RECEIPT, modules)
     upgrade = m.Cli.CommandOutput.model_validate_json(
-        (parent / _DETECTOR_UPGRADE_RECEIPT).read_text(encoding="utf-8")
+        (parent / _DETECTOR_UPGRADE_RECEIPT).read_text(encoding="utf-8"),
     )
     tm.that(u.Cli.process_succeeded(upgrade.outcome), eq=True, msg=upgrade.stderr)
     root = tmp_path / _DETECTOR_PROJECT_NAME
     u.Tests.git_bootstrap(
-        tmp_path, ("clone", "-q", str(parent / _DETECTOR_PROJECT_NAME), str(root))
+        tmp_path,
+        ("clone", "-q", str(parent / _DETECTOR_PROJECT_NAME), str(root)),
     )
     u.Tests.initialize_git_repo(
         root,
         origin_url=u.Tests.repository_ref(
-            root.name, role=c.Infra.MakeProfile.STANDALONE
+            root.name,
+            role=c.Infra.MakeProfile.STANDALONE,
         ).url,
     )
     setup = tm.ok(u.Tests.run_isolated_make(["setup"], cwd=root, capture=False))
@@ -356,7 +418,8 @@ def real_detector_project(tmp_path: Path, request: pytest.FixtureRequest) -> Pat
     tool_path = runtime / ("Scripts" if os.name == "nt" else "bin") / executable
     tm.that(tool_path.is_file(), eq=True)
     (root / "limits.toml").write_text(
-        "[typing_libraries]\nexclude = []\n", encoding="utf-8"
+        "[typing_libraries]\nexclude = []\n",
+        encoding="utf-8",
     )
     return root
 
@@ -424,7 +487,7 @@ def real_python_package(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     (project_root / "pyproject.toml").write_text(
-        '[project]\nname = "test-pkg"\nversion = "0.1.0"\n'
+        '[project]\nname = "test-pkg"\nversion = "0.1.0"\n',
     )
     return project_root
 
@@ -451,7 +514,8 @@ def cached_runner_project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
         encoding="utf-8",
     )
     (package_root / "__init__.py").write_text(
-        "def answer() -> int:\n    return 42\n", encoding="utf-8"
+        "def answer() -> int:\n    return 42\n",
+        encoding="utf-8",
     )
     (tests_root / "test_runtime.py").write_text(
         "from flext_tests import tm\n"
@@ -503,16 +567,22 @@ def mod_workspace(tmp_path: Path) -> Path:
                 f'version = "{project.project.version}"\n'
                 f"{c.Infra.DEPENDENCIES} = []\n"
             ),
-        )
+        ),
     )
     # A declared distribution owns a package: resolving the package name from
     # `[project].name` alone is impossible for a `flext-` distribution, so a
-    # fixture without `src/<pkg>/` is not the project it claims to be.
-    package_dir = (
-        workspace / c.Infra.DEFAULT_SRC_DIR / (project.project.name.replace("-", "_"))
-    )
+    # fixture without `src/<pkg>/` is not the project it claims to be. The
+    # package follows the fixture's own declared name: naming it after the
+    # real project would shadow the installed flext_infra for Rope, and every
+    # packaged campaign binding (flext_infra.c / .t) would lose its owner.
+    package_dir = workspace / c.Infra.DEFAULT_SRC_DIR / workspace.name
     tm.ok(u.Cli.ensure_dir(package_dir))
-    tm.ok(u.Cli.atomic_write_text_file(package_dir / c.Infra.INIT_PY, ""))
+    tm.ok(
+        u.Cli.atomic_write_text_file(
+            package_dir / c.Infra.INIT_PY,
+            '"""Public refactor-mod fixture package."""\n\nfrom __future__ import annotations\n',
+        )
+    )
     tm.ok(
         u.Cli.atomic_write_text_file(
             workspace / "sample.py",
@@ -550,7 +620,7 @@ def mod_workspace(tmp_path: Path) -> Path:
                 "\n"
                 "u.Infra.serialization_lock_execute(paths, timeout)\n"
             ),
-        )
+        ),
     )
     package_dir = workspace / "src" / project.project.name.replace("-", "_")
     tm.ok(u.Cli.ensure_dir(package_dir))
@@ -558,7 +628,7 @@ def mod_workspace(tmp_path: Path) -> Path:
         u.Cli.atomic_write_text_file(
             package_dir / c.Infra.INIT_PY,
             '"""Public refactor-mod fixture package."""\n\nfrom __future__ import annotations\n',
-        )
+        ),
     )
     u.Tests.initialize_git_repo(workspace)
     return workspace
@@ -570,16 +640,16 @@ def real_workspace(tmp_path: Path) -> Path:
     repository_root = tmp_path / "workspace"
     repository_root.mkdir()
     (repository_root / "Makefile").write_text(
-        ".PHONY: help\nhelp:\n\t@echo 'Workspace'\n"
+        ".PHONY: help\nhelp:\n\t@echo 'Workspace'\n",
     )
     (repository_root / "pyproject.toml").write_text(
-        '[project]\nname = "workspace"\nversion = "0.1.0"\n'
+        '[project]\nname = "workspace"\nversion = "0.1.0"\n',
     )
     for i in range(1, 4):
         project_dir = repository_root / f"project_{i}"
         project_dir.mkdir()
         (project_dir / "pyproject.toml").write_text(
-            f'[project]\nname = "project-{i}"\nversion = "0.1.0"\n'
+            f'[project]\nname = "project-{i}"\nversion = "0.1.0"\n',
         )
         src_dir = project_dir / "src" / f"project_{i}"
         src_dir.mkdir(parents=True)
@@ -591,11 +661,17 @@ def real_workspace(tmp_path: Path) -> Path:
 def modernizer_workspace(tmp_path: Path) -> Path:
     workspace = tmp_path / "workspace"
     workspace.mkdir(parents=True, exist_ok=True)
+    # The governed tree above the workspace carries the committed Taplo pin.
+    u.Tests.seed_locked_taplo(tmp_path)
     (workspace / c.PYPROJECT_FILENAME).write_text(
-        _modernizer_workspace_pyproject(), encoding="utf-8"
+        _modernizer_workspace_pyproject(),
+        encoding="utf-8",
     )
     u.Tests.write_beads_project(
-        workspace, workspace="workspace", database="workspace", issue_prefix="workspace"
+        workspace,
+        workspace="workspace",
+        database="workspace",
+        issue_prefix="workspace",
     )
     _write_modernizer_codegen_config(workspace)
     return workspace
@@ -604,13 +680,18 @@ def modernizer_workspace(tmp_path: Path) -> Path:
 @pytest.fixture
 def modernizer_workspace_with_projects(modernizer_workspace: Path) -> Path:
     (modernizer_workspace / c.PYPROJECT_FILENAME).write_text(
-        _modernizer_workspace_pyproject("selected", "ignored"), encoding="utf-8"
+        _modernizer_workspace_pyproject("selected", "ignored"),
+        encoding="utf-8",
     )
     selected = u.Tests.mk_project(
-        modernizer_workspace, "selected", pyproject=_modernizer_pyproject("selected")
+        modernizer_workspace,
+        "selected",
+        pyproject=_modernizer_pyproject("selected"),
     )
     ignored = u.Tests.mk_project(
-        modernizer_workspace, "ignored", pyproject=_modernizer_pyproject("ignored")
+        modernizer_workspace,
+        "ignored",
+        pyproject=_modernizer_pyproject("ignored"),
     )
     for project in (selected, ignored):
         u.Tests.write_beads_project(
@@ -642,7 +723,7 @@ def real_docs_project(tmp_path: Path) -> Path:
     (docs_dir / "index.md").write_text("# Index\n")
     (project_root / "README.md").write_text("# Project\n")
     (project_root / "pyproject.toml").write_text(
-        '[project]\nname = "docs-project"\nversion = "0.1.0"\n'
+        '[project]\nname = "docs-project"\nversion = "0.1.0"\n',
     )
     return project_root
 
@@ -689,7 +770,8 @@ def models_resource(
     """Return the Rope resource for the semantic models fixture module."""
     rope_project, repository_root = semantic_rope_workspace
     resource = u.Infra.resolve_resource_from_path(
-        rope_project, repository_root / "src" / "rope_demo" / "models.py"
+        rope_project,
+        repository_root / "src" / "rope_demo" / "models.py",
     )
     validated: t.Infra.RopeResource = tm.not_none(resource)
     return validated
@@ -702,7 +784,8 @@ def services_resource(
     """Return the Rope resource for the semantic services fixture module."""
     rope_project, repository_root = semantic_rope_workspace
     resource = u.Infra.resolve_resource_from_path(
-        rope_project, repository_root / "src" / "rope_demo" / "services.py"
+        rope_project,
+        repository_root / "src" / "rope_demo" / "services.py",
     )
     validated: t.Infra.RopeResource = tm.not_none(resource)
     return validated

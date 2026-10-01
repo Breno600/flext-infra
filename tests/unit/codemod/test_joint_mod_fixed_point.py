@@ -29,11 +29,11 @@ class TestsJointModFixedPoint:
     @staticmethod
     def _rules(root: Path, *, cycle: bool) -> None:
         """Declare a syntax rule and a text rule with no optional migration receipt."""
-        rules = root / "codemod" / c.Cli.RULES_DIR_NAME
+        config_path = root / c.Infra.CODEMOD_CONFIG_RELPATH
+        rules = config_path.parent / c.Cli.RULES_DIR_NAME
         u.Cli.ensure_dir(rules).unwrap()
         u.Cli.atomic_write_text_file(
-            root / c.Infra.CODEMOD_CONFIG_FILENAME,
-            "ruleDirs:\n  - codemod/rules\ntestConfigs: []\n",
+            config_path, f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\ntestConfigs: []\n"
         ).unwrap()
         u.Cli.atomic_write_text_file(
             rules / "joint.yml",
@@ -50,12 +50,14 @@ class TestsJointModFixedPoint:
         ).unwrap()
 
     def test_semantic_only_findings_are_applied_without_ast_rewrites(
-        self, mod_workspace: Path
+        self,
+        mod_workspace: Path,
     ) -> None:
         """A missing future import selects its semantic owner on its own."""
         sample = mod_workspace / "sample.py"
         u.Cli.atomic_write_text_file(
-            sample, '"""Semantic-only source."""\n\nmarker = tuple()\n'
+            sample,
+            '"""Semantic-only source."""\n\nmarker = tuple()\n',
         ).unwrap()
         before = FlextInfraModGateEngine.scan(mod_workspace, fix=False).unwrap()
         tm.that(before.actionable, eq=0)
@@ -74,7 +76,8 @@ class TestsJointModFixedPoint:
         tm.that(sample.read_bytes(), eq=first)
 
     def test_text_exposes_ast_work_and_both_converge_idempotently(
-        self, mod_workspace: Path
+        self,
+        mod_workspace: Path,
     ) -> None:
         """A text rewrite must not leave an actionable AST result behind success."""
         self._rules(mod_workspace, cycle=False)
@@ -96,7 +99,9 @@ class TestsJointModFixedPoint:
         tm.that(sample.read_bytes(), eq=first)
 
     def test_cross_phase_cycle_fails_without_a_fixed_point_claim(
-        self, mod_workspace: Path, capsys: pytest.CaptureFixture[str]
+        self,
+        mod_workspace: Path,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """AST and regex cannot alternate indefinitely or report a false fixed point."""
         self._rules(mod_workspace, cycle=True)

@@ -7,6 +7,7 @@ across the repository scope with dry-run, fixed-point, and gate validation.
 from __future__ import annotations
 
 import re
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import override
 
@@ -30,7 +31,7 @@ class FlextInfraCodemodSedApply(FlextInfraServiceBase[t.Cli.ResultValue]):
 
         if self.effective_dry_run:
             cli.display_text(
-                f"sed: scan {len(sed_config.patterns)} declared pattern(s)"
+                f"sed: scan {len(sed_config.patterns)} declared pattern(s)",
             )
             return self._dry_run()
         return self._execute_apply()
@@ -45,7 +46,7 @@ class FlextInfraCodemodSedApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                 cli.display_text(
                     f"sed: pattern '{pattern_spec.pattern}' -> "
                     f"'{pattern_spec.replacement}' would modify {change_count} occurrence(s) "
-                    f"in {file_count} file(s)"
+                    f"in {file_count} file(s)",
                 )
             total_changes += change_count
             total_files += file_count
@@ -54,7 +55,7 @@ class FlextInfraCodemodSedApply(FlextInfraServiceBase[t.Cli.ResultValue]):
         else:
             cli.display_text(
                 f"sed: dry-run complete — {total_changes} change(s) across "
-                f"{total_files} file(s)"
+                f"{total_files} file(s)",
             )
         return r[t.Cli.ResultValue].ok(True)
 
@@ -64,7 +65,7 @@ class FlextInfraCodemodSedApply(FlextInfraServiceBase[t.Cli.ResultValue]):
         self._validate_patterns()
 
         cli.display_text("sed: preflight scan")
-        seen: dict[t.VariadicTuple[t.Quad[str, str, str, str]], int] = {}
+        seen: MutableMapping[t.VariadicTuple[t.Quad[str, str, str, str]], int] = {}
         iteration = 0
 
         while True:
@@ -74,7 +75,7 @@ class FlextInfraCodemodSedApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                 prev_iter = seen[fingerprint]
                 return r[t.Cli.ResultValue].fail(
                     f"sed iteration {iteration} made no progress since iteration {prev_iter}; "
-                    f"fixed-point proof failed — changes retained for mandatory owner repair"
+                    f"fixed-point proof failed — changes retained for mandatory owner repair",
                 )
             seen[fingerprint] = iteration
 
@@ -84,11 +85,11 @@ class FlextInfraCodemodSedApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                 break
 
             cli.display_text(
-                f"sed: iteration {iteration} — {changes_made} file(s) modified"
+                f"sed: iteration {iteration} — {changes_made} file(s) modified",
             )
 
         cli.display_text(
-            "sed: require canonical formatting and zero Ruff, Pyrefly, and LSP diagnostics"
+            "sed: require canonical formatting and zero Ruff, Pyrefly, and LSP diagnostics",
         )
         gated = self._run_gates()
         if gated.failure:

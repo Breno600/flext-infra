@@ -25,7 +25,8 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
     """Validate strict layer, facade, typing, and DI invariants."""
 
     rope: t.Port[p.Infra.RopeWorkspaceDsl] = m.Field(
-        exclude=True, description="Shared Rope cycle injected by the composition root"
+        exclude=True,
+        description="Shared Rope cycle injected by the composition root",
     )
     _eligible_files: frozenset[Path] | None = u.PrivateAttr(default=None)
     _first_eligible_file: Path | None = u.PrivateAttr(default=None)
@@ -40,7 +41,10 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
         return r[bool].ok(report.passed)
 
     def __call__(
-        self, workspace: p.Infra.RopeWorkspaceDsl, visit: m.Infra.RopeModuleVisit, /
+        self,
+        workspace: p.Infra.RopeWorkspaceDsl,
+        visit: m.Infra.RopeModuleVisit,
+        /,
     ) -> p.Result[m.Infra.RopeCallbackOutcome]:
         """Validate one module supplied by the shared Rope owner callback."""
         project_root = self.repository_root.resolve()
@@ -51,7 +55,7 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
                     project_root=visit.project_root,
                     callback_id="namespace",
                     applicable=False,
-                )
+                ),
             )
         filepath = visit.file_path.resolve()
         eligible = self._eligible_project_files(workspace)
@@ -62,17 +66,26 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
                     project_root=visit.project_root,
                     callback_id="namespace",
                     applicable=False,
-                )
+                ),
             )
         layout = visit.convention.project_layout
         rel = filepath.relative_to(project_root)
         violations: t.MutableSequenceOf[str] = []
         if filepath == self._first_eligible_file:
-            violations.extend(
-                self._layout_violations(
-                    layout.package_dir if layout is not None else None
+            if layout is None and self._declared_content_only(project_root):
+                # A workspace manifest declaring repository.package=false
+                # defines a content-only root (a workspace shell whose
+                # analyzable surface lives in examples/tests): the facade
+                # layout contract scopes projects that publish packages, so
+                # the undiscovered layout is the declared receipt, not a
+                # defect (invest-6n6u family).
+                pass
+            else:
+                violations.extend(
+                    self._layout_violations(
+                        layout.package_dir if layout is not None else None,
+                    ),
                 )
-            )
         violations.extend(self.check_module(visit, rel))
         return r[m.Infra.RopeCallbackOutcome].ok(
             m.Infra.RopeCallbackOutcome(
@@ -80,11 +93,31 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
                 project_root=visit.project_root,
                 callback_id="namespace",
                 violations=tuple(violations),
-            )
+            ),
         )
 
+    @staticmethod
+    def _declared_content_only(project_root: Path) -> bool:
+        """Return whether the local manifest declares repository.package=false.
+
+        The workspace manifest is the SSOT for the publish contract: a
+        content-only declaration means the analyzable surface lives in
+        examples/tests and the facade layout contract does not apply.
+        Undeclared or load-failing roots stay loud (the layout error is the
+        correct signal when a package was expected).
+        """
+        resolved = project_root.expanduser().resolve()
+        if not u.Infra.workspace_manifest_path(resolved).is_file():
+            return False
+        declared = u.Infra.load_workspace_manifest(resolved)
+        if declared.failure or not declared.value:
+            return False
+        manifest = declared.value[0]
+        return manifest.repository.package is False
+
     def _eligible_project_files(
-        self, workspace: p.Infra.RopeWorkspaceDsl
+        self,
+        workspace: p.Infra.RopeWorkspaceDsl,
     ) -> frozenset[Path]:
         """Index the governed files once for this project callback."""
         cached = self._eligible_files
@@ -120,18 +153,22 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
             violation for outcome in outcomes for violation in outcome.violations
         )
         return self._validation_report(
-            files_checked=len(outcomes), violations=violations
+            files_checked=len(outcomes),
+            violations=violations,
         )
 
     def callback_binding(self) -> m.Infra.RopeCallbackBinding:
         """Bind this validator to its exact files before Rope builds syntax trees."""
         return m.Infra.RopeCallbackBinding(
-            callback=self, file_paths=self._eligible_project_files(self.rope)
+            callback=self,
+            file_paths=self._eligible_project_files(self.rope),
         )
 
     @staticmethod
     def _validation_report(
-        *, files_checked: int, violations: t.SequenceOf[str]
+        *,
+        files_checked: int,
+        violations: t.SequenceOf[str],
     ) -> p.Result[m.Infra.ValidationReport]:
         """Build the namespace validation report."""
         passed = not violations
@@ -142,8 +179,10 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
         )
         return r[m.Infra.ValidationReport].ok(
             m.Infra.ValidationReport(
-                passed=passed, violations=tuple(violations), summary=summary
-            )
+                passed=passed,
+                violations=tuple(violations),
+                summary=summary,
+            ),
         )
 
     def _is_exempt_file(self, filepath: Path) -> bool:
@@ -154,7 +193,7 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
     def _in_declared_scan_scope(self, filepath: Path, project_root: Path) -> bool:
         """Return whether ``filepath`` lies inside the declared namespace scope.
 
-        Why (cosmos-3flk9, decision A): ``[tool.flext.namespace].scan_dirs``
+        Why: ``[tool.flext.namespace].scan_dirs``
         scopes enforcement to production sources when a project declares it —
         ``tests/`` host pytest conventions and ``scripts/`` are thin command
         adapters, so governing them as facades contradicts their contract.
@@ -189,7 +228,7 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
             if not any((package_dir / filename).is_file() for filename in filenames):
                 messages.append(
                     f"[NS-LAYOUT-{len(messages) + 1:03d}] missing {layer} facade: "
-                    + " or ".join(filenames)
+                    + " or ".join(filenames),
                 )
         services_dir = package_dir / "services"
         has_services = services_dir.is_dir() and any(
@@ -200,12 +239,12 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
             for layer in ("base", "api"):
                 if not (package_dir / f"{layer}.py").is_file():
                     messages.append(
-                        f"[NS-LAYOUT-{len(messages) + 1:03d}] missing {layer} facade"
+                        f"[NS-LAYOUT-{len(messages) + 1:03d}] missing {layer} facade",
                     )
         for family in ("_constants", "_typings", "_protocols", "_models", "_utilities"):
             if not (package_dir / family / "base.py").is_file():
                 messages.append(
-                    f"[NS-LAYOUT-{len(messages) + 1:03d}] {family} must begin with base.py"
+                    f"[NS-LAYOUT-{len(messages) + 1:03d}] {family} must begin with base.py",
                 )
         return tuple(messages)
 

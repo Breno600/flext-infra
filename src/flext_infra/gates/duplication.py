@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_core import r
-from flext_infra import c, m, settings, t, u
+from flext_infra import c, m, t, u
 
 from .base_gate import FlextInfraGate
 
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraDuplicationGate(FlextInfraGate):
-    """Report every clone owned by one project from a fresh workspace scan.
+    """Report every clone owned by one project from a fresh scan of that project.
 
     R2 extension: consumer+family scope via [tool.flext.project] config keys;
     thresholds in config SSOT. Structural ban forms only for mechanisms with
@@ -31,20 +31,20 @@ class FlextInfraDuplicationGate(FlextInfraGate):
     can_fix: ClassVar[bool] = False
     scanner_binary: ClassVar[str] = c.Infra.JSCPD_BINARY
 
-    # flext-pulj: process results stay structural outside the Pydantic boundary.
-    _scan_cache: ClassVar[MutableMapping[str, p.Cli.CommandOutput]] = {}
     _python_behavior_cache: ClassVar[
         MutableMapping[t.Triple[str, int, int], t.VariadicTuple[t.Pair[int, int]]]
     ] = {}
 
     @override
     def check(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
         """Run and validate jscpd, then expose every owned clone as an error."""
         _ = ctx
         started = time.monotonic()
-        scan = self._scan_workspace(project_dir)
+        scan = self._scan_project(project_dir)
         parsed = self._issues_from_report(scan, project_dir)
         issues = (
             parsed.value if parsed.success else (self._failure_issue(parsed.error),)
@@ -59,7 +59,7 @@ class FlextInfraDuplicationGate(FlextInfraGate):
             started=started,
         )
 
-    def _scan_workspace(self, project_dir: Path) -> p.Cli.CommandOutput:
+    def _scan_project(self, project_dir: Path) -> p.Cli.CommandOutput:
         """Create one fresh report; tool, scope, and report failures escape."""
         binary = shutil.which(c.Infra.JSCPD_BINARY)
         if binary is None:
@@ -81,9 +81,11 @@ class FlextInfraDuplicationGate(FlextInfraGate):
         if scope.failure:
             return m.Cli.CommandOutput(
                 stdout="",
-                stderr=scope.error or "workspace scope resolution failed",
+                stderr=scope.error or "project scope resolution failed",
                 outcome=m.Cli.ProcessOutcome(
-                    raw_return_code=1, timed_out=False, forwarded_signal=None
+                    raw_return_code=1,
+                    timed_out=False,
+                    forwarded_signal=None,
                 ),
             )
         if not scope.value:
@@ -91,7 +93,9 @@ class FlextInfraDuplicationGate(FlextInfraGate):
                 stdout="",
                 stderr="jscpd scope resolved no source or test directories",
                 outcome=m.Cli.ProcessOutcome(
-                    raw_return_code=1, timed_out=False, forwarded_signal=None
+                    raw_return_code=1,
+                    timed_out=False,
+                    forwarded_signal=None,
                 ),
             )
         rendered_config = self._render_config(project_dir)
@@ -100,7 +104,9 @@ class FlextInfraDuplicationGate(FlextInfraGate):
                 stdout="",
                 stderr=rendered_config.error or "project duplication config invalid",
                 outcome=m.Cli.ProcessOutcome(
-                    raw_return_code=1, timed_out=False, forwarded_signal=None
+                    raw_return_code=1,
+                    timed_out=False,
+                    forwarded_signal=None,
                 ),
             )
         config_path = rendered_config.value
@@ -127,58 +133,43 @@ class FlextInfraDuplicationGate(FlextInfraGate):
         return self._load_report(report_dir, result)
 
     def _render_scope_dirs(self, project_dir: Path) -> p.Result[t.StrSequence]:
-        """Every discovered project's canonical scope plus declared extra trees.
+        """The invoking project's canonical scope plus its declared extra trees.
 
-        R2: Extended to consumer+family scope via [tool.flext.project] config keys.
-        Reuses the same workspace-topology discovery every other check-scoping
-        path uses (``u.Infra.resolve_projects``) — never a second hardcoded
-        project list. A project's manifest may declare additional
-        ``repository.duplication_trees`` (e.g. Helm charts); those declared
-        trees join the scan when they exist on disk.
+        Every repository evaluates only itself, locally exactly as in CI: the
+        scan covers this project's check directories, the governed manifest's
+        ``repository.duplication_trees`` (e.g. Helm charts) and the
+        ``[tool.flext.project]`` scope keys that exist on disk. Other projects
+        are libraries, never scanned from here.
         """
-        # Read project-specific config from [tool.flext.project]
         project_config = self._read_project_config(project_dir)
         if project_config.failure:
             return r[t.StrSequence].from_failure(project_config)
         scope_dirnames = project_config.value.scope
-
-        discovered = u.Infra.resolve_projects(self._repository_root, ())
-        if discovered.failure:
-            return r[t.StrSequence].from_failure(discovered)
-        projects = (
-            tuple(
-                project
-                for project in discovered.value
-                if project.path.resolve() == project_dir.resolve()
-            )
-            if settings.Infra.github_actions
-            else discovered.value
-        )
         declared_trees = self._declared_duplication_trees()
         if declared_trees.failure:
             return r[t.StrSequence].from_failure(declared_trees)
         return r[t.StrSequence].ok(
             tuple(
-                str(project.path / candidate)
-                for project in projects
+                str(project_dir / candidate)
                 for candidate in (
-                    *self._existing_check_dirs(project.path),
+                    *self._existing_check_dirs(project_dir),
                     *(
                         tree
                         for tree in declared_trees.value
-                        if (project.path / tree).is_dir()
+                        if (project_dir / tree).is_dir()
                     ),
                     *(
                         dirname
                         for dirname in scope_dirnames
-                        if (project.path / dirname).is_dir()
+                        if (project_dir / dirname).is_dir()
                     ),
                 )
-            )
+            ),
         )
 
     def _read_project_config(
-        self, project_dir: Path
+        self,
+        project_dir: Path,
     ) -> p.Result[m.Infra.ProjectDuplicationOverrides]:
         """Read ``[tool.flext.project.duplication]`` from pyproject.toml.
 
@@ -191,19 +182,20 @@ class FlextInfraDuplicationGate(FlextInfraGate):
         pyproject_path = project_dir / "pyproject.toml"
         if not pyproject_path.is_file():
             return r[m.Infra.ProjectDuplicationOverrides].ok(
-                m.Infra.ProjectDuplicationOverrides()
+                m.Infra.ProjectDuplicationOverrides(),
             )
         loaded = u.Cli.config_load(pyproject_path, expand_env=False)
         if loaded.failure:
             return r[m.Infra.ProjectDuplicationOverrides].fail(
-                f"invalid project manifest ({pyproject_path}): {loaded.error}"
+                f"invalid project manifest ({pyproject_path}): {loaded.error}",
             )
         tool = u.Cli.json_as_mapping(loaded.value.data).get("tool", {})
         flext = u.Cli.json_as_mapping(tool).get("flext", {})
         project = u.Cli.json_as_mapping(flext).get("project", {})
         duplication = u.Cli.json_as_mapping(project).get("duplication", {})
         validated: p.Result[m.Infra.ProjectDuplicationOverrides] = u.validate_value(
-            m.Infra.ProjectDuplicationOverrides, u.Cli.json_as_mapping(duplication)
+            m.Infra.ProjectDuplicationOverrides,
+            u.Cli.json_as_mapping(duplication),
         )
         if validated.failure:
             return r[m.Infra.ProjectDuplicationOverrides].fail_op(
@@ -220,10 +212,11 @@ class FlextInfraDuplicationGate(FlextInfraGate):
         loaded = u.Cli.config_load(manifest_path, expand_env=False)
         if loaded.failure:
             return r[t.StrSequence].fail(
-                f"invalid workspace manifest ({manifest_path}): {loaded.error}"
+                f"invalid workspace manifest ({manifest_path}): {loaded.error}",
             )
         validated: p.Result[m.Infra.WorkspaceManifestSpec] = u.validate_value(
-            m.Infra.WorkspaceManifestSpec, loaded.value.data
+            m.Infra.WorkspaceManifestSpec,
+            loaded.value.data,
         )
         if validated.failure:
             return r[t.StrSequence].fail_op(
@@ -231,20 +224,6 @@ class FlextInfraDuplicationGate(FlextInfraGate):
                 validated.error,
             )
         return r[t.StrSequence].ok(tuple(validated.value.repository.duplication_trees))
-
-    def _scope_paths(self) -> t.StrSequence:
-        """Resolve canonical source, test, config, and template roots once."""
-        projects = u.Infra.resolve_projects(self._repository_root, ()).unwrap()
-        scope = tuple(
-            str(path)
-            for project in projects
-            for dirname in c.Infra.JSCPD_SCOPE_DIRNAMES
-            if (path := project.path / dirname).is_dir()
-        )
-        if not scope:
-            msg = f"jscpd found no canonical scope under {self._repository_root}"
-            raise ValueError(msg)
-        return scope
 
     def _render_config(self, project_dir: Path) -> p.Result[Path]:
         """Materialize the jscpd config from this gate's typed SSOT.
@@ -286,7 +265,8 @@ class FlextInfraDuplicationGate(FlextInfraGate):
 
     @staticmethod
     def _load_report(
-        report_dir: Path, result: p.Cli.CommandOutput
+        report_dir: Path,
+        result: p.Cli.CommandOutput,
     ) -> p.Cli.CommandOutput:
         """Load the JSON report jscpd writes to disk; stdout carries console noise only."""
         report_path = report_dir / c.Infra.JSCPD_REPORT_FILENAME
@@ -316,7 +296,9 @@ class FlextInfraDuplicationGate(FlextInfraGate):
 
     @classmethod
     def _issues_from_report(
-        cls, scan: p.Cli.CommandOutput, project_dir: Path
+        cls,
+        scan: p.Cli.CommandOutput,
+        project_dir: Path,
     ) -> p.Result[t.VariadicTuple[m.Infra.Issue]]:
         """Extract one Issue per clone side that falls inside ``project_dir``."""
         if not scan.stdout.strip():
@@ -325,7 +307,7 @@ class FlextInfraDuplicationGate(FlextInfraGate):
             # whose scope is empty, which is the fact the operator needs.
             return r[tuple[m.Infra.Issue, ...]].fail(
                 f"duplication scan produced no report for project "
-                f"{project_dir.name}: the scanned scope is empty"
+                f"{project_dir.name}: the scanned scope is empty",
             )
         parsed = u.Cli.json_parse(scan.stdout)
         if parsed.failure:
@@ -351,8 +333,12 @@ class FlextInfraDuplicationGate(FlextInfraGate):
             ):
                 issues.append(
                     cls._issue_from_duplicate(
-                        duplicate, first, first_name, second_name, project_dir
-                    )
+                        duplicate,
+                        first,
+                        first_name,
+                        second_name,
+                        project_dir,
+                    ),
                 )
             elif (
                 Path(second_name).is_relative_to(project_dir)
@@ -360,8 +346,12 @@ class FlextInfraDuplicationGate(FlextInfraGate):
             ):
                 issues.append(
                     cls._issue_from_duplicate(
-                        duplicate, second, second_name, first_name, project_dir
-                    )
+                        duplicate,
+                        second,
+                        second_name,
+                        first_name,
+                        project_dir,
+                    ),
                 )
         return r[tuple[m.Infra.Issue, ...]].ok(tuple(issues))
 
@@ -391,7 +381,10 @@ class FlextInfraDuplicationGate(FlextInfraGate):
 
     @classmethod
     def _is_semantic_clone(
-        cls, duplicate: t.JsonMapping, first: t.JsonMapping, second: t.JsonMapping
+        cls,
+        duplicate: t.JsonMapping,
+        first: t.JsonMapping,
+        second: t.JsonMapping,
     ) -> bool:
         """Require executable Python behavior on both sides of a clone.
 
@@ -408,7 +401,7 @@ class FlextInfraDuplicationGate(FlextInfraGate):
         if u.Cli.json_pick_str(duplicate, "format") != "python":
             return True
         return cls._range_has_python_behavior(first) and cls._range_has_python_behavior(
-            second
+            second,
         )
 
     @classmethod
@@ -416,10 +409,7 @@ class FlextInfraDuplicationGate(FlextInfraGate):
         """Return whether one jscpd source range encloses executable behavior."""
         file_name = u.Cli.json_pick_str(side, "name")
         path = Path(file_name)
-        try:
-            identity = path.stat()
-        except OSError:
-            return True
+        identity = path.stat()
         key = (file_name, identity.st_mtime_ns, identity.st_size)
         ranges = cls._python_behavior_cache.get(key)
         if ranges is None:
@@ -473,7 +463,8 @@ class FlextInfraDuplicationGate(FlextInfraGate):
             ):
                 return True
             return isinstance(
-                node, (ast.Assign, ast.AnnAssign)
+                node,
+                (ast.Assign, ast.AnnAssign),
             ) and not inside_function(node)
 
         return tuple(

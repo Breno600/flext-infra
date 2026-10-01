@@ -15,7 +15,9 @@ class TestsFlextInfraRule0NamespaceStructure:
 
     @pytest.mark.parametrize("family", tuple(c.Infra.FAMILY_SUFFIXES))
     def test_required_public_facade_alias_passes(
-        self, tmp_path: Path, family: str
+        self,
+        tmp_path: Path,
+        family: str,
     ) -> None:
         root = u.Tests.namespace_project(
             tmp_path,
@@ -37,7 +39,7 @@ class TestsFlextInfraRule0NamespaceStructure:
             )
 
         report = u.Tests.validate_namespace_project(
-            m.Infra.NamespaceValidateCommand(repository_root=root)
+            m.Infra.NamespaceValidateCommand(repository_root=root),
         )
 
         tm.that(report.passed, eq=True, msg=str(report.violations))
@@ -60,17 +62,23 @@ class TestsFlextInfraRule0NamespaceStructure:
         ],
     )
     def test_noncanonical_facade_assignments_still_fail(
-        self, tmp_path: Path, module_path: str, assignment: str
+        self,
+        tmp_path: Path,
+        module_path: str,
+        assignment: str,
     ) -> None:
         source = u.Tests.namespace_fixture("rule0_valid.py").replace(
-            "m = FlextTestModels", assignment
+            "m = FlextTestModels",
+            assignment,
         )
         root, target = u.Tests.namespace_project_path(
-            tmp_path, module_source=source, module_path=module_path
+            tmp_path,
+            module_source=source,
+            module_path=module_path,
         )
 
         report = u.Tests.validate_namespace_project(
-            m.Infra.NamespaceValidateCommand(repository_root=root)
+            m.Infra.NamespaceValidateCommand(repository_root=root),
         )
 
         tm.that(report.passed, eq=False)
@@ -85,18 +93,21 @@ class TestsFlextInfraRule0NamespaceStructure:
 
     def test_facade_alias_before_class_is_not_canonical(self, tmp_path: Path) -> None:
         source = u.Tests.namespace_fixture("rule0_valid.py").replace(
-            "m = FlextTestModels", ""
+            "m = FlextTestModels",
+            "",
         )
         source = source.replace(
             "class FlextTestModels(FlextTestModelsBase):",
             "m = FlextTestModels\n\nclass FlextTestModels(FlextTestModelsBase):",
         )
         root = u.Tests.namespace_project(
-            tmp_path, module_source=source, module_name="models.py"
+            tmp_path,
+            module_source=source,
+            module_name="models.py",
         )
 
         report = u.Tests.validate_namespace_project(
-            m.Infra.NamespaceValidateCommand(repository_root=root)
+            m.Infra.NamespaceValidateCommand(repository_root=root),
         )
 
         tm.that(report.passed, eq=False)
@@ -112,13 +123,14 @@ class TestsFlextInfraRule0NamespaceStructure:
             module_name="models.py",
         )
         report = u.Tests.validate_namespace_project(
-            m.Infra.NamespaceValidateCommand(repository_root=root)
+            m.Infra.NamespaceValidateCommand(repository_root=root),
         )
         tm.that(report.passed, eq=True)
         tm.that(report.violations, empty=True)
 
     def test_project_without_services_needs_no_service_facades(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         root = u.Tests.namespace_project(
             tmp_path,
@@ -132,13 +144,14 @@ class TestsFlextInfraRule0NamespaceStructure:
         (package / "services").rmdir()
 
         report = u.Tests.validate_namespace_project(
-            m.Infra.NamespaceValidateCommand(repository_root=root)
+            m.Infra.NamespaceValidateCommand(repository_root=root),
         )
 
         tm.that(report.passed, eq=True, msg=str(report.violations))
 
     def test_project_with_service_requires_composition_facades(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         root = u.Tests.namespace_project(
             tmp_path,
@@ -154,19 +167,22 @@ class TestsFlextInfraRule0NamespaceStructure:
         (package / "base.py").unlink()
 
         report = u.Tests.validate_namespace_project(
-            m.Infra.NamespaceValidateCommand(repository_root=root)
+            m.Infra.NamespaceValidateCommand(repository_root=root),
         )
 
         tm.that(report.passed, eq=False)
         tm.that(
-            any("missing api facade" in item for item in report.violations), eq=True
+            any("missing api facade" in item for item in report.violations),
+            eq=True,
         )
         tm.that(
-            any("missing base facade" in item for item in report.violations), eq=True
+            any("missing base facade" in item for item in report.violations),
+            eq=True,
         )
 
     def test_settings_model_inherits_without_redundant_nested_namespace(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         root = u.Tests.namespace_project(
             tmp_path,
@@ -181,7 +197,7 @@ class TestsFlextInfraRule0NamespaceStructure:
         )
 
         report = u.Tests.validate_namespace_project(
-            m.Infra.NamespaceValidateCommand(repository_root=root)
+            m.Infra.NamespaceValidateCommand(repository_root=root),
         )
 
         tm.that(report.passed, eq=True, msg=str(report.violations))
@@ -194,7 +210,8 @@ class TestsFlextInfraRule0NamespaceStructure:
         )
 
     def test_project_service_base_inherits_without_artificial_namespace(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         root = u.Tests.namespace_project(
             tmp_path,
@@ -209,7 +226,7 @@ class TestsFlextInfraRule0NamespaceStructure:
         )
 
         report = u.Tests.validate_namespace_project(
-            m.Infra.NamespaceValidateCommand(repository_root=root)
+            m.Infra.NamespaceValidateCommand(repository_root=root),
         )
 
         tm.that(report.passed, eq=True, msg=str(report.violations))
@@ -222,7 +239,8 @@ class TestsFlextInfraRule0NamespaceStructure:
         )
 
     def test_api_does_not_publish_inherited_service_base_alias(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         root = u.Tests.namespace_project(
             tmp_path,
@@ -245,13 +263,14 @@ class TestsFlextInfraRule0NamespaceStructure:
         )
 
         report = u.Tests.validate_namespace_project(
-            m.Infra.NamespaceValidateCommand(repository_root=root)
+            m.Infra.NamespaceValidateCommand(repository_root=root),
         )
 
         tm.that(report.passed, eq=True, msg=str(report.violations))
 
     def test_rule0_does_not_flag_non_namespace_runtime_module(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         module_source = (
             "from __future__ import annotations\n\n"
@@ -260,11 +279,13 @@ class TestsFlextInfraRule0NamespaceStructure:
             "    return VALUE\n"
         )
         root = u.Tests.namespace_project(
-            tmp_path, module_source=module_source, module_name="api.py"
+            tmp_path,
+            module_source=module_source,
+            module_name="api.py",
         )
 
         result = u.Tests.validate_namespace_project(
-            m.Infra.NamespaceValidateCommand(repository_root=root)
+            m.Infra.NamespaceValidateCommand(repository_root=root),
         )
 
         tm.that(
@@ -281,15 +302,19 @@ class TestsFlextInfraRule0NamespaceStructure:
         ],
     )
     def test_rule0_validates_statements_without_expression_values(
-        self, tmp_path: Path, module_source: str
+        self,
+        tmp_path: Path,
+        module_source: str,
     ) -> None:
         """Ordinary statements without expression values remain valid AST input."""
         root = u.Tests.namespace_project(
-            tmp_path, module_source=module_source, module_name="runtime.py"
+            tmp_path,
+            module_source=module_source,
+            module_name="runtime.py",
         )
 
         report = u.Tests.validate_namespace_project(
-            m.Infra.NamespaceValidateCommand(repository_root=root)
+            m.Infra.NamespaceValidateCommand(repository_root=root),
         )
 
         tm.that(report.violations, empty=False)
@@ -318,15 +343,20 @@ class TestsFlextInfraRule0NamespaceStructure:
         ],
     )
     def test_rule0_allows_top_level_statement(
-        self, tmp_path: Path, module_source: str, forbidden_violation_substr: str
+        self,
+        tmp_path: Path,
+        module_source: str,
+        forbidden_violation_substr: str,
     ) -> None:
         """Rule 0 never rejects the top-level statements a namespace may carry."""
         root = u.Tests.namespace_project(
-            tmp_path, module_source=module_source, module_name="models.py"
+            tmp_path,
+            module_source=module_source,
+            module_name="models.py",
         )
 
         report = u.Tests.validate_namespace_project(
-            m.Infra.NamespaceValidateCommand(repository_root=root)
+            m.Infra.NamespaceValidateCommand(repository_root=root),
         )
 
         tm.that(
@@ -335,4 +365,77 @@ class TestsFlextInfraRule0NamespaceStructure:
                 for violation in report.violations
             ),
             eq=False,
+        )
+
+    @staticmethod
+    def _write_manifest(project_root: Path, *, package: bool) -> None:
+        """Declare the workspace SSOT publish contract for one project."""
+        config_dir = project_root / "config"
+        config_dir.mkdir(exist_ok=True)
+        (config_dir / "workspace.yaml").write_text(
+            "version: 3\n"
+            'name: "content-only"\n'
+            "repository:\n"
+            '  name: "content-only"\n'
+            '  distribution: "content-only"\n'
+            '  provider: "sample"\n'
+            '  url: "https://example.com/content-only.git"\n'
+            '  path: "."\n'
+            '  role: "workspace"\n'
+            '  state: "active"\n'
+            '  checkout: "root"\n'
+            '  codegen: "conform"\n'
+            f"  package: {str(package).lower()}\n"
+            "  editable: false\n"
+            "  read_only: false\n"
+            "members: []\n"
+            "exclusions: []\n",
+            encoding="utf-8",
+        )
+
+    def test_content_only_declared_root_skips_layout_contract(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A manifest declaring package=false receives the layout receipt.
+
+        The invest root is the real consumer: a workspace shell whose
+        analyzable surface lives in examples/tests owns no facade layout,
+        so NS-LAYOUT-001 must not fire when the SSOT declares
+        repository.package=false (bead invest-6n6u family).
+        """
+        root = u.Tests.namespace_project(
+            tmp_path,
+            module_source="VALUE = 41\n",
+            module_name="loose_module.py",
+        )
+        self._write_manifest(root, package=False)
+        report = u.Tests.validate_namespace_project(
+            m.Infra.NamespaceValidateCommand(repository_root=root),
+        )
+        tm.that(
+            any("NS-LAYOUT-001" in violation for violation in report.violations),
+            eq=False,
+        )
+
+    def test_undeclared_root_without_layout_stays_loud(self, tmp_path: Path) -> None:
+        """No manifest declaration keeps NS-LAYOUT-001 loud.
+
+        A root whose package discovery fails without a content-only
+        declaration is a broken packaged project, not a declared topology.
+        """
+        root = tmp_path / "broken_packaged"
+        root.mkdir()
+        (root / "pyproject.toml").write_text(
+            '[project]\nname = "broken-packaged"\nversion = "0.1.0"\n',
+            encoding="utf-8",
+        )
+        (root / "loose_module.py").write_text("VALUE = 41\n", encoding="utf-8")
+        u.Tests.initialize_git_repo(root)
+        report = u.Tests.validate_namespace_project(
+            m.Infra.NamespaceValidateCommand(repository_root=root),
+        )
+        tm.that(
+            any("NS-LAYOUT-001" in violation for violation in report.violations),
+            eq=True,
         )

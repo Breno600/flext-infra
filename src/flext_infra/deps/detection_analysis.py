@@ -6,7 +6,7 @@ from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 from typing import override
 
-from flext_core import r
+from flext_core import c as core_c, r
 from flext_infra import c, config, m, p, t, u
 
 from ._detection_runners import FlextInfraDependencyDetectionRunnersMixin
@@ -14,6 +14,16 @@ from ._detection_runners import FlextInfraDependencyDetectionRunnersMixin
 
 class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunnersMixin):
     """Typings analysis + conversion helpers composed with the tool-runner mixin."""
+
+    @staticmethod
+    def _read_plain(path: Path) -> p.Result[t.JsonMapping]:
+        """Read one TOML document as a plain JSON mapping."""
+        plain_result = u.Cli.toml_read_json(path)
+        if plain_result.failure:
+            return r[t.JsonMapping].from_failure(plain_result)
+        return r[t.JsonMapping].ok(
+            t.Infra.INFRA_MAPPING_ADAPTER.validate_python(plain_result.value)
+        )
 
     @override
     def _to_toml_config(self, payload: t.MappingKV[str, t.JsonValue]) -> t.JsonMapping:
@@ -34,10 +44,10 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         """Convert container value to namespaced infra value."""
         if value is None:
             return None
-        if isinstance(value, t.PRIMITIVES_TYPES):
+        if isinstance(value, core_c.PRIMITIVES_TYPES):
             primitive: t.JsonValue = value
             return primitive
-        scalar_types = t.PRIMITIVES_TYPES
+        scalar_types = core_c.PRIMITIVES_TYPES
         if isinstance(value, list):
             sequence = t.Cli.JSON_LIST_ADAPTER.validate_python(value)
             converted: t.MutableSequenceOf[t.JsonValue] = []
@@ -64,7 +74,10 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         return mapping
 
     def read_current_typings_from_pyproject(
-        self, project_path: Path, *, include_dev: bool = True
+        self,
+        project_path: Path,
+        *,
+        include_dev: bool = True,
     ) -> t.StrSequence:
         """Read CUSTOM typing requirements and the canonical development group."""
         pyproject = project_path / c.PYPROJECT_FILENAME
@@ -76,20 +89,20 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
             raise RuntimeError(msg)
         data = read_result.value
         project = t.Infra.INFRA_MAPPING_ADAPTER.validate_python(
-            data.get(c.Infra.PROJECT, {})
+            data.get(c.Infra.PROJECT, {}),
         )
         optional = t.Infra.INFRA_MAPPING_ADAPTER.validate_python(
-            project.get(c.Infra.OPTIONAL_DEPENDENCIES, {})
+            project.get(c.Infra.OPTIONAL_DEPENDENCIES, {}),
         )
         requirements = list(
-            t.Infra.STR_SEQ_ADAPTER.validate_python(optional.get(c.Infra.TYPINGS, []))
+            t.Infra.STR_SEQ_ADAPTER.validate_python(optional.get(c.Infra.TYPINGS, [])),
         )
         if include_dev:
             groups = t.Infra.INFRA_MAPPING_ADAPTER.validate_python(
-                data.get(c.Infra.DEPENDENCY_GROUPS, {})
+                data.get(c.Infra.DEPENDENCY_GROUPS, {}),
             )
             requirements.extend(
-                t.Infra.STR_SEQ_ADAPTER.validate_python(groups.get(c.Infra.DEV, []))
+                t.Infra.STR_SEQ_ADAPTER.validate_python(groups.get(c.Infra.DEV, [])),
             )
         names: set[str] = set()
         for spec in requirements:
@@ -101,19 +114,22 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         return sorted(names)
 
     def _project_table(
-        self, project_path: Path
+        self,
+        project_path: Path,
     ) -> p.Result[t.Pair[Path, t.JsonMapping]]:
         """Read one project's pyproject once, as a plain mapping, with its path."""
         pyproject = project_path / c.PYPROJECT_FILENAME
         read_result = self._read_plain(pyproject)
         if read_result.failure:
             return r[t.Pair[Path, t.JsonMapping]].fail_op(
-                f"read {pyproject}", read_result.error
+                f"read {pyproject}",
+                read_result.error,
             )
         return r[t.Pair[Path, t.JsonMapping]].ok((pyproject, read_result.value))
 
     def governed_profile_dependencies(
-        self, project_path: Path
+        self,
+        project_path: Path,
     ) -> p.Result[t.StrSequence]:
         """Return the runtime requirement names a declared dependency profile injects.
 
@@ -126,33 +142,37 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
             return r[t.StrSequence].from_failure(table)
         pyproject, data = table.value
         project = t.Infra.INFRA_MAPPING_ADAPTER.validate_python(
-            data.get(c.Infra.PROJECT, {})
+            data.get(c.Infra.PROJECT, {}),
         )
         name = project.get(c.Infra.NAME)
         distribution = u.Infra.dep_name(name) if isinstance(name, str) else None
         if distribution is None:
             return r[t.StrSequence].fail(
-                f"[project].name must be declared: {pyproject}"
+                f"[project].name must be declared: {pyproject}",
             )
         runtime_names = {
             dependency
             for item in t.Infra.STR_SEQ_ADAPTER.validate_python(
-                project.get(c.Infra.DEPENDENCIES, [])
+                project.get(c.Infra.DEPENDENCIES, []),
             )
             if (dependency := u.Infra.dep_name(item))
         }
         profiles = config.Infra.codegen.scaffold.project.dependency_profiles
         upstreams = u.Infra.dependency_profile_upstreams(
-            profiles, distribution=distribution, runtime_names=runtime_names
+            profiles,
+            distribution=distribution,
+            runtime_names=runtime_names,
         )
         if len(upstreams) > 1:
             return r[t.StrSequence].fail(
                 "scaffold.project.dependency_profiles.upstream must match live "
-                f"dependencies at most once at {pyproject}: {tuple(upstreams)}"
+                f"dependencies at most once at {pyproject}: {tuple(upstreams)}",
             )
         rows = (
             u.Infra.dependency_profile_rows(
-                profiles, upstream=upstreams[0], distribution=distribution
+                profiles,
+                upstream=upstreams[0],
+                distribution=distribution,
             )
             if upstreams
             else ()
@@ -164,12 +184,14 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
                     for row in rows
                     for requirement in row.runtime
                     if (dependency := u.Infra.dep_name(requirement))
-                })
-            )
+                }),
+            ),
         )
 
     def govern_deptry_issues(
-        self, project_path: Path, issues: t.SequenceOf[t.JsonMapping]
+        self,
+        project_path: Path,
+        issues: t.SequenceOf[t.JsonMapping],
     ) -> p.Result[t.SequenceOf[t.JsonMapping]]:
         """Drop unused-dependency findings for profile-injected requirements.
 
@@ -189,7 +211,7 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
                     == c.Infra.DEPTRY_UNUSED_DEPENDENCY_CODE
                     and u.Infra.dep_name(str(issue.get(c.Infra.MODULE, ""))) in names
                 )
-            )
+            ),
         )
 
     def untyped_imports_followed(self, project_path: Path) -> p.Result[bool]:
@@ -202,7 +224,8 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         """
         key = c.Infra.MYPY_FOLLOW_UNTYPED_IMPORTS
         governed = config.Infra.tooling.tools.mypy.boolean_settings.get(
-            key, c.Infra.MYPY_FOLLOW_UNTYPED_IMPORTS_DEFAULT
+            key,
+            c.Infra.MYPY_FOLLOW_UNTYPED_IMPORTS_DEFAULT,
         )
         table = self._project_table(project_path)
         if table.failure:
@@ -215,12 +238,14 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
             return r[bool].fail(
                 f"mypy {key} policy conflict in {pyproject}: the project declares "
                 f"{declared!r}, the governed tooling policy declares {governed!r}; "
-                "regenerate the projection with make gen"
+                "regenerate the projection with make gen",
             )
         return r[bool].ok(governed)
 
     def analyze_required_typings(
-        self, project_path: Path, limits_path: Path | None = None
+        self,
+        project_path: Path,
+        limits_path: Path | None = None,
     ) -> p.Result[m.Infra.TypingsReport]:
         """Analyze project and generate typing stubs requirements report.
 
@@ -271,10 +296,11 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
                 else sorted(
                     set(
                         self.read_current_typings_from_pyproject(
-                            project_path, include_dev=False
-                        )
+                            project_path,
+                            include_dev=False,
+                        ),
                     )
-                    - required_set
+                    - required_set,
                 )
             ),
             limits_applied=bool(limits),
@@ -284,7 +310,8 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         return r[m.Infra.TypingsReport].ok(report)
 
     def load_dependency_limits(
-        self, limits_path: Path | None = None
+        self,
+        limits_path: Path | None = None,
     ) -> t.MappingKV[str, t.JsonValue]:
         """Load dependency limits configuration from TOML file."""
         path = (
@@ -298,7 +325,9 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         return result.value
 
     def module_to_types_package(
-        self, module_name: str, limits: t.MappingKV[str, t.JsonValue]
+        self,
+        module_name: str,
+        limits: t.MappingKV[str, t.JsonValue],
     ) -> str | None:
         """Map a module name to its corresponding types-* package."""
         root = module_name.split(".", 1)[0]

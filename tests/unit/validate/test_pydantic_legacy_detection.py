@@ -169,7 +169,12 @@ class TestsFlextInfraPydanticLegacyDetection:
         ],
     )
     def test_pydantic_decorator_binding_provenance(
-        self, tmp_path: Path, imports: str, body: str, *, legacy: bool
+        self,
+        tmp_path: Path,
+        imports: str,
+        body: str,
+        *,
+        legacy: bool,
     ) -> None:
         root = u.Tests.namespace_project(
             tmp_path,
@@ -183,7 +188,7 @@ class TestsFlextInfraPydanticLegacyDetection:
         )
 
         report = u.Tests.validate_namespace_project(
-            m.Infra.NamespaceValidateCommand(repository_root=root)
+            m.Infra.NamespaceValidateCommand(repository_root=root),
         )
 
         tm.that(report.passed, eq=not legacy, msg=str(report.violations))
@@ -202,7 +207,11 @@ class TestsFlextInfraPydanticLegacyDetection:
         ],
     )
     def test_pydantic_method_detection_requires_unambiguous_member(
-        self, tmp_path: Path, call: str, *, legacy: bool
+        self,
+        tmp_path: Path,
+        call: str,
+        *,
+        legacy: bool,
     ) -> None:
         root = u.Tests.namespace_project(
             tmp_path,
@@ -216,7 +225,7 @@ class TestsFlextInfraPydanticLegacyDetection:
         )
 
         report = u.Tests.validate_namespace_project(
-            m.Infra.NamespaceValidateCommand(repository_root=root)
+            m.Infra.NamespaceValidateCommand(repository_root=root),
         )
 
         tm.that(

@@ -1,8 +1,8 @@
 """Codemod enforcement quality gate.
 
 Runs ``ast-grep scan`` with the codemod rules discovered via
-``importlib.resources`` cascade (ADR-014). Valid policy findings remain
-observable; incomplete scans and native machinery failures block the build.
+``importlib.resources`` cascade (ADR-014). Policy findings block the final
+check; incomplete scans and native machinery failures remain distinct errors.
 
 Copyright (c) 2025 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -11,6 +11,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import time
+from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, m, u
@@ -18,8 +19,6 @@ from flext_infra import c, m, u
 from .base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from flext_infra import p, t
 
 
@@ -34,7 +33,9 @@ class FlextInfraCodemodGate(FlextInfraGate):
 
     @override
     def check(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
         """Run ast-grep only on this repository's first-class source roots."""
         targets = (
@@ -47,7 +48,10 @@ class FlextInfraCodemodGate(FlextInfraGate):
 
     @override
     def check_files(
-        self, files: t.SequenceOf[Path], project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        files: t.SequenceOf[Path],
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
         """Scan every requested file against every elected provider ruleset."""
         if not files:
@@ -94,6 +98,7 @@ class FlextInfraCodemodGate(FlextInfraGate):
                 started=started,
             )
 
+        rules_by_id = {rule.id: rule for rule in planned.value.rules}
         findings: list[m.Infra.Issue] = []
         failures: list[m.Infra.Issue] = []
         raw_output: list[str] = []
@@ -124,7 +129,7 @@ class FlextInfraCodemodGate(FlextInfraGate):
                         file=str(ruleset.config),
                         line=1,
                         column=1,
-                    )
+                    ),
                 )
                 break
             # DiagnosticError (exit 1) requires a valid RuleMatch array,
@@ -142,7 +147,7 @@ class FlextInfraCodemodGate(FlextInfraGate):
                         file=str(ruleset.config),
                         line=1,
                         column=1,
-                    )
+                    ),
                 )
                 break
             findings.extend(
@@ -155,31 +160,36 @@ class FlextInfraCodemodGate(FlextInfraGate):
                     severity=finding.severity,
                 )
                 for finding in report.root
+                if u.Infra.codemod_context_admits(
+                    project_dir,
+                    rules_by_id[finding.rule_id],
+                    Path(finding.file),
+                    finding.captures,
+                )
             )
 
-        # Operator order (2026-09-24): codemod policy findings are
-        # observational. Native scanner failures remain blocking.
+        # A completed scan still blocks when elected policy rules find code.
+        # Native scanner failures retain their distinct failure diagnostics.
+        issues = (*failures, *findings)
         return m.Infra.GateExecution(
             result=self._gate_result(
                 project_dir,
-                passed=not failures,
-                errors=[issue.formatted for issue in failures],
+                passed=not issues,
+                errors=[issue.formatted for issue in issues],
                 started=started,
             ),
-            issues=tuple(failures),
-            observational_issues=tuple(findings),
+            issues=issues,
+            observational_issues=(),
             raw_output="\n".join((
-                (
-                    f"{len(findings)} observational findings; "
-                    f"{len(failures)} native failures"
-                ),
+                (f"{len(findings)} policy findings; {len(failures)} native failures"),
                 *raw_output,
             )),
         )
 
     @staticmethod
     def _validated_scan_report(
-        scan: p.Cli.CommandOutput, ruleset: m.Infra.CodemodRuleset
+        scan: p.Cli.CommandOutput,
+        ruleset: m.Infra.CodemodRuleset,
     ) -> t.Pair[m.Infra.AstGrepReport, str]:
         """Validate findings and derive their exact native terminal diagnostic."""
         report = m.Infra.AstGrepReport.model_validate_json(scan.stdout)
@@ -203,7 +213,8 @@ class FlextInfraCodemodGate(FlextInfraGate):
 
     @staticmethod
     def _scan_command(
-        ruleset: m.Infra.CodemodRuleset, targets: t.StrSequence
+        ruleset: m.Infra.CodemodRuleset,
+        targets: t.StrSequence,
     ) -> t.StrSequence:
         """Canonical ast-grep invocation for one composed provider ruleset."""
         globs: t.StrSequence = tuple(

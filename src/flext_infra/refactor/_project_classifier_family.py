@@ -41,7 +41,8 @@ class FlextInfraProjectClassifierFamilyMixin:
         for family, suffix in c.Infra.FAMILY_SUFFIXES.items():
             file_pattern = c.Infra.FAMILY_FILES[family]
             for file_path in u.Infra.iter_matching_files(
-                self._src_path, includes=[file_pattern]
+                self._src_path,
+                includes=[file_pattern],
             ):
                 class_bases, class_names = self._parse_family_file(file_path, suffix)
                 family_bases[family].update(class_bases)
@@ -49,7 +50,9 @@ class FlextInfraProjectClassifierFamilyMixin:
         return (family_bases, local_facade_classes)
 
     def _parse_family_file(
-        self, file_path: Path, suffix: str
+        self,
+        file_path: Path,
+        suffix: str,
     ) -> t.Pair[t.Infra.StrSet, t.Infra.StrSet]:
         """Parse family file."""
         source = u.Cli.files_read_text(file_path).unwrap()
@@ -80,7 +83,8 @@ class FlextInfraProjectClassifierFamilyMixin:
         family_chains: MutableMapping[str, t.StrSequence] = {}
         for family, suffix in c.Infra.FAMILY_SUFFIXES.items():
             expected_parents = self._expected_parents_for_family(
-                family_suffix=suffix, internal_dependencies=internal_dependencies
+                family_suffix=suffix,
+                internal_dependencies=internal_dependencies,
             )
             confirmed_bases = family_bases.get(family, set())
             confirmed_expected = [
@@ -93,7 +97,10 @@ class FlextInfraProjectClassifierFamilyMixin:
         return family_chains
 
     def _expected_parents_for_family(
-        self, *, family_suffix: str, internal_dependencies: t.StrSequence
+        self,
+        *,
+        family_suffix: str,
+        internal_dependencies: t.StrSequence,
     ) -> t.StrSequence:
         """Return the expected parents for a family."""
         expected: t.MutableSequenceOf[str] = []

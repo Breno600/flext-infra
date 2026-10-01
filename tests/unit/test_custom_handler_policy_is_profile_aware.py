@@ -5,8 +5,8 @@ the profiles have genuinely different contracts:
 
 * a standalone repository may only define private
   ``_custom_<verb>_<what>`` handlers and hooks;
-* a workspace *root* orchestrates the members, so its ``custom.mk`` legitimately
-  owns public orchestration targets and the variables they read.
+* a workspace *root* may carry developer-local Makefile extensions, so its
+  ``custom.mk`` may own public targets and the variables they read.
 
 Applying the member rule to the root made ``codegen conform`` reject the root's
 own surface on every run and block the whole transaction -- which is why no
@@ -48,8 +48,8 @@ class TestsFlextInfraCustomHandlerPolicyIsProfileAware:
 
         tm.that(declared - covered, eq=frozenset())
 
-    def test_repository_root_may_own_public_orchestration_targets(self) -> None:
-        """The root profile permits the public targets it actually ships."""
+    def test_repository_root_may_own_public_targets(self) -> None:
+        """The root profile permits developer-local public targets."""
         policy: m.Infra.CustomHandlerPolicy = (
             config.Infra.codegen.make.custom_handler_policies[
                 c.Infra.MakeProfile.WORKSPACE
@@ -101,7 +101,7 @@ class TestsFlextInfraCustomHandlerPolicyIsProfileAware:
         reject the repository root's own custom surface.
         """
         policies: t.MutableMappingKV[str, m.Infra.CustomHandlerPolicy] = dict(
-            config.Infra.codegen.make.custom_handler_policies
+            config.Infra.codegen.make.custom_handler_policies,
         )
         profile: c.Infra.MakeProfile = c.Infra.MakeProfile.WORKSPACE
 

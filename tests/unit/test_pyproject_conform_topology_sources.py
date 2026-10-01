@@ -25,13 +25,16 @@ class TestsFlextInfraPyprojectConformTopologySources:
     def _member_ref(self, distribution: str, path: str) -> m.Infra.RepositoryRef:
         """Declare one standalone-capable member through the provider contract."""
         return test_u.Tests.repository_ref(
-            distribution, role=self._ROLE.STANDALONE, path=Path(path)
+            distribution,
+            role=self._ROLE.STANDALONE,
+            path=Path(path),
         )
 
     def _workspace(self, *members: m.Infra.RepositoryRef) -> m.Infra.WorkspaceSpec:
         """Compose one workspace fixture from its declared member references."""
         return test_u.Tests.workspace_spec(
-            test_u.Tests.repository_ref("workspace"), subprojects=tuple(members)
+            test_u.Tests.repository_ref("workspace"),
+            subprojects=tuple(members),
         )
 
     def _inline_requirement(self, ref: m.Infra.RepositoryRef) -> str:
@@ -49,9 +52,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
             environments=tuple(toolchain.uv_environments),
         )
 
-    def test_attached_members_render_on_the_workspace_line_of_any_family(
-        self,
-    ) -> None:
+    def test_attached_members_render_on_the_workspace_line_of_any_family(self) -> None:
         """A non-FLEXT member gets its declared source on the workspace line.
 
         The workspace integrates on its own line (``develop``) while the FLEXT
@@ -68,7 +69,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                     provider=test_u.Tests.integration().provider,
                     branch=workspace_line,
                 ),
-            }
+            },
         )
         infra = test_u.Tests.repository_ref("flext-infra")
         infra_requirement = self._inline_requirement(infra)
@@ -84,7 +85,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
                 family_line=test_u.Tests.provider_branch(),
-            )
+            ),
         )
         expected = {
             f"{ref.distribution} @ git+{ref.url}@{workspace_line}"
@@ -95,7 +96,9 @@ class TestsFlextInfraPyprojectConformTopologySources:
             eq=expected,
         )
         workspace_group = tu.Tests.toml_strings_at(
-            rendered, "dependency-groups", "workspace"
+            rendered,
+            "dependency-groups",
+            "workspace",
         )
         tm.that(
             set(workspace_group),
@@ -111,9 +114,169 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
                 family_line=test_u.Tests.provider_branch(),
-            )
+            ),
         )
         tm.that(second, eq=rendered)
+
+    def test_candidate_commit_is_project_specific_and_reaches_fixed_point(self) -> None:
+        """An explicit candidate changes only its declared distribution."""
+        cli = self._member_ref("flext-cli", "flext-cli")
+        infra = self._member_ref("flext-infra", "flext-infra")
+        candidate_commit = "a" * 40
+        workspace = self._workspace(cli, infra).model_copy(
+            update={
+                "candidate_dependencies": (
+                    m.Infra.CandidateDependencySourceSpec(
+                        distribution=cli.distribution,
+                        url=cli.url,
+                        commit=candidate_commit,
+                    ),
+                ),
+            },
+        )
+        source = (
+            '[project]\nname = "workspace"\nversion = "0.1.0"\n'
+            'dependencies = ["flext-cli", "flext-infra"]\n'
+        )
+        rendered = tm.ok(
+            u.Infra.pyproject_conform(
+                source,
+                workspace=workspace,
+                required_dev_dependencies=(),
+                uv_resolution=self._toolchain_resolution(),
+                family_line=test_u.Tests.provider_branch(),
+            ),
+        )
+        dependencies = set(
+            tu.Tests.toml_strings_at(rendered, "project", "dependencies"),
+        )
+        tm.that(
+            dependencies,
+            eq={
+                f"{cli.distribution} @ git+{cli.url}@{candidate_commit}",
+                f"{infra.distribution} @ git+{infra.url}@{test_u.Tests.provider_branch()}",
+            },
+        )
+        tm.that(
+            tu.Tests.toml_strings_at(rendered, "tool", "uv", "override-dependencies"),
+            eq=(f"{cli.distribution} @ git+{cli.url}@{candidate_commit}",),
+        )
+        tm.that(
+            tm.ok(
+                u.Infra.pyproject_conform(
+                    rendered,
+                    workspace=workspace,
+                    required_dev_dependencies=(),
+                    uv_resolution=self._toolchain_resolution(),
+                    family_line=test_u.Tests.provider_branch(),
+                ),
+            ),
+            eq=rendered,
+        )
+
+    def test_candidate_url_must_match_declared_requirement_source(self) -> None:
+        """A commit cannot redirect an existing direct requirement to another repo."""
+        cli = self._member_ref("flext-cli", "flext-cli")
+        foreign = self._member_ref("flext-core", "flext-core")
+        workspace = self._workspace(cli).model_copy(
+            update={
+                "candidate_dependencies": (
+                    m.Infra.CandidateDependencySourceSpec(
+                        distribution=cli.distribution,
+                        url=foreign.url,
+                        commit="b" * 40,
+                    ),
+                ),
+            },
+        )
+        source = (
+            '[project]\nname = "workspace"\nversion = "0.1.0"\n'
+            f'dependencies = ["{self._inline_requirement(cli)}"]\n'
+        )
+        result = u.Infra.pyproject_conform(
+            source,
+            workspace=workspace,
+            required_dev_dependencies=(),
+            uv_resolution=self._toolchain_resolution(),
+            family_line=test_u.Tests.provider_branch(),
+        )
+        tm.that(result.failure, eq=True)
+        tm.that(result.error or "", contains="candidate dependency Git URL differs")
+
+    def test_candidate_cannot_invent_a_missing_dependency_origin(self) -> None:
+        """A candidate pins an owned source; it cannot create provenance."""
+        cli = self._member_ref("flext-cli", "flext-cli")
+        workspace = self._workspace().model_copy(
+            update={
+                "candidate_dependencies": (
+                    m.Infra.CandidateDependencySourceSpec(
+                        distribution=cli.distribution,
+                        url=cli.url,
+                        commit="c" * 40,
+                    ),
+                ),
+            },
+        )
+        result = u.Infra.pyproject_conform(
+            (
+                '[project]\nname = "workspace"\nversion = "0.1.0"\n'
+                'dependencies = ["flext-cli"]\n'
+            ),
+            workspace=workspace,
+            required_dev_dependencies=(),
+            uv_resolution=self._toolchain_resolution(),
+            family_line=test_u.Tests.provider_branch(),
+        )
+        tm.that(result.failure, eq=True)
+        tm.that(result.error or "", contains="no declared Git provenance")
+
+    def test_candidate_must_be_a_declared_requirement(self) -> None:
+        """A stale candidate entry cannot silently leave the resolver unchanged."""
+        cli = self._member_ref("flext-cli", "flext-cli")
+        workspace = self._workspace().model_copy(
+            update={
+                "candidate_dependencies": (
+                    m.Infra.CandidateDependencySourceSpec(
+                        distribution=cli.distribution,
+                        url=cli.url,
+                        commit="d" * 40,
+                    ),
+                ),
+            },
+        )
+        result = u.Infra.pyproject_conform(
+            '[project]\nname = "workspace"\nversion = "0.1.0"\n',
+            workspace=workspace,
+            required_dev_dependencies=(),
+            uv_resolution=self._toolchain_resolution(),
+            family_line=test_u.Tests.provider_branch(),
+        )
+        tm.that(result.failure, eq=True)
+        tm.that(result.error or "", contains="not declared requirements: flext-cli")
+
+    def test_removing_candidate_removes_global_override(self) -> None:
+        """A normal branch resolution leaves no stale candidate override."""
+        infra = self._member_ref("flext-infra", "flext-infra")
+        stale_commit = "a" * 40
+        source = (
+            '[project]\nname = "workspace"\nversion = "0.1.0"\n'
+            f'dependencies = ["{self._inline_requirement(infra)}"]\n'
+            "\n[tool.uv]\noverride-dependencies = "
+            f'["{infra.distribution} @ git+{infra.url}@{stale_commit}"]\n'
+        )
+        rendered = tm.ok(
+            u.Infra.pyproject_conform(
+                source,
+                workspace=self._workspace(infra),
+                required_dev_dependencies=(),
+                uv_resolution=self._toolchain_resolution(),
+                family_line=test_u.Tests.provider_branch(),
+            )
+        )
+        parsed = tu.Tests.toml_mapping(u.Cli.toml_parse_text(rendered))
+        tool = tu.Tests.toml_mapping(parsed.get("tool"))
+        uv = tu.Tests.toml_mapping(tool.get("uv"))
+        tm.that("override-dependencies" not in uv, eq=True)
 
     def _assert_direct_source(self, rendered: str, ref: m.Infra.RepositoryRef) -> None:
         """Assert the canonical standalone output: one direct Git requirement."""
@@ -144,7 +307,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 workspace=workspace,
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
-            )
+            ),
         )
 
         self._assert_direct_source(rendered, core)
@@ -167,7 +330,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 workspace=workspace,
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
-            )
+            ),
         )
 
         self._assert_direct_source(rendered, provider)
@@ -192,7 +355,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 workspace=workspace,
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
-            )
+            ),
         )
 
         dependencies = tu.Tests.toml_strings_at(rendered, "project", "dependencies")
@@ -226,7 +389,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 workspace=workspace,
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
-            )
+            ),
         )
 
         group = tu.Tests.toml_strings_at(rendered, "dependency-groups", "dev")
@@ -240,3 +403,25 @@ class TestsFlextInfraPyprojectConformTopologySources:
 
         tm.that(group, eq=(self._inline_requirement(core),))
         tm.that(not uv_sources, eq=True)
+
+    def test_member_requirement_with_a_foreign_url_fails_provenance(self) -> None:
+        """A member dependency cannot point at a URL its manifest does not own."""
+        workspace = self._workspace(self._member_ref("flext-core", "flext-core"))
+        core = workspace.subprojects[0]
+        host = test_u.Tests.provider().base_url.rstrip("/").rpartition("/")[0]
+        foreign = (
+            f"{core.distribution} @ git+{host}/foreign-owner/{core.distribution}.git@"
+            f"{test_u.Tests.provider_branch()}"
+        )
+
+        result = u.Infra.pyproject_conform(
+            (
+                '[project]\nname = "acme-platform"\nversion = "0.1.0"\n'
+                f'dependencies = ["{foreign}"]\n'
+            ),
+            workspace=workspace,
+            required_dev_dependencies=(),
+            uv_resolution=self._toolchain_resolution(),
+        )
+
+        tm.fail(result, has="internal dependency Git URL differs from manifest")

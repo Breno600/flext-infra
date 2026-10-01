@@ -2,8 +2,8 @@
 
 The conform engine (``base/Makefile.j2``) is the SINGLE owner of the generated
 Makefile for every profile. The workspace profile is served by the same
-template — its member gate fan-out is rendered behind a profile gate — so there
-is no second, divergent generator.
+template with the same local verb bodies, so there is no second, divergent
+generator.
 
 Copyright (c) 2025 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -43,7 +43,7 @@ class TestsFlextInfraRootMakefileSingleOwner:
         """The sole template injects the one custom-include directive from SSOT."""
         templates_root = Path(flext_infra.__file__).resolve().parent / "templates"
         generic = (templates_root / "project" / "base" / "Makefile.j2").read_text(
-            encoding="utf-8"
+            encoding="utf-8",
         )
 
         tm.that(generic, has="{{ makefile_custom_include }}")

@@ -24,10 +24,12 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
     def _write_run_context(report_dir: Path, context: m.Infra.PytestRunContext) -> None:
         """Name the mode and database before any subprocess can fail."""
         u.Cli.atomic_write_text_file(
-            report_dir / "run-context.json", context.model_dump_json(indent=2) + "\n"
+            report_dir / "run-context.json",
+            context.model_dump_json(indent=2) + "\n",
         ).unwrap()
         u.Cli.atomic_write_text_file(
-            report_dir.parent / "latest.txt", f"{report_dir.name}\n"
+            report_dir.parent / "latest.txt",
+            f"{report_dir.name}\n",
         ).unwrap()
 
     @staticmethod
@@ -37,7 +39,12 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
         return f"{message}\n--- pytest.log (tail) ---\n{tail}" if tail else message
 
     def _accounting(
-        self, junit: Path, log: Path, *, cache_restored: bool, reported_count: int
+        self,
+        junit: Path,
+        log: Path,
+        *,
+        cache_restored: bool,
+        reported_count: int,
     ) -> p.Result[m.Infra.TestmonRunAccounting]:
         """Parse typed executed/deselected accounting from durable artifacts."""
         if not junit.exists():
@@ -54,28 +61,50 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
             raise ValueError(msg)
         executed = sum(1 for _ in root.iter("testcase"))
         context = m.Infra.PytestRunContext.model_validate_json(
-            (log.parent / "run-context.json").read_text(encoding="utf-8")
+            (log.parent / "run-context.json").read_text(encoding="utf-8"),
         )
         deselected = 0
         inventory_count = None
+        owns_no_tests = False
+        selection_plan: m.Infra.PytestSelectionPlan | None = None
         if context.execution_mode != c.Infra.PytestExecutionMode.COVERAGE:
             selection_plan = m.Infra.PytestSelectionPlan.model_validate_json(
-                (log.parent / "selection-plan.json").read_text(encoding="utf-8")
+                (log.parent / "selection-plan.json").read_text(encoding="utf-8"),
             )
+            owns_no_tests = selection_plan.owns_no_tests
+        if owns_no_tests and selection_plan is not None:
+            # The declared empty suite produces no manifest artifacts: zero
+            # execution with typed accounting IS the receipt.
+            accounting = m.Infra.TestmonRunAccounting(
+                executed_count=executed,
+                reported_count=reported_count,
+                deselected_count=0,
+                inventory_count=0,
+                cache_restored=cache_restored,
+                owns_no_tests=True,
+            )
+            return r.ok(accounting)
+        if context.execution_mode != c.Infra.PytestExecutionMode.COVERAGE:
+            if selection_plan is None:
+                msg = (
+                    "non-coverage accounting requires the durable selection plan: "
+                    f"{log.parent / 'selection-plan.json'}"
+                )
+                raise RuntimeError(msg)
             selected = (
                 m.Infra.PytestCollectionManifest.model_validate_json(
-                    selection_plan.manifest_path.read_text(encoding="utf-8")
+                    selection_plan.manifest_path.read_text(encoding="utf-8"),
                 )
                 if context.execution_mode == c.Infra.PytestExecutionMode.FULL
                 else m.Infra.PytestCollectionManifest.model_validate_json(
-                    (log.parent / "testmon-selection.json").read_text(encoding="utf-8")
+                    (log.parent / "testmon-selection.json").read_text(encoding="utf-8"),
                 )
             )
             inventory = (
                 selected
                 if not selection_plan.inventory_collected
                 else m.Infra.PytestCollectionManifest.model_validate_json(
-                    (log.parent / "testmon-inventory.json").read_text(encoding="utf-8")
+                    (log.parent / "testmon-inventory.json").read_text(encoding="utf-8"),
                 )
             )
             if not set(selected.node_ids).issubset(inventory.node_ids):
@@ -89,6 +118,7 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
             deselected_count=deselected,
             inventory_count=inventory_count,
             cache_restored=cache_restored,
+            owns_no_tests=owns_no_tests,
         )
         if executed:
             return r.ok(accounting)
@@ -102,27 +132,30 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
         extractor = FlextInfraPytestDiagExtractor(
             repository_root=self.root,
             junit=report_dir / "junit.xml",
-            log_path=report_dir / "pytest.log",
+            log=report_dir / "pytest.log",
             report_log=report_dir / "events.jsonl",
         )
         return extractor.extract(
-            extractor.junit, extractor.log_path, report_log=extractor.report_log
+            extractor.junit,
+            extractor.log_path,
+            report_log=extractor.report_log,
         )
 
     @staticmethod
     def _collection_diagnostics(report_log: Path) -> None:
         """Require complete collection evidence before accepting a selection."""
         diagnostics = FlextInfraPytestDiagExtractor.extract_report_log(
-            report_log
+            report_log,
         ).unwrap()
         receipt = report_log.with_suffix(".diagnostics.json")
         u.Cli.atomic_write_text_file(
-            receipt, diagnostics.model_dump_json(indent=2) + "\n"
+            receipt,
+            diagnostics.model_dump_json(indent=2) + "\n",
         ).unwrap()
         if any((
             diagnostics.collection_failed_count,
             diagnostics.collection_skipped_count,
-            diagnostics.blocking_warning_count,
+            diagnostics.warning_count,
         )):
             msg = f"pytest collection contains blocking findings: {receipt}"
             raise RuntimeError(msg)
@@ -138,8 +171,12 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
         phases: t.MutableSequenceOf[t.Pair[str, m.Infra.PytestDiagnostics]] = []
         if context.execution_mode != c.Infra.PytestExecutionMode.COVERAGE:
             selection_plan = m.Infra.PytestSelectionPlan.model_validate_json(
-                (report_dir / "selection-plan.json").read_text(encoding="utf-8")
+                (report_dir / "selection-plan.json").read_text(encoding="utf-8"),
             )
+            if selection_plan.owns_no_tests:
+                # The declared empty suite ran no collection subprocess, so no
+                # per-phase receipt exists: only the suite diagnostics.
+                return (("suite", suite),)
             names = (
                 (
                     ("selection", "inventory")
@@ -154,7 +191,7 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
                 phases.append((
                     phase,
                     m.Infra.PytestDiagnostics.model_validate_json(
-                        receipt.read_text(encoding="utf-8")
+                        receipt.read_text(encoding="utf-8"),
                     ),
                 ))
         return (*phases, ("suite", suite))
@@ -169,7 +206,8 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
             raise ValueError(msg)
         if coverage.stat().st_size == 0:
             msg = self._failure_detail(
-                f"empty coverage artifact: {coverage}", report_dir / "pytest.log"
+                f"empty coverage artifact: {coverage}",
+                report_dir / "pytest.log",
             )
             raise ValueError(msg)
         return r.ok(True)
@@ -191,15 +229,6 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
                     f"{phase}: {line}"
                     for phase, item in phases
                     for line in item.warning_lines
-                ),
-                "\n",
-            ),
-            (
-                "suspended-warnings.txt",
-                tuple(
-                    f"{phase}: {line}"
-                    for phase, item in phases
-                    for line in item.suspended_warning_lines
                 ),
                 "\n",
             ),

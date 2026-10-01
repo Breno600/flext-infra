@@ -19,14 +19,21 @@ class FlextInfraScanner:
 
     @classmethod
     def scan_project(
-        cls, *, project_root: Path, rope_project: t.Infra.RopeProject
+        cls,
+        *,
+        project_root: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> t.SequenceOf[m.Infra.FacadeStatus]:
         """Return FacadeStatus for each family (c, t, p, m, u) in a project."""
         layout = u.Infra.layout(project_root)
         if layout is None or not layout.src_dir.is_dir():
             return [
                 m.Infra.FacadeStatus(
-                    family=family, exists=False, class_name="", file="", symbol_count=0
+                    family=family,
+                    exists=False,
+                    class_name="",
+                    file="",
+                    symbol_count=0,
                 )
                 for family in c.Infra.FAMILY_SUFFIXES
             ]
@@ -43,7 +50,8 @@ class FlextInfraScanner:
                     continue
                 classes = u.Infra.resolve_module_classes(rope_project, res)
                 match = next(
-                    (n for n in classes if n == expected or n.endswith(suffix)), None
+                    (n for n in classes if n == expected or n.endswith(suffix)),
+                    None,
                 )
                 if match is not None:
                     found_class = match
@@ -57,6 +65,6 @@ class FlextInfraScanner:
                     class_name=found_class,
                     file=found_file,
                     symbol_count=symbols,
-                )
+                ),
             )
         return results

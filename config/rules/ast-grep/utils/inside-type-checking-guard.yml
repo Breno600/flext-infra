@@ -1,0 +1,11 @@
+# A node inside an `if TYPE_CHECKING:` block: annotation-only code that never
+# runs, so runtime import boundaries do not apply to it.
+id: inside-type-checking-guard
+language: python
+rule:
+  inside:
+    kind: if_statement
+    stopBy: end
+    has:
+      field: condition
+      regex: "^(?:typing\\.)?TYPE_CHECKING$"

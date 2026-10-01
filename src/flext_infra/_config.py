@@ -18,8 +18,8 @@ from ._models._config.base import FlextInfraConfigModels
 class FlextInfraConfig(FlextCliConfig):
     """Declarative flext-infra config loaded and validated once."""
 
-    # NOTE (multi-agent, flext-wkii.9 + flext-wkii.17 / agent: codex): direct
-    # config.Infra is the only codegen information surface; no accessor method.
+    # Direct config.Infra is the only codegen information surface; no accessor
+    # method.
     Infra: FlextInfraConfigModels.Infra
 
     @classmethod
@@ -64,4 +64,5 @@ class FlextInfraConfig(FlextCliConfig):
 
 # The public singleton keeps its type through circular facade analysis.
 config: FlextInfraConfig = FlextInfraConfig.fetch_global()
+"""Pre-instantiated frozen config singleton — ``from flext_infra import config``."""
 __all__: list[str] = ["FlextInfraConfig", "config"]

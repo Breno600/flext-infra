@@ -21,7 +21,8 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
     """Verify consumers and publication contracts without inherited import state."""
 
     packages: Annotated[
-        t.StrSequence, m.Field(description="Packages to validate in fresh subprocesses")
+        t.StrSequence,
+        m.Field(description="Packages to validate in fresh subprocesses"),
     ] = (c.Infra.PKG_CORE_UNDERSCORE, "flext_infra", "flext_tests")
     runtime_root: Annotated[
         Path | None,
@@ -77,7 +78,7 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
             layout = u.Infra.layout(root)
             if layout is None:
                 return r[m.Infra.ValidationReport].fail(
-                    f"fresh-import has no Python layout for {root}"
+                    f"fresh-import has no Python layout for {root}",
                 )
             layouts.append(layout)
         origins = tuple(
@@ -85,7 +86,8 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
             for layout in layouts
         )
         origin_code = self._ORIGIN_CODE.replace(
-            self._ORIGINS_PLACEHOLDER, repr(origins)
+            self._ORIGINS_PLACEHOLDER,
+            repr(origins),
         )
         probes: t.MutableSequenceOf[m.Infra.FreshImportProbe] = []
         for layout in layouts:
@@ -95,7 +97,7 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
             payload = u.Cli.toml_mapping_from_text(source.value)
             if payload is None:
                 return r[m.Infra.ValidationReport].fail(
-                    f"invalid published pyproject in {layout.project_root}"
+                    f"invalid published pyproject in {layout.project_root}",
                 )
             metadata = m.Infra.FreshImportMetadata.model_validate(payload).project
             groups: list[t.Pair[str, t.StrMapping]] = []
@@ -115,35 +117,60 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
                                 + f"EntryPoint(name={name!r}, value={value!r}, group={group!r}).load()\n"
                                 + origin_code
                             ),
-                        )
+                        ),
                     )
-            owned = tuple(
+            # A publication plan is the generation transaction's own receipt for
+            # a package it rewrote. The lazy-init planner only covers the
+            # packages of a single Rope workspace index, so a workspace root
+            # plans its own packages while a transaction that also declares
+            # member repositories leaves those members planless (their
+            # initializers are owned by their own self-scoped runs). A layout no
+            # plan claims is therefore verified against its real on-disk
+            # contract: import it in the fresh runtime and resolve the exports
+            # it declares. A plan that does claim the layout must still carry a
+            # usable importable WRITE/SKIP contract, and a broken live package
+            # fails on its import or on a declared name that cannot resolve.
+            layout_plans = tuple(
                 plan
                 for plan in publications
-                if plan.context.importable
-                and plan.action
-                in {c.Infra.LazyInitAction.WRITE, c.Infra.LazyInitAction.SKIP}
-                and plan.context.pkg_dir.is_relative_to(layout.package_dir)
+                if plan.context.pkg_dir.is_relative_to(layout.package_dir)
             )
-            if not any(plan.context.pkg_dir == layout.package_dir for plan in owned):
-                return r[m.Infra.ValidationReport].fail(
-                    f"missing public export contract for {layout.package_name}"
+            if layout_plans:
+                owned = tuple(
+                    plan
+                    for plan in layout_plans
+                    if plan.context.importable
+                    and plan.action
+                    in {c.Infra.LazyInitAction.WRITE, c.Infra.LazyInitAction.SKIP}
                 )
-            body = "".join(
-                self._EXPORT_IMPORT_CODE.format(package=plan.context.current_pkg)
-                + origin_code
-                + self._EXPORT_RESOLVE_CODE.format(exports=tuple(plan.exports))
-                for plan in owned
-            )
+                if not any(
+                    plan.context.pkg_dir == layout.package_dir for plan in owned
+                ):
+                    return r[m.Infra.ValidationReport].fail(
+                        f"missing public export contract for {layout.package_name}",
+                    )
+                body = "".join(
+                    self._EXPORT_IMPORT_CODE.format(package=plan.context.current_pkg)
+                    + origin_code
+                    + self._EXPORT_RESOLVE_CODE.format(exports=tuple(plan.exports))
+                    for plan in owned
+                )
+            else:
+                body = (
+                    self._EXPORT_IMPORT_CODE.format(package=layout.package_name)
+                    + origin_code
+                    + self._EXPORT_RESOLVE_CODE.format(exports=())
+                )
             probes.append(
                 m.Infra.FreshImportProbe(
-                    subject=layout.package_name, code=self._PRELUDE + body + origin_code
-                )
+                    subject=layout.package_name,
+                    code=self._PRELUDE + body + origin_code,
+                ),
             )
         for package in packages:
             if not c.Infra.PYTHON_IMPORT_NAME_RE.fullmatch(package):
                 return r[m.Infra.ValidationReport].fail(
-                    f"{package}: not a valid Python package name"
+                    f"{package}: not a valid Python package name",
                 )
             probes.append(
                 m.Infra.FreshImportProbe(
@@ -152,23 +179,29 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
                     + self._EXPORT_IMPORT_CODE.format(package=package)
                     + origin_code
                     + self._EXPORT_RESOLVE_CODE.format(exports=()),
-                )
+                ),
             )
         if not probes:
             return r[m.Infra.ValidationReport].ok(
                 m.Infra.ValidationReport(
-                    passed=True, violations=(), summary="0 fresh-import probe(s) passed"
-                )
+                    passed=True,
+                    violations=(),
+                    summary="0 fresh-import probe(s) passed",
+                ),
             )
         # The probes execute the target checkout's code, so they run in the
-        # target's own environment, never the one hosting this tool.
+        # declared runtime root's environment (the generated Makefile's
+        # RUNTIME_ROOT), never the one hosting this tool: probing with the
+        # host's dependency set would grade the target against packages it
+        # does not install.
         interpreter = u.Infra.runtime_python(
-            self.repository_root, runtime_root=self.runtime_root
+            self.repository_root,
+            runtime_root=self.runtime_root,
         )
         if not interpreter.is_file():
             return r[m.Infra.ValidationReport].fail(
                 f"fresh-import target interpreter is missing: {interpreter}; "
-                "make setup provisions it"
+                "make setup provisions it",
             )
         env = self._workspace_import_env(tuple(layout.src_dir for layout in layouts))
         workers = config.Infra.codegen.fresh_import_workers
@@ -176,9 +209,11 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
 
         # Each source travels on stdin because the workspace export probe may
         # exceed the kernel's single-argument limit. map preserves report order.
+        # ``-B``: a validator never writes into the checkout it validates, so
+        # the probed sources leave no bytecode cache behind.
         def run_probe(probe: m.Infra.FreshImportProbe) -> p.Result[p.Cli.CommandOutput]:
             return u.Cli.run_raw(
-                [str(interpreter), "-W", "error", "-"],
+                [str(interpreter), "-B", "-W", "error", "-"],
                 cwd=self.repository_root,
                 timeout=c.Infra.TIMEOUT_SHORT,
                 env=env,
@@ -194,7 +229,8 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
             if u.Cli.process_succeeded(output.outcome):
                 continue
             outcome = m.Cli.ProcessOutcome.model_validate(
-                output.outcome, from_attributes=True
+                output.outcome,
+                from_attributes=True,
             )
             detail = (
                 f"{probe.subject}: {outcome.model_dump_json()}\n"
@@ -205,15 +241,16 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
                     passed=False,
                     violations=(detail,),
                     summary=f"fresh-import failed: {probe.subject}",
-                )
+                ),
             )
         summary = f"{len(probes)} fresh-import probe(s) passed"
         return r[m.Infra.ValidationReport].ok(
-            m.Infra.ValidationReport(passed=True, violations=(), summary=summary)
+            m.Infra.ValidationReport(passed=True, violations=(), summary=summary),
         )
 
     def _workspace_import_env(
-        self, source_roots: t.SequenceOf[Path] = ()
+        self,
+        source_roots: t.SequenceOf[Path] = (),
     ) -> t.StrMapping:
         """Prefer the complete candidate fleet over inherited editable installs."""
         inherited_env = u.Cli.process_env()
@@ -227,7 +264,7 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
             part for part in (*import_roots, existing) if part
         )
         return u.Cli.process_env(
-            overrides={c.Infra.ORCHESTRATOR_ENV_PYTHONPATH: pythonpath}
+            overrides={c.Infra.ORCHESTRATOR_ENV_PYTHONPATH: pythonpath},
         )
 
     @override

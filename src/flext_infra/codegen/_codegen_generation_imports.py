@@ -7,7 +7,7 @@ from collections import defaultdict
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
-from flext_infra import c
+from flext_infra import config
 
 from ._codegen_generation_paths import FlextInfraCodegenGenerationPathsMixin
 
@@ -29,7 +29,7 @@ class FlextInfraCodegenGenerationImportsMixin(FlextInfraCodegenGenerationPathsMi
     def _format_import(indent: str, mod: str, parts: t.StrSequence) -> t.StrSequence:
         """Emit one Ruff-canonical import statement within the configured width."""
         compact = f"{indent}from {mod} import {', '.join(parts)}"
-        if len(compact) <= c.Infra.MAX_LINE_LENGTH:
+        if len(compact) <= config.Infra.tooling.tools.ruff.line_length:
             return (compact,)
         nested_indent = f"{indent}    "
         # One symbol per wrapped line is the only form Ruff's isort accepts
@@ -53,12 +53,16 @@ class FlextInfraCodegenGenerationImportsMixin(FlextInfraCodegenGenerationPathsMi
 
     @staticmethod
     def _format_type_checking_module_alias_import(
-        indent: str, mod: str, export_name: str
+        indent: str,
+        mod: str,
+        export_name: str,
     ) -> t.StrSequence:
         """Format one explicit static reexport."""
         return (
             FlextInfraCodegenGenerationImportsMixin._format_module_alias_import(
-                indent, mod, export_name
+                indent,
+                mod,
+                export_name,
             ),
         )
 
@@ -92,7 +96,9 @@ class FlextInfraCodegenGenerationImportsMixin(FlextInfraCodegenGenerationPathsMi
 
     @staticmethod
     def _generate_import_lines(
-        groups: t.MappingKV[str, t.StrPairSequence], *, indent: str = ""
+        groups: t.MappingKV[str, t.StrPairSequence],
+        *,
+        indent: str = "",
     ) -> t.StrSequence:
         """Generate import lines grouped by module path."""
         if not groups:
@@ -102,7 +108,8 @@ class FlextInfraCodegenGenerationImportsMixin(FlextInfraCodegenGenerationPathsMi
         def _emit_module(mod: str) -> None:
             items = groups[mod]
             alias_items = sorted(
-                (item for item in items if not item[1]), key=operator.itemgetter(0)
+                (item for item in items if not item[1]),
+                key=operator.itemgetter(0),
             )
             sorted_items = sorted(
                 (item for item in items if item[1]),
@@ -111,21 +118,26 @@ class FlextInfraCodegenGenerationImportsMixin(FlextInfraCodegenGenerationPathsMi
             for export_name, _ in alias_items:
                 lines.append(
                     FlextInfraCodegenGenerationImportsMixin._format_module_alias_import(
-                        indent, mod, export_name
-                    )
+                        indent,
+                        mod,
+                        export_name,
+                    ),
                 )
             if not sorted_items:
                 return
             parts: t.StrSequence = [
                 FlextInfraCodegenGenerationImportsMixin._format_import_part(
-                    attr_name, export_name
+                    attr_name,
+                    export_name,
                 )
                 for export_name, attr_name in sorted_items
             ]
             lines.extend(
                 FlextInfraCodegenGenerationImportsMixin._format_import(
-                    indent, mod, parts
-                )
+                    indent,
+                    mod,
+                    parts,
+                ),
             )
 
         for mod in sorted(groups, key=str.lower):

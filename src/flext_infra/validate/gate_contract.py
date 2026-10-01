@@ -25,7 +25,8 @@ class FlextInfraGateContractValidator(
     """Validate workspace gate scripts against the scripts-infra contract."""
 
     check_all: Annotated[
-        bool, m.Field(description="Validate scripts that are not validators or fixers")
+        bool,
+        m.Field(description="Validate scripts that are not validators or fixers"),
     ] = False
     mode: Annotated[c.Infra.OperationMode, m.Field(description="Validation mode")] = (
         c.Infra.OperationMode.BASELINE
@@ -56,7 +57,7 @@ class FlextInfraGateContractValidator(
             else int(c.Infra.ScriptExitCode.PASS)
         )
         return r[result_type].ok(
-            result_type(exit_code=exit_code, violation_count=summary.errors)
+            result_type(exit_code=exit_code, violation_count=summary.errors),
         )
 
     @override
@@ -67,9 +68,9 @@ class FlextInfraGateContractValidator(
                 r[bool].ok(True)
                 if outcome.exit_code == int(c.Infra.ScriptExitCode.PASS)
                 else r[bool].fail(
-                    f"gate contract found {outcome.violation_count} error(s)"
+                    f"gate contract found {outcome.violation_count} error(s)",
                 )
-            )
+            ),
         )
 
 

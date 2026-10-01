@@ -14,9 +14,6 @@ from flext_infra import c, m, u
 from flext_infra.refactor.project_alias_migrator import (
     FlextInfraRefactorProjectAliasMigrator,
 )
-from flext_infra.transformers.compatibility_alias import (
-    FlextInfraRefactorCompatibilityAlias,
-)
 from flext_infra.transformers.future_import import FlextInfraRefactorFutureImport
 from flext_infra.transformers.hardcoded_version import (
     FlextInfraRefactorHardcodedVersion,
@@ -26,8 +23,6 @@ from flext_infra.transformers.import_modernizer import (
 )
 from flext_infra.transformers.mro_remover import FlextInfraRefactorMroRemover
 from flext_infra.transformers.open_encoding import FlextInfraRefactorOpenEncoding
-from flext_infra.transformers.pattern import FlextInfraRefactorPatternTransformer
-from flext_infra.transformers.typing_unifier import FlextInfraRefactorTypingUnifier
 
 from .base import FlextInfraFixerAdapter
 
@@ -50,69 +45,25 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
         """Bind the repository root used to resolve relative file paths."""
         super().__init__(repository_root)
 
-    # Canonical transformer registry. New deterministic transformers register here.
+    # Binding of each enforcement-catalog ``transformer`` target to the code that
+    # implements it. A catalog target with no binding here fails the
+    # orchestrator preflight, naming the rule: the catalog is then corrected.
     _TRANSFORMERS: ClassVar[
         t.MutableMappingKV[str, type[FlextInfraRopeTransformer]]
     ] = {
-        "compatibility_alias": FlextInfraRefactorCompatibilityAlias,
         "future_import": FlextInfraRefactorFutureImport,
         "hardcoded_version": FlextInfraRefactorHardcodedVersion,
         "import_modernizer": FlextInfraRefactorImportModernizer,
         "mro_remover": FlextInfraRefactorMroRemover,
         "open_encoding": FlextInfraRefactorOpenEncoding,
-        "pattern": FlextInfraRefactorPatternTransformer,
-        "project_alias_migrator": FlextInfraRefactorProjectAliasMigrator,
         "rewrite_foreign_canonical_alias": FlextInfraRefactorProjectAliasMigrator,
-        "typing_unifier": FlextInfraRefactorTypingUnifier,
-    }
-
-    # Why: targets whose rewriting mechanism is deactivated inside flext-infra,
-    # mapped to the reason reported for every project that still violates them.
-    # The upstream flext-core catalog keeps declaring the fix action, and the
-    # orchestrator preflight requires exactly one adapter to own every declared
-    # action, so this adapter must keep claiming the target. Claiming it here —
-    # instead of dropping it from ``_TRANSFORMERS`` alone — keeps
-    # ``fix-enforcement`` working for every other rule while guaranteeing the
-    # deactivated target never reaches a transformer and never rewrites a file.
-    _DEACTIVATED_TARGETS: ClassVar[t.MappingKV[str, str]] = {
-        "cast_remover": (
-            "fix deactivated: the cast remover rewrote sources through the raw "
-            "ast module (whole-file ast.unparse), which is not an approved "
-            "rewriting surface — only ast-grep codemod rules (make mod) and "
-            "rope are. Redundancy of a cast is a type-inference question that "
-            "neither approved surface can answer, and the removed casts were "
-            "load-bearing (untyped third-party module lookups, Literal "
-            "narrowing), so removing them raised the type-error count. The "
-            "violation is still reported; only the automatic rewrite is off."
-        ),
-        "typing_dict_import": (
-            "fix deactivated: the Dict import transformer rewrote sources with a "
-            "raw regex over the whole file (\\bDict\\s*\\[), which is not an "
-            "approved rewriting surface — only ast-grep codemod rules (make mod) "
-            "and rope are. A regex cannot tell a type node from text, so it "
-            "rewrote docstrings documenting the pattern, comments and the string "
-            "literals of this package's own rewrite tables. The rewrite is "
-            "recomposed as the ast-grep rule typing-dict-to-mapping-kv, whose "
-            "import-unsafe cases are reported by typing-dict-missing-t-import. "
-            "The violation is still reported; only the automatic rewrite is off."
-        ),
-        "typing_dict_attr": (
-            "fix deactivated: the typing.Dict transformer rewrote sources with a "
-            "raw regex over the whole file (\\btyping\\s*\\.\\s*Dict\\s*\\[), "
-            "which is not an approved rewriting surface — only ast-grep codemod "
-            "rules (make mod) and rope are. The attribute form is matched "
-            "structurally by the ast-grep rule typing-dict-to-mapping-kv, whose "
-            "import-unsafe cases are reported by typing-dict-missing-t-import. "
-            "The violation is still reported; only the automatic rewrite is off."
-        ),
     }
 
     @override
     def can_fix(self, fix_action: m.EnforcementFixAction) -> bool:
         """Return whether this adapter handles ``fix_action``."""
-        return fix_action.kind == self.kind and (
-            fix_action.target in self._TRANSFORMERS
-            or fix_action.target in self._DEACTIVATED_TARGETS
+        return (
+            fix_action.kind == self.kind and fix_action.target in self._TRANSFORMERS
         )
 
     @override
@@ -128,36 +79,7 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
         results: t.MutableSequenceOf[m.Infra.ProjectFixResult] = []
         for target, target_violations in self._group_by_target(violations).items():
             rule_id = self._rule_id(target_violations)
-            deactivation = self._DEACTIVATED_TARGETS.get(target)
-            if deactivation is not None:
-                results.append(
-                    m.Infra.ProjectFixResult(
-                        project=project_dir.name,
-                        skipped=(
-                            m.Infra.SkippedViolation(
-                                rule_id=rule_id,
-                                file_path=str(project_dir),
-                                reason=deactivation,
-                            ),
-                        ),
-                    )
-                )
-                continue
-            transformer_cls = self._TRANSFORMERS.get(target)
-            if transformer_cls is None:
-                results.append(
-                    m.Infra.ProjectFixResult(
-                        project=project_dir.name,
-                        failed=(
-                            m.Infra.FailedFix(
-                                rule_id=rule_id,
-                                file_path=str(project_dir),
-                                error=f"transformer {target} not registered",
-                            ),
-                        ),
-                    )
-                )
-                continue
+            transformer_cls = self._TRANSFORMERS[target]
             fix_action = target_violations[0][0].fix_action
             file_paths = self._collect_file_paths(project_dir, target_violations)
             for file_path in file_paths:
@@ -175,7 +97,7 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
                                     ),
                                 ),
                             ),
-                        )
+                        ),
                     )
                     continue
                 results.append(
@@ -185,7 +107,7 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
                         fix_action=fix_action,
                         ctx=ctx,
                         rule_id=rule_id,
-                    )
+                    ),
                 )
         files_modified = {path for result in results for path in result.files_modified}
         if ctx.apply and files_modified:
@@ -204,13 +126,15 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
                                 ),
                             ),
                         ),
-                    )
+                    ),
                 )
         return self._merge_project_fix_results(project_dir, results)
 
     @staticmethod
     def _is_owned_library_exempt(
-        project_dir: Path, fix_action: m.EnforcementFixAction | None, file_path: Path
+        project_dir: Path,
+        fix_action: m.EnforcementFixAction | None,
+        file_path: Path,
     ) -> bool:
         """Skip import modernization inside the library's owning project.
 
@@ -222,7 +146,7 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
         if fix_action is None or fix_action.target != "import_modernizer":
             return False
         imports_to_remove = u.Cli.json_as_sequence(
-            fix_action.params.get("imports_to_remove")
+            fix_action.params.get("imports_to_remove"),
         )
         for module in imports_to_remove:
             if not isinstance(module, str):
@@ -242,7 +166,9 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
         paths = tuple(Path(path) for path in file_paths)
         with u.Infra.open_project(self._repository_root) as rope_project:
             return u.Infra.normalize_imports(
-                rope_project, file_paths=paths, preserve_canonical_aliases=True
+                rope_project,
+                file_paths=paths,
+                preserve_canonical_aliases=True,
             )
 
     def _fix_file(
@@ -297,14 +223,16 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
                 ),
             )
         transformer = self._build_transformer(
-            transformer_cls=transformer_cls, fix_action=fix_action, file_path=file_path
+            transformer_cls=transformer_cls,
+            fix_action=fix_action,
+            file_path=file_path,
         )
         try:
             updated, changes = transformer.apply_to_source(source)
         except Exception as exc:
             exc.add_note(
                 f"enforcement transformer {transformer_cls.__name__} failed for "
-                f"{file_path} (rule {rule_id})"
+                f"{file_path} (rule {rule_id})",
             )
             raise
         if not changes:
@@ -382,19 +310,6 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
     ) -> FlextInfraRopeTransformer:
         """Instantiate a transformer with params declared in the catalog."""
         params = dict(fix_action.params)
-        if transformer_cls is FlextInfraRefactorTypingUnifier:
-            targets_value = params.get("targets", [])
-            targets: t.StrSequence = (
-                tuple(item for item in targets_value if isinstance(item, str))
-                if isinstance(targets_value, (list, tuple))
-                else ()
-            )
-            canonical_map: t.MutableMappingKV[frozenset[str], str] = {}
-            if "dict" in targets:
-                canonical_map[frozenset({"MutableMapping[K, V]"})] = "t.MappingKV[K, V]"
-            return FlextInfraRefactorTypingUnifier(
-                canonical_map=canonical_map, file_path=file_path
-            )
         if transformer_cls is FlextInfraRefactorProjectAliasMigrator:
             return FlextInfraRefactorProjectAliasMigrator(file_path=file_path)
         if transformer_cls is FlextInfraRefactorImportModernizer:
@@ -406,7 +321,7 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
             symbols_to_replace = {
                 k: str(v)
                 for k, v in u.Cli.json_as_mapping(
-                    params.get("symbols_to_replace")
+                    params.get("symbols_to_replace"),
                 ).items()
                 # flext-i6nq.10: Mapping keys are already typed as strings.
                 if isinstance(v, (str, int, float))
@@ -426,17 +341,6 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
                 symbols_to_replace=symbols_to_replace,
                 runtime_aliases=runtime_aliases,
                 blocked_aliases=blocked_aliases,
-            )
-        if transformer_cls is FlextInfraRefactorPatternTransformer:
-            required_alias = params.get("required_alias", "")
-            alias_module = params.get("alias_module", "")
-            return FlextInfraRefactorPatternTransformer(
-                patterns=u.Cli.json_as_mapping_list(params.get("patterns")),
-                required_alias=required_alias
-                if isinstance(required_alias, str)
-                else "",
-                alias_module=alias_module if isinstance(alias_module, str) else "",
-                file_path=file_path,
             )
         # Remaining enforcement transformers require no runtime params.
         return transformer_cls()

@@ -26,7 +26,7 @@ class FlextInfraDocServiceBase(FlextInfraProjectSelectionServiceBase[bool], ABC)
     """Shared abstract base for ``audit``, ``build``, ``fix``, ``generate``, ``validate``."""
 
     output_dir: Annotated[Path | None, m.Field(description="Docs output dir")] = Path(
-        c.Infra.DEFAULT_DOCS_OUTPUT_DIR
+        c.Infra.DEFAULT_DOCS_OUTPUT_DIR,
     )
 
     @staticmethod

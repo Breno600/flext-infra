@@ -34,7 +34,8 @@ class FlextInfraUtilitiesRopeInventory:
         convention = rope_workspace.convention(file_path)
         try:
             pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
-                rope_project, resource
+                rope_project,
+                resource,
             )
         except FlextInfraUtilitiesRopeRuntime.rope_runtime_errors() as exc:
             msg = (
@@ -85,7 +86,7 @@ class FlextInfraUtilitiesRopeInventory:
                     child_scope=record_options.child_scope,
                     include_local_scopes=include_local_scopes,
                     include_references=include_references,
-                )
+                ),
             )
         return tuple(items)
 
@@ -103,14 +104,14 @@ class FlextInfraUtilitiesRopeInventory:
         for name, pyname in cls._sorted_scope_names(scope, parent_options.resource):
             child_scope = cls._child_scope_for(child_scopes, pyname)
             record_options = parent_options.model_copy(
-                update={"name": name, "pyname": pyname, "child_scope": child_scope}
+                update={"name": name, "pyname": pyname, "child_scope": child_scope},
             )
             items.extend(
                 cls._recorded_objects(
                     record_options,
                     child_scope=child_scope,
                     include_references=include_references,
-                )
+                ),
             )
         return tuple(items)
 
@@ -166,7 +167,8 @@ class FlextInfraUtilitiesRopeInventory:
 
     @staticmethod
     def _descend_options(
-        parent_options: m.Infra.RopeInventoryRecordInput, record: m.Infra.Object
+        parent_options: m.Infra.RopeInventoryRecordInput,
+        record: m.Infra.Object,
     ) -> m.Infra.RopeInventoryRecordInput:
         """Descend options."""
         result: m.Infra.RopeInventoryRecordInput = parent_options.model_copy(
@@ -177,31 +179,36 @@ class FlextInfraUtilitiesRopeInventory:
                 "class_chain": tuple(
                     part for part in record.class_path.split(".") if part
                 ),
-            }
+            },
         )
         return result
 
     @staticmethod
     def _sorted_module_names(
-        pymodule: t.Infra.RopePyModule, resource: t.Infra.RopeResource
+        pymodule: t.Infra.RopePyModule,
+        resource: t.Infra.RopeResource,
     ) -> t.VariadicTuple[t.Pair[str, t.Infra.RopePyName]]:
         """Sorted module names."""
         return FlextInfraUtilitiesRopeInventory._sorted_names(
-            pymodule.get_attributes(), resource
+            pymodule.get_attributes(),
+            resource,
         )
 
     @staticmethod
     def _sorted_scope_names(
-        scope: p.Infra.RopeScopeDsl, resource: t.Infra.RopeResource
+        scope: p.Infra.RopeScopeDsl,
+        resource: t.Infra.RopeResource,
     ) -> t.VariadicTuple[t.Pair[str, t.Infra.RopePyName]]:
         """Sorted scope names."""
         return FlextInfraUtilitiesRopeInventory._sorted_names(
-            scope.get_names(), resource
+            scope.get_names(),
+            resource,
         )
 
     @staticmethod
     def _sorted_names(
-        names: t.MappingKV[str, t.Infra.RopePyName], resource: t.Infra.RopeResource
+        names: t.MappingKV[str, t.Infra.RopePyName],
+        resource: t.Infra.RopeResource,
     ) -> t.VariadicTuple[t.Pair[str, t.Infra.RopePyName]]:
         """Sorted names."""
         candidates: list[t.Triple[int, str, t.Infra.RopePyName]] = []
@@ -218,7 +225,10 @@ class FlextInfraUtilitiesRopeInventory:
 
     @classmethod
     def _record(
-        cls, options: m.Infra.RopeInventoryRecordInput, *, include_references: bool
+        cls,
+        options: m.Infra.RopeInventoryRecordInput,
+        *,
+        include_references: bool,
     ) -> m.Infra.Object | None:
         """Record."""
         line = cls._definition_line(options.pyname, options.resource)
@@ -238,7 +248,9 @@ class FlextInfraUtilitiesRopeInventory:
         if kind == "parameter" and options.name in {"self", "cls"}:
             return None
         is_facade_member = cls._is_facade_member(
-            options.convention, name=options.name, scope_chain=options.scope_chain
+            options.convention,
+            name=options.name,
+            scope_chain=options.scope_chain,
         )
         if (
             include_references
@@ -246,7 +258,8 @@ class FlextInfraUtilitiesRopeInventory:
             and not options.name.startswith("_")
         ):
             runtime_reference_sites, script_reference_sites = cls._reference_sites(
-                options, line=line
+                options,
+                line=line,
             )
         else:
             runtime_reference_sites = ()
@@ -285,7 +298,8 @@ class FlextInfraUtilitiesRopeInventory:
 
     @staticmethod
     def _definition_line(
-        pyname: t.Infra.RopePyName, resource: t.Infra.RopeResource
+        pyname: t.Infra.RopePyName,
+        resource: t.Infra.RopeResource,
     ) -> int | None:
         """Definition line."""
         location = pyname.get_definition_location()
@@ -298,7 +312,8 @@ class FlextInfraUtilitiesRopeInventory:
 
     @staticmethod
     def _child_scope_for(
-        scopes: t.SequenceOf[p.Infra.RopeScopeDsl], pyname: t.Infra.RopePyName
+        scopes: t.SequenceOf[p.Infra.RopeScopeDsl],
+        pyname: t.Infra.RopePyName,
     ) -> p.Infra.RopeScopeDsl | None:
         """Child scope for."""
         location = pyname.get_definition_location()
@@ -310,7 +325,7 @@ class FlextInfraUtilitiesRopeInventory:
             validated_existing_scope: p.Infra.RopeScopeDsl = scope
             return validated_existing_scope
         if FlextInfraUtilitiesRopeRuntime.assigned_name(
-            pyname
+            pyname,
         ) or FlextInfraUtilitiesRopeRuntime.parameter_name(pyname):
             return None
         getter = getattr(pyname.get_object(), "get_scope", None)
@@ -363,20 +378,26 @@ class FlextInfraUtilitiesRopeInventory:
 
     @staticmethod
     def _reference_sites(
-        options: m.Infra.RopeInventoryRecordInput, *, line: int
+        options: m.Infra.RopeInventoryRecordInput,
+        *,
+        line: int,
     ) -> t.Pair[
-        t.VariadicTuple[m.Infra.ReferenceSite], t.VariadicTuple[m.Infra.ReferenceSite]
+        t.VariadicTuple[m.Infra.ReferenceSite],
+        t.VariadicTuple[m.Infra.ReferenceSite],
     ]:
         """Collect the reference sites for the symbol one record describes."""
         name = options.name
         lines = options.source.splitlines(keepends=True)
         offset = FlextInfraUtilitiesRopeCore.find_identifier_offset_in_lines(
-            lines, line=line, symbol=name
+            lines,
+            line=line,
+            symbol=name,
         )
         if offset is None:
             return ((), ())
         definition_path = FlextInfraUtilitiesRopeCore.resource_file_path(
-            options.rope_project, options.resource
+            options.rope_project,
+            options.resource,
         )
         search_resources: t.VariadicTuple[t.Infra.RopeResource] | None = None
         if definition_path is not None:
@@ -396,7 +417,10 @@ class FlextInfraUtilitiesRopeInventory:
                 dependent_import_targets=dependent_import_targets,
             )
         hits = FlextInfraUtilitiesRopeImports.find_occurrences(
-            options.rope_project, options.resource, offset, resources=search_resources
+            options.rope_project,
+            options.resource,
+            offset,
+            resources=search_resources,
         )
         runtime_reference_sites: list[m.Infra.ReferenceSite] = []
         script_reference_sites: list[m.Infra.ReferenceSite] = []
@@ -406,7 +430,10 @@ class FlextInfraUtilitiesRopeInventory:
             if (
                 not skipped_definition
                 and FlextInfraUtilitiesRopeInventory._is_definition_occurrence(
-                    hit, definition_path=definition_path, line=line, offset=offset
+                    hit,
+                    definition_path=definition_path,
+                    line=line,
+                    offset=offset,
                 )
             ):
                 skipped_definition = True
@@ -433,15 +460,19 @@ class FlextInfraUtilitiesRopeInventory:
             runtime_reference_sites.append(reference_site)
         if not skipped_definition and definition_path is not None:
             surface = FlextInfraUtilitiesRopeInventory._reference_surface(
-                definition_path
+                definition_path,
             )
             if surface == c.Infra.DIR_SCRIPTS:
                 FlextInfraUtilitiesRopeInventory._discard_definition_site(
-                    script_reference_sites, definition_path=definition_path, line=line
+                    script_reference_sites,
+                    definition_path=definition_path,
+                    line=line,
                 )
             elif surface not in {c.Infra.DIR_TESTS, c.Infra.DIR_EXAMPLES}:
                 FlextInfraUtilitiesRopeInventory._discard_definition_site(
-                    runtime_reference_sites, definition_path=definition_path, line=line
+                    runtime_reference_sites,
+                    definition_path=definition_path,
+                    line=line,
                 )
         return (tuple(runtime_reference_sites), tuple(script_reference_sites))
 
@@ -470,7 +501,10 @@ class FlextInfraUtilitiesRopeInventory:
 
     @staticmethod
     def _discard_definition_site(
-        sites: list[m.Infra.ReferenceSite], *, definition_path: Path, line: int
+        sites: list[m.Infra.ReferenceSite],
+        *,
+        definition_path: Path,
+        line: int,
     ) -> None:
         """Discard definition site."""
         definition_key = (
@@ -518,7 +552,7 @@ class FlextInfraUtilitiesRopeInventory:
         return bool(
             definition_path is not None
             and location_path == definition_path
-            and location_line == line
+            and location_line == line,
         )
 
     @staticmethod
@@ -541,7 +575,11 @@ class FlextInfraUtilitiesRopeInventory:
 
     @staticmethod
     def _fingerprint(
-        source: str, *, name: str, line: int, child_scope: p.Infra.RopeScopeDsl | None
+        source: str,
+        *,
+        name: str,
+        line: int,
+        child_scope: p.Infra.RopeScopeDsl | None,
     ) -> str:
         """Fingerprint."""
         start = max(1, line)
@@ -590,7 +628,7 @@ class FlextInfraUtilitiesRopeInventory:
         if name == alias:
             return True
         return bool(
-            layout is not None and family and name == f"{layout.class_stem}{family}"
+            layout is not None and family and name == f"{layout.class_stem}{family}",
         )
 
 

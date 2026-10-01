@@ -24,7 +24,8 @@ class TestsFlextInfraGateRegistry:
     def _apply_alias_fix(tmp_path: Path, project_dir: Path) -> m.Infra.GateExecution:
         """Write the canonical root manifest and apply the alias gate fix."""
         (project_dir / "pyproject.toml").write_text(
-            '[project]\nname = "flext-infra"\nversion = "0.1.0"\n', encoding="utf-8"
+            '[project]\nname = "flext-infra"\nversion = "0.1.0"\n',
+            encoding="utf-8",
         )
         u.Tests.provision_checkout(project_dir)
         return FlextInfraCanonicalAliasGate(tmp_path).fix(
@@ -54,7 +55,8 @@ class TestsFlextInfraGateRegistry:
         tm.that(frozenset(c.Infra.CANONICAL_FIXABLE_GATE_IDS) <= allowed, eq=True)
 
     def test_canonical_alias_check_detects_root_tests_consumer(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         project_dir = tmp_path / "flext-infra"
         package_init = project_dir / "src" / "flext_infra" / "__init__.py"
@@ -64,24 +66,69 @@ class TestsFlextInfraGateRegistry:
         package_init.write_text("", encoding="utf-8")
         (project_dir / "tests" / "__init__.py").write_text("", encoding="utf-8")
         test_file.write_text(
-            "from flext_core import c\n\nVALUE = c.VALUE\n", encoding="utf-8"
+            "from flext_core import c\n\nVALUE = c.VALUE\n",
+            encoding="utf-8",
         )
         (project_dir / "pyproject.toml").write_text(
-            '[project]\nname = "flext-infra"\nversion = "0.1.0"\n', encoding="utf-8"
+            '[project]\nname = "flext-infra"\nversion = "0.1.0"\n',
+            encoding="utf-8",
         )
         gate = FlextInfraCanonicalAliasGate(tmp_path)
         result = gate.check(
             project_dir,
             m.Infra.GateContext(
-                repository_root=tmp_path, reports_dir=tmp_path / "reports"
+                repository_root=tmp_path,
+                reports_dir=tmp_path / "reports",
             ),
         )
         tm.that(result.result.passed, eq=False)
         tm.that(result.raw_output, has="canonical alias 'c'")
         tm.that(result.raw_output, has="from tests import c")
 
+    def test_canonical_alias_tolerates_content_only_submodule(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A package:false content-only root is a no-policy-owner tree.
+
+        A workspace submodule whose pyproject declares no ``[project]`` table
+        (mt5docker, ``package: false`` by design) must not crash the gate with
+        ``TypeError: missing [project] table`` — the alias check treats it as
+        the no-owner posture and passes (invest repro: ``make check`` on the
+        invest root with submodules materialized died exactly there, bead
+        invest-awmk).
+        """
+        project_dir = tmp_path / "flext-infra"
+        owned_init = project_dir / "src" / "flext_infra" / "__init__.py"
+        owned_init.parent.mkdir(parents=True)
+        owned_init.write_text("", encoding="utf-8")
+        (project_dir / "pyproject.toml").write_text(
+            '[project]\nname = "flext-infra"\nversion = "0.1.0"\n',
+            encoding="utf-8",
+        )
+        submodule = tmp_path / "mt5docker"
+        submodule.mkdir()
+        (submodule / "pyproject.toml").write_text(
+            "[tool.uv]\npackage = false\n",
+            encoding="utf-8",
+        )
+        submodule_mod = submodule / "pkg" / "mod.py"
+        submodule_mod.parent.mkdir()
+        submodule_mod.write_text("VALUE = 1\n", encoding="utf-8")
+
+        gate = FlextInfraCanonicalAliasGate(tmp_path)
+        result = gate.check(
+            tmp_path,
+            m.Infra.GateContext(
+                repository_root=tmp_path,
+                reports_dir=tmp_path / "reports",
+            ),
+        )
+        tm.that(result.result.passed, eq=True)
+
     def test_canonical_alias_fix_rejects_prospective_import_cycle(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         project_dir = tmp_path / "flext-infra"
         package_init = project_dir / "src" / "flext_infra" / "__init__.py"
@@ -93,7 +140,8 @@ class TestsFlextInfraGateRegistry:
         package_init.write_text("", encoding="utf-8")
         unit_init.write_text("", encoding="utf-8")
         tests_init.write_text(
-            "from tests.unit.test_consumer import VALUE\n", encoding="utf-8"
+            "from tests.unit.test_consumer import VALUE\n",
+            encoding="utf-8",
         )
         original = "from flext_core import c\n\nVALUE = c.VALUE\n"
         test_file.write_text(original, encoding="utf-8")
@@ -103,7 +151,8 @@ class TestsFlextInfraGateRegistry:
         tm.that(test_file.read_text(encoding="utf-8"), eq=original)
 
     def test_canonical_alias_fix_is_deterministic_and_preserves_clean_files(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         project_dir = tmp_path / "flext-infra"
         package_init = project_dir / "src" / "flext_infra" / "__init__.py"
@@ -119,12 +168,15 @@ class TestsFlextInfraGateRegistry:
         test_file.write_text(original, encoding="utf-8")
         clean_file.write_text(clean_source, encoding="utf-8")
         (project_dir / "pyproject.toml").write_text(
-            '[project]\nname = "flext-infra"\nversion = "0.1.0"\n', encoding="utf-8"
+            '[project]\nname = "flext-infra"\nversion = "0.1.0"\n',
+            encoding="utf-8",
         )
         u.Tests.provision_checkout(project_dir)
         gate = FlextInfraCanonicalAliasGate(tmp_path)
         context = m.Infra.GateContext(
-            repository_root=tmp_path, reports_dir=tmp_path / "reports", apply_fixes=True
+            repository_root=tmp_path,
+            reports_dir=tmp_path / "reports",
+            apply_fixes=True,
         )
         first_result = gate.fix(project_dir, context)
         first_consumer = test_file.read_bytes()
@@ -139,31 +191,33 @@ class TestsFlextInfraGateRegistry:
         tm.that(clean_file.read_bytes(), eq=first_clean)
 
     def test_canonical_alias_fix_allows_preexisting_unrelated_cycle(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         project_dir = tmp_path / "flext-infra"
         package_dir = project_dir / "src" / "flext_infra"
         package_dir.mkdir(parents=True)
         (package_dir / "__init__.py").write_text("", encoding="utf-8")
         (package_dir / "a.py").write_text(
-            "from flext_infra import b\n", encoding="utf-8"
+            "from flext_infra import b\n",
+            encoding="utf-8",
         )
         (package_dir / "b.py").write_text(
-            "from flext_infra import a\n", encoding="utf-8"
+            "from flext_infra import a\n",
+            encoding="utf-8",
         )
         consumer = package_dir / "consumer.py"
         consumer.write_text(
-            "from flext_core import c\n\nVALUE = c.VALUE\n", encoding="utf-8"
+            "from flext_core import c\n\nVALUE = c.VALUE\n",
+            encoding="utf-8",
         )
         result = TestsFlextInfraGateRegistry._apply_alias_fix(tmp_path, project_dir)
         tm.that(result.result.passed, eq=True)
-        tm.that(
-            consumer.read_text(encoding="utf-8"),
-            has="from flext_infra.constants import c",
-        )
+        tm.that(consumer.read_text(encoding="utf-8"), has="from flext_infra import c")
 
     def test_canonical_alias_fix_rejects_new_cycle_beside_existing_cycle(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A baseline cycle must not hide an independent prospective cycle."""
         project_dir = tmp_path / "flext-infra"
@@ -174,16 +228,19 @@ class TestsFlextInfraGateRegistry:
         unit_dir.mkdir(parents=True)
         (package_dir / "__init__.py").write_text("", encoding="utf-8")
         (package_dir / "a.py").write_text(
-            "from flext_infra import b\n", encoding="utf-8"
+            "from flext_infra import b\n",
+            encoding="utf-8",
         )
         (package_dir / "b.py").write_text(
-            "from flext_infra import a\n", encoding="utf-8"
+            "from flext_infra import a\n",
+            encoding="utf-8",
         )
         consumer = unit_dir / "test_consumer.py"
         original = "from flext_core import c\n\nVALUE = c.VALUE\n"
         consumer.write_text(original, encoding="utf-8")
         (tests_dir / "__init__.py").write_text(
-            "from tests.unit.test_consumer import VALUE\n", encoding="utf-8"
+            "from tests.unit.test_consumer import VALUE\n",
+            encoding="utf-8",
         )
         (unit_dir / "__init__.py").write_text("", encoding="utf-8")
         result = TestsFlextInfraGateRegistry._apply_alias_fix(tmp_path, project_dir)
@@ -195,7 +252,7 @@ class TestsFlextInfraGateRegistry:
     def test_every_allowed_gate_resolves_in_the_registry(self) -> None:
         """Every gate the Make surface accepts must be instantiable.
 
-        flext-38p39: `format` once sat in the canonical check-gate vocabulary
+        `format` once sat in the canonical check-gate vocabulary
         and FlextInfraRuffFormatGate declared gate_id="format" with
         can_fix=True, but the class was never listed in the registry. The
         generated check command could therefore name a gate that silently
@@ -213,7 +270,7 @@ class TestsFlextInfraGateRegistry:
     def test_fixable_gate_vocabulary_matches_the_registry(self) -> None:
         """The Make fixable-gate vocabulary equals the gates that declare can_fix.
 
-        flext-38p39: `make fix` routes through `check run --fix`. Without a
+        `make fix` routes through `check run --fix`. Without a
         gate selector that run executes EVERY gate, including pyright and
         mypy, which cannot fix anything and cost ~37s -- the verb timed out
         (exit 124).
@@ -227,14 +284,20 @@ class TestsFlextInfraGateRegistry:
         registry = FlextInfraGateRegistry.default()
         mutating = {
             gate_id
-            for gate_id in c.Infra.CANONICAL_GATE_IDS
+            for gate_id in c.Infra.ALLOWED_GATES
             if (gate_cls := registry.get(gate_id)) is not None and gate_cls.can_fix
         }
         # `make fix` owns every mutating check-gate EXCEPT the fmt-owned
         # formatters (single-pass verb law: one operation per tool per verb).
         fmt_owned = set(config.Infra.codegen.make.fmt_gates)
         tm.that(set(c.Infra.CANONICAL_FIXABLE_GATE_IDS), eq=mutating - fmt_owned)
-        tm.that(fmt_owned <= mutating, eq=True)
+        tm.that(fmt_owned & set(c.Infra.CANONICAL_GATE_IDS) <= mutating, eq=True)
+        registered_mutating = {
+            gate_id
+            for gate_id in c.Infra.ALLOWED_GATES
+            if (gate_cls := registry.get(gate_id)) is not None and gate_cls.can_fix
+        }
+        tm.that(fmt_owned <= registered_mutating, eq=True)
         # `format` belongs to `make fmt` alone: absent from the read-only
         # check vocabulary AND from the fix vocabulary.
         tm.that(c.Infra.FORMAT not in c.Infra.CANONICAL_FIXABLE_GATE_IDS, eq=True)

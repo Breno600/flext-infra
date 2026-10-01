@@ -10,8 +10,6 @@ from flext_infra import m, u
 from ._fixer_results import FlextInfraCodegenFixerResultsMixin
 from .lazy_init import FlextInfraCodegenLazyInit
 
-_log = u.fetch_logger(__name__)
-
 
 class FlextInfraCodegenFixerPassesMixin(FlextInfraCodegenFixerResultsMixin):
     """Private pipeline passes for codegen fixer composition."""
@@ -31,7 +29,7 @@ class FlextInfraCodegenFixerPassesMixin(FlextInfraCodegenFixerResultsMixin):
         )
         if not violating_projects:
             return
-        _log.warning(
+        FlextInfraCodegenFixerPassesMixin._fixer_log.warning(
             "namespace_enforcement_failed",
             project=project_path.name,
             error="violations remain after namespace enforcement",
