@@ -9,7 +9,7 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import c, m
+from flext_infra import c, m, u
 from flext_infra.validate.runtime_census import FlextInfraRuntimeCensusValidator
 
 from .base_gate import FlextInfraGate
