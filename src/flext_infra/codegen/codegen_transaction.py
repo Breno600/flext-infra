@@ -1,4 +1,8 @@
-"""Single extensible transaction coordinator for complete project generation."""
+"""Single extensible transaction coordinator for complete project generation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -50,7 +54,12 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         roots: t.MappingKV[str, Path],
         operation: Callable[[Path], p.Result[T]],
     ) -> p.Result[T]:
-        """Hold Git and shared destination leases before planning or recovery."""
+        """Hold Git and shared destination leases before planning or recovery.
+
+        Returns:
+            The resulting ``p.Result[T]``.
+
+        """
         identity = self._planner.scope_identity()
         if identity.failure:
             return r[T].from_failure(identity)
@@ -101,7 +110,12 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         roots: t.MappingKV[str, Path],
         inputs: t.VariadicTuple[m.Cli.AtomicFileState],
     ) -> p.Result[m.Infra.CodegenTransactionSession]:
-        """Create a durable file-only cursor using the existing journal lifecycle."""
+        """Create a durable file-only cursor using the existing journal lifecycle.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenTransactionSession]``.
+
+        """
         result_type = r[m.Infra.CodegenTransactionSession]
         if set(roots.values()) - self._file_leases.keys():
             return result_type.fail("file session requires every destination lease")
@@ -192,7 +206,12 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         directories: t.VariadicTuple[Path],
         validator: Callable[[], p.Result[bool]],
     ) -> p.Result[t.VariadicTuple[Path]]:
-        """Compose file publication through the same durable phase lifecycle."""
+        """Compose file publication through the same durable phase lifecycle.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[Path]]``.
+
+        """
         result_type = r[t.VariadicTuple[Path]]
         started = self.begin_files_locked(scope_root, roots, analysis.inputs)
         if started.failure:
@@ -217,7 +236,12 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         self,
         config_plans: t.VariadicTuple[m.Infra.CodegenFilePlan] = (),
     ) -> p.Result[bool]:
-        """Validate a coherent committed Mise snapshot under the generation lock."""
+        """Validate a coherent committed Mise snapshot under the generation lock.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         return self.run_locked(
             prepare=False,
             operation=lambda scope_root: self.validate_locked(scope_root, config_plans),
@@ -228,7 +252,12 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         scope_root: Path,
         config_plans: t.VariadicTuple[m.Infra.CodegenFilePlan] = (),
     ) -> p.Result[bool]:
-        """Reject pending recovery/residue, then exercise real Mise consumers."""
+        """Reject pending recovery/residue, then exercise real Mise consumers.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         layout_result = (
             self._planner.layout_for_config_plans(scope_root, config_plans)
             if config_plans
@@ -262,7 +291,12 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
     def validate_phase_analysis_locked(
         analysis: m.Infra.CodegenPhaseAnalysis,
     ) -> p.Result[bool]:
-        """Validate a published phase from its immutable planning receipt."""
+        """Validate a published phase from its immutable planning receipt.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         return verify.phase_analysis_live(analysis)
 
     def run_locked[T](
@@ -271,7 +305,12 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         prepare: bool,
         operation: Callable[[Path], p.Result[T]],
     ) -> p.Result[T]:
-        """Own the shared journal before recovery through final publication cleanup."""
+        """Own the shared journal before recovery through final publication cleanup.
+
+        Returns:
+            The resulting ``p.Result[T]``.
+
+        """
         identity = self._planner.scope_identity()
         if identity.failure:
             return r[T].from_failure(identity)
@@ -291,7 +330,12 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         prepare: bool,
         operation: Callable[[Path], p.Result[T]],
     ) -> p.Result[T]:
-        """Reauthenticate and reconcile after the descriptor lock is held."""
+        """Reauthenticate and reconcile after the descriptor lock is held.
+
+        Returns:
+            The resulting ``p.Result[T]``.
+
+        """
         if prepare:
             reconciled = self._reconcile(identity)
             if reconciled.failure:
@@ -304,7 +348,12 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         config_plans: t.VariadicTuple[m.Infra.CodegenFilePlan],
         file_plans: t.VariadicTuple[m.Infra.CodegenFilePlan],
     ) -> p.Result[m.Infra.CodegenTransactionSession]:
-        """Publish conform+Mise as the first fully journaled prepared phase."""
+        """Publish conform+Mise as the first fully journaled prepared phase.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenTransactionSession]``.
+
+        """
         result_type = r[m.Infra.CodegenTransactionSession]
         transaction_id = secrets.token_hex(16)
         layout_result = self._planner.layout_for_config_plans(
@@ -563,7 +612,12 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         phase: str,
         plans: t.VariadicTuple[m.Infra.CodegenFilePlan],
     ) -> p.Result[m.Infra.CodegenTransactionSession]:
-        """Append, durably authorize, then publish one dependent generated phase."""
+        """Append, durably authorize, then publish one dependent generated phase.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenTransactionSession]``.
+
+        """
         result_type = r[m.Infra.CodegenTransactionSession]
         changed = tuple(
             plan for plan in plans if u.Infra.codegen_file_requires_effect(plan)
@@ -714,7 +768,12 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         phase: str,
         directories: t.VariadicTuple[Path],
     ) -> p.Result[m.Infra.CodegenTransactionSession]:
-        """Authorize missing generated directories durably, then create them."""
+        """Authorize missing generated directories durably, then create them.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenTransactionSession]``.
+
+        """
         result_type = r[m.Infra.CodegenTransactionSession]
         planned = state.plan_directories(
             session.plan.layout,
@@ -780,7 +839,12 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         session: m.Infra.CodegenTransactionSession,
         validator: Callable[[], p.Result[bool]],
     ) -> p.Result[t.VariadicTuple[Path]]:
-        """Validate final reality while recoverable, then commit and clean up."""
+        """Validate final reality while recoverable, then commit and clean up.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[Path]]``.
+
+        """
         exact = verify.journal_destinations_live(session.plan.layout, session.journal)
         if exact.failure:
             return r[t.VariadicTuple[Path]].from_failure(
@@ -848,7 +912,13 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         journal: m.Infra.CodegenTransactionJournal,
         journal_state: m.Cli.AtomicFileState,
     ) -> p.Result[t.Pair[m.Infra.CodegenTransactionJournal, m.Cli.AtomicFileState]]:
-        """Create and durably bind one directory identity at a time."""
+        """Create and durably bind one directory identity at a time.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[m.Infra.CodegenTransactionJournal,
+                m.Cli.AtomicFileState]]``.
+
+        """
         result_type = r[tuple[m.Infra.CodegenTransactionJournal, m.Cli.AtomicFileState]]
         current_journal = journal
         current_state = journal_state
@@ -928,7 +998,12 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         *,
         journal_write: bool,
     ) -> p.Result[bool]:
-        """Compensate only this invocation's exact empty-directory effect."""
+        """Compensate only this invocation's exact empty-directory effect.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         compensated = state.compensate_created_directory(created)
         if compensated.failure:
             return r[bool].fail(
@@ -943,7 +1018,12 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         session: m.Infra.CodegenTransactionSession,
         failure: str,
     ) -> p.Result[bool]:
-        """Recover the complete prepared transaction and preserve the cause."""
+        """Recover the complete prepared transaction and preserve the cause.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         return self._recover_failure(session.plan.layout, failure)
 
     def publish_prepared_locked[T](
@@ -958,6 +1038,10 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         a failure is returned unchanged and an exception escapes unchanged.
         A failure whose owner already attempted or refused recovery (it carries
         ``recovery_error``) is returned as-is, never recovered twice.
+
+        Returns:
+            The resulting ``p.Result[T]``.
+
         """
         layout = session.plan.layout
         try:
@@ -986,7 +1070,12 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         self,
         layout: m.Infra.MiseToolchainWorkspaceLayout,
     ) -> p.Result[bool]:
-        """Recover only the latest journal receipt written by this transaction."""
+        """Recover only the latest journal receipt written by this transaction.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         expected = self._journal_receipts.get(layout.journal_path)
         if expected is None:
             observed = state.journal_state(layout)
@@ -1037,7 +1126,12 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         all_sources: t.VariadicTuple[t.Pair[str, m.Cli.AtomicFileState]],
         publications: t.VariadicTuple[m.Infra.CodegenStagedFile],
     ) -> p.Result[bool]:
-        """Re-verify every pre-publication barrier, recovering on the first breach."""
+        """Re-verify every pre-publication barrier, recovering on the first breach.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         barriers = FlextInfraCodegenPreconditions.prepublication_barriers(
             plan,
             tuple(source for _phase, source in all_sources),
@@ -1070,7 +1164,12 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         *,
         expected: m.Cli.AtomicFileState,
     ) -> p.Result[m.Cli.AtomicFileState]:
-        """Retain the exact owned receipt for in-session failure recovery."""
+        """Retain the exact owned receipt for in-session failure recovery.
+
+        Returns:
+            The resulting ``p.Result[m.Cli.AtomicFileState]``.
+
+        """
         written = journal_io.write(layout, journal, expected=expected)
         if written.success:
             self._journal_receipts[layout.journal_path] = written.value

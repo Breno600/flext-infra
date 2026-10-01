@@ -1,5 +1,8 @@
 """Deterministic projection lock emitted beside the lazy-init projections.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 ``.agents/projections.lock.json`` (v1) is derived entirely from the composed
 lazy-init file plans: one entry per projected ``.agents``/``.codex`` file with
 its sha256 digest and byte length, ordered by path. Being just another plan
@@ -13,9 +16,10 @@ this file is the projected OUTPUT state, owned by the generator alone.
 from __future__ import annotations
 
 import hashlib
+from collections.abc import MutableMapping
 from operator import itemgetter
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, t, u
@@ -27,11 +31,8 @@ if TYPE_CHECKING:
 class FlextInfraCodegenLazyInitProjectionManifest:
     """Derive the per-project projection manifest from composed file plans."""
 
-    _PROJECTED_ROOTS: ClassVar[frozenset[str]] = frozenset({".agents", ".codex"})
-
-    @classmethod
+    @staticmethod
     def projection_manifest_plans(
-        cls,
         *,
         files: t.VariadicTuple[m.Infra.CodegenFilePlan],
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]:
@@ -40,15 +41,19 @@ class FlextInfraCodegenLazyInitProjectionManifest:
         Entries derive only from the other plans' desired states, so the
         manifest bytes are a pure function of the phase plan: stable order,
         stable digests, no self-reference.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]``.
+
         """
-        projected: t.MutableMappingKV[Path, list[t.JsonDict]] = {}
+        projected: MutableMapping[Path, list[t.JsonDict]] = {}
         for plan in files:
             if plan.desired_content is None:
                 continue
             relative = plan.path.relative_to(plan.project)
-            if relative.parts[0] not in cls._PROJECTED_ROOTS:
+            if relative.parts[0] not in c.Infra.PROJECTED_ROOTS:
                 continue
-            if relative.name == c.Infra.PROJECTIONS_LOCK_FILENAME:
+            if relative.name == c.Infra.MANIFEST_FILENAME:
                 continue
             projected.setdefault(plan.project, []).append({
                 "path": relative.as_posix(),
@@ -58,7 +63,7 @@ class FlextInfraCodegenLazyInitProjectionManifest:
         plans: t.MutableSequenceOf[m.Infra.CodegenFilePlan] = []
         for project in sorted(projected):
             payload: t.JsonDict = {
-                "apiVersion": c.Infra.PROJECTIONS_LOCK_API_VERSION,
+                "apiVersion": c.Infra.MANIFEST_API_VERSION,
                 "entries": [
                     {
                         "path": entry["path"],
@@ -74,7 +79,7 @@ class FlextInfraCodegenLazyInitProjectionManifest:
                     serialized,
                 )
             content = f"{serialized.value}\n".encode(c.Cli.ENCODING_DEFAULT)
-            manifest_path = project / ".agents" / c.Infra.PROJECTIONS_LOCK_FILENAME
+            manifest_path = project / ".agents" / c.Infra.MANIFEST_FILENAME
             state = u.Cli.atomic_read_binary_file_state(manifest_path, required=False)
             if state.failure:
                 return r[t.VariadicTuple[m.Infra.CodegenFilePlan]].from_failure(state)

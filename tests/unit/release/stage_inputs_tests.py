@@ -1,5 +1,8 @@
 """Release staging carries the project's prepared dist inputs.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 A project build hook may force-include inputs its own lifecycle generates
 under ``dist/``. The stage is a Git archive and never contains ignored build
 outputs, so the builder mirrors the prepared files verbatim; the hook keeps

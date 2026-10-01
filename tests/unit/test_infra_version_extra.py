@@ -19,6 +19,7 @@ class TestsFlextInfraInfraVersionExtra:
 
     @staticmethod
     def test_public_package_metadata_matches_project_metadata() -> None:
+        """Test public package metadata matches project metadata."""
         metadata = tm.ok(
             u.Infra.read_project_metadata_result(Path(__file__).resolve().parents[2]),
         )
@@ -30,6 +31,7 @@ class TestsFlextInfraInfraVersionExtra:
 
     @staticmethod
     def test_public_package_author_matches_project_authors() -> None:
+        """Test public package author matches project authors."""
         metadata = tm.ok(
             u.Infra.read_project_metadata_result(Path(__file__).resolve().parents[2]),
         )
@@ -41,6 +43,7 @@ class TestsFlextInfraInfraVersionExtra:
 
     @staticmethod
     def test_public_package_exports_have_expected_runtime_types() -> None:
+        """Test public package exports have expected runtime types."""
         tm.that(infra_pkg.__version__, is_=str)
         tm.that(infra_pkg.__version_info__, is_=tuple)
         tm.that(infra_pkg.__title__, is_=str)

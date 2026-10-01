@@ -1,4 +1,8 @@
-"""Conformance planning for existing repositories and governed artifacts."""
+"""Conformance planning for existing repositories and governed artifacts.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -31,7 +35,12 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         codegen: m.Infra.CodegenConfigSpec,
         contract: m.Infra.CodegenConformSurfaceContract,
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
-        """Conform every declared managed surface in an existing repository."""
+        """Conform every declared managed surface in an existing repository.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
+
+        """
         root = target.root
         repository = target.repository
         if contract.destinations == frozenset(c.Infra.ARTIFACT_NAMES):
@@ -99,6 +108,11 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                     if target.project is not None
                     else ()
                 ),
+                packaged_data_excludes=(
+                    target.project.packaged_data_excludes
+                    if target.project is not None
+                    else ()
+                ),
                 declared_python_dirs=tuple(
                     self._scaffold_python_dirs(
                         codegen.templates.entries,
@@ -152,7 +166,12 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         workspace: m.Infra.WorkspaceSpec,
         codegen: m.Infra.CodegenConfigSpec,
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
-        """Render the bootstrap Make surface before sibling checkouts exist."""
+        """Render the bootstrap Make surface before sibling checkouts exist.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
+
+        """
         destination = c.Infra.MAKEFILE_FILENAME
         entries = tuple(
             entry
@@ -203,7 +222,12 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         codegen: m.Infra.CodegenConfigSpec,
         destination: str,
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
-        """Render the declared docs policy before consumers parse its projection."""
+        """Render the declared docs policy before consumers parse its projection.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
+
+        """
         entries = tuple(
             entry
             for entry in codegen.templates.entries
@@ -245,7 +269,12 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         render_inputs: m.Infra.CodegenRenderInputs,
         contract: m.Infra.CodegenConformSurfaceContract,
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
-        """Render configured overwrite-owned templates for an existing tree."""
+        """Render the managed-file templates for an existing tree.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
+
+        """
         target = render_inputs.target
         workspace = render_inputs.workspace
         codegen = render_inputs.codegen
@@ -278,7 +307,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                     and profile is c.Infra.MakeProfile.WORKSPACE
                 )
             )
-            if managed.path == Path(c.Infra.CUSTOM_MAKE_FILENAME) or pyproject_skipped:
+            if pyproject_skipped:
                 continue
             entries = tuple(
                 entry
@@ -394,7 +423,15 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         *,
         profile: str | None = None,
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
-        """Validate the handwritten Make surface against its profile contract."""
+        """Validate the handwritten Make surface against its profile contract.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
+
+        Raises:
+            ValueError: If rendered.
+
+        """
         policy = config.make.custom_handler_policies.get(
             profile or "",
             config.make.custom_handler_policy,
@@ -452,6 +489,10 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         Only the ``ALL`` surface completes the full governed set; the
         pyproject-scoped surfaces (``DEPENDENCIES``/``PYPROJECT``) keep the plan
         restricted to what their own planners already produced.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
+
         """
         root = target.root
         profile = target.make_profile

@@ -1,4 +1,8 @@
-"""Observable public profiling contract for the cached-pytest runtime."""
+"""Observable public profiling contract for the cached-pytest runtime.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

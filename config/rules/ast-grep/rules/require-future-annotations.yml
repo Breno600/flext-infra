@@ -83,3 +83,48 @@ message: >-
   The `serialize_as_any=True` call flag applies to every value. Use
   `polymorphic_serialization=True` for model subclasses or the per-field
   `SerializeAsAny[...]` annotation through the `m` facade.
+---
+# `__all__`, when a module declares it, closes the module: it is the last
+# top-level statement unless a later statement consumes it (the generated
+# lazy-init install_lazy_exports call reads it), so the export contract is
+# read after every name it lists exists. Moving a statement across others is
+# a relocation, not a token fix.
+id: require-all-last
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/.git/**"
+  - "**/.venv/**"
+  - "**/legado/**"
+  - "**/legacy/**"
+  - "**/node_modules/**"
+  - "**/*_pb2.py"
+  - "**/*_pb2_grpc.py"
+metadata:
+  relocation: module-end
+rule:
+  kind: expression_statement
+  inside:
+    kind: module
+  has:
+    kind: assignment
+    has:
+      field: left
+      regex: ^__all__$
+  precedes:
+    stopBy: end
+    regex: \S
+    not:
+      kind: comment
+  not:
+    precedes:
+      stopBy: end
+      has:
+        kind: identifier
+        regex: ^__all__$
+        stopBy: end
+message: >-
+  `__all__` must be the module's last statement unless a later statement
+  consumes it; the rope module-end relocation moves the declaration there.

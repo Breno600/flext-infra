@@ -1,4 +1,8 @@
-"""Public sed-by-list contract for the ``make mod`` text phase."""
+"""Public sed-by-list contract for the ``make mod`` text phase.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -237,7 +241,12 @@ class TestsFlextInfraModTextGateEngine:
 
     @staticmethod
     def _publication_inputs(root: Path) -> t.Pair[Path, Path]:
-        """Declare two authored inputs and one exact text rewrite catalogue."""
+        """Declare two authored inputs and one exact text rewrite catalogue.
+
+        Returns:
+            The resulting ``t.Pair[Path, Path]``.
+
+        """
         u.Cli.atomic_write_text_file(
             root / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
             "rules:\n  - id: publication-probe\n    find: 'before'\n    replace: 'after'\n",

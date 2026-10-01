@@ -1,4 +1,8 @@
-"""Public dependency-test execution utilities for flext-infra."""
+"""Public dependency-test execution utilities for flext-infra.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -35,7 +39,12 @@ class TestsFlextInfraUtilitiesDepsMixin:
         env: t.StrMapping | None = None,
         repository_root: Path | None = None,
     ) -> p.Result[p.Cli.CommandOutput]:
-        """Run the public detector in its provisioned interpreter, without overrides."""
+        """Run the public detector in its provisioned interpreter, without overrides.
+
+        Returns:
+            The resulting ``p.Result[p.Cli.CommandOutput]``.
+
+        """
         runtime = u.Infra.runtime_environment_dir(root)
         environment = {
             "UV_PROJECT_ENVIRONMENT": str(runtime),
@@ -75,7 +84,12 @@ class TestsFlextInfraUtilitiesDepsMixin:
         repository_root: Path,
         **overrides: t.JsonValue,
     ) -> m.Infra.DetectCommand:
-        """Create a validated dependency-detection command."""
+        """Create a validated dependency-detection command.
+
+        Returns:
+            The resulting ``m.Infra.DetectCommand``.
+
+        """
         validated: m.Infra.DetectCommand = m.Infra.DetectCommand.model_validate({
             "repository_root": str(repository_root),
             **overrides,

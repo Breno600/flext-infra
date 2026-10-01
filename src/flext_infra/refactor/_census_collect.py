@@ -1,4 +1,8 @@
-"""Census per-module inventory + workspace-report assembly — extracted concern."""
+"""Census per-module inventory + workspace-report assembly — extracted concern.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -96,6 +100,10 @@ class FlextInfraRefactorCensusCollectMixin:
 
         In dry-run the removal candidates are previewed through the gates and
         only the ones that pass stay candidates.
+
+        Returns:
+            The resulting ``m.Infra.WorkspaceReport``.
+
         """
         duplicates = self._duplicate_groups(tuple(findings.project_objects.values()))
         duplicate_keys = frozenset(

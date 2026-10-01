@@ -1,4 +1,8 @@
-"""Typed Git request/report contracts for flext-infra public Git API."""
+"""Typed Git request/report contracts for flext-infra public Git API.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

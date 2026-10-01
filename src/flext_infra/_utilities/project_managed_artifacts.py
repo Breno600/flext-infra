@@ -1,4 +1,8 @@
-"""Load and compose project-owned managed-artifact configuration."""
+"""Load and compose project-owned managed-artifact configuration.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -26,6 +30,10 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
 
         A project root that is not materialized yet (a scaffold planned
         read-only) owns no config sources, exactly like an absent ``config/``.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]``.
+
         """
         if not project_dir.exists() and not project_dir.is_symlink():
             return r[tuple[m.Cli.AtomicFileState, ...]].ok(())
@@ -112,7 +120,12 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
 
     @staticmethod
     def empty_snapshot() -> m.Infra.ProjectManagedArtifactsSnapshot:
-        """Return the explicit managed-artifact state for a future scaffold."""
+        """Return the explicit managed-artifact state for a future scaffold.
+
+        Returns:
+            The explicit managed-artifact state for a future scaffold.
+
+        """
         return m.Infra.ProjectManagedArtifactsSnapshot(
             sources=(),
             resolution=m.Infra.ProjectManagedArtifactsResolution(
@@ -166,7 +179,12 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
         cls,
         project_dir: Path,
     ) -> p.Result[m.Infra.ProjectManagedArtifactsResolution]:
-        """Snapshot every YAML once and parse that exact source set."""
+        """Snapshot every YAML once and parse that exact source set.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ProjectManagedArtifactsResolution]``.
+
+        """
         snapshot = cls.snapshot_project_managed_artifacts(project_dir)
         if snapshot.failure:
             return r[m.Infra.ProjectManagedArtifactsResolution].from_failure(snapshot)
@@ -179,7 +197,12 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
         cls,
         project_dir: Path,
     ) -> p.Result[m.Infra.ProjectManagedArtifactsSnapshot]:
-        """Capture and parse exactly one immutable project configuration view."""
+        """Capture and parse exactly one immutable project configuration view.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ProjectManagedArtifactsSnapshot]``.
+
+        """
         source_snapshot = cls.snapshot_config_sources(project_dir)
         if source_snapshot.failure:
             return r[m.Infra.ProjectManagedArtifactsSnapshot].from_failure(
@@ -208,6 +231,10 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
         concurrent WIP, so codegen renders project overlays only from the
         immutable commit catalog; uncommitted declarations never enter a
         projection.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ProjectManagedArtifactsResolution]``.
+
         """
         snapshot = cls.snapshot_committed_project_managed_artifacts(project_dir)
         if snapshot.failure:
@@ -226,6 +253,10 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
         ``sources`` stays empty because Git objects are already immutable: they
         must not enter the transaction's live-file source barrier, and their
         object identity makes a physical re-read meaningless.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ProjectManagedArtifactsSnapshot]``.
+
         """
         resolved = project_dir.expanduser().resolve()
         blobs = FlextInfraUtilitiesGit.git_committed_directory_blobs(
@@ -259,7 +290,12 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
         cls,
         source_snapshot: t.VariadicTuple[m.Cli.AtomicFileState],
     ) -> p.Result[m.Infra.ProjectManagedArtifactsResolution]:
-        """Parse one caller-owned immutable project YAML snapshot."""
+        """Parse one caller-owned immutable project YAML snapshot.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ProjectManagedArtifactsResolution]``.
+
+        """
         payloads: t.MutableMappingKV[Path, bytes] = {}
         for source_state in source_snapshot:
             if source_state.content is None:
@@ -274,7 +310,12 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
         cls,
         payloads: t.MappingKV[Path, bytes],
     ) -> p.Result[m.Infra.ProjectManagedArtifactsResolution]:
-        """Parse one immutable path-to-bytes project YAML catalog."""
+        """Parse one immutable path-to-bytes project YAML catalog.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ProjectManagedArtifactsResolution]``.
+
+        """
         if not payloads:
             return r[m.Infra.ProjectManagedArtifactsResolution].ok(
                 cls.empty_snapshot().resolution,
@@ -336,7 +377,12 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
         source_snapshot: t.VariadicTuple[m.Cli.AtomicFileState],
         rendered: str,
     ) -> p.Result[str]:
-        """Add local tools from one caller-owned immutable YAML snapshot."""
+        """Add local tools from one caller-owned immutable YAML snapshot.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         resolved = cls.load_project_managed_artifacts_from_snapshot(source_snapshot)
         if resolved.failure:
             return r[str].from_failure(resolved)
@@ -348,7 +394,12 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
         resolution: m.Infra.ProjectManagedArtifactsResolution,
         rendered: str,
     ) -> p.Result[str]:
-        """Add local tools from one caller-owned immutable parsed catalog."""
+        """Add local tools from one caller-owned immutable parsed catalog.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         local_tools = resolution.artifacts.Mise.tools
         if not local_tools:
             return r[str].ok(rendered)

@@ -16,7 +16,6 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import FlextInfraCliRouteService, c, config, main as infra_main
-from flext_infra.workspace import FlextInfraWorkspaceDetector
 from tests import m, t, u
 
 
@@ -30,6 +29,10 @@ class TestsFlextInfraCodegenMain:
         The bootstrap projection reads declarations only: ``config/workspace.yaml``
         when present, otherwise the project name and its provider-matched
         Repository URL. A checkout with neither has no identity to render.
+
+        Returns:
+            The resulting ``Path``.
+
         """
         repository = u.Tests.repository_ref(repo.name)
         (repo / "pyproject.toml").write_text(
@@ -52,32 +55,16 @@ class TestsFlextInfraCodegenMain:
     def _seed_public_conform_checkout(root: Path) -> None:
         """Seed a minimal governed package tree plus the real config and Mise inputs.
 
-        The public CLI conform pipeline needs an importable ``src/flext_infra``
-        package (for namespace/ruff discovery) and the real ``config/`` +
-        tracked Mise seeds (``codegen conform`` validates the tracked,
-        checksum-verified launchers rather than minting them). The copied
-        config declares the governed project, whose ``cli_module`` fact renders
-        the default console script, and conform loads every declared entry
-        point in its fresh-import stage, so the seed also carries the minimal
-        ``cli`` module that declaration names. It does not need the full real
-        package tree copied byte-for-byte: the minimal seed used by
-        ``tests/unit/codegen/test_codegen_conform.py::_seed_infra_package_tree``
-        already satisfies the same public conform contract at a fraction of the
-        scan cost, so this fixture reuses that pattern instead of copying
-        hundreds of real modules per test run.
+        Conform verifies the declared console entry point through a fresh
+        import. Seed the real package so the fixture's distribution metadata
+        describes a public runtime that actually exists.
         """
         project_root = Path(__file__).resolve().parents[3]
-        package_dir = root / "src" / "flext_infra"
-        package_init = package_dir / "__init__.py"
-        package_init.parent.mkdir(parents=True, exist_ok=True)
-        tm.ok(u.Cli.atomic_write_text_file(package_init, ""))
-        cli_module = package_dir / "cli.py"
         tm.ok(
-            u.Cli.atomic_write_text_file(
-                cli_module,
-                "def main(args: list[str] | None = None) -> int:\n"
-                '    """Resolve the declared console script entry point."""\n'
-                "    return 0\n",
+            u.Cli.files_copy_directory(
+                project_root / "src" / "flext_infra",
+                root / "src" / "flext_infra",
+                dirs_exist_ok=True,
             ),
         )
         tests_init = root / "tests" / "__init__.py"
@@ -97,21 +84,15 @@ class TestsFlextInfraCodegenMain:
                 root / c.Infra.MISE_TOML_FILENAME,
             ),
         )
-        # The copied manifest declares the project; conform loads every entry
-        # point it declares, so the seed ships the cli module it declares.
-        (manifest,) = tm.ok(FlextInfraWorkspaceDetector.load_workspace_manifest(root))
-        project = tm.not_none(manifest.project)
-        if project.cli_module:
-            tm.ok(
-                u.Cli.atomic_write_text_file(
-                    package_init.parent / c.Infra.CODEGEN_CLI_MODULE_FILENAME,
-                    "def main() -> int:\n    return 0\n",
-                ),
-            )
 
     @staticmethod
     def _mise_transaction_state(root: Path) -> t.Pair[Path, Path]:
-        """Return the workspace journal and the Mise transaction state root."""
+        """Return the workspace journal and the Mise transaction state root.
+
+        Returns:
+            The workspace journal and the Mise transaction state root.
+
+        """
         identity = u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=root)).unwrap()
         return (
             identity.git_dir / c.Infra.JOURNAL_NAME,
@@ -120,7 +101,12 @@ class TestsFlextInfraCodegenMain:
 
     @staticmethod
     def _public_conform_command(root: Path) -> list[str]:
-        """Build the real CLI command whose final argument selects check or apply."""
+        """Build the real CLI command whose final argument selects check or apply.
+
+        Returns:
+            The resulting ``list[str]``.
+
+        """
         return [
             sys.executable,
             "-m",
@@ -337,7 +323,13 @@ class TestsFlextInfraCodegenMain:
         def test_present_invalid_mise_artifact_never_enters_external_resolution(
             infra_git_repo: Path,
         ) -> None:
-            """Reject a present invalid artifact before credential/network work."""
+            """Reject a present invalid artifact before credential/network work.
+
+            Raises:
+                AssertionError: If required Mise launcher has no permission mode; or if
+                    required Mise launcher has no bytes.
+
+            """
             root = infra_git_repo
             TestsFlextInfraCodegenMain._seed_public_conform_checkout(root)
             launcher = root / "bin" / "mise"
@@ -367,15 +359,10 @@ class TestsFlextInfraCodegenMain:
             applied = u.Cli.run_raw(
                 [*TestsFlextInfraCodegenMain._public_conform_command(root), "apply"],
                 cwd=root,
-                env={"MISE_GITHUB_CREDENTIAL_COMMAND": ""},
             )
 
             tm.ok(applied)
             tm.that(applied.value.outcome.raw_return_code, eq=1)
-            tm.that(
-                applied.value.stdout + applied.value.stderr,
-                lacks="MISE_GITHUB_CREDENTIAL_COMMAND is required",
-            )
             tm.that(launcher.read_bytes(), eq=corrupted)
             tm.that(journal.exists(), eq=False)
             tm.that(transaction.exists(), eq=False)

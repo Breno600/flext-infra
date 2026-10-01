@@ -1,4 +1,8 @@
-"""Project dependency-list parsing (PEP 621 + poetry) — extracted concern."""
+"""Project dependency-list parsing (PEP 621 + poetry) — extracted concern.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -83,7 +87,12 @@ class FlextInfraProjectClassifierDepsMixin:
         self,
         raw_mapping: t.MappingKV[str, t.JsonValue],
     ) -> t.StrSequence:
-        """Ordered mapping keys."""
+        """Ordered mapping keys.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         keys = list(raw_mapping.keys())
         if self._mapping_order_is_trusted(raw_mapping):
             return keys
@@ -93,7 +102,12 @@ class FlextInfraProjectClassifierDepsMixin:
         self,
         raw_mapping: t.MappingKV[str, t.JsonValue],
     ) -> bool:
-        """Check whether the mapping order is trusted."""
+        """Check whether the mapping order is trusted.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         return isinstance(raw_mapping, dict)
 
     def _append_unique_dependency(
@@ -113,7 +127,12 @@ class FlextInfraProjectClassifierDepsMixin:
         dependencies: t.StrSequence,
         project_name: str,
     ) -> t.StrSequence:
-        """Return the internal dependencies."""
+        """Return the internal dependencies.
+
+        Returns:
+            The internal dependencies.
+
+        """
         return [
             dependency
             for dependency in dependencies
@@ -122,7 +141,12 @@ class FlextInfraProjectClassifierDepsMixin:
         ]
 
     def _extract_dependency_name(self, raw_dependency: str) -> str:
-        """Extract dependency name."""
+        """Extract dependency name.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         cleaned = raw_dependency.strip().split(";", maxsplit=1)[0].strip()
         if not cleaned:
             return ""
@@ -136,7 +160,12 @@ class FlextInfraProjectClassifierDepsMixin:
         return self._normalize_dependency_name(base_token)
 
     def _normalize_dependency_name(self, raw_name: str) -> str:
-        """Normalize dependency name."""
+        """Normalize dependency name.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         normalized: str = u.norm_str(raw_name, case="lower").replace("_", "-")
         return normalized.strip("./")
 

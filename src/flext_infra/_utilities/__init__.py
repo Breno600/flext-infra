@@ -328,6 +328,7 @@ if TYPE_CHECKING:
     from flext_infra._utilities.iteration_workspace import (
         FlextInfraUtilitiesIterationWorkspace,
     )
+    from flext_infra._utilities.lint_recipes import FlextInfraUtilitiesLintRecipes
     from flext_infra._utilities.log_parser import FlextInfraUtilitiesLogParser
     from flext_infra._utilities.managed_conflicts import (
         FlextInfraUtilitiesManagedConflicts,
@@ -518,6 +519,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesIterationDirectory",
     "FlextInfraUtilitiesIterationMatching",
     "FlextInfraUtilitiesIterationWorkspace",
+    "FlextInfraUtilitiesLintRecipes",
     "FlextInfraUtilitiesLogParser",
     "FlextInfraUtilitiesManagedConflicts",
     "FlextInfraUtilitiesNamespaceConfig",
@@ -816,6 +818,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".iteration_directory": ("FlextInfraUtilitiesIterationDirectory",),
             ".iteration_matching": ("FlextInfraUtilitiesIterationMatching",),
             ".iteration_workspace": ("FlextInfraUtilitiesIterationWorkspace",),
+            ".lint_recipes": ("FlextInfraUtilitiesLintRecipes",),
             ".log_parser": ("FlextInfraUtilitiesLogParser",),
             ".managed_conflicts": ("FlextInfraUtilitiesManagedConflicts",),
             ".namespace": ("FlextInfraUtilitiesCodegenNamespace",),

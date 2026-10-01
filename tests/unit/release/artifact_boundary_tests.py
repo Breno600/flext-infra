@@ -1,4 +1,8 @@
-"""Public release archive-boundary behavior tests."""
+"""Public release archive-boundary behavior tests.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

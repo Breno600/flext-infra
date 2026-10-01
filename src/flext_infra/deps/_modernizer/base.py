@@ -1,4 +1,8 @@
-"""Pyproject modernizer base joining its responsibility classes via MRO."""
+"""Pyproject modernizer base joining its responsibility classes via MRO.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -22,7 +26,12 @@ class FlextInfraPyprojectModernizerBase(
 
     @staticmethod
     def _config_sort_first() -> t.StrSequence:
-        """Read the config-owned top-level TOML section order once."""
+        """Read the config-owned top-level TOML section order once.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         return config.Infra.tooling.tools.tomlsort.sort_first
 
     audit: Annotated[
@@ -60,7 +69,12 @@ class FlextInfraPyprojectModernizerBase(
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute pyproject modernization for the configured workspace."""
+        """Execute pyproject modernization for the configured workspace.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         if self.run() != 0:
             return r[bool].fail("pyproject modernization failed")
         return r[bool].ok(True)

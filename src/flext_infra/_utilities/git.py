@@ -1,5 +1,8 @@
 """Public Git utilities facet for ``u.Infra`` (composed into utilities FLEXT).
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Private GitPython parts live under ``_utilities/_git/``. Consumers use
 ``from flext_infra import u`` only — never import this module or ``_git``.
 """
@@ -55,7 +58,12 @@ class FlextInfraUtilitiesGit(
 
     @staticmethod
     def git_attribute_pattern(path: str) -> str:
-        """Encode one literal path with Git's glob escaping and C quoting."""
+        """Encode one literal path with Git's glob escaping and C quoting.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         literal = (
             path
             .replace("\\", "\\\\")

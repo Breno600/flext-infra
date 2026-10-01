@@ -1,4 +1,8 @@
-"""Artifact projections validated against the typed production SSOT."""
+"""Artifact projections validated against the typed production SSOT.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -20,7 +24,12 @@ class TestsFlextInfraCodegenArtifactSsot:
 
     @pytest.fixture(scope="module")
     def codegen(self) -> CodegenSpec:
-        """Return the production configuration consumed by every projection."""
+        """Return the production configuration consumed by every projection.
+
+        Returns:
+            The production configuration consumed by every projection.
+
+        """
         return config.Infra.codegen
 
     @staticmethod

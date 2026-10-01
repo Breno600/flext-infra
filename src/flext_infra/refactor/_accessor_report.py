@@ -1,4 +1,8 @@
-"""Accessor per-file lint processing + report rendering — extracted concern."""
+"""Accessor per-file lint processing + report rendering — extracted concern.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -61,7 +65,12 @@ class FlextInfraAccessorMigrationReportMixin:
         *,
         preview_available: bool,
     ) -> m.Infra.AccessorMigrationFile:
-        """Rewrite one file, collect its manual warnings and lint evidence."""
+        """Rewrite one file, collect its manual warnings and lint evidence.
+
+        Returns:
+            The resulting ``m.Infra.AccessorMigrationFile``.
+
+        """
         updated_source, automated_changes = self._apply_automated_rewrites(
             rope_project,
             py_file,
@@ -148,12 +157,22 @@ class FlextInfraAccessorMigrationReportMixin:
     def _freeze_lints(
         snapshot: t.Infra.LintSnapshot,
     ) -> MutableMapping[str, t.StrSequence]:
-        """Freeze lints."""
+        """Freeze lints.
+
+        Returns:
+            The resulting ``MutableMapping[str, t.StrSequence]``.
+
+        """
         return {tool: tuple(lines) for tool, lines in snapshot.items()}
 
     @staticmethod
     def _diff(py_file: Path, before: str, after: str) -> str:
-        """Diff."""
+        """Diff.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         diff_lines = u.Infra.unified_diff_lines(
             before,
             after,
@@ -165,7 +184,12 @@ class FlextInfraAccessorMigrationReportMixin:
 
     @staticmethod
     def render_text(report: m.Infra.AccessorMigrationReport) -> str:
-        """Render an accessor migration report as CLI text."""
+        """Render an accessor migration report as CLI text.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         lines: t.MutableSequenceOf[str] = [
             "Accessor Migration",
             f"workspace: {report.workspace}",

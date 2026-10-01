@@ -1,4 +1,8 @@
-"""Import rendering helpers for lazy-init generation."""
+"""Import rendering helpers for lazy-init generation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -20,14 +24,24 @@ class FlextInfraCodegenGenerationImportsMixin(FlextInfraCodegenGenerationPathsMi
 
     @staticmethod
     def _format_import_part(imported_name: str, export_name: str) -> str:
-        """Format one imported symbol, preserving aliases only when names differ."""
+        """Format one imported symbol, preserving aliases only when names differ.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         if imported_name == export_name:
             return imported_name
         return f"{imported_name} as {export_name}"
 
     @staticmethod
     def _format_import(indent: str, mod: str, parts: t.StrSequence) -> t.StrSequence:
-        """Emit one Ruff-canonical import statement within the configured width."""
+        """Emit one Ruff-canonical import statement within the configured width.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         compact = f"{indent}from {mod} import {', '.join(parts)}"
         if len(compact) <= config.Infra.tooling.tools.ruff.line_length:
             return (compact,)
@@ -43,7 +57,12 @@ class FlextInfraCodegenGenerationImportsMixin(FlextInfraCodegenGenerationPathsMi
 
     @staticmethod
     def _format_module_alias_import(indent: str, mod: str, export_name: str) -> str:
-        """Format a module alias import as a from-import of its parent package."""
+        """Format a module alias import as a from-import of its parent package.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         if "." in mod and mod != ".":
             parent_mod, _, child_name = mod.rpartition(".")
             return (
@@ -57,7 +76,12 @@ class FlextInfraCodegenGenerationImportsMixin(FlextInfraCodegenGenerationPathsMi
         mod: str,
         export_name: str,
     ) -> t.StrSequence:
-        """Format one explicit static reexport."""
+        """Format one explicit static reexport.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         return (
             FlextInfraCodegenGenerationImportsMixin._format_module_alias_import(
                 indent,
@@ -70,7 +94,12 @@ class FlextInfraCodegenGenerationImportsMixin(FlextInfraCodegenGenerationPathsMi
     def _group_imports(
         import_map: t.LazyAliasMap,
     ) -> t.MappingKV[str, t.MutableSequenceOf[t.StrPair]]:
-        """Group import map entries by module."""
+        """Group import map entries by module.
+
+        Returns:
+            The resulting ``t.MappingKV[str, t.MutableSequenceOf[t.StrPair]]``.
+
+        """
         groups: MutableMapping[str, list[t.StrPair]] = defaultdict(list)
         for export_name in sorted(import_map):
             mod, attr = import_map[export_name]
@@ -85,6 +114,10 @@ class FlextInfraCodegenGenerationImportsMixin(FlextInfraCodegenGenerationPathsMi
         lower-case names; the name is the secondary key and the alias status
         the tertiary one. Plain lexicographic ordering fights ``ruff format``
         isort on the same generated block, producing a gen/fmt flip-flop.
+
+        Returns:
+            The resulting ``t.Pair[t.Pair[int, str], bool]``.
+
         """
         export_name, imported_name = item
         imported = imported_name or export_name

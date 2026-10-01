@@ -1,4 +1,8 @@
-"""Automatic class-nesting plans derived from the public Rope workspace."""
+"""Automatic class-nesting plans derived from the public Rope workspace.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -53,6 +57,10 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         it either, because the owner's base list is evaluated before its body
         exists. Either move produces a NameError at import, so both are excluded
         from the plan and stay at module level.
+
+        Returns:
+            Top-level classes an owner cannot contain.
+
         """
 
         def ancestors(name: str) -> frozenset[str]:
@@ -83,7 +91,12 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         file_path: Path,
         source: str,
     ) -> p.Result[t.StrMapping]:
-        """Map each loose top-level class to the owner Rope's module policy elects."""
+        """Map each loose top-level class to the owner Rope's module policy elects.
+
+        Returns:
+            The resulting ``p.Result[t.StrMapping]``.
+
+        """
         planned = r[t.StrMapping]
         family = FlextInfraUtilitiesCodegenNamespace.facade_family_of_file(
             file_path.name,
@@ -115,7 +128,12 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         rope_workspace: p.Infra.RopeWorkspaceDsl,
         sources: t.MappingKV[Path, str],
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
-        """Compose helper promotion, family flattening, and orphan nesting."""
+        """Compose helper promotion, family flattening, and orphan nesting.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
+
+        """
         planned = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
         # The planner contract keeps every failure in the Result (see
         # plan_semantic_cutover); helper promotion raises per rejected move.
@@ -161,7 +179,12 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         rope_workspace: p.Infra.RopeWorkspaceDsl,
         sources: t.MappingKV[Path, str],
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
-        """Plan all structural nesting and consumer rewrites without effects."""
+        """Plan all structural nesting and consumer rewrites without effects.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
+
+        """
         planned_edits = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
         modules = {
             entry.file_path.resolve(): entry for entry in rope_workspace.modules()

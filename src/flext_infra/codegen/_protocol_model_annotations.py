@@ -87,7 +87,16 @@ class FlextInfraCodegenProtocolModelAnnotations:
         annotation: t.TypeHintSpecifier | None,
         target: ProtocolModelTarget,
     ) -> str:
-        """Render one field/property type without exposing a concrete model."""
+        """Render one field/property type without exposing a concrete model.
+
+        Returns:
+            The resulting ``str``.
+
+        Raises:
+            TypeError: If unsupported protocol annotation; or if unsupported protocol
+                annotation origin; or if unsupported Callable parameters.
+
+        """
         if isinstance(annotation, ForwardRef):
             return cls._render_forward(annotation.__forward_arg__, target)
         if isinstance(annotation, str):
@@ -170,7 +179,12 @@ class FlextInfraCodegenProtocolModelAnnotations:
         value: p.AttributeProbe,
         target: ProtocolModelTarget,
     ) -> str | None:
-        """Return the existing public facade path for an identical runtime type."""
+        """Return the existing public facade path for an identical runtime type.
+
+        Returns:
+            The existing public facade path for an identical runtime type.
+
+        """
         for prefix, probe in target.facade_probes:
             module_path, _, attribute = probe.rpartition(".")
             # A member without that facade surface cannot hold the value;
@@ -190,7 +204,12 @@ class FlextInfraCodegenProtocolModelAnnotations:
 
     @classmethod
     def _render_forward(cls, annotation: str, target: ProtocolModelTarget) -> str:
-        """Normalize a postponed source annotation without evaluating Field data."""
+        """Normalize a postponed source annotation without evaluating Field data.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         rendered = annotation.strip()
         if rendered.startswith(cls._ANNOTATED_PREFIX):
             rendered = cls._first_annotated_argument(rendered)
@@ -206,7 +225,15 @@ class FlextInfraCodegenProtocolModelAnnotations:
 
     @classmethod
     def _first_annotated_argument(cls, annotation: str) -> str:
-        """Extract the first top-level argument from ``Annotated[...]``."""
+        """Extract the first top-level argument from ``Annotated[...]``.
+
+        Returns:
+            The resulting ``str``.
+
+        Raises:
+            ValueError: If malformed Annotated protocol field.
+
+        """
         content = annotation[len(cls._ANNOTATED_PREFIX) : -1]
         depth = 0
         for index, character in enumerate(content):
@@ -221,7 +248,15 @@ class FlextInfraCodegenProtocolModelAnnotations:
 
     @classmethod
     def _validate(cls, rendered: str) -> str:
-        """Reject escape-hatch types from generated public contracts."""
+        """Reject escape-hatch types from generated public contracts.
+
+        Returns:
+            The resulting ``str``.
+
+        Raises:
+            TypeError: If forbidden generated protocol annotation.
+
+        """
         tokens = frozenset(cls._TOKEN_RE.findall(rendered))
         banned = tokens.intersection(cls._BANNED)
         if banned:

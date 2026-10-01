@@ -1,4 +1,8 @@
-"""Workspace-wide Rope-only census orchestration."""
+"""Workspace-wide Rope-only census orchestration.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -116,6 +120,10 @@ class FlextInfraRefactorCensus(
 
         Workspace-wide scans (zero or many projects) keep the canonical workspace
         root so cross-project rules such as duplicate detection remain accurate.
+
+        Returns:
+            A project-scoped Rope root when exactly one project is selected.
+
         """
         names: t.StrSequence | None = self.project_names
         if names is None or len(names) != 1:
@@ -129,7 +137,12 @@ class FlextInfraRefactorCensus(
     def _execution_reports(
         self,
     ) -> t.Pair[m.Infra.WorkspaceReport, m.Infra.WorkspaceReport]:
-        """Return the final report and the pre-apply report the impact map reads."""
+        """Return the final report and the pre-apply report the impact map reads.
+
+        Returns:
+            The final report and the pre-apply report the impact map reads.
+
+        """
         started = time.monotonic()
         with FlextInfraRopeWorkspace.open_workspace(
             self.root,
@@ -149,13 +162,23 @@ class FlextInfraRefactorCensus(
         return finalized, impact_report
 
     def build_report(self) -> m.Infra.WorkspaceReport:
-        """Build the canonical workspace census report without CLI side effects."""
+        """Build the canonical workspace census report without CLI side effects.
+
+        Returns:
+            The resulting ``m.Infra.WorkspaceReport``.
+
+        """
         report, _ = self._execution_reports()
         return report
 
     @override
     def execute(self) -> p.Result[m.Infra.WorkspaceReport]:
-        """Execute the census with one shared Rope session."""
+        """Execute the census with one shared Rope session.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.WorkspaceReport]``.
+
+        """
         report, impact_report = self._execution_reports()
         cli.display_text(self.render_text(report))
         if self.json_output_path is not None:

@@ -27,7 +27,12 @@ class TestsFlextInfraFreshImport:
 
     @pytest.fixture
     def v(self) -> FlextInfraValidateFreshImport:
-        """Shared validator instance."""
+        """Shared validator instance.
+
+        Returns:
+            The resulting ``FlextInfraValidateFreshImport``.
+
+        """
         return FlextInfraValidateFreshImport()
 
     @staticmethod
@@ -64,6 +69,7 @@ class TestsFlextInfraFreshImport:
 
     @staticmethod
     def test_empty_package_list_passes(v: FlextInfraValidateFreshImport) -> None:
+        """Test empty package list passes."""
         report: m.Infra.ValidationReport = tm.ok(v.build_report(packages=()))
         tm.that(report, is_=m.Infra.ValidationReport)
         tm.that(report.passed, eq=True)
@@ -71,12 +77,14 @@ class TestsFlextInfraFreshImport:
 
     @staticmethod
     def test_stdlib_package_passes(v: FlextInfraValidateFreshImport) -> None:
+        """Test stdlib package passes."""
         report: m.Infra.ValidationReport = tm.ok(v.build_report(packages=("sys",)))
         tm.that(report.passed, eq=True)
         tm.that(report.violations, length=0)
 
     @staticmethod
     def test_nonexistent_package_fails(v: FlextInfraValidateFreshImport) -> None:
+        """Test nonexistent package fails."""
         report: m.Infra.ValidationReport = tm.ok(
             v.build_report(packages=("nonexistent_pkg_xyz_abc_123",)),
         )
@@ -88,6 +96,7 @@ class TestsFlextInfraFreshImport:
     def test_mixed_good_and_bad_reports_only_bad(
         v: FlextInfraValidateFreshImport,
     ) -> None:
+        """Test mixed good and bad reports only bad."""
         report: m.Infra.ValidationReport = tm.ok(
             v.build_report(packages=("sys", "nonexistent_xyz_qqq", "os")),
         )
@@ -99,6 +108,7 @@ class TestsFlextInfraFreshImport:
     def test_stops_at_first_causal_failure(
         v: FlextInfraValidateFreshImport,
     ) -> None:
+        """Test stops at first causal failure."""
         report: m.Infra.ValidationReport = tm.ok(
             v.build_report(packages=("nonexistent_a_qqq", "nonexistent_b_qqq")),
         )
@@ -111,11 +121,13 @@ class TestsFlextInfraFreshImport:
     def test_passing_summary_is_human_readable(
         v: FlextInfraValidateFreshImport,
     ) -> None:
+        """Test passing summary is human readable."""
         report: m.Infra.ValidationReport = tm.ok(v.build_report(packages=("sys", "os")))
         tm.that(report.summary, has="import")
 
     @staticmethod
     def test_workspace_src_package_passes(tmp_path: Path) -> None:
+        """Test workspace src package passes."""
         package_root = tmp_path / "src" / "demo_external"
         package_root.mkdir(parents=True)
         package_root.joinpath("__init__.py").write_text("VALUE = 1\n", encoding="utf-8")
@@ -267,7 +279,6 @@ class TestsFlextInfraFreshImport:
             ),
             action=c.Infra.LazyInitAction.WRITE,
             lazy_map={},
-            type_checking_map={},
             eager_dunders={},
             inline_constants={},
         )
@@ -315,7 +326,6 @@ class TestsFlextInfraFreshImport:
             ),
             action=c.Infra.LazyInitAction.WRITE,
             lazy_map={},
-            type_checking_map={},
             eager_dunders={},
             inline_constants={},
         )
@@ -330,6 +340,7 @@ class TestsFlextInfraFreshImport:
 
     @staticmethod
     def test_advertised_lazy_export_must_resolve(tmp_path: Path) -> None:
+        """Test advertised lazy export must resolve."""
         package = tmp_path / c.Infra.DEFAULT_SRC_DIR / "flext_import_probe"
         package.mkdir(parents=True)
         (package / c.Infra.INIT_PY).write_text(
@@ -352,6 +363,7 @@ class TestsFlextInfraFreshImport:
         *,
         dependency_present: bool,
     ) -> None:
+        """Test declared consumer catches exports omitted from plan."""
         package = tmp_path / c.Infra.DEFAULT_SRC_DIR / "flext_import_probe"
         package.mkdir(parents=True)
         initializer = package / c.Infra.INIT_PY
@@ -380,7 +392,6 @@ class TestsFlextInfraFreshImport:
             ),
             action=c.Infra.LazyInitAction.WRITE,
             lazy_map={},
-            type_checking_map={},
             eager_dunders={},
             inline_constants={},
         )
@@ -400,6 +411,7 @@ class TestsFlextInfraFreshImport:
     def test_probe_larger_than_one_process_argument_still_runs(
         tmp_path: Path,
     ) -> None:
+        """Test probe larger than one process argument still runs."""
         package = tmp_path / c.Infra.DEFAULT_SRC_DIR / "flext_import_probe"
         package.mkdir(parents=True)
         exports = tuple(f"export_{index:05d}_published_name" for index in range(6000))
@@ -425,7 +437,6 @@ class TestsFlextInfraFreshImport:
             action=c.Infra.LazyInitAction.WRITE,
             exports=exports,
             lazy_map={},
-            type_checking_map={},
             eager_dunders={},
             inline_constants={},
         )
@@ -441,6 +452,7 @@ class TestsFlextInfraFreshImport:
     def test_rejects_owned_module_imported_from_another_directory(
         tmp_path: Path,
     ) -> None:
+        """Test rejects owned module imported from another directory."""
         package = tmp_path / c.Infra.DEFAULT_SRC_DIR / "flext_import_probe"
         package.mkdir(parents=True)
         foreign = tmp_path / "foreign"
@@ -471,7 +483,6 @@ class TestsFlextInfraFreshImport:
             action=c.Infra.LazyInitAction.WRITE,
             exports=("value",),
             lazy_map={},
-            type_checking_map={},
             eager_dunders={},
             inline_constants={},
         )
@@ -526,7 +537,6 @@ class TestsFlextInfraFreshImport:
             action=c.Infra.LazyInitAction.WRITE,
             exports=("value",),
             lazy_map={},
-            type_checking_map={},
             eager_dunders={},
             inline_constants={},
         )
@@ -581,7 +591,6 @@ class TestsFlextInfraFreshImport:
                 action=c.Infra.LazyInitAction.WRITE,
                 exports=exports,
                 lazy_map={},
-                type_checking_map={},
                 eager_dunders={},
                 inline_constants={},
             )
@@ -600,6 +609,7 @@ class TestsFlextInfraFreshImport:
 
     @staticmethod
     def test_flext_core_imports_cleanly(v: FlextInfraValidateFreshImport) -> None:
+        """Test flext core imports cleanly."""
         report: m.Infra.ValidationReport = tm.ok(
             v.build_report(packages=("flext_core",)),
         )
@@ -609,6 +619,7 @@ class TestsFlextInfraFreshImport:
     def test_flext_infra_imports_cleanly(
         v: FlextInfraValidateFreshImport,
     ) -> None:
+        """Test flext infra imports cleanly."""
         report: m.Infra.ValidationReport = tm.ok(
             v.build_report(packages=("flext_infra",)),
         )

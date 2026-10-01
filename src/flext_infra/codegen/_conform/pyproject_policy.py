@@ -1,4 +1,8 @@
-"""Pyproject, tooling-root, and custom Make policy projections."""
+"""Pyproject, tooling-root, and custom Make policy projections.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -20,7 +24,12 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
         *,
         package: bool = True,
     ) -> t.StrSequence:
-        """Return Python roots the selected scaffold manifest actually creates."""
+        """Return Python roots the selected scaffold manifest actually creates.
+
+        Returns:
+            Python roots the selected scaffold manifest actually creates.
+
+        """
         # Derive future roots from both
         # declarative owners so scaffold and existing-tree discovery converge.
         generated_roots = {
@@ -52,7 +61,12 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
         *,
         render_inputs: m.Infra.CodegenRenderInputs,
     ) -> p.Result[str]:
-        """Conform one pyproject source."""
+        """Conform one pyproject source.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         target = render_inputs.target
         workspace = render_inputs.workspace
         codegen = render_inputs.codegen
@@ -108,6 +122,10 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
         exclude-dependencies only from the root), one of its declared
         members. Routing an exclusion for an absent project would drop the
         only edge that installs it.
+
+        Returns:
+            The uv dependency exclusions routed to one repository.
+
         """
         target = render_inputs.target
         local = {target.repository.distribution}
@@ -126,7 +144,12 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
         content: str,
         policy: m.Infra.CustomHandlerPolicy,
     ) -> p.Result[bool]:
-        """Reject public targets, aliases, includes, and toolchain declarations."""
+        """Reject public targets, aliases, includes, and toolchain declarations.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         target_re = re.compile(policy.target_pattern)
         in_define = False
         # Collapse backslash continuation lines before validating so that

@@ -1,4 +1,8 @@
-"""Verify every rendered ci.yml secret access is a declared workflow_call input."""
+"""Verify every rendered ci.yml secret access is a declared workflow_call input.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,7 +11,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import c, t, u
+from flext_infra import c, t
 from tests import u
 
 
@@ -29,7 +33,12 @@ class TestsFlextInfraCiDeclaredSecretsContract:
 
     @classmethod
     def render_ci(cls, tmp_path: Path) -> Path:
-        """Render the ci.yml template once and materialize it for parsing."""
+        """Render the ci.yml template once and materialize it for parsing.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         spec = u.CodegenTestSupport.Ci.workflow_spec(
             dist="mcb",
             make_profile=c.Infra.MakeProfile.STANDALONE,
@@ -44,7 +53,12 @@ class TestsFlextInfraCiDeclaredSecretsContract:
 
     @classmethod
     def _declared_secret_names(cls, workflow_path: Path) -> t.JsonMapping:
-        """Return the workflow_call secret contract parsed from the render."""
+        """Return the workflow_call secret contract parsed from the render.
+
+        Returns:
+            The workflow_call secret contract parsed from the render.
+
+        """
         document = u.Cli.yaml_load_mapping(workflow_path)
         triggers = t.Cli.JSON_MAPPING_ADAPTER.validate_python(document["on"])
         workflow_call = t.Cli.JSON_MAPPING_ADAPTER.validate_python(
@@ -54,7 +68,12 @@ class TestsFlextInfraCiDeclaredSecretsContract:
 
     @classmethod
     def _referenced_secret_names(cls, workflow_path: Path) -> set[str]:
-        """Collect every ``secrets.<NAME>`` access in the rendered workflow."""
+        """Collect every ``secrets.<NAME>`` access in the rendered workflow.
+
+        Returns:
+            The resulting ``set[str]``.
+
+        """
         document = u.Cli.yaml_load_mapping(workflow_path)
         jobs = t.Cli.JSON_MAPPING_ADAPTER.validate_python(document["jobs"])
         referenced: set[str] = set()

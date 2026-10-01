@@ -1,4 +1,8 @@
-"""Promoted-command execution on the workspace process boundary."""
+"""Promoted-command execution on the workspace process boundary.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -27,6 +31,13 @@ class FlextInfraUtilitiesPromotedExecution(FlextInfraUtilitiesPromotedInvocation
         The single workspace venv is authoritative for every inherited command;
         the owner root only fixes the working directory. The child is not
         captured, so output, Ctrl-C/SIGINT, and the exact exit code propagate.
+
+        Returns:
+            The resulting ``int``.
+
+        Raises:
+            PromotedRegistryError: If ``result.failure``.
+
         """
         from flext_infra import settings, u
 

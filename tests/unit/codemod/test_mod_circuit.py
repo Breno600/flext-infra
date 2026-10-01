@@ -1,4 +1,8 @@
-"""Public CLI evidence contract for the batch ast-grep ``mod`` verb."""
+"""Public CLI evidence contract for the batch ast-grep ``mod`` verb.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -29,6 +33,7 @@ class TestsFlextInfraModCliRoute:
         mod_workspace: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
+        """Test receipt is complete and replaced by zero scan."""
         report_path = mod_workspace / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH
         sample_path = mod_workspace / "sample.py"
         generated_hook = mod_workspace / ".agents/hooks/session.py"
@@ -233,6 +238,7 @@ class TestsFlextInfraModCliRoute:
 
     @staticmethod
     def test_scan_keeps_prefix_rule_ids_exact(mod_workspace: Path) -> None:
+        """Test scan keeps prefix rule ids exact."""
         config_path = mod_workspace / c.Infra.CODEMOD_CONFIG_RELPATH
         rules_root = config_path.parent / c.Cli.RULES_DIR_NAME
         first_rule = rules_root / "rewire-first.yml"

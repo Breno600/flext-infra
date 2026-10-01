@@ -24,10 +24,23 @@ class TestsFlextInfraAuditor:
 
     @pytest.fixture
     def auditor(self) -> FlextInfraDocAuditor:
+        """Provide ``auditor``.
+
+        Returns:
+            The resulting ``FlextInfraDocAuditor``.
+
+        """
         return FlextInfraDocAuditor()
 
     @pytest.fixture
     def normalize_link(self) -> Callable[[str], str]:
+        """Provide ``normalize_link``.
+
+        Returns:
+            The resulting ``Callable[[str], str]``.
+
+        """
+
         def _normalize(value: str) -> str:
             normalized: str = u.Infra.docs_normalize_link(value)
             return normalized
@@ -36,6 +49,13 @@ class TestsFlextInfraAuditor:
 
     @pytest.fixture
     def should_skip_target(self) -> Callable[[str, str], bool]:
+        """Provide ``should_skip_target``.
+
+        Returns:
+            The resulting ``Callable[[str, str], bool]``.
+
+        """
+
         def _should_skip(link: str, target: str) -> bool:
             should_skip: bool = u.Infra.docs_should_skip_target(link, target)
             return should_skip
@@ -44,6 +64,13 @@ class TestsFlextInfraAuditor:
 
     @pytest.fixture
     def is_external(self) -> Callable[[str], bool]:
+        """Provide ``is_external``.
+
+        Returns:
+            The resulting ``Callable[[str], bool]``.
+
+        """
+
         def _is_external(value: str) -> bool:
             external: bool = u.Infra.docs_is_external(value)
             return external
@@ -55,12 +82,14 @@ class TestsFlextInfraAuditor:
         auditor: FlextInfraDocAuditor,
         tmp_path: Path,
     ) -> None:
+        """Test valid scope returns success."""
         workspace = u.Tests.create_docs_workspace(tmp_path)
         result = auditor.audit(workspace)
         tm.ok(result)
 
     @staticmethod
     def test_issue_structure() -> None:
+        """Test issue structure."""
         issue = m.Infra.AuditIssue(
             file="README.md",
             issue_type="broken_link",
@@ -91,13 +120,14 @@ class TestsFlextInfraAuditor:
         check: str,
         output_dir: str,
     ) -> None:
-        # The command-contract check loads the governed workspace spec,
-        # its repository-local Beads configuration,
+        # The command-contract check loads the governed workspace spec, whose
+        # repository-local Beads configuration every real repository carries,
         # and it resolves a Git identity from the audited root. A selected
         # ``projects`` entry only matches a scope the workspace actually
         # declares, so the fixture is built by the canonical docs workspace
         # owner with exactly the declared members rather than a bare temp
         # directory that happens to carry a Beads file.
+        """Test audit option variants."""
         workspace = u.Tests.create_docs_workspace(
             tmp_path,
             project_names=tuple(projects or ()),
@@ -118,10 +148,12 @@ class TestsFlextInfraAuditor:
 
     @staticmethod
     def test_report_frozen() -> None:
+        """Test report frozen."""
         tm.that(m.Infra.DocsPhaseReport.model_config.get("frozen"), eq=True)
 
     @staticmethod
     def test_issue_frozen() -> None:
+        """Test issue frozen."""
         tm.that(m.Infra.AuditIssue.model_config.get("frozen"), eq=True)
 
     @pytest.mark.parametrize(
@@ -140,6 +172,7 @@ class TestsFlextInfraAuditor:
         raw: str,
         expected: str,
     ) -> None:
+        """Test normalize link."""
         tm.that(normalize_link(raw), eq=expected)
 
     @pytest.mark.parametrize(
@@ -160,6 +193,7 @@ class TestsFlextInfraAuditor:
         target: str,
         expected: bool,
     ) -> None:
+        """Test should skip target."""
         tm.that(should_skip_target(text, target), eq=expected)
 
     @pytest.mark.parametrize("scheme", sorted(c.Infra.DOCS_EXTERNAL_SCHEMES))
@@ -169,6 +203,7 @@ class TestsFlextInfraAuditor:
         is_external: Callable[[str], bool],
         scheme: str,
     ) -> None:
+        """Test permitted external schemes are preserved."""
         target = (
             f"{scheme}://example.invalid"
             if scheme == c.Infra.DOCS_SECURE_WEB_SCHEME
@@ -191,6 +226,7 @@ class TestsFlextInfraAuditor:
         is_external: Callable[[str], bool],
         target: str,
     ) -> None:
+        """Test insecure documentation urls fail fast."""
         with pytest.raises(ValueError, match="use HTTPS"):
             is_external(target)
 
@@ -199,4 +235,5 @@ class TestsFlextInfraAuditor:
         *,
         is_external: Callable[[str], bool],
     ) -> None:
+        """Test repository paths are not external."""
         tm.that(is_external("path/to/file.md"), eq=False)

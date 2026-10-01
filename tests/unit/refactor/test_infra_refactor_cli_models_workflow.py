@@ -1,4 +1,8 @@
-"""CLI workflow tests for refactor namespace automation."""
+"""CLI workflow tests for refactor namespace automation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -22,6 +26,7 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
     def test_namespace_enforce_cli_fails_on_manual_protocol_violation(
         tmp_path: Path,
     ) -> None:
+        """Test namespace enforce cli fails on manual protocol violation."""
         workspace = u.Tests.mk_project(
             tmp_path,
             "workspace",
@@ -52,6 +57,7 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
 
     @staticmethod
     def test_wrapper_root_namespace_cli_dry_run_succeeds(tmp_path: Path) -> None:
+        """Test wrapper root namespace cli dry run succeeds."""
         workspace = u.Tests.mk_project(
             tmp_path,
             "workspace",
@@ -86,6 +92,7 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
     def test_wrapper_root_namespace_cli_check_fails_when_changes_are_needed(
         tmp_path: Path,
     ) -> None:
+        """Test wrapper root namespace cli check fails when changes are needed."""
         workspace = u.Tests.mk_project(
             tmp_path,
             "workspace",
@@ -117,6 +124,7 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
     def test_wrapper_root_namespace_cli_apply_rewrites_file(
         tmp_path: Path,
     ) -> None:
+        """Test wrapper root namespace cli apply rewrites file."""
         workspace = u.Tests.mk_project(
             tmp_path,
             "workspace",

@@ -1,4 +1,8 @@
-"""Public utility tests used by docs generation flows."""
+"""Public utility tests used by docs generation flows.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,6 +23,7 @@ class TestsFlextInfraDocsGeneratorInternals:
 
     @staticmethod
     def test_anchorize_normalizes_headings() -> None:
+        """Test anchorize normalizes headings."""
         tm.that(u.Infra.anchorize("Hello World"), eq="hello-world")
         tm.that(u.Infra.anchorize("Test-Case"), eq="test-case")
         tm.that(u.Infra.anchorize(""), eq="")
@@ -36,6 +41,7 @@ class TestsFlextInfraDocsGeneratorInternals:
 
     @staticmethod
     def test_anchorize_keeps_underscores_like_python_markdown() -> None:
+        """Test anchorize keeps underscores like python markdown."""
         tm.that(
             u.Infra.anchorize(r"marts/metrics/met_wms\_\_kpi_dashboard"),
             eq="martsmetricsmet_wms__kpi_dashboard",
@@ -44,6 +50,7 @@ class TestsFlextInfraDocsGeneratorInternals:
 
     @staticmethod
     def test_build_toc_lists_h2_and_h3_sections() -> None:
+        """Test build toc lists h2 and h3 sections."""
         toc = u.Infra.build_toc("# Main\n\n## Section 1\n\n### Subsection\n")
 
         tm.that(toc, has="<!-- TOC START -->")
@@ -52,6 +59,7 @@ class TestsFlextInfraDocsGeneratorInternals:
 
     @staticmethod
     def test_build_toc_skips_headings_inside_fenced_code() -> None:
+        """Test build toc skips headings inside fenced code."""
         content = (
             "# Main\n\n"
             "## Real Section\n\n"
@@ -106,6 +114,7 @@ class TestsFlextInfraDocsGeneratorInternals:
 
     @staticmethod
     def test_update_toc_replaces_existing_block() -> None:
+        """Test update toc replaces existing block."""
         updated, changed = u.Infra.update_toc(
             "# Main\n\n<!-- TOC START -->\n- stale\n<!-- TOC END -->\n\n## Section\n",
         )
@@ -118,6 +127,7 @@ class TestsFlextInfraDocsGeneratorInternals:
     def test_generated_markdown_is_toc_normalized_before_write(
         tmp_path: Path,
     ) -> None:
+        """Test generated markdown is toc normalized before write."""
         generated = tmp_path / "generated.md"
 
         result = u.Infra.docs_write_if_needed(
@@ -132,6 +142,7 @@ class TestsFlextInfraDocsGeneratorInternals:
 
     @staticmethod
     def test_update_toc_preserves_single_blank_after_level_one_heading() -> None:
+        """Test update toc preserves single blank after level one heading."""
         updated, changed = u.Infra.update_toc("# Main\n\n## Section\n")
 
         tm.that(changed, eq=1)
@@ -142,6 +153,7 @@ class TestsFlextInfraDocsGeneratorInternals:
     def test_generated_non_markdown_preserves_exact_content(
         tmp_path: Path,
     ) -> None:
+        """Test generated non markdown preserves exact content."""
         generated = tmp_path / "mkdocs.yml"
         content = "site_name: Generated\n"
 
@@ -152,6 +164,7 @@ class TestsFlextInfraDocsGeneratorInternals:
 
     @staticmethod
     def test_generate_creates_selected_project_reports(tmp_path: Path) -> None:
+        """Test generate creates selected project reports."""
         workspace, generator = u.Tests.docs_workspace_generator(
             tmp_path,
             project_names=("flext-a", "flext-b"),

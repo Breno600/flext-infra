@@ -1,4 +1,8 @@
-"""Public behavior tests for census removal previews."""
+"""Public behavior tests for census removal previews.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -1,5 +1,8 @@
 """Verify published exports and real entrypoints in fresh child processes.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 The conformance transaction runs this guard before committing its journal.
 Each entrypoint loads before any package smoke so cached imports cannot hide
 consumer-order defects. Imported workspace modules must belong to this checkout.
@@ -71,7 +74,12 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
         publications: t.SequenceOf[m.Infra.LazyInitPlan] = (),
         repository_roots: t.SequenceOf[Path] = (),
     ) -> p.Result[m.Infra.ValidationReport]:
-        """Validate complete publications, stopping at the first causal failure."""
+        """Validate complete publications, stopping at the first causal failure.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ValidationReport]``.
+
+        """
         layouts: t.MutableSequenceOf[m.Infra.RopeProjectLayout] = []
         for root in repository_roots:
             layout = u.Infra.layout(root)
@@ -251,7 +259,12 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
         self,
         source_roots: t.SequenceOf[Path] = (),
     ) -> t.StrMapping:
-        """Prefer the complete candidate fleet over inherited editable installs."""
+        """Prefer the complete candidate fleet over inherited editable installs.
+
+        Returns:
+            The resulting ``t.StrMapping``.
+
+        """
         inherited_env = u.Cli.process_env()
         import_roots = (
             *(str(root) for root in source_roots),
@@ -268,7 +281,12 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute the same guard used by managed publication."""
+        """Execute the same guard used by managed publication.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         result = self.build_report(packages=self.packages)
         if result.failure:
             return r[bool].from_failure(result)

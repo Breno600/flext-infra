@@ -1,4 +1,8 @@
-"""Shared text/path helpers for namespace refactor utilities."""
+"""Shared text/path helpers for namespace refactor utilities.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -17,7 +21,12 @@ class FlextInfraUtilitiesRefactorNamespaceCommon:
 
     @staticmethod
     def _parse_simple_from_import_line(line: str) -> t.Infra.TransformResult | None:
-        """Parse simple from import line."""
+        """Parse simple from import line.
+
+        Returns:
+            The resulting ``t.Infra.TransformResult | None``.
+
+        """
         stripped = line.strip()
         if (
             not stripped.startswith("from ")
@@ -40,7 +49,12 @@ class FlextInfraUtilitiesRefactorNamespaceCommon:
         lines: t.StrSequence,
         imports: t.StrSequence,
     ) -> t.StrSequence:
-        """Insert import lines."""
+        """Insert import lines.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         if not imports:
             return list(lines)
         insert_idx = (
@@ -57,7 +71,12 @@ class FlextInfraUtilitiesRefactorNamespaceCommon:
         source_file: Path,
         filename: str,
     ) -> Path:
-        """Canonical target file."""
+        """Canonical target file.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         parts = source_file.parts
         src_dir: str = c.Infra.DEFAULT_SRC_DIR
         if src_dir in parts:
@@ -73,7 +92,12 @@ class FlextInfraUtilitiesRefactorNamespaceCommon:
         lines: t.StrSequence,
         header: str,
     ) -> t.Pair[int, int] | None:
-        """Find top level block."""
+        """Find top level block.
+
+        Returns:
+            The resulting ``t.Pair[int, int] | None``.
+
+        """
         start_idx = -1
         for idx, line in enumerate(lines):
             if line.startswith(header):

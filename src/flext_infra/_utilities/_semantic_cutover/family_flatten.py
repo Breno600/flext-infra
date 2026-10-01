@@ -1,4 +1,8 @@
-"""Plan the installed single-wrapper rule against one Rope snapshot."""
+"""Plan the installed single-wrapper rule against one Rope snapshot.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

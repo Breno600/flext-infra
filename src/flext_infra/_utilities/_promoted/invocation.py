@@ -1,4 +1,8 @@
-"""Promoted-command contract and invocation validation."""
+"""Promoted-command contract and invocation validation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -103,7 +107,12 @@ class FlextInfraUtilitiesPromotedInvocation(FlextInfraUtilitiesPromotedWorkspace
         param: p.Infra.PromotedParam,
         command: p.Infra.PromotedCommand,
     ) -> str:
-        """Return one parameter value: the command WHAT, the environment, or default."""
+        """Return one parameter value: the command WHAT, the environment, or default.
+
+        Returns:
+            One parameter value: the command WHAT, the environment, or default.
+
+        """
         from flext_infra import u
 
         if param.name == c.Infra.PromotedSelector.WHAT:

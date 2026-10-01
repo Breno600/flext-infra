@@ -1,4 +1,8 @@
-"""Semantic private-import cutover planning."""
+"""Semantic private-import cutover planning.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -45,7 +49,12 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
         tree: ast.Module,
         plan: m.Infra.PrivateImportRewritePlan,
     ) -> frozenset[str]:
-        """Return facades required outside a ``TYPE_CHECKING`` boundary."""
+        """Return facades required outside a ``TYPE_CHECKING`` boundary.
+
+        Returns:
+            Facades required outside a ``TYPE_CHECKING`` boundary.
+
+        """
         parents = {
             child: parent
             for parent in ast.walk(tree)
@@ -96,7 +105,16 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
         sources: t.MappingKV[Path, str],
         findings: t.SequenceOf[m.Infra.ModScanFinding],
     ) -> t.Infra.PrivateImportReferences:
-        """Resolve every reported cross-owner private import to its public owner."""
+        """Resolve every reported cross-owner private import to its public owner.
+
+        Returns:
+            The resulting ``t.Infra.PrivateImportReferences``.
+
+        Raises:
+            ValueError: If ambiguous private star import in; or if no public facade
+                exposes cross-owner private import.
+
+        """
         live_findings = tuple(
             finding
             for finding in findings
@@ -206,7 +224,15 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
         sources: t.MappingKV[Path, str],
         finding: m.Infra.ModScanFinding,
     ) -> bool:
-        """Reject a preflight import already moved by an earlier semantic phase."""
+        """Reject a preflight import already moved by an earlier semantic phase.
+
+        Returns:
+            The resulting ``bool``.
+
+        Raises:
+            ValueError: If private import source missing from inventory.
+
+        """
         statement = cls._finding_statement(finding)
         if not isinstance(statement, ast.ImportFrom):
             return False
@@ -231,7 +257,12 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
         sources: t.MappingKV[Path, str],
         findings: t.SequenceOf[m.Infra.ModScanFinding],
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
-        """Plan binding-aware public import rewrites."""
+        """Plan binding-aware public import rewrites.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
+
+        """
         planned_edits = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
         specs, direct_specs, facades = cls._private_import_references(
             root,
@@ -268,7 +299,15 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
         direct_specs: t.MappingKV[str, t.Pair[str, str]],
         facades: t.MappingKV[str, t.VariadicTuple[t.Quad[ast.Module, str, str, str]]],
     ) -> t.Infra.TransformResult:
-        """Rewrite one module's private imports and prove zero residue."""
+        """Rewrite one module's private imports and prove zero residue.
+
+        Returns:
+            The resulting ``t.Infra.TransformResult``.
+
+        Raises:
+            ValueError: If ambiguous facade alias; or if ambiguous public reference for.
+
+        """
         tree = ast.parse(source, filename=str(file_path))
         removals: MutableMapping[str, set[str]] = {}
         obsolete_imports: MutableMapping[str, set[str]] = {}

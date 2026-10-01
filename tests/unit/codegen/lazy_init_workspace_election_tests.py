@@ -1,4 +1,8 @@
-"""Workspace-mode lazy-init elects the same nearest parent as standalone mode."""
+"""Workspace-mode lazy-init elects the same nearest parent as standalone mode.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

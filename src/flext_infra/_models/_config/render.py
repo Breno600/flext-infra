@@ -1,4 +1,8 @@
-"""Render specification models for generated workflow and env surfaces."""
+"""Render specification models for generated workflow and env surfaces.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -57,10 +61,6 @@ class FlextInfraConfigModelsRender:
         python_version: Annotated[
             t.NonEmptyStr,
             m.Field(description="Python major.minor line"),
-        ]
-        docs_report_filenames: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(description="Structured documentation report allowlist"),
         ]
         github_actions: Annotated[
             Mapping[str, FlextInfraConfigModelsProvider.GithubActionPinSpec],

@@ -1,4 +1,8 @@
-"""Behavior tests for public lazy-init generation."""
+"""Behavior tests for public lazy-init generation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -351,6 +355,7 @@ class TestsFlextInfraLazyInitHelpers:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test generated constants owner never widens parent map."""
         repository_root, package_root = self._workspace(tmp_path)
         u.Tests.write_lazy_init_namespace_module(
             package_root / "models.py",
@@ -510,6 +515,7 @@ class TestsFlextInfraLazyInitHelpers:
         tm.that(exports_content, has='".constants": (')
 
     def test_existing_root_composes_public_parent_aliases(self, tmp_path: Path) -> None:
+        """Test existing root composes public parent aliases."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
             project_name="flext-demo",

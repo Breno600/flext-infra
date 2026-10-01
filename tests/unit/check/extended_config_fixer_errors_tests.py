@@ -34,6 +34,7 @@ class TestsFlextInfraExtendedConfigFixerErrors:
         pyproject: str,
         name: str,
     ) -> None:
+        """Test process file returns empty for non fixable documents."""
         file_path = tmp_path / f"{name}.toml"
         file_path.write_text(pyproject, encoding="utf-8")
 
@@ -46,6 +47,7 @@ class TestsFlextInfraExtendedConfigFixerErrors:
     def test_run_returns_verbose_messages_for_selected_project(
         tmp_path: Path,
     ) -> None:
+        """Test run returns verbose messages for selected project."""
         u.Tests.mk_project(
             tmp_path,
             "project1",
@@ -68,6 +70,7 @@ class TestsFlextInfraExtendedConfigFixerErrors:
     def test_run_dry_run_preserves_file_while_reporting_fixes(
         tmp_path: Path,
     ) -> None:
+        """Test run dry run preserves file while reporting fixes."""
         project_dir = u.Tests.mk_project(
             tmp_path,
             "project1",
