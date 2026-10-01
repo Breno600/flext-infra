@@ -98,7 +98,7 @@ class FlextInfraPytestRunnerBase(s[int]):
         if page_size <= 0 or pages <= 0:
             msg = "physical memory capacity is unavailable"
             raise ValueError(msg)
-        memory_gb = (page_size * pages) // (1024**3)
+        memory_gb = (page_size * pages) // c.Infra.BYTES_PER_GIB
         if memory_gb <= 0:
             msg = "physical memory is below one GiB"
             raise ValueError(msg)

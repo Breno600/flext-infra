@@ -89,7 +89,7 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
         )
 
     @staticmethod
-    @lru_cache(maxsize=32768)
+    @lru_cache(maxsize=c.Infra.DIRECTORY_CACHE_MAXSIZE)
     def _foreign_directory(
         directory: Path, repository_root: Path, governed_roots: frozenset[Path]
     ) -> bool:

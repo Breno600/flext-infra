@@ -110,7 +110,7 @@ class FlextInfraModelsCheck:
         @property
         def memory_limit_bytes(self) -> int:
             """Validated memory limit converted to bytes for the platform owner."""
-            return self.memory_limit_mb * 1024 * 1024
+            return self.memory_limit_mb * c.Infra.BYTES_PER_MIB
 
     class MypyInvocation(m.ContractModel):
         """Checker inputs; callers cannot select an executable or Python program."""

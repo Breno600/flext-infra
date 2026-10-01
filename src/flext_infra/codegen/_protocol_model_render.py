@@ -10,12 +10,11 @@ from collections.abc import MutableMapping
 from inspect import getattr_static
 from types import FunctionType
 
-from flext_infra import m, t
+from flext_infra import config, m, t
 
 from ._protocol_model_annotations import FlextInfraCodegenProtocolModelAnnotations
 
 Target = FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget
-LineBudget = 170
 MinimalBodyLines = 3
 
 
@@ -50,12 +49,21 @@ class FlextInfraCodegenProtocolModelRender:
     def _chunks(
         cls, models: t.SequenceOf[type[m.BaseModel]], target: Target
     ) -> t.SequenceOf[str]:
-        """Split one owner's protocol bodies under the line budget."""
+        """Split one owner's protocol bodies under the configured module LOC cap.
+
+        The budget is ``loc_cap.max_lines`` minus the module header and the
+        part class line, so every generated part module stays under the cap.
+        """
+        budget = (
+            config.Infra.codegen.loc_cap.max_lines
+            - cls._module_header(target).count("\n")
+            - 1
+        )
         chunks: list[str] = []
         current = ""
         for model in models:
             body = cls._render_protocol(model, target)
-            if current and current.count("\n") + body.count("\n") > LineBudget:
+            if current and current.count("\n") + body.count("\n") > budget:
                 chunks.append(current)
                 current = ""
             current += body

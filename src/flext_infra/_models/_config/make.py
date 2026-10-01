@@ -220,6 +220,15 @@ class FlextInfraConfigModelsMake:
         reports_dir: Annotated[
             Path, m.Field(description="Repository-relative docs reports directory")
         ]
+        overview_preview_limits: Annotated[
+            Mapping[t.NonEmptyStr, t.PositiveInt],
+            m.Field(
+                description=(
+                    "Items listed per contract field on the generated API "
+                    "overview page before the preview is truncated"
+                )
+            ),
+        ]
         cross_project_relative_link_pattern: Annotated[
             t.NonEmptyStr,
             m.Field(

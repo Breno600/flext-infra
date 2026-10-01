@@ -502,17 +502,17 @@ class FlextInfraModelsDepsToolConfig(
                 alias="show-missing",
                 description="Display missing lines in coverage report.",
             ),
-        ] = True
+        ]
         skip_covered: Annotated[
             bool,
             m.Field(
                 alias="skip-covered",
                 description="Skip covered files in coverage report.",
             ),
-        ] = False
+        ]
         precision: Annotated[
             int, m.Field(description="Decimal precision for coverage percentages.")
-        ] = 2
+        ]
         exclude_also: Annotated[
             t.StrSequence,
             m.Field(
@@ -560,7 +560,6 @@ class FlextInfraModelsDepsToolConfig(
         prose_wrap: Annotated[
             str,
             m.Field(
-                default="always",
                 alias="prose-wrap",
                 description="Prettier proseWrap contract for markdown prose.",
             ),
@@ -568,7 +567,6 @@ class FlextInfraModelsDepsToolConfig(
         tab_width: Annotated[
             int,
             m.Field(
-                default=4,
                 alias="tab-width",
                 description="Prettier tabWidth for non-markdown targets.",
             ),
@@ -576,7 +574,6 @@ class FlextInfraModelsDepsToolConfig(
         md_tab_width: Annotated[
             int,
             m.Field(
-                default=2,
                 alias="md-tab-width",
                 description="Prettier tabWidth override for markdown targets.",
             ),
@@ -677,19 +674,6 @@ class FlextInfraModelsDepsToolConfig(
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 alias="import-layer-order",
-                default=(
-                    "settings",
-                    "config",
-                    "c",
-                    "t",
-                    "p",
-                    "m",
-                    "u",
-                    "base",
-                    "services",
-                    "api",
-                    "cli",
-                ),
                 description=(
                     "Canonical dependency layer order for project "
                     "imports. Lower index = lower layer. A module may "
@@ -714,7 +698,7 @@ class FlextInfraModelsDepsToolConfig(
                     "module defect fixed at the module root cause."
                 ),
             ),
-        ] = "type_checking"
+        ]
         forward_import_form: Annotated[
             Literal["relative_dot"],
             m.Field(

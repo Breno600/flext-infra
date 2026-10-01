@@ -561,24 +561,21 @@ class FlextInfraUtilitiesDocsRender:
     def docs_overview_page(scope: m.Infra.DocScope, contract: t.JsonMapping) -> str:
         """Return the generated overview page for a project API."""
         data = contract
-        aliases = FlextInfraUtilitiesDocsRender._preview(
-            FlextInfraUtilitiesDocsRender.as_string_sequence(data, "aliases"), limit=11
-        )
-        exports = FlextInfraUtilitiesDocsRender._preview(
-            FlextInfraUtilitiesDocsRender.as_string_sequence(data, "public_symbols"),
-            limit=10,
-        )
-        facades = FlextInfraUtilitiesDocsRender._preview(
-            FlextInfraUtilitiesDocsRender.as_string_sequence(data, "facades"), limit=8
-        )
-        module_exports = FlextInfraUtilitiesDocsRender._preview(
-            FlextInfraUtilitiesDocsRender.as_string_sequence(data, "module_exports"),
-            limit=8,
+        limits = config.Infra.codegen.make.docs.overview_preview_limits
+        aliases, exports, facades, module_exports, keywords = (
+            FlextInfraUtilitiesDocsRender._preview(
+                FlextInfraUtilitiesDocsRender.as_string_sequence(data, field),
+                limit=limits[field],
+            )
+            for field in (
+                "aliases",
+                "public_symbols",
+                "facades",
+                "module_exports",
+                "keywords",
+            )
         )
         modules = FlextInfraUtilitiesDocsRender.as_string_sequence(data, "modules")
-        keywords = FlextInfraUtilitiesDocsRender._preview(
-            FlextInfraUtilitiesDocsRender.as_string_sequence(data, "keywords"), limit=8
-        )
         classifiers = (
             ", ".join(
                 FlextInfraUtilitiesDocsRender.as_string_sequence(data, "classifiers")

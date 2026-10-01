@@ -59,7 +59,7 @@ class FlextInfraMypyDarwinSupervisor:
             if int(group) == pid and not state.startswith("Z"):
                 total_kib += int(rss)
                 alive = True
-        return total_kib * 1024, alive
+        return total_kib * c.Infra.BYTES_PER_KIB, alive
 
     @classmethod
     def run(

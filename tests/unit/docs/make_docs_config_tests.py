@@ -23,6 +23,7 @@ def _spec_payload(**overrides: t.JsonValue) -> dict[str, object]:
         "reports_dir": ".reports/docs",
         "cross_project_relative_link_pattern": "^(?:../)+flext-[a-z0-9-]+(?:/|$)",
         "stale_github_organizations": ["placeholder-org"],
+        "overview_preview_limits": {"aliases": 3},
     }
     payload.update(overrides)
     return payload

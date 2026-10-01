@@ -50,8 +50,6 @@ class FlextInfraConstantsCodegenLazy:
         r"^(?:_?test(?:_[A-Za-z0-9_]+)?|[A-Za-z0-9_]+_tests?)\.py$"
     )
     "Test-module filenames forbidden from installable package export maps."
-    INIT_PY: ClassVar[str] = "__init__.py"
-    "Standard Python package initializer filename."
     # Cleanup is the only owner of retired init artifacts.
     OBSOLETE_GENERATED_INIT_FILES: ClassVar[t.StrSequence] = ("__unit__.py",)
     "Generated initializer artifacts removed during every codegen pass."

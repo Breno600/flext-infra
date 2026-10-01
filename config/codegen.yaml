@@ -509,6 +509,12 @@ Infra:
             - worktree
         mutable_actions: [fix, fmt]
         reports_dir: .reports/docs
+        overview_preview_limits:
+          aliases: 11
+          public_symbols: 10
+          facades: 8
+          module_exports: 8
+          keywords: 8
         cross_project_relative_link_pattern: '^(?:\.\./)+flext-[a-z0-9-]+(?:/|$)'
         stale_github_organizations:
           - organization

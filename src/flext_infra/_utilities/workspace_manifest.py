@@ -48,7 +48,7 @@ class FlextInfraUtilitiesWorkspaceManifest:
         return cls._parsed_workspace_manifest(text.value, str(manifest_path))
 
     @staticmethod
-    @lru_cache(maxsize=256)
+    @lru_cache(maxsize=c.Infra.CONTENT_CACHE_MAXSIZE)
     def _parsed_workspace_manifest(
         text: str, manifest_path: str
     ) -> p.Result[t.SequenceOf[m.Infra.WorkspaceManifestSpec]]:

@@ -15,6 +15,8 @@ from functools import lru_cache
 from importlib.util import resolve_name
 from typing import TYPE_CHECKING
 
+from flext_infra import c
+
 from ..private_import_facades import FlextInfraUtilitiesPrivateImportFacades
 from ..rope_analysis import FlextInfraUtilitiesRopeAnalysis
 
@@ -177,7 +179,7 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         return cls._facade_declared_class(modules, *target, visiting | {identity})
 
     @staticmethod
-    @lru_cache(maxsize=256)
+    @lru_cache(maxsize=c.Infra.CONTENT_CACHE_MAXSIZE)
     def _facade_module_statements(
         source: str, module: str
     ) -> t.VariadicTuple[ast.stmt]:
