@@ -35,11 +35,16 @@ class FlextInfraUtilitiesProjectDiscovery(
         manifest_path = FlextInfraUtilitiesWorkspaceManifest.workspace_manifest_path(
             repository_root
         )
+        packaged = m.Infra.RefactorConfigSpec(
+            project_scan_dirs=config.Infra.source_scan.roots
+        )
         if not manifest_path.is_file():
-            return m.Infra.RefactorConfigSpec()
+            return packaged
         loaded = u.Cli.config_load(manifest_path, expand_env=False).unwrap()
         manifest = m.Infra.WorkspaceManifestSpec.model_validate(loaded.data)
-        return manifest.refactor or m.Infra.RefactorConfigSpec()
+        if manifest.refactor is None:
+            return packaged
+        return manifest.refactor
 
     @classmethod
     @lru_cache(maxsize=1)

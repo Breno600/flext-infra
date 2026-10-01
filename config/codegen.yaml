@@ -171,6 +171,7 @@ Infra:
       flext-core: 7
       flext-dbt-ldif: 7
       flext-infra: 7
+    dependabot_cooldown_default_days: 0
 
     # Runner packages a distribution's own tests need (Ubuntu apt names),
     # installed by the generated CI before the gates run. A test that drives
@@ -381,6 +382,20 @@ Infra:
         external_storage_directory: flext/infra/testmon
         target_directory: tests
         reports_directory: .reports/tests
+      # Actions-cache policy for the shared testmon database: two-phase
+      # generations, a per-repository byte budget with an ascending quota
+      # ladder, and the refs allowed to publish (never pull requests).
+      testmon_cache_policy:
+        mode: stable
+        save_enabled: false
+        max_bootstrap_generations: 3
+        max_stable_generations: 3
+        per_repo_budget_bytes: 52428800
+        warning_threshold_percent: 80
+        maintenance_threshold_percent: 90
+        block_threshold_percent: 95
+        allowed_save_refs: [main, 0.12.0-dev]
+        key_prefix: flext-testmon
       # The Mypy gate shares analysis across checkouts of the same project name.
       # Relocks retain the directory; Mypy revalidates changed modules. Distinct
       # project names keep their module namespaces in separate directories.

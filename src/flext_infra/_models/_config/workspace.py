@@ -133,10 +133,7 @@ class FlextInfraConfigModelsWorkspace:
 
         project_scan_dirs: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                default_factory=lambda: ("src", "tests", "scripts", "examples"),
-                description="Relative directories scanned for candidate files",
-            ),
+            m.Field(description="Relative directories scanned for candidate files"),
         ]
         file_extensions: Annotated[
             t.VariadicTuple[t.NonEmptyStr],

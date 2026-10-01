@@ -286,7 +286,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                     # disable Dependabot for the repository.
                     has_devcontainer=(repository_root / ".devcontainer").is_dir(),
                     dependabot_cooldown_days=codegen.dependabot_cooldown_days.get(
-                        dist, 0
+                        dist, codegen.dependabot_cooldown_default_days
                     ),
                     checkout_submodules=codegen.checkout_submodules_overrides.get(
                         dist, codegen.checkout_submodules

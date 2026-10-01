@@ -73,9 +73,6 @@ class FlextInfraConstantsRefactor:
     })
     "ast-grep rule whose findings select each finding-driven semantic cutover."
 
-    RK_REFACTOR: ClassVar[str] = "refactor"
-    RK_PROJECT_SCAN_DIRS: ClassVar[str] = "project_scan_dirs"
-    RK_FILE_EXTENSIONS: ClassVar[str] = "file_extensions"
     RK_FORBIDDEN_IMPORTS: ClassVar[str] = "forbidden_imports"
     RK_REDUNDANT_TYPE_TARGETS: ClassVar[str] = "redundant_type_targets"
     RK_TARGET_MODULES: ClassVar[str] = "target_modules"
@@ -152,12 +149,6 @@ class FlextInfraConstantsRefactor:
         "`make mod-snapshots`, review the snapshot diff and commit it"
     )
     CODEMOD_EPHEMERAL_DIRNAME: ClassVar[str] = "__pycache__"
-    REFACTOR_CONFIG_KEYS: ClassVar[t.StrSequence] = (
-        RK_PROJECT_SCAN_DIRS,
-        RK_FILE_EXTENSIONS,
-    )
-    """Allowed keys under the ``refactor`` config scope."""
-
     TYPING_DEFINITION_FILES: ClassVar[frozenset[str]] = frozenset({
         "constants.py",
         "_constants",

@@ -19,23 +19,6 @@ from ..._constants import (
 from .contract import FlextInfraConfigModelsContract
 
 
-def _shared_mypy_cache_spec() -> FlextInfraConfigModelsMake.MypyCacheSpec:
-    """Build the declared default shared Mypy analysis cache policy.
-
-    Declared here (module scope) so the field default is one shared policy that
-    a member may override, instead of forcing every hand-owned ``codegen.yaml``
-    to repeat the same block just to satisfy a required field.
-    """
-    return FlextInfraConfigModelsMake.MypyCacheSpec()
-
-
-def _default_testmon_cache_policy() -> (
-    FlextInfraConfigModelsMake.TestmonCachePolicySpec
-):
-    """Build the declared default testmon cache policy (#1001 delta)."""
-    return FlextInfraConfigModelsMake.TestmonCachePolicySpec()
-
-
 class FlextInfraConfigModelsMake:
     """Make workflow, verb, CI, and cache specification models."""
 
@@ -87,7 +70,7 @@ class FlextInfraConfigModelsMake:
                     "preserve their local behavior. Pre-push check unsets CI."
                 )
             ),
-        ] = "N"
+        ]
         local_check_gates: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
@@ -245,11 +228,8 @@ class FlextInfraConfigModelsMake:
         ]
         stale_github_organizations: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                default=("organization",),
-                description="Placeholder GitHub orgs that must be rewritten",
-            ),
-        ] = ("organization",)
+            m.Field(description="Placeholder GitHub orgs that must be rewritten"),
+        ]
         github_repos: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsMake.DocsGithubRepoSpec],
             m.Field(
@@ -391,35 +371,35 @@ class FlextInfraConfigModelsMake:
         mode: Annotated[
             Literal["bootstrap", "stable"],
             m.Field(description="Cache phase: bootstrap seeds, stable saves"),
-        ] = "stable"
+        ]
         save_enabled: Annotated[
             bool, m.Field(description="Master switch for cache publishes")
-        ] = False
+        ]
         max_bootstrap_generations: Annotated[
             int, m.Field(gt=0, description="Retention cap for bootstrap generations")
-        ] = 3
+        ]
         max_stable_generations: Annotated[
             int, m.Field(gt=0, description="Retention cap for stable generations")
-        ] = 3
+        ]
         per_repo_budget_bytes: Annotated[
             int, m.Field(gt=0, description="Per-repository byte budget")
-        ] = 52_428_800
+        ]
         warning_threshold_percent: Annotated[
             int, m.Field(ge=0, le=100, description="Quota-ladder warning stage")
-        ] = 80
+        ]
         maintenance_threshold_percent: Annotated[
             int, m.Field(ge=0, le=100, description="Quota-ladder maintenance stage")
-        ] = 90
+        ]
         block_threshold_percent: Annotated[
             int, m.Field(ge=0, le=100, description="Quota-ladder block stage")
-        ] = 95
+        ]
         allowed_save_refs: Annotated[
-            tuple[t.NonEmptyStr, ...],
+            t.VariadicTuple[t.NonEmptyStr],
             m.Field(description="Refs whose pushes may publish cache generations"),
-        ] = ("main", "0.12.0-dev")
+        ]
         key_prefix: Annotated[
             t.NonEmptyStr, m.Field(description="Actions cache key namespace")
-        ] = "flext-testmon"
+        ]
 
         @u.model_validator(mode="after")
         def require_ascending_quota_ladder(self) -> Self:
@@ -440,38 +420,21 @@ class FlextInfraConfigModelsMake:
 
         cache_environment_variable: Annotated[
             FlextInfraConstantsMake.MypyCacheEnvironment,
-            m.Field(
-                default=FlextInfraConstantsMake.MypyCacheEnvironment.CACHE_DIR,
-                description="Mypy's cache-directory environment variable",
-            ),
+            m.Field(description="Mypy's cache-directory environment variable"),
         ]
         data_home_environment_variable: Annotated[
             FlextInfraConstantsMake.MypyCacheEnvironment,
-            m.Field(
-                default=FlextInfraConstantsMake.MypyCacheEnvironment.DATA_HOME,
-                description="XDG persistent cache-home variable",
-            ),
+            m.Field(description="XDG persistent cache-home variable"),
         ]
         user_home_environment_variable: Annotated[
             FlextInfraConstantsMake.MypyCacheEnvironment,
-            m.Field(
-                default=FlextInfraConstantsMake.MypyCacheEnvironment.USER_HOME,
-                description="User home variable for the XDG default",
-            ),
+            m.Field(description="User home variable for the XDG default"),
         ]
         home_cache_directory: Annotated[
-            Path,
-            m.Field(
-                default=Path(".cache"),
-                description="Standard cache directory below the user home",
-            ),
+            Path, m.Field(description="Standard cache directory below the user home")
         ]
         external_storage_directory: Annotated[
-            Path,
-            m.Field(
-                default=Path("flext/infra/mypy"),
-                description="FLEXT-owned directory below the cache home",
-            ),
+            Path, m.Field(description="FLEXT-owned directory below the cache home")
         ]
 
         @u.model_validator(mode="after")
@@ -608,7 +571,6 @@ class FlextInfraConfigModelsMake:
         fmt_gates: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                default=("markdown-format",),
                 description=(
                     "Gates whose mutating side `make fmt` drives (formatters). "
                     "The read-only side runs in `make check`; `make fix` never "
@@ -626,18 +588,11 @@ class FlextInfraConfigModelsMake:
         # whether the stage is generated and installed at all.
         pre_commit: Annotated[
             bool,
-            m.Field(
-                default=False,
-                description="Generate and install the pre-commit git-hook stage",
-            ),
-        ] = False
+            m.Field(description="Generate and install the pre-commit git-hook stage"),
+        ]
         pre_push: Annotated[
-            bool,
-            m.Field(
-                default=False,
-                description="Generate and install the pre-push git-hook stage",
-            ),
-        ] = False
+            bool, m.Field(description="Generate and install the pre-push git-hook stage")
+        ]
         workflow: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsMake.MakeWorkflowStepSpec],
             m.Field(min_length=1, description="Ordered canonical validation workflow"),
@@ -653,16 +608,12 @@ class FlextInfraConfigModelsMake:
         testmon_cache_policy: Annotated[
             FlextInfraConfigModelsMake.TestmonCachePolicySpec,
             m.Field(
-                default_factory=_default_testmon_cache_policy,
-                description="Declarative save/budget/quota policy for the shared testmon cache (#1001 delta)",
+                description="Declarative save/budget/quota policy for the shared testmon cache"
             ),
         ]
         mypy_cache: Annotated[
             FlextInfraConfigModelsMake.MypyCacheSpec,
-            m.Field(
-                default_factory=_shared_mypy_cache_spec,
-                description="Project-keyed shared Mypy analysis cache policy",
-            ),
+            m.Field(description="Project-keyed shared Mypy analysis cache policy"),
         ]
         verbs: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsMake.MakeVerbSpec],

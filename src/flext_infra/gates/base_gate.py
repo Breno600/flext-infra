@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_infra import c, m, u
+from flext_infra import c, config, m, u
 
 from ..codegen.file_leases import FlextInfraCodegenFileLeases
 
@@ -545,7 +545,7 @@ class FlextInfraGate:
 
     def _existing_check_dirs(self, project_dir: Path) -> t.StrSequence:
         """Return every first-class project-owned Python directory."""
-        return self._dirs_with_py(project_dir, c.Infra.CHECK_DIRS_REPOSITORY)
+        return self._dirs_with_py(project_dir, config.Infra.source_scan.roots)
 
     @staticmethod
     def _dirs_with_py(project_dir: Path, dirs: t.StrSequence) -> t.StrSequence:

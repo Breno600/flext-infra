@@ -7,30 +7,11 @@ from typing import Annotated, ClassVar
 
 from flext_cli import m
 
-from flext_infra import c, t
+from flext_infra import t
 
 
 class FlextInfraModelsRefactorGrep:
     """Mixin containing migration/reporting contracts for refactor orchestration."""
-
-    class RefactorConfig(m.ContractModel):
-        """Refactor file-selection config."""
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
-
-        project_scan_dirs: t.StrSequence = m.Field(
-            default_factory=lambda: [
-                c.Infra.DEFAULT_SRC_DIR,
-                c.Infra.DIR_TESTS,
-                c.Infra.DIR_SCRIPTS,
-                c.Infra.DIR_EXAMPLES,
-            ],
-            description="Relative directories scanned for candidate files",
-        )
-        file_extensions: t.StrSequence = m.Field(
-            default_factory=tuple,
-            description="Allowed file extensions (empty = all by pattern)",
-        )
 
     class CodemodRule(m.ArbitraryTypesModel):
         """One validated ast-grep rule document from a composed provider."""
