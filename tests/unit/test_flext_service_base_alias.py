@@ -1,4 +1,8 @@
-"""Tests for the FLEXT service-base alias."""
+"""Tests for the FLEXT service-base alias.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -10,6 +14,8 @@ from tests import u
 
 
 class TestsFlextInfraServiceBaseAlias:
+    """Tests for ``FlextInfraServiceBaseAlias``."""
+
     @staticmethod
     def test_service_base_generic_alias_flext_is_permitted() -> None:
         """Generic service-root bases must not trigger facade FLEXT enforcement."""

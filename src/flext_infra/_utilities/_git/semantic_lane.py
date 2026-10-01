@@ -1,4 +1,8 @@
-"""Canonical publication lane for ``u.Infra``: produced paths to one pull request."""
+"""Canonical publication lane for ``u.Infra``: produced paths to one pull request.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -39,6 +43,10 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
         that carries nothing beyond ``base`` publishes nothing: the checkout
         returns to ``base``, the empty lane branch is removed, and the result
         is ``False``.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         root = request.repo_root
         status = cls.git_status(m.Infra.GitStatusRequest(repo_root=root))
@@ -77,7 +85,12 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
 
     @classmethod
     def _git_discard_empty_lane(cls, request: m.Infra.GitLaneRequest) -> p.Result[bool]:
-        """Return to ``base`` and remove the lane branch that carries nothing."""
+        """Return to ``base`` and remove the lane branch that carries nothing.
+
+        Returns:
+            To ``base`` and remove the lane branch that carries nothing.
+
+        """
         root = request.repo_root
         for command in (
             [c.Infra.GIT, "switch", request.base],
@@ -90,7 +103,12 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
 
     @classmethod
     def _git_enter_lane(cls, request: m.Infra.GitLaneRequest) -> p.Result[bool]:
-        """Continue the lane where it exists (local, then remote), else start it at HEAD."""
+        """Continue the lane where it exists (local, then remote), else start it at HEAD.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         root, branch = request.repo_root, request.branch
         local = u.Cli.capture(
             [c.Infra.GIT, "rev-parse", "--verify", "--quiet", f"refs/heads/{branch}"],
@@ -126,7 +144,12 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
 
     @classmethod
     def _git_commit_produced(cls, request: m.Infra.GitLaneRequest) -> p.Result[bool]:
-        """Commit exactly the paths the status lists; nothing produced commits nothing."""
+        """Commit exactly the paths the status lists; nothing produced commits nothing.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         root = request.repo_root
         status = cls.git_status(m.Infra.GitStatusRequest(repo_root=root))
         if status.failure:
@@ -151,7 +174,12 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
 
     @classmethod
     def _git_open_pull_request(cls, request: m.Infra.GitLaneRequest) -> p.Result[bool]:
-        """Push the lane, then open its pull request or refresh the open one."""
+        """Push the lane, then open its pull request or refresh the open one.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         root, branch = request.repo_root, request.branch
         pushed = cls.git_push_upstream(
             m.Infra.GitPushRequest(repo_root=root, branch=branch),

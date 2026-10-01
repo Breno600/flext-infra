@@ -1,4 +1,8 @@
-"""Behavior: git_copy_worktree_state preserves the staged/unstaged split."""
+"""Behavior: git_copy_worktree_state preserves the staged/unstaged split.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

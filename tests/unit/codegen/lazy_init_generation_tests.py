@@ -1,4 +1,8 @@
-"""Public contract tests for canonical lazy-init artifact rendering."""
+"""Public contract tests for canonical lazy-init artifact rendering.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -25,9 +29,13 @@ class TestsFlextInfraCodegenGeneration:
         *,
         eager_dunders: t.LazyAliasMap | None = None,
         child_packages: t.StrSequence = (),
-        type_checking_map: t.LazyAliasMap | None = None,
     ) -> m.Infra.LazyInitPlan:
-        """Build one validated render plan for a synthetic package path."""
+        """Build one validated render plan for a synthetic package path.
+
+        Returns:
+            The resulting ``m.Infra.LazyInitPlan``.
+
+        """
         package_dir = Path.cwd() / current_pkg.replace(".", "/")
         return m.Infra.LazyInitPlan(
             context=m.Infra.LazyInitPackageContext(
@@ -40,9 +48,6 @@ class TestsFlextInfraCodegenGeneration:
             action=c.Infra.LazyInitAction.WRITE,
             exports=exports,
             lazy_map=MappingProxyType(dict(lazy_map)),
-            type_checking_map=MappingProxyType(
-                dict(lazy_map if type_checking_map is None else type_checking_map),
-            ),
             eager_dunders=MappingProxyType(dict(eager_dunders or {})),
             inline_constants=MappingProxyType({}),
             child_packages_for_lazy=child_packages,
@@ -123,6 +128,7 @@ class TestsFlextInfraCodegenGeneration:
 
     @staticmethod
     def test_generated_runtime_surfaces_import_without_bootstrap_cycles() -> None:
+        """Test generated runtime surfaces import without bootstrap cycles."""
         tm.that(flext_core.__all__, has="c")
         tm.that(dir(flext_core), has="c")
         tm.that(flext_core.c.__name__, eq="FlextConstants")
@@ -181,6 +187,7 @@ class TestsFlextInfraCodegenGeneration:
         tm.that(content, lacks="__unit__")
 
     def test_nested_package_initializer_is_static(self) -> None:
+        """Test nested package initializer is static."""
         plan = self._plan(
             "flext_core._lazy_parts",
             ("FlextLazy",),
@@ -232,6 +239,7 @@ class TestsFlextInfraCodegenGeneration:
         tm.that(content, lacks="    _ = (")
 
     def test_public_nested_package_preserves_lazy_exports(self) -> None:
+        """Test public nested package preserves lazy exports."""
         plan = self._plan(
             "demo_pkg.services",
             ("Demo", "Nested"),
@@ -386,8 +394,8 @@ class TestsFlextInfraCodegenGeneration:
         tm.that(init_content, lacks="TestsDemoCase")
         tm.that(init_content, lacks=".unit.test_demo")
 
-    def test_root_type_checking_alias_uses_named_local_facade(self) -> None:
-        """Static analyzers receive the local facade class behind short aliases."""
+    def test_root_type_checking_imports_the_declared_letter(self) -> None:
+        """Static imports name the letter the facade module declares."""
         plan = self._plan(
             "demo_pkg",
             ("FlextDemoProtocols", "p"),
@@ -395,23 +403,16 @@ class TestsFlextInfraCodegenGeneration:
                 "FlextDemoProtocols": ("demo_pkg.protocols", "FlextDemoProtocols"),
                 "p": ("demo_pkg.protocols", "p"),
             }),
-            type_checking_map={
-                "FlextDemoProtocols": ("demo_pkg.protocols", "FlextDemoProtocols"),
-                "p": ("demo_pkg.protocols", "FlextDemoProtocols"),
-            },
         )
 
         content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(content, "__init__.py", "exec")
-        tm.that(
-            content,
-            contains="from .protocols import FlextDemoProtocols, FlextDemoProtocols as p",
-        )
-        tm.that(content, contains="FlextDemoProtocols as p")
+        tm.that(content, contains="from .protocols import FlextDemoProtocols, p")
+        tm.that(content, lacks="FlextDemoProtocols as p")
 
-    def test_root_service_alias_uses_typed_service_base(self) -> None:
-        """Bind ``s`` to the concrete project service base for static analysis."""
+    def test_root_service_letter_is_the_declared_service_letter(self) -> None:
+        """The service letter is imported as the base module declares it."""
         plan = self._plan(
             "demo_pkg",
             ("FlextDemoServiceBase", "s"),
@@ -419,26 +420,19 @@ class TestsFlextInfraCodegenGeneration:
                 "FlextDemoServiceBase": ("demo_pkg.base", "FlextDemoServiceBase"),
                 "s": ("demo_pkg.base", "s"),
             }),
-            type_checking_map={
-                "FlextDemoServiceBase": ("demo_pkg.base", "FlextDemoServiceBase"),
-                "s": ("demo_pkg.base", "FlextDemoServiceBase"),
-            },
         )
 
         content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(content, "__init__.py", "exec")
-        tm.that(
-            content,
-            contains="from .base import FlextDemoServiceBase, FlextDemoServiceBase as s",
-        )
-        tm.that(content, contains="FlextDemoServiceBase as s")
+        tm.that(content, contains="from .base import FlextDemoServiceBase, s")
+        tm.that(content, lacks="FlextDemoServiceBase as s")
 
     @staticmethod
-    def test_type_checking_renderer_keeps_explicit_aliases() -> None:
-        """Static imports bind aliases to their facade types explicitly."""
+    def test_type_checking_renderer_keeps_declared_letters() -> None:
+        """Static imports keep each letter under the name its module declares."""
         lines = FlextInfraCodegenGeneration.generate_type_checking({
-            "module": [("c", "FlextConstants"), ("m", "FlextModels")],
+            "module": [("c", "c"), ("m", "m")],
         })
 
         tm.that(
@@ -446,7 +440,7 @@ class TestsFlextInfraCodegenGeneration:
             contains=(
                 "if TYPE_CHECKING:\n"
                 "    from flext_core import FlextTypes\n"
-                "    from module import FlextConstants as c, FlextModels as m"
+                "    from module import c, m"
             ),
         )
 
@@ -546,10 +540,6 @@ class TestsFlextInfraCodegenGeneration:
             action=c.Infra.LazyInitAction.WRITE,
             exports=("cli_c", "project_p"),
             lazy_map=MappingProxyType({
-                "cli_c": ("flext_cli", "c"),
-                "project_p": ("demo_worktree_pkg", "p"),
-            }),
-            type_checking_map=MappingProxyType({
                 "cli_c": ("flext_cli", "c"),
                 "project_p": ("demo_worktree_pkg", "p"),
             }),

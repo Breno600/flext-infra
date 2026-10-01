@@ -1,4 +1,8 @@
-"""Result helpers for the codegen fixer service."""
+"""Result helpers for the codegen fixer service.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -20,7 +24,12 @@ class FlextInfraCodegenFixerResultsMixin:
 
     @staticmethod
     def _empty_result(project_name: str) -> m.Infra.AutoFixResult:
-        """Empty result."""
+        """Empty result.
+
+        Returns:
+            The resulting ``m.Infra.AutoFixResult``.
+
+        """
         return m.Infra.AutoFixResult(
             project=project_name,
             violations_fixed=[],
@@ -33,7 +42,12 @@ class FlextInfraCodegenFixerResultsMixin:
         project_name: str,
         ctx: m.Infra.FixContext,
     ) -> m.Infra.AutoFixResult:
-        """Build result."""
+        """Build result.
+
+        Returns:
+            The resulting ``m.Infra.AutoFixResult``.
+
+        """
         return m.Infra.AutoFixResult(
             project=project_name,
             violations_fixed=list(ctx.violations_fixed),
@@ -46,7 +60,12 @@ class FlextInfraCodegenFixerResultsMixin:
         ctx: m.Infra.FixContext,
         project_path: Path,
     ) -> t.SequenceOf[m.Infra.CensusViolation]:
-        """Read the initial namespace violations and record skip reason on failure."""
+        """Read the initial namespace violations and record skip reason on failure.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.CensusViolation]``.
+
+        """
         initial_violations_result = u.Infra.parse_namespace_validation(
             FlextInfraNamespaceValidator(repository_root=project_path).build_report(),
             project_path,

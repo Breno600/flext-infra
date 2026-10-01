@@ -1,4 +1,8 @@
-"""Persist dependency reports through real public discovery and tools."""
+"""Persist dependency reports through real public discovery and tools.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -14,6 +18,8 @@ pytestmark = [pytest.mark.slow, pytest.mark.remote]
 
 
 class TestsFlextInfraDepsDetectorReport:
+    """Tests for ``FlextInfraDepsDetectorReport``."""
+
     @pytest.mark.parametrize("custom", [False, True])
     def test_report_path_and_real_project_identity(
         self,
@@ -21,6 +27,7 @@ class TestsFlextInfraDepsDetectorReport:
         *,
         custom: bool,
     ) -> None:
+        """Test report path and real project identity."""
         root = real_detector_project
         destination = root / (
             "custom-report.json"
@@ -42,6 +49,7 @@ class TestsFlextInfraDepsDetectorReport:
     def test_blocked_report_path_preserves_writer_failure(
         real_detector_project: Path,
     ) -> None:
+        """Test blocked report path preserves writer failure."""
         root = real_detector_project
         blocked = root / "blocked"
         blocked.write_text("not-a-directory", encoding="utf-8")

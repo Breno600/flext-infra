@@ -27,7 +27,12 @@ class FlextInfraCodegenLayoutFilesMixin:
         target: Path,
         archive_rel: str,
     ) -> p.Result[str]:
-        """Move one entry; collisions archive the source (never delete)."""
+        """Move one entry; collisions archive the source (never delete).
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         if not target.exists():
             moved = self._move_path(project_dir, source, target)
             if moved.failure:
@@ -56,7 +61,12 @@ class FlextInfraCodegenLayoutFilesMixin:
         rel: str,
         finding: m.Infra.LayoutFinding | None = None,
     ) -> p.Result[t.Pair[t.Infra.LayoutStatus, str]]:
-        """Move one entry under ``archive_root/<project>/`` (idempotent)."""
+        """Move one entry under ``archive_root/<project>/`` (idempotent).
+
+        Returns:
+            The resulting ``p.Result[t.Pair[t.Infra.LayoutStatus, str]]``.
+
+        """
         spec = config.Infra.codegen.layout
         target = project_dir / spec.archive_root / project_dir.name / rel
         base_message = finding.message if finding is not None else source.name
@@ -94,7 +104,12 @@ class FlextInfraCodegenLayoutFilesMixin:
         source: Path,
         target: Path,
     ) -> p.Result[bool]:
-        """Move via ``git mv`` when tracked, plain rename otherwise."""
+        """Move via ``git mv`` when tracked, plain rename otherwise.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         target.parent.mkdir(parents=True, exist_ok=True)
         source_rel = source.relative_to(project_dir).as_posix()
         target_rel = target.relative_to(project_dir).as_posix()
@@ -122,6 +137,10 @@ class FlextInfraCodegenLayoutFilesMixin:
 
         Archives leave Git tracking (``git rm --cached``) so the preserved
         content under ``archive_root`` is ignored, never committed.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         target.parent.mkdir(parents=True, exist_ok=True)
         source_rel = source.relative_to(project_dir).as_posix()
@@ -142,7 +161,12 @@ class FlextInfraCodegenLayoutFilesMixin:
         project_dir: Path,
         source: Path,
     ) -> p.Result[bool]:
-        """Remove a byte-identical duplicate whose content is already archived."""
+        """Remove a byte-identical duplicate whose content is already archived.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         source_rel = source.relative_to(project_dir).as_posix()
         if self._git_tracked(project_dir, source_rel):
             removed = u.Infra.git_rm_path(
@@ -159,7 +183,12 @@ class FlextInfraCodegenLayoutFilesMixin:
 
     @staticmethod
     def _git_tracked(project_dir: Path, rel: str) -> bool:
-        """Whether a path is git-tracked; False for plain directories."""
+        """Whether a path is git-tracked; False for plain directories.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         listed = u.Infra.git_is_tracked(
             m.Infra.GitRelativePathRequest(repo_root=project_dir, relative_path=rel),
         )

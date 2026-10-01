@@ -1,4 +1,8 @@
-"""The Ruff exemption map is the tooling owner's fleet map, scoped per project."""
+"""The Ruff exemption map is the tooling owner's fleet map, scoped per project.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -21,9 +25,9 @@ class TestsFlextInfraRuffProjectExemptions:
         """A project without retired roots receives every fleet entry unchanged."""
         fleet = config.Infra.tooling.tools.ruff.lint.per_file_ignores
 
-        scoped = FlextInfraEnsureRuffConfigPhase.compose_per_file_ignores(
+        scoped = FlextInfraEnsureRuffConfigPhase.project_per_file_ignores(
             tmp_path,
-            global_ignores=fleet,
+            fleet,
         )
 
         tm.that(

@@ -26,7 +26,12 @@ class TestsFlextInfraValidateMain:
 
     @staticmethod
     def _cli(*args: str) -> int:
-        """Run validate routing through the canonical infra CLI."""
+        """Run validate routing through the canonical infra CLI.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         return infra_main(["validate", *args])
 
     @staticmethod

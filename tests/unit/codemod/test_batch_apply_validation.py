@@ -1,4 +1,8 @@
-"""Fixed-point validation for staged ast-grep rule cascades."""
+"""Fixed-point validation for staged ast-grep rule cascades.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -15,7 +19,12 @@ class TestsFlextInfraCodemodBatchApplyValidation:
 
     @staticmethod
     def _report(path: Path, rule_id: str) -> m.Infra.ModScanReport:
-        """Build one actionable ast-grep finding report."""
+        """Build one actionable ast-grep finding report.
+
+        Returns:
+            The resulting ``m.Infra.ModScanReport``.
+
+        """
         finding = m.Infra.ModScanFinding(
             rule_file="fixture.yml",
             rule_id=rule_id,

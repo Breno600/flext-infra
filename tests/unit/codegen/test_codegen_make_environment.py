@@ -1,4 +1,8 @@
-"""Generated Make environment isolation contract."""
+"""Generated Make environment isolation contract.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -446,7 +450,12 @@ class TestsFlextInfraCodegenMakeEnvironment:
 
     @staticmethod
     def _locks(root: Path) -> t.MappingKV[str, bytes]:
-        """Return every lock artifact ``make upg`` owns, keyed by relative path."""
+        """Return every lock artifact ``make upg`` owns, keyed by relative path.
+
+        Returns:
+            Every lock artifact ``make upg`` owns, keyed by relative path.
+
+        """
         sidecars = root / ".mise" / "locks"
         paths = (
             root / c.Infra.UV_LOCK_FILENAME,
@@ -716,7 +725,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(check_invocations, empty=False)
         for invocation in check_invocations:
             tm.that(invocation, lacks="--apply")
-        tm.that(makefile, has="--apply --report-findings")
+        tm.that(makefile, has="--apply")
+        tm.that(makefile, lacks="--report-findings")
 
     @staticmethod
     def test_standalone_check_executes_its_declared_default_gates(
@@ -760,7 +770,12 @@ class TestsFlextInfraCodegenMakeEnvironment:
 
     @staticmethod
     def _recipe_targets_containing(makefile: str, needle: str) -> set[str]:
-        """Return every rule target whose recipe (not comments) carries *needle*."""
+        """Return every rule target whose recipe (not comments) carries *needle*.
+
+        Returns:
+            Every rule target whose recipe (not comments) carries *needle*.
+
+        """
         targets: set[str] = set()
         current: str | None = None
         continued = False
@@ -856,6 +871,69 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(jscpd.get("platforms"), eq=None)
         tm.that(waza.get("version"), eq=toolchain.waza_version)
         tm.that(waza.get("version_prefix"), eq=toolchain.waza_version_prefix)
+
+    @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
+    def test_upg_publishes_the_lock_with_the_sidecars_it_references(
+        self,
+        tmp_path: Path,
+        profile: c.Infra.MakeProfile,
+    ) -> None:
+        """The staged lock reaches the tree only with every sidecar it names.
+
+        ``mise lock`` writes each tool's sidecar under ``.mise/locks`` beside
+        the staged lock, so publishing the lock alone leaves it naming a
+        sidecar that the next ``make gen`` rejects. Referenced sidecars land
+        before the lock rename (the commit point), unreferenced default-lock
+        sidecars are removed after it, and the converge step keeps ``gen``
+        output so a failure carries its cause.
+        """
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path,
+            profile,
+            bootstrap=True,
+        )
+        makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding="utf-8",
+        )
+        publish_sidecar = 'mv "$$staged" "$$published";'
+        publish_lock = 'mv "$$lock_stage/mise.lock" "$$project_root/mise.lock";'
+        retire_sidecar = (
+            'case "$$referenced_sidecars" in *" $$relative "*) ;; '
+            '*) find "$$sidecar" -depth -delete ;; esac;'
+        )
+        tm.that(makefile, has=[publish_sidecar, publish_lock, retire_sidecar])
+        tm.that(
+            makefile.index(publish_sidecar) < makefile.index(publish_lock),
+            eq=True,
+        )
+        tm.that(
+            makefile.index(publish_lock) < makefile.index(retire_sidecar),
+            eq=True,
+        )
+        tm.that(makefile, has="$(SELF_MAKE) gen; \\")
+        tm.that(makefile, lacks=["gen > /dev/null", "could not be staged"])
+
+    @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
+    def test_bootstrap_reads_only_the_caller_github_token(
+        self,
+        tmp_path: Path,
+        profile: c.Infra.MakeProfile,
+    ) -> None:
+        """The one credential variable comes from the caller, never a store.
+
+        An absent ``GITHUB_TOKEN`` leaves mise anonymous; no recipe asks gh, a
+        keyring or netrc for a stored credential to fill it.
+        """
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path,
+            profile,
+            bootstrap=True,
+        )
+        makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding="utf-8",
+        )
+        tm.that(makefile, has="export GITHUB_TOKEN")
+        tm.that(makefile, lacks=["gh auth", "gh_auth_token"])
 
     @staticmethod
     def test_public_gate_fails_closed_before_managed_environment_exists(

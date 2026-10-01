@@ -1,4 +1,8 @@
-"""Centralized constants for the docs subpackage."""
+"""Centralized constants for the docs subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -55,7 +59,10 @@ class FlextInfraConstantsDocs:
         "tel",
     })
     DOCS_FRAGMENT_PREFIX: ClassVar[str] = "#"
-    PYTHON_FENCE_RUFF_EXTEND_IGNORE: ClassVar[t.StrSequence] = ("D100", "INP001")
+    PYTHON_FENCE_RUFF_EXTEND_IGNORE: ClassVar[t.StrSequence] = (
+        "undocumented-public-module",
+        "implicit-namespace-package",
+    )
     """Only module-docstring and package rules are inapplicable to a
     standalone Markdown fence. All names, behavior, types, and security
     rules remain active and require correction in the authored source."""

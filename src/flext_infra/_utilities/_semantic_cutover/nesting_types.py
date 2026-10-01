@@ -1,4 +1,8 @@
-"""Identity-preserving quoted type edits for class movement and nesting."""
+"""Identity-preserving quoted type edits for class movement and nesting.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -164,7 +168,12 @@ class FlextInfraUtilitiesSemanticNestingTypes(
 
     @classmethod
     def _captured_names(cls, module: p.Infra.RopePyModule) -> frozenset[str]:
-        """Collect identifiers any nested scope binds over the module level."""
+        """Collect identifiers any nested scope binds over the module level.
+
+        Returns:
+            The resulting ``frozenset[str]``.
+
+        """
         captured: set[str] = set()
 
         class Visitor(ast.NodeVisitor):
@@ -235,7 +244,17 @@ class FlextInfraUtilitiesSemanticNestingTypes(
 
     @classmethod
     def _checked_type_reference(cls, scope: p.Infra.RopeScope, expression: str) -> str:
-        """Reject a destination import captured by an existing lexical binding."""
+        """Reject a destination import captured by an existing lexical binding.
+
+        Returns:
+            The resulting ``str``.
+
+        Raises:
+            TypeError: If quoted type destination is not an identifier chain.
+            ValueError: If quoted type scope has no declaring module; or if shadowed
+                quoted type destination.
+
+        """
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         node = ast.parse(expression, mode="eval").body
         while isinstance(node, ast.Attribute):

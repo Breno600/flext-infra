@@ -1,4 +1,8 @@
-"""Repository-local codegen extension contracts."""
+"""Repository-local codegen extension contracts.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -273,7 +277,7 @@ class TestsFlextInfraCodegenCatalogExtensions:
         )
         toolchain = config.Infra.codegen.toolchain
         mise = tm.not_none(u.Tests.planned_text(plan, c.Infra.MISE_TOML_FILENAME))
-        tm.that(mise, has=f'python = "{toolchain.python_tool_version}"')
+        tm.that(mise, has=f'python = "{toolchain.python_version}"')
         tm.that(mise, has=f'direnv = "{toolchain.direnv_version}"')
         tm.that(mise, has=f'go = "{toolchain.go_version}"')
         tm.that(mise, has=f'make = "{toolchain.make_version}"')
@@ -321,6 +325,7 @@ class TestsFlextInfraCodegenCatalogExtensions:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test local manifest conforms without global repository rows."""
         root = self._repository(
             "acme-platform",
             path=".",

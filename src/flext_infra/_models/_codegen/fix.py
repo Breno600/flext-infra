@@ -1,4 +1,8 @@
-"""Auto-fix, consolidation, and namespace policy models."""
+"""Auto-fix, consolidation, and namespace policy models.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -298,5 +302,10 @@ class FlextInfraModelsCodegenFixModels:
         ]
 
         def __hash__(self) -> int:
-            """Hash by stable business identity so keys work in sets and frozensets."""
+            """Hash by stable business identity so keys work in sets and frozensets.
+
+            Returns:
+                The resulting ``int``.
+
+            """
             return hash((self.module, self.rule, self.content_hash))

@@ -1,4 +1,8 @@
-"""Render the canonical focused pytest cProfile artifact."""
+"""Render the canonical focused pytest cProfile artifact.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -14,7 +18,12 @@ class FlextInfraCProfileEntry:
 
     @staticmethod
     def main() -> int:
-        """Dispatch focused or explicitly receipted profiles to the report owner."""
+        """Dispatch focused or explicitly receipted profiles to the report owner.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         report_root = Path.cwd().resolve() / ".reports" / "cprofile"
         profile_path = (
             Path(sys.argv[1]) if len(sys.argv) > 1 else report_root / "pytest.pstats"

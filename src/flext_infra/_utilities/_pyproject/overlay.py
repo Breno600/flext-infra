@@ -1,4 +1,8 @@
-"""Preserve live CUSTOM project keys and unmanaged tool tables over renders."""
+"""Preserve live CUSTOM project keys and unmanaged tool tables over renders.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -29,7 +33,12 @@ class FlextInfraUtilitiesPyprojectOverlay:
         preserve_project_keys: t.StrSequence | None = None,
         managed_tool_tables: t.StrSequence | None = None,
     ) -> p.Result[str]:
-        """Keep live CUSTOM project keys and unmanaged tool tables."""
+        """Keep live CUSTOM project keys and unmanaged tool tables.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         spec = FlextInfraUtilitiesManagedConflicts.pyproject_managed_file()
         if spec.failure:
             return r[str].from_failure(spec)

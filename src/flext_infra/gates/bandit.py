@@ -1,4 +1,8 @@
-"""FLEXT bandit quality gate."""
+"""FLEXT bandit quality gate.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -30,7 +34,12 @@ class FlextInfraBanditGate(FlextInfraGate):
 
     @override
     def selected_for(self, project_dir: Path) -> bool:
-        """Only a project with a ``src`` package surface selects bandit."""
+        """Only a project with a ``src`` package surface selects bandit.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         return (project_dir / c.Infra.DEFAULT_SRC_DIR).is_dir()
 
     @override
@@ -39,7 +48,12 @@ class FlextInfraBanditGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
-        """Get check dirs."""
+        """Get check dirs.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         _ = ctx
         if not (project_dir / c.Infra.DEFAULT_SRC_DIR).exists():
             return []
@@ -52,7 +66,12 @@ class FlextInfraBanditGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Parse check output."""
+        """Parse check output.
+
+        Returns:
+            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
+
+        """
         del project_dir, ctx
         issues: t.MutableSequenceOf[m.Infra.Issue] = []
         if not u.Cli.process_succeeded(result.outcome) and not result.stdout.strip():
@@ -92,7 +111,12 @@ class FlextInfraBanditGate(FlextInfraGate):
 
     @staticmethod
     def _parse_bandit_payload(stdout: str) -> p.Result[t.MappingKV[str, t.JsonValue]]:
-        """Parse Bandit JSON stdout into a typed payload mapping."""
+        """Parse Bandit JSON stdout into a typed payload mapping.
+
+        Returns:
+            The resulting ``p.Result[t.MappingKV[str, t.JsonValue]]``.
+
+        """
         parsed_result = u.Cli.json_parse(stdout)
         if parsed_result.failure:
             return r[t.MappingKV[str, t.JsonValue]].from_failure(parsed_result)
@@ -112,6 +136,10 @@ class FlextInfraBanditGate(FlextInfraGate):
         Bandit fails its run on every reported result, so each one is a
         blocking gate finding; Bandit's own LOW/MEDIUM/HIGH rating is not the
         gate severity vocabulary and stays in the raw report.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.Issue]``.
+
         """
         return tuple(
             m.Infra.Issue(
@@ -129,12 +157,17 @@ class FlextInfraBanditGate(FlextInfraGate):
 
     @staticmethod
     def _parse_error_issue(message: str) -> m.Infra.Issue:
-        """Build the canonical Bandit output parse issue."""
+        """Build the canonical Bandit output parse issue.
+
+        Returns:
+            The resulting ``m.Infra.Issue``.
+
+        """
         return m.Infra.Issue(
             file="<bandit-output>",
             line=0,
             column=0,
-            code="PARSE_ERROR",
+            code=c.Infra.ToolOutcome.ERROR.value,
             message=message,
             severity="ERROR",
         )

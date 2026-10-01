@@ -1,4 +1,8 @@
-"""Public dependency mutation against a real provisioned UV project."""
+"""Public dependency mutation against a real provisioned UV project.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -16,10 +20,13 @@ pytestmark = [pytest.mark.slow, pytest.mark.remote]
 
 
 class TestsFlextInfraDepsDetectorMain:
+    """Tests for ``FlextInfraDepsDetectorMain``."""
+
     @staticmethod
     def test_run_without_typings_skips_typings_detection(
         real_detector_project: Path,
     ) -> None:
+        """Test run without typings skips typings detection."""
         root = real_detector_project
         before = (root / "pyproject.toml").read_bytes()
         outcome = tm.ok(u.Tests.run_real_detector(root, "--no-pip-check"))
@@ -62,6 +69,7 @@ class TestsFlextInfraDepsDetectorMain:
         self,
         real_detector_project: Path,
     ) -> None:
+        """Test apply typings follows governed policy and preserves source."""
         root = real_detector_project
         followed = config.Infra.tooling.tools.mypy.boolean_settings.get(
             c.Infra.MYPY_FOLLOW_UNTYPED_IMPORTS,
@@ -172,6 +180,7 @@ class TestsFlextInfraDepsDetectorMain:
     def test_apply_typings_dry_run_preserves_source_and_lock(
         real_detector_project: Path,
     ) -> None:
+        """Test apply typings dry run preserves source and lock."""
         root = real_detector_project
         paths = (root / "pyproject.toml", root / "uv.lock")
         before = tuple(path.read_bytes() for path in paths)
@@ -187,6 +196,7 @@ class TestsFlextInfraDepsDetectorMain:
 
     @staticmethod
     def test_main_returns_failure_code_on_run_failure() -> None:
+        """Test main returns failure code on run failure."""
         tm.that(
             main([
                 "deps",
@@ -215,6 +225,7 @@ class TestsFlextInfraDepsDetectorMain:
     def test_member_without_own_venv_fails_closed_not_parent_environment(
         real_detector_project: Path,
     ) -> None:
+        """Test member without own venv fails closed not parent environment."""
         root = real_detector_project
         member = u.Tests.mk_project(
             root,

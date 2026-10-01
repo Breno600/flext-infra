@@ -27,7 +27,12 @@ class FlextInfraCodemodAstScan(FlextInfraServiceBase[t.Cli.ResultValue]):
 
     @override
     def execute(self) -> p.Result[t.Cli.ResultValue]:
-        """Report or apply both mechanical cascades of the ast engine."""
+        """Report or apply both mechanical cascades of the ast engine.
+
+        Returns:
+            The resulting ``p.Result[t.Cli.ResultValue]``.
+
+        """
         planned = u.Infra.codemod_rule_plan(self.repository_root)
         if planned.failure:
             return r[t.Cli.ResultValue].from_failure(planned)
@@ -79,7 +84,12 @@ class FlextInfraCodemodAstScan(FlextInfraServiceBase[t.Cli.ResultValue]):
         root: Path,
         rules: t.SequenceOf[Path],
     ) -> p.Result[t.Cli.ResultValue]:
-        """Drive both mechanical cascades to a fixed point, retaining failures."""
+        """Drive both mechanical cascades to a fixed point, retaining failures.
+
+        Returns:
+            The resulting ``p.Result[t.Cli.ResultValue]``.
+
+        """
         cli.display_text("ast: validate ast-grep rule fixtures")
         FlextInfraModGateEngine.validate_rule_fixtures(root, rules).unwrap()
         current = FlextInfraModGateEngine.scan(root, fix=False).unwrap()

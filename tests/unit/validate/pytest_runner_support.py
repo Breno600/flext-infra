@@ -1,4 +1,8 @@
-"""Shared runtime helpers for the public pytest runner test modules."""
+"""Shared runtime helpers for the public pytest runner test modules.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -18,7 +22,12 @@ def runner_for(
     profile_collection: bool = False,
     slow_phase: bool = False,
 ) -> FlextInfraPytestRunner:
-    """Bind one runner to the fixture project's canonical cache paths."""
+    """Bind one runner to the fixture project's canonical cache paths.
+
+    Returns:
+        The resulting ``FlextInfraPytestRunner``.
+
+    """
     cache = config.Infra.codegen.make.testmon_cache
     testmon_db = (
         cached_runner_project.parent
@@ -80,7 +89,15 @@ def declare_parallel_project(project_root: Path) -> None:
 
 
 def profile_parent(runner: FlextInfraPytestRunner, output: Path) -> int:
-    """Exercise the real -m entry in a fresh process with the Make-owned inputs."""
+    """Exercise the real -m entry in a fresh process with the Make-owned inputs.
+
+    Returns:
+        The resulting ``int``.
+
+    Raises:
+        RuntimeError: If ``not u.Cli.process_succeeded(outcome)``.
+
+    """
     output.parent.mkdir(parents=True, exist_ok=True)
     policy = config.Infra.tooling.tools.pytest
     cache = config.Infra.codegen.make.testmon_cache
@@ -115,7 +132,12 @@ def profile_collection(
     receipt: Path,
     arguments: t.StrTuple,
 ) -> p.Cli.CommandOutput:
-    """Use the real child transport invoked by the canonical profiling runner."""
+    """Use the real child transport invoked by the canonical profiling runner.
+
+    Returns:
+        The resulting ``p.Cli.CommandOutput``.
+
+    """
     return tm.ok(
         u.Cli.run_raw(
             (
@@ -134,6 +156,11 @@ def profile_collection(
 
 
 def summary(reports_root: Path) -> str:
-    """Read the latest report summary through the files facade."""
+    """Read the latest report summary through the files facade.
+
+    Returns:
+        The resulting ``str``.
+
+    """
     latest_name = tm.ok(u.Cli.files_read_text(reports_root / "latest.txt")).strip()
     return tm.ok(u.Cli.files_read_text(reports_root / latest_name / "summary.txt"))

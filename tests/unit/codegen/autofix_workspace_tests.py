@@ -38,6 +38,7 @@ class TestsFlextInfraCodegenAutofixWorkspace:
 
     @pytest.mark.slow
     def test_project_without_pyproject_excluded_from_run(self, tmp_path: Path) -> None:
+        """Test project without pyproject excluded from run."""
         external_project = tmp_path / "external-project"
         external_project.mkdir()
         (external_project / "Makefile").touch()
@@ -67,6 +68,7 @@ class TestsFlextInfraCodegenAutofixWorkspace:
         tm.that(project_names, has="test-proj")
 
     def test_project_without_src_returns_empty(self, tmp_path: Path) -> None:
+        """Test project without src returns empty."""
         project = tmp_path / "no-src-proj"
         project.mkdir()
         (project / "Makefile").touch()
@@ -82,6 +84,7 @@ class TestsFlextInfraCodegenAutofixWorkspace:
         tm.that(result.files_modified, empty=True)
 
     def test_files_modified_tracks_affected_files(self, tmp_path: Path) -> None:
+        """Test files modified tracks affected files."""
         project = u.Tests.create_codegen_project(
             tmp_path=tmp_path,
             name="test-proj",

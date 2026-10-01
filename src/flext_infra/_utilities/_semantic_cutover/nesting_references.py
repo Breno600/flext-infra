@@ -1,4 +1,8 @@
-"""Binding-aware reference rewrites for automatic class nesting."""
+"""Binding-aware reference rewrites for automatic class nesting.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -26,7 +30,12 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
         bindings_by_module: t.MappingKV[str, t.StrMapping],
         definitions: t.StrMapping,
     ) -> str:
-        """Return binding-proven import and usage rewrites without effects."""
+        """Return binding-proven import and usage rewrites without effects.
+
+        Returns:
+            Binding-proven import and usage rewrites without effects.
+
+        """
         import libcst as cst
         from libcst.metadata import (
             MetadataWrapper,
@@ -69,6 +78,13 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
                 aliases parsed from valid Python can only carry a ``Name``
                 (``import x as (a, b)`` is a SyntaxError); Tuple/List belong to
                 ``WithItem``/``ExceptHandler`` clauses only.
+
+                Returns:
+                    The bound alias identifier, rejecting impossible shapes.
+
+                Raises:
+                    TypeError: If unsupported import alias target.
+
                 """
                 if not isinstance(asname.name, cst.Name):
                     msg = (
@@ -122,6 +138,10 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
                 Walking outward, a function boundary therefore means qualify, and a
                 class that is the owner or is itself being moved under the owner
                 means the reference will land in that shared class scope.
+
+                Returns:
+                    The resulting ``bool``.
+
                 """
                 current: cst.CSTNode | None = self.get_metadata(
                     ParentNodeProvider,
@@ -149,6 +169,13 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
 
                 ``None`` when the node carries no nesting binding; two competing
                 bindings are ambiguous and raise with ``ambiguity`` naming the site.
+
+                Returns:
+                    The one class-nesting replacement bound to ``original_node``.
+
+                Raises:
+                    ValueError: If ambiguous class-nesting.
+
                 """
                 replacements = {
                     replacement

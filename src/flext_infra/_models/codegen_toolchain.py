@@ -1,4 +1,8 @@
-"""Toolchain layout and observed-state contracts for code generation."""
+"""Toolchain layout and observed-state contracts for code generation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -190,7 +194,15 @@ class FlextInfraModelsCodegenToolchain:
 
         @u.model_validator(mode="after")
         def _validate_destination_paths(self) -> Self:
-            """Bind every captured state to its declared live destination."""
+            """Bind every captured state to its declared live destination.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If Mise project states differ from declared destinations.
+
+            """
             expected = (
                 self.layout.artifacts.config,
                 self.layout.artifacts.unix_launcher,
@@ -270,7 +282,15 @@ class FlextInfraModelsCodegenToolchain:
 
         @u.model_validator(mode="after")
         def _validate_project_layouts(self) -> Self:
-            """Bind every mutable project snapshot to the exact stable layout."""
+            """Bind every mutable project snapshot to the exact stable layout.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If Mise project snapshots differ from workspace layout.
+
+            """
             if (
                 tuple(project.layout for project in self.projects)
                 != self.layout.projects

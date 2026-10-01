@@ -1,4 +1,8 @@
-"""Gitignore rendering utilities for ``u.Infra``."""
+"""Gitignore rendering utilities for ``u.Infra``.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -13,13 +17,26 @@ class FlextInfraUtilitiesGitignore:
 
     @staticmethod
     def codegen_templates_root(codegen: m.Infra.CodegenConfigSpec) -> Path:
-        """Return the resolved template root of the installed flext-infra package."""
+        """Return the resolved template root of the installed flext-infra package.
+
+        Returns:
+            The resolved template root of the installed flext-infra package.
+
+        """
         package_root = Path(__file__).resolve().parent.parent
         return (package_root / "templates" / codegen.templates.root).resolve()
 
     @staticmethod
     def codegen_template_sources(codegen: m.Infra.CodegenConfigSpec) -> frozenset[Path]:
-        """Resolve only manifest-declared template inputs, never output suffixes."""
+        """Resolve only manifest-declared template inputs, never output suffixes.
+
+        Returns:
+            The resulting ``frozenset[Path]``.
+
+        Raises:
+            ValueError: If declared template source escapes its owner root.
+
+        """
         root = FlextInfraUtilitiesGitignore.codegen_templates_root(codegen)
         sources: set[Path] = set()
         for entry in codegen.templates.entries:
@@ -45,6 +62,10 @@ class FlextInfraUtilitiesGitignore:
 
         Pure function: takes codegen spec + profile + name + workspace + project_dir,
         returns rendered gitignore string via u.Cli.template_render.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
         """
         from flext_infra import u
 
@@ -99,6 +120,10 @@ class FlextInfraUtilitiesGitignore:
         renderer of ``base/gitignore.j2`` (conform planning, the layout engine,
         ``codegen new``) consumes this projection, so the layout gate can never
         demand a pattern that ``make gen`` does not materialize.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.ScaffoldGitignoreSectionSpec]``.
+
         """
         sections = [
             section

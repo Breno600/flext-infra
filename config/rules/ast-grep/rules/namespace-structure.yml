@@ -307,7 +307,12 @@ message: >-
   The protocols facade is TYPE_CHECKING-only in a settings layer.
 ---
 # Imports of the own package keep their names: an alias renames a published
-# facade or module for one file.
+# facade or module for one file. Under TYPE_CHECKING, binding one of the
+# project's runtime letters to its facade class is the canonical letter
+# binding (operator-ruling-2026-10-01-facade-rebind-mypy-scope): a facade that
+# rebinds its letter leaves mypy the upstream binding, so static analyzers
+# receive the class itself. The branch captures the letter as $LETTER and the
+# engine admits the finding only when it is not a runtime letter.
 id: ban-local-import-alias
 language: python
 severity: error
@@ -317,17 +322,35 @@ metadata:
   context:
     MODULE:
       is: own-package
+    LETTER:
+      not: local-alias
 rule:
   kind: aliased_import
   any:
-    - inside:
-        kind: import_from_statement
-        has:
-          field: module_name
-          pattern: $MODULE
-    - has:
-        field: name
-        pattern: $MODULE
+    - not:
+        matches: inside-type-checking-guard
+      any:
+        - inside:
+            kind: import_from_statement
+            has:
+              field: module_name
+              pattern: $MODULE
+        - has:
+            field: name
+            pattern: $MODULE
+    - matches: inside-type-checking-guard
+      has:
+        field: alias
+        pattern: $LETTER
+      any:
+        - inside:
+            kind: import_from_statement
+            has:
+              field: module_name
+              pattern: $MODULE
+        - has:
+            field: name
+            pattern: $MODULE
 message: >-
   Local import aliases are forbidden: import the own package's names as
   published.

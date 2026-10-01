@@ -1,4 +1,8 @@
-"""Verify ci.yml installs the runner packages a distribution declares."""
+"""Verify ci.yml installs the runner packages a distribution declares.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,7 +10,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import c, u
+from flext_infra import c
 from tests import t, u
 
 
@@ -31,6 +35,7 @@ class TestsFlextInfraCiSystemPackages:
         return tm.ok(u.Cli.template_render(cls.ci_template, spec))
 
     def test_declared_packages_render_one_install_step_before_the_gates(self) -> None:
+        """Test declared packages render one install step before the gates."""
         rendered = self._render_ci(system_packages=("engine-calc", "engine-fonts"))
 
         tm.that(rendered.count(self.step_name), eq=1)
@@ -44,6 +49,7 @@ class TestsFlextInfraCiSystemPackages:
         )
 
     def test_no_declaration_renders_no_install_step(self) -> None:
+        """Test no declaration renders no install step."""
         rendered = self._render_ci(system_packages=())
 
         tm.that(rendered, lacks=self.step_name)

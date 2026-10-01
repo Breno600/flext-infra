@@ -1,4 +1,8 @@
-"""Repository-local topology and Beads identity contracts."""
+"""Repository-local topology and Beads identity contracts.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,7 +23,12 @@ class TestsFlextInfraRepositoryLocalTopology:
 
     @staticmethod
     def _beads_fixture_root(tmp_path: Path, directory: str) -> Path:
-        """Initialize one governed checkout carrying the canonical Beads identity."""
+        """Initialize one governed checkout carrying the canonical Beads identity.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         return u.Tests.WorktreeFixture.governed_workspace(
             tmp_path,
             directory,
@@ -31,7 +40,12 @@ class TestsFlextInfraRepositoryLocalTopology:
 
     @staticmethod
     def _beads_fixture_payload() -> t.MutableMappingKV[str, t.JsonValue]:
-        """Return the canonical Beads identity payload a fixture checkout declares."""
+        """Return the canonical Beads identity payload a fixture checkout declares.
+
+        Returns:
+            The canonical Beads identity payload a fixture checkout declares.
+
+        """
         return {
             "version": 1,
             "workspace": "fixture-workspace",
@@ -41,7 +55,12 @@ class TestsFlextInfraRepositoryLocalTopology:
 
     @staticmethod
     def _self_named_governed_root(tmp_path: Path, directory: str) -> Path:
-        """Initialize one governed checkout whose identity derives from its directory."""
+        """Initialize one governed checkout whose identity derives from its directory.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         name = f"fixture-{directory}"
         return u.Tests.WorktreeFixture.governed_workspace(
             tmp_path,
@@ -340,7 +359,12 @@ class TestsFlextInfraRepositoryLocalTopology:
 
     @staticmethod
     def _attached_member(tmp_path: Path) -> Path:
-        """Attach a governed member to a parent workspace and return its path."""
+        """Attach a governed member to a parent workspace and return its path.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         child_source = tmp_path / "child-source"
         u.Tests.WorktreeFixture.initialize_governed_project(
             child_source,

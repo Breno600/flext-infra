@@ -1,4 +1,8 @@
-"""Public planning contracts for immutable Rope family flattening."""
+"""Public planning contracts for immutable Rope family flattening.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -24,6 +28,7 @@ class TestsFlextInfraFamilyFlatten:
         *,
         collision: bool,
     ) -> None:
+        """Test snapshot rewrites alias and inherited consumers without effects."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         directory = u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory
         family = package / directory
@@ -106,6 +111,7 @@ class TestsFlextInfraFamilyFlatten:
         tmp_path: Path,
         entity: str,
     ) -> None:
+        """Test entity classes are not namespace wrappers."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         family = (
             package / u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory
@@ -134,6 +140,7 @@ class TestsFlextInfraFamilyFlatten:
         tmp_path: Path,
         reference: str,
     ) -> None:
+        """Test wrapper used as an entity is preserved without edits."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         directory = u.Infra.facade_family_declared_by(c.Infra.CONSTANTS_PY).directory
         family = package / directory
@@ -160,6 +167,7 @@ class TestsFlextInfraFamilyFlatten:
     def test_flatten_removes_wrapper_docstring_and_promotes_alias_member(
         tmp_path: Path,
     ) -> None:
+        """Test flatten removes wrapper docstring and promotes alias member."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         family = (
             package / u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory

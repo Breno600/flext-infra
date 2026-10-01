@@ -1,4 +1,8 @@
-"""Test extra paths sync behavior."""
+"""Test extra paths sync behavior.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,7 +23,12 @@ class TestsFlextInfraDepsExtraPathsSync:
 
     @pytest.fixture
     def pyright_content(self) -> str:
-        """Provide minimal Pyright configuration content."""
+        """Provide minimal Pyright configuration content.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return "[tool.pyright]\nextraPaths = []\n"
 
     @staticmethod

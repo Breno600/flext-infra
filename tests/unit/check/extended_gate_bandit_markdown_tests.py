@@ -1,4 +1,8 @@
-"""Public Bandit and Markdown gate behavior against the real lane tools."""
+"""Public Bandit and Markdown gate behavior against the real lane tools.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -36,6 +40,7 @@ class TestsFlextInfraBanditAndMarkdownGates:
 
     @staticmethod
     def test_bandit_reports_real_finding(tmp_path: Path) -> None:
+        """Test bandit reports real finding."""
         project_dir = u.Tests.mk_project(tmp_path, "bandit-project")
         (project_dir / c.Infra.DEFAULT_SRC_DIR).mkdir()
         (project_dir / c.Infra.DEFAULT_SRC_DIR / "main.py").write_text(
@@ -94,7 +99,7 @@ class TestsFlextInfraBanditAndMarkdownGates:
         ("markdown_text", "config_text", "findings_block", "codes"),
         [
             (HEADING_SKIP, None, True, ["MD001"]),
-            ("# Test\n", '{"broken": [', True, ["TOOL_ERROR"]),
+            ("# Test\n", '{"broken": [', True, [c.Infra.ToolOutcome.ERROR]),
             # A residual MD013 reflow finding remains blocking when the
             # formatter cannot normalize the paragraph.
             (
@@ -126,6 +131,7 @@ class TestsFlextInfraBanditAndMarkdownGates:
         findings_block: bool,
         codes: t.StrSequence,
     ) -> None:
+        """Test markdown check."""
         project_dir = u.Tests.mk_project(tmp_path, "markdown-project")
         if markdown_text:
             (project_dir / "README.md").write_text(markdown_text, encoding="utf-8")

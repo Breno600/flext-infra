@@ -1,4 +1,8 @@
-"""Domain models for the workspace subpackage."""
+"""Domain models for the workspace subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -51,25 +55,30 @@ class FlextInfraModelsWorkspace:
 
         repository_root: Annotated[Path, m.Field(description="Repository root path")]
 
-    class SuperprojectGovernance(m.ContractModel):
-        """Resolved superproject facts shared by every composed member load."""
+    class SubprojectLoadContext(m.ContractModel):
+        """Workspace governance scope shared by every declared subproject entry."""
 
-        root: Annotated[Path, m.Field(description="Superproject repository root")]
         integration_branch: Annotated[
             str | None,
-            m.Field(description="Resolved workspace integration branch"),
+            m.Field(
+                description=(
+                    "Resolved workspace integration line; absent defers to the "
+                    "provider's conventional branch fallback"
+                ),
+            ),
         ] = None
-        beads: Annotated[
+        workspace_beads: Annotated[
             FlextInfraConfigModels.BeadsProjectSpec | None,
-            m.Field(description="Workspace Beads ledger spec"),
+            m.Field(description="Workspace Beads ledger spec; absent disables routing"),
         ] = None
-        members: Annotated[
-            t.MappingKV[Path, FlextInfraConfigModels.RepositoryRef],
-            m.Field(description="Manifest member identities indexed by path"),
-        ]
         allow_unprovisioned_members: Annotated[
             bool,
-            m.Field(description="Permit declared members before checkout setup"),
+            m.Field(
+                description=(
+                    "Whether declared Python members may stay unprovisioned "
+                    "checkouts while CI omits them deliberately"
+                ),
+            ),
         ] = False
 
     class EnvironmentContractViolation(mm.PositiveLineMixin, m.ContractModel):

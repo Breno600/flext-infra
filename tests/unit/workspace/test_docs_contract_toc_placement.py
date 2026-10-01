@@ -1,4 +1,8 @@
-"""Managed TOC placement must never precede the document's level-1 heading."""
+"""Managed TOC placement must never precede the document's level-1 heading.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

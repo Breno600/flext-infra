@@ -1,4 +1,8 @@
-"""Canonical Git worktree composition for ``u.Infra``."""
+"""Canonical Git worktree composition for ``u.Infra``.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

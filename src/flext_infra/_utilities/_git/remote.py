@@ -1,4 +1,8 @@
-"""Git remote credential redaction."""
+"""Git remote credential redaction.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -28,7 +32,12 @@ class FlextInfraUtilitiesGitRemote:
 
     @classmethod
     def redact_origin_remote(cls, url: str) -> str:
-        """Remove credentials and sensitive query values from a remote URL."""
+        """Remove credentials and sensitive query values from a remote URL.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         value = url.strip()
         parsed = urlsplit(value)
         userinfo, marker, host = parsed.netloc.rpartition("@")
@@ -52,7 +61,12 @@ class FlextInfraUtilitiesGitRemote:
 
     @classmethod
     def canonical_origin_remote(cls, url: str) -> str:
-        """Return one transport-stable repository identity for a remote URL."""
+        """Return one transport-stable repository identity for a remote URL.
+
+        Returns:
+            One transport-stable repository identity for a remote URL.
+
+        """
         value = cls.redact_origin_remote(url)
         parsed = urlsplit(value)
         if (

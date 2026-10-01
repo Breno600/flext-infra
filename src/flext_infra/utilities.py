@@ -34,6 +34,7 @@ from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
 from flext_infra._utilities.docs_validate import FlextInfraUtilitiesDocsValidate
 from flext_infra._utilities.git import FlextInfraUtilitiesGit
 from flext_infra._utilities.iteration import FlextInfraUtilitiesIteration
+from flext_infra._utilities.lint_recipes import FlextInfraUtilitiesLintRecipes
 from flext_infra._utilities.log_parser import FlextInfraUtilitiesLogParser
 from flext_infra._utilities.managed_conflicts import FlextInfraUtilitiesManagedConflicts
 from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
@@ -153,6 +154,7 @@ class FlextInfraUtilities(FlextCliUtilities):
         FlextInfraUtilitiesDeferredSelfReferenceRewrite,
         FlextInfraUtilitiesGit,
         FlextInfraUtilitiesIteration,
+        FlextInfraUtilitiesLintRecipes,
         FlextInfraUtilitiesLogParser,
         FlextInfraUtilitiesManagedConflicts,
         FlextInfraUtilitiesSemanticCutover,

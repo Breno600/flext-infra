@@ -1,4 +1,8 @@
-"""Conservative binding proof for canonical model-field boundary guards."""
+"""Conservative binding proof for canonical model-field boundary guards.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -16,7 +20,14 @@ class FlextInfraUtilitiesSemanticCutoverModelFieldsBindings(
 
     @classmethod
     def _require_unshadowed_guard(cls, tree: ast.Module) -> None:
-        """Require every referenced builtin and the imported guard to be unbound."""
+        """Require every referenced builtin and the imported guard to be unbound.
+
+        Raises:
+            ValueError: If model-class narrowing conflicts with a local binding; or if
+                model-class narrowing cannot resolve wildcard imports; or if model-class
+                guard dependency has a different owner.
+
+        """
         required = {"u", "isinstance", "type", "getattr", "object", "dict"}
         for node in ast.walk(tree):
             if not isinstance(node, ast.ImportFrom) and required.intersection(

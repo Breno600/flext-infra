@@ -1,5 +1,8 @@
 """Work-in-progress merge law: a WIP head never merges into integration.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 The runtime surface is the generated CI ``merge-guard`` job, owned by
 config/codegen.yaml (``Infra.codegen.make.work_in_progress``). A GitHub Draft
 selects no job at all; a non-draft PR whose head commit subject matches a WIP
@@ -52,14 +55,24 @@ class TestsWorkInProgressGates:
 
     @staticmethod
     def _merge_guard_script() -> str:
-        """Extract the rendered merge-guard run script from the repo projection."""
+        """Extract the rendered merge-guard run script from the repo projection.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         section = _RENDERED_CI.read_text(encoding="utf-8").split("merge-guard:", 1)[1]
         body = section.split("run: |", 1)[1].split("# End SECTION: merge-guard job")[0]
         return "".join(line[10:] + "\n" for line in body.splitlines() if line.strip())
 
     @classmethod
     def _guard(cls, root: Path, subject: str, base: str) -> p.Result[str]:
-        """Run the committed guard against one real head commit subject."""
+        """Run the committed guard against one real head commit subject.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         test_u.Tests.git_bootstrap(root, ("commit", "--allow-empty", "-m", subject))
         with cls._base_ref(base):
             return u.Cli.capture(
