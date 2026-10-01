@@ -87,22 +87,17 @@ Infra:
         - macos-arm64
         - windows-x64
       # The Mise release `make upg` writes to every project's mise.version and
-      # bakes into bin/mise and bin/mise.cmd. Held at 2026.9.16: under the
-      # dependency cooldown `latest` resolves 2026.9.17, whose artifact fails
-      # the receipt check ("Mise receipt returned invalid version") and stops
-      # setup fleet-wide. Move to latest once the newest release outside the
-      # cooldown passes that check.
+      # bakes into bin/mise and bin/mise.cmd: `latest` under the dependency
+      # cooldown, or a held release (with its reason here) while the newest
+      # release outside the cooldown fails the receipt check.
       mise_selector: github:jdx/mise
-      mise_version: "2026.9.16"
+      mise_version: latest
       # Projection: .mise.toml [tools] keys. Override the selector here.
       qlty_selector: github:qltysh/qlty
       qlty_version: latest
       node_version: latest
       jscpd_selector: github:kucherenko/jscpd
-      # Held at 5.3.3 (#1303): the 5.4.0 release ships no assets for the
-      # fleet's six platforms, so mise cannot lock it and make upg fails
-      # fleet-wide. Move to latest once a 5.4.x release publishes them.
-      jscpd_version: "5.3.3"
+      jscpd_version: latest
       # Prettier is the markdown formatter (markdown-format gate): provisioned
       # through npm so the fleet binary version is owned by this SSOT alone.
       prettier_selector: npm:prettier
