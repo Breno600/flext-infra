@@ -527,11 +527,6 @@ class FlextInfraProtocolsBase(Protocol):
             """Moving Make release selector provisioned by mise."""
             ...
 
-        @property
-        def suspended_mise_selector_patterns(self) -> t.StrSequence:
-            """Selector families rejected while their capabilities are suspended."""
-            ...
-
     @runtime_checkable
     class TemplateEntrySpec(Protocol):
         """Template-entry fields consumed by scaffold root selection."""

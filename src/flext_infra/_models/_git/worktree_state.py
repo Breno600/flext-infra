@@ -90,18 +90,6 @@ class FlextInfraModelsGitWorktreeState:
             ),
         ]
 
-    class GitObservedFilePayload(m.ContractModel):
-        """Physical bytes and mode captured for a guarded file effect."""
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
-
-        path: Annotated[Path, m.Field(description="Repository-relative working path")]
-        content: Annotated[
-            bytes | None, m.Field(description="Physical file bytes or absent file")
-        ]
-        permissions: Annotated[int, m.Field(description="Observed permission bits")]
-        mode: Annotated[str, m.Field(description="Observed Git file mode")]
-
     class GitWorktreeStateSnapshot(m.ContractModel):
         """Scoped source identity and both independently measured layers."""
 

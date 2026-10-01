@@ -26,22 +26,22 @@ from flext_infra.validate.tier_whitelist import FlextInfraValidateTierWhitelist
 from ..api import infra
 
 
-def _validate_namespace_command(
-    request: m.Infra.NamespaceValidateCommand,
-) -> p.Result[m.Infra.ValidationReport]:
-    """Run namespace validation through the facade-owned Rope composition."""
-    result = infra.validate_namespace(request)
-    if result.failure:
-        return r[m.Infra.ValidationReport].from_failure(result)
-    report = result.unwrap()
-    if report.passed:
-        return r[m.Infra.ValidationReport].ok(report)
-    details = "\n".join((report.summary, *report.violations))
-    return r[m.Infra.ValidationReport].fail(details)
-
-
 class FlextInfraValidationCommandRoutes(FlextInfraCliRouteBase):
     """Own the complete validate command tuple."""
+
+    @staticmethod
+    def _validate_namespace_command(
+        request: m.Infra.NamespaceValidateCommand,
+    ) -> p.Result[m.Infra.ValidationReport]:
+        """Run namespace validation through the facade-owned Rope composition."""
+        result = infra.validate_namespace(request)
+        if result.failure:
+            return r[m.Infra.ValidationReport].from_failure(result)
+        report = result.unwrap()
+        if report.passed:
+            return r[m.Infra.ValidationReport].ok(report)
+        details = "\n".join((report.summary, *report.violations))
+        return r[m.Infra.ValidationReport].fail(details)
 
     validate_command_routes: ClassVar[t.VariadicTuple[m.Cli.ResultCommandRoute]] = (
         tuple(

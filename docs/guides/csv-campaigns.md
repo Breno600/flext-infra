@@ -15,7 +15,11 @@ then replay through this verb; do not edit a generated projection.
 When a candidate's Python package cannot import, the healthy Infra provider
 can run `make mod-text-candidate` after its workspace manifest declares exactly
 one `candidate_bootstrap_targets` entry. The same target declaration also
-supports `make bootstrap-candidate` to project the candidate Makefile.
+supports `make bootstrap-candidate` to project the declared recovery surface.
+For regexes that may match several identifiers, declare a named group and
+`capture_equals: {keyword: expected_name}` in the rule. The engine validates
+that the group exists and rejects a different captured value before publishing
+any rewrite in the batch.
 
 The public `make mod` circuit reads `Infra.refactor_csv_campaigns` from the packaged
 configuration. Each campaign keeps one `old,new` CSV as its rename source. Consumer

@@ -46,6 +46,13 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
         """Return the package name for a project directory (``flext-cli`` → ``flext_cli``)."""
         return project_dir.name.replace("-", "_")
 
+    @override
+    def selected_for(self, project_dir: Path) -> bool:
+        """The package that defines the canonical aliases never selects the gate."""
+        return self._normalized_project_name(project_dir) not in (
+            self._ALIAS_SOURCE_PACKAGES
+        )
+
     @staticmethod
     def _alias_files(project_dir: Path) -> p.Result[t.SequenceOf[Path]]:
         """Return Python files from configured namespace roots for alias checks.
@@ -76,12 +83,8 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
         """Scan one project's Python sources for ENFORCE-080 violations."""
         _ = ctx
         started = time.monotonic()
-        if self._normalized_project_name(project_dir) in self._ALIAS_SOURCE_PACKAGES:
-            return self._neutral_skip_result(
-                project_dir,
-                started,
-                message=f"{self.gate_id}: source package ({c.Infra.PKG_CORE_UNDERSCORE}) excluded from rewrite",
-            )
+        if not self.selected_for(project_dir):
+            return self._skip_result(project_dir, started)
         files_result = self._alias_files(project_dir)
         if files_result.failure:
             file_path_str = files_result.error or "canonical-alias scan failed"
@@ -143,12 +146,8 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
         if ctx.check_only or not ctx.apply_fixes:
             return self._check_only_fix_result(project_dir)
         started = time.monotonic()
-        if self._normalized_project_name(project_dir) in self._ALIAS_SOURCE_PACKAGES:
-            return self._neutral_skip_result(
-                project_dir,
-                started,
-                message=f"{self.gate_id}: source package ({c.Infra.PKG_CORE_UNDERSCORE}) excluded from rewrite",
-            )
+        if not self.selected_for(project_dir):
+            return self._skip_result(project_dir, started)
         files_result = self._alias_files(project_dir)
         if files_result.failure:
             message = files_result.error or "canonical-alias fix failed"

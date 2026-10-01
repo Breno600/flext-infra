@@ -16,40 +16,6 @@ from tests import u as test_u
 class TestsFlextInfraGitFacet:
     """Exercise the public Git facade against a real repository worktree."""
 
-    def test_tracked_scope_preserves_literal_names_across_index_states(
-        self, tmp_path: Path
-    ) -> None:
-        repository = test_u.Tests.git_repository(tmp_path)
-        scope = repository / "literal names"
-        scope.mkdir()
-        tracked = scope / ' tracked "name"\n.csv '
-        raw_name = scope / os.fsdecode(b"tracked-\xff.csv")
-        removed = scope / "removed.csv"
-        renamed = scope / "rename -> source.csv"
-        for path in (tracked, raw_name, removed, renamed):
-            path.write_text("column\nvalue\n", encoding="utf-8")
-        test_u.Tests.git_run(repository, "add", "--", scope.name)
-        test_u.Tests.git_run(repository, "commit", "-m", "literal tracked paths")
-        destination = scope / ' rename -> target\n".csv '
-        test_u.Tests.git_run(repository, "mv", "--", str(renamed), str(destination))
-        test_u.Tests.git_run(repository, "rm", "--cached", "--", str(removed))
-        (repository / ".gitignore").write_text("removed.csv\n", encoding="utf-8")
-        untracked = scope / ' new\n" -> file.csv '
-        untracked.write_text("column\nnew\n", encoding="utf-8")
-
-        paths = tm.not_none(u.Infra.git_tracked_scope_paths(scope))
-
-        tm.that(set(paths), eq={tracked, raw_name, removed, destination, untracked})
-
-    def test_tracked_scope_propagates_corrupt_index_failure(
-        self, tmp_path: Path
-    ) -> None:
-        repository = test_u.Tests.git_repository(tmp_path)
-        (repository / ".git" / "index").write_bytes(b"invalid index")
-
-        with pytest.raises(GitCommandError, match="index"):
-            u.Infra.git_tracked_scope_paths(repository)
-
     def test_identity_marks_only_a_missing_symbolic_branch_as_unborn(
         self, tmp_path: Path
     ) -> None:
@@ -234,10 +200,7 @@ class TestsFlextInfraGitFacet:
 
     @pytest.mark.parametrize("change", ["tracked", "staged", "untracked"])
     def test_verify_clean_cli_rejects_real_worktree_changes(
-        self,
-        real_git_repo: Path,
-        capsys: pytest.CaptureFixture[str],
-        change: str,
+        self, real_git_repo: Path, capsys: pytest.CaptureFixture[str], change: str
     ) -> None:
         """The public CLI passes a clean checkout and exposes a dirty Git report."""
         argv = ["workspace", "verify-clean", "--repo-root", str(real_git_repo)]

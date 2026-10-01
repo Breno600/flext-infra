@@ -37,7 +37,11 @@ class TestsFlextInfraCodegenPackagedDataWheel:
 
     @staticmethod
     def _prepare_project(
-        root: Path, *, package_config: bool, packaged_data_paths: tuple[str, ...] = ()
+        root: Path,
+        *,
+        package_config: bool,
+        packaged_data_paths: tuple[str, ...] = (),
+        packaged_data_excludes: tuple[str, ...] = (),
     ) -> None:
         """Materialize one governed project, optionally shipping in-package data."""
         _ = u.Tests.standalone_workspace(root, FIXTURE_DISTRIBUTION)
@@ -73,6 +77,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             FIXTURE_DISTRIBUTION,
             cli_module=False,
             packaged_data_paths=packaged_data_paths,
+            packaged_data_excludes=packaged_data_excludes,
         )
         u.Tests.git_bootstrap(
             root,
@@ -118,13 +123,26 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         )
 
     @staticmethod
-    def _sdist_only_include(root: Path) -> t.JsonList:
-        """Read the rendered sdist only-include list of the conformed project."""
+    def _sdist_include(root: Path) -> t.JsonList:
+        """Read the rendered sdist source patterns of the conformed project."""
         manifest = (root / c.PYPROJECT_FILENAME).read_text(encoding="utf-8")
         sdist = u.Tests.toml_table_at(
             manifest, c.Infra.TOOL, "hatch", "build", "targets", "sdist"
         )
-        return u.Tests.toml_list(sdist["only-include"])
+        return u.Tests.toml_list(sdist["include"])
+
+    @staticmethod
+    def _sdist_force_include(root: Path) -> t.JsonMapping:
+        """Read declared source files retained unchanged by the sdist."""
+        manifest = (root / c.PYPROJECT_FILENAME).read_text(encoding="utf-8")
+        sdist = u.Tests.toml_table_at(
+            manifest, c.Infra.TOOL, "hatch", "build", "targets", "sdist"
+        )
+        return (
+            u.Tests.toml_mapping(sdist["force-include"])
+            if "force-include" in sdist
+            else {}
+        )
 
     @pytest.mark.slow
     def test_declared_root_data_dir_stays_selected(self, infra_git_repo: Path) -> None:
@@ -159,7 +177,8 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             eq=False,
         )
         tm.that(
-            FIXTURE_DISTRIBUTION_DATA_DIR in self._sdist_only_include(infra_git_repo),
+            f"/{FIXTURE_DISTRIBUTION_DATA_DIR}/**"
+            in self._sdist_include(infra_git_repo),
             eq=False,
         )
 
@@ -183,7 +202,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             ),
             eq=f"{package_name}/infra",
         )
-        tm.that("infra" in self._sdist_only_include(infra_git_repo), eq=True)
+        tm.that("/infra/**" in self._sdist_include(infra_git_repo), eq=True)
 
     @pytest.mark.slow
     def test_undeclared_infrastructure_dir_stays_out_of_archives(
@@ -197,7 +216,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         tm.that(self._conform_self(infra_git_repo), eq=0)
 
         tm.that("infra" in self._wheel_force_include(infra_git_repo), eq=False)
-        tm.that("infra" in self._sdist_only_include(infra_git_repo), eq=False)
+        tm.that("/infra/**" in self._sdist_include(infra_git_repo), eq=False)
 
     @pytest.mark.slow
     def test_in_package_data_dir_is_never_force_included(
@@ -218,15 +237,16 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         force_include = self._wheel_force_include(infra_git_repo)
         tm.that(FIXTURE_DISTRIBUTION_DATA_DIR in force_include, eq=False)
         tm.that(
-            FIXTURE_DISTRIBUTION_DATA_DIR in self._sdist_only_include(infra_git_repo),
+            f"/{FIXTURE_DISTRIBUTION_DATA_DIR}/**"
+            in self._sdist_include(infra_git_repo),
             eq=False,
         )
         # The package copy still ships through the packages entry.
         package_name = u.Tests.project_spec(FIXTURE_DISTRIBUTION).package_name
         wheel = self._wheel_target(infra_git_repo)
         tm.that(
-            f"{c.Infra.DEFAULT_SRC_DIR}/{package_name}"
-            in u.Tests.toml_list(wheel["packages"]),
+            f"/{c.Infra.DEFAULT_SRC_DIR}/{package_name}/**"
+            in u.Tests.toml_list(wheel["include"]),
             eq=True,
         )
 
@@ -246,8 +266,8 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             self._wheel_force_include(infra_git_repo),
             eq={catalog: f"{package_name}/{catalog}"},
         )
-        tm.that(catalog in self._sdist_only_include(infra_git_repo), eq=True)
-        tm.that("config" in self._sdist_only_include(infra_git_repo), eq=False)
+        tm.that(self._sdist_force_include(infra_git_repo), eq={catalog: catalog})
+        tm.that("/config/**" in self._sdist_include(infra_git_repo), eq=False)
 
     @pytest.mark.slow
     @pytest.mark.parametrize(
@@ -281,6 +301,23 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         )
         before = (infra_git_repo / c.PYPROJECT_FILENAME).read_bytes()
         with pytest.raises(FileNotFoundError, match="packaged data"):
+            self._conform_self(infra_git_repo)
+        tm.that((infra_git_repo / c.PYPROJECT_FILENAME).read_bytes(), eq=before)
+
+    @pytest.mark.slow
+    def test_missing_exclusion_fails_before_effects(self, infra_git_repo: Path) -> None:
+        """An exclusion typo cannot leave a private file inside the archive."""
+        self._prepare_project(
+            infra_git_repo,
+            package_config=False,
+            packaged_data_paths=("infra",),
+            packaged_data_excludes=("infra/missing.json",),
+        )
+        tm.ok(
+            u.Cli.atomic_write_text_file(infra_git_repo / "infra" / "site.yml", "---\n")
+        )
+        before = (infra_git_repo / c.PYPROJECT_FILENAME).read_bytes()
+        with pytest.raises(ValueError, match="invalid packaged data exclusion"):
             self._conform_self(infra_git_repo)
         tm.that((infra_git_repo / c.PYPROJECT_FILENAME).read_bytes(), eq=before)
 
@@ -333,18 +370,21 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         """Direct wheel, sdist and rebuilt wheel carry the same selected bytes."""
         catalog = "config/deployment.yaml"
         asset = "infra/ansible/site.yml"
+        ignored = "infra/state.json"
         self._prepare_project(
-            infra_git_repo, package_config=False, packaged_data_paths=(catalog, "infra")
+            infra_git_repo,
+            package_config=False,
+            packaged_data_paths=(catalog, "infra"),
+            packaged_data_excludes=(ignored,),
         )
         tm.ok(u.Cli.atomic_write_text_file(infra_git_repo / catalog, "profiles: {}\n"))
         tm.ok(
             u.Cli.atomic_write_text_file(infra_git_repo / asset, "---\n- hosts: all\n")
         )
-        tm.that(self._conform_self(infra_git_repo), eq=0)
-        ignored = "infra/state.json"
         tm.ok(u.Cli.atomic_write_text_file(infra_git_repo / ignored, "private state\n"))
+        tm.that(self._conform_self(infra_git_repo), eq=0)
         with (infra_git_repo / ".gitignore").open("a", encoding="utf-8") as stream:
-            stream.write(f"\n/{ignored}\n")
+            stream.write(f"\n/{ignored}\n/{catalog}\n")
         output = infra_git_repo.parent / "artifacts"
         direct = output / "direct"
         source = output / "source"

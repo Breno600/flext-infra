@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import docs_main, main
+from flext_infra import FlextInfraCli, main
 from tests import u
 
 if TYPE_CHECKING:
@@ -63,7 +63,11 @@ class TestsFlextInfraAuditorCli:
         )
 
         argv = ["audit", "--repository-root", str(workspace)]
-        result = docs_main(argv) if package_entrypoint else main(["docs", *argv])
+        result = (
+            FlextInfraCli.docs_main(argv)
+            if package_entrypoint
+            else main(["docs", *argv])
+        )
         tm.that(result, eq=1)
         captured = capsys.readouterr()
         tm.that("Audit completed successfully" in captured.out + captured.err, eq=False)

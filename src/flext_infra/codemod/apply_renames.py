@@ -10,7 +10,7 @@ from flext_cli import cli
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
-from flext_infra.transformers import publish_semantic_file_plans
+from flext_infra.transformers import FlextInfraSemanticPublication
 
 from ._rename_sources import FlextInfraRenameSources
 from ._rename_symbols import FlextInfraRenameSymbols
@@ -130,7 +130,7 @@ class FlextInfraApplyRenames:
                 desired_mode=driver.mode,
                 changes=(),
             )
-            publication = publish_semantic_file_plans(
+            publication = FlextInfraSemanticPublication.publish_semantic_file_plans(
                 (*plans, driver_plan),
                 repository_root=Path(commonpath(roots)),
                 validator=verify,

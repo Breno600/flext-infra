@@ -28,7 +28,9 @@ class FlextInfraSilentFailureDetector:
         display_path = file_path
         if ctx.project_root is not None and file_path.is_relative_to(ctx.project_root):
             display_path = file_path.relative_to(ctx.project_root)
-        tree = _rope_module_ast(ctx.rope_project, resource)
+        tree = FlextInfraSilentFailureDetector._rope_module_ast(
+            ctx.rope_project, resource
+        )
         if tree is None:
             return []
         return tuple(
@@ -40,7 +42,11 @@ class FlextInfraSilentFailureDetector:
                 message=finding.detail,
             )
             for finding in u.Infra.collect_silent_failure_findings(
-                tree, source, is_test_module=_is_test_module(file_path)
+                tree,
+                source,
+                is_test_module=FlextInfraSilentFailureDetector._is_test_module(
+                    file_path
+                ),
             )
         )
 
@@ -55,7 +61,7 @@ class FlextInfraSilentFailureDetector:
         source = resource.read()
         if not source.strip():
             return ()
-        tree = _rope_module_ast(ctx.rope_project, resource)
+        tree = cls._rope_module_ast(ctx.rope_project, resource)
         if tree is None:
             return ()
         return tuple(
@@ -67,7 +73,7 @@ class FlextInfraSilentFailureDetector:
                 fix_action=finding.fix_action,
             )
             for finding in u.Infra.collect_silent_failure_findings(
-                tree, source, is_test_module=_is_test_module(ctx.file_path)
+                tree, source, is_test_module=cls._is_test_module(ctx.file_path)
             )
         )
 
@@ -76,24 +82,24 @@ class FlextInfraSilentFailureDetector:
         """Kinds that ``fix_silent_failure_sentinels`` can auto-correct."""
         return frozenset({"silent-failure-guard", "silent-failure-except"})
 
+    @staticmethod
+    def _is_test_module(file_path: Path) -> bool:
+        """Return whether ``file_path`` lives under a tests tree.
 
-def _is_test_module(file_path: Path) -> bool:
-    """Return whether ``file_path`` lives under a tests tree.
+        Why (cosmos-3flk9): a test teardown legitimately suppresses lifecycle
+        errors (a child process that already died) via ``contextlib.suppress``;
+        that is process reaping, not a silenced production failure.
+        """
+        return any(part == "tests" for part in file_path.parts)
 
-    Why (cosmos-3flk9): a test teardown legitimately suppresses lifecycle
-    errors (a child process that already died) via ``contextlib.suppress``;
-    that is process reaping, not a silenced production failure.
-    """
-    return any(part == "tests" for part in file_path.parts)
-
-
-def _rope_module_ast(
-    rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
-) -> ast.Module | None:
-    """Return the rope-backed module AST; rope parse failures escape loudly."""
-    pymodule = u.Infra.resolve_pymodule(rope_project, resource)
-    tree = pymodule.get_ast()
-    return tree if isinstance(tree, ast.Module) else None
+    @staticmethod
+    def _rope_module_ast(
+        rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
+    ) -> ast.Module | None:
+        """Return the rope-backed module AST; rope parse failures escape loudly."""
+        pymodule = u.Infra.resolve_pymodule(rope_project, resource)
+        tree = pymodule.get_ast()
+        return tree if isinstance(tree, ast.Module) else None
 
 
 __all__: list[str] = ["FlextInfraSilentFailureDetector"]

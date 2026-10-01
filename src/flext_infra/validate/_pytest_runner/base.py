@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Self
 
-from flext_infra import c, config, m, u
+from flext_infra import c, config, m, t, u
 from flext_infra.base import s
 
 type PytestPolicy = m.Infra.PytestConfig
@@ -30,7 +30,25 @@ class FlextInfraPytestRunnerBase(s[int]):
         m.Field(description="CI/pre-commit selection captured at the Make boundary."),
     ] = False
     profile_enabled: Annotated[
-        bool, m.Field(description="Capture child process cProfile evidence.")
+        bool,
+        m.Field(
+            description="Profile the real suite child and preserve its native exit"
+        ),
+    ] = False
+    collection_command_prefix: Annotated[
+        t.StrTuple,
+        m.Field(
+            description="Explicit profiling child invocation from the outer boundary."
+        ),
+    ] = ()
+    slow_phase: Annotated[
+        bool,
+        m.Field(
+            description=(
+                "Run only the configured slow marker in its own phase; otherwise "
+                "the budgeted phase runs everything else."
+            )
+        ),
     ] = False
 
     @staticmethod
@@ -40,13 +58,18 @@ class FlextInfraPytestRunnerBase(s[int]):
 
     @classmethod
     def from_environment(
-        cls, *, started_at_monotonic: float, profile_enabled: bool = False
+        cls,
+        *,
+        started_at_monotonic: float,
+        collection_command_prefix: t.StrTuple = (),
+        profile_enabled: bool = False,
     ) -> Self:
         """Create the runner exclusively from generated Make inputs."""
         ci = config.Infra.codegen.make.ci
         return cls(
             repository_root=Path.cwd(),
             started_at_monotonic=started_at_monotonic,
+            collection_command_prefix=collection_command_prefix,
             profile_enabled=profile_enabled,
             ci_context=(u.Infra.env_lookup(ci.variable) or "").strip() == ci.value,
             target=Path(cls._environment_value(c.Infra.PYTEST_ENV_TARGET)),
@@ -102,7 +125,11 @@ class FlextInfraPytestRunnerBase(s[int]):
         return memory_gb
 
     def _declared_project_name(self) -> str | None:
-        """Read the declared project identity shared by runtime policies."""
+        """Read the declared project identity shared by runtime policies.
+
+        Absence is structural (no pyproject, no ``[project]`` table); a
+        malformed declaration raises instead of collapsing into the default.
+        """
         pyproject_path = self.root / c.PYPROJECT_FILENAME
         if not pyproject_path.is_file():
             return None
@@ -119,6 +146,8 @@ class FlextInfraPytestRunnerBase(s[int]):
         A tree without a declared ``[project].name`` (fixture projects, raw
         workbenches) is an expected state and takes the fleet-wide default.
         """
+        if not policy.parallel_worker_overrides:
+            return policy.parallel_workers
         name = self._declared_project_name()
         if name is None:
             return policy.parallel_workers

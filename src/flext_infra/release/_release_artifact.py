@@ -13,7 +13,7 @@ from packaging.utils import canonicalize_name
 from packaging.version import InvalidVersion, Version
 
 from flext_core import r
-from flext_infra import c, p, t, u
+from flext_infra import c, m, p, t, u
 
 from ._release_boundary import FlextInfraReleaseBoundaryMixin
 
@@ -81,7 +81,11 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
 
     @classmethod
     def _archive_error(
-        cls, path: Path, project: str, members: t.SequenceOf[t.Triple[str, bool, bool]]
+        cls,
+        path: Path,
+        project: str,
+        members: t.SequenceOf[t.Triple[str, bool, bool]],
+        allowed_roots: t.StrSequence,
     ) -> str:
         """Return why an archive's members leave the public boundary, or ''."""
         wheel = path.suffix == ".whl"
@@ -109,7 +113,9 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
             if (
                 not wheel
                 and regular
-                and not cls._sdist_member_allowed(PurePosixPath(name).parts)
+                and not cls._sdist_member_allowed(
+                    PurePosixPath(name).parts, allowed_roots
+                )
             ):
                 return f"sdist contains unexpected public content: {name}"
         if wheel:
@@ -123,17 +129,13 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
 
     @classmethod
     def _validate_artifact(
-        cls,
-        path: Path,
-        identity: t.Pair[str, str],
-        license_sha256: str,
-        versions: t.StrMapping,
+        cls, path: Path, expectation: m.Infra.ArtifactExpectation
     ) -> p.Result[t.Pair[t.Infra.ReleaseArtifactKind, t.Infra.ReleaseArtifactSha256]]:
         """Validate one artifact's boundary, identity and pins; return kind and digest."""
         result_type = r[
             t.Pair[t.Infra.ReleaseArtifactKind, t.Infra.ReleaseArtifactSha256]
         ]
-        project, version = identity
+        project, version = expectation.project, expectation.version
         kind: t.Infra.ReleaseArtifactKind = (
             "wheel" if path.suffix == ".whl" else "sdist"
         )
@@ -141,12 +143,12 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
         if contents.failure:
             return result_type.from_failure(contents)
         members, payload = contents.value
-        error = cls._archive_error(path, project, members)
+        error = cls._archive_error(path, project, members, expectation.allowed_roots)
         licenses = [data for name, data in payload.items() if cls._is_license(name)]
         metadata = [data for name, data in payload.items() if not cls._is_license(name)]
         if not error and len(licenses) != 1:
             error = f"{kind} must contain exactly one LICENSE: {path}"
-        if not error and u.Cli.sha256_bytes(licenses[0]) != license_sha256:
+        if not error and u.Cli.sha256_bytes(licenses[0]) != expectation.license_sha256:
             error = f"{kind} LICENSE differs from committed source: {path}"
         if not error and len(metadata) != 1:
             error = f"{kind} must contain one core metadata file: {path}"
@@ -181,8 +183,8 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
             ):
                 continue
             pin = (
-                cls._release_specifier(versions[dependency])
-                if dependency in versions
+                cls._release_specifier(expectation.versions[dependency])
+                if dependency in expectation.versions
                 else r[str].fail(f"internal dependency version unknown: {dependency}")
             )
             if pin.failure or str(requirement.specifier) != pin.value:

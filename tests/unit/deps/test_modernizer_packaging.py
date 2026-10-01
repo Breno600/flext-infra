@@ -118,7 +118,10 @@ class TestsFlextInfraDepsModernizerPackaging:
             f"{c.Infra.DEFAULT_SRC_DIR}/{root_package}",
         }
         module_path = f"{c.Infra.DEFAULT_SRC_DIR}/{root_module}.py"
-        tm.that(set(u.Tests.toml_list(wheel["packages"])), eq=package_paths)
+        tm.that(
+            set(u.Tests.toml_list(wheel["include"])),
+            eq={f"/{path}/**" for path in package_paths},
+        )
         tm.that(
             u.Tests.toml_mapping(wheel["force-include"]), has=module_path, msg=manifest
         )
@@ -126,9 +129,31 @@ class TestsFlextInfraDepsModernizerPackaging:
             u.Tests.toml_mapping(wheel["force-include"])[module_path],
             eq=f"{root_module}.py",
         )
-        only_include = set(u.Tests.toml_list(sdist["only-include"]))
-        tm.that(package_paths <= only_include, eq=True)
-        tm.that(module_path in only_include, eq=True)
+        included = set(u.Tests.toml_list(sdist["include"]))
+        tm.that({f"/{path}/**" for path in package_paths} <= included, eq=True)
+        tm.that(u.Tests.toml_mapping(sdist["force-include"]), has=module_path)
+        tm.that(
+            u.Tests.toml_mapping(sdist["force-include"])[module_path], eq=module_path
+        )
+
+        manifest_path = infra_git_repo / c.PYPROJECT_FILENAME
+        header = "[tool.hatch.build.targets.sdist.force-include]\n"
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                manifest_path,
+                manifest.replace(header, header + '"stale.txt" = "stale.txt"\n'),
+            )
+        )
+        tm.that(self._conform_self(infra_git_repo), eq=0)
+        repaired = u.Tests.toml_table_at(
+            manifest_path.read_text(encoding="utf-8"),
+            c.Infra.TOOL,
+            "hatch",
+            "build",
+            "targets",
+            "sdist",
+        )
+        tm.that(u.Tests.toml_mapping(repaired["force-include"]), lacks="stale.txt")
 
         fixed_point = infra_main([
             c.Infra.CLI_GROUP_CODEGEN,

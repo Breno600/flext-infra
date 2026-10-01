@@ -15,6 +15,7 @@ from flext_infra.gates.pyright import FlextInfraPyrightGate
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from flext_infra import p
     from flext_infra.gates.base_gate import FlextInfraGate
 
 
@@ -64,8 +65,10 @@ class TestsFlextInfraTypeGates:
                         eq=[str(cache)],
                     )
                     tm.that(cache.is_dir(), eq=True)
-                    tm.that(any(path.is_file() for path in cache.rglob("*")), eq=True)
-                    tm.that((root / ".mypy_cache").exists(), eq=False)
+                    tm.that(
+                        any(path.is_file() for path in cache.rglob("*")), eq=True
+                    )
+                tm.that((root / ".mypy_cache").exists(), eq=False)
             tm.that(
                 {path.name for path in shared_root.iterdir()},
                 eq={"fixture-alpha", "fixture-beta"},
@@ -253,16 +256,13 @@ class TestsFlextInfraTypeGates:
             issue.file.endswith(unselected.name) for issue in full_project.issues
         )
 
-    @pytest.mark.parametrize("gate_class", [FlextInfraMypyGate])
+    @pytest.mark.parametrize(
+        "gate_class", [FlextInfraMypyGate, FlextInfraPyrightGate, FlextInfraPyreflyGate]
+    )
     def test_empty_source_is_not_passed(
         self, tmp_path: Path, gate_class: type[FlextInfraGate]
     ) -> None:
-        """Mypy keeps the loud default: no inputs never reads as a clean pass.
-
-        The python checkers (pyright/pyrefly) own a conditional-empty posture
-        instead — their targets depend on the project topology, so they pass
-        with the typed empty-analysis observation (see the twin test).
-        """
+        """A checker invoked without inputs never reads as a clean pass."""
         result = gate_class(tmp_path).check(
             tmp_path,
             m.Infra.GateContext(repository_root=tmp_path, reports_dir=tmp_path),
@@ -275,27 +275,17 @@ class TestsFlextInfraTypeGates:
     @pytest.mark.parametrize(
         "gate_class", [FlextInfraPyrightGate, FlextInfraPyreflyGate]
     )
-    def test_zero_python_topology_passes_with_typed_receipt(
-        self, tmp_path: Path, gate_class: type[FlextInfraGate]
+    def test_python_analysis_gates_follow_detected_content(
+        self,
+        tmp_path: Path,
+        real_python_package: Path,
+        gate_class: type[FlextInfraGate],
     ) -> None:
-        """The type gates own a conditional-empty posture: pass + observation.
-
-        Unlike the loud default above (a mypy gate with no inputs did not
-        establish acceptance), the python checkers' targets are conditional
-        on the project topology: a content-only project (package:false root
-        or empty configured include) has no python to analyze by declared
-        design, so the gates pass with the typed empty-analysis observation
-        instead of failing.
-        """
-        gate = gate_class(tmp_path)
-        result = gate.check(
-            tmp_path,
-            m.Infra.GateContext(repository_root=tmp_path, reports_dir=tmp_path),
+        """Detected Python content, not a pass receipt, selects the type gates."""
+        tm.that(gate_class(tmp_path).selected_for(tmp_path), eq=False)
+        tm.that(
+            gate_class(real_python_package).selected_for(real_python_package), eq=True
         )
-        assert result.result.passed is True
-        assert not result.issues
-        codes = [issue.code for issue in result.observational_issues]
-        assert codes == [f"{gate.gate_id}-empty-analysis"]
 
     @pytest.mark.parametrize("payload", ["", " ", "not JSON", "{}", "[]", "null"])
     @pytest.mark.parametrize(
@@ -337,7 +327,7 @@ class TestsFlextInfraTypeGates:
         assert report.summary.information_count == 1
 
     def test_pyright_zero_collection(self) -> None:
-        """filesAnalyzed=0 is a valid report: content-only roots analyze nothing."""
+        """filesAnalyzed=0 parses; the gate, not the model, judges it."""
         report = m.Infra.PyrightReport.model_validate_json(
             '{"version":"1.1.411","time":"1","generalDiagnostics":[], '
             '"summary":{"filesAnalyzed":0,"errorCount":0,"warningCount":0,'
@@ -347,52 +337,27 @@ class TestsFlextInfraTypeGates:
         assert report.summary.files_analyzed == 0
         assert not report.general_diagnostics
 
-    @pytest.mark.slow
-    def test_pyright_passes_with_receipt_on_zero_python_topology(
-        self, checker_context: m.Infra.GateContext
+    def test_checker_does_not_run_type_gates_on_content_only_project(
+        self, real_python_package: Path, rope_workspace: p.Infra.RopeWorkspaceDsl
     ) -> None:
-        """A content-only project (no python under the configured root) passes.
-
-        The gate emits one typed information receipt naming the condition
-        instead of failing on the native filesAnalyzed=0 report (invest
-        repro: pyright TOOL_ERROR 'filesAnalyzed Input should be greater
-        than 0' on a package:false root).
-        """
-        project = checker_context.repository_root
-        src_pkg = project / "src" / "test_pkg"
-        for module in src_pkg.glob("*.py"):
+        """A project without Python targets gets no type-gate row at all."""
+        for module in (real_python_package / "src").rglob("*.py"):
             module.unlink()
+        reports = real_python_package / ".reports"
 
-        result = FlextInfraPyrightGate(project).check(project, checker_context)
+        results = tm.ok(
+            FlextInfraWorkspaceChecker(
+                repository_root=real_python_package.parent, rope=rope_workspace
+            ).run_projects(
+                [real_python_package.name],
+                [FlextInfraPyrightGate.gate_id, FlextInfraPyreflyGate.gate_id],
+                reports_dir=reports,
+            )
+        )
 
-        tm.that(result.result.passed, eq=True)
-        receipts = [
-            i for i in result.observational_issues if i.code == "pyright-empty-analysis"
-        ]
-        tm.that(len(receipts), eq=1)
-        tm.that(receipts[0].severity.lower() == "information", eq=True)
-
-    @pytest.mark.slow
-    def test_pyrefly_passes_with_receipt_on_zero_python_topology(
-        self, checker_context: m.Infra.GateContext
-    ) -> None:
-        """Pyrefly's banner-only nonzero exit on an empty topology is a receipt.
-
-        Verified repro: with zero targets pyrefly exits 1 printing only its
-        'INFO Checking project...' banner lines with an empty errors JSON —
-        the gate turns that exact shape into the typed receipt and stays red
-        for any output carrying non-informational lines.
-        """
-        project = checker_context.repository_root
-        src_pkg = project / "src" / "test_pkg"
-        for module in src_pkg.glob("*.py"):
-            module.unlink()
-
-        result = FlextInfraPyreflyGate(project).check(project, checker_context)
-
-        tm.that(result.result.passed, eq=True)
-        receipts = [
-            i for i in result.observational_issues if i.code == "pyrefly-empty-analysis"
-        ]
-        tm.that(len(receipts), eq=1)
-        tm.that(receipts[0].severity.lower() == "information", eq=True)
+        tm.that(results[0].gates, empty=True)
+        markdown = (reports / c.Infra.CHECK_REPORT_MARKDOWN_FILENAME).read_text(
+            encoding="utf-8"
+        )
+        tm.that(markdown, lacks=f"- {FlextInfraPyrightGate.gate_id}:")
+        tm.that(markdown, lacks=f"- {FlextInfraPyreflyGate.gate_id}:")

@@ -46,6 +46,21 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
             return r[str].fail(f"failed to create checkpoint: {exc}", exception=exc)
         return r[str].ok(commit_sha)
 
+    @staticmethod
+    def _git_text(output: bytes | str | tuple[int, bytes, str]) -> str:
+        """Normalize one GitPython command result to text at its typed boundary.
+
+        GitPython types every command result as ``bytes | str |`` the
+        extended-output tuple; the tuple shape only exists behind
+        ``with_extended_output``, which the checkpoint commands never request.
+        """
+        if isinstance(output, bytes):
+            return output.decode(c.Cli.ENCODING_DEFAULT)
+        if isinstance(output, str):
+            return output
+        msg = "git command returned extended output without its contract"
+        raise TypeError(msg)
+
     @classmethod
     def _git_create_checkpoint_commit(
         cls,
@@ -90,8 +105,8 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
             case _:
                 detail = "checkpoint parent has invalid author identity"
                 raise OSError(detail)
-        commit_sha = repo.git.execute(
-            [
+        commit_sha = cls._git_text(
+            repo.git.execute([
                 c.Infra.GIT,
                 "-c",
                 f"user.name={author_name}",
@@ -103,10 +118,7 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
                 parent,
                 "-m",
                 message,
-            ],
-            with_extended_output=False,
-            as_process=False,
-            stdout_as_string=True,
+            ])
         ).strip()
         repo.git.update_ref(c.Infra.GIT_HEAD, commit_sha)
         return commit_sha

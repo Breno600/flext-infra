@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pstats
 import shlex
 import sys
 from collections.abc import MutableMapping
@@ -95,8 +94,12 @@ class FlextInfraPytestRunnerExecution(
         # For a zero-test project (no test module under the config-owned
         # roots) rc=5 is the DECLARED inventory outcome in both phases.
         owns_no_tests = self._owns_no_tests()
+        # A project may declare no slow-marked item at all, so the slow phase
+        # accepts an empty complete inventory as its declared outcome.
         accepted = {pytest.ExitCode.OK} | (
-            set() if complete else {pytest.ExitCode.NO_TESTS_COLLECTED}
+            set()
+            if complete and not self.slow_phase
+            else {pytest.ExitCode.NO_TESTS_COLLECTED}
         )
         if owns_no_tests:
             accepted = {pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED}
@@ -129,7 +132,7 @@ class FlextInfraPytestRunnerExecution(
         if outcome.raw_return_code == pytest.ExitCode.NO_TESTS_COLLECTED and node_ids:
             msg = "pytest reported no collection with a nonempty manifest"
             raise RuntimeError(msg)
-        if complete and not node_ids and not owns_no_tests:
+        if complete and not node_ids and not owns_no_tests and not self.slow_phase:
             msg = "complete pytest inventory must contain at least one test"
             raise RuntimeError(msg)
         u.Cli.atomic_write_text_file(
@@ -202,14 +205,6 @@ class FlextInfraPytestRunnerExecution(
             deadline=self._process_deadline(),
         ).unwrap()
         self._record_process_outcome(report_dir, "suite", outcome)
-        if self.profile_enabled:
-            profiles = tuple(sorted((report_dir / "profiles").glob("*.pstats")))
-            if not profiles:
-                msg = f"pytest produced no child profiles: {report_dir}"
-                raise FileNotFoundError(msg)
-            pstats.Stats(*(str(path) for path in profiles)).dump_stats(
-                str(report_dir / "pytest.pstats")
-            )
         return outcome
 
     @staticmethod
@@ -296,8 +291,6 @@ class FlextInfraPytestRunnerExecution(
         phases = self._phase_diagnostics(report_dir, context=context, suite=diagnostics)
         self._write_diagnostics(report_dir, diagnostics, phases=phases)
         warnings = sum(item.warning_count for _, item in phases)
-        blocking_warnings = sum(item.blocking_warning_count for _, item in phases)
-        suspended_warnings = sum(item.suspended_warning_count for _, item in phases)
         accounting_complete = (
             accounting.executed_count == accounting.reported_count
             and (
@@ -309,7 +302,7 @@ class FlextInfraPytestRunnerExecution(
         rejected = any((
             diagnostics.failed_count,
             diagnostics.error_count,
-            blocking_warnings,
+            warnings,
             diagnostics.skipped_count,
             diagnostics.collection_failed_count,
             diagnostics.collection_skipped_count,
@@ -324,9 +317,20 @@ class FlextInfraPytestRunnerExecution(
             if accounting.inventory_count is None
             else accounting.inventory_count - accounting.deselected_count
         )
+        # The suite stop instant can land on the last selected test's teardown:
+        # pytest still reports the interrupt, but every selected test executed
+        # with complete accounting and nothing remains for the next selection.
+        # Coverage keeps the interrupt red: its artifact is validated only on a
+        # clean exit.
+        stopped_after_selection = (
+            raw_return_code == pytest.ExitCode.INTERRUPTED
+            and context.execution_mode != c.Infra.PytestExecutionMode.COVERAGE
+            and not rejected
+            and accounting.executed_count == selected_count
+        )
         final_exit = (
             0
-            if (accepted_cache_hit or accepted_zero_tests)
+            if (accepted_cache_hit or accepted_zero_tests or stopped_after_selection)
             else raw_return_code or int(rejected)
         )
         # A graceful stop at the suite stop instant publishes the executed
@@ -352,10 +356,7 @@ class FlextInfraPytestRunnerExecution(
         )
         ci_excluded = self.ci_excluded_markers(execution_mode=context.execution_mode)
         phase_counts = "".join(
-            f"{phase}_warnings={item.warning_count}\n"
-            f"{phase}_blocking_warnings={item.blocking_warning_count}\n"
-            f"{phase}_suspended_warnings={item.suspended_warning_count}\n"
-            for phase, item in phases
+            f"{phase}_warnings={item.warning_count}\n" for phase, item in phases
         )
         summary = (
             f"outcome={result}\n"
@@ -370,8 +371,6 @@ class FlextInfraPytestRunnerExecution(
             f"cache_restored={cache_restored}\n"
             f"failed={diagnostics.failed_count}\nerrors={diagnostics.error_count}\n"
             f"warnings={warnings}\n"
-            f"blocking_warnings={blocking_warnings}\n"
-            f"suspended_warnings={suspended_warnings}\n"
             f"{phase_counts}"
             f"skipped={diagnostics.skipped_count}\n"
             f"collection_errors={diagnostics.collection_failed_count}\n"
@@ -400,19 +399,31 @@ class FlextInfraPytestRunnerExecution(
 
     def _execute_testmon(self, *, complete: bool) -> p.Result[int]:
         """Execute one selected testmon phase without resetting shared state."""
-        u.Cli.ensure_dir(self.testmon_db.parent).unwrap()
-        report_dir = self._report_directory()
         execution_mode = (
             c.Infra.PytestExecutionMode.FULL
             if complete
             else c.Infra.PytestExecutionMode.INCREMENTAL
         )
+        slow_marker = config.Infra.tooling.tools.pytest.slow_marker
+        if self.slow_phase and slow_marker in self.ci_excluded_markers(
+            execution_mode=execution_mode
+        ):
+            # The CI context deselects the slow marker by declaration, so its
+            # phase is typed NOT EXECUTED here, never a selection of nothing.
+            sys.stderr.write(
+                f"pytest slow phase NOT EXECUTED: ci-excluded-markers declares "
+                f"{slow_marker!r}\n"
+            )
+            return r.ok(0)
+        u.Cli.ensure_dir(self.testmon_db.parent).unwrap()
+        report_dir = self._report_directory()
         self._write_run_context(
             report_dir,
             m.Infra.PytestRunContext(
                 execution_mode=execution_mode,
                 testmon_db=self.testmon_db,
                 deadline_monotonic=self._process_deadline().expires_at_monotonic,
+                report_directory=report_dir,
             ),
         )
         pre_digest = FlextInfraTestmonDbInspector.digest_file(self.testmon_db)
@@ -442,9 +453,7 @@ class FlextInfraPytestRunnerExecution(
         # enforces that manifest for both cold and warm caches while testmon
         # continues to collect dependencies through its xdist integration.
         command = self.build_command(
-            report_dir,
-            selection_plan,
-            execution_mode=execution_mode,
+            report_dir, selection_plan, execution_mode=execution_mode
         )
         outcome = self._run_suite(command, report_dir, execution_mode=execution_mode)
         cache_hit = (
@@ -504,6 +513,7 @@ class FlextInfraPytestRunnerExecution(
                 execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
                 testmon_db=None,
                 deadline_monotonic=self._process_deadline().expires_at_monotonic,
+                report_directory=report_dir,
             ),
         )
         # The inventory pass enforces the same collection policy before coverage.

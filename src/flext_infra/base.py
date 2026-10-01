@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, ClassVar, Self, override
 
-from flext_core import r, s
+from flext_core import FlextService, r
 from flext_infra import c, m, p, t, u
 
 from ._base_payload import FlextInfraCommandPayloadMixin
@@ -13,7 +13,7 @@ from ._settings import settings
 
 
 class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
-    s[TDomainResult], FlextInfraCommandPayloadMixin
+    FlextService[TDomainResult], FlextInfraCommandPayloadMixin
 ):
     """Domain command context shared by all flext-infra CLI services.
 
