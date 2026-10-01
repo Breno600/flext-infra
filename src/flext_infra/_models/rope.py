@@ -164,10 +164,6 @@ class FlextInfraModelsRope:
             t.VariadicTuple[FlextInfraModelsRope.IgnoredRegion],
             m.Field(description="Rope-classified string and comment regions"),
         ]
-        word_finder: Annotated[
-            p.Infra.RopeWorder,
-            m.Field(description="Rope word and call classifier over the same source"),
-        ]
 
     class FamilyWrapperFlatten(m.ArbitraryTypesModel):
         """Rope identity of one namespace wrapper flattened into its family owner."""
