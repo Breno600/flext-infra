@@ -382,6 +382,40 @@ class TestsFlextInfraModTextGateEngine:
         tm.that(second.read_bytes(), eq=original)
         tm.that(alias.read_bytes(), eq=original)
 
+    def test_project_identity_change_rejects_authenticated_text_publication(
+        self,
+        mod_workspace: Path,
+    ) -> None:
+        """A writer changing [project].name cannot publish the planned batch."""
+        first, _second = self._publication_inputs(mod_workspace)
+        original_source = first.read_bytes()
+        document = mod_workspace / c.PYPROJECT_FILENAME
+        identity = tm.ok(u.Cli.atomic_read_binary_file_state(document, required=True))
+        source = tm.ok(u.Cli.atomic_read_binary_file_state(first, required=True))
+        distribution = u.Infra.project_name_from_payload(
+            document,
+            u.Infra.pyproject_payload(document),
+        )
+        original_document = document.read_text(encoding="utf-8")
+        changed_document = original_document.replace(
+            f'name = "{distribution}"',
+            f'name = "changed-{distribution}"',
+        )
+        tm.that(changed_document == original_document, eq=False)
+        transaction = FlextInfraCodegenTransaction(
+            FlextInfraCodegenMiseArtifacts(repository_root=mod_workspace),
+        )
+        roots = {"@mod-text": mod_workspace}
+
+        def publish(scope: Path) -> p.Result[m.Infra.CodegenTransactionSession]:
+            tm.ok(u.Cli.atomic_write_text_file(document, changed_document))
+            return transaction.begin_files_locked(scope, roots, (identity, source))
+
+        rejected = transaction.run_files_locked(roots, publish)
+        tm.fail(rejected, has="generation authenticated state changed")
+        tm.that(first.read_bytes(), eq=original_source)
+        tm.that(document.read_text(encoding="utf-8"), eq=changed_document)
+
     @pytest.mark.parametrize("raise_failure", [False, True])
     def test_text_phase_validation_failure_recovers_published_files(
         self,
