@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import config
+from flext_infra import config, infra
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from tests import c, m, u
 
@@ -141,7 +141,7 @@ class TestsFlextInfraRootArtifactOwnership:
             what=c.Infra.CodegenConformSurface.MAKEFILE,
             mode=c.Infra.CodegenConformMode.APPLY,
         )
-        tm.ok(FlextInfraCodegenConform.execute_request(request))
+        tm.ok(infra.codegen_conform(request))
         manual = {"custom.mk": b"# manual project extension\n"}
         (root / "custom.mk").write_bytes(manual["custom.mk"])
         configured_policy = next(
@@ -157,7 +157,7 @@ class TestsFlextInfraRootArtifactOwnership:
             ),
         )
 
-        first = FlextInfraCodegenConform.execute_request(request)
+        first = infra.codegen_conform(request)
         result = tm.ok(first)
         governed = tuple(file for file in result.plan.files if file.policy is not None)
         tm.that(tuple(file.path for file in governed), eq=(root / "Makefile",))

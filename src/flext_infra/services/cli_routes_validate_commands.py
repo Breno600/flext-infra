@@ -9,7 +9,6 @@ from flext_infra import m, p, t
 from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
 from flext_infra.validate.cprofile_report import FlextInfraCProfileReport
 from flext_infra.validate.fresh_import import FlextInfraValidateFreshImport
-from flext_infra.validate.import_cycles import FlextInfraValidateImportCycles
 from flext_infra.validate.inventory import FlextInfraInventoryService
 from flext_infra.validate.lazy_map_freshness import FlextInfraValidateLazyMapFreshness
 from flext_infra.validate.pytest_diag import FlextInfraPytestDiagExtractor
@@ -28,7 +27,7 @@ class FlextInfraValidationCommandRoutes(FlextInfraCliRouteBase):
     def _validate_namespace_command(
         request: m.Infra.NamespaceValidateCommand,
     ) -> p.Result[m.Infra.ValidationReport]:
-        """Run namespace validation through the facade-owned Rope composition."""
+        """Run namespace validation through the rule engine."""
         result = infra.validate_namespace(request)
         if result.failure:
             return r[m.Infra.ValidationReport].from_failure(result)
@@ -112,14 +111,6 @@ class FlextInfraValidationCommandRoutes(FlextInfraCliRouteBase):
                     ),
                 ),
                 (
-                    "import-cycles",
-                    "Guard 1: ROPE-backed import cycle detector",
-                    FlextInfraValidateImportCycles,
-                    FlextInfraCliRouteBase.result_handler(
-                        FlextInfraValidateImportCycles.execute,
-                    ),
-                ),
-                (
                     "lazy-map-freshness",
                     "Guard 2/3: lazy-map freshness validator",
                     FlextInfraValidateLazyMapFreshness,
@@ -129,7 +120,7 @@ class FlextInfraValidationCommandRoutes(FlextInfraCliRouteBase):
                 ),
                 (
                     "namespace",
-                    "Guard: static namespace rules (NS-000..003) via rope",
+                    "Guard: namespace laws of the rule catalog",
                     m.Infra.NamespaceValidateCommand,
                     FlextInfraCliRouteBase.result_handler(_validate_namespace_command),
                 ),

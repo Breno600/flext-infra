@@ -399,13 +399,13 @@ class FlextInfraWorkspaceDetector(
         result_type = r[tuple[tuple[m.Infra.RepositoryRef, ...], t.VariadicTuple[Path]]]
         if declared.failure:
             return result_type.from_failure(declared)
-        baseline = u.Infra.repository_baseline_branch(
+        governance = cls._superproject_governance(
             repository_root,
-            preference=(
-                config.Infra.codegen.branch_policy.integration_branch_preference
-            ),
+            beads=workspace_beads,
+            allow_unprovisioned_members=allow_unprovisioned_members,
         )
-        integration_branch = baseline.value if baseline.success else None
+        if governance.failure:
+            return result_type.from_failure(governance)
         subprojects: list[m.Infra.RepositoryRef] = []
         external: list[Path] = []
         seen: set[Path] = set()
@@ -522,13 +522,10 @@ class FlextInfraWorkspaceDetector(
             # intentionally absent working tree: Git already records the
             # commit it must materialize, so the entry classifies as an
             # external dependency instead of a missing governed checkout.
-            indexed = u.Infra.git_staged_gitlink_oid(
-                m.Infra.GitRefRequest(
-                    repo_root=repository_root,
-                    reference=path.as_posix(),
-                ),
-            )
-            if indexed.success:
+            indexed = u.Infra.git_index_gitlink_paths(repository_root)
+            if indexed.failure:
+                return result_type.from_failure(indexed)
+            if path.as_posix() in indexed.value:
                 return result_type.ok(path)
             return result_type.fail(
                 f"governed subproject checkout is missing: {path.as_posix()}",
@@ -652,12 +649,18 @@ class FlextInfraWorkspaceDetector(
             inherited_beads = cls.load_beads_spec(superproject_root)
             if inherited_beads.failure:
                 return r[m.Infra.WorkspaceSpec].from_failure(inherited_beads)
-            try:
-                member_path = member_root.relative_to(superproject_root)
-            except ValueError:
+            if not member_root.is_relative_to(superproject_root):
                 return r[m.Infra.WorkspaceSpec].fail(
                     f"Git submodule escapes its superproject: {member_root}",
                 )
+            member_path = member_root.relative_to(superproject_root)
+            # Same owner as the parent load, so a composed member validates
+            # against exactly the facts its superproject governs with.
+            governance = cls._superproject_governance(
+                superproject_root, beads=inherited_beads.value
+            )
+            if governance.failure:
+                return r[m.Infra.WorkspaceSpec].from_failure(governance)
             loaded_member = cls._load_subproject(
                 superproject_root,
                 member_path,

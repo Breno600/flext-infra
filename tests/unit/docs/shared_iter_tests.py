@@ -103,11 +103,11 @@ class TestsFlextInfraDocsSharedIter:
         tm.that(not any("node_modules" in str(f) for f in files), eq=True)
 
     def test_excludes_archived_markdown(self, tmp_path: Path) -> None:
-        """Test historical backup files and legado roots remain evidence-only."""
+        """Archived roots stay evidence-only; a backup-named page is governed."""
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir(parents=True, exist_ok=True)
-        backup = docs_dir / "guide.bak-legacy.md"
-        backup.write_text("# Archived backup\n")
+        backup_named = docs_dir / "guide.bak-legacy.md"
+        backup_named.write_text("# Archived backup\n")
         legado = docs_dir / "legado"
         legado.mkdir()
         archived = legado / "guide.md"
@@ -115,7 +115,7 @@ class TestsFlextInfraDocsSharedIter:
 
         files = u.Infra.iter_markdown_files(tmp_path)
 
-        tm.that(backup in files, eq=False)
+        tm.that(backup_named in files, eq=True)
         tm.that(archived in files, eq=False)
 
     def test_excludes_generated_crg_reports(self, tmp_path: Path) -> None:

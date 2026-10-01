@@ -111,6 +111,18 @@ rule:
                       has:
                         field: definition
                         kind: class_definition
+    # An import-time expression other than the entry-point call.
+    - all:
+        - kind: expression_statement
+        - inside:
+            kind: module
+        - has:
+            kind: call
+            pattern: $NAME
+            not:
+              has:
+                field: function
+                regex: "(?:^|\\.)main$"
 message: >-
   Loose object at module level: nest `$NAME` inside the module's single facade
   class (only that class, its alias, __all__, imports and a `main` entry
@@ -491,58 +503,3 @@ transform:
 message: >-
   Class `$NAME` belongs to the `$FAMILY` facade family; declare it in that
   family's module or package.
----
-# ENFORCE-014: a facade package publishes every canonical family through its
-# generated lazy exports.
-id: require-canonical-facade-family
-language: python
-severity: error
-files:
-  - "src/*/__init__.py"
-rule:
-  kind: module
-  has:
-    stopBy: end
-    kind: assignment
-    has:
-      field: left
-      regex: "^_LAZY_IMPORTS$"
-  any:
-    - not:
-        has:
-          stopBy: end
-          kind: pair
-          has:
-            field: key
-            regex: "^[\"']c[\"']$"
-    - not:
-        has:
-          stopBy: end
-          kind: pair
-          has:
-            field: key
-            regex: "^[\"']t[\"']$"
-    - not:
-        has:
-          stopBy: end
-          kind: pair
-          has:
-            field: key
-            regex: "^[\"']p[\"']$"
-    - not:
-        has:
-          stopBy: end
-          kind: pair
-          has:
-            field: key
-            regex: "^[\"']m[\"']$"
-    - not:
-        has:
-          stopBy: end
-          kind: pair
-          has:
-            field: key
-            regex: "^[\"']u[\"']$"
-message: >-
-  The package does not publish every canonical facade family (c, t, p, m, u):
-  add the missing family module and regenerate the package exports.

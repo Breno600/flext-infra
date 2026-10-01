@@ -42,34 +42,6 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
         return files
 
     @staticmethod
-    def docs_text_token_issues(
-        scope: m.Infra.DocScope, *, tokens: t.StrSequence, issue_type: str
-    ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Collect token-presence issues in the complete Markdown scope."""
-        issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
-        if not tokens:
-            return issues
-        for (
-            rel,
-            md_file,
-        ) in FlextInfraUtilitiesDocsAuditDetectorsMixin._policy_text_files(
-            scope,
-            exempt_paths,
-        ):
-            text = md_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
-            for token in tokens:
-                if token in text:
-                    issues.append(
-                        m.Infra.AuditIssue(
-                            file=rel,
-                            issue_type=issue_type,
-                            severity="medium",
-                            message=f"contains `{token}`",
-                        ),
-                    )
-        return issues
-
-    @staticmethod
     def docs_placeholder_issues(
         scope: m.Infra.DocScope, *, patterns: t.StrSequence
     ) -> t.SequenceOf[m.Infra.AuditIssue]:

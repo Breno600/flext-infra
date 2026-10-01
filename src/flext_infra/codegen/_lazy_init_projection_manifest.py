@@ -13,6 +13,7 @@ this file is the projected OUTPUT state, owned by the generator alone.
 from __future__ import annotations
 
 import hashlib
+from collections.abc import MutableMapping
 from operator import itemgetter
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -22,10 +23,6 @@ from flext_infra import c, m, t, u
 
 if TYPE_CHECKING:
     from flext_infra import p
-
-MANIFEST_API_VERSION: str = "flext-infra/projections-lock/v1"
-MANIFEST_FILENAME: str = "projections.lock.json"
-_PROJECTED_ROOTS: frozenset[str] = frozenset({".agents", ".codex"})
 
 
 class FlextInfraCodegenLazyInitProjectionManifest:
@@ -41,26 +38,24 @@ class FlextInfraCodegenLazyInitProjectionManifest:
         manifest bytes are a pure function of the phase plan: stable order,
         stable digests, no self-reference.
         """
-        projected: dict[Path, list[t.JsonDict]] = {}
+        projected: MutableMapping[Path, list[t.JsonDict]] = {}
         for plan in files:
             if plan.desired_content is None:
                 continue
             relative = plan.path.relative_to(plan.project)
-            if relative.parts[0] not in _PROJECTED_ROOTS:
+            if relative.parts[0] not in c.Infra.PROJECTED_ROOTS:
                 continue
-            if relative.name == MANIFEST_FILENAME:
+            if relative.name == c.Infra.MANIFEST_FILENAME:
                 continue
-            projected.setdefault(plan.project, []).append(
-                {
-                    "path": relative.as_posix(),
-                    "sha256": hashlib.sha256(plan.desired_content).hexdigest(),
-                    "bytes": len(plan.desired_content),
-                }
-            )
+            projected.setdefault(plan.project, []).append({
+                "path": relative.as_posix(),
+                "sha256": hashlib.sha256(plan.desired_content).hexdigest(),
+                "bytes": len(plan.desired_content),
+            })
         plans: list[m.Infra.CodegenFilePlan] = []
         for project in sorted(projected):
             payload: t.JsonDict = {
-                "apiVersion": MANIFEST_API_VERSION,
+                "apiVersion": c.Infra.MANIFEST_API_VERSION,
                 "entries": [
                     {
                         "path": entry["path"],
@@ -76,7 +71,7 @@ class FlextInfraCodegenLazyInitProjectionManifest:
                     serialized
                 )
             content = f"{serialized.value}\n".encode(c.Cli.ENCODING_DEFAULT)
-            manifest_path = project / ".agents" / MANIFEST_FILENAME
+            manifest_path = project / ".agents" / c.Infra.MANIFEST_FILENAME
             state = u.Cli.atomic_read_binary_file_state(manifest_path, required=False)
             if state.failure:
                 return r[t.VariadicTuple[m.Infra.CodegenFilePlan]].from_failure(state)
