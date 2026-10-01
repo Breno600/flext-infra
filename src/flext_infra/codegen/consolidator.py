@@ -112,7 +112,9 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
     ) -> p.Result[t.SequenceOf[Path]]:
         """Return indexed Python wrapper files for one consolidation pass."""
         resolved_root = project_root.resolve()
-        constants_directory = c.Infra.FAMILY_DIRECTORIES["c"]
+        constants_directory = u.Infra.facade_family_declared_by(
+            c.Infra.CONSTANTS_PY,
+        ).directory
         indexed_files: t.MutableSequenceOf[Path] = []
         for module in rope_workspace.modules():
             if (

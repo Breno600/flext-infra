@@ -23,6 +23,7 @@ class FlextInfraModelsWorkspace:
     - ``ContractModel`` reserved for immutable workspace settings contracts.
     """
 
+<<<<<<< HEAD
     class SuperprojectGovernance(m.ArbitraryTypesModel):
         """Superproject facts every member load validates against."""
 
@@ -31,6 +32,29 @@ class FlextInfraModelsWorkspace:
         beads: FlextInfraConfigModelsBeads.BeadsProjectSpec | None
         members: t.MappingKV[Path, FlextInfraConfigModelsContexts.RepositoryRef]
         allow_unprovisioned_members: bool
+=======
+    class SuperprojectGovernance(m.ContractModel):
+        """Facts of one superproject that govern every composed subproject.
+
+        Resolved once per superproject, then shared by each member load.
+        """
+
+        root: Annotated[Path, m.Field(description="Superproject repository root")]
+        integration_branch: Annotated[
+            str | None, m.Field(description="Detected workspace integration branch")
+        ] = None
+        beads: Annotated[
+            FlextInfraConfigModels.BeadsProjectSpec | None,
+            m.Field(description="Workspace Beads contract members inherit"),
+        ] = None
+        members: Annotated[
+            t.MappingKV[Path, FlextInfraConfigModels.RepositoryRef],
+            m.Field(description="Manifest-declared member identities by path"),
+        ]
+        allow_unprovisioned_members: Annotated[
+            bool, m.Field(description="Accept manifest identity before checkout setup")
+        ] = False
+>>>>>>> origin/0.12.0-dev
 
     class WorkspaceEnvironmentRequest(m.ContractModel):
         """Read-only request for validating the active workspace environment."""
@@ -121,12 +145,16 @@ class FlextInfraModelsWorkspace:
         ]
 
     class DirectUrlDirectoryInfo(m.ContractModel):
-        """PEP 610 directory metadata for one installed distribution."""
+        """PEP 610 directory metadata for one installed distribution.
+
+        PEP 610 makes ``editable`` optional with a ``false`` default, so a
+        local directory install that omits it is a plain directory install.
+        """
 
         editable: Annotated[
             bool,
             m.Field(description="Distribution is installed as editable"),
-        ]
+        ] = False
 
     class DirectUrlReceipt(m.ContractModel):
         """Any installed distribution's PEP 610 receipt, read for its kind only.

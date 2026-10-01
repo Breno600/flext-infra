@@ -197,7 +197,7 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
             class_name = f"{request.test_prefix}{request.prefix}{suffix}"
             docstring = f"{doc_suffix} for {request.prefix.lower()}."
             if request.test_module:
-                alias = c.Infra.NAMESPACE_LAYER_BY_FILE[filename]
+                alias = u.Infra.facade_family_declared_by(filename).letter
                 content = u.Infra.generate_test_module_skeleton(
                     context=m.Infra.TestModuleSkeletonRenderContext(
                         class_name=class_name,

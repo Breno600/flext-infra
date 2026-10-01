@@ -428,20 +428,22 @@ class FlextInfraModelsDepsToolConfig(
             if self.termination_grace_seconds >= self.run_timeout_seconds:
                 msg = "pytest termination grace must be less than run timeout"
                 raise ValueError(msg)
-            if (
-                self.case_timeout_seconds + self.termination_grace_seconds
-                > self.run_timeout_seconds
-            ):
-                msg = "pytest run timeout must include item and termination budgets"
-                raise ValueError(msg)
             if self.slow_timeout_seconds <= self.case_timeout_seconds:
                 msg = "pytest slow timeout must exceed the per-case timeout"
                 raise ValueError(msg)
             if self.slow_timeout_seconds >= self.run_timeout_seconds:
                 msg = "pytest slow timeout must be less than run timeout"
                 raise ValueError(msg)
+            # Every reserve includes one item bound plus the grace, so this
+            # also keeps a single item and the termination inside each run; a
+            # reserve at or past a run budget would place the stop before the
+            # suite. The single-bound checks above report first: they name the
+            # field. Both phases' reserves bind every declared run budget.
+            reserve = max(
+                self.suite_stop_reserve_seconds, self.slow_suite_stop_reserve_seconds
+            )
             if any(
-                timeout <= self.suite_stop_reserve_seconds
+                timeout <= reserve
                 for timeout in (
                     self.run_timeout_seconds,
                     *self.run_timeout_overrides.values(),
@@ -733,16 +735,16 @@ class FlextInfraModelsDepsToolConfig(
             ),
         ]
         forward_import_form: Annotated[
-            Literal["relative_dot"],
+            Literal["absolute"],
             m.Field(
                 alias="forward-import-form",
                 description=(
                     "How forward (downward) intra-project imports are "
-                    "emitted. ``relative_dot`` uses relative imports "
-                    "within the same package."
+                    "emitted. ``absolute`` names the full module path; "
+                    "relative imports are banned."
                 ),
             ),
-        ] = "relative_dot"
+        ]
 
     class ToolConfigDocument(m.ArbitraryTypesModel):
         """Root schema for canonical ``config/tooling.yaml`` policy data."""

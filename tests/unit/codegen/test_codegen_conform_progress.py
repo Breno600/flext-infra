@@ -7,8 +7,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, m
-from flext_infra.codegen.conform import FlextInfraCodegenConform
+from flext_infra import c, config, infra, m
 from tests import u
 
 
@@ -31,11 +30,9 @@ class TestsFlextInfraCodegenConformProgress:
             mode=c.Infra.CodegenConformMode.APPLY,
             what=c.Infra.CodegenConformSurface.MAKEFILE,
         )
-        tm.ok(FlextInfraCodegenConform.execute_request(request, workspace))
+        tm.ok(infra.codegen_conform(request, workspace))
         _ = capsys.readouterr()
-        checked = FlextInfraCodegenConform.execute_request(
-            request.model_copy(update={"mode": c.Infra.CodegenConformMode.CHECK}),
-        )
+        checked = infra.codegen_conform(request.model_copy(update={"mode": c.Infra.CodegenConformMode.CHECK}),)
         tm.ok(checked)
         captured = capsys.readouterr().out
         tm.that("Codegen Conform" in captured, where=bool, msg=captured[-3000:])
