@@ -32,7 +32,10 @@ class FlextInfraConfigModelsWorkspace:
             if self.path.is_absolute() or not self.path.parts:
                 msg = "candidate bootstrap path must be relative"
                 raise ValueError(msg)
-            if self.what is not FlextInfraConstantsCodegenProject.CodegenConformSurface.MAKEFILE:
+            if (
+                self.what
+                is not FlextInfraConstantsCodegenProject.CodegenConformSurface.MAKEFILE
+            ):
                 msg = "candidate bootstrap owns only the Makefile surface"
                 raise ValueError(msg)
             return self
@@ -155,6 +158,13 @@ class FlextInfraConfigModelsWorkspace:
             ),
         ]
         name: Annotated[t.NonEmptyStr, m.Field(description="Workspace name")]
+        docs_audit: Annotated[
+            FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+            m.Field(
+                default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+                description="Repository-owned documentation audit declarations",
+            ),
+        ]
         namespace_scan_dirs: Annotated[
             t.StrSequence,
             m.Field(
@@ -282,6 +292,13 @@ class FlextInfraConfigModelsWorkspace:
         """Local identity plus topology read from this repository's Git inputs."""
 
         name: Annotated[t.NonEmptyStr, m.Field(description="Workspace name")]
+        docs_audit: Annotated[
+            FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+            m.Field(
+                default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+                description="Validated local documentation audit declarations",
+            ),
+        ]
         beads: Annotated[
             FlextInfraConfigModelsBeads.BeadsProjectSpec | None,
             m.Field(description="Repository-local Beads identity when enabled"),

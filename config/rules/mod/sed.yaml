@@ -1,9 +1,9 @@
 # Declarative sed-by-list rules for the make mod text phase.
 #
 # Each entry is one list-driven regex rewrite applied across the governed
-# scan surface (the same ast_grep_scan_targets scope as the ast-grep
-# cascade). The engine proves an exact expected-count receipt per rule and
-# reaches a rewrite fixed point before the canonical validate gate runs.
+# scan surface and explicitly included paths. The engine proves an exact
+# expected-count receipt when declared, and reaches a rewrite fixed point
+# before the canonical validate gate runs.
 #
 # rules:
 #   - id: example-rule-id          # unique text-rule identifier
@@ -15,4 +15,18 @@
 #     flags: ["MULTILINE"]         # optional names from CODEMOD_TEXT_FLAG_NAMES
 #     expected: 3                  # optional exact finding count receipt
 
-rules: []
+rules:
+  - id: docs-strict-python-fence-ruff-ignores
+    description: Retain only syntax-context docstring and package exceptions for isolated executable fences.
+    include: [src/flext_infra/_constants/docs.py]
+    find: '^        "(?:D101|D102|D103|D106|PLR2004|S101|T201|T203|ANN001|ANN002|ANN003|ANN201|ANN202|ANN204|ANN205|PLC0415|B018|F821|F811|SLF001|S106|PT004|E402|PLW0127|PLC0414)",\n'
+    replace: ''
+    flags: [MULTILINE]
+  - id: docs-strict-python-fence-rationale
+    description: Explain the bounded exceptions kept for standalone Markdown fence files.
+    include: [src/flext_infra/_constants/docs.py]
+    find: '(?s)    """Rules ignored for executable docs snippets.*?lazy-export pattern itself teaches\)\."""'
+    replace: |2-
+          """Only module-docstring and package rules are inapplicable to a
+          standalone Markdown fence. All names, behavior, types, and security
+          rules remain active and require correction in the authored source."""

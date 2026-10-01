@@ -506,8 +506,8 @@ Infra:
         # Operator law 2026-09-22: `make docs` is a docs-only lifecycle
         # (generate -> fix -> fmt -> check); it never runs the workspace-wide
         # codegen conform as a prerequisite. `validate` is the structural
-        # check (blocking when the .md set is incomplete); `audit` findings
-        # are warnings owned by cleanup beads, never CI blockers.
+        # check (blocking when the .md set is incomplete); every `audit`
+        # finding fails the lifecycle and requires source-owner repair.
         actions: [generate, fix, fmt, validate, audit]
         api_modules:
           flext-infra:
@@ -1084,10 +1084,9 @@ Infra:
       - path: .python-version
         owner: codegen
         policy: full
-    # The docs auditor's placeholder/forbidden-term lists are fleet policy: one
-    # template owns them, so the placeholder and forbidden-term checks in
-    # _auditor_checks.py enforce on every governed repository instead of
-    # silently reading an absent file as empty lists.
+    # The docs auditor's lexical defaults and repository-specific exact-file
+    # evidence declarations are rendered from the template and typed workspace
+    # manifest, then enforced from this full codegen-owned projection.
       - path: docs/docs_config.json
         owner: codegen
         policy: full
@@ -2007,13 +2006,13 @@ Infra:
           profiles: [workspace, standalone]
           delegate: render
           overwrite: true
-      # Static docs-auditor policy: no Jinja vars; the docs scope policy and
-      # the auditor read it as data (docs_policy_list).
+      # Repository-owned audit policy is validated from workspace.yaml,
+      # rendered per project, and parsed into DocsAuditPolicySpec by the auditor.
         - source: base/docs/docs_config.json.j2
           destination: docs/docs_config.json
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
+          overwrite: true
         - source: base/gitignore.j2
           destination: .gitignore
           profiles: [workspace, standalone]

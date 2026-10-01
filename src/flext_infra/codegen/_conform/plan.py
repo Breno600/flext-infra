@@ -125,6 +125,7 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                     # and the namespace production scope it declares.
                     local_workspace = m.Infra.WorkspaceSpec(
                         name=repository.name,
+                        docs_audit=declared_member.value.docs_audit,
                         beads=workspace.beads,
                         repository=local_repository,
                         project=declared_member.value.project,

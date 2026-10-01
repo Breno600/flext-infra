@@ -235,6 +235,14 @@ class FlextInfraConfigModelsContexts:
     class ProjectRenderContext(MakeRenderContext):
         """Complete typed input consumed by project scaffold templates."""
 
+        docs_audit: Annotated[
+            FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+            m.Field(
+                default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+                description="Validated repository documentation audit declarations",
+            ),
+        ]
+
         # NOTE (multi-agent, flext-get3j): this render field is the exact
         # projection of ProjectSpec; templates must not infer or default a hook.
         hatch_build_hook_path: Annotated[
@@ -351,9 +359,14 @@ class FlextInfraConfigModelsContexts:
         ]
         packaged_data_paths: Annotated[
             t.StrSequence,
-            m.Field(description="Validated relative data paths shipped in distributions"),
+            m.Field(
+                description="Validated relative data paths shipped in distributions"
+            ),
         ]
-        packaged_data_files: Annotated[t.StrSequence, m.Field(description="Validated individually declared data files")]
+        packaged_data_files: Annotated[
+            t.StrSequence,
+            m.Field(description="Validated individually declared data files"),
+        ]
         class_stem: Annotated[
             t.NonEmptyStr, m.Field(description="Public facade class stem")
         ]
