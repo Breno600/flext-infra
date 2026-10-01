@@ -5,6 +5,7 @@ from __future__ import annotations
 import shlex
 import sys
 from collections.abc import MutableMapping
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, override
 
@@ -68,7 +69,50 @@ class FlextInfraPytestRunnerExecution(
         complete: bool = False,
         verify_inventory: bool = True,
     ) -> m.Infra.PytestSelectionPlan:
-        """Return the typed testmon selection and its manifest owner."""
+        """Return the typed testmon selection and its manifest owner.
+
+        The selection and the complete inventory are independent read-only
+        collections (both ``--testmon-nocollect``, each with its own artifacts),
+        so they run concurrently on the one entrypoint clock instead of one
+        after the other (flext-3l1gk); the first failure still escapes.
+        """
+        if complete or not verify_inventory:
+            return self._collect_selection(
+                report_dir, complete=complete, execution_mode=execution_mode
+            )
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            selected = pool.submit(
+                self._collect_selection,
+                report_dir,
+                complete=False,
+                execution_mode=execution_mode,
+            )
+            complete_inventory = pool.submit(
+                self._collect_selection,
+                report_dir,
+                complete=True,
+                execution_mode=execution_mode,
+            )
+            selection = selected.result()
+            inventory = complete_inventory.result()
+        if not set(selection.node_ids).issubset(inventory.node_ids):
+            msg = "testmon selected node IDs outside the complete collection inventory"
+            raise RuntimeError(msg)
+        return selection.model_copy(
+            update={
+                "whole_target": selection.node_ids == inventory.node_ids,
+                "inventory_collected": True,
+            }
+        )
+
+    def _collect_selection(
+        self,
+        report_dir: Path,
+        *,
+        execution_mode: c.Infra.PytestExecutionMode,
+        complete: bool,
+    ) -> m.Infra.PytestSelectionPlan:
+        """Run one read-only collection and publish its manifest artifacts."""
         artifact = "testmon-inventory" if complete else "testmon-selection"
         selection_log = report_dir / f"{artifact}.log"
         manifest_path = report_dir / f"{artifact}.json"
@@ -138,21 +182,11 @@ class FlextInfraPytestRunnerExecution(
         u.Cli.atomic_write_text_file(
             report_dir / f"{artifact}.txt", "\n".join(node_ids) + "\n"
         ).unwrap()
-        if not complete and verify_inventory:
-            inventory = self._resolve_selection(
-                report_dir, complete=True, execution_mode=execution_mode
-            )
-            if not set(node_ids).issubset(inventory.node_ids):
-                msg = "testmon selected node IDs outside the complete collection inventory"
-                raise RuntimeError(msg)
-            whole_target = node_ids == inventory.node_ids
-        else:
-            whole_target = True
         return m.Infra.PytestSelectionPlan(
             manifest_path=manifest_path,
             node_ids=node_ids,
-            whole_target=whole_target,
-            inventory_collected=complete or verify_inventory,
+            whole_target=True,
+            inventory_collected=complete,
             owns_no_tests=owns_no_tests,
         )
 
