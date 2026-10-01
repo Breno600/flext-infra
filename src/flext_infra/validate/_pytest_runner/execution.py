@@ -79,6 +79,10 @@ class FlextInfraPytestRunnerExecution(
             complete=complete,
             execution_mode=execution_mode,
         )
+        if self.collection_command_prefix:
+            sys.stdout.write(
+                f"pytest {artifact} profile: {manifest_path.with_suffix('.pstats')}\n"
+            )
         outcome = u.Cli.run_to_file(
             command,
             selection_log,
@@ -389,9 +393,13 @@ class FlextInfraPytestRunnerExecution(
         return r.ok(final_exit)
 
     @override
-    def execute(self) -> p.Result[int]:
-        """Execute the incremental testmon operation."""
-        return self._execute_testmon(complete=False)
+    def execute(
+        self, *, run_context_receiver: p.Infra.PytestRunContextReceiver | None = None
+    ) -> p.Result[int]:
+        """Execute incrementally, exposing the actual receipt to an explicit observer."""
+        return self._execute_testmon(
+            complete=False, run_context_receiver=run_context_receiver
+        )
 
     def execute_full(self) -> p.Result[int]:
         """Run incremental then full under one deadline and persistent database."""
@@ -400,7 +408,12 @@ class FlextInfraPytestRunnerExecution(
             return r.ok(incremental_exit)
         return self._execute_testmon(complete=True)
 
-    def _execute_testmon(self, *, complete: bool) -> p.Result[int]:
+    def _execute_testmon(
+        self,
+        *,
+        complete: bool,
+        run_context_receiver: p.Infra.PytestRunContextReceiver | None = None,
+    ) -> p.Result[int]:
         """Execute one selected testmon phase without resetting shared state."""
         u.Cli.ensure_dir(self.testmon_db.parent).unwrap()
         report_dir = self._report_directory()
@@ -409,14 +422,15 @@ class FlextInfraPytestRunnerExecution(
             if complete
             else c.Infra.PytestExecutionMode.INCREMENTAL
         )
-        self._write_run_context(
-            report_dir,
-            m.Infra.PytestRunContext(
-                execution_mode=execution_mode,
-                testmon_db=self.testmon_db,
-                deadline_monotonic=self._process_deadline().expires_at_monotonic,
-            ),
+        context = m.Infra.PytestRunContext(
+            execution_mode=execution_mode,
+            testmon_db=self.testmon_db,
+            deadline_monotonic=self._process_deadline().expires_at_monotonic,
+            report_directory=report_dir if self.collection_command_prefix else None,
         )
+        self._write_run_context(report_dir, context)
+        if run_context_receiver is not None:
+            run_context_receiver(context)
         pre_digest = FlextInfraTestmonDbInspector.digest_file(self.testmon_db)
         cache_restored = False
         if pre_digest is not None:
@@ -505,6 +519,7 @@ class FlextInfraPytestRunnerExecution(
                 execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
                 testmon_db=None,
                 deadline_monotonic=self._process_deadline().expires_at_monotonic,
+                report_directory=report_dir if self.collection_command_prefix else None,
             ),
         )
         # The inventory pass enforces the same collection policy before coverage.

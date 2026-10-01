@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import libcst as cst
-
 from .nesting_references import FlextInfraUtilitiesSemanticCutoverNestingReferences
 
 if TYPE_CHECKING:
+    import libcst as cst
+
     from flext_infra import t
 
 
@@ -39,6 +39,8 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
 
     @classmethod
     def _nest_definitions(cls, source: str, definitions: t.StrMapping) -> str:
+        import libcst as cst
+
         if not definitions:
             return source
         owners = frozenset(definitions.values())
@@ -140,6 +142,8 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
     @staticmethod
     def _declares_exports(node: cst.BaseStatement) -> bool:
         """Whether one module-level statement declares ``__all__``."""
+        import libcst as cst
+
         return isinstance(node, cst.SimpleStatementLine) and any(
             isinstance(statement, cst.AnnAssign)
             and isinstance(statement.target, cst.Name)
@@ -159,6 +163,8 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
         and its declared annotation, so a module using a tuple annotation was
         silently rewritten to a list. Only the value changes here.
         """
+        import libcst as cst
+
         rewritten = cst.parse_statement(f'__all__ = ["{owner_name}"]\n')
         if not isinstance(node, cst.SimpleStatementLine) or not isinstance(
             rewritten, cst.SimpleStatementLine
@@ -182,6 +188,8 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
         body: t.SequenceOf[cst.BaseStatement],
     ) -> t.Pair[t.VariadicTuple[cst.BaseStatement], t.VariadicTuple[cst.BaseStatement]]:
         """Split one class body into its leading docstring and the remainder."""
+        import libcst as cst
+
         if not body:
             return ((), ())
         head = body[0]

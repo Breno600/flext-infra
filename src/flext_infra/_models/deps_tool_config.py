@@ -378,6 +378,16 @@ class FlextInfraModelsDepsToolConfig(
                 + self.termination_grace_seconds
             )
 
+        @property
+        def serial_suite_stop_reserve_seconds(self) -> int:
+            """Derive the serial stop budget.
+
+            Serial execution keeps at most one item in flight, so only that
+            item can still run to the slow per-item ceiling after the stop,
+            followed by the same termination grace.
+            """
+            return self.slow_timeout_seconds + self.termination_grace_seconds
+
         @u.model_validator(mode="after")
         def _validate_execution_limits(self) -> Self:
             """Keep item and termination budgets inside the hard invocation cap."""
