@@ -32,7 +32,7 @@ class FlextInfraConstantsDocs:
     DOCS_AUDIT_REPORT_FILENAME: ClassVar[str] = "audit-report.md"
     DOCS_VALIDATE_SUMMARY_FILENAME: ClassVar[str] = "validate-summary.json"
     DOCS_VALIDATE_REPORT_FILENAME: ClassVar[str] = "validate-report.md"
-    DOCS_STRUCTURED_REPORT_FILENAMES: ClassVar[t.StrSequence] = (
+    DOCS_STRUCTURED_REPORT_FILENAMES: ClassVar[t.VariadicTuple[str]] = (
         DOCS_AUDIT_SUMMARY_FILENAME,
         DOCS_AUDIT_REPORT_FILENAME,
         DOCS_VALIDATE_SUMMARY_FILENAME,

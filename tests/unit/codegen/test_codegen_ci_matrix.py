@@ -659,7 +659,8 @@ class TestsFlextInfraCodegenCiMatrix:
         jobs = t.Cli.JSON_MAPPING_ADAPTER.validate_python(document["jobs"])
         job = t.Cli.JSON_MAPPING_ADAPTER.validate_python(jobs["docs-quality"])
         steps = [
-            t.Cli.JSON_MAPPING_ADAPTER.validate_python(step) for step in job["steps"]
+            t.Cli.JSON_MAPPING_ADAPTER.validate_python(step)
+            for step in t.Cli.JSON_LIST_ADAPTER.validate_python(job["steps"])
         ]
         docs_step = next(step for step in steps if step.get("run") == "make docs")
         upload = next(
