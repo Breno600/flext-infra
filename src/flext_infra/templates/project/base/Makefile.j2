@@ -741,11 +741,6 @@ _builtin_fix_enforcement: _builtin_require_environment
 _builtin_sonarcloud_sync_all: _builtin_require_environment
 	@$(WORKSPACE_ORCHESTRATE) --verb sonarcloud-sync $(WORKSPACE_PROJECT_ARGS)
 
-# Member propagation exists only where members exist: this workspace's
-# flext-infra conforms and relocks each declared member and publishes one
-# pull-request lane per member that changed. It never merges.
-_builtin-propagate: _builtin_require_environment
-	@$(PROJECT_FLEXT_INFRA) {{ workspace_cli_group }} propagate --repository-root "$(PROJECT_ROOT)"
 {% else %}
 _builtin_build_artifacts:
 {% if package %}
@@ -794,6 +789,7 @@ _builtin_fix_enforcement: _builtin_require_environment
 # to no setup/gen/check/test workflow row and never runs implicitly.
 _builtin_sonarcloud_sync_all: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) maintenance sonarcloud-sync --repository-root "$(PROJECT_ROOT)"
+{% endif %}
 
 {% if make_profile == "workspace" %}
 # Member propagation exists only where members exist: this workspace's
