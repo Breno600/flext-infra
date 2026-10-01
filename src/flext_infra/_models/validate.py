@@ -196,6 +196,15 @@ class FlextInfraModelsCore:
             pattern=r"^[0-9a-f]{64}$",
             description="Digest binding a profile sidecar to its exact pstats artifact",
         )
+        report_directory: Path | None = m.Field(
+            default=None,
+            description="Explicit directory binding profiled parent and children",
+        )
+        profile_sha256: str | None = m.Field(
+            default=None,
+            pattern=r"^[0-9a-f]{64}$",
+            description="Digest binding a profile sidecar to its exact pstats artifact",
+        )
 
     class PytestReportEvent(m.Value):
         """Common report-log envelope and the complete warning payload."""
