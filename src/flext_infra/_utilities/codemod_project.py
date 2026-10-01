@@ -681,7 +681,9 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         repairable = frozenset(
             rule.id
             for rule in planned.value.rules
-            if rule.fixable or rule.relocation is not None
+            if rule.fixable
+            or rule.relocation is not None
+            or rule.id in c.Infra.SEMANTIC_CUTOVER_RULE_IDS.values()
         )
         parsed: list[m.Infra.CensusViolation] = []
         for violation in validation.value.violations:

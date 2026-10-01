@@ -46,8 +46,9 @@ Infra:
       uv_environments: ["sys_platform == 'linux'", "sys_platform == 'darwin'"]
       # Global compatibility exceptions become [tool.uv] constraint-dependencies
       # in every project, including projects using the dependency transitively.
-      # Declarations stay latest: an upstream's own bound is resolved by uv from
-      # that upstream's metadata, never restated here as a fleet cap.
+      # Keep reasons here; an empty list removes constraints from all projections.
+      # Dependency compatibility is resolved from the declared project graph;
+      # upstream packages own any bounds their public contracts require.
       uv_constraint_dependencies: []
       # Moving selectors consumed by generated .mise.toml and CI. Only
       # `make upg` resolves them to the newest release and writes mise.lock;
@@ -92,16 +93,30 @@ Infra:
         - macos-x64
         - macos-arm64
         - windows-x64
+      # The Mise release `make upg` writes to every project's mise.version and
+      # bakes into bin/mise and bin/mise.cmd. Held at 2026.9.16: under the
+      # dependency cooldown `latest` resolves 2026.9.17, whose artifact fails
+      # the receipt check ("Mise receipt returned invalid version") and stops
+      # setup fleet-wide. Move to latest once the newest release outside the
+      # cooldown passes that check.
+      mise_selector: github:jdx/mise
+      mise_version: "2026.9.16"
       # Projection: .mise.toml [tools] keys. Override the selector here.
       qlty_selector: github:qltysh/qlty
       qlty_version: latest
       node_version: latest
       jscpd_selector: github:kucherenko/jscpd
-      jscpd_version: latest
+      # Held at 5.3.3 (#1303): the 5.4.0 release ships no assets for the
+      # fleet's six platforms, so mise cannot lock it and make upg fails
+      # fleet-wide. Move to latest once a 5.4.x release publishes them.
+      jscpd_version: "5.3.3"
       # Prettier is the markdown formatter (markdown-format gate): provisioned
       # through npm so the fleet binary version is owned by this SSOT alone.
       prettier_selector: npm:prettier
-      prettier_version: latest
+      # Pinned to 3.5.x: prettier 3.7+ changed markdown formatting (list-continuation
+      # printer, proseWrap) which the markdown-format gate has not been revalidated
+      # against. Only float through `make upg` once the docs gate is verified.
+      prettier_version: 3.5.3
       waza_selector: github:microsoft/waza
       waza_version: latest
       # microsoft/waza also publishes azd-extension tags, and GitHub marks
@@ -483,6 +498,8 @@ Infra:
         actions: [generate, fix, fmt, validate, audit]
         mutable_actions: [fix, fmt]
         reports_dir: .reports/docs
+        api_modules:
+          flext-infra: [flext_infra]
         overview_preview_limits:
           aliases: 11
           public_symbols: 10
@@ -1230,7 +1247,7 @@ Infra:
               - pydantic>=2.13.5
               - pydantic-settings>=2.15.0
               - pyyaml>=6.0.3
-              - structlog>=26.1.0
+              - structlog>=25.5.0
               - typing-extensions>=4.16.0
             codegen: [flext-infra]
           - upstream: flext_cli
@@ -1251,7 +1268,7 @@ Infra:
             runtime: [flext-api, bcrypt>=5.0.0, PyJWT>=2.15.1]
           - upstream: flext_core
             project: flext-cli
-            runtime: [click>=8.5.0, typer>=0.27.2, jinja2>=3.1.6, jsonschema>=4.26.0, tomlkit>=0.15.1, ruamel.yaml>=0.19.1, defusedxml>=0.7.1, openpyxl>=3.1.5, python-docx>=1.2.0, python-pptx>=1.0.2]
+            runtime: [click>=8.3.3, typer>=0.27.2, jinja2>=3.1.6, jsonschema>=4.26.0, tomlkit>=0.15.1, ruamel.yaml>=0.19.1, defusedxml>=0.7.1, openpyxl>=3.1.5, python-docx>=1.2.0, python-pptx>=1.0.2]
           - upstream: flext_cli
             project: flext-infra
             runtime: [flext-cli, defusedxml>=0.7.1, GitPython>=3.2.0, jinja2>=3.1.6, libcst>=1.9.0, Markdown>=3.11, "rope @ git+https://github.com/marlon-costa-dc/rope.git@datacosmos", pytest>=9.1.1, mkdocs>=1.6.1]

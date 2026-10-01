@@ -252,7 +252,13 @@ class TestsFlextInfraCodegenGeneration:
         init_content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(init_content, "__init__.py", "exec")
-        tm.that(init_content, contains="from flext_core.lazy import")
+        tm.that(
+            init_content,
+            contains=(
+                f"from {c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE} import "
+                f"{', '.join(c.Infra.LAZY_BOOTSTRAP_HELPERS)}"
+            ),
+        )
         tm.that(init_content, contains='__all__: tuple[str, ...] = ("Demo", "Nested")')
         tm.that(init_content, contains="install_lazy_exports")
 

@@ -21,6 +21,9 @@ from flext_infra._utilities._semantic_cutover.facade_bases import (
 from flext_infra._utilities._semantic_cutover.model_fields import (
     FlextInfraUtilitiesSemanticCutoverModelFields,
 )
+from flext_infra._utilities._semantic_cutover.module_layout import (
+    FlextInfraUtilitiesSemanticCutoverModuleLayout,
+)
 from flext_infra._utilities._semantic_cutover.nesting import (
     FlextInfraUtilitiesSemanticCutoverNesting,
 )
@@ -45,6 +48,7 @@ class FlextInfraUtilitiesSemanticCutoverBase(
     FlextInfraUtilitiesSemanticCutoverModelFields,
     FlextInfraUtilitiesSemanticCutoverSelfFacade,
     FlextInfraUtilitiesSemanticCutoverDynamicEnvironment,
+    FlextInfraUtilitiesSemanticCutoverModuleLayout,
 ):
     """Plan every semantic ``make mod`` cutover through one typed contract."""
 
@@ -85,6 +89,10 @@ class FlextInfraUtilitiesSemanticCutoverBase(
                 return cls._plan_self_facade_imports(root, sources, selected)
             case c.Infra.SemanticCutoverPhase.DYNAMIC_ENVIRONMENT:
                 return cls._plan_dynamic_environment(root, sources, selected)
+            case c.Infra.SemanticCutoverPhase.MODULE_END:
+                return cls._plan_module_end(root, sources, selected)
+            case c.Infra.SemanticCutoverPhase.NOTICE_LAST:
+                return cls._plan_notice_last(root, sources, selected)
             case _:
                 assert_never(phase)
 
