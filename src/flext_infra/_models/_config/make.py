@@ -518,6 +518,12 @@ class FlextInfraConfigModelsMake:
                         raise ValueError(msg)
                 return self
 
+        runtime_environment_directory: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description="Sibling directory for physical workspace environments"
+            ),
+        ]
         examples_timeout_seconds: Annotated[
             int,
             m.Field(gt=0, le=120, description="Workspace examples process deadline"),

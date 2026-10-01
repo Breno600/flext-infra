@@ -658,6 +658,8 @@ Infra:
         # Slow marks cover nested public runner executions, including a cold
         # cache seed and a warm replay under parallel suite load.
         slow-timeout-seconds: 180
+        # Marker selecting the items that run in the dedicated slow phase.
+        slow-marker: slow
         # The complete inventory exceeds 3300 cases. A 189-case incremental
         # execution took 127 seconds, projecting over 2200 seconds for the
         # inventory before the slowest integration cases. Keep a bounded wall
