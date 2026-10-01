@@ -74,6 +74,28 @@ class TestsFlextInfraPytestRunnerZeroTest:
             slow_phase=slow_phase,
         )
 
+    def test_plural_module_form_still_owns_its_tests(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A ``*_tests.py``-only suite owns tests: the SSOT patterns decide.
+
+        The module patterns come from the pytest ``python-files`` SSOT; a
+        hardcoded copy that omitted the plural form answered "owns no tests"
+        for a live suite, and the accounting then rejected a fully green
+        run (selected=0 vs executed=N, exit 1 on a cold checkout).
+        """
+        project_root = self._zero_test_project(tmp_path)
+        cache = config.Infra.codegen.make.testmon_cache
+        module = project_root / cache.target_directory / "sample_suite_tests.py"
+        module.write_text(
+            "def test_value() -> None:\n    from zero_sample import VALUE\n"
+            "    tm_value = VALUE == 41\n    assert tm_value\n",
+            encoding="utf-8",
+        )
+        runner = self._runner(project_root, tmp_path)
+        tm.that(runner._owns_no_tests(), eq=False)
+
     def test_held_testmon_database_lease_refuses_a_concurrent_run(
         self,
         tmp_path: Path,

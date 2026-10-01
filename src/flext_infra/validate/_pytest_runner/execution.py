@@ -246,7 +246,11 @@ class FlextInfraPytestRunnerExecution(
 
         """
         pytest_settings = config.Infra.tooling.tools.pytest
-        patterns = ("test_*.py", "*_test.py")
+        # The module patterns are the pytest SSOT's own python-files: a
+        # project whose suites use another declared form (``*_tests.py``)
+        # still owns its tests, and a hardcoded copy of the list here would
+        # answer "owns no tests" for a live suite again.
+        patterns = pytest_settings.python_files
         for root in pytest_settings.test_paths:
             base = self.root / root
             if not base.is_dir():

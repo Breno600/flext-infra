@@ -704,7 +704,7 @@ class FlextInfraConfigModelsMake:
             m.Field(
                 description="Public Make verb to checker gate mapping outside make check",
             ),
-        ] = MappingProxyType({})
+        ] = m.Field(default_factory=lambda: MappingProxyType({}))
 
         @u.model_validator(mode="after")
         def _validate_project_check_gates(self) -> Self:

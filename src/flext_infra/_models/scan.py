@@ -214,7 +214,7 @@ class FlextInfraModelsScan:
         capture_equals: Annotated[
             t.MappingKV[str, str],
             m.Field(description="Named regex captures and their required exact values"),
-        ] = MappingProxyType({})
+        ] = m.Field(default_factory=lambda: MappingProxyType({}))
         expected: Annotated[
             int | None,
             m.Field(
