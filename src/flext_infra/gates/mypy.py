@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import c, config, m, t, u
+from flext_infra import c, m, t, u
 
 from .base_gate import FlextInfraGate
 
@@ -171,27 +171,10 @@ class FlextInfraMypyGate(FlextInfraGate):
     def _check_env(
         self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> t.StrMapping | None:
-        """Share cache across checkouts and relocks, isolating project namespaces.
-
-        Mypy revalidates changed modules itself; lock-keyed paths discard useful
-        analysis on every relock. Project names keep unrelated tests packages
-        from competing for the same module cache.
-        """
-        spec = config.Infra.codegen.make.mypy_cache
-        process_env = u.Cli.process_env()
-        home = process_env.get(str(spec.data_home_environment_variable)) or str(
-            Path(process_env[str(spec.user_home_environment_variable)])
-            / spec.home_cache_directory
-        )
-        metadata = u.Infra.read_project_metadata_result(project_dir)
-        if metadata.failure:
-            msg = metadata.error or f"project metadata unreadable: {project_dir}"
-            raise ValueError(msg)
+        """Run Mypy against the project's shared analysis cache."""
         overrides = {
             c.Infra.MypyCacheEnvironment.CACHE_DIR.value: str(
-                Path(home)
-                / spec.external_storage_directory
-                / metadata.value.project.name
+                u.Infra.mypy_cache_directory(project_dir)
             )
         }
         typings_generated = ctx.repository_root / c.Infra.DIR_TYPINGS / "generated"

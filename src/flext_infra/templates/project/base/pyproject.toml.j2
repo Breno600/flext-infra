@@ -136,19 +136,13 @@ path = {{ hatch_build_hook_path | tojson }}
 {% endif %}
 
 [tool.hatch.build.targets.wheel]
-packages = [
-  "src/{{ package_name }}",
+include = [
+  "/src/{{ package_name }}/**",
 {% for package in root_packages %}
-  {{ ("src/" ~ package) | tojson }},
-{% endfor %}
-]
-only-include = [
-  "src/{{ package_name }}",
-{% for package in root_packages %}
-  {{ ("src/" ~ package) | tojson }},
+  {{ ("/src/" ~ package ~ "/**") | tojson }},
 {% endfor %}
 {% for data_path in packaged_data_paths if data_path not in packaged_data_files %}
-  {{ data_path | tojson }},
+  {{ ("/" ~ data_path ~ "/**") | tojson }},
 {% endfor %}
 ]
 
@@ -172,16 +166,16 @@ only-include = [
 {% endif %}
 
 [tool.hatch.build.targets.sdist]
-only-include = [
-  "src/{{ package_name }}",
+include = [
+  "/src/{{ package_name }}/**",
 {% for package in root_packages %}
-  {{ ("src/" ~ package) | tojson }},
+  {{ ("/src/" ~ package ~ "/**") | tojson }},
 {% endfor %}
 {% for module in root_modules %}
-  {{ ("src/" ~ module ~ ".py") | tojson }},
+  {{ ("/src/" ~ module ~ ".py") | tojson }},
 {% endfor %}
 {% for data_dir in packaged_data_paths %}
-  {{ data_dir | tojson }},
+  {{ ("/" ~ data_dir ~ ("" if data_dir in packaged_data_files else "/**")) | tojson }},
 {% endfor %}
 ]
 {% endif %}

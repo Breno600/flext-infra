@@ -118,13 +118,13 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         )
 
     @staticmethod
-    def _sdist_only_include(root: Path) -> t.JsonList:
-        """Read the rendered sdist only-include list of the conformed project."""
+    def _sdist_include(root: Path) -> t.JsonList:
+        """Read the rendered sdist source patterns of the conformed project."""
         manifest = (root / c.PYPROJECT_FILENAME).read_text(encoding="utf-8")
         sdist = u.Tests.toml_table_at(
             manifest, c.Infra.TOOL, "hatch", "build", "targets", "sdist"
         )
-        return u.Tests.toml_list(sdist["only-include"])
+        return u.Tests.toml_list(sdist["include"])
 
     @pytest.mark.slow
     def test_declared_root_data_dir_stays_selected(self, infra_git_repo: Path) -> None:
@@ -159,7 +159,8 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             eq=False,
         )
         tm.that(
-            FIXTURE_DISTRIBUTION_DATA_DIR in self._sdist_only_include(infra_git_repo),
+            f"/{FIXTURE_DISTRIBUTION_DATA_DIR}/**"
+            in self._sdist_include(infra_git_repo),
             eq=False,
         )
 
@@ -183,7 +184,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             ),
             eq=f"{package_name}/infra",
         )
-        tm.that("infra" in self._sdist_only_include(infra_git_repo), eq=True)
+        tm.that("/infra/**" in self._sdist_include(infra_git_repo), eq=True)
 
     @pytest.mark.slow
     def test_undeclared_infrastructure_dir_stays_out_of_archives(
@@ -197,7 +198,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         tm.that(self._conform_self(infra_git_repo), eq=0)
 
         tm.that("infra" in self._wheel_force_include(infra_git_repo), eq=False)
-        tm.that("infra" in self._sdist_only_include(infra_git_repo), eq=False)
+        tm.that("/infra/**" in self._sdist_include(infra_git_repo), eq=False)
 
     @pytest.mark.slow
     def test_in_package_data_dir_is_never_force_included(
@@ -218,15 +219,16 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         force_include = self._wheel_force_include(infra_git_repo)
         tm.that(FIXTURE_DISTRIBUTION_DATA_DIR in force_include, eq=False)
         tm.that(
-            FIXTURE_DISTRIBUTION_DATA_DIR in self._sdist_only_include(infra_git_repo),
+            f"/{FIXTURE_DISTRIBUTION_DATA_DIR}/**"
+            in self._sdist_include(infra_git_repo),
             eq=False,
         )
         # The package copy still ships through the packages entry.
         package_name = u.Tests.project_spec(FIXTURE_DISTRIBUTION).package_name
         wheel = self._wheel_target(infra_git_repo)
         tm.that(
-            f"{c.Infra.DEFAULT_SRC_DIR}/{package_name}"
-            in u.Tests.toml_list(wheel["packages"]),
+            f"/{c.Infra.DEFAULT_SRC_DIR}/{package_name}/**"
+            in u.Tests.toml_list(wheel["include"]),
             eq=True,
         )
 
@@ -246,8 +248,8 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             self._wheel_force_include(infra_git_repo),
             eq={catalog: f"{package_name}/{catalog}"},
         )
-        tm.that(catalog in self._sdist_only_include(infra_git_repo), eq=True)
-        tm.that("config" in self._sdist_only_include(infra_git_repo), eq=False)
+        tm.that(f"/{catalog}" in self._sdist_include(infra_git_repo), eq=True)
+        tm.that("/config/**" in self._sdist_include(infra_git_repo), eq=False)
 
     @pytest.mark.slow
     @pytest.mark.parametrize(

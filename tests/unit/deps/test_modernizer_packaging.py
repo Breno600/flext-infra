@@ -118,7 +118,10 @@ class TestsFlextInfraDepsModernizerPackaging:
             f"{c.Infra.DEFAULT_SRC_DIR}/{root_package}",
         }
         module_path = f"{c.Infra.DEFAULT_SRC_DIR}/{root_module}.py"
-        tm.that(set(u.Tests.toml_list(wheel["packages"])), eq=package_paths)
+        tm.that(
+            set(u.Tests.toml_list(wheel["include"])),
+            eq={f"/{path}/**" for path in package_paths},
+        )
         tm.that(
             u.Tests.toml_mapping(wheel["force-include"]), has=module_path, msg=manifest
         )
@@ -126,9 +129,9 @@ class TestsFlextInfraDepsModernizerPackaging:
             u.Tests.toml_mapping(wheel["force-include"])[module_path],
             eq=f"{root_module}.py",
         )
-        only_include = set(u.Tests.toml_list(sdist["only-include"]))
-        tm.that(package_paths <= only_include, eq=True)
-        tm.that(module_path in only_include, eq=True)
+        included = set(u.Tests.toml_list(sdist["include"]))
+        tm.that({f"/{path}/**" for path in package_paths} <= included, eq=True)
+        tm.that(f"/{module_path}" in included, eq=True)
 
         fixed_point = infra_main([
             c.Infra.CLI_GROUP_CODEGEN,

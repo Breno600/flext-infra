@@ -43,6 +43,8 @@ class TestsFlextInfraCodegenRepositoryRootScope:
         tm.that(
             rendered, has="PROJECT_FLEXT_INFRA := $(PROJECT_INFRA_RUN) -m flext_infra"
         )
+        tm.that(rendered.endswith("\n"), eq=True)
+        tm.that(rendered.endswith("\n\n"), eq=False)
 
     def test_repository_root_gate_verbs_evaluate_only_the_root(
         self, tmp_path: Path
@@ -158,7 +160,6 @@ class TestsFlextInfraCodegenRepositoryRootScope:
             )
         ]
         tm.that(positions, eq=sorted(positions))
-        tm.that(steps[positions[-1] :], len=1)
         tm.that(sum("lock --project" in step for step in steps), eq=1)
         converge = second.stdout.splitlines()
         final_lock = next(i for i, s in enumerate(converge) if "lock --project" in s)

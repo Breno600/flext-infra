@@ -338,6 +338,7 @@ Infra:
     make:
       examples_timeout_seconds: 120
       submodule_timeout_seconds: 120
+      runtime_environment_directory: .flext-venvs
       # Operator 2026-09-08: ruff is the formatting and autofix rule.
       # Every ruff invocation uses --preview. Never weaken ruff to keep a
       # file; change the code. [tool.ruff] preview: true in tooling.yaml is
@@ -375,7 +376,6 @@ Infra:
           census_rule_families: [ENFORCE-046, ENFORCE-066, ENFORCE-067, ENFORCE-069, class_prefix]
       # One filename and the root-relative runner paths; the runner places the
       # database in platformdirs' external per-worktree cache.
-      runtime_environment_directory: .flext-venvs
       testmon_cache:
         database_filename: .testmondata
         database_environment_variable: TESTMON_DATAFILE
@@ -573,10 +573,14 @@ Infra:
           description: Inspect ownership, dependency, and generated-state health.
         - name: status
           description: Report the resolved runtime and repository state.
+        - name: verify-clean
+          description: Verify that generated documentation and managed artifacts leave the Git tree clean.
         - name: docs
           description: Generate, fix, format, and check documentation.
         - name: clean
           description: Remove every declared disposable artifact.
+        - name: bootstrap-candidate
+          description: Bootstrap declared candidate worktrees with this branch-matched generator.
         - name: release-plan
           description: Resolve the release decision through the public protocol.
         - name: release-version
@@ -590,9 +594,6 @@ Infra:
         - name: gen
           description: Regenerate every managed projection atomically.
           produces_activation: true
-        - name: bootstrap-candidate
-          description: Conform the sibling candidate worktree declared in this repository manifest.
-          profiles: [standalone]
         - name: initialize
           description: Materialize the declared package initializer graph.
         - name: mod
@@ -1822,8 +1823,6 @@ Infra:
             - "**/*.bkp?"
             - "**/*.backup"
             - "**/*.orig"
-            - "**/*_backup"
-            - "**/*_backup_*"
             - "**/*.md.backup"
             - "**/archived/"
         - name: "Autofix rejection artifacts (run_skill_autofix.sh rollback output)"

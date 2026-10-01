@@ -40,3 +40,18 @@ rules:
     find: '(^[ \t]+(?:observed|output|namespace|consumer)[ \t]*=[ \t]*tm\.ok\(\s*u\.Cli\.)run_checked(?=\()'
     replace: '\g<1>run'
     flags: [MULTILINE]
+  - id: docs-pytest-single-suite-deadline
+    description: Replace removed per-project timeout override guidance with the typed suite policy.
+    include: [docs/guides/testing.md]
+    find: |-
+      ^The fleet default test wall and any measured per-project `run-timeout-overrides`
+      live in `config/tooling\.yaml`, keyed by the declared `\[project\]\.name`\. The runner
+      and generated Make process bound derive their deadlines from that same policy\.
+      Use the profile and complete run receipts to size a project override; an
+      interrupted selection or suite remains a failed invocation\.$
+    replace: |-
+      The suite deadline is declared once as `Infra.tooling.tools.pytest.run-timeout-seconds`
+      in `config/tooling.yaml`. The typed runner and generated Make process bound
+      derive from that policy. Use the profile and complete run receipts to repair
+      a slow owner; an interrupted selection or suite remains a failed invocation.
+    flags: [MULTILINE]

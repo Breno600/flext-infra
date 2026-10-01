@@ -272,6 +272,12 @@ class TestsFlextInfraGateRegistry:
         fmt_owned = set(config.Infra.codegen.make.fmt_gates)
         tm.that(set(c.Infra.CANONICAL_FIXABLE_GATE_IDS), eq=mutating - fmt_owned)
         tm.that(fmt_owned & set(c.Infra.CANONICAL_GATE_IDS) <= mutating, eq=True)
+        registered_mutating = {
+            gate_id
+            for gate_id in c.Infra.ALLOWED_GATES
+            if (gate_cls := registry.get(gate_id)) is not None and gate_cls.can_fix
+        }
+        tm.that(fmt_owned <= registered_mutating, eq=True)
         # `format` belongs to `make fmt` alone: absent from the read-only
         # check vocabulary AND from the fix vocabulary.
         tm.that(c.Infra.FORMAT not in c.Infra.CANONICAL_FIXABLE_GATE_IDS, eq=True)
