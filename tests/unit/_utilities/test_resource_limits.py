@@ -1,4 +1,8 @@
-"""Behavior tests for bounded Mypy process execution."""
+"""Behavior tests for bounded Mypy process execution.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

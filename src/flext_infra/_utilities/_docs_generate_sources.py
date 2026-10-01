@@ -1,4 +1,8 @@
-"""Authenticated source discovery and CAS verification for docs generation."""
+"""Authenticated source discovery and CAS verification for docs generation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -21,7 +25,12 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
 
     @staticmethod
     def _source_directory_exists(path: Path) -> p.Result[bool]:
-        """Return source-directory presence after physical path authentication."""
+        """Return source-directory presence after physical path authentication.
+
+        Returns:
+            Source-directory presence after physical path authentication.
+
+        """
         planned = cli_u.Cli.atomic_plan_directory_chain(path)
         if planned.failure:
             return r[bool].from_failure(planned)
@@ -35,7 +44,12 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
         suffixes: frozenset[str],
         excluded_names: frozenset[str] = frozenset(),
     ) -> p.Result[t.VariadicTuple[Path]]:
-        """List regular source files through one authenticated tree inventory."""
+        """List regular source files through one authenticated tree inventory.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[Path]]``.
+
+        """
         planned = cli_u.Cli.atomic_plan_directory_chain(root)
         if planned.failure:
             return r[t.VariadicTuple[Path]].from_failure(planned)
@@ -60,7 +74,12 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
         repository_root: Path,
         extra_roots: t.SequenceOf[Path] = (),
     ) -> p.Result[t.VariadicTuple[Path]]:
-        """Discover every physical source consumed by one docs render."""
+        """Discover every physical source consumed by one docs render.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[Path]]``.
+
+        """
         roots = FlextInfraUtilitiesDocsScope.docs_repository_roots(
             repository_root,
             extra_roots,
@@ -143,7 +162,12 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
         *,
         extra_roots: t.SequenceOf[Path] = (),
     ) -> p.Result[bool]:
-        """Require exact source topology and physical states to remain unchanged."""
+        """Require exact source topology and physical states to remain unchanged.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         discovered = FlextInfraUtilitiesDocsGenerateSourcesMixin.docs_source_paths(
             repository_root,
             extra_roots,

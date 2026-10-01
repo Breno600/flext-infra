@@ -1,4 +1,8 @@
-"""Public behavior tests for disposable-artifact cleanup."""
+"""Public behavior tests for disposable-artifact cleanup.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

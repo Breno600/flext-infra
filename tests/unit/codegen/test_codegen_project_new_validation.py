@@ -20,7 +20,12 @@ class TestsFlextInfraCodegenProjectNewValidation:
 
     @staticmethod
     def _service(root: Path, **overrides: str) -> FlextInfraCodegenProjectNew:
-        """Build one apply-mode project-new service with overridable inputs."""
+        """Build one apply-mode project-new service with overridable inputs.
+
+        Returns:
+            The resulting ``FlextInfraCodegenProjectNew``.
+
+        """
         defaults: dict[str, str] = {
             "repository_url": "git@github.com:flext-sh/flext-demo.git",
             "repository_branch": "0.12.0-dev",

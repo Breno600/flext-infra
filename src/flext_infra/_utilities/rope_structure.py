@@ -14,7 +14,12 @@ class FlextInfraUtilitiesRopeStructure:
 
     @staticmethod
     def logical_statements(source: str) -> t.SequenceOf[m.Infra.LogicalStatement]:
-        """Return Rope logical regions with scope and TYPE_CHECKING context."""
+        """Return Rope logical regions with scope and TYPE_CHECKING context.
+
+        Returns:
+            Rope logical regions with scope and TYPE_CHECKING context.
+
+        """
         from rope.base import codeanalyze
 
         if not source:
@@ -69,7 +74,12 @@ class FlextInfraUtilitiesRopeStructure:
 
     @staticmethod
     def _is_type_checking_guard(text: str) -> bool:
-        """Return whether one logical-line region opens a TYPE_CHECKING branch."""
+        """Return whether one logical-line region opens a TYPE_CHECKING branch.
+
+        Returns:
+            Whether one logical-line region opens a TYPE_CHECKING branch.
+
+        """
         normalized = " ".join(text.split())
         return normalized in {"if TYPE_CHECKING:", "if TYPE_CHECKING is True:"}
 
@@ -106,7 +116,12 @@ class FlextInfraUtilitiesRopeStructure:
 
     @staticmethod
     def _header_name(text: str) -> str:
-        """Return the declared name from a ``class``/``def`` header line."""
+        """Return the declared name from a ``class``/``def`` header line.
+
+        Returns:
+            The declared name from a ``class``/``def`` header line.
+
+        """
         stripped = text.strip().removeprefix("async ").strip()
         body = stripped.split(maxsplit=1)[1] if " " in stripped else ""
         for separator in ("(", ":", "["):
@@ -115,7 +130,12 @@ class FlextInfraUtilitiesRopeStructure:
 
     @staticmethod
     def _categorize(text: str) -> c.Infra.StatementCategory:
-        """Classify one statement by its leading token (lexical, no AST)."""
+        """Classify one statement by its leading token (lexical, no AST).
+
+        Returns:
+            The resulting ``c.Infra.StatementCategory``.
+
+        """
         stripped = text.strip()
         first = stripped.split(maxsplit=1)[0] if stripped else ""
         keyword_map = {
@@ -133,7 +153,12 @@ class FlextInfraUtilitiesRopeStructure:
 
     @staticmethod
     def _categorize_expression(stripped: str) -> c.Infra.StatementCategory:
-        """Classify a non-keyword statement."""
+        """Classify a non-keyword statement.
+
+        Returns:
+            The resulting ``c.Infra.StatementCategory``.
+
+        """
         head = FlextInfraUtilitiesRopeStructure._assignment_head(stripped)
         if head is not None:
             return (
@@ -153,7 +178,12 @@ class FlextInfraUtilitiesRopeStructure:
 
     @staticmethod
     def _string_literal_headed(stripped: str) -> bool:
-        """Return whether a statement starts with a string literal."""
+        """Return whether a statement starts with a string literal.
+
+        Returns:
+            Whether a statement starts with a string literal.
+
+        """
         index = 0
         while index < len(stripped) and stripped[index].lower() in "rbfu":
             index += 1
@@ -161,7 +191,12 @@ class FlextInfraUtilitiesRopeStructure:
 
     @staticmethod
     def _assignment_head(stripped: str) -> str | None:
-        """Return the target side of a top-level assignment."""
+        """Return the target side of a top-level assignment.
+
+        Returns:
+            The target side of a top-level assignment.
+
+        """
         depth = 0
         quote = ""
         for index, char in enumerate(stripped):
@@ -183,7 +218,12 @@ class FlextInfraUtilitiesRopeStructure:
 
     @staticmethod
     def target_name(statement: m.Infra.LogicalStatement) -> str:
-        """Return a simple assignment/annotation target name, or empty."""
+        """Return a simple assignment/annotation target name, or empty.
+
+        Returns:
+            A simple assignment/annotation target name, or empty.
+
+        """
         head = FlextInfraUtilitiesRopeStructure._assignment_head(statement.text.strip())
         source = head if head is not None else statement.text.strip()
         name = source.split(":", maxsplit=1)[0].strip()
@@ -191,7 +231,12 @@ class FlextInfraUtilitiesRopeStructure:
 
     @staticmethod
     def class_base_names(statement: m.Infra.LogicalStatement) -> t.Infra.StrSet:
-        """Return terminal base-class names from a class header."""
+        """Return terminal base-class names from a class header.
+
+        Returns:
+            Terminal base-class names from a class header.
+
+        """
         stripped = statement.text.strip()
         open_paren = stripped.find("(")
         close_paren = stripped.rfind(")")

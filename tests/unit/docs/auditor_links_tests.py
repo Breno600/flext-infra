@@ -159,6 +159,7 @@ class TestsFlextInfraAuditorLinks:
         def test_broken_link_issues_rejects_cross_project_relative_link(
             tmp_path: Path,
         ) -> None:
+            """Test broken link issues rejects cross project relative link."""
             docs_dir = tmp_path / "docs"
             docs_dir.mkdir(parents=True, exist_ok=True)
             (docs_dir / "test.md").write_text(

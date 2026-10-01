@@ -1,5 +1,8 @@
 """Enforce the runner's collection manifest through pytest's public hook API.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 The runner resolves selected node IDs once and passes that ordered manifest as
 pytest arguments. Testmon still records dependencies in every worker, but its
 worker-local stable/unstable classification must not define xdist's index order.
@@ -66,6 +69,11 @@ class FlextInfraPytestCollection:
         neither imports no model. A requested manifest loads only its owning
         model module, never the whole model facade, because every runner
         collection process pays that import.
+
+        Raises:
+            ValueError: If Runner collection manifest contains duplicate node IDs; or if
+                Runner collection differs from selection.
+
         """
         selected: str | None = session.config.getoption(
             FlextInfraConstantsCheck.PYTEST_SELECTED_COLLECTION_OPTION,

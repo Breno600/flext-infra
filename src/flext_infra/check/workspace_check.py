@@ -1,4 +1,8 @@
-"""FLEXT infrastructure workspace checker."""
+"""FLEXT infrastructure workspace checker.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -46,14 +50,24 @@ class FlextInfraWorkspaceChecker(
 
     @staticmethod
     def parse_tool_args(raw: str | None) -> t.StrSequence:
-        """Parse extra gate arguments passed as a shell-style string."""
+        """Parse extra gate arguments passed as a shell-style string.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         if raw is None:
             return list[str]()
         return [item for item in shlex.split(raw) if item]
 
     @staticmethod
     def resolve_gates(gates: t.StrSequence) -> p.Result[list[str]]:
-        """Validate exact, unique requested gate names without normalization."""
+        """Validate exact, unique requested gate names without normalization.
+
+        Returns:
+            The resulting ``p.Result[list[str]]``.
+
+        """
         if not gates:
             return r[list[str]].fail("ERROR: at least one quality gate is required")
         resolved: list[str] = []
@@ -69,11 +83,21 @@ class FlextInfraWorkspaceChecker(
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute."""
+        """Execute.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         return r[bool].fail("Use execute_command() directly")
 
     def execute_payload(self, params: m.Infra.RunCommand) -> p.Result[bool]:
-        """Execute quality gates from the canonical check command payload."""
+        """Execute quality gates from the canonical check command payload.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         project_targets_result = self._resolve_project_targets(params)
         if project_targets_result.failure:
             return r[bool].from_failure(project_targets_result)
@@ -129,35 +153,50 @@ class FlextInfraWorkspaceChecker(
         Every repository evaluates only itself: an
         omitted ``--projects`` never widens to the declared members, and a root
         that is not a project fails loud through the topology owner.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.CheckProjectTarget]]``.
+
         """
         requested = params.project_names
         if requested:
             return r[t.SequenceOf[m.Infra.CheckProjectTarget]].ok(
                 tuple(
-                    m.Infra.CheckProjectTarget.from_workspace_name(
-                        params.repository_root,
-                        project_name,
+                    m.Infra.CheckProjectTarget(
+                        name=project_name,
+                        path=params.repository_root / project_name,
                     )
                     for project_name in requested
                 ),
             )
-        discovered = u.Infra.resolve_projects(params.repository_root, ())
-        if discovered.failure:
-            return r[t.SequenceOf[m.Infra.CheckProjectTarget]].from_failure(discovered)
-        project_targets = tuple(
-            m.Infra.CheckProjectTarget(name=project.name, path=project.path)
-            for project in discovered.value
+        resolved = u.Infra.resolve_projects(params.repository_root, (".",))
+        if resolved.failure:
+            return r[t.SequenceOf[m.Infra.CheckProjectTarget]].from_failure(resolved)
+        return r[t.SequenceOf[m.Infra.CheckProjectTarget]].ok(
+            tuple(
+                m.Infra.CheckProjectTarget(name=project.name, path=project.path)
+                for project in resolved.value
+            ),
         )
-        return r[t.SequenceOf[m.Infra.CheckProjectTarget]].ok(project_targets)
 
     def format(self, project_dir: Path) -> p.Result[m.Infra.GateResult]:
-        """Run format checks for one project."""
+        """Run format checks for one project.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GateResult]``.
+
+        """
         return r[m.Infra.GateResult].ok(
             self._run_gate(c.Infra.FORMAT, project_dir).result,
         )
 
     def lint(self, project_dir: Path) -> p.Result[m.Infra.GateResult]:
-        """Run lint checks for one project."""
+        """Run lint checks for one project.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GateResult]``.
+
+        """
         return r[m.Infra.GateResult].ok(
             self._run_gate(c.Infra.LINT, project_dir).result,
         )
@@ -167,7 +206,12 @@ class FlextInfraWorkspaceChecker(
         project: str,
         gates: t.StrSequence,
     ) -> p.Result[t.SequenceOf[m.Infra.ProjectResult]]:
-        """Run selected gates for one project."""
+        """Run selected gates for one project.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.ProjectResult]]``.
+
+        """
         return self.run_projects([project], list(gates))
 
     def run_projects(
@@ -179,7 +223,12 @@ class FlextInfraWorkspaceChecker(
         fail_fast: bool = c.Infra.CHECK_FAIL_FAST_DEFAULT,
         ctx: m.Infra.GateContext | None = None,
     ) -> p.Result[t.SequenceOf[m.Infra.ProjectResult]]:
-        """Run selected gates for multiple projects."""
+        """Run selected gates for multiple projects.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.ProjectResult]]``.
+
+        """
         resolved_gates_result = self.resolve_gates(gates)
         if resolved_gates_result.failure:
             return r[t.SequenceOf[m.Infra.ProjectResult]].from_failure(
@@ -226,7 +275,12 @@ class FlextInfraWorkspaceChecker(
         self,
         projects: t.StrSequence | t.SequenceOf[m.Infra.CheckProjectTarget],
     ) -> t.SequenceOf[m.Infra.CheckProjectTarget]:
-        """Return typed project targets from public names or internal selections."""
+        """Return typed project targets from public names or internal selections.
+
+        Returns:
+            Typed project targets from public names or internal selections.
+
+        """
         targets: list[m.Infra.CheckProjectTarget] = []
         for project in projects:
             if isinstance(project, m.Infra.CheckProjectTarget):

@@ -28,7 +28,12 @@ class FlextInfraUtilitiesIterationMatching(FlextInfraUtilitiesGitScopeMixin):
         includes: t.StrSequence,
         excludes: t.StrSequence = (),
     ) -> t.SequenceOf[Path]:
-        """Return files in one scope through the canonical git-aware selection path."""
+        """Return files in one scope through the canonical git-aware selection path.
+
+        Returns:
+            Files in one scope through the canonical git-aware selection path.
+
+        """
         if not root.is_dir():
             return []
         root = root.resolve()

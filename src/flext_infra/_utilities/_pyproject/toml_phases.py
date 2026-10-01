@@ -1,4 +1,8 @@
-"""Declarative TOML phase application over one normalized pyproject payload."""
+"""Declarative TOML phase application over one normalized pyproject payload.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -16,7 +20,12 @@ class FlextInfraUtilitiesPyprojectTomlPhases:
         payload: t.MutableJsonMapping,
         *phases: m.Infra.DepsToml.PhaseConfig,
     ) -> t.StrSequence:
-        """Apply declarative phases in order and return one flat change list."""
+        """Apply declarative phases in order and return one flat change list.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         return [
             change
             for phase in phases
@@ -31,7 +40,12 @@ class FlextInfraUtilitiesPyprojectTomlPhases:
         *,
         parent_path: t.StrSequence,
     ) -> t.StrSequence:
-        """Apply one phase and its nested tables below ``parent_path``."""
+        """Apply one phase and its nested tables below ``parent_path``.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         phase_path = (*parent_path, *phase.root_path, *phase.table_path)
         table = u.Cli.toml_mapping_ensure_path(payload, phase_path)
         prefix = u.Cli.toml_dot_path(*phase_path)
@@ -53,7 +67,12 @@ class FlextInfraUtilitiesPyprojectTomlPhases:
         | m.Infra.DepsToml.ListOp
         | m.Infra.DepsToml.RemoveOp,
     ) -> t.SequenceOf[t.Pair[t.StrSequence, str]]:
-        """Apply one operation; return its ``(relative key path, outcome)`` change."""
+        """Apply one operation; return its ``(relative key path, outcome)`` change.
+
+        Returns:
+            The resulting ``t.SequenceOf[t.Pair[t.StrSequence, str]]``.
+
+        """
         if isinstance(operation, m.Infra.DepsToml.SetOp):
             changed = u.Cli.toml_mapping_sync_value(
                 table,

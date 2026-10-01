@@ -22,7 +22,12 @@ class FlextInfraDocAuditorMixin:
 
     @staticmethod
     def resolve_checks(check: str) -> t.Infra.StrSet:
-        """Parse check string into a resolved set of check names."""
+        """Parse check string into a resolved set of check names.
+
+        Returns:
+            The resulting ``t.Infra.StrSet``.
+
+        """
         checks = {part.strip() for part in check.split(",") if part.strip()}
         if not checks or "all" in checks:
             return {

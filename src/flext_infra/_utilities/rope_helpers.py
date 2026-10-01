@@ -1,4 +1,8 @@
-"""Generic helper mixin for Rope-backed refactors."""
+"""Generic helper mixin for Rope-backed refactors.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -15,7 +19,12 @@ class FlextInfraUtilitiesRopeHelpers(FlextInfraUtilitiesRopeMethodOrderMixin):
 
     @staticmethod
     def statement_line_span(statement: ast.stmt) -> t.IntPair:
-        """Return the 1-based inclusive line span of one statement, decorators included."""
+        """Return the 1-based inclusive line span of one statement, decorators included.
+
+        Returns:
+            The 1-based inclusive line span of one statement, decorators included.
+
+        """
         decorators: t.SequenceOf[ast.expr] = (
             statement.decorator_list
             if isinstance(
@@ -34,7 +43,15 @@ class FlextInfraUtilitiesRopeHelpers(FlextInfraUtilitiesRopeMethodOrderMixin):
         *,
         kind: str,
     ) -> t.IntPair | None:
-        """Return the line span of the top-level ``kind`` definition named ``name``."""
+        """Return the line span of the top-level ``kind`` definition named ``name``.
+
+        Returns:
+            The line span of the top-level ``kind`` definition named ``name``.
+
+        Raises:
+            ValueError: If unsupported definition kind.
+
+        """
         if kind == "function":
             node_types: t.VariadicTuple[type[ast.stmt]] = (
                 ast.FunctionDef,
@@ -64,7 +81,12 @@ class FlextInfraUtilitiesRopeHelpers(FlextInfraUtilitiesRopeMethodOrderMixin):
         *,
         kind: str = "function",
     ) -> str | None:
-        """Return the full top-level def/class block named ``name``, decorators included."""
+        """Return the full top-level def/class block named ``name``, decorators included.
+
+        Returns:
+            The full top-level def/class block named ``name``, decorators included.
+
+        """
         span = FlextInfraUtilitiesRopeHelpers.top_level_definition_span(
             source,
             name,

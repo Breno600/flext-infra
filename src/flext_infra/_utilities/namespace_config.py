@@ -23,7 +23,15 @@ class FlextInfraUtilitiesNamespaceConfig:
 
     @staticmethod
     def namespace_meta(project_root: Path) -> t.JsonMapping:
-        """Return optional ``tool.flext.namespace`` metadata for one project."""
+        """Return optional ``tool.flext.namespace`` metadata for one project.
+
+        Returns:
+            Optional ``tool.flext.namespace`` metadata for one project.
+
+        Raises:
+            TypeError: If [tool.flext.namespace] must be a table in.
+
+        """
         flext_meta = FlextInfraUtilitiesPyproject.tool_flext_meta(project_root)
         if "namespace" not in flext_meta:
             return {}
@@ -35,7 +43,15 @@ class FlextInfraUtilitiesNamespaceConfig:
 
     @staticmethod
     def _namespace_flag(project_root: Path, key: str, *, absent: bool) -> bool:
-        """Return one boolean ``[tool.flext.namespace]`` flag; a non-bool fails."""
+        """Return one boolean ``[tool.flext.namespace]`` flag; a non-bool fails.
+
+        Returns:
+            One boolean ``[tool.flext.namespace]`` flag; a non-bool fails.
+
+        Raises:
+            TypeError: If [tool.flext.namespace].
+
+        """
         meta = FlextInfraUtilitiesNamespaceConfig.namespace_meta(project_root)
         if key not in meta:
             return absent
@@ -47,7 +63,12 @@ class FlextInfraUtilitiesNamespaceConfig:
 
     @staticmethod
     def namespace_enabled(project_root: Path) -> bool:
-        """Return whether namespace enforcement is enabled (enabled when unset)."""
+        """Return whether namespace enforcement is enabled (enabled when unset).
+
+        Returns:
+            Whether namespace enforcement is enabled (enabled when unset).
+
+        """
         return FlextInfraUtilitiesNamespaceConfig._namespace_flag(
             project_root,
             "enabled",
@@ -62,6 +83,16 @@ class FlextInfraUtilitiesNamespaceConfig:
         1. Explicit ``[tool.flext.namespace] scan_dirs`` in pyproject.toml.
         2. Git-tracked top-level directories that exist on disk.
         3. Outside Git, the configured source-scan roots that exist on disk.
+
+        Returns:
+            Configured scan dirs for namespace enforcement.
+
+        Raises:
+            TypeError: If [tool.flext.namespace] scan_dirs must be a list of non-empty
+                strings in.
+            ValueError: If [tool.flext.namespace] scan_dirs is empty in; or if
+                ``declared.failure``.
+
         """
         meta = FlextInfraUtilitiesNamespaceConfig.namespace_meta(project_root)
         if "scan_dirs" in meta:
@@ -105,7 +136,12 @@ class FlextInfraUtilitiesNamespaceConfig:
 
     @staticmethod
     def namespace_include_dynamic_dirs(project_root: Path) -> bool:
-        """Return whether namespace enforcement scans non-canonical dirs (off when unset)."""
+        """Return whether namespace enforcement scans non-canonical dirs (off when unset).
+
+        Returns:
+            Whether namespace enforcement scans non-canonical dirs (off when unset).
+
+        """
         return FlextInfraUtilitiesNamespaceConfig._namespace_flag(
             project_root,
             "include_dynamic_dirs",

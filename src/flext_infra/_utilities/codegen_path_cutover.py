@@ -1,4 +1,8 @@
-"""Rope-owned migration of transaction path capability consumers."""
+"""Rope-owned migration of transaction path capability consumers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -23,7 +27,20 @@ class FlextInfraUtilitiesCodegenPathCutover:
         rope_workspace: p.Infra.RopeWorkspaceDsl,
         sources: t.MappingKV[Path, str],
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
-        """Migrate exact owner calls, preserving homonyms and root-only callers."""
+        """Migrate exact owner calls, preserving homonyms and root-only callers.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.SemanticMigrationEdit]``.
+
+        Raises:
+            TypeError: If transaction path restructuring produced a non-content effect.
+            ValueError: If transaction path implementation has ambiguous governed
+                ownership; or if Rope could not resolve the transaction path
+                implementation owner; or if Rope resolved a transaction owner outside
+                the governed inventory; or if Rope source differs from the mod planning
+                snapshot; or if Rope change escaped the governed source inventory.
+
+        """
         from flext_infra import m, p
 
         project = rope_workspace.rope_project

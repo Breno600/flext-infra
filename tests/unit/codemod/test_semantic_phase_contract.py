@@ -1,4 +1,8 @@
-"""Real-source regression evidence for staged semantic cutovers."""
+"""Real-source regression evidence for staged semantic cutovers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -21,6 +25,7 @@ class TestsFlextInfraSemanticPhaseContract:
     def test_annotations_and_nesting_complete_in_one_atomic_cutover(
         tmp_path: Path,
     ) -> None:
+        """Test annotations and nesting complete in one atomic cutover."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         # Publication runs through the codegen transaction, which coordinates
         # only inside an exact Git worktree root, exactly as in production.
@@ -73,6 +78,7 @@ class TestsFlextInfraSemanticPhaseContract:
     def test_nesting_replans_proposed_sources_without_publishing(
         tmp_path: Path,
     ) -> None:
+        """Test nesting replans proposed sources without publishing."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         owner = f"{u.derive_class_stem(root.name)}{u.Infra.facade_family_declared_by(c.Infra.CONSTANTS_PY).suffix}"
         path = package / "constants.py"

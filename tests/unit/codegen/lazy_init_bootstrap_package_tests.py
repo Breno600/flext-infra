@@ -33,7 +33,12 @@ class TestsFlextInfraLazyInitBootstrapPackage:
 
     @staticmethod
     def _write_bootstrap_owner(package_root: Path, subpackage: str) -> Path:
-        """Create a private facet of the bootstrap-owning distribution."""
+        """Create a private facet of the bootstrap-owning distribution.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         facet_dir = package_root / subpackage
         facet_dir.mkdir()
         (facet_dir / c.Infra.INIT_PY).write_text("", encoding=c.Cli.ENCODING_DEFAULT)

@@ -1,4 +1,8 @@
-"""Destination-local staging for generic generated-file plans."""
+"""Destination-local staging for generic generated-file plans.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -34,7 +38,12 @@ class FlextInfraCodegenStaging:
         phase: str,
         plans: t.VariadicTuple[m.Infra.CodegenFilePlan],
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenStagedFile]]:
-        """Stage one exact phase without changing any live destination."""
+        """Stage one exact phase without changing any live destination.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.CodegenStagedFile]]``.
+
+        """
         result_type = r[tuple[m.Infra.CodegenStagedFile, ...]]
         if phase not in FlextInfraCodegenStaging._phases:
             return result_type.fail(f"unsupported generation phase: {phase}")

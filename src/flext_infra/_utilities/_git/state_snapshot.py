@@ -1,4 +1,8 @@
-"""Read scoped index and exact working bytes without changing the source."""
+"""Read scoped index and exact working bytes without changing the source.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -231,7 +235,12 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
         cls,
         request: m.Infra.GitWorktreeStateRequest,
     ) -> p.Result[m.Infra.GitWorktreeStateSnapshot]:
-        """Measure owned index entries and raw files, without writing Git objects."""
+        """Measure owned index entries and raw files, without writing Git objects.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitWorktreeStateSnapshot]``.
+
+        """
         try:
             snapshot = cls._state_snapshot(request)
         except (GitCommandError, OSError, ValueError) as exc:
@@ -244,7 +253,12 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
         snapshot: m.Infra.GitWorktreeStateSnapshot,
         destination_root: Path,
     ) -> p.Result[bool]:
-        """Return false for layer differences, fail on foreign identity or read errors."""
+        """Return false for layer differences, fail on foreign identity or read errors.
+
+        Returns:
+            False for layer differences, fail on foreign identity or read errors.
+
+        """
         observed = cls.git_snapshot_worktree_state(
             m.Infra.GitWorktreeStateRequest(
                 repo_root=destination_root,

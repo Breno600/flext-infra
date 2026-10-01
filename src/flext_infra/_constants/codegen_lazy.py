@@ -1,4 +1,8 @@
-"""Lazy-init constants for the codegen package."""
+"""Lazy-init constants for the codegen package.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -141,7 +145,6 @@ class FlextInfraConstantsCodegenLazy:
     "Internal child packages exported at the root as module objects only."
     INFRA_ONLY_EXPORTS: ClassVar[frozenset[str]] = frozenset({
         "cleanup_submodule_namespace",
-        "install_lazy_exports",
         "lazy_getattr",
         "logger",
         "merge_lazy_imports",
@@ -160,7 +163,6 @@ class FlextInfraConstantsCodegenLazy:
     })
     "Exports excluded from package __init__.py auto-export."
     PUBLISHED_ALL_EXCLUDE: ClassVar[frozenset[str]] = frozenset({
-        "build_lazy_import_map",
         "lazy",
         "normalize_lazy_imports",
     })
@@ -206,7 +208,6 @@ class FlextInfraConstantsCodegenLazy:
             "tf": ("flext_tests", "tf"),
             "tk": ("flext_tests", "tk"),
             "tm": ("flext_tests", "tm"),
-            "tv": ("flext_tests", "tv"),
             "u": ("flext_tests", "u"),
             "x": ("flext_tests", "x"),
         })

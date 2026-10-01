@@ -1,4 +1,8 @@
-"""Concrete-syntax rewrite that extends a facade by its parent's class name."""
+"""Concrete-syntax rewrite that extends a facade by its parent's class name.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -24,7 +28,12 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBaseCst:
         owner: str,
         owner_bound: bool,
     ) -> str:
-        """Return the facade source extending ``owner`` with its layout kept."""
+        """Return the facade source extending ``owner`` with its layout kept.
+
+        Returns:
+            The facade source extending ``owner`` with its layout kept.
+
+        """
         import libcst as cst
 
         class _FacadeBaseTransformer(cst.CSTTransformer):

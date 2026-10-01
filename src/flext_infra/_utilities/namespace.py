@@ -1,4 +1,8 @@
-"""Canonical codegen namespace utilities shared by census and auto-fix."""
+"""Canonical codegen namespace utilities shared by census and auto-fix.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -42,6 +46,13 @@ class FlextInfraUtilitiesCodegenNamespace:
         binds to a class whose module has a private ``_<module>/`` package
         beside it. Its suffix is the bound class name past the stem every
         family class shares. No letter, file or suffix is listed here.
+
+        Returns:
+            The resulting ``t.MappingKV[str, m.Infra.FacadeFamily]``.
+
+        Raises:
+            ValueError: If ``not bound``.
+
         """
         core = import_module(c.Infra.PKG_CORE_UNDERSCORE)
         core_dir = Path(getfile(core)).parent
@@ -68,7 +79,12 @@ class FlextInfraUtilitiesCodegenNamespace:
 
     @classmethod
     def facade_family_of_file(cls, file_name: str) -> str | None:
-        """Return the family letter whose facade module file is ``file_name``."""
+        """Return the family letter whose facade module file is ``file_name``.
+
+        Returns:
+            The family letter whose facade module file is ``file_name``.
+
+        """
         return next(
             (
                 letter
@@ -80,7 +96,15 @@ class FlextInfraUtilitiesCodegenNamespace:
 
     @classmethod
     def facade_family_declared_by(cls, file_name: str) -> m.Infra.FacadeFamily:
-        """Return the family whose facade module is ``file_name``."""
+        """Return the family whose facade module is ``file_name``.
+
+        Returns:
+            The family whose facade module is ``file_name``.
+
+        Raises:
+            ValueError: If no facade family declares the module.
+
+        """
         letter = cls.facade_family_of_file(file_name)
         if letter is None:
             msg = f"no facade family declares the module {file_name}"
@@ -89,7 +113,12 @@ class FlextInfraUtilitiesCodegenNamespace:
 
     @classmethod
     def facade_family_of_directory(cls, directory: str) -> str | None:
-        """Return the family letter whose private package is ``directory``."""
+        """Return the family letter whose private package is ``directory``.
+
+        Returns:
+            The family letter whose private package is ``directory``.
+
+        """
         return next(
             (
                 letter
@@ -101,12 +130,22 @@ class FlextInfraUtilitiesCodegenNamespace:
 
     @classmethod
     def matches_root_namespace_file(cls, file_name: str) -> bool:
-        """Return whether *file_name* is a governed root-namespace facade file."""
+        """Return whether *file_name* is a governed root-namespace facade file.
+
+        Returns:
+            Whether *file_name* is a governed root-namespace facade file.
+
+        """
         return file_name.endswith(c.Infra.EXT_PYTHON) and not file_name.startswith("_")
 
     @staticmethod
     def runtime_singleton_export(file_name: str) -> str | None:
-        """Return the sole public singleton owned by a sanctioned runtime module."""
+        """Return the sole public singleton owned by a sanctioned runtime module.
+
+        Returns:
+            The sole public singleton owned by a sanctioned runtime module.
+
+        """
         return next(
             (
                 Path(module_file).stem.removeprefix("_")
@@ -118,7 +157,12 @@ class FlextInfraUtilitiesCodegenNamespace:
 
     @classmethod
     def surface_name(cls, package_name: str) -> str:
-        """Return the configured surface name for one import package."""
+        """Return the configured surface name for one import package.
+
+        Returns:
+            The configured surface name for one import package.
+
+        """
         parts = tuple(part for part in package_name.split(".") if part)
         if not parts:
             return ""
@@ -131,6 +175,10 @@ class FlextInfraUtilitiesCodegenNamespace:
         Project package roots under ``src/`` qualify, as do namespace packages under
         governed wrapper surfaces like ``tests/``, ``examples/``, and ``scripts/``.
         Ordinary nested runtime subpackages such as ``<pkg>.services`` do not.
+
+        Returns:
+            Whether a package behaves like a project namespace root.
+
         """
         parts = tuple(part for part in package_name.split(".") if part)
         if not parts:
@@ -154,7 +202,12 @@ class FlextInfraUtilitiesCodegenNamespace:
         package_name: str,
         export_names: t.StrSequence,
     ) -> t.StrSequence:
-        """Order root-package exports with alias hierarchy preserved."""
+        """Order root-package exports with alias hierarchy preserved.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         _ = (package_dir, package_name)
         ordered_unique = tuple(dict.fromkeys(export_names))
         export_set = set(ordered_unique)
@@ -177,7 +230,12 @@ class FlextInfraUtilitiesCodegenNamespace:
 
     @staticmethod
     def package_alias(*, package_name: str) -> str:
-        """Derive the canonical root API alias from the import package."""
+        """Derive the canonical root API alias from the import package.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         root = package_name.split(".", maxsplit=1)[0]
         if root.startswith(c.Infra.PKG_PREFIX_UNDERSCORE):
             return root.removeprefix(c.Infra.PKG_PREFIX_UNDERSCORE)
@@ -185,7 +243,12 @@ class FlextInfraUtilitiesCodegenNamespace:
 
     @classmethod
     def _runtime_aliases(cls, package_dir: Path) -> t.StrSequence:
-        """Read root aliases from declarations, never from initializer outputs."""
+        """Read root aliases from declarations, never from initializer outputs.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         return tuple(
             alias
             for module_file in sorted(package_dir.glob("*.py"))
@@ -204,7 +267,18 @@ class FlextInfraUtilitiesCodegenNamespace:
         value: ast.expr,
         file_path: Path,
     ) -> t.StrSequence:
-        """Resolve a literal ``__all__`` or the former generated tuple alias."""
+        """Resolve a literal ``__all__`` or the former generated tuple alias.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            ValueError: If ``not isinstance(literal, (list, tuple)) or not
+                all((isinstance(item, str) for item in literal))``; or if a
+                ``(ValueError, SyntaxError)`` is caught; or if ``source_name not in
+                assignments``.
+
+        """
         assignments: MutableMapping[str, ast.expr] = {}
         for node in tree.body:
             if isinstance(node, ast.Assign):
@@ -284,7 +358,12 @@ class FlextInfraUtilitiesCodegenNamespace:
         *,
         project: p.Infra.ProjectInfo | None = None,
     ) -> m.Infra.RopeProjectLayout | None:
-        """Return the canonical project layout contract for one project root."""
+        """Return the canonical project layout contract for one project root.
+
+        Returns:
+            The canonical project layout contract for one project root.
+
+        """
         resolved_root = project_root.resolve()
         package_name = (
             project.package_name
@@ -330,7 +409,15 @@ class FlextInfraUtilitiesCodegenNamespace:
         rope_project: t.Infra.RopeProject,
         project_layout: m.Infra.RopeProjectLayout | None = None,
     ) -> t.Quad[str | None, str | None, str | None, t.StrSequence]:
-        """Return (family_alias, expected_family, expected_alias, family_tokens)."""
+        """Return (family_alias, expected_family, expected_alias, family_tokens).
+
+        Returns:
+            (family_alias, expected_family, expected_alias, family_tokens).
+
+        Raises:
+            ValueError: If facade source is unavailable to Rope.
+
+        """
         family_alias = cls.facade_family_of_directory(file_path.parent.name)
         declared_exports = cls._declared_exports(file_path)
         uppercase_names = tuple(name for name in declared_exports if name[:1].isupper())
@@ -388,6 +475,10 @@ class FlextInfraUtilitiesCodegenNamespace:
         Returns: (is_fixture_module, is_family_module, is_family_package,
                   is_services_module, is_services_package, is_namespace_file,
                   is_root_namespace)
+
+        Returns:
+            The module/package placement booleans for one file.
+
         """
         package_depth = len(package_parts)
         is_fixture_module = file_path.parent.name == "_fixtures"
@@ -425,7 +516,12 @@ class FlextInfraUtilitiesCodegenNamespace:
         *,
         project_layout: m.Infra.RopeProjectLayout | None = None,
     ) -> str:
-        """Derive the class-stem prefix for one file inside a project."""
+        """Derive the class-stem prefix for one file inside a project.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         project_root = (
             project_layout.project_root
             if project_layout is not None
@@ -457,7 +553,12 @@ class FlextInfraUtilitiesCodegenNamespace:
         current_pkg: str = "",
         project_layout: m.Infra.RopeProjectLayout | None = None,
     ) -> m.Infra.NamespaceModulePolicy:
-        """Derive publication from existing declarations, without repair inference."""
+        """Derive publication from existing declarations, without repair inference.
+
+        Returns:
+            The resulting ``m.Infra.NamespaceModulePolicy``.
+
+        """
         package_name = current_pkg or FlextInfraUtilitiesDiscovery.package_name(
             file_path,
         )
@@ -569,7 +670,15 @@ class FlextInfraUtilitiesCodegenNamespace:
         rel_path: Path | None = None,
         current_pkg: str = "",
     ) -> m.Infra.NamespaceModulePolicy:
-        """Enrich publication declarations with repair and inherited-shape evidence."""
+        """Enrich publication declarations with repair and inherited-shape evidence.
+
+        Returns:
+            The resulting ``m.Infra.NamespaceModulePolicy``.
+
+        Raises:
+            ValueError: If facade source is unavailable to Rope.
+
+        """
         policy = cls.publication_policy(
             file_path,
             rope_project=rope_project,
@@ -623,7 +732,12 @@ class FlextInfraUtilitiesCodegenNamespace:
         *,
         projects: t.SequenceOf[m.Infra.ProjectInfo] | None = None,
     ) -> p.Result[t.SequenceOf[m.Infra.ProjectInfo]]:
-        """Discover only projects that participate in codegen automation."""
+        """Discover only projects that participate in codegen automation.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.ProjectInfo]]``.
+
+        """
         if projects is None:
             projects_result = FlextInfraUtilitiesDocsScope.discover_projects(
                 repository_root,
@@ -739,7 +853,12 @@ class FlextInfraUtilitiesCodegenNamespace:
 
     @staticmethod
     def _normalize_class_header(*, line: str, class_name: str, base_name: str) -> str:
-        """Normalize class header."""
+        """Normalize class header.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         stripped = line.strip()
         prefix = f"class {class_name}"
         if not stripped.startswith(prefix) or not stripped.endswith(":"):
@@ -754,6 +873,10 @@ class FlextInfraUtilitiesCodegenNamespace:
         Uses the docstring-aware position helper so the import can never land
         inside a multi-line module docstring (the cause of the F821/"unexpected
         indent" corruption).
+
+        Returns:
+            The resulting ``str``.
+
         """
         lines = source.splitlines()
         if import_line in lines:
@@ -785,7 +908,13 @@ class FlextInfraUtilitiesCodegenNamespace:
         t.VariadicTuple[m.Infra.CensusViolation],
         t.VariadicTuple[m.Infra.CensusViolation],
     ]:
-        """Split initial violations into fixed and still-skipped groups."""
+        """Split initial violations into fixed and still-skipped groups.
+
+        Returns:
+            The resulting ``t.Pair[t.VariadicTuple[m.Infra.CensusViolation],
+                t.VariadicTuple[m.Infra.CensusViolation]]``.
+
+        """
         if not initial_violations:
             return ((), ())
         source_cache: MutableMapping[str, t.StrSequence] = {}
@@ -813,7 +942,12 @@ class FlextInfraUtilitiesCodegenNamespace:
 
     @staticmethod
     def _read_source_lines(project_path: Path, module: str) -> t.StrSequence:
-        """Read source lines."""
+        """Read source lines.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         module_path = project_path / module
         if not module_path.is_file():
             return ()
@@ -827,7 +961,12 @@ class FlextInfraUtilitiesCodegenNamespace:
         project_path: Path,
         source_cache: MutableMapping[str, t.StrSequence],
     ) -> m.Infra.ViolationKey:
-        """Build violation key."""
+        """Build violation key.
+
+        Returns:
+            The resulting ``m.Infra.ViolationKey``.
+
+        """
         if violation.module not in source_cache:
             source_cache[violation.module] = cls._read_source_lines(
                 project_path,

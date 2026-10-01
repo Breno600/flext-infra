@@ -1,5 +1,8 @@
 """Semantic facade-base cutover: extend the parent by its declared class name.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 A facade module that imports its parent's short letter, subclasses it, and then
 rebinds the same letter to the subclass binds that letter twice. Type checkers
 then read the letter as a variable, so every ``m.X`` annotation reached through
@@ -49,7 +52,12 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
         sources: t.MappingKV[Path, str],
         findings: t.SequenceOf[m.Infra.ModScanFinding],
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
-        """Plan the class-name base for every facade the detector selected."""
+        """Plan the class-name base for every facade the detector selected.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
+
+        """
         selected = frozenset((root / finding.file).resolve() for finding in findings)
         items = tuple(
             item for item in cls._editable_sources(sources) if item[0] in selected
@@ -117,6 +125,13 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
 
         One facade may extend several parents by their letters; the shapes
         are ordered by parent module so the rewrite is deterministic.
+
+        Returns:
+            Every ``(module, letter, local, facade)`` rebound letter base.
+
+        Raises:
+            ValueError: If relative facade base import is not a declared owner in.
+
         """
         imports: MutableMapping[str, t.Triple[str, str, int]] = {}
         rebinds: MutableMapping[str, str] = {}
@@ -171,6 +186,10 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
         bases, class bodies, decorators, defaults) evaluates the imported
         parent, so writing the parent class there keeps runtime identical.
         Function and lambda bodies run after the rebind and keep the letter.
+
+        Returns:
+            The resulting ``str``.
+
         """
         rebind_line = max(
             node.lineno
@@ -214,7 +233,12 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
 
     @staticmethod
     def _facade_bound_imports(tree: ast.Module, module: str) -> frozenset[str]:
-        """Return names a module already imports unaliased from ``module``."""
+        """Return names a module already imports unaliased from ``module``.
+
+        Returns:
+            Names a module already imports unaliased from ``module``.
+
+        """
         return frozenset(
             imported.name
             for node in tree.body
@@ -227,7 +251,12 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
 
     @staticmethod
     def _facade_module_bindings(tree: ast.Module) -> frozenset[str]:
-        """Return every module-scope binding name."""
+        """Return every module-scope binding name.
+
+        Returns:
+            Every module-scope binding name.
+
+        """
         names: set[str] = set()
         for node in tree.body:
             if isinstance(node, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef):

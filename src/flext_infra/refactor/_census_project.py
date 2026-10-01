@@ -1,4 +1,8 @@
-"""Census per-project report assembly."""
+"""Census per-project report assembly.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -54,7 +58,12 @@ class FlextInfraRefactorCensusProjectMixin:
         duplicate_keys: frozenset[str],
         scan_config: m.Infra.ScanConfig,
     ) -> m.Infra.ProjectReport:
-        """Project report."""
+        """Project report.
+
+        Returns:
+            The resulting ``m.Infra.ProjectReport``.
+
+        """
         objects = tuple(findings.project_objects.get(project, ()))
         violations: list[m.Infra.Violation] = []
         rule_names = scan_config.rule_names

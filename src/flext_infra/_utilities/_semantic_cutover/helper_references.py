@@ -1,4 +1,8 @@
-"""Keep original type bindings alive through Rope's immutable class move."""
+"""Keep original type bindings alive through Rope's immutable class move.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -106,7 +110,12 @@ class FlextInfraUtilitiesSemanticHelperReferences(
         prepared: t.MutableMappingKV[Path, str],
         quoted_imports: t.MappingKV[Path, str],
     ) -> None:
-        """Move the declaration in a closed snapshot and retain quoted imports."""
+        """Move the declaration in a closed snapshot and retain quoted imports.
+
+        Raises:
+            ValueError: If moved helper import changed its quoted binding.
+
+        """
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         request = move.request
         root = Path(request.rope_project.root.real_path)
@@ -235,6 +244,10 @@ class FlextInfraUtilitiesSemanticHelperReferences(
         module binding ``u``), that import re-enters the module being defined
         and cycles at runtime; the destination's own declaration is the binding
         its moved code resolves.
+
+        Returns:
+            The resulting ``str``.
+
         """
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         body = ast.parse(source).body
@@ -326,7 +339,15 @@ class FlextInfraUtilitiesSemanticHelperReferences(
         source: str,
         original: p.Infra.RopePyModule,
     ) -> str:
-        """Resolve reexports to the original declaration before MoveGlobal cuts it."""
+        """Resolve reexports to the original declaration before MoveGlobal cuts it.
+
+        Returns:
+            The resulting ``str``.
+
+        Raises:
+            ValueError: If shared helper consumer has no Rope scope.
+
+        """
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         project = move.request.rope_project
         origin = move.origin_module
@@ -372,7 +393,13 @@ class FlextInfraUtilitiesSemanticHelperReferences(
         t.SequenceOf[t.Pair[str, str | None]],
         t.SequenceOf[t.Pair[str, str | None]],
     ]:
-        """Separate imports of this declaration from unrelated bindings."""
+        """Separate imports of this declaration from unrelated bindings.
+
+        Returns:
+            The resulting ``t.Pair[t.SequenceOf[t.Pair[str, str | None]],
+                t.SequenceOf[t.Pair[str, str | None]]]``.
+
+        """
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         kept: list[t.Pair[str, str | None]] = []
         moved: list[t.Pair[str, str | None]] = []

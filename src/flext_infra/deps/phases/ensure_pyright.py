@@ -1,4 +1,8 @@
-"""Phase: Ensure standard Pyright configuration for strict type checking."""
+"""Phase: Ensure standard Pyright configuration for strict type checking.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -25,7 +29,12 @@ class FlextInfraEnsurePyrightConfigPhase:
         *,
         rules: m.Infra.PyrightConfig.PathRulesConfig | None = None,
     ) -> str:
-        """Apply the configured privacy policy for each declared root category."""
+        """Apply the configured privacy policy for each declared root category.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         effective_rules = rules or self._tool_config.tools.pyright.path_rules
         if env_dir == effective_rules.source_dir:
             source_report: str = effective_rules.source_report_private_usage
@@ -44,7 +53,12 @@ class FlextInfraEnsurePyrightConfigPhase:
         extra_paths: t.StrSequence,
         rules: m.Infra.PyrightConfig.PathRulesConfig,
     ) -> m.Infra.PyrightConfig.ExecutionEnvironment:
-        """Env entry."""
+        """Env entry.
+
+        Returns:
+            The resulting ``m.Infra.PyrightConfig.ExecutionEnvironment``.
+
+        """
         return m.Infra.PyrightConfig.ExecutionEnvironment(
             root=root,
             report_private_usage=self._report_private_usage_for_env(
@@ -63,7 +77,12 @@ class FlextInfraEnsurePyrightConfigPhase:
         source_dir: str,
         member_src_paths: t.SequenceOf[str] = (),
     ) -> t.StrSequence:
-        """``src/`` owns only its own path; every other discovered dir also imports from src + root."""
+        """``src/`` owns only its own path; every other discovered dir also imports from src + root.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         if env_dir == source_dir:
             paths = [source_path]
         elif source_path != project_root:
@@ -80,7 +99,12 @@ class FlextInfraEnsurePyrightConfigPhase:
         project_root: str,
         rules: m.Infra.PyrightConfig.PathRulesConfig,
     ) -> t.SequenceOf[m.Infra.PyrightConfig.ExecutionEnvironment]:
-        """Envs for dirs."""
+        """Envs for dirs.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.PyrightConfig.ExecutionEnvironment]``.
+
+        """
         return [
             self._env_entry(
                 env_dir=env_dir,
@@ -103,7 +127,12 @@ class FlextInfraEnsurePyrightConfigPhase:
         root_prefix: Path | None,
         source_path: str,
     ) -> t.SequenceOf[m.Infra.PyrightConfig.ExecutionEnvironment]:
-        """Resolve configured overrides only when their project path exists."""
+        """Resolve configured overrides only when their project path exists.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.PyrightConfig.ExecutionEnvironment]``.
+
+        """
         if project_dir is None:
             return ()
         rules = self._tool_config.tools.pyright.path_rules
@@ -127,7 +156,12 @@ class FlextInfraEnsurePyrightConfigPhase:
         return tuple(environments)
 
     def _project_source_path(self, *, prefix: str = "") -> str:
-        """Project source path."""
+        """Project source path.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         rules = self._tool_config.tools.pyright.path_rules
         return f"{prefix}/{rules.source_dir}" if prefix else rules.source_dir
 
@@ -139,7 +173,12 @@ class FlextInfraEnsurePyrightConfigPhase:
         project_dir: Path | None,
         project_roots: t.StrSequence,
     ) -> t.SequenceOf[m.Infra.PyrightConfig.ExecutionEnvironment]:
-        """Return the expected execution environments."""
+        """Return the expected execution environments.
+
+        Returns:
+            The expected execution environments.
+
+        """
         if not is_root or repository_root is None:
             rules = self._tool_config.tools.pyright.path_rules
             return (
@@ -195,7 +234,12 @@ class FlextInfraEnsurePyrightConfigPhase:
         self,
         env_dirs: t.StrSequence,
     ) -> t.SequenceOf[t.JsonDict]:
-        """Render configured environments for Python roots declared before writes."""
+        """Render configured environments for Python roots declared before writes.
+
+        Returns:
+            The resulting ``t.SequenceOf[t.JsonDict]``.
+
+        """
         rules = self._tool_config.tools.pyright.path_rules
         environments = self._envs_for_dirs(
             env_dirs=self._declared_environment_dirs(env_dirs),
@@ -207,7 +251,12 @@ class FlextInfraEnsurePyrightConfigPhase:
 
     @staticmethod
     def _declared_environment_dirs(env_dirs: t.StrSequence) -> t.StrSequence:
-        """Apply canonical Python discovery exclusions to pre-write declarations."""
+        """Apply canonical Python discovery exclusions to pre-write declarations.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         # Declared and on-disk roots must
         # select the same first-class analyzer environments in the first pass.
         return tuple(
@@ -220,7 +269,12 @@ class FlextInfraEnsurePyrightConfigPhase:
         self,
         environment: m.Infra.PyrightConfig.ExecutionEnvironment,
     ) -> t.JsonDict:
-        """Render one execution environment."""
+        """Render one execution environment.
+
+        Returns:
+            The resulting ``t.JsonDict``.
+
+        """
         payload: t.JsonDict = environment.model_dump(mode="json", by_alias=True)
         return payload
 
@@ -229,7 +283,12 @@ class FlextInfraEnsurePyrightConfigPhase:
         project_root: Path | None,
         analysis_exclusions: t.StrSequence | None,
     ) -> t.StrSequence:
-        """Return the complete config-owned Pyright exclude list."""
+        """Return the complete config-owned Pyright exclude list.
+
+        Returns:
+            The complete config-owned Pyright exclude list.
+
+        """
         rules = self._tool_config.tools.pyright.path_rules
         workspace_excludes: t.StrSequence = ()
         if analysis_exclusions is None and project_root is not None:
@@ -251,7 +310,12 @@ class FlextInfraEnsurePyrightConfigPhase:
         base_dir: Path | None,
         configured_paths: t.StrSequence,
     ) -> t.StrSequence:
-        """Existing paths."""
+        """Existing paths.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         if base_dir is None:
             return ()
         existing: t.StrSequence = [
@@ -268,7 +332,12 @@ class FlextInfraEnsurePyrightConfigPhase:
         repository_root: Path | None,
         project_dir: Path | None,
     ) -> t.StrSequence:
-        """Ignore typings and stub diagnostics."""
+        """Ignore typings and stub diagnostics.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         rules = self._tool_config.tools.pyright.path_rules
         ignores: t.MutableSequenceOf[str] = []
         if is_root:
@@ -289,7 +358,12 @@ class FlextInfraEnsurePyrightConfigPhase:
         context: m.Infra.PyprojectAnalyzerContext,
         paths_manager: FlextInfraExtraPathsManager | None,
     ) -> t.StrSequence:
-        """Resolve the one analyzer-root set consumed by includes and environments."""
+        """Resolve the one analyzer-root set consumed by includes and environments.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         generated_roots = (
             paths_manager.generated_python_roots if paths_manager is not None else ()
         )
@@ -338,7 +412,12 @@ class FlextInfraEnsurePyrightConfigPhase:
         paths_manager: FlextInfraExtraPathsManager | None,
         analysis_exclusions: t.StrSequence | None,
     ) -> m.Infra.DepsToml.PhaseConfig:
-        """Build the managed pyright phase for one project context."""
+        """Build the managed pyright phase for one project context.
+
+        Returns:
+            The resulting ``m.Infra.DepsToml.PhaseConfig``.
+
+        """
         is_root = context.is_root
         repository_root, project_dir = context.repository_root, context.project_dir
         project_root = repository_root if is_root else project_dir
@@ -435,7 +514,12 @@ class FlextInfraEnsurePyrightConfigPhase:
         paths_manager: FlextInfraExtraPathsManager | None = None,
         analysis_exclusions: t.StrSequence | None = None,
     ) -> t.StrSequence:
-        """Apply managed pyright settings directly to one normalized payload."""
+        """Apply managed pyright settings directly to one normalized payload.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         return u.Infra.apply_toml_phases(
             payload,
             self._phase(

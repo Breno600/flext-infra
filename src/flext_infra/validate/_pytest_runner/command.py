@@ -1,4 +1,8 @@
-"""Canonical pytest argv for persistent testmon execution."""
+"""Canonical pytest argv for persistent testmon execution.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -35,6 +39,10 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         editable install names a checkout path, not a toolchain: testmon already
         tracks that source by file checksum, so every checkout of one project
         on the same lock shares one environment record.
+
+        Returns:
+            The resulting ``str``.
+
         """
         provenance: t.MutableSequenceOf[str] = []
         for distribution in distributions():
@@ -64,6 +72,10 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         runs the whole suite in one process. One predicate drives both the
         marker expression and the stop reserve, so an in-flight slow item
         always has its slow drain.
+
+        Returns:
+            The resulting ``bool``.
+
         """
         return self.slow_phase or execution_mode == c.Infra.PytestExecutionMode.COVERAGE
 
@@ -81,6 +93,10 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         the deadline SIGTERM discarding every unflushed result. Serial runs
         keep at most one item in flight, so their reserve is smaller; a run
         that carries slow items reserves the slow per-item bound.
+
+        Returns:
+            The resulting ``float``.
+
         """
         pytest = config.Infra.tooling.tools.pytest
         if self.carries_slow_items(execution_mode):
@@ -102,7 +118,12 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         *,
         execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
     ) -> t.StrTuple:
-        """Use the same CI token as generated workflows and pre-commit hooks."""
+        """Use the same CI token as generated workflows and pre-commit hooks.
+
+        Returns:
+            The resulting ``t.StrTuple``.
+
+        """
         if self.ci_context and execution_mode != c.Infra.PytestExecutionMode.FULL:
             return config.Infra.tooling.tools.pytest.ci_excluded_markers
         return ()
@@ -117,6 +138,10 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         budgeted run, its file then read as stable, and the slow phase passed
         without running it. testmon's environment is its declared separation
         between run configurations, so each marker scope owns one.
+
+        Returns:
+            The resulting ``str``.
+
         """
         scope = hashlib.sha256(
             self._marker_expression(execution_mode).encode(),
@@ -128,6 +153,10 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
 
         The phase split is a marker expression: the budgeted phase deselects
         the slow marker, the slow phase selects only it.
+
+        Returns:
+            The native pytest marker expression of one execution scope.
+
         """
         pytest = config.Infra.tooling.tools.pytest
         excluded = tuple(
@@ -160,7 +189,12 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         *,
         execution_mode: c.Infra.PytestExecutionMode,
     ) -> t.VariadicTuple[str]:
-        """Apply the same configured plugin contract to collection and execution."""
+        """Apply the same configured plugin contract to collection and execution.
+
+        Returns:
+            The resulting ``t.VariadicTuple[str]``.
+
+        """
         pytest = config.Infra.tooling.tools.pytest
         expression = self._marker_expression(execution_mode)
         return (
@@ -189,6 +223,10 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         pass runs no test and records its collection and warning evidence.
         The coverage inventory owns no testmon plugin, so it never reads or
         writes the persistent database.
+
+        Returns:
+            The resulting ``t.VariadicTuple[str]``.
+
         """
         testmon = (
             ()
@@ -244,6 +282,10 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         """Build the testmon suite argv (never the cov plugin).
 
         A resolved plan carries the selected IDs and their manifest together.
+
+        Returns:
+            The resulting ``t.VariadicTuple[str]``.
+
         """
         pytest = config.Infra.tooling.tools.pytest
         selected_node_ids = selection_plan.node_ids if selection_plan else None
@@ -309,6 +351,10 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         The measurement source is the declared package source directory — the
         same boundary every fleet coverage config declares — so imported
         third-party/Cython modules can never emit parse warnings.
+
+        Returns:
+            The resulting ``t.VariadicTuple[str]``.
+
         """
         pytest = config.Infra.tooling.tools.pytest
         workers = "0" if serialize else str(self.parallel_worker_budget(pytest))
@@ -338,7 +384,12 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         workers: str,
         trailing: t.StrSequence,
     ) -> t.VariadicTuple[str]:
-        """Assemble one suite invocation; ``trailing`` owns the plugin split."""
+        """Assemble one suite invocation; ``trailing`` owns the plugin split.
+
+        Returns:
+            The resulting ``t.VariadicTuple[str]``.
+
+        """
         pytest = config.Infra.tooling.tools.pytest
         return (
             sys.executable,

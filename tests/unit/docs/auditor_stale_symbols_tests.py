@@ -1,4 +1,8 @@
-"""Regression tests for stale-symbol docs auditing."""
+"""Regression tests for stale-symbol docs auditing.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -98,6 +102,7 @@ class TestsFlextInfraAuditorStaleSymbols:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test generated api reference accepts live public symbol."""
         scope = self._stale_symbol_scope(tmp_path)
         self._write(
             scope.path / "docs" / "api-reference" / "generated" / "overview.md",
@@ -112,6 +117,7 @@ class TestsFlextInfraAuditorStaleSymbols:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test generated api reference reports missing public symbol."""
         scope = self._stale_symbol_scope(tmp_path)
         self._write(
             scope.path / "docs" / "api-reference" / "generated" / "overview.md",
@@ -125,6 +131,7 @@ class TestsFlextInfraAuditorStaleSymbols:
         tm.that(issues[0].message, eq="contains `DeadSymbol`")
 
     def test_manual_docs_report_live_symbol_mentions(self, tmp_path: Path) -> None:
+        """Test manual docs report live symbol mentions."""
         scope = self._stale_symbol_scope(tmp_path)
         self._write(
             scope.path / "docs" / "guides" / "manual.md",
@@ -193,6 +200,7 @@ class TestsFlextInfraAuditorStaleSymbols:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test public contract resolves imported lazy public exports."""
         package_root = tmp_path / "src" / "demo_pkg"
         self._write_demo_pyproject(tmp_path)
         self._write(
@@ -245,6 +253,7 @@ class TestsFlextInfraAuditorStaleSymbols:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test public contract resolves imported lazy import map."""
         package_root = tmp_path / "src" / "demo_pkg"
         self._write_demo_pyproject(tmp_path)
         self._write(
@@ -291,6 +300,7 @@ class TestsFlextInfraAuditorStaleSymbols:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test docstring issues accepts direct part flext docstring."""
         package_root = tmp_path / "src" / "demo_pkg"
         self._write_demo_pyproject(tmp_path)
         self._write(

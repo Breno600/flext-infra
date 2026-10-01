@@ -1,4 +1,8 @@
-"""Test detection classify behavior."""
+"""Test detection classify behavior.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

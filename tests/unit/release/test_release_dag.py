@@ -1,4 +1,8 @@
-"""Public release build-policy tests using real workspaces."""
+"""Public release build-policy tests using real workspaces.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -38,7 +42,12 @@ class TestsFlextInfraReleaseDag:
 
         @staticmethod
         def policy_snapshot(workspace: Path, name: str) -> bytes:
-            """Read one immutable policy file a build phase snapshotted."""
+            """Read one immutable policy file a build phase snapshotted.
+
+            Returns:
+                The resulting ``bytes``.
+
+            """
             return (
                 u.Tests.release_report_dir(workspace, c.Tests.RELEASE_VERSION_BASE)
                 / "policy"
@@ -117,7 +126,11 @@ class TestsFlextInfraReleaseDag:
             gitleaks = entries[c.Infra.RELEASE_GITLEAKS_CONFIG_PATH]
             tm.that("config/build-constraints.txt" in entries, eq=False)
             tm.that(set(gitleaks.profiles), eq=set(c.Infra.MakeProfile))
-            tm.that(gitleaks.overwrite, eq=True)
+            managed = {
+                item.path.as_posix(): item.policy
+                for item in config.Infra.codegen.managed_files
+            }
+            tm.that(managed[c.Infra.RELEASE_GITLEAKS_CONFIG_PATH], eq="full")
 
     class TestsArchiveBoundary:
         """Publishable archive content policy."""

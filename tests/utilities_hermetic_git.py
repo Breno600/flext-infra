@@ -1,5 +1,8 @@
 """Hermetic Git provider: local bare mirrors that keep fixture sources real.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Governed fixtures declare their internal dependencies with direct Git sources
 (a source-less internal dependency fails loudly), so ``uv lock`` inside a
 fixture resolves those sources. These helpers serve the exact locked revisions
@@ -33,6 +36,10 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
 
         The checkout itself is not in its lock; it joins as the infrastructure
         repository the fixture provider serves, at the checked-out commit.
+
+        Returns:
+            Every ``(url, rev, sha)`` Git source the checkout lock pins.
+
         """
         toml = TestsFlextInfraUtilitiesTomlMixin
         lock = (project_root / c.Infra.UV_LOCK_FILENAME).read_text(encoding="utf-8")
@@ -72,6 +79,13 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
         and pins only the branch ref: full history at zero copy cost (git
         refuses to update shallow roots, so a shallow mirror cannot serve a
         client whose uv cache lacks the history).
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            FileNotFoundError: If locked Git source is not held locally.
+
         """
         storage_root = Path(os.environ[c.Infra.MISE_BOOTSTRAP_STORAGE_ROOT_VARIABLE])
         cache = (
@@ -147,6 +161,10 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
         Git may speak only the ``file`` protocol, uv makes no network request
         and skips its GitHub API shortcut, so a fixture that still reaches a
         remote fails instead of passing on a live network.
+
+        Returns:
+            The resulting ``t.StrMapping``.
+
         """
         count = int(os.environ.get("GIT_CONFIG_COUNT", "0"))
         hosts = sorted(path.name for path in mirrors.iterdir() if path.is_dir())

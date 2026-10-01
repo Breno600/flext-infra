@@ -20,6 +20,8 @@ if TYPE_CHECKING:
 
 
 class TestsFlextInfraExtendedConfigFixer:
+    """Tests for ``FlextInfraExtendedConfigFixer``."""
+
     @staticmethod
     def _extra_paths_manager(repository_root: Path) -> FlextInfraExtraPathsManager:
         return FlextInfraExtraPathsManager(repository_root=repository_root)
