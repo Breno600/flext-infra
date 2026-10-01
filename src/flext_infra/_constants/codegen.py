@@ -65,8 +65,8 @@ class FlextInfraConstantsCodegen(
     """Bounded polite wait for a held lease before failing loud.
 
     A legitimate fleet ``make gen`` holds the lease for minutes; an immediate
-    non-blocking refusal turned ordinary multi-agent traffic into a spurious
-    ``JournalLeaseTimeoutError`` (flext-c2kp3). The wait is bounded so a truly
+    non-blocking refusal turned ordinary concurrent traffic into a spurious
+    ``JournalLeaseTimeoutError``. The wait is bounded so a truly
     wedged holder still fails loud instead of hanging forever.
     """
 
@@ -93,21 +93,19 @@ class FlextInfraConstantsCodegen(
         ("utilities.py", "Utilities", "FlextTestsUtilities", "Test utilities"),
     )
     "Base module definitions for tests/: (filename, class_suffix, base_class, docstring)."
-    # flext-wkii.14 (agent: codegen) — canonical root config/settings pair: a
+    # Canonical root config/settings pair: a
     # private `_config.py`/`_settings.py` module exporting the singleton.
-    # Consumed by the scaffold generator (flext-wkii.10).
+    # Consumed by the scaffold generator.
     RUNTIME_MODULES: ClassVar[t.VariadicTuple[t.Quad[str, str, str, str]]] = (
         ("_config.py", "Config", "FlextConfig", "Runtime config"),
         ("_settings.py", "Settings", "FlextSettings", "Runtime settings"),
     )
     "Runtime singleton modules for src/: (filename, class_suffix, base_class, docstring)."
     VIOLATION_PATTERN: ClassVar[t.RegexPattern] = re.compile(
-        r"\[(?P<rule>NS-(?:[A-Z]+|\d{3}))-\d{3}\]\s+"
-        r"(?P<module>[^:]+):(?P<line>\d+)\s+\u2014\s+(?P<message>.+)"
+        r"\[(?P<rule>[a-z0-9][a-z0-9-]*)\]\s+"
+        r"(?P<module>[^:]+):(?P<line>\d+)\s+\u2014\s+(?P<message>.+)",
     )
-    "Regex to parse violation strings: [NS-RULE-NNN] path:line — message."
-    PROTOCOL_MODEL_LINE_BUDGET: ClassVar[int] = 170
-    "Line budget of one generated structural-protocol module chunk."
+    "Regex to parse violation strings: [rule-id] path:line — message."
     PROTOCOL_MODEL_MINIMAL_BODY_LINES: ClassVar[int] = 3
     "Header lines of a generated protocol class; at or below it the body is empty."
     LAZY_IMPORTS_BINDING: ClassVar[str] = "_LAZY_IMPORTS"
@@ -124,7 +122,6 @@ class FlextInfraConstantsCodegen(
     "Canonical Unix Mise launcher filename."
     MISE_WINDOWS_LAUNCHER_FILENAME: ClassVar[str] = "mise.cmd"
     "Canonical Windows Mise launcher filename."
-    "UTC basic stamp for `{filename}.{stamp}.bak` written before gen apply."
     CODEGEN_TRANSACTION_LOCK_FILENAME: ClassVar[str] = "flext-infra-codegen.lock"
     "Worktree-specific administrative lock for complete generation."
     CODEGEN_TRANSACTION_LOCK_MODE: ClassVar[int] = 0o600
@@ -296,17 +293,24 @@ class FlextInfraConstantsCodegen(
     QG_REPORT_DIR: ClassVar[str] = ".reports/codegen/constants-quality-gate"
     "Report directory for constants quality gate."
     QG_CHECK_NAMESPACE_COMPLIANCE: ClassVar[str] = "namespace_compliance"
-    QG_CHECK_FLEXT_VALIDITY: ClassVar[str] = "flext_validity"
-    QG_CHECK_IMPORT_RESOLUTION: ClassVar[str] = "import_resolution"
-    QG_CHECK_LAYER_COMPLIANCE: ClassVar[str] = "layer_compliance"
     QG_CHECK_DUPLICATION_REDUCTION: ClassVar[str] = "duplication_reduction"
     QG_CHECK_TYPE_SAFETY: ClassVar[str] = "type_safety"
     QG_CHECK_LINT_CLEAN: ClassVar[str] = "lint_clean"
 
+<<<<<<< HEAD
     # Lazy-init projection manifest (.agents/projections.lock.json, v1): the
     # projected OUTPUT lock owned by the generator alone.
     PROJECTIONS_LOCK_API_VERSION: ClassVar[str] = "flext-infra/projections-lock/v1"
     PROJECTIONS_LOCK_FILENAME: ClassVar[str] = "projections.lock.json"
+=======
+    # --- Projection lock (.agents/projections.lock.json) ---
+    PROJECTIONS_LOCK_API_VERSION: ClassVar[str] = "flext-infra/projections-lock/v1"
+    "Schema version of the generated projection lock."
+    PROJECTIONS_LOCK_FILENAME: ClassVar[str] = "projections.lock.json"
+    "Basename of the generated projection lock."
+    PROJECTIONS_LOCK_ROOTS: ClassVar[frozenset[str]] = frozenset({".agents", ".codex"})
+    "Projection roots whose files the lock records."
+>>>>>>> origin/0.12.0-dev
 
 
 __all__: list[str] = ["FlextInfraConstantsCodegen"]

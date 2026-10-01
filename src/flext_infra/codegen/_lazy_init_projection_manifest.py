@@ -13,7 +13,7 @@ this file is the projected OUTPUT state, owned by the generator alone.
 from __future__ import annotations
 
 import hashlib
-from operator import itemgetter
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
@@ -39,24 +39,33 @@ class FlextInfraCodegenLazyInitProjectionManifest:
         manifest bytes are a pure function of the phase plan: stable order,
         stable digests, no self-reference.
         """
+<<<<<<< HEAD
         projected: t.MutableMappingKV[Path, list[t.JsonDict]] = {}
+=======
+        projected: MutableMapping[Path, list[m.Infra.ProjectionLockEntry]] = {}
+>>>>>>> origin/0.12.0-dev
         for plan in files:
             if plan.desired_content is None:
                 continue
             relative = plan.path.relative_to(plan.project)
+<<<<<<< HEAD
             if relative.parts[0] not in cls._PROJECTED_ROOTS:
+=======
+            if relative.parts[0] not in c.Infra.PROJECTIONS_LOCK_ROOTS:
+>>>>>>> origin/0.12.0-dev
                 continue
             if relative.name == c.Infra.PROJECTIONS_LOCK_FILENAME:
                 continue
             projected.setdefault(plan.project, []).append(
-                {
-                    "path": relative.as_posix(),
-                    "sha256": hashlib.sha256(plan.desired_content).hexdigest(),
-                    "bytes": len(plan.desired_content),
-                }
+                m.Infra.ProjectionLockEntry(
+                    path=relative.as_posix(),
+                    sha256=hashlib.sha256(plan.desired_content).hexdigest(),
+                    bytes=len(plan.desired_content),
+                )
             )
         plans: t.MutableSequenceOf[m.Infra.CodegenFilePlan] = []
         for project in sorted(projected):
+<<<<<<< HEAD
             payload: t.JsonDict = {
                 "apiVersion": c.Infra.PROJECTIONS_LOCK_API_VERSION,
                 "entries": [
@@ -69,6 +78,17 @@ class FlextInfraCodegenLazyInitProjectionManifest:
                 ],
             }
             serialized = u.Cli.json_dumps(payload, indent=2)
+=======
+            payload = m.Infra.ProjectionLockPayload.model_validate(
+                {
+                    "apiVersion": c.Infra.PROJECTIONS_LOCK_API_VERSION,
+                    "entries": tuple(
+                        sorted(projected[project], key=lambda entry: entry.path)
+                    ),
+                }
+            )
+            serialized = u.Cli.json_dumps(payload.model_dump(by_alias=True), indent=2)
+>>>>>>> origin/0.12.0-dev
             if serialized.failure:
                 return r[t.VariadicTuple[m.Infra.CodegenFilePlan]].from_failure(
                     serialized

@@ -33,10 +33,22 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
             description="Validated scaffold specification included in the atomic plan",
         ),
     ] = None
+    ports: Annotated[
+        m.Infra.CodegenConformPorts | None,
+        m.Field(
+            default=None,
+            exclude=True,
+            description=(
+                "Docs planner and fresh-import probe wired by the facade; the "
+                "complete surface fails before any effect without them"
+            ),
+        ),
+    ] = None
 
     @staticmethod
     def link_mode(
-        repository: m.Infra.RepositoryRef, toolchain: m.Infra.ToolchainSpec
+        repository: m.Infra.RepositoryRef,
+        toolchain: m.Infra.ToolchainSpec,
     ) -> str:
         """Resolve the repository override through one codegen authority."""
         return repository.uv_link_mode or toolchain.uv_link_mode
@@ -55,7 +67,8 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
             return ()
         discovered = [
             m.Infra.MakeVerbSpec(
-                name=entry.name, description=f"Script command: {entry.name}"
+                name=entry.name,
+                description=f"Script command: {entry.name}",
             )
             for entry in sorted(scripts_dir.iterdir())
             if entry.is_dir() and (entry / "all.sh").is_file()
@@ -70,7 +83,7 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
     ) -> t.VariadicTuple[m.Infra.MakeVerbSpec]:
         """Union declared and discovered script verbs deduplicated by name.
 
-        Why (cosmos-3flk9): object-level dedup never converges because declared
+        Why: object-level dedup never converges because declared
         verbs carry their canonical config descriptions while discoveries carry
         ``Script command: <name>``, so every verb entered ``extra_verbs`` twice
         and the generated Makefile emitted colliding ``_builtin-<verb>``
@@ -96,7 +109,8 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
 
     @classmethod
     def surface_contract(
-        cls, surface: c.Infra.CodegenConformSurface
+        cls,
+        surface: c.Infra.CodegenConformSurface,
     ) -> m.Infra.CodegenConformSurfaceContract:
         match surface:
             case c.Infra.CodegenConformSurface.ALL:
@@ -122,6 +136,13 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
                 ).as_posix()
                 return m.Infra.CodegenConformSurfaceContract(
                     destinations=frozenset({destination}), pyproject=False, custom=False
+                )
+            case c.Infra.CodegenConformSurface.MISE_TRIPLE:
+                return m.Infra.CodegenConformSurfaceContract(
+                    destinations=frozenset(c.Infra.ARTIFACT_NAMES),
+                    pyproject=False,
+                    delegates=False,
+                    custom=False,
                 )
             case _:
                 return m.Infra.CodegenConformSurfaceContract(

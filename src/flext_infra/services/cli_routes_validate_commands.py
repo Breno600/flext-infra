@@ -9,19 +9,13 @@ from flext_infra import m, p, t
 from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
 from flext_infra.validate.cprofile_report import FlextInfraCProfileReport
 from flext_infra.validate.fresh_import import FlextInfraValidateFreshImport
-from flext_infra.validate.import_cycles import FlextInfraValidateImportCycles
 from flext_infra.validate.inventory import FlextInfraInventoryService
 from flext_infra.validate.lazy_map_freshness import FlextInfraValidateLazyMapFreshness
-from flext_infra.validate.metadata_discipline import (
-    FlextInfraValidateMetadataDiscipline,
-)
 from flext_infra.validate.pytest_diag import FlextInfraPytestDiagExtractor
 from flext_infra.validate.runtime_census import FlextInfraRuntimeCensusValidator
 from flext_infra.validate.scanner import FlextInfraTextPatternScanner
-from flext_infra.validate.silent_failure import FlextInfraSilentFailureValidator
 from flext_infra.validate.skill_validator import FlextInfraSkillValidator
 from flext_infra.validate.stub_chain import FlextInfraStubSupplyChain
-from flext_infra.validate.tier_whitelist import FlextInfraValidateTierWhitelist
 
 from ..api import infra
 
@@ -33,7 +27,7 @@ class FlextInfraValidationCommandRoutes(FlextInfraCliRouteBase):
     def _validate_namespace_command(
         request: m.Infra.NamespaceValidateCommand,
     ) -> p.Result[m.Infra.ValidationReport]:
-        """Run namespace validation through the facade-owned Rope composition."""
+        """Run namespace validation through the rule engine."""
         result = infra.validate_namespace(request)
         if result.failure:
             return r[m.Infra.ValidationReport].from_failure(result)
@@ -57,7 +51,7 @@ class FlextInfraValidationCommandRoutes(FlextInfraCliRouteBase):
                     "Render a bounded cProfile report",
                     FlextInfraCProfileReport,
                     FlextInfraCliRouteBase.result_handler(
-                        FlextInfraCProfileReport.execute
+                        FlextInfraCProfileReport.execute,
                     ),
                 ),
                 (
@@ -65,7 +59,7 @@ class FlextInfraValidationCommandRoutes(FlextInfraCliRouteBase):
                     "Generate scripts inventory",
                     FlextInfraInventoryService,
                     FlextInfraCliRouteBase.result_handler(
-                        FlextInfraInventoryService.execute
+                        FlextInfraInventoryService.execute,
                     ),
                 ),
                 (
@@ -73,7 +67,7 @@ class FlextInfraValidationCommandRoutes(FlextInfraCliRouteBase):
                     "Post-import Beartype enforcement census for flext_* modules",
                     FlextInfraRuntimeCensusValidator,
                     FlextInfraCliRouteBase.result_handler(
-                        FlextInfraRuntimeCensusValidator.execute
+                        FlextInfraRuntimeCensusValidator.execute,
                     ),
                 ),
                 (
@@ -81,7 +75,7 @@ class FlextInfraValidationCommandRoutes(FlextInfraCliRouteBase):
                     "Extract pytest diagnostics",
                     FlextInfraPytestDiagExtractor,
                     FlextInfraCliRouteBase.result_handler(
-                        FlextInfraPytestDiagExtractor.execute
+                        FlextInfraPytestDiagExtractor.execute,
                     ),
                 ),
                 (
@@ -89,7 +83,7 @@ class FlextInfraValidationCommandRoutes(FlextInfraCliRouteBase):
                     "Scan text files for patterns",
                     FlextInfraTextPatternScanner,
                     FlextInfraCliRouteBase.result_handler(
-                        FlextInfraTextPatternScanner.execute
+                        FlextInfraTextPatternScanner.execute,
                     ),
                 ),
                 (
@@ -97,15 +91,7 @@ class FlextInfraValidationCommandRoutes(FlextInfraCliRouteBase):
                     "Validate a skill",
                     FlextInfraSkillValidator,
                     FlextInfraCliRouteBase.result_handler(
-                        FlextInfraSkillValidator.execute
-                    ),
-                ),
-                (
-                    "silent-failure",
-                    "Validate silent failure sentinel returns",
-                    FlextInfraSilentFailureValidator,
-                    FlextInfraCliRouteBase.result_handler(
-                        FlextInfraSilentFailureValidator.execute
+                        FlextInfraSkillValidator.execute,
                     ),
                 ),
                 (
@@ -113,7 +99,7 @@ class FlextInfraValidationCommandRoutes(FlextInfraCliRouteBase):
                     "Validate stub supply chain",
                     FlextInfraStubSupplyChain,
                     FlextInfraCliRouteBase.result_handler(
-                        FlextInfraStubSupplyChain.execute
+                        FlextInfraStubSupplyChain.execute,
                     ),
                 ),
                 (
@@ -121,15 +107,7 @@ class FlextInfraValidationCommandRoutes(FlextInfraCliRouteBase):
                     "Guard 7: fresh-process import smoke test",
                     FlextInfraValidateFreshImport,
                     FlextInfraCliRouteBase.result_handler(
-                        FlextInfraValidateFreshImport.execute
-                    ),
-                ),
-                (
-                    "import-cycles",
-                    "Guard 1: ROPE-backed import cycle detector",
-                    FlextInfraValidateImportCycles,
-                    FlextInfraCliRouteBase.result_handler(
-                        FlextInfraValidateImportCycles.execute
+                        FlextInfraValidateFreshImport.execute,
                     ),
                 ),
                 (
@@ -137,30 +115,14 @@ class FlextInfraValidationCommandRoutes(FlextInfraCliRouteBase):
                     "Guard 2/3: lazy-map freshness validator",
                     FlextInfraValidateLazyMapFreshness,
                     FlextInfraCliRouteBase.result_handler(
-                        FlextInfraValidateLazyMapFreshness.execute
+                        FlextInfraValidateLazyMapFreshness.execute,
                     ),
                 ),
                 (
                     "namespace",
-                    "Guard: static namespace rules (NS-000..003) via rope",
+                    "Guard: namespace laws of the rule catalog",
                     m.Infra.NamespaceValidateCommand,
                     FlextInfraCliRouteBase.result_handler(_validate_namespace_command),
-                ),
-                (
-                    "tier-whitelist",
-                    "Guard 5: tier-whitelist/abstraction-boundary enforcer",
-                    FlextInfraValidateTierWhitelist,
-                    FlextInfraCliRouteBase.result_handler(
-                        FlextInfraValidateTierWhitelist.execute
-                    ),
-                ),
-                (
-                    "metadata-discipline",
-                    "Guard 8: centralized metadata parser discipline",
-                    FlextInfraValidateMetadataDiscipline,
-                    FlextInfraCliRouteBase.result_handler(
-                        FlextInfraValidateMetadataDiscipline.execute
-                    ),
                 ),
             )
         )

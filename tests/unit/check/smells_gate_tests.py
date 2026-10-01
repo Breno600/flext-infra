@@ -109,7 +109,8 @@ class TestsFlextInfraSmellsGate:
             f"p{index}" for index in range(c.SMELL_THRESHOLDS["params"] * 2)
         )
         (self._package(smells_project) / "wide.py").write_text(
-            f"def wide({params}):\n    return p0\n", encoding=c.Cli.ENCODING_DEFAULT
+            f"def wide({params}):\n    return p0\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
 
         execution = FlextInfraSmellsGate(tmp_path).check(

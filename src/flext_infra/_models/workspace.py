@@ -50,6 +50,32 @@ class FlextInfraModelsWorkspace:
 
         repository_root: Annotated[Path, m.Field(description="Repository root path")]
 
+    class SubprojectLoadContext(m.ContractModel):
+        """Workspace governance scope shared by every declared subproject entry."""
+
+        integration_branch: Annotated[
+            str | None,
+            m.Field(
+                description=(
+                    "Resolved workspace integration line; absent defers to the "
+                    "provider's conventional branch fallback"
+                ),
+            ),
+        ] = None
+        workspace_beads: Annotated[
+            FlextInfraConfigModels.BeadsProjectSpec | None,
+            m.Field(description="Workspace Beads ledger spec; absent disables routing"),
+        ] = None
+        allow_unprovisioned_members: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Whether declared Python members may stay unprovisioned "
+                    "checkouts while CI omits them deliberately"
+                ),
+            ),
+        ] = False
+
     class EnvironmentContractViolation(mm.PositiveLineMixin, m.ContractModel):
         """One static ``.envrc``/``.envrc.local`` contract violation.
 
@@ -59,10 +85,12 @@ class FlextInfraModelsWorkspace:
         """
 
         message: Annotated[
-            str, m.Field(description="Violation description without the line prefix")
+            str,
+            m.Field(description="Violation description without the line prefix"),
         ]
         token: Annotated[
-            str, m.Field(description="Offending token when the contract is token-based")
+            str,
+            m.Field(description="Offending token when the contract is token-based"),
         ] = ""
 
     class WorkspaceProjectContext(m.ContractModel):
@@ -95,18 +123,25 @@ class FlextInfraModelsWorkspace:
 
         repository_root: Annotated[Path, m.Field(description="Consumer project root")]
         flext_root: Annotated[
-            Path, m.Field(description="Flext worktree supplying the packages")
+            Path,
+            m.Field(description="Flext worktree supplying the packages"),
         ]
         python: Annotated[
-            Path, m.Field(description="Interpreter of the environment to rebind")
+            Path,
+            m.Field(description="Interpreter of the environment to rebind"),
         ]
 
     class DirectUrlDirectoryInfo(m.ContractModel):
-        """PEP 610 directory metadata for one installed distribution."""
+        """PEP 610 directory metadata for one installed distribution.
+
+        PEP 610 makes ``editable`` optional with a ``false`` default, so a
+        local directory install that omits it is a plain directory install.
+        """
 
         editable: Annotated[
-            bool, m.Field(description="Distribution is installed as editable")
-        ]
+            bool,
+            m.Field(description="Distribution is installed as editable"),
+        ] = False
 
     class DirectUrlReceipt(m.ContractModel):
         """Any installed distribution's PEP 610 receipt, read for its kind only.
@@ -135,7 +170,8 @@ class FlextInfraModelsWorkspace:
         """Discovered project metadata for workspace operations."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-            frozen=True, validate_default=False
+            frozen=True,
+            validate_default=False,
         )
 
         path: Annotated[Path, m.Field(description="Absolute or relative project path")]
@@ -144,13 +180,16 @@ class FlextInfraModelsWorkspace:
             False
         )
         has_src: Annotated[
-            bool, m.Field(description="Project has source directory")
+            bool,
+            m.Field(description="Project has source directory"),
         ] = True
         project_class: Annotated[
-            t.NonEmptyStr, m.Field(description="Docs/governance project classification")
+            t.NonEmptyStr,
+            m.Field(description="Docs/governance project classification"),
         ] = "platform"
         package_name: Annotated[
-            str, m.Field(description="Primary Python package name")
+            str,
+            m.Field(description="Primary Python package name"),
         ] = ""
         make_profile: Annotated[
             c.Infra.MakeProfile,
@@ -169,21 +208,25 @@ class FlextInfraModelsWorkspace:
         """
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-            frozen=True, validate_default=False
+            frozen=True,
+            validate_default=False,
         )
 
         project_root: Annotated[Path, m.Field(description="Project root path")]
         pyproject_path: Annotated[Path, m.Field(description="Resolved pyproject path")]
         payload: Annotated[
-            t.JsonMapping, m.Field(description="Parsed pyproject payload")
+            t.JsonMapping,
+            m.Field(description="Parsed pyproject payload"),
         ]
         docs_meta: Annotated[
-            t.JsonMapping, m.Field(description="Parsed tool.flext.docs payload")
+            t.JsonMapping,
+            m.Field(description="Parsed tool.flext.docs payload"),
         ]
         project_name: Annotated[str, m.Field(description="Declared project name")] = ""
         package_name: Annotated[str, m.Field(description="Primary package name")] = ""
         dependency_names: Annotated[
-            t.StrSequence, m.Field(description="Declared dependency names")
+            t.StrSequence,
+            m.Field(description="Declared dependency names"),
         ] = m.Field(default_factory=tuple)
 
 

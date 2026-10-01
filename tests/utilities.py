@@ -51,15 +51,6 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
         """Canonical test helper namespace."""
 
         @staticmethod
-        def enforcement_rule(rule_id: str) -> m.EnforcementRuleSpec:
-            """Resolve one enabled rule from the canonical enforcement catalog."""
-            catalog = u.build_canonical_catalog()
-            rule: m.EnforcementRuleSpec = next(
-                rule for rule in catalog.enabled_rules() if rule.id == rule_id
-            )
-            return rule
-
-        @staticmethod
         def number(value: t.JsonValue) -> float:
             """Narrow one parsed payload value to a real number."""
             tm.that(isinstance(value, (int, float)), eq=True)
@@ -72,7 +63,7 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
         def json_payload(content: str) -> t.JsonMapping:
             """Parse JSON text through the canonical reader and narrow it."""
             return TestsFlextInfraUtilitiesTomlMixin.toml_mapping(
-                tm.ok(u.Cli.json_loads(content))
+                tm.ok(u.Cli.json_loads(content)),
             )
 
         @staticmethod
@@ -102,18 +93,20 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             """Build the generated Make and activation fixture consumed by real verbs."""
             role = c.Infra.MakeProfile(profile.value)
             repository = u.Tests.repository_ref(
-                "fixture-project", role=role
+                "fixture-project",
+                role=role,
             ).model_copy(
                 update={
                     "editable": True,
                     "package": package,
                     "extra_verbs": extra_verbs,
                     "script_dispatch": script_dispatch,
-                }
+                },
             )
             project_root = tmp_path / profile.value / "fixture-project"
             u.Tests.WorktreeFixture.write_python_project(
-                project_root, repository.distribution
+                project_root,
+                repository.distribution,
             )
             # The generated Makefile consumes the tracked Mise launcher for every
             # verb (setup/check/fix/...), not only at bootstrap: the
@@ -125,7 +118,7 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                     u.Cli.atomic_write_text_file(
                         project_root / config.Infra.codegen.scaffold.project.readme,
                         "# Bootstrap environment contract\n",
-                    )
+                    ),
                 )
             beads = u.Tests.beads_project(repository.distribution)
             u.Tests.write_beads_project(
@@ -137,13 +130,13 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             u.Tests.initialize_git_repo(project_root, origin_url=repository.url)
             u.Tests.provider(repository.provider)
             baseline = tm.ok(
-                u.Cli.capture(["git", "rev-parse", "HEAD"], cwd=project_root)
+                u.Cli.capture(["git", "rev-parse", "HEAD"], cwd=project_root),
             )
             tm.ok(
                 u.Cli.run_checked(
                     ["git", "config", "remote.origin.skipDefaultUpdate", "true"],
                     cwd=project_root,
-                )
+                ),
             )
             tm.ok(
                 u.Cli.run_checked(
@@ -154,12 +147,12 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                         baseline,
                     ],
                     cwd=project_root,
-                )
+                ),
             )
             repository_root = project_root
             workspace = u.Tests.workspace_spec(
                 repository,
-                project=u.Tests.project_spec("fixture-project", cli_module=False),
+                project=u.Tests.project_spec("fixture-project"),
             )
             request = u.Tests.conform_request(
                 project_root,
@@ -171,7 +164,7 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                     repository_root=repository_root,
                     request=request,
                     initial_workspace=workspace,
-                ).plan(request)
+                ).plan(request),
             )
             # Materialize the complete activation contract through its guarded
             # publisher, including Beads metadata consumed by the generated .envrc.
@@ -194,8 +187,8 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             tm.that(paths <= {file.path for file in artifacts}, eq=True)
             tm.ok(
                 u.Tests.materialize_codegen_plans(
-                    r[tuple[m.Infra.CodegenFilePlan, ...]].ok(artifacts)
-                )
+                    r[tuple[m.Infra.CodegenFilePlan, ...]].ok(artifacts),
+                ),
             )
             if bootstrap:
                 # Exercise the documented custom-handler/hook boundary with real
@@ -227,22 +220,26 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                         "\t@$(UV_RUN) python -c 'import os, sys; "
                         'print(sys.prefix); print(os.environ["UV_PROJECT_ENVIRONMENT"])'
                         "'\n",
-                    )
+                    ),
                 )
                 (project_root / ".envrc.local").write_text(
-                    'export MAKE_ACTIVATION_PROOF="$PROJECT_ROOT"\n', encoding="utf-8"
+                    'export MAKE_ACTIVATION_PROOF="$PROJECT_ROOT"\n',
+                    encoding="utf-8",
                 )
             else:
                 tm.ok(
                     u.Cli.run_checked(
-                        ["direnv", "allow", str(project_root)], cwd=project_root
-                    )
+                        ["direnv", "allow", str(project_root)],
+                        cwd=project_root,
+                    ),
                 )
             return project_root, repository_root
 
         @staticmethod
         def resolved_make_checkout(
-            template: Path, parent: Path, profile: c.Infra.MakeProfile
+            template: Path,
+            parent: Path,
+            profile: c.Infra.MakeProfile,
         ) -> Path:
             """Check out a resolved ``make upg`` template as a fresh repository.
 
@@ -258,13 +255,14 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                 ignore=shutil.ignore_patterns(".venv", ".git"),
             )
             u.Tests.initialize_git_repo(
-                root, origin_url=u.Tests.repository_ref(root.name, role=profile).url
+                root,
+                origin_url=u.Tests.repository_ref(root.name, role=profile).url,
             )
             tm.ok(
                 u.Cli.run_checked(
                     ["git", "config", "remote.origin.skipDefaultUpdate", "true"],
                     cwd=root,
-                )
+                ),
             )
             tm.that((root / ".venv").exists(), eq=False)
             return root
@@ -287,7 +285,7 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
         def command_receipt(path: Path) -> m.Cli.CommandOutput:
             """Read one recorded provisioning command outcome."""
             return m.Cli.CommandOutput.model_validate_json(
-                path.read_text(encoding="utf-8")
+                path.read_text(encoding="utf-8"),
             )
 
         @staticmethod
@@ -303,7 +301,8 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                 _ = shutil.copy2(path, destination, follow_symlinks=False)
             tm.that((root / ".venv").exists(), eq=False)
             u.Tests.initialize_git_repo(
-                root, origin_url=u.Tests.repository_ref(config.Infra.name).url
+                root,
+                origin_url=u.Tests.repository_ref(config.Infra.name).url,
             )
             return root
 
@@ -321,199 +320,14 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                     return r[bool].from_failure(directory_plan)
                 if directory_plan.value.directories:
                     created = u.Cli.atomic_create_directory_chain_guarded(
-                        directory_plan.value, permission_mode=0o755
+                        directory_plan.value,
+                        permission_mode=0o755,
                     )
                     if created.failure:
                         return r[bool].from_failure(created)
             return TestsFlextInfraUtilities.Tests.materialize_codegen_plans(
-                u.Infra.docs_file_plans(bundle)
+                u.Infra.docs_file_plans(bundle),
             )
-
-        @staticmethod
-        def namespace_fixture(name: str) -> str:
-            """Read a non-importable source fixture for namespace validation."""
-            fixture = (
-                Path(name).with_suffix(".pysrc") if name.endswith(".py") else Path(name)
-            )
-            return (
-                Path(__file__).parent / "fixtures" / "namespace_validator" / fixture
-            ).read_text(encoding="utf-8")
-
-        @staticmethod
-        def namespace_project(
-            tmp_path: Path, *, module_source: str, module_name: str
-        ) -> Path:
-            """Create a tracked canonical project with one overridden module."""
-            root, _ = TestsFlextInfraUtilities.Tests.namespace_project_path(
-                tmp_path, module_source=module_source, module_path=module_name
-            )
-            return root
-
-        @staticmethod
-        def namespace_project_path(
-            tmp_path: Path, *, module_source: str, module_path: str
-        ) -> t.Pair[Path, Path]:
-            """Create canonical facades and track the source or test module."""
-            project_root = tmp_path / "project"
-            package_dir = project_root / "src" / "flext_test"
-            package_dir.mkdir(parents=True)
-            _ = (package_dir / "__init__.py").write_text("", encoding="utf-8")
-            TestsFlextInfraUtilities.Tests.write_canonical_package_layout(package_dir)
-            relative = Path(module_path)
-            target = (
-                project_root if relative.parts[0] == c.Infra.DIR_TESTS else package_dir
-            ) / relative
-            target.parent.mkdir(parents=True, exist_ok=True)
-            if relative.parts[0] == c.Infra.DIR_TESTS:
-                tests_initializer = project_root / c.Infra.DIR_TESTS / c.Infra.INIT_PY
-                if not tests_initializer.exists():
-                    _ = tests_initializer.write_text("", encoding="utf-8")
-            _ = target.write_text(module_source, encoding="utf-8")
-            TestsFlextInfraUtilities.Tests.initialize_git_repo(project_root)
-            return project_root, target
-
-        @staticmethod
-        def validate_namespace_project(
-            request: m.Infra.NamespaceValidateCommand,
-        ) -> m.Infra.ValidationReport:
-            """Validate one project and require the public result to succeed."""
-            from flext_infra.api import infra
-
-            result = infra.validate_namespace(request)
-            tm.ok(result)
-            return result.value
-
-        @staticmethod
-        def assert_namespace_valid(request: m.Infra.NamespaceValidateCommand) -> None:
-            """Require a namespace project to have no violations."""
-            report = TestsFlextInfraUtilities.Tests.validate_namespace_project(request)
-            tm.that(report.passed, eq=True, msg=str(report.violations))
-            tm.that(report.violations, empty=True)
-
-        @staticmethod
-        def assert_namespace_invalid(
-            request: m.Infra.NamespaceValidateCommand,
-            *,
-            expected_violation_substr: str | None = None,
-            expected_violation_count: int | None = None,
-        ) -> None:
-            """Require a namespace project to expose its expected violations."""
-            report = TestsFlextInfraUtilities.Tests.validate_namespace_project(request)
-            tm.that(report.passed, eq=False, msg=str(report.violations))
-            if expected_violation_substr is not None:
-                tm.that(
-                    any(
-                        expected_violation_substr in item for item in report.violations
-                    ),
-                    eq=True,
-                    msg=(
-                        "expected violation containing "
-                        f"{expected_violation_substr!r}; found {report.violations}"
-                    ),
-                )
-            if expected_violation_count is not None:
-                tm.that(len(report.violations), eq=expected_violation_count)
-
-        @staticmethod
-        def assert_namespace_violation_contains(
-            request: m.Infra.NamespaceValidateCommand, substring: str
-        ) -> None:
-            """Require at least one namespace violation to contain text."""
-            report = TestsFlextInfraUtilities.Tests.validate_namespace_project(request)
-            tm.that(
-                any(substring in item for item in report.violations),
-                eq=True,
-                msg=f"expected violation containing {substring!r}; found {report.violations}",
-            )
-
-        @staticmethod
-        def assert_namespace_no_violation_contains(
-            request: m.Infra.NamespaceValidateCommand, substring: str
-        ) -> None:
-            """Require every namespace violation to omit text."""
-            report = TestsFlextInfraUtilities.Tests.validate_namespace_project(request)
-            tm.that(
-                any(substring in item for item in report.violations),
-                eq=False,
-                msg=f"unexpected violation containing {substring!r}: {report.violations}",
-            )
-
-        @staticmethod
-        def assert_namespace_file_in_inventory(root: Path, target: Path) -> None:
-            """Require a namespace fixture to occur in the source inventory."""
-            files = u.Infra.iter_python_files(
-                m.Infra.SourceScanRequest(project_roots=(root,))
-            )
-            tm.ok(files)
-            tm.that(
-                target in files.value,
-                eq=True,
-                msg=f"namespace fixture omitted from source inventory: {target}; {files.value}",
-            )
-
-        @staticmethod
-        def write_canonical_package_layout(package_dir: Path) -> None:
-            """Materialize the complete facade layout a governed package declares.
-
-            The namespace validator grades a project, not a file: every missing
-            facade, private-family base and composition tree is a violation of
-            its own. A fixture that writes one module and expects a clean report
-            is asserting that the layout law does not exist.
-            """
-            stem = u.derive_class_stem(package_dir.name)
-            namespace = stem.removeprefix("Flext")
-            families = (
-                ("c", "constants", "_constants", "Constants"),
-                ("t", "typings", "_typings", "Types"),
-                ("p", "protocols", "_protocols", "Protocols"),
-                ("m", "models", "_models", "Models"),
-                ("u", "utilities", "_utilities", "Utilities"),
-            )
-            for alias, public_name, private_dir, suffix in families:
-                private_root = package_dir / private_dir
-                private_root.mkdir(parents=True, exist_ok=True)
-                (private_root / c.Infra.INIT_PY).write_text("", encoding="utf-8")
-                for module_name, class_suffix in (
-                    ("base", "Base"),
-                    ("domain", "Domain"),
-                ):
-                    (private_root / f"{module_name}.py").write_text(
-                        "from __future__ import annotations\n\n\n"
-                        f"class {stem}{suffix}{class_suffix}:\n    pass\n",
-                        encoding="utf-8",
-                    )
-                # The facade class extends its own private bases and rebinds
-                # the letter locally — never the parent letter itself, whose
-                # import shadows the local alias binding and breaks the
-                # owner election.
-                (package_dir / f"{public_name}.py").write_text(
-                    "from __future__ import annotations\n\n"
-                    f"from {package_dir.name}.{private_dir}.base import "
-                    f"{stem}{suffix}Base\n"
-                    f"from {package_dir.name}.{private_dir}.domain import "
-                    f"{stem}{suffix}Domain\n\n\n"
-                    f"class {stem}{suffix}({stem}{suffix}Base, {stem}{suffix}Domain):\n"
-                    f"    class {namespace}({stem}{suffix}Base, {stem}{suffix}Domain):\n"
-                    "        pass\n\n\n"
-                    f"{alias} = {stem}{suffix}\n\n"
-                    f'__all__: list[str] = ["{stem}{suffix}", "{alias}"]\n',
-                    encoding="utf-8",
-                )
-            for simple_name, class_suffix in (
-                ("settings", "Settings"),
-                ("config", "Config"),
-                ("base", "Base"),
-                ("api", "Api"),
-                ("cli", "Cli"),
-            ):
-                (package_dir / f"{simple_name}.py").write_text(
-                    "from __future__ import annotations\n\n\n"
-                    f"class {stem}{class_suffix}:\n    pass\n",
-                    encoding="utf-8",
-                )
-            services = package_dir / "services"
-            services.mkdir(parents=True, exist_ok=True)
-            (services / c.Infra.INIT_PY).write_text("", encoding="utf-8")
 
         @staticmethod
         def write_package_init(directory: Path, content: str) -> Path:

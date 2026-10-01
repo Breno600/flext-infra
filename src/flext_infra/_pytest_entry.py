@@ -17,11 +17,15 @@ class FlextInfraPytestEntry:
         """Parse the Make boundary and return the exact child process status.
 
         ``full`` runs incremental then complete testmon execution. ``coverage``
-        selects coverage alone; the default is the incremental operation. The
-        ``slow`` operation runs the incremental phase over the slow marker
-        only, as its own bounded process outside the budgeted clock.
+        selects coverage alone; the default is the incremental operation. A
+        trailing ``slow`` runs the operation over the slow marker only, as its
+        own bounded process outside the budgeted clock (``slow`` alone is the
+        incremental slow phase, ``full slow`` the complete one).
         """
-        mode = sys.argv[1] if len(sys.argv) > 1 else ""
+        arguments = sys.argv[1:]
+        slow_phase = arguments[-1:] == ["slow"]
+        operation = arguments[:-1] if slow_phase else arguments
+        mode = operation[0] if operation else ""
         if mode in {"profile", "profile-collection"}:
             from ._pytest_profile import FlextInfraPytestProfile
 
@@ -41,13 +45,18 @@ class FlextInfraPytestEntry:
         from flext_infra.validate.pytest_runner import FlextInfraPytestRunner
 
         runner = FlextInfraPytestRunner.from_environment(
+<<<<<<< HEAD
             started_at_monotonic=cls._STARTED_AT_MONOTONIC
+=======
+            started_at_monotonic=cls._STARTED_AT_MONOTONIC,
+            slow_phase=slow_phase,
+>>>>>>> origin/0.12.0-dev
         )
-        if mode == "coverage":
+        if mode == "coverage" and not slow_phase:
             return runner.execute_coverage().unwrap()
-        if mode == "full":
+        if mode == "full" and len(operation) == 1:
             return runner.execute_full().unwrap()
-        if mode in {"", "slow"}:
+        if not operation:
             return runner.execute().unwrap()
         msg = f"unsupported pytest operation: {mode}"
         raise ValueError(msg)

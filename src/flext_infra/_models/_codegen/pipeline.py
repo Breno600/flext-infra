@@ -25,21 +25,24 @@ class FlextInfraModelsCodegenPipelineModels:
             False
         )
         output_format: Annotated[
-            str, m.Field(description="Output format (json|text)")
+            str,
+            m.Field(description="Output format (json|text)"),
         ] = "text"
 
     class CodegenAutoFixCommand(CodegenCommand):
         """Auto-fix request with its one additional rule selector."""
 
         rules_only: Annotated[
-            bool, m.Field(description="Run only deterministic namespace rules")
+            bool,
+            m.Field(description="Run only deterministic namespace rules"),
         ] = False
 
     class CandidateBootstrapCommand(m.ContractModel):
         """Typed public request for an atomic declared Makefile campaign."""
 
         repository_root: Annotated[
-            Path, m.Field(description="Repository with the candidate declarations")
+            Path,
+            m.Field(description="Repository with the candidate declarations"),
         ]
         dry_run: Annotated[bool, m.Field(description="Validate without writing")] = (
             False
@@ -48,7 +51,8 @@ class FlextInfraModelsCodegenPipelineModels:
             False
         )
         apply_changes: Annotated[
-            bool, m.Field(description="Apply the complete candidate campaign")
+            bool,
+            m.Field(description="Apply the complete candidate campaign"),
         ] = True
 
     class CodegenPhaseAnalysis(m.ArbitraryTypesModel):
@@ -86,11 +90,35 @@ class FlextInfraModelsCodegenPipelineModels:
                 raise ValueError(msg)
             return self
 
+    class CodegenConformPorts(m.ArbitraryTypesModel):
+        """Collaborators the complete conform crosses into, wired by the facade.
+
+        Docs rendering and fresh-import validation are other service families;
+        the composition root binds their implementations once and conform only
+        consumes these ports.
+        """
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
+            frozen=True,
+            extra="forbid",
+            arbitrary_types_allowed=True,
+        )
+
+        docs_planner: Annotated[
+            p.Infra.DocsArtifactPlannerFactory,
+            m.Field(description="Builds the docs planner for one conform scope"),
+        ]
+        fresh_import: Annotated[
+            p.Infra.FreshImportProbeFactory,
+            m.Field(description="Builds the fresh-import probe for one repository"),
+        ]
+
     class CodegenPipelineState(m.ArbitraryTypesModel):
         """Typed inter-stage state for the codegen pipeline — Pydantic v2 model."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-            extra="forbid", arbitrary_types_allowed=True
+            extra="forbid",
+            arbitrary_types_allowed=True,
         )
 
         discovered_projects: Annotated[

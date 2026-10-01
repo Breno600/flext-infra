@@ -35,20 +35,5 @@ class FlextInfraProtocolsCheck(Protocol):
         failed: int
         total_elapsed: float
 
-    @runtime_checkable
-    class RopeCheckGate(Protocol):
-        """Gate that consumes the composition root's shared Rope cycle."""
-
-        def rope_callback_binding(
-            self, project_dir: Path, rope: p.Infra.RopeWorkspaceDsl
-        ) -> m.Infra.RopeCallbackBinding: ...
-
-        def check_rope_outcomes(
-            self,
-            project_dir: Path,
-            ctx: m.Infra.GateContext,
-            outcomes: tuple[m.Infra.RopeCallbackOutcome, ...],
-        ) -> m.Infra.GateExecution: ...
-
 
 __all__: list[str] = ["FlextInfraProtocolsCheck"]

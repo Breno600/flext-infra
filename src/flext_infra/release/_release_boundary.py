@@ -26,7 +26,8 @@ class FlextInfraReleaseBoundaryMixin(FlextInfraProjectSelectionServiceBase[bool]
             path.parent.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
             return r[bool].fail_op(
-                f"create release output directory {path.parent}", exc
+                f"create release output directory {path.parent}",
+                exc,
             )
         return u.Cli.files_write_text(path, content)
 

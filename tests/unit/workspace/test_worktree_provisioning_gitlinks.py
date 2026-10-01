@@ -26,17 +26,19 @@ class TestsFlextInfraWorktreeProvisioningGitlinks:
         return source
 
     def _lane(
-        self, tmp_path: Path, *, managed: bool = True
+        self,
+        tmp_path: Path,
+        *,
+        managed: bool = True,
     ) -> t.Triple[Path, Path, str]:
         lane = tmp_path / "lane"
         lane.mkdir()
         (lane / "pyproject.toml").write_text(
-            '[project]\nname = "fixture"\nversion = "0.1.0"\n', encoding="utf-8"
+            '[project]\nname = "fixture"\nversion = "0.1.0"\n',
+            encoding="utf-8",
         )
         (lane / "Makefile").write_text(
-            "RUNTIME_VENV := $(dir $(CURDIR))"
-            f"{c.Infra.ENVIRONMENT_DIRECTORY}/"
-            "$(patsubst /%,%,$(CURDIR))\n"
+            f"RUNTIME_VENV := $(CURDIR)/{c.Infra.ENVIRONMENT_DIRECTORY}\n"
             ".PHONY: setup\n"
             "setup:\n"
             "\t@mkdir -p $(RUNTIME_VENV)/bin\n"
@@ -45,7 +47,8 @@ class TestsFlextInfraWorktreeProvisioningGitlinks:
             encoding="utf-8",
         )
         (lane / ".gitignore").write_text(
-            f"{c.Infra.ENVIRONMENT_DIRECTORY}/\n", encoding="utf-8"
+            f"{c.Infra.ENVIRONMENT_DIRECTORY}/\n",
+            encoding="utf-8",
         )
         u.Tests.initialize_git_repo(lane)
         source = self._source(tmp_path, "member")
@@ -75,7 +78,8 @@ class TestsFlextInfraWorktreeProvisioningGitlinks:
         return lane, source, recorded
 
     def test_absent_governed_gitlink_is_materialized_at_recorded_oid(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         lane, _source_root, recorded = self._lane(tmp_path)
         self._git(lane, "submodule", "deinit", "-q", "-f", "member")
@@ -85,7 +89,8 @@ class TestsFlextInfraWorktreeProvisioningGitlinks:
         tm.that(self._git(lane / "member", "rev-parse", "HEAD"), eq=recorded)
 
     def test_governed_gitlink_head_mismatch_fails_untouched(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         lane, source, _recorded = self._lane(tmp_path)
         (source / "advanced.txt").write_text("advanced\n", encoding="utf-8")
@@ -101,7 +106,8 @@ class TestsFlextInfraWorktreeProvisioningGitlinks:
         tm.that(self._git(lane / "member", "rev-parse", "HEAD"), eq=advanced)
 
     def test_governed_gitlink_origin_identity_mismatch_fails(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         lane, _source_root, _recorded = self._lane(tmp_path)
         self._git(
