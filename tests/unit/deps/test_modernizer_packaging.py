@@ -160,6 +160,9 @@ class TestsFlextInfraDepsModernizerPackaging:
 
         manifest_path = infra_git_repo / c.PYPROJECT_FILENAME
         header = "[tool.hatch.build.targets.sdist.force-include]\n"
+        # The stale entry must really be injected, or ``lacks`` below passes
+        # vacuously on an unchanged manifest.
+        tm.that(manifest.count(header), eq=1)
         tm.ok(
             u.Cli.atomic_write_text_file(
                 manifest_path,

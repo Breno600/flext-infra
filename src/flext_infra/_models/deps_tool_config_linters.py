@@ -235,6 +235,7 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
             int,
             m.Field(
                 gt=0,
+                le=c.Infra.MYPY_TIMEOUT_SECONDS_FLEET_BOUND,
                 description=(
                     "Mypy wall-time budget in seconds (SSOT); a project"
                     " overlay may only lower it."

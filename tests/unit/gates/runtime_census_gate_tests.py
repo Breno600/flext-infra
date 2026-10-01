@@ -113,7 +113,12 @@ class TestsRuntimeCensusBlocking:
         mixed_project: Path,
         genuine_project: Path,
     ) -> None:
-        """Prefix, parameter and constant violations all count against the run."""
+        """Prefix and constant violations count against the check census run.
+
+        The parameter-count violation the mixed fixture also trips is a smell
+        family (``smell_function_parameters``) routed to the smells gate, so it
+        never reaches this run.
+        """
         mixed = tm.ok(
             FlextInfraRuntimeCensusValidator(
                 repository_root=mixed_project,
@@ -126,6 +131,7 @@ class TestsRuntimeCensusBlocking:
         )
         tm.that(mixed.passed, eq=False)
         tm.that("\n".join(mixed.violations), has="[ENFORCE-079]")
+        tm.that("\n".join(mixed.violations), lacks="[smell_function_parameters]")
         tm.that(len(mixed.violations) > len(genuine.violations), eq=True)
         tm.that(
             mixed.summary,
