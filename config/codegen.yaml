@@ -1073,6 +1073,9 @@ Infra:
       - path: Makefile
         owner: make
         policy: full
+      - path: bin/mise-lock-transaction.py
+        owner: codegen
+        policy: full
     # CUSTOM vs MANAGED (humans read comments; this block is the owner):
     #   conflict_sections = MANAGED tables (template wins on make gen)
     #   preserve_project_keys = CUSTOM [project] keys (live wins on merge)
@@ -1474,6 +1477,7 @@ Infra:
         # `make gen` owns their content.
             - "!bin/mise"
             - "!bin/mise.cmd"
+            - "!bin/mise-lock-transaction.py"
         - name: "Documentation"
           profiles: [workspace]
           patterns:
@@ -1874,6 +1878,7 @@ Infra:
             - "/bin/*"
             - "!/bin/mise"
             - "!/bin/mise.cmd"
+            - "!/bin/mise-lock-transaction.py"
             - ".tools/"
             - "__pycache__/"
             - "base.mk"
@@ -2075,6 +2080,11 @@ Infra:
           profiles: [workspace, standalone]
           delegate: render
           overwrite: false
+        - source: base/bin/mise-lock-transaction.py.j2
+          destination: bin/mise-lock-transaction.py
+          profiles: [workspace, standalone]
+          delegate: render
+          overwrite: true
         - source: base/Makefile.j2
           destination: Makefile
         # The generic conform engine is the single Makefile owner for every
