@@ -1354,6 +1354,19 @@ Infra:
           - upstream: flext_core
             project: flext-target-oracle-wms
             runtime: [flext-meltano, flext-oracle-wms, flext-cli]
+        # Precedence order: a generated _config.py composes the first base
+        # whose distribution is among the project's runtime requirements or
+        # its declared upstream.
+        config_bases:
+          - distribution: flext-meltano
+            module: flext_meltano
+            class_name: FlextMeltanoConfig
+          - distribution: flext-cli
+            module: flext_cli
+            class_name: FlextCliConfig
+          - distribution: flext-core
+            module: flext_core
+            class_name: FlextConfig
       ping_example:
         command_name: ping
         help_text: Return the configured health response.

@@ -23,13 +23,6 @@ class FlextInfraConstantsWorkspace:
         UPDATE = "update"
         REMOVE = "remove"
 
-    EXTERNAL_WORKSPACE_SIBLING_PATTERNS: ClassVar[t.StrSequence] = (
-        ".ai-hub",
-        "algar-*",
-        "gruponos-*",
-    )
-    "Sibling directory patterns for FLEXT-managed external workspaces."
-
     PERSISTENT_STATE_ARTIFACT_NAMES: ClassVar[frozenset[str]] = frozenset({".serena"})
     "Persistent-state artifact basenames owned by the local repository."
 

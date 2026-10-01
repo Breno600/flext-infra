@@ -268,46 +268,43 @@ class FlextInfraConfigModelsContexts:
             """Settings environment prefix derived from the distribution name."""
             return f"{self.dist.upper().replace('-', '_')}_"
 
-        @m.computed_field
         @property
-        def config_base_class(self) -> str:
-            """ENFORCE-042 config base class derived from the declared profile.
+        def _config_base(
+            self,
+        ) -> FlextInfraConfigModelsScaffold.ScaffoldConfigBaseSpec:
+            """ENFORCE-042 config base selected from the declared profile.
 
             The fleet-converged ``_config.py`` composes ``FlextSettings`` FIRST
             with the project's capability base. The base is a property of the
-            declared dependency profile, never a per-project hand choice:
-
-            - ``FlextMeltanoConfig`` when the profile consumes ``flext-meltano``
-              (the Singer tap/target/dbt family);
-            - ``FlextCliConfig`` when the profile consumes ``flext-cli``;
-            - ``FlextConfig`` otherwise (the core-only API/Auth family).
+            declared dependency profile, never a per-project hand choice: the
+            first entry of ``scaffold.project.config_bases`` whose distribution
+            the profile depends on (its runtime requirements or its upstream).
             """
-            runtime = tuple(self.dependency_profile.runtime)
-            has_meltano = any(
+            profile = self.dependency_profile
+            depended = {
                 requirement.split(">")[0].split("=")[0].split("[")[0].strip()
-                in {"flext-meltano", "flext_meltano"}
-                for requirement in runtime
+                for requirement in profile.runtime
+            } | {profile.upstream.replace("_", "-")}
+            for base in self.scaffold.project.config_bases:
+                if base.distribution in depended:
+                    return base
+            msg = (
+                "scaffold.project.config_bases declares no base for the "
+                f"dependency profile of {self.dist}: {sorted(depended)}"
             )
-            has_cli = any(
-                requirement.split(">")[0].split("=")[0].split("[")[0].strip()
-                in {"flext-cli", "flext_cli"}
-                for requirement in runtime
-            )
-            if has_meltano:
-                return "FlextMeltanoConfig"
-            if has_cli:
-                return "FlextCliConfig"
-            return "FlextConfig"
+            raise ValueError(msg)
+
+        @m.computed_field
+        @property
+        def config_base_class(self) -> str:
+            """Config base class composed by the generated ``_config.py``."""
+            return self._config_base.class_name
 
         @m.computed_field
         @property
         def config_base_module(self) -> str:
             """Import module exposing ``config_base_class``."""
-            return {
-                "FlextMeltanoConfig": "flext_meltano",
-                "FlextCliConfig": "flext_cli",
-                "FlextConfig": "flext_core",
-            }[self.config_base_class]
+            return self._config_base.module
 
         scaffold: Annotated[
             FlextInfraConfigModelsScaffold.ScaffoldSpec,

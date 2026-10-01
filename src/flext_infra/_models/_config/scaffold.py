@@ -44,6 +44,19 @@ class FlextInfraConfigModelsScaffold:
             m.Field(description="Code-generation requirements"),
         ] = ()
 
+    class ScaffoldConfigBaseSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """One upstream config base a generated ``_config.py`` may compose."""
+
+        distribution: Annotated[
+            t.NonEmptyStr, m.Field(description="Distribution owning the base")
+        ]
+        module: Annotated[
+            t.NonEmptyStr, m.Field(description="Import module exposing the base")
+        ]
+        class_name: Annotated[
+            t.NonEmptyStr, m.Field(description="Config base class name")
+        ]
+
     class ScaffoldProjectSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Project metadata policy for newly scaffolded distributions."""
 
@@ -83,6 +96,16 @@ class FlextInfraConfigModelsScaffold:
                 FlextInfraConfigModelsScaffold.ScaffoldDependencyProfileSpec
             ],
             m.Field(min_length=1, description="Upstream dependency profiles"),
+        ]
+        config_bases: Annotated[
+            t.VariadicTuple[FlextInfraConfigModelsScaffold.ScaffoldConfigBaseSpec],
+            m.Field(
+                min_length=1,
+                description=(
+                    "Config base classes in precedence order; a project composes "
+                    "the first one whose distribution it depends on"
+                ),
+            ),
         ]
 
     class ScaffoldPingExampleSpec(FlextInfraConfigModelsContract.ConfigContract):
