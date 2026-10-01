@@ -30,7 +30,7 @@ from typing import Annotated, Self
 
 {{ settings_import_line }}
 
-from ._models.config import (
+from {{ package_name }}._models.config import (
     {{ class_stem }}ConfigModels,
 )
 

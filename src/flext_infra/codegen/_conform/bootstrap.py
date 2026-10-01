@@ -33,6 +33,17 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
             description="Validated scaffold specification included in the atomic plan",
         ),
     ] = None
+    ports: Annotated[
+        m.Infra.CodegenConformPorts | None,
+        m.Field(
+            default=None,
+            exclude=True,
+            description=(
+                "Docs planner and fresh-import probe wired by the facade; the "
+                "complete surface fails before any effect without them"
+            ),
+        ),
+    ] = None
 
     @staticmethod
     def link_mode(

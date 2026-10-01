@@ -29,11 +29,9 @@ class TestsFlextInfraWorkspaceInit:
     def test_execute_returns_failure(
         self,
         tmp_path: Path,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         result = FlextInfraWorkspaceChecker(
             repository_root=tmp_path,
-            rope=rope_workspace,
         ).execute()
         tm.fail(result, has="Use execute_command() directly")
 
@@ -54,14 +52,12 @@ class TestsFlextInfraWorkspaceInit:
     def test_run_projects_fails_when_reports_dir_is_not_a_directory(
         self,
         tmp_path: Path,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         reports_file = tmp_path / "reports.txt"
         reports_file.write_text("", encoding="utf-8")
 
         result = FlextInfraWorkspaceChecker(
             repository_root=tmp_path,
-            rope=rope_workspace,
         ).run_projects(["project-a"], [c.Infra.LINT], reports_dir=reports_file)
 
         tm.fail(result)

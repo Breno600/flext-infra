@@ -153,7 +153,6 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                     target_file: expected_target_source,
                     source_file: source,
                 },
-                keep_backup=True,
                 gates=gates,
             ),
         )
@@ -434,7 +433,6 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                     target_file: expected_target_source,
                     source_file: source,
                 },
-                keep_backup=True,
                 gates=gates,
             ),
         )
@@ -670,9 +668,6 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                 )
                 if resource is None:
                     continue
-                original_source = resolved_py_file.read_text(
-                    encoding=c.Cli.ENCODING_DEFAULT,
-                )
                 changed = False
                 for source_module, target_module, names in mappings:
                     updated = (
@@ -690,14 +685,6 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                         rope_project,
                         resolved_py_file,
                     )
-                    backup_path = resolved_py_file.with_suffix(
-                        resolved_py_file.suffix + c.Infra.SAFE_EXECUTION_BAK_SUFFIX,
-                    )
-                    if not backup_path.exists():
-                        backup_path.write_text(
-                            original_source,
-                            encoding=c.Cli.ENCODING_DEFAULT,
-                        )
 
 
 __all__: list[str] = ["FlextInfraUtilitiesRefactorNamespaceMoves"]

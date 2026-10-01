@@ -17,7 +17,7 @@ import pytest
 from flext_tests import tm
 
 from flext_core import r
-from flext_infra import config, main
+from flext_infra import config, infra, main
 from flext_infra.codegen import (
     FlextInfraCodegenConform,
     FlextInfraCodegenMiseArtifacts,
@@ -119,7 +119,7 @@ class TestsFlextInfraCodegenConform:
             scope=c.Infra.CodegenConformScope.SELF,
             mode=c.Infra.CodegenConformMode.APPLY,
         )
-        tm.ok(FlextInfraCodegenConform.execute_request(request, workspace))
+        tm.ok(infra.codegen_conform(request, workspace))
         u.Tests.commit_git_changes(template, "Seed conformed lifecycle fixture")
         return template
 
@@ -184,16 +184,17 @@ class TestsFlextInfraCodegenConform:
             if scenario.endswith("-failure")
             else _FlextInfraCodegenConformLifecycleProbe.execute_request
         )
+        ports = infra.codegen_conform_ports()
 
         if scenario.startswith("exception-"):
             with pytest.raises(OSError, match="raised after begin") as raised:
-                execute(request)
+                execute(request, ports=ports)
             tm.that(raised.value is _LIFECYCLE_EXCEPTION, eq=True)
         elif scenario == "docs-failure":
             with pytest.raises(ValueError, match="Invalid JSON"):
-                execute(request)
+                execute(request, ports=ports)
         else:
-            failed = execute(request)
+            failed = execute(request, ports=ports)
             expected = {
                 "cas": "atomic destination content changed",
                 "source-race": "atomic source changed",
@@ -437,14 +438,12 @@ class TestsFlextInfraCodegenConform:
             config.Infra.name,
             extra_verbs=(m.Infra.MakeVerbSpec(name=verb, description=help_text),),
         )
-        return FlextInfraCodegenConform.execute_request(
-            u.Tests.conform_request(
-                root,
-                what=c.Infra.CodegenConformSurface.MAKEFILE,
-                scope=c.Infra.CodegenConformScope.SELF,
-                mode=c.Infra.CodegenConformMode.APPLY,
-            ),
-        )
+        return infra.codegen_conform(u.Tests.conform_request(
+            root,
+            what=c.Infra.CodegenConformSurface.MAKEFILE,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.APPLY,
+        ),)
 
     @pytest.mark.slow
     def test_setext_underline_is_accepted_as_ordinary_content(
@@ -500,13 +499,11 @@ class TestsFlextInfraCodegenConform:
         package_init.parent.mkdir(parents=True, exist_ok=True)
         package_init.write_text("", encoding="utf-8")
 
-        applied = FlextInfraCodegenConform.execute_request(
-            u.Tests.conform_request(
-                root,
-                scope=c.Infra.CodegenConformScope.SELF,
-                mode=c.Infra.CodegenConformMode.APPLY,
-            ),
-        )
+        applied = infra.codegen_conform(u.Tests.conform_request(
+            root,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.APPLY,
+        ),)
 
         tm.ok(applied)
         rendered = (root / "pyproject.toml").read_text(encoding="utf-8")
@@ -552,7 +549,7 @@ class TestsFlextInfraCodegenConform:
             year=2026,
             apply_changes=True,
         )
-        first = service.execute()
+        first = infra.codegen_new(service)
         first_result = tm.ok(first)
         tm.that(bool(first_result.written_files), eq=True)
         tm.that(first_result.written_files.count(root / "README.md"), eq=1)
@@ -650,7 +647,8 @@ class TestsFlextInfraCodegenConform:
         # The scaffolded manifest is reconciled against Git on every later
         # read, so it declares the identity the fixture clone actually has.
         repository = u.Tests.repository_ref(config.Infra.name)
-        created = FlextInfraCodegenProjectNew(
+        created = infra.codegen_new(
+            FlextInfraCodegenProjectNew(
             flext_source=u.Tests.flext_source(),
             name=repository.name,
             kind=c.Infra.ProjectKind.INTERNAL_FLEXT,
@@ -666,7 +664,8 @@ class TestsFlextInfraCodegenConform:
             upstream="flext_cli",
             year=2026,
             apply_changes=True,
-        ).execute()
+            ),
+        )
         tm.ok(created)
         expected_tree = TestsFlextInfraConformSupport.project_tree(existing_root)
         tm.ok(
@@ -682,13 +681,11 @@ class TestsFlextInfraCodegenConform:
             ),
         )
         u.Tests.commit_git_changes(existing_root, "Seed committed drift")
-        migrated = FlextInfraCodegenConform.execute_request(
-            u.Tests.conform_request(
-                existing_root,
-                scope=c.Infra.CodegenConformScope.SELF,
-                mode=c.Infra.CodegenConformMode.APPLY,
-            ),
-        )
+        migrated = infra.codegen_conform(u.Tests.conform_request(
+            existing_root,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.APPLY,
+        ),)
         tm.ok(migrated)
         actual_tree = TestsFlextInfraConformSupport.project_tree(existing_root)
         assert actual_tree == expected_tree, (
@@ -740,22 +737,18 @@ class TestsFlextInfraCodegenConform:
             ),
         )
 
-        applied = FlextInfraCodegenConform.execute_request(
-            u.Tests.conform_request(
-                root,
-                scope=c.Infra.CodegenConformScope.SELF,
-                mode=c.Infra.CodegenConformMode.APPLY,
-            ),
-        )
+        applied = infra.codegen_conform(u.Tests.conform_request(
+            root,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.APPLY,
+        ),)
         tm.ok(applied)
 
-        fixed_point = FlextInfraCodegenConform.execute_request(
-            u.Tests.conform_request(
-                root,
-                scope=c.Infra.CodegenConformScope.SELF,
-                mode=c.Infra.CodegenConformMode.CHECK,
-            ),
-        )
+        fixed_point = infra.codegen_conform(u.Tests.conform_request(
+            root,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.CHECK,
+        ),)
         tm.ok(fixed_point)
         tm.that(fixed_point.value.written_files, eq=())
 
@@ -768,13 +761,11 @@ class TestsFlextInfraCodegenConform:
         TestsFlextInfraConformSupport.seed_infra_package_tree(root)
         (root / "scripts").mkdir()
 
-        result = FlextInfraCodegenConform.execute_request(
-            u.Tests.conform_request(
-                root,
-                scope=c.Infra.CodegenConformScope.SELF,
-                mode=c.Infra.CodegenConformMode.APPLY,
-            ),
-        )
+        result = infra.codegen_conform(u.Tests.conform_request(
+            root,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.APPLY,
+        ),)
 
         tm.ok(result)
         tm.that(
@@ -834,7 +825,7 @@ class TestsFlextInfraCodegenConform:
         for required in ("Makefile", ".mise.toml", ".python-version", ".gitignore"):
             tm.that(u.Infra.codegen_file_requires_effect(plans[required]), eq=True)
 
-        applied = FlextInfraCodegenConform.execute_request(request)
+        applied = infra.codegen_conform(request)
         tm.ok(applied)
         for relative, content in create_only.items():
             tm.that((root / relative).read_text(encoding="utf-8"), eq=content)
@@ -853,13 +844,11 @@ class TestsFlextInfraCodegenConform:
             ),
         )
 
-        fixed_point = FlextInfraCodegenConform.execute_request(
-            u.Tests.conform_request(
-                root,
-                scope=c.Infra.CodegenConformScope.SELF,
-                mode=c.Infra.CodegenConformMode.CHECK,
-            ),
-        )
+        fixed_point = infra.codegen_conform(u.Tests.conform_request(
+            root,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.CHECK,
+        ),)
         tm.ok(fixed_point)
         tm.that(fixed_point.value.written_files, eq=())
 
@@ -896,13 +885,11 @@ class TestsFlextInfraCodegenConform:
         u.Tests.commit_git_changes(root, "Seed pre-bake Mise projection")
 
         tm.ok(
-            FlextInfraCodegenConform.execute_request(
-                u.Tests.conform_request(
-                    root,
-                    scope=c.Infra.CodegenConformScope.SELF,
-                    mode=c.Infra.CodegenConformMode.APPLY,
-                ),
-            ),
+            infra.codegen_conform(u.Tests.conform_request(
+                root,
+                scope=c.Infra.CodegenConformScope.SELF,
+                mode=c.Infra.CodegenConformMode.APPLY,
+            ),),
         )
 
         packaged = files("flext_infra").joinpath(c.Infra.MISE_COLD_START_DIRECTORY)
@@ -913,13 +900,11 @@ class TestsFlextInfraCodegenConform:
             )
             tm.that((root / relative).stat().st_mode & 0o777, eq=mode)
         tm.ok(FlextInfraCodegenMiseArtifacts(repository_root=root).execute(), eq=True)
-        fixed_point = FlextInfraCodegenConform.execute_request(
-            u.Tests.conform_request(
-                root,
-                scope=c.Infra.CodegenConformScope.SELF,
-                mode=c.Infra.CodegenConformMode.CHECK,
-            ),
-        )
+        fixed_point = infra.codegen_conform(u.Tests.conform_request(
+            root,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.CHECK,
+        ),)
         tm.ok(fixed_point)
         tm.that(fixed_point.value.written_files, eq=())
 
@@ -1037,14 +1022,12 @@ class TestsFlextInfraCodegenConform:
         root = tmp_path / "consumer"
         u.Tests.seed_locked_taplo(tmp_path)
         tm.ok(
-            FlextInfraCodegenConform.execute_request(
-                u.Tests.conform_request(
-                    root,
-                    scope=c.Infra.CodegenConformScope.SELF,
-                    mode=c.Infra.CodegenConformMode.APPLY,
-                ),
-                initial_workspace=workspace,
+            infra.codegen_conform(u.Tests.conform_request(
+                root,
+                scope=c.Infra.CodegenConformScope.SELF,
+                mode=c.Infra.CodegenConformMode.APPLY,
             ),
+            initial_workspace=workspace,),
         )
         package_root = (root / "src/consumer/__init__.py").read_text(encoding="utf-8")
         tm.that(package_root, has='"flext_cli": (')

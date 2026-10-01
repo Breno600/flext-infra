@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
 
-from .. import c, m, u
+from .. import c, m, t, u
 from ._execution import FlextInfraCodegenExecutionBase
 from .conform import FlextInfraCodegenConform
 
@@ -127,6 +127,14 @@ class FlextInfraCodegenProjectNew(
         ),
     ]
     year: Annotated[int, m.Field(ge=2025, description="Deterministic copyright year.")]
+    conform_ports: t.Port[m.Infra.CodegenConformPorts | None] = m.Field(
+        default=None,
+        exclude=True,
+        description=(
+            "Docs and fresh-import ports bound by FlextInfra.codegen_new; the "
+            "scaffold conform fails before any effect without them"
+        ),
+    )
 
     @override
     def execute(self) -> p.Result[m.Infra.CodegenResult]:
@@ -238,6 +246,7 @@ class FlextInfraCodegenProjectNew(
         return FlextInfraCodegenConform.execute_request(
             request,
             initial_workspace=workspace,
+            ports=self.conform_ports,
         )
 
 

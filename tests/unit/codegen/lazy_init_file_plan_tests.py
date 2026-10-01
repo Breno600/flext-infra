@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
+from flext_infra import infra
 from flext_infra.codegen import FlextInfraCodegenConform
 from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
 from flext_infra.workspace import FlextInfraWorkspaceDetector
@@ -127,14 +128,14 @@ class TestsFlextInfraCodegenLazyInitFilePlans:
         )
         tm.that({path: path.read_bytes() for path in before}, eq=before)
         applied = request.model_copy(update={"mode": c.Infra.CodegenConformMode.APPLY})
-        tm.ok(FlextInfraCodegenConform.execute_request(applied, workspace))
+        tm.ok(infra.codegen_conform(applied, workspace))
         for repository, package in zip((root, member), packages, strict=True):
             initializer = package / c.Infra.INIT_PY
             tm.that(
                 initializer.read_bytes() != before[initializer],
                 eq=repository.resolve() in expected,
             )
-        tm.ok(FlextInfraCodegenConform.execute_request(request, workspace))
+        tm.ok(infra.codegen_conform(request, workspace))
 
     def test_scope_outside_workspace_is_a_causal_plan_failure(
         self,

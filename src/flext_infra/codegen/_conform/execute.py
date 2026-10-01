@@ -8,8 +8,6 @@ from typing import Self, override
 from flext_core import r
 
 from ... import c, config, m, p, t, u
-from ...docs import FlextInfraDocGenerator
-from ...validate import FlextInfraValidateFreshImport
 from ...workspace import FlextInfraWorkspaceDetector
 from .. import (
     FlextInfraCodegenLazyInit,
@@ -34,8 +32,14 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         cls: type[Self],
         request: m.Infra.CodegenConformRequest,
         initial_workspace: m.Infra.WorkspaceSpec | None = None,
+        *,
+        ports: m.Infra.CodegenConformPorts | None,
     ) -> p.Result[m.Infra.CodegenResult]:
-        """Execute one already validated public CLI request."""
+        """Execute one already validated request with the facade-wired ports.
+
+        ``ports`` is required at every call: the complete surface consumes it,
+        and a single-file surface declares its absence explicitly with ``None``.
+        """
         root = request.root.expanduser().resolve()
         bootstrap: t.VariadicTuple[m.Cli.AtomicDirectoryState] = ()
         initialized_git = False
@@ -142,6 +146,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             repository_root=root,
             request=request,
             initial_workspace=initial_workspace,
+            ports=ports,
         )
         try:
             result = service.execute()
@@ -312,6 +317,12 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         request: m.Infra.CodegenConformRequest,
     ) -> p.Result[m.Infra.CodegenResult]:
         """Run complete conformance inside the sole generation lock."""
+        ports = self.ports
+        if ports is None:
+            return r[m.Infra.CodegenResult].fail(
+                "complete conform requires the facade-wired docs and fresh-import "
+                "ports; run it through FlextInfra.codegen_conform",
+            )
         mode = c.Infra.CodegenConformMode(request.mode)
         mise_owner = FlextInfraCodegenMiseArtifacts(repository_root=request.root)
         transaction = FlextInfraCodegenTransaction(mise_owner)
@@ -321,6 +332,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 request,
                 scope_root,
                 transaction,
+                ports,
             ),
         )
 
@@ -329,6 +341,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         request: m.Infra.CodegenConformRequest,
         scope_root: Path,
         transaction: FlextInfraCodegenTransaction,
+        ports: m.Infra.CodegenConformPorts,
     ) -> p.Result[m.Infra.CodegenResult]:
         """Materialize scaffold parents, then run one locked generation cycle."""
         prepared = self._prepare_scaffold_directories(request)
@@ -339,6 +352,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 request,
                 scope_root,
                 transaction,
+                ports,
             )
         except Exception as exc:
             rollback = self._rollback_scaffold_directories(prepared.value)
@@ -405,6 +419,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         request: m.Infra.CodegenConformRequest,
         scope_root: Path,
         transaction: FlextInfraCodegenTransaction,
+        ports: m.Infra.CodegenConformPorts,
     ) -> p.Result[m.Infra.CodegenResult]:
         """Plan, publish, and validate one prepared locked generation cycle."""
         u.Cli.header("Codegen Conform")
@@ -459,7 +474,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 return r[m.Infra.CodegenResult].fail(
                     f"lazy-init drift detected: {paths}\n{report}",
                 )
-            docs_generator = FlextInfraDocGenerator(
+            docs_generator = ports.docs_planner(
                 repository_root=request.root,
                 projects=tuple(repository.name for repository in plan.repositories),
                 include_root=docs_include_root,
@@ -493,6 +508,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 docs_include_root=docs_include_root,
                 transaction=transaction,
                 session=current,
+                ports=ports,
             ),
         )
 
@@ -504,6 +520,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         docs_include_root: bool,
         transaction: FlextInfraCodegenTransaction,
         session: m.Infra.CodegenTransactionSession,
+        ports: m.Infra.CodegenConformPorts,
     ) -> p.Result[m.Infra.CodegenResult]:
         """Complete every post-begin phase through prepared-state recovery."""
         lazy_analysis = self._lazy_phase(request, plan)
@@ -535,7 +552,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         )
         if extended.failure:
             return r[m.Infra.CodegenResult].from_failure(extended)
-        docs_generator = FlextInfraDocGenerator(
+        docs_generator = ports.docs_planner(
             repository_root=request.root,
             projects=tuple(repository.name for repository in plan.repositories),
             include_root=docs_include_root,
@@ -583,6 +600,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 owned_lazy_analysis,
                 docs_analysis,
                 verified_plan,
+                ports,
             ),
         )
         if published.failure:
@@ -753,6 +771,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         lazy_analysis: m.Infra.CodegenPhaseAnalysis,
         docs_analysis: m.Infra.CodegenPhaseAnalysis,
         verified_plan: list[m.Infra.CodegenPlan],
+        ports: m.Infra.CodegenConformPorts,
     ) -> p.Result[bool]:
         """Replan conform against live bytes before the journal can commit.
 
@@ -803,7 +822,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             if validated.failure:
                 return r[bool].from_failure(validated)
         u.Cli.info("stage=verify-fresh-imports")
-        imported = FlextInfraValidateFreshImport(
+        imported = ports.fresh_import(
             repository_root=request.root,
         ).build_report(
             publications=lazy_analysis.publications,

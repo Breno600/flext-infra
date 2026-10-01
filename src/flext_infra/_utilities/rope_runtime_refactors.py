@@ -7,8 +7,6 @@ import itertools
 import tokenize
 from typing import ClassVar
 
-from rope.base import codeanalyze, simplify
-
 from flext_infra import m, p, t
 
 from .rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
@@ -58,6 +56,8 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
         The body statements own the dedent width and the wrapper docstring, so
         both derive from the logical facts instead of being passed alongside.
         """
+        from rope.base import codeanalyze, simplify
+
         lines = codeanalyze.SourceLinesAdapter(source)
         indentation = body[0].indent - header.indent
         docstring_span = (
