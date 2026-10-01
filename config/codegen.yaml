@@ -28,10 +28,6 @@ Infra:
       # writes the committed uv.lock and mise.lock; setup, gen, and fmt install
       # frozen from those locks.
       python_version: "3.13"
-      # Python resolves and installs from precompiled builds only; the
-      # dependency cooldown below is what keeps a source-only patch out of
-      # the resolved set.
-      python_compile: false
       # Supply-chain cooldown (operator 2026-10-01): ONE value for every
       # resolver — the generated mise `minimum_release_age` (so `make upg`
       # never selects a release younger than this, e.g. a Python patch with
@@ -325,10 +321,6 @@ Infra:
         discovery_scope: none
 
     make:
-      # Physical workspace environments live beside the checkout so a linked
-      # worktree shares one project-keyed environment instead of an in-tree
-      # duplicate (runtime_environment_dir derives the same path).
-      runtime_environment_directory: .flext-venvs
       examples_timeout_seconds: 120
       submodule_timeout_seconds: 120
       # Operator 2026-09-08: ruff is the formatting and autofix rule.
@@ -399,31 +391,6 @@ Infra:
         # Other pre-push verbs use this token to preserve local test behavior;
         # pre-push check unsets CI so it runs every active check gate.
         local_value: N
-        # Rules, not a skip-list: local_check_gates is the ONLY
-        # declared set. CI=Y runs its strict complement, derived in
-        # MakeSpec.check_gates_ci over the active default universe, so every
-        # active gate retains an owner. CI=N intersects the declared local set
-        # with that universe; an unset CI runs all active gates. `format`
-        # is not a check gate at all -- it mutates files, so it belongs to
-        # make fmt / make fix only. This supersedes the earlier
-        # check_gates_skip list, which could drift out of sync with the set it
-        # was meant to complement.
-        # CI is ternary (Y/N/absent).
-        # tooling.tools.pytest.ci-excluded-markers defines the slow-test
-        # exclusion for CI and pre-commit, not local/pre-push runs.
-        # CI=N owns the complementary local check gates; absent uses testmon
-        # for incremental developer runs.
-        #
-        # The set is the SLOW whole-program type checkers: those are the gates
-        # worth deferring
-        # off the fast CI leg, and they are what CI=N exists to own. `lint` is
-        # not here -- ruff is cheap, so making CI skip it buys nothing and
-        # leaves the fast leg without a linter.
-        # mypy runs in the CI context so its red content cannot merge unseen;
-        # the project-owned timeout budget (tools.mypy.timeout_seconds) makes
-        # it runnable on the runner.
-        # pyrefly stays local-only (fast; pyright already covers CI).
-        local_check_gates: [pyrefly]
       # Git-hook stages are disabled by default;
       # the workflow below still declares stage membership so re-enabling is a
       # one-key change, case by case. CI owns read-only setup, generation drift,
@@ -481,28 +448,14 @@ Infra:
         # check); it never runs the workspace-wide codegen conform as a
         # prerequisite. `validate` is the structural check (blocking when the
         # .md set is incomplete).
+        api_modules:
+          flext-infra: ["flext_infra.api"]
+        # Rejects Markdown links that traverse out of the project into a
+        # sibling flext repository by relative path.
+        cross_project_relative_link_pattern: '^(?:\.\./)+flext-[a-z0-9-]+(?:/|$)'
         actions: [generate, fix, fmt, validate, audit]
         mutable_actions: [fix, fmt]
         reports_dir: .reports/docs
-        overview_preview_limits:
-          aliases: 11
-          public_symbols: 10
-          facades: 8
-          module_exports: 8
-          keywords: 8
-        cross_project_relative_link_pattern: '^(?:\.\./)+flext-[a-z0-9-]+(?:/|$)'
-        stale_github_organizations:
-          - organization
-        github_repos:
-          - organization: flext-sh
-            repository: flext
-            branch: 0.12.0-dev
-          - organization: flext-sh
-            repository: flext-core
-            branch: 0.12.0-dev
-          - organization: flext-sh
-            repository: flext-infra
-            branch: 0.12.0-dev
       # Private cross-repo doc-link entries (checkouts outside this public
       # registry) belong in config/codegen-overrides.local.yaml; the
       # lookup appends local entries and resolves first match.

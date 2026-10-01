@@ -420,7 +420,6 @@ Infra:
         # Slow marks are a narrow integration-harness budget, not permission
         # for an unbounded test. Cases that exceed it require owner repair.
         slow-timeout-seconds: 30
-        slow-marker: slow
         # A local suite that cannot finish within run-timeout-seconds is a
         # performance defect. The generated process wall is derived from this
         # value and the termination grace by the typed model; no second timeout
