@@ -8,7 +8,10 @@ from typing import Annotated
 from flext_cli import m
 
 from ... import t
-from ..._constants import FlextInfraConstantsCodegenProject
+from ..._constants import (
+    FlextInfraConstantsCodegenProject,
+    FlextInfraConstantsWorkspace,
+)
 from ..deps_tool_config import FlextInfraModelsDepsToolConfig
 from .contexts import FlextInfraConfigModelsContexts
 from .contract import FlextInfraConfigModelsContract
@@ -213,6 +216,10 @@ class FlextInfraConfigModelsRender:
             t.NonEmptyStr,
             m.Field(description="Project-relative owner of the runtime environment"),
         ] = "."
+        environment_directory: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Runtime-root environment directory (law, not config)"),
+        ] = FlextInfraConstantsWorkspace.ENVIRONMENT_DIRECTORY
         environment_path_prepends: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(description="Project-relative executable paths"),
