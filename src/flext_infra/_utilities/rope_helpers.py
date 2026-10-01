@@ -2,16 +2,14 @@
 
 from __future__ import annotations
 
+import ast
+
 from flext_infra import c, t
 
-from ._rope_bracket_balance import FlextInfraUtilitiesRopeBracketBalanceMixin
 from ._rope_method_order import FlextInfraUtilitiesRopeMethodOrderMixin
 
 
-class FlextInfraUtilitiesRopeHelpers(
-    FlextInfraUtilitiesRopeBracketBalanceMixin,
-    FlextInfraUtilitiesRopeMethodOrderMixin,
-):
+class FlextInfraUtilitiesRopeHelpers(FlextInfraUtilitiesRopeMethodOrderMixin):
     """Generic text, import-placement, and method-order helpers."""
 
     @staticmethod
@@ -70,46 +68,66 @@ class FlextInfraUtilitiesRopeHelpers(
         return results
 
     @staticmethod
+    def statement_line_span(statement: ast.stmt) -> t.IntPair:
+        """Return the 1-based inclusive line span of one statement, decorators included."""
+        decorators: t.SequenceOf[ast.expr] = (
+            statement.decorator_list
+            if isinstance(
+                statement,
+                ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
+            )
+            else ()
+        )
+        start = min((statement.lineno, *(node.lineno for node in decorators)))
+        return start, statement.end_lineno or statement.lineno
+
+    @staticmethod
+    def top_level_definition_span(
+        source: str,
+        name: str,
+        *,
+        kind: str,
+    ) -> t.IntPair | None:
+        """Return the line span of the top-level ``kind`` definition named ``name``."""
+        if kind == "function":
+            node_types: t.VariadicTuple[type[ast.stmt]] = (
+                ast.FunctionDef,
+                ast.AsyncFunctionDef,
+            )
+        elif kind == "class":
+            node_types = (ast.ClassDef,)
+        else:
+            msg = f"unsupported definition kind: {kind}"
+            raise ValueError(msg)
+        for statement in ast.parse(source).body:
+            if (
+                isinstance(
+                    statement,
+                    ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
+                )
+                and isinstance(statement, node_types)
+                and statement.name == name
+            ):
+                return FlextInfraUtilitiesRopeHelpers.statement_line_span(statement)
+        return None
+
+    @staticmethod
     def extract_definition(
         source: str,
         name: str,
         *,
         kind: str = "function",
     ) -> str | None:
-        r"""Extract full def/class block by name using regex.
-
-        Handles single-line signatures. Multi-line return-annotation
-        signatures (``def foo() -> tuple[\n    A,\n]:``) are detected
-        by a fallback bracket-balance scan that extends the regex match
-        through any unclosed bracket groups.
-        """
-        if kind == "function":
-            pattern = c.Infra.compile_function_def_block(name)
-        elif kind == "class":
-            pattern = c.Infra.compile_class_def_block(name)
-        else:
-            return None
-        match = pattern.search(source)
-        if match is None:
-            return None
-        block = match.group(0)
-        return FlextInfraUtilitiesRopeHelpers._extend_block_through_open_brackets(
+        """Return the full top-level def/class block named ``name``, decorators included."""
+        span = FlextInfraUtilitiesRopeHelpers.top_level_definition_span(
             source,
-            block,
-            match_end=match.end(),
-        ).rstrip("\n")
-
-    @staticmethod
-    def remove_definition(source: str, name: str, *, kind: str = "function") -> str:
-        """Remove a top-level def/class from source."""
-        if kind == "function":
-            pattern = c.Infra.compile_function_def_remove(name)
-        elif kind == "class":
-            pattern = c.Infra.compile_class_def_remove(name)
-        else:
-            return source
-        updated_source: str = pattern.sub("", source, count=1)
-        return updated_source
+            name,
+            kind=kind,
+        )
+        if span is None:
+            return None
+        start, end = span
+        return "\n".join(source.splitlines()[start - 1 : end])
 
     @staticmethod
     def append_to_class_body(source: str, class_name: str, block: str) -> str:
