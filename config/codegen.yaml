@@ -1036,6 +1036,11 @@ Infra:
       - path: .envrc.local
         owner: codegen
         policy: merge
+      # The fleet template owns its rendered sections. A project's
+      # ManagedArtifacts.Gitignore.preserved_blocks declares exact delimiter
+      # pairs for sections written by another generator; codegen retains those
+      # live bytes and rejects incomplete or duplicate delimiters. No external
+      # destination list belongs in this fleet manifest.
       - path: .gitignore
         owner: codegen
         policy: merge
