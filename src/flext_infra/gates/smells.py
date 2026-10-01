@@ -1,4 +1,8 @@
-"""Fail-closed qlty code-smell quality gate."""
+"""Fail-closed qlty code-smell quality gate.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -35,6 +39,10 @@ class FlextInfraSmellsGate(FlextInfraGate):
 
         Empty or malformed SARIF is a blocking scan failure, regardless of the
         process status. A valid SARIF document with zero results is a pass.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.Issue]``.
+
         """
         prefix = (
             ""
@@ -59,7 +67,12 @@ class FlextInfraSmellsGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
-        """One qlty scan of ``project_dir``'s check directories."""
+        """One qlty scan of ``project_dir``'s check directories.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
+        """
         _ = ctx
         started = time.monotonic()
         scan = self._scan(project_dir)
@@ -79,7 +92,15 @@ class FlextInfraSmellsGate(FlextInfraGate):
         ctx: m.Infra.GateContext,
         check_dirs: t.StrSequence,
     ) -> t.StrSequence:
-        """The project's scan command (check() names its check dirs itself)."""
+        """The project's scan command (check() names its check dirs itself).
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            FileNotFoundError: If ``binary is None``.
+
+        """
         _ = ctx, check_dirs
         binary = self._resolve_binary()
         if binary is None:
@@ -93,13 +114,26 @@ class FlextInfraSmellsGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Parse SARIF stdout into per-project issues (check_files path)."""
+        """Parse SARIF stdout into per-project issues (check_files path).
+
+        Returns:
+            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
+
+        """
         _ = ctx
         issues = self._scanned_issues(result, project_dir)
         return not issues, issues
 
     def _scan_command(self, binary: str, project_dir: Path) -> t.StrSequence:
-        """Name the project's paths explicitly; qlty scans them in full."""
+        """Name the project's paths explicitly; qlty scans them in full.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            ValueError: If smells.
+
+        """
         paths = tuple(
             (project_dir / directory).relative_to(self._repository_root).as_posix()
             for directory in self._existing_check_dirs(project_dir)
@@ -111,7 +145,12 @@ class FlextInfraSmellsGate(FlextInfraGate):
 
     @staticmethod
     def _unrunnable_scan_output(stderr: str) -> p.Cli.CommandOutput:
-        """Synthesize the scan result for a scanner that cannot run at all."""
+        """Synthesize the scan result for a scanner that cannot run at all.
+
+        Returns:
+            The resulting ``p.Cli.CommandOutput``.
+
+        """
         return m.Cli.CommandOutput(
             stdout="",
             stderr=stderr,
@@ -133,6 +172,10 @@ class FlextInfraSmellsGate(FlextInfraGate):
         unexplained `wip` commit. The generator owns the file, so its absence
         is a generation gap reported through the gate result with the exact
         path, never papered over mid-scan and never read as a clean pass.
+
+        Returns:
+            The resulting ``p.Cli.CommandOutput``.
+
         """
         binary = self._resolve_binary()
         if binary is None:
@@ -156,7 +199,12 @@ class FlextInfraSmellsGate(FlextInfraGate):
 
     @staticmethod
     def _failure_issue(message: str | None) -> m.Infra.Issue:
-        """Represent malformed or absent scanner output as a blocking issue."""
+        """Represent malformed or absent scanner output as a blocking issue.
+
+        Returns:
+            The resulting ``m.Infra.Issue``.
+
+        """
         return m.Infra.Issue(
             file=c.PYPROJECT_FILENAME,
             line=1,
@@ -176,6 +224,10 @@ class FlextInfraSmellsGate(FlextInfraGate):
 
         Pure function over a literal qlty SARIF payload (unit-testable, no
         subprocess) — same strategy as ``loc_cap._files_over_cap``.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.Issue]]``.
+
         """
         if not sarif_json.strip():
             return r[tuple[m.Infra.Issue, ...]].fail("qlty returned empty SARIF output")
@@ -194,7 +246,12 @@ class FlextInfraSmellsGate(FlextInfraGate):
 
     @classmethod
     def _issue_from_result(cls, result: t.JsonMapping, prefix: str) -> m.Infra.Issue:
-        """Map one SARIF result to an Issue enriched with the FLEXT fix text."""
+        """Map one SARIF result to an Issue enriched with the FLEXT fix text.
+
+        Returns:
+            The resulting ``m.Infra.Issue``.
+
+        """
         rule_id = u.Cli.json_pick_str(result, "ruleId")
         code = rule_id.removeprefix(c.Infra.SMELLS_RULE_PREFIX)
         physical = u.Cli.json_deep_mapping(
@@ -216,7 +273,12 @@ class FlextInfraSmellsGate(FlextInfraGate):
 
     @classmethod
     def _result_uri(cls, result: t.JsonMapping) -> str:
-        """Workspace-relative URI of the finding's first location."""
+        """Workspace-relative URI of the finding's first location.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         uri: str = u.Cli.json_pick_str(
             u.Cli.json_deep_mapping(
                 cls._first_location(result),
@@ -229,7 +291,12 @@ class FlextInfraSmellsGate(FlextInfraGate):
 
     @staticmethod
     def _first_location(result: t.JsonMapping) -> t.JsonMapping:
-        """First SARIF location mapping (empty mapping when absent)."""
+        """First SARIF location mapping (empty mapping when absent).
+
+        Returns:
+            The resulting ``t.JsonMapping``.
+
+        """
         locations = u.Cli.json_deep_mapping_list(result, "locations")
         return locations[0] if locations else {}
 
@@ -240,6 +307,10 @@ class FlextInfraSmellsGate(FlextInfraGate):
         The SARIF text already states the concrete problem (name and count);
         the core problem text is a census template whose placeholders qlty
         does not supply, so only the fix is appended.
+
+        Returns:
+            The resulting ``str``.
+
         """
         tag = c.Infra.SMELLS_RULE_TAGS.get(code, "")
         text = c.ENFORCEMENT_RULES_TEXT.get(tag) if tag else None
