@@ -50,7 +50,7 @@ gitleaks = "latest"
 "aqua:boyter/scc" = "latest"
 kubeconform = "latest"
 node = "latest"
-"npm:prettier" = "latest"
+"npm:prettier" = "3.5.3"
 go = "latest"
 make = "latest"
 [tools."github:qltysh/qlty"]

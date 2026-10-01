@@ -92,6 +92,7 @@ class FlextInfraPytestProfile:
         runner = FlextInfraPytestRunner.from_environment(
             started_at_monotonic=started_at_monotonic,
             collection_command_prefix=prefix,
+            profile_enabled=True,
         )
         # The runner publishes its run context before any child can fail; the
         # parent binds the profile to the receipt THIS invocation wrote, also

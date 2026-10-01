@@ -91,10 +91,12 @@ endif
 endif
 
 # GITHUB_TOKEN is the one GitHub credential variable every tool reads (mise,
-# gh, uv), and only the caller's environment supplies it: no recipe reads a
-# stored credential (gh, keyring, netrc) to fill an absent one. A tool-scoped
-# alias of the same credential never reaches a recipe, where it would shadow or
-# outrank it. The value stays in the environment, never in a rendered recipe.
+# gh, uv). The caller's environment supplies it (ai-hub propagates it through
+# .envrc.ai-hub); when it carries none, the network bootstrap selects the first
+# declared toolchain.github_credential_commands entry whose executable is on
+# PATH, and that source must deliver. With no source present, GitHub access is
+# anonymous. A tool-scoped alias of the same credential never reaches a recipe,
+# where it would shadow or outrank it. The value is never printed.
 export GITHUB_TOKEN
 unexport GH_TOKEN MISE_GITHUB_TOKEN GITHUB_API_TOKEN
 
@@ -661,7 +663,7 @@ _builtin_test_all: _builtin_require_environment
 
 _builtin_test_full_all: _builtin_require_environment
 {{ test_report_recipe(
-    runner=pytest_test_runner(("full",)),
+    runner=pytest_test_runner(("full", "full-slow")),
 ) }}
 
 # fmt is format-only (single-pass verb law): ruff formats Python, the

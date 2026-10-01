@@ -29,7 +29,16 @@ class FlextInfraModelsDepsToolConfigProjectGitignore(
 
         @m.model_validator(mode="after")
         def validate_markers(self) -> Self:
-            """Require distinct, complete single-line delimiters."""
+            """Require distinct, complete single-line delimiters.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If gitignore preserved block markers must be distinct single
+                    lines.
+
+            """
             if (
                 self.begin == self.end
                 or self.begin in self.end
