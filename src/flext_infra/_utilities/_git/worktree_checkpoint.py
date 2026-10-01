@@ -161,7 +161,7 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
                 repo.git.update_index(
                     "--add",
                     "--cacheinfo",
-                    c.Infra.GIT_CACHEINFO_GITLINK,
+                    c.Infra.GIT_GITLINK_MODE_TEXT,
                     source_head,
                     path,
                 )

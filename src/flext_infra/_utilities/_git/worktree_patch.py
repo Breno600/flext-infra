@@ -78,14 +78,16 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
         """Apply submodule entries that have no working-tree file representation."""
         current: Path | None = None
         gitlink = False
+        gitlink_mode = c.Infra.GIT_GITLINK_MODE_TEXT.encode()
         for raw_line in patch.splitlines():
             if raw_line.startswith(b"diff --git a/"):
                 _, _, _source, target = raw_line.split(maxsplit=3)
                 current = Path(target.removeprefix(b"b/").decode())
                 gitlink = False
                 continue
-            if raw_line == b"new file mode 160000" or (
-                raw_line.startswith(b"index ") and raw_line.endswith(b" 160000")
+            if raw_line == b"new file mode " + gitlink_mode or (
+                raw_line.startswith(b"index ")
+                and raw_line.endswith(b" " + gitlink_mode)
             ):
                 gitlink = True
                 continue
@@ -100,7 +102,7 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
                     repo.git.update_index(
                         "--add",
                         "--cacheinfo",
-                        c.Infra.GIT_CACHEINFO_GITLINK,
+                        c.Infra.GIT_GITLINK_MODE_TEXT,
                         commit,
                         current.as_posix(),
                     )
