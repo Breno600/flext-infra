@@ -384,10 +384,7 @@ class FlextInfraDuplicationGate(FlextInfraGate):
         """Return whether one jscpd source range encloses executable behavior."""
         file_name = u.Cli.json_pick_str(side, "name")
         path = Path(file_name)
-        try:
-            identity = path.stat()
-        except OSError:
-            return True
+        identity = path.stat()
         key = (file_name, identity.st_mtime_ns, identity.st_size)
         ranges = cls._python_behavior_cache.get(key)
         if ranges is None:

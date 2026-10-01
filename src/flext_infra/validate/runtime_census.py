@@ -54,7 +54,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
     @staticmethod
     def _is_local_class(klass: type, module_name: str) -> bool:
         """Return True when ``klass`` is defined in ``module_name`` (not imported)."""
-        return getattr(klass, "__module__", "") == module_name
+        return klass.__module__ == module_name
 
     @classmethod
     def _walk_modules(cls, package_name: str) -> t.SequenceOf[str]:

@@ -170,18 +170,13 @@ class FlextInfraSmellsGate(FlextInfraGate):
         by construction and the smell gate reports only hand-written source.
         ``Issue.file`` is project-relative while ``qlty`` URIs are
         workspace-relative, so the project directory is joined to the workspace
-        root before reading the header. Unreadable files keep their findings
-        (fail-closed).
+        root before reading the header.
         """
         visible: list[m.Infra.Issue] = []
         for issue in issues:
             path = project_dir / issue.file
-            try:
-                with path.open("r", encoding=c.Cli.ENCODING_DEFAULT) as handle:
-                    first_line = handle.readline()
-            except OSError:
-                visible.append(issue)
-                continue
+            with path.open("r", encoding=c.Cli.ENCODING_DEFAULT) as handle:
+                first_line = handle.readline()
             if c.Infra.AUTOGEN_HEADER not in first_line:
                 visible.append(issue)
         return tuple(visible)

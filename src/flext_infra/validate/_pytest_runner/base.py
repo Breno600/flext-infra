@@ -107,20 +107,13 @@ class FlextInfraPytestRunnerBase(s[int]):
     def _declared_worker_ceiling(
         self, policy: PytestPolicy
     ) -> int | m.Infra.PytestWorkerCeiling:
-        """Resolve the declared project's ceiling over the fleet default.
-
-        A tree without a declared ``[project].name`` (fixture projects, raw
-        workbenches) is an expected state and takes the fleet-wide default.
-        """
+        """Resolve the declared project's ceiling over the fleet default."""
         if not policy.parallel_worker_overrides:
             return policy.parallel_workers
         pyproject_path = self.root / c.PYPROJECT_FILENAME
-        try:
-            name = u.Infra.project_name_from_payload(
-                pyproject_path, u.Infra.pyproject_payload(pyproject_path)
-            )
-        except (TypeError, ValueError):
-            return policy.parallel_workers
+        name = u.Infra.project_name_from_payload(
+            pyproject_path, u.Infra.pyproject_payload(pyproject_path)
+        )
         return policy.parallel_worker_overrides.get(name, policy.parallel_workers)
 
     @staticmethod

@@ -147,7 +147,7 @@ class FlextInfraPytestCollection:
             ):
                 return
             self.completed_items.add(report.nodeid)
-            total_items = len(getattr(session, "items", ()) or ())
+            total_items = len(session.items)
             if total_items and len(self.completed_items) >= total_items:
                 return
             reason = f"suite stop instant {self.stop_at_monotonic:.3f} reached"

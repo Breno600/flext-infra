@@ -128,7 +128,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                     match.group("file"),
                     code=self.gate_id,
                     message=default_message,
-                    line=int(match.groupdict().get("line", 1) or 1),
+                    line=1,
                 )
                 if match
                 else None
