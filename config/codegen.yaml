@@ -649,7 +649,6 @@ Infra:
       - {name: target}
       - {name: .pyrefly_cache, vscode_exclude: false, watch_exclude: false, source_scan_ignore: true}
       - {name: .tox, vscode_exclude: false, watch_exclude: false, source_scan_ignore: true}
-      - {name: conftest.py, is_dir: false, gitignore: false, vscode_exclude: false, watch_exclude: false, source_scan_ignore: true}
       - {name: dist-packages, gitignore: false, vscode_exclude: false, watch_exclude: false, source_scan_ignore: true}
       - {name: legado, gitignore: false, vscode_exclude: false, watch_exclude: false, source_scan_ignore: true}
       - {name: site-packages, gitignore: false, vscode_exclude: false, watch_exclude: false, source_scan_ignore: true}
