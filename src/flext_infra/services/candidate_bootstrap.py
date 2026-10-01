@@ -1,4 +1,4 @@
-"""One atomic campaign for declared candidate Makefile projections."""
+"""One atomic campaign for declared candidate recovery projections."""
 
 from __future__ import annotations
 
@@ -92,10 +92,15 @@ class FlextInfraCandidateBootstrapService:
             planned = self._planner.plan(request)
             if planned.failure:
                 return r[m.Infra.CodegenPhaseAnalysis].from_failure(planned)
-            expected = root / c.Infra.MAKEFILE_FILENAME
+            destination = (
+                Path(c.Infra.DIR_DOCS) / c.Infra.DOCS_CONFIG_FILENAME
+                if target.what == c.Infra.CodegenConformSurface.DOCS_CONFIG
+                else Path(c.Infra.MAKEFILE_FILENAME)
+            )
+            expected = root / destination
             if len(planned.value.files) != 1 or planned.value.files[0].path != expected:
                 return r[m.Infra.CodegenPhaseAnalysis].fail(
-                    f"candidate bootstrap must plan exactly one Makefile: {root}"
+                    f"candidate bootstrap must plan exactly one {destination}: {root}"
                 )
             for file in planned.value.files:
                 files.append(file)
