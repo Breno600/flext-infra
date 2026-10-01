@@ -19,8 +19,8 @@ Infra:
       max_lines: 1000
 
     toolchain:
-      # Single-source Python minor line. The environment resolves the newest
-      # compatible 3.13 patch; no patch is pinned in generated repositories.
+      # The language floor is a minor line. The runtime tool is pinned to the
+      # newest Python patch whose lock resolves on all declared platforms.
       # Derived as computed fields on ToolchainSpec:
       #   python_required_version -> >=3.13,<3.14
       # Every fleet binary is declared `latest`. Only `make upg` resolves the
@@ -28,6 +28,7 @@ Infra:
       # writes the committed uv.lock and mise.lock; setup, gen, and fmt install
       # frozen from those locks (operator 2026-09-24).
       python_version: "3.13"
+      python_tool_version: "3.13.15"
       uv_link_mode: copy
       uv_environments: ["sys_platform == 'linux'", "sys_platform == 'darwin'"]
       # Global compatibility exceptions become [tool.uv] constraint-dependencies
