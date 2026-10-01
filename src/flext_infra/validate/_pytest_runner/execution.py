@@ -178,7 +178,7 @@ class FlextInfraPytestRunnerExecution(
         pytest_settings = config.Infra.tooling.tools.pytest
         return m.Cli.ProcessDeadline(
             expires_at_monotonic=self.started_at_monotonic
-            + pytest_settings.run_timeout_seconds,
+            + self.run_timeout_seconds(pytest_settings),
             termination_grace_seconds=pytest_settings.termination_grace_seconds,
         )
 
@@ -443,9 +443,7 @@ class FlextInfraPytestRunnerExecution(
         # continues to collect dependencies through its xdist integration.
         command = self.build_command(
             report_dir,
-            selection,
-            manifest_path=selection_plan.manifest_path,
-            whole_target=selection_plan.whole_target,
+            selection_plan,
             execution_mode=execution_mode,
         )
         outcome = self._run_suite(command, report_dir, execution_mode=execution_mode)

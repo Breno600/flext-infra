@@ -139,6 +139,39 @@ class TestsFlextInfraPytestRunner(PytestRunnerContract):
         policy = config.Infra.tooling.tools.pytest
         runner = self.runner_for(cached_runner_project)
         assert runner.parallel_worker_budget(policy) == policy.parallel_workers
+        assert runner.run_timeout_seconds(policy) == policy.run_timeout_seconds
+
+    def test_declared_project_uses_its_configured_run_wall(
+        self, cached_runner_project: Path
+    ) -> None:
+        """The suite argv and process policy share one declared project budget."""
+        policy = config.Infra.tooling.tools.pytest
+        declared_name = next(iter(policy.run_timeout_overrides), config.Infra.name)
+        expected = policy.run_timeout_overrides.get(
+            declared_name, policy.run_timeout_seconds
+        )
+        pyproject = cached_runner_project / "pyproject.toml"
+        pyproject.write_text(
+            pyproject.read_text(encoding="utf-8")
+            + f'\n[project]\nname = "{declared_name}"\nversion = "0.1.0"\n',
+            encoding="utf-8",
+        )
+        runner = self.runner_for(cached_runner_project)
+        report = (
+            cached_runner_project
+            / config.Infra.codegen.make.testmon_cache.reports_directory
+        )
+
+        assert runner.run_timeout_seconds(policy) == expected
+        command = runner.build_command(report)
+        stop = next(
+            item for item in command if item.startswith(c.Infra.PYTEST_SUITE_STOP_OPTION)
+        )
+        assert float(stop.partition("=")[2]) == (
+            runner.started_at_monotonic
+            + expected
+            - policy.suite_stop_reserve_seconds
+        )
 
     def test_worker_ceiling_follows_the_declared_project_override(
         self, cached_runner_project: Path

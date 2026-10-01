@@ -101,6 +101,23 @@ class FlextInfraPytestRunnerBase(s[int]):
             raise ValueError(msg)
         return memory_gb
 
+    def _declared_project_name(self) -> str | None:
+        """Read the declared project identity shared by runtime policies."""
+        pyproject_path = self.root / c.PYPROJECT_FILENAME
+        try:
+            return u.Infra.project_name_from_payload(
+                pyproject_path, u.Infra.pyproject_payload(pyproject_path)
+            )
+        except (TypeError, ValueError):
+            return None
+
+    def run_timeout_seconds(self, policy: PytestPolicy) -> int:
+        """Resolve the declared project's measured wall over the fleet default."""
+        name = self._declared_project_name()
+        if name is None:
+            return policy.run_timeout_seconds
+        return policy.run_timeout_overrides.get(name, policy.run_timeout_seconds)
+
     def _declared_worker_ceiling(
         self, policy: PytestPolicy
     ) -> int | m.Infra.PytestWorkerCeiling:
@@ -109,14 +126,8 @@ class FlextInfraPytestRunnerBase(s[int]):
         A tree without a declared ``[project].name`` (fixture projects, raw
         workbenches) is an expected state and takes the fleet-wide default.
         """
-        if not policy.parallel_worker_overrides:
-            return policy.parallel_workers
-        pyproject_path = self.root / c.PYPROJECT_FILENAME
-        try:
-            name = u.Infra.project_name_from_payload(
-                pyproject_path, u.Infra.pyproject_payload(pyproject_path)
-            )
-        except (TypeError, ValueError):
+        name = self._declared_project_name()
+        if name is None:
             return policy.parallel_workers
         return policy.parallel_worker_overrides.get(name, policy.parallel_workers)
 
