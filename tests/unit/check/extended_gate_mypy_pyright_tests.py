@@ -360,7 +360,6 @@ class TestsFlextInfraTypeGates:
     def test_checker_does_not_run_type_gates_on_content_only_project(
         self,
         real_python_package: Path,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         """A project without Python targets gets no type-gate row at all."""
         for module in (real_python_package / "src").rglob("*.py"):
@@ -370,7 +369,6 @@ class TestsFlextInfraTypeGates:
         results = tm.ok(
             FlextInfraWorkspaceChecker(
                 repository_root=real_python_package.parent,
-                rope=rope_workspace,
             ).run_projects(
                 [real_python_package.name],
                 [FlextInfraPyrightGate.gate_id, FlextInfraPyreflyGate.gate_id],

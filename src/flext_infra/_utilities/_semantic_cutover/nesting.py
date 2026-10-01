@@ -7,8 +7,9 @@ from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, m, t
+from flext_infra import m, t
 
+from ..namespace import FlextInfraUtilitiesCodegenNamespace
 from ..rope_runtime_modules import FlextInfraUtilitiesRopeRuntimeModules
 from .edits import FlextInfraUtilitiesSemanticCutoverEdits
 from .family_flatten import FlextInfraUtilitiesSemanticFamilyFlatten
@@ -75,13 +76,10 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
     ) -> p.Result[t.StrMapping]:
         """Map each loose top-level class to the owner Rope's module policy elects."""
         planned = r[t.StrMapping]
-        family = c.Infra.NAMESPACE_FILE_TO_FAMILY.get(file_path.name) or next(
-            (
-                alias
-                for alias, directory in c.Infra.FAMILY_DIRECTORIES.items()
-                if file_path.parent.name == directory
-            ),
-            None,
+        family = FlextInfraUtilitiesCodegenNamespace.facade_family_of_file(
+            file_path.name,
+        ) or FlextInfraUtilitiesCodegenNamespace.facade_family_of_directory(
+            file_path.parent.name,
         )
         classes = {
             node.name: node
