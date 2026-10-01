@@ -91,8 +91,7 @@ class TestsFlextInfraDocsGenerator:
         (package / "__init__.py").write_text(
             '"""Workspace fixture package."""\n', encoding="utf-8"
         )
-        declared = config.Infra.codegen.make.docs.api_modules.get(project_name, ())
-        for module in declared:
+        for module in ("api", "models"):
             source = package / f"{module.replace('.', '/')}.py"
             source.parent.mkdir(parents=True, exist_ok=True)
             source.write_text('"""Public fixture module."""\n', encoding="utf-8")
@@ -310,26 +309,21 @@ class TestsFlextInfraDocsGenerator:
         )
         tm.that((project / "README.md").read_text(encoding="utf-8"), eq=first_readme)
 
-    def test_configured_api_modules_own_generated_module_pages(
+    def test_public_top_level_modules_own_generated_module_pages(
         self, tmp_path: Path
     ) -> None:
-        """Generate only config-owned API modules, never modules inferred from exports."""
-        project_name = config.Infra.name
-        declared = config.Infra.codegen.make.docs.api_modules[project_name]
+        """Every public top-level module gets a page; private modules never do."""
+        project_name = "flext-a"
         workspace = u.Tests.create_docs_workspace(
             tmp_path, project_names=(project_name,)
         )
         project = workspace / project_name
         package = project / "src" / project_name.replace("-", "_")
-        (package / "exported_but_undocumented.py").write_text(
-            '"""Module intentionally absent from the docs declaration."""\n',
-            encoding="utf-8",
-        )
-        (package / "__init__.py").write_text(
-            "from flext_infra import exported_but_undocumented\n\n"
-            '__all__ = ["exported_but_undocumented"]\n',
-            encoding="utf-8",
-        )
+        public = ("api", "models")
+        for module in (*public, "_internal"):
+            (package / f"{module}.py").write_text(
+                f'"""Fixture module {module}."""\n', encoding="utf-8"
+            )
 
         generator = FlextInfraDocGenerator(
             repository_root=workspace, selected_projects=[project_name]
@@ -342,9 +336,14 @@ class TestsFlextInfraDocsGenerator:
             for path in modules_root.rglob("*.md")
             if path.name != "index.md"
         }
-        expected = {f"{module.replace('.', '/')}" + ".md" for module in declared}
+        expected = {
+            f"{path.stem}.md"
+            for path in package.glob("*.py")
+            if not path.stem.startswith("_")
+        }
+        tm.that(set(public) <= {name.removesuffix(".md") for name in expected}, eq=True)
         tm.that(generated, eq=expected)
-        tm.that("exported_but_undocumented.md" in generated, eq=False)
+        tm.that("_internal.md" in generated, eq=False)
 
     def test_generated_markdown_starts_with_level_one_heading(
         self, tmp_path: Path

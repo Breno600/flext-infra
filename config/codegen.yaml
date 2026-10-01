@@ -494,19 +494,6 @@ Infra:
         # check (blocking when the .md set is incomplete); `audit` findings
         # are warnings owned by cleanup beads, never CI blockers.
         actions: [generate, fix, fmt, validate, audit]
-        api_modules:
-          flext-infra:
-            - api
-            - base
-            - base_selection
-            - cli
-            - constants
-            - git
-            - models
-            - protocols
-            - typings
-            - utilities
-            - worktree
         mutable_actions: [fix, fmt]
         reports_dir: .reports/docs
         overview_preview_limits:

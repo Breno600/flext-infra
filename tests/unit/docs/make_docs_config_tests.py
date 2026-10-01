@@ -18,7 +18,6 @@ def _spec_payload(**overrides: t.JsonValue) -> dict[str, object]:
     """Build one valid synthetic spec payload; overrides mutate one field."""
     payload: dict[str, object] = {
         "actions": ["generate", "fix", "validate"],
-        "api_modules": {"flext-demo": ("api", "base")},
         "mutable_actions": ["fix"],
         "reports_dir": ".reports/docs",
         "cross_project_relative_link_pattern": "^(?:../)+flext-[a-z0-9-]+(?:/|$)",

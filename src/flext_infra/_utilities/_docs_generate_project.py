@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import config, m, t
+from flext_infra import c, m, t
 
 from ._docs_generate_plan import FlextInfraUtilitiesDocsGeneratePlanMixin
 from ._docs_guides import FlextInfraUtilitiesDocsGuidesMixin
@@ -25,9 +25,20 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
 
     @staticmethod
     def _module_names(scope: m.Infra.DocScope) -> list[str]:
-        """Return config-owned public API module names for one distribution."""
-        declared = config.Infra.codegen.make.docs.api_modules.get(scope.name, ())
-        return [f"{scope.package_name}.{module}" for module in declared]
+        """Return the public top-level modules of the scope's package.
+
+        The public API is what the package itself declares public: every
+        top-level module whose name is not private. It is derived from the
+        package tree, never listed per distribution in configuration.
+        """
+        if not scope.package_name:
+            return []
+        package_dir = scope.path / c.Infra.DEFAULT_SRC_DIR / scope.package_name
+        return [
+            f"{scope.package_name}.{module.stem}"
+            for module in sorted(package_dir.glob(c.Infra.EXT_PYTHON_GLOB))
+            if not module.stem.startswith("_")
+        ]
 
     @staticmethod
     def docs_project_api_artifacts(scope: m.Infra.DocScope) -> list[t.Pair[Path, str]]:
