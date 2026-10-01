@@ -1,0 +1,44 @@
+# A test-class method that never reads `self` is a static method (PLR6301).
+#
+# The rewrite drops the unused `self` parameter and declares `@staticmethod`.
+# It applies only to undecorated methods directly inside a test class, whose
+# body never names `self` and never calls zero-argument `super()` (which reads
+# the implicit first argument). Decorated methods keep their decorator order
+# and are left to their owner.
+id: test-method-without-self-is-static
+language: python
+severity: error
+files:
+  - "tests/**/*.py"
+utils:
+  undecorated-test-method:
+    all:
+      - kind: function_definition
+      - not:
+          inside:
+            kind: decorated_definition
+      - inside:
+          kind: block
+          inside:
+            kind: class_definition
+      - not:
+          has:
+            field: body
+            has:
+              stopBy: end
+              any:
+                - kind: identifier
+                  regex: '^(?:self|super)$'
+rule:
+  all:
+    - matches: undecorated-test-method
+    - any:
+        - pattern: "def $NAME(self, $$$PARAMS) -> $RET:\n    $$$BODY"
+        - pattern: "def $NAME(self) -> $RET:\n    $$$BODY"
+fix: |-
+  @staticmethod
+  def $NAME($$$PARAMS) -> $RET:
+      $$$BODY
+message: >-
+  The method never reads `self`: declare it `@staticmethod` and drop the
+  unused parameter.
