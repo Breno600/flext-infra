@@ -150,6 +150,7 @@ class FlextInfraModTextGateEngine:
             c.Infra.CODEMOD_TEXT_KEY_REPLACE,
             c.Infra.CODEMOD_TEXT_KEY_FLAGS,
             c.Infra.CODEMOD_TEXT_KEY_EXPECTED,
+            c.Infra.CODEMOD_TEXT_KEY_CAPTURE_EQUALS,
         ))
         if unknown:
             return r[m.Infra.ModTextRule].fail(
@@ -175,11 +176,24 @@ class FlextInfraModTextGateEngine:
             return r[m.Infra.ModTextRule].fail(
                 f"text rule expected receipt must be a non-negative integer in {source}"
             )
+        capture_equals = raw.get(c.Infra.CODEMOD_TEXT_KEY_CAPTURE_EQUALS, {})
+        if not isinstance(capture_equals, dict) or any(
+            not isinstance(name, str) or not isinstance(value, str)
+            for name, value in capture_equals.items()
+        ):
+            return r[m.Infra.ModTextRule].fail(
+                f"text rule capture_equals must map capture names to strings in {source}"
+            )
         try:
-            re.compile(find)
+            compiled = re.compile(find)
         except re.error as error:
             return r[m.Infra.ModTextRule].fail(
                 f"invalid find regex in {source}: {error}"
+            )
+        unknown_captures = set(capture_equals).difference(compiled.groupindex)
+        if unknown_captures:
+            return r[m.Infra.ModTextRule].fail(
+                f"unknown regex captures {sorted(unknown_captures)} in {source}"
             )
         rule = m.Infra.ModTextRule(
             rule_id=str(raw.get(c.Infra.CODEMOD_TEXT_KEY_ID, "")),
@@ -193,6 +207,7 @@ class FlextInfraModTextGateEngine:
             find=find,
             replace=str(raw.get(c.Infra.CODEMOD_TEXT_KEY_REPLACE, "")),
             flags=flag_names,
+            capture_equals=capture_equals,
             expected=expected,
         )
         if not rule.rule_id:
@@ -403,6 +418,14 @@ class FlextInfraModTextGateEngine:
         match: re.Match[str],
     ) -> str:
         """Record and expand one match, binding every loop value explicitly."""
+        for name, expected in rule.capture_equals.items():
+            actual = match.group(name)
+            if actual != expected:
+                msg = (
+                    f"text rule {rule.rule_id} capture {name} expected "
+                    f"{expected!r}, matched {actual!r} in {target}"
+                )
+                raise ValueError(msg)
         replacement = match.expand(rule.replace)
         line_index = bisect_right(line_starts, match.start()) - 1
         found.append(

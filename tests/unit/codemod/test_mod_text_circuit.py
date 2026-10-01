@@ -23,6 +23,74 @@ if TYPE_CHECKING:
 class TestsFlextInfraModTextGateEngine:
     """Exercise the declarative sed-by-list engine through its public scan."""
 
+    def test_capture_guard_rejects_wrong_keyword_before_publication(
+        self, mod_workspace: Path
+    ) -> None:
+        """A broad regex cannot rewrite a different keyword by accident."""
+        source = mod_workspace / "sample.py"
+        tm.ok(u.Cli.atomic_write_text_file(source, "token = 1\n"))
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
+                "rules:\n"
+                "  - id: guarded-keyword\n"
+                "    include: ['sample.py']\n"
+                "    find: '(?P<keyword>[a-z]+) = 1'\n"
+                "    capture_equals: {keyword: secret}\n"
+                "    replace: 'secret = 2'\n",
+            )
+        )
+        before = source.read_bytes()
+
+        with pytest.raises(ValueError, match="capture keyword expected"):
+            FlextInfraModTextGateEngine.scan(mod_workspace, fix=True)
+
+        tm.that(source.read_bytes(), eq=before)
+
+    def test_capture_guard_accepts_declared_keyword_and_fixed_point(
+        self, mod_workspace: Path
+    ) -> None:
+        """A guarded rule rewrites once, then observes no further match."""
+        source = mod_workspace / "sample.py"
+        tm.ok(u.Cli.atomic_write_text_file(source, "secret = 1\n"))
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
+                "rules:\n"
+                "  - id: guarded-keyword\n"
+                "    include: ['sample.py']\n"
+                "    find: '(?P<keyword>[a-z]+) = 1'\n"
+                "    capture_equals: {keyword: secret}\n"
+                "    replace: 'secret = 2'\n",
+            )
+        )
+
+        tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=True))
+        tm.that(source.read_text(encoding="utf-8"), eq="secret = 2\n")
+        tm.that(
+            tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=False)).findings,
+            eq=0,
+        )
+
+    def test_capture_guard_requires_a_declared_named_group(
+        self, mod_workspace: Path
+    ) -> None:
+        """An invalid catalogue fails before scanning any candidate source."""
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
+                "rules:\n"
+                "  - id: missing-capture\n"
+                "    find: '[a-z]+ = 1'\n"
+                "    capture_equals: {keyword: secret}\n",
+            )
+        )
+
+        tm.fail(
+            FlextInfraModTextGateEngine.load_rules(mod_workspace),
+            has="unknown regex captures",
+        )
+
     def test_invalid_python_replacement_never_publishes_batch(
         self, mod_workspace: Path
     ) -> None:
