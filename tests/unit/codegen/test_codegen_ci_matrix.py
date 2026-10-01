@@ -210,14 +210,10 @@ class TestsFlextInfraCodegenCiMatrix:
         # step, which runs `make gen` and proves the tree is unchanged.
         tm.that(workflow, has="- name: gen fixed point (blocking)")
         tm.that(workflow, has="CI=Y make gen")
-        tm.that(
-            workflow,
-            has='candidate_status="$(git status --porcelain --untracked-files=all --ignore-submodules=none)"\n          test -z "$candidate_status"',
-        )
-        tm.that(workflow, lacks="|| true")
         tm.that(workflow, lacks="run: CI=Y make conform")
         tm.that(workflow, has="run: CI=Y make audit")
         tm.that(workflow, lacks="attest/gates/v1")
+
         tm.that(workflow, lacks="github verify-gates")
         tm.that(workflow, lacks="WHAT=")
         step_indices = tuple(workflow.index(run_line) for run_line in ci_step_runs)
@@ -253,6 +249,40 @@ class TestsFlextInfraCodegenCiMatrix:
         steps_index = workflow.index("    steps:")
         setup_index = workflow.index("run: CI=Y make setup")
         tm.that(steps_index < setup_index, eq=True)
+
+    def test_gen_fixed_point_rejects_dirty_git_tree(
+        self, rendered_project: Path, tmp_path: Path
+    ) -> None:
+        """Run the generated post-generation shell check in a dirty repository."""
+        workflow = u.Cli.yaml_load_mapping(
+            rendered_project / ".github" / "workflows" / "ci.yml"
+        )
+        jobs = t.Cli.JSON_MAPPING_ADAPTER.validate_python(workflow["jobs"])
+        runs: list[str] = []
+        for raw_job in jobs.values():
+            job = t.Cli.JSON_MAPPING_ADAPTER.validate_python(raw_job)
+            steps = job["steps"]
+            if not isinstance(steps, list):
+                msg = "workflow job steps must be a sequence"
+                raise TypeError(msg)
+            for raw_step in steps:
+                step = t.Cli.JSON_MAPPING_ADAPTER.validate_python(raw_step)
+                if step.get("name") == "gen fixed point (blocking)":
+                    script = step.get("run")
+                    if not isinstance(script, str):
+                        msg = "fixed-point step must have a shell script"
+                        raise TypeError(msg)
+                    runs.append(script)
+        tm.that(len(runs), eq=1)
+        post_generation = runs[0].split("CI=Y make gen", maxsplit=1)[1]
+        repository = tmp_path / "dirty-repository"
+        repository.mkdir()
+        u.Tests.initialize_git_repo(repository)
+        (repository / "untracked.txt").write_text("dirty\n", encoding="utf-8")
+        outcome = tm.ok(
+            u.Cli.run_raw(["sh", "-eu", "-c", post_generation], cwd=repository)
+        )
+        tm.that(u.Cli.process_succeeded(outcome.outcome), eq=False)
 
     def test_rendered_workflow_python_commands_compile(
         self,

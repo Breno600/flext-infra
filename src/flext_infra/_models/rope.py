@@ -148,6 +148,23 @@ class FlextInfraModelsRope:
         text: t.NonEmptyStr = m.Field(description="Exact source region")
         is_comment: bool = m.Field(description="Comment marker")
 
+    class RopeSourceFacts(m.ArbitraryTypesModel):
+        """One Rope fact pass over a module source, shared by every static rule."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        source: Annotated[
+            str, m.Field(description="Exact module source the facts describe")
+        ]
+        imports: Annotated[
+            t.VariadicTuple[FlextInfraModelsRope.ImportFact],
+            m.Field(description="Normalized Rope import bindings of the module"),
+        ]
+        regions: Annotated[
+            t.VariadicTuple[FlextInfraModelsRope.IgnoredRegion],
+            m.Field(description="Rope-classified string and comment regions"),
+        ]
+
     class FamilyWrapperFlatten(m.ArbitraryTypesModel):
         """Rope identity of one namespace wrapper flattened into its family owner."""
 
