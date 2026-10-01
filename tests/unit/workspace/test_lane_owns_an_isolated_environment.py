@@ -25,7 +25,7 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         (repository / "Makefile").write_text(
             "PROJECT_ROOT := $(CURDIR)\n"
             "RUNTIME_ROOT := $(PROJECT_ROOT)\n"
-            f"RUNTIME_VENV := $(PROJECT_ROOT)/{c.Infra.ENVIRONMENT_DIRECTORY}\n"
+            f"RUNTIME_VENV := $(RUNTIME_ROOT)/{c.Infra.ENVIRONMENT_DIRECTORY}\n"
             ".PHONY: setup\n"
             "setup:\n"
             '\t@test "$(RUNTIME_ROOT)" = "$(PROJECT_ROOT)"\n'

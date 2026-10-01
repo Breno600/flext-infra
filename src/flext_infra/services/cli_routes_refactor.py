@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+from flext_cli import cli
+
+from flext_core import r
 from flext_infra import infra, m, p, t
 from flext_infra.codegen.protocol_models import FlextInfraCodegenProtocolModels
 from flext_infra.codemod.ast_scan import FlextInfraCodemodAstScan
@@ -42,6 +45,27 @@ class FlextInfraCliModProgress:
 
 class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
     """Own the complete refactor command tuple."""
+
+    @staticmethod
+    def execute_apply_renames(
+        request: m.Infra.ApplyRenamesInput,
+    ) -> p.Result[t.Cli.ResultValue]:
+        """Display the real rename result and preserve pending-work failure."""
+        result = infra.apply_renames(request)
+        if result.failure:
+            return r[t.Cli.ResultValue].from_failure(result)
+        report = result.value
+        cli.display_text(FlextInfraCliModProgress.render_rename(report))
+        if report.occurrences:
+            return r[t.Cli.ResultValue].fail(
+                f"{report.occurrences} pending source edits"
+            )
+        return r[t.Cli.ResultValue].ok(True)
+
+    @staticmethod
+    def execute_mod(request: m.Infra.ModCommand) -> p.Result[t.Cli.ResultValue]:
+        """Compose the mod use case and pass through its first failure."""
+        return infra.mod(request, FlextInfraCliModProgress())
 
     @staticmethod
     def execute_mod_text(
