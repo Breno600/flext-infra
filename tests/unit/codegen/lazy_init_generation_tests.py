@@ -80,13 +80,13 @@ class TestsFlextInfraCodegenGeneration:
         tm.that(content, contains="MappingProxyType(")
         tm.that(content, contains="build_lazy_import_map(")
         tm.that(content, contains='".api": ("Demo",)')
-        tm.that(content, contains="from .__version__ import __version__ as __version__")
+        tm.that(content, contains="from demo_pkg.__version__ import __version__\n")
         tm.that(
             content,
             contains='__all__: tuple[str, ...] = ("Demo", "__version__", "r")',
         )
         tm.that(content, contains="if TYPE_CHECKING:")
-        tm.that(content, contains="    from .api import Demo")
+        tm.that(content, contains="    from demo_pkg.api import Demo")
         tm.that(content, contains="install_lazy_exports(")
         tm.that(content, lacks="__unit__")
 
@@ -111,8 +111,8 @@ class TestsFlextInfraCodegenGeneration:
         assert formatted.success, formatted.error
         assert target.read_text(encoding="utf-8") == rendered
 
-    def test_sibling_private_exports_use_relative_owners(self) -> None:
-        """Static and lazy imports resolve the same private sibling module."""
+    def test_sibling_private_exports_import_their_absolute_owner(self) -> None:
+        """The static import names the absolute owner; the lazy key stays compact."""
         plan = self._plan(
             "demo_pkg.servers._rfc",
             ("BaseConstants",),
@@ -122,9 +122,9 @@ class TestsFlextInfraCodegenGeneration:
         content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(content, "__init__.py", "exec")
-        tm.that(content, has="from .._base.constants import BaseConstants")
+        tm.that(content, has="from demo_pkg.servers._base.constants import BaseConstants")
         tm.that(content, has='".._base.constants": ("BaseConstants",)')
-        tm.that(content, lacks="from demo_pkg.servers._base.constants import")
+        tm.that(content, lacks="from .._base.constants import")
 
     @staticmethod
     def test_generated_runtime_surfaces_import_without_bootstrap_cycles() -> None:
@@ -152,20 +152,21 @@ class TestsFlextInfraCodegenGeneration:
         owner: str,
         rendered_owner: str,
     ) -> None:
-        """Static imports and lazy targets resolve to the same declared owner."""
+        """The static import names the absolute owner the compact lazy key resolves to."""
         package = "demo_pkg.servers._rfc"
         plan = self._plan(
             package,
             ("Demo",),
             MappingProxyType({"Demo": (owner, "Demo")}),
         )
+        absolute_owner = resolve_name(owner, package)
 
         content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(content, "__init__.py", "exec")
-        tm.that(content, contains=f"from {rendered_owner} import Demo")
+        tm.that(content, contains=f"from {absolute_owner} import Demo")
         tm.that(content, contains=f'"{rendered_owner}": ("Demo",)')
-        tm.that(resolve_name(rendered_owner, package), eq=resolve_name(owner, package))
+        tm.that(resolve_name(rendered_owner, package), eq=absolute_owner)
 
     def test_root_initializer_contains_static_and_lazy_contracts(self) -> None:
         """Public root initializer keeps typing and runtime targets aligned."""
@@ -179,9 +180,9 @@ class TestsFlextInfraCodegenGeneration:
 
         compile(content, "__init__.py", "exec")
         tm.that(content, contains="if TYPE_CHECKING:")
-        tm.that(content, contains="    from .api import Demo")
+        tm.that(content, contains="    from demo_pkg.api import Demo")
         runtime_prefix = content.split("if TYPE_CHECKING:", maxsplit=1)[0]
-        tm.that(runtime_prefix, lacks="from .api import Demo")
+        tm.that(runtime_prefix, lacks="from demo_pkg.api import Demo")
         tm.that(content, contains='".api": ("Demo",)')
         tm.that(content, contains="install_lazy_exports(")
         tm.that(content, lacks="__unit__")
@@ -216,12 +217,12 @@ class TestsFlextInfraCodegenGeneration:
         content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(content, "__init__.py", "exec")
-        tm.that(content, lacks="from ._utilities.conversion import DemoConversion")
+        tm.that(content, lacks="from demo_pkg._utilities.conversion import DemoConversion")
         tm.that(content, lacks="DemoConversion")
         tm.that(content, contains='__all__: tuple[str, ...] = ("Demo",)')
 
-    def test_root_type_checking_uses_compact_relative_local_imports(self) -> None:
-        """Emit relative declarations as explicit public re-exports."""
+    def test_root_type_checking_imports_local_declarations_absolutely(self) -> None:
+        """Emit local declarations as absolute public re-exports."""
         plan = self._plan(
             "flext_cli",
             ("FlextCliSettings", "settings"),
@@ -234,8 +235,8 @@ class TestsFlextInfraCodegenGeneration:
         content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(content, "__init__.py", "exec")
-        tm.that(content, contains="from ._settings import FlextCliSettings, settings")
-        tm.that(content, lacks="from flext_cli._settings import")
+        tm.that(content, contains="from flext_cli._settings import FlextCliSettings, settings")
+        tm.that(content, lacks="from ._settings import")
         tm.that(content, lacks="    _ = (")
 
     def test_public_nested_package_preserves_lazy_exports(self) -> None:
@@ -275,7 +276,7 @@ class TestsFlextInfraCodegenGeneration:
         init_content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(init_content, "__init__.py", "exec")
-        tm.that(init_content, contains="from .settings import DemoFixture")
+        tm.that(init_content, contains="from demo_pkg._fixtures.settings import DemoFixture")
         tm.that(init_content, contains='__all__: tuple[str, ...] = ("DemoFixture",)')
         tm.that(init_content, contains="install_lazy_exports")
 
@@ -374,7 +375,10 @@ class TestsFlextInfraCodegenGeneration:
         tm.that(init_content, contains='".constants": ("TestsDemoConstants", "c"),')
         tm.that(init_content, contains='".utilities": ("TestsDemoUtilities", "u"),')
         import_block = init_content.split(
-            "from flext_core.lazy import build_lazy_import_map, install_lazy_exports\n",
+            (
+                f"from {c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE} import "
+                f"{', '.join(c.Infra.LAZY_BOOTSTRAP_HELPERS)}\n"
+            ),
             maxsplit=1,
         )[1]
         import_block = import_block.split("install_lazy_exports(", maxsplit=1)[0]
@@ -382,13 +386,13 @@ class TestsFlextInfraCodegenGeneration:
             import_block.index(module)
             for module in (
                 "from flext_tests import tm",
-                "from .base import",
-                "from .constants import",
-                "from .models import",
-                "from .protocols import",
-                "from .settings import",
-                "from .typings import",
-                "from .utilities import",
+                "from tests.base import",
+                "from tests.constants import",
+                "from tests.models import",
+                "from tests.protocols import",
+                "from tests.settings import",
+                "from tests.typings import",
+                "from tests.utilities import",
             )
         )
         tm.that(module_offsets, eq=tuple(sorted(module_offsets)))
@@ -414,7 +418,7 @@ class TestsFlextInfraCodegenGeneration:
         content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(content, "__init__.py", "exec")
-        tm.that(content, contains="from .protocols import FlextDemoProtocols, p")
+        tm.that(content, contains="from demo_pkg.protocols import FlextDemoProtocols, p")
         tm.that(content, lacks="FlextDemoProtocols as p")
 
     def test_root_service_letter_is_the_declared_service_letter(self) -> None:
@@ -431,7 +435,7 @@ class TestsFlextInfraCodegenGeneration:
         content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(content, "__init__.py", "exec")
-        tm.that(content, contains="from .base import FlextDemoServiceBase, s")
+        tm.that(content, contains="from demo_pkg.base import FlextDemoServiceBase, s")
         tm.that(content, lacks="FlextDemoServiceBase as s")
 
     @staticmethod
