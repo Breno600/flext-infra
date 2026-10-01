@@ -16,6 +16,7 @@ class FlextInfraCandidateBootstrapService:
         planner: p.Infra.CandidateBootstrapPlanner,
         transaction: p.Infra.CandidateBootstrapTransaction,
     ) -> None:
+        """Wire the declared-target planner to its atomic publisher."""
         self._planner = planner
         self._transaction = transaction
 
