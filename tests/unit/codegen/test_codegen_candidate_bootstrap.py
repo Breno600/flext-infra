@@ -172,3 +172,45 @@ class TestsFlextInfraCodegenCandidateBootstrap:
             tm.ok(u.Cli.atomic_read_binary_file_state(projection, required=True)),
             eq=first,
         )
+
+    def test_pyproject_bootstrap_uses_declared_candidate_surface(
+        self, tmp_path: Path
+    ) -> None:
+        """A healthy provider restores a candidate before its own Make can import."""
+        source, _ = tests_u.Tests.render_make_environment(
+            tmp_path / "source", c.Infra.MakeProfile.STANDALONE
+        )
+        candidate, _ = tests_u.Tests.render_make_environment(
+            tmp_path / "candidate", c.Infra.MakeProfile.STANDALONE
+        )
+        manifest = tests_u.Tests.write_workspace_manifest(source, source.name)
+        tests_u.Tests.write_workspace_manifest(candidate, candidate.name)
+        manifest.write_text(
+            manifest.read_text(encoding="utf-8")
+            + "\ncandidate_bootstrap_targets:\n"
+            + f"  - path: {Path(os.path.relpath(candidate, source)).as_posix()}\n"
+            + "    what: pyproject\n",
+            encoding="utf-8",
+        )
+        projection = candidate / c.PYPROJECT_FILENAME
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                projection,
+                projection.read_text(encoding="utf-8") + "\n# stale projection\n",
+            )
+        )
+        command = m.Infra.CandidateBootstrapCommand(repository_root=source)
+
+        tm.ok(infra.bootstrap_candidate(command))
+        first = tm.ok(u.Cli.atomic_read_binary_file_state(projection, required=True))
+        tm.that(
+            u.Cli.toml_mapping_from_text((first.content or b"").decode("utf-8"))
+            is not None,
+            eq=True,
+        )
+        tm.that(first.content or b"", lacks=b"# stale projection")
+        tm.ok(infra.bootstrap_candidate(command))
+        tm.that(
+            tm.ok(u.Cli.atomic_read_binary_file_state(projection, required=True)),
+            eq=first,
+        )

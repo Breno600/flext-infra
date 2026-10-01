@@ -35,6 +35,7 @@ class FlextInfraConfigModelsWorkspace:
             if self.what not in {
                 FlextInfraConstantsCodegenProject.CodegenConformSurface.MAKEFILE,
                 FlextInfraConstantsCodegenProject.CodegenConformSurface.DOCS_CONFIG,
+                FlextInfraConstantsCodegenProject.CodegenConformSurface.PYPROJECT,
             }:
                 msg = "candidate bootstrap owns only declared recovery surfaces"
                 raise ValueError(msg)

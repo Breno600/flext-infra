@@ -51,7 +51,9 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             return self._plan_existing_makefile(target, workspace, codegen)
         docs_config = (Path(c.Infra.DIR_DOCS) / c.Infra.DOCS_CONFIG_FILENAME).as_posix()
         if contract.destinations == frozenset({docs_config}):
-            return self._plan_existing_docs_config(target, codegen, docs_config)
+            return self._plan_existing_docs_config(
+                target, workspace, codegen, docs_config
+            )
         managed_artifacts = u.Infra.snapshot_committed_project_managed_artifacts(root)
         if managed_artifacts.failure:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
@@ -176,6 +178,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
     def _plan_existing_docs_config(
         self,
         target: m.Infra.RepositoryConformTarget,
+        workspace: m.Infra.WorkspaceSpec,
         codegen: m.Infra.CodegenConfigSpec,
         destination: str,
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
@@ -198,7 +201,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         source = u.Cli.atomic_read_binary_file_state(template, required=True)
         if source.failure:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(source)
-        rendered = u.Cli.template_render(template, m.ContractModel())
+        rendered = u.Cli.template_render(template, workspace)
         if rendered.failure:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(rendered)
         parsed = u.Cli.json_loads(rendered.value)
