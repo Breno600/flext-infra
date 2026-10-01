@@ -138,6 +138,7 @@ class FlextInfraCodegenConform(FlextInfraCodegenConformExecute):
                     config_spec.branch_policy.governed_branch_patterns
                 ),
             )
+        )
         selected_result = self._select_repositories(
             request, workspace, current_repository
         )
