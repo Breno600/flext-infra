@@ -33,6 +33,7 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                     in {
                         c.Infra.CodegenConformSurface.MAKEFILE,
                         c.Infra.CodegenConformSurface.DOCS_CONFIG,
+                        c.Infra.CodegenConformSurface.PYPROJECT,
                     }
                 ),
             )
