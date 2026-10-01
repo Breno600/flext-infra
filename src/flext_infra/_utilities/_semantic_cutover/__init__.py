@@ -1,40 +1,87 @@
 # AUTO-GENERATED FILE — Regenerate with: make gen
-"""Flext Infra. Utilities. Semantic Cutover package."""
+"""Flext Infra. Utilities. Semantic Cutover package.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core.lazy import build_lazy_import_map, install_lazy_exports
+from flext_core import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from .alias_cst import FlextInfraUtilitiesSemanticCutoverAliasCst
-    from .aliases import FlextInfraUtilitiesSemanticCutoverAliases
-    from .base import FlextInfraUtilitiesSemanticCutoverBase
-    from .bindings import FlextInfraUtilitiesSemanticCutoverBindings
-    from .dynamic_environment import (
+    from flext_infra._utilities._semantic_cutover.alias_cst import (
+        FlextInfraUtilitiesSemanticCutoverAliasCst,
+    )
+    from flext_infra._utilities._semantic_cutover.aliases import (
+        FlextInfraUtilitiesSemanticCutoverAliases,
+    )
+    from flext_infra._utilities._semantic_cutover.base import (
+        FlextInfraUtilitiesSemanticCutoverBase,
+    )
+    from flext_infra._utilities._semantic_cutover.bindings import (
+        FlextInfraUtilitiesSemanticCutoverBindings,
+    )
+    from flext_infra._utilities._semantic_cutover.dynamic_environment import (
         FlextInfraUtilitiesSemanticCutoverDynamicEnvironment,
     )
-    from .edits import FlextInfraUtilitiesSemanticCutoverEdits
-    from .facade_base_cst import FlextInfraUtilitiesSemanticCutoverFacadeBaseCst
-    from .facade_bases import FlextInfraUtilitiesSemanticCutoverFacadeBases
-    from .facade_owners import FlextInfraUtilitiesSemanticCutoverFacadeOwners
-    from .family_flatten import FlextInfraUtilitiesSemanticFamilyFlatten
-    from .family_references import FlextInfraUtilitiesSemanticFamilyReferences
-    from .family_type_references import FlextInfraUtilitiesSemanticFamilyTypeReferences
-    from .helper_references import FlextInfraUtilitiesSemanticHelperReferences
-    from .model_fields import FlextInfraUtilitiesSemanticCutoverModelFields
-    from .model_fields_bindings import (
+    from flext_infra._utilities._semantic_cutover.edits import (
+        FlextInfraUtilitiesSemanticCutoverEdits,
+    )
+    from flext_infra._utilities._semantic_cutover.facade_base_cst import (
+        FlextInfraUtilitiesSemanticCutoverFacadeBaseCst,
+    )
+    from flext_infra._utilities._semantic_cutover.facade_bases import (
+        FlextInfraUtilitiesSemanticCutoverFacadeBases,
+    )
+    from flext_infra._utilities._semantic_cutover.facade_owners import (
+        FlextInfraUtilitiesSemanticCutoverFacadeOwners,
+    )
+    from flext_infra._utilities._semantic_cutover.family_flatten import (
+        FlextInfraUtilitiesSemanticFamilyFlatten,
+    )
+    from flext_infra._utilities._semantic_cutover.family_references import (
+        FlextInfraUtilitiesSemanticFamilyReferences,
+    )
+    from flext_infra._utilities._semantic_cutover.family_type_references import (
+        FlextInfraUtilitiesSemanticFamilyTypeReferences,
+    )
+    from flext_infra._utilities._semantic_cutover.helper_references import (
+        FlextInfraUtilitiesSemanticHelperReferences,
+    )
+    from flext_infra._utilities._semantic_cutover.model_fields import (
+        FlextInfraUtilitiesSemanticCutoverModelFields,
+    )
+    from flext_infra._utilities._semantic_cutover.model_fields_bindings import (
         FlextInfraUtilitiesSemanticCutoverModelFieldsBindings,
     )
-    from .nesting import FlextInfraUtilitiesSemanticCutoverNesting
-    from .nesting_cst import FlextInfraUtilitiesSemanticCutoverNestingCst
-    from .nesting_references import FlextInfraUtilitiesSemanticCutoverNestingReferences
-    from .nesting_types import FlextInfraUtilitiesSemanticNestingTypes
-    from .private_import_cst import FlextInfraUtilitiesSemanticCutoverPrivateImportCst
-    from .private_imports import FlextInfraUtilitiesSemanticCutoverPrivateImports
-    from .self_facade import FlextInfraUtilitiesSemanticCutoverSelfFacade
+    from flext_infra._utilities._semantic_cutover.module_layout import (
+        FlextInfraUtilitiesSemanticCutoverModuleLayout,
+    )
+    from flext_infra._utilities._semantic_cutover.nesting import (
+        FlextInfraUtilitiesSemanticCutoverNesting,
+    )
+    from flext_infra._utilities._semantic_cutover.nesting_cst import (
+        FlextInfraUtilitiesSemanticCutoverNestingCst,
+    )
+    from flext_infra._utilities._semantic_cutover.nesting_references import (
+        FlextInfraUtilitiesSemanticCutoverNestingReferences,
+    )
+    from flext_infra._utilities._semantic_cutover.nesting_types import (
+        FlextInfraUtilitiesSemanticNestingTypes,
+    )
+    from flext_infra._utilities._semantic_cutover.private_import_cst import (
+        FlextInfraUtilitiesSemanticCutoverPrivateImportCst,
+    )
+    from flext_infra._utilities._semantic_cutover.private_imports import (
+        FlextInfraUtilitiesSemanticCutoverPrivateImports,
+    )
+    from flext_infra._utilities._semantic_cutover.self_facade import (
+        FlextInfraUtilitiesSemanticCutoverSelfFacade,
+    )
 
 
 __all__: tuple[str, ...] = (
@@ -49,6 +96,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesSemanticCutoverFacadeOwners",
     "FlextInfraUtilitiesSemanticCutoverModelFields",
     "FlextInfraUtilitiesSemanticCutoverModelFieldsBindings",
+    "FlextInfraUtilitiesSemanticCutoverModuleLayout",
     "FlextInfraUtilitiesSemanticCutoverNesting",
     "FlextInfraUtilitiesSemanticCutoverNestingCst",
     "FlextInfraUtilitiesSemanticCutoverNestingReferences",
@@ -86,6 +134,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".model_fields_bindings": (
                 "FlextInfraUtilitiesSemanticCutoverModelFieldsBindings",
             ),
+            ".module_layout": ("FlextInfraUtilitiesSemanticCutoverModuleLayout",),
             ".nesting": ("FlextInfraUtilitiesSemanticCutoverNesting",),
             ".nesting_cst": ("FlextInfraUtilitiesSemanticCutoverNestingCst",),
             ".nesting_references": (

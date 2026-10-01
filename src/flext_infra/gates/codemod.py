@@ -15,8 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, m, u
-
-from .base_gate import FlextInfraGate
+from flext_infra.gates.base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -37,7 +36,15 @@ class FlextInfraCodemodGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
-        """Run ast-grep only on this repository's first-class source roots."""
+        """Run ast-grep only on this repository's first-class source roots.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
+        Raises:
+            FileNotFoundError: If ``not targets``.
+
+        """
         targets = (
             *self._existing_check_dirs(project_dir),
             *(path.name for path in project_dir.glob("*.py") if path.is_file()),
@@ -53,7 +60,15 @@ class FlextInfraCodemodGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
-        """Scan every requested file against every elected provider ruleset."""
+        """Scan every requested file against every elected provider ruleset.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
+        Raises:
+            FileNotFoundError: If ``not path.is_file()``.
+
+        """
         if not files:
             return self.check(project_dir, ctx)
         for path in files:
@@ -74,7 +89,15 @@ class FlextInfraCodemodGate(FlextInfraGate):
         targets: t.StrSequence,
         started: float,
     ) -> m.Infra.GateExecution:
-        """Keep whole-project and file-scoped scans on the same native contract."""
+        """Keep whole-project and file-scoped scans on the same native contract.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
+        Raises:
+            RuntimeError: If codemod rule planning failed without a diagnostic.
+
+        """
         planned = u.Infra.codemod_rule_plan(project_dir)
         if planned.failure:
             failure = planned.error
@@ -179,7 +202,6 @@ class FlextInfraCodemodGate(FlextInfraGate):
                 started=started,
             ),
             issues=issues,
-            observational_issues=(),
             raw_output="\n".join((
                 (f"{len(findings)} policy findings; {len(failures)} native failures"),
                 *raw_output,
@@ -191,7 +213,17 @@ class FlextInfraCodemodGate(FlextInfraGate):
         scan: p.Cli.CommandOutput,
         ruleset: m.Infra.CodemodRuleset,
     ) -> t.Pair[m.Infra.AstGrepReport, str]:
-        """Validate findings and derive their exact native terminal diagnostic."""
+        """Validate findings and derive their exact native terminal diagnostic.
+
+        Returns:
+            The resulting ``t.Pair[m.Infra.AstGrepReport, str]``.
+
+        Raises:
+            ValueError: If ``(scan.outcome.raw_return_code == 1) != bool(error_count)``;
+                or if ``any((finding.rule_id not in ruleset.rule_ids for finding in
+                report.root))``.
+
+        """
         report = m.Infra.AstGrepReport.model_validate_json(scan.stdout)
         error_count = sum(finding.severity == "error" for finding in report.root)
         if (scan.outcome.raw_return_code == 1) != bool(error_count):
@@ -216,7 +248,12 @@ class FlextInfraCodemodGate(FlextInfraGate):
         ruleset: m.Infra.CodemodRuleset,
         targets: t.StrSequence,
     ) -> t.StrSequence:
-        """Canonical ast-grep invocation for one composed provider ruleset."""
+        """Canonical ast-grep invocation for one composed provider ruleset.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         globs: t.StrSequence = tuple(
             f"!{dir_name}/" for dir_name in c.Infra.CHECK_EXCLUDED_DIRS
         )

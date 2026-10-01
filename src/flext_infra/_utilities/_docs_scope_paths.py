@@ -1,4 +1,8 @@
-"""Authenticated lexical path and workspace-topology helpers for docs scope."""
+"""Authenticated lexical path and workspace-topology helpers for docs scope.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,8 +13,7 @@ from flext_cli import u
 
 from flext_core.result import FlextResult as r
 from flext_infra import c, t
-
-from .git import FlextInfraUtilitiesGit
+from flext_infra._utilities.git import FlextInfraUtilitiesGit
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -21,7 +24,15 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
 
     @staticmethod
     def absolute_lexical(path: Path) -> Path:
-        """Return an absolute lexical path without dereferencing aliases."""
+        """Return an absolute lexical path without dereferencing aliases.
+
+        Returns:
+            An absolute lexical path without dereferencing aliases.
+
+        Raises:
+            ValueError: If docs path cannot contain parent traversal.
+
+        """
         if ".." in path.parts:
             msg = f"docs path cannot contain parent traversal: {path}"
             raise ValueError(msg)
@@ -29,7 +40,15 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
 
     @staticmethod
     def physical_directory_exists(path: Path) -> bool:
-        """Return presence only after descriptor-authenticated traversal."""
+        """Return presence only after descriptor-authenticated traversal.
+
+        Returns:
+            Presence only after descriptor-authenticated traversal.
+
+        Raises:
+            ValueError: If ``planned.failure``.
+
+        """
         planned = u.Cli.atomic_plan_directory_chain(path)
         if planned.failure:
             raise ValueError(planned.error or f"docs directory is unsafe: {path}")
@@ -37,7 +56,15 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
 
     @staticmethod
     def _physical_file_exists(path: Path) -> bool:
-        """Return file presence only after descriptor-authenticated inspection."""
+        """Return file presence only after descriptor-authenticated inspection.
+
+        Returns:
+            File presence only after descriptor-authenticated inspection.
+
+        Raises:
+            ValueError: If ``state.failure``.
+
+        """
         state = u.Cli.atomic_read_binary_file_state(path, required=False)
         if state.failure:
             raise ValueError(state.error or f"docs file is unsafe: {path}")
@@ -48,7 +75,12 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
         repository_root: Path,
         extra_roots: t.SequenceOf[Path] = (),
     ) -> p.Result[t.VariadicTuple[Path]]:
-        """Return existing physical roots from one stable workspace topology."""
+        """Return existing physical roots from one stable workspace topology.
+
+        Returns:
+            Existing physical roots from one stable workspace topology.
+
+        """
         try:
             return FlextInfraUtilitiesDocsScopePathsMixin._docs_repository_roots(
                 repository_root,
@@ -65,7 +97,12 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
         repository_root: Path,
         extra_roots: t.SequenceOf[Path],
     ) -> p.Result[t.VariadicTuple[Path]]:
-        """Discover roots while the public boundary owns exception conversion."""
+        """Discover roots while the public boundary owns exception conversion.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[Path]]``.
+
+        """
         root = FlextInfraUtilitiesDocsScopePathsMixin.absolute_lexical(repository_root)
         if not FlextInfraUtilitiesDocsScopePathsMixin.physical_directory_exists(root):
             return r[t.VariadicTuple[Path]].fail(

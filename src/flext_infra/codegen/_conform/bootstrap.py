@@ -1,4 +1,8 @@
-"""Conform service root: validated request state and toolchain policy."""
+"""Conform service root: validated request state and toolchain policy.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,7 +10,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import Annotated
 
-from ... import c, m, s, t
+from flext_infra import c, m, s, t
 
 
 class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
@@ -33,13 +37,29 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
             description="Validated scaffold specification included in the atomic plan",
         ),
     ] = None
+    ports: Annotated[
+        m.Infra.CodegenConformPorts | None,
+        m.Field(
+            default=None,
+            exclude=True,
+            description=(
+                "Docs planner and fresh-import probe wired by the facade; the "
+                "complete surface fails before any effect without them"
+            ),
+        ),
+    ] = None
 
     @staticmethod
     def link_mode(
         repository: m.Infra.RepositoryRef,
         toolchain: m.Infra.ToolchainSpec,
     ) -> str:
-        """Resolve the repository override through one codegen authority."""
+        """Resolve the repository override through one codegen authority.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return repository.uv_link_mode or toolchain.uv_link_mode
 
     @staticmethod
@@ -50,6 +70,10 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
 
         The filesystem is the SSOT: a verb is emitted only when its all.sh
         entrypoint exists. No manual list is required.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.MakeVerbSpec]``.
+
         """
         scripts_dir = repository_root / c.Infra.DIR_SCRIPTS
         if not scripts_dir.is_dir():
@@ -80,6 +104,13 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
         a discovery is dropped when it would shadow a canonical ``make.verbs``
         builtin, whose native ``_builtin-<verb>`` implementation is the only
         owner of that name in the generated Makefile.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.MakeVerbSpec]``.
+
+        Raises:
+            ValueError: If config extra_verbs declares canonical verb.
+
         """
         merged: MutableMapping[str, m.Infra.MakeVerbSpec] = {}
         for verb in discovered:
@@ -124,7 +155,9 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
                     Path(c.Infra.DIR_DOCS) / c.Infra.DOCS_CONFIG_FILENAME
                 ).as_posix()
                 return m.Infra.CodegenConformSurfaceContract(
-                    destinations=frozenset({destination}), pyproject=False, custom=False
+                    destinations=frozenset({destination}),
+                    pyproject=False,
+                    custom=False,
                 )
             case c.Infra.CodegenConformSurface.MISE_TRIPLE:
                 return m.Infra.CodegenConformSurfaceContract(

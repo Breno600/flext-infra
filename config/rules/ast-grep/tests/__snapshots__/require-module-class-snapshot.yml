@@ -1,0 +1,20 @@
+id: require-module-class
+snapshots:
+  ? |
+    import os
+  : labels:
+    - source: |
+        import os
+      style: primary
+      start: 0
+      end: 10
+  ? |
+    import os
+    VALUE = os.sep
+  : labels:
+    - source: |
+        import os
+        VALUE = os.sep
+      style: primary
+      start: 0
+      end: 25

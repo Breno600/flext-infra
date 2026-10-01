@@ -1,4 +1,8 @@
-"""Public contract for governed repository-root artifact ownership."""
+"""Public contract for governed repository-root artifact ownership.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,7 +11,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import config
+from flext_infra import config, infra
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from tests import c, m, u
 
@@ -15,7 +19,8 @@ from tests import c, m, u
 class TestsFlextInfraRootArtifactOwnership:
     """Prove codegen config is the sole root-artifact ownership catalog."""
 
-    def test_envrc_template_covers_every_repository_profile(self) -> None:
+    @staticmethod
+    def test_envrc_template_covers_every_repository_profile() -> None:
         """Every generated repository owns the same direnv activation contract."""
         entry = next(
             item
@@ -25,7 +30,8 @@ class TestsFlextInfraRootArtifactOwnership:
 
         tm.that(set(entry.profiles), eq=set(c.Infra.MakeProfile))
 
-    def test_release_workflow_requires_explicit_repository_opt_in(self) -> None:
+    @staticmethod
+    def test_release_workflow_requires_explicit_repository_opt_in() -> None:
         """Package membership alone must never activate release automation."""
         entry = next(
             item
@@ -35,7 +41,9 @@ class TestsFlextInfraRootArtifactOwnership:
 
         tm.that(entry.requires_release_protocol, eq=True)
 
-    def test_governed_artifacts_have_one_explicit_policy(self) -> None:
+    @staticmethod
+    def test_governed_artifacts_have_one_explicit_policy() -> None:
+        """Test governed artifacts have one explicit policy."""
         configured = config.Infra.codegen.managed_files
         paths = tuple(item.path.as_posix() for item in configured)
 
@@ -55,7 +63,8 @@ class TestsFlextInfraRootArtifactOwnership:
         for owned in github_managed.values():
             tm.that(owned.policy, eq="full")
 
-    def test_every_packaged_github_template_is_declared(self) -> None:
+    @staticmethod
+    def test_every_packaged_github_template_is_declared() -> None:
         """Keep the packaged GitHub tree and typed render manifest bijective."""
         template_root = (
             Path(__file__).parents[3]
@@ -78,7 +87,8 @@ class TestsFlextInfraRootArtifactOwnership:
 
         tm.that(physical, eq=declared)
 
-    def test_github_template_without_managed_owner_is_rejected(self) -> None:
+    @staticmethod
+    def test_github_template_without_managed_owner_is_rejected() -> None:
         """Reject any config where a GitHub projection escapes full ownership."""
         spec = config.Infra.codegen
         github_managed = tuple(
@@ -96,7 +106,8 @@ class TestsFlextInfraRootArtifactOwnership:
         with pytest.raises(ValueError, match="ownership mismatch"):
             type(spec).model_validate(mutated)
 
-    def test_github_managed_owner_must_be_full(self) -> None:
+    @staticmethod
+    def test_github_managed_owner_must_be_full() -> None:
         """Reject weaker policies for every config-declared GitHub artifact."""
         spec = config.Infra.codegen
         target = next(
@@ -116,7 +127,9 @@ class TestsFlextInfraRootArtifactOwnership:
         with pytest.raises(ValueError, match="must be full-managed"):
             type(spec).model_validate(mutated)
 
-    def test_conform_uses_one_fixed_point_plan(self, infra_git_repo: Path) -> None:
+    @staticmethod
+    def test_conform_uses_one_fixed_point_plan(infra_git_repo: Path) -> None:
+        """Test conform uses one fixed point plan."""
         root = infra_git_repo
         u.Tests.write_project_beads_config(root, "flext-demo")
         package_root = root / "src" / "flext_demo"
@@ -141,7 +154,7 @@ class TestsFlextInfraRootArtifactOwnership:
             what=c.Infra.CodegenConformSurface.MAKEFILE,
             mode=c.Infra.CodegenConformMode.APPLY,
         )
-        tm.ok(FlextInfraCodegenConform.execute_request(request))
+        tm.ok(infra.codegen_conform(request))
         manual = {"custom.mk": b"# manual project extension\n"}
         (root / "custom.mk").write_bytes(manual["custom.mk"])
         configured_policy = next(
@@ -157,7 +170,7 @@ class TestsFlextInfraRootArtifactOwnership:
             ),
         )
 
-        first = FlextInfraCodegenConform.execute_request(request)
+        first = infra.codegen_conform(request)
         result = tm.ok(first)
         governed = tuple(file for file in result.plan.files if file.policy is not None)
         tm.that(tuple(file.path for file in governed), eq=(root / "Makefile",))

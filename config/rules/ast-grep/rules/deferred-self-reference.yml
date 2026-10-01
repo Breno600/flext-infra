@@ -1,0 +1,109 @@
+# A nested model names what it depends on while its own class body executes.
+#
+# - `default_factory=lambda: Outer.Sibling()` postpones a name resolution the
+#   definition order should have satisfied, turning a structural defect into a
+#   runtime one that no static gate sees.
+# - A field annotated with its own owner cannot be instantiated while that
+#   owner is still incomplete.
+#
+# Class bodies only: a class declared inside a function is local data. The
+# repair is diamond-FLEXT composition (hoist the referenced model into its own
+# namespace facet, inherit it, reference it as a resolved base attribute); the
+# semantic phase normalizes the factory form.
+id: ban-deferred-self-reference
+language: python
+severity: error
+files:
+  - "**/*.py"
+# The finding is the deferred name itself: a name inside the body of a
+# `default_factory` lambda that is one of its enclosing classes.
+rule:
+  kind: identifier
+  pattern: $OWNER
+  # A name, or the root of a dotted path; the attribute segments of a path
+  # are member names, not references.
+  not:
+    inside:
+      kind: attribute
+      field: attribute
+  all:
+    - inside:
+        kind: lambda
+        stopBy: end
+        inside:
+          kind: keyword_argument
+          has:
+            field: name
+            regex: "^default_factory$"
+    - not:
+        inside:
+          kind: lambda_parameters
+          stopBy: end
+    - inside:
+        kind: class_definition
+        stopBy: end
+        has:
+          field: name
+          pattern: $OWNER
+    - not:
+        inside:
+          kind: function_definition
+          stopBy: end
+message: >-
+  default_factory defers the resolution of `$OWNER` through a lambda; hoist the
+  model into a FLEXT namespace facet, inherit it, and pass the model as the
+  factory.
+---
+# The finding is the self-reference in the annotation: a name inside a
+# field's annotation that is the nearest enclosing class, outside ClassVar and
+# TypeAdapter wrappers (those are not fields).
+id: ban-recursive-model
+language: python
+severity: error
+files:
+  - "**/*.py"
+rule:
+  kind: identifier
+  pattern: $OWNER
+  # A name, or the root of a dotted path; the attribute segments of a path
+  # are member names, not references.
+  not:
+    inside:
+      kind: attribute
+      field: attribute
+  all:
+    - inside:
+        kind: type
+        stopBy: end
+        inside:
+          kind: assignment
+          field: type
+          not:
+            has:
+              field: type
+              pattern: $_
+              has:
+                stopBy: end
+                any:
+                  - kind: generic_type
+                    has:
+                      kind: identifier
+                      regex: "^(?:ClassVar|TypeAdapter)$"
+                  - kind: subscript
+                    has:
+                      field: value
+                      regex: "(?:^|\\.)(?:ClassVar|TypeAdapter)$"
+    - inside:
+        kind: class_definition
+        stopBy:
+          kind: class_definition
+        has:
+          field: name
+          pattern: $OWNER
+    - not:
+        inside:
+          kind: function_definition
+          stopBy: end
+message: >-
+  Model `$OWNER` annotates a field with itself; split the recursive leg into a
+  FLEXT namespace facet.

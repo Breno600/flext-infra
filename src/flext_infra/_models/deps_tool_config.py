@@ -1,4 +1,8 @@
-"""Tool configuration models for the deps subpackage."""
+"""Tool configuration models for the deps subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,9 +12,12 @@ from typing import Annotated, Literal, Self
 from flext_cli import m, u
 
 from flext_infra import t
-
-from .deps_tool_config_linters import FlextInfraModelsDepsToolConfigLinters
-from .deps_tool_config_type_checkers import FlextInfraModelsDepsToolConfigTypeCheckers
+from flext_infra._models.deps_tool_config_linters import (
+    FlextInfraModelsDepsToolConfigLinters,
+)
+from flext_infra._models.deps_tool_config_type_checkers import (
+    FlextInfraModelsDepsToolConfigTypeCheckers,
+)
 
 
 class FlextInfraModelsDepsToolConfig(
@@ -97,7 +104,12 @@ class FlextInfraModelsDepsToolConfig(
         @m.model_validator(mode="before")
         @classmethod
         def _coerce_legacy_int(cls, data: t.JsonValue) -> t.JsonValue:
-            """Accept the legacy bare-integer form as an absolute ceiling."""
+            """Accept the legacy bare-integer form as an absolute ceiling.
+
+            Returns:
+                The resulting ``t.JsonValue``.
+
+            """
             if isinstance(data, int) and not isinstance(data, bool):
                 return {"workers": data}
             return data
@@ -106,7 +118,16 @@ class FlextInfraModelsDepsToolConfig(
         def _require_exactly_one_form(
             self,
         ) -> FlextInfraModelsDepsToolConfig.PytestWorkerCeiling:
-            """Reject ambiguous (both or neither) ceiling forms."""
+            """Reject ambiguous (both or neither) ceiling forms.
+
+            Returns:
+                The resulting ``FlextInfraModelsDepsToolConfig.PytestWorkerCeiling``.
+
+            Raises:
+                ValueError: If PytestWorkerCeiling requires exactly one of workers or
+                    cpu_fraction.
+
+            """
             if (self.workers is None) == (self.cpu_fraction is None):
                 msg = "PytestWorkerCeiling requires exactly one of workers or cpu_fraction"
                 raise ValueError(msg)
@@ -421,18 +442,30 @@ class FlextInfraModelsDepsToolConfig(
 
         @u.model_validator(mode="after")
         def _validate_execution_limits(self) -> Self:
-            """Keep item and termination budgets inside the hard invocation cap."""
+            """Keep item and termination budgets inside the hard invocation cap.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If pytest case timeout must be less than run timeout; or if
+                    pytest termination grace must be less than run timeout; or if pytest
+                    slow timeout must exceed the per-case timeout; or if pytest slow
+                    timeout must be less than run timeout; or if pytest run timeout must
+                    exceed the suite stop reserve; or if pytest runtime policy options
+                    are derived from typed fields; or if pytest progress args must
+                    expose verbose item progress; or if pytest ci-excluded-markers must
+                    be declared in standard-markers; or if pytest slow-marker must be
+                    declared in standard-markers; or if pytest external-gate-markers
+                    must be a non-empty subset of standard-markers; undeclared; or if
+                    pytest reporting args must not override runner-owned policy.
+
+            """
             if self.case_timeout_seconds >= self.run_timeout_seconds:
                 msg = "pytest case timeout must be less than run timeout"
                 raise ValueError(msg)
             if self.termination_grace_seconds >= self.run_timeout_seconds:
                 msg = "pytest termination grace must be less than run timeout"
-                raise ValueError(msg)
-            if (
-                self.case_timeout_seconds + self.termination_grace_seconds
-                > self.run_timeout_seconds
-            ):
-                msg = "pytest run timeout must include item and termination budgets"
                 raise ValueError(msg)
             if self.slow_timeout_seconds <= self.case_timeout_seconds:
                 msg = "pytest slow timeout must exceed the per-case timeout"
@@ -440,8 +473,17 @@ class FlextInfraModelsDepsToolConfig(
             if self.slow_timeout_seconds >= self.run_timeout_seconds:
                 msg = "pytest slow timeout must be less than run timeout"
                 raise ValueError(msg)
+            # Every reserve includes one item bound plus the grace, so this
+            # also keeps a single item and the termination inside each run; a
+            # reserve at or past a run budget would place the stop before the
+            # suite. The single-bound checks above report first: they name the
+            # field. Both phases' reserves bind every declared run budget.
+            reserve = max(
+                self.suite_stop_reserve_seconds,
+                self.slow_suite_stop_reserve_seconds,
+            )
             if any(
-                timeout <= self.suite_stop_reserve_seconds
+                timeout <= reserve
                 for timeout in (
                     self.run_timeout_seconds,
                     *self.run_timeout_overrides.values(),
@@ -570,7 +612,8 @@ class FlextInfraModelsDepsToolConfig(
             ),
         ]
         precision: Annotated[
-            int, m.Field(description="Decimal precision for coverage percentages.")
+            int,
+            m.Field(description="Decimal precision for coverage percentages."),
         ]
         exclude_also: Annotated[
             t.StrSequence,
@@ -641,6 +684,13 @@ class FlextInfraModelsDepsToolConfig(
     class MarkdownConfig(m.ArbitraryTypesModel):
         """Markdown lint rules and excluded non-documentation surfaces."""
 
+        findings_exit_codes: Annotated[
+            t.VariadicTuple[int],
+            m.Field(
+                alias="findings-exit-codes",
+                description="Exit statuses with which rumdl reports its findings.",
+            ),
+        ]
         rules: t.JsonMapping = m.Field(description="Rumdl-compatible rule mapping.")
         exclude: t.StrTuple = m.Field(
             description="Glob patterns excluded from Markdown quality checks.",
@@ -733,16 +783,16 @@ class FlextInfraModelsDepsToolConfig(
             ),
         ]
         forward_import_form: Annotated[
-            Literal["relative_dot"],
+            Literal["absolute"],
             m.Field(
                 alias="forward-import-form",
                 description=(
                     "How forward (downward) intra-project imports are "
-                    "emitted. ``relative_dot`` uses relative imports "
-                    "within the same package."
+                    "emitted. ``absolute`` names the full module path; "
+                    "relative imports are banned."
                 ),
             ),
-        ] = "relative_dot"
+        ]
 
     class ToolConfigDocument(m.ArbitraryTypesModel):
         """Root schema for canonical ``config/tooling.yaml`` policy data."""
@@ -850,6 +900,10 @@ class FlextInfraModelsDepsToolConfig(
         mypy_path: Annotated[
             t.StrTuple,
             m.Field(description="Resolved Mypy search paths"),
+        ]
+        mypy_facade_rebind_modules: Annotated[
+            t.StrTuple,
+            m.Field(description="Modules written in the canonical facade-rebind form"),
         ]
         pyrefly_search_path: Annotated[
             t.StrTuple,

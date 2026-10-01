@@ -1,4 +1,8 @@
-"""Project-owned Mise configuration models."""
+"""Project-owned Mise configuration models.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,12 +12,8 @@ from flext_cli import m
 
 from flext_infra import t
 
-from .deps_tool_config_project_ruff import FlextInfraModelsDepsToolConfigProjectRuff
 
-
-class FlextInfraModelsDepsToolConfigProjectMise(
-    FlextInfraModelsDepsToolConfigProjectRuff,
-):
+class FlextInfraModelsDepsToolConfigProjectMise:
     """Project-local Mise tools extending fleet tool declarations."""
 
     class ProjectMiseTool(m.ArbitraryTypesModel):

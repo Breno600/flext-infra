@@ -1,4 +1,8 @@
-"""Tests for refactor namespace-move rewriting."""
+"""Tests for refactor namespace-move rewriting.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -24,6 +28,22 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
 
+    @staticmethod
+    def _non_module_files(package_root: Path) -> t.VariadicTuple[str]:
+        """Return files the rewrite left beside the package modules.
+
+        Returns:
+            Files the rewrite left beside the package modules.
+
+        """
+        return tuple(
+            sorted(
+                path.name
+                for path in package_root.iterdir()
+                if path.is_file() and path.suffix != ".py"
+            ),
+        )
+
     @classmethod
     def _build_project(cls, tmp_path: Path) -> t.Pair[Path, Path]:
         project_root = tmp_path / "flext-demo"
@@ -44,6 +64,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test rewrite manual protocol violations uses public runtime api."""
         project_root, package_root = self._build_project(tmp_path)
         protocols_file = package_root / "protocols.py"
         source_file = package_root / "service.py"
@@ -90,14 +111,13 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         protocols_text = protocols_file.read_text(encoding="utf-8")
         tm.that(protocols_text, has="from typing import Protocol")
         tm.that(protocols_text, has="class External(Protocol):")
-        tm.that(source_file.with_suffix(".py.bak").exists(), eq=True)
-        tm.that(consumer_file.with_suffix(".py.bak").exists(), eq=True)
-        tm.that(protocols_file.with_suffix(".py.bak").exists(), eq=True)
+        tm.that(self._non_module_files(package_root), eq=())
 
     def test_rewrite_manual_typing_alias_violations_uses_public_runtime_api(
         self,
         tmp_path: Path,
     ) -> None:
+        """Test rewrite manual typing alias violations uses public runtime api."""
         project_root, package_root = self._build_project(tmp_path)
         typings_file = package_root / "typings.py"
         source_file = package_root / "service.py"
@@ -117,7 +137,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         )
 
         u.Infra.rewrite_manual_typing_alias_violations(
-            project_root=project_root, names_by_file={source_file: {"PayloadMap"}}
+            project_root=project_root,
+            names_by_file={source_file: {"PayloadMap"}},
         )
 
         source_text = source_file.read_text(encoding="utf-8")
@@ -126,5 +147,4 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         tm.that(typings_text, has="type PayloadMap = t.StrMapping")
         tm.that(typings_text, lacks="from typing import TypeAlias")
         tm.that(typings_text, has="from flext_core import t")
-        tm.that(source_file.with_suffix(".py.bak").exists(), eq=True)
-        tm.that(typings_file.with_suffix(".py.bak").exists(), eq=True)
+        tm.that(self._non_module_files(package_root), eq=())

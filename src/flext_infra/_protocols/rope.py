@@ -42,19 +42,6 @@ class FlextInfraProtocolsRope(Protocol):
         def apply_to_source(self, source: str) -> t.Infra.TransformResult: ...
 
     @runtime_checkable
-    class RopeModuleCallback(Protocol):
-        """Validate or alter one module inside the owner Rope cycle."""
-
-        def __call__(
-            self,
-            workspace: FlextInfraProtocolsRope.RopeWorkspaceDsl,
-            visit: m.Infra.RopeModuleVisit,
-            /,
-        ) -> p.Result[m.Infra.RopeCallbackOutcome]:
-            """Return one typed validation or mutation outcome."""
-            ...
-
-    @runtime_checkable
     class RopeScopeDsl(Protocol):
         """Public scope contract for Rope semantic traversal."""
 
@@ -122,13 +109,6 @@ class FlextInfraProtocolsRope(Protocol):
             *,
             project_names: t.StrSequence | None = None,
         ) -> t.SequenceOf[m.Infra.RopeModuleIndexEntry]: ...
-
-        def cycle(
-            self,
-            callbacks: t.SequenceOf[m.Infra.RopeCallbackBinding],
-            *,
-            project_names: t.StrSequence | None = None,
-        ) -> p.Result[m.Infra.RopeCycleReport]: ...
 
         def source(self, file_path: Path) -> str: ...
 

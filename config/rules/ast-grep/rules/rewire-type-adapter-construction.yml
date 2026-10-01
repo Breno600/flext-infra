@@ -1,0 +1,90 @@
+# Adapter construction routes through the utilities facade.
+#
+# flext-core exposes ``m.TypeAdapter[T]`` / ``t.TypeAdapter[T]`` as PEP 695 types:
+# the upstream class is final, so one facade name cannot be both a valid
+# annotation and a constructor. ``u.type_adapter(...)`` is the constructor.
+# Calling the type alias fails at import time ("TypeAliasType is not callable"),
+# and a bare pydantic import bypasses the facade boundary.
+#
+# The receiver is constrained to the facade letters ``m`` and ``t`` or to a bare
+# ``TypeAdapter`` provably imported from pydantic, so a project-local name that
+# happens to be called ``TypeAdapter`` keeps its own contract. The rewrite is only
+# emitted where ``u`` is bound from a public FLEXT package; the companion rule
+# rewire-type-adapter-construction-missing-u-import reports the other modules.
+# The now-unused pydantic import is removed by Ruff F401.
+id: rewire-type-adapter-construction
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+  - "examples/**/*.py"
+  - "scripts/**/*.py"
+rule:
+  all:
+    - any:
+        - all:
+            - pattern: $FACADE.TypeAdapter($$$ARGS)
+            - has:
+                field: function
+                has:
+                  field: object
+                  regex: "^(?:m|t)$"
+        - all:
+            - pattern: TypeAdapter($$$ARGS)
+            - inside:
+                kind: module
+                stopBy: end
+                has:
+                  stopBy: end
+                  matches: type-adapter-imported-from-pydantic
+    - inside:
+        kind: module
+        stopBy: end
+        has:
+          stopBy: end
+          matches: u-imported-from-flext
+fix: u.type_adapter($$$ARGS)
+message: >-
+  Construct adapters with u.type_adapter(...). m.TypeAdapter[T] and
+  t.TypeAdapter[T] are annotation types, not constructors, and a bare pydantic
+  import bypasses the facade boundary.
+---
+# Detection-only companion: the same construction in a module that does not bind
+# `u`. A blind fix would emit an undefined name; bind the facade first.
+id: rewire-type-adapter-construction-missing-u-import
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+  - "examples/**/*.py"
+  - "scripts/**/*.py"
+rule:
+  all:
+    - any:
+        - all:
+            - pattern: $FACADE.TypeAdapter($$$ARGS)
+            - has:
+                field: function
+                has:
+                  field: object
+                  regex: "^(?:m|t)$"
+        - all:
+            - pattern: TypeAdapter($$$ARGS)
+            - inside:
+                kind: module
+                stopBy: end
+                has:
+                  stopBy: end
+                  matches: type-adapter-imported-from-pydantic
+    - inside:
+        kind: module
+        stopBy: end
+        not:
+          has:
+            stopBy: end
+            matches: u-imported-from-flext
+message: >-
+  Adapter construction must become u.type_adapter(...), but this module does
+  not bind the utilities facade `u`. Add the facade import first.

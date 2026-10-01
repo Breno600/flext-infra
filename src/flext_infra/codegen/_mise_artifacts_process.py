@@ -1,4 +1,8 @@
-"""Strict isolated subprocess environment for Mise artifact generation."""
+"""Strict isolated subprocess environment for Mise artifact generation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -23,7 +27,12 @@ class FlextInfraMiseArtifactsProcess:
         scratch: Path,
         contract: m.Infra.MiseBootstrapEnvironmentSpec,
     ) -> p.Result[bool]:
-        """Create only invocation-local policy, home, and receipt paths."""
+        """Create only invocation-local policy, home, and receipt paths.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
 
         def directory_key(path: Path) -> t.Pair[int, str]:
             return len(path.parts), path.as_posix()
@@ -71,7 +80,12 @@ class FlextInfraMiseArtifactsProcess:
         release: str,
         contract: m.Infra.MiseBootstrapEnvironmentSpec,
     ) -> p.Result[MutableMapping[str, str]]:
-        """Build one isolated environment backed by release-addressed storage."""
+        """Build one isolated environment backed by release-addressed storage.
+
+        Returns:
+            The resulting ``p.Result[MutableMapping[str, str]]``.
+
+        """
         install_path = u.Infra.mise_runtime_install_path(storage_root, release)
         if install_path.failure:
             return r[MutableMapping[str, str]].from_failure(install_path)
@@ -93,9 +107,6 @@ class FlextInfraMiseArtifactsProcess:
         for name in contract.passthrough_environment:
             if value := u.Infra.env_lookup(name):
                 isolated[name] = value
-        credential_command = settings.Infra.mise_github_credential_command
-        if credential_command:
-            isolated["MISE_GITHUB_CREDENTIAL_COMMAND"] = credential_command
         return r[MutableMapping[str, str]].ok(isolated)
 
     @classmethod
@@ -103,7 +114,12 @@ class FlextInfraMiseArtifactsProcess:
         cls,
         environment_values: t.StrMapping,
     ) -> MutableMapping[str, str]:
-        """Select Mise's documented config-free mode for runtime-only commands."""
+        """Select Mise's documented config-free mode for runtime-only commands.
+
+        Returns:
+            The resulting ``MutableMapping[str, str]``.
+
+        """
         result = dict(environment_values)
         result["MISE_NO_CONFIG"] = "1"
         return result
@@ -117,7 +133,12 @@ class FlextInfraMiseArtifactsProcess:
         env: t.StrMapping,
         operation: str,
     ) -> p.Result[str]:
-        """Run one Mise process and reject nonzero status or any Mise warning."""
+        """Run one Mise process and reject nonzero status or any Mise warning.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         u.Cli.info(f"mise-toolchain: start operation={operation}")
         executed = u.Cli.run_raw(
             command,
@@ -140,7 +161,12 @@ class FlextInfraMiseArtifactsProcess:
 
     @classmethod
     def write_new(cls, path: Path, content: bytes, mode: int) -> p.Result[bool]:
-        """Create exact isolated state through the canonical atomic owner."""
+        """Create exact isolated state through the canonical atomic owner.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         before = u.Cli.atomic_read_binary_file_state(path, required=False)
         if before.failure:
             return r[bool].from_failure(before)

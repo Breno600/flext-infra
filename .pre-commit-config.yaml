@@ -5,8 +5,10 @@ repos:
     # Why: each make verb is its own pre-commit/pre-push hook so the developer
     # sees per-step status (Passed/Failed) natively via the pre-commit runner.
     # Every step owns its CI context instead of inheriting the caller's token.
-    # pre-commit is the fast mutation pass and runs the CI gate set
-    # (CI=Y). pre-push check unsets CI to run
+    # pre-commit is the fast mutation pass and runs the fast check partition
+    # (CI=Y), derived from the gate registry kind: only
+    # external gates, never type checkers or flext-infra validators.
+    # pre-push check unsets CI to run
     # every active gate; its other verbs retain CI=N.
     # Pytest deselects tooling.tools.pytest.ci_excluded_markers
     # only with CI=Y, shared by CI and pre-commit. Local and

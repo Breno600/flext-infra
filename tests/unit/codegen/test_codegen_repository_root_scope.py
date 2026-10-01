@@ -5,6 +5,9 @@ owner for every profile) and its gate verbs run the same local bodies as every
 repository: a workspace root consumes its declared members as libraries and
 never fans a verb out across them, locally exactly as in CI (operator ruling
 2026-09-29).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -20,7 +23,10 @@ from tests import u, u as test_u
 
 
 class TestsFlextInfraCodegenRepositoryRootScope:
-    def test_conform_owns_repository_root_makefile(self) -> None:
+    """Tests for ``FlextInfraCodegenRepositoryRootScope``."""
+
+    @staticmethod
+    def test_conform_owns_repository_root_makefile() -> None:
         """The single Makefile render entry includes the workspace profile."""
         makefile_entries = tuple(
             entry
@@ -183,14 +189,21 @@ class TestsFlextInfraCodegenRepositoryRootScope:
             eq={
                 "upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle",
                 "upg: TOOL_BOOTSTRAP_RESOLVE := 1",
-                "upg: TOOL_BOOTSTRAP_LOCK := 1",
+                # mise.lock is written only by the relock, from the manifest
+                # `gen` rendered with the newly locked generator.
                 "_upg_relock: TOOL_BOOTSTRAP_LIFECYCLE := _upg_converge",
                 "_upg_relock: TOOL_BOOTSTRAP_LOCK := 1",
             },
         )
 
-    def _render_root_makefile(self, tmp_path: Path) -> Path:
-        """Render base/Makefile.j2 from a typed workspace fixture."""
+    @staticmethod
+    def _render_root_makefile(tmp_path: Path) -> Path:
+        """Render base/Makefile.j2 from a typed workspace fixture.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         repository = u.Tests.repository_ref("workspace-fixture")
         workspace = u.Tests.workspace_spec(
             repository,

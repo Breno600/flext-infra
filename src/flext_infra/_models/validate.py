@@ -1,4 +1,8 @@
-"""Domain models for the core subpackage."""
+"""Domain models for the core subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,8 +11,8 @@ from typing import Annotated, ClassVar, Literal, Self
 
 from flext_cli import m, u
 
-from .. import c, t
-from . import FlextInfraModelsMixins as mm
+from flext_infra import c, t
+from flext_infra._models import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsCore:
@@ -125,7 +129,15 @@ class FlextInfraModelsCore:
 
         @u.model_validator(mode="after")
         def require_unique_node_ids(self) -> Self:
-            """Reject incomplete identifiers and ambiguous worker manifests."""
+            """Reject incomplete identifiers and ambiguous worker manifests.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If collection manifest requires nonempty unique node IDs.
+
+            """
             if any(not node_id for node_id in self.node_ids) or len(
                 self.node_ids,
             ) != len(set(self.node_ids)):
@@ -241,7 +253,17 @@ class FlextInfraModelsCore:
 
         @u.model_validator(mode="after")
         def require_event_payload(self) -> Self:
-            """Reject incomplete runtime events instead of reporting zero findings."""
+            """Reject incomplete runtime events instead of reporting zero findings.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If WarningMessage requires category, filename, lineno and
+                    message; or if TestReport requires nodeid, a runtest phase and
+                    outcome; or if CollectReport requires nodeid and outcome.
+
+            """
             if self.report_type == "WarningMessage" and any(
                 value is None
                 for value in (self.category, self.filename, self.lineno, self.message)
@@ -392,13 +414,13 @@ class FlextInfraModelsCore:
     class NamespaceValidateCommand(m.ContractModel):
         """CLI payload for ``flext-infra validate namespace``.
 
-        Read-only namespace rule scan (NS-000..003) for one repository root.
+        Read-only rule-catalog scan of one repository root's namespace scope.
         """
 
         repository_root: Annotated[
             Path,
             m.Field(
-                description="Repository root whose namespace contract is validated"
+                description="Repository root whose namespace contract is validated",
             ),
         ]
 

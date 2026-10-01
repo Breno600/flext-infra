@@ -1,14 +1,17 @@
-"""Hermetic Makefile-only bootstrap for stale generated dispatchers."""
+"""Hermetic Makefile-only bootstrap for stale generated dispatchers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
 from flext_core import r
-
-from .. import c, m, u
-from ._execution import FlextInfraCodegenExecutionBase
-from .conform import FlextInfraCodegenConform
+from flext_infra import c, m, u
+from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
+from flext_infra.codegen.conform import FlextInfraCodegenConform
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -21,7 +24,12 @@ class FlextInfraCodegenMakeBootstrap(FlextInfraCodegenExecutionBase[bool]):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Apply or check only this checkout's canonical Makefile projection."""
+        """Apply or check only this checkout's canonical Makefile projection.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         # Why: `init` bootstraps a fresh checkout, so it must reject the same
         # non-exact/unregistered-nested roots the Mise workspace planner
         # rejects, through the shared `u.Infra.exact_worktree_root` owner.
@@ -47,7 +55,12 @@ class FlextInfraCodegenMakeBootstrap(FlextInfraCodegenExecutionBase[bool]):
         surface: c.Infra.CodegenConformSurface,
         mode: c.Infra.CodegenConformMode,
     ) -> p.Result[bool]:
-        """Run the owned conform transaction for a checked bootstrap target."""
+        """Run the owned conform transaction for a checked bootstrap target.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         conformed = FlextInfraCodegenConform.execute_request(
             m.Infra.CodegenConformRequest(
                 root=root,
@@ -55,6 +68,9 @@ class FlextInfraCodegenMakeBootstrap(FlextInfraCodegenExecutionBase[bool]):
                 scope=c.Infra.CodegenConformScope.SELF,
                 mode=mode,
             ),
+            # The bootstrap surface publishes one file and never crosses into
+            # the docs or fresh-import families.
+            ports=None,
         )
         if conformed.failure:
             return r[bool].from_failure(conformed)

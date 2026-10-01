@@ -1,4 +1,8 @@
-"""Selector-free Make and project-tool constants."""
+"""Selector-free Make and project-tool constants.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,7 +10,7 @@ import re
 from enum import StrEnum
 from typing import TYPE_CHECKING, ClassVar
 
-from .._constants.check import FlextInfraConstantsCheck
+from flext_infra._constants.check import FlextInfraConstantsCheck
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -73,10 +77,7 @@ class FlextInfraConstantsMake:
 
     MYPY_MEMORY_LIMIT_MB_ENV: ClassVar[str] = "MYPY_MEMORY_LIMIT_MB"
     MYPY_MEMORY_LIMIT_MB_DEFAULT: ClassVar[int] = 6144
-    MYPY_TIMEOUT_SECONDS_ENV: ClassVar[str] = "MYPY_TIMEOUT_SECONDS"
-    MYPY_TIMEOUT_SECONDS_DEFAULT: ClassVar[int] = 600
     MYPY_PROFILE_OUTPUT_ENV: ClassVar[str] = "FLEXT_MYPY_PROFILE_OUTPUT"
-    MYPY_TIMEOUT_SECONDS_MAX: ClassVar[int] = 600
     MYPY_TIMEOUT_GRACE_SECONDS: ClassVar[int] = 10
     MYPY_SUPERVISOR_PS_TIMEOUT: ClassVar[int] = 1
     MYPY_SUPERVISOR_POLL_SECONDS: ClassVar[float] = 0.1

@@ -1,14 +1,19 @@
-"""Ruff and Mypy tool configuration models for the deps subpackage."""
+"""Ruff and Mypy tool configuration models for the deps subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from flext_cli import m
 
 from flext_infra import c, t
-
-from .deps_tool_config_project import FlextInfraModelsDepsToolConfigProject
+from flext_infra._models.deps_tool_config_project import (
+    FlextInfraModelsDepsToolConfigProject,
+)
 
 
 class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProject):
@@ -96,6 +101,33 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
             ),
         ]
 
+    class RuffAuthorizedException(m.ArbitraryTypesModel):
+        """One operator-authorized Ruff exception, recorded with its authority.
+
+        An exception exists only together with the operator ruling that
+        authorized it and the reason its rules cannot hold for its scope; an
+        entry missing either is refused when the config loads.
+        """
+
+        rules: Annotated[
+            t.SequenceOf[t.Infra.RuffRule],
+            m.Field(min_length=1, description="Ruff rules the exception covers."),
+        ]
+        files: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(
+                description="Glob the exception is scoped to; absent, every file.",
+            ),
+        ] = None
+        authority: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Operator ruling that authorized the exception."),
+        ]
+        reason: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Why the rules cannot hold for this scope."),
+        ]
+
     class RuffLintConfig(m.ArbitraryTypesModel):
         """Ruff lint settings loaded from YAML."""
 
@@ -129,16 +161,104 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 description="Forbidden direct APIs and their canonical alternatives.",
             ),
         ]
+        ban_relative_imports: Annotated[
+            Literal["all"],
+            m.Field(
+                alias="ban-relative-imports",
+                description="Relative imports are banned; every import is absolute.",
+            ),
+        ]
+        copyright_notice_rgx: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                alias="copyright-notice-rgx",
+                description="Regex every module's copyright notice must match.",
+            ),
+        ]
+        fix_recipes: Annotated[
+            t.MappingKV[t.Infra.RuffRule, c.Infra.LintFixRecipe],
+            m.Field(
+                alias="fix-recipes",
+                description=(
+                    "Ruff rule name -> repair make fix applies to the findings "
+                    "Ruff reports without a fix of its own."
+                ),
+            ),
+        ]
         isort: FlextInfraModelsDepsToolConfigLinters.RuffIsortConfig = m.Field(
             description="Ruff isort configuration",
         )
-        per_file_ignores: Annotated[
-            t.Infra.PerFileIgnores,
+        authorized_exceptions: Annotated[
+            tuple[FlextInfraModelsDepsToolConfigLinters.RuffAuthorizedException, ...],
             m.Field(
-                alias="per-file-ignores",
-                description="Per-file ignore mapping from glob pattern to ruff rule IDs.",
+                alias="authorized-exceptions",
+                description=(
+                    "Operator-authorized Ruff exceptions: unscoped entries render "
+                    "as ignore, scoped entries as per-file-ignores."
+                ),
             ),
         ]
+
+        @m.computed_field
+        @property
+        def ignore(self) -> t.StrSequence:
+            """Rules excepted for every file, rendered as Ruff ``ignore``."""
+            return tuple(
+                sorted({
+                    rule
+                    for entry in self.authorized_exceptions
+                    if entry.files is None
+                    for rule in entry.rules
+                }),
+            )
+
+        @m.computed_field
+        @property
+        def per_file_ignores(self) -> t.Infra.PerFileIgnores:
+            """Scoped exceptions, rendered as Ruff ``per-file-ignores``."""
+            return {
+                pattern: tuple(
+                    sorted({
+                        rule
+                        for entry in self.authorized_exceptions
+                        if entry.files == pattern
+                        for rule in entry.rules
+                    }),
+                )
+                for pattern in sorted({
+                    entry.files
+                    for entry in self.authorized_exceptions
+                    if entry.files is not None
+                })
+            }
+
+        @m.model_validator(mode="after")
+        def _reject_repeated_exception(
+            self,
+        ) -> FlextInfraModelsDepsToolConfigLinters.RuffLintConfig:
+            """Refuse a rule excepted twice for the same scope.
+
+            Returns:
+                The validated Ruff lint settings.
+
+            Raises:
+                ValueError: If two entries except one rule for the same scope.
+
+            """
+            scopes = [
+                (entry.files, rule)
+                for entry in self.authorized_exceptions
+                for rule in entry.rules
+            ]
+            repeated = sorted({
+                f"{rule} for {files or 'every file'}"
+                for files, rule in scopes
+                if scopes.count((files, rule)) > 1
+            })
+            if repeated:
+                msg = "Ruff exceptions declared twice: " + ", ".join(repeated)
+                raise ValueError(msg)
+            return self
 
     class RuffConfig(m.ArbitraryTypesModel):
         """Ruff top-level settings loaded from YAML."""
@@ -151,6 +271,13 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
             ),
         ] = m.Field(default_factory=tuple)
         fix: Annotated[bool, m.Field(description="Enable automatic ruff fixes")]
+        findings_exit_codes: Annotated[
+            t.VariadicTuple[int],
+            m.Field(
+                alias="findings-exit-codes",
+                description="Exit statuses with which Ruff reports its findings.",
+            ),
+        ]
         line_length: Annotated[
             int,
             m.Field(alias="line-length", description="Maximum line length."),
@@ -221,17 +348,25 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
             int,
             m.Field(
                 gt=0,
-                le=c.Infra.MYPY_TIMEOUT_SECONDS_MAX,
                 description=(
-                    "Project Mypy wall-time budget in seconds (SSOT; the env"
-                    " MYPY_TIMEOUT_SECONDS overrides it at the ingress"
-                    " boundary)."
+                    "Mypy wall-time budget in seconds (SSOT); a project"
+                    " overlay may only lower it."
                 ),
             ),
         ]
         plugins: Annotated[t.StrSequence, m.Field(description="Mypy plugins list.")] = (
             m.Field(default_factory=tuple)
         )
+        facade_rebind_error_codes: Annotated[
+            t.StrSequence,
+            m.Field(
+                alias="facade-rebind-error-codes",
+                description=(
+                    "Mypy error codes the canonical facade rebind raises; codegen "
+                    "disables them only in the modules written in that form."
+                ),
+            ),
+        ]
         boolean_settings: Annotated[
             t.BoolMapping,
             m.Field(

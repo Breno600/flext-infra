@@ -5,6 +5,9 @@ subject that a merged pull request leaves on its merge commit, writes the
 version only through the protocol, and identifies a release by one tag shape.
 These are external contracts (Conventional Commits, PEP 440, Git), so they are
 constants rather than configuration.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

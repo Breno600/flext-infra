@@ -1,4 +1,8 @@
-"""Physical destination leases for recoverable file publication."""
+"""Physical destination leases for recoverable file publication.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,8 +11,9 @@ from contextlib import ExitStack, contextmanager
 from pathlib import Path
 
 from flext_infra import c, m, t, u
-
-from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles as files
+from flext_infra.codegen._mise_artifacts_files import (
+    FlextInfraMiseArtifactsFiles as files,
+)
 
 
 class FlextInfraCodegenFileLeases:
@@ -17,7 +22,13 @@ class FlextInfraCodegenFileLeases:
     @staticmethod
     @contextmanager
     def mutation_lease(root: Path) -> Generator[None]:
-        """Serialize one nontransactional writer with its canonical scope owner."""
+        """Serialize one nontransactional writer with its canonical scope owner.
+
+        Raises:
+            ValueError: If mutation root changed before lease acquisition; or if
+                mutation Git ownership changed before lease acquisition.
+
+        """
         scope = u.Infra.git_mutation_scope(
             m.Infra.GitRepoRequest(repo_root=root),
         ).unwrap()
@@ -60,7 +71,13 @@ class FlextInfraCodegenFileLeases:
         *,
         held_roots: frozenset[Path] = frozenset(),
     ) -> Generator[None]:
-        """Serialize destinations not already covered by the outer root lease."""
+        """Serialize destinations not already covered by the outer root lease.
+
+        Raises:
+            ValueError: If file publication root changed before lease; or if file
+                publication root changed during lease.
+
+        """
         for participant in participants:
             physical = files.physical_directory_identity(participant.root).unwrap()
             if physical != (participant.device, participant.inode):

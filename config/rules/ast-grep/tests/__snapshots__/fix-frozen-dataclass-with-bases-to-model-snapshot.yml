@@ -1,0 +1,56 @@
+id: fix-frozen-dataclass-with-bases-to-model
+snapshots:
+  ? |
+    from flext_core import m
+
+    @dataclass(frozen=True)
+    class Point(Base):
+        x: int
+  : fixed: |
+      from flext_core import m
+
+      class Point(Base, m.FrozenModel):
+          x: int
+    labels:
+    - source: |-
+        @dataclass(frozen=True)
+        class Point(Base):
+            x: int
+      style: primary
+      start: 26
+      end: 79
+    - source: '@dataclass(frozen=True)'
+      style: secondary
+      start: 26
+      end: 49
+    - source: Point
+      style: secondary
+      start: 56
+      end: 61
+    - source: (Base)
+      style: secondary
+      start: 61
+      end: 67
+    - source: 'x: int'
+      style: secondary
+      start: 73
+      end: 79
+    - source: |-
+        class Point(Base):
+            x: int
+      style: secondary
+      start: 50
+      end: 79
+    - source: from flext_core import m
+      style: secondary
+      start: 0
+      end: 24
+    - source: |
+        from flext_core import m
+
+        @dataclass(frozen=True)
+        class Point(Base):
+            x: int
+      style: secondary
+      start: 0
+      end: 80

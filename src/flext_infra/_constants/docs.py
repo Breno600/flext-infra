@@ -1,4 +1,8 @@
-"""Centralized constants for the docs subpackage."""
+"""Centralized constants for the docs subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -55,7 +59,10 @@ class FlextInfraConstantsDocs:
         "tel",
     })
     DOCS_FRAGMENT_PREFIX: ClassVar[str] = "#"
-    PYTHON_FENCE_RUFF_EXTEND_IGNORE: ClassVar[t.StrSequence] = ("D100", "INP001")
+    PYTHON_FENCE_RUFF_EXTEND_IGNORE: ClassVar[t.StrSequence] = (
+        "undocumented-public-module",
+        "implicit-namespace-package",
+    )
     """Only module-docstring and package rules are inapplicable to a
     standalone Markdown fence. All names, behavior, types, and security
     rules remain active and require correction in the authored source."""
@@ -124,6 +131,22 @@ class FlextInfraConstantsDocs:
     # --- Markdown link/heading patterns ---
     MARKDOWN_LINK_RE: ClassVar[t.RegexPattern] = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
     """Match markdown links capturing text (group 1) and URL (group 2)."""
+    DOCS_GITHUB_BLOB_TREE_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"^https://github\.com/"
+        r"(?P<org>[^/]+)/(?P<repo>[^/]+)/"
+        r"(?P<kind>blob|tree)/"
+        r"(?P<refpath>[^/?#]+/[^?#]*)"
+        r"(?P<suffix>[?#].*)?$",
+    )
+    """Match a github.com blob/tree documentation URL by its named parts.
+
+    ``refpath`` is the whole ``<ref>/<path>`` remainder: Git refs may contain
+    ``/``, so the ref/path boundary is only decidable against the governed
+    branch a consumer knows. ``suffix`` keeps a ``?query`` or ``#fragment``
+    (for example ``#L10``) out of the filesystem path.
+    """
+    DOCS_OWNED_HEADER_LINES: ClassVar[int] = 2
+    """Lines an owned member guide carries before its body: marker + source."""
     HEADING_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^#{1,6}\s+(.+?)\s*$",
         re.MULTILINE,

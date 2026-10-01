@@ -1,4 +1,8 @@
-"""Gitignore rendering utilities for ``u.Infra``."""
+"""Gitignore rendering utilities for ``u.Infra``.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -13,13 +17,26 @@ class FlextInfraUtilitiesGitignore:
 
     @staticmethod
     def codegen_templates_root(codegen: m.Infra.CodegenConfigSpec) -> Path:
-        """Return the resolved template root of the installed flext-infra package."""
+        """Return the resolved template root of the installed flext-infra package.
+
+        Returns:
+            The resolved template root of the installed flext-infra package.
+
+        """
         package_root = Path(__file__).resolve().parent.parent
         return (package_root / "templates" / codegen.templates.root).resolve()
 
     @staticmethod
     def codegen_template_sources(codegen: m.Infra.CodegenConfigSpec) -> frozenset[Path]:
-        """Resolve only manifest-declared template inputs, never output suffixes."""
+        """Resolve only manifest-declared template inputs, never output suffixes.
+
+        Returns:
+            The resulting ``frozenset[Path]``.
+
+        Raises:
+            ValueError: If declared template source escapes its owner root.
+
+        """
         root = FlextInfraUtilitiesGitignore.codegen_templates_root(codegen)
         sources: set[Path] = set()
         for entry in codegen.templates.entries:
@@ -43,8 +60,12 @@ class FlextInfraUtilitiesGitignore:
     ) -> p.Result[str]:
         """Render the canonical ``.gitignore`` for one named project.
 
-        Pure function: takes codegen spec + profile + name + workspace + project_dir,
-        returns rendered gitignore string via u.Cli.template_render.
+        Render the declared fleet sections, then retain any external blocks
+        delegated by the project's typed config from its live ignore file.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
         """
         from flext_infra import u
 
@@ -66,11 +87,13 @@ class FlextInfraUtilitiesGitignore:
             )
         templates_root = FlextInfraUtilitiesGitignore.codegen_templates_root(codegen)
         project_patterns: t.StrSequence = ()
+        preserved_blocks: t.VariadicTuple[m.Infra.ProjectGitignorePreservedBlock] = ()
         if project_dir is not None:
             resolved = u.Infra.load_project_managed_artifacts(project_dir)
             if resolved.failure:
                 return r[str].from_failure(resolved)
             project_patterns = resolved.value.artifacts.Gitignore.patterns
+            preserved_blocks = resolved.value.artifacts.Gitignore.preserved_blocks
         context = m.Infra.GitignoreRenderSpec(
             gitignore_sections=FlextInfraUtilitiesGitignore.gitignore_sections(
                 codegen,
@@ -80,7 +103,92 @@ class FlextInfraUtilitiesGitignore:
                 project_patterns=project_patterns,
             ),
         )
-        return u.Cli.template_render(templates_root / entry.source, context)
+        rendered = u.Cli.template_render(templates_root / entry.source, context)
+        if rendered.failure or project_dir is None:
+            return rendered
+        return FlextInfraUtilitiesGitignore.preserve_project_gitignore_blocks(
+            rendered.value,
+            project_dir,
+            preserved_blocks,
+        )
+
+    @staticmethod
+    def preserve_project_gitignore_blocks(
+        rendered: str,
+        project_dir: Path,
+        blocks: t.VariadicTuple[m.Infra.ProjectGitignorePreservedBlock],
+    ) -> p.Result[str]:
+        """Compose declared external blocks without taking ownership of their lines.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
+        if not blocks:
+            return r[str].ok(rendered)
+        from flext_infra import u
+
+        destination = project_dir / c.Infra.GITIGNORE
+        snapshot = u.Cli.atomic_read_binary_file_state(destination, required=False)
+        if snapshot.failure:
+            return r[str].from_failure(snapshot)
+        content = snapshot.value.content
+        if content is None:
+            return r[str].ok(rendered)
+        current = content.decode(c.Cli.ENCODING_DEFAULT)
+        lines = current.splitlines(keepends=True)
+        rendered_lines = rendered.splitlines()
+        sections: list[tuple[int, int, str]] = []
+        for block in blocks:
+            if any(
+                marker in line
+                for marker in (block.begin, block.end)
+                for line in rendered_lines
+            ):
+                return r[str].fail(
+                    f"generated gitignore claims external block {block.begin!r}: "
+                    f"{destination}",
+                )
+            found: dict[str, list[int]] = {block.begin: [], block.end: []}
+            for index, line in enumerate(lines):
+                text = line.rstrip("\r\n")
+                for marker in (block.begin, block.end):
+                    if marker not in text:
+                        continue
+                    if text != marker:
+                        return r[str].fail(
+                            f"malformed gitignore preserved marker {marker!r}: "
+                            f"{destination}",
+                        )
+                    found[marker].append(index)
+            begins = found[block.begin]
+            ends = found[block.end]
+            if not begins and not ends:
+                continue
+            if len(begins) != 1 or len(ends) != 1 or begins[0] >= ends[0]:
+                return r[str].fail(
+                    f"ambiguous gitignore preserved block {block.begin!r}: "
+                    f"{destination}",
+                )
+            sections.append((
+                begins[0],
+                ends[0],
+                "".join(lines[begins[0] : ends[0] + 1]),
+            ))
+        sections.sort(key=lambda item: item[0])
+        if any(
+            previous[1] >= current[0]
+            for previous, current in zip(sections, sections[1:])
+        ):
+            return r[str].fail(f"overlapping gitignore preserved blocks: {destination}")
+        composed = rendered
+        for _, _, external in sections:
+            if composed and not composed.endswith("\n"):
+                composed += "\n"
+            if composed and not composed.endswith("\n\n"):
+                composed += "\n"
+            composed += external
+        return r[str].ok(composed)
 
     @staticmethod
     def gitignore_sections(
@@ -99,6 +207,10 @@ class FlextInfraUtilitiesGitignore:
         renderer of ``base/gitignore.j2`` (conform planning, the layout engine,
         ``codegen new``) consumes this projection, so the layout gate can never
         demand a pattern that ``make gen`` does not materialize.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.ScaffoldGitignoreSectionSpec]``.
+
         """
         sections = [
             section

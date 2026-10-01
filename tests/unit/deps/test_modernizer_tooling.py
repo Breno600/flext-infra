@@ -1,4 +1,8 @@
-"""Tooling phase tests for deps modernizer."""
+"""Tooling phase tests for deps modernizer.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,31 +12,14 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import FlextInfraEnsureRuffConfigPhase
-from tests import t, u
+from tests import m, t, u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from tests import m
-
 
 class TestsFlextInfraDepsModernizerTooling:
     """Declarative tests for the Ruff phase and analyzer surface policy."""
-
-    @staticmethod
-    def _project_with_local_ruff_policy(tmp_path: Path, name: str) -> Path:
-        """Create one project whose local config extends Ruff per-file ignores."""
-        project_dir = tmp_path / name
-        config_dir = project_dir / "config"
-        config_dir.mkdir(parents=True)
-        (config_dir / "cli.yaml").write_text(
-            "ManagedArtifacts:\n"
-            "  Ruff:\n"
-            "    per_file_ignores:\n"
-            "      src/flext_cli/_config.py: [N802]\n",
-            encoding="utf-8",
-        )
-        return project_dir
 
     @staticmethod
     def _applied(
@@ -40,7 +27,12 @@ class TestsFlextInfraDepsModernizerTooling:
         project_dir: Path,
         source: str = "",
     ) -> t.Pair[t.MutableJsonMapping, t.JsonMapping]:
-        """Apply the Ruff phase twice to one named payload; return payload and ruff."""
+        """Apply the Ruff phase twice to one named payload; return payload and ruff.
+
+        Returns:
+            The resulting ``t.Pair[t.MutableJsonMapping, t.JsonMapping]``.
+
+        """
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
             u.Tests.toml_payload(f'[project]\nname = "{project_dir.name}"\n{source}'),
         )
@@ -52,8 +44,8 @@ class TestsFlextInfraDepsModernizerTooling:
             u.Tests.toml_mapping(payload["tool"])["ruff"],
         )
 
+    @staticmethod
     def test_typecheck_policy_keeps_tracked_surfaces_visible(
-        self,
         tool_config_document: m.Infra.ToolConfigDocument,
     ) -> None:
         """Keep every tracked Python surface visible to all four analyzers."""
@@ -131,6 +123,10 @@ class TestsFlextInfraDepsModernizerTooling:
             eq=sorted(ruff_policy.lint.extend_safe_fixes),
         )
         tm.that(
+            list(u.Tests.toml_strings(lint["ignore"])),
+            eq=list(ruff_policy.lint.ignore),
+        )
+        tm.that(
             list(
                 u.Tests.toml_strings(
                     u.Tests.toml_mapping(lint["isort"])["known-first-party"],
@@ -149,34 +145,24 @@ class TestsFlextInfraDepsModernizerTooling:
             },
         )
 
-    @pytest.mark.parametrize("with_local_policy", [True, False])
-    def test_ruff_phase_applies_only_own_project_overrides(
-        self,
+    @staticmethod
+    def test_project_cannot_declare_its_own_ruff_exemption(
         tmp_path: Path,
-        tool_config_document: m.Infra.ToolConfigDocument,
-        *,
-        with_local_policy: bool,
     ) -> None:
-        """Project config extends Ruff policy only for its own managed artifact."""
-        project_dir = (
-            self._project_with_local_ruff_policy(tmp_path, "flext-cli")
-            if with_local_policy
-            else tmp_path / "flext-tests"
+        """Per-file exemptions live only at the tooling owner, never per project."""
+        project_dir = tmp_path / "flext-sample"
+        config_dir = project_dir / "config"
+        config_dir.mkdir(parents=True)
+        (config_dir / "sample.yaml").write_text(
+            "ManagedArtifacts:\n"
+            "  Ruff:\n"
+            "    per_file_ignores:\n"
+            "      src/flext_sample/_config.py: [N802]\n",
+            encoding="utf-8",
         )
-        project_dir.mkdir(parents=True, exist_ok=True)
 
-        _, ruff = self._applied(tool_config_document, project_dir)
-
-        ignores = u.Tests.toml_mapping(
-            u.Tests.toml_mapping(ruff["lint"])["per-file-ignores"],
-        )
-        if with_local_policy:
-            tm.that(
-                list(u.Tests.toml_strings(ignores["src/flext_cli/_config.py"])),
-                eq=["N802"],
-            )
-        else:
-            tm.that(ignores, lacks="src/flext_cli/_config.py")
+        with pytest.raises(m.ValidationError):
+            u.Infra.load_project_managed_artifacts(project_dir)
 
     def test_ruff_phase_skips_nonmember_workspace_namespaces(
         self,

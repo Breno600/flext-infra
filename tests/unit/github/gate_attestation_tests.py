@@ -1,4 +1,8 @@
-"""Behavior tests for local SSH-signed gate attestations."""
+"""Behavior tests for local SSH-signed gate attestations.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -16,7 +20,8 @@ from tests import u as test_u
 class TestsFlextInfraGithubGateAttestation:
     """Behavior tests for local SSH-signed gate attestations."""
 
-    def _signed_repository(self, root: Path) -> Path:
+    @staticmethod
+    def _signed_repository(root: Path) -> Path:
         test_u.Tests.git_bootstrap(root, ("init", "-b", c.Infra.GIT_MAIN))
         for key, value in (
             ("user.name", "Attestation Test"),
@@ -78,13 +83,15 @@ class TestsFlextInfraGithubGateAttestation:
         )
         return allowed_signers
 
-    def _head(self, root: Path) -> str:
+    @staticmethod
+    def _head(root: Path) -> str:
         oid: str = tm.ok(
             u.Infra.git_repository_head(m.Infra.GitRepoRequest(repo_root=root)),
         ).oid
         return oid
 
-    def _rev_parse(self, root: Path, commitish: str) -> str:
+    @staticmethod
+    def _rev_parse(root: Path, commitish: str) -> str:
         oid: str = tm.ok(
             u.Infra.git_rev_parse(
                 m.Infra.GitCommitishRequest(repo_root=root, commitish=commitish),
@@ -94,18 +101,24 @@ class TestsFlextInfraGithubGateAttestation:
 
     @pytest.fixture
     def signed_repository_factory(self) -> Callable[[Path], Path]:
-        """Create one SSH-signing fixture repository per test invocation."""
+        """Create one SSH-signing fixture repository per test invocation.
+
+        Returns:
+            The resulting ``Callable[[Path], Path]``.
+
+        """
         return self._signed_repository
 
-    def _request(self, root: Path) -> m.Infra.GateAttestationCreateRequest:
+    @staticmethod
+    def _request(root: Path) -> m.Infra.GateAttestationCreateRequest:
         return m.Infra.GateAttestationCreateRequest(
             workspace=str(root),
             signer="attester@example.test",
             gates=("gen", "check", "test"),
         )
 
+    @staticmethod
     def _verify(
-        self,
         root: Path,
         allowed_signers: Path,
         commit_sha: str,
@@ -125,6 +138,7 @@ class TestsFlextInfraGithubGateAttestation:
         tmp_path: Path,
         signed_repository_factory: Callable[[Path], Path],
     ) -> None:
+        """Test signed gate attestation round trip is local."""
         allowed_signers = signed_repository_factory(tmp_path)
         created = u.Infra.git_create_gate_attestation(self._request(tmp_path))
 
@@ -141,6 +155,7 @@ class TestsFlextInfraGithubGateAttestation:
         tmp_path: Path,
         signed_repository_factory: Callable[[Path], Path],
     ) -> None:
+        """Test gate attestation normalizes network remote git suffix."""
         allowed_signers = signed_repository_factory(tmp_path)
         tm.ok(u.Infra.git_create_gate_attestation(self._request(tmp_path)))
         remote = tm.ok(
@@ -167,6 +182,7 @@ class TestsFlextInfraGithubGateAttestation:
         tmp_path: Path,
         signed_repository_factory: Callable[[Path], Path],
     ) -> None:
+        """Test gate attestation verifies selected commit with equal tree."""
         allowed_signers = signed_repository_factory(tmp_path)
         tm.ok(u.Infra.git_create_gate_attestation(self._request(tmp_path)))
         selected_sha = self._head(tmp_path)
@@ -197,6 +213,7 @@ class TestsFlextInfraGithubGateAttestation:
         tmp_path: Path,
         signed_repository_factory: Callable[[Path], Path],
     ) -> None:
+        """Test gate attestation rejects incomplete coverage."""
         allowed_signers = signed_repository_factory(tmp_path)
         tm.ok(u.Infra.git_create_gate_attestation(self._request(tmp_path)))
 
@@ -215,6 +232,7 @@ class TestsFlextInfraGithubGateAttestation:
         tmp_path: Path,
         signed_repository_factory: Callable[[Path], Path],
     ) -> None:
+        """Test gate attestation rejects duplicate gate coverage."""
         _allowed_signers = signed_repository_factory(tmp_path)
         values = self._request(tmp_path).model_dump()
         values["gates"] = ("gen", "check", "test", "test")

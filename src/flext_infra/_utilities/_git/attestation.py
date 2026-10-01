@@ -1,4 +1,8 @@
-"""SSH-signed Git gate attestation owner."""
+"""SSH-signed Git gate attestation owner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -12,9 +16,8 @@ from git import GitCommandError
 
 from flext_core import r
 from flext_infra import m
-
-from ..._utilities._git.remote import FlextInfraUtilitiesGitRemote
-from ..._utilities._git.semantic_identity import (
+from flext_infra._utilities._git.remote import FlextInfraUtilitiesGitRemote
+from flext_infra._utilities._git.semantic_identity import (
     FlextInfraUtilitiesGitSemanticIdentityMixin,
 )
 
@@ -119,7 +122,12 @@ class FlextInfraUtilitiesGitAttestationMixin(
         cls,
         request: m.Infra.GateAttestationCreateRequest,
     ) -> p.Result[m.Infra.GateAttestationReport]:
-        """Create the exact signed tag for a validated HEAD predicate."""
+        """Create the exact signed tag for a validated HEAD predicate.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GateAttestationReport]``.
+
+        """
         repo_root = Path(request.workspace).expanduser().resolve()
         predicate_result = cls._attestation_predicate(request)
         if predicate_result.failure:
@@ -147,7 +155,12 @@ class FlextInfraUtilitiesGitAttestationMixin(
         cls,
         request: m.Infra.GateAttestationVerifyRequest,
     ) -> p.Result[m.Infra.GateAttestationReport]:
-        """Verify signature, signer, HEAD identity, and exact gate coverage."""
+        """Verify signature, signer, HEAD identity, and exact gate coverage.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GateAttestationReport]``.
+
+        """
         repo_root = Path(request.workspace).expanduser().resolve()
         allowed = Path(request.allowed_signers).expanduser().resolve()
         if not allowed.is_file():

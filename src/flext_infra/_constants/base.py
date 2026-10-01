@@ -9,9 +9,9 @@ from __future__ import annotations
 from enum import StrEnum, unique
 from typing import TYPE_CHECKING, ClassVar
 
-from .make import FlextInfraConstantsMake
-from .source_code import FlextInfraConstantsSourceCode
-from .validate import FlextInfraConstantsSharedInfra
+from flext_infra._constants.make import FlextInfraConstantsMake
+from flext_infra._constants.source_code import FlextInfraConstantsSourceCode
+from flext_infra._constants.validate import FlextInfraConstantsSharedInfra
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -87,8 +87,6 @@ class FlextInfraConstantsBase(
     "Mypy tool section key."
     PYRIGHT: ClassVar[str] = "pyright"
     "Pyright tool section key."
-    PYRIGHT_LANGSERVER: ClassVar[str] = "pyright-langserver"
-    "Pyright Language Server Protocol executable."
     PYTEST: ClassVar[str] = "pytest"
     "Pytest tool section key."
     RUFF: ClassVar[str] = "ruff"
@@ -238,8 +236,6 @@ class FlextInfraConstantsBase(
         "--require-hashes",
     )
     "Fail-closed isolated build of one release artifact from staged source."
-    JSON_RPC_VERSION: ClassVar[str] = "2.0"
-    "Canonical JSON-RPC protocol version used by LSP transports."
     GATE_ATTESTATION_SCHEMA: ClassVar[str] = "https://flext.sh/attestations/gates/v1"
     "Canonical schema identifier for signed gate attestations."
     UV_HTTP_CONNECT_TIMEOUT: ClassVar[str] = "UV_HTTP_CONNECT_TIMEOUT"
@@ -385,8 +381,6 @@ class FlextInfraConstantsBase(
         M = "m"
         U = "u"
 
-    SAFE_EXECUTION_BAK_SUFFIX: ClassVar[str] = ".bak"
-    "File backup suffix for copy-on-write safety."
     ENV_VAR_FORCE_COLOR: ClassVar[str] = "FORCE_COLOR"
     "Color-forcing variable: its mere presence makes ruff emit ANSI sequences."
 
@@ -399,19 +393,6 @@ class FlextInfraConstantsBase(
     ENV_DEFAULT_STANDALONE: ClassVar[bool] = False
     ENV_DEFAULT_USE_HTTPS: ClassVar[bool] = False
     ENV_DEFAULT_GITHUB_ACTIONS: ClassVar[bool] = False
-
-    @unique
-    class ExecutionMode(StrEnum):
-        """Execution mode for commands that modify files."""
-
-        DRY_RUN = "dry-run"
-        "Preview changes without writing."
-        CHECK_ONLY = "check-only"
-        "Detect violations without fixing."
-        APPLY_SAFE = "apply-safe"
-        "Apply with backup, validate, rollback on failure."
-        APPLY_FORCE = "apply-force"
-        "Apply without post-validation."
 
 
 __all__: list[str] = ["FlextInfraConstantsBase"]

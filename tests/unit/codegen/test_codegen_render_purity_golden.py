@@ -1,4 +1,8 @@
-"""Tri-environment golden contract for pure generation inputs."""
+"""Tri-environment golden contract for pure generation inputs.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -15,8 +19,14 @@ from tests import c, u
 class TestsFlextInfraCodegenRenderPurityGolden:
     """Render remains f(SSOT, templates, PINS) across three host shapes."""
 
-    def _project(self, root: Path) -> Path:
-        """Materialize one governed fixture repository."""
+    @staticmethod
+    def _project(root: Path) -> Path:
+        """Materialize one governed fixture repository.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         project = u.Tests.mk_project(
             root,
             "render-purity",
@@ -30,7 +40,8 @@ class TestsFlextInfraCodegenRenderPurityGolden:
         )
         return project
 
-    def _committed_overlay(self, project: Path, body: str) -> None:
+    @staticmethod
+    def _committed_overlay(project: Path, body: str) -> None:
         """Commit one project-owned ManagedArtifacts catalog."""
         config_dir = project / c.CONFIG_DIR_NAME
         config_dir.mkdir(exist_ok=True)
@@ -85,40 +96,32 @@ class TestsFlextInfraCodegenRenderPurityGolden:
         for key, value in expected.items():
             tm.that(settings[key], eq=value, msg=f"{environment}: {key}")
 
-    def test_ruff_catalog_reads_committed_head_not_worktree_wip(
+    def test_catalog_reads_committed_head_not_worktree_wip(
         self,
         tmp_path: Path,
     ) -> None:
-        """The committed catalog is the sole project Ruff render authority."""
+        """The committed catalog is the sole project managed-artifact authority."""
         project = self._project(tmp_path / "catalog")
         self._committed_overlay(
             project,
-            "ManagedArtifacts:\n"
-            "  Ruff:\n"
-            "    per_file_ignores:\n"
-            "      tests/**: [S101]\n",
+            "ManagedArtifacts:\n  Gitignore:\n    patterns: [committed-cache/]\n",
         )
         (project / c.CONFIG_DIR_NAME / "wip-tooling.yaml").write_text(
-            "ManagedArtifacts:\n"
-            "  Ruff:\n"
-            "    per_file_ignores:\n"
-            "      src/**: [SLF001]\n",
+            "ManagedArtifacts:\n  Gitignore:\n    patterns: [wip-cache/]\n",
             encoding="utf-8",
         )
 
         committed = tm.ok(u.Infra.load_committed_project_managed_artifacts(project))
         working = tm.ok(u.Infra.load_project_managed_artifacts(project))
 
+        tm.that(committed.artifacts.Gitignore.patterns, eq=("committed-cache/",))
         tm.that(
-            dict(committed.artifacts.Ruff.per_file_ignores),
-            eq={"tests/**": ("S101",)},
-        )
-        tm.that(
-            dict(working.artifacts.Ruff.per_file_ignores),
-            eq={"src/**": ("SLF001",), "tests/**": ("S101",)},
+            working.artifacts.Gitignore.patterns,
+            eq=("committed-cache/", "wip-cache/"),
         )
 
-    def test_fixture_scaffold_year_is_the_production_ssot(self) -> None:
+    @staticmethod
+    def test_fixture_scaffold_year_is_the_production_ssot() -> None:
         """Fixture identity uses the same year declaration production renders."""
         year = config.Infra.codegen.scaffold.project.copyright_year
         spec: m.Infra.ProjectSpec = u.Tests.project_spec("year-owner")

@@ -1,4 +1,8 @@
-"""Workspace/parser helper tests for deps modernizer."""
+"""Workspace/parser helper tests for deps modernizer.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -39,7 +43,9 @@ class TestsFlextInfraDepsModernizerWorkspace:
         tm.that(modernizer.run(), eq=2)
         tm.that(external_pyproject.read_text(encoding="utf-8"), eq=original)
 
-    def test_taplo_formats_toml_through_public_utility(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_taplo_formats_toml_through_public_utility(tmp_path: Path) -> None:
+        """Test taplo formats toml through public utility."""
         u.Tests.write_mise_lock(
             tmp_path,
             "taplo",
@@ -78,10 +84,11 @@ class TestsFlextInfraDepsModernizerWorkspace:
         tm.that(formatted, eq='name = "demo"\n')
         tm.that(reformatted, eq=formatted)
 
+    @staticmethod
     def test_taplo_uses_nearest_existing_root_for_scaffold_path(
-        self,
         tmp_path: Path,
     ) -> None:
+        """Test taplo uses nearest existing root for scaffold path."""
         u.Tests.write_mise_lock(
             tmp_path,
             "taplo",
@@ -105,8 +112,8 @@ class TestsFlextInfraDepsModernizerWorkspace:
         # a formatted TOML document ends with the canonical trailing newline.
         tm.that(formatted, eq='name = "demo"\n')
 
+    @staticmethod
     def test_taplo_authenticates_the_locked_pin_not_the_selector(
-        self,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -143,7 +150,8 @@ class TestsFlextInfraDepsModernizerWorkspace:
         error = tm.fail(formatted)
         tm.that(error, has=["mise.lock pin", "expected=0.9.9", "observed=taplo 0.10.0"])
 
-    def test_taplo_fails_loud_without_a_committed_lock(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_taplo_fails_loud_without_a_committed_lock(tmp_path: Path) -> None:
         """No mise.lock above the workspace means no offline generation."""
         formatted = infra_u.Infra.format_toml_source(
             'name="demo"\n',
@@ -187,15 +195,16 @@ class TestsFlextInfraDepsModernizerWorkspace:
         else:
             tm.that(log_entries, empty=True)
 
-    def test_repository_root_returns_explicit_path(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_repository_root_returns_explicit_path(tmp_path: Path) -> None:
         """Verify repository root returns explicit path."""
         explicit = tmp_path / "explicit"
         explicit.mkdir()
         result = u.Infra.resolve_repository_root_or_cwd(explicit)
         tm.that(str(result), eq=str(explicit.resolve()))
 
+    @staticmethod
     def test_repository_root_fallback_returns_non_empty_path(
-        self,
         tmp_path: Path,
     ) -> None:
         """Verify repository root fallback returns non empty path."""
@@ -283,8 +292,8 @@ class TestsFlextInfraDepsModernizerWorkspace:
         tm.that(u.Cli.json_as_sequence(groups.get(c.Infra.DEV)), eq=["pytest"])
         tm.that(list(payload)[: len(expected_order)], eq=list(expected_order))
 
+    @staticmethod
     def test_main_applies_only_selected_projects(
-        self,
         modernizer_workspace_with_projects: Path,
     ) -> None:
         """Verify main applies only selected projects."""
@@ -313,8 +322,8 @@ class TestsFlextInfraDepsModernizerWorkspace:
         )
         tm.that(ignored_pyproject.read_text(encoding="utf-8"), has='name = "ignored"')
 
+    @staticmethod
     def test_modernizer_selects_configured_member_by_declared_name(
-        self,
         tmp_path: Path,
     ) -> None:
         """Resolve a configured member through its canonical project name."""
@@ -352,8 +361,8 @@ class TestsFlextInfraDepsModernizerWorkspace:
 
         tm.that(modernizer.run(), eq=0)
 
+    @staticmethod
     def test_modernizer_accepts_workspace_only_root_without_constraint_rewrite(
-        self,
         tmp_path: Path,
     ) -> None:
         """Do not require root project metadata for member-only modernization."""
@@ -386,8 +395,8 @@ class TestsFlextInfraDepsModernizerWorkspace:
 
         tm.that(modernizer.run(), eq=0)
 
+    @staticmethod
     def test_modernizer_rejects_ambiguous_configured_member_alias(
-        self,
         tmp_path: Path,
     ) -> None:
         """Fail loud when one canonical project name selects multiple members."""

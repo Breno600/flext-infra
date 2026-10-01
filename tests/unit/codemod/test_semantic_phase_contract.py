@@ -1,4 +1,8 @@
-"""Real-source regression evidence for staged semantic cutovers."""
+"""Real-source regression evidence for staged semantic cutovers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -17,15 +21,16 @@ if TYPE_CHECKING:
 class TestsFlextInfraSemanticPhaseContract:
     """Require planned and published sources to reach the same fixed point."""
 
+    @staticmethod
     def test_annotations_and_nesting_complete_in_one_atomic_cutover(
-        self,
         tmp_path: Path,
     ) -> None:
+        """Test annotations and nesting complete in one atomic cutover."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         # Publication runs through the codegen transaction, which coordinates
         # only inside an exact Git worktree root, exactly as in production.
         u.Tests.initialize_git_repo(root)
-        owner = f"{u.derive_class_stem(root.name)}{c.Infra.FAMILY_SUFFIXES['c']}"
+        owner = f"{u.derive_class_stem(root.name)}{u.Infra.facade_family_declared_by(c.Infra.CONSTANTS_PY).suffix}"
         path = package / "constants.py"
         u.Tests.write_lazy_init_namespace_module(
             path,
@@ -69,12 +74,13 @@ class TestsFlextInfraSemanticPhaseContract:
             tm.ok(FlextInfraCodemodSemanticApply.apply(root, report, rope))
         tm.that(path.read_text(encoding="utf-8"), eq=published)
 
+    @staticmethod
     def test_nesting_replans_proposed_sources_without_publishing(
-        self,
         tmp_path: Path,
     ) -> None:
+        """Test nesting replans proposed sources without publishing."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
-        owner = f"{u.derive_class_stem(root.name)}{c.Infra.FAMILY_SUFFIXES['c']}"
+        owner = f"{u.derive_class_stem(root.name)}{u.Infra.facade_family_declared_by(c.Infra.CONSTANTS_PY).suffix}"
         path = package / "constants.py"
         u.Tests.write_lazy_init_namespace_module(
             path,
@@ -105,8 +111,8 @@ class TestsFlextInfraSemanticPhaseContract:
         tm.that(remaining.value, empty=True)
         tm.that(path.read_text(encoding="utf-8"), eq=original)
 
+    @staticmethod
     def test_nesting_reports_every_module_without_an_owner_as_a_failure(
-        self,
         tmp_path: Path,
     ) -> None:
         """A module without its declared owner fails the plan instead of raising."""

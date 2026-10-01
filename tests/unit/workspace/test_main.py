@@ -1,4 +1,8 @@
-"""Public workspace CLI and facade tests."""
+"""Public workspace CLI and facade tests.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -50,6 +54,7 @@ class TestsFlextInfraWorkspaceMain:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test unattached child does not infer workspace from ancestor."""
         repository_root = tmp_path / "workspace"
         self._write_workspace(repository_root)
         member_root = repository_root / "demo-a"
@@ -66,6 +71,7 @@ class TestsFlextInfraWorkspaceMain:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test workspace main detect accepts explicit repository root."""
         repository_root = tmp_path / "workspace"
         self._write_workspace(repository_root)
         member_root = repository_root / "demo-a"
@@ -89,4 +95,5 @@ class TestsFlextInfraWorkspaceMain:
         tm.that(exit_code, eq=0)
 
     def test_workspace_main_without_command_returns_failure(self) -> None:
+        """Test workspace main without command returns failure."""
         tm.that(self._workspace_main([]), eq=1)

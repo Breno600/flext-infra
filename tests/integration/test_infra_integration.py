@@ -30,7 +30,7 @@ class TestsFlextInfraIntegrationInfraIntegration:
 
     @pytest.mark.integration
     def test_markdown_fix_reports_residual_after_repair(self, tmp_path: Path) -> None:
-        """A fixable finding is repaired while an unfixable one stays red."""
+        """A fixable finding is repaired; an unfixable one stays reported for check."""
         project_dir = tu.Tests.mk_project(tmp_path, "markdown-fmt-contract")
         document = project_dir / "README.md"
         document.write_text("not a heading   \n", encoding="utf-8")
@@ -43,7 +43,9 @@ class TestsFlextInfraIntegrationInfraIntegration:
 
         execution = FlextInfraMarkdownGate(tmp_path).fix(project_dir, context)
 
-        tm.that(execution.result.passed, eq=False)
+        # rumdl completed under its declared findings status: the repair
+        # verb does not break, and the residual finding stays reported.
+        tm.that(execution.result.passed, eq=True)
         tm.that(document.read_text(encoding="utf-8"), eq="not a heading\n")
         tm.that(execution.issues[0].code, eq="MD041")
 

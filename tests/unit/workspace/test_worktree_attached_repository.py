@@ -1,4 +1,8 @@
-"""Attached-repository worktree topology behavior."""
+"""Attached-repository worktree topology behavior.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -17,6 +21,7 @@ class TestsFlextInfraAttachedRepositoryWorktree(u.Tests.WorktreeFixture):
         self,
         tmp_path: Path,
     ) -> None:
+        """Test attached submodule uses one primary local container."""
         child_source = tmp_path / "child-source"
         child_source.mkdir()
         (child_source / "README.md").write_text("child\n", encoding="utf-8")

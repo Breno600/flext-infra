@@ -1,4 +1,8 @@
-"""Transport ast-grep JSON replacements to the existing guarded publisher."""
+"""Transport ast-grep JSON replacements to the existing guarded publisher.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,14 +23,21 @@ class FlextInfraModReplacements:
     """Preserve exact engine rewrites without granting it filesystem effects."""
 
     @staticmethod
-    def require_authored(report: m.Infra.ModScanReport) -> p.Result[bool]:
-        """Retain generator findings as blocking evidence, never writable targets."""
-        generated = tuple(
-            item for item in report.entries if item.source_owner == "generator"
-        )
+    def require_authored(
+        entries: t.SequenceOf[m.Infra.ModScanFinding],
+    ) -> p.Result[bool]:
+        """Retain generator findings as blocking evidence, never writable targets.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        generated = tuple(item for item in entries if item.source_owner == "generator")
         if generated:
+            # One entry per file and rule: the per-finding detail is in the
+            # mod findings report, the verdict names the generator owners.
             details = ", ".join(
-                f"generator:{item.file}:{item.rule_id}" for item in generated
+                sorted({f"generator:{item.file}:{item.rule_id}" for item in generated}),
             )
             return r[bool].fail(
                 f"generated findings require canonical generator repair: {details}",
@@ -35,8 +46,15 @@ class FlextInfraModReplacements:
 
     @classmethod
     def publish(cls, root: Path, report: m.Infra.ModScanReport) -> p.Result[bool]:
-        """Validate byte coordinates and publish complete CAS-owned file plans."""
-        allowed = cls.require_authored(report)
+        """Validate byte coordinates and publish complete CAS-owned file plans.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        allowed = cls.require_authored(
+            tuple(finding for finding in report.entries if finding.actionable),
+        )
         if allowed.failure:
             return allowed
         grouped: MutableMapping[Path, list[m.Infra.ModScanFinding]] = {}

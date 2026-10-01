@@ -1,4 +1,8 @@
-"""Public fix-workflow tests for docs services."""
+"""Public fix-workflow tests for docs services.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -16,10 +20,11 @@ if TYPE_CHECKING:
 class TestsFlextInfraDocsFixer:
     """Public fix-workflow tests for docs services."""
 
+    @staticmethod
     def test_fix_returns_reports_for_root_and_selected_project(
-        self,
         tmp_path: Path,
     ) -> None:
+        """Test fix returns reports for root and selected project."""
         workspace = u.Tests.create_docs_workspace(
             tmp_path,
             project_names=("flext-a", "flext-b"),
@@ -31,10 +36,11 @@ class TestsFlextInfraDocsFixer:
         tm.ok(result)
         tm.that([report.scope for report in result.value], eq=["root", "flext-a"])
 
+    @staticmethod
     def test_fix_apply_updates_docs_file_and_writes_reports(
-        self,
         tmp_path: Path,
     ) -> None:
+        """Test fix apply updates docs file and writes reports."""
         workspace = u.Tests.create_docs_workspace(tmp_path, include_fixable_link=True)
 
         result = FlextInfraDocFixer().fix(workspace, apply=True)
@@ -43,7 +49,8 @@ class TestsFlextInfraDocsFixer:
         tm.that((workspace / "docs/README.md").read_text(), has="guides/setup.md")
         tm.that((workspace / ".reports/docs/fix-report.md").exists(), eq=True)
 
-    def test_fix_check_apply_check_converges(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_fix_check_apply_check_converges(tmp_path: Path) -> None:
         """Fail on unapplied drift, apply it, then pass at the fixed point."""
         workspace = u.Tests.create_docs_workspace(tmp_path, include_fixable_link=True)
         fixer = FlextInfraDocFixer()
@@ -65,14 +72,17 @@ class TestsFlextInfraDocsFixer:
         tm.that(fixed_point.value[0].passed, eq=True)
         tm.that(fixed_point.value[0].changed_files, eq=0)
 
-    def test_fix_item_model_tracks_link_and_toc_counts(self) -> None:
+    @staticmethod
+    def test_fix_item_model_tracks_link_and_toc_counts() -> None:
+        """Test fix item model tracks link and toc counts."""
         item = m.Infra.DocsPhaseItemModel(phase="fix", file="README.md", links=2, toc=1)
 
         tm.that(item.file, eq="README.md")
         tm.that(item.links, eq=2)
         tm.that(item.toc, eq=1)
 
-    def test_fix_repairs_closing_fence_welded_to_code(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_fix_repairs_closing_fence_welded_to_code(tmp_path: Path) -> None:
         """A prior malformed projection converges without per-file repair."""
         workspace = u.Tests.create_docs_workspace(tmp_path)
         document = workspace / "docs/welded.md"
@@ -86,8 +96,8 @@ class TestsFlextInfraDocsFixer:
         tm.ok(result)
         tm.that(document.read_text(encoding="utf-8"), has="value = 1\n```\n\n## Next")
 
+    @staticmethod
     def test_fix_preserves_indented_closes_and_four_backtick_fences(
-        self,
         tmp_path: Path,
     ) -> None:
         """Only a welded code line is repaired, never a legitimate fence.
@@ -123,8 +133,8 @@ class TestsFlextInfraDocsFixer:
         tm.that("````\n" in content, eq=True)
         tm.that("   \n```\n" in content, eq=False)
 
+    @staticmethod
     def test_fix_rewrites_bare_notest_fences_for_the_mkdocs_build(
-        self,
         tmp_path: Path,
     ) -> None:
         """A bare ``notest`` qualifier is rewritten to the attr_list form.

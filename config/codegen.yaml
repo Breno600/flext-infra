@@ -40,8 +40,9 @@ Infra:
       uv_environments: ["sys_platform == 'linux'", "sys_platform == 'darwin'"]
       # Global compatibility exceptions become [tool.uv] constraint-dependencies
       # in every project, including projects using the dependency transitively.
-      # Declarations stay latest: an upstream's own bound is resolved by uv from
-      # that upstream's metadata, never restated here as a fleet cap.
+      # Keep reasons here; an empty list removes constraints from all projections.
+      # Dependency compatibility is resolved from the declared project graph;
+      # upstream packages own any bounds their public contracts require.
       uv_constraint_dependencies: []
       # Moving selectors consumed by generated .mise.toml and CI. Only
       # `make upg` resolves them to the newest release and writes mise.lock;
@@ -86,16 +87,39 @@ Infra:
         - macos-x64
         - macos-arm64
         - windows-x64
+      # The Mise release `make upg` writes to every project's mise.version and
+      # bakes into bin/mise and bin/mise.cmd. Held at 2026.9.16: under the
+      # dependency cooldown `latest` resolves 2026.9.17, whose artifact fails
+      # the receipt check ("Mise receipt returned invalid version") and stops
+      # setup fleet-wide. Move to latest once the newest release outside the
+      # cooldown passes that check.
+      mise_selector: github:jdx/mise
+      mise_version: "2026.9.16"
+      # The network bootstrap (make setup, make upg) selects its GitHub
+      # credential once, before any effect: the caller's GITHUB_TOKEN when it
+      # is set (ai-hub propagates it through .envrc.ai-hub); otherwise the first
+      # command below whose executable is on PATH. A selected command that fails
+      # or prints nothing stops the verb; it never degrades to anonymous. With
+      # no source present, mise reaches GitHub anonymously.
+      github_credential_commands:
+        - [gh, auth, token]
       # Projection: .mise.toml [tools] keys. Override the selector here.
       qlty_selector: github:qltysh/qlty
       qlty_version: latest
       node_version: latest
       jscpd_selector: github:kucherenko/jscpd
-      jscpd_version: "5.4.0"
+      # Held at 5.3.2 (#1315): 5.3.3 ships no macos-arm64 asset and 5.4.0
+      # ships none for the fleet's six platforms, so mise cannot lock either
+      # and make upg fails fleet-wide. Move to latest once a newer release
+      # publishes assets for all six declared platforms.
+      jscpd_version: "5.3.2"
       # Prettier is the markdown formatter (markdown-format gate): provisioned
       # through npm so the fleet binary version is owned by this SSOT alone.
       prettier_selector: npm:prettier
-      prettier_version: latest
+      # Pinned to 3.5.x: prettier 3.7+ changed markdown formatting (list-continuation
+      # printer, proseWrap) which the markdown-format gate has not been revalidated
+      # against. Only float through `make upg` once the docs gate is verified.
+      prettier_version: 3.5.3
       waza_selector: github:microsoft/waza
       waza_version: latest
       # microsoft/waza also publishes azd-extension tags, and GitHub marks
@@ -327,8 +351,11 @@ Infra:
       # Every ruff invocation uses --preview. Never weaken ruff to keep a
       # file; change the code. [tool.ruff] preview: true in tooling.yaml is
       # the same policy projected into pyproject.
-      # Repair and formatting apply fixes and retain a failing exit status
-      # for remaining findings. Reporting never normalizes a red gate.
+      # Repair and formatting never break on findings (operator rulings
+      # 2026-10-01, lint automation): a tool run ends clean, with findings
+      # under the findings status its tooling config declares, or in error.
+      # Findings stay reported and are enforced by make check; only an error
+      # breaks the verb, with its cause.
       # lint_fix is the lint gate's apply mode and the ONLY lint repair: make
       # fmt runs format only (single-pass verb law), so no lint_apply exists.
       # make fix never deletes information: lint_fix applies
@@ -402,6 +429,18 @@ Infra:
         # make fmt / make fix only.
         # tooling.tools.pytest.ci-excluded-markers defines the slow-test
         # exclusion for CI and pre-commit, not local/pre-push runs.
+        # CI=N owns the complementary local check gates; absent uses testmon
+        # for incremental developer runs.
+        #
+        # The set is the SLOW whole-program type checkers: those are the gates
+        # worth deferring
+        # off the fast CI leg, and they are what CI=N exists to own. `lint` is
+        # not here -- ruff is cheap, so making CI skip it buys nothing and
+        # leaves the fast leg without a linter.
+        # mypy runs in the CI context so its red content cannot merge unseen;
+        # the project-owned timeout budget (tools.mypy.timeout_seconds) makes
+        # it runnable on the runner.
+        # pyrefly stays local-only (fast; pyright already covers CI).
       # Git-hook stages are disabled by default;
       # the workflow below still declares stage membership so re-enabling is a
       # one-key change, case by case. CI owns read-only setup, generation drift,
@@ -417,11 +456,10 @@ Infra:
         - {verb: fmt, contexts: [local, pre_commit]}
         - {verb: fix, contexts: [local, pre_commit]}
         - {verb: check, contexts: [local, ci, pre_push, pre_commit]}
-      # CI runs setup, the gen fixed point, the
-      # deps audit and check only; make test runs locally and on pre-push,
-      # never in CI. The CI test-only steps (testmon cache, test reports)
-      # render only while a test row declares the ci context.
-        - {verb: test, contexts: [local, pre_push]}
+      # CI also runs the incremental suite with the persistent testmon cache.
+      # The full suite remains a separate local verb that first runs this
+      # incremental phase and then exercises the complete inventory.
+        - {verb: test, contexts: [local, ci, pre_push]}
       # Artifacts `make clean` removes. Read by Makefile.j2 for the cache
       # sweep and the root-level directory/file lists.
       clean:
@@ -464,6 +502,14 @@ Infra:
           flext-infra: [flext_infra]
         mutable_actions: [fix, fmt]
         reports_dir: .reports/docs
+        api_modules:
+          flext-infra: [flext_infra]
+        overview_preview_limits:
+          aliases: 11
+          public_symbols: 10
+          facades: 8
+          module_exports: 8
+          keywords: 8
         cross_project_relative_link_pattern: '^(?:\.\./)+flext-[a-z0-9-]+(?:/|$)'
         stale_github_organizations:
           - organization
@@ -542,6 +588,10 @@ Infra:
           description: Materialize the declared package initializer graph.
         - name: mod
           description: Apply the declared structural codemods; committed rule-test snapshots are verified, never rewritten.
+        - name: mod-text
+          description: Apply the declared Sed text rules with exact receipts and guarded publication.
+        - name: mod-text-candidate
+          description: Apply declared Sed text rules to the configured candidate workspace.
         # The explicit snapshot regeneration: `mod` only verifies
         # snapshots, so a changed rule output lands as a reviewed commit.
         - name: mod-snapshots
@@ -629,7 +679,6 @@ Infra:
       - {name: target}
       - {name: .pyrefly_cache, vscode_exclude: false, watch_exclude: false, source_scan_ignore: true}
       - {name: .tox, vscode_exclude: false, watch_exclude: false, source_scan_ignore: true}
-      - {name: conftest.py, is_dir: false, gitignore: false, vscode_exclude: false, watch_exclude: false, source_scan_ignore: true}
       - {name: dist-packages, gitignore: false, vscode_exclude: false, watch_exclude: false, source_scan_ignore: true}
       - {name: legado, gitignore: false, vscode_exclude: false, watch_exclude: false, source_scan_ignore: true}
       - {name: site-packages, gitignore: false, vscode_exclude: false, watch_exclude: false, source_scan_ignore: true}
@@ -991,6 +1040,11 @@ Infra:
       - path: .envrc.local
         owner: codegen
         policy: merge
+      # The fleet template owns its rendered sections. A project's
+      # ManagedArtifacts.Gitignore.preserved_blocks declares exact delimiter
+      # pairs for sections written by another generator; codegen retains those
+      # live bytes and rejects incomplete or duplicate delimiters. No external
+      # destination list belongs in this fleet manifest.
       - path: .gitignore
         owner: codegen
         policy: merge
@@ -1042,6 +1096,9 @@ Infra:
         policy: full
       - path: Makefile
         owner: make
+        policy: full
+      - path: bin/mise-lock-transaction.py
+        owner: codegen
         policy: full
     # CUSTOM vs MANAGED (humans read comments; this block is the owner):
     #   conflict_sections = MANAGED tables (template wins on make gen)
@@ -1199,7 +1256,7 @@ Infra:
               - pydantic>=2.13.5
               - pydantic-settings>=2.15.0
               - pyyaml>=6.0.3
-              - structlog>=26.1.0
+              - structlog>=25.5.0
               - typing-extensions>=4.16.0
             codegen: [flext-infra]
           - upstream: flext_cli
@@ -1220,7 +1277,7 @@ Infra:
             runtime: [flext-api, bcrypt>=5.0.0, PyJWT>=2.15.1]
           - upstream: flext_core
             project: flext-cli
-            runtime: [click>=8.5.0, typer>=0.27.2, jinja2>=3.1.6, jsonschema>=4.26.0, tomlkit>=0.15.1, ruamel.yaml>=0.19.1, defusedxml>=0.7.1, openpyxl>=3.1.5, python-docx>=1.2.0, python-pptx>=1.0.2]
+            runtime: [click>=8.3.3, typer>=0.27.2, jinja2>=3.1.6, jsonschema>=4.26.0, tomlkit>=0.15.1, ruamel.yaml>=0.19.1, defusedxml>=0.7.1, openpyxl>=3.1.5, python-docx>=1.2.0, python-pptx>=1.0.2]
           - upstream: flext_cli
             project: flext-infra
             runtime: [flext-cli, defusedxml>=0.7.1, GitPython>=3.2.0, jinja2>=3.1.6, libcst>=1.9.0, Markdown>=3.11, "rope @ git+https://github.com/marlon-costa-dc/rope.git@datacosmos", pytest>=9.1.1, mkdocs>=1.6.1]
@@ -1241,7 +1298,7 @@ Infra:
             runtime: [flext-cli, flext-web, flext-api, fastmcp>=4.0.10, requests>=2.34.2, aiohttp>=3.14.3, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1]
           - upstream: flext_cli
             project: flext-web
-            runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.54.0, fastapi>=0.142.1, starlette>=1.7.0, werkzeug>=3.1.9]
+            runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.54.0, fastapi>=0.142.2, starlette>=1.7.0, werkzeug>=3.1.9]
           - upstream: flext_cli
             project: flext-db-oracle
             runtime: [flext-cli, oracledb>=26.0.1, sqlalchemy>=2.0.54]
@@ -1444,6 +1501,7 @@ Infra:
         # `make gen` owns their content.
             - "!bin/mise"
             - "!bin/mise.cmd"
+            - "!bin/mise-lock-transaction.py"
         - name: "Documentation"
           profiles: [workspace]
           patterns:
@@ -1844,6 +1902,7 @@ Infra:
             - "/bin/*"
             - "!/bin/mise"
             - "!/bin/mise.cmd"
+            - "!/bin/mise-lock-transaction.py"
             - ".tools/"
             - "__pycache__/"
             - "base.mk"
@@ -1855,42 +1914,34 @@ Infra:
           destination: .github/ci-template/ci.yml
           profiles: [workspace]
           delegate: render
-          overwrite: false
         - source: base/.github/copilot-instructions.md.j2
           destination: .github/copilot-instructions.md
           profiles: [workspace]
           delegate: render
-          overwrite: false
         - source: base/.github/dependabot.yml.j2
           destination: .github/dependabot.yml
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/.github/prompts/flext-aggressive-scale-refactor.prompt.md.j2
           destination: .github/prompts/flext-aggressive-scale-refactor.prompt.md
           profiles: [workspace]
           delegate: render
-          overwrite: false
         - source: base/.github/prompts/flext-strict-jsonvalue-session-continuation.prompt.md.j2
           destination: .github/prompts/flext-strict-jsonvalue-session-continuation.prompt.md
           profiles: [workspace]
           delegate: render
-          overwrite: false
         - source: base/.github/scripts/check-beads-policy.sh.j2
           destination: .github/scripts/check-beads-policy.sh
           profiles: [workspace]
           delegate: render
-          overwrite: false
         - source: base/.github/scripts/check-cqrs-compliance.sh.j2
           destination: .github/scripts/check-cqrs-compliance.sh
           profiles: [workspace]
           delegate: render
-          overwrite: false
         - source: base/.github/scripts/validate-git-hook.sh.j2
           destination: .github/scripts/validate-git-hook.sh
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
       # Multi-environment CI base: reusable ci-matrix workflow + per-distro
       # clean-machine images validating bootstrap and make verbs everywhere.
         - source: base/.github/workflows/ci-matrix.yml.j2
@@ -1900,22 +1951,18 @@ Infra:
         # to the integration line.
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/.github/workflows/ci.yml.j2
           destination: .github/workflows/ci.yml
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/.pre-commit-config.yaml.j2
           destination: .pre-commit-config.yaml
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/LICENSE.j2
           destination: LICENSE
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
       # The release build phase snapshots the
       # Gitleaks policy before the first artifact build, and renders the
       # hash-pinned build backend for `uv build --require-hashes` directly
@@ -1924,64 +1971,52 @@ Infra:
           destination: config/gitleaks-release.toml
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: true
       # Repository-owned audit policy is validated from workspace.yaml,
       # rendered per project, and parsed into DocsAuditPolicySpec by the auditor.
         - source: base/docs/docs_config.json.j2
           destination: docs/docs_config.json
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: true
         - source: base/gitignore.j2
           destination: .gitignore
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/python-version.j2
           destination: .python-version
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/qlty.toml.j2
           destination: .qlty/qlty.toml
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: true
         - source: base/sonarcloud.properties.j2
           destination: .sonarcloud.properties
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: true
         - source: base/env.example.j2
           destination: .env.example
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/.mise.toml.j2
           destination: .mise.toml
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/markdownlint.json.j2
           destination: .markdownlint.json
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: true
         - source: base/markdownlintignore.j2
           destination: .markdownlintignore
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: true
         - source: base/prettierrc.j2
           destination: .prettierrc
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: true
         - source: base/prettierignore.j2
           destination: .prettierignore
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: true
       # Ledger routing config: rendered only for repositories that own a
       # ledger. The workspace root owns a shared ledger when a gitlink's
       # Every repository renders its own `.beads` configuration; the shared
@@ -1991,88 +2026,75 @@ Infra:
           requires_beads: true
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
       # Static repository-local storage, database, and endpoint projection.
         - source: base/beads-metadata.json.j2
           destination: .beads/metadata.json
           requires_beads: true
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/.envrc.j2
           destination: .envrc
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/.github/workflows/docs.yml.j2
           destination: .github/workflows/docs.yml
-        # O workflow chama `uv sync`; e esta projecao que instala o uv antes.
-        # Restringir a workspace deixava os membros com uma copia stale
-        # sem o passo Install uv, e o job morria em "uv: command not found".
+        # The workflow runs `uv sync`, and this projection installs uv first.
+        # Restricting it to the workspace left members with a stale copy
+        # without the Install uv step, and the job died on "uv: command not found".
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: true
       # Release automation is opt-in per distribution. Repositories without an
       # explicit declaration have this generated workflow retired by conform.
         - source: base/.github/workflows/release.yml.j2
           destination: .github/workflows/release.yml
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: true
           requires_release_protocol: true
         - source: base/tests/fixtures/ci/docker/ubuntu.Dockerfile.j2
           destination: tests/fixtures/ci/docker/ubuntu.Dockerfile
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/tests/fixtures/ci/docker/debian.Dockerfile.j2
           destination: tests/fixtures/ci/docker/debian.Dockerfile
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/tests/fixtures/ci/docker/fedora.Dockerfile.j2
           destination: tests/fixtures/ci/docker/fedora.Dockerfile
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/tests/fixtures/ci/docker/alpine.Dockerfile.j2
           destination: tests/fixtures/ci/docker/alpine.Dockerfile
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/tests/fixtures/ci/docker/arch.Dockerfile.j2
           destination: tests/fixtures/ci/docker/arch.Dockerfile
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
+        - source: base/bin/mise-lock-transaction.py.j2
+          destination: bin/mise-lock-transaction.py
+          profiles: [workspace, standalone]
+          delegate: render
         - source: base/Makefile.j2
           destination: Makefile
         # The generic conform engine is the single Makefile owner for every
-        # profile; every profile renders the same local verb bodies.
-        # Fully generated (overwrite: true): a project never owns a verb.
-        # `overwrite: false` froze every existing Makefile at the shape it
-        # had when first written, so new builtin verbs never reached the
-        # fleet. Customisation lives exclusively in custom.mk, through
-        # pre-/post-verb hooks, and may not redefine a verb.
+        # profile; every profile renders the same local verb bodies. A
+        # project never owns a verb: customisation lives exclusively in
+        # custom.mk, through pre-/post-verb hooks, and may not redefine one.
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: true
         - source: base/custom.mk.j2
           destination: custom.mk
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/pyproject.toml.j2
           destination: pyproject.toml
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
       # New-project declaration is serialized once from WorkspaceManifestSpec.
       # Existing-tree conform reads this file as input and never overwrites it.
         - destination: config/workspace.yaml
           profiles: [workspace, standalone]
           delegate: manifest
-          overwrite: false
       # Repository-local Beads identity. conform requires this file to
       # exist before it can plan, so a scaffolded project that never
       # rendered it could not be conformed at all.
@@ -2081,124 +2103,100 @@ Infra:
           requires_beads: true
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: true
         - source: base/src/api.py.j2
           destination: "src/{package_name}/api.py"
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/src/cli.py.j2
           destination: "src/{package_name}/cli.py"
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/src/__main__.py.j2
           destination: "src/{package_name}/__main__.py"
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/src/base.py.j2
           destination: "src/{package_name}/base.py"
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/src/models.py.j2
           destination: "src/{package_name}/models.py"
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/src/typings.py.j2
           destination: "src/{package_name}/typings.py"
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/src/protocols.py.j2
           destination: "src/{package_name}/protocols.py"
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/src/constants.py.j2
           destination: "src/{package_name}/constants.py"
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/src/utilities.py.j2
           destination: "src/{package_name}/utilities.py"
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/src/_config.py.j2
           destination: "src/{package_name}/_config.py"
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/src/_settings.py.j2
           destination: "src/{package_name}/_settings.py"
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/src/py.typed.j2
           destination: "src/{package_name}/py.typed"
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
       # Domain behavior is generated in services, not base.py.
         - source: base/src/services/ping.py.j2
           destination: "src/{package_name}/services/ping.py"
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
       # Runtime config is app-owned and loaded
       # by FlextConfig from the project-root config directory.
         - source: base/src/config/ns.yaml.j2
           destination: "config/{ns}.yaml"
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
       # Config/settings declarations live in
       # the canonical public models/config/settings facets, never parallel parts.
         - source: base/src/_models/ping.py.j2
           destination: "src/{package_name}/_models/ping.py"
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/src/_models/config.py.j2
           destination: "src/{package_name}/_models/config.py"
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/src/_models/settings.py.j2
           destination: "src/{package_name}/_models/settings.py"
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/src/_constants/config.py.j2
           destination: "src/{package_name}/_constants/config.py"
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/src/_constants/settings.py.j2
           destination: "src/{package_name}/_constants/settings.py"
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/src/_protocols/config.py.j2
           destination: "src/{package_name}/_protocols/config.py"
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/src/_protocols/ping.py.j2
           destination: "src/{package_name}/_protocols/ping.py"
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/src/_protocols/settings.py.j2
           destination: "src/{package_name}/_protocols/settings.py"
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/src/_typings/base.py.j2
           destination: "src/{package_name}/_typings/base.py"
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false

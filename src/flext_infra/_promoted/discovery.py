@@ -1,12 +1,15 @@
-"""Promoted-command discovery across first-wins script roots."""
+"""Promoted-command discovery across first-wins script roots.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Self
 
 from flext_infra import c, u
-
-from .registry import FlextInfraPromotedRegistry
+from flext_infra._promoted.registry import FlextInfraPromotedRegistry
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -31,6 +34,10 @@ class FlextInfraPromotedDiscovery(FlextInfraPromotedRegistry):
         workspace can inject ``scripts/`` before its subrepos while each isolated
         subrepo stays authoritative over its own commands. Without injection the
         order is ``spec.scripts``, sorted submodule roots, then the consumer root.
+
+        Returns:
+            The resulting ``Self``.
+
         """
         message = c.Infra.PromotedMessage
         workspace = spec or u.Infra.promoted_discovered_workspace_spec()

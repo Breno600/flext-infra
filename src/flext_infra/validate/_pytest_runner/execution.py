@@ -1,4 +1,8 @@
-"""Strict process lifecycle for the canonical pytest runner."""
+"""Strict process lifecycle for the canonical pytest runner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -12,10 +16,9 @@ import pytest
 
 from flext_core import r
 from flext_infra import c, config, m, t, u
+from flext_infra.validate._pytest_runner.command import FlextInfraPytestRunnerCommand
+from flext_infra.validate._pytest_runner.reports import FlextInfraPytestRunnerReports
 from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
-
-from .command import FlextInfraPytestRunnerCommand
-from .reports import FlextInfraPytestRunnerReports
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -32,7 +35,12 @@ class FlextInfraPytestRunnerExecution(
         *,
         digest: str | None,
     ) -> p.Result[m.Infra.TestmonCacheState]:
-        """Run the SQLite integrity owner for the testmon database."""
+        """Run the SQLite integrity owner for the testmon database.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.TestmonCacheState]``.
+
+        """
         return FlextInfraTestmonDbInspector(
             repository_root=self.root,
             db_path=self.testmon_db,
@@ -48,6 +56,10 @@ class FlextInfraPytestRunnerExecution(
 
         The coverage verb owns no testmon plugin, so its children neither
         receive nor inherit a testmon database location.
+
+        Returns:
+            The child environment shared by every runner invocation.
+
         """
         testmon_keys = (
             config.Infra.codegen.make.testmon_cache.database_environment_variable,
@@ -179,10 +191,28 @@ class FlextInfraPytestRunnerExecution(
         if complete and not node_ids and not owns_no_tests and not self.slow_phase:
             msg = "complete pytest inventory must contain at least one test"
             raise RuntimeError(msg)
+        # A slow phase whose complete inventory holds no slow-marked item owns
+        # no test in its scope: it publishes the typed zero-test receipt, the
+        # same declared outcome as a project without test modules.
+        owns_no_tests = owns_no_tests or (complete and self.slow_phase and not node_ids)
         u.Cli.atomic_write_text_file(
             report_dir / f"{artifact}.txt",
             "\n".join(node_ids) + "\n",
         ).unwrap()
+        if not complete and verify_inventory:
+            inventory = self._resolve_selection(
+                report_dir,
+                complete=True,
+                execution_mode=execution_mode,
+            )
+            if inventory.owns_no_tests:
+                return inventory
+            if not set(node_ids).issubset(inventory.node_ids):
+                msg = "testmon selected node IDs outside the complete collection inventory"
+                raise RuntimeError(msg)
+            whole_target = node_ids == inventory.node_ids
+        else:
+            whole_target = True
         return m.Infra.PytestSelectionPlan(
             manifest_path=manifest_path,
             node_ids=node_ids,
@@ -199,6 +229,10 @@ class FlextInfraPytestRunnerExecution(
         content-only workspace shell), not a broken collection. A project that
         DOES own test files but collects nothing keeps the loud failure —
         zero-execution of an existing suite is never a silent pass (law 14).
+
+        Returns:
+            Whether the project owns zero test files by design.
+
         """
         pytest_settings = config.Infra.tooling.tools.pytest
         patterns = ("test_*.py", "*_test.py")
@@ -212,7 +246,12 @@ class FlextInfraPytestRunnerExecution(
         return True
 
     def _process_deadline(self) -> p.Cli.ProcessDeadline:
-        """Use the entrypoint clock for selection, execution, and cleanup."""
+        """Use the entrypoint clock for selection, execution, and cleanup.
+
+        Returns:
+            The resulting ``p.Cli.ProcessDeadline``.
+
+        """
         pytest_settings = config.Infra.tooling.tools.pytest
         return m.Cli.ProcessDeadline(
             expires_at_monotonic=self.started_at_monotonic
@@ -227,7 +266,12 @@ class FlextInfraPytestRunnerExecution(
         *,
         execution_mode: c.Infra.PytestExecutionMode,
     ) -> p.Cli.ProcessOutcome:
-        """Execute one suite argv under the shared deadline and environment."""
+        """Execute one suite argv under the shared deadline and environment.
+
+        Returns:
+            The resulting ``p.Cli.ProcessOutcome``.
+
+        """
         u.Cli.atomic_write_text_file(
             report_dir / "command.txt",
             f"{shlex.join(command)}\n",
@@ -249,7 +293,12 @@ class FlextInfraPytestRunnerExecution(
         phase: str,
         outcome: p.Cli.ProcessOutcome,
     ) -> None:
-        """Preserve the process owner's causal fields even when JUnit is absent."""
+        """Preserve the process owner's causal fields even when JUnit is absent.
+
+        Raises:
+            RuntimeError: If pytest.
+
+        """
         recorded = m.Cli.ProcessOutcome.model_validate(outcome, from_attributes=True)
         receipt = report_dir / f"{phase}-outcome.json"
         u.Cli.atomic_write_text_file(
@@ -274,6 +323,10 @@ class FlextInfraPytestRunnerExecution(
         TestsFailed; it is still one completed suite lifecycle whose bounded
         evidence must be published. An operator signal keeps forwarded_signal
         set and never qualifies.
+
+        Returns:
+            Whether a failing suite still finished its lifecycle.
+
         """
         return (
             outcome.raw_return_code
@@ -302,7 +355,16 @@ class FlextInfraPytestRunnerExecution(
         raw_return_code: int = 0,
         cache_hit: bool = False,
     ) -> p.Result[int]:
-        """Reject incomplete evidence and publish one bounded summary."""
+        """Reject incomplete evidence and publish one bounded summary.
+
+        Returns:
+            The resulting ``p.Result[int]``.
+
+        Raises:
+            RuntimeError: If zero execution is accepted only for a verified incremental
+                cache hit; or if a testmon cache hit cannot contain executed tests.
+
+        """
         diagnostics = self._diagnostics(report_dir).unwrap()
         accounting = self._accounting(
             report_dir / "junit.xml",
@@ -429,18 +491,33 @@ class FlextInfraPytestRunnerExecution(
 
     @override
     def execute(self) -> p.Result[int]:
-        """Execute the incremental testmon operation."""
+        """Execute the incremental testmon operation.
+
+        Returns:
+            The resulting ``p.Result[int]``.
+
+        """
         return self._execute_testmon(complete=False)
 
     def execute_full(self) -> p.Result[int]:
-        """Run incremental then full under one deadline and persistent database."""
+        """Run incremental then full under one deadline and persistent database.
+
+        Returns:
+            The resulting ``p.Result[int]``.
+
+        """
         incremental_exit = self.execute().unwrap()
         if incremental_exit:
             return r.ok(incremental_exit)
         return self._execute_testmon(complete=True)
 
     def _execute_testmon(self, *, complete: bool) -> p.Result[int]:
-        """Execute one selected testmon phase without resetting shared state."""
+        """Execute one selected testmon phase without resetting shared state.
+
+        Returns:
+            The resulting ``p.Result[int]``.
+
+        """
         execution_mode = (
             c.Infra.PytestExecutionMode.FULL
             if complete
@@ -448,16 +525,43 @@ class FlextInfraPytestRunnerExecution(
         )
         slow_marker = config.Infra.tooling.tools.pytest.slow_marker
         if self.slow_phase and slow_marker in self.ci_excluded_markers(
-            execution_mode=execution_mode
+            execution_mode=execution_mode,
         ):
             # The CI context deselects the slow marker by declaration, so its
             # phase is typed NOT EXECUTED here, never a selection of nothing.
             sys.stderr.write(
                 f"pytest slow phase NOT EXECUTED: ci-excluded-markers declares "
-                f"{slow_marker!r}\n"
+                f"{slow_marker!r}\n",
             )
             return r.ok(0)
         u.Cli.ensure_dir(self.testmon_db.parent).unwrap()
+        # The digest, the run and the post-run integrity inspection read one
+        # shared database: a concurrent run on it would make the integrity
+        # verdict describe the other run's writes. One native lease serializes
+        # it; a held lease refuses at once instead of spending this deadline.
+        with u.Infra.codegen_transaction_lease(self.testmon_db, wait_seconds=0):
+            return self._execute_testmon_leased(
+                complete=complete,
+                execution_mode=execution_mode,
+            )
+
+    def _execute_testmon_leased(
+        self,
+        *,
+        complete: bool,
+        execution_mode: c.Infra.PytestExecutionMode,
+    ) -> p.Result[int]:
+        """Run one testmon phase while holding the database lease.
+
+        Returns:
+            The resulting ``p.Result[int]``.
+
+        Raises:
+            RuntimeError: If empty incremental selection requires an integrity-checked
+                cache; or if testmon cache is unusable; or if testmon preflight rejected
+                cache.
+
+        """
         report_dir = self._report_directory()
         self._write_run_context(
             report_dir,
@@ -480,7 +584,9 @@ class FlextInfraPytestRunnerExecution(
         selection_plan = self._resolve_selection(
             report_dir,
             complete=complete,
-            verify_inventory=pre_digest is not None,
+            # The slow phase always proves its inventory, so a project without
+            # slow-marked items reaches the zero-test receipt even on a cold cache.
+            verify_inventory=pre_digest is not None or self.slow_phase,
             execution_mode=execution_mode,
         )
         u.Cli.atomic_write_text_file(
@@ -495,7 +601,9 @@ class FlextInfraPytestRunnerExecution(
         # enforces that manifest for both cold and warm caches while testmon
         # continues to collect dependencies through its xdist integration.
         command = self.build_command(
-            report_dir, selection_plan, execution_mode=execution_mode
+            report_dir,
+            selection_plan,
+            execution_mode=execution_mode,
         )
         outcome = self._run_suite(command, report_dir, execution_mode=execution_mode)
         cache_hit = (
@@ -547,6 +655,10 @@ class FlextInfraPytestRunnerExecution(
         The coverage artifact is validated here; coverage is reported, never gated.
         A completed failing suite writes no coverage artifact but still
         publishes its accounting and diagnostics with the original exit code.
+
+        Returns:
+            The resulting ``p.Result[int]``.
+
         """
         report_dir = self._report_directory()
         self._write_run_context(
