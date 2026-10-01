@@ -1,9 +1,7 @@
 # A hand-rolled `while` loop that walks `path.parent` testing `(P / ".git")`
 # to decide repository/scope boundaries duplicates the typed git-scope owner
 # (u.Infra.git_declared_submodule_paths / repository-root resolution from the
-# typed git context — rule coordination--shared-venv-guard). Evidence: X-30
-# (validate/tier_whitelist.py); current instance:
-# _utilities/_git/scope.py::_git_repo_root.
+# typed git context). Current instance: _utilities/_git/scope.py::_git_repo_root.
 #
 # LIMITATION (stated, not silently dropped): ast-grep cannot express "any loop
 # construct that walks toward the filesystem root testing .git" as one sound

@@ -12,16 +12,12 @@ from flext_infra.validate.fresh_import import FlextInfraValidateFreshImport
 from flext_infra.validate.import_cycles import FlextInfraValidateImportCycles
 from flext_infra.validate.inventory import FlextInfraInventoryService
 from flext_infra.validate.lazy_map_freshness import FlextInfraValidateLazyMapFreshness
-from flext_infra.validate.metadata_discipline import (
-    FlextInfraValidateMetadataDiscipline,
-)
 from flext_infra.validate.pytest_diag import FlextInfraPytestDiagExtractor
 from flext_infra.validate.runtime_census import FlextInfraRuntimeCensusValidator
 from flext_infra.validate.scanner import FlextInfraTextPatternScanner
 from flext_infra.validate.silent_failure import FlextInfraSilentFailureValidator
 from flext_infra.validate.skill_validator import FlextInfraSkillValidator
 from flext_infra.validate.stub_chain import FlextInfraStubSupplyChain
-from flext_infra.validate.tier_whitelist import FlextInfraValidateTierWhitelist
 
 from ..api import infra
 
@@ -145,22 +141,6 @@ class FlextInfraValidationCommandRoutes(FlextInfraCliRouteBase):
                     "Guard: static namespace rules (NS-000..003) via rope",
                     m.Infra.NamespaceValidateCommand,
                     FlextInfraCliRouteBase.result_handler(_validate_namespace_command),
-                ),
-                (
-                    "tier-whitelist",
-                    "Guard 5: tier-whitelist/abstraction-boundary enforcer",
-                    FlextInfraValidateTierWhitelist,
-                    FlextInfraCliRouteBase.result_handler(
-                        FlextInfraValidateTierWhitelist.execute
-                    ),
-                ),
-                (
-                    "metadata-discipline",
-                    "Guard 8: centralized metadata parser discipline",
-                    FlextInfraValidateMetadataDiscipline,
-                    FlextInfraCliRouteBase.result_handler(
-                        FlextInfraValidateMetadataDiscipline.execute
-                    ),
                 ),
             )
         )

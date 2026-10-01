@@ -120,37 +120,6 @@ message: >-
   boundary failure; convert through `e.fail_validation`/`r.fail` with the
   error preserved, or let it escape.
 ---
-# Pydantic surface is reachable only through facades outside layer-0.
-# `_settings.py` is the typed, zero-cycle configuration boundary and may import
-# pydantic directly; every consumer above it routes through a package facade.
-# The v1 import forms are already owned by ban-pydantic-v1-api.yml.
-id: ban-direct-pydantic-import
-language: python
-severity: error
-files:
-  - "**/*.py"
-ignores:
-  - "**/.git/**"
-  - "**/.venv/**"
-  - "**/legado/**"
-  - "**/legacy/**"
-  - "**/node_modules/**"
-  - "**/*_pb2.py"
-  - "**/*_pb2_grpc.py"
-  - "**/flext_core/**"
-  - "**/_settings.py"
-rule:
-  any:
-    - pattern: import pydantic
-    - pattern: import pydantic.settings
-    - pattern: import pydantic_settings
-    - pattern: from pydantic import $$$NAMES
-    - pattern: from pydantic_settings import $$$NAMES
-message: >-
-  Pydantic is import-only through facades above layer-0. Route this consumer
-  through its package facade (`m`/`t`/`p`/`u`) and close a missing member at
-  flext-core instead of importing directly.
----
 # Graduation of the provable subset of `ban-json-loads-paired-validate` to an
 # automatic rewrite. The outer `.model_validate` is a Pydantic-v2-exclusive
 # method, so the receiver is provably a v2 model; with exactly one positional

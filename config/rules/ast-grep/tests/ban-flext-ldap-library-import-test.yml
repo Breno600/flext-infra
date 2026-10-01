@@ -1,4 +1,4 @@
-id: ban-direct-ldap3-import
+id: ban-flext-ldap-library-import
 valid:
   - from flext_ldap import FlextLdap
 invalid:

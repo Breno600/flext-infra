@@ -1,0 +1,9 @@
+id: ban-infra-metadata-parser-import
+valid:
+  - from flext_core import u
+  - |
+    if TYPE_CHECKING:
+        import tomllib
+invalid:
+  - import tomllib
+  - from tomllib import loads, TOMLDecodeError

@@ -31,7 +31,6 @@ from flext_infra.gates.ruff_lint import FlextInfraRuffLintGate
 from flext_infra.gates.runtime_census import FlextInfraRuntimeCensusGate
 from flext_infra.gates.silent_failure import FlextInfraSilentFailureGate
 from flext_infra.gates.smells import FlextInfraSmellsGate
-from flext_infra.gates.tier_whitelist import FlextInfraTierWhitelistGate
 
 
 class FlextInfraGateRegistry:
@@ -87,7 +86,6 @@ class FlextInfraGateRegistry:
             FlextInfraRuntimeCensusGate,
             FlextInfraNamespaceGate,
             FlextInfraLayoutGate,
-            FlextInfraTierWhitelistGate,
             FlextInfraIndexDeclarationsGate,
             FlextInfraSmellsGate,
             FlextInfraCodemodGate,

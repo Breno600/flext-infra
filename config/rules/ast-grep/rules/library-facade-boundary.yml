@@ -1,41 +1,124 @@
-# A third-party library with an owning FLEXT facade is imported only by its
-# owner; every other package routes through the owner's facade. One document
-# per library; `metadata.owner` names the owning distribution, whose own rule
-# plan drops the rule (source and tests of the owner may use the library).
+# A third-party library with an owning FLEXT facade is imported at runtime
+# only by its owner; every other package routes through the owner's facade.
+# One document per owner; `metadata.owner` names the owning distribution,
+# whose own rule plan drops the rule. Imports under `if TYPE_CHECKING:` never
+# run and are outside the boundary. Configuration (`_config.py`) and settings
+# modules are layer-0 of the c/t/p/m/u chain and import their foundation
+# libraries directly.
 #
 # Detection only: the facade member that replaces a direct use is chosen per
 # call site.
-id: ban-direct-structlog-import
+id: ban-flext-core-library-import
 language: python
 severity: error
 files:
   - "**/*.py"
+ignores:
+  - "**/_config.py"
+  - "**/_settings.py"
 metadata:
   owner: flext-core
 rule:
-  any:
-    - pattern: import structlog
-    - pattern: import structlog.$$$MODULE
-    - pattern: from structlog import $$$NAMES
-    - pattern: from structlog.$$$MODULE import $$$NAMES
+  all:
+    - any:
+        - all:
+            - kind: import_statement
+            - has:
+                stopBy: end
+                kind: dotted_name
+                regex: "^(?:pydantic|pydantic_core|dependency_injector|returns|structlog|yaml)(?:\\.|$)"
+        - all:
+            - kind: import_from_statement
+            - has:
+                field: module_name
+                regex: "^(?:pydantic|pydantic_core|dependency_injector|returns|structlog|yaml)(?:\\.|$)"
+    - not:
+        matches: inside-type-checking-guard
 message: >-
-  structlog is owned by flext-core: obtain loggers through u.fetch_logger.
+  pydantic, pydantic_core, dependency_injector, returns, structlog and yaml are owned by flext-core: route through its c/t/p/m/u facades (loggers via u.fetch_logger) and close a missing member at flext-core.
 ---
-id: ban-direct-oracledb-import
+id: ban-flext-core-settings-library-import
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/_config.py"
+  - "**/*settings.py"
+metadata:
+  owner: flext-core
+rule:
+  all:
+    - any:
+        - all:
+            - kind: import_statement
+            - has:
+                stopBy: end
+                kind: dotted_name
+                regex: "^(?:pydantic_settings)(?:\\.|$)"
+        - all:
+            - kind: import_from_statement
+            - has:
+                field: module_name
+                regex: "^(?:pydantic_settings)(?:\\.|$)"
+    - not:
+        matches: inside-type-checking-guard
+message: >-
+  pydantic_settings is owned by flext-core: only settings modules declare `class X(FlextSettings, BaseSettings)`; every other module uses the settings facade.
+---
+id: ban-flext-cli-library-import
 language: python
 severity: error
 files:
   - "**/*.py"
 metadata:
-  owner: flext-db-oracle
+  owner: flext-cli
 rule:
-  any:
-    - pattern: import oracledb
-    - pattern: from oracledb import $$$NAMES
+  all:
+    - any:
+        - all:
+            - kind: import_statement
+            - has:
+                stopBy: end
+                kind: dotted_name
+                regex: "^(?:rich|orjson|click)(?:\\.|$)"
+        - all:
+            - kind: import_from_statement
+            - has:
+                field: module_name
+                regex: "^(?:rich|orjson|click)(?:\\.|$)"
+    - not:
+        matches: inside-type-checking-guard
 message: >-
-  oracledb is owned by flext-db-oracle: use its database facade.
+  rich, orjson and click are owned by flext-cli: use its Cli facade members.
 ---
-id: ban-direct-ldap3-import
+id: ban-flext-infra-library-import
+language: python
+severity: error
+files:
+  - "**/*.py"
+metadata:
+  owner: flext-infra
+rule:
+  all:
+    - any:
+        - all:
+            - kind: import_statement
+            - has:
+                stopBy: end
+                kind: dotted_name
+                regex: "^(?:rope)(?:\\.|$)"
+        - all:
+            - kind: import_from_statement
+            - has:
+                field: module_name
+                regex: "^(?:rope)(?:\\.|$)"
+    - not:
+        matches: inside-type-checking-guard
+message: >-
+  rope is owned by flext-infra: use its refactor and codemod facades.
+---
+id: ban-flext-ldap-library-import
 language: python
 severity: error
 files:
@@ -43,9 +126,150 @@ files:
 metadata:
   owner: flext-ldap
 rule:
-  any:
-    - pattern: import ldap3
-    - pattern: from ldap3 import $$$NAMES
-    - pattern: from ldap3.$$$MODULE import $$$NAMES
+  all:
+    - any:
+        - all:
+            - kind: import_statement
+            - has:
+                stopBy: end
+                kind: dotted_name
+                regex: "^(?:ldap3)(?:\\.|$)"
+        - all:
+            - kind: import_from_statement
+            - has:
+                field: module_name
+                regex: "^(?:ldap3)(?:\\.|$)"
+    - not:
+        matches: inside-type-checking-guard
 message: >-
   ldap3 is owned by flext-ldap: use its LDAP facade.
+---
+id: ban-flext-meltano-library-import
+language: python
+severity: error
+files:
+  - "**/*.py"
+metadata:
+  owner: flext-meltano
+rule:
+  all:
+    - any:
+        - all:
+            - kind: import_statement
+            - has:
+                stopBy: end
+                kind: dotted_name
+                regex: "^(?:singer_sdk)(?:\\.|$)"
+        - all:
+            - kind: import_from_statement
+            - has:
+                field: module_name
+                regex: "^(?:singer_sdk)(?:\\.|$)"
+    - not:
+        matches: inside-type-checking-guard
+message: >-
+  singer_sdk is owned by flext-meltano: build taps and targets on its bases.
+---
+id: ban-flext-db-oracle-library-import
+language: python
+severity: error
+files:
+  - "**/*.py"
+metadata:
+  owner: flext-db-oracle
+rule:
+  all:
+    - any:
+        - all:
+            - kind: import_statement
+            - has:
+                stopBy: end
+                kind: dotted_name
+                regex: "^(?:sqlalchemy|oracledb)(?:\\.|$)"
+        - all:
+            - kind: import_from_statement
+            - has:
+                field: module_name
+                regex: "^(?:sqlalchemy|oracledb)(?:\\.|$)"
+    - not:
+        matches: inside-type-checking-guard
+message: >-
+  sqlalchemy and oracledb are owned by flext-db-oracle: use its database facade.
+---
+id: ban-flext-grpc-library-import
+language: python
+severity: error
+files:
+  - "**/*.py"
+metadata:
+  owner: flext-grpc
+rule:
+  all:
+    - any:
+        - all:
+            - kind: import_statement
+            - has:
+                stopBy: end
+                kind: dotted_name
+                regex: "^(?:grpc)(?:\\.|$)"
+        - all:
+            - kind: import_from_statement
+            - has:
+                field: module_name
+                regex: "^(?:grpc)(?:\\.|$)"
+    - not:
+        matches: inside-type-checking-guard
+message: >-
+  grpc is owned by flext-grpc: use its gRPC facade.
+---
+id: ban-flext-web-library-import
+language: python
+severity: error
+files:
+  - "**/*.py"
+metadata:
+  owner: flext-web
+rule:
+  all:
+    - any:
+        - all:
+            - kind: import_statement
+            - has:
+                stopBy: end
+                kind: dotted_name
+                regex: "^(?:fastapi)(?:\\.|$)"
+        - all:
+            - kind: import_from_statement
+            - has:
+                field: module_name
+                regex: "^(?:fastapi)(?:\\.|$)"
+    - not:
+        matches: inside-type-checking-guard
+message: >-
+  fastapi is owned by flext-web: use its web facade.
+---
+id: ban-flext-api-library-import
+language: python
+severity: error
+files:
+  - "**/*.py"
+metadata:
+  owner: flext-api
+rule:
+  all:
+    - any:
+        - all:
+            - kind: import_statement
+            - has:
+                stopBy: end
+                kind: dotted_name
+                regex: "^(?:httpx)(?:\\.|$)"
+        - all:
+            - kind: import_from_statement
+            - has:
+                field: module_name
+                regex: "^(?:httpx)(?:\\.|$)"
+    - not:
+        matches: inside-type-checking-guard
+message: >-
+  httpx is owned by flext-api: use its HTTP client facade.

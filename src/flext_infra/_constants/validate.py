@@ -130,16 +130,6 @@ class FlextInfraConstantsSharedInfra:
         r"Library stubs not installed for ['\"](\S+?)['\"]"
     )
     INTERNAL_PREFIXES: ClassVar[t.VariadicTuple[str]] = ("flext_", "flext-")
-    METADATA_TOMLLIB_MODULES: ClassVar[frozenset[str]] = frozenset({"tomllib"})
-    # Package-tree markers matched against "/<path relative to the scanned
-    # root>" (X-77): the directory name of the working copy (a lane may be
-    # named anything) never takes part in the match.
-    METADATA_ALLOWLIST_PATH_MARKERS: ClassVar[t.StrSequence] = (
-        "/src/flext_core/_utilities/project_metadata.py",
-        "/src/flext_infra/iteration.py",
-        "/src/flext_infra/__version__.py",
-    )
-    METADATA_TARGET_SCOPE_MARKERS: ClassVar[t.StrSequence] = ("/src/flext_infra/",)
 
     # --- Integration baseline discovery ---
     # Ordered preference used to derive one repository's integration baseline
@@ -246,24 +236,6 @@ class FlextInfraConstantsSharedInfra:
     DIR_TESTS: ClassVar[str] = "tests"
     DIR_EXAMPLES: ClassVar[str] = "examples"
     DIR_SCRIPTS: ClassVar[str] = "scripts"
-    # Runtime-exempt surfaces, matched on path parts RELATIVE to the scanned
-    # repository root (X-75): an ancestor directory name never grants an
-    # exemption. Scope exclusions (state/cache dirs) belong to the source-scan
-    # ignore list, not here.
-    TIER_WHITELIST_NON_RUNTIME_DIR_PARTS: ClassVar[frozenset[str]] = frozenset({
-        DIR_TESTS,
-        DIR_EXAMPLES,
-        DIR_SCRIPTS,
-        "evaluate",
-    })
-    TIER_WHITELIST_SETTINGS_MODULE_LIBRARIES: ClassVar[frozenset[str]] = frozenset({
-        "pydantic_settings"
-    })
-    TIER_WHITELIST_LEAF_CONFIG_FILES: ClassVar[frozenset[str]] = frozenset({
-        "_config.py"
-    })
-    "Leaf config modules (e.g. ai-hub/_config.py) that own their external-library"
-    "imports directly as the bottom of the c/t/p/m/u chain."
     DIR_TYPINGS: ClassVar[str] = "typings"
     DIR_DOCS: ClassVar[str] = "docs"
     DIR_BUILD: ClassVar[str] = "build"

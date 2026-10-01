@@ -93,10 +93,6 @@ class FlextInfraConstantsCheck:
             "internal://flext-infra/runtime-census",
         ),
         "namespace": ("Flext Namespace Rule Gate", "internal://flext-infra/namespace"),
-        "tier-whitelist": (
-            "Flext Tier Whitelist Gate",
-            "internal://flext-infra/tier-whitelist",
-        ),
         "index-declarations": (
             "Flext Index Declarations Gate",
             "internal://flext-infra/index-declarations",

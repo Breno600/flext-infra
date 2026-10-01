@@ -13,12 +13,7 @@ rule:
             kind: function_definition
             stopBy: end
         - not:
-            inside:
-              kind: if_statement
-              stopBy: end
-              has:
-                field: condition
-                regex: "^(?:typing\\.)?TYPE_CHECKING$"
+            matches: inside-type-checking-guard
     - pattern: importlib.import_module($$$ARGS)
     - all:
         - pattern: $ALIAS.import_module($$$ARGS)
