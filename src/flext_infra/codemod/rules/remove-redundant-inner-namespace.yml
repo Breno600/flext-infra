@@ -5,11 +5,8 @@
 # or a docstring), re-exposes a namespace the parent already provides through
 # its own MRO. Deleting it is behaviour-preserving.
 #
-# This rule replaces the libcst transformer `FlextInfraRefactorMroRemover`
-# (`transformers/mro_remover.py`). The transformer decided redundancy from raw
-# concrete syntax and then patched an emptied class body back to `pass`; both
-# steps are expressed here structurally, and the second is expressed as a
-# precondition instead of a repair.
+# Redundancy and the emptied-body case are both expressed structurally; the
+# second is a precondition instead of a repair.
 #
 # Every removal precondition below is positive and metavariable-consistent, so
 # the rule cannot match text that merely looks like the construct: ast-grep

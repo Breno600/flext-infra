@@ -15,14 +15,9 @@ from flext_infra.refactor.project_alias_migrator import (
     FlextInfraRefactorProjectAliasMigrator,
 )
 from flext_infra.transformers.future_import import FlextInfraRefactorFutureImport
-from flext_infra.transformers.hardcoded_version import (
-    FlextInfraRefactorHardcodedVersion,
-)
 from flext_infra.transformers.import_modernizer import (
     FlextInfraRefactorImportModernizer,
 )
-from flext_infra.transformers.mro_remover import FlextInfraRefactorMroRemover
-from flext_infra.transformers.open_encoding import FlextInfraRefactorOpenEncoding
 
 from .base import FlextInfraFixerAdapter
 
@@ -48,14 +43,14 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
     # Binding of each enforcement-catalog ``transformer`` target to the code that
     # implements it. A catalog target with no binding here fails the
     # orchestrator preflight, naming the rule: the catalog is then corrected.
+    # Rules whose rewrite is an ast-grep rule (open encoding, hardcoded version,
+    # redundant inner namespace, typing Dict) are applied by ``make mod`` and
+    # carry no transformer binding.
     _TRANSFORMERS: ClassVar[
         t.MutableMappingKV[str, type[FlextInfraRopeTransformer]]
     ] = {
         "future_import": FlextInfraRefactorFutureImport,
-        "hardcoded_version": FlextInfraRefactorHardcodedVersion,
         "import_modernizer": FlextInfraRefactorImportModernizer,
-        "mro_remover": FlextInfraRefactorMroRemover,
-        "open_encoding": FlextInfraRefactorOpenEncoding,
         "rewrite_foreign_canonical_alias": FlextInfraRefactorProjectAliasMigrator,
     }
 
