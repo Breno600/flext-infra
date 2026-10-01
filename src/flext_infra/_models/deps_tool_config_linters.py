@@ -222,9 +222,8 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
             m.Field(
                 gt=0,
                 description=(
-                    "Project Mypy wall-time budget in seconds (SSOT; the env"
-                    " MYPY_TIMEOUT_SECONDS overrides it at the ingress"
-                    " boundary)."
+                    "Mypy wall-time budget in seconds (SSOT); a project"
+                    " overlay may only lower it."
                 ),
             ),
         ]
