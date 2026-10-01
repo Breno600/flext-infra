@@ -285,7 +285,7 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
             "print(documented.HINT)\n"
             "print(documented.first(['a', 'b']))\n"
         )
-        before = tm.ok(
+        tm.ok(
             u.Cli.run_raw((sys.executable, "-c", probe), cwd=source_file.parent.parent)
         )
 

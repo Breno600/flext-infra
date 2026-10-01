@@ -6,7 +6,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import FlextInfraWorktreeService, c, config, u as infra_u
+from flext_infra import FlextInfraWorktreeService, c, u as infra_u
 from tests import u
 
 
@@ -26,7 +26,7 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
             "PROJECT_ROOT := $(CURDIR)\n"
             "RUNTIME_ROOT := $(PROJECT_ROOT)\n"
             "RUNTIME_VENV := $(dir $(CURDIR))"
-            f"{config.Infra.codegen.make.runtime_environment_directory}/"
+            f"{c.Infra.ENVIRONMENT_DIRECTORY}/"
             "$(patsubst /%,%,$(CURDIR))\n"
             ".PHONY: setup\n"
             "setup:\n"

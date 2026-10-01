@@ -658,6 +658,10 @@ Infra:
         # Slow marks cover nested public runner executions, including a cold
         # cache seed and a warm replay under parallel suite load.
         slow-timeout-seconds: 180
+        # The declared marker whose cases form the bounded-budget phase; the
+        # remaining cases run in their own phase under the full inventory
+        # budget (gate-budget rule).
+        slow-marker: slow
         # The complete inventory exceeds 3300 cases. A 189-case incremental
         # execution took 127 seconds, projecting over 2200 seconds for the
         # inventory before the slowest integration cases. Keep a bounded wall

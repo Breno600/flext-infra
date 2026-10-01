@@ -92,8 +92,8 @@ class TestsFlextInfraWorkspaceChecker:
             '"""Fixture module."""\n\nvalue = 1\n', encoding="utf-8"
         )
         test_u.Tests.declare_workspace_projects(tmp_path, (project_dir.name,))
-        init_result = cli_u.Cli.run_raw(["git", "init"], cwd=tmp_path)
-        add_result = cli_u.Cli.run_raw(["git", "add", "flext-core"], cwd=tmp_path)
+        init_result = test_u.Cli.run_raw(["git", "init"], cwd=tmp_path)
+        add_result = test_u.Cli.run_raw(["git", "add", "flext-core"], cwd=tmp_path)
         tm.ok(init_result)
         tm.ok(add_result)
 
