@@ -129,6 +129,19 @@ rules:
     find: '(^[ \t]+(?:observed|output|namespace|consumer)[ \t]*=[ \t]*tm\.ok\(\s*u\.Cli\.)run_checked(?=\()'
     replace: '\g<1>run'
     flags: [MULTILINE]
+  - id: docgen-dependency-sequence-prose-wrap
+    distributions: [cosmos-docgen]
+    description: Wrap the authored consumer dependency sequence without changing its meaning.
+    include:
+      - docs/superpowers/specs/2026-07-09-config-tipado-template-so-formatacao-design.md
+    find: '^(?P<sequence>`C1` → \{ `C2a`→`C2b`, `C2c` \} → `C3`\.) (?P<detail>.+)$'
+    capture_equals:
+      detail: 'C1 é o cutover atômico da planilha; C2a é a ingestão e bloqueia o deck C2b; C2c (documentos) pode avançar em paralelo; C3 remove Python dos consumidores.'
+    replace: |-
+      \g<sequence>
+
+      \g<detail>
+    flags: [MULTILINE]
   - id: docs-pytest-single-suite-deadline
     distributions: [flext-infra]
     description: Replace removed per-project timeout override guidance with the typed suite policy.
