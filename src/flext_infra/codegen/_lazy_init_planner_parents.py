@@ -157,7 +157,7 @@ class FlextInfraCodegenLazyInitPlannerParentsMixin:
         Only facade letters are inherited (ADR-015 R1a): a name whose declarer,
         reached through the parent's published re-export chain, binds it to a
         class. Singleton instances and entry points (``cli``, ``infra``,
-        ``main``, ``docs_main``) stay in the root that declares them (operator
+        ``main``) stay in the root that declares them (operator
         ruling 2026-09-23). The letter is sourced from the NEAREST parent that
         declares or re-exports it, never the distant declaring owner (operator
         ruling 2026-09-23), so workspace and standalone plans render one form.
@@ -225,8 +225,8 @@ class FlextInfraCodegenLazyInitPlannerParentsMixin:
         """Return the facade letters a package's own modules declare in __all__.
 
         Only class aliases qualify (``u.Infra.facade_letter_names_source``):
-        singleton instances and entry points such as ``cli``, ``infra``,
-        ``main`` and ``docs_main`` belong to their declaring namespace root only.
+        singleton instances and entry points such as ``cli``, ``infra`` and
+        ``main`` belong to their declaring namespace root only.
         """
         cache_key = f"declared:{package_name}"
         cached = self._source_exports_cache.get(cache_key)

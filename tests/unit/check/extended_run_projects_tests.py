@@ -144,8 +144,8 @@ class TestsFlextInfraRunProjects:
 
         tm.ok(result)
         tm.that(len(result.value), eq=2)
-        tm.that(result.value[0].total_errors > 0, eq=True)
-        tm.that(result.value[1].total_errors, eq=0)
+        tm.that(result.value[0].total_findings > 0, eq=True)
+        tm.that(result.value[1].total_findings, eq=0)
 
     def test_run_project_returns_single_project_result(
         self, tmp_path: Path, rope_workspace: p.Infra.RopeWorkspaceDsl

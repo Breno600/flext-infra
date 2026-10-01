@@ -259,6 +259,9 @@ class TestsFlextInfraCodegenCatalogExtensions:
         tm.that(mise, has=f'make = "{toolchain.make_version}"')
         tm.that(mise, lacks="credential_command")
         tm.that(mise, lacks="minimum_release_age")
+        # The bootstrap keeps Mise's release-age cooldown: a zero override
+        # resolved python releases published before their prebuilt builds.
+        tm.that(content, lacks="MISE_MINIMUM_RELEASE_AGE")
         # S1 (operator law 2026-09-14): gen has one always-apply recipe; the
         # CHECK_ONLY-selected check/apply pair no longer exists.
         tm.that(content, lacks="_builtin_gen_check:")

@@ -7,7 +7,6 @@ consumer-order defects. Imported workspace modules must belong to this checkout.
 
 from __future__ import annotations
 
-import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Annotated, ClassVar, override
@@ -193,18 +192,6 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
         interpreter = u.Infra.runtime_python(
             self.repository_root, runtime_root=self.runtime_root
         )
-        if not interpreter.is_file():
-            # A physical runtime environment beside the worktree (D-VENV) is
-            # the declared owner; a fresh CI checkout may not have it yet,
-            # while its own ``.venv`` is provisioned by setup from the same
-            # committed lock - the identical dependency set, so the probes
-            # still grade the target against what it declares.
-            interpreter = (
-                self.repository_root
-                / ".venv"
-                / ("Scripts" if sys.platform == "win32" else "bin")
-                / c.Infra.PYTHON
-            )
         if not interpreter.is_file():
             return r[m.Infra.ValidationReport].fail(
                 f"fresh-import target interpreter is missing: {interpreter}; "

@@ -143,15 +143,17 @@ class FlextInfraEnsureRuffConfigPhase:
         }
 
     def _phase(
-        self, *, path: Path, facts: m.Infra.RuffProjectFacts
+        self,
+        *,
+        path: Path,
+        first_party: t.StrSequence,
+        stale_patterns: t.StrSequence,
+        per_file_ignores: t.MappingKV[str, t.StrSequence],
+        generated_python_roots: t.StrSequence,
     ) -> m.Infra.DepsToml.PhaseConfig:
         """Build the canonical Ruff phase for one project path."""
         ruff_cfg = self._tool_config.tools.ruff
-        workspace_exclusions = (
-            self._workspace_exclusion_globs(path.parent)
-            if facts.analysis_exclusions is None
-            else facts.analysis_exclusions
-        )
+        workspace_exclusions = self._workspace_exclusion_globs(path.parent)
         # Models stay declaration-only; the
         # Ruff phase owns the derived union consumed by emitted tool config.
         effective_ignore = sorted({
@@ -164,7 +166,7 @@ class FlextInfraEnsureRuffConfigPhase:
             ("split-on-trailing-comma", ruff_cfg.lint.isort.split_on_trailing_comma),
         ]
         detected_packages = sorted({
-            *facts.first_party,
+            *first_party,
             *self._workspace_project_namespaces(path.parent),
         })
         if detected_packages:
@@ -180,8 +182,7 @@ class FlextInfraEnsureRuffConfigPhase:
         # roots the active plan is materializing accepted as present (the
         # extra-paths manager owns that declared set).
         generated_roots = FlextInfraExtraPathsManager(
-            repository_root=path.parent,
-            generated_python_roots=facts.generated_python_roots,
+            repository_root=path.parent, generated_python_roots=generated_python_roots
         ).generated_python_roots
 
         def _present(directory: str) -> bool:
@@ -299,12 +300,9 @@ class FlextInfraEnsureRuffConfigPhase:
                                 key=pattern,
                                 value=u.normalize_to_json_value(sorted(rules)),
                             )
-                            for pattern, rules in facts.per_file_ignores.items()
+                            for pattern, rules in per_file_ignores.items()
                         ),
-                        *(
-                            toml.RemoveOp(key=pattern)
-                            for pattern in facts.stale_patterns
-                        ),
+                        *(toml.RemoveOp(key=pattern) for pattern in stale_patterns),
                     ),
                 ),
             ),
@@ -315,7 +313,6 @@ class FlextInfraEnsureRuffConfigPhase:
         payload: t.MutableJsonMapping,
         *,
         path: Path,
-        analysis_exclusions: t.StrSequence | None = None,
         generated_python_roots: t.StrSequence = (),
     ) -> t.StrSequence:
         """Apply canonical Ruff settings directly to one normalized payload."""
@@ -333,19 +330,16 @@ class FlextInfraEnsureRuffConfigPhase:
                 payload,
                 self._phase(
                     path=path,
-                    facts=m.Infra.RuffProjectFacts(
-                        first_party=FlextInfraToolTablesPhase.first_party_namespaces(
-                            payload, path=path
-                        ),
-                        stale_patterns=[
-                            pattern
-                            for pattern in current_ignores or ()
-                            if pattern not in effective_ignores
-                        ],
-                        per_file_ignores=effective_ignores,
-                        analysis_exclusions=analysis_exclusions,
-                        generated_python_roots=generated_python_roots,
+                    first_party=FlextInfraToolTablesPhase.first_party_namespaces(
+                        payload, path=path
                     ),
+                    stale_patterns=[
+                        pattern
+                        for pattern in current_ignores or ()
+                        if pattern not in effective_ignores
+                    ],
+                    per_file_ignores=effective_ignores,
+                    generated_python_roots=generated_python_roots,
                 ),
             )
         )

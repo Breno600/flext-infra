@@ -52,53 +52,72 @@ class TestsFlextInfraUtilitiesResourceLimits:
         )
 
     def test_mypy_budget_resolves_the_project_tooling_overlay(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self, tmp_path: Path
     ) -> None:
-        """The project tooling.yaml budget drives the runner timeout (#1113)."""
-        monkeypatch.delenv(c.Infra.MYPY_TIMEOUT_SECONDS_ENV, raising=False)
+        """A project tooling.yaml budget may tighten the runner timeout."""
+        budget = c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT // 2
         (tmp_path / "config").mkdir()
         (tmp_path / "config" / "tooling.yaml").write_text(
-            "tools:\n  mypy:\n    timeout_seconds: 600\n", encoding="utf-8"
+            f"tools:\n  mypy:\n    timeout_seconds: {budget}\n", encoding="utf-8"
         )
-        expected_limit = m.Infra.MypyResourceLimit(
-            memory_limit_mb=u.Infra.mypy_resource_limit().memory_limit_mb,
-            timeout_seconds=600,
+        with tm.scope(remove_env_keys=(c.Infra.MYPY_TIMEOUT_SECONDS_ENV,)):
+            expected_limit = m.Infra.MypyResourceLimit(
+                memory_limit_mb=u.Infra.mypy_resource_limit().memory_limit_mb,
+                timeout_seconds=budget,
+            )
+            timeout = u.Infra.mypy_runner_timeout_for_project(tmp_path)
+
+        tm.that(timeout, eq=u.Infra.mypy_runner_timeout(expected_limit))
+
+    def test_mypy_budget_overlay_above_the_bound_fails_loud(
+        self, tmp_path: Path
+    ) -> None:
+        """A project budget can never raise the fleet wall-time bound."""
+        (tmp_path / "config").mkdir()
+        (tmp_path / "config" / "tooling.yaml").write_text(
+            "tools:\n  mypy:\n    timeout_seconds: "
+            f"{c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT + 1}\n",
+            encoding="utf-8",
         )
 
-        tm.that(
-            u.Infra.mypy_runner_timeout_for_project(tmp_path),
-            eq=u.Infra.mypy_runner_timeout(expected_limit),
-        )
+        with (
+            tm.scope(remove_env_keys=(c.Infra.MYPY_TIMEOUT_SECONDS_ENV,)),
+            pytest.raises(
+                ValueError,
+                match=f"less than or equal to {c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT}",
+            ),
+        ):
+            u.Infra.mypy_runner_timeout_for_project(tmp_path)
 
     def test_mypy_budget_env_override_beats_the_project_overlay(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self, tmp_path: Path
     ) -> None:
         """The documented precedence is env override > project budget."""
-        monkeypatch.setenv(c.Infra.MYPY_TIMEOUT_SECONDS_ENV, "150")
+        override = c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT // 3
         (tmp_path / "config").mkdir()
         (tmp_path / "config" / "tooling.yaml").write_text(
-            "tools:\n  mypy:\n    timeout_seconds: 600\n", encoding="utf-8"
+            "tools:\n  mypy:\n    timeout_seconds: "
+            f"{c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT // 2}\n",
+            encoding="utf-8",
         )
-        expected_limit = m.Infra.MypyResourceLimit(
-            memory_limit_mb=u.Infra.mypy_resource_limit().memory_limit_mb,
-            timeout_seconds=150,
-        )
+        with tm.scope(env={c.Infra.MYPY_TIMEOUT_SECONDS_ENV: str(override)}):
+            expected_limit = m.Infra.MypyResourceLimit(
+                memory_limit_mb=u.Infra.mypy_resource_limit().memory_limit_mb,
+                timeout_seconds=override,
+            )
+            timeout = u.Infra.mypy_runner_timeout_for_project(tmp_path)
 
-        tm.that(
-            u.Infra.mypy_runner_timeout_for_project(tmp_path),
-            eq=u.Infra.mypy_runner_timeout(expected_limit),
-        )
+        tm.that(timeout, eq=u.Infra.mypy_runner_timeout(expected_limit))
 
     def test_mypy_budget_without_overlay_uses_the_fleet_default(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self, tmp_path: Path
     ) -> None:
         """No project overlay falls back to the fleet tooling SSOT."""
-        monkeypatch.delenv(c.Infra.MYPY_TIMEOUT_SECONDS_ENV, raising=False)
+        with tm.scope(remove_env_keys=(c.Infra.MYPY_TIMEOUT_SECONDS_ENV,)):
+            timeout = u.Infra.mypy_runner_timeout_for_project(tmp_path)
+            expected = u.Infra.mypy_runner_timeout()
 
-        tm.that(
-            u.Infra.mypy_runner_timeout_for_project(tmp_path),
-            eq=u.Infra.mypy_runner_timeout(),
-        )
+        tm.that(timeout, eq=expected)
 
     def test_workspace_checker_requires_its_own_environment(
         self, tmp_path: Path
@@ -352,11 +371,11 @@ class TestsFlextInfraUtilitiesResourceLimits:
         """Reject a wall-time configuration above the canonical ceiling."""
         with pytest.raises(
             ValueError,
-            match=f"less than or equal to {c.Infra.MYPY_TIMEOUT_SECONDS_MAX}",
+            match=f"less than or equal to {c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT}",
         ):
             m.Infra.MypyResourceLimit(
                 memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
-                timeout_seconds=c.Infra.MYPY_TIMEOUT_SECONDS_MAX + 1,
+                timeout_seconds=c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT + 1,
             )
 
     def test_mypy_timeout_has_controlled_exit_and_signal_diagnostic(self) -> None:

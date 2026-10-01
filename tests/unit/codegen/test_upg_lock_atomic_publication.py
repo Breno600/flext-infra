@@ -66,16 +66,12 @@ class TestsFlextInfraUpgLockAtomicPublication:
                 tm.that(
                     child.poll(), eq=None, msg="upgrade exited before FIFO observation"
                 )
+                # uv opens the wheel on a tokio worker thread, whose thread
+                # name is not "uv": identify the owned uv by its command line
+                # and require that one of its threads waits on the FIFO.
                 observed = tm.ok(
                     u.Cli.run(
-                        [
-                            "ps",
-                            "--sid",
-                            str(child.pid),
-                            "-L",
-                            "-o",
-                            "pid=,comm=,wchan:64=",
-                        ],
+                        ["ps", "--sid", str(child.pid), "-L", "-o", "wchan:64=,args="],
                         timeout=self.INTERRUPT_AFTER_SECONDS,
                     )
                 )
@@ -91,10 +87,10 @@ class TestsFlextInfraUpgLockAtomicPublication:
                     row[0] for row in rows if len(row) > 1 and row[1] == c.Infra.UV
                 }
                 if any(
-                    len(row) > 2
-                    and row[0] in owned
-                    and row[2].split() == ["wait_for_partner"]
-                    for row in rows
+                    len(fields) > 1
+                    and fields[0] == "wait_for_partner"
+                    and Path(fields[1]).name == c.Infra.UV
+                    for fields in (row.split() for row in observed.stdout.splitlines())
                 ):
                     break
                 time.sleep(0.02)

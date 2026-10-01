@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from flext_core import r
 from flext_infra import c, m, u
 
-from ._mise_artifacts_candidates import publication_plan
+from ._mise_artifacts_candidates import FlextInfraMiseArtifactsCandidates
 from ._mise_artifacts_process import FlextInfraMiseArtifactsProcess as process
 
 if TYPE_CHECKING:
@@ -63,7 +63,9 @@ class FlextInfraMiseStaging:
             )
             if staged.failure:
                 return result_type.from_failure(staged)
-            receipts = publication_plan((project,), (stage_root,))
+            receipts = FlextInfraMiseArtifactsCandidates.publication_plan(
+                (project,), (stage_root,)
+            )
             if receipts.failure:
                 return result_type.from_failure(receipts)
             publications.extend(receipts.value)

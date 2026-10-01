@@ -6,7 +6,7 @@ import shutil
 from collections import defaultdict
 from collections.abc import Callable as _CensusCallable, MutableMapping
 from pathlib import Path
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, ClassVar
 
 from flext_cli import u
 
@@ -23,14 +23,11 @@ from .rope_runtime import FlextInfraUtilitiesRopeRuntime
 if TYPE_CHECKING:
     from flext_infra import p
 
-_log = u.fetch_logger(__name__)
-
-_UNSUPPORTED_SIMPLE_REMOVAL_CODE: Final[str] = "CENSUS_UNSUPPORTED_SIMPLE_REMOVAL"
-"Error code marking a candidate outside the simple-removal contract (not a failure)."
-
 
 class FlextInfraUtilitiesRefactorCensus:
     """Census and source introspection helpers for refactor tools."""
+
+    _census_log: ClassVar[p.Logger] = u.fetch_logger(__name__)
 
     @staticmethod
     def export_pydantic_json(model_payload: m.BaseModel, export_path: Path) -> None:
@@ -584,7 +581,7 @@ class FlextInfraUtilitiesRefactorCensus:
         try:
             rope.rope_project.validate()
         except RecursionError as exc:
-            _log.warning(
+            FlextInfraUtilitiesRefactorCensus._census_log.warning(
                 "rope_validate_recursion_limit",
                 candidate=candidate.file_path,
                 error=str(exc),
@@ -606,7 +603,7 @@ class FlextInfraUtilitiesRefactorCensus:
         """Plan one simple removal and bind its post-write Rope cleanup.
 
         A candidate outside the simple-removal contract yields a typed
-        failure carrying ``_UNSUPPORTED_SIMPLE_REMOVAL_CODE`` — never a
+        failure carrying ``c.Infra.CENSUS_UNSUPPORTED_SIMPLE_REMOVAL_CODE`` — never a
         ``None`` payload, which success results forbid. The preview and
         apply paths translate that code into their own "unsupported"
         outcome so both report the same result from one owner.
@@ -618,7 +615,7 @@ class FlextInfraUtilitiesRefactorCensus:
             return planned.fail(
                 "candidate is outside the simple-removal contract: "
                 f"{candidate.file_path}:{candidate.line} {candidate.object_name}",
-                error_code=_UNSUPPORTED_SIMPLE_REMOVAL_CODE,
+                error_code=c.Infra.CENSUS_UNSUPPORTED_SIMPLE_REMOVAL_CODE,
             )
         updates_result = (
             FlextInfraUtilitiesRefactorCensus._simple_removal_sources_result(
@@ -658,7 +655,7 @@ class FlextInfraUtilitiesRefactorCensus:
             rope, candidate, source_cache=source_cache
         )
         if planned.failure:
-            if planned.error_code == _UNSUPPORTED_SIMPLE_REMOVAL_CODE:
+            if planned.error_code == c.Infra.CENSUS_UNSUPPORTED_SIMPLE_REMOVAL_CODE:
                 return r[bool].ok(False)
             return r[bool].from_failure(planned)
         updates, post_write = planned.unwrap()
@@ -667,7 +664,7 @@ class FlextInfraUtilitiesRefactorCensus:
                 updates, workspace=workspace, gates=gates, post_write=post_write
             )
         except RuntimeError as exc:
-            _log.warning(
+            FlextInfraUtilitiesRefactorCensus._census_log.warning(
                 "census_preview_candidate_rejected",
                 candidate=candidate.file_path,
                 object_name=candidate.object_name,
@@ -706,7 +703,7 @@ class FlextInfraUtilitiesRefactorCensus:
             rope, candidate, source_cache=source_cache
         )
         if planned.failure:
-            if planned.error_code == _UNSUPPORTED_SIMPLE_REMOVAL_CODE:
+            if planned.error_code == c.Infra.CENSUS_UNSUPPORTED_SIMPLE_REMOVAL_CODE:
                 return r[bool].ok(False)
             return r[bool].from_failure(planned)
         updates, cleanup = planned.unwrap()
