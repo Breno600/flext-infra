@@ -362,6 +362,7 @@ mise_exec() { \
 'MISE_GITHUB_OAUTH_OPEN_BROWSER=false' \
 'MISE_LOCKFILE=true' \
 'MISE_LOCKED=true' \
+'MISE_PYTHON_COMPILE=false' \
 $${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
 "HOME=$$scratch/home" \
 "USERPROFILE=$$scratch/home" \
@@ -589,6 +590,7 @@ mise_exec() { \
 'MISE_GITHUB_OAUTH_OPEN_BROWSER=false' \
 'MISE_LOCKFILE=true' \
 'MISE_LOCKED=true' \
+'MISE_PYTHON_COMPILE=false' \
 $${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
 "HOME=$$scratch/home" \
 "USERPROFILE=$$scratch/home" \

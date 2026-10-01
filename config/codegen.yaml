@@ -28,6 +28,11 @@ Infra:
       # writes the committed uv.lock and mise.lock; setup, gen, and fmt install
       # frozen from those locks.
       python_version: "3.13"
+      # Projection: .mise.toml [settings.python] compile and bootstrap
+      # MISE_PYTHON_COMPILE. false lists and installs only precompiled
+      # python-build-standalone releases, so `latest` within the minor line
+      # never selects a CPython release that has no prebuilt build.
+      python_compile: false
       uv_link_mode: copy
       uv_environments: ["sys_platform == 'linux'", "sys_platform == 'darwin'"]
       # Global compatibility exceptions become [tool.uv] constraint-dependencies

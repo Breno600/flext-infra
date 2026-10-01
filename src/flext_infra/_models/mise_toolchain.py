@@ -195,6 +195,17 @@ class FlextInfraModelsMiseToolchain:
                 ),
             ),
         ]
+        python_compile: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Rendered as [settings.python] compile and bootstrap "
+                    "MISE_PYTHON_COMPILE. False restricts Python resolution "
+                    "and installation to precompiled builds. "
+                    "Override toolchain.python_compile."
+                )
+            ),
+        ]
         npm_package_manager: Annotated[
             Literal["aube"],
             m.Field(description="Mise npm installer with a locked dependency graph"),
