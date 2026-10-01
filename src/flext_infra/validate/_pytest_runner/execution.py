@@ -5,7 +5,6 @@ from __future__ import annotations
 import shlex
 import sys
 from collections.abc import MutableMapping
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, override
 
@@ -71,30 +70,18 @@ class FlextInfraPytestRunnerExecution(
     ) -> m.Infra.PytestSelectionPlan:
         """Return the typed testmon selection and its manifest owner.
 
-        The selection and the complete inventory are independent read-only
-        collections (both ``--testmon-nocollect``, each with its own artifacts),
-        so they run concurrently on the one entrypoint clock instead of one
-        after the other (flext-3l1gk); the first failure still escapes.
+        Each collection is one deadline-bound child of the flext-cli process
+        owner, which runs deadline processes on the main interpreter thread
+        only; the selection and the complete inventory therefore run in order.
         """
+        selection = self._collect_selection(
+            report_dir, complete=complete, execution_mode=execution_mode
+        )
         if complete or not verify_inventory:
-            return self._collect_selection(
-                report_dir, complete=complete, execution_mode=execution_mode
-            )
-        with ThreadPoolExecutor(max_workers=2) as pool:
-            selected = pool.submit(
-                self._collect_selection,
-                report_dir,
-                complete=False,
-                execution_mode=execution_mode,
-            )
-            complete_inventory = pool.submit(
-                self._collect_selection,
-                report_dir,
-                complete=True,
-                execution_mode=execution_mode,
-            )
-            selection = selected.result()
-            inventory = complete_inventory.result()
+            return selection
+        inventory = self._collect_selection(
+            report_dir, complete=True, execution_mode=execution_mode
+        )
         if not set(selection.node_ids).issubset(inventory.node_ids):
             msg = "testmon selected node IDs outside the complete collection inventory"
             raise RuntimeError(msg)
