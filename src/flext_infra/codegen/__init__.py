@@ -52,9 +52,6 @@ if TYPE_CHECKING:
     from ._lazy_init_planner_public_root import (
         FlextInfraCodegenLazyInitPlannerPublicRootMixin,
     )
-    from ._lazy_init_projection_manifest import (
-        FlextInfraCodegenLazyInitProjectionManifest,
-    )
     from ._mise_artifacts_candidates import FlextInfraMiseArtifactsCandidates
     from ._mise_artifacts_cold_start import FlextInfraMiseColdStart
     from ._mise_artifacts_derivation import FlextInfraMiseArtifactsDerivation
@@ -136,7 +133,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenLazyInitGenerationRegistryMixin",
     "FlextInfraCodegenLazyInitPlanner",
     "FlextInfraCodegenLazyInitPlannerPublicRootMixin",
-    "FlextInfraCodegenLazyInitProjectionManifest",
     "FlextInfraCodegenMakeBootstrap",
     "FlextInfraCodegenMiseArtifacts",
     "FlextInfraCodegenPipeline",
@@ -217,9 +213,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ),
             "._lazy_init_planner_public_root": (
                 "FlextInfraCodegenLazyInitPlannerPublicRootMixin",
-            ),
-            "._lazy_init_projection_manifest": (
-                "FlextInfraCodegenLazyInitProjectionManifest",
             ),
             "._mise_artifacts_candidates": ("FlextInfraMiseArtifactsCandidates",),
             "._mise_artifacts_cold_start": ("FlextInfraMiseColdStart",),
