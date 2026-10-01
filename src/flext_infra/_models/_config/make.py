@@ -174,6 +174,16 @@ class FlextInfraConfigModelsMake:
                 ),
             ),
         ]
+        api_modules: Annotated[
+            Mapping[t.NonEmptyStr, t.VariadicTuple[t.NonEmptyStr]],
+            m.Field(
+                min_length=1,
+                description=(
+                    "Public API modules generated per distribution; absent "
+                    "distributions own no module pages"
+                ),
+            ),
+        ]
         mutable_actions: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(min_length=1, description="Docs actions that mutate"),

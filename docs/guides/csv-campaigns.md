@@ -26,10 +26,15 @@ that the group exists and rejects a different captured value before publishing
 any rewrite in the batch.
 Sed rules may declare `distributions: [flext-infra]` to select consumers by
 their validated `[project].name`. An omitted or empty selector applies to every
-consumer. The packaged catalogue's Infra-specific rules declare this selector,
-so external projects can compose their own rules without inheriting Infra-only
-file requirements. A selected Markdown include still fails if its source is
-absent; a missing project identity is an error rather than an implicit match.
+consumer. The packaged catalogue scopes both Infra and Cosmos Docgen rules to
+their owning distributions, so external projects can compose their own rules
+without inheriting another project's file requirements. A selected Markdown
+include still fails if its source is absent; a missing project identity is an
+error rather than an implicit match.
+The project identity is parsed from one authenticated `pyproject.toml` snapshot,
+using the same managed-conflict recovery and typed TOML validation as project
+metadata. That snapshot remains a transaction input through publication, so a
+concurrent identity change rejects the complete text batch.
 
 The public `make mod` circuit reads `Infra.refactor_csv_campaigns` from the packaged
 configuration. Each campaign keeps one `old,new` CSV as its rename source. Consumer
