@@ -93,12 +93,7 @@ class TestsFlextInfraBanditAndMarkdownGates:
             # reads the same typed rules SSOT the .markdownlint.json
             # projection renders. A hand-written config literal here would
             # freeze a shape no projection produces.
-            (
-                REFLOW_HINT,
-                CANONICAL_MARKDOWNLINT_CONFIG,
-                False,
-                [],
-            ),
+            (REFLOW_HINT, CANONICAL_MARKDOWNLINT_CONFIG, False, []),
         ],
     )
     def test_markdown_check(
