@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import c, config, m, u
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 from ..codegen.file_leases import FlextInfraCodegenFileLeases
 
@@ -44,7 +45,14 @@ class FlextInfraGate:
         runs, never passes, and is never listed.
         """
         return not self.requires_python_targets or bool(
-            u.Infra.discover_python_targets(project_dir),
+            u.Infra.discover_python_targets(
+                project_dir,
+                workspace_excluded_top_dirs=(
+                    FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
+                        project_dir
+                    ).unwrap()
+                ),
+            ),
         )
 
     def __init__(
