@@ -80,7 +80,7 @@ class FlextInfraCodegenLazyInitPlanner(
         """Build the lazy-init render plan for one package directory."""
         context = self.context(pkg_dir)
         if not context.importable or self._shadows_stdlib_module(pkg_dir):
-            # flext-mh7g4: no generated content can repair a package name that
+            # No generated content can repair a package name that
             # shadows a stdlib module, so the plan removes generator-owned
             # residue and otherwise skips the directory. The ALL_SCAN_PATTERNS
             # contract is unchanged: every surface is still scanned; only
@@ -154,7 +154,7 @@ class FlextInfraCodegenLazyInitPlanner(
         is_facade_root = self._is_facade_root(context)
         export_names = {*lazy_map, *eager_dunders}
         if not is_facade_root:
-            # flext-udpm5: a nested package's own modules commonly consume
+            # A nested package's own modules commonly consume
             # the project root's already-published facade aliases directly
             # (``from <root> import c, m, p, ...``) without defining any
             # local class of their own under that alias. _resolve_aliases
@@ -180,7 +180,7 @@ class FlextInfraCodegenLazyInitPlanner(
                     or lazy_map.get(name) != (root_pkg_name, name)
                 }
         if is_facade_root:
-            # flext-pulj (codex) + ulw follow-up: __all__ is the one public
+            # __all__ is the one public
             # contract (dir()/star-import/docs already respect it). Do NOT
             # narrow lazy_map/_LAZY_MODULES to match -- internal fragments across
             # the package rely on lazy __getattr__ resolving the root facade
@@ -268,8 +268,8 @@ class FlextInfraCodegenLazyInitPlanner(
     def _publish_plan(self, plan: m.Infra.LazyInitPlan) -> m.Infra.LazyInitPlan:
         """Publish one bottom-up plan so parents follow it in the same pass.
 
-        flext-pulj (codex): later alias resolution never rebuilds a package
-        without its children. flext-mh7g4: every plan, including REMOVE and
+        Later alias resolution never rebuilds a package
+        without its children. Every plan, including REMOVE and
         SKIP decided before rendering, is published so the parent inventory in
         ``_merge_children`` sees the child's action instead of the on-disk
         initializer.

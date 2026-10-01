@@ -410,10 +410,11 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 )
                 if rendered is None:
                     continue
-                relative = (
-                    layout.package_dir
-                    / (c.Infra.FAMILY_PUBLIC_MODULES[family] + c.Infra.EXT_PYTHON)
-                ).relative_to(root)
+                facade_path = u.Infra.facade_module_path(layout.package_dir, family)
+                if facade_path is None:
+                    msg = f"rendered {family} facade has no declaring module"
+                    raise ValueError(msg)
+                relative = facade_path.relative_to(root)
                 utility_plan = self.file_plan(root, relative.as_posix(), rendered)
                 if utility_plan.failure:
                     return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(

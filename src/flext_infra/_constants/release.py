@@ -107,8 +107,8 @@ class FlextInfraConstantsRelease:
     RELEASE_SDIST_ROOT_FILES: ClassVar[frozenset[str]] = frozenset({
         ".gitignore",
         # A project may ship its governance agent manifests as declared
-        # runtime assets at the sdist root (ai-hub embeds AGENTS.md and
-        # CLAUDE.md for the agents it deploys); the build hook
+        # runtime assets at the sdist root (a consumer may embed AGENTS.md
+        # and CLAUDE.md for the agents it deploys); the build hook
         # force-includes them by name.
         "agents.md",
         "claude.md",

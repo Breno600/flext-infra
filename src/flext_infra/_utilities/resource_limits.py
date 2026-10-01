@@ -134,7 +134,7 @@ class FlextInfraUtilitiesResourceLimits:
         Mypy keys its cache by module and revalidates each entry by source hash,
         so every checkout and every relock of one project reuse one analysis: a
         dependency bump recomputes only the modules it changed. Keying by lock
-        content (flext-7jnr0) forced a cold full-fleet analysis after every
+        content forced a cold full-fleet analysis after every
         relock and broke the bounded Mypy run. Projects keep distinct
         directories because their ``tests`` packages share one module name.
         """
@@ -227,22 +227,24 @@ class FlextInfraUtilitiesResourceLimits:
 
     @staticmethod
     def _project_mypy_budget(project_dir: Path) -> int | None:
-        """Read ``tools.mypy.timeout_seconds`` from the project overlay."""
+        """Read ``Infra.tooling.tools.mypy.timeout_seconds`` from the overlay.
+
+        The overlay has the same nesting as the packaged ``tooling.yaml``. A
+        level the overlay does not declare is a typed absence (no project
+        budget); a declared level that is not a mapping fails loud.
+        """
         tooling = project_dir / "config" / "tooling.yaml"
         if not tooling.is_file():
             return None
-        parsed = u.Cli.yaml_safe_load(tooling)
-        if parsed.failure:
-            msg = f"project tooling.yaml unreadable: {parsed.error}"
-            raise ValueError(msg)
-        payload = parsed.value or {}
-        tools = payload.get("tools") if isinstance(payload, dict) else None
-        mypy_block = tools.get("mypy") if isinstance(tools, dict) else None
-        raw_budget = (
-            mypy_block.get("timeout_seconds") if isinstance(mypy_block, dict) else None
-        )
-        if raw_budget is None:
-            return None
+        node: t.JsonValue = u.Cli.yaml_safe_load(tooling).unwrap()
+        for key in ("Infra", "tooling", "tools", "mypy", "timeout_seconds"):
+            if not isinstance(node, dict):
+                msg = f"project tooling.yaml level above {key!r} is not a mapping"
+                raise TypeError(msg)
+            if key not in node:
+                return None
+            node = node[key]
+        raw_budget = node
         if not isinstance(raw_budget, int) or isinstance(raw_budget, bool):
             msg = f"project mypy budget must be a plain integer: {raw_budget!r}"
             raise TypeError(msg)

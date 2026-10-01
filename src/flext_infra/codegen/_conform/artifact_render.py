@@ -242,8 +242,8 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             # Why: this marker is regenerated on every `make gen`, but the
             # ledger identity inside it is owned by the checkout, not by the
             # fleet SSOT. Rendering without it stripped the key, and Beads then
-            # minted a NEW identity on next access — rig gmn lost
-            # 2b1a0582-… that way (commit 3e7ba1e). Read it back so a
+            # minted a NEW identity on next access — a consumer rig lost its
+            # identity that way. Read it back so a
             # regeneration is identity-preserving.
             return r[p.Model].ok(
                 m.Infra.BeadsMetadataRenderSpec(
@@ -292,8 +292,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                     # disable Dependabot for the repository.
                     has_devcontainer=(repository_root / ".devcontainer").is_dir(),
                     dependabot_cooldown_days=codegen.dependabot_cooldown_days.get(
-                        dist,
-                        0,
+                        dist, codegen.dependabot_cooldown_default_days
                     ),
                     checkout_submodules=codegen.checkout_submodules_overrides.get(
                         dist,
@@ -322,7 +321,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 ),
             )
         if destination == c.Infra.RELEASE_GITLEAKS_CONFIG_PATH:
-            # Why (flext-to3n7): the release build phase snapshots the gitleaks
+            # Why: the release build phase snapshots the gitleaks
             # policy from the repository; it is fleet policy owned by
             # config/infra.yaml, never scaffold-only project metadata.
             return r[p.Model].ok(

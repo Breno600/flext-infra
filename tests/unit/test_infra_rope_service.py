@@ -362,17 +362,12 @@ class TestsFlextInfraInfraRopeService:
                 eq=True,
             )
 
-    @pytest.mark.parametrize(
-        ("family_alias", "module_name"),
-        tuple(c.Infra.FAMILY_PUBLIC_MODULES.items()),
-    )
+    @pytest.mark.parametrize("family_alias", sorted(c.Infra.FLEXT_FAMILIES))
     def test_class_nesting_cutover_uses_declared_family_owner(
-        self,
-        tmp_path: Path,
-        family_alias: str,
-        module_name: str,
+        self, tmp_path: Path, family_alias: str
     ) -> None:
         """Plan every facade family from semantic objects and its declared owner."""
+        module_name = u.Tests.family_public_module(family_alias)
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         owner_name = (
             f"{u.derive_class_stem(repository_root.name)}"

@@ -76,7 +76,7 @@ class FlextInfraCodegenLazyInitPlannerParentsMixin:
                 seen,
             )
         )
-        # flext-j47u (codex): Rope state is the sole parent fact source; the old
+        # Rope state is the sole parent fact source; the old
         # stdlib-AST fallback duplicated this exact import/class walk.
         parents: list[str] = []
         for package_name in (*base_packages, *same_package_parents):
@@ -129,7 +129,7 @@ class FlextInfraCodegenLazyInitPlannerParentsMixin:
 
         A base names a DECLARED parent: it must resolve (indexed source or the
         active environment). Resolving nowhere is a fact to surface, never a
-        silently dropped parent (flext-b3xmn).
+        silently dropped parent.
         """
         package_name = self._package_name_from_target(target)
         if package_name:
@@ -283,7 +283,7 @@ class FlextInfraCodegenLazyInitPlannerParentsMixin:
                 return package_name
         if not parts:
             return ""
-        # Why (flext-27a9e.1, flext-b3xmn, R32): project-scoped Rope indexes
+        # Why: project-scoped Rope indexes
         # omit declared parents; u.Infra resolves the name in the declared
         # environment. "" is the typed answer for "not a package here".
         if u.Infra.declared_package_dir(parts[0]) is not None:

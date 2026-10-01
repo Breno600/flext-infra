@@ -93,7 +93,7 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
             ]
         index: t.MutableLazyAliasMap = {}
         project_layout = self._project_layout_for(context.pkg_dir)
-        # flext-i6nq.10: Generated support modules are output, never public input.
+        # Generated support modules are output, never public input.
         # conftest.py is pytest-private: its hook variables (pytest_plugins) are
         # never public package ABI and must not enter the lazy export map.
         skip_names = {
@@ -104,7 +104,7 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
             *c.Infra.OBSOLETE_GENERATED_INIT_FILES,
         }
         for py_file, module_name in module_entries:
-            # Operator ruling (2026-09-16, universal, no exceptions): a light
+            # Universal, no exceptions: a light
             # package init exports ONLY its direct children. Subdirectory
             # symbols stay in the subpackage's own init — never re-exported
             # upward, in the root or anywhere else.
@@ -112,14 +112,14 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
                 continue
             child_dir = py_file.parent / py_file.stem
             child_entry = self._package_entry(child_dir)
-            # flext-pulj: test artifacts never enter an installable package ABI.
+            # Test artifacts never enter an installable package ABI.
             test_only_source_module = (
                 context.surface != c.Infra.DIR_TESTS
                 or context.current_pkg == c.Infra.DIR_TESTS
             ) and (
                 c.Infra.TEST_ONLY_SOURCE_MODULE_RE.fullmatch(py_file.name) is not None
             )
-            # flext-6int (claude-ulw): extract predicate to satisfy PLR0916
+            # Extract predicate to satisfy PLR0916
             # (>5 boolean expressions); retired/generated/test modules are
             # never semantic input for the lazy export map.
             is_generated_or_test = (

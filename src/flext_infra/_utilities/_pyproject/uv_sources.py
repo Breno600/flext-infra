@@ -81,25 +81,13 @@ class FlextInfraUtilitiesPyprojectUvSources(
         uv = u.Cli.toml_table_child(tool, "uv")
         if uv is None:
             uv = u.Cli.toml_ensure_table(tool, "uv")
-        # A declared candidate commit replaces every direct and transitive
-        # requirement for that distribution during staging. The candidate
-        # manifest owns this temporary pin; the committed lock owns normal
-        # resolutions when no candidate is declared (flext-oe420).
-        if candidate_sources:
-            u.Cli.toml_sync_string_list(
-                uv,
-                "override-dependencies",
-                [
-                    f"{name} @ {source}"
-                    for name, source in sorted(candidate_sources.items())
-                ],
-            )
-        else:
-            u.Cli.toml_remove_key_if_present(uv, "override-dependencies")
+        # uv.lock, written only by `make upg`, owns every resolved revision:
+        # no override may pin one beside it.
+        u.Cli.toml_remove_key_if_present(uv, "override-dependencies")
         u.Cli.toml_remove_key_if_present(uv, "required-version")
         # Constraints are SSOT-rendered: the declared config value is the only
         # source, so a removed declaration exterminates the key everywhere and
-        # no orphan cap can survive without an owner (flext-gzfd2 class).
+        # no orphan cap can survive without an owner.
         retained_constraints = tuple(
             requirement
             for requirement in resolution.constraint_dependencies
@@ -114,10 +102,10 @@ class FlextInfraUtilitiesPyprojectUvSources(
         else:
             u.Cli.toml_remove_key_if_present(uv, "constraint-dependencies")
         u.Cli.toml_sync_value(uv, "link-mode", resolution.link_mode)
-        # The supply-chain cooldown was exterminated fleet-wide (flext-fphyv):
+        # The supply-chain cooldown was exterminated fleet-wide:
         # uv resolves every version published up to now. Removed declarations
         # exterminate the keys everywhere so no orphan cap survives without an
-        # owner (flext-gzfd2 class).
+        # owner.
         u.Cli.toml_remove_key_if_present(uv, "exclude-newer")
         u.Cli.toml_remove_key_if_present(uv, "exclude-newer-package")
         # Environments come from the fleet toolchain SSOT: an empty declaration

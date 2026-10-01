@@ -23,7 +23,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         """Check a real typed source through both validated resource ceilings."""
         limit = m.Infra.MypyResourceLimit(
             memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
-            timeout_seconds=c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT,
+            timeout_seconds=config.Infra.tooling.tools.mypy.timeout_seconds,
         )
         command = u.Infra.mypy_limited_command(
             test_u.Tests.mypy_workload(tmp_path),
@@ -191,7 +191,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
             else c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
             timeout_seconds=test_u.Tests.mypy_deadline_limit().timeout_seconds
             if scenario == "deadline"
-            else c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT,
+            else config.Infra.tooling.tools.mypy.timeout_seconds,
         )
         source = "import sys,time; print('workload-ready', flush=True); "
         if scenario == "exit":
@@ -296,7 +296,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         """Preserve external termination and reap the running workload."""
         limit = m.Infra.MypyResourceLimit(
             memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
-            timeout_seconds=c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT,
+            timeout_seconds=config.Infra.tooling.tools.mypy.timeout_seconds,
         )
         started = u.Cli.process_start(
             u.Infra.mypy_limited_command(
@@ -330,7 +330,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
     def test_mypy_resource_limit_parses_environment_at_boundary(self) -> None:
         """Convert valid process text once before strict model validation."""
         memory_limit = c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT // 2
-        timeout_limit = c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT // 2
+        timeout_limit = config.Infra.tooling.tools.mypy.timeout_seconds // 2
         with tm.scope(
             env={
                 c.Infra.MYPY_MEMORY_LIMIT_MB_ENV: str(memory_limit),
@@ -376,7 +376,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
             env={
                 c.Infra.MYPY_MEMORY_LIMIT_MB_ENV: invalid_value,
                 c.Infra.MYPY_TIMEOUT_SECONDS_ENV: str(
-                    c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT,
+                    config.Infra.tooling.tools.mypy.timeout_seconds
                 ),
             },
         )
@@ -392,7 +392,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         ):
             m.Infra.MypyResourceLimit(
                 memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT + 1,
-                timeout_seconds=c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT,
+                timeout_seconds=config.Infra.tooling.tools.mypy.timeout_seconds,
             )
 
     def test_mypy_resource_contract_rejects_timeout_above_ceiling(self) -> None:
@@ -410,7 +410,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         """Expose the configured ceilings and process status on timeout."""
         limit = m.Infra.MypyResourceLimit(
             memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
-            timeout_seconds=c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT,
+            timeout_seconds=config.Infra.tooling.tools.mypy.timeout_seconds,
         )
         diagnostic = u.Infra.mypy_failure_diagnostic(
             m.Cli.CommandOutput(
@@ -439,7 +439,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         """Expose traceback output when Mypy also writes an error banner."""
         limit = m.Infra.MypyResourceLimit(
             memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
-            timeout_seconds=c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT,
+            timeout_seconds=config.Infra.tooling.tools.mypy.timeout_seconds,
         )
         diagnostic = u.Infra.mypy_failure_diagnostic(
             m.Cli.CommandOutput(

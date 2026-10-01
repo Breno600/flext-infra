@@ -84,14 +84,14 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
         is_facade_root = self._is_facade_root(parent_context)
         direct: list[str] = []
         for child_dir in package_entry.descendant_child_dirs:
-            # flext-pulj (codex): do not merge retired root registries into the
+            # Do not merge retired root registries into the
             # inline map that replaces them.
             if child_dir.name in c.Infra.OBSOLETE_ROOT_SUPPORT_NAMES:
                 continue
             if not self.context(child_dir).importable:
                 continue
             resolved_child_dir = child_dir.resolve()
-            # flext-mh7g4: children are planned before their parent (depth
+            # Children are planned before their parent (depth
             # descending), so the parent inventory follows the child's plan in
             # the same pass — a planned WRITE counts as a package even before
             # its initializer exists on disk, and a planned REMOVE/SKIP (for

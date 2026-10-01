@@ -65,7 +65,7 @@ class TestsFlextInfraWorkspaceMemberLedgerIdentity:
             ),
         )
 
-        loaded = tm.ok(FlextInfraWorkspaceDetector.load_workspace_manifest(tmp_path))
+        loaded = tm.ok(u.Infra.load_workspace_manifest(tmp_path))
 
         tm.that(loaded, len=1)
         tm.that(loaded[0].repository.extra_verbs, eq=(root_verb,))

@@ -6,6 +6,7 @@ import sys
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, m, u
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 from .base_gate import FlextInfraGate
 
@@ -32,7 +33,14 @@ class FlextInfraPyreflyGate(FlextInfraGate):
     ) -> t.StrSequence:
         """Check only local Python roots to avoid scanning dependency trees."""
         _ = ctx
-        return u.Infra.discover_python_targets(project_dir)
+        return u.Infra.discover_python_targets(
+            project_dir,
+            workspace_excluded_top_dirs=(
+                FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
+                    project_dir
+                ).unwrap()
+            ),
+        )
 
     @override
     def _build_check_command(

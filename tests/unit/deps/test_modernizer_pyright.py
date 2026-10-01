@@ -10,6 +10,7 @@ from flext_tests import tm
 from flext_infra import (
     FlextInfraEnsurePyrightConfigPhase,
     FlextInfraPyprojectModernizer,
+    FlextInfraWorkspaceDetector,
     u as infra_u,
 )
 from tests import m, t, u
@@ -94,7 +95,17 @@ class TestsFlextInfraDepsModernizerPyright:
         )
         (member_source / "__init__.py").write_text("VALUE = 1\n", encoding="utf-8")
 
-        tm.that(infra_u.Infra.discover_python_dirs(tmp_path), eq=["src"])
+        tm.that(
+            infra_u.Infra.discover_python_dirs(
+                tmp_path,
+                workspace_excluded_top_dirs=(
+                    FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
+                        tmp_path
+                    ).unwrap()
+                ),
+            ),
+            eq=["src"],
+        )
 
     def test_python_discovery_uses_caller_resolved_exclusions(
         self,
@@ -405,7 +416,14 @@ class TestsFlextInfraDepsModernizerPyright:
             encoding="utf-8",
         )
         u.Tests.write_project_beads_config(tmp_path, "workspace")
-        discovered = frozenset(infra_u.Infra.discover_python_dirs(tmp_path))
+        excluded_top_dirs = FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
+            tmp_path
+        ).unwrap()
+        discovered = frozenset(
+            infra_u.Infra.discover_python_dirs(
+                tmp_path, workspace_excluded_top_dirs=excluded_top_dirs
+            )
+        )
         declared = tuple(d for d in rules.env_dirs if d in discovered)
 
         pyright = self._applied(
@@ -418,5 +436,9 @@ class TestsFlextInfraDepsModernizerPyright:
                 str(u.Tests.toml_mapping(environment)["root"])
                 for environment in u.Tests.toml_list(pyright["executionEnvironments"])
             ),
-            eq=sorted(infra_u.Infra.analyzer_python_roots(tmp_path, declared)),
+            eq=sorted(
+                infra_u.Infra.analyzer_python_roots(
+                    tmp_path, declared, workspace_excluded_top_dirs=excluded_top_dirs
+                )
+            ),
         )

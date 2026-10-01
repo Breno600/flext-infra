@@ -36,8 +36,7 @@ class FlextInfraUtilitiesPromotedExecution(FlextInfraUtilitiesPromotedInvocation
         python = Path(sys.executable)
         if not python.is_file():
             cls.promoted_fail(message.WORKSPACE_PYTHON_MISSING, python=python)
-        live_settings = type(settings).fetch_global()
-        active_venv = live_settings.Infra.virtual_env
+        active_venv = settings.Infra.virtual_env
         venv = Path(active_venv) if active_venv else Path(sys.prefix)
         env = os.environ.copy()
         env.update({

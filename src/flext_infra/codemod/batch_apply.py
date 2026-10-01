@@ -8,7 +8,7 @@ from typing import override
 
 from flext_core import r
 
-from .. import FlextInfraServiceBase, m, p, t, u
+from .. import FlextInfraConfig, FlextInfraServiceBase, config, infra, m, p, t, u
 from . import (
     FlextInfraCodemodSemanticApply,
     FlextInfraModGateEngine,
@@ -242,9 +242,7 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
         the same list without carrying a copy. Scan roots stay
         repository-root-relative because they select the tree being rewritten.
         """
-        campaigns = (
-            FlextInfraConfig.fetch_global().Infra.refactor_csv_campaigns.campaigns
-        )
+        campaigns = config.Infra.refactor_csv_campaigns.campaigns
         config_dir = FlextInfraConfig.ssot_config_dir()
         inputs: list[m.Infra.ApplyRenamesInput] = []
         for campaign in campaigns:

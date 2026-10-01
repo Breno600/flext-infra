@@ -90,7 +90,7 @@ class FlextInfraUtilitiesDocsValidate:
                 raw,
                 strict=True,
             )
-        except c.EXC_BROAD_RUNTIME as exc:
+        except c.ValidationError as exc:
             return r[t.StrSequence].fail(
                 f"invalid required_skills configuration: {exc}",
                 error_code="required_skills_validation",

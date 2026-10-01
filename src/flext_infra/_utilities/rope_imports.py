@@ -902,11 +902,14 @@ class FlextInfraUtilitiesRopeImports:
         rope_project: t.Infra.RopeProject,
         violations: t.SequenceOf[m.Infra.CompatibilityAliasViolation],
         parse_failures: t.MutableSequenceOf[m.Infra.ParseFailureViolation],
+        *,
+        alias_migrator: p.Infra.ProjectAliasMigratorFactory,
     ) -> None:
         """Rewrite foreign canonical alias imports to local project facades.
 
-        Uses the ENFORCE-080 project alias migrator to move owned aliases from
-        ``flext_core`` to the project's local facade modules.
+        The calling service supplies the ENFORCE-080 project alias migrator,
+        which moves owned aliases from ``flext_core`` to the project's local
+        facade; the utility never reaches into the refactor services.
         """
         _ = parse_failures
         # Each violation names the project that owns the alias. Inferring the
@@ -929,13 +932,8 @@ class FlextInfraUtilitiesRopeImports:
             )
             if resource is None:
                 continue
-            from flext_infra.refactor.project_alias_migrator import (
-                FlextInfraRefactorProjectAliasMigrator,
-            )
-
-            transformer = FlextInfraRefactorProjectAliasMigrator(
-                file_path=file_path,
-                current_project=next(iter(owners)),
+            transformer = alias_migrator(
+                file_path=file_path, current_project=next(iter(owners))
             )
             updated, changes = transformer.transform(rope_project, resource)
             if changes:

@@ -42,7 +42,7 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
         ).model_copy(deep=True)
 
     @staticmethod
-    @lru_cache(maxsize=128)
+    @lru_cache(maxsize=c.Infra.CONTENT_CACHE_MAXSIZE)
     def _state_from_content(
         root: Path,
         pyproject_path: Path,

@@ -12,9 +12,8 @@ from typing import ClassVar
 
 from flext_cli import u
 
-from flext_infra import c, m, t
+from flext_infra import c, config, m, t
 
-from .._config import FlextInfraConfig
 from .discovery import FlextInfraUtilitiesDiscovery
 from .project_discovery import FlextInfraUtilitiesProjectDiscovery
 from .resource_limits import FlextInfraUtilitiesResourceLimits
@@ -96,7 +95,7 @@ class FlextInfraUtilitiesProtectedEditLinting:
         }
         return tuple(
             gate
-            for gate in FlextInfraConfig.fetch_global().Infra.codegen.make.check_gates_ci
+            for gate in config.Infra.codegen.make.check_gates_ci
             if gate in lint_tool_gates
         )
 
@@ -175,11 +174,10 @@ class FlextInfraUtilitiesProtectedEditLinting:
 
     @staticmethod
     def _relative_path(py_file: Path, workspace: Path) -> Path:
-        """Relative path."""
-        try:
+        """Return ``py_file`` relative to the workspace when it lies inside it."""
+        if py_file.is_relative_to(workspace):
             return py_file.relative_to(workspace)
-        except ValueError:
-            return py_file
+        return py_file
 
     @staticmethod
     def _command_cwd(py_file: Path, workspace: Path) -> Path:
@@ -305,7 +303,7 @@ class FlextInfraUtilitiesProtectedEditLinting:
         """Execute selected lint tools."""
         command_cwd = cls._command_cwd(py_file, workspace)
 
-        # flext-38p39: every gate is an independent subprocess -- _run_lint_gate
+        # Every gate is an independent subprocess -- _run_lint_gate
         # builds its own command and returns a value, touching no shared state.
         # Running any one of them ahead of the pool made a snapshot cost that
         # gate's full wall clock PLUS the slowest of the rest, instead of just

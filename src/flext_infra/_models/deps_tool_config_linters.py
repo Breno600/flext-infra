@@ -225,10 +225,10 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 description=(
                     "Project Mypy wall-time budget in seconds (SSOT; the env"
                     " MYPY_TIMEOUT_SECONDS overrides it at the ingress"
-                    " boundary). It may tighten the fleet bound, never raise it."
+                    " boundary)."
                 ),
             ),
-        ] = c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT
+        ]
         plugins: Annotated[t.StrSequence, m.Field(description="Mypy plugins list.")] = (
             m.Field(default_factory=tuple)
         )

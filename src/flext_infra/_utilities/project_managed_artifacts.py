@@ -370,7 +370,7 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
         tools = u.Cli.toml_ensure_table(doc, "tools")
         for selector, tool in local_tools.items():
             if selector in tools:
-                # Resilient composition (operator law 2026-09-18): a project
+                # Resilient composition: a project
                 # declaring a tool the fleet now provides is promotion residue,
                 # never an ambiguous contract. The fleet SSOT wins, the stale
                 # local declaration is reported for removal, and generation

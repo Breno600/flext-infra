@@ -46,7 +46,7 @@ src/flext_infra/
 
 ## Promoted command framework
 
-Repository-owned `scripts/<verb>/<WHAT>.{py,sh}` commands declare a `/// cosmos-command`
+Repository-owned `scripts/<verb>/<WHAT>.{py,sh}` commands declare a `/// flext-command`
 header and are reached only through `make <verb> WHAT=<action>` when the repository
 declares `script_dispatch`.
 

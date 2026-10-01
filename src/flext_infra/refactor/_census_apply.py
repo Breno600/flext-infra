@@ -27,6 +27,7 @@ from flext_infra.detectors.private_import_bypass_detector import (
 
 from ._census_apply_formatting import FlextInfraRefactorCensusApplyFormattingMixin
 from .classvar_constant_autofix import FlextInfraRefactorClassvarConstantAutofix
+from .project_alias_migrator import FlextInfraRefactorProjectAliasMigrator
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -152,6 +153,7 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
                 u.Infra.rewrite_compatibility_alias_violations(
                     violations=compatibility_violations,
                     parse_failures=parse_failures,
+                    alias_migrator=FlextInfraRefactorProjectAliasMigrator,
                 )
                 changed = True
             elif action == "rewrite_private_import_bypass":
@@ -201,6 +203,7 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
                     rope_project=ctx.rope_project,
                     violations=foreign_canonical_violations,
                     parse_failures=parse_failures,
+                    alias_migrator=FlextInfraRefactorProjectAliasMigrator,
                 )
                 changed = True
             elif action == "classvar_relocation":

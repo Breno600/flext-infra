@@ -188,7 +188,7 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         return cls._facade_declared_class(modules, *target, visiting | {identity})
 
     @staticmethod
-    @lru_cache(maxsize=256)
+    @lru_cache(maxsize=c.Infra.CONTENT_CACHE_MAXSIZE)
     def _facade_module_statements(
         source: str,
         module: str,

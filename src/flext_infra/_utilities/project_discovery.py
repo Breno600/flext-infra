@@ -33,11 +33,16 @@ class FlextInfraUtilitiesProjectDiscovery(
         manifest_path = FlextInfraUtilitiesWorkspaceManifest.workspace_manifest_path(
             repository_root,
         )
+        packaged = m.Infra.RefactorConfigSpec(
+            project_scan_dirs=config.Infra.source_scan.roots
+        )
         if not manifest_path.is_file():
-            return m.Infra.RefactorConfigSpec()
+            return packaged
         loaded = u.Cli.config_load(manifest_path, expand_env=False).unwrap()
         manifest = m.Infra.WorkspaceManifestSpec.model_validate(loaded.data)
-        return manifest.refactor or m.Infra.RefactorConfigSpec()
+        if manifest.refactor is None:
+            return packaged
+        return manifest.refactor
 
     @classmethod
     @lru_cache(maxsize=1)
@@ -195,7 +200,7 @@ class FlextInfraUtilitiesProjectDiscovery(
 
         A declared submodule is another repository: it is consumed as an
         installed library and never indexed from here (every repository
-        evaluates only itself, operator ruling 2026-09-29). The raw child scan
+        evaluates only itself). The raw child scan
         below is a second enumerator, so it must honour the same manifest
         authority as ``discover_project_candidates``. Without that filter every
         direct child holding a ``pyproject.toml`` re-entered the scope the
@@ -266,8 +271,7 @@ class FlextInfraUtilitiesProjectDiscovery(
     def governed_project_roots(cls, repository_root: Path) -> t.SequenceOf[Path]:
         """Return the repositories a verb run at ``repository_root`` governs.
 
-        Every repository evaluates and rewrites only itself (operator ruling
-        2026-09-29): a workspace root consumes its declared members as
+        Every repository evaluates and rewrites only itself: a workspace root consumes its declared members as
         installed libraries and never scans, checks, or rewrites them; each
         member runs its own verbs in its own repository.
         """
@@ -279,7 +283,7 @@ class FlextInfraUtilitiesProjectDiscovery(
         *,
         runtime_root: Path | None = None,
     ) -> Path:
-        """Resolve the checkout's Python environment (D-VENV, flext-x8gn6).
+        """Resolve the checkout's Python environment.
 
         A declared ``runtime_root`` (the generated Makefile's ``RUNTIME_ROOT``)
         owns the environment. Undeclared, the owner derives it: a subproject

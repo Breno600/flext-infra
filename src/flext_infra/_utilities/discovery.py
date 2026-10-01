@@ -190,12 +190,12 @@ class FlextInfraUtilitiesDiscovery(
             policy_owner = cls.project_package_name(project_root)
         except TypeError:
             return m.Infra.AliasMigrationContext(policy_owner="", import_root="")
-        try:
-            relative_parts = (
-                file_path.resolve().relative_to(project_root.resolve()).parts
-            )
-        except ValueError:
-            relative_parts = ()
+        resolved_file, resolved_root = file_path.resolve(), project_root.resolve()
+        relative_parts = (
+            resolved_file.relative_to(resolved_root).parts
+            if resolved_file.is_relative_to(resolved_root)
+            else ()
+        )
         import_root = (
             c.Infra.DIR_TESTS
             if relative_parts and relative_parts[0] == c.Infra.DIR_TESTS
@@ -227,19 +227,19 @@ class FlextInfraUtilitiesDiscovery(
         cls,
         project_dir: Path,
         *,
+        workspace_excluded_top_dirs: frozenset[str],
         skip_dirs: frozenset[str] | None = None,
-        workspace_excluded_top_dirs: frozenset[str] | None = None,
     ) -> t.StrSequence:
-        """Return top-level directories that contain at least one Python file."""
+        """Return top-level directories that contain at least one Python file.
+
+        ``workspace_excluded_top_dirs`` is the caller's validated analysis
+        scope: the service that owns the workspace topology computes it and
+        passes it in, so discovery never reaches back into that service.
+        """
         if not project_dir.is_dir():
             return list[str]()
         effective_skip = (
             skip_dirs if skip_dirs is not None else c.Infra.PYTHON_DISCOVERY_SKIP_DIRS
-        )
-        workspace_excluded = (
-            workspace_excluded_top_dirs
-            if workspace_excluded_top_dirs is not None
-            else cls._workspace_excluded_top_dirs(project_dir)
         )
         return [
             subdir.name
@@ -247,7 +247,7 @@ class FlextInfraUtilitiesDiscovery(
             if subdir.is_dir()
             and not subdir.name.startswith(".")
             and subdir.name not in effective_skip
-            and subdir.name not in workspace_excluded
+            and subdir.name not in workspace_excluded_top_dirs
             and any(
                 cls._python_file_belongs_to_project(project_dir, source)
                 for source in cls._walk_python_files(subdir, effective_skip)
@@ -255,7 +255,9 @@ class FlextInfraUtilitiesDiscovery(
         ]
 
     @classmethod
-    def discover_python_targets(cls, project_dir: Path) -> t.StrSequence:
+    def discover_python_targets(
+        cls, project_dir: Path, *, workspace_excluded_top_dirs: frozenset[str]
+    ) -> t.StrSequence:
         """Return every first-party Python target owned by one project root.
 
         Directory discovery alone omits standalone modules stored directly at
@@ -270,7 +272,12 @@ class FlextInfraUtilitiesDiscovery(
             for path in sorted(project_dir.iterdir())
             if path.is_file() and path.suffix in {".py", ".pyi"}
         ]
-        return [*cls.discover_python_dirs(project_dir), *root_modules]
+        return [
+            *cls.discover_python_dirs(
+                project_dir, workspace_excluded_top_dirs=workspace_excluded_top_dirs
+            ),
+            *root_modules,
+        ]
 
     @staticmethod
     def _walk_python_files(
@@ -313,7 +320,7 @@ class FlextInfraUtilitiesDiscovery(
         project_dir: Path,
         declared: t.StrSequence,
         *,
-        workspace_excluded_top_dirs: frozenset[str] | None = None,
+        workspace_excluded_top_dirs: frozenset[str],
     ) -> t.StrSequence:
         """Return the Python roots every analyzer surface must agree on.
 
@@ -344,17 +351,6 @@ class FlextInfraUtilitiesDiscovery(
                 and not (project_dir / root / c.PYPROJECT_FILENAME).is_file()
             ),
         )
-
-    @staticmethod
-    def _workspace_excluded_top_dirs(project_dir: Path) -> frozenset[str]:
-        """Return first segments of read-only external topology paths."""
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
-        excluded = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
-        if excluded.failure:
-            msg = excluded.error or "workspace analysis scope is unavailable"
-            raise ValueError(msg)
-        return frozenset(path.parts[0] for path in excluded.value if path.parts)
 
     @staticmethod
     def package_init_path(repository_root: Path, package_name: str) -> Path | None:

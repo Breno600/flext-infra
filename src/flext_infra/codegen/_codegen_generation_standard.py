@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-# flext-wkii.17.26 (codex): Keep lazy loading only at the public package root and
+# Keep lazy loading only at the public package root and
 # bind Ruff validation to each target project's real initializer path.
 class FlextInfraCodegenGenerationStandardMixin(
     FlextInfraCodegenGenerationRenderersMixin,
@@ -36,7 +36,7 @@ class FlextInfraCodegenGenerationStandardMixin(
         source = plan.type_checking_map or plan.lazy_map
         public_names = frozenset(plan.exports)
         wildcard_modules = frozenset(plan.wildcard_runtime_modules)
-        # flext-pulj (codex): direct imports outside __all__ remain statically
+        # Direct imports outside __all__ remain statically
         # declared because they are part of the established root interface.
         filtered: MutableMapping[str, t.StrPair] = {
             name: target
@@ -308,7 +308,7 @@ class FlextInfraCodegenGenerationStandardMixin(
             first_party_names.add(project_pkg)
         # I001 parity is judged by THIS project's ruff table, so the render
         # reads the same projected ``known-first-party`` list the linter reads
-        # (flext-3t4z2 S1). Deriving the set from declared dependencies races
+        # Deriving the set from declared dependencies races
         # the deps projection: a pyproject whose tool tables predate a
         # dependency wave renders one order while ruff enforces another, and
         # the generated block fails I001 on every cycle. The derived set stays

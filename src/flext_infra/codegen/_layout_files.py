@@ -1,4 +1,4 @@
-"""Filesystem and Git primitives for the layout engine apply path (flext-0wuz).
+"""Filesystem and Git primitives for the layout engine apply path.
 
 Archive-not-delete law: nothing is ever destroyed; collisions and duplicates
 move content into ``<archive_root>/<project>/``. Git checkouts use ``git mv``

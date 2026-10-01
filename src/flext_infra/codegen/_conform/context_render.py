@@ -239,7 +239,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
             project = workspace.project
         if workspace.namespace_scan_dirs and not project.namespace_scan_dirs:
             # The manifest-level declaration is the repository's production scope
-            # for the namespace validator (cosmos-3flk9 decision A), so a
+            # for the namespace validator, so a
             # checkout that derives its project metadata declares it once at the
             # workspace root instead of freezing a full scaffold spec. An
             # explicit project-level declaration stays the more specific owner.
@@ -393,7 +393,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 ),
                 namespace_scan_dirs=project.namespace_scan_dirs,
                 workspace_integration=workspace.integration,
-                # NOTE (multi-agent, flext-get3j): carry only the validated
+                # Carry only the validated
                 # project declaration; conform owns no inferred Hatch hook.
                 hatch_build_hook_path=project.hatch_build_hook_path,
                 class_stem=project.class_stem,
@@ -496,8 +496,8 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         marker still carries the ledger identity the repository was cloned
         with. Rendering ``project_id: null`` over it dirties the tree (the
         generated-drift check goes red) and, worse, a pushed rewrite would
-        strand every clone's identity — the same class of loss as rig gmn's
-        2b1a0582. When identity.toml is absent, read the id back from the
+        strand every clone's identity — the same class of loss already
+        observed in a consumer rig. When identity.toml is absent, read the id back from the
         existing marker so an unminted checkout preserves the identity it
         cloned instead of clobbering it.
         """

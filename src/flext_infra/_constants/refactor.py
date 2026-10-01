@@ -112,9 +112,6 @@ class FlextInfraConstantsRefactor:
     })
     "ast-grep rule whose findings select each finding-driven semantic cutover."
 
-    RK_REFACTOR: ClassVar[str] = "refactor"
-    RK_PROJECT_SCAN_DIRS: ClassVar[str] = "project_scan_dirs"
-    RK_FILE_EXTENSIONS: ClassVar[str] = "file_extensions"
     RK_FORBIDDEN_IMPORTS: ClassVar[str] = "forbidden_imports"
     RK_REDUNDANT_TYPE_TARGETS: ClassVar[str] = "redundant_type_targets"
     RK_TARGET_MODULES: ClassVar[str] = "target_modules"
@@ -208,12 +205,6 @@ class FlextInfraConstantsRefactor:
         "`make mod-snapshots`, review the snapshot diff and commit it"
     )
     CODEMOD_EPHEMERAL_DIRNAME: ClassVar[str] = "__pycache__"
-    REFACTOR_CONFIG_KEYS: ClassVar[t.StrSequence] = (
-        RK_PROJECT_SCAN_DIRS,
-        RK_FILE_EXTENSIONS,
-    )
-    """Allowed keys under the ``refactor`` config scope."""
-
     TYPING_DEFINITION_FILES: ClassVar[frozenset[str]] = frozenset({
         "constants.py",
         "_constants",
@@ -306,14 +297,6 @@ class FlextInfraConstantsRefactor:
         "u": "*utilities.py",
     })
     "Facade family letter → file glob mapping."
-    FAMILY_PUBLIC_MODULES: ClassVar[t.StrMapping] = MappingProxyType({
-        "c": "constants",
-        "m": "models",
-        "p": "protocols",
-        "t": "typings",
-        "u": "utilities",
-    })
-    "Facade family letter → public facade module suffix mapping."
     NAMESPACE_FILE_TO_FAMILY: ClassVar[t.StrMapping] = MappingProxyType(
         dict.fromkeys(FLEXT_CONSTANTS_FILE_NAMES, "c")
         | dict.fromkeys(FLEXT_TYPINGS_FILE_NAMES, "t")
@@ -436,7 +419,7 @@ class FlextInfraConstantsRefactor:
         c.ENFORCEMENT_PROJECT_ALIAS_OWNERS
     )
     "Project package → canonical aliases it re-exports locally (SSOT: flext-core)."
-    # flext-j47u: consume core enforcement data through its exact canonical alias.
+    # Consume core enforcement data through its exact canonical alias.
     ENFORCEMENT_LIBRARY_OWNERS: ClassVar[t.StrMapping] = c.ENFORCEMENT_LIBRARY_OWNERS
     "External library → project that owns its abstraction facade (SSOT: flext-core)."
     "Matches 'from __future__ import annotations' import statement."

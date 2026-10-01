@@ -91,6 +91,20 @@ class FlextInfraModelsMiseToolchain:
         by pyproject manifests.
         """
 
+        # Selector families rejected while their capabilities are suspended.
+        # Nothing stays suspended -- gc and beads are
+        # operator-owned forks resolved as latest, so the default frees every
+        # selector family and the vocabulary stays declared on this owner.
+        suspended_mise_selector_patterns: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                default=(),
+                description=(
+                    "Mise selector families rejected while suspended; empty "
+                    "frees every toolchain"
+                ),
+            ),
+        ] = ()
         python_version: Annotated[
             t.NonEmptyStr,
             m.Field(
@@ -245,19 +259,15 @@ class FlextInfraModelsMiseToolchain:
         prettier_selector: Annotated[
             t.NonEmptyStr,
             m.Field(
-                default="npm:prettier",
                 description=(
                     "Mise selector for prettier. Override toolchain.prettier_selector; "
                     "never the .mise.toml key."
-                ),
+                )
             ),
         ]
         prettier_version: Annotated[
             t.NonEmptyStr,
-            m.Field(
-                default="latest",
-                description="Moving prettier release selector, e.g. 'latest'",
-            ),
+            m.Field(description="Prettier release selector, e.g. 'latest'"),
         ]
         waza_selector: Annotated[
             t.NonEmptyStr,
@@ -287,8 +297,8 @@ class FlextInfraModelsMiseToolchain:
             m.Field(
                 description=(
                     "Taplo release selector; the committed mise.lock pins the "
-                    "version generation authenticates (flext-t7668)"
-                ),
+                    "version generation authenticates"
+                )
             ),
         ]
         ast_grep_selector: Annotated[

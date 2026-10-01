@@ -36,7 +36,7 @@ class FlextInfraConfigModelsMake:
                     "preserve their local behavior. Pre-push check unsets CI."
                 ),
             ),
-        ] = "N"
+        ]
         local_check_gates: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
@@ -170,16 +170,6 @@ class FlextInfraConfigModelsMake:
                 ),
             ),
         ]
-        api_modules: Annotated[
-            Mapping[t.NonEmptyStr, t.VariadicTuple[t.NonEmptyStr]],
-            m.Field(
-                min_length=1,
-                description=(
-                    "Public API modules generated per distribution; absent "
-                    "distributions own no module pages"
-                ),
-            ),
-        ]
         mutable_actions: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(min_length=1, description="Docs actions that mutate"),
@@ -192,6 +182,15 @@ class FlextInfraConfigModelsMake:
             Path,
             m.Field(description="Repository-relative docs reports directory"),
         ]
+        overview_preview_limits: Annotated[
+            Mapping[t.NonEmptyStr, t.PositiveInt],
+            m.Field(
+                description=(
+                    "Items listed per contract field on the generated API "
+                    "overview page before the preview is truncated"
+                )
+            ),
+        ]
         cross_project_relative_link_pattern: Annotated[
             t.NonEmptyStr,
             m.Field(
@@ -200,11 +199,8 @@ class FlextInfraConfigModelsMake:
         ]
         stale_github_organizations: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                default=("organization",),
-                description="Placeholder GitHub orgs that must be rewritten",
-            ),
-        ] = ("organization",)
+            m.Field(description="Placeholder GitHub orgs that must be rewritten"),
+        ]
         github_repos: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsMake.DocsGithubRepoSpec],
             m.Field(
@@ -212,29 +208,6 @@ class FlextInfraConfigModelsMake:
                 description="Governed org/repo/branch map for cross-repo doc URLs",
             ),
         ] = ()
-
-        @u.model_validator(mode="after")
-        def _validate_api_modules(self) -> Self:
-            """Reject duplicate or non-importable API module declarations."""
-            for distribution, modules in self.api_modules.items():
-                if not modules:
-                    msg = f"docs api_modules must not be empty: {distribution}"
-                    raise ValueError(msg)
-                if len(set(modules)) != len(modules):
-                    msg = f"docs api_modules must be unique: {distribution}"
-                    raise ValueError(msg)
-                invalid = next(
-                    (
-                        module
-                        for module in modules
-                        if not all(part.isidentifier() for part in module.split("."))
-                    ),
-                    None,
-                )
-                if invalid is not None:
-                    msg = f"docs api module is not importable: {invalid}"
-                    raise ValueError(msg)
-            return self
 
         @u.model_validator(mode="after")
         def _validate_actions(self) -> Self:
@@ -339,6 +312,118 @@ class FlextInfraConfigModelsMake:
                 raise ValueError(msg)
             return self
 
+    class TestmonCachePolicySpec(FlextInfraConfigModelsContract.ConfigContract):
+        """Declarative Actions-cache policy for the shared testmon database.
+
+        Implements the preserved #1001 delta: two-phase
+        generations with per-mode caps, a per-repository byte budget with a
+        three-stage quota ladder, a save-ref allowlist (never save from PRs)
+        and a cache-key namespace.
+        """
+
+        mode: Annotated[
+            Literal["bootstrap", "stable"],
+            m.Field(description="Cache phase: bootstrap seeds, stable saves"),
+        ]
+        save_enabled: Annotated[
+            bool, m.Field(description="Master switch for cache publishes")
+        ]
+        max_bootstrap_generations: Annotated[
+            int, m.Field(gt=0, description="Retention cap for bootstrap generations")
+        ]
+        max_stable_generations: Annotated[
+            int, m.Field(gt=0, description="Retention cap for stable generations")
+        ]
+        per_repo_budget_bytes: Annotated[
+            int, m.Field(gt=0, description="Per-repository byte budget")
+        ]
+        warning_threshold_percent: Annotated[
+            int, m.Field(ge=0, le=100, description="Quota-ladder warning stage")
+        ]
+        maintenance_threshold_percent: Annotated[
+            int, m.Field(ge=0, le=100, description="Quota-ladder maintenance stage")
+        ]
+        block_threshold_percent: Annotated[
+            int, m.Field(ge=0, le=100, description="Quota-ladder block stage")
+        ]
+        allowed_save_refs: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(description="Refs whose pushes may publish cache generations"),
+        ]
+        key_prefix: Annotated[
+            t.NonEmptyStr, m.Field(description="Actions cache key namespace")
+        ]
+
+        @u.model_validator(mode="after")
+        def require_ascending_quota_ladder(self) -> Self:
+            """Keep the quota ladder strictly ascending within the percent scale."""
+            full_scale = 100
+            if not (
+                self.warning_threshold_percent
+                < self.maintenance_threshold_percent
+                < self.block_threshold_percent
+                <= full_scale
+            ):
+                msg = "testmon cache quota ladder must ascend warning < maintenance < block <= 100"
+                raise ValueError(msg)
+            return self
+
+    class MypyCacheSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """Project-keyed shared Mypy cache: one analysis per project, reused across relocks."""
+
+        cache_environment_variable: Annotated[
+            FlextInfraConstantsMake.MypyCacheEnvironment,
+            m.Field(description="Mypy's cache-directory environment variable"),
+        ]
+        data_home_environment_variable: Annotated[
+            FlextInfraConstantsMake.MypyCacheEnvironment,
+            m.Field(description="XDG persistent cache-home variable"),
+        ]
+        user_home_environment_variable: Annotated[
+            FlextInfraConstantsMake.MypyCacheEnvironment,
+            m.Field(description="User home variable for the XDG default"),
+        ]
+        home_cache_directory: Annotated[
+            Path, m.Field(description="Standard cache directory below the user home")
+        ]
+        external_storage_directory: Annotated[
+            Path, m.Field(description="FLEXT-owned directory below the cache home")
+        ]
+
+        @u.model_validator(mode="after")
+        def require_external_cache_contract(self) -> Self:
+            """Keep the official cache variable and the external path policy exact."""
+            for name, actual, expected in (
+                (
+                    "cache_environment_variable",
+                    self.cache_environment_variable,
+                    FlextInfraConstantsMake.MypyCacheEnvironment.CACHE_DIR,
+                ),
+                (
+                    "data_home_environment_variable",
+                    self.data_home_environment_variable,
+                    FlextInfraConstantsMake.MypyCacheEnvironment.DATA_HOME,
+                ),
+                (
+                    "user_home_environment_variable",
+                    self.user_home_environment_variable,
+                    FlextInfraConstantsMake.MypyCacheEnvironment.USER_HOME,
+                ),
+            ):
+                if actual != expected:
+                    msg = f"mypy cache {name} must be {expected.value}"
+                    raise ValueError(msg)
+            for name, path in (
+                ("home_cache_directory", self.home_cache_directory),
+                ("external_storage_directory", self.external_storage_directory),
+            ):
+                if path.is_absolute() or any(
+                    part in {"", ".", ".."} for part in path.parts
+                ):
+                    msg = f"mypy cache {name} must be normalized and relative"
+                    raise ValueError(msg)
+            return self
+
     class MakeWorkInProgressSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Predicate the generated CI merge guard applies to pull request heads.
 
@@ -369,14 +454,14 @@ class FlextInfraConfigModelsMake:
     class MakeRuffSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Ruff CLI contract for generated Make verbs and quality gates.
 
-        Operator 2026-09-08: ruff is the style and autofix rule. Every
+        Ruff is the style and autofix rule. Every
         invocation uses preview. Never weaken ruff to keep a file; change the
-        code. Single-pass verb law (operator 2026-09-18): ``make fmt`` runs
+        code. Single-pass verb law: ``make fmt`` runs
         format only and ``make fix`` owns lint repair through the lint gate —
         there is deliberately no ``lint_apply`` key, because a lint pass
         inside fmt would repeat the lint gate's fix.
 
-        ``make fix`` never deletes information (flext-itpd1.5): the lint repair
+        ``make fix`` never deletes information: the lint repair
         applies Ruff's safe fixes only, so ``lint_fix`` rejects the unsafe-fix
         flag. Rules whose fixes delete code stay reported through the
         ``unfixable`` list rendered from ``tooling.yaml``.
@@ -577,7 +662,6 @@ class FlextInfraConfigModelsMake:
         fmt_gates: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                default=("markdown-format",),
                 description=(
                     "Gates whose mutating side `make fmt` drives (formatters). "
                     "The read-only side runs in `make check`; `make fix` never "
@@ -589,22 +673,17 @@ class FlextInfraConfigModelsMake:
             FlextInfraConfigModelsMake.MakeWorkInProgressSpec,
             m.Field(description="WIP branch and draft PR gate predicate"),
         ]
-        # The workflow owns WHICH steps belong to each git-hook stage; these
-        # booleans only govern whether the stage is generated and installed.
+        # Why: git-hook stages are OFF by default and
+        # re-enabled case by case via these config gates. The workflow keeps
+        # owning WHICH steps belong to each stage; the booleans only govern
+        # whether the stage is generated and installed at all.
         pre_commit: Annotated[
             bool,
-            m.Field(
-                default=False,
-                description="Generate and install the pre-commit git-hook stage",
-            ),
-        ] = False
+            m.Field(description="Generate and install the pre-commit git-hook stage"),
+        ]
         pre_push: Annotated[
-            bool,
-            m.Field(
-                default=False,
-                description="Generate and install the pre-push git-hook stage",
-            ),
-        ] = False
+            bool, m.Field(description="Generate and install the pre-push git-hook stage")
+        ]
         workflow: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsMake.MakeWorkflowStepSpec],
             m.Field(min_length=1, description="Ordered canonical validation workflow"),
@@ -622,16 +701,12 @@ class FlextInfraConfigModelsMake:
         testmon_cache_policy: Annotated[
             FlextInfraConfigModelsMake.MakeSpec.TestmonCachePolicySpec,
             m.Field(
-                default_factory=TestmonCachePolicySpec,
-                description="Declarative save/budget/quota policy for the shared testmon cache (#1001 delta)",
+                description="Declarative save/budget/quota policy for the shared testmon cache"
             ),
         ]
         mypy_cache: Annotated[
-            FlextInfraConfigModelsMake.MakeSpec.MypyCacheSpec,
-            m.Field(
-                default_factory=MypyCacheSpec,
-                description="Project-keyed shared Mypy analysis cache policy",
-            ),
+            FlextInfraConfigModelsMake.MypyCacheSpec,
+            m.Field(description="Project-keyed shared Mypy analysis cache policy"),
         ]
         verbs: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsMake.MakeVerbSpec],
@@ -701,7 +776,7 @@ class FlextInfraConfigModelsMake:
         def _validate_verbs(self) -> Self:
             """Validate declared public verbs against workflow and contract.
 
-            Why there is no `"setup" in declared` rejection here (flext-lq86m):
+            Why there is no `"setup" in declared` rejection here:
             the message it carried -- "make setup cannot require the managed
             validation environment" -- is a statement about a verb's
             ENVIRONMENT DEPENDENCY, not about the name `setup`. Testing the
@@ -754,7 +829,7 @@ class FlextInfraConfigModelsMake:
             if len(standalone_gates) != len(set(standalone_gates)):
                 msg = "make standalone_check_gates must route each gate once"
                 raise ValueError(msg)
-            # Why (hq-36xk, flext-lq86m): the guard that lived here read
+            # Why: the guard that lived here read
             # `if "setup" in serialized` and protected `make setup` from being
             # placed in the serialized mutation set, so it could never require
             # the managed validation environment it is supposed to CREATE.

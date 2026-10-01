@@ -18,7 +18,7 @@ from .namespace import FlextInfraUtilitiesCodegenNamespace
 from .namespace_common import FlextInfraUtilitiesRefactorNamespaceCommon
 from .rope_module_patch import FlextInfraUtilitiesRopeModulePatch
 
-# flext-j47u (codex): annotation-only stdlib types are safe runtime imports;
+# Annotation-only stdlib types are safe runtime imports;
 # TYPE_CHECKING is reserved for real reverse-dependency cycle boundaries.
 
 
@@ -50,13 +50,11 @@ class FlextInfraUtilitiesRefactorNamespaceFacades:
         pyproject_path = project_root / c.PYPROJECT_FILENAME
         if not pyproject_path.exists():
             return MappingProxyType(dict[str, t.VariadicTuple[str]]())
-        try:
-            raw = pyproject_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
-        except OSError:
-            return MappingProxyType(dict[str, t.VariadicTuple[str]]())
+        raw = pyproject_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         payload = u.Cli.toml_mapping_from_text(raw)
         if payload is None:
-            return MappingProxyType(dict[str, t.VariadicTuple[str]]())
+            msg = f"invalid TOML in {pyproject_path}"
+            raise ValueError(msg)
         dep_names = (
             FlextInfraUtilitiesDependencies.declared_dependency_names_from_payload(
                 t.Infra.INFRA_MAPPING_ADAPTER.validate_python(payload),

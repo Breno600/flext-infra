@@ -21,6 +21,16 @@ class TestsFlextInfraUtilitiesCodegenMixin:
     """Codegen and lazy-init workspace fixture helpers."""
 
     @staticmethod
+    def family_public_module(family: str) -> str:
+        """Return the public facade module stem the canonical file names give a letter."""
+        (stem,) = (
+            name.removesuffix(c.Infra.EXT_PYTHON)
+            for name, letter in c.Infra.NAMESPACE_FILE_TO_FAMILY.items()
+            if letter == family and not name.startswith("_")
+        )
+        return stem
+
+    @staticmethod
     def ruff_per_file_ignores_toml() -> str:
         """Render the fleet Ruff policy as a pyproject fragment.
 
@@ -153,7 +163,10 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         # facade completeness law rejects owners without their public facade.
         package_dir = root / "src" / "fixture_project"
         for family in ("u", "p"):
-            facade = package_dir / f"{c.Infra.FAMILY_PUBLIC_MODULES[family]}.py"
+            facade = (
+                package_dir
+                / f"{TestsFlextInfraUtilitiesCodegenMixin.family_public_module(family)}.py"
+            )
             if (package_dir / c.Infra.FAMILY_DIRECTORIES[family]).is_dir() and (
                 not facade.is_file()
             ):

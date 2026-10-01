@@ -72,7 +72,7 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
     ) -> t.VariadicTuple[m.Infra.MakeVerbSpec]:
         """Union declared and discovered script verbs deduplicated by name.
 
-        Why (cosmos-3flk9): object-level dedup never converges because declared
+        Why: object-level dedup never converges because declared
         verbs carry their canonical config descriptions while discoveries carry
         ``Script command: <name>``, so every verb entered ``extra_verbs`` twice
         and the generated Makefile emitted colliding ``_builtin-<verb>``

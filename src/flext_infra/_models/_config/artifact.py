@@ -89,14 +89,8 @@ class FlextInfraConfigModelsArtifact:
 
         max_lines: Annotated[
             int,
-            m.Field(
-                ge=1,
-                description=(
-                    "Per-module code-LOC ceiling. Operator instruction "
-                    "2026-09-07: the former 1000-LOC allowance stands."
-                ),
-            ),
-        ] = 1000
+            m.Field(ge=1, description="Per-module code-LOC ceiling"),
+        ]
 
     class CodegenConfigSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Fully modeled content of ``config/codegen.yaml``."""
@@ -110,11 +104,11 @@ class FlextInfraConfigModelsArtifact:
                     "renders any more; generation removes them from consumers"
                 ),
             ),
-        ] = ()
+        ]
         fresh_import_workers: Annotated[
             int,
             m.Field(ge=1, le=16, description="Concurrent fresh-import subprocesses"),
-        ] = 1
+        ]
         loc_cap: Annotated[
             FlextInfraConfigModelsArtifact.CodegenLocCapSpec,
             m.Field(description="Per-module code-LOC ceiling policy"),
@@ -130,7 +124,6 @@ class FlextInfraConfigModelsArtifact:
         checkout_submodules: Annotated[
             t.NonEmptyStr,
             m.Field(
-                default="false",
                 pattern=r"^(true|false|recursive)$",
                 description=(
                     "Default actions/checkout submodules mode for every "
@@ -159,6 +152,17 @@ class FlextInfraConfigModelsArtifact:
                     "is no cooldown: every ecosystem selects the newest "
                     "available release immediately. A distribution that must "
                     "stagger updates declares its own days here."
+                ),
+            ),
+        ]
+        dependabot_cooldown_default_days: Annotated[
+            int,
+            m.Field(
+                ge=7,
+                description=(
+                    "Dependabot cooldown (default-days) for every distribution "
+                    "absent from dependabot_cooldown_days; the supply-chain "
+                    "policy requires a rolling delay of at least seven days"
                 ),
             ),
         ]
@@ -388,7 +392,7 @@ class FlextInfraConfigModelsArtifact:
             FlextInfraConfigModelsTemplates.TemplatesSpec,
             m.Field(description="New-project-only scaffold template manifest"),
         ]
-        # Operator law: flext-infra owns generic conform policy only. The set
+        # flext-infra owns generic conform policy only. The set
         # of projects it serves is NOT its knowledge — each repository's own
         # .gitmodules is the read-only topology authority.
 

@@ -383,7 +383,7 @@ class TestsFlextInfraRepositoryLocalTopology:
         members: t.VariadicTuple[m.Infra.RepositoryRef],
     ) -> None:
         """Record ``members`` as the root manifest's declared member contracts."""
-        (manifest,) = tm.ok(FlextInfraWorkspaceDetector.load_workspace_manifest(root))
+        (manifest,) = tm.ok(u.Infra.load_workspace_manifest(root))
         tm.ok(
             u.Cli.yaml_dump(
                 u.Infra.workspace_manifest_path(root),

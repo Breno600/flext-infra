@@ -1,4 +1,4 @@
-"""Apply orchestration for the project-layout engine (flext-0wuz).
+"""Apply orchestration for the project-layout engine.
 
 Executes the typed findings produced by the planning mixin, composing the
 file/archive primitives and the gitignore owner through FLEXT.

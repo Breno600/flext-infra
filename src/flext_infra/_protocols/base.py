@@ -627,14 +627,6 @@ class FlextInfraProtocolsBase(Protocol):
             ...
 
     @runtime_checkable
-    class TomlReader(Protocol):
-        """Contract for TOML file readers used by dependency services."""
-
-        def read_plain(self, path: Path) -> p.Result[t.JsonMapping]:
-            """Read and parse a TOML file as a plain dict with r error handling."""
-            ...
-
-    @runtime_checkable
     class SafetyRunner(Protocol):
         """Protocol for command execution backends used by the safety manager."""
 
@@ -732,10 +724,6 @@ class FlextInfraProtocolsBase(Protocol):
             """Build project report from deptry issues."""
             ...
 
-    @runtime_checkable
-    class TypingsDepsService(Protocol):
-        """Service for typing-related dependency detection."""
-
         def load_dependency_limits(
             self,
             limits_path: Path | None = None,
@@ -751,10 +739,6 @@ class FlextInfraProtocolsBase(Protocol):
             """Get required typing libraries for a project."""
             ...
 
-    @runtime_checkable
-    class PipCheckDepsService(Protocol):
-        """Service for pip-based dependency checking."""
-
         def run_pip_check(
             self,
             repository_root: Path,
@@ -764,25 +748,8 @@ class FlextInfraProtocolsBase(Protocol):
             ...
 
     @runtime_checkable
-    class RunnerService(Protocol):
-        """Service for running arbitrary commands."""
-
-        def run_raw(
-            self,
-            cmd: t.StrSequence,
-            cwd: Path | None = None,
-            timeout: int | None = None,
-            env: t.StrMapping | None = None,
-        ) -> p.Result[p.Cli.CommandOutput]:
-            """Run command and return raw output."""
-            ...
-
-    @runtime_checkable
     class DetectorRuntime(Protocol):
-        """Protocol for detector runtime service dependencies."""
-
-        deps: FlextInfraProtocolsBase.DepsService
-        runner: FlextInfraProtocolsBase.RunnerService
+        """Protocol for the detector command the runtime reports through."""
 
         @property
         def log(self) -> p.Logger: ...
@@ -855,6 +822,26 @@ class FlextInfraProtocolsBase(Protocol):
 
         def transform(self, files: t.SequenceOf[Path]) -> p.Result[t.SequenceOf[Path]]:
             """Apply transformation to files, return paths of modified files."""
+            ...
+
+    @runtime_checkable
+    class RopeSourceTransformer(Protocol):
+        """Contract for one rope transformer applied to one resource."""
+
+        def transform(
+            self, rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
+        ) -> t.Infra.TransformResult:
+            """Rewrite the resource and return the updated source and changes."""
+            ...
+
+    @runtime_checkable
+    class ProjectAliasMigratorFactory(Protocol):
+        """Builds the transformer that moves owned aliases to the local facade."""
+
+        def __call__(
+            self, *, file_path: Path | None, current_project: str
+        ) -> FlextInfraProtocolsBase.RopeSourceTransformer:
+            """Build the migrator for one file owned by ``current_project``."""
             ...
 
     @runtime_checkable

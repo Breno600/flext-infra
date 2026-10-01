@@ -115,7 +115,7 @@ class FlextInfraModelsDepsToolConfig(
     class PytestConfig(m.ArbitraryTypesModel):
         """Pytest baseline settings loaded from YAML."""
 
-        # flext-j47u (codex): every rendered pytest value is validated config data.
+        # Every rendered pytest value is validated config data.
         case_timeout_seconds: Annotated[
             int,
             m.Field(
@@ -321,7 +321,7 @@ class FlextInfraModelsDepsToolConfig(
                 description="Canonical pytest test module patterns.",
             ),
         ]
-        # flext-wkii.17 (codex): collection roots are validated config, not local state.
+        # Collection roots are validated config, not local state.
         test_paths: Annotated[
             t.StrTuple,
             m.Field(
@@ -561,18 +561,17 @@ class FlextInfraModelsDepsToolConfig(
                 alias="show-missing",
                 description="Display missing lines in coverage report.",
             ),
-        ] = True
+        ]
         skip_covered: Annotated[
             bool,
             m.Field(
                 alias="skip-covered",
                 description="Skip covered files in coverage report.",
             ),
-        ] = False
+        ]
         precision: Annotated[
-            int,
-            m.Field(description="Decimal precision for coverage percentages."),
-        ] = 2
+            int, m.Field(description="Decimal precision for coverage percentages.")
+        ]
         exclude_also: Annotated[
             t.StrSequence,
             m.Field(
@@ -592,7 +591,7 @@ class FlextInfraModelsDepsToolConfig(
     class VultureConfig(m.ArbitraryTypesModel):
         """Vulture production-reachability policy loaded from YAML."""
 
-        # NOTE (multi-agent, flext-j47u): keep dead-code scope fully config-owned.
+        # Keep dead-code scope fully config-owned.
         exclude: Annotated[
             t.StrTuple,
             m.Field(
@@ -620,7 +619,6 @@ class FlextInfraModelsDepsToolConfig(
         prose_wrap: Annotated[
             str,
             m.Field(
-                default="always",
                 alias="prose-wrap",
                 description="Prettier proseWrap contract for markdown prose.",
             ),
@@ -628,7 +626,6 @@ class FlextInfraModelsDepsToolConfig(
         tab_width: Annotated[
             int,
             m.Field(
-                default=4,
                 alias="tab-width",
                 description="Prettier tabWidth for non-markdown targets.",
             ),
@@ -636,7 +633,6 @@ class FlextInfraModelsDepsToolConfig(
         md_tab_width: Annotated[
             int,
             m.Field(
-                default=2,
                 alias="md-tab-width",
                 description="Prettier tabWidth override for markdown targets.",
             ),
@@ -735,7 +731,7 @@ class FlextInfraModelsDepsToolConfig(
                     "module defect fixed at the module root cause."
                 ),
             ),
-        ] = "type_checking"
+        ]
         forward_import_form: Annotated[
             Literal["relative_dot"],
             m.Field(
@@ -839,7 +835,7 @@ class FlextInfraModelsDepsToolConfig(
             ),
         ] = ()
 
-    # flext-j47u (codex): explicit runtime-only values keep the Jinja structure full.
+    # Explicit runtime-only values keep the Jinja structure full.
     class ToolingRuntimeContext(m.ArbitraryTypesModel):
         """Resolved project/workspace values consumed by the complete template."""
 

@@ -7,6 +7,9 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
+from flext_infra.refactor.project_alias_migrator import (
+    FlextInfraRefactorProjectAliasMigrator,
+)
 from tests import m, u
 
 if TYPE_CHECKING:
@@ -156,6 +159,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
                 ),
             ],
             parse_failures=[],
+            alias_migrator=FlextInfraRefactorProjectAliasMigrator,
         )
 
         source_text = source_file.read_text(encoding="utf-8")
@@ -198,6 +202,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
                 ),
             ],
             parse_failures=[],
+            alias_migrator=FlextInfraRefactorProjectAliasMigrator,
         )
 
         source_text = source_file.read_text(encoding="utf-8")

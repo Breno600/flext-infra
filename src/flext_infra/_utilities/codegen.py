@@ -238,8 +238,7 @@ class FlextInfraUtilitiesCodegen(
             / "templates"
             / c.Infra.TEMPLATE_MODULE_SKELETON
         )
-        # NOTE (multi-agent, flext-wkii.17 / agent: uv_overlay_owner): preserve
-        # the exact validated model identity across the template boundary.
+        # Preserve the exact validated model identity across the template boundary.
         context = m.Infra.ModuleSkeletonRenderContext(
             class_name=class_name,
             base_class=base_class,

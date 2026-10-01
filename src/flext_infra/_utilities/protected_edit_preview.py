@@ -89,7 +89,7 @@ class FlextInfraUtilitiesProtectedEditPreview(FlextInfraUtilitiesProtectedEditLi
             modified,
             fromfile=f"a/{rel}",
             tofile=f"b/{rel}",
-            max_lines=30,
+            max_lines=c.Infra.EDIT_DIFF_PREVIEW_MAX_LINES,
         )
         report_lines = [f"  REVERTED {rel}:"]
         report_lines.extend(f"    {line.rstrip()}" for line in diff)

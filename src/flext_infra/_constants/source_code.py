@@ -310,14 +310,6 @@ class FlextInfraConstantsSourceCode:
     )
     "Regex: module-level ``X [: T] = value`` assignment (captures name, value)."
 
-    CHECK_DIRS_REPOSITORY: ClassVar[t.StrSequence] = (
-        "src",
-        "examples",
-        "scripts",
-        "tests",
-    )
-    "All first-class Python roots passed to repository analyzers."
-
     GITHUB_REPO_URL: ClassVar[str] = "https://github.com/flext-sh/flext"
     "Official GitHub repository URL for the FLEXT project."
     GITHUB_REPO_NAME: ClassVar[str] = "flext-sh/flext"

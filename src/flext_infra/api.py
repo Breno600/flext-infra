@@ -225,10 +225,10 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
             return r[m.Infra.WorkspaceProjectContext].ok(
                 m.Infra.WorkspaceProjectContext(cwd=resolved, identity=identity.value),
             )
-        workspace = u.Infra.workspace_spec_load(root)
+        workspace = FlextInfraWorkspaceDetector.load_workspace_spec(root)
         if workspace.failure:
             return r[m.Infra.WorkspaceProjectContext].from_failure(workspace)
-        target = u.Infra.repository_conform_target(root, workspace.value)
+        target = FlextInfraWorkspaceDetector.conform_target(root, workspace.value)
         if target.failure:
             return r[m.Infra.WorkspaceProjectContext].from_failure(target)
         return r[m.Infra.WorkspaceProjectContext].ok(
