@@ -19,10 +19,6 @@ class FlextInfraModelsDepsToolConfigProject(
     class ProjectManagedArtifactsFragment(m.ArbitraryTypesModel):
         """Optional project-owned sections present in one configuration source."""
 
-        Ruff: Annotated[
-            FlextInfraModelsDepsToolConfigProjectArtifacts.ProjectRuffConfig | None,
-            m.Field(description="Ruff section declared by this source"),
-        ] = None
         Mise: Annotated[
             FlextInfraModelsDepsToolConfigProjectArtifacts.ProjectMiseConfig | None,
             m.Field(description="Mise section declared by this source"),
