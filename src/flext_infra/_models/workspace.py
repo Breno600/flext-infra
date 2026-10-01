@@ -26,11 +26,21 @@ class FlextInfraModelsWorkspace:
     class SuperprojectGovernance(m.ArbitraryTypesModel):
         """Superproject facts every member load validates against."""
 
-        root: Path
-        integration_branch: str | None
-        beads: FlextInfraConfigModelsBeads.BeadsProjectSpec | None
-        members: t.MappingKV[Path, FlextInfraConfigModelsContexts.RepositoryRef]
-        allow_unprovisioned_members: bool
+        root: Annotated[Path, m.Field(description="Superproject root path")]
+        integration_branch: Annotated[
+            str | None, m.Field(description="Configured integration branch")
+        ]
+        beads: Annotated[
+            FlextInfraConfigModelsBeads.BeadsProjectSpec | None,
+            m.Field(description="Configured central Beads route"),
+        ]
+        members: Annotated[
+            t.MappingKV[Path, FlextInfraConfigModelsContexts.RepositoryRef],
+            m.Field(description="Declared workspace member repositories"),
+        ]
+        allow_unprovisioned_members: Annotated[
+            bool, m.Field(description="Permit declared members without checkouts")
+        ]
 
     class WorkspaceEnvironmentRequest(m.ContractModel):
         """Read-only request for validating the active workspace environment."""
