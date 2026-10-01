@@ -141,7 +141,7 @@ class FlextInfraModGateEngine:
             if scratch.resolve().is_relative_to(config_root.resolve()):
                 msg = "rule fixture scratch must be outside its source root"
                 raise ValueError(msg)
-            owner_root = u.Infra.project_root(config_root)
+            owner_root = u.Infra.nearest_project_root(root, config_root)
             owners.append((
                 config_root,
                 tuple(owner_rules),

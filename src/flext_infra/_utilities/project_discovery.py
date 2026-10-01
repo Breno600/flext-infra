@@ -267,6 +267,20 @@ class FlextInfraUtilitiesProjectDiscovery(
         return (repository_root.resolve(),)
 
     @staticmethod
+    def nearest_project_root(repository_root: Path, path: Path) -> Path | None:
+        """Find the nearest manifest owner inside one governed repository."""
+        boundary = repository_root.resolve()
+        candidate = path.resolve()
+        if not candidate.is_relative_to(boundary):
+            return None
+        for parent in (candidate, *candidate.parents):
+            if (parent / c.PYPROJECT_FILENAME).is_file():
+                return parent
+            if parent == boundary:
+                return None
+        return None
+
+    @staticmethod
     def runtime_environment_dir(
         project_root: Path, *, runtime_root: Path | None = None,
     ) -> Path:
