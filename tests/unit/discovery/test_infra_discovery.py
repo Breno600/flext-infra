@@ -1,9 +1,9 @@
 """Tests for FlextInfraDiscoveryService.
 
+Tests cover project discovery, pyproject file discovery, and error handling.
+
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
-
-Tests cover project discovery, pyproject file discovery, and error handling.
 """
 
 from __future__ import annotations

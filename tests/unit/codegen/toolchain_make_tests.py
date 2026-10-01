@@ -1,13 +1,13 @@
 """Contract tests for the portable Make toolchain provider.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 Root cause (R1): ``make`` was not declared in generated ``.mise.toml``, so
 ``direnv exec .`` resolved ``make`` from a stale host shim (a conda-carried
 installation) instead of a Mise-managed binary, causing ``make setup`` to
 exit 1. The fleet toolchain now owns ``make`` as a moving ``latest``
 selector rendered through the canonical ``.mise.toml`` projection.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

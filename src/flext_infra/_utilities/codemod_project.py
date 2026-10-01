@@ -1,8 +1,5 @@
 """Project-scope analyses the rule engine evaluates for rule data.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 ast-grep matches one file's syntax. Some laws are verdicts over the whole
 project: whether a module takes part in an import cycle, whether a facade's
 namespace composes every class its family package declares. The engine owns
@@ -10,6 +7,9 @@ building those project facts (once per project root and process); rule
 documents name the verdict they need through ``metadata.context`` predicates.
 No rule lives here: the rule data decides where a fact is asked and what it
 means.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

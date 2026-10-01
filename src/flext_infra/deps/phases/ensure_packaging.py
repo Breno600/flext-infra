@@ -1,8 +1,5 @@
 """Phase: Ensure bounded Hatch wheel and source-distribution targets.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 Every project's wheel gets an explicit ``[tool.hatch.build.targets.wheel]``
 with the primary ``src/<pkg>`` plus every project-declared additional package.
 Project-declared standalone modules under ``src/<module>.py`` and root data
@@ -11,6 +8,9 @@ Directories use the same Hatch selection rules in both archives; explicit files
 are included individually. The source
 distribution is bounded to the package source and those validated data roots,
 preventing caches and ignored workspace state from entering release artifacts.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

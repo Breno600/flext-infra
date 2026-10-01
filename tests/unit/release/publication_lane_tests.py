@@ -1,12 +1,12 @@
 """Publication lane behavior: what a step produces reaches one pull request.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 The lane is the canonical owner release and member propagation share: from a
 clean integration checkout, ``u.Infra.git_publish_lane`` enters the lane,
 runs the producing step, commits exactly the paths it produced, pushes the
 lane and opens or refreshes its pull request.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

@@ -1,13 +1,13 @@
 """Derive a facade letter's class from the ``__all__`` that declares it.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 The owner of a facade letter is the module that declares it in its own
 ``__all__`` next to the class it names (``__all__ = ["FlextCliModels", "m"]``).
 Resolution follows the last module-scope binding of each name through imports
 and plain or annotated aliases, reading editable and installed sources without
 importing them. No class name is ever inferred from a package name.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

@@ -1,12 +1,12 @@
 """Topological publish ordering behavior for the release orchestrator.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 Publishing to an index is immutable, so a dependent uploaded before its
 dependency leaves the index in a state no rollback can repair. The order is
 derived from each project's declared dependencies -- never from a hand-written
 list that silently diverges from the manifests it claims to describe.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
