@@ -373,12 +373,6 @@ Infra:
           # match a census rule id exactly, tag families by prefix. Unmapped
           # families (e.g. ENFORCE-079) stay fully blocking.
           census_rule_families: [ENFORCE-046, ENFORCE-066, ENFORCE-067, ENFORCE-069, class_prefix]
-        - gate: smells
-          authority: "operator ruling 2026-09-27 (smells/infra-codegen/slow-tests non-blocking for merge until further notice, coordination gc-wisp-bm2jtn); flext-w41u6"
-          reason: "Pre-existing qlty smell backlog (751 in flext-infra, already red on a9af10130) is burned down under flext-w41u6; the gate returns when the ruling is lifted."
-          # Census consistency (gc-wisp-d7mnad): same ruling, same families in
-          # the runtime census; suppressed findings still surface as INFO.
-          census_rule_families: [smell_, no_accessor_methods, utility_not_static]
       # One filename and the root-relative runner paths; the runner places the
       # database in platformdirs' external per-worktree cache.
       runtime_environment_directory: .flext-venvs
@@ -558,7 +552,9 @@ Infra:
           description: Run the workspace public runtime examples.
           profiles: [workspace]
         - name: check
-          description: Run every configured non-test gate.
+          description: Run the configured non-test gates except the dedicated smells audit.
+        - name: smells
+          description: Run the strict code-smell audit as a dedicated gate.
         - name: test
           description: Run incremental tests through the persistent testmon cache.
         - name: test-full
@@ -616,6 +612,8 @@ Infra:
         - name: sonarcloud-sync
           description: Write the SSOT SonarCloud issue exclusions to the server-side project settings (requires SONAR_TOKEN).
       custom_handler_profile_overrides: {}
+      standalone_check_gates:
+        smells: smells
       custom_handler_policy:
         filename: custom.mk
         # Custom behavior is one private whole-verb replacement or one lifecycle
@@ -1095,8 +1093,8 @@ Infra:
       - path: docs/docs_config.json
         owner: codegen
         policy: full
-    # Qlty refuses to scan without a repository configuration. Keep the
-    # blocking smells posture fleet-wide and generated from this SSOT.
+    # Qlty refuses to scan without a repository configuration. The generated
+    # make smells verb owns this strict, separately scheduled audit fleet-wide.
       - path: .qlty/qlty.toml
         owner: codegen
         policy: full
