@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import m, u
 from flext_infra.validate.namespace_validator import FlextInfraNamespaceValidator
@@ -12,14 +12,11 @@ if TYPE_CHECKING:
 
     from flext_infra import p, t
 
-_log = u.fetch_logger(__name__)
-
 
 class FlextInfraCodegenFixerResultsMixin:
     """Private result and validation helpers for codegen fixer composition."""
 
-    if TYPE_CHECKING:
-        rope: p.Infra.RopeWorkspaceDsl
+    _fixer_log: ClassVar[p.Logger] = u.fetch_logger(__name__)
 
     @staticmethod
     def _empty_result(project_name: str) -> m.Infra.AutoFixResult:
@@ -33,7 +30,8 @@ class FlextInfraCodegenFixerResultsMixin:
 
     @staticmethod
     def _build_result(
-        project_name: str, ctx: m.Infra.FixContext
+        project_name: str,
+        ctx: m.Infra.FixContext,
     ) -> m.Infra.AutoFixResult:
         """Build result."""
         return m.Infra.AutoFixResult(
@@ -44,16 +42,19 @@ class FlextInfraCodegenFixerResultsMixin:
         )
 
     def _load_initial_violations(
-        self, ctx: m.Infra.FixContext, project_path: Path
+        self,
+        ctx: m.Infra.FixContext,
+        project_path: Path,
     ) -> t.SequenceOf[m.Infra.CensusViolation]:
         """Read the initial namespace violations and record skip reason on failure."""
         initial_violations_result = u.Infra.parse_namespace_validation(
             FlextInfraNamespaceValidator(
-                repository_root=project_path, rope=self.rope
-            ).build_report()
+                repository_root=project_path,
+            ).build_report(),
+            project_path,
         )
         if initial_violations_result.failure:
-            _log.warning(
+            self._fixer_log.warning(
                 "namespace_validation_failed",
                 project=project_path.name,
                 error=str(initial_violations_result.error),
@@ -77,8 +78,9 @@ class FlextInfraCodegenFixerResultsMixin:
         """Re-run validation and split outstanding violations into fixed vs skipped."""
         remaining_result = u.Infra.parse_namespace_validation(
             FlextInfraNamespaceValidator(
-                repository_root=project_path, rope=self.rope
-            ).build_report()
+                repository_root=project_path,
+            ).build_report(),
+            project_path,
         )
         if remaining_result.failure:
             ctx.skip(

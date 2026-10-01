@@ -82,7 +82,8 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
         """Return the fixture's declared integration line (provider + branch)."""
         provider = TestsFlextInfraUtilitiesProjectFixtureMixin.provider()
         return m.Infra.WorkspaceIntegrationSpec(
-            provider=provider.name, branch=FIXTURE_PROVIDER_BRANCH
+            provider=provider.name,
+            branch=FIXTURE_PROVIDER_BRANCH,
         )
 
     @staticmethod
@@ -115,7 +116,10 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
 
     @staticmethod
     def repository_ref(
-        name: str, *, role: c.Infra.MakeProfile | None = None, path: Path | None = None
+        name: str,
+        *,
+        role: c.Infra.MakeProfile | None = None,
+        path: Path | None = None,
     ) -> m.Infra.RepositoryRef:
         """Build a repository reference from the declared fixture provider.
 
@@ -161,7 +165,7 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
         )
 
     @staticmethod
-    def project_spec(name: str) -> m.Infra.ProjectSpec:
+    def project_spec(name: str, *, cli_module: bool = True) -> m.Infra.ProjectSpec:
         """Build deterministic scaffold metadata for one project fixture."""
         package_name = name.replace("-", "_")
         class_stem = u.derive_class_stem(name)
@@ -189,11 +193,16 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
             documentation=homepage,
             repository_root_rel=".",
             year=config.Infra.codegen.scaffold.project.copyright_year,
+            cli_module=cli_module,
         )
 
     @staticmethod
     def write_beads_project(
-        repository: Path, *, workspace: str, database: str, issue_prefix: str
+        repository: Path,
+        *,
+        workspace: str,
+        database: str,
+        issue_prefix: str,
     ) -> Path:
         """Write the typed repository-local Beads identity fixture.
 
@@ -284,7 +293,10 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
     def write_project_beads_config(project_dir: Path, name: str) -> Path:
         """Write a standalone project's required local topology input."""
         return TestsFlextInfraUtilitiesProjectFixtureMixin.write_beads_project(
-            project_dir, workspace=name, database=name, issue_prefix=name
+            project_dir,
+            workspace=name,
+            database=name,
+            issue_prefix=name,
         )
 
     @staticmethod

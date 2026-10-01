@@ -4,35 +4,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
-import libcst as cst
-from libcst.metadata import MetadataWrapper, QualifiedNameProvider
-
 if TYPE_CHECKING:
+    import libcst as cst
+
     from flext_infra import p, t
 
 
 class FlextInfraUtilitiesQualifiedNames:
     """Resolve lazy LibCST qualified-name metadata through its public visitor API."""
 
-    class _ResidueCollector(cst.CSTVisitor):
-        METADATA_DEPENDENCIES = (QualifiedNameProvider,)
-
-        def __init__(self, candidates: t.Infra.Container[str]) -> None:
-            self.candidates = candidates
-            self.residue: set[str] = set()
-
-        @override
-        def on_visit(self, node: cst.CSTNode) -> bool:
-            self.residue.update(
-                qualified_name.name
-                for qualified_name in self.get_metadata(QualifiedNameProvider, node, ())
-                if qualified_name.name in self.candidates
-            )
-            return True
-
     @staticmethod
     def dotted_name(node: cst.BaseExpression | None) -> str | None:
         """Return a static dotted name, or ``None`` for a dynamic expression."""
+        import libcst as cst
+
         if isinstance(node, cst.Name):
             return node.value
         if isinstance(node, cst.Attribute):
@@ -41,19 +26,13 @@ class FlextInfraUtilitiesQualifiedNames:
         return None
 
     @staticmethod
-    def module_expression(module: str) -> cst.Attribute | cst.Name:
-        """Build a typed LibCST expression for a dotted module name."""
-        parts = module.split(".")
-        expression: cst.Attribute | cst.Name = cst.Name(parts[0])
-        for part in parts[1:]:
-            expression = cst.Attribute(value=expression, attr=cst.Name(part))
-        return expression
-
-    @staticmethod
     def without_exports(
-        value: cst.BaseExpression, names: t.Infra.Container[str]
+        value: cst.BaseExpression,
+        names: t.Infra.Container[str],
     ) -> cst.BaseExpression:
         """Drop ``names`` from a literal ``__all__`` list or tuple expression."""
+        import libcst as cst
+
         if not isinstance(value, cst.List | cst.Tuple):
             return value
         return value.with_changes(
@@ -63,14 +42,17 @@ class FlextInfraUtilitiesQualifiedNames:
                 if not isinstance(element.value, cst.SimpleString)
                 or not isinstance(element.value.evaluated_value, str)
                 or element.value.evaluated_value not in names
-            )
+            ),
         )
 
     @staticmethod
     def filter_exports[N: (cst.Assign, cst.AnnAssign)](
-        node: N, names: t.Infra.Container[str]
+        node: N,
+        names: t.Infra.Container[str],
     ) -> N:
         """Drop ``names`` from an ``__all__`` assignment; other assignments pass."""
+        import libcst as cst
+
         targets = (
             tuple(target.target for target in node.targets)
             if isinstance(node, cst.Assign)
@@ -84,20 +66,24 @@ class FlextInfraUtilitiesQualifiedNames:
         ):
             return node
         return node.with_changes(
-            value=FlextInfraUtilitiesQualifiedNames.without_exports(node.value, names)
+            value=FlextInfraUtilitiesQualifiedNames.without_exports(node.value, names),
         )
 
     @staticmethod
     def normalized_import_aliases(
-        aliases: t.SequenceOf[cst.ImportAlias], *, parenthesized: bool
+        aliases: t.SequenceOf[cst.ImportAlias],
+        *,
+        parenthesized: bool,
     ) -> t.VariadicTuple[cst.ImportAlias]:
         """Repair separators after import aliases were dropped or rewritten."""
+        import libcst as cst
+
         last_index = len(aliases) - 1
         return tuple(
             alias.with_changes(comma=cst.MaybeSentinel.DEFAULT)
             if index == last_index and not parenthesized
             else alias.with_changes(
-                comma=cst.Comma(whitespace_after=cst.SimpleWhitespace(" "))
+                comma=cst.Comma(whitespace_after=cst.SimpleWhitespace(" ")),
             )
             if index < last_index and not isinstance(alias.comma, cst.Comma)
             else alias
@@ -109,9 +95,11 @@ class FlextInfraUtilitiesQualifiedNames:
         """Return whether ``parent`` spells ``node`` as a binding, not a reference.
 
         An import alias, an attribute's own ``attr``, and a keyword argument's
-        name are written by the surrounding syntax, so a rename must leave them
-        exactly as they are.
+         name are written by the surrounding syntax, so a rename must leave them
+         exactly as they are.
         """
+        import libcst as cst
+
         if isinstance(parent, cst.ImportAlias):
             return True
         if isinstance(parent, cst.Attribute) and parent.attr is node:
@@ -120,10 +108,35 @@ class FlextInfraUtilitiesQualifiedNames:
 
     @classmethod
     def qualified_name_residue(
-        cls, source: str, candidates: t.Infra.Container[str]
+        cls,
+        source: str,
+        candidates: t.Infra.Container[str],
     ) -> frozenset[str]:
         """Return candidate qualified names referenced by Python source."""
-        collector = cls._ResidueCollector(candidates)
+        import libcst as cst
+        from libcst.metadata import MetadataWrapper, QualifiedNameProvider
+
+        class _ResidueCollector(cst.CSTVisitor):
+            METADATA_DEPENDENCIES = (QualifiedNameProvider,)
+
+            def __init__(self, candidates: t.Infra.Container[str]) -> None:
+                self.candidates = candidates
+                self.residue: set[str] = set()
+
+            @override
+            def on_visit(self, node: cst.CSTNode) -> bool:
+                self.residue.update(
+                    qualified_name.name
+                    for qualified_name in self.get_metadata(
+                        QualifiedNameProvider,
+                        node,
+                        (),
+                    )
+                    if qualified_name.name in self.candidates
+                )
+                return True
+
+        collector = _ResidueCollector(candidates)
         MetadataWrapper(cst.parse_module(source)).visit(collector)
         return frozenset(collector.residue)
 

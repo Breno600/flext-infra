@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesDocsGeneratePlanMixin(
-    FlextInfraUtilitiesDocsGenerateSourcesMixin
+    FlextInfraUtilitiesDocsGenerateSourcesMixin,
 ):
     """Normalize rendered artifacts and bind them to exact destination states."""
 
@@ -42,22 +42,20 @@ class FlextInfraUtilitiesDocsGeneratePlanMixin(
                 or ".." in target.parts
             ):
                 return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].fail(
-                    f"docs publication paths must be absolute and lexical: {target}"
+                    f"docs publication paths must be absolute and lexical: {target}",
                 )
-            try:
-                target.relative_to(project)
-            except ValueError:
+            if not target.is_relative_to(project):
                 return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].fail(
-                    f"docs publication target escapes project {project}: {target}"
+                    f"docs publication target escapes project {project}: {target}",
                 )
             if target in targets:
                 return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].fail(
-                    f"duplicate docs publication target: {target}"
+                    f"duplicate docs publication target: {target}",
                 )
             targets.add(target)
             normalized.append((project, target, content))
         return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].ok(
-            tuple(normalized)
+            tuple(normalized),
         )
 
     @staticmethod
@@ -79,8 +77,8 @@ class FlextInfraUtilitiesDocsGeneratePlanMixin(
                 sorted(
                     required,
                     key=FlextInfraUtilitiesDocsGeneratePlanMixin._directory_sort_key,
-                )
-            )
+                ),
+            ),
         )
 
     @staticmethod
@@ -96,7 +94,9 @@ class FlextInfraUtilitiesDocsGeneratePlanMixin(
         # re-read here, once, immediately before publication planning; the
         # destination CAS re-validates physically at publish time.
         stable = FlextInfraUtilitiesDocsGeneratePlanMixin.docs_verify_sources(
-            repository_root, bundle.source_states, extra_roots=scope_roots
+            repository_root,
+            bundle.source_states,
+            extra_roots=scope_roots,
         )
         if stable.failure:
             return r[tuple[m.Infra.CodegenFilePlan, ...]].from_failure(stable)
@@ -117,20 +117,22 @@ class FlextInfraUtilitiesDocsGeneratePlanMixin(
 
     @staticmethod
     def _prune_generated_tree_artifacts(
-        project: Path, root: Path, rendered: t.SequenceOf[t.Pair[Path, str]]
+        project: Path,
+        root: Path,
+        rendered: t.SequenceOf[t.Pair[Path, str]],
     ) -> p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]:
         """Describe stale files owned by one generated tree as absent artifacts."""
         planned = cli_u.Cli.atomic_plan_directory_chain(root)
         if planned.failure:
             return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
-                planned
+                planned,
             )
         if planned.value.directories:
             return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].ok(())
         inventory = cli_u.Cli.atomic_inventory_physical_tree(root)
         if inventory.failure:
             return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
-                inventory
+                inventory,
             )
         expected_paths = {
             path for path, _content in rendered if path.is_relative_to(root)
@@ -142,7 +144,7 @@ class FlextInfraUtilitiesDocsGeneratePlanMixin(
                 if entry.kind == "file"
                 and entry.path.suffix == ".md"
                 and entry.path not in expected_paths
-            )
+            ),
         )
 
 

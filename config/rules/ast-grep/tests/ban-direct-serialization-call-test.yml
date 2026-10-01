@@ -1,0 +1,13 @@
+id: ban-direct-serialization-call
+valid:
+  - u.Cli.json_dumps(payload)
+  - payload.json
+  - data.loads(raw)
+  - yaml_text = text
+invalid:
+  - json.dumps(payload)
+  - json.load(handle)
+  - yaml.safe_load(text)
+  - yaml.dump(data)
+  - csv.DictReader(handle)
+  - writer = csv.writer

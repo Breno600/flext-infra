@@ -22,7 +22,7 @@ from tests import c, u
 
 
 class TestsFlextInfraLazyInitWorkspaceElection:
-    """A member's lazy-init is self-scoped; the workspace root plans nothing."""
+    """Workspace planning uses declared sibling source without publishing it."""
 
     @staticmethod
     def _write_constants(package_root: Path, *, parent: str, class_name: str) -> None:
@@ -36,8 +36,9 @@ class TestsFlextInfraLazyInitWorkspaceElection:
             encoding=c.Infra.ENCODING_DEFAULT,
         )
 
-    def test_workspace_plan_elects_nearest_reexporting_parent(
-        self, tmp_path: Path
+    def test_workspace_plan_uses_declared_sibling_without_installing_it(
+        self,
+        tmp_path: Path,
     ) -> None:
         """Members self-scope; cross-repo parents refuse loud; the root plans zero."""
         workspace = tmp_path / "workspace"
@@ -58,13 +59,19 @@ class TestsFlextInfraLazyInitWorkspaceElection:
             encoding=c.Cli.ENCODING_DEFAULT,
         )
         u.Tests.write_lazy_init_namespace_module(
-            owner / c.Infra.CONSTANTS_PY, class_name="FlextWsOwnerConstants", alias="c"
+            owner / c.Infra.CONSTANTS_PY,
+            class_name="FlextWsOwnerConstants",
+            alias="c",
         )
         u.Tests.write_lazy_init_namespace_module(
-            owner / "result.py", class_name="FlextWsOwnerResult", alias="r"
+            owner / "result.py",
+            class_name="FlextWsOwnerResult",
+            alias="r",
         )
         self._write_constants(
-            middle, parent="flext_ws_owner", class_name="FlextWsMiddleConstants"
+            middle,
+            parent="flext_ws_owner",
+            class_name="FlextWsMiddleConstants",
         )
         self._write_constants(
             child, parent="flext_ws_middle", class_name="FlextWsChildConstants"
@@ -82,7 +89,6 @@ class TestsFlextInfraLazyInitWorkspaceElection:
         entries, _refs = u.Infra.module_mapping_assignment_source(
             generated, u.Infra.lazy_imports_name_source(generated)
         )
-        sources = dict(entries)
 
         tm.that(sources.get(".constants", ()), has="c")
 

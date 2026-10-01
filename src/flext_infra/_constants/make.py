@@ -37,13 +37,13 @@ class FlextInfraConstantsMake:
         USER_HOME = "HOME"
 
     MAKE_ASSIGNMENT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^[A-Za-z_][A-Za-z0-9_]*\s*(?::?:|\?|\+)?="
+        r"^[A-Za-z_][A-Za-z0-9_]*\s*(?::?:|\?|\+)?=",
     )
     MAKE_DIRECTIVE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?:export|unexport|override|include|-include|sinclude|vpath)\b"
+        r"^(?:export|unexport|override|include|-include|sinclude|vpath)\b",
     )
     MAKE_CONDITIONAL_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?:else\b|endif\b|ifeq\b|ifneq\b|ifdef\b|ifndef\b)"
+        r"^(?:else\b|endif\b|ifeq\b|ifneq\b|ifdef\b|ifndef\b)",
     )
     MAKE_REPOSITORY_ROOT: ClassVar[str] = "REPOSITORY_ROOT"
     "Make variable the workspace orchestrator passes to attached members."
@@ -73,19 +73,24 @@ class FlextInfraConstantsMake:
 
     MYPY_MEMORY_LIMIT_MB_ENV: ClassVar[str] = "MYPY_MEMORY_LIMIT_MB"
     MYPY_MEMORY_LIMIT_MB_DEFAULT: ClassVar[int] = 6144
-    MYPY_TIMEOUT_SECONDS_ENV: ClassVar[str] = "MYPY_TIMEOUT_SECONDS"
     MYPY_PROFILE_OUTPUT_ENV: ClassVar[str] = "FLEXT_MYPY_PROFILE_OUTPUT"
-    MYPY_TIMEOUT_SECONDS_DEFAULT: ClassVar[int] = 120
+    # The import-time model bound: neither a project budget nor the env
+    # override may exceed the fleet ceiling. The configured budget value
+    # itself stays SSOT-owned (config/tooling.yaml mypy timeout_seconds).
+    MYPY_TIMEOUT_SECONDS_FLEET_BOUND: ClassVar[int] = 120
     MYPY_TIMEOUT_SECONDS_MAX: ClassVar[int] = 600
     MYPY_TIMEOUT_GRACE_SECONDS: ClassVar[int] = 10
+    MYPY_SUPERVISOR_PS_TIMEOUT: ClassVar[int] = 1
+    MYPY_SUPERVISOR_POLL_SECONDS: ClassVar[float] = 0.1
+    MYPY_SUPERVISOR_SHUTDOWN_POLL_SECONDS: ClassVar[float] = 0.05
     PRLIMIT_COMMAND: ClassVar[str] = "prlimit"
     PRLIMIT_ADDRESS_SPACE_OPTION: ClassVar[str] = "--as"
     TIMEOUT_COMMAND: ClassVar[str] = "timeout"
     TIMEOUT_KILL_AFTER_SECONDS: ClassVar[int] = 5
 
     # Every read-only gate this package implements, derived from the gate SSOT
-    # (c.Infra.SARIF_TOOL_INFO) so registering a gate makes it reachable
-    # through `make check` in the same edit and no second list can drift.
+    # (c.Infra.SARIF_TOOL_INFO) so registering a gate makes it available to
+    # the generated Make command surface without a second vocabulary.
     # Mutating gates (`format`) are excluded: they rewrite files, so they are
     # owned by `make fmt` / `make fix` and a read-only verb
     # must never invoke them.
@@ -95,11 +100,9 @@ class FlextInfraConstantsMake:
         if gate not in FlextInfraConstantsCheck.MUTATING_GATES
     )
     # markdown-code and markdown-format stay allowed and explicitly invocable
-    # (`--gates markdown-code`), but are not default check gates: operator
-    # ruling 2026-09-18 (flext-uz0dt for markdown-code; flext-v4fmn for
-    # markdown-format) takes them out of the unset-CI default set pending
-    # review. markdown-format is structurally contradictory on the current
-    # generated docs: the gen render is not prettier-stable, so no commit can
+    # (`--gates markdown-code`), but are not default check gates: they stay
+    # out of the unset-CI default set pending review. markdown-format is
+    # structurally contradictory on the current generated docs: the gen render is not prettier-stable, so no commit can
     # satisfy both `gen fixed point` and `prettier --check`.
     CANONICAL_DEFAULT_GATE_IDS: ClassVar[t.VariadicTuple[str]] = tuple(
         gate
@@ -114,7 +117,6 @@ class FlextInfraConstantsMake:
         "lint",
         "markdown",
         "markdown-code",
-        "canonical-alias",
     )
     # markdown-format is deliberately absent: prettier is a formatter, so the
     # gate's mutating side is owned by `make fmt` (check = `prettier --check`),

@@ -26,7 +26,9 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         )
         return m.Infra.MypyResourceLimit(
             memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
-            timeout_seconds=min(c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT, available // 2),
+            timeout_seconds=min(
+                config.Infra.tooling.tools.mypy.timeout_seconds, available // 2
+            ),
         )
 
     @staticmethod
@@ -34,7 +36,8 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         """Reap a registered workload in pytest teardown, preserving call failures."""
         pid = pid_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         snapshot = u.Cli.run_raw(
-            ("/bin/ps", "-p", str(int(pid)), "-o", "stat="), timeout=timeout
+            ("/bin/ps", "-p", str(int(pid)), "-o", "stat="),
+            timeout=timeout,
         ).unwrap()
         if snapshot.outcome.raw_return_code not in {0, 1} or snapshot.stderr:
             raise RuntimeError(snapshot.stderr)
@@ -70,8 +73,11 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
     @staticmethod
     def create_python_environment(root: Path) -> p.Result[bool]:
         """Provision a physical fixture environment with the current interpreter."""
+        environment = u.Infra.runtime_environment_dir(root)
+        environment.parent.mkdir(parents=True, exist_ok=True)
         return u.Cli.run_checked(
-            ["uv", "venv", "--python", sys.executable, str(root / ".venv")], cwd=root
+            ["uv", "venv", "--python", sys.executable, str(environment)],
+            cwd=root,
         )
 
     @staticmethod

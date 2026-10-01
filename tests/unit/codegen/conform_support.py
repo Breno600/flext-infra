@@ -11,7 +11,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import config
+from flext_infra import config, infra
 from flext_infra.codegen import FlextInfraCodegenConform
 from tests import c, m, t, u
 
@@ -49,15 +49,13 @@ class TestsFlextInfraConformSupport:
     ) -> None:
         """Materialize one exact public conform surface for a focused test."""
         tm.ok(
-            FlextInfraCodegenConform.execute_request(
-                u.Tests.conform_request(
-                    root,
-                    what=surface,
-                    scope=c.Infra.CodegenConformScope.SELF,
-                    mode=c.Infra.CodegenConformMode.APPLY,
-                ),
-                initial_workspace=workspace,
-            )
+            infra.codegen_conform(u.Tests.conform_request(
+                root,
+                what=surface,
+                scope=c.Infra.CodegenConformScope.SELF,
+                mode=c.Infra.CodegenConformMode.APPLY,
+            ),
+            initial_workspace=workspace,),
         )
 
     @staticmethod
@@ -70,7 +68,7 @@ class TestsFlextInfraConformSupport:
                 if path.is_file()
                 and ".git" not in path.relative_to(root).parts
                 and ".infra-baseline" not in path.relative_to(root).parts
-            )
+            ),
         )
 
     @staticmethod
@@ -112,7 +110,7 @@ class TestsFlextInfraConformSupport:
                 f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
                 'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
                 'dependencies = ["flext-cli"]\n',
-            )
+            ),
         )
         package_init = root / "src" / "flext_infra" / "__init__.py"
         package_init.parent.mkdir(parents=True, exist_ok=True)
@@ -131,10 +129,11 @@ class TestsFlextInfraConformSupport:
     ) -> t.Pair[FlextInfraCodegenConform, m.Infra.CodegenConformRequest]:
         """Materialize the standalone root fixture and its CHECK-mode conform service."""
         repository = u.Tests.repository_ref("flext-infra").model_copy(
-            update={"path": Path()}
+            update={"path": Path()},
         )
         workspace = u.Tests.workspace_spec(
-            repository, project=u.Tests.project_spec(repository.name)
+            repository,
+            project=u.Tests.project_spec(repository.name),
         )
         (root / "pyproject.toml").write_text(
             f"[project]\nname = '{repository.distribution}'\nversion = '0.1.0'\n",
@@ -149,6 +148,8 @@ class TestsFlextInfraConformSupport:
             mode=c.Infra.CodegenConformMode.CHECK,
         )
         service = FlextInfraCodegenConform(
-            repository_root=root, request=request, initial_workspace=workspace
+            repository_root=root,
+            request=request,
+            initial_workspace=workspace,
         )
         return service, request

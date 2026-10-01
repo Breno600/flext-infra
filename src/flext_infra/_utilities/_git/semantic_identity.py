@@ -14,7 +14,7 @@ from git import (
 )
 
 from flext_core import r
-from flext_infra import m
+from flext_infra import c, m
 
 from ..._utilities._git.remote import FlextInfraUtilitiesGitRemote
 from ..._utilities._git.repo import FlextInfraUtilitiesGitRepo
@@ -23,17 +23,16 @@ from ..._utilities._git.semantic_lane import FlextInfraUtilitiesGitSemanticLaneM
 if TYPE_CHECKING:
     from flext_infra import p
 
-_GITLINK_MODE = "160000"
-
 
 class FlextInfraUtilitiesGitSemanticIdentityMixin(
-    FlextInfraUtilitiesGitSemanticLaneMixin
+    FlextInfraUtilitiesGitSemanticLaneMixin,
 ):
     """Own semantic identity operations."""
 
     @classmethod
     def git_identity(
-        cls, request: m.Infra.GitRepoRequest
+        cls,
+        request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitIdentityReport]:
         """Return consolidated Git identity for one repository path.
 
@@ -42,27 +41,55 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
         """
         try:
             repo = cls._repo(request.repo_root)
-            if not repo.head.is_valid():
+            if cls._git_head_is_unborn(repo):
                 return r[m.Infra.GitIdentityReport].fail(
-                    f"Git repository has no committed HEAD: {request.repo_root.resolve()}"
+                    f"Git repository has no committed HEAD: {request.repo_root.resolve()}",
+                    error_code=c.Infra.GIT_UNBORN_HEAD_ERROR_CODE,
                 )
             primary = cls._git_primary_worktree_root_path(request.repo_root)
             if primary.failure:
                 return r[m.Infra.GitIdentityReport].from_failure(primary)
             report = cls._collect_identity_facts(
-                repo, primary_root=primary.value, requested_path=request.repo_root
+                repo,
+                primary_root=primary.value,
+                requested_path=request.repo_root,
             )
         except GitCommandError as exc:
             return r[m.Infra.GitIdentityReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitIdentityReport].fail(
-                f"failed to resolve Git identity: {exc}", exception=exc
+                f"failed to resolve Git identity: {exc}",
+                exception=exc,
             )
         return r[m.Infra.GitIdentityReport].ok(report)
 
+    @staticmethod
+    def _git_head_is_unborn(repo: Repo) -> bool:
+        """Distinguish an absent symbolic branch from broken refs or objects."""
+        if repo.head.is_valid():
+            return False
+        branch_ref = repo.git.symbolic_ref("--quiet", "HEAD")
+        status, stdout, stderr = repo.git.show_ref(
+            "--exists",
+            branch_ref,
+            with_extended_output=True,
+            with_exceptions=False,
+        )
+        if status == c.Infra.GIT_REF_MISSING_EXIT_CODE:
+            return branch_ref.startswith(c.Infra.GIT_REFS_HEADS)
+        if status:
+            raise GitCommandError(
+                ["git", "show-ref", "--exists", branch_ref],
+                status,
+                stderr=stderr,
+                stdout=stdout,
+            )
+        return False
+
     @classmethod
     def exact_worktree_root(
-        cls, requested: Path
+        cls,
+        requested: Path,
     ) -> p.Result[m.Infra.GitIdentityReport]:
         """Reject Git parent discovery and unregistered nesting under a root.
 
@@ -80,7 +107,7 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
         if identity.value.repo_root != requested:
             return r[m.Infra.GitIdentityReport].fail(
                 "Git request is not the exact Git worktree root: "
-                f"requested={requested} resolved={identity.value.repo_root}"
+                f"requested={requested} resolved={identity.value.repo_root}",
             )
         if identity.value.is_submodule or identity.value.is_worktree:
             return identity
@@ -91,13 +118,14 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
                 return r[m.Infra.GitIdentityReport].fail(
                     "Git request is nested inside another Git repository and is "
                     "not a registered submodule or linked worktree: "
-                    f"requested={requested} outer={outer.value.repo_root}"
+                    f"requested={requested} outer={outer.value.repo_root}",
                 )
         return identity
 
     @classmethod
     def git_is_inside_work_tree(
-        cls, request: m.Infra.GitRepoRequest
+        cls,
+        request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitBoolReport]:
         """Return whether ``repo_root`` sits inside a Git work tree.
 
@@ -110,7 +138,7 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
             return r[m.Infra.GitBoolReport].from_failure(refreshed)
         resolved = request.repo_root.expanduser().resolve()
         try:
-            # Why (flext-infra-c3h): same nested-path contract as git_open_repo.
+            # Why: same nested-path contract as git_open_repo.
             repo = Repo(resolved, search_parent_directories=True)
         except InvalidGitRepositoryError:
             return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=False))
@@ -118,22 +146,27 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
             return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=False))
         except (GitCommandNotFound, OSError, ValueError) as exc:
             return r[m.Infra.GitBoolReport].fail(
-                f"failed to probe Git work tree: {exc}", exception=exc
+                f"failed to probe Git work tree: {exc}",
+                exception=exc,
             )
         # GitPython pins a `git cat-file` child per open handle: the probe owns
         # its handle, so it is released before the report leaves the boundary.
         try:
             return r[m.Infra.GitBoolReport].ok(
                 m.Infra.GitBoolReport(
-                    value=not repo.bare and repo.working_tree_dir is not None
-                )
+                    value=not repo.bare and repo.working_tree_dir is not None,
+                ),
             )
         finally:
             repo.close()
 
     @classmethod
     def _collect_identity_facts(
-        cls, repo: Repo, *, primary_root: Path, requested_path: Path | None = None
+        cls,
+        repo: Repo,
+        *,
+        primary_root: Path,
+        requested_path: Path | None = None,
     ) -> m.Infra.GitIdentityReport:
         """Collect GitPython-native identity facts into one report."""
         head_oid = repo.head.commit.hexsha
@@ -141,10 +174,7 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
         git_dir = Path(repo.git_dir).resolve()
         common_dir = Path(repo.common_dir).resolve()
         porcelain = repo.git.status("--porcelain", "--untracked-files=all")
-        try:
-            branch: str | None = repo.active_branch.name
-        except TypeError:
-            branch = None
+        branch = None if repo.head.is_detached else repo.active_branch.name
         remotes = {remote.name: remote.url for remote in repo.remotes}
         origin = remotes.get("origin")
         upstream = remotes.get("upstream")
@@ -163,7 +193,7 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
             primary_repo = cls._repo(primary_root)
             try:
                 raw_super = primary_repo.git.rev_parse(
-                    "--show-superproject-working-tree"
+                    "--show-superproject-working-tree",
                 ).strip()
             finally:
                 # The secondary handle is only opened for this one probe; every
@@ -178,13 +208,14 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
         # real submodule superproject was never recognized as one.
         staged_entries = repo.git.ls_files("--stage")
         has_submodules = any(
-            line.startswith(f"{_GITLINK_MODE} ") for line in staged_entries.splitlines()
+            line.startswith(f"{c.Infra.GIT_GITLINK_MODE_TEXT} ")
+            for line in staged_entries.splitlines()
         )
-        # Why (flext-2cafk / ai-hub-n1nh.5): git rev-parse --show-superproject-
+        # Why: git rev-parse --show-superproject-
         # working-tree already means "this working tree is a submodule".
         # Requiring .git to be a gitfile excluded absorbed/converted submodules
-        # whose .git is a real directory (cosmos-charts under cosmos-main), so
-        # is_submodule stayed False and ai-hub demoted them to unmanaged.
+        # whose .git is a real directory, so is_submodule stayed False and
+        # consumers demoted them to unmanaged.
         is_submodule = superproject is not None
         is_attached_submodule = (
             superproject is not None and working_tree.is_relative_to(superproject)

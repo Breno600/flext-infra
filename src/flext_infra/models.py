@@ -19,7 +19,6 @@ from ._models.check import FlextInfraModelsCheck
 from ._models.codemod import FlextInfraModelsCodemod
 from ._models.deps import FlextInfraModelsDeps
 from ._models.docs import FlextInfraModelsDocs
-from ._models.enforcement import FlextInfraModelsEnforcement
 from ._models.gates import FlextInfraModelsGates
 from ._models.git import FlextInfraModelsGit
 from ._models.layout import FlextInfraModelsLayout
@@ -31,7 +30,6 @@ from ._models.rope import FlextInfraModelsRope
 from ._models.rope_move import FlextInfraModelsRopeMove
 from ._models.rope_rules import FlextInfraModelsRopeRules
 from ._models.scan import FlextInfraModelsScan
-from ._models.settings import FlextInfraSettingsModels
 from ._models.sonarcloud import FlextInfraModelsSonarcloud
 from ._models.testmon import FlextInfraModelsTestmon
 from ._models.transformers import FlextInfraModelsTransformers
@@ -51,7 +49,6 @@ class FlextInfraModels(FlextCliModels):
         FlextInfraModelsCodemod,
         FlextInfraModelsDeps,
         FlextInfraModelsDocs,
-        FlextInfraModelsEnforcement,
         FlextInfraModelsGates,
         FlextInfraModelsLayout,
         FlextInfraModelsPromoted,
@@ -68,7 +65,6 @@ class FlextInfraModels(FlextCliModels):
         FlextInfraModelsScan,
         FlextInfraModelsSonarcloud,
         FlextInfraModelsTestmon,
-        FlextInfraSettingsModels,
         FlextInfraModelsCore,
         FlextInfraModelsBase,
     ):

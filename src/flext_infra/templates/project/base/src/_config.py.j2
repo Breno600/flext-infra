@@ -1,4 +1,4 @@
-{# ENFORCE-042 (2026-09-21): the fleet-converged _config.py is a FlextSettings-first
+{# The fleet-converged _config.py is a FlextSettings-first
    namespace-holder singleton. The generator owns this contract; consumers never
    hand-author it. The base class is derived from the declared dependency profile
    (config_base_class/config_base_module), never guessed in-template. The open
@@ -30,7 +30,7 @@ from typing import Annotated, Self
 
 {{ settings_import_line }}
 
-from ._models.config import (
+from {{ package_name }}._models.config import (
     {{ class_stem }}ConfigModels,
 )
 
@@ -38,11 +38,11 @@ from ._models.config import (
 {{ config_class_declaration }}
     """{{ class_stem }} config auto-loaded and validated from ``config/*.yaml``.
 
-    MRO carries ``FlextSettings`` FIRST (ENFORCE-042); the class stays a frozen,
+    MRO carries ``FlextSettings`` FIRST; the class stays a frozen,
     YAML-validated config singleton.
     """
 
-    # ENFORCE-042 namespace-holder contract: ``FlextSettings`` contributes
+    # Namespace-holder contract: ``FlextSettings`` contributes
     # namespacing only — instance machinery stays plain object semantics so the
     # settings singleton ``__new__`` cannot leak into the config singleton.
     # Unlike never-instantiated namespace holders, ``__init__`` delegates to

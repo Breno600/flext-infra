@@ -9,6 +9,7 @@ from flext_cli import m, u
 
 from ... import t
 from ..._constants import FlextInfraConstantsCodegenProject
+from ..._constants.deps import FlextInfraConstantsDeps
 from .beads import FlextInfraConfigModelsBeads
 from .contexts import FlextInfraConfigModelsContexts
 from .contract import FlextInfraConfigModelsContract
@@ -17,14 +18,69 @@ from .contract import FlextInfraConfigModelsContract
 class FlextInfraConfigModelsWorkspace:
     """Workspace manifest, integration, and policy models."""
 
+    class CandidateBootstrapTargetSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """One declared worktree and canonical conform surface."""
+
+        path: Annotated[Path, m.Field(description="Relative candidate worktree path")]
+        what: Annotated[
+            FlextInfraConstantsCodegenProject.CodegenConformSurface,
+            m.Field(description="Canonical generator surface for this target"),
+        ]
+
+        @u.model_validator(mode="after")
+        def _validate_path(self) -> Self:
+            if self.path.is_absolute() or not self.path.parts:
+                msg = "candidate bootstrap path must be relative"
+                raise ValueError(msg)
+            if self.what not in {
+                FlextInfraConstantsCodegenProject.CodegenConformSurface.MAKEFILE,
+                FlextInfraConstantsCodegenProject.CodegenConformSurface.MISE_TRIPLE,
+                FlextInfraConstantsCodegenProject.CodegenConformSurface.DOCS_CONFIG,
+                FlextInfraConstantsCodegenProject.CodegenConformSurface.PYPROJECT,
+            }:
+                msg = "candidate bootstrap owns only declared recovery surfaces"
+                raise ValueError(msg)
+            return self
+
+    class CandidateDependencySourceSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """One explicitly staged Git commit for a candidate dependency."""
+
+        distribution: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Exact dependency distribution name"),
+        ]
+        url: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Canonical HTTPS Git repository URL"),
+        ]
+        commit: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Full immutable Git commit OID"),
+        ]
+
+        @u.model_validator(mode="after")
+        def _validate_source(self) -> Self:
+            if not self.url.startswith("https://") or not self.url.endswith(".git"):
+                msg = "candidate dependency URL must be canonical HTTPS Git"
+                raise ValueError(msg)
+            if FlextInfraConstantsDeps.GIT_COMMIT_OID_RE.fullmatch(self.commit) is None:
+                msg = "candidate dependency commit must be a full Git OID"
+                raise ValueError(msg)
+            return self
+
+    type CandidateBootstrapTargets = t.VariadicTuple[CandidateBootstrapTargetSpec]
+    """Shared declaration type for repeated candidate worktree target fields."""
+
     class WorkspaceBeadsServerSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Optional Dolt connection declared by a versioned workspace manifest."""
 
         backend: Annotated[
-            Literal["dolt"], m.Field(description="Workspace ledger storage engine")
+            Literal["dolt"],
+            m.Field(description="Workspace ledger storage engine"),
         ]
         mode: Annotated[
-            Literal["server"], m.Field(description="Workspace ledger connection mode")
+            Literal["server"],
+            m.Field(description="Workspace ledger connection mode"),
         ]
         shared_server: Annotated[
             Literal[False],
@@ -32,7 +88,8 @@ class FlextInfraConfigModelsWorkspace:
         ] = False
         host: Annotated[t.NonEmptyStr, m.Field(description="Dolt server host")]
         port: Annotated[
-            int, m.Field(ge=1, le=65535, description="Dolt server TCP port")
+            int,
+            m.Field(ge=1, le=65535, description="Dolt server TCP port"),
         ]
         user: Annotated[t.NonEmptyStr, m.Field(description="Dolt server user")]
         auto_commit: Annotated[
@@ -44,7 +101,8 @@ class FlextInfraConfigModelsWorkspace:
         """Bounded per-project policy declared by a workspace manifest."""
 
         project: Annotated[
-            t.NonEmptyStr, m.Field(description="Canonical project distribution")
+            t.NonEmptyStr,
+            m.Field(description="Canonical project distribution"),
         ]
         beads_enabled: Annotated[
             bool,
@@ -52,14 +110,16 @@ class FlextInfraConfigModelsWorkspace:
                 description=(
                     "Whether the repository participates in Beads; an overlay "
                     "that omits it means the same as no overlay (enabled)"
-                )
+                ),
             ),
         ] = True
         ci_enabled: Annotated[
-            bool, m.Field(description="Whether conform owns the CI surface")
+            bool,
+            m.Field(description="Whether conform owns the CI surface"),
         ] = True
         ci_matrix_auto_run: Annotated[
-            bool, m.Field(description="Whether the CI matrix runs automatically")
+            bool,
+            m.Field(description="Whether the CI matrix runs automatically"),
         ] = False
         gascity_enabled: Annotated[
             bool,
@@ -69,7 +129,7 @@ class FlextInfraConfigModelsWorkspace:
                     "contract (city-owned Dolt server, gc tool projection, "
                     "inherited endpoint keys). False renders the standalone "
                     "shape: repository-local Dolt server owned by Beads."
-                )
+                ),
             ),
         ] = True
 
@@ -84,10 +144,7 @@ class FlextInfraConfigModelsWorkspace:
 
         project_scan_dirs: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                default_factory=lambda: ("src", "tests", "scripts", "examples"),
-                description="Relative directories scanned for candidate files",
-            ),
+            m.Field(description="Relative directories scanned for candidate files"),
         ]
         file_extensions: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
@@ -109,6 +166,13 @@ class FlextInfraConfigModelsWorkspace:
             ),
         ]
         name: Annotated[t.NonEmptyStr, m.Field(description="Workspace name")]
+        docs_audit: Annotated[
+            FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+            m.Field(
+                default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+                description="Repository-owned documentation audit declarations",
+            ),
+        ]
         namespace_scan_dirs: Annotated[
             t.StrSequence,
             m.Field(
@@ -116,7 +180,7 @@ class FlextInfraConfigModelsWorkspace:
                     "Repository-level production roots the namespace validator "
                     "enforces; an empty declaration keeps every root in scope, and "
                     "an explicit project-level declaration wins"
-                )
+                ),
             ),
         ] = ()
         ledger_id: Annotated[
@@ -148,7 +212,8 @@ class FlextInfraConfigModelsWorkspace:
             m.Field(description="Declared external dependency paths"),
         ] = ()
         content_only: Annotated[
-            t.VariadicTuple[Path], m.Field(description="Content-only Gitlink paths")
+            t.VariadicTuple[Path],
+            m.Field(description="Content-only Gitlink paths"),
         ] = ()
         exclusions: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsWorkspace.WorkspaceExclusionSpec],
@@ -158,6 +223,16 @@ class FlextInfraConfigModelsWorkspace:
             FlextInfraConfigModelsContexts.WorkspaceIntegrationSpec | None,
             m.Field(description="Optional integration provider overlay"),
         ] = None
+        candidate_dependencies: Annotated[
+            t.VariadicTuple[
+                FlextInfraConfigModelsWorkspace.CandidateDependencySourceSpec
+            ],
+            m.Field(description="Candidate-only exact dependency Git sources"),
+        ] = ()
+        candidate_bootstrap_targets: Annotated[
+            FlextInfraConfigModelsWorkspace.CandidateBootstrapTargets,
+            m.Field(description="Declared candidate worktrees conformed by Infra"),
+        ] = ()
         repository_policy_overlays: Annotated[
             t.VariadicTuple[
                 FlextInfraConfigModelsWorkspace.RepositoryPolicyOverlaySpec
@@ -204,6 +279,16 @@ class FlextInfraConfigModelsWorkspace:
                     + ", ".join(sorted(unknown_projects))
                 )
                 raise ValueError(msg)
+            candidate_names = tuple(
+                item.distribution for item in self.candidate_dependencies
+            )
+            if len(set(candidate_names)) != len(candidate_names):
+                msg = "candidate dependency distributions must be unique"
+                raise ValueError(msg)
+            targets = self.candidate_bootstrap_targets
+            if len({target.path for target in targets}) != len(targets):
+                msg = "candidate bootstrap targets must be unique"
+                raise ValueError(msg)
             return self
 
     class CodegenBootstrapSource(FlextInfraConfigModelsContract.ConfigContract):
@@ -216,6 +301,13 @@ class FlextInfraConfigModelsWorkspace:
         """Local identity plus topology read from this repository's Git inputs."""
 
         name: Annotated[t.NonEmptyStr, m.Field(description="Workspace name")]
+        docs_audit: Annotated[
+            FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+            m.Field(
+                default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+                description="Validated local documentation audit declarations",
+            ),
+        ]
         beads: Annotated[
             FlextInfraConfigModelsBeads.BeadsProjectSpec | None,
             m.Field(description="Repository-local Beads identity when enabled"),
@@ -227,7 +319,7 @@ class FlextInfraConfigModelsWorkspace:
                     "Gas City runtime-contract participation resolved from the "
                     "matched repository policy overlay; True when the checkout "
                     "declares no manifest or no overlay."
-                )
+                ),
             ),
         ] = True
         repository: Annotated[
@@ -244,7 +336,7 @@ class FlextInfraConfigModelsWorkspace:
                 description=(
                     "FLEXT dependency source required before the first pyproject "
                     "exists; generated dependencies own provenance afterwards."
-                )
+                ),
             ),
         ] = None
         namespace_scan_dirs: Annotated[
@@ -254,7 +346,7 @@ class FlextInfraConfigModelsWorkspace:
                     "Repository-level production roots the namespace validator "
                     "enforces; an empty declaration keeps every root in scope, and "
                     "an explicit project-level declaration wins"
-                )
+                ),
             ),
         ] = ()
         integration: Annotated[
@@ -263,9 +355,19 @@ class FlextInfraConfigModelsWorkspace:
                 description=(
                     "Declared integration provider and branch from the workspace "
                     "manifest; the resolver consults it before any Git fact"
-                )
+                ),
             ),
         ] = None
+        candidate_dependencies: Annotated[
+            t.VariadicTuple[
+                FlextInfraConfigModelsWorkspace.CandidateDependencySourceSpec
+            ],
+            m.Field(description="Candidate-only exact dependency Git sources"),
+        ] = ()
+        candidate_bootstrap_targets: Annotated[
+            FlextInfraConfigModelsWorkspace.CandidateBootstrapTargets,
+            m.Field(description="Declared candidate worktrees for bootstrap"),
+        ] = ()
         subprojects: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsContexts.RepositoryRef],
             m.Field(description="Direct governed repositories from local .gitmodules"),
@@ -290,7 +392,7 @@ class FlextInfraConfigModelsWorkspace:
                 )
                 raise ValueError(msg)
             if len(set(self.external_dependency_paths)) != len(
-                self.external_dependency_paths
+                self.external_dependency_paths,
             ):
                 msg = "external dependency paths must be unique"
                 raise ValueError(msg)

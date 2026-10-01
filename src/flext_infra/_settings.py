@@ -28,7 +28,7 @@ class FlextInfraSettings(FlextSettings):
         frozen=True,
     )
 
-    # flext-wkii.4.15: composition only; declaration and env validation stay private.
+    # Composition only; declaration and env validation stay private.
     Infra: FlextInfraSettingsModels.Infra = m.Field(
         default_factory=FlextInfraSettingsModels.Infra,
         description="Namespaced infra settings.",
@@ -45,6 +45,11 @@ class FlextInfraSettings(FlextSettings):
         elsewhere are banned by the ``ban-ambient-environ-read`` rule.
         """
         return _os.environ.get(name)
+
+    @staticmethod
+    def env_required(name: str) -> str:
+        """Read a required dynamic key, preserving native missing-key semantics."""
+        return _os.environ[name]
 
 
 settings: FlextInfraSettings = FlextInfraSettings.fetch_global()

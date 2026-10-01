@@ -17,7 +17,10 @@ class FlextInfraUtilitiesDocsCommandContractMixin:
 
     @staticmethod
     def _docs_command_candidates(
-        line: str, *, fence_marker: str, fence_language: str
+        line: str,
+        *,
+        fence_marker: str,
+        fence_language: str,
     ) -> t.StrSequence:
         """Return executable shell snippets, excluding surrounding prose."""
         if fence_marker:
@@ -31,6 +34,8 @@ class FlextInfraUtilitiesDocsCommandContractMixin:
             match.group(0)[1:-1]
             for match in c.Infra.INLINE_CODE_RE.finditer(line)
             if len(match.group(0)[1:-1].split()) > 1
+            and c.Infra.DOCS_INLINE_COMMAND_DIRECTIVE_RE.search(line[: match.start()])
+            is not None
         )
 
     @staticmethod
@@ -61,7 +66,9 @@ class FlextInfraUtilitiesDocsCommandContractMixin:
             for (
                 candidate
             ) in FlextInfraUtilitiesDocsCommandContractMixin._docs_command_candidates(
-                line, fence_marker=fence_marker, fence_language=fence_language
+                line,
+                fence_marker=fence_marker,
+                fence_language=fence_language,
             ):
                 make_match = c.Infra.DOCS_MAKE_COMMAND_RE.match(candidate)
                 if c.Infra.DOCS_RAW_PYTEST_COMMAND_RE.match(candidate):
@@ -70,11 +77,12 @@ class FlextInfraUtilitiesDocsCommandContractMixin:
                     issue = "direct tool command bypasses the root Make dispatcher"
                 elif make_match is not None:
                     selector = c.Infra.DOCS_FORBIDDEN_MAKE_SELECTOR_RE.search(
-                        make_match.group("args")
+                        make_match.group("args"),
                     )
                     verb = make_match.group("verb").lower()
                     verb_spec = next(
-                        (spec for spec in effective_verbs if spec.name == verb), None
+                        (spec for spec in effective_verbs if spec.name == verb),
+                        None,
                     )
                     legacy_apply = (
                         c.Infra.DOCS_APPLY_RE.search(make_match.group("args"))
@@ -110,7 +118,7 @@ class FlextInfraUtilitiesDocsCommandContractMixin:
                         issue_type="command_contract",
                         severity="high",
                         message=f"line {number}: {issue}",
-                    )
+                    ),
                 )
         return issues
 
@@ -125,12 +133,16 @@ class FlextInfraUtilitiesDocsCommandContractMixin:
         """
         from flext_infra import u
 
-        loaded = u.Infra.workspace_spec_load(scope.path)
+        loaded = u.Infra.load_workspace_manifest(scope.path)
         if loaded.failure:
             raise ValueError(loaded.error)
         effective_verbs = (
             *config.Infra.codegen.make.verbs,
-            *loaded.value.repository.extra_verbs,
+            *(
+                verb
+                for manifest in loaded.value
+                for verb in manifest.repository.extra_verbs
+            ),
         )
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         docs_root = scope.path / c.Infra.DIR_DOCS
@@ -146,14 +158,15 @@ class FlextInfraUtilitiesDocsCommandContractMixin:
             ):
                 continue
             content = path.read_text(
-                encoding=c.Cli.ENCODING_DEFAULT, errors=c.Infra.IGNORE
+                encoding=c.Cli.ENCODING_DEFAULT,
+                errors=c.Infra.IGNORE,
             )
             issues.extend(
                 FlextInfraUtilitiesDocsCommandContractMixin.docs_command_contract_content_issues(
                     content,
                     relative_path=relative_path,
                     effective_verbs=effective_verbs,
-                )
+                ),
             )
         return issues
 

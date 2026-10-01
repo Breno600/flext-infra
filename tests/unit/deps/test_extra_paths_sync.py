@@ -24,15 +24,17 @@ class TestsFlextInfraDepsExtraPathsSync:
 
     def _create_pyproject(self, directory: Path, content: str) -> Path:
         pyproject_path: Path = tf(base_dir=directory).create(
-            content=content, name="pyproject.toml"
+            content=content,
+            name="pyproject.toml",
         )
         return pyproject_path
 
     def _manager(
-        self, repository_root: Path | None = None
+        self,
+        repository_root: Path | None = None,
     ) -> FlextInfraExtraPathsManager:
         return FlextInfraExtraPathsManager(
-            repository_root=repository_root or _TEST_REPOSITORY_ROOT
+            repository_root=repository_root or _TEST_REPOSITORY_ROOT,
         )
 
     @pytest.mark.parametrize(
@@ -67,7 +69,8 @@ class TestsFlextInfraDepsExtraPathsSync:
             pyproject = self._create_pyproject(project, content)
             project_dirs_arg = [project] if project_dirs else []
             result = self._manager(tmp_path).sync_extra_paths(
-                dry_run=dry_run, project_dirs=project_dirs_arg
+                dry_run=dry_run,
+                project_dirs=project_dirs_arg,
             )
             tm.ok(result)
             if expect_has:
@@ -79,7 +82,8 @@ class TestsFlextInfraDepsExtraPathsSync:
             return
         _ = self._create_pyproject(tmp_path, pyright_content)
         result = self._manager(tmp_path).sync_extra_paths(
-            dry_run=dry_run, project_dirs=[] if project_dirs == [] else None
+            dry_run=dry_run,
+            project_dirs=[] if project_dirs == [] else None,
         )
         if expect_fail:
             tm.fail(result)
@@ -91,7 +95,8 @@ class TestsFlextInfraDepsExtraPathsSync:
         tm.fail(self._manager(tmp_path).sync_extra_paths(), has="Missing")
 
     def test_sync_extra_paths_skips_selected_dirs_without_pyproject(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Selected dirs without pyproject are skipped (worktree-safe), not failed."""
         project = tmp_path / "proj"
@@ -177,11 +182,12 @@ class TestsFlextInfraDepsExtraPathsSync:
             return
         pyproject = self._create_pyproject(tmp_path, pyright_content)
         tm.ok(
-            self._manager(tmp_path).sync_one(pyproject, is_root=True, dry_run=dry_run)
+            self._manager(tmp_path).sync_one(pyproject, is_root=True, dry_run=dry_run),
         )
 
     def test_sync_doc_is_idempotent_when_paths_already_match(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Equal path content must not report changes across list/tuple forms."""
         (tmp_path / "src").mkdir()
