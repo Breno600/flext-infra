@@ -147,8 +147,7 @@ class FlextInfraEnsureRuffConfigPhase:
         *,
         path: Path,
         first_party: t.StrSequence,
-        stale_patterns: t.StrSequence,
-        per_file_ignores: t.MappingKV[str, t.StrSequence],
+        ignores: m.Infra.RuffPerFileIgnoresProjection,
         analysis_exclusions: t.StrSequence | None,
         generated_python_roots: t.StrSequence,
     ) -> m.Infra.DepsToml.PhaseConfig:
@@ -305,9 +304,12 @@ class FlextInfraEnsureRuffConfigPhase:
                                 key=pattern,
                                 value=u.normalize_to_json_value(sorted(rules)),
                             )
-                            for pattern, rules in per_file_ignores.items()
+                            for pattern, rules in ignores.effective.items()
                         ),
-                        *(toml.RemoveOp(key=pattern) for pattern in stale_patterns),
+                        *(
+                            toml.RemoveOp(key=pattern)
+                            for pattern in ignores.stale_patterns
+                        ),
                     ),
                 ),
             ),
@@ -339,12 +341,14 @@ class FlextInfraEnsureRuffConfigPhase:
                     first_party=FlextInfraToolTablesPhase.first_party_namespaces(
                         payload, path=path
                     ),
-                    stale_patterns=[
-                        pattern
-                        for pattern in current_ignores or ()
-                        if pattern not in effective_ignores
-                    ],
-                    per_file_ignores=effective_ignores,
+                    ignores=m.Infra.RuffPerFileIgnoresProjection(
+                        effective=effective_ignores,
+                        stale_patterns=tuple(
+                            pattern
+                            for pattern in current_ignores or ()
+                            if pattern not in effective_ignores
+                        ),
+                    ),
                     analysis_exclusions=analysis_exclusions,
                     generated_python_roots=generated_python_roots,
                 ),

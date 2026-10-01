@@ -447,6 +447,11 @@ class FlextInfraWorkspaceDetector(
             ),
         )
         integration_branch = baseline.value if baseline.success else None
+        context = m.Infra.SubprojectLoadContext(
+            integration_branch=integration_branch,
+            workspace_beads=workspace_beads,
+            allow_unprovisioned_members=allow_unprovisioned_members,
+        )
         for path in declared.value:
             if path in seen:
                 return result_type.fail(
@@ -456,10 +461,8 @@ class FlextInfraWorkspaceDetector(
             loaded = cls._load_subproject(
                 repository_root,
                 path,
-                integration_branch=integration_branch,
-                workspace_beads=workspace_beads,
                 declared_member=members.value.get(path),
-                allow_unprovisioned_members=allow_unprovisioned_members,
+                context=context,
             )
             if loaded.failure:
                 return result_type.from_failure(loaded)
@@ -489,10 +492,8 @@ class FlextInfraWorkspaceDetector(
         repository_root: Path,
         path: Path,
         *,
-        integration_branch: str | None = None,
-        workspace_beads: m.Infra.BeadsProjectSpec | None,
         declared_member: m.Infra.RepositoryRef | None,
-        allow_unprovisioned_members: bool = False,
+        context: m.Infra.SubprojectLoadContext,
     ) -> p.Result[m.Infra.RepositoryRef | Path]:
         """Load one governed entry, or its declared path for external entries.
 
@@ -505,6 +506,9 @@ class FlextInfraWorkspaceDetector(
         on the workspace's detected integration line or follow the
         superproject.
         """
+        integration_branch = context.integration_branch
+        workspace_beads = context.workspace_beads
+        allow_unprovisioned_members = context.allow_unprovisioned_members
         result_type = r[m.Infra.RepositoryRef | Path]
         if path.is_absolute() or not path.parts or ".." in path.parts:
             return result_type.fail(f"invalid .gitmodules path: {path.as_posix()}")
@@ -704,9 +708,13 @@ class FlextInfraWorkspaceDetector(
             loaded_member = cls._load_subproject(
                 superproject_root,
                 member_path,
-                integration_branch=baseline.value if baseline.success else None,
-                workspace_beads=inherited_beads.value,
                 declared_member=superproject_members.value.get(member_path),
+                context=m.Infra.SubprojectLoadContext(
+                    integration_branch=(
+                        baseline.value if baseline.success else None
+                    ),
+                    workspace_beads=inherited_beads.value,
+                ),
             )
             if loaded_member.failure or isinstance(loaded_member.value, Path):
                 return r[m.Infra.WorkspaceSpec].fail(

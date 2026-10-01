@@ -13,6 +13,8 @@ from libcst.metadata import (
     ScopeProvider,
 )
 
+from flext_infra import c
+
 
 class FlextInfraTypingMutation(cst.CSTVisitor):
     """Prove reads through indexing, iteration, membership, truth and builtin len.
@@ -21,11 +23,7 @@ class FlextInfraTypingMutation(cst.CSTVisitor):
     concrete parameter contract, including method calls and escaped references.
     """
 
-    METADATA_DEPENDENCIES = (
-        ScopeProvider,
-        ParentNodeProvider,
-        ExpressionContextProvider,
-    )
+    METADATA_DEPENDENCIES = c.Infra.TYPING_MUTATION_METADATA_DEPENDENCIES
 
     def __init__(self) -> None:
         self.mutated: set[str] = set()

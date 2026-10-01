@@ -189,6 +189,20 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             m.Field(description="Data directories selected with VCS filters"),
         ] = ()
 
+    class RuffPerFileIgnoresProjection(m.ContractModel):
+        """Composed per-file-ignores table for one canonical Ruff render."""
+
+        effective: Annotated[
+            t.MappingKV[str, t.StrSequence],
+            m.Field(description="Merged exemption map the table must declare"),
+        ]
+        stale_patterns: Annotated[
+            t.StrTuple,
+            m.Field(
+                description="Declared patterns retired from the current table"
+            ),
+        ] = ()
+
     class PyprojectDeclaredTopology(m.ContractModel):
         """Project topology a caller declares instead of discovering it on disk.
 

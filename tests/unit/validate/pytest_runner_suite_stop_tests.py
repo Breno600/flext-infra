@@ -79,15 +79,24 @@ class TestsFlextInfraPytestRunnerSuiteStop:
         than one worker executes serially and keeps only one in-flight item.
         """
         policy = config.Infra.tooling.tools.pytest
+
+        def dispatch_plan(node_ids: t.StrSequence) -> m.Infra.PytestSelectionPlan:
+            """Synthetic selection whose manifest path matches the real argv."""
+            return m.Infra.PytestSelectionPlan.model_validate({
+                "manifest_path": "m.json",
+                "node_ids": list(node_ids),
+                "whole_target": False,
+                "inventory_collected": False,
+                "owns_no_tests": False,
+            })
+
         multi = [f"tests/test_serial_{'x' * index}.py::test_one" for index in range(4)]
         runner = runner_for(cached_runner_project)
         multi_command = runner.build_command(
-            cached_runner_project / runner.reports, multi, manifest_path=Path("m.json")
+            cached_runner_project / runner.reports, dispatch_plan(multi)
         )
         serial_command = runner.build_command(
-            cached_runner_project / runner.reports,
-            multi[:1],
-            manifest_path=Path("m.json"),
+            cached_runner_project / runner.reports, dispatch_plan(multi[:1])
         )
 
         def stop_value(command: t.StrSequence) -> float:

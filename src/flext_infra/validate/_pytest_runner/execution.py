@@ -459,9 +459,7 @@ class FlextInfraPytestRunnerExecution(
         # continues to collect dependencies through its xdist integration.
         command = self.build_command(
             report_dir,
-            selection,
-            manifest_path=selection_plan.manifest_path,
-            whole_target=selection_plan.whole_target,
+            selection_plan,
             execution_mode=execution_mode,
         )
         outcome = self._run_suite(command, report_dir, execution_mode=execution_mode)

@@ -9,7 +9,7 @@ from importlib.metadata import distributions
 from pathlib import Path
 from typing import ClassVar
 
-from flext_infra import c, config, t
+from flext_infra import c, config, m, t
 
 from ..._pytest_collection import FlextInfraPytestCollection
 from .base import FlextInfraPytestRunnerBase
@@ -159,30 +159,27 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
     def build_command(
         self,
         report_dir: Path,
-        selected_node_ids: t.StrSequence | None = None,
+        manifest: m.Infra.PytestSelectionPlan | None = None,
         *,
-        manifest_path: Path | None = None,
         serialize: bool = False,
-        whole_target: bool = False,
         execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
     ) -> t.VariadicTuple[str]:
         """Build the testmon suite argv (never the cov plugin).
 
-        A nonempty selection is enforced from its manifest, so it requires
-        ``manifest_path``.
+        A nonempty selection is enforced from its owning manifest artifact,
+        so the plan always carries the node IDs together with the manifest
+        path that declares them.
         """
         pytest = config.Infra.tooling.tools.pytest
-        selection = selected_node_ids or None
-        if selection and manifest_path is None:
-            msg = "a runner selection requires its collection manifest path"
-            raise ValueError(msg)
+        selection = (manifest.node_ids or None) if manifest is not None else None
+        manifest_path = manifest.manifest_path if manifest is not None else None
         # An empty selection needs no workers, and a selection smaller than the
         # worker budget never needs more workers than items: every extra worker
         # only pays startup cost for an empty queue. Explicit serial execution
         # remains available to callers; cold and warm cache runs share the same
         # manifest.
         budget = self.parallel_worker_budget(pytest)
-        if serialize or selected_node_ids == ():
+        if serialize or (manifest is not None and not manifest.node_ids):
             workers = "0"
         elif selection:
             workers = str(min(budget, len(selection)))
@@ -198,7 +195,8 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             serial=serial,
             targets=(
                 (str(self.target),)
-                if whole_target or selection is None
+                if selection is None
+                or (manifest is not None and manifest.whole_target)
                 else tuple(selection)
             ),
             workers=workers,
@@ -208,13 +206,18 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                     (
                         "-p",
                         FlextInfraPytestCollection.__module__,
-                        f"{c.Infra.PYTEST_SELECTED_COLLECTION_OPTION}={manifest_path}",
+                        (
+                            f"{c.Infra.PYTEST_SELECTED_COLLECTION_OPTION}="
+                            f"{manifest_path}"
+                        ),
                     )
-                    if selection
+                    if manifest_path is not None
                     else ()
                 ),
                 "--testmon",
-                *(("--testmon-noselect",) if selection else ("--testmon-forceselect",)),
+                *(
+                    ("--testmon-noselect",) if selection else ("--testmon-forceselect",)
+                ),
                 "--testmon-env",
                 f"'{self._toolchain_testmon_environment()}'",
                 *self._NO_COVERAGE,

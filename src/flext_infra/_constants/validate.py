@@ -7,12 +7,26 @@ from enum import IntEnum, unique
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
+from libcst.metadata import ExpressionContextProvider, ParentNodeProvider, ScopeProvider
+
 if TYPE_CHECKING:
     from flext_infra import t
 
 
 class FlextInfraConstantsSharedInfra:
     """Shared infrastructure constants consumed by flext_infra.constants."""
+
+    TYPING_MUTATION_METADATA_DEPENDENCIES: ClassVar[
+        tuple[
+            type[ScopeProvider | ParentNodeProvider | ExpressionContextProvider],
+            ...,
+        ]
+    ] = (
+        ScopeProvider,
+        ParentNodeProvider,
+        ExpressionContextProvider,
+    )
+    "LibCST metadata providers the typing-mutation visitor requires (c.Infra.*)."
 
     @unique
     class ScriptExitCode(IntEnum):
