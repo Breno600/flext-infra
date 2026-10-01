@@ -7,7 +7,6 @@ from pathlib import Path
 from types import CodeType
 from typing import TYPE_CHECKING
 
-import pytest
 from flext_tests import tm
 
 from flext_core import r
@@ -332,12 +331,9 @@ class TestsFlextInfraRefactorMainCli:
             cls._write(workspace / "tests" / "test_service.py", test_source)
         return workspace, service_file
 
-
-
     @classmethod
     def _build_facade_member_workspace(cls, tmp_path: Path) -> t.Pair[Path, Path]:
         return cls._build_module_workspace(tmp_path, cls._FACADE_MEMBER_MODULE)
-
 
     @classmethod
     def _build_test_only_workspace(cls, tmp_path: Path) -> Path:
@@ -415,14 +411,6 @@ class TestsFlextInfraRefactorMainCli:
         self._write_workspace_pyproject(workspace)
         result = self._refactor_main("census", "--repository-root", str(workspace))
         tm.that(result, eq=0)
-
-
-
-
-
-
-
-
 
     def test_refactor_census_flags_unused_when_only_tests_reference_source(
         self,

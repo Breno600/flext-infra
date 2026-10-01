@@ -109,8 +109,6 @@ class FlextInfraConstantsDocs:
     so an already-rewritten fence never matches again.
     """
 
-
-
     # --- Markdown link/heading patterns ---
     MARKDOWN_LINK_RE: ClassVar[t.RegexPattern] = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
     """Match markdown links capturing text (group 1) and URL (group 2)."""

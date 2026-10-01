@@ -11,7 +11,6 @@ from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 if TYPE_CHECKING:
     from .adapters import FlextInfraConstantsAdapters
     from .base import FlextInfraConstantsBase
-    from .census import FlextInfraConstantsCensus
     from .check import FlextInfraConstantsCheck
     from .cli import FlextInfraConstantsCli
     from .codegen import FlextInfraConstantsCodegen
@@ -37,7 +36,6 @@ if TYPE_CHECKING:
 __all__: tuple[str, ...] = (
     "FlextInfraConstantsAdapters",
     "FlextInfraConstantsBase",
-    "FlextInfraConstantsCensus",
     "FlextInfraConstantsCheck",
     "FlextInfraConstantsCli",
     "FlextInfraConstantsCodegen",
@@ -65,7 +63,6 @@ _LAZY_IMPORTS = MappingProxyType(
         MappingProxyType({
             ".adapters": ("FlextInfraConstantsAdapters",),
             ".base": ("FlextInfraConstantsBase",),
-            ".census": ("FlextInfraConstantsCensus",),
             ".check": ("FlextInfraConstantsCheck",),
             ".cli": ("FlextInfraConstantsCli",),
             ".codegen": ("FlextInfraConstantsCodegen",),

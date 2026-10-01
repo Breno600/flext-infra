@@ -228,10 +228,9 @@ diagnostic; directory names are never identity fallbacks.
 
 ## Codemod scanner contract
 
-Codemod policy findings are observational. This exception applies to those findings
-only. It does not accept failed rule discovery, failed scanner execution, incomplete
-output, or invalid diagnostic payloads, and it does not close the associated migration
-work.
+Every codemod policy finding blocks the gate, whatever its rule severity. Failed rule
+discovery, failed scanner execution, incomplete output, and invalid diagnostic payloads
+block as native failures with their own diagnostics.
 
 The gate consumes the complete native `ast-grep scan --json=compact` array. The
 [documented scan contract](https://ast-grep.github.io/reference/cli/scan.html) and

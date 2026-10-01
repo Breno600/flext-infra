@@ -15,7 +15,9 @@ if TYPE_CHECKING:
     from flext_infra import p, t
 
 
-class FlextInfraRefactorCensusRemovalMixin(FlextInfraRefactorCensusApplyFormattingMixin):
+class FlextInfraRefactorCensusRemovalMixin(
+    FlextInfraRefactorCensusApplyFormattingMixin
+):
     """Preview and apply the inventory's removal candidates through gates.
 
     Removal of unreferenced objects is the census's own effect: it acts on

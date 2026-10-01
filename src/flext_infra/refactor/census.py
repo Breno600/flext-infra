@@ -98,6 +98,7 @@ class FlextInfraRefactorCensus(
         return u.Infra.normalize_sequence_values(self.families)
 
     @property
+    @override
     def dry_run_gate_names(self) -> t.StrSequence:
         """Per-candidate gate set (``lint`` + ``pyrefly``).
 
