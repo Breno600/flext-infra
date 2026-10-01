@@ -7,12 +7,26 @@ from enum import IntEnum, unique
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
+from libcst.metadata import ExpressionContextProvider, ParentNodeProvider, ScopeProvider
+
 if TYPE_CHECKING:
     from flext_infra import t
 
 
 class FlextInfraConstantsSharedInfra:
     """Shared infrastructure constants consumed by flext_infra.constants."""
+
+    TYPING_MUTATION_METADATA_DEPENDENCIES: ClassVar[
+        tuple[
+            type[ScopeProvider | ParentNodeProvider | ExpressionContextProvider],
+            ...,
+        ]
+    ] = (
+        ScopeProvider,
+        ParentNodeProvider,
+        ExpressionContextProvider,
+    )
+    "LibCST metadata providers the typing-mutation visitor requires (c.Infra.*)."
 
     @unique
     class ScriptExitCode(IntEnum):
@@ -69,6 +83,8 @@ class FlextInfraConstantsSharedInfra:
     )
     SCRIPT_HEADER_MAX_LINES: ClassVar[int] = 10
     SCRIPT_MIN_CODE_LINES: ClassVar[int] = 20
+    CPROFILE_RECEIPT_ARGUMENT_COUNT: ClassVar[int] = 3
+    "``argv`` length when an explicit run receipt accompanies the profile path."
     SKILL_REPORT_VALIDATED_TOP_DIRS: ClassVar[frozenset[str]] = frozenset({"."})
     SKILL_REPORT_SKIPPED_TOP_DIRS: ClassVar[frozenset[str]] = frozenset({
         "evidence",
