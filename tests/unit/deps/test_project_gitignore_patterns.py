@@ -243,6 +243,77 @@ class TestsFlextInfraProjectGitignorePatterns:
 
         assert result.failure
 
+    def test_distinct_prefix_markers_preserve_both_blocks(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A longer exact delimiter is not a malformed shorter delimiter."""
+        root = self._project(
+            tmp_path / "project",
+            {
+                "tooling.yaml": (
+                    "ManagedArtifacts:\n  Gitignore:\n    preserved_blocks:\n"
+                    "      - begin: '# BEGIN external projection'\n"
+                    "        end: '# END external projection'\n"
+                    "      - begin: '# BEGIN external projection extended'\n"
+                    "        end: '# END external projection extended'\n"
+                ),
+            },
+        )
+        (root / ".gitignore").write_text(
+            "# BEGIN external projection\n/first\n# END external projection\n\n"
+            "# BEGIN external projection extended\n/second\n"
+            "# END external projection extended\n",
+            encoding="utf-8",
+        )
+
+        first = tm.ok(
+            FlextInfraCodegenConform.render_project_gitignore(
+                config.Infra.codegen,
+                profile=c.Infra.MakeProfile.STANDALONE,
+                project_name=root.name,
+                project_dir=root,
+            ),
+        )
+        assert first.count("# BEGIN external projection\n") == 1
+        assert first.count("# BEGIN external projection extended\n") == 1
+        (root / ".gitignore").write_text(first, encoding="utf-8")
+        second = tm.ok(
+            FlextInfraCodegenConform.render_project_gitignore(
+                config.Infra.codegen,
+                profile=c.Infra.MakeProfile.STANDALONE,
+                project_name=root.name,
+                project_dir=root,
+            ),
+        )
+        assert second == first
+
+    def test_comment_mentioning_marker_is_not_a_delimiter(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A normal comment may quote a marker without claiming the block."""
+        root = self._external_project(tmp_path / "project")
+        (root / ".gitignore").write_text(
+            "# This comment quotes # BEGIN external projection for readers.\n"
+            "# BEGIN external projection\n/owned\n# END external projection\n",
+            encoding="utf-8",
+        )
+
+        rendered = tm.ok(
+            FlextInfraCodegenConform.render_project_gitignore(
+                config.Infra.codegen,
+                profile=c.Infra.MakeProfile.STANDALONE,
+                project_name=root.name,
+                project_dir=root,
+            ),
+        )
+
+        assert "# This comment quotes" not in rendered
+        assert rendered.endswith(
+            "# BEGIN external projection\n/owned\n# END external projection\n",
+        )
+
     def test_duplicate_block_declaration_fails(self, tmp_path: Path) -> None:
         """Two project config documents cannot claim the same external marker."""
         root = self._project(
