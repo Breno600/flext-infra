@@ -23,6 +23,57 @@ if TYPE_CHECKING:
 class TestsFlextInfraModTextGateEngine:
     """Exercise the declarative sed-by-list engine through its public scan."""
 
+    def test_declared_markdown_rule_replays_and_reaches_fixed_point(
+        self, mod_workspace: Path
+    ) -> None:
+        """An authored Markdown guide is an authenticated public text input."""
+        guide = mod_workspace / "docs" / "guide.md"
+        tm.ok(u.Cli.ensure_dir(guide.parent))
+        tm.ok(u.Cli.atomic_write_text_file(guide, "Old guidance.\n"))
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
+                "rules:\n"
+                "  - id: guide-contract\n"
+                "    include: ['docs/*.md']\n"
+                "    find: 'Old guidance\\.'\n"
+                "    replace: 'Current guidance.'\n",
+            )
+        )
+
+        tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=True))
+        tm.that(guide.read_text(encoding="utf-8"), eq="Current guidance.\n")
+        tm.that(
+            tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=False)).findings,
+            eq=0,
+        )
+
+    def test_declared_markdown_symlink_fails_before_publication(
+        self, mod_workspace: Path
+    ) -> None:
+        """A declared guide cannot route publication through a symbolic link."""
+        source = mod_workspace / "guide-source.md"
+        tm.ok(u.Cli.atomic_write_text_file(source, "Old guidance.\n"))
+        guide = mod_workspace / "docs" / "guide.md"
+        tm.ok(u.Cli.ensure_dir(guide.parent))
+        guide.symlink_to(source)
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
+                "rules:\n"
+                "  - id: guide-contract\n"
+                "    include: ['docs/guide.md']\n"
+                "    find: 'Old guidance\\.'\n"
+                "    replace: 'Current guidance.'\n",
+            )
+        )
+
+        tm.fail(
+            FlextInfraModTextGateEngine.scan(mod_workspace, fix=True),
+            has="text Markdown source must be physical",
+        )
+        tm.that(source.read_text(encoding="utf-8"), eq="Old guidance.\n")
+
     def test_capture_guard_rejects_wrong_keyword_before_publication(
         self, mod_workspace: Path
     ) -> None:
