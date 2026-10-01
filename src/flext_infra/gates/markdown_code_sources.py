@@ -45,7 +45,12 @@ class FlextInfraMarkdownCodeSources:
         project_dir: Path,
         markdown_files: t.SequenceOf[Path],
     ) -> t.VariadicTuple[t.Triple[str, str, t.Pair[str, int]]]:
-        """Collect parseable Python fences with their documentation locations."""
+        """Collect one named source per parseable fenced ``python`` block.
+
+        Blocks carrying the ``notest`` fence marker and unparseable fragments
+        are excluded. The Markdown validator owns syntax errors; this gate owns
+        only formatting of Python blocks that compile.
+        """
         collected: list[t.Triple[str, str, t.Pair[str, int]]] = []
         for md_path in markdown_files:
             relative_posix = md_path.relative_to(project_dir).as_posix()

@@ -28,8 +28,10 @@ Infra:
       # writes the committed uv.lock and mise.lock; setup, gen, and fmt install
       # frozen from those locks.
       python_version: "3.13"
+      # The runtime tool is pinned to the newest Python patch whose lock
+      # resolves on every declared platform; the language floor above stays a
+      # minor line.
       python_tool_version: "3.13.15"
-      python_compile: false
       # Supply-chain cooldown (operator 2026-10-01): ONE value for every
       # resolver — the generated mise `minimum_release_age` (so `make upg`
       # never selects a release younger than this, e.g. a Python patch with
@@ -63,6 +65,10 @@ Infra:
       # The embedded aube installer preserves the locked dependency graph;
       # the approved package lifecycle is declared in the mise projection.
       npm_package_manager: aube
+      # False keeps Python resolution and installation on precompiled builds:
+      # compiling from source selected releases ahead of their published
+      # builds and stalled the fleet bootstrap (operator 2026-10-01).
+      python_compile: false
       gitleaks_version: latest
       kubeconform_version: latest
       # Projection: .mise.toml [settings] lockfile / locked and [tool_config] locked.
@@ -89,7 +95,7 @@ Infra:
       qlty_version: latest
       node_version: latest
       jscpd_selector: github:kucherenko/jscpd
-      jscpd_version: "5.4.0"
+      jscpd_version: latest
       # Prettier is the markdown formatter (markdown-format gate): provisioned
       # through npm so the fleet binary version is owned by this SSOT alone.
       prettier_selector: npm:prettier
@@ -319,6 +325,9 @@ Infra:
         discovery_scope: none
 
     make:
+      # Physical workspace environments live beside the checkout so a linked
+      # worktree shares one project-keyed environment instead of an in-tree
+      # duplicate (runtime_environment_dir derives the same path).
       examples_timeout_seconds: 120
       submodule_timeout_seconds: 120
       # Operator 2026-09-08: ruff is the formatting and autofix rule.
@@ -347,7 +356,6 @@ Infra:
       # formats — without it the ruff-format surface has no verb home and
       # drift survives a green check until `make mod` validates.
       fmt_gates: [format, markdown-format]
-      runtime_environment_directory: .flext-venvs
       # One filename and the root-relative runner paths; the runner places the
       # database in platformdirs' external per-worktree cache.
       testmon_cache:
@@ -414,7 +422,6 @@ Infra:
         # the project-owned timeout budget (tools.mypy.timeout_seconds) makes
         # it runnable on the runner.
         # pyrefly stays local-only (fast; pyright already covers CI).
-        local_check_gates: [pyrefly]
       # Git-hook stages are disabled by default;
       # the workflow below still declares stage membership so re-enabling is a
       # one-key change, case by case. CI owns read-only setup, generation drift,

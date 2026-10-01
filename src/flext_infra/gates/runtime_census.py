@@ -35,20 +35,9 @@ class FlextInfraRuntimeCensusGate(FlextInfraGate):
         """Run the runtime census scoped to ``project_dir``."""
         _ = ctx
         started = time.monotonic()
-        # The filter is the declared project name, never the checkout directory
-        # name: a worktree or renamed checkout keeps its manifest identity, and
-        # the census discovery keys projects by exactly that pyproject name.
-        metadata = u.Infra.read_project_metadata_result(project_dir)
-        if metadata.failure:
-            return self._build_project_error_gate_result(
-                project_dir,
-                passed=False,
-                errors=[str(metadata.error)],
-                started=started,
-            )
-        validator = FlextInfraRuntimeCensusValidator(
-            repository_root=project_dir,
-            project_filter=metadata.value.project.name,
+        validator = FlextInfraRuntimeCensusValidator.for_project(
+            project_dir,
+            census_gate=self.gate_id,
         )
         # ``build_report`` (not ``execute``) keeps violations structured so the
         # gate can grade a broken invocation separately from found violations.

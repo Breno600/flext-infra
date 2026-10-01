@@ -29,7 +29,7 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
         candidates = tuple(
             path
             for path in sources
-            if path.parent.name in c.Infra.FAMILY_DIRECTORIES.values()
+            if u.Infra.facade_family_of_directory(path.parent.name) is not None
             and not sources[path].startswith(c.Infra.AUTOGEN_HEADERS)
         )
         if not candidates:
@@ -138,6 +138,14 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
         if not body:
             msg = f"inline namespace wrapper cannot be flattened safely: {path}"
             raise ValueError(msg)
+        wrapper_docstring = (
+            (body[0].line, body[0].end_line)
+            if sources[path]
+            .splitlines()[body[0].line - 1]
+            .lstrip()
+            .startswith(('"""', "'''", '"', "'"))
+            else None
+        )
         if any(
             item.enclosing_name == wrapper_name
             and item.category

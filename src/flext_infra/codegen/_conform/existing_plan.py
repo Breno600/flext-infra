@@ -93,11 +93,6 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                     if target.project is not None
                     else ()
                 ),
-                packaged_data_excludes=(
-                    target.project.packaged_data_excludes
-                    if target.project is not None
-                    else ()
-                ),
                 declared_python_dirs=tuple(
                     self._scaffold_python_dirs(
                         codegen.templates.entries,
@@ -304,9 +299,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                     f"managed destination escapes repository root: {entry.destination}",
                 )
             path = (root / relative).resolve()
-            try:
-                path.relative_to(root.resolve())
-            except ValueError:
+            if not path.is_relative_to(root.resolve()):
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
                     f"managed destination escapes repository root: {entry.destination}",
                 )

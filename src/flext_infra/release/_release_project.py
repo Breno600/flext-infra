@@ -216,12 +216,7 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
             )
         built: t.MutableSequenceOf[m.Infra.BuildArtifact] = []
         for source in sources:
-            validated = cls._validate_artifact(
-                source,
-                identity,
-                license_sha256,
-                versions,
-            )
+            validated = cls._validate_artifact(source, expectation)
             if validated.failure:
                 return result_type.from_failure(validated)
             kind, digest = validated.value

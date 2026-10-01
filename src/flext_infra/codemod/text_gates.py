@@ -30,57 +30,6 @@ from ..codegen import FlextInfraCodegenMiseArtifacts, FlextInfraCodegenTransacti
 class FlextInfraModTextGateEngine:
     """Scan, apply, and prove the declarative sed-by-list rule cascade."""
 
-    @staticmethod
-    def _provider_rules_path() -> Path:
-        """Resolve the one configured provider rules file for every phase."""
-        return FlextInfraConfig.ssot_config_dir() / (
-            c.Infra.CODEMOD_TEXT_RULES_RELPATH.relative_to(c.Infra.CODEGEN_CONFIG_DIR)
-        )
-
-    @classmethod
-    def run(cls, root: Path, *, apply: bool) -> p.Result[t.Cli.ResultValue]:
-        """Replay only text rules through their authenticated transaction."""
-        pending = cls.scan(root, fix=False, validate_receipts=True)
-        if pending.failure:
-            return r[t.Cli.ResultValue].from_failure(pending)
-        if apply and pending.value.actionable:
-            applied = cls.scan(root, fix=True, validate_receipts=True)
-            if applied.failure:
-                return r[t.Cli.ResultValue].from_failure(applied)
-        remaining = cls.scan(root, fix=False)
-        if remaining.failure:
-            return r[t.Cli.ResultValue].from_failure(remaining)
-        if remaining.value.findings:
-            return r[t.Cli.ResultValue].fail(
-                f"mod-text has {remaining.value.findings} pending finding(s)"
-            )
-        return r[t.Cli.ResultValue].ok(
-            f"mod-text: {pending.value.actionable if apply else 0} "
-            "actionable finding(s) applied; fixed point verified"
-        )
-
-    @classmethod
-    def run(cls, root: Path, *, apply: bool) -> p.Result[t.Cli.ResultValue]:
-        """Replay only text rules through their authenticated transaction."""
-        pending = cls.scan(root, fix=False, validate_receipts=True)
-        if pending.failure:
-            return r[t.Cli.ResultValue].from_failure(pending)
-        if apply and pending.value.actionable:
-            applied = cls.scan(root, fix=True, validate_receipts=True)
-            if applied.failure:
-                return r[t.Cli.ResultValue].from_failure(applied)
-        remaining = cls.scan(root, fix=False)
-        if remaining.failure:
-            return r[t.Cli.ResultValue].from_failure(remaining)
-        if remaining.value.findings:
-            return r[t.Cli.ResultValue].fail(
-                f"mod-text has {remaining.value.findings} pending finding(s)"
-            )
-        return r[t.Cli.ResultValue].ok(
-            f"mod-text: {pending.value.actionable if apply else 0} "
-            "actionable finding(s) applied; fixed point verified"
-        )
-
     @classmethod
     def run(cls, root: Path, *, apply: bool) -> p.Result[t.Cli.ResultValue]:
         """Replay only text rules through their authenticated transaction."""
@@ -124,6 +73,11 @@ class FlextInfraModTextGateEngine:
         snapshots: list[m.Cli.AtomicFileState] = []
         for path, required in ((provider, True), (consumer, False)):
             if snapshots and path == snapshots[0].path:
+                continue
+            # The consumer overlay is optional: a repository without the
+            # overlay's directory declares no overlay, the same typed absence
+            # as a missing file (the atomic read rejects an absent parent).
+            if not required and not path.parent.is_dir():
                 continue
             snapshot = u.Cli.atomic_read_binary_file_state(path, required=required)
             if snapshot.failure:
@@ -334,53 +288,31 @@ class FlextInfraModTextGateEngine:
         actionable = 0
         inputs = list(catalogues.value)
         plans: list[m.Infra.CodegenFilePlan] = []
-        inventoried: set[Path] = set()
-        for target in targets:
-            candidate = root / target
-            paths = (
-                tuple(sorted(candidate.rglob(f"*{c.Infra.EXT_PYTHON}")))
-                if candidate.is_dir()
-                else (candidate,)
-            )
-            for path in paths:
-                if path in inventoried:
-                    continue
-                inventoried.add(path)
-                relative = path.relative_to(root).as_posix()
-                captured = u.Cli.atomic_read_binary_file_state(path, required=True)
-                if captured.failure:
-                    return r[m.Infra.ModTextReport].from_failure(captured)
-                before = captured.value
-                if before.content is None:
-                    return r[m.Infra.ModTextReport].fail(
-                        f"text source disappeared during inventory: {path}",
-                    )
-                inputs.append(before)
-                source = before.content.decode(c.Cli.ENCODING_DEFAULT)
-                updated, target_entries, target_actionable = cls._rewrite_source(
-                    source,
-                    relative,
-                    rules,
+        for path in sources.value:
+            relative = path.relative_to(root).as_posix()
+            captured = u.Cli.atomic_read_binary_file_state(path, required=True)
+            if captured.failure:
+                return r[m.Infra.ModTextReport].from_failure(captured)
+            before = captured.value
+            if before.content is None:
+                return r[m.Infra.ModTextReport].fail(
+                    f"text source disappeared during inventory: {path}",
                 )
-                entries.extend(target_entries)
-                actionable += target_actionable
-                if target_entries:
-                    files.add(Path(relative))
-                if fix and updated != source:
-                    if source.startswith(c.Infra.AUTOGEN_HEADERS):
-                        return r[m.Infra.ModTextReport].fail(
-                            f"generated findings require canonical generator repair: {path}",
-                        )
-                    plans.append(
-                        m.Infra.CodegenFilePlan(
-                            project=root,
-                            path=path,
-                            before=before,
-                            desired_content=updated.encode(c.Cli.ENCODING_DEFAULT),
-                            desired_mode=before.mode,
-                            source_states=(*catalogues.value, before),
-                            owner="mod-text",
-                        ),
+            inputs.append(before)
+            source = before.content.decode(c.Cli.ENCODING_DEFAULT)
+            updated, target_entries, target_actionable = cls._rewrite_source(
+                source,
+                relative,
+                rules,
+            )
+            entries.extend(target_entries)
+            actionable += target_actionable
+            if target_entries:
+                files.add(Path(relative))
+            if fix and updated != source:
+                if source.startswith(c.Infra.AUTOGEN_HEADERS):
+                    return r[m.Infra.ModTextReport].fail(
+                        f"generated findings require canonical generator repair: {path}",
                     )
                 if path.suffix == c.Infra.EXT_PYTHON:
                     ast.parse(updated, filename=str(path))
@@ -393,7 +325,7 @@ class FlextInfraModTextGateEngine:
                         desired_mode=before.mode,
                         source_states=(*catalogues.value, before),
                         owner="mod-text",
-                    )
+                    ),
                 )
         report = m.Infra.ModTextReport(
             findings=len(entries),
@@ -409,28 +341,7 @@ class FlextInfraModTextGateEngine:
                 return r[m.Infra.ModTextReport].from_failure(published)
         return r[m.Infra.ModTextReport].ok(report)
 
-    @staticmethod
-    def _inventory_paths(
-        root: Path, rules: t.VariadicTuple[m.Infra.ModTextRule]
-    ) -> t.VariadicTuple[Path]:
-        """Union the Python surface with every declared text-rule include glob."""
-        paths: set[Path] = set()
-        for target in u.Infra.ast_grep_scan_targets(root):
-            candidate = root / target
-            if candidate.is_dir():
-                paths.update(candidate.rglob(f"*{c.Infra.EXT_PYTHON}"))
-            else:
-                paths.add(candidate)
-        for rule in rules:
-            for glob in rule.include:
-                relative = Path(glob)
-                if relative.is_absolute() or ".." in relative.parts:
-                    msg = f"text rule {rule.rule_id} escapes repository: {glob}"
-                    raise ValueError(msg)
-                paths.update(path for path in root.glob(glob) if path.is_file())
-        return tuple(sorted(paths))
-
-    @staticmethod
+    @classmethod
     def _publish(
         cls,
         root: Path,
@@ -450,19 +361,15 @@ class FlextInfraModTextGateEngine:
         )
 
         def validate_inventory() -> p.Result[bool]:
-            expected = {
-                state.path for state in inputs if state.path not in catalogue_paths
-            }
+            catalogue_states = cls._catalogue_states(root)
+            if catalogue_states.failure:
+                return r[bool].from_failure(catalogue_states)
+            catalogues = {state.path for state in catalogue_states.value}
             expected = {state.path for state in inputs if state.path not in catalogues}
-            observed: set[Path] = set()
-            for target in u.Infra.ast_grep_scan_targets(root):
-                candidate = root / target
-                observed.update(
-                    candidate.rglob(f"*{c.Infra.EXT_PYTHON}")
-                    if candidate.is_dir()
-                    else (candidate,),
-                )
-            if observed != expected:
+            observed = cls._source_paths(root, rules)
+            if observed.failure:
+                return r[bool].from_failure(observed)
+            if set(observed.value) != expected:
                 return r[bool].fail("text source inventory changed before publication")
             return r[bool].ok(True)
 

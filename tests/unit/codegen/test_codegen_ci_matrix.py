@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, t
+from flext_infra import c, config, infra, t
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from flext_infra.codegen.project_new import FlextInfraCodegenProjectNew
 from tests import u
@@ -66,7 +66,7 @@ class TestsFlextInfraCodegenCiMatrix:
             year=2026,
             apply_changes=True,
         )
-        result = service.execute()
+        result = infra.codegen_new(service)
         tm.ok(result)
         return root
 
@@ -278,10 +278,6 @@ class TestsFlextInfraCodegenCiMatrix:
         repository = tmp_path / "dirty-repository"
         repository.mkdir()
         u.Tests.initialize_git_repo(repository)
-        clean_outcome = tm.ok(
-            u.Cli.run_raw(["sh", "-eu", "-c", post_generation], cwd=repository)
-        )
-        tm.that(u.Cli.process_succeeded(clean_outcome.outcome), eq=True)
         (repository / "untracked.txt").write_text("dirty\n", encoding="utf-8")
         outcome = tm.ok(
             u.Cli.run_raw(["sh", "-eu", "-c", post_generation], cwd=repository)

@@ -300,6 +300,7 @@ class FlextInfraEnsureRuffConfigPhase:
                             toml.RemoveOp(key=pattern)
                             for pattern in facts.stale_patterns
                         ),
+                        *(toml.RemoveOp(key=pattern) for pattern in facts.stale_patterns),
                     ),
                 ),
             ),
@@ -311,7 +312,6 @@ class FlextInfraEnsureRuffConfigPhase:
         *,
         path: Path,
         generated_python_roots: t.StrSequence = (),
-        analysis_exclusions: t.StrTuple | None = None,
     ) -> t.StrSequence:
         """Apply canonical Ruff settings directly to one normalized payload."""
         effective_ignores = self.compose_per_file_ignores(
@@ -339,7 +339,6 @@ class FlextInfraEnsureRuffConfigPhase:
                             if pattern not in effective_ignores
                         ],
                         per_file_ignores=effective_ignores,
-                        analysis_exclusions=analysis_exclusions,
                         generated_python_roots=generated_python_roots,
                     ),
                 ),

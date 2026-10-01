@@ -65,8 +65,8 @@ class FlextInfraConstantsCodegen(
     """Bounded polite wait for a held lease before failing loud.
 
     A legitimate fleet ``make gen`` holds the lease for minutes; an immediate
-    non-blocking refusal turned ordinary concurrent traffic into a spurious
-    ``JournalLeaseTimeoutError``. The wait is bounded so a truly
+    non-blocking refusal turned ordinary multi-agent traffic into a spurious
+    ``JournalLeaseTimeoutError`` (flext-c2kp3). The wait is bounded so a truly
     wedged holder still fails loud instead of hanging forever.
     """
 
@@ -93,9 +93,9 @@ class FlextInfraConstantsCodegen(
         ("utilities.py", "Utilities", "FlextTestsUtilities", "Test utilities"),
     )
     "Base module definitions for tests/: (filename, class_suffix, base_class, docstring)."
-    # Canonical root config/settings pair: a
+    # flext-wkii.14 (agent: codegen) — canonical root config/settings pair: a
     # private `_config.py`/`_settings.py` module exporting the singleton.
-    # Consumed by the scaffold generator.
+    # Consumed by the scaffold generator (flext-wkii.10).
     RUNTIME_MODULES: ClassVar[t.VariadicTuple[t.Quad[str, str, str, str]]] = (
         ("_config.py", "Config", "FlextConfig", "Runtime config"),
         ("_settings.py", "Settings", "FlextSettings", "Runtime settings"),
@@ -103,7 +103,7 @@ class FlextInfraConstantsCodegen(
     "Runtime singleton modules for src/: (filename, class_suffix, base_class, docstring)."
     VIOLATION_PATTERN: ClassVar[t.RegexPattern] = re.compile(
         r"\[(?P<rule>NS-(?:[A-Z]+|\d{3}))-\d{3}\]\s+"
-        r"(?P<module>[^:]+):(?P<line>\d+)\s+\u2014\s+(?P<message>.+)",
+        r"(?P<module>[^:]+):(?P<line>\d+)\s+\u2014\s+(?P<message>.+)"
     )
     "Regex to parse violation strings: [NS-RULE-NNN] path:line — message."
     PROTOCOL_MODEL_LINE_BUDGET: ClassVar[int] = 170
@@ -296,9 +296,17 @@ class FlextInfraConstantsCodegen(
     QG_REPORT_DIR: ClassVar[str] = ".reports/codegen/constants-quality-gate"
     "Report directory for constants quality gate."
     QG_CHECK_NAMESPACE_COMPLIANCE: ClassVar[str] = "namespace_compliance"
+    QG_CHECK_FLEXT_VALIDITY: ClassVar[str] = "flext_validity"
+    QG_CHECK_IMPORT_RESOLUTION: ClassVar[str] = "import_resolution"
+    QG_CHECK_LAYER_COMPLIANCE: ClassVar[str] = "layer_compliance"
     QG_CHECK_DUPLICATION_REDUCTION: ClassVar[str] = "duplication_reduction"
     QG_CHECK_TYPE_SAFETY: ClassVar[str] = "type_safety"
     QG_CHECK_LINT_CLEAN: ClassVar[str] = "lint_clean"
+
+    # Lazy-init projection manifest (.agents/projections.lock.json, v1): the
+    # projected OUTPUT lock owned by the generator alone.
+    PROJECTIONS_LOCK_API_VERSION: ClassVar[str] = "flext-infra/projections-lock/v1"
+    PROJECTIONS_LOCK_FILENAME: ClassVar[str] = "projections.lock.json"
 
 
 __all__: list[str] = ["FlextInfraConstantsCodegen"]
