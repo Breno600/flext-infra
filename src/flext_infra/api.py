@@ -17,6 +17,8 @@ from .codegen.fixer import FlextInfraCodegenFixer
 from .codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
 from .codegen.pipeline import FlextInfraCodegenPipeline
 from .codegen.project_new import FlextInfraCodegenProjectNew
+from .codemod.apply_renames import FlextInfraApplyRenames
+from .codemod.batch_apply import FlextInfraCodemodBatchApply
 from .codemod.text_gates import FlextInfraModTextGateEngine
 from .docs.formatter import FlextInfraDocFormatter
 from .docs.generator import FlextInfraDocGenerator
@@ -107,13 +109,14 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         ).execute()
 
     def codegen_pipeline(self, request: m.Infra.CodegenCommand) -> p.Result[str]:
-        """Run the codegen pipeline within the facade-owned Rope lifecycle."""
+        """Run the codegen pipeline with the facade-wired conform ports."""
         return FlextInfraCodegenPipeline(
             repository_root=request.repository_root,
             apply_changes=request.apply,
             check_only=request.check_only,
             dry_run=request.dry_run,
             output_format=request.output_format,
+            conform_ports=self.codegen_conform_ports(),
         ).execute()
 
     @staticmethod

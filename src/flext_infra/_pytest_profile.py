@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import cProfile
+import os
 import runpy
 import sys
 import time
@@ -80,16 +81,22 @@ class FlextInfraPytestProfile:
         from flext_infra import m
 
         reports_root = runner.root / runner.reports
-        latest = max(
-            reports_root.glob("*/run-context.json"),
-            key=lambda receipt: receipt.stat().st_mtime,
-        )
-        self._record_context(
-            m.Infra.PytestRunContext.model_validate_json(
-                latest.read_text(encoding="utf-8"),
-            ),
-        )
-        return exit_code
+        preexisting = frozenset(reports_root.glob("*/run-context.json"))
+        try:
+            return runner.execute().unwrap()
+        finally:
+            fresh = [
+                receipt
+                for receipt in reports_root.glob("*/run-context.json")
+                if receipt not in preexisting
+            ]
+            if fresh:
+                latest = max(fresh, key=lambda receipt: receipt.stat().st_mtime)
+                self._record_context(
+                    m.Infra.PytestRunContext.model_validate_json(
+                        latest.read_text(encoding="utf-8"),
+                    ),
+                )
 
     def _run_collection(self, receipt_path: Path) -> int:
         from flext_infra import m
