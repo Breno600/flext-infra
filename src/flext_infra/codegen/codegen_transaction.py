@@ -912,12 +912,9 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
             return self._recover(layout.value)
         residue = state.transaction_residue(layout.value)
         if residue:
-            # Residue with no journal authority is the leftover of an
-            # interrupted invocation, not live state. Reclaim it and continue so
-            # one aborted run cannot poison every later generation.
-            reclaimed = state.reclaim_transaction_residue(residue)
-            if reclaimed.failure:
-                return r[bool].from_failure(reclaimed)
+            return r[bool].fail(
+                f"generation staging has no journal authority: {residue[0]}"
+            )
         return r[bool].ok(True)
 
     def _handle_journal_write_failure(
