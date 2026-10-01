@@ -9,42 +9,33 @@ from typing import Annotated, override
 from flext_cli import cli
 
 from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra import m, p, t, u
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
 from flext_infra.workspace.rope import FlextInfraRopeWorkspace
 
-from ._census_apply import FlextInfraRefactorCensusApplyMixin
 from ._census_collect import FlextInfraRefactorCensusCollectMixin
 from ._census_collect_helpers import FlextInfraRefactorCensusCollectHelpersMixin
 from ._census_filters import FlextInfraRefactorCensusFiltersMixin
-from ._census_inventory import FlextInfraRefactorCensusInventoryMixin
 from ._census_objects import FlextInfraRefactorCensusObjectsMixin
 from ._census_project import FlextInfraRefactorCensusProjectMixin
 from ._census_render import FlextInfraRefactorCensusRenderMixin
-from ._census_rules_alias import FlextInfraRefactorCensusRulesAliasMixin
-from ._census_rules_dispatch import FlextInfraRefactorCensusRulesDispatchMixin
-from ._census_rules_struct import FlextInfraRefactorCensusRulesStructMixin
-from ._census_symbols import FlextInfraRefactorCensusSymbolsMixin
-from ._census_validate import FlextInfraRefactorCensusValidateMixin
 
 
 class FlextInfraRefactorCensus(
     FlextInfraProjectSelectionServiceBase[m.Infra.WorkspaceReport],
-    FlextInfraRefactorCensusApplyMixin,
     FlextInfraRefactorCensusCollectMixin,
     FlextInfraRefactorCensusCollectHelpersMixin,
     FlextInfraRefactorCensusFiltersMixin,
-    FlextInfraRefactorCensusInventoryMixin,
     FlextInfraRefactorCensusObjectsMixin,
     FlextInfraRefactorCensusProjectMixin,
     FlextInfraRefactorCensusRenderMixin,
-    FlextInfraRefactorCensusRulesAliasMixin,
-    FlextInfraRefactorCensusRulesDispatchMixin,
-    FlextInfraRefactorCensusRulesStructMixin,
-    FlextInfraRefactorCensusSymbolsMixin,
-    FlextInfraRefactorCensusValidateMixin,
 ):
-    """Generalized Rope-only census service for Python objects across the workspace."""
+    """Rope object census across the workspace: inventory and its analyses.
+
+    Code-shape rules are rule data run by the one engine (``make mod`` and the
+    codemod gate); the census reports what only a workspace object inventory
+    can see — duplicate definitions, unreferenced objects and tier placement.
+    """
 
     json_output: Annotated[
         str | None, m.Field(description="Path to write JSON report")
@@ -100,23 +91,6 @@ class FlextInfraRefactorCensus(
         """Normalized family filters."""
         return u.Infra.normalize_sequence_values(self.families)
 
-    @property
-    @override
-    def dry_run_gate_names(self) -> t.StrSequence:
-        """Per-candidate gate set (``lint`` + ``pyrefly``).
-
-        Mypy and pyright perform transitive module analysis that flags
-        ``__init__.py`` lazy-import references to just-removed symbols
-        *before* ``FlextInfraCodegenLazyInit`` regenerates them at the
-        end of ``_apply_supported_fixes``. That would roll back every
-        safe candidate. The per-candidate gate therefore uses the two
-        fast tools that validate the actual file being modified
-        (``ruff`` E/F + ``pyrefly``); the session-level regen run + a
-        final ``ruff format/fix`` on every touched file guarantees
-        consistency afterwards.
-        """
-        return (c.Infra.LINT, c.Infra.PYREFLY)
-
     def _rope_root_for_selection(self) -> Path | None:
         """Return a project-scoped Rope root when exactly one project is selected.
 
@@ -132,51 +106,28 @@ class FlextInfraRefactorCensus(
             return project_path
         return None
 
-    def _execution_reports(
-        self,
-    ) -> t.Pair[m.Infra.WorkspaceReport, m.Infra.WorkspaceReport | None]:
-        """Collect the final report and the pre-apply impact-map report."""
-        started = time.monotonic()
-        applied = frozenset[str]()
-        impact_map_report: m.Infra.WorkspaceReport | None = None
-        rope_root = self._rope_root_for_selection()
-        with FlextInfraRopeWorkspace.open_workspace(
-            self.root, rope_repository_root=rope_root
-        ) as rope:
-
-            def collect(applied: frozenset[str]) -> m.Infra.WorkspaceReport:
-                return self._collect_report(rope, applied=applied)
-
-            report = collect(applied)
-            impact_map_report = report
-            effective_dry_run: bool = self.effective_dry_run
-            if self.apply_changes and not effective_dry_run:
-                applied = self._apply_supported_fixes(rope, report)
-                if applied:
-                    rope.reload()
-                    report = collect(applied)
-        finalized_report = report.model_copy(
-            update={"scan_duration_seconds": time.monotonic() - started}
-        )
-        return finalized_report, impact_map_report
-
     def build_report(self) -> m.Infra.WorkspaceReport:
         """Build the canonical workspace census report without CLI side effects."""
-        report, _ = self._execution_reports()
-        return report
+        started = time.monotonic()
+        with FlextInfraRopeWorkspace.open_workspace(
+            self.root, rope_repository_root=self._rope_root_for_selection()
+        ) as rope:
+            report = self._collect_report(rope)
+        return report.model_copy(
+            update={"scan_duration_seconds": time.monotonic() - started}
+        )
 
     @override
     def execute(self) -> p.Result[m.Infra.WorkspaceReport]:
         """Execute the census with one shared Rope session."""
-        report, impact_map_report = self._execution_reports()
+        report = self.build_report()
         cli.display_text(self.render_text(report))
         if self.json_output_path is not None:
             u.Infra.export_pydantic_json(report, self.json_output_path)
             u.Cli.info(f"JSON report exported to: {self.json_output_path}")
         if self.impact_map_output_path is not None:
             impact_result = u.Infra.write_impact_map(
-                self._impact_map_results(impact_map_report or report),
-                self.impact_map_output_path,
+                self._impact_map_results(report), self.impact_map_output_path
             )
             if impact_result.failure:
                 return r[m.Infra.WorkspaceReport].from_failure(impact_result)

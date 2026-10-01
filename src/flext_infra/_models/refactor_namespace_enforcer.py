@@ -124,20 +124,6 @@ class FlextInfraModelsNamespaceEnforcer:
             m.Field(description="Whether the symbol is already exported by the facade"),
         ] = False
 
-    class InlineImportViolation(mm.ViolationDetailMixin, ImportViolationBase):
-        """Inline or lazy import declared inside a function body."""
-
-        module_name: Annotated[
-            str,
-            m.Field(description="Imported module name (empty for importlib dynamic)"),
-        ] = ""
-        imported_symbols: Annotated[
-            t.StrSequence,
-            m.Field(description="Symbols imported from the module, if any"),
-        ] = m.Field(default_factory=tuple)
-        is_importlib: Annotated[
-            bool, m.Field(description="Whether this is an importlib.import_module call")
-        ] = False
 
     class CyclicImportViolation(m.ContractModel):
         """Cyclic import violation."""
@@ -160,10 +146,6 @@ class FlextInfraModelsNamespaceEnforcer:
         kind: Annotated[str, m.Field(description="Violation kind")]
         alias: Annotated[str, m.Field(description="Alias involved")]
 
-    class ManualTypingAliasViolation(mm.ViolationDetailMixin, FileLineViolation):
-        """Manual typing alias violation."""
-
-        name: Annotated[t.NonEmptyStr, m.Field(description="Alias name")]
 
     class CompatibilityAliasViolation(FileLineViolation):
         """Compatibility alias violation."""

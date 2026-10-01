@@ -381,12 +381,6 @@ class FlextInfraConstantsRefactor:
         re.IGNORECASE | re.MULTILINE,
     )
     "Matches top-level logger assignments created outside namespace classes."
-    PEP695_RE: ClassVar[t.RegexPattern] = re.compile(r"^type\s+(\w+)\s*=", re.MULTILINE)
-    "Matches PEP 695 type alias definitions."
-    TYPEALIAS_ANNOT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(\w+)\s*:\s*(?:\w+\.)*TypeAlias\s*=", re.MULTILINE
-    )
-    "Matches TypeAlias annotation syntax for typing alias detection."
     TYPING_FACTORY_ASSIGN_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^(\w+)\s*=\s*(?:(?:\w+\.)*)?"
         r"(?:TypeVar|ParamSpec|TypeVarTuple|NewType)\s*\(",

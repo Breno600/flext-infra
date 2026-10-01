@@ -237,9 +237,6 @@ class FlextInfraCodegenQualityGate(s[bool]):
             "projects_total": total,
             "projects_passed": passed,
             "projects_failed": total - passed,
-            "flext_failures": 0,
-            "layer_violations": 0,
-            "cross_project_reference_violations": 0,
             "modified_python_files": modified_python_files,
         }
         return summary
@@ -258,13 +255,6 @@ class FlextInfraCodegenQualityGate(s[bool]):
         # (e.g. ``total_violations`` → ``total``).
         metric_check_rows: t.VariadicTuple[t.Triple[str, str, str]] = (
             (c.Infra.QG_CHECK_NAMESPACE_COMPLIANCE, "total_violations", "total"),
-            (c.Infra.QG_CHECK_FLEXT_VALIDITY, "flext_failures", "flext_failures"),
-            (
-                c.Infra.QG_CHECK_IMPORT_RESOLUTION,
-                "cross_project_reference_violations",
-                "cross_project_reference_violations",
-            ),
-            (c.Infra.QG_CHECK_LAYER_COMPLIANCE, "layer_violations", "layer_violations"),
             (
                 c.Infra.QG_CHECK_DUPLICATION_REDUCTION,
                 "duplicate_groups",
@@ -320,11 +310,7 @@ class FlextInfraCodegenQualityGate(s[bool]):
                     m.Infra.QualityGateProjectFinding(
                         project=report.project,
                         violations_total=report.violations_total,
-                        fixable_violations=len(report.fixes),
                         validator_passed=report.violations_total == 0,
-                        flext_failures=0,
-                        layer_violations=0,
-                        cross_project_reference_violations=0,
                     )
                     for report in census_report.projects
                 ),

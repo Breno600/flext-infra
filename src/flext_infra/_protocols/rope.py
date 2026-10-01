@@ -201,18 +201,5 @@ class FlextInfraProtocolsRope(Protocol):
             rope_project: t.Infra.RopeProject, file_path: Path
         ) -> t.Infra.RopeResource | None: ...
 
-    @runtime_checkable
-    class CensusModuleRule(Protocol):
-        """Call contract shared by the structural census rule scanners.
-
-        Every structural census rule reads one module under census through
-        this one contract, so the census dispatcher owns a single call site
-        instead of one hand-written block per rule.
-        """
-
-        def __call__(
-            self, scan: m.Infra.ModuleScan
-        ) -> tuple[list[m.Infra.Violation], list[m.Infra.Fix]]: ...
-
 
 __all__: list[str] = ["FlextInfraProtocolsRope"]
