@@ -858,6 +858,10 @@ class FlextInfraModelsDepsToolConfig(
             t.StrTuple,
             m.Field(description="Resolved Mypy search paths"),
         ]
+        mypy_facade_rebind_modules: Annotated[
+            t.StrTuple,
+            m.Field(description="Modules written in the canonical facade-rebind form"),
+        ]
         pyrefly_search_path: Annotated[
             t.StrTuple,
             m.Field(description="Resolved Pyrefly search paths"),

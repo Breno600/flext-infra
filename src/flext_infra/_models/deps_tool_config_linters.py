@@ -245,6 +245,16 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         plugins: Annotated[t.StrSequence, m.Field(description="Mypy plugins list.")] = (
             m.Field(default_factory=tuple)
         )
+        facade_rebind_error_codes: Annotated[
+            t.StrSequence,
+            m.Field(
+                alias="facade-rebind-error-codes",
+                description=(
+                    "Mypy error codes the canonical facade rebind raises; codegen "
+                    "disables them only in the modules written in that form."
+                ),
+            ),
+        ]
         boolean_settings: Annotated[
             t.BoolMapping,
             m.Field(

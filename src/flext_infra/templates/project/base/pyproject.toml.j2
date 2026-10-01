@@ -238,6 +238,20 @@ module = [
 ]
 follow_untyped_imports = {{ override.follow_untyped_imports | lower }}
 {% endfor %}
+{% if tooling_runtime.mypy_facade_rebind_modules %}
+
+[[tool.mypy.overrides]]
+module = [
+{% for item in tooling_runtime.mypy_facade_rebind_modules %}
+  {{ item | tojson }},
+{% endfor %}
+]
+disable_error_code = [
+{% for item in tooling.tools.mypy.facade_rebind_error_codes %}
+  {{ item | tojson }},
+{% endfor %}
+]
+{% endif %}
 
 [tool.pydantic-mypy]
 init_forbid_extra = {{ tooling.tools.pydantic_mypy.init_forbid_extra | lower }}

@@ -255,6 +255,9 @@ class FlextInfraPyprojectModernizerTooling:
                     if declared_roots
                     else tools.mypy_path or derived_mypy_path
                 ),
+                "mypy_facade_rebind_modules": u.Infra.facade_rebind_modules(
+                    project_dir,
+                ),
                 "pyrefly_search_path": (
                     derived_search_path
                     if declared_roots

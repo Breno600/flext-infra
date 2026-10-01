@@ -25,8 +25,10 @@ class FlextInfraModReplacements:
         """Retain generator findings as blocking evidence, never writable targets."""
         generated = tuple(item for item in entries if item.source_owner == "generator")
         if generated:
+            # One entry per file and rule: the per-finding detail is in the
+            # mod findings report, the verdict names the generator owners.
             details = ", ".join(
-                f"generator:{item.file}:{item.rule_id}" for item in generated
+                sorted({f"generator:{item.file}:{item.rule_id}" for item in generated}),
             )
             return r[bool].fail(
                 f"generated findings require canonical generator repair: {details}",

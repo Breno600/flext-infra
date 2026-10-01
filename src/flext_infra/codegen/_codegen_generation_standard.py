@@ -69,7 +69,7 @@ class FlextInfraCodegenGenerationStandardMixin(
             if previous_top is not None and top != previous_top:
                 eager_lines.append("")
             parts = tuple(
-                f"{imported_name} as {export_name}"
+                cls._format_import_part(imported_name, export_name)
                 for export_name, imported_name in sorted(eager_groups[module])
                 if imported_name
             )
