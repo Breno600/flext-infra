@@ -90,9 +90,7 @@ class TestsFlextInfraWorkspaceManifest:
     ) -> None:
         """An invalid declared scope fails before discovery can widen it."""
         manifest = u.Tests.write_standalone_workspace_manifest(tmp_path, _PROBE)
-        manifest.write_text(
-            "{}\n", encoding=c.Cli.ENCODING_DEFAULT
-        )
+        manifest.write_text("{}\n", encoding=c.Cli.ENCODING_DEFAULT)
 
         with pytest.raises(c.ValidationError):
             u.Infra.manifest_nonparticipant_paths(tmp_path)
@@ -102,9 +100,7 @@ class TestsFlextInfraWorkspaceManifest:
     ) -> None:
         """A present invalid manifest is never treated as undeclared settings."""
         manifest = u.Tests.write_standalone_workspace_manifest(tmp_path, _PROBE)
-        manifest.write_text(
-            "{}\n", encoding=c.Cli.ENCODING_DEFAULT
-        )
+        manifest.write_text("{}\n", encoding=c.Cli.ENCODING_DEFAULT)
 
         with pytest.raises(c.ValidationError):
             u.Infra.load_refactor_config(tmp_path)
