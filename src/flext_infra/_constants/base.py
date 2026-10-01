@@ -400,6 +400,16 @@ class FlextInfraConstantsBase(
     ENV_DEFAULT_USE_HTTPS: ClassVar[bool] = False
     ENV_DEFAULT_GITHUB_ACTIONS: ClassVar[bool] = False
 
+    # ANSI color codes and terminal symbols (SSOT for output styling).
+
+    RESET: ClassVar[str] = "\x1b[0m"
+    RED: ClassVar[str] = "\x1b[31m"
+    GREEN: ClassVar[str] = "\x1b[32m"
+    YELLOW: ClassVar[str] = "\x1b[33m"
+    BLUE: ClassVar[str] = "\x1b[34m"
+    CYAN: ClassVar[str] = "\x1b[36m"
+    BOLD: ClassVar[str] = "\x1b[1m"
+
     @unique
     class ExecutionMode(StrEnum):
         """Execution mode for commands that modify files."""

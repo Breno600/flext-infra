@@ -6,6 +6,7 @@ from typing import ClassVar
 
 from flext_infra import infra, m, p, t
 from flext_infra.codegen.protocol_models import FlextInfraCodegenProtocolModels
+from flext_infra.codemod.apply_renames import FlextInfraApplyRenames
 from flext_infra.codemod.ast_scan import FlextInfraCodemodAstScan
 from flext_infra.codemod.snapshot_refresh import FlextInfraCodemodSnapshotRefresh
 from flext_infra.refactor.accessor_migration import (
@@ -51,6 +52,13 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
         return infra.mod_text(request)
 
     @staticmethod
+    def execute_mod(
+        request: m.Infra.ModCommand,
+    ) -> p.Result[t.Cli.ResultValue]:
+        """Compose the codemod use case with the CLI progress transport."""
+        return infra.mod(request, FlextInfraCliModProgress())
+
+    @staticmethod
     def execute_mod_text_candidate(
         request: m.Infra.ModTextCommand,
     ) -> p.Result[t.Cli.ResultValue]:
@@ -62,7 +70,7 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
             name="apply-renames",
             help_text="Check or apply an old,new CSV rename list",
             model_cls=m.Infra.ApplyRenamesInput,
-            handler=execute_apply_renames,
+            handler=FlextInfraApplyRenames.execute_command,
         ),
         m.Cli.ResultCommandRoute(
             name="namespace-enforce",
@@ -114,24 +122,6 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
             ),
             model_cls=m.Infra.ModCommand,
             handler=execute_mod,
-        ),
-        m.Cli.ResultCommandRoute(
-            name="mod-text",
-            help_text="Replay only authenticated declarative text rules",
-            model_cls=m.Infra.ModCommand,
-            handler=execute_mod_text,
-        ),
-        m.Cli.ResultCommandRoute(
-            name="mod-text",
-            help_text="Replay only authenticated declarative text rules",
-            model_cls=m.Infra.ModTextCommand,
-            handler=execute_mod_text,
-        ),
-        m.Cli.ResultCommandRoute(
-            name="mod-text-candidate",
-            help_text="Replay text rules in the declared candidate worktree",
-            model_cls=m.Infra.ModTextCommand,
-            handler=execute_mod_text_candidate,
         ),
         m.Cli.ResultCommandRoute(
             name="mod-text",

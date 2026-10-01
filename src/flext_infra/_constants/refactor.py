@@ -323,6 +323,14 @@ class FlextInfraConstantsRefactor:
         "u": "_utilities",
     })
     "Facade family letter → subdirectory name mapping."
+    FAMILY_PUBLIC_MODULES: ClassVar[t.StrMapping] = MappingProxyType({
+        "c": "constants",
+        "m": "models",
+        "p": "protocols",
+        "t": "typings",
+        "u": "utilities",
+    })
+    "Facade family letter → public facade module suffix mapping."
     FAMILY_FILES: ClassVar[t.StrMapping] = MappingProxyType({
         "c": "*constants.py",
         "t": "*typings.py",
@@ -449,6 +457,161 @@ class FlextInfraConstantsRefactor:
     # --- Symbol/identifier patterns ---
     IDENTIFIER_PATTERN: ClassVar[t.RegexPattern] = re.compile(r"\b[A-Za-z_]\w*\b")
     "Regex: Python identifier word boundary match."
+    RK_REFACTOR: ClassVar[str] = "refactor"
+
+    RK_PROJECT_SCAN_DIRS: ClassVar[str] = "project_scan_dirs"
+
+    RK_FILE_EXTENSIONS: ClassVar[str] = "file_extensions"
+
+    CODEMOD_RESOURCE_DIRNAME: ClassVar[str] = "codemod"
+
+    REFACTOR_SIGNATURE_RULES_RELPATH: ClassVar[Path] = (
+        Path("config") / "rules" / "refactor" / "signature-propagation.yml"
+    )
+
+    REFACTOR_SIGNATURE_RULES_KEY: ClassVar[str] = "migrations"
+
+    REFACTOR_CONFIG_KEYS: ClassVar[t.StrSequence] = (
+        RK_PROJECT_SCAN_DIRS,
+        RK_FILE_EXTENSIONS,
+    )
+    """Allowed keys under the ``refactor`` config scope."""
+
+    CONSTANTS_CLASS_SUFFIX: ClassVar[str] = "Constants"
+    "Class-name suffix used to identify constants facades."
+
+    CONSTANT_PATTERN: ClassVar[t.RegexPattern] = re.compile(r"^_*[A-Z][A-Z0-9_]*$")
+    "Compiled naming pattern for module-level constant candidates."
+
+    CLASSVAR_DECLARATION_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"^([A-Z][A-Z0-9_]*:\s*)ClassVar\[(.*)\](\s*=)", re.DOTALL
+    )
+    "One ``NAME: ClassVar[T] =`` declaration head, capturing name, type and ``=``."
+
+    DOCSTRING_DELIMITER_COUNT: ClassVar[int] = 2
+    "Opening plus closing quote delimiters of a one-line docstring."
+
+    NAMESPACE_CONSTANT_PATTERN: ClassVar[t.RegexPattern] = re.compile(
+        r"^_?[A-Z][A-Z0-9_]+$"
+    )
+    "Regex: namespace constant candidate names."
+
+    CLASSVAR_EXEMPT_NAMES: ClassVar[frozenset[str]] = (
+        c.ENFORCEMENT_CLASSVAR_EXEMPT_NAMES
+    )
+    "ClassVar attribute names that are framework idioms and stay in place (SSOT: flext-core)."
+
+    CLASSVAR_ALLOWED_CALLS: ClassVar[frozenset[str]] = frozenset({
+        "Path",
+        "PurePath",
+        "PosixPath",
+        "WindowsPath",
+        "frozenset",
+        "tuple",
+        "dict",
+        "list",
+        "set",
+        "MappingProxyType",
+    })
+    "Canonical factory calls allowed as ClassVar default values."
+
+    NAMESPACE_MIN_ALIAS_LENGTH: ClassVar[int] = 2
+
+    FACADE_ALIAS_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"^(\w)\b[^=]*=\s*(\w+)", re.MULTILINE
+    )
+    "Matches ``m = FlextFooModels`` alias assignments in facade files."
+
+    # --- Detector regex constants ---
+
+    ASSIGN_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"^([A-Z_]\w*)\s*[:=]", re.MULTILINE
+    )
+    "Matches top-level UPPER_CASE assignments for loose constant detection."
+
+    LOGGER_ASSIGN_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"^([A-Za-z_]\w*)\s*[:=]\s*(?:(?:\w+\.)*)?"
+        r"(?:fetch_logger|create_module_logger|get_logger|logging\.getLogger)\s*\(",
+        re.IGNORECASE | re.MULTILINE,
+    )
+    "Matches top-level logger assignments created outside namespace classes."
+
+    PEP695_RE: ClassVar[t.RegexPattern] = re.compile(r"^type\s+(\w+)\s*=", re.MULTILINE)
+    "Matches PEP 695 type alias definitions."
+
+    TYPEALIAS_ANNOT_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"^(\w+)\s*:\s*(?:\w+\.)*TypeAlias\s*=", re.MULTILINE
+    )
+    "Matches TypeAlias annotation syntax for typing alias detection."
+
+    COMPAT_ALIAS_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"^([A-Z]\w+)\s*=\s*([A-Z]\w+)\s*$", re.MULTILINE
+    )
+    "Matches compatibility alias assignments (CapitalName = CapitalName)."
+
+    COMPAT_SKIP_NAMES: ClassVar[frozenset[str]] = frozenset({
+        "__all__",
+        "__version__",
+        "__version_info__",
+    })
+    "Names to skip during compatibility alias detection."
+
+    ENFORCEMENT_PROJECT_ALIAS_OWNERS: ClassVar[t.StrSequenceMapping] = (
+        c.ENFORCEMENT_PROJECT_ALIAS_OWNERS
+    )
+    "Project package → canonical aliases it re-exports locally (SSOT: flext-core)."
+    # flext-j47u: consume core enforcement data through its exact canonical alias.
+
+    FUTURE_ANNOTATIONS_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"^from\s+__future__\s+import\s+annotations\b", re.MULTILINE
+    )
+    "Matches 'from __future__ import annotations' import statement."
+
+    ONLY_DOCSTRING_RE: ClassVar[t.RegexPattern] = re.compile(
+        r'^("""[\s\S]*?"""|\'\'\'[\s\S]*?\'\'\')\s*$'
+    )
+    "Matches files that contain only a module docstring."
+
+    SCAN_ALLOWED_TOP_LEVEL: ClassVar[frozenset[str]] = frozenset({
+        "__all__",
+        "__version__",
+        "__version_info__",
+    })
+    "Top-level names allowed without namespace classification."
+
+    NAMESPACE_PRIVATE_BASE_CLASS_SUFFIXES: ClassVar[frozenset[str]] = frozenset({
+        "Base",
+        "Mixin",
+        "Typing",
+    })
+    "Allowed suffixes for multiple private classes in a private base module."
+
+    IMPORT_BYPASS_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"^try:\n"
+        r"(    from .+\n)"
+        r"except ImportError:\n"
+        r"    from .+\n",
+        re.MULTILINE,
+    )
+    "Regex: try/except ImportError import bypass block (strict form)."
+
+    # --- Deprecated class pattern ---
+
+    CLASS_BLOCK_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"^(class\s+(\w+)\b[^\n]*:\n(?:(?:[ \t]+[^\n]*|[ \t]*)\n)*)", re.MULTILINE
+    )
+    "Regex: full class block including body lines."
+
+    DEPRECATION_WARN_RE: ClassVar[t.RegexPattern] = re.compile(r"\.warn\s*\(")
+    "Regex: deprecation warning call site (.warn())."
+
+    # --- Lazy import fixer ---
+
+    DEF_ASYNC_CLASS_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"^(?:def |async def |class )", re.MULTILINE
+    )
+    "Regex: top-level def/async def/class keyword (for lazy import detection)."
+
 
 
 __all__: list[str] = ["FlextInfraConstantsRefactor"]

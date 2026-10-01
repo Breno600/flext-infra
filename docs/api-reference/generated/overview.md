@@ -20,18 +20,19 @@
   Generators, Typing :: Typed
 - Project class: `infra`
 - Keywords: `automation`, `codegen`, `flext`, `infrastructure`, `tooling`
-- Main facades: `FlextInfra`, `FlextInfraAccessorMigrationOrchestrator`,
-  `FlextInfraApplyRenames`, `FlextInfraBanditGate`, `FlextInfraCProfileReport`,
-  `FlextInfraCandidateBootstrapService`, `FlextInfraCleanService`, `FlextInfraCli` (+134
-  more)
+- Main facades: `FlextInfra`, `FlextInfraAbstractionBoundaryGate`,
+  `FlextInfraAccessorMigrationOrchestrator`, `FlextInfraApplyRenames`,
+  `FlextInfraBanditGate`, `FlextInfraCProfileReport`,
+  `FlextInfraCandidateBootstrapService`, `FlextInfraClassPlacementDetector` (+180 more)
 - Alias exports: `c`, `d`, `e`, `h`, `m`, `p`, `r`, `s`, `t`, `u`, `x`
-- Public symbol exports: `FlextInfra`, `FlextInfraAccessorMigrationOrchestrator`,
-  `FlextInfraApplyRenames`, `FlextInfraBanditGate`, `FlextInfraCProfileReport`,
-  `FlextInfraCandidateBootstrapService`, `FlextInfraCleanService`, `FlextInfraCli`,
-  `FlextInfraCliDispatchService`, `FlextInfraCliRouteBase` (+144 more)
+- Public symbol exports: `FlextInfra`, `FlextInfraAbstractionBoundaryGate`,
+  `FlextInfraAccessorMigrationOrchestrator`, `FlextInfraApplyRenames`,
+  `FlextInfraBanditGate`, `FlextInfraCProfileReport`,
+  `FlextInfraCandidateBootstrapService`, `FlextInfraClassPlacementDetector`,
+  `FlextInfraCleanService`, `FlextInfraCli` (+186 more)
 - Exported module shortcuts: `check`, `codegen`, `codemod`, `deps`, `detectors`, `docs`,
-  `gates`, `maintenance` (+6 more)
-- Generated module pages: `151`
+  `fixers`, `gates` (+7 more)
+- Generated module pages: `196`
 
 ## Next Pages
 

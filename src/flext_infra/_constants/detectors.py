@@ -22,7 +22,7 @@ class FlextInfraConstantsDetectors:
     "Path parts that exempt a file from inline-import detection (SSOT: detector-local)."
 
     INLINE_IMPORT_EXEMPT_FILE_NAMES: ClassVar[frozenset[str]] = frozenset({
-        "__init__.py",
+        "__init__.py"
     })
     "File names that exempt a module from inline-import detection."
 
