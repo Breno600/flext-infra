@@ -448,6 +448,33 @@ class TestsFlextInfraRepositoryLocalTopology:
 
         tm.fail(result, has="declared Python member checkout has no")
 
+    def test_makefile_bootstrap_accepts_unprovisioned_declared_member(
+        self, tmp_path: Path
+    ) -> None:
+        """The setup Makefile can be rendered before a partial member is ready."""
+        member = self._attached_member(tmp_path)
+        root = member.parents[1]
+        workspace = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
+        self._declare_members(root, workspace.subprojects)
+        (member / c.PYPROJECT_FILENAME).unlink()
+
+        request = u.Tests.conform_request(
+            root, what=c.Infra.CodegenConformSurface.MAKEFILE
+        )
+        plan = tm.ok(
+            FlextInfraCodegenConform(repository_root=root, request=request).plan(
+                request
+            )
+        )
+
+        tm.that(
+            tuple(item.path for item in plan.files),
+            has=root / c.Infra.MAKEFILE_FILENAME,
+        )
+        tm.fail(
+            FlextInfraWorkspaceDetector.load_workspace_spec(root), has="no pyproject"
+        )
+
     def test_composed_self_load_records_its_workspace_checkout(
         self, tmp_path: Path
     ) -> None:

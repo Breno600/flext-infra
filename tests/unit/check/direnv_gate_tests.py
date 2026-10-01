@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
 from flext_tests import tm
 
 from flext_infra import c, m
@@ -33,6 +34,13 @@ class TestsFlextInfraDirenvGate:
     def issue_codes(execution: m.Infra.GateExecution) -> t.StrSequence:
         """Return the issue codes one gate execution reported, in order."""
         return [issue.code for issue in execution.issues]
+
+    @staticmethod
+    def messages(
+        violations: t.VariadicTuple[m.Infra.EnvironmentContractViolation],
+    ) -> t.StrSequence:
+        """Render typed violations exactly as the gate reports them."""
+        return [f"line {v.line}: {v.message}" for v in violations]
 
     class TestsDirenvContractLint:
         """Pure-lint contracts for managed environment files."""
@@ -69,7 +77,7 @@ class TestsFlextInfraDirenvGate:
                 )
             )
             tm.that(len(violations), eq=1)
-            tm.that("absent.envrc" in violations[0], eq=True)
+            tm.that("absent.envrc" in violations[0].message, eq=True)
 
         def test_dynamic_targets_are_skipped(self, tmp_path: Path) -> None:
             """Runtime-derived targets cannot be validated statically."""
@@ -80,21 +88,21 @@ class TestsFlextInfraDirenvGate:
             )
             tm.that(violations, eq=())
 
+        @pytest.mark.parametrize("prefix", ["${HOME}", "$HOME", "~"])
         def test_home_targets_validated_only_when_resolving(
-            self, tmp_path: Path
+            self, tmp_path: Path, prefix: str
         ) -> None:
-            """resolve_home=False skips $HOME targets (generation-time lint)."""
-            violations = (
-                FlextInfraWorkspaceEnvironmentContracts.envrc_contract_violations(
-                    'source_env "$HOME/.config/environment.d/projects/absent.envrc"\n',
-                    root=tmp_path,
-                    resolve_home=False,
-                )
+            """resolve_home=False skips ${HOME} targets (generation-time lint)."""
+            violations = FlextInfraWorkspaceEnvironmentContracts.envrc_contract_violations(
+                f'source_env "{prefix}/.config/environment.d/projects/absent.envrc"\n',
+                root=tmp_path,
+                resolve_home=False,
             )
             tm.that(violations, eq=())
 
+        @pytest.mark.parametrize("prefix", ["${HOME}", "$HOME", "~"])
         def test_home_targets_resolve_against_the_real_home(
-            self, tmp_path: Path
+            self, tmp_path: Path, prefix: str
         ) -> None:
             """resolve_home=True substitutes the real home for the prefix.
 
@@ -103,14 +111,16 @@ class TestsFlextInfraDirenvGate:
             """
             violations = (
                 FlextInfraWorkspaceEnvironmentContracts.envrc_contract_violations(
-                    'source_env "$HOME"\n'
-                    'watch_file "$HOME/.flext-infra-contract-absent-marker"\n',
+                    f'source_env "{prefix}"\n'
+                    f'watch_file "{prefix}/.flext-infra-contract-absent-marker"\n',
                     root=tmp_path,
                 )
             )
             tm.that(len(violations), eq=1)
-            tm.that(".flext-infra-contract-absent-marker" in violations[0], eq=True)
-            tm.that("/./" not in violations[0], eq=True)
+            tm.that(
+                ".flext-infra-contract-absent-marker" in violations[0].message, eq=True
+            )
+            tm.that("/./" not in violations[0].message, eq=True)
 
     class TestsEnvrcLocalContracts:
         """Local overrides never carry generated activation residue."""
@@ -153,13 +163,21 @@ class TestsFlextInfraDirenvGate:
             tm.that(normalized, eq="export CUSTOM_OVERRIDE=1\nPATH_add bin\n")
 
         def test_violations_flag_activation_residue(self) -> None:
-            """Markers and Beads variables are named per line."""
+            """Markers and Beads variables are typed per line with their token."""
             violations = (
                 FlextInfraWorkspaceEnvironmentContracts.envrc_local_contract_violations(
                     self.stale_section + "export BEADS_DOLT_AUTO_START=0\n"
                 )
             )
             tm.that(len(violations), eq=5)
+            tm.that(tuple(v.line for v in violations), eq=(1, 2, 3, 4, 5))
+            tm.that(violations[4].token, eq="BEADS_DOLT_")
+            tm.that(
+                TestsFlextInfraDirenvGate.messages(violations)[4].endswith(
+                    "Beads activation variable in local overrides: BEADS_DOLT_"
+                ),
+                eq=True,
+            )
 
         def test_clean_local_content_passes(self) -> None:
             """Custom overrides carry no violations."""

@@ -166,6 +166,48 @@ class TestsFlextInfraFreshImport:
 
         tm.fail(result, has=f"missing public export contract for {package.name}")
 
+    def test_layout_without_a_plan_verifies_its_on_disk_contract(
+        self, tmp_path: Path
+    ) -> None:
+        """A layout no publication claims is verified from its live exports.
+
+        A workspace-root generation transaction indexes only its own packages,
+        so a declared member repository arrives with no lazy-init plan. The
+        verifier must import that checkout and resolve its declared ``__all__``
+        instead of rejecting it for the missing plan.
+        """
+        repository_root, package = u.Tests.create_lazy_init_workspace(tmp_path)
+        (package / c.Infra.INIT_PY).write_text(
+            "value = 17\n__all__ = ('value',)\n", encoding=c.Cli.ENCODING_DEFAULT
+        )
+
+        report = tm.ok(
+            FlextInfraValidateFreshImport(repository_root=repository_root).build_report(
+                publications=(), repository_roots=(repository_root,)
+            )
+        )
+
+        tm.that(report.passed, eq=True, msg=str(report.violations))
+
+    def test_layout_without_a_plan_still_fails_on_a_broken_disk_contract(
+        self, tmp_path: Path
+    ) -> None:
+        """A live package whose declared export cannot resolve still fails."""
+        repository_root, package = u.Tests.create_lazy_init_workspace(tmp_path)
+        (package / c.Infra.INIT_PY).write_text(
+            "__all__ = ('missing_export',)\n", encoding=c.Cli.ENCODING_DEFAULT
+        )
+
+        report = tm.ok(
+            FlextInfraValidateFreshImport(repository_root=repository_root).build_report(
+                publications=(), repository_roots=(repository_root,)
+            )
+        )
+
+        tm.that(report.passed, eq=False)
+        tm.that(report.violations[0], has="missing_export")
+        tm.that(report.violations[0], has="Traceback")
+
     @pytest.mark.parametrize("script_group", ["scripts", "gui-scripts"])
     @pytest.mark.parametrize("target_exists", [False, True])
     def test_declared_script_failure_blocks_publication(

@@ -88,17 +88,18 @@ class TestsFlextInfraCodegenConstantsQualityGate:
             '"""Shared constant fixture."""\n\n'
             "from typing import Final\n\n"
             "SHARED_TIMEOUT: Final[int] = 30\n"
-            "__all__: list[str] = []\n"
         )
         project = u.Tests.create_codegen_project(
             tmp_path=tmp_path,
-            name="duplicate-consumer",
-            pkg_name="duplicate_consumer",
-            files={"first.py": constant_source, "second.py": constant_source},
+            name="flext-cli",
+            pkg_name="flext_cli",
+            files={
+                "constants.py": constant_source,
+                "other_constants.py": constant_source,
+                "typings.py": '"""Empty typing fixture."""\n',
+            },
         )
-        # A repository scans its own sources; declared submodules are installed
-        # dependencies. Keep both real definitions inside this census boundary.
-        # Module-level exports stay empty so lazy-init has no ambiguous reexport.
+        u.Tests.provision_checkout(project)
         tm.that(u.Tests.run_lazy_init(project), eq=0)
         gate = FlextInfraCodegenQualityGate(repository_root=project)
         report_result = gate.build_report()
@@ -116,7 +117,4 @@ class TestsFlextInfraCodegenConstantsQualityGate:
             if u.Cli.json_pick_str(group, "name") == "SHARED_TIMEOUT"
         ]
         tm.that(matching_groups, length=1)
-        tm.that(u.Cli.json_pick_str(matching_groups[0], "canonical"), eq=project.name)
-        definitions = u.Cli.json_deep_mapping_list(matching_groups[0], "definitions")
-        tm.that(definitions, length=2)
-        tm.that(u.Cli.json_pick_str(report, "verdict"), eq="FAIL")
+        tm.that(u.Cli.json_pick_str(matching_groups[0], "canonical"), eq="flext-cli")

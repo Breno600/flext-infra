@@ -28,6 +28,13 @@ def _shared_mypy_cache_spec() -> FlextInfraConfigModelsMake.MypyCacheSpec:
     return FlextInfraConfigModelsMake.MypyCacheSpec()
 
 
+def _default_testmon_cache_policy() -> (
+    FlextInfraConfigModelsMake.TestmonCachePolicySpec
+):
+    """Build the declared default testmon cache policy (#1001 delta)."""
+    return FlextInfraConfigModelsMake.TestmonCachePolicySpec()
+
+
 class FlextInfraConfigModelsMake:
     """Make workflow, verb, CI, and cache specification models."""
 
@@ -226,16 +233,6 @@ class FlextInfraConfigModelsMake:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(min_length=1, description="Docs actions that mutate"),
         ]
-        warning_actions: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                default=(),
-                description=(
-                    "Docs actions whose findings are reported as warnings "
-                    "instead of failing the phase"
-                ),
-            ),
-        ] = ()
         reports_dir: Annotated[
             Path, m.Field(description="Repository-relative docs reports directory")
         ]
@@ -300,16 +297,17 @@ class FlextInfraConfigModelsMake:
             if unknown is not None:
                 msg = f"docs action is not a registered CLI action: {unknown}"
                 raise ValueError(msg)
-            for label, selected in (
-                ("mutable_actions", self.mutable_actions),
-                ("warning_actions", self.warning_actions),
-            ):
-                outside = next(
-                    (action for action in selected if action not in self.actions), None
-                )
-                if outside is not None:
-                    msg = f"{label} entry is not part of the docs lifecycle: {outside}"
-                    raise ValueError(msg)
+            outside = next(
+                (
+                    action
+                    for action in self.mutable_actions
+                    if action not in self.actions
+                ),
+                None,
+            )
+            if outside is not None:
+                msg = f"mutable_actions entry is not part of the docs lifecycle: {outside}"
+                raise ValueError(msg)
             return self
 
     class TestmonCacheSpec(FlextInfraConfigModelsContract.ConfigContract):
@@ -377,6 +375,62 @@ class FlextInfraConfigModelsMake:
                     raise ValueError(msg)
             if Path(self.database_filename).name != self.database_filename:
                 msg = "testmon cache database_filename must be a filename"
+                raise ValueError(msg)
+            return self
+
+    class TestmonCachePolicySpec(FlextInfraConfigModelsContract.ConfigContract):
+        """Declarative Actions-cache policy for the shared testmon database.
+
+        Implements the preserved #1001 delta (bead flext-j0u23): two-phase
+        generations with per-mode caps, a per-repository byte budget with a
+        three-stage quota ladder, a save-ref allowlist (never save from PRs)
+        and a cache-key namespace.
+        """
+
+        mode: Annotated[
+            Literal["bootstrap", "stable"],
+            m.Field(description="Cache phase: bootstrap seeds, stable saves"),
+        ] = "stable"
+        save_enabled: Annotated[
+            bool, m.Field(description="Master switch for cache publishes")
+        ] = False
+        max_bootstrap_generations: Annotated[
+            int, m.Field(gt=0, description="Retention cap for bootstrap generations")
+        ] = 3
+        max_stable_generations: Annotated[
+            int, m.Field(gt=0, description="Retention cap for stable generations")
+        ] = 3
+        per_repo_budget_bytes: Annotated[
+            int, m.Field(gt=0, description="Per-repository byte budget")
+        ] = 52_428_800
+        warning_threshold_percent: Annotated[
+            int, m.Field(ge=0, le=100, description="Quota-ladder warning stage")
+        ] = 80
+        maintenance_threshold_percent: Annotated[
+            int, m.Field(ge=0, le=100, description="Quota-ladder maintenance stage")
+        ] = 90
+        block_threshold_percent: Annotated[
+            int, m.Field(ge=0, le=100, description="Quota-ladder block stage")
+        ] = 95
+        allowed_save_refs: Annotated[
+            tuple[t.NonEmptyStr, ...],
+            m.Field(description="Refs whose pushes may publish cache generations"),
+        ] = ("main", "0.12.0-dev")
+        key_prefix: Annotated[
+            t.NonEmptyStr, m.Field(description="Actions cache key namespace")
+        ] = "flext-testmon"
+
+        @u.model_validator(mode="after")
+        def require_ascending_quota_ladder(self) -> Self:
+            """Keep the quota ladder strictly ascending within the percent scale."""
+            full_scale = 100
+            if not (
+                self.warning_threshold_percent
+                < self.maintenance_threshold_percent
+                < self.block_threshold_percent
+                <= full_scale
+            ):
+                msg = "testmon cache quota ladder must ascend warning < maintenance < block <= 100"
                 raise ValueError(msg)
             return self
 
@@ -533,9 +587,18 @@ class FlextInfraConfigModelsMake:
     class MakeSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Complete generated Makefile public and extension contract."""
 
+        runtime_environment_directory: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description="Sibling directory for physical workspace environments"
+            ),
+        ]
         examples_timeout_seconds: Annotated[
             int,
             m.Field(gt=0, le=120, description="Workspace examples process deadline"),
+        ]
+        submodule_timeout_seconds: Annotated[
+            int, m.Field(gt=0, le=600, description="Governed submodule setup deadline")
         ]
         ruff: Annotated[
             FlextInfraConfigModelsMake.MakeRuffSpec,
@@ -585,6 +648,13 @@ class FlextInfraConfigModelsMake:
         testmon_cache: Annotated[
             FlextInfraConfigModelsMake.TestmonCacheSpec,
             m.Field(description="Adaptive testmon Actions cache policy"),
+        ]
+        testmon_cache_policy: Annotated[
+            FlextInfraConfigModelsMake.TestmonCachePolicySpec,
+            m.Field(
+                default_factory=_default_testmon_cache_policy,
+                description="Declarative save/budget/quota policy for the shared testmon cache (#1001 delta)",
+            ),
         ]
         mypy_cache: Annotated[
             FlextInfraConfigModelsMake.MypyCacheSpec,

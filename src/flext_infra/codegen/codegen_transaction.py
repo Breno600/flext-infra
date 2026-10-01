@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import secrets
-from collections.abc import Callable
+from collections.abc import Callable, MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -36,7 +36,7 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         self._planner = FlextInfraMiseWorkspacePlanner(owner)
         self._recovery = FlextInfraMiseRecovery()
         self._mise_staging = FlextInfraMiseStaging()
-        self._journal_receipts: dict[Path, m.Cli.AtomicFileState] = {}
+        self._journal_receipts: MutableMapping[Path, m.Cli.AtomicFileState] = {}
 
     def run_files_locked[T](
         self, roots: t.MappingKV[str, Path], operation: Callable[[Path], p.Result[T]]
@@ -910,9 +910,12 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
             return self._recover(layout.value)
         residue = state.transaction_residue(layout.value)
         if residue:
-            return r[bool].fail(
-                f"generation residue has no journal authority: {residue[0]}"
-            )
+            # Residue with no journal authority is the leftover of an
+            # interrupted invocation, not live state. Reclaim it and continue so
+            # one aborted run cannot poison every later generation.
+            reclaimed = state.reclaim_transaction_residue(residue)
+            if reclaimed.failure:
+                return r[bool].from_failure(reclaimed)
         return r[bool].ok(True)
 
     def _handle_journal_write_failure(

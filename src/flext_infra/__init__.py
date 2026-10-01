@@ -48,6 +48,7 @@ if TYPE_CHECKING:
     from .check.workspace_check import FlextInfraWorkspaceChecker
     from .check.workspace_check_gates import FlextInfraWorkspaceCheckGatesMixin
     from .cli import FlextInfraCli, docs_main, main
+    from .codegen.candidate_bootstrap import FlextInfraCodegenCandidateBootstrap
     from .codegen.census import FlextInfraCodegenCensus
     from .codegen.codegen_generation import FlextInfraCodegenGeneration
     from .codegen.codegen_transaction import FlextInfraCodegenTransaction
@@ -91,6 +92,7 @@ if TYPE_CHECKING:
     from .deps.detector_runtime import FlextInfraDependencyDetectorRuntime
     from .deps.extra_paths import FlextInfraExtraPathsManager
     from .deps.fix_pyrefly_config import FlextInfraConfigFixer
+    from .deps.lock_integrity import FlextInfraLockIntegrityVerifier
     from .deps.modernizer import FlextInfraPyprojectModernizer
     from .deps.phases.consolidate_groups import FlextInfraConsolidateGroupsPhase
     from .deps.phases.ensure_packaging import FlextInfraEnsurePackagingPhase
@@ -285,6 +287,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraCliRouteBase",
     "FlextInfraCliRouteService",
     "FlextInfraCodegen",
+    "FlextInfraCodegenCandidateBootstrap",
     "FlextInfraCodegenCensus",
     "FlextInfraCodegenConform",
     "FlextInfraCodegenConsolidator",
@@ -363,6 +366,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraLayoutGate",
     "FlextInfraLocCapGate",
     "FlextInfraLocDeltaValidator",
+    "FlextInfraLockIntegrityVerifier",
     "FlextInfraLooseObjectDetector",
     "FlextInfraLooseTestFunctionDetector",
     "FlextInfraLspDiagnosticsDetector",
@@ -524,6 +528,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".check.workspace_check_gates": ("FlextInfraWorkspaceCheckGatesMixin",),
             ".cli": ("FlextInfraCli", "docs_main", "main"),
             ".codegen": ("codegen",),
+            ".codegen.candidate_bootstrap": ("FlextInfraCodegenCandidateBootstrap",),
             ".codegen.census": ("FlextInfraCodegenCensus",),
             ".codegen.codegen_generation": ("FlextInfraCodegenGeneration",),
             ".codegen.codegen_transaction": ("FlextInfraCodegenTransaction",),
@@ -569,6 +574,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".deps.detector_runtime": ("FlextInfraDependencyDetectorRuntime",),
             ".deps.extra_paths": ("FlextInfraExtraPathsManager",),
             ".deps.fix_pyrefly_config": ("FlextInfraConfigFixer",),
+            ".deps.lock_integrity": ("FlextInfraLockIntegrityVerifier",),
             ".deps.modernizer": ("FlextInfraPyprojectModernizer",),
             ".deps.phases.consolidate_groups": ("FlextInfraConsolidateGroupsPhase",),
             ".deps.phases.ensure_packaging": ("FlextInfraEnsurePackagingPhase",),
