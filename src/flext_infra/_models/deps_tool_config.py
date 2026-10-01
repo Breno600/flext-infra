@@ -775,11 +775,11 @@ class FlextInfraModelsDepsToolConfig(
                 description="Conformed Ruff source roots",
             ),
         ] = ()
-        ruff_exclude: Annotated[
+        ruff_extend_exclude: Annotated[
             t.StrTuple,
             m.Field(
-                validation_alias=m.AliasPath("ruff", "exclude"),
-                description="Conformed Ruff exclusions",
+                validation_alias=m.AliasPath("ruff", "extend-exclude"),
+                description="Conformed workspace exclusions added to Ruff's defaults",
             ),
         ] = ()
 
@@ -825,8 +825,9 @@ class FlextInfraModelsDepsToolConfig(
         ruff_src: Annotated[
             t.StrTuple, m.Field(description="Resolved Ruff source roots")
         ]
-        ruff_exclude: Annotated[
-            t.StrTuple, m.Field(description="Resolved Ruff exclusions")
+        ruff_extend_exclude: Annotated[
+            t.StrTuple,
+            m.Field(description="Resolved workspace exclusions added to Ruff's defaults"),
         ]
 
 

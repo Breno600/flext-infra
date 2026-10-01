@@ -193,8 +193,7 @@ class FlextInfraEnsureRuffConfigPhase:
             operations=(
                 toml.RemoveOp(key=c.Infra.EXTEND),
                 toml.ListOp(
-                    key=c.Infra.EXCLUDE,
-                    values=sorted({*ruff_cfg.exclude, *workspace_exclusions}),
+                    key="extend-exclude", values=sorted(workspace_exclusions)
                 ),
                 toml.ListOp(
                     key="namespace-packages", values=sorted(existing_namespace_packages)

@@ -70,7 +70,6 @@ class TestsFlextInfraDepsModernizerTooling:
             frozenset(tools.ruff.namespace_packages),
             eq=frozenset({"examples", "scripts", "tests"}),
         )
-        tm.that(tracked_surfaces.isdisjoint(tools.ruff.exclude), eq=True)
         tm.that(frozenset(tools.pyright.path_rules.env_dirs), eq=tracked_surfaces)
         tm.that(
             hidden_globs.isdisjoint(tools.pyright.path_rules.default_excludes), eq=True
@@ -98,10 +97,10 @@ class TestsFlextInfraDepsModernizerTooling:
         )
 
         tm.that(payload, lacks="lint")
-        tm.that(
-            frozenset(u.Tests.toml_strings(ruff["exclude"])),
-            eq=frozenset(ruff_policy.exclude),
-        )
+        # A project without workspace declarations adds no exclusions, and
+        # Ruff keeps its own default excludes (never a replacement list).
+        tm.that(list(u.Tests.toml_strings(ruff["extend-exclude"])), eq=[])
+        tm.that(ruff, lacks="exclude")
         tm.that(ruff["line-length"], eq=ruff_policy.line_length)
         tm.that(ruff["target-version"], eq=ruff_policy.target_version)
         # The declared src list stays the SSOT; the projection filters it to

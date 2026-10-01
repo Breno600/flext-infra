@@ -142,10 +142,6 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
     class RuffConfig(m.ArbitraryTypesModel):
         """Ruff top-level settings loaded from YAML."""
 
-        exclude: Annotated[
-            t.StrSequence,
-            m.Field(description="Directory/file globs excluded from ruff checks."),
-        ] = m.Field(default_factory=tuple)
         namespace_packages: Annotated[
             t.StrSequence,
             m.Field(
