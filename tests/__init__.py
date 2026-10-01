@@ -11,7 +11,7 @@ from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 if TYPE_CHECKING:
     from flext_tests import api, d, e, h, r, td, tf, tk, tm, tv, x
 
-    from . import integration, refactor, unit
+    from . import fixtures, integration, refactor, unit
     from .base import TestsFlextInfraServiceBase, TestsFlextInfraServiceBase as s
     from .constants import TestsFlextInfraConstants, TestsFlextInfraConstants as c
     from .constants_scan import TestsFlextInfraConstantsScanMixin
@@ -59,6 +59,7 @@ __all__: tuple[str, ...] = (
     "c",
     "d",
     "e",
+    "fixtures",
     "h",
     "integration",
     "m",
@@ -83,6 +84,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".base": ("TestsFlextInfraServiceBase", "s"),
             ".constants": ("TestsFlextInfraConstants", "c"),
             ".constants_scan": ("TestsFlextInfraConstantsScanMixin",),
+            ".fixtures": ("fixtures",),
             ".integration": ("integration",),
             ".models": ("TestsFlextInfraModels", "m"),
             ".protocols": ("TestsFlextInfraProtocols", "p"),
