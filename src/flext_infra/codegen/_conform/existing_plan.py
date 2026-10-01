@@ -78,6 +78,11 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 root_packages=(
                     target.project.root_packages if target.project is not None else ()
                 ),
+                repository_namespace_packages=(
+                    target.project.repository_namespace_packages
+                    if target.project is not None
+                    else ()
+                ),
                 packaged_data_paths=(
                     target.project.packaged_data_paths
                     if target.project is not None

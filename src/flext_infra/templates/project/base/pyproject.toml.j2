@@ -144,6 +144,9 @@ include = [
 {% for data_path in packaged_data_paths if data_path not in packaged_data_files %}
   {{ ("/" ~ data_path ~ "/**") | tojson }},
 {% endfor %}
+{% for namespace in repository_namespace_packages %}
+  {{ ("/" ~ namespace ~ "/**") | tojson }},
+{% endfor %}
 ]
 
 [tool.hatch.build.targets.wheel.sources]
@@ -153,6 +156,9 @@ include = [
 {% endfor %}
 {% for data_path in packaged_data_paths if data_path not in packaged_data_files %}
 {{ data_path | tojson }} = {{ (package_name ~ "/" ~ data_path) | tojson }}
+{% endfor %}
+{% for namespace in repository_namespace_packages %}
+{{ namespace | tojson }} = {{ namespace | tojson }}
 {% endfor %}
 {% if packaged_data_files or root_modules %}
 
@@ -173,6 +179,9 @@ include = [
 {% endfor %}
 {% for data_dir in packaged_data_paths if data_dir not in packaged_data_files %}
   {{ ("/" ~ data_dir ~ "/**") | tojson }},
+{% endfor %}
+{% for namespace in repository_namespace_packages %}
+  {{ ("/" ~ namespace ~ "/**") | tojson }},
 {% endfor %}
 ]
 {% if packaged_data_files or root_modules %}
