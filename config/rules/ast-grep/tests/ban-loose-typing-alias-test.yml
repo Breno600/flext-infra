@@ -1,0 +1,19 @@
+id: ban-loose-typing-alias
+valid:
+  - |
+    class Namespace:
+        type Inner = int
+  - |
+    def build() -> None:
+        T = TypeVar("T")
+  - |
+    VALUE: int = 1
+  - |
+    result = factory("T")
+invalid:
+  - type Payload = dict[str, int]
+  - "Alias: TypeAlias = int"
+  - "Alias: typing.TypeAlias = int"
+  - T = TypeVar("T")
+  - P = typing.ParamSpec("P")
+  - UserId = NewType("UserId", int)

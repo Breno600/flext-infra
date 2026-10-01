@@ -1,0 +1,42 @@
+# A module-level type alias, TypeAlias annotation or typing factory
+# (TypeVar, ParamSpec, TypeVarTuple, NewType) is a typing declaration; outside
+# the typings owner it is a second owner of the type vocabulary.
+#
+# Scope is the module body: a declaration nested in a class or function is the
+# enclosing namespace's own member, not a loose module object.
+#
+# Detection only: relocating the declaration rewires every consumer, a
+# semantic move owned by the rope phases of make mod.
+id: ban-loose-typing-alias
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/typings.py"
+  - "**/_typings.py"
+  - "**/typings/**"
+  - "**/_typings/**"
+rule:
+  inside:
+    kind: module
+  any:
+    - kind: type_alias_statement
+    - kind: expression_statement
+      has:
+        kind: assignment
+        has:
+          field: type
+          regex: "^(?:[A-Za-z_][A-Za-z0-9_]*\\.)*TypeAlias$"
+    - kind: expression_statement
+      has:
+        kind: assignment
+        has:
+          field: right
+          kind: call
+          has:
+            field: function
+            regex: "^(?:[A-Za-z_][A-Za-z0-9_]*\\.)*(?:TypeVar|ParamSpec|TypeVarTuple|NewType)$"
+message: >-
+  Module-level typing declaration outside the typings owner: declare it in
+  typings.py or the typings package.
