@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import stat
 from pathlib import Path
 
@@ -18,6 +19,21 @@ class FlextInfraUtilitiesGitStateFilesMixin(
     FlextInfraUtilitiesGitStatePublicationMixin
 ):
     """Consume CLI physical-state primitives under the shared writer lease."""
+
+    @staticmethod
+    def _state_remove_symlink_target(target: Path) -> None:
+        """Remove an existing file, directory, or symlink at ``target``.
+
+        The CLI facet publishes no public removal primitive on this line
+        (only its private helper exists upstream), so the guarded-effects
+        owner keeps the physical removal inside its own lease boundary.
+        """
+        if not target.exists() and not target.is_symlink():
+            return
+        if target.is_dir() and not target.is_symlink():
+            shutil.rmtree(target)
+        else:
+            target.unlink()
 
     @classmethod
     def _state_blob_payload(cls, root: Path, oid: str) -> bytes:
@@ -71,7 +87,7 @@ class FlextInfraUtilitiesGitStateFilesMixin(
     def _state_write_symlink(destination: Path, target: str) -> None:
         """Atomically point ``destination`` at the raw ``target`` text."""
         staged = destination.parent / f".{destination.name}.symlink-{os.getpid()}"
-        u.Cli.remove_symlink_target(staged).unwrap()
+        FlextInfraUtilitiesGitStateFilesMixin._state_remove_symlink_target(staged)
         staged.symlink_to(target)
         staged.replace(destination)
 
@@ -105,7 +121,7 @@ class FlextInfraUtilitiesGitStateFilesMixin(
                 payload = cls._state_blob_payload(root, desired.oid)
                 cls._state_write_symlink(destination, os.fsdecode(payload))
                 return
-            u.Cli.remove_symlink_target(destination).unwrap()
+            cls._state_remove_symlink_target(destination)
         else:
             before_file = u.Cli.atomic_read_binary_file_state(
                 destination, required=False
