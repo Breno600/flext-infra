@@ -157,6 +157,14 @@ fi
 
 # === SECTION: virtual environment (managed) ===
 # Source: the physical Git superproject owns .venv; an unattached checkout owns its own.
+# `-d` follows symlinks, so a borrowed environment is rejected first, matching
+# the generated Makefile's physical-environment guard.
+for environment_path in "${VENV_DIR}" "${VENV_DIR}/bin" "${VENV_DIR}/Scripts"; do
+  if [[ -L "${environment_path}" ]]; then
+    log_error "workspace environment must be physical, not a symlink: ${environment_path}"
+    return 1
+  fi
+done
 if [[ -f "${PROJECT_ROOT}/pyproject.toml" && -d "${VENV_DIR}" ]]; then
   export UV_PROJECT_ENVIRONMENT="${VENV_DIR}"
   export VIRTUAL_ENV="${VENV_DIR}"

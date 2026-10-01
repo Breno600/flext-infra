@@ -462,11 +462,16 @@ class FlextInfraUtilitiesDocsRender:
         ])
 
     @staticmethod
-    def docs_api_readme(scope: m.Infra.DocScope, contract: t.JsonMapping) -> str:
-        """Return the standard API readme for a project."""
+    def docs_api_readme(
+        scope: m.Infra.DocScope, contract: t.JsonMapping, modules: t.SequenceOf[str]
+    ) -> str:
+        """Return the standard API readme for a project.
+
+        ``modules`` is the configured module-page list actually rendered, not
+        the analysed contract's public modules, so the count matches the pages.
+        """
         data = contract
         facades = FlextInfraUtilitiesDocsRender.as_string_sequence(data, "facades")
-        modules = FlextInfraUtilitiesDocsRender.as_string_sequence(data, "modules")
         return FlextInfraUtilitiesDocsRender._render_markdown([
             f"# {scope.name} API Reference",
             "",
@@ -577,8 +582,14 @@ class FlextInfraUtilitiesDocsRender:
         return rendered
 
     @staticmethod
-    def docs_overview_page(scope: m.Infra.DocScope, contract: t.JsonMapping) -> str:
-        """Return the generated overview page for a project API."""
+    def docs_overview_page(
+        scope: m.Infra.DocScope, contract: t.JsonMapping, modules: t.SequenceOf[str]
+    ) -> str:
+        """Return the generated overview page for a project API.
+
+        ``modules`` is the configured module-page list actually rendered, not
+        the analysed contract's public modules, so the count matches the pages.
+        """
         data = contract
         limits = config.Infra.codegen.make.docs.overview_preview_limits
         aliases, exports, facades, module_exports, keywords = (
@@ -594,7 +605,6 @@ class FlextInfraUtilitiesDocsRender:
                 "keywords",
             )
         )
-        modules = FlextInfraUtilitiesDocsRender.as_string_sequence(data, "modules")
         classifiers = (
             ", ".join(
                 FlextInfraUtilitiesDocsRender.as_string_sequence(data, "classifiers"),

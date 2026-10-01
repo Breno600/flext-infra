@@ -198,8 +198,10 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
             return r[t.Cli.ResultValue].fail(
                 "mod-text-candidate requires exactly one candidate_bootstrap_target"
             )
+        # Non-strict: a missing declared worktree is graded by the exact-root
+        # owner's typed failure instead of escaping as FileNotFoundError.
         identity = u.Infra.exact_worktree_root(
-            (source_root / targets[0].path).resolve(strict=True)
+            (source_root / targets[0].path).resolve()
         )
         if identity.failure:
             return r[t.Cli.ResultValue].from_failure(identity)

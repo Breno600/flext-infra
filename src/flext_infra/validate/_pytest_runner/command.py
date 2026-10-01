@@ -55,22 +55,48 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         digest = hashlib.sha256(fingerprint.encode()).hexdigest()[:12]
         return f"toolchain-{digest}"
 
-    def suite_stop_monotonic(self, *, serial: bool = False) -> float:
+    def carries_slow_items(self, execution_mode: c.Infra.PytestExecutionMode) -> bool:
+        """Whether this invocation may run slow-marked items.
+
+        Only the incremental budgeted phase deselects the slow marker; the
+        slow phase selects it, and coverage and the full operation run the
+        whole suite. One predicate drives both the marker expression and the
+        stop reserve, so an in-flight slow item always has its slow drain.
+        """
+        return self.slow_phase or execution_mode in {
+            c.Infra.PytestExecutionMode.COVERAGE,
+            c.Infra.PytestExecutionMode.FULL,
+        }
+
+    def suite_stop_monotonic(
+        self,
+        *,
+        serial: bool = False,
+        execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
+    ) -> float:
         """Derive the graceful suite stop instant from the entrypoint deadline.
 
         Selection and inventory consume the same clock, so the instant leaves
         exactly the typed stop reserve before the process deadline: pytest
         ends its own session there and testmon persists what ran, instead of
         the deadline SIGTERM discarding every unflushed result. Serial runs
-        keep at most one item in flight, so their reserve is smaller.
+        keep at most one item in flight, so their reserve is smaller; a run
+        that carries slow items reserves the slow per-item bound.
         """
         pytest = config.Infra.tooling.tools.pytest
-        return (
-            self.started_at_monotonic
-            + self.run_timeout_seconds(pytest)
-            - pytest.suite_stop_reserve_seconds
-        )
-        return self.started_at_monotonic + pytest.run_timeout_seconds - reserve
+        if self.carries_slow_items(execution_mode):
+            reserve = (
+                pytest.slow_serial_suite_stop_reserve_seconds
+                if serial
+                else pytest.slow_suite_stop_reserve_seconds
+            )
+        else:
+            reserve = (
+                pytest.serial_suite_stop_reserve_seconds
+                if serial
+                else pytest.suite_stop_reserve_seconds
+            )
+        return self.started_at_monotonic + self.run_timeout_seconds(pytest) - reserve
 
     def ci_excluded_markers(
         self,
@@ -105,8 +131,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                 ),
                 *(
                     ()
-                    if self.slow_phase
-                    or execution_mode == c.Infra.PytestExecutionMode.COVERAGE
+                    if self.carries_slow_items(execution_mode)
                     else (pytest.slow_marker,)
                 ),
             ))
@@ -226,6 +251,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         return self._suite_argv(
             report_dir,
             serial=serial,
+            execution_mode=execution_mode,
             targets=(
                 (str(self.target),)
                 if (
@@ -272,6 +298,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         return self._suite_argv(
             report_dir,
             serial=workers == "0",
+            execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
             targets=(str(self.target),),
             workers=workers,
             trailing=(
@@ -289,6 +316,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         report_dir: Path,
         *,
         serial: bool,
+        execution_mode: c.Infra.PytestExecutionMode,
         targets: t.StrSequence,
         workers: str,
         trailing: t.StrSequence,
@@ -312,7 +340,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             *pytest.progress_args,
             *pytest.report_args,
             f"--timeout={pytest.case_timeout_seconds}",
-            f"{c.Infra.PYTEST_SUITE_STOP_OPTION}={self.suite_stop_monotonic(serial=serial)!r}",
+            f"{c.Infra.PYTEST_SUITE_STOP_OPTION}={self.suite_stop_monotonic(serial=serial, execution_mode=execution_mode)!r}",
             f"--maxfail={pytest.max_failures}",
             f"--junitxml={report_dir / 'junit.xml'}",
             f"--report-log={report_dir / 'events.jsonl'}",

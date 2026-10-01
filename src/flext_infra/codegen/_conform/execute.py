@@ -253,12 +253,35 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         written: t.VariadicTuple[Path] = ()
         if changed:
             (file,) = changed
-            before = u.Infra.codegen_file_before_state(file)
-            if before.failure:
-                return r[m.Infra.CodegenResult].from_failure(before)
             if file.desired_content is None or file.desired_mode is None:
                 return r[m.Infra.CodegenResult].fail(
                     "Makefile bootstrap cannot delete its dispatcher",
+                )
+            # A bootstrap destination under an absent parent (``docs/`` on a
+            # fresh candidate) materializes that chain first, the same guarded
+            # primitive the managed scaffold uses, and removes only what this
+            # attempt created when publication fails.
+            created: t.VariadicTuple[m.Cli.AtomicDirectoryState] = ()
+            if not file.path.parent.is_dir():
+                chain = u.Cli.atomic_plan_directory_chain(file.path.parent)
+                if chain.failure:
+                    return r[m.Infra.CodegenResult].from_failure(chain)
+                materialized = u.Cli.atomic_create_directory_chain_guarded(
+                    chain.value, permission_mode=0o755
+                )
+                if materialized.failure:
+                    return r[m.Infra.CodegenResult].from_failure(materialized)
+                created = tuple(materialized.value)
+                replanned = self.plan(request)
+                if replanned.failure:
+                    return self._bootstrap_rollback(created, replanned)
+                (file,) = replanned.value.files
+            before = u.Infra.codegen_file_before_state(file)
+            if before.failure:
+                return self._bootstrap_rollback(created, before)
+            if file.desired_content is None or file.desired_mode is None:
+                return self._bootstrap_rollback(
+                    created, r[bool].fail(f"bootstrap cannot delete {destination}")
                 )
             published = u.Cli.atomic_write_binary_file_guarded(
                 before.value,
@@ -266,7 +289,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 permission_mode=file.desired_mode,
             )
             if published.failure:
-                return r[m.Infra.CodegenResult].from_failure(published)
+                return self._bootstrap_rollback(created, published)
             written = (file.path,)
         verified = self.plan(request)
         if verified.failure:
@@ -655,6 +678,21 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 )
             created.extend(materialized.value)
         return r[t.VariadicTuple[m.Cli.AtomicDirectoryState]].ok(tuple(created))
+
+    @classmethod
+    def _bootstrap_rollback(
+        cls,
+        created: t.VariadicTuple[m.Cli.AtomicDirectoryState],
+        failure: p.FailureLike,
+    ) -> p.Result[m.Infra.CodegenResult]:
+        """Return the original bootstrap failure after removing its own parents."""
+        rollback = cls._rollback_scaffold_directories(created)
+        if rollback.failure:
+            return r[m.Infra.CodegenResult].fail(
+                f"{failure.error}; bootstrap directory rollback failed: "
+                f"{rollback.error}"
+            )
+        return r[m.Infra.CodegenResult].from_failure(failure)
 
     @staticmethod
     def _rollback_scaffold_directories(

@@ -41,16 +41,20 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
         c.Infra.PKG_CORE_UNDERSCORE,
     })
 
-    @staticmethod
-    def _normalized_project_name(project_dir: Path) -> str:
-        """Return the package name for a project directory (``flext-cli`` → ``flext_cli``)."""
-        return project_dir.name.replace("-", "_")
-
     @override
     def selected_for(self, project_dir: Path) -> bool:
-        """The package that defines the canonical aliases never selects the gate."""
-        return self._normalized_project_name(project_dir) not in (
-            self._ALIAS_SOURCE_PACKAGES
+        """The package that defines the canonical aliases never selects the gate.
+
+        The owner is identified by its declared PEP 621 name, never the
+        checkout directory: a renamed worktree of the alias owner keeps its
+        manifest identity. Unreadable metadata selects the gate, whose check
+        reports the failure.
+        """
+        metadata = u.Infra.read_project_metadata_result(project_dir)
+        return (
+            metadata.failure
+            or metadata.value.project.name.replace("-", "_")
+            not in self._ALIAS_SOURCE_PACKAGES
         )
 
     @staticmethod

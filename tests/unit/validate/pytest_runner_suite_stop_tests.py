@@ -121,11 +121,9 @@ class TestsFlextInfraPytestRunnerSuiteStop:
             return float(raw.partition("=")[2])
 
         workers_index = list(multi_command).index("-n") + 1
-        multi_workers = list(multi_command)[workers_index]
-        expected_workers = min(runner.parallel_worker_budget(policy), len(multi))
-        tm.that(
-            multi_workers, eq="0" if expected_workers <= 1 else str(expected_workers)
-        )
+        budget = runner.parallel_worker_budget(policy)
+        tm.that(budget > 1, eq=True)
+        tm.that(list(multi_command)[workers_index], eq=str(min(budget, len(multi))))
         tm.that(
             stop_value(multi_command),
             eq=runner.started_at_monotonic
