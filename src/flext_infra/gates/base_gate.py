@@ -32,6 +32,15 @@ class FlextInfraGate:
     # Name of the external scanner a gate provisions on PATH, when it uses one.
     scanner_binary: ClassVar[str] = ""
     checker_info_prefixes: ClassVar[t.StrSequence] = ()
+    # A gate that analyzes Python sources is selected only for a project whose
+    # detected content holds a first-party Python target.
+    requires_python_targets: ClassVar[bool] = False
+
+    def selected_for(self, project_dir: Path) -> bool:
+        """Whether this project's detected content selects the gate at all."""
+        return not self.requires_python_targets or bool(
+            u.Infra.discover_python_targets(project_dir)
+        )
 
     def __init__(
         self, repository_root: Path, *, runner: p.Cli.CommandRunner | None = None
@@ -281,29 +290,16 @@ class FlextInfraGate:
     ) -> m.Infra.GateExecution:
         """Assemble a gate execution from parsed check output.
 
-        Severity decides blockingness in one owner: error/warning findings
-        fail the gate; informational findings are receipts and travel as
-        observations (report-only), never overriding acceptance.
+        Every parsed finding blocks the gate, whatever its native severity.
         """
-        blocking = tuple(
-            issue
-            for issue in issues
-            if issue.severity.lower() in {"error", "warning", "warn"}
-        )
-        observational = tuple(
-            issue
-            for issue in issues
-            if issue.severity.lower() not in {"error", "warning", "warn"}
-        )
         return m.Infra.GateExecution(
             result=self._gate_result(
                 project_dir,
-                passed=passed and not blocking,
-                errors=[issue.formatted for issue in blocking],
+                passed=passed and not issues,
+                errors=[issue.formatted for issue in issues],
                 started=started,
             ),
-            issues=blocking,
-            observational_issues=observational,
+            issues=tuple(issues),
             raw_output=raw_output,
         )
 

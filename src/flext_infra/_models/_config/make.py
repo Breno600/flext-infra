@@ -39,40 +39,6 @@ def _default_testmon_cache_policy() -> (
 class FlextInfraConfigModelsMake:
     """Make workflow, verb, CI, and cache specification models."""
 
-    class MakeGateSuspensionSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """An explicitly authorized policy gate excluded from default execution."""
-
-        gate: Annotated[t.NonEmptyStr, m.Field(description="Suspended gate id")]
-        authority: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Bead and operator decision authorizing suspension"),
-        ]
-        reason: Annotated[
-            t.NonEmptyStr, m.Field(description="Reason recorded in gate receipts")
-        ]
-        census_rule_families: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                default=(),
-                description=(
-                    "Runtime-census rule families this suspension also covers. "
-                    "A family starting with 'ENFORCE-' matches a census "
-                    "violation rule id exactly; every other family matches the "
-                    "violation tag by prefix. Matching families are dropped "
-                    "from the census failure count under one loud INFO line "
-                    "per family; unmapped families stay fully blocking"
-                ),
-            ),
-        ] = ()
-
-        @u.model_validator(mode="after")
-        def _validate_evidence(self) -> Self:
-            """Whitespace cannot stand in for an authority or a rationale."""
-            if not self.authority.strip() or not self.reason.strip():
-                msg = "make gate suspension requires authority and reason"
-                raise ValueError(msg)
-            return self
-
     class MakeCiSpec(FlextInfraConfigModelsContract.ConfigContract):
         """The only permitted environment delta between local and CI execution."""
 
@@ -710,53 +676,6 @@ class FlextInfraConfigModelsMake:
                 description="Public Make verb to checker gate mapping outside make check"
             ),
         ] = MappingProxyType({})
-        check_gate_suspensions: Annotated[
-            t.VariadicTuple[FlextInfraConfigModelsMake.MakeGateSuspensionSpec],
-            m.Field(
-                description="Explicitly authorized suspensions shared by local, CI, and hooks"
-            ),
-        ] = ()
-
-        @u.model_validator(mode="after")
-        def _validate_check_gate_suspensions(self) -> Self:
-            """Suspensions name unique, suspendable gates in this project's vocabulary."""
-            gates = tuple(item.gate for item in self.check_gate_suspensions)
-            if len(gates) != len(set(gates)):
-                msg = "make check_gate_suspensions must name unique gates"
-                raise ValueError(msg)
-            unknown = sorted(set(gates) - set(self.check_gates_allowed))
-            if unknown:
-                msg = f"make check_gate_suspensions contains unknown gates: {', '.join(unknown)}"
-                raise ValueError(msg)
-            protected = sorted(
-                set(gates) & FlextInfraConstantsCheck.UNSUSPENDABLE_GATES
-            )
-            if protected:
-                msg = (
-                    "make check_gate_suspensions cannot suspend lint, format "
-                    f"or type-checker gates: {', '.join(protected)}"
-                )
-                raise ValueError(msg)
-            standalone = set(self.standalone_check_gates.values())
-            misplaced = sorted(set(gates) & standalone)
-            if misplaced:
-                msg = (
-                    "make check_gate_suspensions cannot suspend standalone gates: "
-                    f"{', '.join(misplaced)}"
-                )
-                raise ValueError(msg)
-            families = [
-                family
-                for item in self.check_gate_suspensions
-                for family in item.census_rule_families
-            ]
-            if len(families) != len(set(families)):
-                msg = (
-                    "make check_gate_suspensions census_rule_families must be "
-                    "declared by exactly one gate"
-                )
-                raise ValueError(msg)
-            return self
 
         @u.model_validator(mode="after")
         def _validate_project_check_gates(self) -> Self:
@@ -907,17 +826,12 @@ class FlextInfraConfigModelsMake:
         @property
         def check_gates_default(self) -> t.VariadicTuple[str]:
             """Active default gates, shared by local, CI, hooks, and project gates."""
-            suspended = frozenset(item.gate for item in self.check_gate_suspensions)
             standalone = frozenset(self.standalone_check_gates.values())
             declared = (
                 *FlextInfraConstantsMake.CANONICAL_DEFAULT_GATE_IDS,
                 *self.project_check_gates,
             )
-            return tuple(
-                gate
-                for gate in declared
-                if gate not in suspended and gate not in standalone
-            )
+            return tuple(gate for gate in declared if gate not in standalone)
 
         @m.computed_field
         @property

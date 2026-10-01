@@ -33,15 +33,12 @@ class FlextInfraWorkspaceCheckReportsMixin:
             "",
             "## Summary",
             "",
-            "| Project | Status | Errors | Observations |",
-            "|---|---:|---:|---:|",
+            "| Project | Status | Errors |",
+            "|---|---:|---:|",
         ]
         for project in results:
             status = "PASS" if project.passed else "FAIL"
-            lines.append(
-                f"| {project.project} | {status} | {project.total_errors} | "
-                f"{project.total_observations} |"
-            )
+            lines.append(f"| {project.project} | {status} | {project.total_errors} |")
         lines.extend(["", "## Details", ""])
         for project in results:
             lines.append(f"### {project.project}")
@@ -51,14 +48,9 @@ class FlextInfraWorkspaceCheckReportsMixin:
                     continue
                 gate_status = "PASS" if execution.result.passed else "FAIL"
                 lines.append(
-                    f"- {gate}: {gate_status} ({len(execution.issues)} issues, "
-                    f"{execution.observational_count} observations)"
+                    f"- {gate}: {gate_status} ({len(execution.issues)} issues)"
                 )
                 lines.extend(f"  - {issue.formatted}" for issue in execution.issues)
-                lines.extend(
-                    f"  - Observational [{issue.severity}]: {issue.formatted}"
-                    for issue in execution.observational_issues
-                )
             lines.append("")
         return "\n".join(lines)
 
@@ -75,10 +67,7 @@ class FlextInfraWorkspaceCheckReportsMixin:
                 if execution is None:
                     continue
                 tool_name, tool_url = c.Infra.SARIF_TOOL_INFO[gate]
-                for issue, observational in (
-                    *((issue, False) for issue in execution.issues),
-                    *((issue, True) for issue in execution.observational_issues),
-                ):
+                for issue in execution.issues:
                     rule_id = issue.code or gate
                     rules_by_id.setdefault(
                         rule_id,
@@ -88,9 +77,7 @@ class FlextInfraWorkspaceCheckReportsMixin:
                             helpUri=tool_url,
                         ),
                     )
-                    sarif_results.append(
-                        cls._sarif_issue(issue, rule_id, observational=observational)
-                    )
+                    sarif_results.append(cls._sarif_issue(issue, rule_id))
         return m.Infra.SarifReport(
             runs=(
                 m.Infra.SarifRun(
@@ -103,24 +90,17 @@ class FlextInfraWorkspaceCheckReportsMixin:
         )
 
     @staticmethod
-    def _sarif_issue(
-        issue: m.Infra.Issue, rule_id: str, *, observational: bool
-    ) -> m.Infra.SarifResult:
-        """Render one occurrence while retaining its native diagnostic severity."""
-        if observational:
-            level = "note"
-            message = f"Observational [{issue.severity}]: {issue.message}"
-        else:
-            level = (
-                "warning"
-                if issue.severity.lower() == c.Infra.SeverityLevel.WARNING
-                else "error"
-            )
-            message = issue.message
+    def _sarif_issue(issue: m.Infra.Issue, rule_id: str) -> m.Infra.SarifResult:
+        """Render one blocking occurrence while retaining its native severity."""
+        level = (
+            "warning"
+            if issue.severity.lower() == c.Infra.SeverityLevel.WARNING
+            else "error"
+        )
         return m.Infra.SarifResult(
             ruleId=rule_id,
             level=level,
-            message=message,
+            message=issue.message,
             locations=[
                 m.Infra.SarifLocation(
                     uri=issue.file, start_line=issue.line, start_column=issue.column
@@ -184,11 +164,6 @@ class FlextInfraWorkspaceCheckReportsMixin:
                 u.Cli.info(
                     f"{project.project:30s} {project.total_errors:6d}  ({breakdown})"
                 )
-        if any(project.total_observations for project in results):
-            u.Cli.info("Observational findings by project (not gate failures):")
-            for project in results:
-                if project.total_observations:
-                    u.Cli.info(f"{project.project:30s} {project.total_observations:6d}")
         return r[t.SequenceOf[m.Infra.ProjectResult]].ok(results)
 
 

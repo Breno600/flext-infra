@@ -151,6 +151,8 @@ class FlextInfraWorkspaceCheckGatesMixin:
             if gate_instance is None:
                 msg = f"{gate_id} gate not registered"
                 raise ValueError(msg)
+            if not gate_instance.selected_for(project_dir):
+                continue
             stages.append(
                 m.Cli.PipelineStageSpec(
                     stage_id=gate_id,
@@ -246,10 +248,7 @@ class FlextInfraWorkspaceCheckGatesMixin:
                 m.Cli.PipelineStageResult(
                     stage_id=gate_id,
                     status=c.Cli.PipelineStageStatus.OK,
-                    output={
-                        "errors": execution.error_count,
-                        "observations": execution.observational_count,
-                    },
+                    output={"errors": execution.error_count},
                 )
             )
 

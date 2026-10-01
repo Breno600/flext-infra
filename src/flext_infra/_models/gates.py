@@ -145,10 +145,8 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
     class PyrightSummary(m.ContractModel):
         """Native completed-analysis counters.
 
-        ``filesAnalyzed=0`` is a legitimate outcome for content-only project
-        topologies (package:false roots whose discovery yields no python): the
-        tool ran, analyzed nothing, and reported zero diagnostics. The gate
-        layer — not the model — turns that shape into a typed receipt.
+        The model accepts ``filesAnalyzed=0``; the gate layer decides that an
+        empty analysis of a project with Python targets is a failure.
         """
 
         files_analyzed: Annotated[
