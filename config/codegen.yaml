@@ -2044,12 +2044,10 @@ Infra:
           destination: tests/fixtures/ci/docker/arch.Dockerfile
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/bin/mise-lock-transaction.py.j2
           destination: bin/mise-lock-transaction.py
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: true
         - source: base/Makefile.j2
           destination: Makefile
         # The generic conform engine is the single Makefile owner for every
