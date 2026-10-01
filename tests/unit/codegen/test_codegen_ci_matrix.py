@@ -754,7 +754,9 @@ class TestsFlextInfraCodegenCiMatrix:
             step for step in steps if step["name"] == "Docs lifecycle (blocking)"
         )
         upload = next(
-            step for step in steps if step.get("name") == "Upload docs reports on failure"
+            step
+            for step in steps
+            if step.get("name") == "Upload docs reports on failure"
         )
         tm.that(docs_step.get("run"), eq="make docs")
         tm.that(docs_step.get("continue-on-error"), eq=None)

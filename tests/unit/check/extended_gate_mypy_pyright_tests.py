@@ -65,9 +65,7 @@ class TestsFlextInfraTypeGates:
                         eq=[str(cache)],
                     )
                     tm.that(cache.is_dir(), eq=True)
-                    tm.that(
-                        any(path.is_file() for path in cache.rglob("*")), eq=True
-                    )
+                    tm.that(any(path.is_file() for path in cache.rglob("*")), eq=True)
                 tm.that((root / ".mypy_cache").exists(), eq=False)
             tm.that(
                 {path.name for path in shared_root.iterdir()},
