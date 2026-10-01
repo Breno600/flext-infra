@@ -461,6 +461,8 @@ class FlextInfraUtilitiesLintRecipes:
             if isinstance(parent, ast.If):
                 test = ast.unparse(parent.test)
                 return f"``{test}``" if node in parent.body else f"``not ({test})``"
+            if isinstance(parent, ast.ExceptHandler) and parent.type is not None:
+                return f"a ``{ast.unparse(parent.type)}`` is caught"
             node = parent
         return ""
 
