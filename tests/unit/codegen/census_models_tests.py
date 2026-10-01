@@ -19,7 +19,9 @@ class TestsFlextInfraCodegenCensusModels:
     """Violation pattern and census report model contracts."""
 
     def test_named_groups_present(self) -> None:
-        match = c.Infra.VIOLATION_PATTERN.match("[NS-001-001] src/file.py:10 — msg")
+        match = c.Infra.VIOLATION_PATTERN.match(
+            "[ban-cyclic-import] src/file.py:10 — msg",
+        )
         tm.that(match is not None, eq=True)
         if match is not None:
             tm.that(set(match.groupdict()), eq={"rule", "module", "line", "message"})
@@ -40,7 +42,10 @@ class TestsFlextInfraCodegenCensusModels:
 
     def test_empty_report(self) -> None:
         report = m.Infra.CensusReport(
-            project="test-project", violations=[], total=0, fixable=0
+            project="test-project",
+            violations=[],
+            total=0,
+            fixable=0,
         )
         tm.that(report.project, eq="test-project")
         tm.that(report.total, eq=0)
@@ -50,13 +55,25 @@ class TestsFlextInfraCodegenCensusModels:
     def test_report_with_mixed_violations(self) -> None:
         violations = [
             m.Infra.CensusViolation(
-                module="src/a.py", rule="NS-000", line=1, message="m1", fixable=False
+                module="src/a.py",
+                rule="NS-000",
+                line=1,
+                message="m1",
+                fixable=False,
             ),
             m.Infra.CensusViolation(
-                module="src/b.py", rule="NS-001", line=2, message="m2", fixable=True
+                module="src/b.py",
+                rule="NS-001",
+                line=2,
+                message="m2",
+                fixable=True,
             ),
             m.Infra.CensusViolation(
-                module="src/c.py", rule="NS-002", line=3, message="m3", fixable=True
+                module="src/c.py",
+                rule="NS-002",
+                line=3,
+                message="m3",
+                fixable=True,
             ),
         ]
         report = m.Infra.CensusReport(

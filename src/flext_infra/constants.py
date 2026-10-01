@@ -15,7 +15,6 @@ from ._constants.cli import FlextInfraConstantsCli
 from ._constants.codegen import FlextInfraConstantsCodegen
 from ._constants.codegen_project import FlextInfraConstantsCodegenProject
 from ._constants.deps import FlextInfraConstantsDeps
-from ._constants.detectors import FlextInfraConstantsDetectors
 from ._constants.docs import FlextInfraConstantsDocs
 from ._constants.git import FlextInfraConstantsGit
 from ._constants.namespace import FlextInfraConstantsNamespace
@@ -40,7 +39,6 @@ class FlextInfraConstants(FlextCliConstants):
         FlextInfraConstantsCodegenProject,
         FlextInfraConstantsRope,
         FlextInfraConstantsDeps,
-        FlextInfraConstantsDetectors,
         FlextInfraConstantsDocs,
         FlextInfraConstantsGit,
         FlextInfraConstantsNamespace,

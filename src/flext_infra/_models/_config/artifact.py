@@ -41,16 +41,20 @@ class FlextInfraConfigModelsArtifact:
             True
         )
         vscode_exclude: Annotated[
-            bool, m.Field(description="Feed VS Code files.exclude + search.exclude")
+            bool,
+            m.Field(description="Feed VS Code files.exclude + search.exclude"),
         ] = True
         watch_exclude: Annotated[
-            bool, m.Field(description="Feed VS Code files.watcherExclude")
+            bool,
+            m.Field(description="Feed VS Code files.watcherExclude"),
         ] = True
         gitignore: Annotated[
-            bool, m.Field(description="Feed the Python/tool section of .gitignore")
+            bool,
+            m.Field(description="Feed the Python/tool section of .gitignore"),
         ] = True
         source_scan_ignore: Annotated[
-            bool, m.Field(description="Feed source_scan.ignored_resources")
+            bool,
+            m.Field(description="Feed source_scan.ignored_resources"),
         ] = False
 
     class CodegenVscodeSpec(FlextInfraConfigModelsContract.ConfigContract):
@@ -85,14 +89,8 @@ class FlextInfraConfigModelsArtifact:
 
         max_lines: Annotated[
             int,
-            m.Field(
-                ge=1,
-                description=(
-                    "Per-module code-LOC ceiling. Operator instruction "
-                    "2026-09-07: the former 1000-LOC allowance stands."
-                ),
-            ),
-        ] = 1000
+            m.Field(ge=1, description="Per-module code-LOC ceiling"),
+        ]
 
     class CodegenConfigSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Fully modeled content of ``config/codegen.yaml``."""
@@ -104,13 +102,13 @@ class FlextInfraConfigModelsArtifact:
                 description=(
                     "Repository-relative generated projections that no template "
                     "renders any more; generation removes them from consumers"
-                )
+                ),
             ),
-        ] = ()
+        ]
         fresh_import_workers: Annotated[
             int,
             m.Field(ge=1, le=16, description="Concurrent fresh-import subprocesses"),
-        ] = 1
+        ]
         loc_cap: Annotated[
             FlextInfraConfigModelsArtifact.CodegenLocCapSpec,
             m.Field(description="Per-module code-LOC ceiling policy"),
@@ -126,7 +124,6 @@ class FlextInfraConfigModelsArtifact:
         checkout_submodules: Annotated[
             t.NonEmptyStr,
             m.Field(
-                default="false",
                 pattern=r"^(true|false|recursive)$",
                 description=(
                     "Default actions/checkout submodules mode for every "
@@ -143,19 +140,7 @@ class FlextInfraConfigModelsArtifact:
                 description=(
                     "Per-distribution override of checkout_submodules, for "
                     "projects that really do exercise their subprojects in CI"
-                )
-            ),
-        ]
-        dependabot_cooldown_days: Annotated[
-            Mapping[str, int],
-            m.Field(
-                description=(
-                    "Per-distribution dependabot cooldown (default-days, >= 0) "
-                    "opted in for generated dependabot.yml. The fleet default "
-                    "is no cooldown: every ecosystem selects the newest "
-                    "available release immediately. A distribution that must "
-                    "stagger updates declares its own days here."
-                )
+                ),
             ),
         ]
         ci_private_submodules: Annotated[
@@ -164,7 +149,7 @@ class FlextInfraConfigModelsArtifact:
                 description=(
                     "Per-distribution private submodule deploy-key contracts "
                     "rendered into generated CI before make setup"
-                )
+                ),
             ),
         ]
         ci_private_dependency_auth: Annotated[
@@ -173,7 +158,7 @@ class FlextInfraConfigModelsArtifact:
                 description=(
                     "Per-distribution GitHub App identity minting installation "
                     "tokens for private git dependencies in generated CI"
-                )
+                ),
             ),
         ]
         ci_system_packages: Annotated[
@@ -182,7 +167,7 @@ class FlextInfraConfigModelsArtifact:
                 description=(
                     "Per-distribution runner packages (Ubuntu apt names) the "
                     "generated CI installs before the gates run"
-                )
+                ),
             ),
         ]
         ci_package_registry_read: Annotated[
@@ -193,7 +178,7 @@ class FlextInfraConfigModelsArtifact:
                     "Packages (for example private GHCR OCI dependencies); only "
                     "these grant the ci job packages: read, every other job "
                     "and distribution stays contents-only"
-                )
+                ),
             ),
         ]
         uv_exclude_dependencies: Annotated[
@@ -242,7 +227,7 @@ class FlextInfraConfigModelsArtifact:
                 description=(
                     "Declarative project-layout conformance contract consumed "
                     "by the layout engine and the layout quality gate"
-                )
+                ),
             ),
         ]
 
@@ -351,14 +336,14 @@ class FlextInfraConfigModelsArtifact:
                     FlextInfraConfigModelsScaffold.ScaffoldGitignoreSectionSpec(
                         name=FlextInfraConstantsSharedInfra.GITIGNORE_DERIVED_SECTION_NAME,
                         patterns=tuple(derived),
-                    )
+                    ),
                 )
             if managed_allowed:
                 sections.append(
                     FlextInfraConfigModelsScaffold.ScaffoldGitignoreSectionSpec(
                         name=FlextInfraConstantsSharedInfra.GITIGNORE_MANAGED_SECTION_NAME,
                         patterns=tuple(managed_allowed),
-                    )
+                    ),
                 )
             return tuple(sections)
 
@@ -384,7 +369,7 @@ class FlextInfraConfigModelsArtifact:
             FlextInfraConfigModelsTemplates.TemplatesSpec,
             m.Field(description="New-project-only scaffold template manifest"),
         ]
-        # Operator law: flext-infra owns generic conform policy only. The set
+        # flext-infra owns generic conform policy only. The set
         # of projects it serves is NOT its knowledge — each repository's own
         # .gitmodules is the read-only topology authority.
 
@@ -443,22 +428,28 @@ class FlextInfraConfigModelsArtifact:
             m.Field(description="Output paths selected for conformance planning"),
         ] = None
         complete_governed: Annotated[
-            bool, m.Field(description="Whether every governed output is represented")
+            bool,
+            m.Field(description="Whether every governed output is represented"),
         ] = False
         dependencies_only: Annotated[
-            bool, m.Field(description="Whether planning is dependency-only")
+            bool,
+            m.Field(description="Whether planning is dependency-only"),
         ] = False
         delegates: Annotated[
-            bool, m.Field(description="Whether delegated templates are planned")
+            bool,
+            m.Field(description="Whether delegated templates are planned"),
         ] = True
         pyproject: Annotated[
-            bool, m.Field(description="Whether project metadata is planned")
+            bool,
+            m.Field(description="Whether project metadata is planned"),
         ] = True
         templates: Annotated[
-            bool, m.Field(description="Whether managed templates are planned")
+            bool,
+            m.Field(description="Whether managed templates are planned"),
         ] = True
         custom: Annotated[
-            bool, m.Field(description="Whether custom Make policy is planned")
+            bool,
+            m.Field(description="Whether custom Make policy is planned"),
         ] = True
 
     class CodegenConformRequest(FlextInfraConfigModelsContract.ConfigContract):
@@ -482,7 +473,8 @@ class FlextInfraConfigModelsArtifact:
         """Rendered artifact plus the exact source states used to compose it."""
 
         rendered: Annotated[
-            str, m.Field(description="Fully composed managed-file content")
+            str,
+            m.Field(description="Fully composed managed-file content"),
         ]
         source_states: Annotated[
             t.VariadicTuple[m.Cli.AtomicFileState],
@@ -525,9 +517,21 @@ class FlextInfraConfigModelsArtifact:
                     "once per plan for the project context and every workflow; "
                     "None when Git publishes none, so a render that needs it "
                     "fails with the resolver's own cause"
-                )
+                ),
             ),
         ]
+        planned_direct_sources: Annotated[
+            t.VariadicTuple[str] | None,
+            m.Field(
+                description=(
+                    "Requirement names the pyproject composed in this plan "
+                    "takes by direct reference (forks and local projects). "
+                    "Planners compose the pyproject first and record them; "
+                    "None means this plan composes no pyproject, so the "
+                    "committed one is the source"
+                )
+            ),
+        ] = None
 
     class CodegenFilePlan(FlextInfraConfigModelsContract.ConfigContract):
         """Exact before state and desired state for one managed file."""
@@ -540,7 +544,7 @@ class FlextInfraConfigModelsArtifact:
                 description=(
                     "Descriptor-authenticated file state, or the exact absent "
                     "parent chain captured by read-only planning"
-                )
+                ),
             ),
         ]
         desired_content: Annotated[
@@ -660,7 +664,7 @@ class FlextInfraConfigModelsArtifact:
                 description=(
                     "Config-directory-relative path to the old,new rename-list "
                     "CSV; the list ships with the declaring config"
-                )
+                ),
             ),
         ]
         roots: Annotated[
@@ -708,4 +712,37 @@ class FlextInfraConfigModelsArtifact:
         campaigns: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsArtifact.RenameCampaignSpec],
             m.Field(default=(), description="Ordered rename campaigns"),
+        ] = ()
+
+    class SedPatternSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """One declared literal regex substitution applied across the mod scope."""
+
+        pattern: Annotated[t.NonEmptyStr, m.Field(description="Regex source to match")]
+        replacement: Annotated[
+            str, m.Field(description="Literal replacement text")
+        ]
+        file_glob: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(default=None, description="Optional file glob filter"),
+        ]
+        flags: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                default=(),
+                description=(
+                    "Regex flags by name (IGNORECASE, MULTILINE, DOTALL)"
+                ),
+            ),
+        ] = ()
+        description: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(default=None, description="Why this substitution exists"),
+        ] = None
+
+    class SedPatternsSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """Declared sed-by-list substitution set with optional per-pattern filters."""
+
+        patterns: Annotated[
+            t.VariadicTuple[SedPatternSpec],
+            m.Field(default=(), description="Ordered substitution patterns"),
         ] = ()

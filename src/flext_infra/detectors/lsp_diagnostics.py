@@ -35,7 +35,7 @@ class FlextInfraLspDiagnosticsDetector:
                     resolved := (path if path.is_absolute() else root / path).resolve()
                 ).is_file()
                 and resolved.suffix == c.Infra.EXT_PYTHON
-            })
+            }),
         )
         started = u.Cli.process_start((c.Infra.PYRIGHT_LANGSERVER, "--stdio"), cwd=root)
         if started.failure:
@@ -66,21 +66,23 @@ class FlextInfraLspDiagnosticsDetector:
 
         def receive() -> p.Result[t.JsonMapping]:
             header = process.stdout_read_until(
-                cls._HEADER_SEPARATOR, timeout=remaining()
+                cls._HEADER_SEPARATOR,
+                timeout=remaining(),
             )
             if header.failure:
                 return r[t.JsonMapping].from_failure(header)
             fields = tuple(
                 line
                 for line in header.value.removesuffix(cls._HEADER_SEPARATOR).split(
-                    b"\r\n"
+                    b"\r\n",
                 )
                 if line.startswith(cls._CONTENT_LENGTH)
             )
             if len(fields) != 1:
                 return r[t.JsonMapping].fail("LSP response requires one Content-Length")
             body = process.stdout_read_exact(
-                int(fields[0].split(b":", maxsplit=1)[1]), timeout=remaining()
+                int(fields[0].split(b":", maxsplit=1)[1]),
+                timeout=remaining(),
             )
             if body.failure:
                 return r[t.JsonMapping].from_failure(body)
@@ -90,7 +92,7 @@ class FlextInfraLspDiagnosticsDetector:
             if not isinstance(decoded.value, Mapping):
                 return r[t.JsonMapping].fail("LSP response body must be an object")
             return r[t.JsonMapping].ok(
-                t.Infra.INFRA_MAPPING_ADAPTER.validate_python(decoded.value)
+                t.Infra.INFRA_MAPPING_ADAPTER.validate_python(decoded.value),
             )
 
         def record(message: t.JsonMapping) -> p.Result[bool]:
@@ -159,7 +161,7 @@ class FlextInfraLspDiagnosticsDetector:
                             "languageId": "python",
                             "version": 1,
                             "text": source.value,
-                        }
+                        },
                     },
                 },
                 {
@@ -174,7 +176,7 @@ class FlextInfraLspDiagnosticsDetector:
                 if sent.failure:
                     return reject(sent.error or f"LSP document write failed: {path}")
         while not document_ids.issubset(response_ids) or not expected_uris.issubset(
-            published_uris
+            published_uris,
         ):
             received = receive()
             if received.failure:
@@ -210,7 +212,7 @@ class FlextInfraLspDiagnosticsDetector:
         if completed.value != 0:
             return r[bool].fail(
                 f"{c.Infra.PYRIGHT_LANGSERVER} exited with code {completed.value}: "
-                f"{process.stderr or process.stdout}"
+                f"{process.stderr or process.stdout}",
             )
         if process.stderr:
             return r[bool].fail(process.stderr)

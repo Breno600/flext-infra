@@ -30,7 +30,7 @@ class TestsFlextInfraCiIntegrationBranchTriggers:
             # The repository's own integration branch joins the SSOT baselines;
             # no positional or named assumption about the baseline contents.
             ci_trigger_branches=tuple(
-                dict.fromkeys((*cls.baseline_branches, repository_branch))
+                dict.fromkeys((*cls.baseline_branches, repository_branch)),
             ),
         )
         return tm.ok(u.Cli.template_render(cls.ci_template, spec))
@@ -38,7 +38,8 @@ class TestsFlextInfraCiIntegrationBranchTriggers:
     @staticmethod
     def _trigger_section(rendered: str) -> str:
         return rendered.split('"on":', maxsplit=1)[1].split(
-            "# End SECTION: triggers", maxsplit=1
+            "# End SECTION: triggers",
+            maxsplit=1,
         )[0]
 
     @staticmethod
@@ -48,7 +49,7 @@ class TestsFlextInfraCiIntegrationBranchTriggers:
     def test_ci_triggers_include_custom_workspace_integration_branch(self) -> None:
         custom_branch = "feature/v0-4-0-multitenant-weaviate"
         triggers = self._trigger_section(
-            self.render_ci(repository_branch=custom_branch)
+            self.render_ci(repository_branch=custom_branch),
         )
 
         tm.that(self._branch_count(triggers, custom_branch), eq=2)

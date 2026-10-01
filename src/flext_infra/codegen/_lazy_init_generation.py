@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from flext_infra.codegen.lazy_init_planner import FlextInfraCodegenLazyInitPlanner
 
 
-# flext-i6nq.10: Root manifests and initializers are synchronized as one artifact set.
+# Root manifests and initializers are synchronized as one artifact set.
 class FlextInfraCodegenLazyInitGenerationMixin(
     FlextInfraCodegenLazyInitGenerationFilePlanMixin,
     FlextInfraCodegenLazyInitGenerationRegistryMixin,

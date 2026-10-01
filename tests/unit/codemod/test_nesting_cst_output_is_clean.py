@@ -25,10 +25,11 @@ class TestsFlextInfraNestingCutoverOutput:
     def _planned_source(tmp_path: Path) -> str:
         """Plan one class-nesting cutover through the public cutover owner."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
-        alias, module_name = next(iter(c.Infra.FAMILY_PUBLIC_MODULES.items()))
+        alias = sorted(u.Infra.facade_families())[0]
+        module_name = u.Tests.family_public_module(alias)
         owner_name = (
             f"{u.derive_class_stem(repository_root.name)}"
-            f"{c.Infra.FAMILY_SUFFIXES[alias]}"
+            f"{u.Infra.facade_families()[alias].suffix}"
         )
         module_path = package_root / f"{module_name}.py"
         u.Tests.write_lazy_init_namespace_module(
@@ -48,7 +49,8 @@ class TestsFlextInfraNestingCutoverOutput:
         return tm.ok(planned)[0].updated_source
 
     def test_emitted_source_carries_no_blank_line_with_indentation(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A separator line inside the owner block is empty, never indented."""
         emitted = self._planned_source(tmp_path)
@@ -60,7 +62,8 @@ class TestsFlextInfraNestingCutoverOutput:
         tm.that(indented_blanks, empty=True)
 
     def test_emitted_source_keeps_docstrings_at_their_new_depth(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A moved class carries its docstring to the depth it now sits at."""
         emitted = self._planned_source(tmp_path)
@@ -81,7 +84,8 @@ class TestsFlextInfraNestingCutoverOutput:
             break
 
     def test_emitted_source_passes_the_whitespace_and_docstring_gates(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Ruff finds none of the three defects the mover used to write.
 

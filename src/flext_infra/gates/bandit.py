@@ -36,7 +36,9 @@ class FlextInfraBanditGate(FlextInfraGate):
 
     @override
     def _get_check_dirs(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
         """Get check dirs."""
         _ = ctx
@@ -46,7 +48,10 @@ class FlextInfraBanditGate(FlextInfraGate):
 
     @override
     def _parse_check_output(
-        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        result: p.Cli.CommandOutput,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
         """Parse check output."""
         del project_dir, ctx
@@ -54,8 +59,12 @@ class FlextInfraBanditGate(FlextInfraGate):
         if not u.Cli.process_succeeded(result.outcome) and not result.stdout.strip():
             issues.append(
                 self._command_error_issue(
-                    result, tool=c.Infra.BANDIT, file="<bandit>", line=0, column=0
-                )
+                    result,
+                    tool=c.Infra.BANDIT,
+                    file="<bandit>",
+                    line=0,
+                    column=0,
+                ),
             )
             return False, issues
         if not result.stdout.strip():
@@ -65,16 +74,20 @@ class FlextInfraBanditGate(FlextInfraGate):
         if parsed_payload.failure:
             issues.append(
                 self._parse_error_issue(
-                    parsed_payload.error or "Tool output parsing failed"
-                )
+                    parsed_payload.error or "Tool output parsing failed",
+                ),
             )
             return False, issues
         issues.extend(self._bandit_issues(parsed_payload.unwrap()))
         if not issues and not u.Cli.process_succeeded(result.outcome):
             issues.append(
                 self._command_error_issue(
-                    result, tool=c.Infra.BANDIT, file="<bandit>", line=0, column=0
-                )
+                    result,
+                    tool=c.Infra.BANDIT,
+                    file="<bandit>",
+                    line=0,
+                    column=0,
+                ),
             )
         return u.Cli.process_succeeded(result.outcome), issues
 
@@ -87,7 +100,7 @@ class FlextInfraBanditGate(FlextInfraGate):
         raw_payload = parsed_result.unwrap()
         if not isinstance(raw_payload, Mapping):
             return r[t.MappingKV[str, t.JsonValue]].fail(
-                "Bandit output is not a JSON object"
+                "Bandit output is not a JSON object",
             )
         return r[t.MappingKV[str, t.JsonValue]].ok(u.Cli.json_as_mapping(raw_payload))
 
@@ -111,7 +124,7 @@ class FlextInfraBanditGate(FlextInfraGate):
                 severity=c.Infra.GateSeverity.ERROR.value,
             )
             for raw_item in u.Cli.json_as_mapping_list(
-                bandit_data.get(c.Infra.BANDIT_RESULTS_KEY, [])
+                bandit_data.get(c.Infra.BANDIT_RESULTS_KEY, []),
             )
         )
 

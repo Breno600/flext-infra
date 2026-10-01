@@ -15,7 +15,6 @@ import inspect
 import pkgutil
 import re
 import sys
-import types
 from collections import defaultdict
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, Annotated, Self, override
@@ -35,7 +34,8 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
     """Post-import runtime enforcement census across workspace projects."""
 
     project_filter: Annotated[
-        str | None, m.Field(description="Project filter (comma-separated)")
+        str | None,
+        m.Field(description="Project filter (comma-separated)"),
     ] = None
     census_gate: Annotated[
         str,
@@ -71,8 +71,8 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
     def _gate_rule_families() -> t.MappingKV[str, frozenset[str]]:
         """Census rule families owned by a gate other than the runtime census.
 
-        Operator ruling 2026-10-01: no smell enters ``make check``; the
-        ``make smells`` verb owns every smell family. The family set derives
+        No smell enters ``make check``; the ``make smells`` verb owns every
+        smell family. The family set derives
         from the flext-core smell catalog — every smell tag plus the rule id
         of every catalog row carrying one — so a smell added to the catalog
         moves to the smells gate in the same edit, with no second list.
@@ -86,25 +86,9 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         }
 
     @staticmethod
-    def _package_name_for_project(project: p.Infra.ProjectInfo) -> str | None:
-        """Resolve the importable package name for a project root."""
-        layout = u.Infra.layout(project.path, project=project)
-        if layout is not None:
-            package_name: str = layout.package_name
-            return package_name
-        src_dir = project.path / c.Infra.DEFAULT_SRC_DIR
-        if not src_dir.is_dir():
-            return None
-        for child in sorted(src_dir.iterdir()):
-            if child.is_dir() and (child / c.Infra.INIT_PY).is_file():
-                child_name: str = child.name
-                return child_name
-        return None
-
-    @staticmethod
     def _is_local_class(klass: type, module_name: str) -> bool:
         """Return True when ``klass`` is defined in ``module_name`` (not imported)."""
-        return getattr(klass, "__module__", "") == module_name
+        return klass.__module__ == module_name
 
     @classmethod
     def _walk_modules(cls, package_name: str) -> t.SequenceOf[str]:
@@ -113,7 +97,9 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         prefix = package.__name__ + "."
         modules: list[str] = [package.__name__]
         for _, modname, _ in pkgutil.walk_packages(
-            package.__path__, prefix=prefix, onerror=cls._raise_package_walk_error
+            package.__path__,
+            prefix=prefix,
+            onerror=cls._raise_package_walk_error,
         ):
             modules.append(modname)
         return modules
@@ -127,34 +113,9 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
             raise RuntimeError(msg)
         raise exception.with_traceback(exception.__traceback__)
 
-    @staticmethod
-    def _is_declared_island(module: types.ModuleType) -> bool:
-        """Whether the module lives under a declared stdlib island path.
-
-        Why: ADR-0018 declares the native hook-client island the sole,
-        performance-motivated exception to the FLEXT enforcement surface; it
-        is stdlib-only and cannot consume ``ai_hub._constants``, so the same
-        declaration the boundary, namespace, and silent-failure gates honor
-        keeps the runtime census from enforcing family constants on it.
-        """
-        module_file = getattr(module, "__file__", None)
-        if module_file is None:
-            return False
-        posix = str(module_file).replace("\\", "/")
-        return any(
-            fragment in posix
-            for fragment in c.Infra.NAMESPACE_STDLIB_ISLAND_PATH_FRAGMENTS
-        )
-
     def _check_module(self, module_name: str) -> t.SequenceOf[m.Infra.ValidationReport]:
         """Import one module and run runtime enforcement on its local classes."""
         module = importlib.import_module(module_name)
-        if self._is_declared_island(module):
-            return [
-                m.Infra.ValidationReport(
-                    passed=True, violations=(), summary=f"{module_name}: clean"
-                )
-            ]
         violations: list[str] = []
         for _name, obj in inspect.getmembers(module, inspect.isclass):
             if not self._is_local_class(obj, module.__name__):
@@ -166,7 +127,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
                 rule_part = f" [{violation.rule_id}]" if violation.rule_id else ""
                 violations.append(
                     f"{file_part}{line_part}{obj.__qualname__}{rule_part}: "
-                    f"{violation.message}"
+                    f"{violation.message}",
                 )
         return [
             m.Infra.ValidationReport(
@@ -177,41 +138,24 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
                     if violations
                     else f"{module_name}: clean"
                 ),
-            )
+            ),
         ]
 
     def _project_report(
-        self, project: p.Infra.ProjectInfo
+        self,
+        project: p.Infra.ProjectInfo,
     ) -> p.Result[m.Infra.ValidationReport]:
-        """Run the runtime census for one project and return a merged report."""
-        package_name = self._package_name_for_project(project)
-        if package_name is None:
-            return r[m.Infra.ValidationReport].ok(
-                m.Infra.ValidationReport(
-                    passed=True,
-                    violations=(),
-                    summary=f"{project.name}: no importable package found",
-                )
+        """Run the runtime census for one project and return a merged report.
+
+        A project without an importable package establishes no census: it
+        fails, never passes on empty input.
+        """
+        layout = u.Infra.layout(project.path, project=project)
+        if layout is None:
+            return r[m.Infra.ValidationReport].fail(
+                f"runtime census: {project.name} has no importable package",
             )
-        # Operator stability contract (2026-09-16): an unimportable package is
-        # a census violation to report, never a verb crash.
-        walked = r[t.SequenceOf[str]].create_from_callable(
-            lambda: self._walk_modules(package_name)
-        )
-        if walked.failure:
-            return r[m.Infra.ValidationReport].ok(
-                m.Infra.ValidationReport(
-                    passed=False,
-                    violations=(
-                        (
-                            f"{package_name}: package import failed: "
-                            f"{type(walked.exception).__name__}: {walked.error}"
-                        ),
-                    ),
-                    summary=f"{project.name}: package import failed",
-                )
-            )
-        real_modules = list(walked.value)
+        real_modules = list(self._walk_modules(layout.package_name))
         if self.target_module is not None:
             real_modules = [
                 name
@@ -223,32 +167,12 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
             name
             for name in real_modules
             if not frozenset(config.Infra.codegen.source_scan_ignored).intersection(
-                name.split(".")
+                name.split("."),
             )
         ]
         all_reports: list[m.Infra.ValidationReport] = []
         for module_name in real_modules:
-            # Operator stability contract (2026-09-16): a module that cannot
-            # import is a census violation to report, never a verb crash —
-            # findings feed the generator, the Make verb completes.
-            checked = r[t.SequenceOf[m.Infra.ValidationReport]].create_from_callable(
-                lambda name=module_name: self._check_module(name)
-            )
-            if checked.success:
-                all_reports.extend(checked.value)
-            else:
-                all_reports.append(
-                    m.Infra.ValidationReport(
-                        passed=False,
-                        violations=(
-                            (
-                                f"{module_name}: import failed: "
-                                f"{type(checked.exception).__name__}: {checked.error}"
-                            ),
-                        ),
-                        summary=f"{module_name}: import failed",
-                    )
-                )
+            all_reports.extend(self._check_module(module_name))
         merged_violations = tuple(
             violation for report in all_reports for violation in report.violations
         )
@@ -260,8 +184,10 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         )
         return r[m.Infra.ValidationReport].ok(
             m.Infra.ValidationReport(
-                passed=passed, violations=merged_violations, summary=summary
-            )
+                passed=passed,
+                violations=merged_violations,
+                summary=summary,
+            ),
         )
 
     @staticmethod
@@ -340,7 +266,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         if not projects:
             return r[m.Infra.ValidationReport].fail(
                 f"runtime census selected no projects: root={self.repository_root}, "
-                f"filter={self.project_filter!r}"
+                f"filter={self.project_filter!r}",
             )
         merged_violations: list[str] = []
         for project in projects:
@@ -350,7 +276,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
             report = report_result.value
             merged_violations.extend(report.violations)
         # Every owned finding blocks: ownership routes a family to its gate,
-        # it never suspends one (operator order 2026-10-01, gc-wisp-1n83u4).
+        # it never suspends one.
         owned_violations = self._gate_owned(merged_violations)
         label = (
             "runtime census"
@@ -365,8 +291,10 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         )
         return r[m.Infra.ValidationReport].ok(
             m.Infra.ValidationReport(
-                passed=passed, violations=owned_violations, summary=summary
-            )
+                passed=passed,
+                violations=tuple(merged_violations),
+                summary=summary,
+            ),
         )
 
     @override

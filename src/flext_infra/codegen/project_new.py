@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
 
-from .. import c, m, u
+from .. import c, m, t, u
 from ._execution import FlextInfraCodegenExecutionBase
 from .conform import FlextInfraCodegenConform
 
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraCodegenProjectNew(
-    FlextInfraCodegenExecutionBase[m.Infra.CodegenResult]
+    FlextInfraCodegenExecutionBase[m.Infra.CodegenResult],
 ):
     """Scaffold one new repository of a declared governance kind."""
 
@@ -40,14 +40,16 @@ class FlextInfraCodegenProjectNew(
         m.Field(
             description=(
                 "Governance kind: internal_flext, internal, or third_party_fork."
-            )
+            ),
         ),
     ]
     output_root: Annotated[
-        Path, m.Field(description="Directory that becomes the generated project root.")
+        Path,
+        m.Field(description="Directory that becomes the generated project root."),
     ]
     package_name: Annotated[
-        str, m.Field(description="Python package name (default: name with '-'→'_').")
+        str,
+        m.Field(description="Python package name (default: name with '-'→'_')."),
     ] = ""
     # Field renamed
     # ``namespace``→``project_namespace`` to avoid colliding with the inherited
@@ -60,7 +62,8 @@ class FlextInfraCodegenProjectNew(
         ),
     ] = ""
     description: Annotated[
-        str, m.Field(default="", description="Project description (default: derived).")
+        str,
+        m.Field(default="", description="Project description (default: derived)."),
     ] = ""
     provider: Annotated[
         str,
@@ -79,7 +82,7 @@ class FlextInfraCodegenProjectNew(
                 "Canonical HTTPS Git clone URL for the new repository. There is "
                 "nothing to detect for a repository that does not exist yet, so "
                 "the caller must declare it."
-            )
+            ),
         ),
     ]
     repository_branch: Annotated[
@@ -89,16 +92,18 @@ class FlextInfraCodegenProjectNew(
                 "Integration branch the new repository initializes on. Git owns "
                 "no answer for an unborn repository, so the caller must declare "
                 "it."
-            )
+            ),
         ),
     ]
     license: Annotated[
-        str, m.Field(min_length=1, description="SPDX project license identifier.")
+        str,
+        m.Field(min_length=1, description="SPDX project license identifier."),
     ]
     flext_repository_url: Annotated[
         str,
         m.Field(
-            min_length=1, description="Git URL of the FLEXT infrastructure source."
+            min_length=1,
+            description="Git URL of the FLEXT infrastructure source.",
         ),
     ]
     flext_repository_ref: Annotated[
@@ -106,10 +111,12 @@ class FlextInfraCodegenProjectNew(
         m.Field(min_length=1, description="Git ref consumed from the FLEXT source."),
     ]
     author_name: Annotated[
-        str, m.Field(min_length=1, description="Author/maintainer display name.")
+        str,
+        m.Field(min_length=1, description="Author/maintainer display name."),
     ]
     author_email: Annotated[
-        str, m.Field(min_length=3, description="Author/maintainer email.")
+        str,
+        m.Field(min_length=3, description="Author/maintainer email."),
     ]
     upstream: Annotated[str, m.Field(description="Upstream facade module (flext_cli).")]
     flext_source: Annotated[
@@ -120,6 +127,14 @@ class FlextInfraCodegenProjectNew(
         ),
     ]
     year: Annotated[int, m.Field(ge=2025, description="Deterministic copyright year.")]
+    conform_ports: t.Port[m.Infra.CodegenConformPorts | None] = m.Field(
+        default=None,
+        exclude=True,
+        description=(
+            "Docs and fresh-import ports bound by FlextInfra.codegen_new; the "
+            "scaffold conform fails before any effect without them"
+        ),
+    )
 
     @override
     def execute(self) -> p.Result[m.Infra.CodegenResult]:
@@ -132,12 +147,12 @@ class FlextInfraCodegenProjectNew(
         repository_url = self.repository_url.strip()
         if not repository_url:
             return r[m.Infra.CodegenResult].fail(
-                "repository URL is required: declare --repository-url"
+                "repository URL is required: declare --repository-url",
             )
         repository_branch = self.repository_branch.strip()
         if not repository_branch:
             return r[m.Infra.CodegenResult].fail(
-                "repository branch is required: declare --repository-branch"
+                "repository branch is required: declare --repository-branch",
             )
         # Declared remotes are the only provenance a repository that does not
         # exist yet can carry, so both URLs and the FLEXT ref are validated to
@@ -151,7 +166,7 @@ class FlextInfraCodegenProjectNew(
         flext_ref = self.flext_repository_ref.strip()
         if not flext_ref:
             return r[m.Infra.CodegenResult].fail(
-                "flext repository ref is required: declare --flext-repository-ref"
+                "flext repository ref is required: declare --flext-repository-ref",
             )
         package_name = self.package_name or self.name.replace("-", "_")
         class_stem = u.derive_class_stem(self.name)
@@ -176,7 +191,8 @@ class FlextInfraCodegenProjectNew(
         workspace = m.Infra.WorkspaceSpec(
             name=self.name,
             flext_source=m.Infra.CodegenBootstrapSource(
-                url=flext_url.value, ref=flext_ref
+                url=flext_url.value,
+                ref=flext_ref,
             ),
             beads=m.Infra.BeadsProjectSpec(
                 version=c.Infra.BEADS_CONFIG_VERSION,
@@ -228,7 +244,9 @@ class FlextInfraCodegenProjectNew(
             mode=c.Infra.CodegenConformMode.APPLY,
         )
         return FlextInfraCodegenConform.execute_request(
-            request, initial_workspace=workspace
+            request,
+            initial_workspace=workspace,
+            ports=self.conform_ports,
         )
 
 

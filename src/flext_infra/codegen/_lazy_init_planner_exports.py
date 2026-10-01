@@ -19,17 +19,22 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
         rope_workspace: p.Infra.RopeWorkspaceDsl
         lazy_init: m.Infra.LazyInitConfig
         _module_exports_cache: MutableMapping[
-            tuple[str, bool, bool, bool, bool, bool], t.LazyAliasMap
+            tuple[str, bool, bool, bool, bool, bool],
+            t.LazyAliasMap,
         ]
         _version_module_name: str
         _project_layout_cache: MutableMapping[Path, m.Infra.RopeProjectLayout]
 
         def _package_entry(
-            self, pkg_dir: Path
+            self,
+            pkg_dir: Path,
         ) -> m.Infra.RopePackageIndexEntry | None: ...
 
         def _add(
-            self, index: t.MutableLazyAliasMap, name: str, target: t.StrPair
+            self,
+            index: t.MutableLazyAliasMap,
+            name: str,
+            target: t.StrPair,
         ) -> None: ...
 
         @staticmethod
@@ -48,7 +53,8 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
         return layout
 
     def _package_exports(
-        self, context: m.Infra.LazyInitPackageContext
+        self,
+        context: m.Infra.LazyInitPackageContext,
     ) -> t.MutableLazyAliasMap:
         """Return the lazy export map for a package (excluding child packages)."""
         package_entry = self._package_entry(context.pkg_dir)
@@ -87,7 +93,7 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
             ]
         index: t.MutableLazyAliasMap = {}
         project_layout = self._project_layout_for(context.pkg_dir)
-        # flext-i6nq.10: Generated support modules are output, never public input.
+        # Generated support modules are output, never public input.
         # conftest.py is pytest-private: its hook variables (pytest_plugins) are
         # never public package ABI and must not enter the lazy export map.
         skip_names = {
@@ -98,7 +104,7 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
             *c.Infra.OBSOLETE_GENERATED_INIT_FILES,
         }
         for py_file, module_name in module_entries:
-            # Operator ruling (2026-09-16, universal, no exceptions): a light
+            # Universal, no exceptions: a light
             # package init exports ONLY its direct children. Subdirectory
             # symbols stay in the subpackage's own init — never re-exported
             # upward, in the root or anywhere else.
@@ -106,14 +112,14 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
                 continue
             child_dir = py_file.parent / py_file.stem
             child_entry = self._package_entry(child_dir)
-            # flext-pulj: test artifacts never enter an installable package ABI.
+            # Test artifacts never enter an installable package ABI.
             test_only_source_module = (
                 context.surface != c.Infra.DIR_TESTS
                 or context.current_pkg == c.Infra.DIR_TESTS
             ) and (
                 c.Infra.TEST_ONLY_SOURCE_MODULE_RE.fullmatch(py_file.name) is not None
             )
-            # flext-6int (claude-ulw): extract predicate to satisfy PLR0916
+            # Extract predicate to satisfy PLR0916
             # (>5 boolean expressions); retired/generated/test modules are
             # never semantic input for the lazy export map.
             is_generated_or_test = (
@@ -154,7 +160,7 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
                             allow_functions=True,
                             require_explicit_all=True,
                         ),
-                    )
+                    ),
                 )
             )
             if (
@@ -215,8 +221,8 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
                     "require_explicit_all": (
                         resolved_export_options.require_explicit_all
                         and not resolved_export_options.include_dunder
-                    )
-                }
+                    ),
+                },
             ),
         )
         exports = {

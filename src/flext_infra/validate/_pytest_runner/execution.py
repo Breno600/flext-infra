@@ -22,20 +22,27 @@ if TYPE_CHECKING:
 
 
 class FlextInfraPytestRunnerExecution(
-    FlextInfraPytestRunnerCommand, FlextInfraPytestRunnerReports
+    FlextInfraPytestRunnerCommand,
+    FlextInfraPytestRunnerReports,
 ):
     """Execute pytest once and reject incomplete evidence."""
 
     def _inspect_cache(
-        self, *, digest: str | None
+        self,
+        *,
+        digest: str | None,
     ) -> p.Result[m.Infra.TestmonCacheState]:
         """Run the SQLite integrity owner for the testmon database."""
         return FlextInfraTestmonDbInspector(
-            repository_root=self.root, db_path=self.testmon_db, pre_run_digest=digest
+            repository_root=self.root,
+            db_path=self.testmon_db,
+            pre_run_digest=digest,
         ).execute()
 
     def _selection_env(
-        self, *, execution_mode: c.Infra.PytestExecutionMode
+        self,
+        *,
+        execution_mode: c.Infra.PytestExecutionMode,
     ) -> MutableMapping[str, str]:
         """Return the child environment shared by every runner invocation.
 
@@ -49,8 +56,8 @@ class FlextInfraPytestRunnerExecution(
         coverage = execution_mode == c.Infra.PytestExecutionMode.COVERAGE
         overrides = {
             c.Infra.ORCHESTRATOR_ENV_PYTHONPATH: str(
-                self.root / c.Infra.DEFAULT_SRC_DIR
-            )
+                self.root / c.Infra.DEFAULT_SRC_DIR,
+            ),
         }
         if not coverage:
             overrides.update(dict.fromkeys(testmon_keys, str(self.testmon_db)))
@@ -87,7 +94,9 @@ class FlextInfraPytestRunnerExecution(
             deadline=self._process_deadline(),
         ).unwrap()
         self._record_process_outcome(
-            report_dir, "inventory" if complete else "selection", outcome
+            report_dir,
+            "inventory" if complete else "selection",
+            outcome,
         )
         log_text = selection_log.read_text(encoding="utf-8")
         # Exit code 5 is pytest's "no tests ran": testmon selected nothing.
@@ -126,7 +135,7 @@ class FlextInfraPytestRunnerExecution(
                 owns_no_tests=True,
             )
         manifest = m.Infra.PytestCollectionManifest.model_validate_json(
-            manifest_path.read_text(encoding="utf-8")
+            manifest_path.read_text(encoding="utf-8"),
         )
         node_ids = manifest.node_ids
         if outcome.raw_return_code == pytest.ExitCode.NO_TESTS_COLLECTED and node_ids:
@@ -136,11 +145,14 @@ class FlextInfraPytestRunnerExecution(
             msg = "complete pytest inventory must contain at least one test"
             raise RuntimeError(msg)
         u.Cli.atomic_write_text_file(
-            report_dir / f"{artifact}.txt", "\n".join(node_ids) + "\n"
+            report_dir / f"{artifact}.txt",
+            "\n".join(node_ids) + "\n",
         ).unwrap()
         if not complete and verify_inventory:
             inventory = self._resolve_selection(
-                report_dir, complete=True, execution_mode=execution_mode
+                report_dir,
+                complete=True,
+                execution_mode=execution_mode,
             )
             if not set(node_ids).issubset(inventory.node_ids):
                 msg = "testmon selected node IDs outside the complete collection inventory"
@@ -181,7 +193,7 @@ class FlextInfraPytestRunnerExecution(
         pytest_settings = config.Infra.tooling.tools.pytest
         return m.Cli.ProcessDeadline(
             expires_at_monotonic=self.started_at_monotonic
-            + pytest_settings.run_timeout_seconds,
+            + self.run_timeout_seconds(pytest_settings),
             termination_grace_seconds=pytest_settings.termination_grace_seconds,
         )
 
@@ -194,7 +206,8 @@ class FlextInfraPytestRunnerExecution(
     ) -> p.Cli.ProcessOutcome:
         """Execute one suite argv under the shared deadline and environment."""
         u.Cli.atomic_write_text_file(
-            report_dir / "command.txt", f"{shlex.join(command)}\n"
+            report_dir / "command.txt",
+            f"{shlex.join(command)}\n",
         ).unwrap()
         outcome = u.Cli.run_to_file(
             command,
@@ -209,19 +222,22 @@ class FlextInfraPytestRunnerExecution(
 
     @staticmethod
     def _record_process_outcome(
-        report_dir: Path, phase: str, outcome: p.Cli.ProcessOutcome
+        report_dir: Path,
+        phase: str,
+        outcome: p.Cli.ProcessOutcome,
     ) -> None:
         """Preserve the process owner's causal fields even when JUnit is absent."""
         recorded = m.Cli.ProcessOutcome.model_validate(outcome, from_attributes=True)
         receipt = report_dir / f"{phase}-outcome.json"
         u.Cli.atomic_write_text_file(
-            receipt, recorded.model_dump_json(indent=2) + "\n"
+            receipt,
+            recorded.model_dump_json(indent=2) + "\n",
         ).unwrap()
         if not u.Cli.process_succeeded(outcome):
             sys.stderr.write(
                 f"pytest {phase}: raw_return_code={outcome.raw_return_code} "
                 f"timed_out={outcome.timed_out} "
-                f"forwarded_signal={outcome.forwarded_signal}; receipt={receipt}\n"
+                f"forwarded_signal={outcome.forwarded_signal}; receipt={receipt}\n",
             )
         if outcome.raw_return_code == 0 and not u.Cli.process_succeeded(outcome):
             msg = f"pytest {phase} reported zero after an interrupted lifecycle: {receipt}"
@@ -245,11 +261,14 @@ class FlextInfraPytestRunnerExecution(
 
     @staticmethod
     def _record_cache_state(
-        report_dir: Path, name: str, state: m.Infra.TestmonCacheState
+        report_dir: Path,
+        name: str,
+        state: m.Infra.TestmonCacheState,
     ) -> None:
         """Persist one testmon integrity decision before it is acted upon."""
         u.Cli.atomic_write_text_file(
-            report_dir / f"{name}.json", state.model_dump_json(indent=2) + "\n"
+            report_dir / f"{name}.json",
+            state.model_dump_json(indent=2) + "\n",
         ).unwrap()
 
     def _finalize(
@@ -269,7 +288,7 @@ class FlextInfraPytestRunnerExecution(
             reported_count=len(diagnostics.reported_node_ids),
         ).unwrap()
         context = m.Infra.PytestRunContext.model_validate_json(
-            (report_dir / "run-context.json").read_text(encoding="utf-8")
+            (report_dir / "run-context.json").read_text(encoding="utf-8"),
         )
         # The zero-test receipt travels on the typed accounting the reports
         # owner parsed from the durable selection plan.
@@ -525,7 +544,9 @@ class FlextInfraPytestRunnerExecution(
         )
         command = self.build_coverage_command(report_dir)
         outcome = self._run_suite(
-            command, report_dir, execution_mode=c.Infra.PytestExecutionMode.COVERAGE
+            command,
+            report_dir,
+            execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
         )
         if self._completed_failure(outcome):
             return self._finalize(report_dir, raw_return_code=outcome.raw_return_code)

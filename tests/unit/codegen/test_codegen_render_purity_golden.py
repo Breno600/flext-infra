@@ -25,7 +25,8 @@ class TestsFlextInfraCodegenRenderPurityGolden:
         )
         u.Tests.write_project_beads_config(project, "render-purity")
         u.Tests.initialize_git_repo(
-            project, origin_url=u.Tests.repository_ref("render-purity").url
+            project,
+            origin_url=u.Tests.repository_ref("render-purity").url,
         )
         return project
 
@@ -36,14 +37,18 @@ class TestsFlextInfraCodegenRenderPurityGolden:
         (config_dir / "tooling.yaml").write_text(body, encoding="utf-8")
         u.Tests.git_bootstrap(project, ("add", "config/tooling.yaml"))
         u.Tests.git_bootstrap(
-            project, ("commit", "--no-verify", "-m", "commit managed artifacts")
+            project,
+            ("commit", "--no-verify", "-m", "commit managed artifacts"),
         )
 
     @pytest.mark.parametrize(
-        "environment", ["runner-clean", "host-runtime", "host-concurrent-wip"]
+        "environment",
+        ["runner-clean", "host-runtime", "host-concurrent-wip"],
     )
     def test_vscode_settings_are_identical_in_every_environment(
-        self, tmp_path: Path, environment: str
+        self,
+        tmp_path: Path,
+        environment: str,
     ) -> None:
         """Runtime state and worktree WIP never change VS Code projections."""
         project = self._project(tmp_path / environment)
@@ -80,35 +85,28 @@ class TestsFlextInfraCodegenRenderPurityGolden:
         for key, value in expected.items():
             tm.that(settings[key], eq=value, msg=f"{environment}: {key}")
 
-    def test_ruff_catalog_reads_committed_head_not_worktree_wip(
-        self, tmp_path: Path
+    def test_catalog_reads_committed_head_not_worktree_wip(
+        self,
+        tmp_path: Path,
     ) -> None:
-        """The committed catalog is the sole project Ruff render authority."""
+        """The committed catalog is the sole project managed-artifact authority."""
         project = self._project(tmp_path / "catalog")
         self._committed_overlay(
             project,
-            "ManagedArtifacts:\n"
-            "  Ruff:\n"
-            "    per_file_ignores:\n"
-            "      tests/**: [S101]\n",
+            "ManagedArtifacts:\n  Gitignore:\n    patterns: [committed-cache/]\n",
         )
         (project / c.CONFIG_DIR_NAME / "wip-tooling.yaml").write_text(
-            "ManagedArtifacts:\n"
-            "  Ruff:\n"
-            "    per_file_ignores:\n"
-            "      src/**: [SLF001]\n",
+            "ManagedArtifacts:\n  Gitignore:\n    patterns: [wip-cache/]\n",
             encoding="utf-8",
         )
 
         committed = tm.ok(u.Infra.load_committed_project_managed_artifacts(project))
         working = tm.ok(u.Infra.load_project_managed_artifacts(project))
 
+        tm.that(committed.artifacts.Gitignore.patterns, eq=("committed-cache/",))
         tm.that(
-            dict(committed.artifacts.Ruff.per_file_ignores), eq={"tests/**": ("S101",)}
-        )
-        tm.that(
-            dict(working.artifacts.Ruff.per_file_ignores),
-            eq={"src/**": ("SLF001",), "tests/**": ("S101",)},
+            working.artifacts.Gitignore.patterns,
+            eq=("committed-cache/", "wip-cache/"),
         )
 
     def test_fixture_scaffold_year_is_the_production_ssot(self) -> None:

@@ -9,6 +9,7 @@ from flext_cli import u
 from flext_infra import c, m, p, t
 
 from ._rope_core_pymodule import FlextInfraUtilitiesRopeCorePyModuleMixin
+from .namespace import FlextInfraUtilitiesCodegenNamespace
 from .rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 
@@ -27,7 +28,8 @@ class FlextInfraUtilitiesRopeClassMove:
         move_completed = False
         if created_target:
             u.Cli.atomic_write_text_file(
-                target_file, f"{c.Infra.FUTURE_ANNOTATIONS}\n"
+                target_file,
+                f"{c.Infra.FUTURE_ANNOTATIONS}\n",
             ).unwrap()
         try:
             request.rope_project.validate()
@@ -42,7 +44,10 @@ class FlextInfraUtilitiesRopeClassMove:
 
     @classmethod
     def plan_class_move(
-        cls, request: m.Infra.ClassMoveRequest, *, sources: t.MappingKV[Path, str]
+        cls,
+        request: m.Infra.ClassMoveRequest,
+        *,
+        sources: t.MappingKV[Path, str],
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
         """Preview one identity-preserving move inside a closed source inventory."""
         if request.apply:
@@ -62,7 +67,8 @@ class FlextInfraUtilitiesRopeClassMove:
                 msg = f"class move source differs from its planning snapshot: {path}"
                 raise ValueError(msg)
         changes = mover.get_changes(
-            cls._resource(request.rope_project, root, target_file), resources=resources
+            cls._resource(request.rope_project, root, target_file),
+            resources=resources,
         )
         edits: list[m.Infra.SemanticMigrationEdit] = []
         for change in changes.changes:
@@ -80,13 +86,14 @@ class FlextInfraUtilitiesRopeClassMove:
                         original_source=sources[path],
                         updated_source=change.new_contents,
                         changes=(f"Rope moved {request.class_name} to {target_file}",),
-                    )
+                    ),
                 )
         return tuple(edits)
 
     @classmethod
     def _class_mover(
-        cls, request: m.Infra.ClassMoveRequest
+        cls,
+        request: m.Infra.ClassMoveRequest,
     ) -> t.Pair[Path, p.Infra.RopeMoveGlobal]:
         """Resolve both execution and planning from the exact original declaration."""
         root = Path(request.rope_project.root.real_path).resolve()
@@ -113,28 +120,11 @@ class FlextInfraUtilitiesRopeClassMove:
             msg = f"class {request.class_name} was not found at line {request.line}"
             raise ValueError(msg)
         mover = FlextInfraUtilitiesRopeRuntime.create_move(
-            request.rope_project, source_resource, offset
+            request.rope_project,
+            source_resource,
+            offset,
         )
         return target_file, mover
-
-    @staticmethod
-    def class_family(class_info: m.Infra.ClassInfo) -> str:
-        """Derive the canonical FLEXT family from one Rope class fact."""
-        terminal_bases = {
-            base_name.rsplit(".", maxsplit=1)[-1] for base_name in class_info.bases
-        }
-        if terminal_bases & c.Infra.PLACEMENT_PYDANTIC_BASE_NAMES:
-            return "m"
-        if terminal_bases & c.Infra.PLACEMENT_PROTOCOL_BASE_NAMES:
-            return "p"
-        if terminal_bases & c.Infra.PLACEMENT_ENUM_BASE_NAMES:
-            return "c"
-        if any(
-            class_info.name.endswith(suffix)
-            for suffix in c.Infra.PLACEMENT_UTILITY_NAME_SUFFIXES
-        ):
-            return "u"
-        return ""
 
     @staticmethod
     def class_module_stem(class_name: str) -> str:
@@ -143,12 +133,19 @@ class FlextInfraUtilitiesRopeClassMove:
 
     @classmethod
     def class_target_file(
-        cls, *, package_dir: Path, source_file: Path, class_name: str, family: str
+        cls,
+        *,
+        package_dir: Path,
+        source_file: Path,
+        class_name: str,
+        family: str,
     ) -> Path:
         """Derive a canonical destination without a project-owned registry."""
         module_stem = cls.class_module_stem(class_name)
         if family:
-            family_dir = c.Infra.FAMILY_DIRECTORIES[family]
+            family_dir = FlextInfraUtilitiesCodegenNamespace.facade_families()[
+                family
+            ].directory
             return package_dir / family_dir / f"{module_stem}.py"
         return source_file.parent / f"_{source_file.stem}_{module_stem}.py"
 
@@ -162,7 +159,9 @@ class FlextInfraUtilitiesRopeClassMove:
 
     @staticmethod
     def _resource(
-        rope_project: t.Infra.RopeProject, root: Path, file_path: Path
+        rope_project: t.Infra.RopeProject,
+        root: Path,
+        file_path: Path,
     ) -> t.Infra.RopeResource:
         relative_path = file_path.relative_to(root).as_posix()
         return rope_project.get_resource(relative_path)

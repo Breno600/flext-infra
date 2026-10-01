@@ -1,4 +1,0 @@
-from tests._utilities.domain import TestsFlextTestUtilitiesDomain
-
-class TestsFlextTestTypesDomain:
-    pass

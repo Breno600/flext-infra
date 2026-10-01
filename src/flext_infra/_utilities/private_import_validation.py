@@ -29,35 +29,6 @@ class FlextInfraUtilitiesPrivateImportValidation:
         private removals, its superseded public roots, and relocated exports.
         """
         tree = ast.parse(source, filename=str(file_path))
-        for absolute_module, relative_module in plan.relative_imports.items():
-            level = len(relative_module) - len(relative_module.lstrip("."))
-            module = relative_module[level:] or None
-            if any(
-                isinstance(node, ast.ImportFrom)
-                and node.level == 0
-                and node.module == absolute_module
-                for node in ast.walk(tree)
-            ):
-                msg = (
-                    f"absolute same-owner import residue from {absolute_module} "
-                    f"in {file_path}"
-                )
-                raise ValueError(msg)
-            imported_symbols = {
-                imported.name
-                for node in ast.walk(tree)
-                if isinstance(node, ast.ImportFrom)
-                and node.level == level
-                and node.module == module
-                for imported in node.names
-            }
-            missing = plan.relative_symbols[absolute_module] - imported_symbols
-            if missing:
-                msg = (
-                    f"relative same-owner import {relative_module} missing "
-                    f"{sorted(missing)} in {file_path}"
-                )
-                raise ValueError(msg)
         for module, symbols in removals.items():
             if any(
                 isinstance(node, ast.ImportFrom)
@@ -80,7 +51,8 @@ class FlextInfraUtilitiesPrivateImportValidation:
                 msg = f"public facade import {package}.{alias} missing in {file_path}"
                 raise ValueError(msg)
         residue = FlextInfraUtilitiesQualifiedNames.qualified_name_residue(
-            source, plan.replacements
+            source,
+            plan.replacements,
         )
         if residue:
             msg = f"private binding residue {sorted(residue)} in {file_path}"

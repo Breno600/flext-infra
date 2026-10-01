@@ -56,8 +56,7 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
         return sorted(
             path
             for path in search_root.rglob("*.md")
-            if ".bak" not in path.name
-            and not any(
+            if not any(
                 part in c.Infra.DOC_EXCLUDED_DIRS or part.startswith(".")
                 for part in path.relative_to(search_root).parts
             )
@@ -86,7 +85,8 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
             if not (
                 path.is_relative_to(docs_root)
                 and FlextInfraUtilitiesDocsScope.excluded_doc_path(
-                    scope_root, path.relative_to(docs_root)
+                    scope_root,
+                    path.relative_to(docs_root),
                 )
             )
         ]
@@ -97,7 +97,9 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             u.write_file(
-                path, "\n".join(lines).rstrip() + "\n", encoding=c.Cli.ENCODING_DEFAULT
+                path,
+                "\n".join(lines).rstrip() + "\n",
+                encoding=c.Cli.ENCODING_DEFAULT,
             )
             return r[bool].ok(True)
         except OSError as exc:
@@ -125,7 +127,8 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
             "changes": [list(row) for row in table.rows],
         })
         _ = u.Cli.json_write(
-            scope.report_dir / f"{phase}-summary.json", summary_payload
+            scope.report_dir / f"{phase}-summary.json",
+            summary_payload,
         )
         header = "| " + " | ".join(table.columns) + " |"
         divider = "|---|" + "---:|" * (len(table.columns) - 1)
@@ -188,7 +191,9 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
     ) -> p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]:
         """Build scopes and run handler on each, collecting reports."""
         scopes_result = FlextInfraUtilitiesDocs.build_scopes(
-            repository_root=repository_root, projects=projects, output_dir=output_dir
+            repository_root=repository_root,
+            projects=projects,
+            output_dir=output_dir,
         )
         if scopes_result.failure:
             return r[t.SequenceOf[m.Infra.DocsPhaseReport]].from_failure(scopes_result)
