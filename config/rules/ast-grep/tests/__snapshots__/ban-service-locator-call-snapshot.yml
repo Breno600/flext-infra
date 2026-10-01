@@ -1,0 +1,40 @@
+id: ban-service-locator-call
+snapshots:
+  runner = get_service("runner"):
+    labels:
+    - source: get_service("runner")
+      style: primary
+      start: 9
+      end: 30
+    - source: get_service
+      style: secondary
+      start: 9
+      end: 20
+  runner = registry.resolve_service(Runner):
+    labels:
+    - source: registry.resolve_service(Runner)
+      style: primary
+      start: 9
+      end: 41
+    - source: resolve_service
+      style: secondary
+      start: 18
+      end: 33
+    - source: registry.resolve_service
+      style: secondary
+      start: 9
+      end: 33
+  runner = self.container():
+    labels:
+    - source: self.container()
+      style: primary
+      start: 9
+      end: 25
+    - source: container
+      style: secondary
+      start: 14
+      end: 23
+    - source: self.container
+      style: secondary
+      start: 9
+      end: 23

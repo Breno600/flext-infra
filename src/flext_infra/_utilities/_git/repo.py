@@ -1,5 +1,8 @@
 """GitPython repository helpers for the private git facet.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Only ``FlextInfraUtilitiesGitRepo`` lives here. Semantic operations use
 GitPython's object-oriented API (``Repo``, ``IndexFile``, ``Remote``,
 ``BaseIndexEntry``) or the ``repo.git.<cmd>(args)`` proxy directly;
@@ -35,7 +38,12 @@ class FlextInfraUtilitiesGitRepo:
     def _registered_worktree_entries(
         porcelain: str,
     ) -> t.VariadicTuple[m.Infra.GitWorktreeEntry]:
-        """Parse one ``worktree list --porcelain`` document into typed entries."""
+        """Parse one ``worktree list --porcelain`` document into typed entries.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.GitWorktreeEntry]``.
+
+        """
         entries: list[m.Infra.GitWorktreeEntry] = []
         path: Path | None = None
         head: str | None = None
@@ -67,7 +75,7 @@ class FlextInfraUtilitiesGitRepo:
                         detached=detached,
                         bare=bare,
                         locked=locked,
-                    )
+                    ),
                 )
                 path = None
                 head = None
@@ -79,7 +87,12 @@ class FlextInfraUtilitiesGitRepo:
 
     @classmethod
     def refresh_binary(cls) -> p.Result[bool]:
-        """Point GitPython at the absolute path of the canonical git binary."""
+        """Point GitPython at the absolute path of the canonical git binary.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         # Git.refresh resolves relative names against cwd; always pass an absolute path.
         resolved = shutil.which(c.Infra.GIT)
         if resolved is None:
@@ -100,6 +113,10 @@ class FlextInfraUtilitiesGitRepo:
         open with the same contract, and one of them documents it as "the same
         nested-path contract as git_open_repo" -- but this opener had lost it,
         so every nested path failed with "cannot open git repository".
+
+        Returns:
+            The resulting ``p.Result[Repo]``.
+
         """
         resolved = repo_root.expanduser().resolve()
         try:
@@ -126,6 +143,13 @@ class FlextInfraUtilitiesGitRepo:
 
         This is the canonical helper for semantic methods that prefer
         try/except → ``r[...].fail()`` over ``Result`` chaining.
+
+        Returns:
+            The resulting ``Repo``.
+
+        Raises:
+            OSError: If ``opened.failure``.
+
         """
         opened = cls._open_repo(repo_root)
         if opened.failure:
@@ -134,20 +158,32 @@ class FlextInfraUtilitiesGitRepo:
 
     @classmethod
     def _git_primary_worktree_root_path(cls, repository_path: Path) -> p.Result[Path]:
-        """Resolve the primary worktree from Git's shared storage topology."""
+        """Resolve the primary worktree from Git's shared storage topology.
+
+        Returns:
+            The resulting ``p.Result[Path]``.
+
+        """
         try:
             repo = cls._repo(repository_path)
             common_dir = Path(
-                repo.git.rev_parse("--path-format=absolute", "--git-common-dir").strip()
+                repo.git.rev_parse(
+                    "--path-format=absolute",
+                    "--git-common-dir",
+                ).strip(),
             ).resolve()
             configured_output = repo.git.config(
-                "--path", "--get", "core.worktree", with_exceptions=False
+                "--path",
+                "--get",
+                "core.worktree",
+                with_exceptions=False,
             ).strip()
         except GitCommandError as exc:
             return r[Path].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[Path].fail(
-                f"failed to resolve primary worktree: {exc}", exception=exc
+                f"failed to resolve primary worktree: {exc}",
+                exception=exc,
             )
 
         if configured_output:
@@ -160,60 +196,55 @@ class FlextInfraUtilitiesGitRepo:
         else:
             try:
                 git_dir = Path(
-                    repo.git.rev_parse("--path-format=absolute", "--git-dir").strip()
+                    repo.git.rev_parse("--path-format=absolute", "--git-dir").strip(),
                 ).resolve()
-            except GitCommandError as exc:
-                return r[Path].fail(str(exc), exception=exc)
-            if git_dir == common_dir:
-                primary_root = Path(
-                    repo.git.rev_parse("--show-toplevel").strip()
+                caller_root = Path(
+                    repo.git.rev_parse("--show-toplevel").strip(),
                 ).resolve()
-            else:
-                registered = tuple(
-                    entry.path
-                    for entry in cls._registered_worktree_entries(
-                        repo.git.worktree("list", "--porcelain")
+                entries = (
+                    ()
+                    if git_dir == common_dir
+                    else cls._registered_worktree_entries(
+                        repo.git.worktree("list", "--porcelain"),
                     )
                 )
-                if not registered:
-                    return r[Path].fail(
-                        f"Git worktree registry is empty for {repository_path}"
-                    )
-                primary_root = registered[0]
-                primary_repo = cls._open_repo(primary_root)
-                primary_top: Path | None = None
-                if primary_repo.success:
-                    try:
-                        primary_top = Path(
-                            primary_repo.value.git.rev_parse("--show-toplevel").strip()
-                        ).resolve()
-                    except GitCommandError:
-                        primary_top = None
-                if primary_top != primary_root:
-                    caller_root = Path(
-                        repo.git.rev_parse("--show-toplevel").strip()
-                    ).resolve()
-                    if caller_root not in registered:
-                        return r[Path].fail(
-                            "current worktree is absent from Git's canonical registry: "
-                            f"{caller_root}"
-                        )
-                    primary_root = caller_root
+            except GitCommandError as exc:
+                return r[Path].fail(str(exc), exception=exc)
+            # Git lists the main worktree first. Bare shared storage has no main
+            # checkout, so each registered worktree is its own primary.
+            if git_dir == common_dir:
+                primary_root = caller_root
+            elif not entries:
+                return r[Path].fail(
+                    f"Git worktree registry is empty for {repository_path}",
+                )
+            elif not entries[0].bare:
+                primary_root = entries[0].path
+            elif caller_root in {entry.path for entry in entries}:
+                primary_root = caller_root
+            else:
+                return r[Path].fail(
+                    "current worktree is absent from Git's canonical registry: "
+                    f"{caller_root}",
+                )
 
         primary_repo = cls._open_repo(primary_root)
         if primary_repo.failure:
             return r[Path].fail(
-                f"invalid primary worktree: {primary_root}: {primary_repo.error}"
+                f"invalid primary worktree: {primary_root}: {primary_repo.error}",
             )
         try:
             resolved_top = Path(
-                primary_repo.value.git.rev_parse("--show-toplevel").strip()
+                primary_repo.value.git.rev_parse("--show-toplevel").strip(),
             ).resolve()
         except GitCommandError as exc:
-            return r[Path].fail(f"invalid primary worktree: {primary_root}: {exc}")
+            return r[Path].fail(
+                f"invalid primary worktree: {primary_root}: {exc}",
+                exception=exc,
+            )
         if resolved_top != primary_root:
             return r[Path].fail(
-                f"Git primary worktree mismatch: {primary_root} != {resolved_top}"
+                f"Git primary worktree mismatch: {primary_root} != {resolved_top}",
             )
         return r[Path].ok(primary_root)
 

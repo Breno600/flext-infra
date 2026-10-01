@@ -1,4 +1,8 @@
-"""Gitignore rendering utilities for ``u.Infra``."""
+"""Gitignore rendering utilities for ``u.Infra``.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -13,9 +17,37 @@ class FlextInfraUtilitiesGitignore:
 
     @staticmethod
     def codegen_templates_root(codegen: m.Infra.CodegenConfigSpec) -> Path:
-        """Return the resolved template root of the installed flext-infra package."""
+        """Return the resolved template root of the installed flext-infra package.
+
+        Returns:
+            The resolved template root of the installed flext-infra package.
+
+        """
         package_root = Path(__file__).resolve().parent.parent
         return (package_root / "templates" / codegen.templates.root).resolve()
+
+    @staticmethod
+    def codegen_template_sources(codegen: m.Infra.CodegenConfigSpec) -> frozenset[Path]:
+        """Resolve only manifest-declared template inputs, never output suffixes.
+
+        Returns:
+            The resulting ``frozenset[Path]``.
+
+        Raises:
+            ValueError: If declared template source escapes its owner root.
+
+        """
+        root = FlextInfraUtilitiesGitignore.codegen_templates_root(codegen)
+        sources: set[Path] = set()
+        for entry in codegen.templates.entries:
+            if entry.source is None:
+                continue
+            path = (root / entry.source).resolve()
+            if not path.is_relative_to(root):
+                msg = f"declared template source escapes its owner root: {entry.source}"
+                raise ValueError(msg)
+            sources.add(path)
+        return frozenset(sources)
 
     @staticmethod
     def render_project_gitignore(
@@ -30,6 +62,10 @@ class FlextInfraUtilitiesGitignore:
 
         Pure function: takes codegen spec + profile + name + workspace + project_dir,
         returns rendered gitignore string via u.Cli.template_render.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
         """
         from flext_infra import u
 
@@ -43,11 +79,11 @@ class FlextInfraUtilitiesGitignore:
         )
         if entry is None:
             return r[str].fail(
-                "gitignore template is missing from codegen configuration"
+                "gitignore template is missing from codegen configuration",
             )
         if entry.source is None:
             return r[str].fail(
-                "gitignore codegen entry must declare a render template source"
+                "gitignore codegen entry must declare a render template source",
             )
         templates_root = FlextInfraUtilitiesGitignore.codegen_templates_root(codegen)
         project_patterns: t.StrSequence = ()
@@ -63,7 +99,7 @@ class FlextInfraUtilitiesGitignore:
                 project_name=project_name,
                 workspace=workspace,
                 project_patterns=project_patterns,
-            )
+            ),
         )
         return u.Cli.template_render(templates_root / entry.source, context)
 
@@ -84,6 +120,10 @@ class FlextInfraUtilitiesGitignore:
         renderer of ``base/gitignore.j2`` (conform planning, the layout engine,
         ``codegen new``) consumes this projection, so the layout gate can never
         demand a pattern that ``make gen`` does not materialize.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.ScaffoldGitignoreSectionSpec]``.
+
         """
         sections = [
             section
@@ -116,7 +156,7 @@ class FlextInfraUtilitiesGitignore:
                 m.Infra.ScaffoldGitignoreSectionSpec(
                     name="WHITELIST: governed workspace subprojects (derived)",
                     patterns=tuple(member_patterns),
-                )
+                ),
             )
         if project_name is not None:
             override = codegen.layout.project_overrides.get(project_name)
@@ -125,7 +165,7 @@ class FlextInfraUtilitiesGitignore:
                     m.Infra.ScaffoldGitignoreSectionSpec(
                         name=c.Infra.GITIGNORE_LAYOUT_SECTION_NAME,
                         patterns=override.gitignore_additions,
-                    )
+                    ),
                 )
         if project_patterns:
             # The repository owns the ignore patterns the fleet scaffold cannot
@@ -135,7 +175,7 @@ class FlextInfraUtilitiesGitignore:
                 m.Infra.ScaffoldGitignoreSectionSpec(
                     name=c.Infra.GITIGNORE_PROJECT_SECTION_NAME,
                     patterns=tuple(project_patterns),
-                )
+                ),
             )
         return tuple(sections)
 

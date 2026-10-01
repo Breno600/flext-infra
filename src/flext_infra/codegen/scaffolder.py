@@ -12,10 +12,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 from flext_core import r
-
-from .. import c, m, u
-from ._execution import FlextInfraCodegenExecutionBase
-from ._mise_artifacts_publication import publish_file_plan
+from flext_infra import c, m, u
+from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
+from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
 
 if TYPE_CHECKING:
     from .. import p, t
@@ -26,7 +25,12 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
 
     @override
     def execute(self) -> p.Result[str]:
-        """Execute scaffolding directly from the validated CLI model."""
+        """Execute scaffolding directly from the validated CLI model.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         dry_run = self.dry_run or not self.apply_changes
         results = self.run(dry_run=dry_run)
         total_created = sum(len(result.files_created) for result in results)
@@ -41,7 +45,7 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
         )
         lines.append(
             f"Scaffold: {total_created} created, {total_skipped} skipped"
-            f" across {len(results)} projects"
+            f" across {len(results)} projects",
         )
         return r[str].ok("\n".join(lines))
 
@@ -74,7 +78,10 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
         ]
 
     def _scaffold_project(
-        self, project: p.Infra.ProjectInfo, *, dry_run: bool = False
+        self,
+        project: p.Infra.ProjectInfo,
+        *,
+        dry_run: bool = False,
     ) -> m.Infra.ScaffoldResult:
         """Scaffold missing base modules for a single project.
 
@@ -89,12 +96,16 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
         project_path = project.path
         if not (project_path / c.Infra.DEFAULT_SRC_DIR).is_dir():
             return m.Infra.ScaffoldResult(
-                project=project_path.name, files_created=[], files_skipped=[]
+                project=project_path.name,
+                files_created=[],
+                files_skipped=[],
             )
         project_layout = u.Infra.layout(project_path)
         if project_layout is None or not project_layout.class_stem:
             return m.Infra.ScaffoldResult(
-                project=project_path.name, files_created=[], files_skipped=[]
+                project=project_path.name,
+                files_created=[],
+                files_skipped=[],
             )
         files_created: t.MutableSequenceOf[str] = []
         files_skipped: t.MutableSequenceOf[str] = []
@@ -111,7 +122,7 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
                     dry_run=dry_run,
                     files_created=[],
                     files_skipped=[],
-                )
+                ),
             )
             files_created.extend(created)
             files_skipped.extend(skipped)
@@ -129,7 +140,7 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
                     dry_run=dry_run,
                     files_created=[],
                     files_skipped=[],
-                )
+                ),
             )
             files_created.extend(created)
             files_skipped.extend(skipped)
@@ -147,7 +158,7 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
                     dry_run=dry_run,
                     files_created=[],
                     files_skipped=[],
-                )
+                ),
             )
             files_created.extend(created)
             files_skipped.extend(skipped)
@@ -165,7 +176,7 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
                     dry_run=dry_run,
                     files_created=[],
                     files_skipped=[],
-                )
+                ),
             )
             files_created.extend(created)
             files_skipped.extend(skipped)
@@ -176,9 +187,19 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
         )
 
     def _scaffold_dir(
-        self, request: m.Infra.ScaffoldDirRequest
+        self,
+        request: m.Infra.ScaffoldDirRequest,
     ) -> t.Pair[t.MutableSequenceOf[str], t.MutableSequenceOf[str]]:
-        """Generate missing modules in a directory and return file lists."""
+        """Generate missing modules in a directory and return file lists.
+
+        Returns:
+            The resulting ``t.Pair[t.MutableSequenceOf[str],
+                t.MutableSequenceOf[str]]``.
+
+        Raises:
+            OSError: If writing scaffold.
+
+        """
         files_created: t.MutableSequenceOf[str] = []
         files_skipped: t.MutableSequenceOf[str] = []
         for filename, suffix, base_class, doc_suffix in request.modules:
@@ -189,7 +210,7 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
             class_name = f"{request.test_prefix}{request.prefix}{suffix}"
             docstring = f"{doc_suffix} for {request.prefix.lower()}."
             if request.test_module:
-                alias = c.Infra.NAMESPACE_LAYER_BY_FILE[filename]
+                alias = u.Infra.facade_family_declared_by(filename).letter
                 content = u.Infra.generate_test_module_skeleton(
                     context=m.Infra.TestModuleSkeletonRenderContext(
                         class_name=class_name,
@@ -198,10 +219,10 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
                         alias=alias,
                         namespace=f"{request.test_prefix}{request.prefix}",
                         project_namespace=request.prefix.removeprefix(
-                            c.Infra.PKG_PREFIX_UNDERSCORE.rstrip("_").capitalize()
+                            c.Infra.PKG_PREFIX_UNDERSCORE.rstrip("_").capitalize(),
                         ),
                         docstring=docstring,
-                    )
+                    ),
                 )
             else:
                 content = u.Infra.generate_module_skeleton(
@@ -225,7 +246,10 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
                 desired_mode=0o644,
                 owner="codegen",
             )
-            written = publish_file_plan(planned, phase="scaffold")
+            written = FlextInfraMisePublication.publish_file_plan(
+                planned,
+                phase="scaffold",
+            )
             if written.failure:
                 message = f"writing scaffold {filepath}: {written.error}"
                 raise OSError(message)

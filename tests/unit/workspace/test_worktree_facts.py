@@ -1,4 +1,8 @@
-"""Canonical worktree facts primitive parity fixtures."""
+"""Canonical worktree facts primitive parity fixtures.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -17,14 +21,25 @@ class TestsFlextInfraWorktreeFacts(u.Tests.WorktreeFixture):
 
     @staticmethod
     def _policy() -> m.Infra.WorktreeFactsPolicy:
-        """Return the typed layout policy the fixtures exercise."""
+        """Return the typed layout policy the fixtures exercise.
+
+        Returns:
+            The typed layout policy the fixtures exercise.
+
+        """
         return m.Infra.WorktreeFactsPolicy(
-            tool_internal=(".claude/worktrees",), deps_dirs=(".venv", "node_modules")
+            tool_internal=(".claude/worktrees",),
+            deps_dirs=(".venv", "node_modules"),
         )
 
     @classmethod
     def _query(cls, *repo_roots: Path, window: int = 90) -> m.Infra.WorktreeFactsQuery:
-        """Build one facts query over the given repository roots."""
+        """Build one facts query over the given repository roots.
+
+        Returns:
+            The resulting ``m.Infra.WorktreeFactsQuery``.
+
+        """
         return m.Infra.WorktreeFactsQuery(
             repo_roots=repo_roots,
             policy=cls._policy(),
@@ -144,7 +159,8 @@ class TestsFlextInfraWorktreeFacts(u.Tests.WorktreeFixture):
         tm.that(actions, eq=())
 
     def test_registered_worktrees_are_deterministically_ordered(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Registry entries resolve in stable, sorted order."""
         repo = tmp_path / "repo"

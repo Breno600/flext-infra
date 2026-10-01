@@ -1,8 +1,8 @@
 # AGENTS.md — flext-infra
 
 > **Parent workspace law** lives in [`../AGENTS.md`](../AGENTS.md) — read it first.
-> Universal engineering core: `~/.agents/UNIVERSAL_CORE.md`. Composition: global
-> skills + parent/root `AGENTS.md` + this scope delta. Do not re-embed universal law.
+> Composition: global skills + parent/root `AGENTS.md` + this scope delta. Do not
+> re-embed universal law.
 >
 > **Standalone / independent mode:** when `../AGENTS.md` does not resolve, pin the
 > parent raw `AGENTS.md` URL to the same branch/release as this package (never
@@ -46,7 +46,7 @@ src/flext_infra/
 
 ## Promoted command framework
 
-Repository-owned `scripts/<verb>/<WHAT>.{py,sh}` commands declare a `/// cosmos-command`
+Repository-owned `scripts/<verb>/<WHAT>.{py,sh}` commands declare a `/// flext-command`
 header and are reached only through `make <verb> WHAT=<action>` when the repository
 declares `script_dispatch`.
 

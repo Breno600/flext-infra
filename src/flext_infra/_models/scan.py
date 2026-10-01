@@ -9,12 +9,16 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
+from types import MappingProxyType
 from typing import Annotated, ClassVar, Literal
 
 from flext_cli import m
 
-from .. import c, t
-from . import FlextInfraModelsMixins as mm, FlextInfraModelsNamespaceEnforcer
+from flext_infra import c, t
+from flext_infra._models import (
+    FlextInfraModelsMixins as mm,
+    FlextInfraModelsNamespaceEnforcer,
+)
 
 
 class FlextInfraModelsScan:
@@ -24,10 +28,10 @@ class FlextInfraModelsScan:
         """Bundles common parameters passed to every detect_file classmethod."""
 
         file_path: Path = m.Field(
-            description="Filesystem path of the file being scanned."
+            description="Filesystem path of the file being scanned.",
         )
         rope_project: t.Infra.RopeProject = m.Field(
-            description="Initialized Rope project for semantic metadata."
+            description="Initialized Rope project for semantic metadata.",
         )
         parse_failures: Annotated[
             (
@@ -38,11 +42,12 @@ class FlextInfraModelsScan:
             ),
             m.SkipValidation,
             m.Field(
-                description="Shared parse-failure collector across detector passes."
+                description="Shared parse-failure collector across detector passes.",
             ),
         ] = None
         project_name: Annotated[
-            str, m.Field(description="Optional project name for the scanned file.")
+            str,
+            m.Field(description="Optional project name for the scanned file."),
         ] = ""
         project_root: Annotated[
             Path | None,
@@ -53,11 +58,13 @@ class FlextInfraModelsScan:
         """A single violation found during file scanning."""
 
         message: Annotated[
-            str, m.Field(description="Human-readable violation description")
+            str,
+            m.Field(description="Human-readable violation description"),
         ]
         severity: Annotated[str, m.Field(description="Violation severity level")]
         rule_id: Annotated[
-            str | None, m.Field(description="Optional rule identifier")
+            str | None,
+            m.Field(description="Optional rule identifier"),
         ] = None
 
     class ScanResult(m.ArbitraryTypesModel):
@@ -69,7 +76,8 @@ class FlextInfraModelsScan:
             m.Field(default_factory=list, description="Violations found in the file"),
         ]
         detector_name: Annotated[
-            str, m.Field(description="Name of the detector that produced this result")
+            str,
+            m.Field(description="Name of the detector that produced this result"),
         ]
 
     class ModScanFinding(m.ArbitraryTypesModel):
@@ -82,10 +90,12 @@ class FlextInfraModelsScan:
             m.Field(description="Rule document file producing the finding"),
         ]
         rule_id: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact ast-grep rule identifier")
+            t.NonEmptyStr,
+            m.Field(description="Exact ast-grep rule identifier"),
         ]
         repository: Annotated[
-            t.NonEmptyStr, m.Field(description="Workspace repository owning the file")
+            t.NonEmptyStr,
+            m.Field(description="Workspace repository owning the file"),
         ]
         file: Annotated[Path, m.Field(description="Workspace-relative finding path")]
         source_owner: Annotated[
@@ -97,7 +107,8 @@ class FlextInfraModelsScan:
             m.Field(description="Exact source snapshot authenticated before scanning"),
         ] = None
         range: Annotated[
-            t.JsonMapping, m.Field(description="Exact ast-grep source range payload")
+            t.JsonMapping,
+            m.Field(description="Exact ast-grep source range payload"),
         ]
         text: Annotated[str, m.Field(description="Exact matched source text")]
         replacement: Annotated[
@@ -105,7 +116,8 @@ class FlextInfraModelsScan:
             m.Field(description="Exact replacement when the rule provides one"),
         ] = None
         actionable: Annotated[
-            bool, m.Field(description="Whether applying the rule changes source bytes")
+            bool,
+            m.Field(description="Whether applying the rule changes source bytes"),
         ]
         classification: Annotated[
             c.Infra.ModScanFindingClass,
@@ -114,7 +126,7 @@ class FlextInfraModelsScan:
         payload: Annotated[
             t.JsonMapping,
             m.Field(
-                description="Complete validated ast-grep finding without field loss"
+                description="Complete validated ast-grep finding without field loss",
             ),
         ]
 
@@ -122,10 +134,12 @@ class FlextInfraModelsScan:
         """UTF-8 byte coordinates supplied by the ast-grep JSON contract."""
 
         start: Annotated[
-            int, m.Field(ge=0, strict=True, description="Inclusive start byte")
+            int,
+            m.Field(ge=0, strict=True, description="Inclusive start byte"),
         ]
         end: Annotated[
-            int, m.Field(ge=0, strict=True, description="Exclusive end byte")
+            int,
+            m.Field(ge=0, strict=True, description="Exclusive end byte"),
         ]
 
     class ModScanReport(m.ArbitraryTypesModel):
@@ -134,10 +148,12 @@ class FlextInfraModelsScan:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         findings: Annotated[
-            t.NonNegativeInt, m.Field(description="Complete finding count")
+            t.NonNegativeInt,
+            m.Field(description="Complete finding count"),
         ]
         actionable: Annotated[
-            t.NonNegativeInt, m.Field(description="Byte-changing rewrite count")
+            t.NonNegativeInt,
+            m.Field(description="Byte-changing rewrite count"),
         ]
         detection_only: Annotated[
             t.NonNegativeInt,
@@ -148,7 +164,8 @@ class FlextInfraModelsScan:
             m.Field(description="Findings whose declared fix is byte-identical"),
         ]
         files: Annotated[
-            frozenset[Path], m.Field(description="Files containing findings")
+            frozenset[Path],
+            m.Field(description="Files containing findings"),
         ]
         entries: Annotated[
             t.VariadicTuple[FlextInfraModelsScan.ModScanFinding],
@@ -161,31 +178,42 @@ class FlextInfraModelsScan:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         rule_id: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact unique text-rule identifier")
+            t.NonEmptyStr,
+            m.Field(description="Exact unique text-rule identifier"),
         ]
         description: Annotated[
-            str, m.Field(description="Human-readable rewrite intent")
+            str,
+            m.Field(description="Human-readable rewrite intent"),
         ] = ""
         include: Annotated[
-            t.StrSequence, m.Field(description="fnmatch globs a target path must match")
+            t.StrSequence,
+            m.Field(description="fnmatch globs a target path must match"),
         ] = ()
         exclude: Annotated[
             t.StrSequence,
             m.Field(description="fnmatch globs a target path must not match"),
         ] = ()
         find: Annotated[
-            t.NonEmptyStr, m.Field(description="Regex source pattern to locate")
+            t.NonEmptyStr,
+            m.Field(description="Regex source pattern to locate"),
         ]
         replace: Annotated[
-            str, m.Field(description="Expansion template replacing each match")
+            str,
+            m.Field(description="Expansion template replacing each match"),
         ] = ""
         flags: Annotated[
-            t.StrSequence, m.Field(description="Regex flag names from the SSOT map")
+            t.StrSequence,
+            m.Field(description="Regex flag names from the SSOT map"),
         ] = ()
+        capture_equals: Annotated[
+            t.MappingKV[str, str],
+            m.Field(description="Named regex captures and their required exact values"),
+        ] = MappingProxyType({})
         expected: Annotated[
             int | None,
             m.Field(
-                ge=0, description="Exact finding count the rule must produce when set"
+                ge=0,
+                description="Exact finding count the rule must produce when set",
             ),
         ] = None
 
@@ -195,13 +223,15 @@ class FlextInfraModelsScan:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         rule_id: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact text-rule identifier")
+            t.NonEmptyStr,
+            m.Field(description="Exact text-rule identifier"),
         ]
         file: Annotated[Path, m.Field(description="Workspace-relative target path")]
         line: Annotated[t.NonNegativeInt, m.Field(description="One-based match line")]
         text: Annotated[str, m.Field(description="Exact matched source text")]
         replacement: Annotated[
-            str, m.Field(description="Expanded replacement for the match")
+            str,
+            m.Field(description="Expanded replacement for the match"),
         ]
 
     class ModTextReport(m.ArbitraryTypesModel):
@@ -210,14 +240,16 @@ class FlextInfraModelsScan:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         findings: Annotated[
-            t.NonNegativeInt, m.Field(description="Complete finding count")
+            t.NonNegativeInt,
+            m.Field(description="Complete finding count"),
         ]
         actionable: Annotated[
             t.NonNegativeInt,
             m.Field(description="Matches whose replacement differs from the text"),
         ]
         files: Annotated[
-            frozenset[Path], m.Field(description="Files containing findings")
+            frozenset[Path],
+            m.Field(description="Files containing findings"),
         ]
         entries: Annotated[
             t.VariadicTuple[FlextInfraModelsScan.ModTextFinding],
@@ -230,10 +262,12 @@ class FlextInfraModelsScan:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         schema_version: Annotated[
-            Literal[1], m.Field(description="Exact structured evidence schema")
+            Literal[1],
+            m.Field(description="Exact structured evidence schema"),
         ]
         command: Annotated[
-            c.Infra.ModScanCommand, m.Field(description="Public mod scan mode")
+            c.Infra.ModScanCommand,
+            m.Field(description="Public mod scan mode"),
         ]
         root: Annotated[Path, m.Field(description="Absolute scanned workspace root")]
         scope: Annotated[
@@ -241,10 +275,12 @@ class FlextInfraModelsScan:
             m.Field(min_length=1, description="Exact ast-grep target scope"),
         ]
         findings: Annotated[
-            t.NonNegativeInt, m.Field(description="Complete finding count")
+            t.NonNegativeInt,
+            m.Field(description="Complete finding count"),
         ]
         actionable: Annotated[
-            t.NonNegativeInt, m.Field(description="Byte-changing rewrite count")
+            t.NonNegativeInt,
+            m.Field(description="Byte-changing rewrite count"),
         ]
         detection_only: Annotated[
             t.NonNegativeInt,

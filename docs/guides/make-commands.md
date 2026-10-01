@@ -9,7 +9,9 @@
 
 - [Discover commands](#discover-commands)
 - [Canonical workflow](#canonical-workflow)
+- [Codemod rule fixtures](#codemod-rule-fixtures)
 - [Verb single-pass contract](#verb-single-pass-contract)
+- [Information-preserving repair](#information-preserving-repair)
 - [Markdown quality pipeline](#markdown-quality-pipeline)
 - [Test contract](#test-contract)
 - [Failure contract](#failure-contract)
@@ -48,14 +50,25 @@ make test
 make build
 ```
 
-The consecutive generation passes prove the fixed point after structural rewrites.
+The consecutive generation passes prove the fixed point after structural rewrites. The
+first pass derives Ruff source roots from the declared template outputs, including test
+directories it will create, so the verification pass sees the same topology.
 `make build` packages the validated candidate; it does not replace runtime verification.
 Each verb executes its declared operation directly. No project, file, pattern, action,
-phase, fix, or changed-only selector may be attached to a standard verb.
+phase, fix, or changed-only selector may be attached to a standard verb. When
+`make setup` initializes an absent governed submodule, it uses the explicit GitHub
+credential selected by the root Make contract in a Git credential helper scoped to that
+invocation. The token stays in the process environment, outside command arguments and
+logs. `make.submodule_timeout_seconds` in `config/codegen.yaml` bounds the clone; a
+timed-out or incomplete checkout fails the verb. Existing submodule worktrees are
+validated without fetching or rewriting them.
 
 `make help` is the complete live inventory. Additional declared verbs such as `upg`,
 `docs`, `audit`, `status`, `waza`, `duplication`, and the release verbs retain their own
-single operation and are invoked only when their scope applies.
+single operation and are invoked only when their scope applies. The `docs` lifecycle
+ends with an audit: any finding fails the verb and remains in
+`.reports/docs/audit-report.md`. Command guidance is checked in executable shell blocks
+and inline instructions; descriptions of internal tools are not shell guidance.
 
 ## Codemod rule fixtures
 
@@ -70,6 +83,12 @@ rules this repository owns from their tests, prints every created, updated or re
 snapshot, and leaves the diff for review in the same commit as the rule change.
 Inherited rule providers keep the snapshots their owner ships.
 
+For private imports, `make mod` first resolves whether the importing file and target
+module share an owner. Same-owner imports become relative imports without inspecting an
+installed package with the same top-level name. Only cross-owner imports require
+installed public-facade discovery; invalid relative imports in that dependency remain
+errors.
+
 ## Verb single-pass contract
 
 Each mutating verb owns exactly one operation per tool, and `make check` is strictly
@@ -80,15 +99,16 @@ read-only — no verb repeats another verb's work across the canonical sequence
 | --------------------------------- | ---------------------------------- | ----------------------- | ------------------------------------------ |
 | `lint` — ruff                     | read-only `ruff` verdict           | —                       | one `ruff` repair pass                     |
 | `format` — ruff                   | — (mutating)                       | `ruff` format pass      | —                                          |
-| `markdown` — rumdl                | `rumdl check`                      | —                       | `rumdl fmt`                                |
+| `markdown` — rumdl                | `rumdl check`                      | —                       | `rumdl check --fix`                        |
 | `markdown-format` — prettier      | `prettier --check`                 | `prettier --write`      | —                                          |
 | `markdown-code` — ruff (embedded) | format verdict on parseable blocks | —                       | one format pass, clean round-trips spliced |
-| `canonical-alias`                 | read-only scan                     | —                       | declared import rewrite                    |
 | `smells` — qlty                   | read-only scan                     | —                       | —                                          |
 
-`make fmt` never runs a lint pass and `make fix` never formats: each operation runs once
-per verb, residue found by a mutation is reported there and enforced only by
-`make check`, and `make fix`/`make fmt` repeated on a green tree are no-ops.
+`make fmt` never runs a lint pass and `make fix` never runs the format-only gates: each
+operation runs once per verb. `rumdl check --fix` repairs fixable findings and returns a
+failing status for residual findings. A mutation that cannot complete its declared
+repair stays red before `make check`; on a green tree, repeated `make fix` and
+`make fmt` are no-ops.
 
 ## Information-preserving repair
 
@@ -120,7 +140,10 @@ The markdown standard lives once in `flext-infra/config/tooling.yaml`
 
 - `rumdl` is the linter (markdownlint-compatible `MD*` rules through the generated
   `.markdownlint.json` / `.markdownlintignore`); syntax findings inside embedded code
-  belong to the flext-tests markdown validator, not to a second linter.
+  belong to the flext-tests markdown validator, not to a second linter. Its fix pass
+  keeps unfixable findings visible and makes `make fix` fail when they remain. MD013
+  uses standard reflow to wrap overlong prose; paragraph-normalization mode is not
+  selected because its separate hint cannot be resolved by the native writer.
 - `prettier` (pinned 3.5.x — newer releases dropped prose reflow) is the formatter:
   `prettier --check` in `make check`, `prettier --write` in `make fmt`.
 - `markdown-code` holds parseable embedded Python and doctest examples to the
@@ -155,6 +178,10 @@ reported as tests passed. The full phase must execute its complete nonempty inve
 The root dispatcher resolves workspace scope from its typed topology. Generated Make
 surfaces and documentation are changed at their template or configuration owner, then
 regenerated with `make gen`.
+
+When conformance selects multiple repositories, lazy initializer planning opens each
+repository in its own Rope workspace. Conformance combines their authenticated file
+plans into one transaction receipt and verifies the selected publications together.
 
 ## Related guides
 

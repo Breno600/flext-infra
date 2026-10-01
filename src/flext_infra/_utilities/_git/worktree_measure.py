@@ -1,5 +1,8 @@
 """Canonical Git responsibility mixin for ``u.Infra``.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Bounded, symlink-free directory measurement used by the worktree facts
 primitive. A bound being hit or one unreadable subtree degrades ``exact`` to
 False; the walk never follows a symlink out of the tree.
@@ -12,18 +15,24 @@ import time
 from pathlib import Path
 
 from flext_infra import c, t
-
-from .worktree_status import FlextInfraUtilitiesGitWorktreeStatusMixin
+from flext_infra._utilities._git.worktree_status import (
+    FlextInfraUtilitiesGitWorktreeStatusMixin,
+)
 
 
 class FlextInfraUtilitiesGitWorktreeMeasureMixin(
-    FlextInfraUtilitiesGitWorktreeStatusMixin
+    FlextInfraUtilitiesGitWorktreeStatusMixin,
 ):
     """Own the bounded tree measurement for worktree facts."""
 
     @classmethod
     def _worktree_measure(cls, root: Path) -> t.Triple[int, float, bool]:
-        """Measure one tree within the bounded, symlink-free walk."""
+        """Measure one tree within the bounded, symlink-free walk.
+
+        Returns:
+            The resulting ``t.Triple[int, float, bool]``.
+
+        """
         started = time.monotonic()
         total_bytes = 0
         newest = 0.0
@@ -55,7 +64,12 @@ class FlextInfraUtilitiesGitWorktreeMeasureMixin(
     def _worktree_scan_dir(
         directory: Path,
     ) -> t.Pair[t.VariadicTuple[os.DirEntry[str]], bool]:
-        """List one directory paired with whether it was readable."""
+        """List one directory paired with whether it was readable.
+
+        Returns:
+            The resulting ``t.Pair[t.VariadicTuple[os.DirEntry[str]], bool]``.
+
+        """
         entries: t.VariadicTuple[os.DirEntry[str]] = ()
         readable = True
         try:
@@ -67,9 +81,15 @@ class FlextInfraUtilitiesGitWorktreeMeasureMixin(
 
     @classmethod
     def _worktree_entry_metrics(
-        cls, entry: os.DirEntry[str]
+        cls,
+        entry: os.DirEntry[str],
     ) -> t.Triple[bool, int, float]:
-        """Return ``(descend, bytes, mtime)`` for one entry, skipping symlinks."""
+        """Return ``(descend, bytes, mtime)`` for one entry, skipping symlinks.
+
+        Returns:
+            ``(descend, bytes, mtime)`` for one entry, skipping symlinks.
+
+        """
         descend = False
         size = 0
         mtime = 0.0
@@ -85,12 +105,22 @@ class FlextInfraUtilitiesGitWorktreeMeasureMixin(
 
     @staticmethod
     def _worktree_entry_is_dir(entry: os.DirEntry[str]) -> bool:
-        """Return whether one entry is a real directory rather than a symlink."""
+        """Return whether one entry is a real directory rather than a symlink.
+
+        Returns:
+            Whether one entry is a real directory rather than a symlink.
+
+        """
         return entry.is_dir(follow_symlinks=False) and not entry.is_symlink()
 
     @staticmethod
     def _worktree_entry_file_metrics(entry: os.DirEntry[str]) -> t.Pair[int, float]:
-        """Return ``(bytes, mtime)`` for one regular entry, zero for a symlink."""
+        """Return ``(bytes, mtime)`` for one regular entry, zero for a symlink.
+
+        Returns:
+            ``(bytes, mtime)`` for one regular entry, zero for a symlink.
+
+        """
         if entry.is_symlink():
             return 0, 0.0
         stat = entry.stat(follow_symlinks=False)

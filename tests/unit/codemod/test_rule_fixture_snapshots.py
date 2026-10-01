@@ -1,4 +1,8 @@
-"""Rule-test snapshots change only through their explicit refresh, never in mod."""
+"""Rule-test snapshots change only through their explicit refresh, never in mod.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -23,7 +27,12 @@ class TestsFlextInfraModRuleFixtureSnapshots:
         fix: str = "bar($A)",
         invalid: t.StrSequence = ("foo(1)",),
     ) -> Path:
-        """Declare one governed rule with its test under ``root``; return the rule."""
+        """Declare one governed rule with its test under ``root``; return the rule.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         for directory in ("src", f"{fixtures}/rules", f"{fixtures}/tests"):
             tm.ok(u.Cli.ensure_dir(root / directory))
         tm.ok(
@@ -31,7 +40,7 @@ class TestsFlextInfraModRuleFixtureSnapshots:
                 root / c.Infra.CODEMOD_CONFIG_FILENAME,
                 f"ruleDirs: [{fixtures}/rules]\n"
                 f"testConfigs:\n  - testDir: {fixtures}/tests\n",
-            )
+            ),
         )
         rule = root / fixtures / "rules" / "demo.yml"
         tm.ok(
@@ -39,20 +48,25 @@ class TestsFlextInfraModRuleFixtureSnapshots:
                 rule,
                 "id: demo\nlanguage: python\nseverity: error\n"
                 f"rule:\n  pattern: foo($A)\nfix: {fix}\n",
-            )
+            ),
         )
         cases = "".join(f"  - {case}\n" for case in invalid)
         tm.ok(
             u.Cli.atomic_write_text_file(
                 root / fixtures / "tests" / "demo-test.yml",
                 f"id: demo\nvalid:\n  - baz(1)\ninvalid:\n{cases}",
-            )
+            ),
         )
         return rule
 
     @staticmethod
     def _snapshot(root: Path, rule_id: str = "demo") -> Path:
-        """Return the committed snapshot path of one rule under ``root``."""
+        """Return the committed snapshot path of one rule under ``root``.
+
+        Returns:
+            The committed snapshot path of one rule under ``root``.
+
+        """
         return (
             root
             / "codemod"
@@ -62,15 +76,18 @@ class TestsFlextInfraModRuleFixtureSnapshots:
         )
 
     def test_refresh_records_what_verification_then_accepts(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A dry refresh writes nothing; the applied refresh makes mod verify."""
         rule = self._owner(tmp_path)
 
         preview = tm.ok(
             FlextInfraModGateEngine.refresh_rule_snapshots(
-                tmp_path, (rule,), apply=False
-            )
+                tmp_path,
+                (rule,),
+                apply=False,
+            ),
         )
         tm.that(preview, eq=(f"created {self._snapshot(tmp_path)}",))
         tm.that(self._snapshot(tmp_path).exists(), eq=False)
@@ -78,8 +95,10 @@ class TestsFlextInfraModRuleFixtureSnapshots:
 
         applied = tm.ok(
             FlextInfraModGateEngine.refresh_rule_snapshots(
-                tmp_path, (rule,), apply=True
-            )
+                tmp_path,
+                (rule,),
+                apply=True,
+            ),
         )
 
         tm.that(applied, eq=preview)
@@ -88,21 +107,26 @@ class TestsFlextInfraModRuleFixtureSnapshots:
         tm.that(
             tm.ok(
                 FlextInfraModGateEngine.refresh_rule_snapshots(
-                    tmp_path, (rule,), apply=True
-                )
+                    tmp_path,
+                    (rule,),
+                    apply=True,
+                ),
             ),
             empty=True,
         )
 
     def test_changed_rule_output_fails_verification_without_rewriting(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Mod never accepts a new fix output as its own expectation."""
         rule = self._owner(tmp_path)
         tm.ok(
             FlextInfraModGateEngine.refresh_rule_snapshots(
-                tmp_path, (rule,), apply=True
-            )
+                tmp_path,
+                (rule,),
+                apply=True,
+            ),
         )
         committed = self._snapshot(tmp_path).read_bytes()
         _ = self._owner(tmp_path, fix="qux($A)")
@@ -113,8 +137,10 @@ class TestsFlextInfraModRuleFixtureSnapshots:
         tm.that(self._snapshot(tmp_path).read_bytes(), eq=committed)
         changes = tm.ok(
             FlextInfraModGateEngine.refresh_rule_snapshots(
-                tmp_path, (rule,), apply=True
-            )
+                tmp_path,
+                (rule,),
+                apply=True,
+            ),
         )
         tm.that(changes, eq=(f"updated {self._snapshot(tmp_path)}",))
         tm.that(self._snapshot(tmp_path).read_text(encoding="utf-8"), has="qux(1)")
@@ -122,14 +148,18 @@ class TestsFlextInfraModRuleFixtureSnapshots:
 
     @pytest.mark.parametrize("residue", ["removed-rule", "deleted-case"])
     def test_snapshot_residue_fails_verification_until_refreshed(
-        self, tmp_path: Path, residue: str
+        self,
+        tmp_path: Path,
+        residue: str,
     ) -> None:
         """A snapshot no rule test produces is reported, then removed by refresh."""
         rule = self._owner(tmp_path, invalid=("foo(1)", "foo(2)"))
         tm.ok(
             FlextInfraModGateEngine.refresh_rule_snapshots(
-                tmp_path, (rule,), apply=True
-            )
+                tmp_path,
+                (rule,),
+                apply=True,
+            ),
         )
         if residue == "removed-rule":
             stale = self._snapshot(tmp_path, "retired")
@@ -140,7 +170,7 @@ class TestsFlextInfraModRuleFixtureSnapshots:
                     ._snapshot(tmp_path)
                     .read_text(encoding="utf-8")
                     .replace("id: demo", "id: retired"),
-                )
+                ),
             )
             expected = f"removed {stale}"
         else:
@@ -152,15 +182,18 @@ class TestsFlextInfraModRuleFixtureSnapshots:
         tm.fail(failure, has=c.Infra.CODEMOD_SNAPSHOT_REFRESH_HINT)
         changes = tm.ok(
             FlextInfraModGateEngine.refresh_rule_snapshots(
-                tmp_path, (rule,), apply=True
-            )
+                tmp_path,
+                (rule,),
+                apply=True,
+            ),
         )
         tm.that(changes, eq=(expected,))
         tm.ok(FlextInfraModGateEngine.validate_rule_fixtures(tmp_path, (rule,)))
 
     @pytest.mark.slow
     def test_public_refresh_route_dry_run_fails_until_applied(
-        self, mod_workspace: Path
+        self,
+        mod_workspace: Path,
     ) -> None:
         """The public route previews pending snapshots as red and applies them."""
         _ = self._owner(mod_workspace)

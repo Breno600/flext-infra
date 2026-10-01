@@ -1,5 +1,8 @@
 """Contract tests for the portable Make toolchain provider.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Root cause (R1): ``make`` was not declared in generated ``.mise.toml``, so
 ``direnv exec .`` resolved ``make`` from a stale host shim (a conda-carried
 installation) instead of a Mise-managed binary, causing ``make setup`` to
@@ -17,7 +20,8 @@ from flext_infra import config
 class TestsFlextInfraToolchainMake:
     """The Make provider is a managed Mise tool, never a host shim."""
 
-    def test_make_version_tracks_latest(self) -> None:
+    @staticmethod
+    def test_make_version_tracks_latest() -> None:
         """Keep Make policy explicit while Mise resolves its newest release."""
         toolchain = config.Infra.codegen.toolchain
 

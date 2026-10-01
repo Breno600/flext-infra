@@ -16,7 +16,12 @@ class FlextInfraWorkspaceGovernanceMixin:
     def persistent_state_artifacts(
         make_profile: c.Infra.MakeProfile,
     ) -> t.VariadicTuple[m.Infra.CodegenArtifactSpec]:
-        """Project persistent-state artifacts owned by every governed repository."""
+        """Project persistent-state artifacts owned by every governed repository.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.CodegenArtifactSpec]``.
+
+        """
         del make_profile
         persistent = c.Infra.PERSISTENT_STATE_ARTIFACT_NAMES
         return tuple(

@@ -7,7 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import shutil
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from functools import cache, lru_cache
 from pathlib import Path
 
@@ -15,9 +15,8 @@ from flext_cli import u
 
 from flext_core import r
 from flext_infra import c, m, p, t
-
-from .git import FlextInfraUtilitiesGit
-from .managed_conflicts import FlextInfraUtilitiesManagedConflicts
+from flext_infra._utilities.git import FlextInfraUtilitiesGit
+from flext_infra._utilities.managed_conflicts import FlextInfraUtilitiesManagedConflicts
 
 
 class FlextInfraUtilitiesPyproject:
@@ -33,17 +32,27 @@ class FlextInfraUtilitiesPyproject:
         ``FlextInfraUtilitiesManagedConflicts.recover_managed_toml``; a
         conflict outside those sections fails loud through that utility's
         own contract. Read-only: no file is written here.
+
+        Returns:
+            Live pyproject text with merge-control lines resolved.
+
         """
         spec_result = FlextInfraUtilitiesManagedConflicts.pyproject_managed_file()
         if spec_result.failure:
             return r[str].from_failure(spec_result)
         return FlextInfraUtilitiesManagedConflicts.recover_managed_toml(
-            raw, conflict_sections=spec_result.value.conflict_sections
+            raw,
+            conflict_sections=spec_result.value.conflict_sections,
         )
 
     @staticmethod
     def live_pyproject_text(pyproject_path: Path) -> p.Result[str]:
-        """Read one live pyproject and resolve managed merge conflicts."""
+        """Read one live pyproject and resolve managed merge conflicts.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         raw = u.Cli.atomic_read_binary_file_state(pyproject_path, required=True)
         if raw.failure:
             return r[str].from_failure(raw)
@@ -51,7 +60,7 @@ class FlextInfraUtilitiesPyproject:
         if content is None:
             return r[str].fail(f"pyproject is absent: {pyproject_path}")
         return FlextInfraUtilitiesPyproject.recover_live_pyproject_text(
-            content.decode(c.Cli.ENCODING_DEFAULT)
+            content.decode(c.Cli.ENCODING_DEFAULT),
         )
 
     @staticmethod
@@ -67,9 +76,13 @@ class FlextInfraUtilitiesPyproject:
 
         The document is the live text with managed merge conflicts resolved
         (``live_pyproject_text``); the file is never written here.
+
+        Returns:
+            The resulting ``p.Result[p.ProjectMetadata]``.
+
         """
         live = FlextInfraUtilitiesPyproject.live_pyproject_text(
-            project_root / c.PYPROJECT_FILENAME
+            project_root / c.PYPROJECT_FILENAME,
         )
         if live.failure:
             return r[p.ProjectMetadata].from_failure(live)
@@ -80,7 +93,7 @@ class FlextInfraUtilitiesPyproject:
         if payload is None:
             return r[p.ProjectMetadata].fail(
                 f"cannot read project metadata from {project_root}: "
-                f"{c.PYPROJECT_FILENAME} is not valid TOML"
+                f"{c.PYPROJECT_FILENAME} is not valid TOML",
             )
         try:
             document = u.PyprojectDocument.model_validate(payload)
@@ -99,6 +112,10 @@ class FlextInfraUtilitiesPyproject:
         Centralizes the adapter choice so every caller validates through the
         same typed boundary; validation failures escape with the precise
         pydantic error instead of a sentinel.
+
+        Returns:
+            The resulting ``t.JsonMapping``.
+
         """
         result: t.JsonMapping = t.Infra.INFRA_MAPPING_ADAPTER.validate_python(payload)
         return result
@@ -119,6 +136,10 @@ class FlextInfraUtilitiesPyproject:
         (``_locked_mise_version``, nearest lock at or above the execution root)
         resolves it before any shim runs, so generation formats with the locked
         release and never asks a tool manager to resolve a version mid-run.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
         """
         config_path = toolchain_root / c.Infra.TAPLO_CONFIG_FILENAME
         config_content = config_path.read_bytes() if config_path.is_file() else b""
@@ -152,16 +173,26 @@ class FlextInfraUtilitiesPyproject:
         resolves it, into ``mise.lock``. Generation therefore reads the pinned
         release and passes it on, and an absent lock entry fails loud instead
         of silently accepting whatever binary the host happens to expose.
+
+        Returns:
+            The exact Taplo release the committed lock pins.
+
         """
         if declared != c.Infra.MISE_MOVING_SELECTOR:
             return r[str].ok(declared)
         return FlextInfraUtilitiesPyproject._locked_tool_version(
-            toolchain_root, c.Infra.TAPLO_MISE_TOOL_NAME
+            toolchain_root,
+            c.Infra.TAPLO_MISE_TOOL_NAME,
         )
 
     @staticmethod
     def _locked_tool_version(toolchain_root: Path, tool_name: str) -> p.Result[str]:
-        """Return one tool's pinned version from ``mise.lock`` at the root."""
+        """Return one tool's pinned version from ``mise.lock`` at the root.
+
+        Returns:
+            One tool's pinned version from ``mise.lock`` at the root.
+
+        """
         lock_path = toolchain_root / c.Infra.MISE_LOCK_FILENAME
         source = u.Cli.files_read_text(lock_path)
         if source.failure:
@@ -177,12 +208,12 @@ class FlextInfraUtilitiesPyproject:
         if not isinstance(version, str) or not version.strip():
             return r[str].fail(
                 f"{lock_path.name} pins no version for {tool_name}: "
-                "run make upg to resolve the lock"
+                "run make upg to resolve the lock",
             )
         return r[str].ok(version.strip())
 
     @staticmethod
-    @lru_cache(maxsize=128)
+    @lru_cache(maxsize=c.Infra.CONTENT_CACHE_MAXSIZE)
     def _format_toml_source_cached(
         source: str,
         *,
@@ -195,7 +226,9 @@ class FlextInfraUtilitiesPyproject:
     ) -> p.Result[str]:
         del config_digest
         taplo = FlextInfraUtilitiesPyproject._taplo_binary(
-            taplo_version, process_timeout_seconds, execution_root
+            taplo_version,
+            process_timeout_seconds,
+            execution_root,
         )
         if taplo.failure:
             return r[str].from_failure(taplo)
@@ -219,19 +252,22 @@ class FlextInfraUtilitiesPyproject:
                 .strip()
             )
             return r[str].fail(
-                f"taplo format failed ({output.outcome.raw_return_code}): {detail}"
+                f"taplo format failed ({output.outcome.raw_return_code}): {detail}",
             )
         try:
             formatted = output.stdout.decode(c.Cli.ENCODING_DEFAULT)
         except UnicodeDecodeError as exc:
             return r[str].fail(
-                f"taplo format returned non-UTF-8 output: {exc}", exception=exc
+                f"taplo format returned non-UTF-8 output: {exc}",
+                exception=exc,
             )
         return r[str].ok(formatted)
 
     @staticmethod
     def _locked_mise_version(
-        execution_root: Path, tool: str, selector: str
+        execution_root: Path,
+        tool: str,
+        selector: str,
     ) -> p.Result[str]:
         """Resolve the selector's pinned version from the committed mise.lock.
 
@@ -239,6 +275,10 @@ class FlextInfraUtilitiesPyproject:
         every other execution must authenticate exactly what the lock pins,
         because a version taken from the selector itself sends the shim's
         resolution over the network on a cold cache.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
         """
         lock_path = next(
             (
@@ -251,10 +291,10 @@ class FlextInfraUtilitiesPyproject:
         if lock_path is None:
             return r[str].fail(
                 f"no {c.Infra.MISE_LOCK_FILENAME} above {execution_root} pins "
-                f"{tool}; run make upg so generation stays offline"
+                f"{tool}; run make upg so generation stays offline",
             )
         document = u.Cli.toml_parse_text(
-            lock_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+            lock_path.read_text(encoding=c.Cli.ENCODING_DEFAULT),
         )
         if document is None:
             return r[str].fail(f"{lock_path} is not valid TOML")
@@ -270,33 +310,41 @@ class FlextInfraUtilitiesPyproject:
         for entry in entries:
             if not isinstance(entry, Mapping):
                 return r[str].fail(
-                    f"{lock_path} has a malformed [[tools.{tool}]] entry: {entry!r}"
+                    f"{lock_path} has a malformed [[tools.{tool}]] entry: {entry!r}",
                 )
             pinned = entry.get("version")
             specifiers = entry.get("specifiers", ())
             if not isinstance(pinned, str) or not isinstance(specifiers, (list, tuple)):
                 return r[str].fail(
-                    f"{lock_path} has a malformed [[tools.{tool}]] entry: {entry!r}"
+                    f"{lock_path} has a malformed [[tools.{tool}]] entry: {entry!r}",
                 )
             if selector in specifiers or selector == pinned:
                 return r[str].ok(pinned)
         return r[str].fail(
-            f"{lock_path} pins no {tool} for selector {selector!r}; run make upg"
+            f"{lock_path} pins no {tool} for selector {selector!r}; run make upg",
         )
 
     @staticmethod
     @cache
     def _taplo_binary(
-        taplo_version: str, process_timeout_seconds: int, execution_root: Path
+        taplo_version: str,
+        process_timeout_seconds: int,
+        execution_root: Path,
     ) -> p.Result[Path]:
         """Resolve and authenticate Make's config-versioned Taplo executable.
 
         ``taplo_version`` is the release selector the workspace declares; the
         version that authenticates is the one the committed mise.lock pins for
         it, so no shim run ever resolves a moving selector over the network.
+
+        Returns:
+            The resulting ``p.Result[Path]``.
+
         """
         pinned = FlextInfraUtilitiesPyproject._locked_mise_version(
-            execution_root, c.Infra.TAPLO_MISE_TOOL_NAME, taplo_version
+            execution_root,
+            c.Infra.TAPLO_MISE_TOOL_NAME,
+            taplo_version,
         )
         if pinned.failure:
             return r[Path].from_failure(pinned)
@@ -304,7 +352,7 @@ class FlextInfraUtilitiesPyproject:
         resolved = shutil.which("taplo")
         if resolved is None:
             return r[Path].fail(
-                "Taplo executable is absent from the Make-provisioned PATH"
+                "Taplo executable is absent from the Make-provisioned PATH",
             )
         # Mise shims are executable symlinks whose basename selects the tool.
         # Resolving the link turns ``taplo`` into the Mise binary and changes
@@ -323,7 +371,7 @@ class FlextInfraUtilitiesPyproject:
         )
         if identified.failure:
             return r[Path].fail(
-                f"Taplo identity check could not run: {binary}: {identified.error}"
+                f"Taplo identity check could not run: {binary}: {identified.error}",
             )
         if not u.Cli.process_succeeded(identified.value.outcome):
             # The cause belongs in the message: a shim that resolves but cannot
@@ -333,14 +381,14 @@ class FlextInfraUtilitiesPyproject:
             return r[Path].fail(
                 f"Taplo identity check failed: {binary} exited "
                 f"{identified.value.outcome.raw_return_code}: "
-                f"{detail or 'no diagnostic output'}"
+                f"{detail or 'no diagnostic output'}",
             )
         observed = identified.value.stdout.strip()
         identity_matches = pinned.value in observed
         if not identity_matches:
             return r[Path].fail(
                 "resolved Taplo executable version differs from the mise.lock "
-                f"pin: expected={pinned.value} observed={observed}"
+                f"pin: expected={pinned.value} observed={observed}",
             )
         return r[Path].ok(binary)
 
@@ -351,6 +399,14 @@ class FlextInfraUtilitiesPyproject:
 
         The payload is parsed from the live text with managed merge
         conflicts resolved (``live_pyproject_text``).
+
+        Returns:
+            One parsed ``pyproject.toml`` payload validated against ``t.Infra``.
+
+        Raises:
+            RuntimeError: If failed to read pyproject payload at; or if pyproject
+                payload at.
+
         """
         if not pyproject_path.is_file():
             return {}
@@ -366,7 +422,12 @@ class FlextInfraUtilitiesPyproject:
 
     @staticmethod
     def normalized_toml_payload(document: t.Cli.TomlDocument) -> t.JsonMapping:
-        """Return one TOML document normalized through the infra adapter."""
+        """Return one TOML document normalized through the infra adapter.
+
+        Returns:
+            One TOML document normalized through the infra adapter.
+
+        """
         payload = u.Cli.toml_as_mapping(document)
         if not payload:
             return {}
@@ -374,9 +435,14 @@ class FlextInfraUtilitiesPyproject:
 
     @staticmethod
     def tool_flext_meta(project_root: Path) -> t.JsonMapping:
-        """Return the normalized ``tool.flext`` table from a project root."""
+        """Return the normalized ``tool.flext`` table from a project root.
+
+        Returns:
+            The normalized ``tool.flext`` table from a project root.
+
+        """
         payload = FlextInfraUtilitiesPyproject.pyproject_payload(
-            project_root / c.PYPROJECT_FILENAME
+            project_root / c.PYPROJECT_FILENAME,
         )
         tool = payload.get(c.Infra.TOOL)
         if not isinstance(tool, dict):
@@ -386,7 +452,12 @@ class FlextInfraUtilitiesPyproject:
 
     @staticmethod
     def docs_meta_from_payload(payload: t.JsonMapping) -> t.JsonMapping:
-        """Extract ``tool.flext.docs`` metadata from an already-parsed payload."""
+        """Extract ``tool.flext.docs`` metadata from an already-parsed payload.
+
+        Returns:
+            The resulting ``t.JsonMapping``.
+
+        """
         tool = payload.get(c.Infra.TOOL)
         if not isinstance(tool, dict):
             return {}
@@ -398,7 +469,16 @@ class FlextInfraUtilitiesPyproject:
 
     @staticmethod
     def project_name_from_payload(entry: Path, payload: t.JsonMapping) -> str:
-        """Return the declared project name from ``[project].name``."""
+        """Return the declared project name from ``[project].name``.
+
+        Returns:
+            The declared project name from ``[project].name``.
+
+        Raises:
+            TypeError: If ``not isinstance(project_section, dict)``.
+            ValueError: If ``not isinstance(raw_name, str) or not raw_name.strip()``.
+
+        """
         project_section = payload.get("project")
         if not isinstance(project_section, dict):
             msg = f"{entry}: missing [project] table in pyproject.toml"
@@ -411,9 +491,19 @@ class FlextInfraUtilitiesPyproject:
 
     @staticmethod
     def package_name_from_payload(
-        project_root: Path, payload: t.JsonMapping, docs_meta: t.JsonMapping
+        project_root: Path,
+        payload: t.JsonMapping,
+        docs_meta: t.JsonMapping,
     ) -> str:
-        """Return the primary package name using pre-loaded pyproject payload."""
+        """Return the primary package name using pre-loaded pyproject payload.
+
+        Returns:
+            The primary package name using pre-loaded pyproject payload.
+
+        Raises:
+            ValueError: If ``project_name.startswith(c.Infra.PKG_PREFIX_HYPHEN)``.
+
+        """
         configured = docs_meta.get("package_name")
         if isinstance(configured, str) and configured.strip():
             return configured.strip()
@@ -437,7 +527,8 @@ class FlextInfraUtilitiesPyproject:
                     child_path: Path = child
                     return child_path.name
         project_name = FlextInfraUtilitiesPyproject.project_name_from_payload(
-            project_root, payload
+            project_root,
+            payload,
         )
         if project_name.startswith(c.Infra.PKG_PREFIX_HYPHEN):
             msg = (
@@ -450,13 +541,20 @@ class FlextInfraUtilitiesPyproject:
 
     @staticmethod
     def project_package_name(project_root: Path) -> str:
-        """Return the primary Python package name for a project root."""
+        """Return the primary Python package name for a project root.
+
+        Returns:
+            The primary Python package name for a project root.
+
+        """
         payload = FlextInfraUtilitiesPyproject.pyproject_payload(
-            project_root / c.PYPROJECT_FILENAME
+            project_root / c.PYPROJECT_FILENAME,
         )
         docs_meta = FlextInfraUtilitiesPyproject.docs_meta_from_payload(payload)
         return FlextInfraUtilitiesPyproject.package_name_from_payload(
-            project_root, payload, docs_meta
+            project_root,
+            payload,
+            docs_meta,
         )
 
     @staticmethod
@@ -471,13 +569,20 @@ class FlextInfraUtilitiesPyproject:
         ``flext-managed`` is not a workspace project, the same contract the
         workspace detector applies; every governed path stays in the sequence
         so a missing or unreadable member pyproject still fails at its reader.
+
+        Returns:
+            Governed project paths declared by this directory's ``.gitmodules``.
+
+        Raises:
+            ValueError: If ``declared.failure``; or if ``unmanaged.failure``.
+
         """
         declared = FlextInfraUtilitiesGit.git_declared_submodule_paths(repository_root)
         if declared.failure:
             msg = declared.error or f"invalid workspace topology: {repository_root}"
             raise ValueError(msg)
         unmanaged = FlextInfraUtilitiesGit.git_unmanaged_submodule_paths(
-            m.Infra.GitRepoRequest(repo_root=repository_root)
+            m.Infra.GitRepoRequest(repo_root=repository_root),
         )
         if unmanaged.failure:
             msg = unmanaged.error or f"invalid workspace topology: {repository_root}"
