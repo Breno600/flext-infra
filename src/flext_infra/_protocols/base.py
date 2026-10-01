@@ -830,26 +830,6 @@ class FlextInfraProtocolsBase(Protocol):
             ...
 
     @runtime_checkable
-    class RopeSourceTransformer(Protocol):
-        """Contract for one rope transformer applied to one resource."""
-
-        def transform(
-            self, rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
-        ) -> t.Infra.TransformResult:
-            """Rewrite the resource and return the updated source and changes."""
-            ...
-
-    @runtime_checkable
-    class ProjectAliasMigratorFactory(Protocol):
-        """Builds the transformer that moves owned aliases to the local facade."""
-
-        def __call__(
-            self, *, file_path: Path | None, current_project: str
-        ) -> FlextInfraProtocolsBase.RopeSourceTransformer:
-            """Build the migrator for one file owned by ``current_project``."""
-            ...
-
-    @runtime_checkable
     class SafeValidator(Protocol):
         """Contract for post-transform quality gate validators."""
 
