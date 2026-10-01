@@ -171,7 +171,12 @@ class FlextInfraConfigModelsMake:
         ]
         overview_preview_limits: Annotated[
             FlextInfraConfigModelsMake.DocsOverviewPreviewLimitsSpec,
-            m.Field(description="Maximum preview sizes for generated API overviews"),
+            m.Field(
+                description=(
+                    "Items listed per contract field on the generated API "
+                    "overview page before the preview is truncated"
+                )
+            ),
         ]
         cross_project_relative_link_pattern: Annotated[
             t.NonEmptyStr,
@@ -514,7 +519,9 @@ class FlextInfraConfigModelsMake:
 
         runtime_environment_directory: Annotated[
             t.NonEmptyStr,
-            m.Field(description="Sibling directory for physical project environments"),
+            m.Field(
+                description="Sibling directory for physical workspace environments",
+            ),
         ]
         examples_timeout_seconds: Annotated[
             int,

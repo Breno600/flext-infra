@@ -50,16 +50,15 @@ class TestsFlextInfraUtilitiesDocsFixtureMixin:
         _write(workspace / "docs/guides/README.md", "# Guides\n")
         _write(workspace / "docs/projects/README.md", "# Projects\n")
         _write(workspace / "docs/api-reference/README.md", "# API Reference\n")
-        # The audited root is a project like any other: its command contract
-        # is read from its own metadata, so the root always carries one.
-        members = ", ".join(f'"{name}"' for name in project_names)
-        workspace_table = (
-            f"\n[tool.uv.workspace]\nmembers = [{members}]\n" if project_names else ""
-        )
-        _write(
-            workspace / "pyproject.toml",
-            f'[project]\nname = "workspace"\nversion = "0.1.0"\n{workspace_table}',
-        )
+        if project_names:
+            members = ", ".join(f'"{name}"' for name in project_names)
+            _write(
+                workspace / "pyproject.toml",
+                (
+                    '[project]\nname = "workspace"\nversion = "0.1.0"\n\n'
+                    f"[tool.uv.workspace]\nmembers = [{members}]\n"
+                ),
+            )
 
         for name in project_names:
             project = workspace / name

@@ -87,11 +87,10 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         of every catalog row carrying one — so a smell added to the catalog
         moves to the smells gate in the same edit, with no second list.
         """
-        smell_rows = (*c.SMELL_BEARTYPE_ROWS, *c.SMELL_CODE_SMELL_ROWS)
         return {
             c.Infra.SMELLS: frozenset({
                 *c.ENFORCEMENT_SMELL_TAGS,
-                *(rule_id for rule_id, *_ in smell_rows),
+                *c.SMELL_RULES_TEXT,
             })
         }
 

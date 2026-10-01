@@ -249,7 +249,7 @@ class FlextInfraCodegenProjectNew(
         return FlextInfraCodegenConform.execute_request(
             request,
             initial_workspace=workspace,
-            ports=self.conform_ports,
+            ports=self.conform_collaborators,
         )
 
 
