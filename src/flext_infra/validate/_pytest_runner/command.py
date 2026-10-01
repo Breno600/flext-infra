@@ -127,10 +127,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                 f"'{self._toolchain_testmon_environment()}'",
             )
         )
-        return (
-            sys.executable,
-            "-m",
-            "pytest",
+        pytest_arguments = (
             str(self.target),
             *testmon,
             "--collect-only",
@@ -149,6 +146,14 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             "0",
             "--no-cov",
         )
+        if self.collection_command_prefix:
+            return (
+                *self.collection_command_prefix,
+                str(manifest_path.with_suffix(".pstats")),
+                str(manifest_path.parent / "run-context.json"),
+                *pytest_arguments,
+            )
+        return (sys.executable, "-m", "pytest", *pytest_arguments)
 
     def build_command(
         self,

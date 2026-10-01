@@ -17,7 +17,7 @@ class TestsFlextInfraReleaseSdistGovernanceRoot:
 
     def test_governance_agent_manifest_is_admitted_at_the_sdist_root(self) -> None:
         """The deployed-agents governance manifest is public root content."""
-        tm.that(c.Infra.RELEASE_SDIST_ROOT_FILES, has={"agents.md"})
+        tm.that("agents.md" in c.Infra.RELEASE_SDIST_ROOT_FILES, eq=True)
 
     def test_boundary_still_refuses_operational_roots(self) -> None:
         """The root-file set admits no directories, only named files."""

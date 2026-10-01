@@ -197,7 +197,7 @@ class TestsFlextInfraReleaseDag:
             )
 
         @staticmethod
-        @pytest.mark.parametrize("target", ["wheel", "sdist"])
+        @pytest.mark.parametrize("target", ["build", "wheel", "sdist"])
         def test_hatch_exclusion_cannot_cancel_declared_source(
             tmp_path: Path, target: str
         ) -> None:
@@ -208,18 +208,24 @@ class TestsFlextInfraReleaseDag:
             pyproject = project / "pyproject.toml"
             content = pyproject.read_text(encoding="utf-8")
             header = f"[tool.hatch.build.targets.{target}]\n"
-            pyproject.write_text(
-                content.replace(header, header + 'exclude = ["/src/flext_a/**"]\n'),
-                encoding="utf-8",
-            )
+            replacement = header + 'exclude = ["/src/flext_a/**"]\n'
+            expected = "Hatch targets must use source patterns without exclusions"
+            if target == "build":
+                header = "[tool.hatch.build.targets.sdist]\n"
+                replacement = (
+                    '[tool.hatch.build]\nexclude = ["/src/flext_a/**"]\n\n' + header
+                )
+                expected = (
+                    "Hatch build must use target source patterns without exclusions"
+                )
+            pyproject.write_text(content.replace(header, replacement), encoding="utf-8")
             u.Tests.commit_git_changes(project, "add conflicting Hatch exclusion")
 
             result = u.Tests.run_release_build(workspace, project_name, dry_run=True)
 
             tm.that(result, eq=1)
             tm.that(
-                u.Tests.release_build_log_text(workspace, project_name),
-                has="Hatch targets must use source patterns without exclusions",
+                u.Tests.release_build_log_text(workspace, project_name), has=expected
             )
 
         @staticmethod

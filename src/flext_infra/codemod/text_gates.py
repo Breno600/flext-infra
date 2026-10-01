@@ -42,9 +42,8 @@ class FlextInfraModTextGateEngine:
         root: Path,
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
         """Capture the packaged rules and the consumer overlay exactly once."""
-        provider = (
-            FlextInfraConfig.ssot_config_dir().parent
-            / c.Infra.CODEMOD_TEXT_RULES_RELPATH
+        provider = FlextInfraConfig.ssot_config_dir() / (
+            c.Infra.CODEMOD_TEXT_RULES_RELPATH.relative_to(c.Infra.CODEGEN_CONFIG_DIR)
         )
         consumer = root / c.Infra.CODEMOD_TEXT_RULES_RELPATH
         snapshots: list[m.Cli.AtomicFileState] = []

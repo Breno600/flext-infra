@@ -134,6 +134,12 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
             return r[bool].fail(
                 "release pyproject must define Hatch wheel and sdist targets"
             )
+        if build is not None and any(
+            key in build for key in ("only-include", "packages", "exclude")
+        ):
+            return r[bool].fail(
+                "Hatch build must use target source patterns without exclusions"
+            )
         wheel_includes: p.Result[t.StrSequence] = u.validate_value(
             t.Infra.STR_SEQ_ADAPTER,
             u.Cli.json_as_sequence(u.Cli.toml_value(wheel, "include")),

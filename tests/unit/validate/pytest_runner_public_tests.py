@@ -227,11 +227,8 @@ class TestsFlextInfraPytestRunner:
         tm.that(outcome.raw_return_code, eq=exit_code)
         tm.that(outcome.timed_out, eq=False)
         tm.that(outcome.forwarded_signal, none=True)
-        # The declared max-failures stop interrupts the xdist session, which
-        # pytest reports as INTERRUPTED; the summary carries that raw code.
         tm.that(
-            summary(reports_root),
-            has=["failed=1", f"exit={pytest.ExitCode.INTERRUPTED.value}"],
+            summary(reports_root), has=["failed=1", f"exit={outcome.raw_return_code}"]
         )
         events = tm.ok(u.Cli.files_read_text(report_path.parent / "events.jsonl"))
         tm.that(events, has="first failure evidence", lacks="second failure evidence")
