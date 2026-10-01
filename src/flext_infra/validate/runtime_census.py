@@ -338,14 +338,14 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
                     )
         return tuple(kept), tuple(gate_counts.items())
 
-    def _partition_gate_owned(
-        self, violations: t.SequenceOf[str]
-    ) -> t.Pair[tuple[str, ...], int]:
-        """Keep the violations ``census_gate`` owns; count those routed away.
+    def _gate_owned(self, violations: t.SequenceOf[str]) -> tuple[str, ...]:
+        """The violations ``census_gate`` owns; every other gate never sees them.
 
         A gate that owns census families grades exactly those families; the
-        runtime census gate grades every family no other gate owns. Bracketless
-        lines (import failures) own no family and stay with the runtime census.
+        runtime census gate grades every family no other gate owns. Ownership
+        is routing, never suppression: a family another gate owns is neither
+        counted nor reported here. Bracketless lines (import failures) own no
+        family and stay with the runtime census.
         """
         owned = self._gate_rule_families()
         own_families = owned.get(self.census_gate)
@@ -370,7 +370,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
                 )
             if keep:
                 kept.append(violation)
-        return tuple(kept), len(violations) - len(kept)
+        return tuple(kept)
 
     def build_report(self) -> p.Result[m.Infra.ValidationReport]:
         """Build one validation report for the selected workspace projects."""
@@ -396,7 +396,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
                 return r[m.Infra.ValidationReport].from_failure(report_result)
             report = report_result.value
             merged_violations.extend(report.violations)
-        owned_violations, routed_total = self._partition_gate_owned(merged_violations)
+        owned_violations = self._gate_owned(merged_violations)
         if self.census_gate != c.Infra.RUNTIME_CENSUS:
             kept = owned_violations
             passed = not kept
@@ -409,12 +409,6 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
                 m.Infra.ValidationReport(
                     passed=passed, violations=kept, summary=summary
                 )
-            )
-        if routed_total:
-            u.Cli.info(
-                f"runtime census routed {routed_total} finding(s) to their owning "
-                f"gates ({', '.join(sorted(self._gate_rule_families()))}); "
-                "each runs through its own Make verb, never make check"
             )
         kept_violations, suppressed_by_gate = self._partition_suspended(
             owned_violations

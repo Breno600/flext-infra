@@ -206,10 +206,15 @@ class TestsRuntimeCensusSmellOwnership:
             if any(violation.endswith(f"[{tag}]") for tag in c.ENFORCEMENT_SMELL_TAGS)
         )
 
-    def test_check_census_routes_smell_families_away(
+    def test_check_census_never_sees_smell_families(
         self, mixed_project: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        """The runtime-census gate reports no smell and says where they went."""
+        """The runtime-census gate neither reports nor counts any smell.
+
+        Premise (operator 2026-10-01): make smells owns every smell family;
+        ownership is routing, so no smell is suspended, observational,
+        suppressed, or announced inside make check.
+        """
         report = tm.ok(
             FlextInfraRuntimeCensusValidator(
                 repository_root=mixed_project
@@ -217,8 +222,9 @@ class TestsRuntimeCensusSmellOwnership:
         )
         output = capsys.readouterr().out
         tm.that(self._smell_tokens(report.violations), length=0)
-        tm.that(output, has="runtime census routed")
-        tm.that(output, has=c.Infra.SMELLS)
+        for tag in c.ENFORCEMENT_SMELL_TAGS:
+            tm.that(output, lacks=tag)
+            tm.that(report.summary, lacks=tag)
 
     def test_smells_census_reports_only_smell_families(
         self, mixed_project: Path
