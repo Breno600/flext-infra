@@ -228,11 +228,21 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 return r[m.Infra.CodegenResult].fail(f"codegen drift detected: {paths}")
             return r[m.Infra.CodegenResult].ok(m.Infra.CodegenResult(plan=plan))
         surface = c.Infra.CodegenConformSurface(request.what)
-        if surface is not c.Infra.CodegenConformSurface.MAKEFILE:
+        if surface not in {
+            c.Infra.CodegenConformSurface.MAKEFILE,
+            c.Infra.CodegenConformSurface.DOCS_CONFIG,
+            c.Infra.CodegenConformSurface.PYPROJECT,
+        }:
             return r[m.Infra.CodegenResult].fail(
                 "partial codegen apply is prohibited; use the complete all surface",
             )
-        expected_path = request.root.expanduser().resolve() / c.Infra.MAKEFILE_FILENAME
+        destinations = self.surface_contract(surface).destinations
+        if destinations is None or len(destinations) != 1:
+            return r[m.Infra.CodegenResult].fail(
+                f"bootstrap requires one destination for {surface}"
+            )
+        destination = Path(next(iter(destinations)))
+        expected_path = request.root.expanduser().resolve() / destination
         if (
             any(file.path != expected_path for file in plan.files)
             or len(plan.files) != 1

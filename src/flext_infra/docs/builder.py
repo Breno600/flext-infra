@@ -17,8 +17,6 @@ if TYPE_CHECKING:
 class FlextInfraDocBuilder(FlextInfraDocServiceBase):
     """Build MkDocs sites for governed FLEXT scopes."""
 
-    _runner: p.Cli.CommandRunner = u.PrivateAttr(default_factory=u.Cli)
-
     def build(
         self,
         repository_root: Path,
@@ -49,10 +47,7 @@ class FlextInfraDocBuilder(FlextInfraDocServiceBase):
 
     def _build_scope(self, scope: m.Infra.DocScope) -> m.Infra.DocsPhaseReport:
         """Build one scope via the docs build utilities and persist its reports."""
-        report: m.Infra.DocsPhaseReport = u.Infra.docs_run_mkdocs(
-            scope,
-            runner=self._runner,
-        )
+        report: m.Infra.DocsPhaseReport = u.Infra.docs_run_mkdocs(scope)
         u.Infra.docs_write_build_reports(scope, report)
         self.logger.info(
             "docs_build_scope_completed",

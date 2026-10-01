@@ -165,7 +165,7 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
         )
 
     @staticmethod
-    def project_spec(name: str) -> m.Infra.ProjectSpec:
+    def project_spec(name: str, *, cli_module: bool = True) -> m.Infra.ProjectSpec:
         """Build deterministic scaffold metadata for one project fixture."""
         package_name = name.replace("-", "_")
         class_stem = u.derive_class_stem(name)
@@ -193,6 +193,7 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
             documentation=homepage,
             repository_root_rel=".",
             year=config.Infra.codegen.scaffold.project.copyright_year,
+            cli_module=cli_module,
         )
 
     @staticmethod

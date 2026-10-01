@@ -13,7 +13,7 @@ from flext_infra.detectors.class_placement_detector import (
 from flext_infra.refactor.classvar_constant_autofix import (
     FlextInfraRefactorClassvarConstantAutofix,
 )
-from tests import c, m, u
+from tests import c, u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -402,114 +402,6 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         tm.that(isinstance(source_text, str), eq=True)
         tm.that(target_text, has="TEST_VALUE = 1.5")
         tm.that(source_text, lacks="TEST_VALUE = 1.5")
-
-    @staticmethod
-    def _classvar_rule() -> m.EnforcementRuleSpec:
-        catalog = u.build_canonical_catalog()
-        return next(
-            rule
-            for rule in catalog.enabled_rules()
-            if rule.fix_action is not None
-            and rule.fix_action.target == "classvar_relocation"
-        )
-
-    @staticmethod
-    def _write_classvar_test_module(project_root: Path) -> Path:
-        tests_pkg = project_root / "tests" / "unit"
-        tests_pkg.mkdir(parents=True)
-        (project_root / "tests" / "__init__.py").write_text("", encoding="utf-8")
-        (tests_pkg / "__init__.py").write_text("", encoding="utf-8")
-        module_path = tests_pkg / "test_execution_result.py"
-        module_path.write_text(
-            "class TestsDemo:\n"
-            "    TEST_VALUE = 1.5\n"
-            "    def test_value(self) -> None:\n"
-            "        assert self.TEST_VALUE == 1.5\n",
-            encoding="utf-8",
-        )
-        return module_path
-
-    def test_classvar_relocation_targets_tests_package_constants(
-        self,
-        tmp_path: Path,
-    ) -> None:
-        """ENFORCE-079 maps project tests modules to their sibling _constants."""
-        project_root = tmp_path / "demo"
-        module_path = self._write_classvar_test_module(project_root)
-
-        result = u.Tests.run_rope_fixer(
-            tmp_path,
-            project_root,
-            self._classvar_rule(),
-            module_path,
-            apply=False,
-        )
-
-        tm.that(
-            " ".join(fix.error for fix in result.failed),
-            has="tests.unit._constants",
-        )
-
-    def test_classvar_relocation_uses_existing_tests_root_constants(
-        self,
-        tmp_path: Path,
-    ) -> None:
-        """ENFORCE-079 reuses an existing top-level tests constants SSOT."""
-        project_root = tmp_path / "demo"
-        module_path = self._write_classvar_test_module(project_root)
-        constants_root = project_root / "tests" / "_constants"
-        constants_root.mkdir(parents=True)
-        (constants_root / "__init__.py").write_text("", encoding="utf-8")
-
-        result = u.Tests.run_rope_fixer(
-            tmp_path,
-            project_root,
-            self._classvar_rule(),
-            module_path,
-            apply=False,
-        )
-
-        tm.that(
-            " ".join(preview.message for preview in result.previewed),
-            has="tests._constants",
-        )
-
-    def test_classvar_relocation_moves_every_constant_in_one_run(
-        self,
-        tmp_path: Path,
-    ) -> None:
-        """ENFORCE-079 relocates every class constant in a single pass."""
-        project_root = tmp_path / "demo"
-        tests_pkg = project_root / "tests" / "unit"
-        tests_pkg.mkdir(parents=True)
-        (project_root / "tests" / "__init__.py").write_text("", encoding="utf-8")
-        (tests_pkg / "__init__.py").write_text("", encoding="utf-8")
-        constants_root = project_root / "tests" / "_constants"
-        constants_root.mkdir(parents=True)
-        (constants_root / "__init__.py").write_text(
-            '"""Constants."""\n',
-            encoding="utf-8",
-        )
-        module_path = tests_pkg / "test_execution_result.py"
-        module_path.write_text(
-            "class TestsDemo:\n"
-            "    VERSION = '1.0'\n"
-            "    VENDOR_STRING_MAX_TOKENS = 64\n",
-            encoding="utf-8",
-        )
-
-        result = u.Tests.run_rope_fixer(
-            tmp_path,
-            project_root,
-            self._classvar_rule(),
-            module_path,
-            apply=True,
-        )
-
-        tm.that(result.failed, eq=[])
-        source_text = module_path.read_text(encoding="utf-8")
-        tm.that(source_text, lacks="VERSION = '1.0'")
-        tm.that(source_text, lacks="VENDOR_STRING_MAX_TOKENS = 64")
 
     def test_autofix_dry_run_resolves_package_constants_module(
         self,

@@ -141,7 +141,7 @@ class FlextInfraMiseRecovery:
             # site-packages) are never uniquely-owned workspace state: a stale
             # journal entry pointing inside the installed package classifies
             # as a noop instead of failing the whole recovery on the nlink
-            # guard of the atomic-state reader (ai-hub runner, flext-6ep5y).
+            # guard of the atomic-state reader.
             package_root = Path(__file__).resolve().parents[2]
             if target.value.is_relative_to(package_root):
                 actions.append(

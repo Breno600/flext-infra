@@ -46,7 +46,7 @@ jobs:
 {%- include "_fragments/private_submodules_init.j2" %}
 {%- include "_fragments/private_dependency_auth.j2" %}
 
-      # Why (flext-gd3m1): a cold runner re-downloaded every locked Mise tool
+      # Why: a cold runner re-downloaded every locked Mise tool
       # (go included) on every Docs run, and a network blip failed setup. The
       # cache is content-addressed by the committed locks, so a warm cache is
       # always valid for the same lock and can never hide a finding; it only
@@ -128,7 +128,7 @@ jobs:
 {%- include "_fragments/private_submodules_init.j2" %}
 {%- include "_fragments/private_dependency_auth.j2" %}
 
-      # Why (flext-gd3m1): same cold-download protection as the docs-quality job.
+      # Why: same cold-download protection as the docs-quality job.
 {%- include "_fragments/toolchain_cache_restore.j2" %}
 
       - name: Sync workspace toolchain

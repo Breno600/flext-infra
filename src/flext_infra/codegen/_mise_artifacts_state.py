@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import shutil
 import stat
 from collections.abc import MutableMapping
 from pathlib import Path

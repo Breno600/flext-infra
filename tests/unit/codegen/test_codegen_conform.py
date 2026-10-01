@@ -596,7 +596,7 @@ class TestsFlextInfraCodegenConform:
         tm.that(first_result.plan.request.root, eq=root.resolve())
         # A new project serializes its own identity once from the typed
         # manifest contract; later conform runs read it as input.
-        (manifest,) = tm.ok(FlextInfraWorkspaceDetector.load_workspace_manifest(root))
+        (manifest,) = tm.ok(u.Infra.load_workspace_manifest(root))
         tm.that(manifest.name, eq=name)
         tm.that((root / "config" / "beads.yaml").is_file(), eq=True)
         tm.that((root / "pyproject.toml").is_file(), eq=True)
@@ -716,7 +716,18 @@ class TestsFlextInfraCodegenConform:
         module = root / extra_root / "maintenance.py"
         module.parent.mkdir(parents=True, exist_ok=True)
         tm.ok(u.Cli.atomic_write_text_file(module, "VALUE = 1\n"))
-        tm.that(extra_root in u.Infra.discover_python_dirs(root), eq=True)
+        tm.that(
+            extra_root
+            in u.Infra.discover_python_dirs(
+                root,
+                workspace_excluded_top_dirs=(
+                    FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
+                        root
+                    ).unwrap()
+                ),
+            ),
+            eq=True,
+        )
         tm.that(
             extra_root in config.Infra.tooling.tools.pyright.path_rules.env_dirs,
             eq=False,

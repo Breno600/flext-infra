@@ -380,51 +380,18 @@ class FlextInfraModelsCore:
             m.Field(description="Written report file paths"),
         ] = m.Field(default_factory=list)
 
-    class GateContractViolation(m.Value):
-        """One gate-script contract violation."""
-
-        # Why: leaf validate contract owned by m.Infra (collision-safe vs census Violation).
-        script: Annotated[str, m.Field(description="Script path")]
-        check: Annotated[str, m.Field(description="Failed check")]
-        message: Annotated[str, m.Field(description="Violation message")]
-        severity: Annotated[str, m.Field(description="Severity")] = (
-            c.Infra.GateSeverity.ERROR.value
-        )
-
-    class GateContractScriptInfo(m.Value):
-        """Validation result for one gate script."""
-
-        path: Annotated[str, m.Field(description="Script path")]
-        extension: Annotated[str, m.Field(description="File extension")]
-        role: Annotated[str, m.Field(description="Script role")]
-        violations: Annotated[
-            t.VariadicTuple[FlextInfraModelsCore.GateContractViolation],
-            m.Field(description="Violations"),
-        ] = ()
-
-    class GateContractSummary(m.Value):
-        """Aggregate gate-contract counts."""
-
-        errors: Annotated[int, m.Field(description="Error count")] = 0
-        gate_scripts: Annotated[int, m.Field(description="Gate script count")] = 0
-        ok: Annotated[int, m.Field(description="Passing gate script count")] = 0
-
-    class GateContractRunResult(m.Value):
-        """CLI outcome for one gate-contract validation run."""
-
-        exit_code: Annotated[int, m.Field(description="Process exit code")]
-        violation_count: Annotated[int, m.Field(description="Error count")]
-
     class NamespaceValidateCommand(m.ContractModel):
         """CLI payload for ``flext-infra validate namespace``.
 
         Read-only namespace rule scan (NS-000..003) for one repository root.
         """
 
-        repository_root: Path = m.Field(
-            default_factory=Path.cwd,
-            description="Repository root whose namespace contract is validated",
-        )
+        repository_root: Annotated[
+            Path,
+            m.Field(
+                description="Repository root whose namespace contract is validated"
+            ),
+        ]
 
 
 __all__: list[str] = ["FlextInfraModelsCore"]

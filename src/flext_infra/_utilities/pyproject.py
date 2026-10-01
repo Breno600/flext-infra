@@ -184,7 +184,7 @@ class FlextInfraUtilitiesPyproject:
         return r[str].ok(version.strip())
 
     @staticmethod
-    @lru_cache(maxsize=128)
+    @lru_cache(maxsize=c.Infra.CONTENT_CACHE_MAXSIZE)
     def _format_toml_source_cached(
         source: str,
         *,

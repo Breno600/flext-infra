@@ -51,20 +51,18 @@ class TestsFlextInfraCodegenMain:
     def _seed_public_conform_checkout(root: Path) -> None:
         """Seed a minimal governed package tree plus the real config and Mise inputs.
 
-        The public CLI conform pipeline needs an importable ``src/flext_infra``
-        package (for namespace/ruff discovery) and the real ``config/`` +
-        tracked Mise seeds (``codegen conform`` validates the tracked,
-        checksum-verified launchers rather than minting them). It does not need
-        the full real package tree copied byte-for-byte: the minimal seed used by
-        ``tests/unit/codegen/test_codegen_conform.py::_seed_infra_package_tree``
-        already satisfies the same public conform contract at a fraction of the
-        scan cost, so this fixture reuses that pattern instead of copying
-        hundreds of real modules per test run.
+        Conform verifies the declared console entry point through a fresh
+        import. Seed the real package so the fixture's distribution metadata
+        describes a public runtime that actually exists.
         """
         project_root = Path(__file__).resolve().parents[3]
-        package_init = root / "src" / "flext_infra" / "__init__.py"
-        package_init.parent.mkdir(parents=True, exist_ok=True)
-        tm.ok(u.Cli.atomic_write_text_file(package_init, ""))
+        tm.ok(
+            u.Cli.files_copy_directory(
+                project_root / "src" / "flext_infra",
+                root / "src" / "flext_infra",
+                dirs_exist_ok=True,
+            )
+        )
         tests_init = root / "tests" / "__init__.py"
         tests_init.parent.mkdir(parents=True, exist_ok=True)
         tm.ok(u.Cli.atomic_write_text_file(tests_init, ""))
@@ -228,6 +226,7 @@ class TestsFlextInfraCodegenMain:
             )
             tm.that(" ".join(result.value.stdout.split()), contains=route.help_text)
 
+        @pytest.mark.slow
         def test_managed_conflict_is_planned_and_published_atomically(
             self,
             infra_git_repo: Path,

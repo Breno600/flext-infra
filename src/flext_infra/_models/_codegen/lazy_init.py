@@ -101,23 +101,7 @@ class FlextInfraModelsCodegenLazyInitModels:
             t.NonNegativeInt,
             m.Field(description="Total violations"),
         ]
-        fixable_violations: Annotated[
-            t.NonNegativeInt,
-            m.Field(description="Auto-fixable violations"),
-        ]
         validator_passed: Annotated[
             bool,
             m.Field(description="Whether validator passed"),
-        ]
-        flext_failures: Annotated[
-            t.NonNegativeInt,
-            m.Field(description="FLEXT failure count"),
-        ]
-        layer_violations: Annotated[
-            t.NonNegativeInt,
-            m.Field(description="Layer violation count"),
-        ]
-        cross_project_reference_violations: Annotated[
-            t.NonNegativeInt,
-            m.Field(description="Cross-project reference violation count"),
         ]

@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from flext_infra import p
 
 
-# NOTE (multi-agent, flext-wkii.17.26 / agent: codex): lazy generation delegates
+# Lazy generation delegates
 # exact models to flext-cli and proves every rendered initializer is Ruff-clean.
 class FlextInfraCodegenGenerationRenderersMixin(
     FlextInfraCodegenGenerationLazyEntriesMixin,

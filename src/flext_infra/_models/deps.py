@@ -170,7 +170,7 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             ),
         ] = False
 
-    # NOTE (multi-agent, flext-wkii.17.9): codegen consumes the pure pyproject
+    # Codegen consumes the pure pyproject
     # renderer directly, so no deps CLI payload remains for path/workspace modes.
 
     class PyprojectDocumentState(m.ArbitraryTypesModel):
@@ -250,6 +250,12 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
         root_packages: Annotated[
             t.StrTuple,
             m.Field(description="Top-level packages shipped beyond the primary one"),
+        ] = ()
+        repository_namespace_packages: Annotated[
+            t.StrTuple,
+            m.Field(
+                description="Implicit namespace directories shipped from the repository root"
+            ),
         ] = ()
         packaged_data_paths: Annotated[
             t.StrTuple,

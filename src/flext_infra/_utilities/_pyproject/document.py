@@ -118,7 +118,9 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         )
         if namespace_scope.failure:
             return r[str].from_failure(namespace_scope)
-        sources_result = cls._sync_uv_sources(source, resolution=uv_resolution)
+        sources_result = cls._sync_uv_sources(
+            source, resolution=uv_resolution, candidate_sources=candidate_sources
+        )
         if sources_result.failure:
             return r[str].from_failure(sources_result)
         provenance_result = cls._validate_dependency_provenance(
@@ -153,8 +155,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
 
         ``None`` or an empty sequence leaves the section untouched: projects
         without a declared scope keep the dynamic every-root behavior. A
-        non-empty sequence is the workspace manifest's production scope
-        (cosmos-3flk9 decision A).
+        non-empty sequence is the workspace manifest's production scope.
         """
         if not namespace_scan_dirs:
             return r[bool].ok(True)

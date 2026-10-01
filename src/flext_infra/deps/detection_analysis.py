@@ -15,6 +15,16 @@ from ._detection_runners import FlextInfraDependencyDetectionRunnersMixin
 class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunnersMixin):
     """Typings analysis + conversion helpers composed with the tool-runner mixin."""
 
+    @staticmethod
+    def _read_plain(path: Path) -> p.Result[t.JsonMapping]:
+        """Read one TOML document as a plain JSON mapping."""
+        plain_result = u.Cli.toml_read_json(path)
+        if plain_result.failure:
+            return r[t.JsonMapping].from_failure(plain_result)
+        return r[t.JsonMapping].ok(
+            t.Infra.INFRA_MAPPING_ADAPTER.validate_python(plain_result.value)
+        )
+
     @override
     def _to_toml_config(self, payload: t.MappingKV[str, t.JsonValue]) -> t.JsonMapping:
         """To toml config."""

@@ -61,6 +61,11 @@ class TestsFlextInfraCodegenLazyInitService:
             project_name="flext-test-unrelated",
             package_name="flext_test_unrelated",
         )
+        # Declaring topology does not grant an implicit cross-repository scan;
+        # publication receives its selected owners explicitly.
+        u.Tests.declare_workspace_projects(
+            tmp_path, ("flext-test-selected", "flext-test-unrelated")
+        )
         # Each Git checkout owns its own Rope index; the sibling repository
         # must remain untouched by publication of the selected checkout.
         u.Tests.write_lazy_init_namespace_module(

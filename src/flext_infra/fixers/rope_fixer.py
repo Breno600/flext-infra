@@ -26,6 +26,9 @@ from flext_infra.detectors.private_import_bypass_detector import (
 from flext_infra.refactor.classvar_constant_autofix import (
     FlextInfraRefactorClassvarConstantAutofix,
 )
+from flext_infra.refactor.project_alias_migrator import (
+    FlextInfraRefactorProjectAliasMigrator,
+)
 
 from .base import FlextInfraFixerAdapter
 
@@ -99,23 +102,9 @@ class FlextInfraRopeFixerAdapter(FlextInfraFixerAdapter):
         if not violations:
             return m.Infra.ProjectFixResult(project=project_dir.name)
         results: list[m.Infra.ProjectFixResult] = []
+        dispatch = self._target_dispatch()
         for target, target_violations in self._group_by_target(violations).items():
-            handler = self._target_dispatch().get(target)
-            if handler is None:
-                results.append(
-                    m.Infra.ProjectFixResult(
-                        project=project_dir.name,
-                        failed=(
-                            m.Infra.FailedFix(
-                                rule_id=target_violations[0][0].id,
-                                file_path=str(project_dir),
-                                error=f"rope target {target} not registered",
-                            ),
-                        ),
-                    ),
-                )
-                continue
-            results.append(handler(project_dir, target_violations, ctx))
+            results.append(dispatch[target](project_dir, target_violations, ctx))
         return self._merge_project_fix_results(project_dir, results)
 
     def _target_dispatch(
@@ -481,6 +470,7 @@ class FlextInfraRopeFixerAdapter(FlextInfraFixerAdapter):
                 u.Infra.rewrite_compatibility_alias_violations(
                     violations=file_violations,
                     parse_failures=[],
+                    alias_migrator=FlextInfraRefactorProjectAliasMigrator,
                 )
 
         return self._run_batch_file_fix_steps(

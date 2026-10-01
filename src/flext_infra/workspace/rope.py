@@ -85,7 +85,7 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
         rope_repository_root: Path | None = None,
     ) -> Self:
         """Create one ready-to-use Rope workspace session."""
-        # NOTE (multi-agent, flext-wkii.17.24): scan policy is owned only by the
+        # Scan policy is owned only by the
         # validated config singleton, never copied into a session.
         resolved_rope_root = rope_repository_root or u.Infra.rope_repository_root(
             repository_root,

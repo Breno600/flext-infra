@@ -212,8 +212,9 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(workflow, has="CI=Y make gen")
         tm.that(
             workflow,
-            has='test -z "$(git status --porcelain --untracked-files=all --ignore-submodules=none || true)"',
+            has='candidate_status="$(git status --porcelain --untracked-files=all --ignore-submodules=none)"\n          test -z "$candidate_status"',
         )
+        tm.that(workflow, lacks="|| true")
         tm.that(workflow, lacks="run: CI=Y make conform")
         tm.that(workflow, has="run: CI=Y make audit")
         tm.that(workflow, lacks="attest/gates/v1")
@@ -328,7 +329,7 @@ class TestsFlextInfraCodegenCiMatrix:
         tmp_path: Path,
     ) -> None:
         """Empty private_submodules include must not accumulate blank lines."""
-        root = self.render_project(tmp_path / "member")
+        root = rendered_project
         workflow = (root / ".github" / "workflows" / "ci.yml").read_text(
             encoding="utf-8",
         )
@@ -405,12 +406,12 @@ class TestsFlextInfraCodegenCiMatrix:
             for _reference, version in references:
                 tm.that(version, eq=action.version)
 
-    def test_dependabot_does_not_delay_available_updates(
-        self,
-        rendered_project: Path,
+    def test_dependabot_applies_the_fleet_cooldown_everywhere(
+        self, rendered_project: Path
     ) -> None:
-        """Every declared ecosystem can select its newest available release."""
+        """Every ecosystem entry carries the one configured cooldown."""
         root = rendered_project
+        days = config.Infra.codegen.toolchain.dependency_cooldown_days
 
         document = u.Cli.yaml_load_mapping(root / ".github" / "dependabot.yml")
         updates = t.Cli.JSON_LIST_ADAPTER.validate_python(document["updates"])
@@ -421,22 +422,49 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(ecosystems, eq={"github-actions", "pip"})
         for item in updates:
             update = t.Cli.JSON_MAPPING_ADAPTER.validate_python(item)
-            tm.that(update, lacks="cooldown")
+            cooldown = t.Cli.JSON_MAPPING_ADAPTER.validate_python(update["cooldown"])
+            tm.that(cooldown["default-days"], eq=days)
 
-    def test_dependabot_renders_cooldown_when_opted_in(self) -> None:
-        """A distribution opting into staggered updates gets a cooldown per entry.
+    def test_cooldown_exclusion_is_the_direct_git_requirement_set(
+        self, tmp_path: Path
+    ) -> None:
+        """Only requirements taken by direct reference are excluded."""
+        pyproject = tmp_path / c.Infra.PYPROJECT_FILENAME
+        pyproject.write_text(
+            "[project]\n"
+            'name = "example"\n'
+            'version = "0.1.0"\n'
+            "dependencies = [\n"
+            '  "registry-package>=1.0",\n'
+            '  "example-local @ git+https://example.invalid/local.git@main",\n'
+            "]\n"
+            "[dependency-groups]\n"
+            'dev = ["example-fork @ git+https://example.invalid/fork.git@main"]\n',
+            encoding="utf-8",
+        )
+        document = tm.ok(u.Cli.toml_read_document(pyproject))
 
-        The opt-in is per-distribution config (never fleet-wide): the default
-        render stays cooldown-free, so only the distribution that declared
-        staggered updates pays for them.
+        names = tm.ok(u.Infra.direct_source_names(document))
+
+        tm.that(names, eq=("example-fork", "example-local"))
+
+    def test_dependabot_cooldown_skips_forks_and_local_projects(self) -> None:
+        """Git-referenced requirements are excluded from pip cooldowns only.
+
+        Forks and local projects never enter the supply-chain cooldown; the
+        exclusion rides the pip entries, while every entry keeps the one
+        configured default-days.
         """
+        excluded = ("example-fork", "example-local")
         spec = CodegenTestSupport.Ci.workflow_spec(
             dist="example-dist",
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch="develop",
             ci_trigger_branches=CodegenTestSupport.Ci.ci_trigger_branches("develop"),
             has_devcontainer=True,
-        ).model_copy(update={"dependabot_cooldown_days": 7})
+            cooldown_excluded_dependencies=excluded,
+        )
+        days = config.Infra.codegen.toolchain.dependency_cooldown_days
         template = (
             Path(__file__).resolve().parents[3]
             / "src/flext_infra/templates/project/base/.github/dependabot.yml.j2"
@@ -452,7 +480,11 @@ class TestsFlextInfraCodegenCiMatrix:
         for item in updates:
             update = t.Cli.JSON_MAPPING_ADAPTER.validate_python(item)
             cooldown = t.Cli.JSON_MAPPING_ADAPTER.validate_python(update["cooldown"])
-            tm.that(cooldown["default-days"], eq=7)
+            tm.that(cooldown["default-days"], eq=days)
+            if update["package-ecosystem"] == "pip":
+                tm.that(list(excluded), eq=cooldown["exclude"])
+            else:
+                tm.that(cooldown, lacks="exclude")
 
     def test_distro_dockerfiles_emitted(self, rendered_project: Path) -> None:
         """Generated project carries one Dockerfile per supported distro."""
@@ -527,9 +559,9 @@ class TestsFlextInfraCodegenCiMatrix:
             content = (docker_dir / f"{distro}.Dockerfile").read_text(encoding="utf-8")
             tm.that("libatomic" not in content, eq=True, msg=distro)
 
-    def test_dockerfiles_render_byte_idempotently(self, tmp_path: Path) -> None:
+    def test_dockerfiles_render_byte_idempotently(self, rendered_project: Path) -> None:
         """Repeated project generation preserves the generated Dockerfiles."""
-        root = self.render_project(tmp_path / "external")
+        root = rendered_project
         before = {
             distro: (
                 root / "tests" / "fixtures" / "ci" / "docker" / f"{distro}.Dockerfile"
@@ -673,6 +705,48 @@ class TestsFlextInfraCodegenCiMatrix:
 
         for branch in config.Infra.codegen.branch_policy.ci_trigger_branches:
             tm.that(content, has=f"      - {branch}")
+
+    def test_docs_failure_upload_keeps_audit_failure_and_scopes_hidden_reports(
+        self, rendered_project: Path
+    ) -> None:
+        """A generated Docs job fails on audit findings and retains safe reports."""
+        workflow = u.Cli.yaml_load_mapping(
+            rendered_project / ".github/workflows/docs.yml"
+        )
+        jobs = t.Cli.JSON_MAPPING_ADAPTER.validate_python(workflow["jobs"])
+        docs_job = t.Cli.JSON_MAPPING_ADAPTER.validate_python(jobs["docs-quality"])
+        raw_steps = docs_job["steps"]
+        if not isinstance(raw_steps, list):
+            msg = "Docs workflow steps must be a sequence"
+            raise TypeError(msg)
+        steps = [t.Cli.JSON_MAPPING_ADAPTER.validate_python(step) for step in raw_steps]
+        docs_step = next(
+            step for step in steps if step["name"] == "Docs lifecycle (blocking)"
+        )
+        upload = next(
+            step for step in steps if step.get("name") == "Upload docs reports on failure"
+        )
+        tm.that(docs_step.get("run"), eq="make docs")
+        tm.that(docs_step.get("continue-on-error"), eq=None)
+        tm.that(upload["if"], eq="failure()")
+        upload_with = t.Cli.JSON_MAPPING_ADAPTER.validate_python(upload["with"])
+        tm.that(upload_with["include-hidden-files"], eq=True)
+        tm.that(upload_with["if-no-files-found"], eq="error")
+        report_path_value = upload_with["path"]
+        if not isinstance(report_path_value, str):
+            msg = "Docs report paths must be text"
+            raise TypeError(msg)
+        report_paths = report_path_value.splitlines()
+        tm.that(report_paths, empty=False)
+        permitted_names = {
+            "audit-summary.json",
+            "audit-report.md",
+            "validate-summary.json",
+            "validate-report.md",
+        }
+        tm.that({Path(path).name for path in report_paths}, eq=permitted_names)
+        for path in report_paths:
+            tm.that(".reports" in Path(path).parts, eq=True)
 
     def test_docs_workflow_jobs_authenticate_toolchain_resolution(
         self,

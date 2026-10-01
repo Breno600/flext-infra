@@ -75,7 +75,6 @@ class FlextInfraConstantsMake:
     MYPY_MEMORY_LIMIT_MB_DEFAULT: ClassVar[int] = 6144
     MYPY_TIMEOUT_SECONDS_ENV: ClassVar[str] = "MYPY_TIMEOUT_SECONDS"
     MYPY_PROFILE_OUTPUT_ENV: ClassVar[str] = "FLEXT_MYPY_PROFILE_OUTPUT"
-    MYPY_TIMEOUT_SECONDS_DEFAULT: ClassVar[int] = 120
     MYPY_TIMEOUT_SECONDS_MAX: ClassVar[int] = 600
     MYPY_TIMEOUT_GRACE_SECONDS: ClassVar[int] = 10
     MYPY_SUPERVISOR_PS_TIMEOUT: ClassVar[int] = 1
@@ -98,11 +97,9 @@ class FlextInfraConstantsMake:
         if gate not in FlextInfraConstantsCheck.MUTATING_GATES
     )
     # markdown-code and markdown-format stay allowed and explicitly invocable
-    # (`--gates markdown-code`), but are not default check gates: operator
-    # ruling 2026-09-18 (flext-uz0dt for markdown-code; flext-v4fmn for
-    # markdown-format) takes them out of the unset-CI default set pending
-    # review. markdown-format is structurally contradictory on the current
-    # generated docs: the gen render is not prettier-stable, so no commit can
+    # (`--gates markdown-code`), but are not default check gates: they stay
+    # out of the unset-CI default set pending review. markdown-format is
+    # structurally contradictory on the current generated docs: the gen render is not prettier-stable, so no commit can
     # satisfy both `gen fixed point` and `prettier --check`.
     CANONICAL_DEFAULT_GATE_IDS: ClassVar[t.VariadicTuple[str]] = tuple(
         gate

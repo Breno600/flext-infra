@@ -103,8 +103,12 @@ class FlextInfraPytestRunnerExecution(
         # For a zero-test project (no test module under the config-owned
         # roots) rc=5 is the DECLARED inventory outcome in both phases.
         owns_no_tests = self._owns_no_tests()
+        # A project may declare no slow-marked item at all, so the slow phase
+        # accepts an empty complete inventory as its declared outcome.
         accepted = {pytest.ExitCode.OK} | (
-            set() if complete else {pytest.ExitCode.NO_TESTS_COLLECTED}
+            set()
+            if complete and not self.slow_phase
+            else {pytest.ExitCode.NO_TESTS_COLLECTED}
         )
         if owns_no_tests:
             accepted = {pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED}
@@ -137,7 +141,7 @@ class FlextInfraPytestRunnerExecution(
         if outcome.raw_return_code == pytest.ExitCode.NO_TESTS_COLLECTED and node_ids:
             msg = "pytest reported no collection with a nonempty manifest"
             raise RuntimeError(msg)
-        if complete and not node_ids and not owns_no_tests:
+        if complete and not node_ids and not owns_no_tests and not self.slow_phase:
             msg = "complete pytest inventory must contain at least one test"
             raise RuntimeError(msg)
         u.Cli.atomic_write_text_file(
@@ -189,7 +193,7 @@ class FlextInfraPytestRunnerExecution(
         pytest_settings = config.Infra.tooling.tools.pytest
         return m.Cli.ProcessDeadline(
             expires_at_monotonic=self.started_at_monotonic
-            + pytest_settings.run_timeout_seconds,
+            + self.run_timeout_seconds(pytest_settings),
             termination_grace_seconds=pytest_settings.termination_grace_seconds,
         )
 
@@ -414,19 +418,31 @@ class FlextInfraPytestRunnerExecution(
 
     def _execute_testmon(self, *, complete: bool) -> p.Result[int]:
         """Execute one selected testmon phase without resetting shared state."""
-        u.Cli.ensure_dir(self.testmon_db.parent).unwrap()
-        report_dir = self._report_directory()
         execution_mode = (
             c.Infra.PytestExecutionMode.FULL
             if complete
             else c.Infra.PytestExecutionMode.INCREMENTAL
         )
+        slow_marker = config.Infra.tooling.tools.pytest.slow_marker
+        if self.slow_phase and slow_marker in self.ci_excluded_markers(
+            execution_mode=execution_mode
+        ):
+            # The CI context deselects the slow marker by declaration, so its
+            # phase is typed NOT EXECUTED here, never a selection of nothing.
+            sys.stderr.write(
+                f"pytest slow phase NOT EXECUTED: ci-excluded-markers declares "
+                f"{slow_marker!r}\n"
+            )
+            return r.ok(0)
+        u.Cli.ensure_dir(self.testmon_db.parent).unwrap()
+        report_dir = self._report_directory()
         self._write_run_context(
             report_dir,
             m.Infra.PytestRunContext(
                 execution_mode=execution_mode,
                 testmon_db=self.testmon_db,
                 deadline_monotonic=self._process_deadline().expires_at_monotonic,
+                report_directory=report_dir,
             ),
         )
         pre_digest = FlextInfraTestmonDbInspector.digest_file(self.testmon_db)
@@ -456,13 +472,7 @@ class FlextInfraPytestRunnerExecution(
         # enforces that manifest for both cold and warm caches while testmon
         # continues to collect dependencies through its xdist integration.
         command = self.build_command(
-            report_dir,
-            selection,
-            invocation=m.Infra.PytestInvocation(
-                manifest_path=selection_plan.manifest_path,
-                whole_target=selection_plan.whole_target,
-                execution_mode=execution_mode,
-            ),
+            report_dir, selection_plan, execution_mode=execution_mode
         )
         outcome = self._run_suite(command, report_dir, execution_mode=execution_mode)
         cache_hit = (
@@ -522,6 +532,7 @@ class FlextInfraPytestRunnerExecution(
                 execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
                 testmon_db=None,
                 deadline_monotonic=self._process_deadline().expires_at_monotonic,
+                report_directory=report_dir,
             ),
         )
         # The inventory pass enforces the same collection policy before coverage.

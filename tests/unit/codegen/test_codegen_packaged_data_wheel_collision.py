@@ -41,6 +41,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         *,
         package_config: bool,
         packaged_data_paths: tuple[str, ...] = (),
+        repository_namespace_packages: tuple[str, ...] = (),
     ) -> None:
         """Materialize one governed project, optionally shipping in-package data."""
         _ = u.Tests.standalone_workspace(root, FIXTURE_DISTRIBUTION)
@@ -76,6 +77,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             FIXTURE_DISTRIBUTION,
             cli_module=False,
             packaged_data_paths=packaged_data_paths,
+            repository_namespace_packages=repository_namespace_packages,
         )
         u.Tests.git_bootstrap(
             root,
@@ -139,6 +141,19 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         )
         return u.Tests.toml_list(sdist["include"])
 
+    @staticmethod
+    def _sdist_force_include(root: Path) -> t.JsonMapping:
+        """Read declared source files retained unchanged by the sdist."""
+        manifest = (root / c.PYPROJECT_FILENAME).read_text(encoding="utf-8")
+        sdist = u.Tests.toml_table_at(
+            manifest, c.Infra.TOOL, "hatch", "build", "targets", "sdist"
+        )
+        return (
+            u.Tests.toml_mapping(sdist["force-include"])
+            if "force-include" in sdist
+            else {}
+        )
+
     @pytest.mark.slow
     def test_declared_root_data_dir_stays_selected(self, infra_git_repo: Path) -> None:
         """A declared root directory reaches the wheel through native selection."""
@@ -173,8 +188,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             eq=False,
         )
         tm.that(
-            f"/{FIXTURE_DISTRIBUTION_DATA_DIR}/**"
-            in self._sdist_include(infra_git_repo),
+            FIXTURE_DISTRIBUTION_DATA_DIR in self._sdist_only_include(infra_git_repo),
             eq=False,
         )
 
@@ -202,6 +216,52 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             eq=f"{package_name}/infra",
         )
         tm.that("/infra/**" in self._sdist_include(infra_git_repo), eq=True)
+
+    @pytest.mark.slow
+    def test_repository_namespace_retains_its_import_path(
+        self, infra_git_repo: Path
+    ) -> None:
+        """A declared root namespace ships at the same import path in both formats."""
+        self._prepare_project(
+            infra_git_repo,
+            package_config=False,
+            repository_namespace_packages=("infra",),
+        )
+        source = infra_git_repo / "infra" / "pulumi" / "__main__.py"
+        tm.ok(u.Cli.atomic_write_text_file(source, "VALUE = 'fixture'\n"))
+
+        tm.that(self._conform_self(infra_git_repo), eq=0)
+
+        wheel = self._wheel_target(infra_git_repo)
+        tm.that("/infra/**" in u.Tests.toml_list(wheel["include"]), eq=True)
+        tm.that(u.Tests.toml_mapping(wheel["sources"]).get("infra"), eq="infra")
+        tm.that("/infra/**" in self._sdist_include(infra_git_repo), eq=True)
+        output = infra_git_repo.parent / "namespace-artifacts"
+        wheel_dir = output / "wheel"
+        sdist_dir = output / "sdist"
+        tm.ok(
+            u.Cli.run_checked(
+                ["uv", "build", "--wheel", "--out-dir", str(wheel_dir)],
+                cwd=infra_git_repo,
+            )
+        )
+        tm.ok(
+            u.Cli.run_checked(
+                ["uv", "build", "--sdist", "--out-dir", str(sdist_dir)],
+                cwd=infra_git_repo,
+            )
+        )
+        with zipfile.ZipFile(next(wheel_dir.glob("*.whl"))) as archive:
+            tm.that(archive.read("infra/pulumi/__main__.py"), eq=source.read_bytes())
+        with tarfile.open(next(sdist_dir.glob("*.tar.gz"))) as archive:
+            member = next(
+                item for item in archive.getmembers()
+                if item.name.endswith("/infra/pulumi/__main__.py")
+            )
+            stream = archive.extractfile(member)
+            assert stream is not None
+            with stream:
+                tm.that(stream.read(), eq=source.read_bytes())
 
     @pytest.mark.slow
     def test_undeclared_infrastructure_dir_stays_out_of_archives(
@@ -270,8 +330,8 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             self._wheel_force_include(infra_git_repo),
             eq={catalog: f"{package_name}/{catalog}"},
         )
-        tm.that(f"/{catalog}" in self._sdist_include(infra_git_repo), eq=True)
-        tm.that("/config/**" in self._sdist_include(infra_git_repo), eq=False)
+        tm.that(catalog in self._sdist_only_include(infra_git_repo), eq=True)
+        tm.that("config" in self._sdist_only_include(infra_git_repo), eq=False)
 
     @pytest.mark.slow
     @pytest.mark.parametrize(
@@ -380,9 +440,20 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         )
         tm.that(self._conform_self(infra_git_repo), eq=0)
         ignored = "infra/state.json"
+        self._prepare_project(
+            infra_git_repo,
+            package_config=False,
+            packaged_data_paths=(catalog, "infra"),
+            packaged_data_excludes=(ignored,),
+        )
+        tm.ok(u.Cli.atomic_write_text_file(infra_git_repo / catalog, "profiles: {}\n"))
+        tm.ok(
+            u.Cli.atomic_write_text_file(infra_git_repo / asset, "---\n- hosts: all\n")
+        )
         tm.ok(u.Cli.atomic_write_text_file(infra_git_repo / ignored, "private state\n"))
+        tm.that(self._conform_self(infra_git_repo), eq=0)
         with (infra_git_repo / ".gitignore").open("a", encoding="utf-8") as stream:
-            stream.write(f"\n/{ignored}\n")
+            stream.write(f"\n/{ignored}\n/{catalog}\n")
         output = infra_git_repo.parent / "artifacts"
         direct = output / "direct"
         source = output / "source"

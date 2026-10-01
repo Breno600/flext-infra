@@ -8,22 +8,11 @@ from __future__ import annotations
 
 from flext_tests import tm
 
-from tests import c, m
+from tests import c
 
 
 class TestsFlextInfraInfraConstantsExtra:
     """Tests for Check namespace constants."""
-
-    def test_check_dirs_declared_repository_is_list(self) -> None:
-        tm.that(c.Infra.CHECK_DIRS_REPOSITORY, is_=tuple)
-
-    def test_check_dirs_match_the_typed_refactor_contract(self) -> None:
-        configured_dirs = m.Infra.RefactorConfig().project_scan_dirs
-        tm.that(frozenset(c.Infra.CHECK_DIRS_REPOSITORY), eq=frozenset(configured_dirs))
-
-    def test_check_dirs_are_strings(self) -> None:
-        for d in c.Infra.CHECK_DIRS_REPOSITORY:
-            tm.that(d, is_=str)
 
     def test_github_constants_are_strings(self) -> None:
         tm.that(c.Infra.GITHUB_REPO_URL, is_=str)

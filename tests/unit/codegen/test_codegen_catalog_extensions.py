@@ -273,11 +273,14 @@ class TestsFlextInfraCodegenCatalogExtensions:
         )
         toolchain = config.Infra.codegen.toolchain
         mise = tm.not_none(u.Tests.planned_text(plan, c.Infra.MISE_TOML_FILENAME))
+        tm.that(mise, has=f'python = "{toolchain.python_tool_version}"')
         tm.that(mise, has=f'direnv = "{toolchain.direnv_version}"')
         tm.that(mise, has=f'go = "{toolchain.go_version}"')
         tm.that(mise, has=f'make = "{toolchain.make_version}"')
         tm.that(mise, lacks="credential_command")
-        tm.that(mise, lacks="minimum_release_age")
+        tm.that(
+            mise, has=f'minimum_release_age = "{toolchain.dependency_cooldown_days}d"'
+        )
         # S1 (operator law 2026-09-14): gen has one always-apply recipe; the
         # CHECK_ONLY-selected check/apply pair no longer exists.
         tm.that(content, lacks="_builtin_gen_check:")

@@ -183,7 +183,7 @@ class FlextInfraPyprojectModernizerRun:
                         state.value.rendered,
                         fromfile=f"{file_path}:before",
                         tofile=f"{file_path}:after",
-                        max_lines=30,
+                        max_lines=c.Infra.EDIT_DIFF_PREVIEW_MAX_LINES,
                     )
                     u.Cli.info(
                         "deps: first rendered drift\n" + "".join(diff_lines).rstrip(),
@@ -217,7 +217,7 @@ class FlextInfraPyprojectModernizerRun:
         *,
         dry_run: bool,
     ) -> int:
-        """Write runtime-resolved floors to the codegen SSOT (flext-gzfd2 cutover)."""
+        """Write runtime-resolved floors to the codegen SSOT."""
         try:
             root_project_name = u.Infra.project_name_from_payload(
                 root_state.pyproject_path,

@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import hashlib
 import os
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -72,16 +71,16 @@ _DETECTOR_PROJECT_NAME = "detector-fixture"
 _DETECTOR_UPGRADE_RECEIPT = "upgrade-receipt.json"
 
 
-def _detector_template_parent(modules: t.StrSequence) -> Path:
+def _detector_template_parent(run_root: Path, modules: t.StrSequence) -> Path:
     """Return the run-scoped home of one resolved detector consumer.
 
     The pytest invocation's temporary root is shared by every worker of one
     run and removed with it, so each run resolves its own environment once.
     """
-    return Path(tempfile.gettempdir()) / "detector-templates" / "-".join(modules)
+    return run_root / "detector-templates" / "-".join(modules)
 
 
-def _provision_detector_template(modules: t.StrSequence) -> None:
+def _provision_detector_template(run_root: Path, modules: t.StrSequence) -> None:
     """Resolve one detector consumer through ``make upg`` and commit its locks.
 
     ``make upg`` is the sole writer of a new consumer's locks; it resolves over
@@ -89,7 +88,7 @@ def _provision_detector_template(modules: t.StrSequence) -> None:
     item starts. The command output is kept as the receipt every consumer of
     the template asserts.
     """
-    parent = _detector_template_parent(modules)
+    parent = _detector_template_parent(run_root, modules)
     distributions = {"requests": "requests", "pytz": "pytz", "six": "six"}
     # A governed FLEXT consumer declares exactly one runtime upstream profile;
     # conform derives its project spec from it (context_render.py).
@@ -192,9 +191,15 @@ _INFRA_CHECKOUT_SCENARIOS = (
 )
 
 
-def _run_scoped(kind: str, key: str) -> Path:
+def _run_root(factory: pytest.TempPathFactory) -> Path:
+    """Use pytest's invocation directory, shared across xdist workers."""
+    base = factory.getbasetemp()
+    return base.parent if os.environ.get("PYTEST_XDIST_WORKER") else base
+
+
+def _run_scoped(run_root: Path, kind: str, key: str) -> Path:
     """Return the run-scoped home of one provisioned consumer."""
-    return Path(tempfile.gettempdir()) / kind / key
+    return run_root / kind / key
 
 
 def _write_receipt(path: Path, output: p.Cli.CommandOutput) -> None:
@@ -210,14 +215,14 @@ def _write_receipt(path: Path, output: p.Cli.CommandOutput) -> None:
     )
 
 
-def _provision_make_template(profile: c.Infra.MakeProfile) -> None:
+def _provision_make_template(run_root: Path, profile: c.Infra.MakeProfile) -> None:
     """Resolve one generated consumer through ``make upg`` once per run.
 
     The upgrade runs under a foreign uv environment with a declared post-upg
     hook, and a checkout of the resolved result installs every locked tool
     into cold CI storage; both receipts are what the consumers assert.
     """
-    parent = _run_scoped("make-templates", profile.value)
+    parent = _run_scoped(run_root, "make-templates", profile.value)
     root, _ = u.Tests.render_make_environment(parent, profile, bootstrap=True)
     hostile_venv = parent / c.Tests.MAKE_TEMPLATE_HOSTILE_VENV
     (hostile_venv / "bin").mkdir(parents=True)
@@ -268,9 +273,9 @@ def _provision_make_template(profile: c.Infra.MakeProfile) -> None:
     _write_receipt(parent / _MAKE_CI_SETUP_RECEIPT, setup)
 
 
-def _provision_infra_checkout(scenario: str) -> None:
+def _provision_infra_checkout(run_root: Path, scenario: str) -> None:
     """Set up one candidate checkout from its committed locks before its item."""
-    parent = _run_scoped("infra-checkouts", scenario)
+    parent = _run_scoped(run_root, "infra-checkouts", scenario)
     root = u.Tests.infra_source_checkout(parent)
     setup = tm.ok(
         u.Tests.run_isolated_make(["--no-print-directory", "setup"], cwd=root),
@@ -295,15 +300,15 @@ def _ensure_provisioned(
             return
         match key:
             case c.Infra.MakeProfile():
-                _provision_make_template(key)
+                _provision_make_template(run_root, key)
             case str():
-                _provision_infra_checkout(key)
+                _provision_infra_checkout(run_root, key)
             case _:
-                _provision_detector_template(key)
+                _provision_detector_template(run_root, key)
 
 
 @pytest.fixture
-def hermetic_git_environment() -> t.StrMapping:
+def hermetic_git_environment(tmp_path_factory: pytest.TempPathFactory) -> t.StrMapping:
     """Serve the fixture provider's Git sources from this run's local mirrors.
 
     The mirrors are built once per locked-source set under the canonical
@@ -330,7 +335,9 @@ def hermetic_git_environment() -> t.StrMapping:
 
 
 @pytest.fixture
-def resolved_make_templates() -> t.MappingKV[c.Infra.MakeProfile, Path]:
+def resolved_make_templates(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> t.MappingKV[c.Infra.MakeProfile, Path]:
     """Return every profile's committed ``make upg`` template for this run.
 
     Consumers clone a template rather than resolving inside their budget; the
@@ -338,8 +345,9 @@ def resolved_make_templates() -> t.MappingKV[c.Infra.MakeProfile, Path]:
     """
     templates: dict[c.Infra.MakeProfile, Path] = {}
     for profile in c.Infra.MakeProfile:
-        parent = _run_scoped("make-templates", profile.value)
-        _ensure_provisioned(parent, _MAKE_UPGRADE_RECEIPT, profile)
+        run_root = _run_root(tmp_path_factory)
+        parent = _run_scoped(run_root, "make-templates", profile.value)
+        _ensure_provisioned(run_root, parent, _MAKE_UPGRADE_RECEIPT, profile)
         upgrade = u.Tests.command_receipt(parent / _MAKE_UPGRADE_RECEIPT)
         tm.that(
             u.Cli.process_succeeded(upgrade.outcome),
@@ -351,11 +359,14 @@ def resolved_make_templates() -> t.MappingKV[c.Infra.MakeProfile, Path]:
 
 
 @pytest.fixture(params=_INFRA_CHECKOUT_SCENARIOS)
-def provisioned_infra_checkout(request: pytest.FixtureRequest) -> t.Pair[str, Path]:
+def provisioned_infra_checkout(
+    request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory
+) -> t.Pair[str, Path]:
     """Return one scenario's candidate checkout, set up from committed locks."""
     scenario = str(request.param)
-    parent = _run_scoped("infra-checkouts", scenario)
-    _ensure_provisioned(parent, _INFRA_SETUP_RECEIPT, scenario)
+    run_root = _run_root(tmp_path_factory)
+    parent = _run_scoped(run_root, "infra-checkouts", scenario)
+    _ensure_provisioned(run_root, parent, _INFRA_SETUP_RECEIPT, scenario)
     setup = u.Tests.command_receipt(parent / _INFRA_SETUP_RECEIPT)
     tm.that(
         u.Cli.process_succeeded(setup.outcome),
@@ -363,12 +374,16 @@ def provisioned_infra_checkout(request: pytest.FixtureRequest) -> t.Pair[str, Pa
         msg=setup.stdout + setup.stderr,
     )
     root = parent / config.Infra.name
-    tm.that((root / ".venv" / "pyvenv.cfg").is_file(), eq=True)
+    tm.that((u.Infra.runtime_environment_dir(root) / "pyvenv.cfg").is_file(), eq=True)
     return scenario, root
 
 
 @pytest.fixture(params=[("requests",)])
-def real_detector_project(tmp_path: Path, request: pytest.FixtureRequest) -> Path:
+def real_detector_project(
+    tmp_path: Path,
+    request: pytest.FixtureRequest,
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Path:
     """Check out the run's resolved detector consumer and set it up from its locks.
 
     The consumer clones the committed template exactly as a developer clones a
@@ -376,8 +391,9 @@ def real_detector_project(tmp_path: Path, request: pytest.FixtureRequest) -> Pat
     from the committed locks without resolving anything new.
     """
     modules = t.Infra.STR_SEQ_ADAPTER.validate_python(request.param)
-    parent = _detector_template_parent(modules)
-    _ensure_provisioned(parent, _DETECTOR_UPGRADE_RECEIPT, modules)
+    run_root = _run_root(tmp_path_factory)
+    parent = _detector_template_parent(run_root, modules)
+    _ensure_provisioned(run_root, parent, _DETECTOR_UPGRADE_RECEIPT, modules)
     upgrade = m.Cli.CommandOutput.model_validate_json(
         (parent / _DETECTOR_UPGRADE_RECEIPT).read_text(encoding="utf-8"),
     )
@@ -555,12 +571,18 @@ def mod_workspace(tmp_path: Path) -> Path:
     )
     # A declared distribution owns a package: resolving the package name from
     # `[project].name` alone is impossible for a `flext-` distribution, so a
-    # fixture without `src/<pkg>/` is not the project it claims to be.
-    package_dir = (
-        workspace / c.Infra.DEFAULT_SRC_DIR / (project.project.name.replace("-", "_"))
-    )
+    # fixture without `src/<pkg>/` is not the project it claims to be. The
+    # package follows the fixture's own declared name: naming it after the
+    # real project would shadow the installed flext_infra for Rope, and every
+    # packaged campaign binding (flext_infra.c / .t) would lose its owner.
+    package_dir = workspace / c.Infra.DEFAULT_SRC_DIR / workspace.name
     tm.ok(u.Cli.ensure_dir(package_dir))
-    tm.ok(u.Cli.atomic_write_text_file(package_dir / c.Infra.INIT_PY, ""))
+    tm.ok(
+        u.Cli.atomic_write_text_file(
+            package_dir / c.Infra.INIT_PY,
+            '"""Public refactor-mod fixture package."""\n\nfrom __future__ import annotations\n',
+        )
+    )
     tm.ok(
         u.Cli.atomic_write_text_file(
             workspace / "sample.py",

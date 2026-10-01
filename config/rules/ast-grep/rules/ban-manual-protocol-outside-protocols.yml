@@ -1,0 +1,54 @@
+# A Protocol class lives in its family owner: a protocols module or a
+# protocols package. Declaring one anywhere else creates a second owner of a
+# structural contract.
+#
+# No token fix: relocating the class rewires every consumer. The rule names the
+# rope relocation that performs the move and captures the class as $NAME, the
+# input that relocation consumes.
+id: ban-manual-protocol-outside-protocols
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/protocols.py"
+  - "**/_protocols.py"
+  - "**/protocols/**"
+  - "**/_protocols/**"
+  - "**/settings.py"
+  - "**/_settings.py"
+  - "**/typings.py"
+  - "**/_typings.py"
+  - "**/__init__.py"
+  - "**/__main__.py"
+  - "**/__version__.py"
+  - "**/conftest.py"
+metadata:
+  relocation: protocol
+rule:
+  all:
+    - kind: class_definition
+    - has:
+        field: name
+        pattern: $NAME
+    # A class built inside a function body is local data (a test input, a
+    # factory result), not a declared contract of the module.
+    - not:
+        inside:
+          kind: function_definition
+          stopBy: end
+    - has:
+        field: superclasses
+        has:
+          any:
+            - kind: identifier
+              regex: "^Protocol$"
+            - kind: subscript
+              has:
+                field: value
+                regex: "^(?:typing\\.)?Protocol$"
+            - kind: attribute
+              regex: "^typing\\.Protocol$"
+message: >-
+  Protocol class outside the protocols family: declare it in protocols.py or
+  the _protocols package.

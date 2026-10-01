@@ -8,7 +8,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Annotated, ClassVar
 
-from flext_cli import m, u
+from flext_cli import m
 
 from .. import t
 from .mixins import FlextInfraModelsMixins as mm
@@ -27,11 +27,11 @@ class FlextInfraModelsRefactor(
     - ``ArbitraryTypesModel`` for mutable report/result payloads.
     """
 
+    class ModTextCommand(mm.WriteMixin, m.ContractModel):
+        """Repository-scoped request for authenticated Sed rule replay."""
+
     class RefactorNamespaceEnforceInput(mm.WriteMixin, m.ContractModel):
         """CLI/service request for namespace enforcement."""
-
-    class ModernizeInput(mm.WriteMixin, m.ContractModel):
-        """CLI/service request for generic modernize transformers."""
 
     class AccessorMigrationInput(mm.WriteMixin, m.ContractModel):
         """CLI/service request for accessor migration dry-runs and applies."""
@@ -114,23 +114,6 @@ class FlextInfraModelsRefactor(
             m.Field(description="Decorator names applied to this method"),
         ] = m.Field(default_factory=tuple)
 
-    class Checkpoint(mm.CheckpointRefMixin, m.ArbitraryTypesModel):
-        """Serialisable checkpoint state for refactor safety recovery."""
-
-        repository_root: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Repository root path"),
-        ]
-        status: Annotated[str, m.Field(description="Checkpoint status")] = "running"
-        processed_targets: Annotated[
-            t.StrSequence,
-            m.Field(description="Already-processed file targets"),
-        ] = m.Field(default_factory=tuple)
-        updated_at: Annotated[
-            str,
-            m.Field(description="ISO 8601 timestamp of last update"),
-        ] = m.Field(default_factory=lambda: u.now().isoformat())
-
     class ProjectClassification(m.ArbitraryTypesModel):
         """Result of classifying a project by kind and family chains."""
 
@@ -147,7 +130,7 @@ class FlextInfraModelsRefactor(
             m.Field(description="Family letter to FLEXT chain mapping"),
         ]
 
-    # NOTE (multi-agent): the two models below replace the
+    # The two models below replace the
     # dataclass payloads that lived in refactor/_wrapper_rewrite.py and
     # refactor/classvar_constant_autofix.py (deep-FLEXT: models only in m).
     class WrapperRewriteAccumulator(m.ArbitraryTypesModel):
@@ -263,6 +246,14 @@ class FlextInfraModelsRefactor(
         ] = None
 
     # -- CSV-driven Rename Models ---------------------------------------------
+
+    class ModCommand(mm.WriteMixin, m.ContractModel):
+        """CLI request for the shared AST, semantic, and text codemod cascade."""
+
+        check: Annotated[bool, m.Field(description="Validate without writing")] = False
+        dry_run_mode: Annotated[
+            bool, m.Field(alias="dry-run", description="Inspect without writing")
+        ] = False
 
     class ApplyRenamesInput(mm.WriteMixin, m.ContractModel):
         """Validated CLI request for CSV-driven symbol renames."""

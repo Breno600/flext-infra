@@ -374,6 +374,51 @@ class FlextInfraModGateEngine:
         return r[bool].ok(True)
 
     @staticmethod
+    def _admitted(
+        root: Path,
+        report: m.Infra.ModScanReport,
+        rules_by_id: t.MappingKV[str, m.Infra.CodemodRule],
+    ) -> m.Infra.ModScanReport:
+        """Keep the findings whose rule's project context holds, recounted.
+
+        A rule's ``metadata.context`` binds captured metavariables to project
+        predicates ast-grep cannot see (standard library, own package, runtime
+        closure, the file's declared facade family); the syntactic match is a
+        finding only when every condition holds.
+        """
+        entries = tuple(
+            entry
+            for entry in report.entries
+            if u.Infra.codemod_context_admits(
+                root,
+                rules_by_id[entry.rule_id],
+                entry.file,
+                FlextInfraModGateEngine._single_captures(entry.payload),
+            )
+        )
+        if len(entries) == len(report.entries):
+            return report
+        classes = [entry.classification for entry in entries]
+        return m.Infra.ModScanReport(
+            findings=len(entries),
+            actionable=classes.count(c.Infra.ModScanFindingClass.ACTIONABLE),
+            detection_only=classes.count(c.Infra.ModScanFindingClass.DETECTION_ONLY),
+            non_actionable_with_fix=classes.count(
+                c.Infra.ModScanFindingClass.NON_ACTIONABLE_WITH_FIX
+            ),
+            files=frozenset(entry.file for entry in entries),
+            entries=entries,
+        )
+
+    @staticmethod
+    def _single_captures(payload: t.JsonMapping) -> t.JsonMapping:
+        """Return ast-grep's ``metaVariables.single`` mapping of one finding."""
+        meta = payload.get("metaVariables")
+        single = meta.get("single") if isinstance(meta, Mapping) else None
+        captures: t.JsonMapping = single if isinstance(single, Mapping) else {}
+        return captures
+
+    @staticmethod
     def _validate_expected_receipts(
         rules: t.SequenceOf[m.Infra.CodemodRule],
         report: m.Infra.ModScanReport,
@@ -604,6 +649,7 @@ class FlextInfraModGateEngine:
         files: set[Path] = set()
         entries: list[m.Infra.ModScanFinding] = []
         rule_files_by_id = {rule.id: rule.resource for rule in plan.rules}
+        rules_by_id = {rule.id: rule for rule in plan.rules}
         targets = u.Infra.ast_grep_scan_targets(root)
         sys.stderr.write(
             f"mod: ast-grep {'apply' if fix else 'scan'} "
@@ -649,6 +695,7 @@ class FlextInfraModGateEngine:
                     entry.payload.get("severity") == "error" for entry in report.entries
                 )
                 cls._validate_finding_receipt(run.value.stderr, error_findings).unwrap()
+            report = cls._admitted(root, report, rules_by_id)
             findings += report.findings
             actionable_findings += report.actionable
             detection_only_findings += report.detection_only

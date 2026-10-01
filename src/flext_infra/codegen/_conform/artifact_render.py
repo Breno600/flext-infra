@@ -13,6 +13,42 @@ from .context_render import FlextInfraCodegenConformContextRender
 class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRender):
     """Governed artifact rendering and project overlay composition."""
 
+    @staticmethod
+    def with_planned_pyproject(
+        render_inputs: m.Infra.CodegenRenderInputs, composed: str
+    ) -> p.Result[m.Infra.CodegenRenderInputs]:
+        """Record the direct-reference requirements of the pyproject just planned.
+
+        Planners compose the pyproject before every other destination, so a
+        scaffold (no pyproject on disk yet) and a conformance that changes the
+        requirements both render from the planned bytes, never stale ones.
+        """
+        document = u.Cli.toml_parse_text(composed)
+        if document is None:
+            return r[m.Infra.CodegenRenderInputs].fail(
+                "planned pyproject is not valid TOML"
+            )
+        names = u.Infra.direct_source_names(document)
+        if names.failure:
+            return r[m.Infra.CodegenRenderInputs].from_failure(names)
+        return r[m.Infra.CodegenRenderInputs].ok(
+            render_inputs.model_copy(update={"planned_direct_sources": names.value})
+        )
+
+    @staticmethod
+    def direct_sources(
+        render_inputs: m.Infra.CodegenRenderInputs,
+    ) -> p.Result[t.VariadicTuple[str]]:
+        """Return the planned direct-reference names, else the committed ones."""
+        if render_inputs.planned_direct_sources is not None:
+            return r[t.VariadicTuple[str]].ok(render_inputs.planned_direct_sources)
+        document = u.Cli.toml_read_document(
+            render_inputs.target.root / c.Infra.PYPROJECT_FILENAME
+        )
+        if document.failure:
+            return r[t.VariadicTuple[str]].from_failure(document)
+        return u.Infra.direct_source_names(document.value)
+
     @classmethod
     def compose_project_artifact(
         cls,
@@ -195,7 +231,6 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             return r[p.Model].ok(
                 m.Infra.EnvrcRenderSpec(
                     repository_root_rel=self._repository_root_rel(workspace),
-                    runtime_environment_directory=codegen.make.runtime_environment_directory,
                     environment_path_prepends=(
                         codegen.toolchain.environment_path_prepends
                     ),
@@ -243,8 +278,8 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             # Why: this marker is regenerated on every `make gen`, but the
             # ledger identity inside it is owned by the checkout, not by the
             # fleet SSOT. Rendering without it stripped the key, and Beads then
-            # minted a NEW identity on next access — rig gmn lost
-            # 2b1a0582-… that way (commit 3e7ba1e). Read it back so a
+            # minted a NEW identity on next access — a consumer rig lost its
+            # identity that way. Read it back so a
             # regeneration is identity-preserving.
             return r[p.Model].ok(
                 m.Infra.BeadsMetadataRenderSpec(
@@ -268,6 +303,11 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             if resolved_branch.failure:
                 return r[p.Model].from_failure(resolved_branch)
             branch = resolved_branch.value
+            # Forks and local projects never enter the cooldown: they are the
+            # requirements this project takes by direct git reference.
+            excluded = self.direct_sources(render_inputs)
+            if excluded.failure:
+                return r[p.Model].from_failure(excluded)
             return r[p.Model].ok(
                 m.Infra.GithubWorkflowRenderSpec(
                     dist=dist,
@@ -292,10 +332,8 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                     # checkout rather than declared: a stale flag would silently
                     # disable Dependabot for the repository.
                     has_devcontainer=(repository_root / ".devcontainer").is_dir(),
-                    dependabot_cooldown_days=codegen.dependabot_cooldown_days.get(
-                        dist,
-                        0,
-                    ),
+                    dependency_cooldown_days=codegen.toolchain.dependency_cooldown_days,
+                    cooldown_excluded_dependencies=excluded.value,
                     checkout_submodules=codegen.checkout_submodules_overrides.get(
                         dist,
                         codegen.checkout_submodules,
@@ -323,7 +361,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 ),
             )
         if destination == c.Infra.RELEASE_GITLEAKS_CONFIG_PATH:
-            # Why (flext-to3n7): the release build phase snapshots the gitleaks
+            # Why: the release build phase snapshots the gitleaks
             # policy from the repository; it is fleet policy owned by
             # config/infra.yaml, never scaffold-only project metadata.
             return r[p.Model].ok(
@@ -365,9 +403,13 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         )
         if gitlinks.failure:
             return r[m.Infra.MakefileRenderSpec].from_failure(gitlinks)
+        pytest = config.Infra.tooling.tools.pytest
+        run_timeout_seconds = pytest.run_timeout_overrides.get(
+            target.canonical_project_name, pytest.run_timeout_seconds
+        )
         return r[m.Infra.MakefileRenderSpec].ok(
             m.Infra.MakefileRenderSpec(
-                pytest=config.Infra.tooling.tools.pytest,
+                pytest=pytest,
                 mise_bootstrap=u.Infra.mise_bootstrap_environment(),
                 dist=target.repository.distribution,
                 infra_cli=config.Infra.name,
@@ -412,7 +454,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 timeout_command=c.Infra.TIMEOUT_COMMAND,
                 timeout_kill_after_seconds=c.Infra.TIMEOUT_KILL_AFTER_SECONDS,
                 pytest_process_timeout_seconds=(
-                    config.Infra.tooling.tools.pytest.process_timeout_seconds
+                    run_timeout_seconds + (pytest.termination_grace_seconds * 2)
                 ),
             ),
         )

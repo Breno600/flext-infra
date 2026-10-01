@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, override
+from typing import TYPE_CHECKING, override
 
 import libcst as cst
 
@@ -33,7 +33,7 @@ class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
     class _CstImportHelpers:
         """Static libcst helpers for reading and building import statements."""
 
-        # flext-j47u: keep CST rendering typed; Rope remains the semantic source.
+        # Keep CST rendering typed; Rope remains the semantic source.
         @staticmethod
         def dotted_name(module: cst.BaseExpression | None) -> str | None:
             """Return a dotted name for a libcst import expression."""
@@ -193,13 +193,11 @@ class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
             import_root: str,
             local_aliases: frozenset[str],
             existing_local: MutableMapping[str, set[str]],
-            alias_to_module: t.StrMapping,
             record_change: t.Infra.ChangeCallback,
         ) -> None:
             self._import_root = import_root
             self._local_aliases = local_aliases
             self._existing_local = existing_local
-            self._alias_to_module = alias_to_module
             self._record_change = record_change
             self.imports_to_add: MutableMapping[str, MutableMapping[str, str]] = {}
             self.changes: list[str] = []
@@ -247,16 +245,7 @@ class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
                     kept.append(alias)
                     continue
 
-                suffix = self._alias_to_module.get(bound)
-                if suffix is None:
-                    kept.append(alias)
-                    continue
-
-                local_module = (
-                    self._import_root
-                    if self._import_root == c.Infra.DIR_TESTS
-                    else f"{self._import_root}.{suffix}"
-                )
+                local_module = self._import_root
                 display = bound
                 if bound not in self._existing_local.get(local_module, set()):
                     self.imports_to_add.setdefault(local_module, {})[bound] = display
@@ -276,10 +265,13 @@ class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
                 ],
             )
 
-    """Rewrite ``from flext_core import c`` to ``from <proj>.constants import c``."""
+    """Rewrite ``from flext_core import c`` to ``from <proj> import c``.
+
+    The package root re-exports every facade letter its modules declare in
+    ``__all__``, so the root is the one import target for each owned alias.
+    """
 
     _description = "rewrite foreign canonical alias imports to local project facade"
-    _ALIAS_TO_LOCAL_MODULE: ClassVar[t.StrMapping] = c.Infra.FAMILY_PUBLIC_MODULES
 
     def __init__(
         self,
@@ -348,7 +340,6 @@ class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
             import_root=context.import_root,
             local_aliases=frozenset(local_aliases),
             existing_local=collector.existing_local,
-            alias_to_module=self._ALIAS_TO_LOCAL_MODULE,
             record_change=self._record_change,
         )
         new_tree = tree.visit(transformer)

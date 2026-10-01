@@ -23,7 +23,7 @@ class FlextInfraUtilitiesSilentFailureAst:
     # fail-open path, strictly worse than the already-flagged False. ``0`` and
     # ``""`` stay OUT: a zero count or empty string is frequently the correct
     # computed result, and the AST cannot distinguish that from a sentinel —
-    # flagging them would drown the gate in false positives (flext-t5uhw).
+    # flagging them would drown the gate in false positives.
     _SENTINEL_CONSTANTS: ClassVar[frozenset[p.AttributeProbe]] = frozenset({
         False,
         None,
@@ -337,7 +337,7 @@ class FlextInfraUtilitiesSilentFailureAst:
     ) -> bool:
         """Return whether ``function`` is a findings collector.
 
-        Why (cosmos-3flk9): a collector's contract returns the list of
+        Why: a collector's contract returns the list of
         findings it found; an empty list in a success branch means "no
         findings", not a swallowed failure.
         """
@@ -352,7 +352,7 @@ class FlextInfraUtilitiesSilentFailureAst:
     ) -> bool:
         """Return whether ``function`` is a boolean predicate.
 
-        Why (cosmos-3flk9): a ``has_*``/``is_*``/``should_*`` predicate maps
+        Why: a ``has_*``/``is_*``/``should_*`` predicate maps
         a specific, expected exception to ``False`` — that is the predicate's
         meaning, not a hidden failure.
         """

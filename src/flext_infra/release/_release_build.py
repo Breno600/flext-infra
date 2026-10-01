@@ -68,7 +68,7 @@ class FlextInfraReleaseBuildMixin(FlextInfraReleaseProjectMixin):
                 return r[bool].from_failure(declared)
             versions[project.name] = declared.value
         # A consumer requirement can name an internal distribution the release
-        # tree does not carry as a workspace project (ai-hub's ``flext-api``);
+        # tree does not carry as a workspace project (e.g. ``flext-api``);
         # the root uv.lock is the resolved-version authority `make upg` wrote,
         # so its internal git entries seed the map and workspace projects keep
         # precedence.

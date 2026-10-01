@@ -39,10 +39,9 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
         An empty string when the directory sits outside the project or under no
         recognised source root.
         """
-        try:
-            relative_parts = package_dir.relative_to(project_root).parts
-        except ValueError:
+        if not package_dir.is_relative_to(project_root):
             return ""
+        relative_parts = package_dir.relative_to(project_root).parts
         if not relative_parts:
             return ""
         root_name = relative_parts[0]
@@ -90,7 +89,7 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
         )
 
     @staticmethod
-    @lru_cache(maxsize=32768)
+    @lru_cache(maxsize=c.Infra.DIRECTORY_CACHE_MAXSIZE)
     def _foreign_directory(
         directory: Path,
         repository_root: Path,
@@ -200,7 +199,7 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
                 governed_roots=governed_roots,
             )
         }
-        # flext-pulj (codex): Rope's source roots omit tests/examples/scripts;
+        # Rope's source roots omit tests/examples/scripts;
         # index those declared wrapper surfaces so explicitly targeted codegen
         # can update their generated initializers without textual fallbacks.
         wrapper_paths = {

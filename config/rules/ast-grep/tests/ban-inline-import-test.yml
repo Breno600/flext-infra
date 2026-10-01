@@ -1,0 +1,33 @@
+id: ban-inline-import
+valid:
+  - |
+    import json
+
+    def load() -> object:
+        return json.loads("{}")
+  - |
+    from typing import TYPE_CHECKING
+
+    if TYPE_CHECKING:
+        from pathlib import Path
+  - |
+    def typed() -> None:
+        if TYPE_CHECKING:
+            from pathlib import Path
+invalid:
+  - |
+    def load() -> object:
+        import json
+        return json.loads("{}")
+  - |
+    def build() -> object:
+        from pathlib import Path
+        return Path()
+  - |
+    module = importlib.import_module("json")
+  - |
+    import importlib as loader
+    module = loader.import_module("json")
+  - |
+    from importlib import import_module
+    module = import_module("json")

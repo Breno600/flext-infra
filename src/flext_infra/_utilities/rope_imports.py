@@ -902,11 +902,14 @@ class FlextInfraUtilitiesRopeImports:
         rope_project: t.Infra.RopeProject,
         violations: t.SequenceOf[m.Infra.CompatibilityAliasViolation],
         parse_failures: t.MutableSequenceOf[m.Infra.ParseFailureViolation],
+        *,
+        alias_migrator: p.Infra.ProjectAliasMigratorFactory,
     ) -> None:
         """Rewrite foreign canonical alias imports to local project facades.
 
-        Uses the ENFORCE-080 project alias migrator to move owned aliases from
-        ``flext_core`` to the project's local facade modules.
+        The calling service supplies the ENFORCE-080 project alias migrator,
+        which moves owned aliases from ``flext_core`` to the project's local
+        facade; the utility never reaches into the refactor services.
         """
         _ = parse_failures
         # Each violation names the project that owns the alias. Inferring the
@@ -929,13 +932,8 @@ class FlextInfraUtilitiesRopeImports:
             )
             if resource is None:
                 continue
-            from flext_infra.refactor.project_alias_migrator import (
-                FlextInfraRefactorProjectAliasMigrator,
-            )
-
-            transformer = FlextInfraRefactorProjectAliasMigrator(
-                file_path=file_path,
-                current_project=next(iter(owners)),
+            transformer = alias_migrator(
+                file_path=file_path, current_project=next(iter(owners))
             )
             updated, changes = transformer.transform(rope_project, resource)
             if changes:
@@ -952,20 +950,6 @@ class FlextInfraUtilitiesRopeImports:
     # Layer alignment (ADR-014 §3b/ADR-017; rope-native, replaces the
     # retired libcst draft — cross-layer from-imports take relative form)
     # ------------------------------------------------------------------
-
-    _DEFAULT_IMPORT_LAYER_ORDER: t.StrSequence = (
-        "settings",
-        "config",
-        "c",
-        "t",
-        "p",
-        "m",
-        "u",
-        "base",
-        "services",
-        "api",
-        "cli",
-    )
 
     @classmethod
     def layer_of_module(cls, module_name: str, order: t.StrSequence) -> str | None:
@@ -1014,14 +998,10 @@ class FlextInfraUtilitiesRopeImports:
         repository_root: Path,
         index: m.Infra.RopeWorkspaceIndex,
         project_package: str,
-        config: m.Infra.LazyInitConfig | None = None,
+        config: m.Infra.LazyInitConfig,
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]:
         """Plan relative-form rewrites for cross-layer project from-imports."""
-        order: t.StrSequence = (
-            tuple(config.import_layer_order)
-            if config is not None
-            else cls._DEFAULT_IMPORT_LAYER_ORDER
-        )
+        order: t.StrSequence = tuple(config.import_layer_order)
         file_plans: list[m.Infra.CodegenFilePlan] = []
         for entry in sorted(
             index.modules_by_path.values(),

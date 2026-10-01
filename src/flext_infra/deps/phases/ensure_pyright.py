@@ -233,14 +233,12 @@ class FlextInfraEnsurePyrightConfigPhase:
         rules = self._tool_config.tools.pyright.path_rules
         workspace_excludes: t.StrSequence = ()
         if analysis_exclusions is None and project_root is not None:
-            excluded = FlextInfraWorkspaceDetector.analysis_exclusion_paths(
-                project_root,
+            workspace_excludes = tuple(
+                path.as_posix()
+                for path in FlextInfraWorkspaceDetector.analysis_exclusion_paths(
+                    project_root
+                ).unwrap()
             )
-            if excluded.failure:
-                raise ValueError(
-                    excluded.error or "workspace analysis scope is unavailable",
-                )
-            workspace_excludes = tuple(path.as_posix() for path in excluded.value)
         provided_exclusions = () if analysis_exclusions is None else analysis_exclusions
         return sorted({
             *rules.default_excludes,
@@ -295,11 +293,6 @@ class FlextInfraEnsurePyrightConfigPhase:
         generated_roots = (
             paths_manager.generated_python_roots if paths_manager is not None else ()
         )
-        workspace_excluded_top_dirs = (
-            paths_manager.analysis_excluded_top_dirs
-            if paths_manager is not None
-            else None
-        )
         declared = self._declared_environment_dirs(
             tuple(dict.fromkeys((*context.declared_python_dirs, *generated_roots))),
         )
@@ -312,7 +305,13 @@ class FlextInfraEnsurePyrightConfigPhase:
             return u.Infra.analyzer_python_roots(
                 repository_root,
                 generated_roots,
-                workspace_excluded_top_dirs=workspace_excluded_top_dirs,
+                workspace_excluded_top_dirs=(
+                    paths_manager.analysis_excluded_top_dirs
+                    if paths_manager is not None
+                    else FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
+                        repository_root
+                    ).unwrap()
+                ),
             )
         if context.declared_python_dirs_are_complete:
             return declared
@@ -320,7 +319,13 @@ class FlextInfraEnsurePyrightConfigPhase:
             return u.Infra.analyzer_python_roots(
                 context.project_dir,
                 declared,
-                workspace_excluded_top_dirs=workspace_excluded_top_dirs,
+                workspace_excluded_top_dirs=(
+                    paths_manager.analysis_excluded_top_dirs
+                    if paths_manager is not None
+                    else FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
+                        context.project_dir
+                    ).unwrap()
+                ),
             )
         if declared:
             return declared

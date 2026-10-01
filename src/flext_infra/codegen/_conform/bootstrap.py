@@ -72,7 +72,7 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
     ) -> t.VariadicTuple[m.Infra.MakeVerbSpec]:
         """Union declared and discovered script verbs deduplicated by name.
 
-        Why (cosmos-3flk9): object-level dedup never converges because declared
+        Why: object-level dedup never converges because declared
         verbs carry their canonical config descriptions while discoveries carry
         ``Script command: <name>``, so every verb entered ``extra_verbs`` twice
         and the generated Makefile emitted colliding ``_builtin-<verb>``
@@ -117,6 +117,20 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
                 return m.Infra.CodegenConformSurfaceContract(
                     destinations=frozenset({c.Infra.MAKEFILE_FILENAME}),
                     pyproject=False,
+                    custom=False,
+                )
+            case c.Infra.CodegenConformSurface.DOCS_CONFIG:
+                destination = (
+                    Path(c.Infra.DIR_DOCS) / c.Infra.DOCS_CONFIG_FILENAME
+                ).as_posix()
+                return m.Infra.CodegenConformSurfaceContract(
+                    destinations=frozenset({destination}), pyproject=False, custom=False
+                )
+            case c.Infra.CodegenConformSurface.MISE_TRIPLE:
+                return m.Infra.CodegenConformSurfaceContract(
+                    destinations=frozenset(c.Infra.ARTIFACT_NAMES),
+                    pyproject=False,
+                    delegates=False,
                     custom=False,
                 )
             case _:

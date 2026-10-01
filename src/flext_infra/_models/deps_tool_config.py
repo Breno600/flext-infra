@@ -115,7 +115,7 @@ class FlextInfraModelsDepsToolConfig(
     class PytestConfig(m.ArbitraryTypesModel):
         """Pytest baseline settings loaded from YAML."""
 
-        # flext-j47u (codex): every rendered pytest value is validated config data.
+        # Every rendered pytest value is validated config data.
         case_timeout_seconds: Annotated[
             int,
             m.Field(
@@ -132,14 +132,28 @@ class FlextInfraModelsDepsToolConfig(
                 description="Hard maximum runtime for one explicitly slow item.",
             ),
         ]
+        slow_marker: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                alias="slow-marker",
+                description="Native pytest marker whose items run in their own phase.",
+            ),
+        ]
         run_timeout_seconds: Annotated[
             int,
             m.Field(
                 alias="run-timeout-seconds",
                 gt=0,
-                description="Hard wall-clock maximum for one pytest invocation.",
+                description="Fleet-default wall-clock maximum for one testmon runner operation.",
             ),
         ]
+        run_timeout_overrides: Annotated[
+            Mapping[str, Annotated[int, m.Field(gt=0)]],
+            m.Field(
+                alias="run-timeout-overrides",
+                description="Per-project hard wall for one testmon runner operation.",
+            ),
+        ] = {}
         termination_grace_seconds: Annotated[
             int,
             m.Field(
@@ -275,6 +289,20 @@ class FlextInfraModelsDepsToolConfig(
                 description="Maximum cProfile rows rendered.",
             ),
         ]
+        profile_suite_filename: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                alias="profile-suite-filename",
+                description="Suite cProfile artifact filename",
+            ),
+        ]
+        profile_process_directory: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                alias="profile-process-directory",
+                description="Per-process cProfile artifact directory",
+            ),
+        ]
         min_version: Annotated[
             t.NonEmptyStr,
             m.Field(alias="min-version", description="Minimum pytest version."),
@@ -293,7 +321,7 @@ class FlextInfraModelsDepsToolConfig(
                 description="Canonical pytest test module patterns.",
             ),
         ]
-        # flext-wkii.17 (codex): collection roots are validated config, not local state.
+        # Collection roots are validated config, not local state.
         test_paths: Annotated[
             t.StrTuple,
             m.Field(
@@ -350,34 +378,46 @@ class FlextInfraModelsDepsToolConfig(
 
         @property
         def process_timeout_seconds(self) -> int:
-            """Derive the outer wall without creating a second config field."""
+            """Derive the fleet-default outer wall without a second config field."""
             return self.run_timeout_seconds + (self.termination_grace_seconds * 2)
 
         @property
         def suite_stop_reserve_seconds(self) -> int:
-            """Derive the budget kept after the graceful suite stop instant.
+            """Derive the budgeted-phase reserve kept after the graceful stop.
 
             xdist keeps every worker at least two items deep (the running item
-            plus one queued) or one schedule chunk, whichever is larger; each
-            may still run to the slow per-item ceiling after the stop. The
-            session then needs the termination grace to publish testmon and
-            report evidence before the invocation deadline.
+            plus one queued) or one schedule chunk, whichever is larger. The
+            budgeted phase never carries slow-marked items, so each in-flight
+            item is bounded by the per-case timeout; the session then needs the
+            termination grace to publish testmon and report evidence.
             """
-            items_per_worker = max(2, self.parallel_schedule_chunk)
             return (
-                items_per_worker * self.slow_timeout_seconds
+                self.xdist_items_per_worker * self.case_timeout_seconds
                 + self.termination_grace_seconds
             )
 
         @property
         def serial_suite_stop_reserve_seconds(self) -> int:
-            """Derive the serial stop budget.
+            """Derive the budgeted serial reserve: one per-case item plus grace."""
+            return self.case_timeout_seconds + self.termination_grace_seconds
 
-            Serial execution keeps at most one item in flight, so only that
-            item can still run to the slow per-item ceiling after the stop,
-            followed by the same termination grace.
-            """
+        @property
+        def slow_suite_stop_reserve_seconds(self) -> int:
+            """Derive the slow-phase reserve: in-flight items bounded by the slow ceiling."""
+            return (
+                self.xdist_items_per_worker * self.slow_timeout_seconds
+                + self.termination_grace_seconds
+            )
+
+        @property
+        def slow_serial_suite_stop_reserve_seconds(self) -> int:
+            """Derive the slow-phase serial reserve: one slow item plus grace."""
             return self.slow_timeout_seconds + self.termination_grace_seconds
+
+        @property
+        def xdist_items_per_worker(self) -> int:
+            """Xdist depth per worker: the running item plus one queued, or a chunk."""
+            return max(2, self.parallel_schedule_chunk)
 
         @u.model_validator(mode="after")
         def _validate_execution_limits(self) -> Self:
@@ -400,6 +440,15 @@ class FlextInfraModelsDepsToolConfig(
             if self.slow_timeout_seconds >= self.run_timeout_seconds:
                 msg = "pytest slow timeout must be less than run timeout"
                 raise ValueError(msg)
+            if any(
+                timeout <= self.suite_stop_reserve_seconds
+                for timeout in (
+                    self.run_timeout_seconds,
+                    *self.run_timeout_overrides.values(),
+                )
+            ):
+                msg = "pytest run timeout must exceed the suite stop reserve"
+                raise ValueError(msg)
             derived_options = ("--timeout", "--session-timeout")
             if any(
                 option in {"-o", "--override-ini"}
@@ -418,6 +467,9 @@ class FlextInfraModelsDepsToolConfig(
                 marker not in declared_markers for marker in self.ci_excluded_markers
             ):
                 msg = "pytest ci-excluded-markers must be declared in standard-markers"
+                raise ValueError(msg)
+            if self.slow_marker not in declared_markers:
+                msg = "pytest slow-marker must be declared in standard-markers"
                 raise ValueError(msg)
             undeclared = [
                 marker
@@ -509,18 +561,17 @@ class FlextInfraModelsDepsToolConfig(
                 alias="show-missing",
                 description="Display missing lines in coverage report.",
             ),
-        ] = True
+        ]
         skip_covered: Annotated[
             bool,
             m.Field(
                 alias="skip-covered",
                 description="Skip covered files in coverage report.",
             ),
-        ] = False
+        ]
         precision: Annotated[
-            int,
-            m.Field(description="Decimal precision for coverage percentages."),
-        ] = 2
+            int, m.Field(description="Decimal precision for coverage percentages.")
+        ]
         exclude_also: Annotated[
             t.StrSequence,
             m.Field(
@@ -540,7 +591,7 @@ class FlextInfraModelsDepsToolConfig(
     class VultureConfig(m.ArbitraryTypesModel):
         """Vulture production-reachability policy loaded from YAML."""
 
-        # NOTE (multi-agent, flext-j47u): keep dead-code scope fully config-owned.
+        # Keep dead-code scope fully config-owned.
         exclude: Annotated[
             t.StrTuple,
             m.Field(
@@ -568,7 +619,6 @@ class FlextInfraModelsDepsToolConfig(
         prose_wrap: Annotated[
             str,
             m.Field(
-                default="always",
                 alias="prose-wrap",
                 description="Prettier proseWrap contract for markdown prose.",
             ),
@@ -576,7 +626,6 @@ class FlextInfraModelsDepsToolConfig(
         tab_width: Annotated[
             int,
             m.Field(
-                default=4,
                 alias="tab-width",
                 description="Prettier tabWidth for non-markdown targets.",
             ),
@@ -584,7 +633,6 @@ class FlextInfraModelsDepsToolConfig(
         md_tab_width: Annotated[
             int,
             m.Field(
-                default=2,
                 alias="md-tab-width",
                 description="Prettier tabWidth override for markdown targets.",
             ),
@@ -659,19 +707,6 @@ class FlextInfraModelsDepsToolConfig(
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 alias="import-layer-order",
-                default=(
-                    "settings",
-                    "config",
-                    "c",
-                    "t",
-                    "p",
-                    "m",
-                    "u",
-                    "base",
-                    "services",
-                    "api",
-                    "cli",
-                ),
                 description=(
                     "Canonical dependency layer order for project "
                     "imports. Lower index = lower layer. A module may "
@@ -696,7 +731,7 @@ class FlextInfraModelsDepsToolConfig(
                     "module defect fixed at the module root cause."
                 ),
             ),
-        ] = "type_checking"
+        ]
         forward_import_form: Annotated[
             Literal["relative_dot"],
             m.Field(
@@ -800,7 +835,7 @@ class FlextInfraModelsDepsToolConfig(
             ),
         ] = ()
 
-    # flext-j47u (codex): explicit runtime-only values keep the Jinja structure full.
+    # Explicit runtime-only values keep the Jinja structure full.
     class ToolingRuntimeContext(m.ArbitraryTypesModel):
         """Resolved project/workspace values consumed by the complete template."""
 

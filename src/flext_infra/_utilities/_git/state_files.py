@@ -64,6 +64,12 @@ class FlextInfraUtilitiesGitStateFilesMixin(
                 raise ValueError(msg)
 
     @classmethod
+    def _state_blob_oid(cls, root: Path, content: bytes) -> str:
+        """Hash raw bytes through a reaped one-shot hash-object process."""
+        with FlextInfraUtilitiesGitWorktreeIO.git_stdin(content) as stream:
+            return cls._repo(root).git.hash_object("--stdin", istream=stream)
+
+    @staticmethod
     def _state_require_payload(
         cls,
         root: Path,
@@ -71,8 +77,8 @@ class FlextInfraUtilitiesGitStateFilesMixin(
         observed: m.Infra.GitWorktreeObservedFile,
         allowed: t.SequenceOf[m.Infra.GitWorktreeFileState | None],
     ) -> None:
-        """Hash the observed bytes and accept only an allowed captured state."""
-        if observed.content is None and None in allowed:
+        """Accept only an allowed captured working state."""
+        if observed in allowed:
             return
         if observed.content is not None:
             with FlextInfraUtilitiesGitWorktreeIO.git_stdin(observed.content) as stream:
@@ -92,7 +98,11 @@ class FlextInfraUtilitiesGitStateFilesMixin(
     def _state_write_symlink(destination: Path, target: str) -> None:
         """Atomically point ``destination`` at the raw ``target`` text."""
         staged = destination.parent / f".{destination.name}.symlink-{os.getpid()}"
-        FlextInfraUtilitiesGitStateFilesMixin._state_remove_symlink_target(staged)
+        # The staged path is this process's own scratch name (pid-scoped),
+        # never a real tree: unlink covers both fresh and stale states,
+        # including a broken symlink left by a killed predecessor.
+        if staged.is_symlink() or staged.exists():
+            staged.unlink()
         staged.symlink_to(target)
         staged.replace(destination)
 
@@ -115,8 +125,8 @@ class FlextInfraUtilitiesGitStateFilesMixin(
             cls._state_require_payload(
                 root,
                 path,
-                m.Infra.GitWorktreeObservedFile(
-                    content=os.fsencode(raw_target),
+                m.Infra.GitWorktreeFileState(
+                    path=path,
                     mode="120000",
                     permissions=link_mode,
                 ),
@@ -126,7 +136,10 @@ class FlextInfraUtilitiesGitStateFilesMixin(
                 payload = cls._state_blob_payload(root, desired.oid)
                 cls._state_write_symlink(destination, os.fsdecode(payload))
                 return
-            cls._state_remove_symlink_target(destination)
+            # This branch only reaches a 120000-mode destination: a governed
+            # symlink, so plain unlink is the entire removal (no tree cases).
+            if destination.is_symlink() or destination.exists():
+                destination.unlink()
         else:
             before_file = u.Cli.atomic_read_binary_file_state(
                 destination,

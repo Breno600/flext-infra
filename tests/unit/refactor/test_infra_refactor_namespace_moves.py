@@ -4,8 +4,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
 from flext_tests import tm
 
+from flext_infra.refactor.project_alias_migrator import (
+    FlextInfraRefactorProjectAliasMigrator,
+)
 from tests import m, u
 
 if TYPE_CHECKING:
@@ -14,6 +18,7 @@ if TYPE_CHECKING:
     from tests import t
 
 
+@pytest.mark.slow
 class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
     """Behavior contract for test_infra_refactor_namespace_moves."""
 
@@ -74,13 +79,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         u.Infra.rewrite_manual_protocol_violations(
             project_root=project_root,
             py_files=[source_file, consumer_file],
-            violations=[
-                m.Infra.ManualProtocolViolation(
-                    file=str(source_file),
-                    line=5,
-                    name="External",
-                ),
-            ],
+            names_by_file={source_file: {"External"}},
         )
 
         tm.that(
@@ -121,15 +120,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         )
 
         u.Infra.rewrite_manual_typing_alias_violations(
-            project_root=project_root,
-            violations=[
-                m.Infra.ManualTypingAliasViolation(
-                    file=str(source_file),
-                    line=6,
-                    name="PayloadMap",
-                ),
-            ],
-            parse_failures=[],
+            project_root=project_root, names_by_file={source_file: {"PayloadMap"}}
         )
 
         source_text = source_file.read_text(encoding="utf-8")
@@ -168,6 +159,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
                 ),
             ],
             parse_failures=[],
+            alias_migrator=FlextInfraRefactorProjectAliasMigrator,
         )
 
         source_text = source_file.read_text(encoding="utf-8")
@@ -210,6 +202,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
                 ),
             ],
             parse_failures=[],
+            alias_migrator=FlextInfraRefactorProjectAliasMigrator,
         )
 
         source_text = source_file.read_text(encoding="utf-8")

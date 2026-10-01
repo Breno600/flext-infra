@@ -150,6 +150,11 @@ class FlextInfraPytestCollection:
             total_items = len(session.items)
             if total_items and len(self.completed_items) >= total_items:
                 return
+            # Testmon writes an in-flight coverage batch only when it attaches
+            # nodes_files_lines to a teardown report. Stopping earlier leaves
+            # selected rows without durable execution data on the next run.
+            if not getattr(report, "nodes_files_lines", None):
+                return
             reason = f"suite stop instant {self.stop_at_monotonic:.3f} reached"
             controller = session.config.pluginmanager.getplugin("dsession")
             if isinstance(controller, DSession):

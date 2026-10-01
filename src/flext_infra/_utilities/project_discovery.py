@@ -14,8 +14,6 @@ from typing import override
 
 from flext_cli import u
 
-from flext_infra import config
-
 from ..constants import c
 from ..models import m
 from ..typings import t
@@ -35,11 +33,16 @@ class FlextInfraUtilitiesProjectDiscovery(
         manifest_path = FlextInfraUtilitiesWorkspaceManifest.workspace_manifest_path(
             repository_root,
         )
+        packaged = m.Infra.RefactorConfigSpec(
+            project_scan_dirs=config.Infra.source_scan.roots
+        )
         if not manifest_path.is_file():
-            return m.Infra.RefactorConfigSpec()
+            return packaged
         loaded = u.Cli.config_load(manifest_path, expand_env=False).unwrap()
         manifest = m.Infra.WorkspaceManifestSpec.model_validate(loaded.data)
-        return manifest.refactor or m.Infra.RefactorConfigSpec()
+        if manifest.refactor is None:
+            return packaged
+        return manifest.refactor
 
     @classmethod
     @lru_cache(maxsize=1)
@@ -197,7 +200,7 @@ class FlextInfraUtilitiesProjectDiscovery(
 
         A declared submodule is another repository: it is consumed as an
         installed library and never indexed from here (every repository
-        evaluates only itself, operator ruling 2026-09-29). The raw child scan
+        evaluates only itself). The raw child scan
         below is a second enumerator, so it must honour the same manifest
         authority as ``discover_project_candidates``. Without that filter every
         direct child holding a ``pyproject.toml`` re-entered the scope the
@@ -247,25 +250,28 @@ class FlextInfraUtilitiesProjectDiscovery(
         scan_dirs = refactor_config.project_scan_dirs
         targets: set[str] = set()
         for project in cls.governed_project_roots(resolved_root):
-            # Python files directly in the project root (e.g., conftest.py)
-            for target in project.glob(f"*{c.Infra.EXT_PYTHON}"):
-                if target.exists():
-                    targets.add(target.relative_to(resolved_root).as_posix())
-            # Recursively scan configured directories for Python files
-            for directory in scan_dirs:
-                scan_dir = project / directory
-                if scan_dir.exists():
-                    for target in scan_dir.rglob(f"*{c.Infra.EXT_PYTHON}"):
-                        if target.is_file():
-                            targets.add(target.relative_to(resolved_root).as_posix())
+            for suffix in c.Infra.PYTHON_SOURCE_SUFFIXES:
+                # Python files directly in the project root (e.g., conftest.py)
+                for target in project.glob(f"*{suffix}"):
+                    if target.exists():
+                        targets.add(target.relative_to(resolved_root).as_posix())
+                # Recursively scan configured directories for Python sources:
+                # modules and the stubs the catalog rules also govern.
+                for directory in scan_dirs:
+                    scan_dir = project / directory
+                    if scan_dir.exists():
+                        for target in scan_dir.rglob(f"*{suffix}"):
+                            if target.is_file():
+                                targets.add(
+                                    target.relative_to(resolved_root).as_posix()
+                                )
         return tuple(sorted(targets))
 
     @classmethod
     def governed_project_roots(cls, repository_root: Path) -> t.SequenceOf[Path]:
         """Return the repositories a verb run at ``repository_root`` governs.
 
-        Every repository evaluates and rewrites only itself (operator ruling
-        2026-09-29): a workspace root consumes its declared members as
+        Every repository evaluates and rewrites only itself: a workspace root consumes its declared members as
         installed libraries and never scans, checks, or rewrites them; each
         member runs its own verbs in its own repository.
         """
@@ -277,13 +283,15 @@ class FlextInfraUtilitiesProjectDiscovery(
         *,
         runtime_root: Path | None = None,
     ) -> Path:
-        """Resolve the checkout's Python environment (D-VENV, flext-x8gn6).
+        """Resolve the checkout's Python environment.
 
         A declared ``runtime_root`` (the generated Makefile's ``RUNTIME_ROOT``)
         owns the environment. Undeclared, the owner derives it: a subproject
         checked out inside a workspace uses the workspace environment; a
         standalone checkout or a linked worktree owns its own, exactly as the
-        generated Makefile resolves ``REPOSITORY_ROOT``.
+        generated Makefile resolves ``REPOSITORY_ROOT``. The environment is
+        always ``<runtime root>/.venv``; its location is law, never
+        configuration (operator law 2026-10-01, flext-h2a9h).
         """
         if runtime_root is None:
             runtime = FlextInfraUtilitiesGit.git_repository_root(

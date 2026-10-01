@@ -23,7 +23,7 @@ class TestsFlextInfraModulePathRules:
         valid_alias: bool,
     ) -> None:
         """Test facades own Tests and their exact family alias, never loose aliases."""
-        module = c.Infra.FAMILY_PUBLIC_MODULES[family]
+        module = u.Tests.family_public_module(family)
         suffix = c.Infra.FAMILY_SUFFIXES[family]
         # The negative case binds the alias to the IMPORTED parent class, not
         # the local facade: the owner election accepts any locally-declared

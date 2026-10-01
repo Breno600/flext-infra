@@ -81,13 +81,7 @@ class FlextInfraUtilitiesDocsAudit(
         # scope IS its own repository root, and only a genuine member-project
         # scope carries a `repository_root_override` set at scope build time.
         payload = FlextInfraUtilitiesDocsScope.load_config(scope.repository_root)
-        container = payload.get(section)
-        if not isinstance(container, dict):
-            return []
-        values = container.get(key)
-        return (
-            [str(item).strip() for item in values] if isinstance(values, list) else []
-        )
+        return m.Infra.DocsAuditPolicySpec.model_validate(payload.get("audit", {}))
 
     @staticmethod
     def docs_generated_api_reference_path(relative_docs_path: str) -> bool:

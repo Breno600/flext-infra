@@ -89,14 +89,8 @@ class FlextInfraConfigModelsArtifact:
 
         max_lines: Annotated[
             int,
-            m.Field(
-                ge=1,
-                description=(
-                    "Per-module code-LOC ceiling. Operator instruction "
-                    "2026-09-07: the former 1000-LOC allowance stands."
-                ),
-            ),
-        ] = 1000
+            m.Field(ge=1, description="Per-module code-LOC ceiling"),
+        ]
 
     class CodegenConfigSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Fully modeled content of ``config/codegen.yaml``."""
@@ -110,11 +104,11 @@ class FlextInfraConfigModelsArtifact:
                     "renders any more; generation removes them from consumers"
                 ),
             ),
-        ] = ()
+        ]
         fresh_import_workers: Annotated[
             int,
             m.Field(ge=1, le=16, description="Concurrent fresh-import subprocesses"),
-        ] = 1
+        ]
         loc_cap: Annotated[
             FlextInfraConfigModelsArtifact.CodegenLocCapSpec,
             m.Field(description="Per-module code-LOC ceiling policy"),
@@ -130,7 +124,6 @@ class FlextInfraConfigModelsArtifact:
         checkout_submodules: Annotated[
             t.NonEmptyStr,
             m.Field(
-                default="false",
                 pattern=r"^(true|false|recursive)$",
                 description=(
                     "Default actions/checkout submodules mode for every "
@@ -147,18 +140,6 @@ class FlextInfraConfigModelsArtifact:
                 description=(
                     "Per-distribution override of checkout_submodules, for "
                     "projects that really do exercise their subprojects in CI"
-                ),
-            ),
-        ]
-        dependabot_cooldown_days: Annotated[
-            Mapping[str, int],
-            m.Field(
-                description=(
-                    "Per-distribution dependabot cooldown (default-days, >= 0) "
-                    "opted in for generated dependabot.yml. The fleet default "
-                    "is no cooldown: every ecosystem selects the newest "
-                    "available release immediately. A distribution that must "
-                    "stagger updates declares its own days here."
                 ),
             ),
         ]
@@ -388,7 +369,7 @@ class FlextInfraConfigModelsArtifact:
             FlextInfraConfigModelsTemplates.TemplatesSpec,
             m.Field(description="New-project-only scaffold template manifest"),
         ]
-        # Operator law: flext-infra owns generic conform policy only. The set
+        # flext-infra owns generic conform policy only. The set
         # of projects it serves is NOT its knowledge — each repository's own
         # .gitmodules is the read-only topology authority.
 
@@ -539,6 +520,18 @@ class FlextInfraConfigModelsArtifact:
                 ),
             ),
         ]
+        planned_direct_sources: Annotated[
+            t.VariadicTuple[str] | None,
+            m.Field(
+                description=(
+                    "Requirement names the pyproject composed in this plan "
+                    "takes by direct reference (forks and local projects). "
+                    "Planners compose the pyproject first and record them; "
+                    "None means this plan composes no pyproject, so the "
+                    "committed one is the source"
+                )
+            ),
+        ] = None
 
     class CodegenFilePlan(FlextInfraConfigModelsContract.ConfigContract):
         """Exact before state and desired state for one managed file."""
@@ -660,35 +653,6 @@ class FlextInfraConfigModelsArtifact:
         errors: Annotated[
             t.VariadicTuple[str],
             m.Field(description="Fail-closed validation or write errors"),
-        ] = ()
-
-    class SedPatternSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """One declared literal regex substitution applied across the mod scope."""
-
-        pattern: Annotated[t.NonEmptyStr, m.Field(description="Regex source to match")]
-        replacement: Annotated[str, m.Field(description="Literal replacement text")]
-        file_glob: Annotated[
-            t.NonEmptyStr | None,
-            m.Field(default=None, description="Optional file glob filter"),
-        ]
-        flags: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                default=(),
-                description=("Regex flags by name (IGNORECASE, MULTILINE, DOTALL)"),
-            ),
-        ] = ()
-        description: Annotated[
-            t.NonEmptyStr | None,
-            m.Field(default=None, description="Why this substitution exists"),
-        ] = None
-
-    class SedPatternsSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Declared sed-by-list substitution set with optional per-pattern filters."""
-
-        patterns: Annotated[
-            t.VariadicTuple[FlextInfraConfigModelsArtifact.SedPatternSpec],
-            m.Field(default=(), description="Ordered substitution patterns"),
         ] = ()
 
     class RenameCampaignSpec(FlextInfraConfigModelsContract.ConfigContract):

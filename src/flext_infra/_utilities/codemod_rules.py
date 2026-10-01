@@ -6,7 +6,7 @@ import re
 import sys
 from collections.abc import Mapping, MutableMapping, Sequence
 from functools import lru_cache
-from importlib.metadata import Distribution, distributions
+from importlib.metadata import Distribution, distributions, packages_distributions
 from importlib.util import find_spec
 from pathlib import Path
 
@@ -14,8 +14,10 @@ from flext_cli import u
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 
-from .. import c, m, p, r, t
+from .. import c, config, m, p, r, t
+from ._rope_analysis.exports import FlextInfraUtilitiesRopeAnalysisExports
 from .dependencies import FlextInfraUtilitiesDependencies
+from .pyproject import FlextInfraUtilitiesPyproject
 
 
 class FlextInfraUtilitiesCodemodRules:
@@ -61,14 +63,10 @@ class FlextInfraUtilitiesCodemodRules:
                     f"codemod provider disappeared from resolved graph: {name}",
                 )
             providers.append((name, config))
-        local_packages = cls._local_package_configs(root, root_name)
-        if local_packages.failure:
-            return r[m.Infra.CodemodRulePlan].from_failure(local_packages)
-        providers.extend(local_packages.value)
-        local_config = root / "sgconfig.yml"
+        local_config = root / c.Infra.CODEMOD_CONFIG_RELPATH
         if local_config.is_file():
             providers.append((f"{root_name}:local", local_config))
-        return cls._compose(tuple(providers))
+        return cls._compose(tuple(providers), root_name, runtime_closure)
 
     @staticmethod
     def codemod_rule_filter(rule_ids: t.StrSequence) -> str:
@@ -234,33 +232,20 @@ class FlextInfraUtilitiesCodemodRules:
         roots = tuple(Path(path) for path in spec.submodule_search_locations or ())
         if not roots and spec.origin is not None:
             roots = (Path(spec.origin).parent,)
+        # A distribution's rule root is its config directory: the packaged
+        # copy (<pkg>/config) of an installed wheel, or the config directory
+        # beside src/ of an editable checkout (<root>/src/<pkg> -> <root>).
         configs = {
-            root / c.Infra.CODEMOD_CONFIG_RELPATH
+            base / c.Infra.CODEMOD_CONFIG_RELPATH
             for root in roots
-            if (root / c.Infra.CODEMOD_CONFIG_RELPATH).is_file()
+            for base in (root, root.parents[1])
+            if (base / c.Infra.CODEMOD_CONFIG_RELPATH).is_file()
         }
         if len(configs) > 1:
             return r[t.SequenceOf[Path]].fail(
                 f"distribution exports multiple codemod configs: {raw_name}",
             )
         return r[t.SequenceOf[Path]].ok(tuple(sorted(configs)))
-
-    @classmethod
-    def _local_package_configs(
-        cls,
-        root: Path,
-        root_name: str,
-    ) -> p.Result[t.SequenceOf[t.Pair[str, Path]]]:
-        configs = tuple(sorted((root / "src").glob("*/codemod/sgconfig.yml")))
-        for config in configs:
-            scope = cls._config_scope(config)
-            if scope.failure:
-                return r[t.SequenceOf[t.Pair[str, Path]]].from_failure(scope)
-        return r[t.SequenceOf[t.Pair[str, Path]]].ok(
-            tuple(
-                (f"{root_name}:{config.parents[1].name}", config) for config in configs
-            ),
-        )
 
     @staticmethod
     def _config_scope(config: Path) -> p.Result[str]:
@@ -279,22 +264,41 @@ class FlextInfraUtilitiesCodemodRules:
     def _compose(
         cls,
         providers: t.SequenceOf[t.Pair[str, Path]],
+        root_name: str,
+        runtime_closure: frozenset[str],
     ) -> p.Result[m.Infra.CodemodRulePlan]:
+        """Elect every provider rule once, honouring each rule's declared scope.
+
+        A rule that bans a library outside its owning project declares the
+        owner's distribution under ``metadata.owner``: the owner's own plan
+        never elects it, every other project's plan does. A rule that binds
+        only the consumers of a facade declares that distribution under
+        ``metadata.consumers_of``: a plan elects it only when the facade is in
+        the project's runtime closure, so the facade itself and the projects
+        below it never do.
+        """
         selected: MutableMapping[str, m.Infra.CodemodRule] = {}
         rulesets: list[m.Infra.CodemodRuleset] = []
         provider_order: list[str] = []
-        for provider, config in providers:
+        for provider, provider_config in providers:
             if provider in provider_order:
                 return r[m.Infra.CodemodRulePlan].fail(
                     f"codemod provider declared more than once: {provider}",
                 )
             provider_order.append(provider)
-            parsed = cls._rules(provider, config)
+            parsed = cls._rules(provider, provider_config)
             if parsed.failure:
                 return r[m.Infra.CodemodRulePlan].from_failure(parsed)
             elected: list[str] = []
             fixable: list[str] = []
             for rule in parsed.value:
+                if rule.owner is not None and canonicalize_name(rule.owner) == root_name:
+                    continue
+                if (
+                    rule.consumers_of is not None
+                    and canonicalize_name(rule.consumers_of) not in runtime_closure
+                ):
+                    continue
                 previous = selected.get(rule.id)
                 if previous is not None:
                     if previous.provider == provider:
@@ -317,7 +321,7 @@ class FlextInfraUtilitiesCodemodRules:
                 rulesets.append(
                     m.Infra.CodemodRuleset(
                         provider=provider,
-                        config=config,
+                        config=provider_config,
                         rule_ids=tuple(elected),
                         fixable_rule_ids=tuple(fixable),
                     ),
@@ -400,17 +404,159 @@ class FlextInfraUtilitiesCodemodRules:
                         return r[t.SequenceOf[m.Infra.CodemodRule]].fail(
                             f"{declared.error}: {resource}",
                         )
+                    metadata = parsed_rule.value.get(c.Infra.CODEMOD_RULE_METADATA_KEY)
+                    declared_metadata: t.JsonMapping = (
+                        metadata if isinstance(metadata, Mapping) else {}
+                    )
+                    context = cls._declared_context(
+                        declared_metadata.get(c.Infra.CODEMOD_RULE_CONTEXT_KEY)
+                    )
+                    if context.failure:
+                        return r[t.SequenceOf[m.Infra.CodemodRule]].fail(
+                            f"{context.error}: {resource}"
+                        )
                     rules.append(
-                        m.Infra.CodemodRule(
-                            id=rule_id,
-                            digest=u.Cli.sha256_content(canonical.value),
-                            provider=provider,
-                            resource=resource,
-                            fixable="fix" in parsed_rule.value,
-                            expected=declared.value[0] if declared.value else None,
-                        ),
+                        m.Infra.CodemodRule.model_validate({
+                            "id": rule_id,
+                            "digest": u.Cli.sha256_content(canonical.value),
+                            "provider": provider,
+                            "resource": resource,
+                            "fixable": "fix" in parsed_rule.value,
+                            "expected": declared.value[0] if declared.value else None,
+                            "owner": declared_metadata.get(
+                                c.Infra.CODEMOD_RULE_OWNER_KEY
+                            ),
+                            "consumers_of": declared_metadata.get(
+                                c.Infra.CODEMOD_RULE_CONSUMERS_OF_KEY
+                            ),
+                            "relocation": declared_metadata.get(
+                                c.Infra.CODEMOD_RULE_RELOCATION_KEY
+                            ),
+                            "context": context.value,
+                        })
                     )
         return r[t.SequenceOf[m.Infra.CodemodRule]].ok(tuple(rules))
+
+    @staticmethod
+    def _declared_context(
+        raw: t.JsonValue | None,
+    ) -> p.Result[t.VariadicTuple[m.Infra.CodemodContextCondition]]:
+        """Read ``metadata.context``: ``{VAR: {is|not: predicate}}``.
+
+        Each entry binds one captured single metavariable to one project
+        predicate that must hold (``is``) or fail (``not``). Absence is the
+        empty tuple; any other shape is a malformed rule document.
+        """
+        conditions = r[t.VariadicTuple[m.Infra.CodemodContextCondition]]
+        if raw is None:
+            return conditions.ok(())
+        if not isinstance(raw, Mapping) or not raw:
+            return conditions.fail(
+                "ast-grep rule metadata.context must be a non-empty mapping"
+            )
+        parsed: list[m.Infra.CodemodContextCondition] = []
+        for variable, condition in raw.items():
+            if not isinstance(condition, Mapping) or len(condition) != 1:
+                return conditions.fail(
+                    f"ast-grep rule context ${variable} must hold exactly one of "
+                    f"{c.Infra.CODEMOD_CONTEXT_HOLDS_KEY!r} or "
+                    f"{c.Infra.CODEMOD_CONTEXT_FAILS_KEY!r}"
+                )
+            ((key, predicate),) = condition.items()
+            if key not in {
+                c.Infra.CODEMOD_CONTEXT_HOLDS_KEY,
+                c.Infra.CODEMOD_CONTEXT_FAILS_KEY,
+            }:
+                return conditions.fail(
+                    f"ast-grep rule context ${variable} has unknown key {key!r}"
+                )
+            parsed.append(
+                m.Infra.CodemodContextCondition.model_validate({
+                    "variable": variable,
+                    "predicate": predicate,
+                    "holds": key == c.Infra.CODEMOD_CONTEXT_HOLDS_KEY,
+                })
+            )
+        return conditions.ok(tuple(parsed))
+
+    @classmethod
+    def codemod_context_admits(
+        cls,
+        root: Path,
+        rule: m.Infra.CodemodRule,
+        file_path: Path,
+        captures: t.JsonMapping,
+    ) -> bool:
+        """Return whether one finding satisfies its rule's project context.
+
+        ``captures`` is ast-grep's ``metaVariables.single`` payload of the
+        finding. A declared variable the finding did not capture is a rule
+        defect and raises; the syntactic match alone never stands in for it.
+        """
+        for condition in rule.context:
+            capture = captures.get(condition.variable)
+            text = capture.get("text") if isinstance(capture, Mapping) else None
+            if not isinstance(text, str) or not text.strip():
+                msg = (
+                    f"{rule.id}: context variable ${condition.variable} was not "
+                    f"captured in {file_path}"
+                )
+                raise ValueError(msg)
+            source = file_path if file_path.is_absolute() else root / file_path
+            holds = cls._context_holds(
+                root.resolve(), condition.predicate, text.strip(), source.resolve()
+            )
+            if holds is not condition.holds:
+                return False
+        return True
+
+    @classmethod
+    def _context_holds(
+        cls,
+        root: Path,
+        predicate: c.Infra.CodemodContextPredicate,
+        value: str,
+        file_path: Path,
+    ) -> bool:
+        """Evaluate one predicate against the project SSOT it names."""
+        module = value.split(maxsplit=1)[0].split(".", maxsplit=1)[0]
+        match predicate:
+            case c.Infra.CodemodContextPredicate.STDLIB_MODULE:
+                return module in sys.stdlib_module_names
+            case c.Infra.CodemodContextPredicate.OWN_PACKAGE:
+                return module == FlextInfraUtilitiesPyproject.project_package_name(
+                    root
+                )
+            case c.Infra.CodemodContextPredicate.RUNTIME_PACKAGE:
+                return module in cls._runtime_modules(root)
+            case c.Infra.CodemodContextPredicate.FILE_FAMILY:
+                return value in cls._file_families(file_path)
+
+    @classmethod
+    @lru_cache(maxsize=8)
+    def _runtime_modules(cls, root: Path) -> frozenset[str]:
+        """Top-level import names provided by the project's runtime closure."""
+        project = cls._project(root).unwrap()
+        closure = cls._runtime_closure(project[1], cls._distributions())
+        return frozenset(
+            module
+            for module, providers in packages_distributions().items()
+            if any(canonicalize_name(name) in closure for name in providers)
+        )
+
+    @staticmethod
+    def _file_families(file_path: Path) -> frozenset[str]:
+        """Facade letters the module itself declares in its ``__all__``.
+
+        Letter ownership is the module's own declaration, never its file
+        name; the letter vocabulary is the tooling import-layer order.
+        """
+        declared = FlextInfraUtilitiesRopeAnalysisExports.public_export_names_source(
+            file_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+        )
+        return frozenset(config.Infra.tooling.lazy_init.import_layer_order).intersection(
+            declared
+        )
 
     @staticmethod
     def _declared_expected(

@@ -12,6 +12,7 @@ preventing caches and ignored workspace state from entering release artifacts.
 
 from __future__ import annotations
 
+import keyword
 from pathlib import Path
 
 from flext_infra import c, m, t, u
@@ -117,8 +118,10 @@ class FlextInfraEnsurePackagingPhase:
         *,
         package_name: str,
         data: m.Infra.PackagedDataSelection,
+        data_excludes: t.StrSequence,
         root_modules: t.StrSequence,
         root_packages: t.StrSequence,
+        repository_namespace_packages: t.StrSequence,
     ) -> m.Infra.DepsToml.PhaseConfig:
         """Build bounded distribution targets for one resolved package name."""
         package_path = f"{c.Infra.DEFAULT_SRC_DIR}/{package_name}"
@@ -145,15 +148,18 @@ class FlextInfraEnsurePackagingPhase:
                     root_path=(),
                     table_path=("wheel",),
                     operations=(
+                        toml.ListOp(key="packages", values=package_paths),
                         toml.ListOp(
                             key="include",
                             values=(
                                 *(f"/{path}/**" for path in package_paths),
                                 *(f"/{path}/**" for path in data.directories),
+                                *(
+                                    f"/{path}/**"
+                                    for path in repository_namespace_packages
+                                ),
                             ),
                         ),
-                        toml.RemoveOp(key="packages"),
-                        toml.RemoveOp(key="only-include"),
                         toml.SetOp(
                             key="sources",
                             value={
@@ -168,6 +174,10 @@ class FlextInfraEnsurePackagingPhase:
                                     directory: f"{package_name}/{directory}"
                                     for directory in data.directories
                                 },
+                                **{
+                                    namespace: namespace
+                                    for namespace in repository_namespace_packages
+                                },
                             },
                         ),
                         toml.RemoveOp(key="force-include"),
@@ -179,16 +189,46 @@ class FlextInfraEnsurePackagingPhase:
                     table_path=("sdist",),
                     operations=(
                         toml.ListOp(
-                            key="include",
+                            key="only-include",
                             values=(
                                 *(f"/{path}/**" for path in package_paths),
-                                *(f"/{path}" for path in module_paths),
-                                *(f"/{path}" for path in data.files),
                                 *(f"/{path}/**" for path in data.directories),
+                                *(
+                                    f"/{path}/**"
+                                    for path in repository_namespace_packages
+                                ),
                             ),
                         ),
                         toml.RemoveOp(key="only-include"),
+                        toml.RemoveOp(key="packages"),
+                        (
+                            toml.ListOp(
+                                key="exclude",
+                                values=tuple(f"/{item}" for item in data_excludes),
+                            )
+                            if data_excludes
+                            else toml.RemoveOp(key="exclude")
+                        ),
+                        toml.RemoveOp(key="force-include"),
                     ),
+                ),
+                (
+                    toml.PhaseConfig(
+                        name="packaging",
+                        root_path=(),
+                        table_path=("sdist", "force-include"),
+                        operations=tuple(
+                            toml.SetOp(key=source, value=source)
+                            for source, _destination in force_include
+                        ),
+                    )
+                    if force_include
+                    else toml.PhaseConfig(
+                        name="packaging",
+                        root_path=(),
+                        table_path=("sdist",),
+                        operations=(toml.RemoveOp(key="force-include"),),
+                    )
                 ),
                 (
                     toml.PhaseConfig(
@@ -237,6 +277,7 @@ class FlextInfraEnsurePackagingPhase:
                 topology.root_modules
                 or topology.root_packages
                 or topology.packaged_data_paths
+                or topology.repository_namespace_packages
             ):
                 msg = (
                     "project package name is required when additional distribution "
@@ -271,19 +312,47 @@ class FlextInfraEnsurePackagingPhase:
                 f"initializer: {missing_package / c.Infra.INIT_PY}"
             )
             raise FileNotFoundError(msg)
+        for namespace in topology.repository_namespace_packages:
+            relative = Path(namespace)
+            source = project_dir / relative
+            if (
+                len(relative.parts) != 1
+                or not namespace.isidentifier()
+                or keyword.iskeyword(namespace)
+            ):
+                msg = f"repository namespace must be one Python identifier: {namespace}"
+                raise ValueError(msg)
+            if not source.is_dir() or source.is_symlink():
+                msg = f"repository namespace directory is missing: {source}"
+                raise FileNotFoundError(msg)
+            if (source / c.Infra.INIT_PY).exists():
+                msg = f"repository namespace must be implicit: {source}"
+                raise ValueError(msg)
+            self._validate_data_tree(project_dir.resolve(), source, frozenset())
+            if any(
+                path == namespace or path.startswith(f"{namespace}/")
+                for path in topology.packaged_data_paths
+            ):
+                msg = f"repository namespace overlaps packaged data: {namespace}"
+                raise ValueError(msg)
         data_paths = self.resolve_data_paths(
             project_dir,
             package_name,
             topology.packaged_data_paths,
             topology.planned_data_files,
         )
+        data_excludes = self.resolve_data_excludes(
+            project_dir, data_paths, topology.packaged_data_excludes
+        )
         return u.Infra.apply_toml_phases(
             payload,
             self._phase(
                 package_name=package_name,
                 data=data_paths,
+                data_excludes=data_excludes,
                 root_modules=topology.root_modules,
                 root_packages=topology.root_packages,
+                repository_namespace_packages=topology.repository_namespace_packages,
             ),
         )
 

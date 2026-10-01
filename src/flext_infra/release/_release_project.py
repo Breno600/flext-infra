@@ -104,6 +104,20 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         rendered = self._release_pyproject(source.value, version, versions)
         if rendered.failure:
             return r[m.Infra.BuildRecord].from_failure(rendered)
+        document = u.Cli.toml_parse_text(rendered.value)
+        tool = (
+            u.Cli.toml_table_child(document, c.Infra.TOOL)
+            if document is not None
+            else None
+        )
+        hatch = u.Cli.toml_table_child(tool, "hatch") if tool is not None else None
+        if hatch is None:
+            return r[m.Infra.BuildRecord].fail(
+                "rendered release metadata lost Hatch build targets"
+            )
+        boundary = self._sdist_boundary(hatch)
+        if boundary.failure:
+            return r[m.Infra.BuildRecord].from_failure(boundary)
         for destination in (
             stage / c.PYPROJECT_FILENAME,
             output_dir / "metadata" / f"{name}-pyproject.toml",
@@ -156,9 +170,13 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         artifacts = self._persist_artifacts(
             dist,
             output_dir / "artifacts" / name,
-            (name, version),
-            license_sha256,
-            versions,
+            m.Infra.ArtifactExpectation(
+                project=name,
+                version=version,
+                license_sha256=license_sha256,
+                allowed_roots=tuple(boundary.value),
+                versions=versions,
+            ),
         )
         return artifacts.map(
             lambda built: self._record(
@@ -172,12 +190,7 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
 
     @classmethod
     def _persist_artifacts(
-        cls,
-        dist: Path,
-        destination: Path,
-        identity: t.Pair[str, str],
-        license_sha256: str,
-        versions: t.StrMapping,
+        cls, dist: Path, destination: Path, expectation: m.Infra.ArtifactExpectation
     ) -> p.Result[t.VariadicTuple[m.Infra.BuildArtifact]]:
         """Validate exactly one wheel and one sdist, then persist the set atomically.
 

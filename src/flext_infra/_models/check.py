@@ -101,20 +101,20 @@ class FlextInfraModelsCheck:
             int,
             m.Field(
                 gt=0,
-                le=c.Infra.MYPY_TIMEOUT_SECONDS_MAX,
+                le=c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT,
                 description=(
-                    "Positive Mypy wall-time limit in seconds (bounded by the"
-                    " project SSOT budget; the env override may raise it up"
-                    " to the max)"
+                    "Positive Mypy wall-time limit in seconds; neither the"
+                    " project budget nor the env override may exceed the"
+                    " fleet bound"
                 ),
             ),
-        ] = c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT
+        ]
 
         @m.computed_field
         @property
         def memory_limit_bytes(self) -> int:
             """Validated memory limit converted to bytes for the platform owner."""
-            return self.memory_limit_mb * 1024 * 1024
+            return self.memory_limit_mb * c.Infra.BYTES_PER_MIB
 
     class MypyInvocation(m.ContractModel):
         """Checker inputs; callers cannot select an executable or Python program."""
@@ -143,33 +143,6 @@ class FlextInfraModelsCheck:
 
     class FixPyreflyConfigCommand(mm.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra check fix-pyrefly-settings``."""
-
-    class FixEnforcementCommand(mm.WriteMixin, m.ContractModel):
-        """Canonical CLI payload for ``flext-infra check fix-enforcement``."""
-
-        @property
-        def fail_fast(self) -> bool:
-            """Share the service's fail-fast invariant with gate adapters."""
-            return c.Infra.SERVICE_FAIL_FAST
-
-        rules: Annotated[
-            t.StrSequence,
-            m.Field(description="Comma-separated enforcement rule IDs to fix"),
-        ] = ()
-        safe_only: Annotated[
-            bool,
-            m.Field(
-                alias="safe-only",
-                description="Only apply fixes marked safe in the catalog",
-            ),
-        ] = True
-        check_after: Annotated[
-            bool,
-            m.Field(
-                alias="check-after",
-                description="Re-run the corresponding check after fixing",
-            ),
-        ] = True
 
     class Issue(m.ContractModel):
         """Single issue reported by a quality gate tool."""

@@ -43,55 +43,10 @@ class FlextInfraConstantsDocs:
         "tel",
     })
     DOCS_FRAGMENT_PREFIX: ClassVar[str] = "#"
-    PYTHON_FENCE_RUFF_EXTEND_IGNORE: ClassVar[t.StrSequence] = (
-        "D100",
-        "D101",
-        "D102",
-        "D103",
-        "PLR2004",
-        "S101",
-        "INP001",
-        "T201",
-        "T203",
-        "ANN001",
-        "ANN002",
-        "ANN003",
-        "ANN201",
-        "ANN202",
-        "ANN204",
-        "ANN205",
-        "PLC0415",
-        "D106",
-        "B018",
-        "F821",
-        "F811",
-        "SLF001",
-        "S106",
-        "PT004",
-        "E402",
-        "PLW0127",
-        "PLC0414",
-        "pytest-useless-yield-fixture",
-        "unused-variable",
-        "unused-static-method-argument",
-    )
-    """Rules ignored for executable docs snippets that are not full modules/tests.
-
-    ``D106`` and ``B018`` join the set because the docs are teaching material:
-    a nested example class needs no docstring, and a bare attribute access
-    (``c.Settings.y``) is the idiom being demonstrated, not a useless
-    expression (measured 2026-09-30: 61 findings across the root's docs were
-    exactly these two rules). ``F821`` joins for the same reason one level up:
-    docs snippets are fragments that cite symbols defined in the surrounding
-    prose, other repositories, or the installed fleet — a snippet is never a
-    whole module, so every foreign name is undefined by construction
-    (measured: the root's remaining 57 fence findings were all F821). The
-    final block joins the last fragment-inherent rules measured on the same
-    sweep: ``F811`` (each block re-exemplifies the same protocol), ``SLF001``
-    (demonstrating the lazy internal accessor), ``S106`` (example docker
-    credentials), ``PT004`` (didactic fixture), ``E402`` (contextual import
-    mid-document), ``PLW0127``/``PLC0414`` (the self-assignment aliasing the
-    lazy-export pattern itself teaches)."""
+    PYTHON_FENCE_RUFF_EXTEND_IGNORE: ClassVar[t.StrSequence] = ("D100", "INP001")
+    """Only module-docstring and package rules are inapplicable to a
+    standalone Markdown fence. All names, behavior, types, and security
+    rules remain active and require correction in the authored source."""
     MACHINE_PATH_RE: ClassVar[t.RegexPattern] = re.compile(
         r"(?<![\w./-])/(?:home|Users)/(?P<user>[A-Za-z0-9_.-]+)(?=/|\b)",
     )
@@ -108,8 +63,7 @@ class FlextInfraConstantsDocs:
 
     ``argocd`` is the in-container HOME of the Argo CD side images
     (argocd-cmp-plugin / repo-server) referenced in ADR_024 and the release
-    convergence plan; it is an image contract, not an operator machine
-    (flext-9v0d.3 / cosmos-iracn.7)."""
+    convergence plan; it is an image contract, not an operator machine."""
     PYTHON_FENCE_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^```python\s*\n(?P<body>.*?)^```\s*$",
         re.MULTILINE | re.DOTALL,
@@ -155,47 +109,16 @@ class FlextInfraConstantsDocs:
     so an already-rewritten fence never matches again.
     """
 
-    MANUAL_TOC_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"<!--\s*TOC\s+START\s*-->.*?<!--\s*TOC\s+END\s*-->",
-        re.DOTALL,
-    )
-    """Regex matching a manually inserted table-of-contents block."""
 
-    FENCED_BLOCK_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?P<fence>```+|~~~+)[^\n]*\n.*?^(?P=fence)[ \t]*$\n?",
-        re.MULTILINE | re.DOTALL,
-    )
-    """Match a whole fenced code block, backtick or tilde, with its info string."""
 
     # --- Markdown link/heading patterns ---
     MARKDOWN_LINK_RE: ClassVar[t.RegexPattern] = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
     """Match markdown links capturing text (group 1) and URL (group 2)."""
-    MARKDOWN_LINK_URL_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"\[[^\]]+\]\(([^)]+)\)",
-    )
-    """Match markdown links capturing only the URL (group 1)."""
-    DOCS_GITHUB_BLOB_TREE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^https://github\.com/"
-        r"(?P<org>[^/]+)/(?P<repo>[^/]+)/"
-        r"(?P<kind>blob|tree)/"
-        r"(?P<branch>[^/]+)/"
-        r"(?P<path>.*)$",
-    )
-    """Match a github.com blob/tree documentation URL by its named parts."""
-    DOCS_OWNED_HEADER_LINES: ClassVar[int] = 2
-    """Lines an owned member guide carries before its body: marker + source."""
     HEADING_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^#{1,6}\s+(.+?)\s*$",
         re.MULTILINE,
     )
     """Match any markdown heading (h1-h6), capturing the text."""
-    HEADING_H2_H3_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(##|###)\s+(.+?)\s*$",
-        re.MULTILINE,
-    )
-    """Match h2/h3 headings, capturing level (group 1) and text (group 2)."""
-    ANCHOR_LINK_RE: ClassVar[t.RegexPattern] = re.compile(r"\[([^\]]+)\]\(#([^)]+)\)")
-    """Match internal anchor links, capturing text and anchor."""
     INLINE_CODE_RE: ClassVar[t.RegexPattern] = re.compile(r"`[^`]*`")
     """Match inline code spans for stripping before analysis."""
     DOCS_INLINE_COMMAND_DIRECTIVE_RE: ClassVar[t.RegexPattern] = re.compile(

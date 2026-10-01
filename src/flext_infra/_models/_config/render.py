@@ -8,7 +8,10 @@ from typing import Annotated
 from flext_cli import m
 
 from ... import t
-from ..._constants import FlextInfraConstantsCodegenProject
+from ..._constants import (
+    FlextInfraConstantsCodegenProject,
+    FlextInfraConstantsWorkspace,
+)
 from ..deps_tool_config import FlextInfraModelsDepsToolConfig
 from .contexts import FlextInfraConfigModelsContexts
 from .contract import FlextInfraConfigModelsContract
@@ -78,7 +81,6 @@ class FlextInfraConfigModelsRender:
         has_devcontainer: Annotated[
             bool,
             m.Field(
-                default=False,
                 description=(
                     "Whether the rendered repository ships a .devcontainer "
                     "directory. Dependabot only accepts a devcontainers "
@@ -87,38 +89,36 @@ class FlextInfraConfigModelsRender:
                     "whole manifest, which silently disables EVERY ecosystem in "
                     "it, security updates included. Derived from the repository "
                     "on disk rather than declared, because the directory is the "
-                    "fact and a second declaration could disagree with it "
-                    "(hq-36xk)"
+                    "fact and a second declaration could disagree with it"
                 ),
             ),
         ] = False
-        dependabot_cooldown_days: Annotated[
+        dependency_cooldown_days: Annotated[
             int,
             m.Field(
-                ge=0,
+                ge=1,
                 description=(
-                    "Dependabot cooldown (default-days) rendered into every "
-                    "ecosystem entry of the generated dependabot.yml. Zero "
-                    "(default) renders no cooldown at all: every ecosystem "
-                    "keeps selecting the newest available release immediately, "
-                    "which is the fleet default contract. A distribution that "
-                    "must stagger updates opts in through its codegen config."
+                    "Fleet supply-chain cooldown (codegen.toolchain SSOT) "
+                    "rendered as default-days into every dependabot ecosystem "
+                    "entry."
                 ),
             ),
-        ] = 0
+        ]
+        cooldown_excluded_dependencies: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                description=(
+                    "Requirement names the project takes by direct git "
+                    "reference (forks and local projects): derived from its "
+                    "pyproject, they never enter the cooldown."
+                )
+            ),
+        ] = ()
         checkout_submodules: Annotated[
             t.NonEmptyStr,
             m.Field(
-                default="false",
                 pattern=r"^(true|false|recursive)$",
-                description=(
-                    "actions/checkout submodules mode. Defaults to 'false' "
-                    "because the default GITHUB_TOKEN cannot clone sibling "
-                    "private repositories: 'recursive' aborts the job at "
-                    "checkout with 'Repository not found'. Projects whose "
-                    "submodules are public, or that provide a PAT, override "
-                    "it per project in codegen.yaml"
-                ),
+                description="actions/checkout submodules mode resolved from config",
             ),
         ]
         custom_steps: Annotated[
@@ -232,6 +232,10 @@ class FlextInfraConfigModelsRender:
             FlextInfraConfigModelsContract.MiseBootstrapEnvironmentSpec,
             m.Field(description="Strict persistent Mise storage contract"),
         ]
+        environment_directory: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Runtime-root-local development environment"),
+        ] = FlextInfraConstantsWorkspace.ENVIRONMENT_DIRECTORY
 
     class SonarcloudIssueExclusionSpec(FlextInfraConfigModelsContract.ConfigContract):
         """One SonarCloud issue exclusion applied as a server-side project setting.

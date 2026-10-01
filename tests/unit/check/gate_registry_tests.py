@@ -213,10 +213,7 @@ class TestsFlextInfraGateRegistry:
         )
         result = TestsFlextInfraGateRegistry._apply_alias_fix(tmp_path, project_dir)
         tm.that(result.result.passed, eq=True)
-        tm.that(
-            consumer.read_text(encoding="utf-8"),
-            has="from flext_infra.constants import c",
-        )
+        tm.that(consumer.read_text(encoding="utf-8"), has="from flext_infra import c")
 
     def test_canonical_alias_fix_rejects_new_cycle_beside_existing_cycle(
         self,
@@ -287,13 +284,14 @@ class TestsFlextInfraGateRegistry:
         registry = FlextInfraGateRegistry.default()
         mutating = {
             gate_id
-            for gate_id in c.Infra.CANONICAL_GATE_IDS
+            for gate_id in c.Infra.ALLOWED_GATES
             if (gate_cls := registry.get(gate_id)) is not None and gate_cls.can_fix
         }
         # `make fix` owns every mutating check-gate EXCEPT the fmt-owned
         # formatters (single-pass verb law: one operation per tool per verb).
         fmt_owned = set(config.Infra.codegen.make.fmt_gates)
         tm.that(set(c.Infra.CANONICAL_FIXABLE_GATE_IDS), eq=mutating - fmt_owned)
+        tm.that(fmt_owned & set(c.Infra.CANONICAL_GATE_IDS) <= mutating, eq=True)
         registered_mutating = {
             gate_id
             for gate_id in c.Infra.ALLOWED_GATES

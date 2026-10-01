@@ -17,7 +17,7 @@ class TestsFlextInfraPytestCollectionManifest:
 
     @staticmethod
     def _collect(project: Path, *options: str) -> str:
-        """Collect the sample project with every installed pytest plugin."""
+        """Collect with the real collection plugin as the only external plugin."""
         tests = project / "tests"
         tests.mkdir(exist_ok=True)
         (project / "pytest.ini").write_text("[pytest]\n", encoding="utf-8")
@@ -42,10 +42,15 @@ class TestsFlextInfraPytestCollectionManifest:
                     "--collect-only",
                     "-q",
                     "-p",
-                    "no:randomly",
+                    "pytest_reportlog.plugin",
+                    "-p",
+                    "flext_tests.enforcement_plugin",
+                    "-p",
+                    "flext_infra._pytest_collection",
                     *options,
                 ],
                 cwd=project,
+                env={"PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"},
                 remove_env_keys=("PYTEST_ADDOPTS",),
             ),
         )

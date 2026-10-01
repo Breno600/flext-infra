@@ -68,7 +68,7 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
                 *workspace.external_dependency_paths,
             )
         )
-        # Why (flext-6itas.4): a scaffold's declared roots are the complete
+        # Why: a scaffold's declared roots are the complete
         # future topology only for a subproject/standalone target; a workspace
         # root aggregates subproject trees it has not declared here.
         tooling_result = modernizer.resolve_tooling_context(
@@ -78,6 +78,7 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
             topology=m.Infra.PyprojectDeclaredTopology(
                 root_modules=project.root_modules,
                 root_packages=project.root_packages,
+                repository_namespace_packages=project.repository_namespace_packages,
                 packaged_data_paths=project.packaged_data_paths,
                 planned_data_files=tuple(
                     destination for _, destination in scaffold_entries
@@ -146,7 +147,11 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
                     return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
                         f"template destination parent is not a directory: {parent}",
                     )
-        for entry, destination in scaffold_entries:
+        # The pyproject plans first: renders that derive from its requirements
+        # (the dependabot cooldown exclusion) read the planned bytes.
+        for entry, destination in sorted(
+            scaffold_entries, key=lambda item: item[1] != c.PYPROJECT_FILENAME
+        ):
             if entry.delegate == c.Infra.TemplateDelegate.MANIFEST:
                 manifest_path = (
                     Path(c.CONFIG_DIR_NAME) / c.Infra.WORKSPACE_MANIFEST_FILENAME
@@ -196,6 +201,15 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
                     rendered_content,
                 )
+            if destination == c.PYPROJECT_FILENAME:
+                recorded = self.with_planned_pyproject(
+                    render_inputs, rendered_content.value.rendered
+                )
+                if recorded.failure:
+                    return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
+                        recorded
+                    )
+                render_inputs = recorded.value
             file_plan = self.file_plan(
                 root,
                 destination,

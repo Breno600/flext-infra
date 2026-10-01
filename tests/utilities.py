@@ -51,15 +51,6 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
         """Canonical test helper namespace."""
 
         @staticmethod
-        def enforcement_rule(rule_id: str) -> m.EnforcementRuleSpec:
-            """Resolve one enabled rule from the canonical enforcement catalog."""
-            catalog = u.build_canonical_catalog()
-            rule: m.EnforcementRuleSpec = next(
-                rule for rule in catalog.enabled_rules() if rule.id == rule_id
-            )
-            return rule
-
-        @staticmethod
         def number(value: t.JsonValue) -> float:
             """Narrow one parsed payload value to a real number."""
             tm.that(isinstance(value, (int, float)), eq=True)

@@ -46,6 +46,7 @@ class FlextInfraUtilitiesCodegen(
                     "MISE_LOCKFILE_PLATFORMS",
                     ",".join(toolchain.mise_lockfile_platforms),
                 ),
+                ("MISE_PYTHON_COMPILE", str(toolchain.python_compile).lower()),
             ),
             transient_environment=tuple(c.Infra.MISE_BOOTSTRAP_TRANSIENT_ENVIRONMENT),
             persistent_environment=tuple(c.Infra.MISE_BOOTSTRAP_PERSISTENT_ENVIRONMENT),
@@ -68,7 +69,6 @@ class FlextInfraUtilitiesCodegen(
         """Return the sole typed context every generated ``.envrc`` renders from."""
         toolchain = config.Infra.codegen.toolchain
         return m.Infra.EnvrcRenderSpec(
-            runtime_environment_directory=config.Infra.codegen.make.runtime_environment_directory,
             environment_path_prepends=toolchain.environment_path_prepends,
             mise_bootstrap=FlextInfraUtilitiesCodegen.mise_bootstrap_environment(),
         )
@@ -238,8 +238,7 @@ class FlextInfraUtilitiesCodegen(
             / "templates"
             / c.Infra.TEMPLATE_MODULE_SKELETON
         )
-        # NOTE (multi-agent, flext-wkii.17 / agent: uv_overlay_owner): preserve
-        # the exact validated model identity across the template boundary.
+        # Preserve the exact validated model identity across the template boundary.
         context = m.Infra.ModuleSkeletonRenderContext(
             class_name=class_name,
             base_class=base_class,

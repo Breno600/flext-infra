@@ -21,13 +21,14 @@ class TestsFlextInfraModRuleExpectedReceipt:
     @staticmethod
     def _declare(workspace: Path, *, expected: str) -> None:
         """Point the workspace at one local rule carrying the receipt clause."""
-        rules_root = workspace / "codemod" / c.Cli.RULES_DIR_NAME
+        config_path = workspace / c.Infra.CODEMOD_CONFIG_RELPATH
+        rules_root = config_path.parent / c.Cli.RULES_DIR_NAME
         tm.ok(u.Cli.ensure_dir(rules_root))
         tm.ok(
             u.Cli.atomic_write_text_file(
-                workspace / c.Infra.CODEMOD_CONFIG_FILENAME,
-                "ruleDirs:\n  - codemod/rules\ntestConfigs: []\n",
-            ),
+                config_path,
+                f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\ntestConfigs: []\n",
+            )
         )
         tm.ok(
             u.Cli.atomic_write_text_file(

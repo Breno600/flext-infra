@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import MutableSet
-from pathlib import Path
 from typing import Annotated, ClassVar
 
 from flext_core import m
-from flext_infra import c, p, t
+from flext_infra import c, t
 
 from .mixins import FlextInfraModelsMixins as mm
-from .rope import FlextInfraModelsRope
 
 
 class FlextInfraModelsCensus:
@@ -131,7 +129,7 @@ class FlextInfraModelsCensus:
         )
 
     class Violation(mm.ProjectNameMixin, m.ArbitraryTypesModel):
-        """Detected census violation with fix metadata."""
+        """One census analysis finding over the object inventory."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
@@ -146,7 +144,7 @@ class FlextInfraModelsCensus:
         kind: Annotated[
             str,
             m.Field(
-                description="Violation kind (misplaced/duplicate/unused/missing_flext_base/flat_alias/wrong_tier)",
+                description="Analysis kind (duplicate/unused/wrong_tier)"
             ),
         ]
         severity: Annotated[str, m.Field(description="Severity level")] = (
@@ -154,48 +152,9 @@ class FlextInfraModelsCensus:
         )
         file_path: Annotated[str, m.Field(description="File containing violation")]
         line: Annotated[t.NonNegativeInt, m.Field(description="Line number")] = 0
-        fixable: Annotated[
-            bool,
-            m.Field(description="Whether auto-fix is available"),
-        ] = False
-        fix_action: Annotated[
-            str,
-            m.Field(description="Recommended fix action identifier"),
-        ] = ""
         description: Annotated[
             str,
             m.Field(description="Human-readable violation description"),
-        ] = ""
-
-    class Fix(m.ArbitraryTypesModel):
-        """Applied or proposed auto-fix operation."""
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
-
-        object_name: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Name of the fixed object"),
-        ]
-        action: Annotated[
-            str,
-            m.Field(description="Fix action applied (move_to_tier/deduplicate/...)"),
-        ]
-        source_file: Annotated[str, m.Field(description="Original file path")]
-        target_file: Annotated[
-            str,
-            m.Field(description="Destination file path (for moves)"),
-        ] = ""
-        files_changed: Annotated[
-            t.NonNegativeInt,
-            m.Field(description="Number of files modified"),
-        ] = 0
-        applied: Annotated[
-            bool,
-            m.Field(description="Whether fix was actually applied"),
-        ] = False
-        dry_run_diff: Annotated[
-            str,
-            m.Field(description="Unified diff preview (dry-run mode)"),
         ] = ""
 
     class ScanConfig(m.ArbitraryTypesModel):
@@ -223,10 +182,6 @@ class FlextInfraModelsCensus:
             frozenset[str] | None,
             m.Field(description="Precomputed rule set"),
         ]
-        collect_object_inventory: Annotated[
-            bool,
-            m.Field(description="Whether to collect the full object inventory"),
-        ]
         include_object_references: Annotated[
             bool,
             m.Field(description="Whether to resolve object references"),
@@ -235,44 +190,6 @@ class FlextInfraModelsCensus:
             bool,
             m.Field(description="Whether to include local/nested scopes"),
         ]
-        applied: Annotated[
-            frozenset[str],
-            m.Field(description="Fix keys already applied"),
-        ]
-
-    class ModuleScan(mm.ProjectNameMixin, m.ArbitraryTypesModel):
-        """One module under census: its Rope session, identity, and scan filters.
-
-        Every structural census rule reads the same resolved module facts, so
-        the collector resolves them once and hands this scan to each rule.
-        """
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
-
-        rope: Annotated[
-            p.Infra.RopeWorkspaceDsl,
-            m.Field(description="Shared Rope workspace session scanning the module"),
-        ]
-        file_path: Annotated[Path, m.Field(description="Module file under census")]
-        convention: Annotated[
-            FlextInfraModelsRope.RopeModuleConvention,
-            m.Field(description="Resolved naming and namespace convention"),
-        ]
-        objects: Annotated[
-            t.VariadicTuple[FlextInfraModelsCensus.Object] | None,
-            m.Field(
-                description="Module object inventory; None when it is not collected",
-            ),
-        ]
-        symbol_index: Annotated[
-            t.MappingKV[str, t.Pair[str, int]],
-            m.Field(description="Top-level symbol name to its (kind, line)"),
-        ]
-        scan_config: Annotated[
-            FlextInfraModelsCensus.ScanConfig,
-            m.Field(description="Resolved scan configuration of the collect"),
-        ]
-
     class ScanFindings(m.ArbitraryTypesModel):
         """Per-project census findings accumulated across the scanned modules.
 
@@ -285,17 +202,6 @@ class FlextInfraModelsCensus:
         project_objects: Annotated[
             t.MutableMappingKV[str, t.MutableSequenceOf[FlextInfraModelsCensus.Object]],
             m.Field(description="Object inventory accumulated per project"),
-        ]
-        project_violations: Annotated[
-            t.MutableMappingKV[
-                str,
-                t.MutableSequenceOf[FlextInfraModelsCensus.Violation],
-            ],
-            m.Field(description="Rule violations accumulated per project"),
-        ]
-        project_fixes: Annotated[
-            t.MutableMappingKV[str, t.MutableSequenceOf[FlextInfraModelsCensus.Fix]],
-            m.Field(description="Proposed or applied fixes accumulated per project"),
         ]
         report_projects: Annotated[
             MutableSet[str],
@@ -345,17 +251,9 @@ class FlextInfraModelsCensus:
             default_factory=tuple,
             description="Detected violations",
         )
-        fixes: t.VariadicTuple[FlextInfraModelsCensus.Fix] = m.Field(
-            default_factory=tuple,
-            description="Proposed or applied fixes",
-        )
         violations_total: Annotated[
             t.NonNegativeInt,
             m.Field(description="Total violation count"),
-        ] = 0
-        fixes_applied: Annotated[
-            t.NonNegativeInt,
-            m.Field(description="Fixes applied count"),
         ] = 0
         unused_count: Annotated[
             t.NonNegativeInt,
@@ -386,14 +284,6 @@ class FlextInfraModelsCensus:
         total_violations: Annotated[
             t.NonNegativeInt,
             m.Field(description="Total violations across workspace"),
-        ] = 0
-        total_fixable: Annotated[
-            t.NonNegativeInt,
-            m.Field(description="Total fixable violations"),
-        ] = 0
-        fixes_total: Annotated[
-            t.NonNegativeInt,
-            m.Field(description="Total proposed or applied fixes"),
         ] = 0
         duplicates: t.VariadicTuple[FlextInfraModelsCensus.DuplicateGroup] = m.Field(
             default_factory=tuple,

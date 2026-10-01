@@ -91,11 +91,37 @@ class FlextInfraModelsMiseToolchain:
         by pyproject manifests.
         """
 
+        # Selector families rejected while their capabilities are suspended.
+        # Nothing stays suspended -- gc and beads are
+        # operator-owned forks resolved as latest, so the default frees every
+        # selector family and the vocabulary stays declared on this owner.
+        suspended_mise_selector_patterns: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                default=(),
+                description=(
+                    "Mise selector families rejected while suspended; empty "
+                    "frees every toolchain"
+                ),
+            ),
+        ] = ()
         python_version: Annotated[
             t.NonEmptyStr,
             m.Field(
                 pattern=r"^[0-9]+\.[0-9]+$",
                 description="Python major.minor line, e.g. '3.13'",
+            ),
+        ]
+        dependency_cooldown_days: Annotated[
+            int,
+            m.Field(
+                ge=1,
+                description=(
+                    "Supply-chain cooldown in days, the single value every "
+                    "resolver honours: the generated mise minimum_release_age "
+                    "and every dependabot ecosystem entry. Forks and local "
+                    "projects (direct git references) are excluded."
+                ),
             ),
         ]
         uv_link_mode: Annotated[
@@ -190,6 +216,17 @@ class FlextInfraModelsMiseToolchain:
                 ),
             ),
         ]
+        python_compile: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Rendered as [settings.python] compile and bootstrap "
+                    "MISE_PYTHON_COMPILE. False restricts Python resolution "
+                    "and installation to precompiled builds. "
+                    "Override toolchain.python_compile."
+                )
+            ),
+        ]
         npm_package_manager: Annotated[
             Literal["aube"],
             m.Field(description="Mise npm installer with a locked dependency graph"),
@@ -227,19 +264,15 @@ class FlextInfraModelsMiseToolchain:
         prettier_selector: Annotated[
             t.NonEmptyStr,
             m.Field(
-                default="npm:prettier",
                 description=(
                     "Mise selector for prettier. Override toolchain.prettier_selector; "
                     "never the .mise.toml key."
-                ),
+                )
             ),
         ]
         prettier_version: Annotated[
             t.NonEmptyStr,
-            m.Field(
-                default="latest",
-                description="Moving prettier release selector, e.g. 'latest'",
-            ),
+            m.Field(description="Prettier release selector, e.g. 'latest'"),
         ]
         waza_selector: Annotated[
             t.NonEmptyStr,
@@ -269,8 +302,8 @@ class FlextInfraModelsMiseToolchain:
             m.Field(
                 description=(
                     "Taplo release selector; the committed mise.lock pins the "
-                    "version generation authenticates (flext-t7668)"
-                ),
+                    "version generation authenticates"
+                )
             ),
         ]
         ast_grep_selector: Annotated[
@@ -336,7 +369,7 @@ class FlextInfraModelsMiseToolchain:
         @m.computed_field
         @property
         def python_selector(self) -> str:
-            """Mise/pyenv-style selector for the configured Python minor line."""
+            """Pyenv-style selector for the configured Python minor line."""
             return self.python_version
 
         @u.model_validator(mode="after")
@@ -350,6 +383,9 @@ class FlextInfraModelsMiseToolchain:
             (``latest``, a major.minor line, or a released version) may reach
             the lock.
             """
+            if not self.python_tool_version.startswith(f"{self.python_version}."):
+                msg = "Python runtime patch must match the declared language minor line"
+                raise ValueError(msg)
             offenders = sorted(
                 field
                 for field, value in self

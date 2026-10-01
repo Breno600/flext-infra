@@ -17,6 +17,8 @@ if TYPE_CHECKING:
 class FlextInfraProtocolsPromoted(Protocol):
     """Promoted-command protocol definitions."""
 
+    """flext-command registry protocol namespace."""
+
     @runtime_checkable
     class PromotedParam(Protocol):
         """Promoted command parameter contract."""

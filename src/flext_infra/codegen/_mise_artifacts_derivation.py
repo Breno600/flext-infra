@@ -25,6 +25,22 @@ class FlextInfraMiseArtifactsDerivation:
     """
 
     @classmethod
+    def validate_packaged(cls, directory: Path) -> p.Result[bool]:
+        """Validate the flat packaged copy of one upg-written triple."""
+        release = cls.pinned_release(directory)
+        if release.failure:
+            return r[bool].from_failure(release)
+        for relative, mode in c.Infra.ARTIFACT_SPECS:
+            if relative == c.Infra.MISE_VERSION_PIN_FILENAME:
+                continue
+            launcher = cls._validate_launcher(
+                directory / Path(relative).name, relative, mode, release.value
+            )
+            if launcher.failure:
+                return launcher
+        return r[bool].ok(True)
+
+    @classmethod
     def validate(cls, project_root: Path, runtime_root: Path) -> p.Result[bool]:
         """Validate one project's triple and its projection of the runtime root."""
         release = cls.pinned_release(project_root)

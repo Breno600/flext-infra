@@ -17,6 +17,7 @@ from flext_infra import c, m, p, t
 
 from ._git.worktree_discovery import FlextInfraUtilitiesGitWorktreeDiscoveryMixin
 from .dependencies import FlextInfraUtilitiesDependencies
+from .workspace_manifest import FlextInfraUtilitiesWorkspaceManifest
 
 
 class FlextInfraUtilitiesRepository:
@@ -70,21 +71,10 @@ class FlextInfraUtilitiesRepository:
                 f"internal dependency git source must declare a branch or ref: "
                 f"{requirement}",
             )
-        if url.startswith("https://"):
-            canonical = url
-        elif url.startswith("http://"):
-            canonical = f"https://{url.removeprefix('http://')}"
-        elif url.startswith("ssh://"):
-            canonical = f"https://{url.removeprefix('ssh://').removeprefix('git@')}"
-        elif url.startswith("git@") and ":" in url:
-            host, _, path = url.removeprefix("git@").partition(":")
-            canonical = f"https://{host}/{path}"
-        else:
-            return r[t.Pair[str, str]].fail(
-                f"internal dependency git source scheme is not canonicalizable "
-                f"to HTTPS: {requirement}",
-            )
-        return r[t.Pair[str, str]].ok((canonical, ref))
+        canonical = FlextInfraUtilitiesRepository._canonical_https_url(url)
+        if canonical.failure:
+            return r[t.Pair[str, str]].from_failure(canonical)
+        return r[t.Pair[str, str]].ok((canonical.value, ref))
 
     @classmethod
     def configured_repository_ref(
@@ -305,9 +295,9 @@ class FlextInfraUtilitiesRepository:
         (every internal requirement is commit residue of a retired pin). Being
         hand-authored, a commit ref there is a pin beside uv.lock and fails.
         """
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
-        loaded = FlextInfraWorkspaceDetector.load_workspace_manifest(repository_root)
+        loaded = FlextInfraUtilitiesWorkspaceManifest.load_workspace_manifest(
+            repository_root
+        )
         if loaded.failure:
             return r[t.Pair[str, str]].from_failure(loaded)
         project = loaded.value[0].project if loaded.value else None
@@ -448,9 +438,9 @@ class FlextInfraUtilitiesRepository:
         distribution: str,
     ) -> p.Result[str]:
         """Return the workspace manifest's declared URL for one distribution."""
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
-        loaded = FlextInfraWorkspaceDetector.load_workspace_manifest(repository_root)
+        loaded = FlextInfraUtilitiesWorkspaceManifest.load_workspace_manifest(
+            repository_root
+        )
         if loaded.failure:
             return r[str].from_failure(loaded)
         if not loaded.value:
@@ -537,9 +527,9 @@ class FlextInfraUtilitiesRepository:
         checkout. When none exists the failure is loud and no default is
         invented.
         """
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
-        manifest = FlextInfraWorkspaceDetector.load_workspace_manifest(repository_root)
+        manifest = FlextInfraUtilitiesWorkspaceManifest.load_workspace_manifest(
+            repository_root
+        )
         if manifest.success and manifest.value:
             integration = manifest.value[0].integration
             if integration is not None:
@@ -610,32 +600,6 @@ class FlextInfraUtilitiesRepository:
         return r[str].fail(
             "repository publishes no integration branch "
             f"({', '.join(candidates)}): {repository_root}",
-        )
-
-    @staticmethod
-    def workspace_spec_load(repository_root: Path) -> p.Result[m.Infra.WorkspaceSpec]:
-        """Load governed topology and derive observed external Git dependencies."""
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
-        return FlextInfraWorkspaceDetector.load_workspace_spec(repository_root)
-
-    @staticmethod
-    def repository_conform_target(
-        repository_root: Path,
-        workspace: m.Infra.WorkspaceSpec | None = None,
-    ) -> p.Result[m.Infra.RepositoryConformTarget]:
-        """Return typed effective policy inferred from live repository topology."""
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
-        resolved_workspace = workspace
-        if resolved_workspace is None:
-            loaded = FlextInfraWorkspaceDetector.load_workspace_spec(repository_root)
-            if loaded.failure:
-                return r[m.Infra.RepositoryConformTarget].from_failure(loaded)
-            resolved_workspace = loaded.value
-        return FlextInfraWorkspaceDetector.conform_target(
-            repository_root,
-            resolved_workspace,
         )
 
 

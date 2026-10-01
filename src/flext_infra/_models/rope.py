@@ -19,7 +19,7 @@ from ._codegen.base import FlextInfraCodegen
 class FlextInfraModelsRope:
     """Rope operation result models — accessed via m.Infra.Rope.*."""
 
-    # NOTE (multi-agent, flext-wkii.17.24 / agent: codex): callers resolve project
+    # Callers resolve project
     # selection once; source iteration has one exact, branch-free request shape.
     class SourceScanRequest(m.ContractModel):
         """Exact project roots selected for one production-source scan."""
@@ -94,7 +94,7 @@ class FlextInfraModelsRope:
             int,
             m.Field(ge=0, description="Leading-whitespace column of the statement"),
         ]
-        # flext-j47u (codex): Rope owns both boundaries so multiline consumers
+        # Rope owns both boundaries so multiline consumers
         # never reconstruct statement ranges from source text.
         end_line: Annotated[
             int,
@@ -120,7 +120,7 @@ class FlextInfraModelsRope:
             str,
             m.Field(description="Name of the nearest enclosing def/class, or empty"),
         ] = ""
-        # flext-j47u (codex): consumers share this Rope-derived guard fact instead
+        # Consumers share this Rope-derived guard fact instead
         # of rebuilding TYPE_CHECKING control flow with stdlib AST visitors.
         type_checking_guarded: Annotated[
             bool,
@@ -131,7 +131,7 @@ class FlextInfraModelsRope:
             m.Field(description="Rope-owned source slice for the statement"),
         ] = ""
 
-    # flext-j47u (codex): normalize Rope payloads before enforcement consumes them.
+    # Normalize Rope payloads before enforcement consumes them.
     class ImportFact(mm.PositiveLineMixin, m.ContractModel):
         """One normalized binding emitted by Rope import-info semantics."""
 
@@ -154,8 +154,7 @@ class FlextInfraModelsRope:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         source: Annotated[
-            str,
-            m.Field(description="Exact module source the facts describe"),
+            str, m.Field(description="Exact module source the facts describe")
         ]
         imports: Annotated[
             t.VariadicTuple[FlextInfraModelsRope.ImportFact],
@@ -581,7 +580,7 @@ class FlextInfraModelsRope:
             Path,
             m.Field(description="Canonical root used to open the shared Rope project"),
         ]
-        # NOTE (multi-agent, flext-wkii.17.24): policy stays in config.Infra;
+        # Policy stays in config.Infra;
         # this field-only model retains only materialized session state.
         workspace_index: Annotated[
             FlextInfraModelsRope.RopeWorkspaceIndex,

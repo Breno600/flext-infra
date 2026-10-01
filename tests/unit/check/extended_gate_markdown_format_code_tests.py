@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import pytest
 from flext_tests import tm, tv
 
 from flext_infra import c, m
@@ -134,14 +133,21 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         issues_len: int,
     ) -> None:
         project_dir = u.Tests.mk_project(tmp_path, "markdown-code-clean")
-        (project_dir / "README.md").write_text(markdown_text, encoding="utf-8")
+        (project_dir / "README.md").write_text(self.FORMATTED, encoding="utf-8")
 
         _ = u.Tests.check_gate_asserting(
-            FlextInfraMarkdownCodeGate,
-            tmp_path,
-            project_dir,
-            passed=passed,
-            issues_len=issues_len,
+            FlextInfraMarkdownCodeGate, tmp_path, project_dir, passed=True, issues_len=0
+        )
+
+    def test_code_gate_notest_only_blocks_do_not_select_the_gate(
+        self, tmp_path: Path
+    ) -> None:
+        """A ``notest`` fence is not embedded code to check (#1223 selection)."""
+        project_dir = u.Tests.mk_project(tmp_path, "markdown-code-notest")
+        (project_dir / "README.md").write_text(self.NOTEST_PSEUDO, encoding="utf-8")
+
+        tm.that(
+            FlextInfraMarkdownCodeGate(tmp_path).selected_for(project_dir), eq=False
         )
 
     def test_code_gate_fix_splices_formatted_block_back(self, tmp_path: Path) -> None:

@@ -190,10 +190,10 @@ class FlextInfraUtilitiesDocsRender:
         ``docs/<section>/README.md`` pages that generated index pages link to
         (producing nav 404s). The rooted ``/README.md`` excludes only the
         docs-dir root README (the project README mirror), preserving nested
-        section READMEs. [flext-3o9s nav404 fix]
+        section READMEs.
 
         Curated ``API/**`` mirrors duplicate the generated public-API page and
-        register the same flat symbol anchors (for example ``cosmos_main.s``),
+        register the same flat symbol anchors (for example ``<package>.s``),
         producing ``Multiple primary URLs`` autorefs conflicts. The generated
         page is canonical; the curated mirror is excluded.
         """
@@ -282,7 +282,7 @@ class FlextInfraUtilitiesDocsRender:
     def _quality_gates_lines(*, link_prefix: str) -> t.SequenceOf[str]:
         """Return a thin pointer to the canonical Quality Gates surface.
 
-        Why: flext-4p0t — flext-quality-gates skill path does not exist; route to
+        Why: the flext-quality-gates skill path does not exist; route to
         make-check and AGENTS.md Make contract instead.
         """
         agents_link = FlextInfraUtilitiesDocsRender._resolve_governance_link(
@@ -547,8 +547,7 @@ class FlextInfraUtilitiesDocsRender:
         _ = modules
         data = contract
 
-        # NOTE (multi-agent, flext-p4s3.2 / agent: uv_overlay_owner): preserve one
-        # typed context across the sole public template-rendering boundary.
+        # Preserve one typed context across the sole public template-rendering boundary.
         context = m.Infra.MkdocsProjectRenderContext(
             site_title=str(data.get("site_title", "")).strip() or scope.name,
             site_url=str(data.get("site_url", "")).strip() or c.Infra.GITHUB_REPO_URL,
@@ -581,27 +580,21 @@ class FlextInfraUtilitiesDocsRender:
     def docs_overview_page(scope: m.Infra.DocScope, contract: t.JsonMapping) -> str:
         """Return the generated overview page for a project API."""
         data = contract
-        aliases = FlextInfraUtilitiesDocsRender._preview(
-            FlextInfraUtilitiesDocsRender.as_string_sequence(data, "aliases"),
-            limit=11,
-        )
-        exports = FlextInfraUtilitiesDocsRender._preview(
-            FlextInfraUtilitiesDocsRender.as_string_sequence(data, "public_symbols"),
-            limit=10,
-        )
-        facades = FlextInfraUtilitiesDocsRender._preview(
-            FlextInfraUtilitiesDocsRender.as_string_sequence(data, "facades"),
-            limit=8,
-        )
-        module_exports = FlextInfraUtilitiesDocsRender._preview(
-            FlextInfraUtilitiesDocsRender.as_string_sequence(data, "module_exports"),
-            limit=8,
+        limits = config.Infra.codegen.make.docs.overview_preview_limits
+        aliases, exports, facades, module_exports, keywords = (
+            FlextInfraUtilitiesDocsRender._preview(
+                FlextInfraUtilitiesDocsRender.as_string_sequence(data, field),
+                limit=limits[field],
+            )
+            for field in (
+                "aliases",
+                "public_symbols",
+                "facades",
+                "module_exports",
+                "keywords",
+            )
         )
         modules = FlextInfraUtilitiesDocsRender.as_string_sequence(data, "modules")
-        keywords = FlextInfraUtilitiesDocsRender._preview(
-            FlextInfraUtilitiesDocsRender.as_string_sequence(data, "keywords"),
-            limit=8,
-        )
         classifiers = (
             ", ".join(
                 FlextInfraUtilitiesDocsRender.as_string_sequence(data, "classifiers"),
@@ -682,8 +675,7 @@ class FlextInfraUtilitiesDocsRender:
         """
         data = contract
 
-        # NOTE (multi-agent, flext-p4s3.2 / agent: uv_overlay_owner): preserve one
-        # typed context across the sole public template-rendering boundary.
+        # Preserve one typed context across the sole public template-rendering boundary.
         # The title falls back to the governed project name — never a fleet
         # brand — so a standalone repository describes itself (ag-q6uo).
         context = m.Infra.MkdocsRenderContext(

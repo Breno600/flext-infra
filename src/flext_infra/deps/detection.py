@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping, MutableMapping
 from pathlib import Path
-from typing import override
 
 from flext_core import c as core_c, r
 from flext_infra import c, m, p, t, u
@@ -16,38 +15,6 @@ class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis
     """Runtime vs dev dependency detector using deptry, pip-check, and mypy stub analysis."""
 
     _log = u.fetch_logger(__name__)
-
-    def __init__(self) -> None:
-        """Initialize the dependency detection service with selector, toml, and runner."""
-        self.selector: p.Infra.ProjectSelector | None = None
-        self.toml: p.Infra.TomlReader | None = None
-        self.runner: p.Cli.CommandRunner | None = None
-
-    @override
-    def _read_plain(self, path: Path) -> p.Result[t.JsonMapping]:
-        """Read plain."""
-        if self.toml is not None:
-            return self.toml.read_plain(path)
-        plain_result = u.Cli.toml_read_json(path)
-        if plain_result.failure:
-            return r[t.JsonMapping].from_failure(plain_result)
-        return r[t.JsonMapping].ok(
-            t.Infra.INFRA_MAPPING_ADAPTER.validate_python(plain_result.value),
-        )
-
-    @override
-    def _run_raw(
-        self,
-        cmd: t.StrSequence,
-        *,
-        cwd: Path | None = None,
-        timeout: int | None = None,
-        env: t.StrMapping | None = None,
-    ) -> p.Result[p.Cli.CommandOutput]:
-        """Run raw."""
-        if self.runner is not None:
-            return self.runner.run_raw(cmd, cwd=cwd, timeout=timeout, env=env)
-        return u.Cli.run_raw(cmd, cwd=cwd, timeout=timeout, env=env)
 
     @staticmethod
     def classify_issues(
@@ -120,11 +87,7 @@ class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis
         For full ProjectInfo metadata, use u.Infra.discover_projects().
         """
         names = projects_filter or []
-        result = (
-            self.selector.resolve_projects(repository_root, names)
-            if self.selector is not None
-            else u.Infra.resolve_projects(repository_root, names)
-        )
+        result = u.Infra.resolve_projects(repository_root, names)
         if result.failure:
             return r[t.SequenceOf[Path]].from_failure(result)
         projects_info: t.SequenceOf[m.Infra.ProjectInfo] = result.value

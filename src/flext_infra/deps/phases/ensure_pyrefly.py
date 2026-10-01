@@ -41,7 +41,7 @@ class FlextInfraEnsurePyreflyConfigPhase:
         else:
             expected_search = [c.Infra.DEFAULT_SRC_DIR]
             expected_includes = [f"{c.Infra.DEFAULT_SRC_DIR}/**/*.py*"]
-        # flext-j47u (codex): keep pre-write Pyrefly scope identical to the first
+        # Keep pre-write Pyrefly scope identical to the first
         # post-write discovery without fabricating directories on disk.
         if context.declared_python_dirs_are_complete:
             declared_import_roots = (
@@ -49,9 +49,9 @@ class FlextInfraEnsurePyreflyConfigPhase:
                 if path_rules.source_dir in declared_python_dirs
                 else ()
             )
-            # Why (ai-hub-qwoc, fleet-wide fix): sorted({...}) places "."
+            # Why (fleet-wide fix): sorted({...}) places "."
             # before "src" (ASCII '.' < 's'), so pyrefly resolves every
-            # module twice (ai_hub.X via src AND src.ai_hub.X via "."),
+            # module twice (pkg.X via src AND src.pkg.X via "."),
             # producing phantom bad-argument-type errors. The declared
             # source import root must stay first; everything else (typically
             # ".", for tests.* resolution) sorts after it.
@@ -64,7 +64,7 @@ class FlextInfraEnsurePyreflyConfigPhase:
                 merged_search.discard(path_rules.source_dir)
             merged_search.difference_update(declared_import_roots)
             expected_search = [*declared_import_roots, *sorted(merged_search)]
-            # NOTE (multi-agent, flext-wkii.17.9.2.1): analysis roots belong in
+            # Analysis roots belong in
             # project-includes; only import roots belong in search-path.
             expected_includes = tuple(
                 f"{directory}/**/*.py*" for directory in declared_python_dirs

@@ -288,7 +288,7 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
             modified,
             fromfile=f"a/{rel}",
             tofile=f"b/{rel}",
-            max_lines=30,
+            max_lines=c.Infra.EDIT_DIFF_PREVIEW_MAX_LINES,
         )
         _restore()
         report: t.MutableSequenceOf[str] = [f"  REVERTED {rel}:"]
