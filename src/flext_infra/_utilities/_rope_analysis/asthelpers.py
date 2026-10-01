@@ -33,11 +33,13 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
 
     @staticmethod
     def resource_cache_key(
-        rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
+        rope_project: t.Infra.RopeProject,
+        resource: t.Infra.RopeResource,
     ) -> t.Triple[str, str, int]:
         """Resource cache key."""
         file_path = FlextInfraUtilitiesRopeCore.resource_file_path(
-            rope_project, resource
+            rope_project,
+            resource,
         )
         mtime_ns = (
             file_path.stat().st_mtime_ns
@@ -52,7 +54,7 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
         """Return whether one Rope name is defined in ``resource``."""
         if isinstance(pyname, (p.Infra.RopeImportedName, p.Infra.RopeImportedModule)):
             return False
-        # NOTE (multi-agent, flext-f8vk / kimi): p.Infra declares
+        # p.Infra declares
         # get_definition_location() as tuple-always (every other caller
         # unpacks directly); the old None guard was dead code.
         module, line = pyname.get_definition_location()
@@ -98,7 +100,7 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
         """Return a process-wide rope project usable for string parsing."""
         cached = FlextInfraUtilitiesRopeAnalysisAstHelpers._parse_project
         if cached is None:
-            # flext-o6h5 (agent: kimi) — root-cause fix: the anchor was a hardcoded
+            # Root-cause fix: the anchor was a hardcoded
             # operator path that crashed CI (FileNotFoundError) and silently bound
             # the parse project to the wrong tree locally. Anchor on the validated
             # settings SSOT, with cwd as last resort — both exist where CLI runs.
@@ -130,7 +132,9 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
 
     @staticmethod
     def first_decorator_line(
-        pyfunction: t.Infra.RopePyObject, *, default_line: int
+        pyfunction: t.Infra.RopePyObject,
+        *,
+        default_line: int,
     ) -> int:
         """Return the lowest line number among ``pyfunction``'s decorators."""
         decorators = getattr(pyfunction, "decorators", None) or ()
@@ -230,35 +234,6 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
         return (lineno, col_offset, end_lineno, end_col_offset)
 
     @staticmethod
-    def _body_nodes(node: p.AttributeProbe) -> t.SequenceOf[t.Infra.RopeAstNode]:
-        """Return direct AST body children for a Rope AST node."""
-        if not FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(node):
-            return ()
-        body = getattr(node, "body", ())
-        if not isinstance(body, (list, tuple)):
-            return ()
-        nodes: list[t.Infra.RopeAstNode] = [
-            child
-            for child in body
-            if FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(child)
-        ]
-        return tuple(nodes)
-
-    @staticmethod
-    def class_body_nodes(
-        tree: p.AttributeProbe, *, class_name: str
-    ) -> t.SequenceOf[t.Infra.RopeAstNode]:
-        """Return direct body nodes for a top-level class name."""
-        if not FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(tree):
-            return ()
-        for node in FlextInfraUtilitiesRopeAnalysisAstHelpers._body_nodes(tree):
-            if FlextInfraUtilitiesRopeAnalysisAstHelpers.node_kind(node) != "ClassDef":
-                continue
-            if getattr(node, "name", "") == class_name:
-                return FlextInfraUtilitiesRopeAnalysisAstHelpers._body_nodes(node)
-        return ()
-
-    @staticmethod
     def assignment_target_names(node: p.AttributeProbe) -> t.StrSequence:
         """Return direct assignment target names represented by one AST node."""
         return FlextInfraUtilitiesRopeAnalysisAstHelpers._assignment_target_names(node)
@@ -290,24 +265,6 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
                 if target_name:
                     names.append(target_name)
         return tuple(names)
-
-    @staticmethod
-    def class_symbol_names(class_body: t.SequenceOf[p.AttributeProbe]) -> t.StrSequence:
-        """Return direct method, nested-class and attribute symbols for a class body."""
-        names: set[str] = set()
-        for node in class_body:
-            if not FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(node):
-                continue
-            node_kind = FlextInfraUtilitiesRopeAnalysisAstHelpers.node_kind(node)
-            if node_kind in {"AsyncFunctionDef", "ClassDef", "FunctionDef"}:
-                node_name = getattr(node, "name", "")
-                if isinstance(node_name, str) and node_name:
-                    names.add(node_name)
-                continue
-            names.update(
-                FlextInfraUtilitiesRopeAnalysisAstHelpers._assignment_target_names(node)
-            )
-        return tuple(sorted(names))
 
     @staticmethod
     def class_info_from_source(source: str) -> t.SequenceOf[m.Infra.ClassInfo]:
@@ -374,6 +331,6 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
             and FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(subscript_value)
         ):
             return FlextInfraUtilitiesRopeAnalysisAstHelpers._class_base_name(
-                subscript_value
+                subscript_value,
             )
         return ""

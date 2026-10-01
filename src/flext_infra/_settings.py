@@ -28,7 +28,7 @@ class FlextInfraSettings(FlextSettings):
         frozen=True,
     )
 
-    # flext-wkii.4.15: composition only; declaration and env validation stay private.
+    # Composition only; declaration and env validation stay private.
     Infra: FlextInfraSettingsModels.Infra = m.Field(
         default_factory=FlextInfraSettingsModels.Infra,
         description="Namespaced infra settings.",

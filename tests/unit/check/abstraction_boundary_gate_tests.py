@@ -35,11 +35,16 @@ class TestsFlextInfraAbstractionBoundaryGate:
 
     def test_banned_cli_lib_is_flagged(self, tmp_path: Path) -> None:
         project = self._project(
-            tmp_path, name="flext-demo", filename="logic.py", src="import typer\n"
+            tmp_path,
+            name="flext-demo",
+            filename="logic.py",
+            src="import typer\n",
         )
 
         result = u.Tests.run_gate_check(
-            FlextInfraAbstractionBoundaryGate, tmp_path, project
+            FlextInfraAbstractionBoundaryGate,
+            tmp_path,
+            project,
         )
 
         tm.that(not result.result.passed, eq=True)
@@ -47,11 +52,16 @@ class TestsFlextInfraAbstractionBoundaryGate:
 
     def test_click_allowed_in_singer_boundary(self, tmp_path: Path) -> None:
         project = self._project(
-            tmp_path, name="flext-tap-demo", filename="logic.py", src="import click\n"
+            tmp_path,
+            name="flext-tap-demo",
+            filename="logic.py",
+            src="import click\n",
         )
 
         result = u.Tests.run_gate_check(
-            FlextInfraAbstractionBoundaryGate, tmp_path, project
+            FlextInfraAbstractionBoundaryGate,
+            tmp_path,
+            project,
         )
 
         tm.that(result.result.passed, eq=True)
@@ -65,7 +75,9 @@ class TestsFlextInfraAbstractionBoundaryGate:
         )
 
         result = u.Tests.run_gate_check(
-            FlextInfraAbstractionBoundaryGate, tmp_path, project
+            FlextInfraAbstractionBoundaryGate,
+            tmp_path,
+            project,
         )
 
         tm.that(not result.result.passed, eq=True)
@@ -79,18 +91,25 @@ class TestsFlextInfraAbstractionBoundaryGate:
         )
 
         result = u.Tests.run_gate_check(
-            FlextInfraAbstractionBoundaryGate, tmp_path, project
+            FlextInfraAbstractionBoundaryGate,
+            tmp_path,
+            project,
         )
 
         tm.that(result.result.passed, eq=True)
 
     def test_live_print_call_is_flagged(self, tmp_path: Path) -> None:
         project = self._project(
-            tmp_path, name="flext-demo", filename="logic.py", src="print('live')\n"
+            tmp_path,
+            name="flext-demo",
+            filename="logic.py",
+            src="print('live')\n",
         )
 
         result = u.Tests.run_gate_check(
-            FlextInfraAbstractionBoundaryGate, tmp_path, project
+            FlextInfraAbstractionBoundaryGate,
+            tmp_path,
+            project,
         )
 
         tm.that(not result.result.passed, eq=True)
@@ -105,30 +124,39 @@ class TestsFlextInfraAbstractionBoundaryGate:
         )
 
         result = u.Tests.run_gate_check(
-            FlextInfraAbstractionBoundaryGate, tmp_path, project
+            FlextInfraAbstractionBoundaryGate,
+            tmp_path,
+            project,
         )
 
         tm.that(result.result.passed, eq=True)
 
     def test_declared_boundary_owner_never_selects_the_gate(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A declared boundary owner is not selected, and a direct call never passes."""
         owner = min(c.Infra.BOUNDARY_SKIP_PROJECTS)
         project = self._project(
-            tmp_path, name=owner, filename="logic.py", src="import typer\n"
+            tmp_path,
+            name=owner,
+            filename="logic.py",
+            src="import typer\n",
         )
         gate = FlextInfraAbstractionBoundaryGate(tmp_path)
 
         tm.that(gate.selected_for(project), eq=False)
         result = u.Tests.run_gate_check(
-            FlextInfraAbstractionBoundaryGate, tmp_path, project
+            FlextInfraAbstractionBoundaryGate,
+            tmp_path,
+            project,
         )
         tm.that(result.result.passed, eq=False)
         tm.that(len(result.issues), eq=0)
 
     def test_renamed_owner_retains_declared_boundary_policy(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A worktree directory does not replace the declared distribution identity."""
         project = self._project(
@@ -139,17 +167,23 @@ class TestsFlextInfraAbstractionBoundaryGate:
         )
         renamed = project.rename(tmp_path / "owner-worktree")
         tm.that(
-            FlextInfraAbstractionBoundaryGate(tmp_path).selected_for(renamed), eq=False
+            FlextInfraAbstractionBoundaryGate(tmp_path).selected_for(renamed),
+            eq=False,
         )
 
     def test_owner_directory_does_not_exempt_consumer(self, tmp_path: Path) -> None:
         """A consumer cannot acquire an owner's policy by renaming its checkout."""
         project = self._project(
-            tmp_path, name="flext-demo", filename="logic.py", src="import typer\n"
+            tmp_path,
+            name="flext-demo",
+            filename="logic.py",
+            src="import typer\n",
         )
         renamed = project.rename(tmp_path / min(c.Infra.BOUNDARY_SKIP_PROJECTS))
         result = u.Tests.run_gate_check(
-            FlextInfraAbstractionBoundaryGate, tmp_path, renamed
+            FlextInfraAbstractionBoundaryGate,
+            tmp_path,
+            renamed,
         )
         tm.that(result.result.passed, eq=False)
         tm.that(any("typer" in issue.message for issue in result.issues), eq=True)
@@ -164,14 +198,18 @@ class TestsFlextInfraAbstractionBoundaryGate:
         )
         renamed = project.rename(tmp_path / "toml-owner-worktree")
         result = u.Tests.run_gate_check(
-            FlextInfraAbstractionBoundaryGate, tmp_path, renamed
+            FlextInfraAbstractionBoundaryGate,
+            tmp_path,
+            renamed,
         )
         tm.that(result.result.passed, eq=True)
         tm.that(result.issues, eq=[])
 
     @pytest.mark.parametrize("metadata_text", [None, "[project\n"])
     def test_invalid_metadata_cannot_inherit_owner_directory_policy(
-        self, tmp_path: Path, metadata_text: str | None
+        self,
+        tmp_path: Path,
+        metadata_text: str | None,
     ) -> None:
         """Missing or malformed metadata fails even inside an owner's named folder."""
         project = tmp_path / min(c.Infra.BOUNDARY_SKIP_PROJECTS)
@@ -179,7 +217,9 @@ class TestsFlextInfraAbstractionBoundaryGate:
         if metadata_text is not None:
             (project / c.PYPROJECT_FILENAME).write_text(metadata_text, encoding="utf-8")
         result = u.Tests.run_gate_check(
-            FlextInfraAbstractionBoundaryGate, tmp_path, project
+            FlextInfraAbstractionBoundaryGate,
+            tmp_path,
+            project,
         )
         tm.that(result.result.passed, eq=False)
         tm.that(bool(result.issues), eq=True)

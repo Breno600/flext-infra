@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraRefactorCensusRulesDispatchMixin(
-    FlextInfraRefactorCensusRulesSharedMixin
+    FlextInfraRefactorCensusRulesSharedMixin,
 ):
     """Run every selected structural rule for one module and collect outcomes.
 
@@ -33,29 +33,37 @@ class FlextInfraRefactorCensusRulesDispatchMixin(
             selected_rules: frozenset[str] | None = None,
         ) -> bool: ...
         def _rule_runtime_alias(
-            self, scan: m.Infra.ModuleScan
+            self,
+            scan: m.Infra.ModuleScan,
         ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]: ...
         def _rule_manual_typing_alias(
-            self, scan: m.Infra.ModuleScan
+            self,
+            scan: m.Infra.ModuleScan,
         ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]: ...
         def _rule_class_placement(
-            self, scan: m.Infra.ModuleScan
+            self,
+            scan: m.Infra.ModuleScan,
         ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]: ...
         def _rule_private_import_bypass(
-            self, scan: m.Infra.ModuleScan
+            self,
+            scan: m.Infra.ModuleScan,
         ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]: ...
         def _rule_compatibility_alias(
-            self, scan: m.Infra.ModuleScan
+            self,
+            scan: m.Infra.ModuleScan,
         ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]: ...
         def _rule_inline_import(
-            self, scan: m.Infra.ModuleScan
+            self,
+            scan: m.Infra.ModuleScan,
         ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]: ...
         def _rule_silent_failure(
-            self, scan: m.Infra.ModuleScan
+            self,
+            scan: m.Infra.ModuleScan,
         ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]: ...
 
     def _module_rules(
-        self, scan: m.Infra.ModuleScan
+        self,
+        scan: m.Infra.ModuleScan,
     ) -> t.Pair[t.VariadicTuple[m.Infra.Violation], t.VariadicTuple[m.Infra.Fix]]:
         """Run every selected structural rule for one module and collect outcomes."""
         violations: list[m.Infra.Violation] = []
@@ -90,7 +98,8 @@ class FlextInfraRefactorCensusRulesDispatchMixin(
         return FlextInfraEnforcementEngine.declarative_rules()
 
     def _rule_declarative(
-        self, scan: m.Infra.ModuleScan
+        self,
+        scan: m.Infra.ModuleScan,
     ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]:
         """Run catalog-driven declarative rules for one module."""
         violations: list[m.Infra.Violation] = []
@@ -99,7 +108,9 @@ class FlextInfraRefactorCensusRulesDispatchMixin(
         if not rules:
             return violations, fixes
         ctx = self._detector_context(
-            scan.rope, scan.file_path, convention=scan.convention
+            scan.rope,
+            scan.file_path,
+            convention=scan.convention,
         )
         selected_kinds = scan.scan_config.selected_kinds
         for rule in rules:
@@ -123,7 +134,9 @@ class FlextInfraRefactorCensusRulesDispatchMixin(
                     line = 0
                 object_name = FlextInfraEnforcementEngine.object_name(probe, kind)
                 description = FlextInfraEnforcementEngine.description(
-                    rule, probe, object_name
+                    rule,
+                    probe,
+                    object_name,
                 )
                 violations.append(
                     m.Infra.Violation(
@@ -136,7 +149,7 @@ class FlextInfraRefactorCensusRulesDispatchMixin(
                         description=description,
                         fixable=fixable,
                         fix_action=action,
-                    )
+                    ),
                 )
                 if action:
                     fixes.append(
@@ -147,7 +160,7 @@ class FlextInfraRefactorCensusRulesDispatchMixin(
                             files_changed=1,
                             applied=self._fix_key(scan.file_path, object_name, action)
                             in scan.scan_config.applied,
-                        )
+                        ),
                     )
         return violations, fixes
 

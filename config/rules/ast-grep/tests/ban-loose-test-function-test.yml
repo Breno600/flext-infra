@@ -1,0 +1,24 @@
+id: ban-loose-test-function
+valid:
+  - |
+    class TestsDemo:
+        def test_value(self) -> None:
+            assert True
+  - |
+    def helper_value() -> int:
+        return 1
+  - |
+    def outer() -> None:
+        def test_inner() -> None:
+            pass
+invalid:
+  - |
+    def test_value() -> None:
+        assert True
+  - |
+    @pytest.mark.parametrize("value", [1])
+    def test_param(value: int) -> None:
+        assert value
+  - |
+    async def test_async() -> None:
+        assert True

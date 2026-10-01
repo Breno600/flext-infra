@@ -42,7 +42,11 @@ class FlextInfraValidateMetadataDiscipline(FlextInfraRopeImportBoundaryBase):
 
     @override
     def _is_allowlisted(
-        self, _file_path: Path, _module_name: str, *, repository_root: Path
+        self,
+        _file_path: Path,
+        _module_name: str,
+        *,
+        repository_root: Path,
     ) -> bool:
         """Return True when file path is in canonical metadata reader set."""
         rooted = self._rooted_posix(_file_path, repository_root)

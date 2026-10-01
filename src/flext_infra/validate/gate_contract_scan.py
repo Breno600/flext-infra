@@ -23,14 +23,14 @@ class FlextInfraGateContractScanMixin:
         scripts = u.Infra.git_tracked_scope_paths(scripts_root)
         if scripts is None:
             return r[t.SequenceOf[Path]].fail(
-                f"tracked script discovery requires a Git worktree: {root}"
+                f"tracked script discovery requires a Git worktree: {root}",
             )
         return r[t.SequenceOf[Path]].ok(
             tuple(
                 path.relative_to(root)
                 for path in scripts
                 if path.name != "__init__.py" and path.suffix in {".py", ".sh"}
-            )
+            ),
         )
 
 

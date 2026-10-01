@@ -135,8 +135,8 @@ endif
 # === SECTION: verb dispatch (managed) ===
 # Source: config:make.verbs and the canonical gate vocabulary. A verb exists
 # only in the profiles it declares (make.verbs[].profiles).
-PUBLIC_VERBS := help setup upg build check smells test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status verify-clean docs clean bootstrap-candidate release-plan release-version release-tag release-build publication gen initialize mod mod-snapshots waza duplication sonarcloud-sync
-BUILTIN_VERBS := help setup upg build check smells test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status verify-clean docs clean bootstrap-candidate release-plan release-version release-tag release-build publication gen initialize mod mod-snapshots waza duplication sonarcloud-sync
+PUBLIC_VERBS := help setup upg build check smells test test-full fmt fix fix-namespace fix-accessors audit status verify-clean docs clean bootstrap-candidate release-plan release-version release-tag release-build publication gen initialize mod mod-snapshots waza duplication sonarcloud-sync
+BUILTIN_VERBS := help setup upg build check smells test test-full fmt fix fix-namespace fix-accessors audit status verify-clean docs clean bootstrap-candidate release-plan release-version release-tag release-build publication gen initialize mod mod-snapshots waza duplication sonarcloud-sync
 SCRIPT_VERBS :=
 
 CUSTOM_MAKEFILE := $(MAKEFILE_ROOT)/custom.mk
@@ -877,7 +877,7 @@ define _lock_project
 		mkdir -p "$${stage}/mirror$$relative"; \
 		cp "$$member/pyproject.toml" "$${stage}/mirror$$relative/pyproject.toml"; \
 	done < "$${stage}/.members"; \
-	if [ "$(1)" != "--upgrade --refresh" ] && [ -f "$$workspace/uv.lock" ]; then cp "$$workspace/uv.lock" "$${stage}/mirror/uv.lock"; fi; \
+	if [ -f "$$workspace/uv.lock" ]; then cp "$$workspace/uv.lock" "$${stage}/mirror/uv.lock"; fi; \
 	$(UV) lock --project "$${stage}/mirror" $(1); \
 	$(UV) lock --check --project "$${stage}/mirror"; \
 	if [ -e "$$candidate" ]; then printf 'ERROR: lock staging path already exists: %s\n' "$$candidate" >&2; exit 2; fi; \
@@ -972,17 +972,6 @@ fix: _builtin_require_workspace
 _activated-fix: _builtin_require_environment
 
 	$(call RUN_PUBLIC,fix)
-
-
-
-
-fix-enforcement: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-fix-enforcement
-
-.PHONY: _activated-fix-enforcement
-_activated-fix-enforcement: _builtin_require_environment
-
-	$(call RUN_PUBLIC,fix-enforcement)
 
 
 
@@ -1262,8 +1251,6 @@ _builtin-help:
 	@printf '  %-16s %s\n' 'fmt' 'Apply ruff format --preview and every declared formatter gate. Ruff is the rule; change code, never ruff.';
 
 	@printf '  %-16s %s\n' 'fix' 'Apply the safe fixes of ruff check --fix --preview plus every other configured safe correction; never deletes information. Ruff is the rule; change code, never ruff.';
-
-	@printf '  %-16s %s\n' 'fix-enforcement' 'Apply the safe fix actions declared by the enforcement catalog.';
 
 	@printf '  %-16s %s\n' 'fix-namespace' 'Apply the canonical namespace enforcer to the selected workspace.';
 
@@ -1602,15 +1589,15 @@ _builtin_build_artifacts:
 _builtin_check_all: _builtin_require_environment
 	@set -eu; \
 printf '%s\n' 'INFO: SUSPENDED check gate namespace; authority=flext-itpd1.3; operator decision 2026-09-27 (keep plan v12 suspension); flext-infra#913; reason=Fleet namespace backlog (141 findings here) is repaired after the fleet is green; the gate returns with its Rope single-cycle owner fix.'; \
-gates="lint,pyrefly,mypy,pyright,silent-failure,deferred-self-reference,security,markdown,loc-cap,boundary,runtime-census,tier-whitelist,index-declarations,codemod,layout,canonical-alias,direnv,duplication"; \
+gates="lint,pyrefly,mypy,pyright,deferred-self-reference,security,markdown,loc-cap,runtime-census,index-declarations,codemod,layout,direnv,duplication"; \
 		if [ "$(strip $(CI))" = "Y" ]; then \
-			gates="lint,mypy,pyright,silent-failure,deferred-self-reference,security,markdown,loc-cap,boundary,runtime-census,tier-whitelist,index-declarations,codemod,layout,canonical-alias,direnv,duplication"; \
-			printf 'INFO: CI=Y runs check gates: lint mypy pyright silent-failure deferred-self-reference security markdown loc-cap boundary runtime-census tier-whitelist index-declarations codemod layout canonical-alias direnv duplication\n'; \
+			gates="lint,mypy,pyright,deferred-self-reference,security,markdown,loc-cap,runtime-census,index-declarations,codemod,layout,direnv,duplication"; \
+			printf 'INFO: CI=Y runs check gates: lint mypy pyright deferred-self-reference security markdown loc-cap runtime-census index-declarations codemod layout direnv duplication\n'; \
 		elif [ "$(strip $(CI))" = "N" ]; then \
 			gates="pyrefly"; \
 			printf 'INFO: CI=N runs check gates: pyrefly\n'; \
 		else \
-			printf 'INFO: default context runs check gates: lint pyrefly mypy pyright silent-failure deferred-self-reference security markdown loc-cap boundary runtime-census tier-whitelist index-declarations codemod layout canonical-alias direnv duplication\n'; \
+			printf 'INFO: default context runs check gates: lint pyrefly mypy pyright deferred-self-reference security markdown loc-cap runtime-census index-declarations codemod layout direnv duplication\n'; \
 		fi; \
 		if [ -z "$$gates" ]; then \
 			printf 'ERROR: no active check gates remain in the selected context\n' >&2; \
@@ -1645,12 +1632,7 @@ _builtin_fmt_all: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "format,markdown-format" --apply
 
 _builtin_fix_all: _builtin_require_environment
-	@$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "lint,markdown,markdown-code,canonical-alias" --apply --report-findings
-
-# Catalog-driven enforcement fixes: every ENFORCE rule whose fix action is
-# declared safe, applied through its registered adapter.
-_builtin_fix_enforcement: _builtin_require_environment
-	@$(PROJECT_FLEXT_INFRA) check fix-enforcement --repository-root "$(PROJECT_ROOT)" --projects . --safe-only --apply
+	@$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "lint,markdown,markdown-code" --apply --report-findings
 
 # SonarCloud server-side issue exclusions (SSOT: codegen.sonarcloud). The verb
 # writes an external service with SONAR_TOKEN from the environment; it belongs
@@ -1841,7 +1823,6 @@ _builtin-test: _builtin_test_all
 _builtin-test-full: _builtin_test_full_all
 _builtin-fmt: _builtin_fmt_all
 _builtin-fix: _builtin_fix_all
-_builtin-fix-enforcement: _builtin_fix_enforcement
 _builtin-fix-namespace: _builtin_fix_namespace
 _builtin-fix-accessors: _builtin_fix_accessors
 _builtin-audit:

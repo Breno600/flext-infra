@@ -52,7 +52,10 @@ class FlextInfraUtilitiesRopeImports:
 
     @classmethod
     def imported_module_paths(
-        cls, module_imports: t.Infra.RopeModuleImports, *, current_package: str = ""
+        cls,
+        module_imports: t.Infra.RopeModuleImports,
+        *,
+        current_package: str = "",
     ) -> t.StrSequence:
         """Return runtime import targets represented by a Rope module import set."""
         imported_paths: list[str] = []
@@ -202,7 +205,7 @@ class FlextInfraUtilitiesRopeImports:
         if not isinstance(change_list_raw, list):
             return r[bool].fail(
                 "unexpected rope organize_imports result type: "
-                f"{type(changes).__name__}"
+                f"{type(changes).__name__}",
             )
         change_list = tuple(change_list_raw)
         if not change_list:
@@ -235,12 +238,14 @@ class FlextInfraUtilitiesRopeImports:
         if not existing_paths:
             return r[bool].ok(False)
         canonical_imports: MutableMapping[
-            Path, list[t.Pair[str, t.VariadicTuple[str]]]
+            Path,
+            list[t.Pair[str, t.VariadicTuple[str]]],
         ] = {}
         if preserve_canonical_aliases:
             try:
                 canonical_imports = cls._collect_canonical_alias_imports(
-                    rope_project, existing_paths
+                    rope_project,
+                    existing_paths,
                 )
             except ValueError as exc:
                 return r[bool].fail(str(exc), exception=exc)
@@ -254,22 +259,26 @@ class FlextInfraUtilitiesRopeImports:
             return r[bool].from_failure(check_result)
         if preserve_canonical_aliases:
             restore_result = cls._ensure_canonical_alias_imports(
-                rope_project, canonical_imports
+                rope_project,
+                canonical_imports,
             )
             if restore_result.failure:
                 return r[bool].from_failure(restore_result)
         format_result = u.Cli.run_checked(
-            ["ruff", "format", *normalized_paths], timeout=c.Infra.TIMEOUT_SHORT
+            ["ruff", "format", *normalized_paths],
+            timeout=c.Infra.TIMEOUT_SHORT,
         )
         if format_result.failure:
             return r[bool].from_failure(format_result)
         return r[bool].ok(
-            any(path.read_bytes() != before[path] for path in existing_paths)
+            any(path.read_bytes() != before[path] for path in existing_paths),
         )
 
     @classmethod
     def _collect_canonical_alias_imports(
-        cls, rope_project: t.Infra.RopeProject, file_paths: t.SequenceOf[Path]
+        cls,
+        rope_project: t.Infra.RopeProject,
+        file_paths: t.SequenceOf[Path],
     ) -> MutableMapping[Path, list[t.Pair[str, t.VariadicTuple[str]]]]:
         """Collect canonical runtime-alias imports eligible for semantic restore."""
         runtime_aliases = u.runtime_alias_names(c.Infra.PKG_INFRA_UNDERSCORE)
@@ -280,12 +289,14 @@ class FlextInfraUtilitiesRopeImports:
         collected: MutableMapping[Path, list[t.Pair[str, t.VariadicTuple[str]]]] = {}
         for file_path in file_paths:
             resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
-                rope_project, file_path
+                rope_project,
+                file_path,
             )
             if resource is None:
                 continue
             module_imports = FlextInfraUtilitiesRopeCore.resolve_module_imports(
-                rope_project, resource
+                rope_project,
+                resource,
             )
             entries: list[t.Pair[str, t.VariadicTuple[str]]] = []
             for import_stmt in cls.import_statements(module_imports):
@@ -307,7 +318,8 @@ class FlextInfraUtilitiesRopeImports:
                 ):
                     continue
                 referenced_result = cls._referenced_runtime_aliases(
-                    resource.read(), tuple(name for name, _alias in plain_names)
+                    resource.read(),
+                    tuple(name for name, _alias in plain_names),
                 )
                 if referenced_result.failure:
                     msg = referenced_result.error or "alias reference scan failed"
@@ -325,7 +337,8 @@ class FlextInfraUtilitiesRopeImports:
 
     @staticmethod
     def _referenced_runtime_aliases(
-        source: str, aliases: t.SequenceOf[str]
+        source: str,
+        aliases: t.SequenceOf[str],
     ) -> p.Result[frozenset[str]]:
         """Return runtime aliases referenced after Ruff cleanup."""
         alias_set = frozenset(aliases)
@@ -334,7 +347,8 @@ class FlextInfraUtilitiesRopeImports:
             tree = ast.parse(source)
         except SyntaxError as exc:
             return r[frozenset[str]].fail(
-                f"source is not parseable after import cleanup: {exc!s}", exception=exc
+                f"source is not parseable after import cleanup: {exc!s}",
+                exception=exc,
             )
         for node in ast.walk(tree):
             if isinstance(node, ast.Name) and node.id in alias_set:
@@ -357,12 +371,14 @@ class FlextInfraUtilitiesRopeImports:
         changed_any = False
         for file_path, entries in collected.items():
             resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
-                rope_project, file_path
+                rope_project,
+                file_path,
             )
             if resource is None:
                 continue
             module_imports = FlextInfraUtilitiesRopeCore.resolve_module_imports(
-                rope_project, resource
+                rope_project,
+                resource,
             )
             referenced_aliases_result = cls._referenced_runtime_aliases(
                 resource.read(),
@@ -388,7 +404,7 @@ class FlextInfraUtilitiesRopeImports:
             for module_name, alias_names in entries:
                 missing = sorted(
                     (frozenset(alias_names) & referenced_aliases)
-                    - current.get(module_name, set())
+                    - current.get(module_name, set()),
                 )
                 if not missing:
                     continue
@@ -411,7 +427,9 @@ class FlextInfraUtilitiesRopeImports:
                             )
                             import_stmt.import_info = (
                                 FlextInfraUtilitiesRopeRuntime.from_import(
-                                    module_name, 0, merged
+                                    module_name,
+                                    0,
+                                    merged,
                                 )
                             )
                             changed = True
@@ -419,8 +437,10 @@ class FlextInfraUtilitiesRopeImports:
                 else:
                     module_imports.add_import(
                         FlextInfraUtilitiesRopeRuntime.from_import(
-                            module_name, 0, [(name, None) for name in missing]
-                        )
+                            module_name,
+                            0,
+                            [(name, None) for name in missing],
+                        ),
                     )
                     changed = True
             if changed:
@@ -431,27 +451,6 @@ class FlextInfraUtilitiesRopeImports:
                     resource.write(updated_source)
                     changed_any = True
         return r[bool].ok(changed_any)
-
-    @staticmethod
-    def resolve_absolute_from_imports(
-        rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
-    ) -> t.SequenceOf[t.Infra.RopeFromImport]:
-        """Return all absolute ``from x import ...`` descriptors in a module."""
-        module_imports = FlextInfraUtilitiesRopeCore.resolve_module_imports(
-            rope_project, resource
-        )
-        import_statements = FlextInfraUtilitiesRopeImports.import_statements(
-            module_imports
-        )
-        absolute_from_imports: list[t.Infra.RopeFromImport] = []
-        for import_stmt in import_statements:
-            import_info = import_stmt.import_info
-            if (
-                FlextInfraUtilitiesRopeRuntime.from_import_info(import_info)
-                and import_info.level == 0
-            ):
-                absolute_from_imports.append(import_info)
-        return tuple(absolute_from_imports)
 
     @classmethod
     def relocate_from_import_aliases(
@@ -472,7 +471,8 @@ class FlextInfraUtilitiesRopeImports:
         if not aliases_to_move:
             return None
         module_imports = FlextInfraUtilitiesRopeCore.resolve_module_imports(
-            rope_project, resource
+            rope_project,
+            resource,
         )
         original_source: str = resource.read()
         target_import_stmt, moved_aliases = cls._strip_aliases_from_source_imports(
@@ -491,7 +491,8 @@ class FlextInfraUtilitiesRopeImports:
         )
         updated_source: str = module_imports.get_changed_source()
         if merged_target_pairs and cls._uses_parenthesized_from_import(
-            source=original_source, module_name=target_module
+            source=original_source,
+            module_name=target_module,
         ):
             updated_source = cls._format_parenthesized_from_import(
                 source=updated_source,
@@ -542,7 +543,9 @@ class FlextInfraUtilitiesRopeImports:
             if len(kept_pairs) == len(import_info.names_and_aliases):
                 continue
             import_stmt.import_info = FlextInfraUtilitiesRopeRuntime.from_import(
-                source_module, 0, kept_pairs
+                source_module,
+                0,
+                kept_pairs,
             )
         return target_import_stmt, moved_aliases
 
@@ -559,8 +562,10 @@ class FlextInfraUtilitiesRopeImports:
         if target_import_stmt is None:
             module_imports.add_import(
                 FlextInfraUtilitiesRopeRuntime.from_import(
-                    target_module, 0, [(name, None) for name in sorted_moved]
-                )
+                    target_module,
+                    0,
+                    [(name, None) for name in sorted_moved],
+                ),
             )
             module_imports.sort_imports()
             return tuple((name, None) for name in sorted_moved)
@@ -581,7 +586,9 @@ class FlextInfraUtilitiesRopeImports:
             (name, None) for name in sorted_moved if name not in existing_plain_names
         )
         target_import_stmt.import_info = FlextInfraUtilitiesRopeRuntime.from_import(
-            target_module, 0, list(merged_pairs)
+            target_module,
+            0,
+            list(merged_pairs),
         )
         return tuple(merged_pairs)
 
@@ -614,71 +621,6 @@ class FlextInfraUtilitiesRopeImports:
             return source
         return rewritten_source
 
-    @classmethod
-    def collapse_submodule_alias_imports(
-        cls,
-        rope_project: t.Infra.RopeProject,
-        resource: t.Infra.RopeResource,
-        *,
-        package_name: str,
-        aliases: t.StrSequence | None = None,
-        apply: bool,
-    ) -> str | None:
-        """Hoist ``from package.sub import alias`` into ``from package import alias``."""
-        effective_aliases = aliases or tuple(
-            u.runtime_alias_names(c.Infra.PKG_INFRA_UNDERSCORE)
-        )
-        requested_aliases = frozenset(
-            alias for alias in effective_aliases if len(alias) == 1 and alias.islower()
-        )
-        result: str | None = None
-        if requested_aliases:
-            module_imports = FlextInfraUtilitiesRopeCore.resolve_module_imports(
-                rope_project, resource
-            )
-            moved_aliases: t.Infra.StrSet = set()
-            package_prefix = f"{package_name}."
-            import_statements = cls.import_statements(module_imports)
-            for import_stmt in import_statements:
-                import_info = import_stmt.import_info
-                from_import = (
-                    import_info
-                    if FlextInfraUtilitiesRopeRuntime.from_import_info(import_info)
-                    and import_info.level == 0
-                    else None
-                )
-                if from_import is None or not from_import.module_name.startswith(
-                    package_prefix
-                ):
-                    continue
-                kept_pairs: list[t.Pair[str, str | None]] = []
-                for name, alias in from_import.names_and_aliases:
-                    if alias is None and name in requested_aliases:
-                        moved_aliases.add(name)
-                        continue
-                    kept_pairs.append((name, alias))
-                if len(kept_pairs) == len(from_import.names_and_aliases):
-                    continue
-                import_stmt.import_info = FlextInfraUtilitiesRopeRuntime.from_import(
-                    from_import.module_name, 0, kept_pairs
-                )
-            if moved_aliases:
-                module_imports.add_import(
-                    FlextInfraUtilitiesRopeRuntime.from_import(
-                        package_name,
-                        0,
-                        [(name, None) for name in sorted(moved_aliases)],
-                    )
-                )
-                module_imports.remove_duplicates()
-                module_imports.sort_imports()
-                updated_source: str = module_imports.get_changed_source()
-                if updated_source != resource.read():
-                    if apply:
-                        resource.write(updated_source)
-                    result = updated_source
-        return result
-
     @staticmethod
     def _persisted_import_block(
         module_imports: t.Infra.RopeModuleImports,
@@ -710,15 +652,20 @@ class FlextInfraUtilitiesRopeImports:
     ) -> str | None:
         """Add ``from <module> import <names>`` using rope's ImportOrganizer."""
         module_imports = FlextInfraUtilitiesRopeCore.resolve_module_imports(
-            rope_project, resource
+            rope_project,
+            resource,
         )
         module_imports.add_import(
             FlextInfraUtilitiesRopeRuntime.from_import(
-                from_module, 0, [(name, None) for name in sorted(names)]
-            )
+                from_module,
+                0,
+                [(name, None) for name in sorted(names)],
+            ),
         )
         return FlextInfraUtilitiesRopeImports._persisted_import_block(
-            module_imports, resource, apply=apply
+            module_imports,
+            resource,
+            apply=apply,
         )
 
     @staticmethod
@@ -733,11 +680,12 @@ class FlextInfraUtilitiesRopeImports:
         """Remove specific names from ``from <module> import ...``."""
         names_to_remove = frozenset(names)
         module_imports = FlextInfraUtilitiesRopeCore.resolve_module_imports(
-            rope_project, resource
+            rope_project,
+            resource,
         )
         changed = False
         import_statements = FlextInfraUtilitiesRopeImports.import_statements(
-            module_imports
+            module_imports,
         )
         for import_stmt in import_statements:
             import_info = import_stmt.import_info
@@ -757,160 +705,23 @@ class FlextInfraUtilitiesRopeImports:
             ]
             if len(kept) < len(from_import.names_and_aliases):
                 import_stmt.import_info = FlextInfraUtilitiesRopeRuntime.from_import(
-                    from_module, 0, kept
+                    from_module,
+                    0,
+                    kept,
                 )
                 changed = True
         if not changed:
             return None
         return FlextInfraUtilitiesRopeImports._persisted_import_block(
-            module_imports, resource, apply=apply
+            module_imports,
+            resource,
+            apply=apply,
         )
-
-    @staticmethod
-    def rewrite_private_import_bypass_violations(
-        rope_project: t.Infra.RopeProject,
-        violations: t.SequenceOf[m.Infra.PrivateImportBypassViolation],
-        parse_failures: t.MutableSequenceOf[m.Infra.ParseFailureViolation],
-        *,
-        apply: bool = True,
-    ) -> None:
-        """Rewrite private-module imports to their canonical facade equivalents.
-
-        Only auto-fixable violations (``symbol_exported=True``) are rewritten;
-        callers already filter the violation list before invoking this helper.
-        """
-        _ = parse_failures
-        removals: t.MappingKV[t.Pair[Path, str], set[str]] = defaultdict(set)
-        additions: t.MappingKV[t.Pair[Path, str], set[str]] = defaultdict(set)
-        for violation in violations:
-            file_path = Path(violation.file)
-            removals[file_path, violation.private_module].add(violation.imported_symbol)
-            additions[file_path, violation.suggested_facade].add(
-                violation.imported_symbol
-            )
-        for (file_path, private_module), names in removals.items():
-            resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
-                rope_project, file_path
-            )
-            if resource is None:
-                continue
-            module_imports = FlextInfraUtilitiesRopeCore.resolve_module_imports(
-                rope_project, resource
-            )
-            names_to_remove = frozenset(names)
-            changed = False
-            stmts_to_drop: list[t.Infra.RopeImportStatement] = []
-            for import_stmt in FlextInfraUtilitiesRopeImports.import_statements(
-                module_imports
-            ):
-                import_info = import_stmt.import_info
-                if (
-                    not FlextInfraUtilitiesRopeRuntime.from_import_info(import_info)
-                    or import_info.module_name != private_module
-                ):
-                    continue
-                kept = [
-                    (name, alias)
-                    for name, alias in import_info.names_and_aliases
-                    if name not in names_to_remove
-                ]
-                if len(kept) == len(import_info.names_and_aliases):
-                    continue
-                if kept:
-                    import_stmt.import_info = (
-                        FlextInfraUtilitiesRopeRuntime.from_import(
-                            private_module, 0, kept
-                        )
-                    )
-                else:
-                    stmts_to_drop.append(import_stmt)
-                changed = True
-            imports_list = module_imports.imports
-            for import_stmt in stmts_to_drop:
-                imports_list.remove(import_stmt)
-            if not changed:
-                continue
-            module_imports.remove_duplicates()
-            module_imports.sort_imports()
-            updated = module_imports.get_changed_source()
-            if apply and updated != resource.read():
-                resource.write(updated)
-        for (file_path, facade_module), names in additions.items():
-            resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
-                rope_project, file_path
-            )
-            if resource is None:
-                continue
-            FlextInfraUtilitiesRopeImports.add_import(
-                rope_project, resource, facade_module, sorted(names), apply=apply
-            )
-
-    @staticmethod
-    def rewrite_foreign_canonical_alias_violations(
-        rope_project: t.Infra.RopeProject,
-        violations: t.SequenceOf[m.Infra.CompatibilityAliasViolation],
-        parse_failures: t.MutableSequenceOf[m.Infra.ParseFailureViolation],
-    ) -> None:
-        """Rewrite foreign canonical alias imports to local project facades.
-
-        Uses the ENFORCE-080 project alias migrator to move owned aliases from
-        ``flext_core`` to the project's local facade modules.
-        """
-        _ = parse_failures
-        # Each violation names the project that owns the alias. Inferring the
-        # owner from the path instead would silently do nothing whenever the
-        # file does not sit inside a recognized project tree, which is exactly
-        # the case the detector reports.
-        declared_owners: MutableMapping[Path, set[str]] = defaultdict(set)
-        for violation in violations:
-            declared_owners[Path(violation.file)].add(violation.module_name)
-        for file_path, owners in declared_owners.items():
-            if len(owners) > 1:
-                msg = (
-                    f"canonical alias violations disagree on the owning project "
-                    f"for {file_path}: {sorted(owners)}"
-                )
-                raise ValueError(msg)
-            resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
-                rope_project, file_path
-            )
-            if resource is None:
-                continue
-            from flext_infra.refactor.project_alias_migrator import (
-                FlextInfraRefactorProjectAliasMigrator,
-            )
-
-            transformer = FlextInfraRefactorProjectAliasMigrator(
-                file_path=file_path, current_project=next(iter(owners))
-            )
-            updated, changes = transformer.transform(rope_project, resource)
-            if changes:
-                cleanup_result = FlextInfraUtilitiesRopeImports.normalize_imports(
-                    rope_project, file_paths=(file_path,)
-                )
-                if cleanup_result.failure:
-                    msg = cleanup_result.error or "rope import cleanup failed"
-                    raise RuntimeError(msg)
-            _ = updated
 
     # ------------------------------------------------------------------
     # Layer alignment (ADR-014 §3b/ADR-017; rope-native, replaces the
     # retired libcst draft — cross-layer from-imports take relative form)
     # ------------------------------------------------------------------
-
-    _DEFAULT_IMPORT_LAYER_ORDER: t.StrSequence = (
-        "settings",
-        "config",
-        "c",
-        "t",
-        "p",
-        "m",
-        "u",
-        "base",
-        "services",
-        "api",
-        "cli",
-    )
 
     @classmethod
     def layer_of_module(cls, module_name: str, order: t.StrSequence) -> str | None:
@@ -932,7 +743,8 @@ class FlextInfraUtilitiesRopeImports:
 
     @staticmethod
     def _relative_from_import(
-        source_module: str, target_module: str
+        source_module: str,
+        target_module: str,
     ) -> t.Pair[int, str]:
         """Return the (level, tail) relative form from one module to another."""
         src_parts = source_module.split(".")
@@ -958,17 +770,14 @@ class FlextInfraUtilitiesRopeImports:
         repository_root: Path,
         index: m.Infra.RopeWorkspaceIndex,
         project_package: str,
-        config: m.Infra.LazyInitConfig | None = None,
+        config: m.Infra.LazyInitConfig,
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]:
         """Plan relative-form rewrites for cross-layer project from-imports."""
-        order: t.StrSequence = (
-            tuple(config.import_layer_order)
-            if config is not None
-            else cls._DEFAULT_IMPORT_LAYER_ORDER
-        )
+        order: t.StrSequence = tuple(config.import_layer_order)
         file_plans: list[m.Infra.CodegenFilePlan] = []
         for entry in sorted(
-            index.modules_by_path.values(), key=lambda item: str(item.file_path)
+            index.modules_by_path.values(),
+            key=lambda item: str(item.file_path),
         ):
             if entry.is_package_init or not entry.module_name:
                 continue
@@ -980,12 +789,14 @@ class FlextInfraUtilitiesRopeImports:
             if source_layer is None:
                 continue
             resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
-                rope_project, file_path
+                rope_project,
+                file_path,
             )
             if resource is None:
                 continue
             module_imports = FlextInfraUtilitiesRopeCore.resolve_module_imports(
-                rope_project, resource
+                rope_project,
+                resource,
             )
             changed = False
             for import_stmt in cls.import_statements(module_imports):
@@ -994,7 +805,9 @@ class FlextInfraUtilitiesRopeImports:
                     continue
                 module_name = import_info.module_name or ""
                 absolute = cls._absolute_from_import(
-                    source_module, module_name, import_info.level or 0
+                    source_module,
+                    module_name,
+                    import_info.level or 0,
                 )
                 if not absolute or not (
                     absolute == project_package
@@ -1008,7 +821,9 @@ class FlextInfraUtilitiesRopeImports:
                 if (import_info.level or 0) == level and module_name == tail:
                     continue
                 import_stmt.import_info = FlextInfraUtilitiesRopeRuntime.from_import(
-                    tail, level, list(import_info.names_and_aliases)
+                    tail,
+                    level,
+                    list(import_info.names_and_aliases),
                 )
                 changed = True
             if not changed:
@@ -1027,7 +842,7 @@ class FlextInfraUtilitiesRopeImports:
                     before=before.value,
                     desired_content=updated_source.encode("utf-8"),
                     desired_mode=0o644,
-                )
+                ),
             )
         return r[t.VariadicTuple[m.Infra.CodegenFilePlan]].ok(tuple(file_plans))
 

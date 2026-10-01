@@ -24,7 +24,8 @@ class TestsFlextInfraDepsLockIntegrity:
     def test_healthy_locks_verify_green(self, tmp_path: Path) -> None:
         """Parseable locks without repeated sections verify successfully."""
         (tmp_path / c.Infra.MISE_LOCK_FILENAME).write_text(
-            '[tools."github:kucherenko/jscpd"]\nversion = "5.3.3"\n', encoding="utf-8"
+            '[tools."github:kucherenko/jscpd"]\nversion = "5.3.3"\n',
+            encoding="utf-8",
         )
         (tmp_path / c.Infra.UV_LOCK_FILENAME).write_text(
             'version = 1\n[[package]]\nname = "filelock"\nversion = "4.0.6"\n',
@@ -45,7 +46,8 @@ class TestsFlextInfraDepsLockIntegrity:
             encoding="utf-8",
         )
         (tmp_path / c.Infra.UV_LOCK_FILENAME).write_text(
-            "version = 1\n", encoding="utf-8"
+            "version = 1\n",
+            encoding="utf-8",
         )
         error = tm.fail(self._verifier(tmp_path).execute())
         tm.that(error, has=c.Infra.MISE_LOCK_FILENAME)
@@ -55,10 +57,12 @@ class TestsFlextInfraDepsLockIntegrity:
     def test_unparseable_lock_fails_with_parser_cause(self, tmp_path: Path) -> None:
         """A lock that is not TOML fails with the strict parser cause."""
         (tmp_path / c.Infra.MISE_LOCK_FILENAME).write_text(
-            "not toml at all\n", encoding="utf-8"
+            "not toml at all\n",
+            encoding="utf-8",
         )
         (tmp_path / c.Infra.UV_LOCK_FILENAME).write_text(
-            "version = 1\n", encoding="utf-8"
+            "version = 1\n",
+            encoding="utf-8",
         )
         error = tm.fail(self._verifier(tmp_path).execute())
         tm.that(error, has=c.Infra.MISE_LOCK_FILENAME)

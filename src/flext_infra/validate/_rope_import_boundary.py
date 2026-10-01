@@ -50,7 +50,8 @@ class FlextInfraRopeImportBoundaryBase(s[bool]):
             collected = self._collect_violations(repository_root)
         except OSError as exc:
             return r[m.Infra.ValidationReport].fail(
-                f"{self._SCAN_KIND} scan failed: {exc}", exception=exc
+                f"{self._SCAN_KIND} scan failed: {exc}",
+                exception=exc,
             )
         if collected.failure:
             return r[m.Infra.ValidationReport].from_failure(collected)
@@ -63,14 +64,16 @@ class FlextInfraRopeImportBoundaryBase(s[bool]):
         )
         return r[m.Infra.ValidationReport].ok(
             m.Infra.ValidationReport(
-                passed=passed, violations=list(violations), summary=summary
-            )
+                passed=passed,
+                violations=list(violations),
+                summary=summary,
+            ),
         )
 
     def _collect_violations(self, repository_root: Path) -> p.Result[t.StrSequence]:
         """Resolve each inventory file through rope and accumulate violations."""
         files = u.Infra.iter_python_files(
-            m.Infra.SourceScanRequest(project_roots=(repository_root,))
+            m.Infra.SourceScanRequest(project_roots=(repository_root,)),
         )
         if files.failure:
             return r[t.StrSequence].from_failure(files)
@@ -84,13 +87,15 @@ class FlextInfraRopeImportBoundaryBase(s[bool]):
                 if resource is None:
                     return r[t.StrSequence].fail(
                         f"{self._SCAN_KIND}: inventory file is not a rope resource: "
-                        f"{file_path}"
+                        f"{file_path}",
                     )
                 module_imports = u.Infra.resolve_module_imports(project, resource)
                 violations.extend(
                     self._violations_for_module(
-                        file_path, module_imports, repository_root=root
-                    )
+                        file_path,
+                        module_imports,
+                        repository_root=root,
+                    ),
                 )
         return r[t.StrSequence].ok(tuple(violations))
 
@@ -110,7 +115,11 @@ class FlextInfraRopeImportBoundaryBase(s[bool]):
         return True
 
     def _is_allowlisted(
-        self, _file_path: Path, _module_name: str, *, repository_root: Path
+        self,
+        _file_path: Path,
+        _module_name: str,
+        *,
+        repository_root: Path,
     ) -> bool:
         """Per (file, module) allowlist check. Override to exempt canonical owners."""
         _ = repository_root
@@ -136,17 +145,21 @@ class FlextInfraRopeImportBoundaryBase(s[bool]):
             module_name = u.Infra.import_statement_module_name(stmt)
             if module_name is not None:
                 if self._top_module(
-                    module_name
+                    module_name,
                 ) in self._BANNED and not self._is_allowlisted(
-                    file_path, module_name, repository_root=repository_root
+                    file_path,
+                    module_name,
+                    repository_root=repository_root,
                 ):
                     out.append(self._format_violation(file_path, module_name))
                 continue
             for imported, _alias in u.Infra.import_statement_names_and_aliases(stmt):
                 if self._top_module(
-                    imported
+                    imported,
                 ) in self._BANNED and not self._is_allowlisted(
-                    file_path, imported, repository_root=repository_root
+                    file_path,
+                    imported,
+                    repository_root=repository_root,
                 ):
                     out.append(self._format_violation(file_path, imported))
         return tuple(out)

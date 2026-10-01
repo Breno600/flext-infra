@@ -27,13 +27,15 @@ class TestFreshImportRepositoryScope:
         such checkout regardless of what conform actually published.
         """
         workspace_root = u.Tests.repository_ref(
-            "demo-workspace", role=c.Infra.MakeProfile.WORKSPACE
+            "demo-workspace",
+            role=c.Infra.MakeProfile.WORKSPACE,
         )
         member = u.Tests.repository_ref("demo-member", path=Path("demo-member"))
         umbrella_without_package = workspace_root.model_copy(update={"package": False})
 
         resolved = FlextInfraCodegenConformExecute.fresh_import_repository_roots(
-            Path("/checkouts"), (umbrella_without_package, member)
+            Path("/checkouts"),
+            (umbrella_without_package, member),
         )
 
         tm.that(resolved, eq=(Path("/checkouts/demo-member"),))
@@ -44,9 +46,11 @@ class TestFreshImportRepositoryScope:
         second = u.Tests.repository_ref("demo-second", path=Path("demo-second"))
 
         resolved = FlextInfraCodegenConformExecute.fresh_import_repository_roots(
-            Path("/checkouts"), (first, second)
+            Path("/checkouts"),
+            (first, second),
         )
 
         tm.that(
-            resolved, eq=(Path("/checkouts/demo-first"), Path("/checkouts/demo-second"))
+            resolved,
+            eq=(Path("/checkouts/demo-first"), Path("/checkouts/demo-second")),
         )

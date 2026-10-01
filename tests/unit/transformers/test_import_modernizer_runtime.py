@@ -33,7 +33,11 @@ class TestsImportModernizerRuntime:
         ],
     )
     def test_import_aliases_keep_models_and_quoted_annotations_importable(
-        self, tmp_path: Path, declaration: str, base: str, field: str
+        self,
+        tmp_path: Path,
+        declaration: str,
+        base: str,
+        field: str,
     ) -> None:
         """Alias changes preserve schema metadata, homonyms and multiline data."""
         payload = 'from pydantic import BaseModel, Field\nclass Row(BaseModel):\n    value = Field(description="BaseModel ] café, ☃")\nprint("BaseModel ] café, ☃")\n'
@@ -126,7 +130,8 @@ class Row(BaseModel):
         ],
     )
     def test_competing_destination_binding_rejects_the_complete_rewrite(
-        self, collision: str
+        self,
+        collision: str,
     ) -> None:
         """An unrelated import or local binding cannot capture a facade path."""
         source = f"from pydantic import BaseModel\n{collision}"
@@ -180,7 +185,8 @@ class Row(BaseModel):
             transformer.apply_to_source(source)
 
     def test_conditional_imports_execute_on_each_original_route(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Each branch and a runtime consumer of TYPE_CHECKING retain imports."""
         source = f"""from typing import TYPE_CHECKING
@@ -225,7 +231,8 @@ print(RuntimeRow.model_validate_json('{"value": "runtime"}').value)
         ],
     )
     def test_deferred_typing_calls_reject_incomplete_import_migration(
-        self, expression: str
+        self,
+        expression: str,
     ) -> None:
         """Unsupported deferred call consumers retain their complete source contract."""
         source = f"from typing import TypeVar, NewType, cast\nfrom pydantic import BaseModel\nvalue = {expression}\n"
@@ -246,7 +253,9 @@ print(RuntimeRow.model_validate_json('{"value": "runtime"}').value)
         ],
     )
     def test_local_import_rejects_capture_of_existing_ancestor_reads(
-        self, tmp_path: Path, access: str
+        self,
+        tmp_path: Path,
+        access: str,
     ) -> None:
         """The rejected rewrite leaves direct reads and closure reads executable."""
         source = f"from {c.Infra.PKG_CORE_UNDERSCORE} import m\ndef build():\n{access}    from pydantic import BaseModel\n    return before is BaseModel\n"

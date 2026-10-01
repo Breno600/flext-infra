@@ -57,7 +57,10 @@ class FlextInfraRefactorTypingUnifier(
             self.facades = FlextInfraRefactorImportFacades()
 
         def _expression(
-            self, original: cst.BaseExpression, *, widen: bool
+            self,
+            original: cst.BaseExpression,
+            *,
+            widen: bool,
         ) -> cst.BaseExpression:
             scope = self.get_metadata(ScopeProvider, original)
             if not isinstance(scope, Scope):
@@ -83,7 +86,9 @@ class FlextInfraRefactorTypingUnifier(
 
         @override
         def leave_Annotation(
-            self, original_node: cst.Annotation, updated_node: cst.Annotation
+            self,
+            original_node: cst.Annotation,
+            updated_node: cst.Annotation,
         ) -> cst.Annotation:
             parent = self.get_metadata(ParentNodeProvider, original_node)
             widen = False
@@ -97,12 +102,14 @@ class FlextInfraRefactorTypingUnifier(
                 )
                 widen = bool(bindings) and bindings.issubset(self.readonly)
             return updated_node.with_changes(
-                annotation=self._expression(original_node.annotation, widen=widen)
+                annotation=self._expression(original_node.annotation, widen=widen),
             )
 
         @override
         def leave_AnnAssign(
-            self, original_node: cst.AnnAssign, updated_node: cst.AnnAssign
+            self,
+            original_node: cst.AnnAssign,
+            updated_node: cst.AnnAssign,
         ) -> cst.BaseSmallStatement:
             scope = self.get_metadata(ScopeProvider, original_node)
             if not isinstance(scope, GlobalScope) or original_node.value is None:
@@ -110,7 +117,7 @@ class FlextInfraRefactorTypingUnifier(
             names = {
                 name.name
                 for name in scope.get_qualified_names_for(
-                    original_node.annotation.annotation
+                    original_node.annotation.annotation,
                 )
             }
             if names not in ({"typing.TypeAlias"}, {"typing_extensions.TypeAlias"}):
@@ -119,7 +126,7 @@ class FlextInfraRefactorTypingUnifier(
                 msg = "module TypeAlias declaration must bind one identifier"
                 raise TypeError(msg)
             self.changes.append(
-                f"Converted legacy TypeAlias assignment: {original_node.target.value}"
+                f"Converted legacy TypeAlias assignment: {original_node.target.value}",
             )
             return cst.TypeAlias(
                 name=original_node.target,
@@ -129,10 +136,12 @@ class FlextInfraRefactorTypingUnifier(
 
         @override
         def leave_TypeAlias(
-            self, original_node: cst.TypeAlias, updated_node: cst.TypeAlias
+            self,
+            original_node: cst.TypeAlias,
+            updated_node: cst.TypeAlias,
         ) -> cst.TypeAlias:
             return updated_node.with_changes(
-                value=self._expression(original_node.value, widen=False)
+                value=self._expression(original_node.value, widen=False),
             )
 
     def __init__(

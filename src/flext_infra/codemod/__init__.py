@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from .batch_apply import FlextInfraCodemodBatchApply
     from .batch_gates import FlextInfraModGateEngine
     from .batch_replacements import FlextInfraModReplacements
+    from .sed_apply import FlextInfraCodemodSedApply
     from .semantic_apply import FlextInfraCodemodSemanticApply
     from .snapshot_reconciler import FlextInfraCodemodSnapshotReconciler
     from .snapshot_refresh import FlextInfraCodemodSnapshotRefresh
@@ -26,6 +27,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraApplyRenames",
     "FlextInfraCodemodAstScan",
     "FlextInfraCodemodBatchApply",
+    "FlextInfraCodemodSedApply",
     "FlextInfraCodemodSemanticApply",
     "FlextInfraCodemodSnapshotReconciler",
     "FlextInfraCodemodSnapshotRefresh",
@@ -46,6 +48,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".batch_apply": ("FlextInfraCodemodBatchApply",),
             ".batch_gates": ("FlextInfraModGateEngine",),
             ".batch_replacements": ("FlextInfraModReplacements",),
+            ".sed_apply": ("FlextInfraCodemodSedApply",),
             ".semantic_apply": ("FlextInfraCodemodSemanticApply",),
             ".snapshot_reconciler": ("FlextInfraCodemodSnapshotReconciler",),
             ".snapshot_refresh": ("FlextInfraCodemodSnapshotRefresh",),
@@ -53,7 +56,7 @@ _LAZY_IMPORTS = MappingProxyType(
         }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,
-    )
+    ),
 )
 
 install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)
