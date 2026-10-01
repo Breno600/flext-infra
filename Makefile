@@ -1292,7 +1292,7 @@ _builtin-help:
 
 	@printf '  %-16s %s\n' 'status' 'Report the resolved runtime and repository state.';
 
-	@printf '  %-16s %s\n' 'verify-clean' 'Fail when this repository has staged, unstaged, or untracked changes.';
+	@printf '  %-16s %s\n' 'verify-clean' 'Verify that managed artifacts and generated documentation match their sources and leave no unstaged change to a tracked file.';
 
 	@printf '  %-16s %s\n' 'docs' 'Generate, fix, format, and check documentation.';
 

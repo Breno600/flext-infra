@@ -77,7 +77,12 @@ class FlextInfraModTextGateEngine:
         root: Path,
         rules: t.VariadicTuple[m.Infra.ModTextRule],
     ) -> t.VariadicTuple[m.Infra.ModTextRule]:
-        """Select declared rules using the consumer's typed project identity."""
+        """Select declared rules using the consumer's typed project identity.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.ModTextRule]``.
+
+        """
         document = root / c.PYPROJECT_FILENAME
         payload = u.Infra.pyproject_payload(document)
         distribution = u.Infra.project_name_from_payload(document, payload)
@@ -234,10 +239,14 @@ class FlextInfraModTextGateEngine:
             )
         capture_equals = raw.get(c.Infra.CODEMOD_TEXT_KEY_CAPTURE_EQUALS, {})
         distributions = raw.get(c.Infra.CODEMOD_TEXT_KEY_DISTRIBUTIONS, ())
-        if not isinstance(distributions, (list, tuple)) or any(
-            not isinstance(name, str) or not name.strip() or name != name.strip()
-            for name in distributions
-        ) or len(set(distributions)) != len(distributions):
+        if (
+            not isinstance(distributions, (list, tuple))
+            or any(
+                not isinstance(name, str) or not name.strip() or name != name.strip()
+                for name in distributions
+            )
+            or len(set(distributions)) != len(distributions)
+        ):
             return r[m.Infra.ModTextRule].fail(
                 f"text rule distributions must be unique non-empty names in {source}",
             )

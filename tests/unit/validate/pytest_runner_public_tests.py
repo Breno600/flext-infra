@@ -9,7 +9,6 @@ from __future__ import annotations
 import pstats
 import sqlite3
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import pytest
 from flext_tests import tm
