@@ -350,11 +350,27 @@ class FlextInfraCodegenGenerationStandardMixin(
         """Build one lazy context for a public package root.
 
         Returns:
-            The resulting ``m.Infra.LazyInitRootRender``.
+            Validated template data for the generated root initializer.
+
+        Raises:
+            ValueError: A configured public name is absent from template bindings.
 
         """
         lazy_module_groups, lazy_alias_groups, lazy_map = cls._lazy_groups(plan)
         current_pkg = plan.context.current_pkg
+        template_public_exports = config.Infra.codegen.root_template_public_exports.get(
+            current_pkg,
+            (),
+        )
+        invalid_template_exports = set(template_public_exports).difference(
+            c.Infra.ROOT_TEMPLATE_BINDINGS,
+        )
+        if invalid_template_exports:
+            msg = (
+                f"public template exports for {current_pkg} are not template "
+                f"bindings: {sorted(invalid_template_exports)}"
+            )
+            raise ValueError(msg)
         public_type_checking_imports = cls._type_checking_filtered(plan)
         # The generated TYPE_CHECKING block must mirror the project's ruff
         # isort sections exactly: every namespace the project's
@@ -415,10 +431,13 @@ class FlextInfraCodegenGenerationStandardMixin(
             type_checking_lines=type_checking_lines,
             exports_tuple=cls._format_exports_tuple(
                 cls._build_published_exports(
-                    tuple(
-                        name
-                        for name in plan.exports
-                        if name in lazy_map or name in plan.eager_dunders
+                    (
+                        *template_public_exports,
+                        *tuple(
+                            name
+                            for name in plan.exports
+                            if name in lazy_map or name in plan.eager_dunders
+                        ),
                     ),
                     lazy_map,
                 ),
