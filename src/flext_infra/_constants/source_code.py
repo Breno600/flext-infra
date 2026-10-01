@@ -230,16 +230,6 @@ class FlextInfraConstantsSourceCode:
             re.MULTILINE,
         )
 
-    @staticmethod
-    def compile_class_header_search(class_name: str) -> t.RegexPattern:
-        r"""Compile ``^class <class_name>\b`` (MULTILINE) for full-source search."""
-        return re.compile(rf"^class\s+{re.escape(class_name)}\b", re.MULTILINE)
-
-    MODULE_ASSIGNMENT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^([A-Za-z_]\w*)\s*(?::\s*[^=]+)?=\s*(.+)$",
-    )
-    "Regex: module-level ``X [: T] = value`` assignment (captures name, value)."
-
     GITHUB_REPO_URL: ClassVar[str] = "https://github.com/flext-sh/flext"
     "Official GitHub repository URL for the FLEXT project."
     GITHUB_REPO_NAME: ClassVar[str] = "flext-sh/flext"
