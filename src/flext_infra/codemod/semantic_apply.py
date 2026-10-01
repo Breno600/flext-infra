@@ -10,7 +10,7 @@ from flext_cli import cli
 from flext_core import r
 
 from .. import c, config, m, p, t, u
-from ..transformers import publish_semantic_file_plans
+from ..transformers import FlextInfraSemanticPublication
 
 
 class FlextInfraCodemodSemanticApply:
@@ -415,7 +415,7 @@ class FlextInfraCodemodSemanticApply:
             )
         if not semantic_plans:
             return validator() if validator is not None else r[bool].ok(True)
-        return publish_semantic_file_plans(
+        return FlextInfraSemanticPublication.publish_semantic_file_plans(
             semantic_plans, repository_root=root, validator=validator
         ).map(lambda _: True)
 

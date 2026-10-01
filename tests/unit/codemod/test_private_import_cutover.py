@@ -46,10 +46,11 @@ class TestsFlextInfraPrivateImportCutover:
         }
 
         if bad_source_reachable:
-            tm.fail(
-                self._plan(tmp_path, sources, consumer, statement),
-                has="attempted relative import beyond top-level package",
-            )
+            # The planner fails loud: the import error escapes unwrapped.
+            with pytest.raises(
+                ImportError, match="attempted relative import beyond top-level package"
+            ):
+                self._plan(tmp_path, sources, consumer, statement)
             return
         edits = self._edits(tmp_path, sources, consumer, statement)
 

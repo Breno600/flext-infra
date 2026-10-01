@@ -71,27 +71,6 @@ class FlextInfraModelsGitWorktreeState:
             str, m.Field(description="Index blob or gitlink object identifier")
         ]
 
-    class GitWorktreeObservedFile(m.ContractModel):
-        """The observed worktree layer of one file before a guarded effect.
-
-        The guarded-effect precondition hashes these bytes itself (the hash
-        is the comparison), so this is the pre-hash identity: raw content
-        (symlink target text for links, ``None`` for an absent file), the
-        git mode string, and the exact permission bits.
-        """
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
-        content: Annotated[
-            bytes | None,
-            m.Field(
-                description="Raw working bytes; link text for symlinks, None when absent"
-            ),
-        ]
-        mode: Annotated[str, m.Field(description="Git mode for raw bytes or symlink")]
-        permissions: Annotated[
-            int, m.Field(description="Exact filesystem permission bits")
-        ]
-
     class GitWorktreeFileState(m.ContractModel):
         """Exact working bytes and permissions, including symlink link text."""
 
@@ -109,23 +88,6 @@ class FlextInfraModelsGitWorktreeState:
             m.Field(
                 description="Object identifier for raw bytes or current gitlink HEAD"
             ),
-        ]
-
-    class GitWorktreeObservedContent(m.ContractModel):
-        """Observed working bytes with their filesystem state before hashing."""
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
-        path: Annotated[Path, m.Field(description="Repository-relative working path")]
-        content: Annotated[
-            bytes | None,
-            m.Field(description="Observed working bytes; absent means no file"),
-        ]
-        mode: Annotated[
-            str, m.Field(description="Git mode the observed bytes classify as")
-        ]
-        permissions: Annotated[
-            int,
-            m.Field(description="Exact filesystem permission bits of the observation"),
         ]
 
     class GitWorktreeStateSnapshot(m.ContractModel):

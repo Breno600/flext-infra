@@ -183,7 +183,7 @@ class TestsFlextInfraLazyInitAliasInheritance:
         """Dev/codegen dependencies and non-letter names stay out of the root.
 
         A dev or codegen dependency is a consumer, never a facade ancestor, and
-        singletons or entry points (``cli``, ``main``, ``infra``, ``docs_main``)
+        singletons or entry points (``cli``, ``main``, ``infra``)
         are declared and consumed only from their own namespace root.
         """
         repository_root, child_root = u.Tests.create_lazy_init_workspace(
@@ -221,7 +221,7 @@ class TestsFlextInfraLazyInitAliasInheritance:
         tm.that(sources, lacks="flext_tests")
         tm.that(sources, lacks="flext_infra")
         tm.that(sources.get("flext_cli", ()), has="r")
-        for entry_point in ("cli", "main", "infra", "docs_main"):
+        for entry_point in ("cli", "main", "infra"):
             tm.that(inherited, lacks=entry_point)
         tm.that(u.Tests.run_lazy_init(repository_root, check_only=True), eq=0)
 

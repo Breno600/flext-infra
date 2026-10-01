@@ -219,17 +219,25 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 return r[m.Infra.CodegenResult].fail(f"codegen drift detected: {paths}")
             return r[m.Infra.CodegenResult].ok(m.Infra.CodegenResult(plan=plan))
         surface = c.Infra.CodegenConformSurface(request.what)
-        if surface is not c.Infra.CodegenConformSurface.MAKEFILE:
+        if surface not in {
+            c.Infra.CodegenConformSurface.MAKEFILE,
+            c.Infra.CodegenConformSurface.DOCS_CONFIG,
+        }:
             return r[m.Infra.CodegenResult].fail(
                 "partial codegen apply is prohibited; use the complete all surface"
             )
-        expected_path = request.root.expanduser().resolve() / c.Infra.MAKEFILE_FILENAME
+        destination = (
+            Path(c.Infra.DIR_DOCS) / c.Infra.DOCS_CONFIG_FILENAME
+            if surface is c.Infra.CodegenConformSurface.DOCS_CONFIG
+            else Path(c.Infra.MAKEFILE_FILENAME)
+        )
+        expected_path = request.root.expanduser().resolve() / destination
         if (
             any(file.path != expected_path for file in plan.files)
             or len(plan.files) != 1
         ):
             return r[m.Infra.CodegenResult].fail(
-                "Makefile bootstrap plan must own exactly the root dispatcher"
+                f"bootstrap plan must own exactly {destination}"
             )
         written: t.VariadicTuple[Path] = ()
         if changed:
@@ -239,7 +247,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 return r[m.Infra.CodegenResult].from_failure(before)
             if file.desired_content is None or file.desired_mode is None:
                 return r[m.Infra.CodegenResult].fail(
-                    "Makefile bootstrap cannot delete its dispatcher"
+                    f"bootstrap cannot delete {destination}"
                 )
             published = u.Cli.atomic_write_binary_file_guarded(
                 before.value, file.desired_content, permission_mode=file.desired_mode
@@ -257,7 +265,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         )
         if residual:
             return r[m.Infra.CodegenResult].fail(
-                f"Makefile bootstrap did not reach a fixed point: {residual[0].path}"
+                f"bootstrap did not reach a fixed point: {residual[0].path}"
             )
         return r[m.Infra.CodegenResult].ok(
             m.Infra.CodegenResult(plan=verified.value, written_files=written)

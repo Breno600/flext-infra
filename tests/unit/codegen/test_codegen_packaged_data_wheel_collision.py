@@ -126,6 +126,19 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         )
         return u.Tests.toml_list(sdist["include"])
 
+    @staticmethod
+    def _sdist_force_include(root: Path) -> t.JsonMapping:
+        """Read declared source files retained unchanged by the sdist."""
+        manifest = (root / c.PYPROJECT_FILENAME).read_text(encoding="utf-8")
+        sdist = u.Tests.toml_table_at(
+            manifest, c.Infra.TOOL, "hatch", "build", "targets", "sdist"
+        )
+        return (
+            u.Tests.toml_mapping(sdist["force-include"])
+            if "force-include" in sdist
+            else {}
+        )
+
     @pytest.mark.slow
     def test_declared_root_data_dir_stays_selected(self, infra_git_repo: Path) -> None:
         """A declared root directory reaches the wheel through native selection."""
@@ -248,7 +261,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             self._wheel_force_include(infra_git_repo),
             eq={catalog: f"{package_name}/{catalog}"},
         )
-        tm.that(f"/{catalog}" in self._sdist_include(infra_git_repo), eq=True)
+        tm.that(self._sdist_force_include(infra_git_repo), eq={catalog: catalog})
         tm.that("/config/**" in self._sdist_include(infra_git_repo), eq=False)
 
     @pytest.mark.slow
@@ -346,7 +359,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         ignored = "infra/state.json"
         tm.ok(u.Cli.atomic_write_text_file(infra_git_repo / ignored, "private state\n"))
         with (infra_git_repo / ".gitignore").open("a", encoding="utf-8") as stream:
-            stream.write(f"\n/{ignored}\n")
+            stream.write(f"\n/{ignored}\n/{catalog}\n")
         output = infra_git_repo.parent / "artifacts"
         direct = output / "direct"
         source = output / "source"
