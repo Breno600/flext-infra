@@ -87,9 +87,6 @@ class CodegenTestSupport:
                 make=codegen.make,
                 workspace_repositories=workspace_repositories,
                 checkout_submodules=codegen.checkout_submodules,
-                dependabot_cooldown_days=codegen.dependabot_cooldown_days.get(
-                    dist, codegen.dependabot_cooldown_default_days
-                ),
                 custom_steps=custom_steps,
                 has_devcontainer=has_devcontainer,
                 dependency_cooldown_days=codegen.toolchain.dependency_cooldown_days,
