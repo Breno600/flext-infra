@@ -169,15 +169,14 @@ scan_dirs = ["src"]
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/flext_infra"]
-only-include = ["src/flext_infra", "config"]
+include = ["/src/flext_infra/**", "/config/**"]
 
 [tool.hatch.build.targets.wheel.sources]
 "src/flext_infra" = "flext_infra"
 config = "flext_infra/config"
 
 [tool.hatch.build.targets.sdist]
-only-include = ["src/flext_infra", "config"]
+include = ["/src/flext_infra/**", "/config/**"]
 
 [tool.mypy]
 disable_error_code = [
