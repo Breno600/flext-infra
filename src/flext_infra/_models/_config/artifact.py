@@ -146,18 +146,6 @@ class FlextInfraConfigModelsArtifact:
                 )
             ),
         ]
-        dependabot_cooldown_days: Annotated[
-            Mapping[str, int],
-            m.Field(
-                description=(
-                    "Per-distribution dependabot cooldown (default-days, >= 0) "
-                    "opted in for generated dependabot.yml. The fleet default "
-                    "is no cooldown: every ecosystem selects the newest "
-                    "available release immediately. A distribution that must "
-                    "stagger updates declares its own days here."
-                )
-            ),
-        ]
         ci_private_submodules: Annotated[
             Mapping[str, FlextInfraConfigModelsProvider.CiPrivateSubmodulesSpec],
             m.Field(

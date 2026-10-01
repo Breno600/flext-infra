@@ -71,6 +71,7 @@ class CodegenTestSupport:
             custom_steps: str = "",
             has_devcontainer: bool = False,
             workspace_repositories: t.VariadicTuple[m.Infra.RepositoryRef] = (),
+            cooldown_excluded_dependencies: t.VariadicTuple[t.NonEmptyStr] = (),
         ) -> m.Infra.GithubWorkflowRenderSpec:
             """Build the common strictly typed workflow rendering contract."""
             codegen = config.Infra.codegen
@@ -88,6 +89,8 @@ class CodegenTestSupport:
                 checkout_submodules=codegen.checkout_submodules,
                 custom_steps=custom_steps,
                 has_devcontainer=has_devcontainer,
+                dependency_cooldown_days=codegen.toolchain.dependency_cooldown_days,
+                cooldown_excluded_dependencies=cooldown_excluded_dependencies,
             )
 
         @staticmethod

@@ -433,6 +433,11 @@ class FlextInfraProtocolsBase(Protocol):
             ...
 
         @property
+        def dependency_cooldown_days(self) -> int:
+            """Supply-chain cooldown in days honoured by every resolver."""
+            ...
+
+        @property
         def python_selector(self) -> str:
             """Mise/pyenv-style selector for the Python minor line."""
             ...

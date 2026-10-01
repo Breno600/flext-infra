@@ -109,6 +109,18 @@ class FlextInfraModelsMiseToolchain:
                 description="Python major.minor line, e.g. '3.13'",
             ),
         ]
+        dependency_cooldown_days: Annotated[
+            int,
+            m.Field(
+                ge=1,
+                description=(
+                    "Supply-chain cooldown in days, the single value every "
+                    "resolver honours: the generated mise minimum_release_age "
+                    "and every dependabot ecosystem entry. Forks and local "
+                    "projects (direct git references) are excluded."
+                ),
+            ),
+        ]
         uv_link_mode: Annotated[
             t.NonEmptyStr, m.Field(description="Portable uv installation link mode")
         ]

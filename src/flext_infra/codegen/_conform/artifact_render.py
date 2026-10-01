@@ -261,6 +261,16 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             if resolved_branch.failure:
                 return r[p.Model].from_failure(resolved_branch)
             branch = resolved_branch.value
+            # Forks and local projects never enter the cooldown: they are the
+            # requirements this project takes by direct git reference.
+            document = u.Cli.toml_read_document(
+                repository_root / c.Infra.PYPROJECT_FILENAME
+            )
+            if document.failure:
+                return r[p.Model].from_failure(document)
+            excluded = u.Infra.direct_source_names(document.value)
+            if excluded.failure:
+                return r[p.Model].from_failure(excluded)
             return r[p.Model].ok(
                 m.Infra.GithubWorkflowRenderSpec(
                     dist=dist,
@@ -285,9 +295,8 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                     # checkout rather than declared: a stale flag would silently
                     # disable Dependabot for the repository.
                     has_devcontainer=(repository_root / ".devcontainer").is_dir(),
-                    dependabot_cooldown_days=codegen.dependabot_cooldown_days.get(
-                        dist, 0
-                    ),
+                    dependency_cooldown_days=codegen.toolchain.dependency_cooldown_days,
+                    cooldown_excluded_dependencies=excluded.value,
                     checkout_submodules=codegen.checkout_submodules_overrides.get(
                         dist, codegen.checkout_submodules
                     ),

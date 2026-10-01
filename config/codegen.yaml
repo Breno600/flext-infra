@@ -28,6 +28,14 @@ Infra:
       # writes the committed uv.lock and mise.lock; setup, gen, and fmt install
       # frozen from those locks (operator 2026-09-24).
       python_version: "3.13"
+      # Supply-chain cooldown (operator 2026-10-01): ONE value for every
+      # resolver — the generated mise `minimum_release_age` (so `make upg`
+      # never selects a release younger than this, e.g. a Python patch with
+      # no precompiled builds yet) and every dependabot ecosystem entry.
+      # Forks and local projects never enter it: dependabot excludes the
+      # requirements a project takes by direct git reference. uv carries no
+      # cooldown key (`exclude-newer` stays banned, operator 2026-09-16).
+      dependency_cooldown_days: 7
       uv_link_mode: copy
       uv_environments: ["sys_platform == 'linux'", "sys_platform == 'darwin'"]
       # Global compatibility exceptions become [tool.uv] constraint-dependencies
@@ -162,15 +170,6 @@ Infra:
     # config/codegen-overrides.yaml.
     checkout_submodules: "false"
     checkout_submodules_overrides: {}
-
-    # Per-distribution dependabot stagger opt-in (default-days). Fleets with
-    # shared-registry rate pressure stagger ecosystem updates instead of
-    # taking every newest release immediately (semgrep remediation
-    # flext-p57t.5/.8/.12, reval260921).
-    dependabot_cooldown_days:
-      flext-core: 7
-      flext-dbt-ldif: 7
-      flext-infra: 7
 
     # Runner packages a distribution's own tests need (Ubuntu apt names),
     # installed by the generated CI before the gates run. A test that drives

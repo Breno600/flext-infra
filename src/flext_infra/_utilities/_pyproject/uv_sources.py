@@ -58,6 +58,30 @@ class FlextInfraUtilitiesPyprojectUvSources(
         )
 
     @classmethod
+    def direct_source_names(
+        cls, document: t.Cli.TomlDocument
+    ) -> p.Result[t.VariadicTuple[str]]:
+        """Name every requirement taken by direct ``@ source`` reference.
+
+        Forks and local projects reach a project only this way, never from a
+        registry, so this is the derived set the supply-chain cooldown skips.
+        """
+        lines = cls._document_requirement_lines(document)
+        if lines.failure:
+            return r[t.VariadicTuple[str]].from_failure(lines)
+        return r[t.VariadicTuple[str]].ok(
+            tuple(
+                sorted({
+                    name
+                    for item in lines.value
+                    if cls._declares_direct_source(item)
+                    and (name := FlextInfraUtilitiesDependencies.dep_name(item))
+                    is not None
+                })
+            )
+        )
+
+    @classmethod
     def _sync_uv_sources(
         cls, document: t.Cli.TomlDocument, *, resolution: m.Infra.UvResolutionSpec
     ) -> p.Result[bool]:
@@ -91,10 +115,11 @@ class FlextInfraUtilitiesPyprojectUvSources(
         else:
             u.Cli.toml_remove_key_if_present(uv, "constraint-dependencies")
         u.Cli.toml_sync_value(uv, "link-mode", resolution.link_mode)
-        # The supply-chain cooldown was exterminated fleet-wide (flext-fphyv):
-        # uv resolves every version published up to now. Removed declarations
-        # exterminate the keys everywhere so no orphan cap survives without an
-        # owner (flext-gzfd2 class).
+        # uv carries no cooldown key: `exclude-newer` (any form) is banned
+        # (operator 2026-09-16). The fleet cooldown lives once in
+        # codegen.toolchain.dependency_cooldown_days and reaches mise and
+        # dependabot (operator 2026-10-01). Removed declarations exterminate
+        # the keys everywhere so no orphan cap survives (flext-gzfd2 class).
         u.Cli.toml_remove_key_if_present(uv, "exclude-newer")
         u.Cli.toml_remove_key_if_present(uv, "exclude-newer-package")
         # Environments come from the fleet toolchain SSOT: an empty declaration
