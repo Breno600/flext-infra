@@ -1,0 +1,5 @@
+id: rewire-cli-local-process-timing-unpack
+valid:
+  - "absolute_deadline, grace_seconds = timing_result.unwrap()"
+invalid:
+  - "absolute_deadline, grace_seconds, timeout_exit_code = timing_result.unwrap()"

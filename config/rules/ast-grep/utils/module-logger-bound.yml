@@ -1,0 +1,17 @@
+# A module-level ``logger = ...`` assignment. Rewrites that emit ``logger.*``
+# use this guard so they never create an unbound consumer.
+#
+# The pattern modernizer instead *injected* ``logger = u.fetch_logger(__name__)``
+# when the binding was absent. A textual ast-grep fix cannot choose a legal
+# module-level insertion point (docstring, shebang, ``__future__`` imports), the
+# same constraint that keeps require-future-annotations detection-only, so the
+# emitting rules are gated on an already-present binding.
+id: module-logger-bound
+language: python
+rule:
+  kind: expression_statement
+  has:
+    kind: assignment
+    has:
+      field: left
+      pattern: logger

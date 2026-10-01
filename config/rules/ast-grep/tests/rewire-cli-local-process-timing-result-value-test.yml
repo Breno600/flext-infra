@@ -1,0 +1,5 @@
+id: rewire-cli-local-process-timing-result-value
+valid:
+  - "return (absolute_deadline, grace_seconds)"
+invalid:
+  - "return (absolute_deadline, grace_seconds, timeout_exit_code)"

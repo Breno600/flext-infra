@@ -1,0 +1,14 @@
+id: ban-cli-command-output-exit-code-reader
+snapshots:
+  command.exit_code:
+    labels:
+    - source: command.exit_code
+      style: primary
+      start: 0
+      end: 17
+  output.exit_code:
+    labels:
+    - source: output.exit_code
+      style: primary
+      start: 0
+      end: 16

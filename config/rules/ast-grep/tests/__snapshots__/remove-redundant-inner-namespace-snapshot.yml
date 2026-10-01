@@ -1,0 +1,197 @@
+id: remove-redundant-inner-namespace
+snapshots:
+  ? |
+    class Alpha(Base):
+        class Cli(Alpha):
+            pass
+
+        def run(self) -> int:
+            return 0
+  : fixed: "class Alpha(Base):\n    \n\n    def run(self) -> int:\n        return 0\n"
+    labels:
+    - source: |-
+        class Cli(Alpha):
+                pass
+      style: primary
+      start: 23
+      end: 53
+    - source: Cli
+      style: secondary
+      start: 29
+      end: 32
+    - source: Alpha
+      style: secondary
+      start: 33
+      end: 38
+    - source: Alpha
+      style: secondary
+      start: 33
+      end: 38
+    - source: |-
+        def run(self) -> int:
+                return 0
+      style: secondary
+      start: 59
+      end: 97
+    - source: |-
+        class Cli(Alpha):
+                pass
+
+            def run(self) -> int:
+                return 0
+      style: secondary
+      start: 23
+      end: 97
+    - source: Alpha
+      style: secondary
+      start: 6
+      end: 11
+    - source: |-
+        class Alpha(Base):
+            class Cli(Alpha):
+                pass
+
+            def run(self) -> int:
+                return 0
+      style: secondary
+      start: 0
+      end: 97
+    - source: |-
+        class Cli(Alpha):
+                pass
+
+            def run(self) -> int:
+                return 0
+      style: secondary
+      start: 23
+      end: 97
+  ? |
+    class Beta(Base):
+        class Cli(Beta):
+            ...
+
+        class Real(Base):
+            VALUE = 1
+  : fixed: "class Beta(Base):\n    \n\n    class Real(Base):\n        VALUE = 1\n"
+    labels:
+    - source: |-
+        class Cli(Beta):
+                ...
+      style: primary
+      start: 22
+      end: 50
+    - source: Cli
+      style: secondary
+      start: 28
+      end: 31
+    - source: Beta
+      style: secondary
+      start: 32
+      end: 36
+    - source: Beta
+      style: secondary
+      start: 32
+      end: 36
+    - source: |-
+        class Real(Base):
+                VALUE = 1
+      style: secondary
+      start: 56
+      end: 91
+    - source: |-
+        class Cli(Beta):
+                ...
+
+            class Real(Base):
+                VALUE = 1
+      style: secondary
+      start: 22
+      end: 91
+    - source: Beta
+      style: secondary
+      start: 6
+      end: 10
+    - source: |-
+        class Beta(Base):
+            class Cli(Beta):
+                ...
+
+            class Real(Base):
+                VALUE = 1
+      style: secondary
+      start: 0
+      end: 91
+    - source: |-
+        class Cli(Beta):
+                ...
+
+            class Real(Base):
+                VALUE = 1
+      style: secondary
+      start: 22
+      end: 91
+  ? |
+    class Zeta(Base):
+        class Cli(Zeta):
+            """Namespace."""
+
+        class Real(Base):
+            VALUE = 1
+  : fixed: "class Zeta(Base):\n    \n\n    class Real(Base):\n        VALUE = 1\n"
+    labels:
+    - source: |-
+        class Cli(Zeta):
+                """Namespace."""
+      style: primary
+      start: 22
+      end: 63
+    - source: Cli
+      style: secondary
+      start: 28
+      end: 31
+    - source: Zeta
+      style: secondary
+      start: 32
+      end: 36
+    - source: Zeta
+      style: secondary
+      start: 32
+      end: 36
+    - source: |-
+        class Real(Base):
+                VALUE = 1
+      style: secondary
+      start: 69
+      end: 104
+    - source: |-
+        class Cli(Zeta):
+                """Namespace."""
+
+            class Real(Base):
+                VALUE = 1
+      style: secondary
+      start: 22
+      end: 104
+    - source: Zeta
+      style: secondary
+      start: 6
+      end: 10
+    - source: |-
+        class Zeta(Base):
+            class Cli(Zeta):
+                """Namespace."""
+
+            class Real(Base):
+                VALUE = 1
+      style: secondary
+      start: 0
+      end: 104
+    - source: |-
+        class Cli(Zeta):
+                """Namespace."""
+
+            class Real(Base):
+                VALUE = 1
+      style: secondary
+      start: 22
+      end: 104

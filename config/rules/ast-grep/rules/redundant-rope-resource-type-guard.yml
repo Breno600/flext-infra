@@ -1,0 +1,23 @@
+# A typed RopeProject already promises a RopeResource result. Rechecking the
+# same protocol at runtime duplicates the port contract and creates unreachable
+# code under strict type analysis.
+---
+id: redundant-rope-resource-type-guard
+language: Python
+severity: error
+rule:
+  pattern: |
+    def _resource($$$ARGS) -> $RET:
+        $$$PRELUDE
+        $RESOURCE = $PROJECT.get_resource($PATH)
+        if not isinstance($RESOURCE, p.Infra.RopeResource):
+            $MESSAGE = $TEXT
+            raise TypeError($MESSAGE)
+        return $RESOURCE
+fix: |
+  def _resource($$$ARGS) -> $RET:
+      $$$PRELUDE
+      return $PROJECT.get_resource($PATH)
+message: Trust the typed RopeProject port instead of duplicating its result contract.
+files:
+  - "src/flext_infra/_utilities/**/*.py"

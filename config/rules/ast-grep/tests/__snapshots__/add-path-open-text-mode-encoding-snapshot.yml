@@ -1,0 +1,23 @@
+id: add-path-open-text-mode-encoding
+snapshots:
+  handle = Path(path).open("w"):
+    fixed: handle = Path(path).open("w", encoding="utf-8")
+    labels:
+    - source: Path(path).open("w")
+      style: primary
+      start: 9
+      end: 29
+  handle = Path(path).open(mode="a"):
+    fixed: handle = Path(path).open(mode="a", encoding="utf-8")
+    labels:
+    - source: Path(path).open(mode="a")
+      style: primary
+      start: 9
+      end: 34
+  handle = pathlib.Path(root, name).open("r"):
+    fixed: handle = pathlib.Path(root, name).open("r", encoding="utf-8")
+    labels:
+    - source: pathlib.Path(root, name).open("r")
+      style: primary
+      start: 9
+      end: 43

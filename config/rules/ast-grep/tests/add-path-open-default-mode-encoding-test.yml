@@ -1,0 +1,13 @@
+id: add-path-open-default-mode-encoding
+# `valid` MUST NOT match: a receiver the syntax cannot prove is a Path, or an
+# encoding already declared.
+valid:
+  - handle = candidate.open()
+  - handle = self._path.open()
+  - handle = Path(path).open(encoding="utf-8")
+  - handle = Path(path).open("rb")
+  - HELP = "Path(path).open() needs an encoding"
+# `invalid` MUST match: a direct Path constructor opened in default text mode.
+invalid:
+  - handle = Path(path).open()
+  - handle = pathlib.Path(root, name).open()

@@ -1,0 +1,9 @@
+id: remove-transformer-header-private-import
+valid:
+  - from flext_infra import u
+invalid:
+  - from flext_infra._utilities.transformer_header import FlextInfraUtilitiesTransformerHeader
+  - from flext_infra._utilities.transformer_header import _header
+  - from flext_infra._utilities.transformer_header import ensure_future_annotations
+  - from flext_infra._utilities.transformer_header import alias_locally_bound
+  - from flext_infra.transformers import _header

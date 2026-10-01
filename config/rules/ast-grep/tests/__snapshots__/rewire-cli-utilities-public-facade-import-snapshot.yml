@@ -1,0 +1,23 @@
+id: rewire-cli-utilities-public-facade-import
+snapshots:
+  ? |
+    from flext_cli import (
+        FlextCliUtilities as u,
+    )
+  : fixed: |
+      from flext_cli import u
+    labels:
+    - source: |-
+        from flext_cli import (
+            FlextCliUtilities as u,
+        )
+      style: primary
+      start: 0
+      end: 53
+  from flext_cli import FlextCliUtilities as u:
+    fixed: from flext_cli import u
+    labels:
+    - source: from flext_cli import FlextCliUtilities as u
+      style: primary
+      start: 0
+      end: 44

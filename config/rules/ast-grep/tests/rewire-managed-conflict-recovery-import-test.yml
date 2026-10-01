@@ -1,0 +1,5 @@
+id: rewire-managed-conflict-recovery-import
+valid:
+  - from flext_infra import u
+invalid:
+  - from flext_infra.codegen.managed_conflicts import FlextInfraCodegenManagedConflicts

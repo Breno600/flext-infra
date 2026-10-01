@@ -1,0 +1,30 @@
+id: ban-compat-alias
+snapshots:
+  LegacyClient = CanonicalClient:
+    labels:
+    - source: LegacyClient = CanonicalClient
+      style: primary
+      start: 0
+      end: 30
+    - source: LegacyClient = CanonicalClient
+      style: secondary
+      start: 0
+      end: 30
+    - source: LegacyClient = CanonicalClient
+      style: secondary
+      start: 0
+      end: 30
+  OldService = NewService:
+    labels:
+    - source: OldService = NewService
+      style: primary
+      start: 0
+      end: 23
+    - source: OldService = NewService
+      style: secondary
+      start: 0
+      end: 23
+    - source: OldService = NewService
+      style: secondary
+      start: 0
+      end: 23

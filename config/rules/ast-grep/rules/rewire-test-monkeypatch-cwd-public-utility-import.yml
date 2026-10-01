@@ -1,0 +1,20 @@
+# Migration-only import of the canonical real-state test utility.
+id: rewire-test-monkeypatch-cwd-public-utility-import
+language: Python
+severity: error
+files:
+  - "**/tests/conftest.py"
+rule:
+  all:
+    - pattern: import pytest
+    - inside:
+        kind: module
+        stopBy: end
+        has:
+          pattern: monkeypatch.chdir($DIRECTORY)
+          stopBy: end
+fix: |
+  import pytest
+
+  from flext_tests import u
+message: Import the public shared utility for a real working-directory scope.

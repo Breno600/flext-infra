@@ -1,0 +1,17 @@
+# Private owners disappear after every consumer is wired to u.Infra.
+id: remove-transformer-header-private-import
+language: Python
+severity: error
+files:
+  - "flext-infra/src/**/*.py"
+ignores:
+  - "**/utilities.py"
+rule:
+  any:
+    - pattern: from flext_infra._utilities.transformer_header import FlextInfraUtilitiesTransformerHeader
+    - pattern: from flext_infra._utilities.transformer_header import _header
+    - pattern: from flext_infra._utilities.transformer_header import ensure_future_annotations
+    - pattern: from flext_infra._utilities.transformer_header import alias_locally_bound
+    - pattern: from flext_infra.transformers import _header
+fix: ""
+message: Remove the private transformer-header import after public-facade rewiring.

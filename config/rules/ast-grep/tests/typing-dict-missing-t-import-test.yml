@@ -1,0 +1,31 @@
+id: typing-dict-missing-t-import
+# `valid` MUST NOT match: the module binds `t` (the auto-fixing rule owns it),
+# `Dict` is not typing's, or the text is not a type node.
+valid:
+  - |
+    from flext_core import t
+    from typing import Dict
+    def f(x: Dict[str, int]) -> None: ...
+  - |
+    from flext_core import t
+    import typing
+    def f(y: typing.Dict[str, int]) -> None: ...
+  # locally defined Dict, no typing binding
+  - |
+    class Dict: ...
+    def f(x: Dict[str, int]) -> None: ...
+  # docstring text is not a type node
+  - |
+    """Rewrite ``Dict[K, V]`` to ``t.MappingKV[K, V]``."""
+    from typing import Dict
+# `invalid` MUST match: legacy generic with no `t` binding to rewrite into.
+invalid:
+  - |
+    from typing import Dict
+    def f(x: Dict[str, int]) -> None: ...
+  - |
+    import typing
+    def f(y: typing.Dict[str, int]) -> None: ...
+  - |
+    from typing import Dict
+    ALIAS: Dict[str, int] = {}

@@ -1,0 +1,12 @@
+id: rename-workspace-spec-declared-repositories-to-subprojects
+# `valid` MUST NOT match: local variables, string literals, and distinct names.
+valid:
+  - for project in workspace.value.subprojects
+  - declared = workspace_declared_repositories
+  - scope = "declared_repositories"
+  - |
+    """Prose mentioning workspace.declared_repositories as text."""
+# `invalid` MUST match: attribute reads on any receiver spelling.
+invalid:
+  - for project in workspace.value.declared_repositories
+  - tm.that(spec.declared_repositories, has="flext-core")

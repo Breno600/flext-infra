@@ -1,0 +1,25 @@
+id: remove-breakpoint-debugger-statement
+# `valid` MUST NOT match: a name that is not the builtin call, or the literal
+# text in a string or a comment.
+valid:
+  - handler = breakpoint
+  - HINT = "delete every breakpoint() before committing"
+  - |
+    """Docstring quoting breakpoint() at column zero.
+
+    breakpoint()
+    """
+  - |
+    # A comment mentioning breakpoint() must survive untouched.
+    value = 1
+# `invalid` MUST match: the debugger call as a statement, including one nested
+# in a block where the retired line regex could not see it.
+invalid:
+  - breakpoint()
+  - |
+    def f():
+        breakpoint()
+        return 1
+  - |
+    if debug:
+        breakpoint()

@@ -1,0 +1,9 @@
+id: rewire-cli-local-process-timing-result-type
+language: Python
+severity: error
+files:
+  - "src/flext_cli/_utilities/_runtime_process_timing.py"
+rule:
+  pattern: tuple[float | None, float, int]
+fix: tuple[float | None, float]
+message: Keep only timing facts in the deadline result type.

@@ -1,0 +1,9 @@
+id: rewire-cli-atomic-file-tools
+valid:
+  - u.Cli.atomic_read_binary_file_state(path, required=True)
+  - cli.execute()
+  - service.atomic_read_binary_file_state(path)
+invalid:
+  - cli.atomic_read_binary_file_state(path, required=True)
+  - cli.atomic_create_directory_chain_guarded(plan, permission_mode=0o700)
+  - cli.atomic_cleanup_physical_tree_guarded(manifest)

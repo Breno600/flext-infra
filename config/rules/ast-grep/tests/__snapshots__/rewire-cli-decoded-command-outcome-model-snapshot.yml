@@ -1,0 +1,69 @@
+id: rewire-cli-decoded-command-outcome-model
+snapshots:
+  ? |
+    def decode_output(
+        output: p.Cli.CommandBytesOutput,
+    ) -> p.Result[p.Cli.CommandOutput]:
+        try:
+            stdout = output.stdout.decode("utf-8")
+            stderr = output.stderr.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            return r[p.Cli.CommandOutput].fail(
+                f"non-UTF-8 output from {shlex.join(list(cmd))}: {exc}",
+                exception=exc,
+            )
+        return r[p.Cli.CommandOutput].ok(
+            m.Cli.CommandOutput(
+                stdout=stdout,
+                stderr=stderr,
+                outcome=output.outcome,
+                duration=output.duration,
+            )
+        )
+  : fixed: |+
+      def decode_output(
+          output: p.Cli.CommandBytesOutput,
+      ) -> p.Result[p.Cli.CommandOutput]:
+          try:
+              stdout = output.stdout.decode("utf-8")
+              stderr = output.stderr.decode("utf-8")
+          except UnicodeDecodeError as exc:
+              return r[p.Cli.CommandOutput].fail(
+                  f"non-UTF-8 output from {shlex.join(list(cmd))}: {exc}",
+                  exception=exc,
+              )
+          return r[p.Cli.CommandOutput].ok(
+              m.Cli.CommandOutput(
+                  stdout=stdout,
+                  stderr=stderr,
+                  outcome=m.Cli.ProcessOutcome.model_validate(
+                      output.outcome, from_attributes=True
+                  ),
+                  duration=output.duration,
+              )
+          )
+
+    labels:
+    - source: |-
+        def decode_output(
+            output: p.Cli.CommandBytesOutput,
+        ) -> p.Result[p.Cli.CommandOutput]:
+            try:
+                stdout = output.stdout.decode("utf-8")
+                stderr = output.stderr.decode("utf-8")
+            except UnicodeDecodeError as exc:
+                return r[p.Cli.CommandOutput].fail(
+                    f"non-UTF-8 output from {shlex.join(list(cmd))}: {exc}",
+                    exception=exc,
+                )
+            return r[p.Cli.CommandOutput].ok(
+                m.Cli.CommandOutput(
+                    stdout=stdout,
+                    stderr=stderr,
+                    outcome=output.outcome,
+                    duration=output.duration,
+                )
+            )
+      style: primary
+      start: 0
+      end: 594

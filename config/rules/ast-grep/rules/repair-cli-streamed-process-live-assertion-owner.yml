@@ -1,0 +1,24 @@
+id: repair-cli-streamed-process-live-assertion-owner
+language: Python
+severity: error
+files:
+  - "flext-cli/tests/unit/test_runtime_streamed_process.py"
+rule:
+  all:
+    - pattern: tm.that($RESULT.value, eq=$SUCCESS)
+    - inside:
+        kind: function_definition
+        stopBy: end
+        has:
+          field: name
+          regex: "^test_combined_output_is_byte_exact_and_live$"
+constraints:
+  SUCCESS:
+    regex: "^(?:0|c\\.Cli\\.EXIT_CODE_SUCCESS)$"
+fix: |
+  outcome = tm.ok($RESULT)
+  tm.that(u.Cli.process_succeeded(outcome), eq=True)
+  tm.that(outcome.raw_return_code, eq=c.Cli.EXIT_CODE_SUCCESS)
+  tm.that(outcome.timed_out, eq=False)
+  tm.that(outcome.forwarded_signal, is_=None)
+message: Assert the complete causal receipt in its owning public test.

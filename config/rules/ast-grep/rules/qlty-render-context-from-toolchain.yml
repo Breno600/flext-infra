@@ -1,0 +1,21 @@
+# Qlty configuration is a fleet-wide generated toolchain projection. It must
+# not require per-project package metadata in workspace roots.
+---
+id: qlty-render-context-from-toolchain
+language: Python
+severity: error
+rule:
+  pattern: |
+    if $DESTINATION in {".envrc", ".mise.toml", ".python-version"}:
+        return r[p.Model].ok($CODEGEN.toolchain)
+fix: |
+  if $DESTINATION in {
+      ".envrc",
+      ".mise.toml",
+      ".python-version",
+      c.Infra.QLTY_CONFIG_PATH,
+  }:
+      return r[p.Model].ok($CODEGEN.toolchain)
+message: Render Qlty configuration from the typed fleet toolchain context.
+files:
+  - "src/flext_infra/codegen/conform.py"

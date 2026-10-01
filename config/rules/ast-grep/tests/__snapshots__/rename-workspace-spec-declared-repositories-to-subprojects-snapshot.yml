@@ -1,0 +1,16 @@
+id: rename-workspace-spec-declared-repositories-to-subprojects
+snapshots:
+  for project in workspace.value.declared_repositories:
+    fixed: for project in workspace.value.subprojects
+    labels:
+    - source: workspace.value.declared_repositories
+      style: primary
+      start: 15
+      end: 52
+  tm.that(spec.declared_repositories, has="flext-core"):
+    fixed: tm.that(spec.subprojects, has="flext-core")
+    labels:
+    - source: spec.declared_repositories
+      style: primary
+      start: 8
+      end: 34

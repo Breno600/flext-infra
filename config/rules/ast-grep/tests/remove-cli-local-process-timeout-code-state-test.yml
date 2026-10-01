@@ -1,0 +1,6 @@
+id: remove-cli-local-process-timeout-code-state
+valid:
+  - absolute_deadline = deadline.expires_at_monotonic
+invalid:
+  - timeout_exit_code = 124
+  - timeout_exit_code = deadline.timeout_exit_code

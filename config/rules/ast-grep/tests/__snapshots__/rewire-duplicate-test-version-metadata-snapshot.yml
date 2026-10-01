@@ -1,0 +1,9 @@
+id: rewire-duplicate-test-version-metadata
+snapshots:
+  self._metadata():
+    fixed: tm.ok(u.Infra.read_project_metadata_result(Path(__file__).resolve().parents[2]))
+    labels:
+    - source: self._metadata()
+      style: primary
+      start: 0
+      end: 16

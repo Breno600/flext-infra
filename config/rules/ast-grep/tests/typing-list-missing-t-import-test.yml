@@ -1,0 +1,26 @@
+id: typing-list-missing-t-import
+# `valid` MUST NOT match: the module binds `t` (the auto-fixing rule owns it),
+# `List` is not the typing generic, or the occurrence is text rather than code.
+valid:
+  - |
+    from flext_core import t
+    from typing import List
+
+    ALIAS = List[str]
+  - |
+    from typing import List as L
+    ALIAS = L[str]
+  - |
+    from typing import List
+
+    HELP = "annotate with List[str] rather than list[str]"
+# `invalid` MUST match: a real generic in a module that binds no `t`.
+invalid:
+  - |
+    from typing import List
+
+    def f(x: List[str]) -> None: ...
+  - |
+    import typing
+
+    ALIAS = typing.List[str]

@@ -1,0 +1,20 @@
+# Migration-only import required by the restoring working-directory fixture.
+id: rewire-test-monkeypatch-cwd-generator-import
+language: Python
+severity: error
+files:
+  - "**/tests/conftest.py"
+rule:
+  all:
+    - pattern: from __future__ import annotations
+    - inside:
+        kind: module
+        stopBy: end
+        has:
+          pattern: monkeypatch.chdir($DIRECTORY)
+          stopBy: end
+fix: |
+  from __future__ import annotations
+
+  from collections.abc import Generator
+message: Type the restoring working-directory fixture as a generator.

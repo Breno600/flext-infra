@@ -1,0 +1,19 @@
+# Finish the WorkspaceSpec `declared_repositories` -> `subprojects` rename.
+#
+# The workspace topology model renamed its governed-subproject tuple to
+# `subprojects`; src and test consumers still reading the retired
+# `declared_repositories` attribute are rewired to the canonical field. The
+# `CodegenConformScope.DECLARED` string value and local variables named
+# `workspace_declared_repositories` are different symbols and stay untouched.
+id: rename-workspace-spec-declared-repositories-to-subprojects
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+rule:
+  pattern: $OBJECT.declared_repositories
+fix: $OBJECT.subprojects
+message: >-
+  WorkspaceSpec renamed its governed-subproject tuple to `subprojects`;
+  the `declared_repositories` attribute no longer exists.

@@ -1,0 +1,9 @@
+id: add-cli-process-outcome-success-import
+snapshots:
+  from flext_cli import m, p, r, t:
+    fixed: from flext_cli import c, m, p, r, t
+    labels:
+    - source: from flext_cli import m, p, r, t
+      style: primary
+      start: 0
+      end: 32

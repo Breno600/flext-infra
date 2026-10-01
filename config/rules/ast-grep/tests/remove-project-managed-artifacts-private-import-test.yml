@@ -1,0 +1,9 @@
+id: remove-project-managed-artifacts-private-import
+valid:
+  - from flext_infra import u
+invalid:
+  - from flext_infra._utilities.project_managed_artifacts import FlextInfraUtilitiesProjectManagedArtifacts
+  - |
+    from flext_infra._utilities.project_managed_artifacts import (
+        FlextInfraUtilitiesProjectManagedArtifacts,
+    )

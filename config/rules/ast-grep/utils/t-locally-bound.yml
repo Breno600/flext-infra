@@ -1,0 +1,12 @@
+# Reusable binding guard for codemods that emit ``t.*`` references.
+#
+# A source import aliased away (``t as types``) does not bind ``t``. A bare
+# import or any imported symbol explicitly aliased to ``t`` does. Keeping this
+# structural rule here prevents each typing rewrite from approximating Python
+# import binding independently.
+id: t-locally-bound
+language: python
+rule:
+  any:
+    - pattern: from $$$MODULE import t
+    - pattern: from $$$MODULE import $$$SOURCE as t

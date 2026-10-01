@@ -1,0 +1,30 @@
+id: rewire-cli-command-output-expected-exit-assertion
+snapshots:
+  tm.that(output.exit_code, eq=case.exit_code):
+    fixed: |
+      tm.that(
+          (
+              u.Cli.process_succeeded(output.outcome),
+              output.outcome.raw_return_code,
+          ),
+          eq=(True, case.exit_code),
+      )
+    labels:
+    - source: tm.that(output.exit_code, eq=case.exit_code)
+      style: primary
+      start: 0
+      end: 44
+  tm.that(output.outcome.raw_return_code, eq=case.exit_code):
+    fixed: |
+      tm.that(
+          (
+              u.Cli.process_succeeded(output.outcome),
+              output.outcome.raw_return_code,
+          ),
+          eq=(True, case.exit_code),
+      )
+    labels:
+    - source: tm.that(output.outcome.raw_return_code, eq=case.exit_code)
+      style: primary
+      start: 0
+      end: 58

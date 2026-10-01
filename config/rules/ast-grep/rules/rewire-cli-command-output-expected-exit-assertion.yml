@@ -1,0 +1,18 @@
+id: rewire-cli-command-output-expected-exit-assertion
+language: Python
+severity: error
+files:
+  - "flext-cli/tests/unit/test_runtime_utilities_core.py"
+rule:
+  any:
+    - pattern: tm.that(output.exit_code, eq=case.exit_code)
+    - pattern: tm.that(output.outcome.raw_return_code, eq=case.exit_code)
+fix: |
+  tm.that(
+      (
+          u.Cli.process_succeeded(output.outcome),
+          output.outcome.raw_return_code,
+      ),
+      eq=(True, case.exit_code),
+  )
+message: Assert complete causal success together with the case-owned raw return code.

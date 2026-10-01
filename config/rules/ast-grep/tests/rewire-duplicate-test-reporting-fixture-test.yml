@@ -1,0 +1,5 @@
+id: rewire-duplicate-test-reporting-fixture
+valid:
+  - infra_reporting.resolve_report_dir(root, "project", "check")
+invalid:
+  - service.resolve_report_dir(root, "project", "check")

@@ -1,0 +1,39 @@
+id: rewire-structlog-get-logger-explicit-name
+# `valid` MUST NOT match: no `u` binding, the empty call (owned by the sibling
+# rule), a call with no single-argument translation, or text in a string.
+valid:
+  - |
+    import structlog
+
+    logger = structlog.get_logger("service")
+  - |
+    from flext_core import u
+
+    logger = structlog.get_logger()
+  - |
+    from flext_core import u
+
+    logger = structlog.get_logger(__name__, component=name)
+  - |
+    from flext_core import u
+
+    logger = structlog.get_logger(component=name)
+  - |
+    from flext_core import u
+
+    HELP = 'replace structlog.get_logger("svc") with u.fetch_logger'
+# `invalid` MUST match: a single positional name argument, in any expression
+# form the retired regex could not parse.
+invalid:
+  - |
+    from flext_core import u
+
+    logger = structlog.get_logger("service")
+  - |
+    from flext_core import u
+
+    logger = structlog.get_logger(__name__)
+  - |
+    from flext_core import u
+
+    logger = structlog.get_logger(c.Infra.LOGGER_NAME)

@@ -1,0 +1,8 @@
+id: require-future-annotations
+snapshots:
+  value = 1:
+    labels:
+    - source: value = 1
+      style: primary
+      start: 0
+      end: 9

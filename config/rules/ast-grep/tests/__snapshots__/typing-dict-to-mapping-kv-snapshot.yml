@@ -1,0 +1,166 @@
+id: typing-dict-to-mapping-kv
+snapshots:
+  ? |
+    from flext_core import t
+    from typing import Dict
+    ALIAS = Dict[str, int]
+  : fixed: |
+      from flext_core import t
+      from typing import Dict
+      ALIAS = t.MappingKV[str, int]
+    labels:
+    - source: Dict[str, int]
+      style: primary
+      start: 57
+      end: 71
+    - source: from typing import Dict
+      style: secondary
+      start: 25
+      end: 48
+    - source: |
+        from flext_core import t
+        from typing import Dict
+        ALIAS = Dict[str, int]
+      style: secondary
+      start: 0
+      end: 72
+    - source: from flext_core import t
+      style: secondary
+      start: 0
+      end: 24
+    - source: |
+        from flext_core import t
+        from typing import Dict
+        ALIAS = Dict[str, int]
+      style: secondary
+      start: 0
+      end: 72
+  ? |
+    from flext_core import t
+    from typing import Dict
+    ALIAS: Dict[str, int] = {}
+  : fixed: |
+      from flext_core import t
+      from typing import Dict
+      ALIAS: t.MappingKV[str, int] = {}
+    labels:
+    - source: Dict[str, int]
+      style: primary
+      start: 56
+      end: 70
+    - source: from typing import Dict
+      style: secondary
+      start: 25
+      end: 48
+    - source: |
+        from flext_core import t
+        from typing import Dict
+        ALIAS: Dict[str, int] = {}
+      style: secondary
+      start: 0
+      end: 76
+    - source: from flext_core import t
+      style: secondary
+      start: 0
+      end: 24
+    - source: |
+        from flext_core import t
+        from typing import Dict
+        ALIAS: Dict[str, int] = {}
+      style: secondary
+      start: 0
+      end: 76
+  ? |
+    from flext_core import t
+    from typing import Dict
+    def f() -> Dict[str, int]: ...
+  : fixed: |
+      from flext_core import t
+      from typing import Dict
+      def f() -> t.MappingKV[str, int]: ...
+    labels:
+    - source: Dict[str, int]
+      style: primary
+      start: 60
+      end: 74
+    - source: from typing import Dict
+      style: secondary
+      start: 25
+      end: 48
+    - source: |
+        from flext_core import t
+        from typing import Dict
+        def f() -> Dict[str, int]: ...
+      style: secondary
+      start: 0
+      end: 80
+    - source: from flext_core import t
+      style: secondary
+      start: 0
+      end: 24
+    - source: |
+        from flext_core import t
+        from typing import Dict
+        def f() -> Dict[str, int]: ...
+      style: secondary
+      start: 0
+      end: 80
+  ? |
+    from flext_core import t
+    from typing import Dict
+    def f(x: Dict[str, int]) -> None: ...
+  : fixed: |
+      from flext_core import t
+      from typing import Dict
+      def f(x: t.MappingKV[str, int]) -> None: ...
+    labels:
+    - source: Dict[str, int]
+      style: primary
+      start: 58
+      end: 72
+    - source: from typing import Dict
+      style: secondary
+      start: 25
+      end: 48
+    - source: |
+        from flext_core import t
+        from typing import Dict
+        def f(x: Dict[str, int]) -> None: ...
+      style: secondary
+      start: 0
+      end: 87
+    - source: from flext_core import t
+      style: secondary
+      start: 0
+      end: 24
+    - source: |
+        from flext_core import t
+        from typing import Dict
+        def f(x: Dict[str, int]) -> None: ...
+      style: secondary
+      start: 0
+      end: 87
+  ? |
+    from flext_core import t
+    import typing
+    def f(y: typing.Dict[str, int]) -> None: ...
+  : fixed: |
+      from flext_core import t
+      import typing
+      def f(y: t.MappingKV[str, int]) -> None: ...
+    labels:
+    - source: typing.Dict[str, int]
+      style: primary
+      start: 48
+      end: 69
+    - source: from flext_core import t
+      style: secondary
+      start: 0
+      end: 24
+    - source: |
+        from flext_core import t
+        import typing
+        def f(y: typing.Dict[str, int]) -> None: ...
+      style: secondary
+      start: 0
+      end: 84

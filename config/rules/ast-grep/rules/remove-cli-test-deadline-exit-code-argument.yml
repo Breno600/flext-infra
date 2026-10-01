@@ -1,0 +1,7 @@
+id: remove-cli-test-deadline-exit-code-argument
+language: Python
+severity: error
+rule:
+  pattern: _deadline(seconds=$SECONDS, grace=$GRACE, exit_code=$CODE)
+fix: _deadline(seconds=$SECONDS, grace=$GRACE)
+message: Remove obsolete timeout exit-code arguments from deadline fixtures.

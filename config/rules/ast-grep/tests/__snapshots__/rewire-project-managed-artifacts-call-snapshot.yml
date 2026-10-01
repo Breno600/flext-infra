@@ -1,0 +1,16 @@
+id: rewire-project-managed-artifacts-call
+snapshots:
+  FlextInfraUtilitiesProjectManagedArtifacts.compose_mise_toml_from_snapshot(sources, rendered):
+    fixed: u.Infra.compose_mise_toml_from_snapshot(sources, rendered)
+    labels:
+    - source: FlextInfraUtilitiesProjectManagedArtifacts.compose_mise_toml_from_snapshot(sources, rendered)
+      style: primary
+      start: 0
+      end: 93
+  FlextInfraUtilitiesProjectManagedArtifacts.snapshot_project_managed_artifacts(root):
+    fixed: u.Infra.snapshot_project_managed_artifacts(root)
+    labels:
+    - source: FlextInfraUtilitiesProjectManagedArtifacts.snapshot_project_managed_artifacts(root)
+      style: primary
+      start: 0
+      end: 83

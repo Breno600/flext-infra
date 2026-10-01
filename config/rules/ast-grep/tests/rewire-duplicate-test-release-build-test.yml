@@ -1,0 +1,5 @@
+id: rewire-duplicate-test-release-build
+valid:
+  - u.Tests.run_release_build(workspace, project_name, dry_run=True)
+invalid:
+  - _run_release_build(workspace, project_name, dry_run=True)

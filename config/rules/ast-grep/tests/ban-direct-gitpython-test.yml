@@ -1,0 +1,6 @@
+id: ban-direct-gitpython
+valid:
+  - from flext_infra import u
+invalid:
+  - import git
+  - from git import Repo, GitCommandError

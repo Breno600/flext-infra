@@ -1,0 +1,73 @@
+id: docs-audit-external-call-to-owner
+language: Python
+severity: error
+rule:
+  pattern: FlextInfraUtilitiesDocsAudit.docs_is_external($TARGET)
+fix: FlextInfraUtilitiesDocs.docs_is_external($TARGET)
+message: Classify external documentation links through the u.Infra docs owner.
+files:
+  - "src/flext_infra/_utilities/docs_audit.py"
+---
+id: docs-audit-remove-local-external-classifier
+language: Python
+severity: error
+rule:
+  pattern: |
+    @staticmethod
+    def docs_is_external(target: str) -> bool:
+        """Return whether a docs link target points outside the repository."""
+        lower: str = u.norm_str(target, case="lower").lstrip("<")
+        return lower.startswith(("http://", "https://", "mailto:", "tel:", "data:"))
+message: Remove the duplicate URL classifier after rewiring its consumer.
+files:
+  - "src/flext_infra/_utilities/docs_audit.py"
+---
+id: docs-audit-http-prefix-to-secure-owner
+language: Python
+severity: error
+rule:
+  pattern: $TARGET.startswith("http")
+fix: FlextInfraUtilitiesDocs.docs_is_secure_web_url($TARGET)
+message: Parse and validate documentation URL schemes through the docs owner.
+files:
+  - "src/flext_infra/_utilities/docs_audit.py"
+---
+id: docs-fix-web-prefix-to-secure-owner
+language: Python
+severity: error
+rule:
+  pattern: $TARGET.startswith(("http://", "https://"))
+fix: FlextInfraUtilitiesDocs.docs_is_secure_web_url($TARGET)
+message: Reject HTTP and recognize HTTPS through the docs owner.
+files:
+  - "src/flext_infra/_utilities/docs_fix.py"
+---
+id: docs-fix-non-web-prefixes-to-owner
+language: Python
+severity: error
+rule:
+  pattern: not $TARGET.startswith(("mailto:", "tel:", "#"))
+fix: not (FlextInfraUtilitiesDocs.docs_is_external($TARGET) or $TARGET.startswith(c.Infra.DOCS_FRAGMENT_PREFIX))
+message: Preserve permitted external schemes and fragments through their owners.
+files:
+  - "src/flext_infra/_utilities/docs_fix.py"
+---
+id: docs-generate-preserved-link-to-owner
+language: Python
+severity: error
+rule:
+  pattern: $TARGET.startswith(("http://", "https://", "#", "mailto:"))
+fix: FlextInfraUtilitiesDocs.docs_is_external($TARGET) or $TARGET.startswith(c.Infra.DOCS_FRAGMENT_PREFIX)
+message: Preserve permitted links and fragments without accepting HTTP.
+files:
+  - "src/flext_infra/_utilities/docs_generate.py"
+---
+id: docs-render-web-prefix-to-secure-owner
+language: Python
+severity: error
+rule:
+  pattern: $TARGET.startswith(("http://", "https://"))
+fix: FlextInfraUtilitiesDocs.docs_is_secure_web_url($TARGET)
+message: Resolve absolute governance links only after canonical HTTPS validation.
+files:
+  - "src/flext_infra/_utilities/docs_render.py"

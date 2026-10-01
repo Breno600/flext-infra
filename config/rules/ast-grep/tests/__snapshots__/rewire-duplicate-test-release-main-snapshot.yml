@@ -1,0 +1,9 @@
+id: rewire-duplicate-test-release-main
+snapshots:
+  _run_release_main(workspace, "--phase", "plan"):
+    fixed: u.Tests.run_release_main(workspace, "--phase", "plan")
+    labels:
+    - source: _run_release_main(workspace, "--phase", "plan")
+      style: primary
+      start: 0
+      end: 47

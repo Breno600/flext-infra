@@ -1,0 +1,5 @@
+id: rewire-duplicate-test-version-metadata
+valid:
+  - tm.ok(u.Infra.read_project_metadata_result(root))
+invalid:
+  - self._metadata()

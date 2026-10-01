@@ -1,0 +1,36 @@
+id: rewire-logging-get-logger-to-fetch-logger
+valid:
+  - |
+    from flext_infra import u
+
+    logger = u.fetch_logger(__name__)
+  - |
+    import logging
+
+    logger = logging.getLogger(__name__)
+  - |
+    """Docstring naming logging.getLogger(__name__) as prose."""
+
+    from flext_infra import u
+
+    TABLE = (("logging.getLogger", "u.fetch_logger"),)
+    # comment naming logging.getLogger(__name__)
+  - |
+    from logging import getLogger as gl
+
+    from flext_infra import u
+
+    logger = gl(__name__)
+invalid:
+  - |
+    import logging
+
+    from flext_infra import u
+
+    logger = logging.getLogger(__name__)
+  - |
+    from logging import getLogger
+
+    from flext_infra import u
+
+    logger = getLogger(__name__)

@@ -1,0 +1,64 @@
+id: typing-dict-missing-t-import
+snapshots:
+  ? |
+    from typing import Dict
+    ALIAS: Dict[str, int] = {}
+  : labels:
+    - source: Dict[str, int]
+      style: primary
+      start: 31
+      end: 45
+    - source: from typing import Dict
+      style: secondary
+      start: 0
+      end: 23
+    - source: |
+        from typing import Dict
+        ALIAS: Dict[str, int] = {}
+      style: secondary
+      start: 0
+      end: 51
+    - source: |
+        from typing import Dict
+        ALIAS: Dict[str, int] = {}
+      style: secondary
+      start: 0
+      end: 51
+  ? |
+    from typing import Dict
+    def f(x: Dict[str, int]) -> None: ...
+  : labels:
+    - source: Dict[str, int]
+      style: primary
+      start: 33
+      end: 47
+    - source: from typing import Dict
+      style: secondary
+      start: 0
+      end: 23
+    - source: |
+        from typing import Dict
+        def f(x: Dict[str, int]) -> None: ...
+      style: secondary
+      start: 0
+      end: 62
+    - source: |
+        from typing import Dict
+        def f(x: Dict[str, int]) -> None: ...
+      style: secondary
+      start: 0
+      end: 62
+  ? |
+    import typing
+    def f(y: typing.Dict[str, int]) -> None: ...
+  : labels:
+    - source: typing.Dict[str, int]
+      style: primary
+      start: 23
+      end: 44
+    - source: |
+        import typing
+        def f(y: typing.Dict[str, int]) -> None: ...
+      style: secondary
+      start: 0
+      end: 59

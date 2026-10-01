@@ -1,0 +1,18 @@
+id: add-open-builtin-default-mode-encoding
+# `valid` MUST NOT match: an encoding is already declared, a mode argument makes
+# it a different arity, or the construct is text rather than code.
+valid:
+  - handle = open(path, encoding="utf-8")
+  - handle = open(path, "r")
+  - handle = open(path, mode="w")
+  - handle = open(path, "r", -1, "utf-8")
+  - |
+    """Docstring describing open(path) without an encoding argument."""
+  - HELP = "call open(path) with an explicit encoding"
+  - |
+    # A comment mentioning open(path) must survive untouched.
+    value = 1
+# `invalid` MUST match: a default-mode text open with no encoding.
+invalid:
+  - handle = open(path)
+  - handle = open(self._resolve(name))

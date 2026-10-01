@@ -1,0 +1,41 @@
+id: test-utilities-unambiguous-alias
+snapshots:
+  ? |
+    from flext_infra import u
+    from tests import WorktreeFixture
+
+    value = u.Tests.codegen_file_text(plan)
+  : fixed: |
+      from flext_infra import u
+      from tests import WorktreeFixture, u as test_u
+
+      value = u.Tests.codegen_file_text(plan)
+    labels:
+    - source: from tests import WorktreeFixture
+      style: primary
+      start: 26
+      end: 59
+    - source: from flext_infra import u
+      style: secondary
+      start: 0
+      end: 25
+    - source: |
+        from flext_infra import u
+        from tests import WorktreeFixture
+
+        value = u.Tests.codegen_file_text(plan)
+      style: secondary
+      start: 0
+      end: 101
+    - source: u.Tests.codegen_file_text(plan)
+      style: secondary
+      start: 69
+      end: 100
+    - source: |
+        from flext_infra import u
+        from tests import WorktreeFixture
+
+        value = u.Tests.codegen_file_text(plan)
+      style: secondary
+      start: 0
+      end: 101

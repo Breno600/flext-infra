@@ -1,0 +1,72 @@
+id: ban-serialize-as-any-flag
+snapshots:
+  dumped = adapter.dump_python(value, serialize_as_any=True):
+    labels:
+    - source: serialize_as_any=True
+      style: primary
+      start: 36
+      end: 57
+    - source: adapter.dump_python(value, serialize_as_any=True)
+      style: secondary
+      start: 9
+      end: 58
+    - source: (value, serialize_as_any=True)
+      style: secondary
+      start: 28
+      end: 58
+  payload = outer.model_dump(exclude_none=True, serialize_as_any=True):
+    labels:
+    - source: serialize_as_any=True
+      style: primary
+      start: 46
+      end: 67
+    - source: outer.model_dump(exclude_none=True, serialize_as_any=True)
+      style: secondary
+      start: 10
+      end: 68
+    - source: (exclude_none=True, serialize_as_any=True)
+      style: secondary
+      start: 26
+      end: 68
+  payload = outer.model_dump(serialize_as_any=True):
+    labels:
+    - source: serialize_as_any=True
+      style: primary
+      start: 27
+      end: 48
+    - source: outer.model_dump(serialize_as_any=True)
+      style: secondary
+      start: 10
+      end: 49
+    - source: (serialize_as_any=True)
+      style: secondary
+      start: 26
+      end: 49
+  raw = adapter.dump_json(value, serialize_as_any=True):
+    labels:
+    - source: serialize_as_any=True
+      style: primary
+      start: 31
+      end: 52
+    - source: adapter.dump_json(value, serialize_as_any=True)
+      style: secondary
+      start: 6
+      end: 53
+    - source: (value, serialize_as_any=True)
+      style: secondary
+      start: 23
+      end: 53
+  raw = outer.model_dump_json(serialize_as_any=True):
+    labels:
+    - source: serialize_as_any=True
+      style: primary
+      start: 28
+      end: 49
+    - source: outer.model_dump_json(serialize_as_any=True)
+      style: secondary
+      start: 6
+      end: 50
+    - source: (serialize_as_any=True)
+      style: secondary
+      start: 27
+      end: 50

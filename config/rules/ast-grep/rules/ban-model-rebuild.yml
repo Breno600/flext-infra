@@ -1,0 +1,23 @@
+# ``model_rebuild`` patches annotations that failed to resolve. In a strict
+# fleet every declaration namespace (config, settings, c/t/p/m/u, base,
+# services, api, cli) is importable at class creation, so a required rebuild
+# is evidence of a broken declaration: fix the owner, never call rebuild.
+id: ban-model-rebuild
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/.git/**"
+  - "**/.venv/**"
+  - "**/legado/**"
+  - "**/legacy/**"
+  - "**/node_modules/**"
+  - "**/*_pb2.py"
+  - "**/*_pb2_grpc.py"
+rule:
+  pattern: $$$TARGET.model_rebuild($$$ARGS)
+message: >-
+  `model_rebuild()` is a declaration defect: export the symbol through its
+  facade, break the import cycle at its owner, or hoist the model out of the
+  function scope. A strict fleet never calls `model_rebuild`.

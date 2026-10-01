@@ -1,0 +1,7 @@
+id: rewire-transformer-header-private-call
+valid:
+  - u.Infra.ensure_alias_import(source, module, alias)
+  - u.Infra.alias_locally_bound(source, alias)
+invalid:
+  - FlextInfraUtilitiesTransformerHeader.ensure_alias_import(source, module, alias)
+  - FlextInfraUtilitiesTransformerHeader.alias_locally_bound(source, alias)

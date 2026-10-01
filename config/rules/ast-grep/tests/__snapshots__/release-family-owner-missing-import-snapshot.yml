@@ -1,0 +1,16 @@
+id: release-family-owner-missing-import
+snapshots:
+  'policy: FlextInfraConfigModelsRelease.ReleasePolicySpec':
+    labels:
+    - source: FlextInfraConfigModelsRelease.ReleasePolicySpec
+      style: primary
+      start: 8
+      end: 55
+    - source: 'policy: FlextInfraConfigModelsRelease.ReleasePolicySpec'
+      style: secondary
+      start: 0
+      end: 55
+    - source: 'policy: FlextInfraConfigModelsRelease.ReleasePolicySpec'
+      style: secondary
+      start: 0
+      end: 55

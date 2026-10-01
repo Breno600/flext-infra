@@ -1,0 +1,26 @@
+# A rewrite that emits ``cli.*`` is only F821-safe when the public flext-cli
+# facade is bound as ``cli`` in the same module. This is the structural
+# replacement for the CLI modernizer's ``_cli_symbol`` bookkeeping: the
+# transformer tracked the binding by walking ``ast.ImportFrom`` nodes, and this
+# guard states the same precondition declaratively.
+#
+# Aliased forms (``from flext_cli import cli as c``) are excluded on purpose:
+# the emitted text is a fixed ``cli.``, so an alias would emit an unbound name.
+id: cli-imported-from-flext-cli
+language: python
+rule:
+  kind: import_from_statement
+  all:
+    - has:
+        pattern: cli
+        stopBy: end
+    - has:
+        field: module_name
+        regex: "^flext_cli$"
+    - not:
+        has:
+          kind: aliased_import
+          stopBy: end
+          has:
+            pattern: cli
+            stopBy: end

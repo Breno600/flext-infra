@@ -1,0 +1,16 @@
+id: repair-cli-streamed-process-live-assertion-owner
+valid:
+  - |
+    def test_combined_output_is_byte_exact_and_live(self) -> None:
+        result = u.Cli().run_to_file(command, output_file, live=True)
+        outcome = tm.ok(result)
+        tm.that(u.Cli.process_succeeded(outcome), eq=True)
+        tm.that(outcome.raw_return_code, eq=c.Cli.EXIT_CODE_SUCCESS)
+        tm.that(outcome.timed_out, eq=False)
+        tm.that(outcome.forwarded_signal, is_=None)
+invalid:
+  - |
+    def test_combined_output_is_byte_exact_and_live(self) -> None:
+        result = u.Cli().run_to_file(command, output_file, live=True)
+        tm.ok(result)
+        tm.that(result.value, eq=0)

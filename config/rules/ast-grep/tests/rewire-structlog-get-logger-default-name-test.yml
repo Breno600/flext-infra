@@ -1,0 +1,31 @@
+id: rewire-structlog-get-logger-default-name
+# `valid` MUST NOT match: no `u` binding (the detection-only companion owns it),
+# an explicit name (owned by the sibling rule), an unrelated receiver, or the
+# literal text in a docstring or a string constant.
+valid:
+  - |
+    import structlog
+
+    logger = structlog.get_logger()
+  - |
+    from flext_core import u
+
+    logger = structlog.get_logger("service")
+  - |
+    from flext_core import u
+
+    logger = logging.getLogger()
+  - |
+    from flext_core import u
+
+    HELP = "replace structlog.get_logger() with u.fetch_logger(__name__)"
+  - |
+    """Docstring quoting structlog.get_logger() verbatim."""
+
+    from flext_core import u
+# `invalid` MUST match: the empty structlog constructor in a module binding `u`.
+invalid:
+  - |
+    from flext_core import u
+
+    logger = structlog.get_logger()

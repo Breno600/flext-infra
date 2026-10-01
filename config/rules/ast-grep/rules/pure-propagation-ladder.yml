@@ -1,0 +1,21 @@
+id: pure-propagation-ladder
+language: python
+severity: error
+message: >-
+  Verbatim failure reconstruction loses identity through a duplicate helper
+  ladder. Rebind the original failure with from_failure.
+rule:
+  pattern: |
+    if $R.failure:
+        return $T.fail(
+            $R.error,
+            error_code=$R.error_code,
+            error_data=$R.error_data,
+            exception=$R.exception,
+        )
+constraints:
+  T:
+    regex: '^r\[.+\]$'
+fix: |
+  if $R.failure:
+      return $T.from_failure($R)

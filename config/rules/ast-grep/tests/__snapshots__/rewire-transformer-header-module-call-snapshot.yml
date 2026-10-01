@@ -1,0 +1,16 @@
+id: rewire-transformer-header-module-call
+snapshots:
+  _header.ensure_alias_import(source, module, alias):
+    fixed: u.Infra.ensure_alias_import(source, module, alias)
+    labels:
+    - source: _header.ensure_alias_import(source, module, alias)
+      style: primary
+      start: 0
+      end: 50
+  _header.has_alias_import(source, alias):
+    fixed: u.Infra.has_alias_import(source, alias)
+    labels:
+    - source: _header.has_alias_import(source, alias)
+      style: primary
+      start: 0
+      end: 39

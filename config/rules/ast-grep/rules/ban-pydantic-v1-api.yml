@@ -1,0 +1,39 @@
+# Pydantic v1 compatibility is rejected at its semantically provable import
+# boundary. Generic method names such as ``dict`` and ``json`` are deliberately
+# absent: AST syntax alone cannot prove that their receiver is a Pydantic model.
+id: ban-pydantic-v1-api
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/.git/**"
+  - "**/.venv/**"
+  - "**/legado/**"
+  - "**/legacy/**"
+  - "**/node_modules/**"
+  - "**/*_pb2.py"
+  - "**/*_pb2_grpc.py"
+rule:
+  any:
+    - pattern: from pydantic.v1 import $$$NAMES
+    - pattern: import pydantic.v1 as $$$ALIAS
+    - all:
+        - pattern: from pydantic import $$$NAMES
+        - has:
+            stopBy: end
+            any:
+              - all:
+                  - kind: identifier
+                  - not:
+                      inside:
+                        kind: aliased_import
+                  - regex: "^(?:root_validator|validator)$"
+              - kind: aliased_import
+                any:
+                  - pattern: validator as $ALIAS
+                  - pattern: root_validator as $ALIAS
+message: >-
+  Pydantic v1 compatibility imports are forbidden. Use the package's public
+  `m`/`u` Pydantic v2 facades. This remains detection-only because validator
+  signatures and modes require semantic migration rather than token renaming.

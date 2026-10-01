@@ -1,0 +1,81 @@
+# Recomposition of the recomposable part of the Pydantic modernizer onto
+# `make mod`.
+#
+# The retired transformer selected with the raw `ast` module and then produced
+# every replacement with `str.replace` on the node's own source slice, which is
+# why its rewrites were unsound in two independent ways:
+#
+#   1. Receiver blindness. It renamed `.dict()`, `.json()`, `.copy()` and
+#      `.schema()` on ANY receiver, so `response.json()` (httpx), `os.environ
+#      .copy()` and every non-Pydantic `.dict()` became a call to a method that
+#      does not exist. This package already ruled on that ambiguity in
+#      ban-pydantic-v1-api ("AST syntax alone cannot prove that their receiver
+#      is a Pydantic model"), and those four names are therefore absent here too.
+#   2. First-occurrence text surgery. The decorator rewrites ran
+#      `text.replace(")", ', mode="after")', 1)`, which targets the FIRST `)` in
+#      the decorator's source -- a nested call in an argument, not the closing
+#      parenthesis, whenever one is present.
+#
+# The names below are Pydantic-v1-exclusive, so a match is real evidence rather
+# than a name collision. They are still reported without a `fix:`: the v2
+# replacements exist only on a Pydantic v2 model, and the receiver's type is not
+# provable from syntax, so an unproven rewrite would move the failure from a
+# visible enforcement finding to an AttributeError at runtime -- precisely the
+# class of silent wrongness this migration exists to remove.
+#
+# Not recomposed here, and deliberately so:
+#   - `class Config:` -> `model_config = ConfigDict(...)` is reported by the
+#     sibling document below, but not rewritten: turning a class body into
+#     keyword arguments and adding the `ConfigDict` import is a semantic
+#     transformation, not a token substitution.
+#   - `@validator` / `@root_validator` -> `@field_validator` / `@model_validator`
+#     is not a rename: the v2 decorators require `@classmethod` and a different
+#     callback signature. ban-pydantic-v1-api already reports the import that
+#     introduces them, for exactly this reason.
+#   - `__fields__` / `__field_defaults__` have the same unprovable receiver as
+#     `.dict()`, and the transformer's `__field_defaults__` -> `model_config`
+#     mapping was semantically wrong regardless: v1 field defaults are not model
+#     configuration.
+id: ban-pydantic-v1-model-methods
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+rule:
+  any:
+    - pattern: $RECEIVER.parse_obj($$$ARGS)
+    - pattern: $RECEIVER.parse_raw($$$ARGS)
+    - pattern: $RECEIVER.from_orm($$$ARGS)
+    - pattern: $RECEIVER.schema_json($$$ARGS)
+message: >-
+  Pydantic v1 model API is retired: parse_obj -> model_validate, parse_raw ->
+  model_validate_json, from_orm -> model_validate, schema_json ->
+  model_json_schema. Detection only: the receiver's type is not provable from
+  syntax, and the v2 method exists only on a v2 model.
+---
+id: ban-pydantic-v1-config-class
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+rule:
+  kind: class_definition
+  has:
+    field: name
+    regex: "^Config$"
+  inside:
+    stopBy: end
+    kind: class_definition
+    has:
+      field: superclasses
+      has:
+        stopBy: end
+        kind: identifier
+        regex: "^(?:BaseModel|BaseSettings|RootModel)$"
+message: >-
+  Pydantic v1 `class Config:` is retired; declare `model_config =
+  ConfigDict(...)` instead. Detection only: converting a class body into keyword
+  arguments and adding the ConfigDict import is a semantic transformation, not a
+  token substitution.

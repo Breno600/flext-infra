@@ -1,0 +1,41 @@
+id: rewire-test-monkeypatch-working-directory
+snapshots:
+  ? |
+    import pytest
+
+    @pytest.fixture(autouse=True)
+    def isolate_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Run every test from an isolated directory."""
+        monkeypatch.chdir(tmp_path)
+  : fixed: |+
+      import pytest
+
+      @pytest.fixture(autouse=True)
+      def isolate_cwd(tmp_path: Path) -> Generator[None]:
+          """Run every test from an isolated directory."""
+          with u.Tests.Matchers.scope(cwd=tmp_path):
+              yield
+
+    labels:
+    - source: |-
+        @pytest.fixture(autouse=True)
+        def isolate_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+            """Run every test from an isolated directory."""
+            monkeypatch.chdir(tmp_path)
+      style: primary
+      start: 15
+      end: 203
+    - source: import pytest
+      style: secondary
+      start: 0
+      end: 13
+    - source: |
+        import pytest
+
+        @pytest.fixture(autouse=True)
+        def isolate_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+            """Run every test from an isolated directory."""
+            monkeypatch.chdir(tmp_path)
+      style: secondary
+      start: 0
+      end: 204

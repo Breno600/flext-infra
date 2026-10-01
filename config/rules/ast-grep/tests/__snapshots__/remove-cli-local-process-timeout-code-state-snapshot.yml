@@ -1,0 +1,16 @@
+id: remove-cli-local-process-timeout-code-state
+snapshots:
+  timeout_exit_code = 124:
+    fixed: ''
+    labels:
+    - source: timeout_exit_code = 124
+      style: primary
+      start: 0
+      end: 23
+  timeout_exit_code = deadline.timeout_exit_code:
+    fixed: ''
+    labels:
+    - source: timeout_exit_code = deadline.timeout_exit_code
+      style: primary
+      start: 0
+      end: 46

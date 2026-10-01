@@ -1,0 +1,30 @@
+id: remove-cli-local-process-timeout-code-argument
+language: Python
+severity: error
+rule:
+  pattern:
+    context: |
+      return cls._captured_process_result(
+          cmd,
+          return_code,
+          received_signals,
+          (*failures, *cleanup_errors),
+          stdout_output,
+          stderr_output,
+          max(0.0, time.monotonic() - started),
+          timed_out=timed_out,
+          timeout_seconds=timeout,
+          timeout_exit_code=timeout_exit_code,
+      )
+    selector: return_statement
+fix: |
+  return cls._captured_process_result(
+      return_code,
+      received_signals,
+      (*failures, *cleanup_errors),
+      stdout_output,
+      stderr_output,
+      max(0.0, time.monotonic() - started),
+      timed_out=timed_out,
+  )
+message: Rewire the complete lifecycle return to the causal captured outcome owner.

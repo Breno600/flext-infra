@@ -1,0 +1,15 @@
+id: ban-test-suite-module-all
+# `valid` MUST NOT match: names that only contain __all__, a nested binding,
+# or the text inside a string.
+valid:
+  - __all_names__ = ("a",)
+  - |
+    def names() -> tuple[str, ...]:
+        __all__ = ("local",)
+        return __all__
+  - DOC = "__all__ = ('never',)"
+# `invalid` MUST match: the module-level declaration in every assignment shape.
+invalid:
+  - __all__ = ["TestsFlextDemo"]
+  - '__all__: list[str] = ["TestsFlextDemo"]'
+  - __all__ += ("TestsFlextDemoExtra",)

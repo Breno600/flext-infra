@@ -1,0 +1,7 @@
+id: test-worktree-fixture-public-import
+valid:
+  - |
+    from tests import WorktreeFixture
+invalid:
+  - |
+    from tests.unit.workspace.worktree_fixture import WorktreeFixture

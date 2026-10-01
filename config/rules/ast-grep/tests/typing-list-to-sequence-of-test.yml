@@ -1,0 +1,59 @@
+id: typing-list-to-sequence-of
+# `valid` MUST NOT match: an unbound or aliased `List`, a module with no `t`
+# binding (owned by the detection-only companion), the already canonical form,
+# or the literal text inside a docstring, a string constant, a tuple literal or
+# a comment -- the exact data the retired regex corrupted.
+valid:
+  - |
+    from flext_core import t
+    from typing import List as L
+    ALIAS = L[str]
+  - |
+    from flext_core import t
+    from project.collections import List
+    ALIAS = List[str]
+  - |
+    from typing import List
+    ALIAS = List[str]
+  - |
+    from flext_core import t
+    ALIAS = t.SequenceOf[str]
+  - |
+    from flext_core import t
+    from typing import List
+
+    REWRITE_TABLE = (("Dict[", "t.MappingKV"), ("List[", "t.SequenceOf"))
+  - |
+    from flext_core import t
+    from typing import List
+
+    HELP = "annotate with List[str] rather than list[str]"
+  - |
+    """Module docstring describing a regex that matches List[ tokens."""
+
+    from flext_core import t
+    from typing import List
+  - |
+    from flext_core import t
+    from typing import List
+
+    # A comment mentioning List[str] and typing.List[int] survives untouched.
+    value = 1
+# `invalid` MUST match: a real generic in a module that binds both `List` and
+# `t`, plus the dotted form which needs no `List` binding.
+invalid:
+  - |
+    from flext_core import t
+    from typing import List
+
+    def f(x: List[str]) -> None: ...
+  - |
+    from flext_core import t
+    from typing import List
+
+    ALIAS = List[str]
+  - |
+    from flext_core import t
+    import typing
+
+    ALIAS = typing.List[str]

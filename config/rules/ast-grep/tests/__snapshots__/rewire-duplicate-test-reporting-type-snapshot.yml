@@ -1,0 +1,9 @@
+id: rewire-duplicate-test-reporting-type
+snapshots:
+  'def test_report(infra_reporting: type[u.Cli]) -> None: pass':
+    fixed: 'def test_report(infra_reporting: u.Cli) -> None: pass'
+    labels:
+    - source: type[u.Cli]
+      style: primary
+      start: 33
+      end: 44

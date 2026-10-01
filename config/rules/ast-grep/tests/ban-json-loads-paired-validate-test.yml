@@ -1,0 +1,11 @@
+id: ban-json-loads-paired-validate
+# `valid` MUST NOT match: the single-pass JSON entry point, adapters, and
+# independent json.loads usage on non-validation paths.
+valid:
+  - model = Payload.model_validate_json(raw)
+  - model = Payload.model_validate(payload)
+  - data = json.loads(raw)
+  - model = adapter.validate_json(raw)
+invalid:
+  - model = Payload.model_validate(json.loads(raw))
+  - model = self._sink.model_validate(json.loads(self._read(path)))

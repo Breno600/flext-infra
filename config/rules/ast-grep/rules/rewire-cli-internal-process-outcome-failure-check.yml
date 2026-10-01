@@ -1,0 +1,12 @@
+id: rewire-cli-internal-process-outcome-failure-check
+language: Python
+severity: error
+files:
+  - "flext-cli/src/flext_cli/_utilities/_runtime_commands.py"
+rule:
+  pattern: $OUTCOME.raw_return_code != $SUCCESS
+constraints:
+  SUCCESS:
+    regex: "^(?:0|c\\.Cli\\.EXIT_CODE_SUCCESS)$"
+fix: not cls.process_succeeded($OUTCOME)
+message: Use the causal predicate inside runtime composition.

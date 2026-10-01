@@ -1,0 +1,8 @@
+id: rewire-cli-copied-command-outcome
+valid:
+  - m.Cli.CommandOutput(stdout=source.stdout, stderr=source.stderr, outcome=source.outcome)
+  - m.Cli.CommandBytesOutput(stdout=source.stdout, stderr=source.stderr, outcome=source.outcome)
+invalid:
+  - m.Cli.CommandOutput(stdout=source.stdout, stderr=source.stderr, exit_code=source.exit_code)
+  - m.Cli.CommandOutput(stdout=source.stdout, stderr=source.stderr, exit_code=source.outcome.raw_return_code)
+  - m.Cli.CommandBytesOutput(stdout=source.stdout, stderr=source.stderr, exit_code=source.exit_code)

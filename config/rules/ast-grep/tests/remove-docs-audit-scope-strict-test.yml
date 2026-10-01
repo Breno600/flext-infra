@@ -1,0 +1,9 @@
+id: remove-docs-audit-scope-strict
+valid:
+  - m.Infra.AuditScopeParams(check="all")
+  - m.Infra.AuditScopeParams(check="docstrings", docstring_min=90.0)
+  - OtherParams(check="all", strict=False)
+invalid:
+  - m.Infra.AuditScopeParams(check="links", strict=True)
+  - m.Infra.AuditScopeParams(check="all", strict=False)
+  - m.Infra.AuditScopeParams(check=check, strict=strict)

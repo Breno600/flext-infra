@@ -1,0 +1,25 @@
+id: rewire-test-monkeypatch-environment
+valid:
+  - |
+    from tests import u
+
+    def test_settings_environment(self) -> None:
+        with u.Tests.env_vars_context({
+            expiry_key: expiry_minutes,
+            algorithm_key: algorithm,
+        }):
+            settings = Settings()
+            tm.that(settings.expiry_minutes, eq=expiry_minutes)
+invalid:
+  - |
+    from tests import u
+
+    def test_settings_environment(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        expiry_minutes = c.DEFAULT_EXPIRY_MINUTES + 1
+        algorithm = c.Algorithms.RS256.value
+        monkeypatch.setenv(expiry_key, expiry_minutes)
+        monkeypatch.setenv(algorithm_key, algorithm)
+        settings = Settings()
+        tm.that(settings.expiry_minutes, eq=expiry_minutes)

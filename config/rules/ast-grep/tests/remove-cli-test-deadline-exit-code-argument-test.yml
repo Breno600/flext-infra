@@ -1,0 +1,5 @@
+id: remove-cli-test-deadline-exit-code-argument
+valid:
+  - _deadline(seconds=2.0, grace=0.5)
+invalid:
+  - _deadline(seconds=2.0, grace=0.5, exit_code=93)

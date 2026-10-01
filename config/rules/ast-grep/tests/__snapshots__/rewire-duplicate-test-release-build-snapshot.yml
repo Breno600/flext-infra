@@ -1,0 +1,9 @@
+id: rewire-duplicate-test-release-build
+snapshots:
+  _run_release_build(workspace, project_name, dry_run=True):
+    fixed: u.Tests.run_release_build(workspace, project_name, dry_run=True)
+    labels:
+    - source: _run_release_build(workspace, project_name, dry_run=True)
+      style: primary
+      start: 0
+      end: 57

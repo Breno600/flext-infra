@@ -1,0 +1,60 @@
+id: rewrite-bare-except-to-exception
+snapshots:
+  ? |
+    try:
+        risky()
+    except:
+        logger.warning("boom")
+        raise
+  : fixed: |
+      try:
+          risky()
+      except Exception:
+          logger.warning("boom")
+          raise
+    labels:
+    - source: |-
+        except:
+            logger.warning("boom")
+            raise
+      style: primary
+      start: 17
+      end: 61
+  ? |
+    try:
+        risky()
+    except:
+        pass
+  : fixed: |
+      try:
+          risky()
+      except Exception:
+          pass
+    labels:
+    - source: |-
+        except:
+            pass
+      style: primary
+      start: 17
+      end: 33
+  ? |
+    try:
+        risky()
+    except:
+        pass
+    finally:
+        done()
+  : fixed: |
+      try:
+          risky()
+      except Exception:
+          pass
+      finally:
+          done()
+    labels:
+    - source: |-
+        except:
+            pass
+      style: primary
+      start: 17
+      end: 33

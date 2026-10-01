@@ -1,0 +1,19 @@
+id: add-open-builtin-text-mode-encoding
+# `valid` MUST NOT match: a binary mode, a mode the syntax cannot prove, an
+# encoding already present (higher arity), or the literal text in a string.
+valid:
+  - handle = open(path, "rb")
+  - handle = open(path, mode="rb")
+  - handle = open(path, "wb")
+  - handle = open(path, chosen_mode)
+  - handle = open(path, "r", encoding="latin-1")
+  - handle = open(path)
+  - HELP = 'open(path, "r") needs an encoding'
+  - |
+    """Docstring describing open(path, "r") without an encoding."""
+# `invalid` MUST match: a provably text mode with no encoding.
+invalid:
+  - handle = open(path, "r")
+  - handle = open(path, "w")
+  - handle = open(path, mode="a")
+  - handle = open(path, "r+")

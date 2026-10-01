@@ -1,0 +1,9 @@
+id: rewire-cli-local-process-timing-result-value
+snapshots:
+  return (absolute_deadline, grace_seconds, timeout_exit_code):
+    fixed: return (absolute_deadline, grace_seconds)
+    labels:
+    - source: (absolute_deadline, grace_seconds, timeout_exit_code)
+      style: primary
+      start: 7
+      end: 60

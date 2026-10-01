@@ -1,0 +1,7 @@
+id: remove-docs-auditor-strict-mode
+valid:
+  - FlextInfraDocAuditor(repository_root=root)
+  - OtherService(repository_root=root, strict_mode=True)
+invalid:
+  - FlextInfraDocAuditor(repository_root=root, strict_mode=True)
+  - FlextInfraDocAuditor(repository_root=root, strict_mode=False)

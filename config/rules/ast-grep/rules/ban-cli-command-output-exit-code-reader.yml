@@ -1,0 +1,26 @@
+# A command result is read through its typed ProcessOutcome, never through the
+# exit_code projection, which drops timeout and forwarded-signal causality.
+#
+# Scope is structural: the receiver is a value bound in the same function from
+# a flext-cli runner (`<facade>.Cli.run*(...)`), unwrapped or read through
+# `.value`. Records that own their own `exit_code` field (release records,
+# framework exceptions, connector results) are never bound that way, so they
+# are unreachable without a file list.
+id: ban-cli-command-output-exit-code-reader
+language: Python
+severity: error
+rule:
+  all:
+    - pattern: $OUTPUT.exit_code
+    - inside:
+        kind: function_definition
+        stopBy: end
+        has:
+          stopBy: end
+          any:
+            - pattern: $OUTPUT = $FACADE.Cli.$RUN($$$ARGS).unwrap()
+            - pattern: $OUTPUT = $FACADE.Cli.$RUN($$$ARGS).value
+constraints:
+  RUN:
+    regex: "^run"
+message: Command output readers must consume the typed ProcessOutcome, not exit_code.

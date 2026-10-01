@@ -1,0 +1,31 @@
+id: add-cli-process-outcome-success-helper
+snapshots:
+  ? |
+    class FlextCliUtilitiesRuntimeProcessOutcomeMixin:
+        """Map one completed lifecycle to its public result contract."""
+
+        marker = True
+  : fixed: |+
+      class FlextCliUtilitiesRuntimeProcessOutcomeMixin:
+          """Map one completed lifecycle to its public result contract."""
+
+          @staticmethod
+          def process_succeeded(outcome: p.Cli.ProcessOutcome) -> bool:
+              """Return whether all causal completion fields describe success."""
+              return (
+                  outcome.raw_return_code == c.Cli.EXIT_CODE_SUCCESS
+                  and not outcome.timed_out
+                  and outcome.forwarded_signal is None
+              )
+
+          marker = True
+
+    labels:
+    - source: |-
+        class FlextCliUtilitiesRuntimeProcessOutcomeMixin:
+            """Map one completed lifecycle to its public result contract."""
+
+            marker = True
+      style: primary
+      start: 0
+      end: 138

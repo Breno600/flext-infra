@@ -1,0 +1,16 @@
+id: ban-cli-command-output-exit-code-constructor
+valid:
+  - |
+    m.Cli.CommandOutput(
+        stdout=stdout,
+        stderr=stderr,
+        outcome=m.Cli.ProcessOutcome(
+            raw_return_code=return_code,
+            timed_out=timed_out,
+            forwarded_signal=forwarded_signal,
+        ),
+    )
+invalid:
+  - m.Cli.CommandOutput(stdout="", stderr="failed", exit_code=1)
+  - m.Cli.CommandBytesOutput(stdout=b"", stderr=b"failed", exit_code=return_code)
+  - m.Cli.CommandOutput(stdout=source.stdout, stderr=source.stderr, exit_code=source.exit_code)

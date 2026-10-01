@@ -1,0 +1,99 @@
+id: remove-redundant-inner-namespace
+valid:
+  # Two bases: removing the class would drop `Mixin` from the MRO.
+  - |
+    class Gamma(Base):
+        class Cli(Gamma, Mixin):
+            pass
+
+        class Real(Base):
+            VALUE = 1
+  # Only child of its class body: removal would leave an empty body.
+  - |
+    class Eps(Base):
+        class Cli(Eps):
+            pass
+  # Every sibling is itself redundant: removing all of them empties the body.
+  - |
+    class Delta(Base):
+        class A(Delta):
+            pass
+
+        class B(Delta):
+            pass
+  # The inner class declares something, so it is not a bare namespace.
+  - |
+    class HasMembers(Base):
+        class Cli(HasMembers):
+            VALUE = 2
+
+        class Real(Base):
+            VALUE = 1
+  # The base is not the enclosing class.
+  - |
+    class Keeps(Base):
+        class Cli(Other):
+            pass
+
+        class Real(Base):
+            VALUE = 1
+  # Top-level class: there is no enclosing namespace to inherit from.
+  - |
+    class Outer(Base):
+        pass
+  # The construct appears only inside a string literal.
+  - |
+    CODE_SAMPLE = """
+    class Outer(Base):
+        class Cli(Outer):
+            pass
+
+        def run(self) -> int:
+            return 0
+    """
+  # The construct appears only inside a docstring.
+  - |
+    class Doc(Base):
+        """Docstring showing the banned shape.
+
+        class Outer(Base):
+            class Cli(Outer):
+                pass
+
+            def run(self) -> int:
+                return 0
+        """
+
+        VALUE = 1
+  # The construct appears only inside comments.
+  - |
+    class Real(Base):
+        # class Cli(Real):
+        #     pass
+        def run(self) -> int:
+            return 0
+invalid:
+  # `pass` body, surviving sibling method.
+  - |
+    class Alpha(Base):
+        class Cli(Alpha):
+            pass
+
+        def run(self) -> int:
+            return 0
+  # Ellipsis body, surviving sibling class.
+  - |
+    class Beta(Base):
+        class Cli(Beta):
+            ...
+
+        class Real(Base):
+            VALUE = 1
+  # Docstring-only body, surviving sibling class.
+  - |
+    class Zeta(Base):
+        class Cli(Zeta):
+            """Namespace."""
+
+        class Real(Base):
+            VALUE = 1

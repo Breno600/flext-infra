@@ -1,0 +1,29 @@
+id: release-materialize-tar-tree
+snapshots:
+  ? |
+    archive.extract(member, path=stage_path, filter="data")
+  : fixed: |
+      u.Infra.materialize_tar_tree(archive, stage_path)
+    labels:
+    - source: archive.extract(member, path=stage_path, filter="data")
+      style: primary
+      start: 0
+      end: 55
+  ? |
+    archive.extractall(path=stage_path, filter="data")
+  : fixed: |
+      u.Infra.materialize_tar_tree(archive, path=stage_path)
+    labels:
+    - source: archive.extractall(path=stage_path, filter="data")
+      style: primary
+      start: 0
+      end: 50
+  ? |
+    archive.extractall(stage_path, filter="data")
+  : fixed: |
+      u.Infra.materialize_tar_tree(archive, stage_path)
+    labels:
+    - source: archive.extractall(stage_path, filter="data")
+      style: primary
+      start: 0
+      end: 45

@@ -1,0 +1,16 @@
+id: add-path-open-default-mode-encoding
+snapshots:
+  handle = Path(path).open():
+    fixed: handle = Path(path).open(encoding="utf-8")
+    labels:
+    - source: Path(path).open()
+      style: primary
+      start: 9
+      end: 26
+  handle = pathlib.Path(root, name).open():
+    fixed: handle = pathlib.Path(root, name).open(encoding="utf-8")
+    labels:
+    - source: pathlib.Path(root, name).open()
+      style: primary
+      start: 9
+      end: 40

@@ -1,0 +1,23 @@
+id: remove-docs-audit-scope-strict
+snapshots:
+  m.Infra.AuditScopeParams(check="all", strict=False):
+    fixed: m.Infra.AuditScopeParams(check="all")
+    labels:
+    - source: m.Infra.AuditScopeParams(check="all", strict=False)
+      style: primary
+      start: 0
+      end: 51
+  m.Infra.AuditScopeParams(check="links", strict=True):
+    fixed: m.Infra.AuditScopeParams(check="links")
+    labels:
+    - source: m.Infra.AuditScopeParams(check="links", strict=True)
+      style: primary
+      start: 0
+      end: 52
+  m.Infra.AuditScopeParams(check=check, strict=strict):
+    fixed: m.Infra.AuditScopeParams(check=check)
+    labels:
+    - source: m.Infra.AuditScopeParams(check=check, strict=strict)
+      style: primary
+      start: 0
+      end: 52

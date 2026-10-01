@@ -1,0 +1,9 @@
+id: rewire-cli-local-process-timing-result-value
+language: Python
+severity: error
+files:
+  - "src/flext_cli/_utilities/_runtime_process_timing.py"
+rule:
+  pattern: (absolute_deadline, grace_seconds, timeout_exit_code)
+fix: (absolute_deadline, grace_seconds)
+message: Return only timing facts from deadline resolution.

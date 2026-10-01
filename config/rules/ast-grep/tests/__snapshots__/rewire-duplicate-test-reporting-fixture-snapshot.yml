@@ -1,0 +1,9 @@
+id: rewire-duplicate-test-reporting-fixture
+snapshots:
+  service.resolve_report_dir(root, "project", "check"):
+    fixed: infra_reporting.resolve_report_dir(root, "project", "check")
+    labels:
+    - source: service
+      style: primary
+      start: 0
+      end: 7

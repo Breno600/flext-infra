@@ -1,0 +1,77 @@
+# Detection-only companion of rewire-logging-get-logger-to-fetch-logger.
+#
+# Flags stdlib logger construction in a module that does not bind `u`. The
+# correct call is `u.fetch_logger(...)`, but a blind textual fix would emit an
+# undefined name (Ruff F821 / Pyrefly missing-name), and ast-grep cannot
+# conditionally insert an import in a single textual `fix` — the same constraint
+# that keeps require-future-annotations detection-only. Bind `u` first; the
+# auto-fixing rule then rewrites the call.
+id: rewire-logging-get-logger-missing-u-import
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+rule:
+  all:
+    - any:
+        - pattern: logging.getLogger($$$ARGS)
+        - all:
+            - pattern: getLogger($$$ARGS)
+            - inside:
+                kind: module
+                stopBy: end
+                has:
+                  stopBy: end
+                  matches: get-logger-imported-from-logging
+    - inside:
+        kind: module
+        stopBy: end
+        not:
+          has:
+            stopBy: end
+            matches: u-imported-from-flext
+message: >-
+  Stdlib logger construction must become u.fetch_logger(...), but this module
+  does not bind the utilities facade `u`. Add the facade import first; no
+  auto-fix here avoids emitting an undefined name.
+---
+# Recomposition of the logging modernizer's rewrite contract onto `make mod`.
+#
+# The retired transformer selected `logging.getLogger` with `ast` and then
+# produced the replacement text with `str.replace` / `re.sub` on the node's own
+# source slice. This rule states the same contract structurally: the AST node is
+# the unit of both selection and replacement, so an occurrence of the literal
+# text inside a docstring, a string constant, or a comment is unreachable.
+#
+# Emitting `u.fetch_logger` is only safe when `u` is bound from a public FLEXT
+# package in the same module; the missing-import case is the detection-only
+# companion rule rewire-logging-get-logger-missing-u-import.
+id: rewire-logging-get-logger-to-fetch-logger
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+rule:
+  all:
+    - any:
+        - pattern: logging.getLogger($$$ARGS)
+        - all:
+            - pattern: getLogger($$$ARGS)
+            - inside:
+                kind: module
+                stopBy: end
+                has:
+                  stopBy: end
+                  matches: get-logger-imported-from-logging
+    - inside:
+        kind: module
+        stopBy: end
+        has:
+          stopBy: end
+          matches: u-imported-from-flext
+fix: u.fetch_logger($$$ARGS)
+message: >-
+  Stdlib logger construction must route through the FLEXT utilities facade
+  (u.fetch_logger). The now-unused `logging` import is removed by Ruff F401.

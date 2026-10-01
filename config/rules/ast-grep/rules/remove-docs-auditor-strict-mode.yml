@@ -1,0 +1,9 @@
+id: remove-docs-auditor-strict-mode
+language: Python
+severity: error
+files:
+  - "tests/unit/docs/*.py"
+rule:
+  pattern: FlextInfraDocAuditor(repository_root=$ROOT, strict_mode=$STRICT)
+fix: FlextInfraDocAuditor(repository_root=$ROOT)
+message: Documentation audit failure is unconditional, not an optional service mode.

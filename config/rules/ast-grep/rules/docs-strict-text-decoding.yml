@@ -1,0 +1,9 @@
+id: docs-strict-text-decoding
+language: Python
+severity: error
+rule:
+  pattern: $PATH.read_text(encoding=$ENCODING, errors=c.Infra.IGNORE)
+fix: $PATH.read_text(encoding=$ENCODING)
+message: Documentation decoding errors must escape instead of dropping input bytes.
+files:
+  - "src/flext_infra/_utilities/_docs_audit_detectors.py"

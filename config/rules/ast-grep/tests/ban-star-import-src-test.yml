@@ -1,0 +1,9 @@
+id: ban-star-import-src
+valid:
+  - from flext_core import c, m, p, t, u
+  - exports = "from flext_core import *"
+  - |
+    __all__ = ("PublicFacade",)
+invalid:
+  - from flext_core import *
+  - from .services import *

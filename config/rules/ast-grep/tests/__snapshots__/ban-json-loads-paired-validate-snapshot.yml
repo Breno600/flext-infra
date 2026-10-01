@@ -1,0 +1,14 @@
+id: ban-json-loads-paired-validate
+snapshots:
+  model = Payload.model_validate(json.loads(raw)):
+    labels:
+    - source: Payload.model_validate(json.loads(raw))
+      style: primary
+      start: 8
+      end: 47
+  model = self._sink.model_validate(json.loads(self._read(path))):
+    labels:
+    - source: self._sink.model_validate(json.loads(self._read(path)))
+      style: primary
+      start: 8
+      end: 63
