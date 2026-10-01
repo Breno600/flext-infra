@@ -6,15 +6,15 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, m, u
+from flext_infra import c, m, t, u
 
-from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles as files
 from ._mise_artifacts_derivation import FlextInfraMiseArtifactsDerivation
+from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles as files
 from .mise_artifacts import FlextInfraCodegenMiseArtifacts
 from .mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
 
 if TYPE_CHECKING:
-    from flext_infra import p, t
+    from flext_infra import p
 
 
 class FlextInfraMiseColdStart:
@@ -48,9 +48,7 @@ class FlextInfraMiseColdStart:
         ):
             return result_type.fail("packaged Mise recovery triple is incomplete")
         plans: list[m.Infra.CodegenFilePlan] = []
-        for source, (name, mode) in zip(
-            sources, c.Infra.ARTIFACT_SPECS, strict=True
-        ):
+        for source, (name, mode) in zip(sources, c.Infra.ARTIFACT_SPECS, strict=True):
             destination = root / name
             before = u.Cli.atomic_read_binary_file_state(destination, required=False)
             if before.failure:

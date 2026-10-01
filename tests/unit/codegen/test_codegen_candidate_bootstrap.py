@@ -251,9 +251,7 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         )
         tm.that(repeated, eq=first)
 
-    def test_mise_triple_fails_before_partial_publication(
-        self, tmp_path: Path
-    ) -> None:
+    def test_mise_triple_fails_before_partial_publication(self, tmp_path: Path) -> None:
         """An invalid destination prevents any member of the triple from writing."""
         source, _ = tests_u.Tests.render_make_environment(
             tmp_path / "source", c.Infra.MakeProfile.STANDALONE
