@@ -359,7 +359,11 @@ Infra:
       # Gates whose mutating side `make fmt` drives (formatters). Their
       # read-only side runs in `make check`; `make fix` never repeats them
       # (single-pass verb law: one operation per tool per verb).
-      fmt_gates: [markdown-format]
+      # `format` (ruff) is a mutating gate owned by `make fmt` per the gate
+      # registry contract (flext-38p39): check never mutates, fix never
+      # formats — without it the ruff-format surface has no verb home and
+      # drift survives a green check until `make mod` validates.
+      fmt_gates: [format, markdown-format]
       check_gate_suspensions: []
       # One filename and the root-relative runner paths; the runner places the
       # database in platformdirs' external per-worktree cache.

@@ -63,6 +63,8 @@ class TestsFlextInfraCodegenLazyInitService:
         u.Tests.declare_workspace_projects(
             tmp_path, ("flext-test-selected", "flext-test-unrelated")
         )
+        # Each Git checkout owns its own Rope index; the sibling repository
+        # must remain untouched by publication of the selected checkout.
         u.Tests.write_lazy_init_namespace_module(
             selected_root / "models.py",
             class_name="FlextTestsSelectedModels",

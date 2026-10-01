@@ -39,13 +39,6 @@ class TestsFlextInfraLazyInitWorkspaceElection:
         child_repo, child = u.Tests.create_lazy_init_workspace(
             workspace, project_name="flext-ws-child", package_name="flext_ws_child"
         )
-        workspace.joinpath(c.Infra.GITMODULES).write_text(
-            "".join(
-                f'[submodule "{name}"]\n\tpath = {name}\n'
-                for name in ("flext-ws-owner", "flext-ws-middle", "flext-ws-child")
-            ),
-            encoding=c.Infra.ENCODING_DEFAULT,
-        )
         u.Tests.write_lazy_init_namespace_module(
             owner / c.Infra.CONSTANTS_PY, class_name="FlextWsOwnerConstants", alias="c"
         )

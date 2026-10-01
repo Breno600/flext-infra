@@ -13,7 +13,7 @@ pytestmark = pytest.mark.slow
 
 
 class TestsFlextInfraCodegenMakeAuthentication:
-    """Prove credentials reach managed tools and missing authentication fails."""
+    """Prove explicit credentials reach tools and local operations need none."""
 
     @pytest.mark.parametrize("credential_source", ["GH_TOKEN", "GITHUB_TOKEN"])
     def test_make_exports_explicit_credential_to_real_mise(
@@ -67,10 +67,10 @@ class TestsFlextInfraCodegenMakeAuthentication:
         tm.that(process.stdout + process.stderr, lacks=selected)
 
     @pytest.mark.parametrize("verb", ["setup", "upg", "status", "help", "clean"])
-    def test_make_rejects_missing_environment_credential_at_network_boundary(
+    def test_make_defers_missing_credential_to_the_network_operation(
         self, tmp_path: Path, verb: str
     ) -> None:
-        """Network bootstrap fails without env credentials; local verbs still run."""
+        """Missing credentials never stop bootstrap before the selected tool runs."""
         project_root, _ = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
@@ -92,17 +92,18 @@ class TestsFlextInfraCodegenMakeAuthentication:
             )
         )
         if verb in {"setup", "upg"}:
-            tm.that(process.outcome.raw_return_code, ne=0)
+            tm.that(process.stdout + process.stderr, lacks="GitHub credential is absent")
             tm.that(
-                process.stderr, has="GitHub credential is absent for network bootstrap"
+                process.stdout + process.stderr,
+                has="mise setup receipt=",
             )
-            tm.that(process.stderr, lacks="missing or empty")
-            tm.that(process.stderr, lacks="mise.version")
         else:
             tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
-        tm.that(
-            u.Infra.runtime_environment_dir(project_root).exists(), eq=verb == "status"
-        )
+        if verb not in {"setup", "upg"}:
+            tm.that(
+                u.Infra.runtime_environment_dir(project_root).exists(),
+                eq=verb == "status",
+            )
 
     @pytest.mark.remote
     def test_invalid_explicit_token_fails_at_the_native_mise_backend(
