@@ -207,7 +207,7 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(workflow, has="CI=Y make gen")
         tm.that(
             workflow,
-            has='status="$(git status --porcelain --untracked-files=all --ignore-submodules=none)"',
+            has='candidate_status="$(git status --porcelain --untracked-files=all --ignore-submodules=none)"\n          test -z "$candidate_status"',
         )
         tm.that(workflow, lacks="|| true")
         tm.that(workflow, lacks="run: CI=Y make conform")

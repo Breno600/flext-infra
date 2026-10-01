@@ -152,6 +152,10 @@ class TestsFlextInfraPyprojectConformTopologySources:
             },
         )
         tm.that(
+            tu.Tests.toml_strings_at(rendered, "tool", "uv", "override-dependencies"),
+            eq=(f"{cli.distribution} @ git+{cli.url}@{candidate_commit}",),
+        )
+        tm.that(
             tm.ok(
                 u.Infra.pyproject_conform(
                     rendered,
@@ -237,6 +241,30 @@ class TestsFlextInfraPyprojectConformTopologySources:
         )
         tm.that(result.failure, eq=True)
         tm.that(result.error or "", contains="not declared requirements: flext-cli")
+
+    def test_removing_candidate_removes_global_override(self) -> None:
+        """A normal branch resolution leaves no stale candidate override."""
+        infra = self._member_ref("flext-infra", "flext-infra")
+        stale_commit = "a" * 40
+        source = (
+            '[project]\nname = "workspace"\nversion = "0.1.0"\n'
+            f'dependencies = ["{self._inline_requirement(infra)}"]\n'
+            "\n[tool.uv]\noverride-dependencies = "
+            f'["{infra.distribution} @ git+{infra.url}@{stale_commit}"]\n'
+        )
+        rendered = tm.ok(
+            u.Infra.pyproject_conform(
+                source,
+                workspace=self._workspace(infra),
+                required_dev_dependencies=(),
+                uv_resolution=self._toolchain_resolution(),
+                family_line=test_u.Tests.provider_branch(),
+            )
+        )
+        parsed = tu.Tests.toml_mapping(u.Cli.toml_parse_text(rendered))
+        tool = tu.Tests.toml_mapping(parsed.get("tool"))
+        uv = tu.Tests.toml_mapping(tool.get("uv"))
+        tm.that("override-dependencies" not in uv, eq=True)
 
     def _assert_direct_source(self, rendered: str, ref: m.Infra.RepositoryRef) -> None:
         """Assert the canonical standalone output: one direct Git requirement."""

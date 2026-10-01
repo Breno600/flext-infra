@@ -86,7 +86,7 @@ that explicit contract, avoiding host-interpreter marker evaluation.
 An Infra integration lane can bootstrap declared candidate worktrees with
 `make bootstrap-candidate`. Its handwritten `config/workspace.yaml` lists
 `candidate_bootstrap_targets`, each with a relative `path` and a `what` value of
-`makefile`, `docs-config`, or `pyproject`.
+`makefile`, `docs-config`, `pyproject`, or `mise-triple`.
 The verb uses the current branch-matched Infra generator and validates every target
 as an exact Git worktree root. It plans all declared recovery projections before
 starting one recoverable, multi-root publication, then verifies every target before
@@ -99,7 +99,11 @@ Makefile bootstrap, run `make setup` and `make gen` in that consumer's worktree.
 `docs-config` renders only the declared docs policy template when a conflicted
 generated JSON file prevents ordinary generation from parsing it; afterward run
 `make gen` to verify the full projection. Generated targets are never edited
-directly. The
+directly. `mise-triple` restores the complete launcher and version-pin set from
+the provider's validated packaged `make upg` artifacts in one publication when
+a merge conflict prevents the candidate's Makefile from starting. Run `make upg`
+in the candidate afterward to resolve its current release, then `make gen` to
+project its managed files, including CI. The
 `makefile` surface reads declared member identity from the workspace manifest even when
 a member checkout has been initialized only partially and still lacks its
 `pyproject.toml`; that is the state the new Make setup must repair. All other conform

@@ -71,11 +71,10 @@ directory; the aggregate includes fixture setup, test calls, and teardown. A fai
 interrupted profiled run remains RED with its original process outcome. The profile is
 diagnostic evidence, not a substitute for a complete test result.
 
-The fleet default test wall and any measured per-project `run-timeout-overrides`
-live in `config/tooling.yaml`, keyed by the declared `[project].name`. The runner
-and generated Make process bound derive their deadlines from that same policy.
-Use the profile and complete run receipts to size a project override; an
-interrupted selection or suite remains a failed invocation.
+The suite deadline is declared once as `Infra.tooling.tools.pytest.run-timeout-seconds`
+in `config/tooling.yaml`. The typed runner and generated Make process bound
+derive from that policy. Use the profile and complete run receipts to repair
+a slow owner; an interrupted selection or suite remains a failed invocation.
 
 The runner first completes the incremental operation, then executes the full suite using
 the same database and one monotonic deadline. The first failure stops the sequence. The

@@ -32,11 +32,13 @@ class FlextInfraConfigModelsWorkspace:
             if self.path.is_absolute() or not self.path.parts:
                 msg = "candidate bootstrap path must be relative"
                 raise ValueError(msg)
-            if (
-                self.what
-                != FlextInfraConstantsCodegenProject.CodegenConformSurface.MAKEFILE
-            ):
-                msg = "candidate bootstrap owns only the Makefile surface"
+            if self.what not in {
+                FlextInfraConstantsCodegenProject.CodegenConformSurface.MAKEFILE,
+                FlextInfraConstantsCodegenProject.CodegenConformSurface.MISE_TRIPLE,
+                FlextInfraConstantsCodegenProject.CodegenConformSurface.DOCS_CONFIG,
+                FlextInfraConstantsCodegenProject.CodegenConformSurface.PYPROJECT,
+            }:
+                msg = "candidate bootstrap owns only declared recovery surfaces"
                 raise ValueError(msg)
             return self
 
@@ -165,10 +167,6 @@ class FlextInfraConfigModelsWorkspace:
                 description="Repository-owned documentation audit declarations",
             ),
         ]
-        test_inputs: Annotated[
-            FlextInfraConfigModelsWorkspace.TestInputsSpec | None,
-            m.Field(description="Declared non-Python test behavior inputs"),
-        ] = None
         namespace_scan_dirs: Annotated[
             t.StrSequence,
             m.Field(

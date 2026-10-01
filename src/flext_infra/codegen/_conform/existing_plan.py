@@ -13,6 +13,7 @@ from ... import c, m, p, t, u
 from ...deps import FlextInfraPyprojectModernizer
 from ...services.codegen import FlextInfraCodegen
 from ...workspace.environment_contracts import FlextInfraWorkspaceEnvironmentContracts
+from .._mise_artifacts_cold_start import FlextInfraMiseColdStart
 from .artifact_render import FlextInfraCodegenConformArtifactRender
 
 
@@ -30,6 +31,8 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         """Conform every declared managed surface in an existing repository."""
         root = target.root
         repository = target.repository
+        if contract.destinations == frozenset(c.Infra.ARTIFACT_NAMES):
+            return FlextInfraMiseColdStart.candidate_plans(root)
         stage_started = time.monotonic()
         u.Cli.info(f"  stage=pyproject repository={repository.name}")
         pyproject = root / c.PYPROJECT_FILENAME
