@@ -9,7 +9,7 @@ from importlib.metadata import distributions
 from pathlib import Path
 from typing import ClassVar
 
-from flext_infra import c, config, t
+from flext_infra import c, config, m, t
 
 from ..._pytest_collection import FlextInfraPytestCollection
 from .base import FlextInfraPytestRunnerBase
@@ -152,11 +152,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         self,
         report_dir: Path,
         selected_node_ids: t.StrSequence | None = None,
-        *,
-        manifest_path: Path | None = None,
-        serialize: bool = False,
-        whole_target: bool = False,
-        execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
+        invocation: m.Infra.PytestInvocation | None = None,
     ) -> t.VariadicTuple[str]:
         """Build the testmon suite argv (never the cov plugin).
 
@@ -164,6 +160,11 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         ``manifest_path``.
         """
         pytest = config.Infra.tooling.tools.pytest
+        invocation = invocation or m.Infra.PytestInvocation()
+        manifest_path = invocation.manifest_path
+        serialize = invocation.serialize
+        whole_target = invocation.whole_target
+        execution_mode = invocation.execution_mode
         selection = selected_node_ids or None
         if selection and manifest_path is None:
             msg = "a runner selection requires its collection manifest path"

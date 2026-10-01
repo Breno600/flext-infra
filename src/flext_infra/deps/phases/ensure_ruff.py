@@ -143,21 +143,14 @@ class FlextInfraEnsureRuffConfigPhase:
         }
 
     def _phase(
-        self,
-        *,
-        path: Path,
-        first_party: t.StrSequence,
-        stale_patterns: t.StrSequence,
-        per_file_ignores: t.MappingKV[str, t.StrSequence],
-        analysis_exclusions: t.StrSequence | None,
-        generated_python_roots: t.StrSequence,
+        self, *, path: Path, facts: m.Infra.RuffProjectFacts
     ) -> m.Infra.DepsToml.PhaseConfig:
         """Build the canonical Ruff phase for one project path."""
         ruff_cfg = self._tool_config.tools.ruff
         workspace_exclusions = (
             self._workspace_exclusion_globs(path.parent)
-            if analysis_exclusions is None
-            else analysis_exclusions
+            if facts.analysis_exclusions is None
+            else facts.analysis_exclusions
         )
         # Models stay declaration-only; the
         # Ruff phase owns the derived union consumed by emitted tool config.
@@ -171,7 +164,7 @@ class FlextInfraEnsureRuffConfigPhase:
             ("split-on-trailing-comma", ruff_cfg.lint.isort.split_on_trailing_comma),
         ]
         detected_packages = sorted({
-            *first_party,
+            *facts.first_party,
             *self._workspace_project_namespaces(path.parent),
         })
         if detected_packages:
@@ -187,7 +180,8 @@ class FlextInfraEnsureRuffConfigPhase:
         # roots the active plan is materializing accepted as present (the
         # extra-paths manager owns that declared set).
         generated_roots = FlextInfraExtraPathsManager(
-            repository_root=path.parent, generated_python_roots=generated_python_roots
+            repository_root=path.parent,
+            generated_python_roots=facts.generated_python_roots,
         ).generated_python_roots
 
         def _present(directory: str) -> bool:
@@ -305,9 +299,12 @@ class FlextInfraEnsureRuffConfigPhase:
                                 key=pattern,
                                 value=u.normalize_to_json_value(sorted(rules)),
                             )
-                            for pattern, rules in per_file_ignores.items()
+                            for pattern, rules in facts.per_file_ignores.items()
                         ),
-                        *(toml.RemoveOp(key=pattern) for pattern in stale_patterns),
+                        *(
+                            toml.RemoveOp(key=pattern)
+                            for pattern in facts.stale_patterns
+                        ),
                     ),
                 ),
             ),
@@ -336,17 +333,19 @@ class FlextInfraEnsureRuffConfigPhase:
                 payload,
                 self._phase(
                     path=path,
-                    first_party=FlextInfraToolTablesPhase.first_party_namespaces(
-                        payload, path=path
+                    facts=m.Infra.RuffProjectFacts(
+                        first_party=FlextInfraToolTablesPhase.first_party_namespaces(
+                            payload, path=path
+                        ),
+                        stale_patterns=[
+                            pattern
+                            for pattern in current_ignores or ()
+                            if pattern not in effective_ignores
+                        ],
+                        per_file_ignores=effective_ignores,
+                        analysis_exclusions=analysis_exclusions,
+                        generated_python_roots=generated_python_roots,
                     ),
-                    stale_patterns=[
-                        pattern
-                        for pattern in current_ignores or ()
-                        if pattern not in effective_ignores
-                    ],
-                    per_file_ignores=effective_ignores,
-                    analysis_exclusions=analysis_exclusions,
-                    generated_python_roots=generated_python_roots,
                 ),
             )
         )
