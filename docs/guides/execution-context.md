@@ -106,10 +106,13 @@ No environment is borrowed from another checkout through a symlink.
 ## Mise launchers
 
 `make upg` is also the only writer of `mise.version`, `bin/mise`, and `bin/mise.cmd`. It
-resolves the Mise release once, through Mise itself (`mise latest github:jdx/mise`,
-authenticated by `GITHUB_TOKEN` and subject to Mise's `minimum_release_age`), and
-generates both launchers with `mise generate install-script --version <release>
---windows`, run by that release. Each launcher embeds the release and its checksums, so
+resolves the Mise release once, through Mise itself (`mise latest` of
+`toolchain.mise_selector`, narrowed to `toolchain.mise_version` when
+`flext-infra/config/codegen.yaml` holds a release, authenticated by `GITHUB_TOKEN` and
+subject to Mise's `minimum_release_age`), and generates both launchers with
+`mise generate install-script --version <release> --windows`, run by that release. A
+held release carries its reason beside it in the configuration and returns to `latest`
+when the newest release outside the cooldown works. Each launcher embeds the release and its checksums, so
 direct, PATH, or shim calls never query the network to choose a version.
 `mise.version` holds a generated header followed by the single release line.
 

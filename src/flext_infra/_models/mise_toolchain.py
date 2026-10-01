@@ -243,6 +243,25 @@ class FlextInfraModelsMiseToolchain:
             Literal["aube"],
             m.Field(description="Mise npm installer with a locked dependency graph"),
         ]
+        mise_selector: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Selector `make upg` resolves for the Mise release itself. "
+                    "Override toolchain.mise_selector."
+                ),
+            ),
+        ]
+        mise_version: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Mise release `make upg` writes to mise.version and the "
+                    "launchers: 'latest', or a held release while upstream's "
+                    "newest one is broken"
+                ),
+            ),
+        ]
         qlty_selector: Annotated[
             t.NonEmptyStr,
             m.Field(
