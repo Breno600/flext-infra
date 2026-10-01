@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import textwrap
 from operator import itemgetter
 from pathlib import Path
 
@@ -119,6 +120,38 @@ class FlextInfraUtilitiesRopeSource:
                 continue
             result.append((candidate, candidate))
         return result
+
+    @classmethod
+    def hoist_inline_imports(
+        cls, file_path: Path, statement_lines: t.SequenceOf[t.IntPair]
+    ) -> bool:
+        """Move function-local import statements to the module import block.
+
+        ``statement_lines`` holds the 1-based inclusive line span of each
+        import statement a rule found. The statements are removed from their
+        function bodies and their dedented text is added once after the
+        module's last top-level import. A body left empty, or a result that no
+        longer parses, raises: the move is never half-applied.
+        """
+        if not statement_lines:
+            return False
+        source = file_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+        lines = source.splitlines(keepends=True)
+        hoisted: list[str] = []
+        drop: set[int] = set()
+        for start, end in statement_lines:
+            text = textwrap.dedent("".join(lines[start - 1 : end])).strip()
+            if text not in hoisted:
+                hoisted.append(text)
+            drop.update(range(start, end + 1))
+        kept = [line for index, line in enumerate(lines, start=1) if index not in drop]
+        position = cls.find_import_insert_position(kept)
+        present = {line.strip() for line in kept[:position]}
+        block = [f"{text}\n" for text in hoisted if text not in present]
+        updated = "".join([*kept[:position], *block, *kept[position:]])
+        ast.parse(updated, filename=str(file_path))
+        file_path.write_text(updated, encoding=c.Cli.ENCODING_DEFAULT)
+        return True
 
     @staticmethod
     def rewrite_source_at_offsets(

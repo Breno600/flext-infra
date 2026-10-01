@@ -363,10 +363,18 @@ class FlextInfraNamespaceEnforcerProjectMixin:
         names: MutableMapping[
             c.Infra.CodemodRelocation, MutableMapping[Path, set[str]]
         ] = defaultdict(lambda: defaultdict(set))
+        spans: MutableMapping[Path, list[t.IntPair]] = defaultdict(list)
         for relocation, finding in findings:
-            target = names[relocation][project_root / finding.file]
-            if relocation is not c.Infra.CodemodRelocation.FUTURE_ANNOTATIONS:
-                target.add(self._captured_name(finding))
+            file_path = project_root / finding.file
+            match relocation:
+                case c.Infra.CodemodRelocation.MODULE_IMPORT:
+                    spans[file_path].append(self._finding_lines(finding))
+                case c.Infra.CodemodRelocation.FUTURE_ANNOTATIONS:
+                    names[relocation].setdefault(file_path, set())
+                case _:
+                    names[relocation][file_path].add(self._captured_name(finding))
+        for file_path, statement_lines in spans.items():
+            u.Infra.hoist_inline_imports(file_path, statement_lines)
         for relocation, names_by_file in names.items():
             match relocation:
                 case c.Infra.CodemodRelocation.PROTOCOL:
@@ -412,6 +420,21 @@ class FlextInfraNamespaceEnforcerProjectMixin:
             if entry.rule_id in relocation_by_rule
             and (project_root / entry.file).resolve() in scoped
         )
+
+    @staticmethod
+    def _finding_lines(finding: m.Infra.ModScanFinding) -> t.IntPair:
+        """Return the 1-based inclusive line span of one finding."""
+        start = finding.range["start"]
+        end = finding.range["end"]
+        if not (isinstance(start, Mapping) and isinstance(end, Mapping)):
+            msg = f"ast-grep finding without a line range: {finding.rule_id}"
+            raise TypeError(msg)
+        start_line = start["line"]
+        end_line = end["line"]
+        if not (isinstance(start_line, int) and isinstance(end_line, int)):
+            msg = f"ast-grep finding with a non-integer line: {finding.rule_id}"
+            raise TypeError(msg)
+        return start_line + 1, end_line + 1
 
     @staticmethod
     def _captured_name(finding: m.Infra.ModScanFinding) -> str:

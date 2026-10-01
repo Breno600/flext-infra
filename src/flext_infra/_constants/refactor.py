@@ -63,6 +63,32 @@ class FlextInfraConstantsRefactor:
         PROTOCOL = "protocol"
         TYPING_ALIAS = "typing-alias"
         FUTURE_ANNOTATIONS = "future-annotations"
+        MODULE_IMPORT = "module-import"
+
+    @unique
+    class CodemodContextPredicate(StrEnum):
+        """Project-context predicate a rule applies to one captured metavariable.
+
+        ast-grep matches one file's syntax; what a match means can depend on
+        the project and file it is in. A rule names the predicate under
+        ``metadata.context`` for a captured ``$VAR`` and the engine admits the
+        finding only when the predicate holds (``is``) or fails (``not``). Each
+        predicate is derived from an existing source of truth:
+
+        - ``stdlib-module``: the captured module's top-level name is in the
+          interpreter's ``sys.stdlib_module_names``;
+        - ``own-package``: it is the project's own import package (the
+          package of its ``pyproject.toml`` project);
+        - ``runtime-package``: it is the import package of a distribution in
+          the project's runtime dependency closure;
+        - ``file-family``: the captured facade letter is the family the
+          finding's file declares by its name under the import-layer order.
+        """
+
+        STDLIB_MODULE = "stdlib-module"
+        OWN_PACKAGE = "own-package"
+        RUNTIME_PACKAGE = "runtime-package"
+        FILE_FAMILY = "file-family"
 
     @unique
     class SemanticCutoverPhase(StrEnum):
@@ -154,6 +180,12 @@ class FlextInfraConstantsRefactor:
     # A detection-only rule names the rope relocation that repairs it under
     # `metadata.relocation` and captures the relocated symbol as `$NAME`.
     CODEMOD_RULE_RELOCATION_KEY: ClassVar[str] = "relocation"
+    # A rule whose meaning depends on the project names, per captured
+    # metavariable, the context predicate the engine checks on each finding
+    # (`metadata.context: {VAR: {is|not: predicate}}`).
+    CODEMOD_RULE_CONTEXT_KEY: ClassVar[str] = "context"
+    CODEMOD_CONTEXT_HOLDS_KEY: ClassVar[str] = "is"
+    CODEMOD_CONTEXT_FAILS_KEY: ClassVar[str] = "not"
     CODEMOD_RULE_NAME_METAVARIABLE: ClassVar[str] = "NAME"
     CODEMOD_TEXT_FLAG_NAMES: ClassVar[t.MappingKV[str, int]] = MappingProxyType({
         "IGNORECASE": re.IGNORECASE,

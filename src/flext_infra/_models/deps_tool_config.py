@@ -677,19 +677,6 @@ class FlextInfraModelsDepsToolConfig(
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 alias="import-layer-order",
-                default=(
-                    "settings",
-                    "config",
-                    "c",
-                    "t",
-                    "p",
-                    "m",
-                    "u",
-                    "base",
-                    "services",
-                    "api",
-                    "cli",
-                ),
                 description=(
                     "Canonical dependency layer order for project "
                     "imports. Lower index = lower layer. A module may "

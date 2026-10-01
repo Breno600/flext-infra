@@ -11,6 +11,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import time
+from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, m, u
@@ -18,8 +19,6 @@ from flext_infra import c, m, u
 from .base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from flext_infra import p, t
 
 
@@ -94,6 +93,7 @@ class FlextInfraCodemodGate(FlextInfraGate):
                 started=started,
             )
 
+        rules_by_id = {rule.id: rule for rule in planned.value.rules}
         findings: list[m.Infra.Issue] = []
         failures: list[m.Infra.Issue] = []
         raw_output: list[str] = []
@@ -155,6 +155,12 @@ class FlextInfraCodemodGate(FlextInfraGate):
                     severity=finding.severity,
                 )
                 for finding in report.root
+                if u.Infra.codemod_context_admits(
+                    project_dir,
+                    rules_by_id[finding.rule_id],
+                    Path(finding.file),
+                    finding.captures,
+                )
             )
 
         # Every elected rule finding blocks the gate, regardless of its native

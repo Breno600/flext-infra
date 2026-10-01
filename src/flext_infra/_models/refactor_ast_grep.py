@@ -32,6 +32,23 @@ class FlextInfraModelsRefactorGrep:
             description="Allowed file extensions (empty = all by pattern)",
         )
 
+    class CodemodContextCondition(m.ArbitraryTypesModel):
+        """One project-context condition over a captured metavariable."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        variable: Annotated[
+            t.NonEmptyStr, m.Field(description="Captured single metavariable name")
+        ]
+        predicate: Annotated[
+            c.Infra.CodemodContextPredicate,
+            m.Field(description="Project-context predicate derived from an SSOT"),
+        ]
+        holds: Annotated[
+            bool,
+            m.Field(description="Whether the predicate must hold (is) or fail (not)"),
+        ]
+
     class CodemodRule(m.ArbitraryTypesModel):
         """One validated ast-grep rule document from a composed provider."""
 
@@ -87,6 +104,15 @@ class FlextInfraModelsRefactorGrep:
                 )
             ),
         ] = None
+        context: Annotated[
+            t.VariadicTuple[FlextInfraModelsRefactorGrep.CodemodContextCondition],
+            m.Field(
+                description=(
+                    "Project-context conditions a finding must satisfy; empty "
+                    "when the syntactic match alone is the finding"
+                )
+            ),
+        ] = ()
 
     class CodemodRuleset(m.ArbitraryTypesModel):
         """One provider config and its elected, conflict-free rule IDs."""

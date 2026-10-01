@@ -41,3 +41,53 @@ rule:
 message: >-
   Inline or dynamic import in a utility member: only the package's own facade
   letters are bound at the method point of use.
+---
+# Repair of ban-inline-import for standard-library imports: a stdlib module
+# cannot form an initialisation cycle with project code, so the engine moves
+# the statement to the module import block (relocation module-import). The
+# imported module is captured as $MODULE and the engine admits the finding
+# only when it belongs to the interpreter's standard library
+# (context stdlib-module, read from sys.stdlib_module_names).
+id: hoist-inline-stdlib-import
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/__init__.py"
+  - "**/flext_core/lazy.py"
+  - "**/beartype/**"
+  - "**/_utilities/**"
+metadata:
+  relocation: module-import
+  context:
+    MODULE:
+      is: stdlib-module
+rule:
+  all:
+    - any:
+        - all:
+            - kind: import_statement
+            - has:
+                pattern: $MODULE
+                any:
+                  - kind: dotted_name
+                  - kind: aliased_import
+            - not:
+                has:
+                  nthChild: 2
+                  pattern: $_
+        - all:
+            - kind: import_from_statement
+            - has:
+                field: module_name
+                kind: dotted_name
+                pattern: $MODULE
+    - inside:
+        kind: function_definition
+        stopBy: end
+    - not:
+        matches: inside-type-checking-guard
+message: >-
+  A standard-library import inside a function body belongs to the module
+  import block; the engine hoists it.
