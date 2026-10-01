@@ -516,6 +516,18 @@ class FlextInfraConfigModelsArtifact:
                 )
             ),
         ]
+        planned_direct_sources: Annotated[
+            t.VariadicTuple[str] | None,
+            m.Field(
+                description=(
+                    "Requirement names the pyproject composed in this plan "
+                    "takes by direct reference (forks and local projects). "
+                    "Planners compose the pyproject first and record them; "
+                    "None means this plan composes no pyproject, so the "
+                    "committed one is the source"
+                )
+            ),
+        ] = None
 
     class CodegenFilePlan(FlextInfraConfigModelsContract.ConfigContract):
         """Exact before state and desired state for one managed file."""

@@ -145,7 +145,11 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
                     return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
                         f"template destination parent is not a directory: {parent}"
                     )
-        for entry, destination in scaffold_entries:
+        # The pyproject plans first: renders that derive from its requirements
+        # (the dependabot cooldown exclusion) read the planned bytes.
+        for entry, destination in sorted(
+            scaffold_entries, key=lambda item: item[1] != c.PYPROJECT_FILENAME
+        ):
             if entry.delegate == c.Infra.TemplateDelegate.MANIFEST:
                 manifest_path = (
                     Path(c.CONFIG_DIR_NAME) / c.Infra.WORKSPACE_MANIFEST_FILENAME
@@ -190,6 +194,15 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
                     rendered_content
                 )
+            if destination == c.PYPROJECT_FILENAME:
+                recorded = self.with_planned_pyproject(
+                    render_inputs, rendered_content.value.rendered
+                )
+                if recorded.failure:
+                    return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
+                        recorded
+                    )
+                render_inputs = recorded.value
             file_plan = self.file_plan(
                 root,
                 destination,
