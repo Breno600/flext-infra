@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from flext_tests import tm
 
-import tests.utilities
+from tests import u
 from flext_infra import config
 from tests.unit.codegen.test_ci_integration_branch_triggers import (
     TestsFlextInfraCiIntegrationBranchTriggers,
@@ -16,12 +16,10 @@ class TestsFlextInfraCiCheckoutModeNormalization:
 
     @staticmethod
     def test_ci_job_normalizes_checkout_modes_before_gates() -> None:
-        steps = (
-            tests.utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.ci_job_steps(
-                TestsFlextInfraCiIntegrationBranchTriggers.render_ci(
-                    repository_branch="0.12.0-dev",
-                ),
-            )
+        steps = u.CodegenTestSupport.Ci.ci_job_steps(
+            TestsFlextInfraCiIntegrationBranchTriggers.render_ci(
+                repository_branch="0.12.0-dev",
+            ),
         )
         commands: list[str] = []
         for step in steps:

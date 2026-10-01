@@ -46,6 +46,29 @@ rules:
       - tests/unit/codegen/test_template_formatter_fixed_point.py
     find: '(?P<prefix>repository_branch="(?P<branch>[^"]+)",\n[ \t]+ci_trigger_branches=)(?P<owner>(?:tests\.)?utilities\.TestsFlextInfraUtilities\.CodegenTestSupport\.Ci)\.CI_TRIGGER_BASELINE_BRANCHES'
     replace: '\g<prefix>\g<owner>.ci_trigger_branches("\g<branch>")'
+  - id: codegen-test-public-utility-namespace
+    description: Consume the promoted codegen helper through the canonical test utilities facade.
+    include: [tests/unit/codegen/*.py]
+    find: '(?<![\w.])(?:tests\.)?utilities\.TestsFlextInfraUtilities\.CodegenTestSupport\.Ci'
+    replace: 'u.CodegenTestSupport.Ci'
+  - id: codegen-test-public-utility-import
+    description: Replace concrete test-utilities module imports with the public lazy alias.
+    include: [tests/unit/codegen/*.py]
+    find: '^import tests\.utilities$'
+    replace: 'from tests import u'
+    flags: [MULTILINE]
+  - id: codegen-test-public-utility-import-existing-alias
+    description: Retire the redundant concrete import where u is already present.
+    include: [tests/unit/codegen/*.py]
+    find: '^(from tests import [^\n]*\bu), utilities$'
+    replace: '\g<1>'
+    flags: [MULTILINE]
+  - id: codegen-test-public-utility-import-new-alias
+    description: Add u to an existing test facade import that only carried utilities.
+    include: [tests/unit/codegen/*.py]
+    find: '^(from tests import [^\n]*), utilities$'
+    replace: '\g<1>, u'
+    flags: [MULTILINE]
   - id: docs-strict-python-fence-ruff-ignores
     description: Retain only syntax-context docstring and package exceptions for isolated executable fences.
     include: [src/flext_infra/_constants/docs.py]

@@ -7,7 +7,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-import tests.utilities
+from tests import u
 from flext_infra import c, config, u
 
 
@@ -22,7 +22,7 @@ class TestsFlextInfraCiIntegrationBranchTriggers:
 
     @classmethod
     def render_ci(cls, *, repository_branch: str) -> str:
-        spec = tests.utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.workflow_spec(
+        spec = u.CodegenTestSupport.Ci.workflow_spec(
             dist="mcb",
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch=repository_branch,

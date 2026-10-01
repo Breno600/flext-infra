@@ -8,7 +8,7 @@ from pathlib import Path
 from flext_tests import tm
 
 from flext_infra import c, u
-from tests import t, utilities
+from tests import t, u
 
 
 class TestsFlextInfraCiPackageRegistryRead:
@@ -21,7 +21,7 @@ class TestsFlextInfraCiPackageRegistryRead:
 
     @classmethod
     def _job_permissions(cls, *, packages_read: bool) -> Mapping[str, t.JsonValue]:
-        spec = utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.workflow_spec(
+        spec = u.CodegenTestSupport.Ci.workflow_spec(
             dist="fixture-registry-consumer",
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch="develop",

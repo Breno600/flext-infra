@@ -6,7 +6,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from tests import c, m, t, u, utilities
+from tests import c, m, t, u
 
 
 class TestsFlextInfraTemplateFormatterFixedPoint:
@@ -45,13 +45,11 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
         workspace_repositories: t.VariadicTuple[m.Infra.RepositoryRef],
         has_devcontainer: bool,
     ) -> m.Infra.GithubWorkflowRenderSpec:
-        return utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.workflow_spec(
+        return u.CodegenTestSupport.Ci.workflow_spec(
             dist="demo",
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch="develop",
-            ci_trigger_branches=utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.ci_trigger_branches(
-                "develop"
-            ),
+            ci_trigger_branches=u.CodegenTestSupport.Ci.ci_trigger_branches("develop"),
             workspace_repositories=workspace_repositories,
             has_devcontainer=has_devcontainer,
         )

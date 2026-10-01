@@ -16,7 +16,7 @@ from flext_tests import tm
 from flext_infra import c, config, infra, t
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from flext_infra.codegen.project_new import FlextInfraCodegenProjectNew
-from tests import u, utilities
+from tests import u
 from tests.unit.codegen.conform_support import TestsFlextInfraConformSupport
 
 pytestmark = pytest.mark.slow
@@ -435,12 +435,12 @@ class TestsFlextInfraCodegenCiMatrix:
     @staticmethod
     def test_docs_workflow_inits_private_submodules_when_configured() -> None:
         """Docs jobs that run make setup must use the same deploy-key init as CI."""
-        private = utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.synthetic_private_submodules()
+        private = u.CodegenTestSupport.Ci.synthetic_private_submodules()
         tpl = (
             Path(__file__).resolve().parents[3]
             / "src/flext_infra/templates/project/base/.github/workflows/docs.yml.j2"
         )
-        spec = utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.workflow_spec(
+        spec = u.CodegenTestSupport.Ci.workflow_spec(
             dist="example-workspace",
             make_profile=c.Infra.MakeProfile.WORKSPACE,
             repository_branch="develop",
@@ -523,11 +523,11 @@ class TestsFlextInfraCodegenCiMatrix:
         configured default-days.
         """
         excluded = ("example-fork", "example-local")
-        spec = utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.workflow_spec(
+        spec = u.CodegenTestSupport.Ci.workflow_spec(
             dist="example-dist",
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch="develop",
-            ci_trigger_branches=utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.ci_trigger_branches(
+            ci_trigger_branches=u.CodegenTestSupport.Ci.ci_trigger_branches(
                 "develop",
             ),
             has_devcontainer=True,
