@@ -136,6 +136,19 @@ class FlextInfraConfigModelsMake:
             m.Field(description="Trace/profile globs removed anywhere in the tree"),
         ]
 
+    class DocsOverviewPreviewLimitsSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """Maximum list sizes in the generated public API overview."""
+
+        aliases: Annotated[int, m.Field(gt=0, description="Alias preview limit")]
+        public_symbols: Annotated[
+            int, m.Field(gt=0, description="Public symbol preview limit")
+        ]
+        facades: Annotated[int, m.Field(gt=0, description="Facade preview limit")]
+        module_exports: Annotated[
+            int, m.Field(gt=0, description="Module export preview limit")
+        ]
+        keywords: Annotated[int, m.Field(gt=0, description="Keyword preview limit")]
+
     class MakeDocsSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Generated Makefile docs verb lifecycle and audit policy."""
 
@@ -149,16 +162,16 @@ class FlextInfraConfigModelsMake:
                 ),
             ),
         ]
-        overview_preview_limits: Annotated[
-            Mapping[t.NonEmptyStr, int],
-            m.Field(description="Maximum number of entries in generated docs previews"),
-        ]
         mutable_actions: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(min_length=1, description="Docs actions that mutate"),
         ]
         reports_dir: Annotated[
             Path, m.Field(description="Repository-relative docs reports directory")
+        ]
+        overview_preview_limits: Annotated[
+            FlextInfraConfigModelsMake.DocsOverviewPreviewLimitsSpec,
+            m.Field(description="Maximum preview sizes for generated API overviews"),
         ]
         cross_project_relative_link_pattern: Annotated[
             t.NonEmptyStr,
@@ -499,6 +512,10 @@ class FlextInfraConfigModelsMake:
                         raise ValueError(msg)
                 return self
 
+        runtime_environment_directory: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Sibling directory for physical project environments"),
+        ]
         examples_timeout_seconds: Annotated[
             int,
             m.Field(gt=0, le=120, description="Workspace examples process deadline"),
