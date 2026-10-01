@@ -317,7 +317,9 @@ class FlextInfraUtilitiesProjectDiscovery(
                 m.Infra.GitRepoRequest(repo_root=project_root),
             ).unwrap()
             runtime_root = runtime.repository_root
-        return runtime_root.resolve() / c.Infra.ENVIRONMENT_DIRECTORY
+        physical_root = runtime_root.resolve()
+        relative_identity = physical_root.as_posix().lstrip("/").replace(":", "/")
+        return physical_root.parent / c.Infra.ENVIRONMENT_DIRECTORY / relative_identity
 
     @classmethod
     def runtime_python(

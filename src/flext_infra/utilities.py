@@ -34,6 +34,7 @@ from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
 from flext_infra._utilities.docs_validate import FlextInfraUtilitiesDocsValidate
 from flext_infra._utilities.git import FlextInfraUtilitiesGit
 from flext_infra._utilities.iteration import FlextInfraUtilitiesIteration
+from flext_infra._utilities.lint_recipes import FlextInfraUtilitiesLintRecipes
 from flext_infra._utilities.log_parser import FlextInfraUtilitiesLogParser
 from flext_infra._utilities.managed_conflicts import FlextInfraUtilitiesManagedConflicts
 from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
@@ -97,13 +98,6 @@ from flext_infra._utilities.worktree_lifecycle import FlextInfraWorktreeLifecycl
 from flext_infra._utilities.worktree_provisioning import FlextInfraWorktreeProvisioning
 
 
-from flext_infra._utilities.silent_failure_ast import (
-    FlextInfraUtilitiesSilentFailureAst,
-)
-from flext_infra._utilities.signature_rules import (
-    FlextInfraUtilitiesSignatureRules,
-)
-
 class FlextInfraUtilities(FlextCliUtilities):
     """Utility namespace for flext-infra; extends FlextUtilities.
 
@@ -160,6 +154,7 @@ class FlextInfraUtilities(FlextCliUtilities):
         FlextInfraUtilitiesDeferredSelfReferenceRewrite,
         FlextInfraUtilitiesGit,
         FlextInfraUtilitiesIteration,
+        FlextInfraUtilitiesLintRecipes,
         FlextInfraUtilitiesLogParser,
         FlextInfraUtilitiesManagedConflicts,
         FlextInfraUtilitiesSemanticCutover,
@@ -178,8 +173,6 @@ class FlextInfraUtilities(FlextCliUtilities):
         FlextInfraUtilitiesCodemodProject,
         FlextInfraUtilitiesPrivateImportAncestry,
         FlextInfraUtilitiesPrivateImportFacades,
-        FlextInfraUtilitiesSilentFailureAst,
-        FlextInfraUtilitiesSignatureRules,
     ):
         """Infrastructure-domain utilities - all methods exposed directly."""
 
