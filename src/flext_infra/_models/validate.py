@@ -146,6 +146,24 @@ class FlextInfraModelsCore:
             ),
         )
 
+    class PytestInvocation(m.Value):
+        """How one suite invocation runs: manifest coupling and mode."""
+
+        manifest_path: Path | None = m.Field(
+            default=None,
+            description="Collection manifest enforcing a nonempty selection",
+        )
+        serialize: bool = m.Field(
+            default=False, description="Run serially without xdist workers"
+        )
+        whole_target: bool = m.Field(
+            default=False, description="Selection covers the complete test target"
+        )
+        execution_mode: c.Infra.PytestExecutionMode = m.Field(
+            default=c.Infra.PytestExecutionMode.INCREMENTAL,
+            description="Canonical execution mode for this invocation",
+        )
+
     class PytestRunContext(m.Value):
         """Immutable execution identity shared by a phase's native receipts."""
 
@@ -157,6 +175,15 @@ class FlextInfraModelsCore:
         )
         deadline_monotonic: float = m.Field(
             gt=0, description="Shared absolute deadline across all execution phases"
+        )
+        report_directory: Path | None = m.Field(
+            default=None,
+            description="Explicit directory binding profiled parent and children",
+        )
+        profile_sha256: str | None = m.Field(
+            default=None,
+            pattern=r"^[0-9a-f]{64}$",
+            description="Digest binding a profile sidecar to its exact pstats artifact",
         )
 
     class PytestReportEvent(m.Value):

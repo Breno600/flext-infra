@@ -193,7 +193,7 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
         candidate_rewrites.setdefault(path, []).extend(
             FlextInfraUtilitiesRopeRuntimeRefactors.unwrap_class_rewrites(
                 sources[path],
-                span=m.Infra.WrapperSourceSpan(
+                m.Infra.ClassBlockLayout(
                     header_start=header.line,
                     header_end=header.end_line,
                     body_end=child.get_end(),
