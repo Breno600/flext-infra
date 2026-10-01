@@ -47,6 +47,13 @@ class FlextInfraUtilitiesCodegen(
                     ",".join(toolchain.mise_lockfile_platforms),
                 ),
                 ("MISE_PYTHON_COMPILE", str(toolchain.python_compile).lower()),
+                # The fleet supply-chain cooldown (one SSOT, operator
+                # 2026-10-01): safe mode would ignore the .mise.toml setting,
+                # so `make upg` could resolve a release younger than it.
+                (
+                    "MISE_MINIMUM_RELEASE_AGE",
+                    f"{toolchain.dependency_cooldown_days}d",
+                ),
             ),
             transient_environment=tuple(c.Infra.MISE_BOOTSTRAP_TRANSIENT_ENVIRONMENT),
             persistent_environment=tuple(c.Infra.MISE_BOOTSTRAP_PERSISTENT_ENVIRONMENT),
