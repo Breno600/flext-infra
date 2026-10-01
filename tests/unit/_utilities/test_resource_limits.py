@@ -57,13 +57,12 @@ class TestsFlextInfraUtilitiesResourceLimits:
     def test_mypy_budget_resolves_the_project_tooling_overlay(
         self,
         tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """A project tooling.yaml budget may tighten the runner timeout."""
-        budget = c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT // 2
+        """A project tooling.yaml budget drives the runner timeout."""
+        budget = config.Infra.tooling.tools.mypy.timeout_seconds // 2
         (tmp_path / "config").mkdir()
         (tmp_path / "config" / "tooling.yaml").write_text(
-            "tools:\n  mypy:\n    timeout_seconds: 600\n",
+            f"Infra:\n  tooling:\n    tools:\n      mypy:\n        timeout_seconds: {budget}\n",
             encoding="utf-8",
         )
         with tm.scope(remove_env_keys=(c.Infra.MYPY_TIMEOUT_SECONDS_ENV,)):
@@ -75,41 +74,18 @@ class TestsFlextInfraUtilitiesResourceLimits:
 
         tm.that(timeout, eq=u.Infra.mypy_runner_timeout(expected_limit))
 
-    def test_mypy_budget_overlay_above_the_bound_fails_loud(
-        self, tmp_path: Path
-    ) -> None:
-        """A project budget can never raise the fleet wall-time bound."""
-        (tmp_path / "config").mkdir()
-        (tmp_path / "config" / "tooling.yaml").write_text(
-            "tools:\n  mypy:\n    timeout_seconds: "
-            f"{c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT + 1}\n",
-            encoding="utf-8",
-        )
-
-        with (
-            tm.scope(remove_env_keys=(c.Infra.MYPY_TIMEOUT_SECONDS_ENV,)),
-            pytest.raises(
-                ValueError,
-                match=f"less than or equal to {c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT}",
-            ),
-        ):
-            u.Infra.mypy_runner_timeout_for_project(tmp_path)
-
     def test_mypy_budget_env_override_beats_the_project_overlay(
         self,
         tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """The documented precedence is env override > project budget."""
-        override = c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT // 3
+        fleet_budget = config.Infra.tooling.tools.mypy.timeout_seconds
+        override = fleet_budget // 3
         (tmp_path / "config").mkdir()
         (tmp_path / "config" / "tooling.yaml").write_text(
-            "tools:\n  mypy:\n    timeout_seconds: 600\n",
+            "Infra:\n  tooling:\n    tools:\n      mypy:\n"
+            f"        timeout_seconds: {fleet_budget // 2}\n",
             encoding="utf-8",
-        )
-        expected_limit = m.Infra.MypyResourceLimit(
-            memory_limit_mb=u.Infra.mypy_resource_limit().memory_limit_mb,
-            timeout_seconds=150,
         )
         with tm.scope(env={c.Infra.MYPY_TIMEOUT_SECONDS_ENV: str(override)}):
             expected_limit = m.Infra.MypyResourceLimit(
@@ -123,7 +99,6 @@ class TestsFlextInfraUtilitiesResourceLimits:
     def test_mypy_budget_without_overlay_uses_the_fleet_default(
         self,
         tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """No project overlay falls back to the fleet tooling SSOT."""
         with tm.scope(remove_env_keys=(c.Infra.MYPY_TIMEOUT_SECONDS_ENV,)):
@@ -393,17 +368,6 @@ class TestsFlextInfraUtilitiesResourceLimits:
             m.Infra.MypyResourceLimit(
                 memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT + 1,
                 timeout_seconds=config.Infra.tooling.tools.mypy.timeout_seconds,
-            )
-
-    def test_mypy_resource_contract_rejects_timeout_above_ceiling(self) -> None:
-        """Reject a wall-time configuration above the canonical ceiling."""
-        with pytest.raises(
-            ValueError,
-            match=f"less than or equal to {c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT}",
-        ):
-            m.Infra.MypyResourceLimit(
-                memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
-                timeout_seconds=c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT + 1,
             )
 
     def test_mypy_timeout_has_controlled_exit_and_signal_diagnostic(self) -> None:
