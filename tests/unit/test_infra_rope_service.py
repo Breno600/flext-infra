@@ -282,7 +282,7 @@ class TestsFlextInfraInfraRopeService:
                 eq=True,
             )
 
-    @pytest.mark.parametrize("family_alias", sorted(c.Infra.FLEXT_FAMILIES))
+    @pytest.mark.parametrize("family_alias", sorted(u.Infra.facade_families()))
     def test_class_nesting_cutover_uses_declared_family_owner(
         self, tmp_path: Path, family_alias: str
     ) -> None:
@@ -291,7 +291,7 @@ class TestsFlextInfraInfraRopeService:
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         owner_name = (
             f"{u.derive_class_stem(repository_root.name)}"
-            f"{c.Infra.FAMILY_SUFFIXES[family_alias]}"
+            f"{u.Infra.facade_families()[family_alias].suffix}"
         )
         extra_class_name = f"{owner_name}Member"
         module_path = package_root / f"{module_name}.py"
