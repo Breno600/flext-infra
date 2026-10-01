@@ -49,24 +49,21 @@ class FlextInfraUtilitiesGitStateFilesMixin(
     def _state_require_payload(
         cls,
         root: Path,
-        path: Path,
-        content: bytes | None,
-        permissions: int,
-        mode: str,
+        observed: m.Infra.GitWorktreeObservedPayload,
         allowed: t.SequenceOf[m.Infra.GitWorktreeFileState | None],
     ) -> None:
         """Hash the observed bytes and accept only an allowed captured state."""
-        if content is None and None in allowed:
+        if observed.content is None and None in allowed:
             return
-        if content is not None:
-            with FlextInfraUtilitiesGitWorktreeIO.git_stdin(content) as stream:
+        if observed.content is not None:
+            with FlextInfraUtilitiesGitWorktreeIO.git_stdin(observed.content) as stream:
                 oid = cls._repo(root).git.hash_object("--stdin", istream=stream)
-            observed = m.Infra.GitWorktreeFileState(
-                path=path, mode=mode, permissions=permissions, oid=oid
+            state = m.Infra.GitWorktreeFileState(
+                path=observed.path, mode=observed.mode, permissions=observed.permissions, oid=oid
             )
-            if observed in allowed:
+            if state in allowed:
                 return
-        msg = f"owned file changed before guarded effect: {path}"
+        msg = f"owned file changed before guarded effect: {observed.path}"
         raise ValueError(msg)
 
     @staticmethod
@@ -98,7 +95,14 @@ class FlextInfraUtilitiesGitStateFilesMixin(
                 msg = f"symlink disappeared before guarded effect: {path}"
                 raise ValueError(msg) from exc
             cls._state_require_payload(
-                root, path, os.fsencode(raw_target), link_mode, "120000", allowed
+                root,
+                m.Infra.GitWorktreeObservedPayload(
+                    path=path,
+                    content=os.fsencode(raw_target),
+                    permissions=link_mode,
+                    mode="120000",
+                ),
+                allowed,
             )
             if desired is not None and desired.mode == "120000":
                 payload = cls._state_blob_payload(root, desired.oid)
@@ -115,10 +119,12 @@ class FlextInfraUtilitiesGitStateFilesMixin(
             permissions = before_file.mode if before_file.mode is not None else 0
             cls._state_require_payload(
                 root,
-                path,
-                before_file.content,
-                permissions,
-                "100755" if permissions & stat.S_IXUSR else "100644",
+                m.Infra.GitWorktreeObservedPayload(
+                    path=path,
+                    content=before_file.content,
+                    permissions=permissions,
+                    mode="100755" if permissions & stat.S_IXUSR else "100644",
+                ),
                 allowed,
             )
             if desired is not None and desired.mode != "120000":

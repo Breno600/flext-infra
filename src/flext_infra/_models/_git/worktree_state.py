@@ -90,6 +90,15 @@ class FlextInfraModelsGitWorktreeState:
             ),
         ]
 
+    class GitWorktreeObservedPayload(m.ContractModel):
+        """Raw worktree payload and metadata measured before a guarded write."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+        path: Path = m.Field(description="Repository-relative observed file path")
+        content: bytes | None = m.Field(description="Observed file or symlink bytes")
+        permissions: int = m.Field(description="Observed filesystem permission bits")
+        mode: str = m.Field(description="Observed Git file mode")
+
     class GitWorktreeStateSnapshot(m.ContractModel):
         """Scoped source identity and both independently measured layers."""
 

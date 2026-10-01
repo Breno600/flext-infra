@@ -208,6 +208,7 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             t.StrTuple,
             m.Field(description="Implicit namespace directories shipped from the repository root"),
         ] = ()
+
         packaged_data_paths: Annotated[
             t.StrTuple,
             m.Field(description="Repository-declared relative data paths to ship"),
@@ -242,6 +243,16 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
                 )
             ),
         ] = None
+
+    class RuffIgnoreReconciliation(m.Value):
+        """Desired per-file rules and obsolete keys to remove atomically."""
+
+        desired: t.MappingKV[str, t.StrSequence] = m.Field(
+            description="Effective Ruff per-file ignore rules"
+        )
+        stale: t.StrSequence = m.Field(
+            description="Previously declared patterns absent from the desired rules"
+        )
 
     class PyprojectAnalyzerContext(m.ContractModel):
         """Placement and Python roots of one pyproject the analyzer phases conform.
