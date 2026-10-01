@@ -1,0 +1,5 @@
+id: ban-source-stub-file
+valid: []
+invalid:
+  - |
+    def load(path: str) -> bytes: ...

@@ -179,6 +179,12 @@ class FlextInfraConstantsSharedInfra:
     # --- File extensions (was: class Extensions) ---
     EXT_PYTHON: ClassVar[str] = ".py"
     EXT_PYTHON_GLOB: ClassVar[str] = "*.py"
+    EXT_PYTHON_STUB: ClassVar[str] = ".pyi"
+    PYTHON_SOURCE_SUFFIXES: ClassVar[t.VariadicTuple[str]] = (
+        EXT_PYTHON,
+        EXT_PYTHON_STUB,
+    )
+    "Suffixes of Python source the rule engine scans: modules and stubs."
 
     # --- Directory names (was: class Directories) ---
     DIR_TESTS: ClassVar[str] = "tests"

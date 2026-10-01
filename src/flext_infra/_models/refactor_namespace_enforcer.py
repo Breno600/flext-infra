@@ -38,11 +38,6 @@ class FlextInfraModelsNamespaceEnforcer:
         kind: Annotated[str, m.Field(description="Object kind")]
         suggestion: Annotated[str, m.Field(description="Fix suggestion")] = ""
 
-    class LooseTestFunctionViolation(FileLineViolation):
-        """A module-level ``test_*`` function outside a ``Tests*`` class."""
-
-        name: Annotated[t.NonEmptyStr, m.Field(description="Test function name")]
-        suggestion: Annotated[str, m.Field(description="Fix suggestion")] = ""
 
     class ImportAliasViolation(ImportViolationBase):
         """Import alias violation."""
@@ -88,22 +83,6 @@ class FlextInfraModelsNamespaceEnforcer:
     class InternalImportViolation(mm.ViolationDetailMixin, ImportViolationBase):
         """Internal import violation."""
 
-    class ConsumerImportViolation(mm.ViolationDetailMixin, ImportViolationBase):
-        """Consumer import grammar violation (R1 facade-only rule)."""
-
-        target_package: Annotated[
-            t.NonEmptyStr, m.Field(description="Target flext package name")
-        ]
-        imported_path: Annotated[
-            t.NonEmptyStr, m.Field(description="Full imported module path")
-        ]
-        imported_symbol: Annotated[
-            t.NonEmptyStr, m.Field(description="Symbol being imported")
-        ]
-        legal_symbols: Annotated[
-            t.StrSequence,
-            m.Field(description="Legal symbols published by target package"),
-        ] = ()
 
     class PrivateImportBypassViolation(mm.ViolationDetailMixin, ImportViolationBase):
         """Private-module import that should use the canonical facade."""
