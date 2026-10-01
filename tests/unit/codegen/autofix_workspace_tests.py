@@ -26,15 +26,22 @@ class TestsFlextInfraCodegenAutofixWorkspace:
     """Test suite for FlextInfraCodegenFixer workspace-level operations."""
 
     def _project_info(
-        self, project: Path, *, package_name: str = "test_proj"
+        self,
+        project: Path,
+        *,
+        package_name: str = "test_proj",
     ) -> m.Infra.ProjectInfo:
         return u.Tests.create_project_info(
-            project, name=project.name, package_name=package_name
+            project,
+            name=project.name,
+            package_name=package_name,
         )
 
     @pytest.mark.slow
     def test_project_without_pyproject_excluded_from_run(
-        self, tmp_path: Path, rope_workspace: p.Infra.RopeWorkspaceDsl
+        self,
+        tmp_path: Path,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         external_project = tmp_path / "external-project"
         external_project.mkdir()
@@ -53,7 +60,7 @@ class TestsFlextInfraCodegenAutofixWorkspace:
             files={
                 "base.py": "import typing\nT = typing.TypeVar('T')\n"
                 "class TestProjBase:\n    pass\n\n"
-                '__all__: list[str] = ["TestProjBase", "T"]\n'
+                '__all__: list[str] = ["TestProjBase", "T"]\n',
             },
         )
         u.Tests.declare_workspace_projects(tmp_path, (managed_project.name,))
@@ -65,7 +72,9 @@ class TestsFlextInfraCodegenAutofixWorkspace:
         tm.that(project_names, has="test-proj")
 
     def test_project_without_src_returns_empty(
-        self, tmp_path: Path, rope_workspace: p.Infra.RopeWorkspaceDsl
+        self,
+        tmp_path: Path,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         project = tmp_path / "no-src-proj"
         project.mkdir()
@@ -74,7 +83,7 @@ class TestsFlextInfraCodegenAutofixWorkspace:
         (project / ".git").mkdir()
         fixer = FlextInfraCodegenFixer(repository_root=tmp_path, rope=rope_workspace)
         [result] = fixer.fix_workspace(
-            projects=[self._project_info(project, package_name="")]
+            projects=[self._project_info(project, package_name="")],
         )
         tm.that(result.project, eq="no-src-proj")
         tm.that(result.violations_fixed, empty=True)
@@ -82,7 +91,9 @@ class TestsFlextInfraCodegenAutofixWorkspace:
         tm.that(result.files_modified, empty=True)
 
     def test_files_modified_tracks_affected_files(
-        self, tmp_path: Path, rope_workspace: p.Infra.RopeWorkspaceDsl
+        self,
+        tmp_path: Path,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         project = u.Tests.create_codegen_project(
             tmp_path=tmp_path,

@@ -52,7 +52,9 @@ class FlextInfraPromotedDiscovery(FlextInfraPromotedRegistry):
                     continue
                 if not verb_dir.is_dir():
                     u.Infra.promoted_fail(
-                        message.INVALID_SCRIPTS_ENTRY, path=verb_dir, root=root
+                        message.INVALID_SCRIPTS_ENTRY,
+                        path=verb_dir,
+                        root=root,
                     )
                 # A directory where no file declares a header is not a command
                 # directory; a present but invalid header stays a defect.

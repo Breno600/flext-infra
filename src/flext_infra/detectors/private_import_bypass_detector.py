@@ -32,27 +32,33 @@ class FlextInfraPrivateImportBypassDetector:
 
     @classmethod
     def detect_file(
-        cls, ctx: m.Infra.DetectorContext
+        cls,
+        ctx: m.Infra.DetectorContext,
     ) -> t.SequenceOf[m.Infra.PrivateImportBypassViolation]:
         """Return private-import bypass violations for one file."""
         res = u.Infra.fetch_python_resource(
-            ctx.rope_project, ctx.file_path, skip_init_py=True
+            ctx.rope_project,
+            ctx.file_path,
+            skip_init_py=True,
         )
         if res is None:
             return ()
         current_module = u.Infra.package_name(ctx.file_path)
         declared_imports = u.Infra.resolve_declared_module_imports(
-            ctx.rope_project, res
+            ctx.rope_project,
+            res,
         )
         semantic_imports = u.Infra.resolve_semantic_module_imports(
-            ctx.rope_project, res
+            ctx.rope_project,
+            res,
         )
         violations: list[m.Infra.PrivateImportBypassViolation] = []
         for local_name, fqn in semantic_imports.items():
             if "._" not in fqn:
                 continue
             if FlextInfraInternalImportDetector.facade_assembly_exempt(
-                current_module, fqn
+                current_module,
+                fqn,
             ):
                 continue
             private_module = declared_imports.get(local_name, fqn)
@@ -64,7 +70,9 @@ class FlextInfraPrivateImportBypassDetector:
                 continue
             suggested_facade = f"{package}.{cls._FAMILY_TO_FACADE[family]}"
             symbol_exported = cls._symbol_exported(
-                ctx.rope_project, suggested_facade, local_name
+                ctx.rope_project,
+                suggested_facade,
+                local_name,
             )
             violations.append(
                 m.Infra.PrivateImportBypassViolation(
@@ -79,7 +87,7 @@ class FlextInfraPrivateImportBypassDetector:
                     imported_symbol=local_name,
                     suggested_facade=suggested_facade,
                     symbol_exported=symbol_exported,
-                )
+                ),
             )
         return tuple(violations)
 
@@ -102,7 +110,10 @@ class FlextInfraPrivateImportBypassDetector:
 
     @classmethod
     def _symbol_exported(
-        cls, rope_project: t.Infra.RopeProject, facade_module: str, symbol: str
+        cls,
+        rope_project: t.Infra.RopeProject,
+        facade_module: str,
+        symbol: str,
     ) -> bool:
         """Check whether ``symbol`` is reachable from ``facade_module``."""
         resource = rope_project.find_module(facade_module)

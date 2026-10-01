@@ -33,8 +33,9 @@ class FlextInfraUtilitiesDocsCollectionVerify(FlextInfraUtilitiesDocsCollectionS
                     )
             inventories.append(
                 m.Infra.PlanCollectionSourceInventory(
-                    source_id=source.id, paths=tuple(sorted(discovered))
-                )
+                    source_id=source.id,
+                    paths=tuple(sorted(discovered)),
+                ),
             )
         return tuple(inventories)
 
@@ -54,7 +55,8 @@ class FlextInfraUtilitiesDocsCollectionVerify(FlextInfraUtilitiesDocsCollectionS
             raise ValueError(msg)
         for expected in bundle.source_states:
             current = cli_u.Cli.atomic_read_binary_file_state(
-                expected.path, required=False
+                expected.path,
+                required=False,
             ).unwrap()
             if current != expected:
                 msg = f"plan collection source changed: {expected.path}"
@@ -71,7 +73,7 @@ class FlextInfraUtilitiesDocsCollectionVerify(FlextInfraUtilitiesDocsCollectionS
         outputs = {plan.path: plan for plan in bundle.files}
         original_paths = {path for item in bundle.inventories for path in item.paths}
         exclusions = tuple(
-            sorted(set(bundle.excluded_outputs) | (set(outputs) - original_paths))
+            sorted(set(bundle.excluded_outputs) | (set(outputs) - original_paths)),
         )
         if (
             cls._collection_topology(root, configuration, exclusions)
@@ -81,7 +83,8 @@ class FlextInfraUtilitiesDocsCollectionVerify(FlextInfraUtilitiesDocsCollectionS
             raise ValueError(msg)
         for plan in bundle.files:
             current = cli_u.Cli.atomic_read_binary_file_state(
-                plan.path, required=False
+                plan.path,
+                required=False,
             ).unwrap()
             if (current.content, current.mode) != (
                 plan.desired_content,
@@ -93,7 +96,8 @@ class FlextInfraUtilitiesDocsCollectionVerify(FlextInfraUtilitiesDocsCollectionS
             if expected.path in outputs:
                 continue
             current = cli_u.Cli.atomic_read_binary_file_state(
-                expected.path, required=False
+                expected.path,
+                required=False,
             ).unwrap()
             if current != expected:
                 msg = f"unmodified collection input changed: {expected.path}"

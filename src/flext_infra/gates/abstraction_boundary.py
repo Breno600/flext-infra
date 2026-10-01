@@ -34,8 +34,22 @@ class FlextInfraAbstractionBoundaryGate(FlextInfraGate):
     can_fix: ClassVar[bool] = False
 
     @override
+    def selected_for(self, project_dir: Path) -> bool:
+        """A declared boundary owner never selects the gate that guards it.
+
+        Unreadable metadata selects the gate, whose check reports the failure.
+        """
+        metadata = u.Infra.read_project_metadata_result(project_dir)
+        return (
+            metadata.failure
+            or metadata.value.project.name not in c.Infra.BOUNDARY_SKIP_PROJECTS
+        )
+
+    @override
     def check(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
         """Scan one project's Python sources for abstraction-boundary breaches."""
         _ = ctx
@@ -43,19 +57,18 @@ class FlextInfraAbstractionBoundaryGate(FlextInfraGate):
         metadata = u.Infra.read_project_metadata_result(project_dir)
         if metadata.failure:
             return self._build_project_error_gate_result(
-                project_dir, passed=False, errors=[str(metadata.error)], started=started
+                project_dir,
+                passed=False,
+                errors=[str(metadata.error)],
+                started=started,
             )
         project_name = metadata.value.project.name
         if project_name in c.Infra.BOUNDARY_SKIP_PROJECTS:
-            # A declared boundary owner is exempt by design: an intentional
-            # skip passes, never a non-acceptance for missing targets.
-            return self._neutral_skip_result(
-                project_dir,
-                started,
-                message=f"{self.gate_id}: {project_name} is a declared boundary owner",
-            )
+            # The checker never selects a declared boundary owner; a direct
+            # call on one establishes no acceptance.
+            return self._skip_result(project_dir, started)
         files_result = u.Infra.iter_python_files(
-            m.Infra.SourceScanRequest(project_roots=(project_dir,))
+            m.Infra.SourceScanRequest(project_roots=(project_dir,)),
         )
         if files_result.failure:
             issue = m.Infra.Issue(
@@ -78,7 +91,9 @@ class FlextInfraAbstractionBoundaryGate(FlextInfraGate):
             for issue in self._scan_file(file_path, project_name)
         ]
         return self._detected_gate_execution(
-            project_dir, issues=issues, started=started
+            project_dir,
+            issues=issues,
+            started=started,
         )
 
     def _scan_file(self, path: Path, project: str) -> t.SequenceOf[m.Infra.Issue]:
@@ -107,13 +122,16 @@ class FlextInfraAbstractionBoundaryGate(FlextInfraGate):
             and project not in c.Infra.BOUNDARY_TOML_ALLOWED
         ):
             issues.append(
-                self._issue(path, "imports tomllib/tomlkit — use u.Cli.toml_read_json")
+                self._issue(path, "imports tomllib/tomlkit — use u.Cli.toml_read_json"),
             )
         issues.extend(self._ast_boundary_issues(path, text, posix))
         return issues
 
     def _ast_boundary_issues(
-        self, path: Path, text: str, posix: str
+        self,
+        path: Path,
+        text: str,
+        posix: str,
     ) -> t.SequenceOf[m.Infra.Issue]:
         """Flag live json/yaml/csv calls and concrete FlextCli imports via AST."""
         tree = ast.parse(text, filename=str(path))
@@ -127,7 +145,8 @@ class FlextInfraAbstractionBoundaryGate(FlextInfraGate):
                     attr_seen.add(message)
                     issues.append(self._issue(path, message))
             if isinstance(statement, ast.Attribute) and isinstance(
-                statement.value, ast.Name
+                statement.value,
+                ast.Name,
             ):
                 owner = statement.value.id
                 for module_name, attrs, message in c.Infra.BOUNDARY_ATTR_RULES:
@@ -150,8 +169,9 @@ class FlextInfraAbstractionBoundaryGate(FlextInfraGate):
                     continue
                 issues.append(
                     self._issue(
-                        path, f"imports concrete `{name}` (use cli/c/m/p/t/u/s)"
-                    )
+                        path,
+                        f"imports concrete `{name}` (use cli/c/m/p/t/u/s)",
+                    ),
                 )
         return issues
 

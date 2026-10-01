@@ -55,7 +55,9 @@ class FlextInfraUtilitiesDocsBuild:
 
     @staticmethod
     def _load_mkdocs_config(
-        load: p.Infra.MkDocsLoadConfig, settings: Path, site_dir: Path
+        load: p.Infra.MkDocsLoadConfig,
+        settings: Path,
+        site_dir: Path,
     ) -> MutableMapping[str, p.AttributeProbe]:
         """Load and validate a MkDocs config mapping."""
         return load(config_file_path=str(settings), site_dir=str(site_dir))
@@ -74,7 +76,9 @@ class FlextInfraUtilitiesDocsBuild:
 
     @staticmethod
     def docs_run_mkdocs(
-        scope: m.Infra.DocScope, *, runner: p.Cli.CommandRunner
+        scope: m.Infra.DocScope,
+        *,
+        runner: p.Cli.CommandRunner,
     ) -> m.Infra.DocsPhaseReport:
         """Run MkDocs for primary yml and optional product yaml configs."""
         configs = FlextInfraUtilitiesDocsBuild.docs_mkdocs_config_files(scope)
@@ -91,7 +95,10 @@ class FlextInfraUtilitiesDocsBuild:
         for settings in configs:
             suffix = "" if settings.suffix == ".yml" else "-product"
             report = FlextInfraUtilitiesDocsBuild._docs_run_one_mkdocs(
-                scope, settings=settings, runner=runner, site_suffix=suffix
+                scope,
+                settings=settings,
+                runner=runner,
+                site_suffix=suffix,
             )
             if primary_report is None:
                 primary_report = report
@@ -109,8 +116,8 @@ class FlextInfraUtilitiesDocsBuild:
         if len(configs) > 1:
             return primary_report.model_copy(
                 update={
-                    "reason": f"{primary_report.reason}; product mkdocs.yaml also built"
-                }
+                    "reason": f"{primary_report.reason}; product mkdocs.yaml also built",
+                },
             )
         return primary_report
 
@@ -215,12 +222,14 @@ class FlextInfraUtilitiesDocsBuild:
             FlextInfraUtilitiesDocsBuild._module_callable(mkdocs_build, "build"),
         )
         mkdocs_error_types = FlextInfraUtilitiesDocsBuild._mkdocs_exception_types(
-            mkdocs_exceptions
+            mkdocs_exceptions,
         )
         site_dir.parent.mkdir(parents=True, exist_ok=True)
         try:
             config_obj = FlextInfraUtilitiesDocsBuild._load_mkdocs_config(
-                load, settings, site_dir
+                load,
+                settings,
+                site_dir,
             )
             config_obj["strict"] = True
             _ = build(config_obj, dirty=False)
@@ -230,7 +239,11 @@ class FlextInfraUtilitiesDocsBuild:
 
     @staticmethod
     def docs_serve_mkdocs(
-        scope: m.Infra.DocScope, *, dev_addr: str, livereload: bool, strict: bool
+        scope: m.Infra.DocScope,
+        *,
+        dev_addr: str,
+        livereload: bool,
+        strict: bool,
     ) -> m.Infra.DocsPhaseReport:
         """Serve one scope through the MkDocs Python serve API (blocking)."""
         settings = scope.path / "mkdocs.yml"
@@ -275,7 +288,8 @@ class FlextInfraUtilitiesDocsBuild:
 
     @staticmethod
     def docs_write_build_reports(
-        scope: m.Infra.DocScope, report: m.Infra.DocsPhaseReport
+        scope: m.Infra.DocScope,
+        report: m.Infra.DocsPhaseReport,
     ) -> None:
         """Persist the standard build summary and markdown report."""
         _ = u.Cli.json_write(

@@ -33,7 +33,8 @@ class FlextInfraConfigModelsStatic:
         operator: Literal["import_module"] = m.Field(description="Operator")
         module: t.NonEmptyStr = m.Field(description="Rejected module root")
         owner_project: t.NonEmptyStr | None = m.Field(
-            default=None, description="Permitted owning project"
+            default=None,
+            description="Permitted owning project",
         )
 
     class StaticImportMemberRule(StaticRule):

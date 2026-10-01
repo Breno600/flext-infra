@@ -39,7 +39,7 @@ class FlextInfraModelsMixins:
         projects: Annotated[
             t.StrSequence | None,
             m.Field(
-                description="Projects to process; repeat --projects NAME as needed"
+                description="Projects to process; repeat --projects NAME as needed",
             ),
         ] = None
         module: Annotated[
@@ -49,7 +49,7 @@ class FlextInfraModelsMixins:
                     "Dotted module path to scope verb to a single module "
                     "(e.g. flext_core.result). Mutually compatible with "
                     "--projects/--repository-root; narrows the run."
-                )
+                ),
             ),
         ] = None
         namespace: Annotated[
@@ -58,7 +58,7 @@ class FlextInfraModelsMixins:
                 description=(
                     "Alias namespace (c|m|p|t|u|r|e|h|s|x[.<Domain>]) to scope "
                     "the verb to a single facade slot."
-                )
+                ),
             ),
         ] = None
         verbose: Annotated[bool, m.Field(description="Verbose output")] = False
@@ -84,10 +84,12 @@ class FlextInfraModelsMixins:
         """
 
         report: Annotated[
-            str | None, m.Field(description="Output report file path")
+            str | None,
+            m.Field(description="Output report file path"),
         ] = None
         output_dir: Annotated[
-            str | None, m.Field(description="Output directory for reports")
+            str | None,
+            m.Field(description="Output directory for reports"),
         ] = None
 
         @property
@@ -118,7 +120,7 @@ class FlextInfraModelsMixins:
             m.Field(
                 description="Apply changes instead of running in dry-run mode",
                 json_schema_extra={
-                    "typer_param_decls": list(c.Infra.CLI_APPLY_OPTION_DECLS)
+                    "typer_param_decls": list(c.Infra.CLI_APPLY_OPTION_DECLS),
                 },
             ),
         ] = False
@@ -234,14 +236,16 @@ class FlextInfraModelsMixins:
         """Shared safety checkpoint reference field."""
 
         checkpoint_ref: Annotated[
-            str, m.Field(description="Safety checkpoint reference")
+            str,
+            m.Field(description="Safety checkpoint reference"),
         ] = ""
 
     class ProjectNamesOptionalMixin:
         """Shared optional project-name collection."""
 
         project_names: Annotated[
-            t.StrSequence | None, m.Field(description="Project names")
+            t.StrSequence | None,
+            m.Field(description="Project names"),
         ] = None
 
     class ProjectNamesListMixin:

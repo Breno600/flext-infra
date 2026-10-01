@@ -124,53 +124,8 @@ Infra:
           - docs/api-reference/generated/**
           - docs/projects/generated/**
       ruff:
-        # P0 law: lint covers every tracked Python surface. No excludes over
-        # legado, examples, tests, or scripts code anywhere in this config.
-        # Received agent-hook projections are runtime state owned by ai-hub,
-        # never fleet source: they are untracked and outside the lint surface.
-        exclude:
-          - .git
-          - .github/hooks
-          - .github/hooks/**
-          # Agent-hook projections are runtime state owned by ai-hub, never
-          # fleet source — they are untracked and outside the lint surface.
-          - ".agents/aihub-hooks"
-          - ".agents/aihub-hooks/**"
-          - ".claude/aihub-hooks"
-          - ".claude/aihub-hooks/**"
-          - ".codex/aihub-hooks"
-          - ".codex/aihub-hooks/**"
-          - ".cursor/aihub-hooks"
-          - ".cursor/aihub-hooks/**"
-          - ".gemini/aihub-hooks"
-          - ".gemini/aihub-hooks/**"
-          - .mypy_cache
-          - .pytest_cache
-          - .ruff_cache
-          - .venv
-          # Historical evidence is never a live lint surface.
-          - .archive
-          - .archive/**
-          - "**/.archive/**"
-          - __pycache__
-          - "**/__pyrefly_virtual__/**"
-          - archive
-          - backup
-          - build
-          - dist
-          - htmlcov
-          - temp-backup
-          - typings
-          - vendor
-          - venv
-          - backup
-          - build
-          - dist
-          - htmlcov
-          - temp-backup
-          - typings
-          - vendor
-          - venv
+        # Lint covers every tracked Python surface; `.gitignore` alone decides
+        # visibility (respect-gitignore below), never a copied exclude list.
         # tests, examples, and scripts are dev/tooling source roots (see `src`
         # below), not installed packages: they hold namespace/command modules
         # loaded by path (e.g. the scripts/<verb>/<what> dispatch pattern), so
@@ -188,11 +143,11 @@ Infra:
           indent-style: space
           line-ending: lf
           quote-style: double
-          skip-magic-trailing-comma: true
+          skip-magic-trailing-comma: false
         lint:
           select:
             - ALL
-          # make fix never deletes information (flext-itpd1.5). The lint
+          # make fix never deletes information. The lint
           # repair applies safe fixes only (make.ruff.lint_fix rejects
           # --unsafe-fixes), and these rules are never auto-fixed at all,
           # because their fixes delete a diagnostic print, an assignment, a
@@ -214,7 +169,7 @@ Infra:
           # a rule enters here with evidence that its fix preserves code,
           # comments and diagnostics. None does today.
           extend-safe-fixes: []
-          # flext-j47u (codex): banned API messages are policy data, never template literals.
+          # Banned API messages are policy data, never template literals.
           banned-api:
             argparse: "Use cli.register_result_command + Pydantic model from flext_cli."
             click:
@@ -223,137 +178,23 @@ Infra:
             rich: "Use cli.print / cli.display_message / cli.render_panel / cli.render_table."
             tabulate: "Use cli.render_table from flext_cli."
             typer: "Use cli.create_app_with_common_params / cli.register_command from flext_cli."
-          ignore:
-            - ambiguous-unicode-character-comment
-            - ambiguous-unicode-character-docstring
-            - ambiguous-unicode-character-string
-            - boolean-positional-value-in-call
-            - camelcase-imported-as-lowercase
-            - complex-structure
-            - docstring-missing-exception
-            - docstring-missing-returns
-            - docstring-missing-yields
-            - incorrect-blank-line-before-class
-            - line-too-long
-            - logging-f-string
-            - missing-copyright-notice
-            - missing-trailing-comma
-            - multi-line-summary-second-line
-            - no-self-use
-            - non-imperative-mood
-            # Autouse is the correct contract for suite-wide isolation guards:
-            # requiring every test to opt in would let live state leak whenever
-            # one consumer omitted the fixture.
-            - pytest-fixture-autouse
-            # See the rationale below: this rule and ban-private-import demand
-            # opposite forms for the same import.
-            - relative-imports
-            - too-many-arguments
-            - too-many-branches
-            - too-many-locals
-            - too-many-nested-blocks
-            - too-many-positional-arguments
-            - too-many-public-methods
-            - too-many-return-statements
-            - too-many-statements
-            - typing-only-first-party-import
-            - typing-only-standard-library-import
-            - typing-only-third-party-import
-          ignored-rule-rationales:
-            relative-imports: >-
-              The codemod rule ban-private-import requires the opposite form.
-              Same-owner implementation modules use relative sibling imports and
-              every other consumer uses a public facade, because an absolute
-              private import couples a consumer to an owner layout. Selecting
-              both gates makes every internal import fail one of them.
-              Converting the 304 findings produced 301 ban-private-import
-              errors and took the suite from 1717 to 3135, so the architectural
-              rule decides.
-            import-outside-top-level:
-              Public facade models are imported lazily only at validation and
-              construction sites to preserve the c-t-p-m-u graph and prevent runtime cycles.
           isort:
             combine-as-imports: true
             force-single-line: false
             split-on-trailing-comma: false
-          per-file-ignores:
-            # No blanket mask is declared here. `**/.vulture_whitelist.py` and
-            # `**/*_pb2*.py` previously carried [ALL]; neither glob matches a
-            # tracked file in any governed project, and vendored copies live
-            # under `.venv`, which `exclude` already removes from the lint
-            # surface. A vendored generated file that ever becomes tracked gets
-            # its rules named here, per UNIVERSAL_CORE r19.
-            # Examples are executable documentation loaded by path, not
-            # importable modules, so module-name and shebang rules do not apply.
-            "**/examples/**/*.py": [invalid-module-name, shebang-not-executable]
-            # Test suites: pytest idioms that are correct-by-design
-            # are exempted GLOBALLY at the codegen SSOT (operator P0, per-rule
-            # justified per UNIVERSAL_CORE r19 — never a blanket mask):
-            #  - assert: bare assertions are pytest's executable assertion
-            #    mechanism. Projects may adopt flext-tests matchers, but codegen
-            #    must remain valid for every generated and external consumer.
-            #  - undocumented-public-method/-function/-class: test methods,
-            #    helper functions, and TestsXxx container classes are structural,
-            #    not public API, so docstrings add no value.
-            #  - magic-value-comparison (PLR2004): tests compare literal
-            #    expected values; extracting every literal to a
-            #    named constant harms readability and is not real code debt.
-            #  - compare-to-empty-string (PLC1901): matcher calls can validate
-            #    an exact empty-string result directly.
-            # NOT exempted, and deliberately so: suspicious-subprocess-import
-            # (S404). u.Cli.run / run_raw / run_checked / run_live is the only
-            # canonical process boundary in FLEXT; importing subprocess directly
-            # — including in tests, to fake a runner — is a violation, not an
-            # idiom. A test fakes the CANONICAL runner, never subprocess itself.
-            # NOT exempted (real defects, fixed in test code): import-private-name
-            # (PLC2701) and private-member-access (SLF001) — tests must exercise the
-            # PUBLIC facade only (flext test public-only law).
-            "**/tests/**":
-              - assert
-              - compare-to-empty-string
-              - magic-value-comparison
-              - undocumented-public-class
-              - undocumented-public-function
-              - undocumented-public-method
-            # Generated PEP 562 lazy facade roots intentionally re-export and
-            # synthesize package members; only rules incompatible with that
-            # canonical facade contract are excluded here.
-            "**/__init__.py":
-              - any-type
-              - builtin-import-shadowing
-              - implicit-namespace-package
-              - import-private-name
-              - invalid-module-name
-              - non-empty-init-module
-              - runtime-import-in-type-checking-block
-              - undefined-export
-              - undefined-local-with-import-star
-              - undefined-local-with-import-star-usage
-              - undocumented-public-init
-              - unused-import
+          per-file-ignores: {}
 
       mypy:
         # Project wall-time budget for the bounded Mypy execution (SSOT;
         # MYPY_TIMEOUT_SECONDS env overrides at the ingress boundary). The
-        # fleet cold runs need the model's bounded maximum: flext-core CI
-        # exhausted 120s under host load without a type diagnostic.
-        timeout_seconds: 600
-        # The returns plugin types p.Result: without it every Result.value /
-        # .map boundary resolves to Any and consumers flood with
-        # no-any-return (proven by assert_type on 2026-09-23); its removal
-        # alongside five disable rows and ignore_missing_imports was the
-        # root cause of that flood, restored here from the canonical
-        # pre-regression section (commit 7691100a4).
+        # infra's own whole-program cold run fits the default.
+        timeout_seconds: 120
         plugins: [pydantic.mypy]
-        exclude: ^legado(?:/|$)
-        # mro-j47u: every retained global exclusion carries its tested rationale;
-        # generated pyprojects receive this evidence as managed comments.
         boolean-settings:
-          # The canonical facade rebind (import the upstream single letter,
-          # then rebind it to the composed namespace class, mro-j47u) is a
-          # deliberate same-name redefinition; without this flag Mypy treats
-          # every facade root as an error-degraded Any (removed and restored
-          # 2026-09-22 — the removal flooded CI with no-any-return shadows).
+          # The canonical facade form imports the parent letter, subclasses
+          # it and rebinds the letter (`from flext_core import u`,
+          # `class FlextCliUtilities(u)`, `u = FlextCliUtilities`); Mypy
+          # accepts that same-name rebind only with this setting.
           allow_redefinition: true
           namespace_packages: true
           explicit_package_bases: true
@@ -373,24 +214,10 @@ Infra:
           warn_return_any: true
           warn_unreachable: true
           warn_unused_ignores: true
-        disabled-error-codes:
-          arg-type: Public p.Result values widen only in Mypy; Pyright and Pyrefly retain T.
-          assignment: Dependency-injector descriptors lose their FLEXT-bound type only in Mypy.
-          attr-defined: PEP 562 facade members installed by FLEXT composition are invisible to Mypy.
-          call-arg: Pydantic v2 init signatures behind facade FLEXT are incomplete in Mypy.
-          misc: Valid PEP 695 nested facade aliases are rejected under Mypy's misc bucket.
-          name-defined: Generated PEP 562 exports are installed at runtime but absent to Mypy.
-          no-any-return: Facade returns widen to Any only in Mypy; Pyright and Pyrefly resolve them.
-          no-redef: Canonical c-t-p-m-u facades intentionally rebind their inherited short alias.
-          prop-decorator: Mypy loses Pydantic computed-field descriptors across composed FLEXT.
-          type-var: Mypy 1.20 drops T from inherited p.ResultLike; the direct owner passes.
-          unreachable: Mypy over-narrows facade values and rejects live defensive guards.
-          valid-type: Mypy rejects facade namespaces used as owners in valid PEP 695 aliases.
         string-settings:
           follow_imports: normal
         overrides:
           - modules: [rope.*]
-            disable-error-codes: []
             follow-untyped-imports: true
             justification: >-
               Analyze Rope's installed source without suppressing import-untyped;
@@ -405,60 +232,21 @@ Infra:
           pythonVersion: "3.13"
           typeCheckingMode: strict
         extended-settings:
-          reportArgumentType: "none"
-          reportAttributeAccessIssue: "none"
-          reportCallIssue: "none"
           reportConstantRedefinition: error
           reportIncompatibleMethodOverride: error
-          reportIncompatibleVariableOverride: "none"
           reportInconsistentConstructor: error
-          reportInvalidTypeForm: "none"
           reportMissingImports: error
           reportMissingModuleSource: error
-          reportMissingTypeStubs: "none"
-          reportPrivateUsage: warning
-          reportUnknownArgumentType: "none"
-          reportUnknownLambdaType: "none"
-          reportUnknownMemberType: "none"
-          reportUnknownParameterType: "none"
-          reportUnknownVariableType: "none"
+          reportPrivateUsage: error
           reportUnnecessaryCast: error
-          reportUnnecessaryComparison: warning
-          reportUnnecessaryIsInstance: warning
-          reportUnreachable: "none"
-          reportUnsupportedDunderAll: "none"
-          reportUntypedBaseClass: "none"
-          reportUntypedFunctionDecorator: "none"
+          reportUnnecessaryComparison: error
+          reportUnnecessaryIsInstance: error
           reportUnusedClass: error
           reportUnusedFunction: error
           reportUnusedImport: error
           reportUnusedVariable: error
-        lazy-import-suppressions:
-          reportAssignmentType: "none"
-          reportAttributeAccessIssue: "none"
-          reportGeneralTypeIssues: "none"
-          reportInvalidTypeForm: "none"
-          reportPrivateImportUsage: "none"
-          reportUnknownArgumentType: "none"
-          reportUnknownLambdaType: "none"
-          reportUnknownMemberType: "none"
-          reportUnknownParameterType: "none"
-          reportUnknownVariableType: "none"
-          reportUnusedImport: "none"
-        global-suppression-rationales:
-          reportAssignmentType:
-            Pyright rejects the canonical class-alias rebind after
-            FLEXT facade composition although runtime and the other analyzers resolve it.
-          reportGeneralTypeIssues:
-            Pyright groups the same valid FLEXT facade alias rebind
-            under its broad general diagnostic in every execution environment.
-        source-env-suppressions:
-          reportReturnType: "none"
-        test-like-env-suppressions:
-          reportArgumentType: "none"
-          reportReturnType: "none"
         path-rules:
-          # flext-wkii.17 (codex): source and tracked consumer surfaces are all
+          # Source and tracked consumer surfaces are all
           # first-class environments so no analyzer can hide their diagnostics.
           source-dir: src
           project-root: .
@@ -634,6 +422,12 @@ Infra:
         # value and the termination grace by the typed model; no second timeout
         # source exists.
         run-timeout-seconds: 120
+        run-timeout-overrides:
+          # `make profile-test` on 2026-09-30 selected 3354 cases in 26.04s;
+          # the 120s entry clock stopped the suite after 112 cases/25.62s.
+          # This measurement ceiling permits a complete cold profile before
+          # tightening the limit to the observed full-suite runtime.
+          flext-infra: 1200
         termination-grace-seconds: 2
         # One failure stops the invocation. The next run starts from the
         # corrected owner instead of accumulating a backlog of unrelated
@@ -673,6 +467,8 @@ Infra:
         parallel-schedule-chunk: 1
         profile-sort: cumulative
         profile-limit: 50
+        profile-suite-filename: pytest.pstats
+        profile-process-directory: profiles
         min-version: "8.0"
         python-classes: ["Test*"]
         python-files: ["*_test.py", "*_tests.py", "test_*.py"]
@@ -749,20 +545,6 @@ Infra:
         section_whitelines: 1
         explicit_start: false
 
-    project-type-overrides:
-      core:
-        pyright: {}
-      domain:
-        pyright:
-          reportMissingModuleSource: "warning"
-      platform:
-        pyright: {}
-      integration:
-        pyright:
-          reportMissingModuleSource: "none"
-          reportMissingTypeStubs: "none"
-      app:
-        pyright: {}
     lazy-init:
       # Canonical import layer order for the lazy-init engine. Lower
       # index = lower layer.
@@ -797,10 +579,4 @@ Infra:
 # declaring it there writes a dead exemption into every project's pyproject.toml.
 ManagedArtifacts:
   Ruff:
-    per_file_ignores:
-      # Darwin resource-control boundary: executes validated argv without a
-      # shell and uses the native /bin/ps solely for resident-memory accounting.
-      # This private executable must supervise before loading checker packages.
-      src/flext_infra/_utilities/_mypy_supervisor.py:
-        - suspicious-subprocess-import
-        - subprocess-without-shell-equals-true
+    per_file_ignores: {}

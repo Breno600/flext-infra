@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import MutableMapping
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import m, u
 
@@ -11,8 +11,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from flext_infra import p, t
-
-_log = u.fetch_logger(__name__)
 
 
 class FlextInfraRefactorCensusValidateMixin:
@@ -22,6 +20,8 @@ class FlextInfraRefactorCensusValidateMixin:
     calls ``_validated_project_reports``); borrows root + dry-run flags from
     the facade via FLEXT.
     """
+
+    _census_validate_log: ClassVar[p.Logger] = u.fetch_logger(__name__)
 
     if TYPE_CHECKING:
         dry_run: bool
@@ -71,7 +71,7 @@ class FlextInfraRefactorCensusValidateMixin:
                     )
                     if self.fail_fast:
                         raise RuntimeError(msg)
-                    _log.warning(
+                    self._census_validate_log.warning(
                         "census_preview_candidate_rejected",
                         candidate=candidate.file_path,
                         object_name=candidate.object_name,
@@ -86,7 +86,7 @@ class FlextInfraRefactorCensusValidateMixin:
                             file_path=candidate.file_path,
                             line=candidate.line,
                             description=msg,
-                        )
+                        ),
                     )
                     continue
                 if preview_result.unwrap():
@@ -99,8 +99,8 @@ class FlextInfraRefactorCensusValidateMixin:
                         "violations_total": len(validated_violations),
                         "removal_candidate_count": len(validated_candidates),
                         "removal_candidates": validated_candidates,
-                    }
-                )
+                    },
+                ),
             )
         return tuple(validated_reports)
 

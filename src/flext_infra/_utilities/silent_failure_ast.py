@@ -41,7 +41,11 @@ class FlextInfraUtilitiesSilentFailureAst:
 
     @classmethod
     def collect_silent_failure_findings(
-        cls, tree: ast.Module, source: str, *, is_test_module: bool = False
+        cls,
+        tree: ast.Module,
+        source: str,
+        *,
+        is_test_module: bool = False,
     ) -> t.VariadicTuple[m.Infra.SilentFailureFinding]:
         """Collect all silent-failure findings in one module.
 
@@ -74,7 +78,7 @@ class FlextInfraUtilitiesSilentFailureAst:
                 )
             elif isinstance(node, ast.Call):
                 findings.extend(
-                    cls._call_findings(node, aliases, is_test_module=is_test_module)
+                    cls._call_findings(node, aliases, is_test_module=is_test_module),
                 )
             elif isinstance(node, ast.ExceptHandler):
                 findings.extend(cls._handler_findings(node, aliases, lines, parents))
@@ -96,7 +100,9 @@ class FlextInfraUtilitiesSilentFailureAst:
         return tuple(
             finding.replacement
             for finding in cls.collect_silent_failure_findings(
-                tree, source, is_test_module=is_test_module
+                tree,
+                source,
+                is_test_module=is_test_module,
             )
             if finding.replacement is not None
             and (not allowed or finding.kind in allowed)
@@ -113,7 +119,11 @@ class FlextInfraUtilitiesSilentFailureAst:
 
     @classmethod
     def _call_findings(
-        cls, node: ast.Call, aliases: t.MappingKV[str, str], *, is_test_module: bool
+        cls,
+        node: ast.Call,
+        aliases: t.MappingKV[str, str],
+        *,
+        is_test_module: bool,
     ) -> t.VariadicTuple[m.Infra.SilentFailureFinding]:
         if cls._resolve_call_name(node, aliases) == "contextlib.suppress":
             if is_test_module:
@@ -161,7 +171,8 @@ class FlextInfraUtilitiesSilentFailureAst:
                 ),
             )
         if not cls._body_has_raise_or_fail(node.body) and cls._declares_broad_exception(
-            node, aliases
+            node,
+            aliases,
         ):
             return (
                 m.Infra.SilentFailureFinding(
@@ -178,7 +189,9 @@ class FlextInfraUtilitiesSilentFailureAst:
 
     @classmethod
     def _is_except_sentinel(
-        cls, node: ast.ExceptHandler, aliases: t.MappingKV[str, str]
+        cls,
+        node: ast.ExceptHandler,
+        aliases: t.MappingKV[str, str],
     ) -> bool:
         if node.type is not None and cls._declares_broad_exception(node, aliases):
             return False
@@ -197,7 +210,10 @@ class FlextInfraUtilitiesSilentFailureAst:
 
     @classmethod
     def _guard_findings(
-        cls, node: ast.If, lines: t.StrSequence, parents: t.MappingKV[ast.AST, ast.AST]
+        cls,
+        node: ast.If,
+        lines: t.StrSequence,
+        parents: t.MappingKV[ast.AST, ast.AST],
     ) -> t.VariadicTuple[m.Infra.SilentFailureFinding]:
         result_name = cls._guard_info(node)
         if result_name is None:
@@ -305,7 +321,8 @@ class FlextInfraUtilitiesSilentFailureAst:
 
     @staticmethod
     def _enclosing_function(
-        node: ast.AST, parents: t.MappingKV[ast.AST, ast.AST]
+        node: ast.AST,
+        parents: t.MappingKV[ast.AST, ast.AST],
     ) -> ast.FunctionDef | ast.AsyncFunctionDef | None:
         current: ast.AST | None = node
         while current is not None:
@@ -325,12 +342,13 @@ class FlextInfraUtilitiesSilentFailureAst:
         findings", not a swallowed failure.
         """
         return function.name.endswith("_findings") or function.name.startswith(
-            "collect_"
+            "collect_",
         )
 
     @classmethod
     def _is_boolean_predicate(
-        cls, function: ast.FunctionDef | ast.AsyncFunctionDef
+        cls,
+        function: ast.FunctionDef | ast.AsyncFunctionDef,
     ) -> bool:
         """Return whether ``function`` is a boolean predicate.
 
@@ -434,7 +452,9 @@ class FlextInfraUtilitiesSilentFailureAst:
 
     @classmethod
     def _expression_name(
-        cls, node: ast.expr | None, aliases: t.MappingKV[str, str]
+        cls,
+        node: ast.expr | None,
+        aliases: t.MappingKV[str, str],
     ) -> str:
         if node is None:
             return ""
@@ -448,7 +468,9 @@ class FlextInfraUtilitiesSilentFailureAst:
 
     @classmethod
     def _declares_broad_exception(
-        cls, node: ast.ExceptHandler, aliases: t.MappingKV[str, str]
+        cls,
+        node: ast.ExceptHandler,
+        aliases: t.MappingKV[str, str],
     ) -> bool:
         """Whether the clause declares no exception, or any broad one.
 

@@ -63,14 +63,16 @@ class TestsFlextInfraPytestWorkerCeiling:
         """An absolute ceiling resolves to itself regardless of CPU count."""
         ceiling = m.Infra.PytestWorkerCeiling.model_validate({"workers": 3})
         resolved = FlextInfraPytestRunner.resolve_worker_ceiling(
-            ceiling, os.process_cpu_count()
+            ceiling,
+            os.process_cpu_count(),
         )
         tm.that(resolved, eq=3)
 
     def test_default_arrives_as_a_bare_int_and_passes_through(self) -> None:
         """The fleet-wide default (int) resolves unchanged."""
         resolved = FlextInfraPytestRunner.resolve_worker_ceiling(
-            2, os.process_cpu_count()
+            2,
+            os.process_cpu_count(),
         )
         tm.that(resolved, eq=2)
 
@@ -82,11 +84,13 @@ class TestsFlextInfraPytestWorkerCeiling:
         tm.that(len(overrides) > 0, eq=True)
         for declared in overrides.values():
             tm.that(
-                (declared.workers is None) != (declared.cpu_fraction is None), eq=True
+                (declared.workers is None) != (declared.cpu_fraction is None),
+                eq=True,
             )
 
     def test_worker_ceiling_defaults_without_declared_project(
-        self, cached_runner_project: Path
+        self,
+        cached_runner_project: Path,
     ) -> None:
         """A tree without ``[project].name`` takes the fleet-wide ceiling."""
         policy = config.Infra.tooling.tools.pytest
@@ -94,7 +98,8 @@ class TestsFlextInfraPytestWorkerCeiling:
         assert runner.parallel_worker_budget(policy) == policy.parallel_workers
 
     def test_worker_ceiling_follows_the_declared_project_override(
-        self, cached_runner_project: Path
+        self,
+        cached_runner_project: Path,
     ) -> None:
         """The runner resolves the declared project's override from the SSOT."""
         policy = config.Infra.tooling.tools.pytest
@@ -113,7 +118,8 @@ class TestsFlextInfraPytestWorkerCeiling:
         )
         declared_ceiling = policy.parallel_worker_overrides[declared_name]
         expected_workers = runner.resolve_worker_ceiling(
-            declared_ceiling, os.process_cpu_count()
+            declared_ceiling,
+            os.process_cpu_count(),
         )
         budget = runner.parallel_worker_budget(policy)
         assert budget == expected_workers

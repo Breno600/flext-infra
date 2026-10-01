@@ -34,7 +34,7 @@ class FlextInfraUtilitiesRefactorDiscovery:
                 dict(settings),
                 scope_key=c.Infra.RK_REFACTOR,
                 allowed_keys=c.Infra.REFACTOR_CONFIG_KEYS,
-            )
+            ),
         )
         return validated
 
@@ -56,15 +56,16 @@ class FlextInfraUtilitiesRefactorDiscovery:
 
     @staticmethod
     def _configured_scan_files(
-        project: Path, scan_dirs: t.StrSequence
+        project: Path,
+        scan_dirs: t.StrSequence,
     ) -> t.SequenceOf[Path]:
         """Return files from the exact refactor-owned project directories."""
         files: set[Path] = set()
         for directory_name in scan_dirs:
             files.update(
                 FlextInfraUtilitiesIteration.iter_directory_python_files(
-                    project / directory_name
-                )
+                    project / directory_name,
+                ),
             )
         return tuple(sorted(files))
 
@@ -80,16 +81,19 @@ class FlextInfraUtilitiesRefactorDiscovery:
         Returns None on error.
         """
         refactor_config = FlextInfraUtilitiesRefactorDiscovery._resolve_refactor_config(
-            settings
+            settings,
         )
         files = FlextInfraUtilitiesRefactorDiscovery._configured_scan_files(
-            project, refactor_config.project_scan_dirs
+            project,
+            refactor_config.project_scan_dirs,
         )
         ext = refactor_config.file_extensions
         return list(
             FlextInfraUtilitiesRefactorDiscovery.filter_refactor_files(
-                files, pattern=pattern, allowed_extensions=set(ext)
-            )
+                files,
+                pattern=pattern,
+                allowed_extensions=set(ext),
+            ),
         )
 
     @staticmethod
@@ -102,38 +106,44 @@ class FlextInfraUtilitiesRefactorDiscovery:
         """Collect all candidate files under workspace projects."""
         root = repository_root.resolve()
         refactor_config = FlextInfraUtilitiesRefactorDiscovery._resolve_refactor_config(
-            settings
+            settings,
         )
         scan_dirs = frozenset(refactor_config.project_scan_dirs)
         projects = FlextInfraUtilitiesProjectDiscovery.discover_project_roots(
-            repository_root=root, scan_dirs=scan_dirs or None
+            repository_root=root,
+            scan_dirs=scan_dirs or None,
         )
         ext = refactor_config.file_extensions
         allowed_extensions = set(ext)
         all_files: t.MutableSequenceOf[Path] = []
         for proj in projects:
             files = FlextInfraUtilitiesRefactorDiscovery._configured_scan_files(
-                proj, refactor_config.project_scan_dirs
+                proj,
+                refactor_config.project_scan_dirs,
             )
             all_files.extend(
                 FlextInfraUtilitiesRefactorDiscovery.filter_refactor_files(
-                    files, pattern=pattern, allowed_extensions=allowed_extensions
-                )
+                    files,
+                    pattern=pattern,
+                    allowed_extensions=allowed_extensions,
+                ),
             )
         return all_files
 
     @staticmethod
     def discover_refactor_projects(
-        settings: t.MappingKV[str, t.JsonValue], repository_root: Path
+        settings: t.MappingKV[str, t.JsonValue],
+        repository_root: Path,
     ) -> t.SequenceOf[Path]:
         """Discover workspace projects using the typed refactor config."""
         root = repository_root.resolve()
         refactor_config = FlextInfraUtilitiesRefactorDiscovery._resolve_refactor_config(
-            settings
+            settings,
         )
         scan_dirs = frozenset(refactor_config.project_scan_dirs)
         return FlextInfraUtilitiesProjectDiscovery.discover_project_roots(
-            repository_root=root, scan_dirs=scan_dirs or None
+            repository_root=root,
+            scan_dirs=scan_dirs or None,
         )
 
 

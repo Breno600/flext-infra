@@ -17,5 +17,5 @@ class TestsFlextInfraRule1ConstantsFacade:
             module_name="constants.py",
         )
         u.Tests.assert_namespace_valid(
-            m.Infra.NamespaceValidateCommand(repository_root=root)
+            m.Infra.NamespaceValidateCommand(repository_root=root),
         )

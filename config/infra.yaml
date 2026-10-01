@@ -176,18 +176,6 @@ Infra:
           detail: "Fix the underlying lint defect instead of suppressing it.",
         }
 
-  # Sed-by-list mass replacement patterns for literal refactoring.
-  # Each entry: pattern (regex), replacement, optional file_glob, optional flags, optional description.
-  sed_patterns:
-    patterns:
-      - pattern: "FIXME"
-        replacement: "TODO"
-        description: "Replace FIXME with TODO"
-      - pattern: "\\bprint\\("
-        replacement: "cli.display_text("
-        file_glob: "*.py"
-        description: "Replace print() with cli.display_text()"
-
   # CSV-driven rename campaigns applied by the mod verb's rename phase
   # through the apply-renames engine. Each entry: csv (path to an old,new
   # list, relative to this config directory, which ships inside the
@@ -200,8 +188,8 @@ Infra:
     campaigns:
       - csv: rules/mod/renames/infra-dedup.csv
         bindings:
-          t: [flext_infra.t]
-          c: [flext_infra.c]
+          t: [flext_infra.t, flext_core.t]
+          c: [flext_infra.c, flext_core.c]
         python_documentation: true
         text_globs:
           - "**/*.md"

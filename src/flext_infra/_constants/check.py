@@ -43,6 +43,20 @@ class FlextInfraConstantsCheck:
         WARNING = "warning"
         NOTE = "note"
 
+    @unique
+    class GateKind(StrEnum):
+        """Who owns a gate's rule catalog, which decides where the gate blocks.
+
+        Only ``EXTERNAL`` gates run in the fast contexts (CI and pre-commit):
+        an external tool applying its own per-file rule catalog. Whole-program
+        type checkers and the validators whose rules this package owns run
+        locally and at pre-push, where they block.
+        """
+
+        EXTERNAL = "external"
+        TYPE_CHECKER = "type-checker"
+        INFRA = "infra"
+
     AST_GREP_DOCS_URL: ClassVar[str] = "https://ast-grep.github.io/"
     "Canonical ast-grep documentation URL for gate metadata."
     # Quality gate identifiers shared with the tool-name vocabulary.
@@ -52,68 +66,91 @@ class FlextInfraConstantsCheck:
     MARKDOWN_FORMAT: ClassVar[str] = "markdown-format"
     MARKDOWN_CODE: ClassVar[str] = "markdown-code"
     SMELLS: ClassVar[str] = "smells"
+    RUNTIME_CENSUS: ClassVar[str] = "runtime-census"
     SILENT_FAILURE: ClassVar[str] = "silent-failure"
-    TYPE_CHECKER_GATES: ClassVar[frozenset[str]] = frozenset({
-        "pyrefly",
-        "mypy",
-        "pyright",
+    GATE_TOOLS_BY_KIND: ClassVar[t.MappingKV[GateKind, t.MappingKV[str, t.StrPair]]] = (
+        MappingProxyType({
+            GateKind.EXTERNAL: MappingProxyType({
+                "lint": ("Ruff Linter", "https://docs.astral.sh/ruff/"),
+                "format": ("Ruff Formatter", "https://docs.astral.sh/ruff/formatter/"),
+                "security": ("Bandit", "https://bandit.readthedocs.io/"),
+                "markdown": ("rumdl", "https://rumdl.dev/"),
+                "markdown-format": ("Prettier", "https://prettier.io/"),
+                "markdown-code": ("Ruff", "https://docs.astral.sh/ruff/"),
+                "duplication": ("jscpd", "https://github.com/kucherenko/jscpd"),
+            }),
+            GateKind.TYPE_CHECKER: MappingProxyType({
+                "pyrefly": ("Pyrefly", "https://github.com/facebook/pyrefly"),
+                "mypy": ("Mypy", "https://mypy.readthedocs.io/"),
+                "pyright": ("Pyright", "https://github.com/microsoft/pyright"),
+            }),
+            GateKind.INFRA: MappingProxyType({
+                "silent-failure": (
+                    "Flext Silent Failure Detector",
+                    "internal://flext-infra/silent-failure",
+                ),
+                "deferred-self-reference": (
+                    "Flext Deferred Self Reference Detector",
+                    "internal://flext-infra/deferred-self-reference",
+                ),
+                "loc-cap": ("scc", "https://github.com/boyter/scc"),
+                "boundary": (
+                    "Flext Abstraction Boundary Auditor",
+                    "internal://flext-infra/abstraction-boundary",
+                ),
+                RUNTIME_CENSUS: (
+                    "Flext Runtime Enforcement Census",
+                    "internal://flext-infra/runtime-census",
+                ),
+                "namespace": (
+                    "Flext Namespace Rule Gate",
+                    "internal://flext-infra/namespace",
+                ),
+                "tier-whitelist": (
+                    "Flext Tier Whitelist Gate",
+                    "internal://flext-infra/tier-whitelist",
+                ),
+                "index-declarations": (
+                    "Flext Index Declarations Gate",
+                    "internal://flext-infra/index-declarations",
+                ),
+                SMELLS: ("Flext Code Smell Detector", "internal://flext-infra/smells"),
+                "codemod": ("ast-grep", AST_GREP_DOCS_URL),
+                "layout": (
+                    "Flext Project Layout Gate",
+                    "internal://flext-infra/layout",
+                ),
+                "canonical-alias": (
+                    "Flext Canonical Alias Detector",
+                    "internal://flext-infra/canonical-alias",
+                ),
+                "direnv": (
+                    "Flext Direnv Environment Contract Gate",
+                    "internal://flext-infra/direnv",
+                ),
+            }),
+        })
+    )
+    """The gate registry: each gate is declared once, under its kind.
+
+    ``loc-cap`` and ``codemod`` drive an external engine (scc, ast-grep) over a
+    rule catalog this package owns, so they are ``INFRA``. Every other gate
+    vocabulary below is derived from this declaration.
+    """
+    GATE_KINDS: ClassVar[t.MappingKV[str, GateKind]] = MappingProxyType({
+        gate: kind for kind, tools in GATE_TOOLS_BY_KIND.items() for gate in tools
     })
-    "Native type-checker gates: independent read-only analyzers of one tree."
-    UNSUSPENDABLE_GATES: ClassVar[frozenset[str]] = frozenset({
-        LINT,
-        FORMAT,
-        *TYPE_CHECKER_GATES,
-    })
-    "Lint, format and type-checker gates: never suspendable from `make check`."
+    "Gate id -> kind, derived from the registry declaration."
     SARIF_TOOL_INFO: ClassVar[t.MappingKV[str, t.StrPair]] = MappingProxyType({
-        "lint": ("Ruff Linter", "https://docs.astral.sh/ruff/"),
-        "format": ("Ruff Formatter", "https://docs.astral.sh/ruff/formatter/"),
-        "pyrefly": ("Pyrefly", "https://github.com/facebook/pyrefly"),
-        "mypy": ("Mypy", "https://mypy.readthedocs.io/"),
-        "pyright": ("Pyright", "https://github.com/microsoft/pyright"),
-        "silent-failure": (
-            "Flext Silent Failure Detector",
-            "internal://flext-infra/silent-failure",
-        ),
-        "deferred-self-reference": (
-            "Flext Deferred Self Reference Detector",
-            "internal://flext-infra/deferred-self-reference",
-        ),
-        "security": ("Bandit", "https://bandit.readthedocs.io/"),
-        "markdown": ("rumdl", "https://rumdl.dev/"),
-        "markdown-format": ("Prettier", "https://prettier.io/"),
-        "markdown-code": ("Ruff", "https://docs.astral.sh/ruff/"),
-        "loc-cap": ("scc", "https://github.com/boyter/scc"),
-        "boundary": (
-            "Flext Abstraction Boundary Auditor",
-            "internal://flext-infra/abstraction-boundary",
-        ),
-        "runtime-census": (
-            "Flext Runtime Enforcement Census",
-            "internal://flext-infra/runtime-census",
-        ),
-        "namespace": ("Flext Namespace Rule Gate", "internal://flext-infra/namespace"),
-        "tier-whitelist": (
-            "Flext Tier Whitelist Gate",
-            "internal://flext-infra/tier-whitelist",
-        ),
-        "index-declarations": (
-            "Flext Index Declarations Gate",
-            "internal://flext-infra/index-declarations",
-        ),
-        SMELLS: ("Flext Code Smell Detector", "internal://flext-infra/smells"),
-        "codemod": ("ast-grep", AST_GREP_DOCS_URL),
-        "layout": ("Flext Project Layout Gate", "internal://flext-infra/layout"),
-        "canonical-alias": (
-            "Flext Canonical Alias Detector",
-            "internal://flext-infra/canonical-alias",
-        ),
-        "direnv": (
-            "Flext Direnv Environment Contract Gate",
-            "internal://flext-infra/direnv",
-        ),
-        "duplication": ("jscpd", "https://github.com/kucherenko/jscpd"),
+        gate: tool
+        for tools in GATE_TOOLS_BY_KIND.values()
+        for gate, tool in tools.items()
     })
+    "Gate id -> (tool name, tool url), derived from the registry declaration."
+    TYPE_CHECKER_GATES: ClassVar[frozenset[str]] = frozenset(
+        GATE_TOOLS_BY_KIND[GateKind.TYPE_CHECKER]
+    )
+    "Native type-checker gates: independent read-only analyzers of one tree."
     ALLOWED_GATES: ClassVar[frozenset[str]] = frozenset(SARIF_TOOL_INFO)
     "Gate identifiers — derived from SARIF_TOOL_INFO keys (single SSOT)."
     CHECK_REPORT_MARKDOWN_FILENAME: ClassVar[str] = "check-report.md"
@@ -124,13 +161,14 @@ class FlextInfraConstantsCheck:
     "Gates that rewrite files: owned by `fmt`/`fix`, never a read-only `check` vocabulary."
 
     RUFF_FORMAT_FILE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\s*-->\s*(.+?):\d+:\d+\s*$"
+        r"^\s*-->\s*(.+?):\d+:\d+\s*$",
     )
     MARKDOWN_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?P<file>.*?):(?P<line>\d+):(?P<col>\d+):\s+\[(?P<code>MD\d+)\]\s+(?P<msg>.*)$"
+        r"^(?P<file>.*?):(?P<line>\d+):(?P<col>\d+):\s+\[(?P<code>MD\d+)\]\s+(?P<msg>.*)$",
     )
     MARKDOWN_FORMAT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\[warn\]\s+(?P<file>\S+\.md)\s*$", re.MULTILINE
+        r"^\[warn\]\s+(?P<file>\S+\.md)\s*$",
+        re.MULTILINE,
     )
     "Prettier ``--check`` unformatted-file line (``[warn] <file.md>``); config warns never match."
     MARKDOWN_PY_FENCE_RE: ClassVar[t.RegexPattern] = re.compile(
@@ -143,11 +181,12 @@ class FlextInfraConstantsCheck:
     MARKDOWN_CODE_SKIP_MARKER: ClassVar[str] = "notest"
     "Existing fence marker (pytest-markdown-docs) opting a block out of code validation."
     MARKDOWN_CODE_FORMAT_FILE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?P<file>\S+):\d+:\d+:\s+unformatted:\s+"
+        r"^(?P<file>\S+):\d+:\d+:\s+unformatted:\s+",
     )
     "Ruff format ``--check`` concise verdict line over extracted sources."
     MARKDOWN_CODE_FORMAT_ERROR_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^error: Failed to format (?P<file>\S+):", re.MULTILINE
+        r"^error: Failed to format (?P<file>\S+):",
+        re.MULTILINE,
     )
     "Ruff format hard-failure line over extracted sources (parse errors)."
     VALID_GATE_SEVERITIES: ClassVar[frozenset[str]] = frozenset(GateSeverity)
@@ -220,7 +259,8 @@ class FlextInfraConstantsCheck:
     BOUNDARY_SIMPLE_RULES: ClassVar[t.VariadicTuple[t.Pair[t.RegexPattern, str]]] = (
         (
             re.compile(
-                rf"^\s*(import|from)\s+{'sub' + 'process'}(\s|$|\.)", re.MULTILINE
+                rf"^\s*(import|from)\s+{'sub' + 'process'}(\s|$|\.)",
+                re.MULTILINE,
             ),
             "imports subprocess — use cli.run / cli.capture",
         ),
@@ -273,10 +313,11 @@ class FlextInfraConstantsCheck:
         ),
     )
     BOUNDARY_TOML_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\s*(import|from)\s+(tomllib|tomlkit)(\s|$|\.)", re.MULTILINE
+        r"^\s*(import|from)\s+(tomllib|tomlkit)(\s|$|\.)",
+        re.MULTILINE,
     )
     BOUNDARY_FLEXT_CLI_CONCRETE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"\bFlextCli[A-Z]\w*"
+        r"\bFlextCli[A-Z]\w*",
     )
 
     SCC_BINARY: ClassVar[str] = "scc"
@@ -426,7 +467,7 @@ class FlextInfraConstantsCheck:
         "--update-all",
     })
     MANUAL_CMD_SEGMENT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"&&|\|\||;|\||\n|`|\$\("
+        r"&&|\|\||;|\||\n|`|\$\(",
     )
 
     # --- Net-LOC-delta validator (§3.5) SSOT ---

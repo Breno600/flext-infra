@@ -44,11 +44,15 @@ class FlextInfraGateContractChecksMixin(FlextInfraGateContractContentMixin):
 
     @staticmethod
     def _check_shebang(
-        script: str, header: t.StrSequence, extension: str
+        script: str,
+        header: t.StrSequence,
+        extension: str,
     ) -> m.Infra.GateContractViolation | None:
         if not header:
             return m.Infra.GateContractViolation(
-                check="shebang", message="empty file - no shebang found", script=script
+                check="shebang",
+                message="empty file - no shebang found",
+                script=script,
             )
 
         first = header[0]
@@ -63,13 +67,16 @@ class FlextInfraGateContractChecksMixin(FlextInfraGateContractContentMixin):
             None
             if not message
             else m.Infra.GateContractViolation(
-                check="shebang", message=message, script=script
+                check="shebang",
+                message=message,
+                script=script,
             )
         )
 
     @staticmethod
     def _check_owner_marker(
-        script: str, header: t.StrSequence
+        script: str,
+        header: t.StrSequence,
     ) -> m.Infra.GateContractViolation | None:
         if any(c.Infra.SKILL_OWNER_MARKER_RE.match(line) for line in header):
             return None
@@ -84,7 +91,9 @@ class FlextInfraGateContractChecksMixin(FlextInfraGateContractContentMixin):
 
     @staticmethod
     def _check_exit_codes(
-        script: str, content: str, extension: str
+        script: str,
+        content: str,
+        extension: str,
     ) -> t.SequenceOf[m.Infra.GateContractViolation]:
         if extension != ".sh":
             return ()
@@ -101,12 +110,16 @@ class FlextInfraGateContractChecksMixin(FlextInfraGateContractContentMixin):
                         check="exit_code",
                         message=f"line {i}: exit {code} - only 0/1/2/3 allowed",
                         script=script,
-                    )
+                    ),
                 )
         return tuple(violations)
 
     def _check_min_code_lines(
-        self, script: str, content: str, extension: str, role: str
+        self,
+        script: str,
+        content: str,
+        extension: str,
+        role: str,
     ) -> m.Infra.GateContractViolation | None:
         if role == "other":
             return None
@@ -124,14 +137,20 @@ class FlextInfraGateContractChecksMixin(FlextInfraGateContractContentMixin):
         )
 
     def _validate_script(
-        self, root: Path, script_path: Path, *, check_all: bool
+        self,
+        root: Path,
+        script_path: Path,
+        *,
+        check_all: bool,
     ) -> m.Infra.GateContractScriptInfo:
         script = script_path.as_posix()
         extension = script_path.suffix
         role = self._classify_role(script_path)
         if role == "other" and not check_all:
             return m.Infra.GateContractScriptInfo(
-                extension=extension, path=script, role=role
+                extension=extension,
+                path=script,
+                role=role,
             )
 
         read = u.Cli.files_read_text(root / script_path)
@@ -142,7 +161,10 @@ class FlextInfraGateContractChecksMixin(FlextInfraGateContractContentMixin):
                 script=script,
             )
             return m.Infra.GateContractScriptInfo(
-                extension=extension, path=script, role=role, violations=(unreadable,)
+                extension=extension,
+                path=script,
+                role=role,
+                violations=(unreadable,),
             )
         content = read.value
 
@@ -162,7 +184,10 @@ class FlextInfraGateContractChecksMixin(FlextInfraGateContractContentMixin):
             if violation is not None
         )
         return m.Infra.GateContractScriptInfo(
-            extension=extension, path=script, role=role, violations=tuple(violations)
+            extension=extension,
+            path=script,
+            role=role,
+            violations=tuple(violations),
         )
 
 

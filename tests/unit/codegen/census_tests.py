@@ -28,8 +28,8 @@ class TestsFlextInfraCodegenCensus:
     def _parse_violation(self, violation: str) -> p.Result[m.Infra.CensusViolation]:
         parsed = u.Infra.parse_namespace_validation(
             r[m.Infra.ValidationReport].ok(
-                m.Infra.ValidationReport(passed=True, violations=[violation])
-            )
+                m.Infra.ValidationReport(passed=True, violations=[violation]),
+            ),
         )
         if parsed.failure:
             return r[m.Infra.CensusViolation].from_failure(parsed)
@@ -124,14 +124,14 @@ class TestsFlextInfraCodegenCensus:
 
     def test_ns000_not_fixable(self) -> None:
         result = self._parse_violation(
-            "[NS-000-001] src/file.py:1 — Structure violation"
+            "[NS-000-001] src/file.py:1 — Structure violation",
         )
         violation = tm.ok(result)
         tm.that(not violation.fixable, eq=True)
 
     def test_ns001_fixable(self) -> None:
         result = self._parse_violation(
-            "[NS-001-001] src/file.py:1 — Constant violation"
+            "[NS-001-001] src/file.py:1 — Constant violation",
         )
         violation = tm.ok(result)
         tm.that(violation.fixable, eq=True)
@@ -148,12 +148,17 @@ class TestsFlextInfraCodegenCensus:
             tm.that(not violation.fixable, eq=True)
 
     def test_execute_fails_when_apply_changes_requested(
-        self, tmp_path: Path, rope_workspace: p.Infra.RopeWorkspaceDsl
+        self,
+        tmp_path: Path,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         result = FlextInfraCodegenCensus(
-            repository_root=tmp_path, apply_changes=True, rope=rope_workspace
+            repository_root=tmp_path,
+            apply_changes=True,
+            rope=rope_workspace,
         ).execute()
 
         tm.fail(
-            result, has="census is read-only; use flext-infra codegen auto-fix --apply"
+            result,
+            has="census is read-only; use flext-infra codegen auto-fix --apply",
         )

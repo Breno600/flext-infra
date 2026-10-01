@@ -44,7 +44,7 @@ class FlextInfraManualTypingAliasDetector:
                         line=line_number,
                         name=pep695_match.group(1),
                         detail="PEP695 alias must be centralized under typings scope",
-                    )
+                    ),
                 )
                 continue
             type_alias_match = c.Infra.TYPEALIAS_ANNOT_RE.match(line)
@@ -55,7 +55,7 @@ class FlextInfraManualTypingAliasDetector:
                         line=line_number,
                         name=type_alias_match.group(1),
                         detail="TypeAlias assignment must be centralized under typings scope",
-                    )
+                    ),
                 )
                 continue
             typing_factory_match = c.Infra.TYPING_FACTORY_ASSIGN_RE.match(line)
@@ -67,7 +67,7 @@ class FlextInfraManualTypingAliasDetector:
                     line=line_number,
                     name=typing_factory_match.group(1),
                     detail="Typing factory assignment must be centralized under typings scope",
-                )
+                ),
             )
         return violations
 

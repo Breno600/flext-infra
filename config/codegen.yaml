@@ -19,8 +19,8 @@ Infra:
       max_lines: 1000
 
     toolchain:
-      # Single-source Python minor line. The environment resolves the newest
-      # compatible 3.13 patch; no patch is pinned in generated repositories.
+      # The language floor is a minor line. The runtime tool is pinned to the
+      # newest Python patch whose lock resolves on all declared platforms.
       # Derived as computed fields on ToolchainSpec:
       #   python_required_version -> >=3.13,<3.14
       # Every fleet binary is declared `latest`. Only `make upg` resolves the
@@ -84,7 +84,7 @@ Infra:
       qlty_version: latest
       node_version: latest
       jscpd_selector: github:kucherenko/jscpd
-      jscpd_version: latest
+      jscpd_version: "5.4.0"
       # Prettier is the markdown formatter (markdown-format gate): provisioned
       # through npm so the fleet binary version is owned by this SSOT alone.
       prettier_selector: npm:prettier
@@ -345,6 +345,10 @@ Infra:
       # Gates whose mutating side `make fmt` drives (formatters). Their
       # read-only side runs in `make check`; `make fix` never repeats them
       # (single-pass verb law: one operation per tool per verb).
+      # `format` (ruff) is a mutating gate owned by `make fmt` per the gate
+      # registry contract (flext-38p39): check never mutates, fix never
+      # formats — without it the ruff-format surface has no verb home and
+      # drift survives a green check until `make mod` validates.
       fmt_gates: [format, markdown-format]
       check_gate_suspensions:
         - gate: namespace
@@ -366,9 +370,25 @@ Infra:
         external_storage_directory: flext/infra/testmon
         target_directory: tests
         reports_directory: .reports/tests
-      # The Mypy gate shares analysis across checkouts of the same project name.
-      # Relocks retain the directory; Mypy revalidates changed modules. Distinct
-      # project names keep their module namespaces in separate directories.
+      # Declarative Actions-cache policy for the shared testmon database
+      # (preserved #1001 delta, bead flext-j0u23): two-phase generations with
+      # per-mode caps, per-repo byte budget with a three-stage quota ladder,
+      # save-ref allowlist (never save from PRs) and the cache-key namespace.
+      testmon_cache_policy:
+        mode: stable
+        save_enabled: true
+        max_bootstrap_generations: 3
+        max_stable_generations: 3
+        per_repo_budget_bytes: 52428800
+        warning_threshold_percent: 80
+        maintenance_threshold_percent: 90
+        block_threshold_percent: 95
+        allowed_save_refs: ["main", "0.12.0-dev"]
+        key_prefix: flext-testmon
+      # One lock-keyed Mypy analysis shared by every checkout on the same
+      # dependency lock. Mypy's cache is content-addressed by module hash, so a
+      # warm cache only removes the cold whole-fleet recompute and can never
+      # mask a finding (flext-7jnr0).
       mypy_cache:
         cache_environment_variable: MYPY_CACHE_DIR
         data_home_environment_variable: XDG_CACHE_HOME
@@ -415,7 +435,7 @@ Infra:
       pre_commit: false
       pre_push: false
       workflow:
-      # Pre-commit runs fmt+fix, then the active CI check partition. Pre-push
+      # Pre-commit runs fmt+fix, then the fast check partition. Pre-push
       # runs check with CI unset to cover the complete active gate universe,
       # and adds gen+test with the declared local token.
         - {verb: setup, contexts: [local, ci]}
@@ -757,11 +777,9 @@ Infra:
     # Declarative project-layout SSOT consumed by
     # the layout engine (codegen/layout.py) and the layout quality gate. Every
     # move/archive/gitignore decision derives from this section — the engine
-    # carries zero hardcoded layout knowledge. severity=warning keeps the gate
-    # report-only; flipping to error makes violations fail the check pipeline.
+    # carries zero hardcoded layout knowledge. Every violation fails the check.
     layout:
       version: 1
-      severity: warning
       # Archive-not-delete root: archived entries land in <archive_root>/<project>/.
       archive_root: .bkp
       docs_target: docs
@@ -1037,10 +1055,9 @@ Infra:
       - path: .python-version
         owner: codegen
         policy: full
-    # The docs auditor's placeholder/forbidden-term lists are fleet policy: one
-    # template owns them, so the placeholder and forbidden-term checks in
-    # _auditor_checks.py enforce on every governed repository instead of
-    # silently reading an absent file as empty lists.
+    # The docs auditor's lexical defaults and repository-specific exact-file
+    # evidence declarations are rendered from the template and typed workspace
+    # manifest, then enforced from this full codegen-owned projection.
       - path: docs/docs_config.json
         owner: codegen
         policy: full
@@ -1261,7 +1278,7 @@ Infra:
             runtime: [flext-cli]
           - upstream: flext_cli
             project: flext-quality
-            runtime: [flext-cli, flext-infra, flext-web, flext-api, fastmcp>=4.0.10, requests>=2.34.2, aiohttp>=3.14.3, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1]
+            runtime: [flext-cli, flext-web, flext-api, fastmcp>=4.0.10, requests>=2.34.2, aiohttp>=3.14.3, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1]
           - upstream: flext_cli
             project: flext-web
             runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.54.0, fastapi>=0.142.1, starlette>=1.7.0, werkzeug>=3.1.9]
@@ -1942,13 +1959,13 @@ Infra:
           profiles: [workspace, standalone]
           delegate: render
           overwrite: true
-      # Static docs-auditor policy: no Jinja vars; the docs scope policy and
-      # the auditor read it as data (docs_policy_list).
+      # Repository-owned audit policy is validated from workspace.yaml,
+      # rendered per project, and parsed into DocsAuditPolicySpec by the auditor.
         - source: base/docs/docs_config.json.j2
           destination: docs/docs_config.json
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
+          overwrite: true
         - source: base/gitignore.j2
           destination: .gitignore
           profiles: [workspace, standalone]

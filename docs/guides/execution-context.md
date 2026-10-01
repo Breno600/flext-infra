@@ -249,11 +249,10 @@ Timeouts, forwarded signals, other exit codes, malformed JSON, and disagreement 
 exit code and diagnostic severities remain failures, even when stdout exists. Both
 whole-project checks and `check_files` scan every elected provider rule.
 
-`GateExecution.observational_issues` retains original file, position, rule, message, and
-severity separately from blocking issues and error counts. Workspace reports display
-observation counts separately. SARIF uses explicit observational notes and retains the
-native severity in each note; raw scanner output remains available on the execution. A
-passing gate therefore proves the scanner contract, not zero migration findings.
+`GateExecution.issues` retains each finding's original file, position, rule, message,
+and severity. SARIF reports each finding at its native level; raw scanner output remains
+available on the execution. A passing gate therefore proves both the scanner contract
+and zero rule findings.
 
 The same repair validates projected Ruff first-party namespaces strictly: a malformed
 value cannot be replaced with discovered namespaces. A declared empty list remains

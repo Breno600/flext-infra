@@ -43,13 +43,13 @@ class TestsFlextInfraMakeDocsActionsConfig:
     def test_unknown_action_is_rejected(self) -> None:
         with pytest.raises(c.ValidationError, match="not a registered CLI action"):
             m.Infra.MakeDocsSpec.model_validate(
-                _spec_payload(actions=["generate", "deploy"])
+                _spec_payload(actions=["generate", "deploy"]),
             )
 
     def test_duplicate_action_is_rejected(self) -> None:
         with pytest.raises(c.ValidationError, match="must be unique"):
             m.Infra.MakeDocsSpec.model_validate(
-                _spec_payload(actions=["generate", "generate"])
+                _spec_payload(actions=["generate", "generate"]),
             )
 
     def test_mutable_action_outside_lifecycle_is_rejected(self) -> None:
@@ -59,5 +59,5 @@ class TestsFlextInfraMakeDocsActionsConfig:
     def test_warning_posture_is_not_a_docs_option(self) -> None:
         with pytest.raises(c.ValidationError):
             m.Infra.MakeDocsSpec.model_validate(
-                _spec_payload(warning_actions=["audit"])
+                _spec_payload(warning_actions=["audit"]),
             )

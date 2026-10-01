@@ -39,7 +39,7 @@ class FlextInfraEnsureRuffConfigPhase:
             # list — that conformed artifact would drift from the workspace
             # with no signal. Mirrors _workspace_exclusion_globs fail-loud.
             raise ValueError(
-                discovered.error or "workspace project discovery is unavailable"
+                discovered.error or "workspace project discovery is unavailable",
             )
         return sorted({
             project.package_name
@@ -84,7 +84,7 @@ class FlextInfraEnsureRuffConfigPhase:
         paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
         if paths.failure:
             raise ValueError(
-                paths.error or "workspace analysis exclusions are unavailable"
+                paths.error or "workspace analysis exclusions are unavailable",
             )
         return frozenset(p.parts[0] for p in paths.value if Path(p).parts)
 
@@ -143,7 +143,10 @@ class FlextInfraEnsureRuffConfigPhase:
         }
 
     def _phase(
-        self, *, path: Path, facts: m.Infra.RuffProjectFacts
+        self,
+        *,
+        path: Path,
+        facts: m.Infra.RuffProjectFacts,
     ) -> m.Infra.DepsToml.PhaseConfig:
         """Build the canonical Ruff phase for one project path."""
         ruff_cfg = self._tool_config.tools.ruff
@@ -152,12 +155,6 @@ class FlextInfraEnsureRuffConfigPhase:
             if facts.analysis_exclusions is None
             else facts.analysis_exclusions
         )
-        # Models stay declaration-only; the
-        # Ruff phase owns the derived union consumed by emitted tool config.
-        effective_ignore = sorted({
-            *ruff_cfg.lint.ignore,
-            *ruff_cfg.lint.ignored_rule_rationales,
-        })
         isort_values: t.MutableSequenceOf[t.Pair[str, t.JsonValue]] = [
             ("combine-as-imports", ruff_cfg.lint.isort.combine_as_imports),
             ("force-single-line", ruff_cfg.lint.isort.force_single_line),
@@ -188,7 +185,7 @@ class FlextInfraEnsureRuffConfigPhase:
             return (path.parent / directory).is_dir() or (directory in generated_roots)
 
         existing_root = tuple(d for d in ruff_cfg.src if _present(d))
-        excluded_roots = self._analysis_exclusion_root_set(path.parent)
+        excluded_roots = self._analysis_exclusion_root_set(inputs.path.parent)
         existing_namespace_packages = tuple(
             d for d in ruff_cfg.namespace_packages if d not in excluded_roots
         )
@@ -199,11 +196,12 @@ class FlextInfraEnsureRuffConfigPhase:
             operations=(
                 toml.RemoveOp(key=c.Infra.EXTEND),
                 toml.ListOp(
-                    key=c.Infra.EXCLUDE,
-                    values=sorted({*ruff_cfg.exclude, *workspace_exclusions}),
+                    key="extend-exclude",
+                    values=sorted(workspace_exclusions),
                 ),
                 toml.ListOp(
-                    key="namespace-packages", values=sorted(existing_namespace_packages)
+                    key="namespace-packages",
+                    values=sorted(existing_namespace_packages),
                 ),
                 toml.SetOp(key="fix", value=ruff_cfg.fix),
                 toml.SetOp(key="line-length", value=ruff_cfg.line_length),
@@ -243,25 +241,21 @@ class FlextInfraEnsureRuffConfigPhase:
                         toml.SetOp(
                             key="select",
                             value=u.normalize_to_json_value(
-                                sorted(ruff_cfg.lint.select)
+                                sorted(ruff_cfg.lint.select),
                             ),
-                        ),
-                        toml.SetOp(
-                            key=c.Infra.IGNORE,
-                            value=u.normalize_to_json_value(effective_ignore),
                         ),
                         # make fix never deletes information: the fix-safety
                         # policy comes from the same SSOT the template renders.
                         toml.SetOp(
                             key="unfixable",
                             value=u.normalize_to_json_value(
-                                sorted(ruff_cfg.lint.unfixable)
+                                sorted(ruff_cfg.lint.unfixable),
                             ),
                         ),
                         toml.SetOp(
                             key="extend-safe-fixes",
                             value=u.normalize_to_json_value(
-                                sorted(ruff_cfg.lint.extend_safe_fixes)
+                                sorted(ruff_cfg.lint.extend_safe_fixes),
                             ),
                         ),
                     ),
@@ -276,7 +270,8 @@ class FlextInfraEnsureRuffConfigPhase:
                     ),
                     operations=tuple(
                         toml.SetOp(
-                            key=name, value=u.normalize_to_json_value({"msg": message})
+                            key=name,
+                            value=u.normalize_to_json_value({"msg": message}),
                         )
                         for name, message in ruff_cfg.lint.banned_api.items()
                     ),
@@ -305,6 +300,7 @@ class FlextInfraEnsureRuffConfigPhase:
                             toml.RemoveOp(key=pattern)
                             for pattern in facts.stale_patterns
                         ),
+                        *(toml.RemoveOp(key=pattern) for pattern in stale_patterns),
                     ),
                 ),
             ),
@@ -315,7 +311,6 @@ class FlextInfraEnsureRuffConfigPhase:
         payload: t.MutableJsonMapping,
         *,
         path: Path,
-        analysis_exclusions: t.StrSequence | None = None,
         generated_python_roots: t.StrSequence = (),
     ) -> t.StrSequence:
         """Apply canonical Ruff settings directly to one normalized payload."""
@@ -335,7 +330,8 @@ class FlextInfraEnsureRuffConfigPhase:
                     path=path,
                     facts=m.Infra.RuffProjectFacts(
                         first_party=FlextInfraToolTablesPhase.first_party_namespaces(
-                            payload, path=path
+                            payload,
+                            path=path,
                         ),
                         stale_patterns=[
                             pattern
@@ -347,7 +343,7 @@ class FlextInfraEnsureRuffConfigPhase:
                         generated_python_roots=generated_python_roots,
                     ),
                 ),
-            )
+            ),
         )
         if u.Cli.toml_mapping_remove_key_if_present(payload, c.Infra.LINT_SECTION):
             changes.append("removed stale top-level [lint] section")

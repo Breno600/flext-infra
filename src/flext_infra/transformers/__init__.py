@@ -11,10 +11,7 @@ from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 if TYPE_CHECKING:
     from ._canonical_t_import import FlextInfraEnsureCanonicalTImportMixin
     from ._import_facades import FlextInfraRefactorImportFacades
-    from ._semantic_publication import (
-        publish_semantic_file_plan,
-        publish_semantic_file_plans,
-    )
+    from ._semantic_publication import FlextInfraSemanticPublication
     from ._typing_mutation import FlextInfraTypingMutation
     from ._typing_rewrite import FlextInfraRefactorTypingUnifierRewriteMixin
     from .class_reconstructor import FlextInfraRefactorClassReconstructor
@@ -55,9 +52,8 @@ __all__: tuple[str, ...] = (
     "FlextInfraRefactorTypingUnifier",
     "FlextInfraRefactorTypingUnifierRewriteMixin",
     "FlextInfraRopeTransformer",
+    "FlextInfraSemanticPublication",
     "FlextInfraTypingMutation",
-    "publish_semantic_file_plan",
-    "publish_semantic_file_plans",
 )
 
 _LAZY_IMPORTS = MappingProxyType(
@@ -65,10 +61,7 @@ _LAZY_IMPORTS = MappingProxyType(
         MappingProxyType({
             "._canonical_t_import": ("FlextInfraEnsureCanonicalTImportMixin",),
             "._import_facades": ("FlextInfraRefactorImportFacades",),
-            "._semantic_publication": (
-                "publish_semantic_file_plan",
-                "publish_semantic_file_plans",
-            ),
+            "._semantic_publication": ("FlextInfraSemanticPublication",),
             "._typing_mutation": ("FlextInfraTypingMutation",),
             "._typing_rewrite": ("FlextInfraRefactorTypingUnifierRewriteMixin",),
             ".class_reconstructor": ("FlextInfraRefactorClassReconstructor",),
@@ -90,7 +83,7 @@ _LAZY_IMPORTS = MappingProxyType(
         }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,
-    )
+    ),
 )
 
 install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

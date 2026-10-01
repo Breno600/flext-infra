@@ -26,7 +26,10 @@ class FlextInfraLocCapGate(FlextInfraGate):
 
     @override
     def _build_check_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        check_dirs: t.StrSequence,
     ) -> t.StrSequence:
         """Run scc over the project's Python directories, emitting per-file JSON."""
         _ = project_dir, ctx
@@ -34,7 +37,10 @@ class FlextInfraLocCapGate(FlextInfraGate):
 
     @override
     def _parse_check_output(
-        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        result: p.Cli.CommandOutput,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
         """Parse scc JSON into one Issue per over-cap module."""
         _ = ctx
@@ -53,7 +59,9 @@ class FlextInfraLocCapGate(FlextInfraGate):
                 ),
             )
         issues = self._files_over_cap(
-            result.stdout, config.Infra.codegen.loc_cap.max_lines, project_dir
+            result.stdout,
+            config.Infra.codegen.loc_cap.max_lines,
+            project_dir,
         )
         return len(issues) == 0, issues
 
@@ -71,7 +79,10 @@ class FlextInfraLocCapGate(FlextInfraGate):
 
     @classmethod
     def _files_over_cap(
-        cls, scc_json: str, cap: int, project_dir: Path
+        cls,
+        scc_json: str,
+        cap: int,
+        project_dir: Path,
     ) -> t.VariadicTuple[m.Infra.Issue]:
         """Extract over-cap modules from an `scc --format json --by-file` payload.
 

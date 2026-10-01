@@ -31,7 +31,10 @@ class TestsFlextInfraUtilityFacadeProjection:
         ],
     )
     def test_projects_only_uniquely_discovered_missing_owner(
-        self, tmp_path: Path, import_statement: str, consumer_name: str
+        self,
+        tmp_path: Path,
+        import_statement: str,
+        consumer_name: str,
     ) -> None:
         """Derive the required owner from the executable public consumer."""
         package = tmp_path / "src" / "flext_sample"
@@ -69,19 +72,22 @@ class TestsFlextInfraUtilityFacadeProjection:
         tm.that(updated, has="from flext_sample._utilities.semantic_cutover import (")
         tm.that(updated.count("FlextSampleUtilitiesSemanticCutover"), eq=2)
         tm.that(
-            "FlextSampleUtilitiesSemanticCutover" not in facade.read_text(), eq=True
+            "FlextSampleUtilitiesSemanticCutover" not in facade.read_text(),
+            eq=True,
         )
         tm.that((package / "__init__.py").read_text(), eq=conflicted)
 
     def test_unresolved_consumer_import_fails_before_projection(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Unknown provenance is an error, never an empty owner selection."""
         package = tmp_path / "src" / "flext_sample"
         self._write(package / "__init__.py", "")
         self._write(package / "_utilities" / "owner.py", "class Owner:\n    pass\n")
         self._write(
-            package / "utilities.py", "class Facade:\n    class Sample:\n        pass\n"
+            package / "utilities.py",
+            "class Facade:\n    class Sample:\n        pass\n",
         )
         self._write(
             package / "consumer.py",
@@ -135,7 +141,10 @@ class TestsFlextInfraUtilityFacadeProjection:
 
     @pytest.mark.parametrize("generated", [True, False])
     def test_initializer_ownership_controls_consumer_parsing(
-        self, tmp_path: Path, *, generated: bool
+        self,
+        tmp_path: Path,
+        *,
+        generated: bool,
     ) -> None:
         """Only generated propagation is excluded from authored consumer analysis."""
         package = tmp_path / "src" / "flext_sample"
@@ -196,7 +205,10 @@ class TestsFlextInfraUtilityFacadeProjection:
 
     @pytest.mark.parametrize("multiline", [False, True])
     def test_protocol_annotation_projects_owner_and_converges(
-        self, tmp_path: Path, *, multiline: bool
+        self,
+        tmp_path: Path,
+        *,
+        multiline: bool,
     ) -> None:
         """An owned annotation supplies its protocol without changing other code."""
         package = tmp_path / "src" / "flext_sample"

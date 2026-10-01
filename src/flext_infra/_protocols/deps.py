@@ -19,7 +19,9 @@ class FlextInfraProtocolsDeps(Protocol):
         """Resolve selected workspace projects without a concrete utility dependency."""
 
         def resolve_projects(
-            self, repository_root: Path, names: t.StrSequence
+            self,
+            repository_root: Path,
+            names: t.StrSequence,
         ) -> p.Result[t.SequenceOf[m.Infra.ProjectInfo]]:
             """Resolve project names into canonical project descriptors."""
             ...

@@ -59,10 +59,13 @@ class FlextInfraUtilitiesRopeStructure:
                     enclosing_name=name,
                     type_checking_guarded=bool(type_checking_guards),
                     text=text,
-                )
+                ),
             )
             FlextInfraUtilitiesRopeStructure._push_encloser(
-                enclosers=enclosers, category=category, indent=indent, text=text
+                enclosers=enclosers,
+                category=category,
+                indent=indent,
+                text=text,
             )
             # flext-j47u (codex): all detectors consume this single guard fact.
             if (
@@ -74,20 +77,25 @@ class FlextInfraUtilitiesRopeStructure:
 
     @classmethod
     def detect_static_rules(
-        cls, ctx: m.Infra.DetectorContext, rules: t.SequenceOf[m.Infra.StaticRuleSpec]
+        cls,
+        ctx: m.Infra.DetectorContext,
+        rules: t.SequenceOf[m.Infra.StaticRuleSpec],
     ) -> t.SequenceOf[m.Infra.PatternSmellViolation]:
         """Resolve one detector context and evaluate the configured Rope policy."""
         resource = FlextInfraUtilitiesRopeCore.fetch_python_resource(
-            ctx.rope_project, ctx.file_path
+            ctx.rope_project,
+            ctx.file_path,
         )
         if resource is None:
             return ()
         try:
             pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
-                ctx.rope_project, resource
+                ctx.rope_project,
+                resource,
             )
             module_imports = FlextInfraUtilitiesRopeRuntime.module_imports_for_pymodule(
-                ctx.rope_project, pymodule
+                ctx.rope_project,
+                pymodule,
             )
         except (*FlextInfraUtilitiesRopeRuntime.rope_syntax_errors(),) as exc:
             if ctx.parse_failures is None:
@@ -98,7 +106,7 @@ class FlextInfraUtilitiesRopeStructure:
                     stage="static_rules",
                     error_type=type(exc).__name__,
                     detail=str(exc),
-                )
+                ),
             )
             return ()
         display_path = (
@@ -134,7 +142,8 @@ class FlextInfraUtilitiesRopeStructure:
             source=source,
             imports=cls._import_facts(module_imports),
             regions=cls._ignored_regions(
-                source, codeanalyze.SourceLinesAdapter(source)
+                source,
+                codeanalyze.SourceLinesAdapter(source),
             ),
             word_finder=worder.Worder(source, True),
         )
@@ -205,7 +214,9 @@ class FlextInfraUtilitiesRopeStructure:
         if isinstance(rule, m.Infra.StaticAttributeRule):
             return any(
                 cls._primary_offsets(
-                    facts, statement, f"{fact.local_name}.{rule.member}"
+                    facts,
+                    statement,
+                    f"{fact.local_name}.{rule.member}",
                 )
                 for fact in facts.imports
                 if not fact.from_import_info
@@ -267,7 +278,9 @@ class FlextInfraUtilitiesRopeStructure:
 
     @staticmethod
     def _call_has_keyword(
-        facts: m.Infra.RopeSourceFacts, call_offset: int, keyword: str
+        facts: m.Infra.RopeSourceFacts,
+        call_offset: int,
+        keyword: str,
     ) -> bool:
         """Return whether Rope recognizes a required call keyword."""
         start, end = facts.word_finder.get_word_parens_range(call_offset)
@@ -317,7 +330,8 @@ class FlextInfraUtilitiesRopeStructure:
 
     @staticmethod
     def _ignored_regions(
-        source: str, lines: codeanalyze.SourceLinesAdapter
+        source: str,
+        lines: codeanalyze.SourceLinesAdapter,
     ) -> t.VariadicTuple[m.Infra.IgnoredRegion]:
         """Validate Rope string/comment regions into immutable facts."""
         from rope.base import simplify

@@ -46,7 +46,7 @@ class FlextInfraValidateLazyMapFreshness(FlextInfraProjectSelectionServiceBase[b
 
         """
         planned = FlextInfraCodegenLazyInit(
-            repository_root=repository_root
+            repository_root=repository_root,
         ).plan_files()
         if planned.failure:
             return r[m.Infra.ValidationReport].from_failure(planned)
@@ -66,8 +66,10 @@ class FlextInfraValidateLazyMapFreshness(FlextInfraProjectSelectionServiceBase[b
         )
         return r[m.Infra.ValidationReport].ok(
             m.Infra.ValidationReport(
-                passed=passed, violations=violations, summary=summary
-            )
+                passed=passed,
+                violations=violations,
+                summary=summary,
+            ),
         )
 
     @override

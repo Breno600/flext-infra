@@ -42,14 +42,17 @@ class FlextInfraUtilitiesRopeSource:
         return [
             name
             for name in FlextInfraUtilitiesDiscovery.discover_python_dirs(
-                src_dir, workspace_excluded_top_dirs=frozenset()
+                src_dir,
+                workspace_excluded_top_dirs=frozenset(),
             )
             if name.isidentifier()
         ]
 
     @staticmethod
     def find_import_insert_position(
-        lines: t.StrSequence, *, past_existing: bool = True
+        lines: t.StrSequence,
+        *,
+        past_existing: bool = True,
     ) -> int:
         """Return the module-level line index where an import may be inserted.
 
@@ -77,7 +80,8 @@ class FlextInfraUtilitiesRopeSource:
         position = 0
         for statement in module.body:
             if isinstance(statement, ast.Expr) and isinstance(
-                statement.value, ast.Constant
+                statement.value,
+                ast.Constant,
             ):
                 if isinstance(statement.value.value, str) and position == 0:
                     position = statement.end_lineno or position
@@ -101,7 +105,8 @@ class FlextInfraUtilitiesRopeSource:
     def index_after_docstring_and_future_imports(lines: t.StrSequence) -> int:
         """Return insertion index after module docstring and future imports."""
         return FlextInfraUtilitiesRopeSource.find_import_insert_position(
-            lines, past_existing=False
+            lines,
+            past_existing=False,
         )
 
     @staticmethod
@@ -156,7 +161,9 @@ class FlextInfraUtilitiesRopeSource:
 
     @staticmethod
     def collect_from_import_bound_names(
-        source: str, *, module_name: str
+        source: str,
+        *,
+        module_name: str,
     ) -> t.Infra.StrSet:
         """Collect bound names imported from a target module."""
         bound_names: t.Infra.StrSet = set()
@@ -167,7 +174,7 @@ class FlextInfraUtilitiesRopeSource:
                 bound_names.update(
                     bound
                     for _, bound in FlextInfraUtilitiesRopeSource.parse_import_names(
-                        match.group(2)
+                        match.group(2),
                     )
                 )
         return bound_names
@@ -195,7 +202,8 @@ class FlextInfraUtilitiesRopeSource:
 
     @staticmethod
     def collect_blocked_aliases(
-        source: str, runtime_aliases: t.Infra.StrSet
+        source: str,
+        runtime_aliases: t.Infra.StrSet,
     ) -> t.Infra.StrSet:
         """Collect aliases blocked by definitions, imports, and assignments."""
         parse = FlextInfraUtilitiesRopeSource.parse_import_names
@@ -222,7 +230,8 @@ class FlextInfraUtilitiesRopeSource:
 
     @staticmethod
     def collect_shadowed_aliases(
-        source: str, runtime_aliases: t.Infra.StrSet
+        source: str,
+        runtime_aliases: t.Infra.StrSet,
     ) -> t.Infra.StrSet:
         """Collect runtime-alias names shadowed inside function bodies."""
         shadowed: t.Infra.StrSet = set()
@@ -367,7 +376,8 @@ class FlextInfraUtilitiesRopeSource:
         source = resource.read()
         try:
             pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
-                rope_project, resource
+                rope_project,
+                resource,
             )
             tree = pymodule.get_ast()
         except c.EXC_BROAD_RUNTIME as exc:
@@ -379,18 +389,26 @@ class FlextInfraUtilitiesRopeSource:
             )
             raise TypeError(msg)
         changes = FlextInfraUtilitiesSilentFailureAst.collect_silent_failure_fixes(
-            tree, source, kinds=kinds
+            tree,
+            source,
+            kinds=kinds,
         )
         if not changes:
             return source, []
         updated = cls.rewrite_source_at_offsets(
-            rope_project, resource, changes, apply=apply
+            rope_project,
+            resource,
+            changes,
+            apply=apply,
         )
         return updated, [f"Replaced {len(changes)} silent failure sentinel return(s)"]
 
     @classmethod
     def apply_transformer_to_source(
-        cls, source: str, file_path: Path, transformer_fn: t.Infra.RopeTransformFn
+        cls,
+        source: str,
+        file_path: Path,
+        transformer_fn: t.Infra.RopeTransformFn,
     ) -> t.StrSequencePair:
         """Run a rope transformer against source text via a temporary context."""
         repository_root = FlextInfraUtilitiesDiscovery.project_root(file_path)
@@ -403,10 +421,11 @@ class FlextInfraUtilitiesRopeSource:
         original_disk_source = file_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         try:
             with FlextInfraUtilitiesRopeCore.open_project(
-                repository_root
+                repository_root,
             ) as rope_project:
                 resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
-                    rope_project, file_path
+                    rope_project,
+                    file_path,
                 )
                 if resource is None:
                     return (source, [])
@@ -420,7 +439,8 @@ class FlextInfraUtilitiesRopeSource:
                 != original_disk_source
             ):
                 file_path.write_text(
-                    original_disk_source, encoding=c.Cli.ENCODING_DEFAULT
+                    original_disk_source,
+                    encoding=c.Cli.ENCODING_DEFAULT,
                 )
 
 

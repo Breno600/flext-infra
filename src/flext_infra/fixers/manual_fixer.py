@@ -57,7 +57,7 @@ class FlextInfraManualFixerAdapter(FlextInfraFixerAdapter):
                             f"manual fix required for {rule_id}: "
                             f"{project_dir.name}/{Path(file_path).name}:{line} {message}"
                         ),
-                    )
+                    ),
                 )
             else:
                 previewed.append(
@@ -65,10 +65,12 @@ class FlextInfraManualFixerAdapter(FlextInfraFixerAdapter):
                         rule_id=rule_id,
                         file_path=str(file_path),
                         message=f"line {line}: {message}",
-                    )
+                    ),
                 )
         return m.Infra.ProjectFixResult(
-            project=project_dir.name, previewed=tuple(previewed), failed=tuple(failed)
+            project=project_dir.name,
+            previewed=tuple(previewed),
+            failed=tuple(failed),
         )
 
     @staticmethod

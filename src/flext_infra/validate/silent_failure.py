@@ -20,7 +20,8 @@ class FlextInfraSilentFailureValidator(s[bool]):
     """Validate that failure paths do not collapse into sentinel returns."""
 
     project_filter: Annotated[
-        str | None, m.Field(description="Project filter (comma-separated)")
+        str | None,
+        m.Field(description="Project filter (comma-separated)"),
     ] = None
 
     def build_report(self) -> p.Result[m.Infra.ValidationReport]:
@@ -28,11 +29,11 @@ class FlextInfraSilentFailureValidator(s[bool]):
         issues: t.MutableSequenceOf[str] = []
         projects_result = u.Infra.projects(self.repository_root)
         projects = self._filtered_projects(
-            tuple(projects_result.unwrap()) if projects_result.success else ()
+            tuple(projects_result.unwrap()) if projects_result.success else (),
         )
         for project in projects:
             iter_result = u.Infra.iter_python_files(
-                m.Infra.SourceScanRequest(project_roots=(project.path,))
+                m.Infra.SourceScanRequest(project_roots=(project.path,)),
             )
             if iter_result.failure:
                 return r[m.Infra.ValidationReport].from_failure(iter_result)
@@ -46,7 +47,7 @@ class FlextInfraSilentFailureValidator(s[bool]):
                                 file_path=file_path,
                                 project_root=project.path,
                                 rope_project=rope_project,
-                            )
+                            ),
                         )
                     )
             finally:
@@ -59,8 +60,10 @@ class FlextInfraSilentFailureValidator(s[bool]):
         )
         return r[m.Infra.ValidationReport].ok(
             m.Infra.ValidationReport(
-                passed=passed, violations=list(issues), summary=summary
-            )
+                passed=passed,
+                violations=list(issues),
+                summary=summary,
+            ),
         )
 
     @override
