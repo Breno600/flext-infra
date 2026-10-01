@@ -286,7 +286,12 @@ class TestsFlextInfraScriptDispatchMakefile:
     def test_profile_test_verb_profiles_the_canonical_pytest_entry(
         self, tmp_path: Path
     ) -> None:
-        """The profiling verb uses the bounded runner and shared testmon store."""
+        """profile-test profiles the entry and its central collection children.
+
+        Cold-run diagnosis (flext-itpd1.3.7) needs the same persistent testmon
+        database guard and environment as the bounded gate, but the diagnostic
+        omits the outer PYTEST_BOUNDED wrapper, not the runner's own deadline.
+        """
         rendered = self._render_root_makefile(
             tmp_path, extra_verbs=(), script_dispatch=None
         )
@@ -300,14 +305,17 @@ class TestsFlextInfraScriptDispatchMakefile:
         # and exports the same database environment.
         tm.that(profile_test, has='database="$(FLEXT_PYTEST_TESTMON_DATABASE)";')
         tm.that(profile_test, has=f'{datafile}="$$database"')
-        tm.that(profile_test, has="python -m flext_infra._pytest_entry profile")
+        # The thin entry delegates profiling to the execution adapter.
+        tm.that(profile_test, has="-m flext_infra._pytest_entry profile")
+        tm.that(profile_test, lacks="import cProfile")
         tm.that(profile_test, has="$(PROFILE_REPORTS_DIR)/pytest.pstats")
-        tm.that(profile_test, has="PYTEST_BOUNDED")
+        # Only the bounded gate adds the outer hard wall clock wrapper.
+        tm.that(profile_test, lacks="PYTEST_BOUNDED")
         tm.that(gate_runner, has="PYTEST_BOUNDED")
         report = rendered.split("profile-test-report:", 1)[1].split("\n\n", 1)[0]
-        tm.that(report, has='cd "$(PROJECT_ROOT)"')
         tm.that(report, has="flext_infra._cprofile_entry")
         tm.that(report, has="$(PROFILE_REPORTS_DIR)/pytest.pstats")
+        tm.that(report, has="$(PROFILE_REPORTS_DIR)/pytest.pstats.json")
 
     # A test asserting a downstream consumer's verbs from this
     # engine's catalog was removed. The engine is consumer-agnostic: a consumer

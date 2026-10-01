@@ -402,13 +402,6 @@ class FlextInfraConfigModelsContexts:
                 ),
             ),
         ] = ()
-        repository_namespace_packages: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                default=(),
-                description="Implicit namespace directories at the repository root shipped at their original import path",
-            ),
-        ] = ()
         root_modules: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
@@ -627,13 +620,6 @@ class FlextInfraConfigModelsContexts:
                     "package. Declared per repository because the layout is a "
                     "fact of that repository, not of its upstream profile."
                 ),
-            ),
-        ] = ()
-        repository_namespace_packages: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                default=(),
-                description="Implicit namespace directories at the repository root shipped at their original import path",
             ),
         ] = ()
         root_modules: Annotated[

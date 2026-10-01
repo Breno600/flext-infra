@@ -74,6 +74,27 @@ class TestsFlextInfraCodegenLayoutGitignore:
         tm.that(rendered.value, has="settings.json")
         tm.that(rendered.value, has=f"{archive_root()}/")
 
+    def test_rendered_gitignore_keeps_backup_named_python_sources(
+        self, tmp_path: Path
+    ) -> None:
+        """A backup module is source code even when its name contains backup."""
+        rendered = FlextInfraCodegenConform.render_project_gitignore(
+            config.Infra.codegen,
+            profile=c.Infra.MakeProfile.STANDALONE,
+            project_name="flext-cli",
+        )
+        tm.ok(rendered)
+        (tmp_path / ".gitignore").write_text(rendered.value, encoding="utf-8")
+        tm.ok(u.Cli.capture([c.Infra.GIT, "init"], cwd=tmp_path))
+        source = tmp_path / "src" / "dc_backup" / "workspace_backup_request.py"
+        source.parent.mkdir(parents=True)
+        source.write_text("pass\n", encoding="utf-8")
+        tracked = u.Cli.capture(
+            [c.Infra.GIT, "check-ignore", str(source.relative_to(tmp_path))],
+            cwd=tmp_path,
+        )
+        tm.that(tracked.failure, eq=True)
+
     @pytest.mark.slow
     @pytest.mark.parametrize("directory_suffix", ["", "-lane"])
     def test_rendered_gitignore_satisfies_layout_additions(

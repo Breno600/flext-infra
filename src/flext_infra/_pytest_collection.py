@@ -42,24 +42,10 @@ class FlextInfraPytestCollection:
             default=None,
             help="Monotonic instant after which the session stops gracefully.",
         )
-        parser.addoption(
-            FlextInfraConstantsCheck.PYTEST_PROFILE_OPTION,
-            default=None,
-            help="Directory for real controller and worker cProfile artifacts.",
-        )
 
     @staticmethod
     def pytest_configure(config: pytest.Config) -> None:
         """Record warnings once, on the controller or in serial execution."""
-        profile_directory = config.getoption(
-            FlextInfraConstantsCheck.PYTEST_PROFILE_OPTION
-        )
-        if profile_directory is not None:
-            from ._pytest_profile import FlextInfraPytestProfile
-
-            config.pluginmanager.register(
-                FlextInfraPytestProfile(Path(profile_directory))
-            )
         report_log = config.getoption("report_log")
         if report_log and not hasattr(config, "workerinput"):
             config.pluginmanager.register(

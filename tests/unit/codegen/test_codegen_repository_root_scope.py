@@ -43,6 +43,8 @@ class TestsFlextInfraCodegenRepositoryRootScope:
         tm.that(
             rendered, has="PROJECT_FLEXT_INFRA := $(PROJECT_INFRA_RUN) -m flext_infra"
         )
+        tm.that(rendered.endswith("\n"), eq=True)
+        tm.that(rendered.endswith("\n\n"), eq=False)
 
     def test_repository_root_gate_verbs_evaluate_only_the_root(
         self, tmp_path: Path

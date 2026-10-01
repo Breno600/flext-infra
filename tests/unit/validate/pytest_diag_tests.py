@@ -8,7 +8,7 @@ import pytest
 from defusedxml import ElementTree as DefusedET
 from flext_tests import tm
 
-from flext_infra import FlextInfraPytestDiagExtractor, c
+from flext_infra import FlextInfraPytestDiagExtractor, c, t
 from tests import m
 
 if TYPE_CHECKING:
@@ -397,3 +397,37 @@ class TestsFlextInfraPytestDiag:
         )
         with pytest.raises(ValueError, match="zip"):
             extractor.extract(junit, log, report_log=extractor.report_log)
+
+    @pytest.mark.parametrize(
+        ("phases", "expected"),
+        [
+            (("setup", "teardown"), "incomplete pytest lifecycle"),
+            (("setup", "call"), "incomplete pytest lifecycle"),
+            (("setup", "setup", "call", "teardown"), "duplicate pytest phase"),
+        ],
+        ids=["missing-call", "missing-teardown", "duplicate-setup"],
+    )
+    def test_report_log_rejects_incomplete_or_repeated_lifecycles(
+        self, tmp_path: Path, phases: t.StrTuple, expected: str
+    ) -> None:
+        """Every reported node needs exactly one setup, call and teardown."""
+        report_log = tmp_path / "suite.events.jsonl"
+        report_log.write_text(
+            "".join(
+                m.Infra.PytestReportEvent.model_validate({
+                    "$report_type": "TestReport",
+                    "nodeid": "tests/test_lifecycle.py::test_case",
+                    "when": phase,
+                    "outcome": "passed",
+                }).model_dump_json(by_alias=True, exclude_none=True)
+                + "\n"
+                for phase in phases
+            ),
+            encoding="utf-8",
+        )
+        report_log.with_suffix(c.Infra.PYTEST_WARNING_EVENTS_SUFFIX).write_text(
+            "", encoding="utf-8"
+        )
+
+        with pytest.raises(ValueError, match=expected):
+            FlextInfraPytestDiagExtractor.extract_report_log(report_log)
