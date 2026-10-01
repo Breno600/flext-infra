@@ -400,7 +400,9 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 ruff_per_file_ignores=(
                     FlextInfraEnsureRuffConfigPhase.compose_per_file_ignores(
                         repository_root,
-                        config.Infra.tooling.tools.ruff.lint.per_file_ignores,
+                        global_ignores=(
+                            config.Infra.tooling.tools.ruff.lint.per_file_ignores
+                        ),
                     )
                 ),
                 environment_path_prepends=(codegen.toolchain.environment_path_prepends),
