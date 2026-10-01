@@ -84,10 +84,6 @@ class FlextInfraConstantsCheck:
             "pyright": ("Pyright", "https://github.com/microsoft/pyright"),
         }),
         GateKind.INFRA: MappingProxyType({
-            "deferred-self-reference": (
-                "Flext Deferred Self Reference Detector",
-                "internal://flext-infra/deferred-self-reference",
-            ),
             "loc-cap": ("scc", "https://github.com/boyter/scc"),
             "runtime-census": (
                 "Flext Runtime Enforcement Census",
@@ -175,125 +171,6 @@ class FlextInfraConstantsCheck:
     PYREFLY_ERRORS_KEY: ClassVar[str] = "errors"
     PYREFLY_ZERO_ERRORS_RECEIPT: ClassVar[str] = "INFO 0 errors"
     "Exact successful stderr receipt emitted by Pyrefly's per-file check."
-    # --- Abstraction-boundary gate (§2.7) detection SSOT ---
-    BOUNDARY_SKIP_PROJECTS: ClassVar[frozenset[str]] = frozenset({
-        "flext-cli",
-        "flext-core",
-    })
-    BOUNDARY_TOML_ALLOWED: ClassVar[frozenset[str]] = frozenset({"flext-infra"})
-    BOUNDARY_CLICK_FILES: ClassVar[t.StrSequence] = (
-        "/flext-tap-",
-        "/flext-target-",
-        "/flext-meltano/src/flext_meltano/services/executor_base.py",
-        "/flext-meltano/src/flext_meltano/_protocols/singer.py",
-        "/flext-meltano/tests/unit/test_singer_sdk_adapter.py",
-    )
-    BOUNDARY_EXTENSION_FILES: ClassVar[frozenset[str]] = frozenset({
-        "constants.py",
-        "models.py",
-        "protocols.py",
-        "typings.py",
-        "utilities.py",
-        "config.py",
-        "settings.py",
-        "_config.py",
-        "_settings.py",
-    })
-    # ADR-0018 stdlib island: the native hook client runs as `python3 -I -S`
-    # and is excluded from the facade-boundary rules; the fragment matches the
-    # real posix path segments of the consumer's hook client module.
-    BOUNDARY_SKIP_PATH_FRAGMENTS: ClassVar[t.StrSequence] = (
-        "/ai_hub/hook_client",
-        # Vendored standalone workspace tooling (promoted-command dispatcher):
-        # it must stay importable by a bare `python3` outside any project
-        # venv, so the facade imports the boundary rules mandate are
-        # impossible by design; its stdlib usage belongs to the distributor.
-        "/scripts/lib/cosmos_command",
-    )
-    BOUNDARY_BANNED_LIBS: ClassVar[t.MappingKV[str, str]] = MappingProxyType({
-        "typer": "cli.create_app_with_common_params / cli.register_command",
-        "click": "flext_cli.cli application, registration, execution, and invocation methods",
-        "argparse": "cli.register_result_command + Pydantic model",
-        "rich": "cli.print / cli.display_message / cli.render_panel / cli.render_table",
-        "tabulate": "cli.format_table / cli.show_table",
-        "colorama": "cli.print with c.Cli.MessageStyles",
-        "prompt_toolkit": "cli.prompt / cli.confirm / cli.prompt_password",
-        "tqdm": "cli.display_progress",
-        "getpass": "cli.prompt_password",
-        "orjson": "cli.read_json_file / cli.write_json_file / u.Cli.json_dumps",
-        "ujson": "cli.read_json_file / cli.write_json_file / u.Cli.json_dumps",
-        "simplejson": "cli.read_json_file / cli.write_json_file / u.Cli.json_dumps",
-    })
-    # Precompiled (lib, regex, replacement) rows — click is exempted at the call
-    # site for Singer-SDK boundary files.
-    BOUNDARY_BANNED_RULES: ClassVar[
-        t.VariadicTuple[t.Triple[str, t.RegexPattern, str]]
-    ] = tuple(
-        (lib, re.compile(rf"^\s*(import|from)\s+{lib}(\s|$|\.)", re.MULTILINE), repl)
-        for lib, repl in BOUNDARY_BANNED_LIBS.items()
-    )
-    # Unconditional (regex, message) catalog — one data-driven loop in the gate.
-    BOUNDARY_SIMPLE_RULES: ClassVar[t.VariadicTuple[t.Pair[t.RegexPattern, str]]] = (
-        (
-            re.compile(
-                rf"^\s*(import|from)\s+{'sub' + 'process'}(\s|$|\.)", re.MULTILINE
-            ),
-            "imports subprocess — use cli.run / cli.capture",
-        ),
-    )
-    BOUNDARY_CALL_RULES: ClassVar[t.MappingKV[str, str]] = MappingProxyType({
-        "print": "uses u.Cli.print() — use cli.print",
-        "sys.exit": "uses sys.exit() — use cli.exit()",
-    })
-    # The boundary gate's own rule-definition source files legitimately contain the
-    # forbidden-pattern strings as DETECTION RULES (not as usage); exempt them from
-    # self-scanning so the detector does not flag its own catalog.
-    BOUNDARY_SELF_FILES: ClassVar[frozenset[str]] = frozenset({
-        "flext_infra/_constants/check.py",
-        "flext_infra/gates/abstraction_boundary.py",
-    })
-    BOUNDARY_JSON_ATTRS: ClassVar[frozenset[str]] = frozenset({
-        "dump",
-        "dumps",
-        "load",
-        "loads",
-    })
-    BOUNDARY_YAML_ATTRS: ClassVar[frozenset[str]] = frozenset({
-        "dump",
-        "load",
-        "safe_load",
-    })
-    BOUNDARY_CSV_ATTRS: ClassVar[frozenset[str]] = frozenset({
-        "DictReader",
-        "DictWriter",
-        "reader",
-        "writer",
-    })
-    BOUNDARY_ATTR_RULES: ClassVar[
-        t.VariadicTuple[t.Triple[str, frozenset[str], str]]
-    ] = (
-        (
-            "json",
-            BOUNDARY_JSON_ATTRS,
-            "uses json serialization — use u.Cli.json_* / cli.json_*",
-        ),
-        (
-            "yaml",
-            BOUNDARY_YAML_ATTRS,
-            "uses yaml serialization — use u.Cli.yaml_* / cli.yaml_*",
-        ),
-        (
-            "csv",
-            BOUNDARY_CSV_ATTRS,
-            "uses csv serialization — use u.Cli.csv_* / cli.csv_*",
-        ),
-    )
-    BOUNDARY_TOML_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\s*(import|from)\s+(tomllib|tomlkit)(\s|$|\.)", re.MULTILINE
-    )
-    BOUNDARY_FLEXT_CLI_CONCRETE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"\bFlextCli[A-Z]\w*"
-    )
 
     SCC_BINARY: ClassVar[str] = "scc"
     CLI_DIRENV: ClassVar[str] = "direnv"

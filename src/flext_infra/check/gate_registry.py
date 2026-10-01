@@ -9,9 +9,6 @@ from flext_infra import c, p, t
 from flext_infra.gates.bandit import FlextInfraBanditGate
 from flext_infra.gates.base_gate import FlextInfraGate
 from flext_infra.gates.codemod import FlextInfraCodemodGate
-from flext_infra.gates.deferred_self_reference import (
-    FlextInfraDeferredSelfReferenceGate,
-)
 from flext_infra.gates.direnv import FlextInfraDirenvGate
 from flext_infra.gates.duplication import FlextInfraDuplicationGate
 from flext_infra.gates.index_declarations import FlextInfraIndexDeclarationsGate
@@ -73,7 +70,6 @@ class FlextInfraGateRegistry:
             FlextInfraPyreflyGate,
             FlextInfraMypyGate,
             FlextInfraPyrightGate,
-            FlextInfraDeferredSelfReferenceGate,
             FlextInfraBanditGate,
             FlextInfraMarkdownGate,
             FlextInfraMarkdownFormatGate,

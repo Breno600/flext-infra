@@ -30,59 +30,6 @@ from ..codegen import FlextInfraCodegenMiseArtifacts, FlextInfraCodegenTransacti
 class FlextInfraModTextGateEngine:
     """Scan, apply, and prove the declarative sed-by-list rule cascade."""
 
-    @staticmethod
-    def _provider_rules_path() -> Path:
-        """Resolve the one configured provider rules file for every phase."""
-        return FlextInfraConfig.ssot_config_dir() / (
-            c.Infra.CODEMOD_TEXT_RULES_RELPATH.relative_to(c.Infra.CODEGEN_CONFIG_DIR)
-        )
-
-    @classmethod
-    def run(cls, root: Path, *, apply: bool) -> p.Result[t.Cli.ResultValue]:
-        """Replay only text rules through their authenticated transaction."""
-        pending = cls.scan(root, fix=False, validate_receipts=True)
-        if pending.failure:
-            return r[t.Cli.ResultValue].from_failure(pending)
-        if apply and pending.value.actionable:
-            applied = cls.scan(root, fix=True, validate_receipts=True)
-            if applied.failure:
-                return r[t.Cli.ResultValue].from_failure(applied)
-        remaining = cls.scan(root, fix=False)
-        if remaining.failure:
-            return r[t.Cli.ResultValue].from_failure(remaining)
-        if remaining.value.findings:
-            return r[t.Cli.ResultValue].fail(
-                f"mod-text has {remaining.value.findings} pending finding(s)"
-            )
-        return r[t.Cli.ResultValue].ok(
-            f"mod-text: {pending.value.actionable if apply else 0} "
-            "actionable finding(s) applied; fixed point verified"
-        )
-
-    @classmethod
-    def run(
-        cls, root: Path, *, apply: bool
-    ) -> p.Result[t.Cli.ResultValue]:
-        """Replay only text rules through their authenticated transaction."""
-        pending = cls.scan(root, fix=False, validate_receipts=True)
-        if pending.failure:
-            return r[t.Cli.ResultValue].from_failure(pending)
-        if apply and pending.value.actionable:
-            applied = cls.scan(root, fix=True, validate_receipts=True)
-            if applied.failure:
-                return r[t.Cli.ResultValue].from_failure(applied)
-        remaining = cls.scan(root, fix=False)
-        if remaining.failure:
-            return r[t.Cli.ResultValue].from_failure(remaining)
-        if remaining.value.findings:
-            return r[t.Cli.ResultValue].fail(
-                f"mod-text has {remaining.value.findings} pending finding(s)"
-            )
-        return r[t.Cli.ResultValue].ok(
-            f"mod-text: {pending.value.actionable if apply else 0} "
-            "actionable finding(s) applied; fixed point verified"
-        )
-
     @classmethod
     def run(cls, root: Path, *, apply: bool) -> p.Result[t.Cli.ResultValue]:
         """Replay only text rules through their authenticated transaction."""
@@ -410,27 +357,6 @@ class FlextInfraModTextGateEngine:
             if published.failure:
                 return r[m.Infra.ModTextReport].from_failure(published)
         return r[m.Infra.ModTextReport].ok(report)
-
-    @staticmethod
-    def _inventory_paths(
-        root: Path, rules: t.VariadicTuple[m.Infra.ModTextRule]
-    ) -> t.VariadicTuple[Path]:
-        """Union the Python surface with every declared text-rule include glob."""
-        paths: set[Path] = set()
-        for target in u.Infra.ast_grep_scan_targets(root):
-            candidate = root / target
-            if candidate.is_dir():
-                paths.update(candidate.rglob(f"*{c.Infra.EXT_PYTHON}"))
-            else:
-                paths.add(candidate)
-        for rule in rules:
-            for glob in rule.include:
-                relative = Path(glob)
-                if relative.is_absolute() or ".." in relative.parts:
-                    msg = f"text rule {rule.rule_id} escapes repository: {glob}"
-                    raise ValueError(msg)
-                paths.update(path for path in root.glob(glob) if path.is_file())
-        return tuple(sorted(paths))
 
     @staticmethod
     def _publish(
