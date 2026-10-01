@@ -73,6 +73,38 @@ class TestsFlextInfraDocsFormatter:
         tm.that(fixed_point.value[0].passed, eq=True)
         tm.that(fixed_point.value[0].reason, eq="pending:0")
 
+    def test_toc_fix_and_format_keep_literal_code_symbols(self, tmp_path: Path) -> None:
+        """A rendered TOC must survive the real fixer and formatter together."""
+        workspace = u.Tests.create_docs_workspace(tmp_path)
+        self._write_prettier_policy(workspace)
+        document = workspace / "docs/toc.md"
+        document.write_text(
+            "# Docs\n\n"
+            "## Config module `<project>/_config.py`\n\n"
+            "## Settings `*_dir`\n\n"
+            "## Exports `pkg.__all__`\n\n"
+            "## Models `m.*`\n\n"
+            "## New `flext-*` packages\n",
+            encoding="utf-8",
+        )
+        fixer = FlextInfraDocFixer()
+        formatter = FlextInfraDocFormatter()
+
+        first_fix = fixer.fix(workspace, apply=True)
+        tm.ok(first_fix)
+        first_format = formatter.format(workspace, apply=True)
+        tm.ok(first_format)
+        formatted = document.read_text(encoding="utf-8")
+
+        second_fix = fixer.fix(workspace, apply=True)
+        tm.ok(second_fix)
+        tm.that(second_fix.value[0].changed_files, eq=0)
+        second_format = formatter.format(workspace, apply=True)
+        tm.ok(second_format)
+        tm.that(second_format.value[0].passed, eq=True)
+        tm.that(second_format.value[0].changed_files, eq=0)
+        tm.that(document.read_text(encoding="utf-8"), eq=formatted)
+
     def test_fmt_check_only_never_rewrites_the_tree(self, tmp_path: Path) -> None:
         """The preview pass leaves the pending drift untouched on disk."""
         workspace = u.Tests.create_docs_workspace(tmp_path)
