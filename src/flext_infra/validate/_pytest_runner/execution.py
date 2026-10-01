@@ -89,16 +89,36 @@ class FlextInfraPytestRunnerExecution(
     ) -> m.Infra.PytestSelectionPlan:
         """Return the typed testmon selection and its manifest owner.
 
-        Returns:
-            The typed testmon selection and its manifest owner.
-
-        Raises:
-            RuntimeError: If testmon selection failed (; or if pytest reported no
-                collection with a nonempty manifest; or if complete pytest inventory
-                must contain at least one test; or if testmon selected node IDs outside
-                the complete collection inventory.
-
+        Each collection is one deadline-bound child of the flext-cli process
+        owner, which runs deadline processes on the main interpreter thread
+        only; the selection and the complete inventory therefore run in order.
         """
+        selection = self._collect_selection(
+            report_dir, complete=complete, execution_mode=execution_mode
+        )
+        if complete or not verify_inventory:
+            return selection
+        inventory = self._collect_selection(
+            report_dir, complete=True, execution_mode=execution_mode
+        )
+        if not set(selection.node_ids).issubset(inventory.node_ids):
+            msg = "testmon selected node IDs outside the complete collection inventory"
+            raise RuntimeError(msg)
+        return selection.model_copy(
+            update={
+                "whole_target": selection.node_ids == inventory.node_ids,
+                "inventory_collected": True,
+            }
+        )
+
+    def _collect_selection(
+        self,
+        report_dir: Path,
+        *,
+        execution_mode: c.Infra.PytestExecutionMode,
+        complete: bool,
+    ) -> m.Infra.PytestSelectionPlan:
+        """Run one read-only collection and publish its manifest artifacts."""
         artifact = "testmon-inventory" if complete else "testmon-selection"
         selection_log = report_dir / f"{artifact}.log"
         manifest_path = report_dir / f"{artifact}.json"
@@ -109,6 +129,10 @@ class FlextInfraPytestRunnerExecution(
             complete=complete,
             execution_mode=execution_mode,
         )
+        if self.collection_command_prefix:
+            sys.stdout.write(
+                f"pytest {artifact} profile: {manifest_path.with_suffix('.pstats')}\n"
+            )
         outcome = u.Cli.run_to_file(
             command,
             selection_log,
@@ -192,8 +216,8 @@ class FlextInfraPytestRunnerExecution(
         return m.Infra.PytestSelectionPlan(
             manifest_path=manifest_path,
             node_ids=node_ids,
-            whole_target=whole_target,
-            inventory_collected=complete or verify_inventory,
+            whole_target=True,
+            inventory_collected=complete,
             owns_no_tests=owns_no_tests,
         )
 

@@ -90,18 +90,19 @@ overlay.
 
 Code in a checkout runs in the environment of its `RUNTIME_ROOT`. The generated Makefile
 exports `RUNTIME_ROOT`, and flext-infra reads it as a typed declaration: the
-`fresh-import` validation runs its probes with the Python of the external physical
-environment the Makefile declares, never with the interpreter hosting the tool. Without
-a declaration, the owner derives the checkout's Git root; a declaration without an
-interpreter fails.
+`fresh-import` validation runs its probes with the platform-specific Python interpreter in `<RUNTIME_ROOT>/.venv`, never
+with the interpreter hosting the tool. Without a declaration, the owner derives the
+checkout's Git root; a declaration without an interpreter fails.
 
-A member attached as a submodule uses the environment of its containing Git
-superproject; a standalone checkout or linked worktree has its own. The physical
-directory is `.venv` at the runtime root (`c.Infra.ENVIRONMENT_DIRECTORY`), never a
-configuration value. The generated Makefile, the generated `.envrc`, and
-`runtime_environment_dir` resolve that location from the same resolved runtime root,
-so entering the checkout through a symlink does not change the selected environment.
-No environment is borrowed from another checkout through a symlink.
+The `.venv` belongs to the `RUNTIME_ROOT`. A member attached as a submodule uses the
+`.venv` of its containing Git superproject; a standalone checkout or linked worktree has
+its own. In development there is no other option: the environment is always
+`<RUNTIME_ROOT>/.venv`, rendered from its constant owner, and that location is law,
+never configuration. The generated Makefile, the generated `.envrc`, and
+`runtime_environment_dir` resolve that root through the same physical path, so entering
+the checkout through a symlink does not change the selected environment. No environment
+lives outside the checkout that owns it, and none is borrowed from another checkout
+through a symlink.
 
 ## Mise launchers
 
