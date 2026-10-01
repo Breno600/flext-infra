@@ -122,6 +122,10 @@ class FlextInfraConstantsCheck:
         gate: kind for kind, tools in GATE_TOOLS_BY_KIND.items() for gate in tools
     })
     "Gate id -> kind, derived from the registry declaration."
+    TYPE_CHECKER_GATES: ClassVar[frozenset[str]] = frozenset(
+        GATE_TOOLS_BY_KIND[GateKind.TYPE_CHECKER]
+    )
+    "Native type-checker gates, derived from the registry declaration."
     SARIF_TOOL_INFO: ClassVar[t.MappingKV[str, t.StrPair]] = MappingProxyType({
         gate: tool for tools in GATE_TOOLS_BY_KIND.values() for gate, tool in tools.items()
     })
