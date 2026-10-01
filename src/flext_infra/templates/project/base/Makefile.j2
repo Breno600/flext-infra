@@ -423,7 +423,7 @@ define _lock_project
 		mkdir -p "$${stage}/mirror$$relative"; \
 		cp "$$member/pyproject.toml" "$${stage}/mirror$$relative/pyproject.toml"; \
 	done < "$${stage}/.members"; \
-	$(if $(2),if [ -f "$$workspace/uv.lock" ]; then cp "$$workspace/uv.lock" "$${stage}/mirror/uv.lock"; fi;) \
+	if [ "$(1)" != "--upgrade --refresh" ] && [ -f "$$workspace/uv.lock" ]; then cp "$$workspace/uv.lock" "$${stage}/mirror/uv.lock"; fi; \
 	$(UV) lock --project "$${stage}/mirror" $(1); \
 	$(UV) lock --check --project "$${stage}/mirror"; \
 	if [ -e "$$candidate" ]; then printf 'ERROR: lock staging path already exists: %s\n' "$$candidate" >&2; exit 2; fi; \
@@ -471,7 +471,6 @@ setup: _bootstrap_setup_tools
 # must not require an existing environment.
 upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle
 upg: TOOL_BOOTSTRAP_RESOLVE := 1
-upg: TOOL_BOOTSTRAP_LOCK := 1
 upg: _builtin_require_runtime_root _bootstrap_setup_tools
 
 # Only the runtime root resolves the Mise release. An attached member's pin and
@@ -654,7 +653,7 @@ _upg_activated:
 {% if make_profile == "workspace" %}
 _builtin-self-test: _builtin_require_environment
 {{ test_report_recipe(
-    runner=pytest_test_runner(),
+    runner=pytest_test_runner(("", "slow")),
 ) }}
 
 _builtin-self-check: _builtin_require_environment
@@ -662,7 +661,7 @@ _builtin-self-check: _builtin_require_environment
 
 _builtin-self-test-full: _builtin_require_environment
 {{ test_report_recipe(
-    runner=pytest_test_runner("full"),
+    runner=pytest_test_runner(("full",)),
 ) }}
 
 _builtin-self-fmt: _builtin_require_environment
@@ -712,6 +711,36 @@ _builtin_sonarcloud_sync_project: _builtin_require_environment
 
 _builtin-self-sonarcloud-sync: _builtin_sonarcloud_sync_project
 
+{% if make_profile == "workspace" %}
+_builtin_build_artifacts:
+	@$(WORKSPACE_ORCHESTRATE) --verb build $(WORKSPACE_PROJECT_ARGS)
+
+# Check is read-only: it validates and reports, never rewrites the tree (fix
+# and fmt own mutation). The workspace delegates the same operation to each
+# member; each generated member selects the same active local partition,
+# its CI complement, or all active gates when the CI token is absent.
+_builtin_check_all: _builtin_require_environment
+	@$(WORKSPACE_ORCHESTRATE) --verb check $(WORKSPACE_PROJECT_ARGS)
+
+_builtin_test_all: _builtin_require_environment
+	@$(WORKSPACE_ORCHESTRATE) --verb test $(WORKSPACE_PROJECT_ARGS)
+
+_builtin_test_full_all: _builtin_require_environment
+	@$(WORKSPACE_ORCHESTRATE) --verb test-full $(WORKSPACE_PROJECT_ARGS)
+
+_builtin_fmt_all: _builtin_require_environment
+	@$(WORKSPACE_ORCHESTRATE) --verb fmt $(WORKSPACE_PROJECT_ARGS)
+
+_builtin_fix_all: _builtin_require_environment
+	@$(WORKSPACE_ORCHESTRATE) --verb fix $(WORKSPACE_PROJECT_ARGS)
+
+_builtin_fix_enforcement: _builtin_require_environment
+	@$(WORKSPACE_ORCHESTRATE) --verb fix-enforcement $(WORKSPACE_PROJECT_ARGS)
+
+_builtin_sonarcloud_sync_all: _builtin_require_environment
+	@$(WORKSPACE_ORCHESTRATE) --verb sonarcloud-sync $(WORKSPACE_PROJECT_ARGS)
+
+{% else %}
 # Gate, fix and build verbs act on this repository only, with one body per verb
 # in every profile: a workspace root evaluates itself exactly as CI does.
 _builtin_build_artifacts:
@@ -762,6 +791,7 @@ _builtin_fix_enforcement: _builtin_require_environment
 _builtin_sonarcloud_sync_all: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) maintenance sonarcloud-sync --repository-root "$(PROJECT_ROOT)"
 
+{% endif %}
 {% if make_profile == "workspace" %}
 # Member propagation exists only where members exist: this workspace's
 # flext-infra conforms and relocks each declared member and publishes one

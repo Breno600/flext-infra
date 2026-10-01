@@ -50,8 +50,8 @@ class TestsFlextInfraAuditor:
 
         return _is_external
 
-    @staticmethod
     def test_valid_scope_returns_success(
+        self,
         auditor: FlextInfraDocAuditor,
         tmp_path: Path,
     ) -> None:
@@ -59,8 +59,7 @@ class TestsFlextInfraAuditor:
         result = auditor.audit(workspace)
         tm.ok(result)
 
-    @staticmethod
-    def test_issue_structure() -> None:
+    def test_issue_structure(self) -> None:
         issue = m.Infra.AuditIssue(
             file="README.md",
             issue_type="broken_link",
@@ -91,8 +90,8 @@ class TestsFlextInfraAuditor:
         check: str,
         output_dir: str,
     ) -> None:
-        # The command-contract check loads the governed workspace spec, whose
-        # repository-local Beads configuration every real repository carries,
+        # The command-contract check loads the governed workspace spec,
+        # its repository-local Beads configuration,
         # and it resolves a Git identity from the audited root. A selected
         # ``projects`` entry only matches a scope the workspace actually
         # declares, so the fixture is built by the canonical docs workspace
@@ -116,12 +115,10 @@ class TestsFlextInfraAuditor:
         # hold whatever the runtime did and prove nothing.
         tm.ok(result)
 
-    @staticmethod
-    def test_report_frozen() -> None:
+    def test_report_frozen(self) -> None:
         tm.that(m.Infra.DocsPhaseReport.model_config.get("frozen"), eq=True)
 
-    @staticmethod
-    def test_issue_frozen() -> None:
+    def test_issue_frozen(self) -> None:
         tm.that(m.Infra.AuditIssue.model_config.get("frozen"), eq=True)
 
     @pytest.mark.parametrize(
@@ -194,8 +191,8 @@ class TestsFlextInfraAuditor:
         with pytest.raises(ValueError, match="use HTTPS"):
             is_external(target)
 
-    @staticmethod
     def test_repository_paths_are_not_external(
+        self,
         *,
         is_external: Callable[[str], bool],
     ) -> None:
