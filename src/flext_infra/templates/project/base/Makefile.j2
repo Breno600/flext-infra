@@ -884,6 +884,10 @@ _builtin-mod: _builtin_mod_apply
 _builtin-mod-snapshots: _builtin_mod_snapshots
 _builtin-waza:
 	@cd "$(PROJECT_ROOT)" && $(PROJECT_TOOL_EXEC) waza check --no-update-check
+{% for verb, gate in make.standalone_check_gates.items() %}
+_builtin-{{ verb }}:
+	@{{ check_run(gate) }}
+{% endfor %}
 _builtin-duplication:
 	@{{ check_run("duplication") }}
 _builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all
