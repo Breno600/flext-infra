@@ -80,6 +80,13 @@ from ._utilities.worktree_lifecycle import FlextInfraWorktreeLifecycle
 from ._utilities.worktree_provisioning import FlextInfraWorktreeProvisioning
 
 
+from flext_infra._utilities.silent_failure_ast import (
+    FlextInfraUtilitiesSilentFailureAst,
+)
+from flext_infra._utilities.signature_rules import (
+    FlextInfraUtilitiesSignatureRules,
+)
+
 class FlextInfraUtilities(FlextCliUtilities):
     """Utility namespace for flext-infra; extends FlextUtilities.
 
@@ -155,6 +162,8 @@ class FlextInfraUtilities(FlextCliUtilities):
         FlextInfraUtilitiesCodemodRules,
         FlextInfraUtilitiesPrivateImportAncestry,
         FlextInfraUtilitiesPrivateImportFacades,
+        FlextInfraUtilitiesSilentFailureAst,
+        FlextInfraUtilitiesSignatureRules,
     ):
         """Infrastructure-domain utilities - all methods exposed directly."""
 
