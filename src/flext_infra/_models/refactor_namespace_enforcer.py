@@ -180,13 +180,6 @@ class FlextInfraModelsNamespaceEnforcer:
                 description="Internal import violations collected for the project.",
             ),
         ]
-        consumer_import_violations: Annotated[
-            t.SequenceOf[FlextInfraModelsNamespaceEnforcer.ConsumerImportViolation],
-            m.Field(
-                default_factory=tuple,
-                description="Consumer import grammar violations (R1) collected for the project.",
-            ),
-        ]
         private_import_bypass_violations: Annotated[
             t.SequenceOf[
                 FlextInfraModelsNamespaceEnforcer.PrivateImportBypassViolation
@@ -263,7 +256,6 @@ class FlextInfraModelsNamespaceEnforcer:
                 self.import_violations,
                 self.namespace_source_violations,
                 self.internal_import_violations,
-                self.consumer_import_violations,
                 self.private_import_bypass_violations,
                 self.cyclic_imports,
                 self.runtime_alias_violations,
