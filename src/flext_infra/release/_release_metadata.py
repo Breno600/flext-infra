@@ -37,11 +37,14 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
         if raw is None:
             return r[bool].ok(True)
         items: p.Result[t.StrSequence] = u.validate_value(
-            t.Infra.STR_SEQ_ADAPTER, u.Cli.json_as_sequence(raw), strict=True
+            t.Infra.STR_SEQ_ADAPTER,
+            u.Cli.json_as_sequence(raw),
+            strict=True,
         )
         if items.failure:
             return r[bool].fail_op(
-                f"validate release dependency group {key}", items.error
+                f"validate release dependency group {key}",
+                items.error,
             )
         rendered: t.MutableSequenceOf[str] = []
         for requirement in items.value:
@@ -55,7 +58,7 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
                 continue
             if name not in versions:
                 return r[bool].fail(
-                    f"internal dependency version unknown to this release: {name}"
+                    f"internal dependency version unknown to this release: {name}",
                 )
             pin = cls._release_specifier(versions[name])
             if pin.failure:
@@ -68,7 +71,10 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
 
     @classmethod
     def _release_pyproject(
-        cls, source: str, version: str, versions: t.StrMapping
+        cls,
+        source: str,
+        version: str,
+        versions: t.StrMapping,
     ) -> p.Result[str]:
         """Render a pyproject a public registry accepts: pinned, sourceless, bounded."""
         document = u.Cli.toml_parse_text(source)
@@ -79,7 +85,7 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
         )
         if document is None or project is None:
             return r[str].fail(
-                "release pyproject must be valid TOML defining [project]"
+                "release pyproject must be valid TOML defining [project]",
             )
         project[c.Infra.VERSION] = version
         fields = (
@@ -140,7 +146,7 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
             return r[bool].fail("Hatch wheel target must declare packages")
         forced = u.Cli.toml_table_child(wheel, "force-include")
         sources = tuple(
-            dict.fromkeys((*packages.value, *(str(k) for k in forced or ())))
+            dict.fromkeys((*packages.value, *(str(k) for k in forced or ()))),
         )
         for source in sources:
             path = PurePosixPath(source)
@@ -150,7 +156,7 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
                 or not cls._sdist_member_allowed(("release-root", *path.parts))
             ):
                 return r[bool].fail(
-                    f"Hatch source path is outside the release boundary: {source}"
+                    f"Hatch source path is outside the release boundary: {source}",
                 )
         sdist = u.Cli.toml_ensure_table(targets, "sdist")
         for key in ("exclude", "include", "packages"):

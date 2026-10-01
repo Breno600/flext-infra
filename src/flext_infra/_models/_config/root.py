@@ -49,13 +49,13 @@ class FlextInfraConfigModelsRoot:
         sed_patterns: Annotated[
             FlextInfraConfigModelsArtifact.SedPatternsSpec,
             m.Field(
-                description="Declared literal replacement patterns for mass refactoring"
+                description="Declared literal replacement patterns for mass refactoring",
             ),
         ]
         refactor_csv_campaigns: Annotated[
             FlextInfraConfigModelsArtifact.RefactorCsvCampaignsSpec,
             m.Field(
-                description="Declared CSV-driven rename campaigns for the mod verb"
+                description="Declared CSV-driven rename campaigns for the mod verb",
             ),
         ]
 

@@ -21,12 +21,16 @@ class FlextInfraDependencyDetectorRuntimeSteps:
     _pip_check_factory: Callable[..., m.Infra.PipCheckReport]
 
     def _validate_environment(
-        self, params: m.Infra.DetectCommand, root: Path, venv_bin: Path
+        self,
+        params: m.Infra.DetectCommand,
+        root: Path,
+        venv_bin: Path,
     ) -> p.Result[t.Pair[t.SequenceOf[Path], Path]]:
         """Discover projects and verify deptry binary; return ``(projects, limits_path)``."""
         detector = self._detector
         projects_result = detector.deps.discover_project_paths(
-            root, projects_filter=params.project_names
+            root,
+            projects_filter=params.project_names,
         )
         if projects_result.failure:
             return r[tuple[t.SequenceOf[Path], Path]].from_failure(projects_result)
@@ -38,7 +42,7 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         if not deptry_path.exists():
             detector.log.error("deps_deptry_missing", path=str(deptry_path))
             return r[tuple[t.SequenceOf[Path], Path]].fail(
-                f"Deptry executable not found at {deptry_path}"
+                f"Deptry executable not found at {deptry_path}",
             )
         limits_default = (
             Path(__file__).resolve().parent / c.Infra.DEPENDENCY_LIMITS_FILENAME
@@ -67,7 +71,8 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         version_value = python_cfg.get(c.Infra.VERSION)
         python_version = str(version_value) if version_value is not None else None
         report_model.dependency_limits = self._dependency_limits_factory(
-            python_version=python_version, limits_path=str(limits_path)
+            python_version=python_version,
+            limits_path=str(limits_path),
         )
         return r[bool].ok(True)
 
@@ -100,7 +105,8 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         if governed.failure:
             return r[bool].from_failure(governed)
         project_payload = deps_service.build_project_report(
-            project_name, governed.value
+            project_name,
+            governed.value,
         )
         projects_report[project_name] = dict(project_payload.model_dump())
         run_typings_for_project = (
@@ -135,7 +141,8 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         if not params.quiet:
             detector.log.info("deps_typings_detect_running", project=project_name)
         typings_result = typing_deps.analyze_required_typings(
-            project_path, limits_path=limits_path
+            project_path,
+            limits_path=limits_path,
         )
         if typings_result.failure:
             return r[bool].from_failure(typings_result)
@@ -166,7 +173,7 @@ class FlextInfraDependencyDetectorRuntimeSteps:
             return r[bool].fail(
                 f"UV typing dependency add failed for {project_name}: "
                 f"exit {run_outcome.value.outcome.raw_return_code}\n"
-                f"{run_outcome.value.stdout}\n{run_outcome.value.stderr}"
+                f"{run_outcome.value.stdout}\n{run_outcome.value.stderr}",
             )
         return r[bool].ok(True)
 

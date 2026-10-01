@@ -39,7 +39,8 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
             encoding="utf-8",
         )
         (repository / ".gitignore").write_text(
-            f"setup-runs.log\n{c.Infra.ENVIRONMENT_DIRECTORY}/\n", encoding="utf-8"
+            f"setup-runs.log\n{c.Infra.ENVIRONMENT_DIRECTORY}/\n",
+            encoding="utf-8",
         )
         u.Tests.initialize_git_repo(repository)
         return repository
@@ -62,12 +63,13 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
                     "member",
                 ],
                 cwd=repository,
-            )
+            ),
         )
         tm.ok(
             u.Cli.run_checked(
-                [c.Infra.GIT, "commit", "-am", "test: declare member"], cwd=repository
-            )
+                [c.Infra.GIT, "commit", "-am", "test: declare member"],
+                cwd=repository,
+            ),
         )
 
     @staticmethod
@@ -75,7 +77,8 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         return Path(u.Tests.WorktreeFixture.add_worktree(repository, branch))
 
     def test_setup_runs_in_lane_and_creates_real_local_environment(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         repository = self._repository(tmp_path)
         primary_sentinel = (
@@ -89,7 +92,7 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
                 "MAKEFILES": str(tmp_path / "hostile.mk"),
                 "GNUMAKEFLAGS": "--eval=hostile",
                 "PYTHONPATH": str(tmp_path / "hostile-pythonpath"),
-            }
+            },
         ):
             tm.ok(FlextInfraWorktreeService.setup_lane(lane))
 
@@ -102,7 +105,8 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         )
 
     def test_foreign_environment_symlink_is_unlinked_without_following_target(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         repository = self._repository(tmp_path)
         lane = self._lane(repository, "feature/legacy-link")
@@ -120,14 +124,16 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         assert lane_venv.is_symlink()
 
     def test_setup_initializes_lane_gitlink_without_mutating_primary(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         repository = self._repository(tmp_path)
         self._declare_child(tmp_path, repository)
         tm.ok(
             u.Cli.run_checked(
-                [c.Infra.GIT, "submodule", "deinit", "-f", "member"], cwd=repository
-            )
+                [c.Infra.GIT, "submodule", "deinit", "-f", "member"],
+                cwd=repository,
+            ),
         )
         lane = self._lane(repository, "feature/lane-gitlink")
 

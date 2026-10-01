@@ -29,7 +29,8 @@ class FlextInfraSilentFailureDetector:
         if ctx.project_root is not None and file_path.is_relative_to(ctx.project_root):
             display_path = file_path.relative_to(ctx.project_root)
         tree = FlextInfraSilentFailureDetector._rope_module_ast(
-            ctx.rope_project, resource
+            ctx.rope_project,
+            resource,
         )
         if tree is None:
             return []
@@ -45,14 +46,15 @@ class FlextInfraSilentFailureDetector:
                 tree,
                 source,
                 is_test_module=FlextInfraSilentFailureDetector._is_test_module(
-                    file_path
+                    file_path,
                 ),
             )
         )
 
     @classmethod
     def detect_violations(
-        cls, ctx: m.Infra.DetectorContext
+        cls,
+        ctx: m.Infra.DetectorContext,
     ) -> t.SequenceOf[m.Infra.SilentFailureViolation]:
         """Return silent-failure violations with kind + fix_action for census."""
         resource = u.Infra.fetch_python_resource(ctx.rope_project, ctx.file_path)
@@ -73,7 +75,9 @@ class FlextInfraSilentFailureDetector:
                 fix_action=finding.fix_action,
             )
             for finding in u.Infra.collect_silent_failure_findings(
-                tree, source, is_test_module=cls._is_test_module(ctx.file_path)
+                tree,
+                source,
+                is_test_module=cls._is_test_module(ctx.file_path),
             )
         )
 
@@ -94,7 +98,8 @@ class FlextInfraSilentFailureDetector:
 
     @staticmethod
     def _rope_module_ast(
-        rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
+        rope_project: t.Infra.RopeProject,
+        resource: t.Infra.RopeResource,
     ) -> ast.Module | None:
         """Return the rope-backed module AST; rope parse failures escape loudly."""
         pymodule = u.Infra.resolve_pymodule(rope_project, resource)

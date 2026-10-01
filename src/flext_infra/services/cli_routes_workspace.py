@@ -39,10 +39,10 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
     ) -> p.Result[t.Cli.ResultValue]:
         """Keep the internal beads render context off the public CLI surface."""
         request = m.Infra.WorkspaceEnvironmentSyncRequest.model_validate(
-            params.model_dump()
+            params.model_dump(),
         )
         return FlextInfraWorkspaceEnvironmentMixin.execute_request(request).map(
-            FlextInfraCliRouteBase.as_route_value
+            FlextInfraCliRouteBase.as_route_value,
         )
 
     workspace_routes: ClassVar[
@@ -55,7 +55,7 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
                 help_text="Run release orchestration CLI flow",
                 model_cls=FlextInfraReleaseOrchestrator,
                 handler=FlextInfraCliRouteBase.result_handler(
-                    FlextInfraReleaseOrchestrator.execute_command
+                    FlextInfraReleaseOrchestrator.execute_command,
                 ),
                 success_message="Release completed successfully",
             ),
@@ -73,7 +73,7 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
                 help_text="Verify live workspace editable provenance",
                 model_cls=m.Infra.WorkspaceEnvironmentRequest,
                 handler=FlextInfraCliRouteBase.result_handler(
-                    FlextInfraWorkspaceEnvironmentProvenance.execute_request
+                    FlextInfraWorkspaceEnvironmentProvenance.execute_request,
                 ),
                 success_message="workspace editable provenance verified",
             ),
@@ -97,7 +97,7 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
                         "Detect workspace or standalone mode",
                         FlextInfraWorkspaceDetector,
                         FlextInfraCliRouteBase.result_handler(
-                            FlextInfraWorkspaceDetector.execute_command
+                            FlextInfraWorkspaceDetector.execute_command,
                         ),
                     ),
                     (
@@ -105,7 +105,7 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
                         "Publish this workspace's flext-infra to every member",
                         FlextInfraWorkspacePropagation,
                         FlextInfraCliRouteBase.result_handler(
-                            FlextInfraWorkspacePropagation.execute_command
+                            FlextInfraWorkspacePropagation.execute_command,
                         ),
                     ),
                     (

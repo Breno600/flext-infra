@@ -9,7 +9,8 @@ from ._rope_method_order import FlextInfraUtilitiesRopeMethodOrderMixin
 
 
 class FlextInfraUtilitiesRopeHelpers(
-    FlextInfraUtilitiesRopeBracketBalanceMixin, FlextInfraUtilitiesRopeMethodOrderMixin
+    FlextInfraUtilitiesRopeBracketBalanceMixin,
+    FlextInfraUtilitiesRopeMethodOrderMixin,
 ):
     """Generic text, import-placement, and method-order helpers."""
 
@@ -70,7 +71,10 @@ class FlextInfraUtilitiesRopeHelpers(
 
     @staticmethod
     def extract_definition(
-        source: str, name: str, *, kind: str = "function"
+        source: str,
+        name: str,
+        *,
+        kind: str = "function",
     ) -> str | None:
         r"""Extract full def/class block by name using regex.
 
@@ -90,7 +94,9 @@ class FlextInfraUtilitiesRopeHelpers(
             return None
         block = match.group(0)
         return FlextInfraUtilitiesRopeHelpers._extend_block_through_open_brackets(
-            source, block, match_end=match.end()
+            source,
+            block,
+            match_end=match.end(),
         ).rstrip("\n")
 
     @staticmethod

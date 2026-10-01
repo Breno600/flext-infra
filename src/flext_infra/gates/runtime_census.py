@@ -28,7 +28,9 @@ class FlextInfraRuntimeCensusGate(FlextInfraGate):
 
     @override
     def check(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
         """Run the runtime census scoped to ``project_dir``."""
         _ = ctx
@@ -39,10 +41,14 @@ class FlextInfraRuntimeCensusGate(FlextInfraGate):
         metadata = u.Infra.read_project_metadata_result(project_dir)
         if metadata.failure:
             return self._build_project_error_gate_result(
-                project_dir, passed=False, errors=[str(metadata.error)], started=started
+                project_dir,
+                passed=False,
+                errors=[str(metadata.error)],
+                started=started,
             )
         validator = FlextInfraRuntimeCensusValidator(
-            repository_root=project_dir, project_filter=metadata.value.project.name
+            repository_root=project_dir,
+            project_filter=metadata.value.project.name,
         )
         # ``build_report`` (not ``execute``) keeps violations structured so the
         # gate can grade a broken invocation separately from found violations.

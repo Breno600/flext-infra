@@ -16,7 +16,7 @@ class TestsFlextInfraPytestTimeoutConfig:
         policy = config.Infra.tooling.tools.pytest
 
         round_tripped = type(policy).model_validate(
-            policy.model_dump(by_alias=True, exclude_computed_fields=True)
+            policy.model_dump(by_alias=True, exclude_computed_fields=True),
         )
 
         tm.that(round_tripped, eq=policy)
@@ -49,7 +49,7 @@ class TestsFlextInfraPytestTimeoutConfig:
 
         arbitrary_policy = type(policy).model_validate(payload)
         round_tripped = type(policy).model_validate(
-            arbitrary_policy.model_dump(by_alias=True, exclude_computed_fields=True)
+            arbitrary_policy.model_dump(by_alias=True, exclude_computed_fields=True),
         )
 
         tm.that(round_tripped, eq=arbitrary_policy)
@@ -67,7 +67,8 @@ class TestsFlextInfraPytestTimeoutConfig:
             type(policy).model_validate(payload)
 
     @pytest.mark.parametrize(
-        "override", ["-o", "-o=addopts=", "--override-ini", "--override-ini=addopts="]
+        "override",
+        ["-o", "-o=addopts=", "--override-ini", "--override-ini=addopts="],
     )
     def test_pytest_ini_override_is_forbidden(self, override: str) -> None:
         policy = config.Infra.tooling.tools.pytest
@@ -156,7 +157,8 @@ class TestsFlextInfraPytestTimeoutConfig:
         ],
     )
     def test_reporting_policy_cannot_override_runner_owned_argv(
-        self, argument: str
+        self,
+        argument: str,
     ) -> None:
         policy = config.Infra.tooling.tools.pytest
         payload = policy.model_dump(by_alias=True, exclude_computed_fields=True)

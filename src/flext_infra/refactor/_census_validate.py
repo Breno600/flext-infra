@@ -86,7 +86,7 @@ class FlextInfraRefactorCensusValidateMixin:
                             file_path=candidate.file_path,
                             line=candidate.line,
                             description=msg,
-                        )
+                        ),
                     )
                     continue
                 if preview_result.unwrap():
@@ -99,8 +99,8 @@ class FlextInfraRefactorCensusValidateMixin:
                         "violations_total": len(validated_violations),
                         "removal_candidate_count": len(validated_candidates),
                         "removal_candidates": validated_candidates,
-                    }
-                )
+                    },
+                ),
             )
         return tuple(validated_reports)
 

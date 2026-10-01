@@ -17,7 +17,8 @@ from .refactor_namespace_enforcer import FlextInfraModelsNamespaceEnforcer
 
 
 class FlextInfraModelsRefactor(
-    FlextInfraModelsRefactorGrep, FlextInfraModelsNamespaceEnforcer
+    FlextInfraModelsRefactorGrep,
+    FlextInfraModelsNamespaceEnforcer,
 ):
     """Models for refactor workflows and related tools.
 
@@ -49,13 +50,16 @@ class FlextInfraModelsRefactor(
         file_path: Annotated[Path, m.Field(description="Target file path")]
         success: Annotated[bool, m.Field(description="Whether the operation succeeded")]
         modified: Annotated[
-            bool, m.Field(description="Whether the file was actually modified")
+            bool,
+            m.Field(description="Whether the file was actually modified"),
         ]
         error: Annotated[
-            str | None, m.Field(description="Error message on failure")
+            str | None,
+            m.Field(description="Error message on failure"),
         ] = None
         changes: Annotated[
-            t.StrSequence, m.Field(description="Human-readable change descriptions")
+            t.StrSequence,
+            m.Field(description="Human-readable change descriptions"),
         ] = m.Field(default_factory=tuple)
         refactored_code: Annotated[
             str | None,
@@ -85,10 +89,12 @@ class FlextInfraModelsRefactor(
         """
 
         imported_modules: Annotated[
-            MutableSet[str], m.Field(description="Imported module roots")
+            MutableSet[str],
+            m.Field(description="Imported module roots"),
         ] = m.Field(default_factory=set)
         imported_symbols: Annotated[
-            MutableSet[str], m.Field(description="Imported symbol names")
+            MutableSet[str],
+            m.Field(description="Imported symbol names"),
         ] = m.Field(default_factory=set)
 
     class MethodInfo(m.ArbitraryTypesModel):
@@ -99,25 +105,30 @@ class FlextInfraModelsRefactor(
         node: Annotated[
             t.Infra.RopePyObject | None,
             m.Field(
-                description="Node representation from Rope or PyObject", exclude=True
+                description="Node representation from Rope or PyObject",
+                exclude=True,
             ),
         ]
         decorators: Annotated[
-            t.StrSequence, m.Field(description="Decorator names applied to this method")
+            t.StrSequence,
+            m.Field(description="Decorator names applied to this method"),
         ] = m.Field(default_factory=tuple)
 
     class Checkpoint(mm.CheckpointRefMixin, m.ArbitraryTypesModel):
         """Serialisable checkpoint state for refactor safety recovery."""
 
         repository_root: Annotated[
-            t.NonEmptyStr, m.Field(description="Repository root path")
+            t.NonEmptyStr,
+            m.Field(description="Repository root path"),
         ]
         status: Annotated[str, m.Field(description="Checkpoint status")] = "running"
         processed_targets: Annotated[
-            t.StrSequence, m.Field(description="Already-processed file targets")
+            t.StrSequence,
+            m.Field(description="Already-processed file targets"),
         ] = m.Field(default_factory=tuple)
         updated_at: Annotated[
-            str, m.Field(description="ISO 8601 timestamp of last update")
+            str,
+            m.Field(description="ISO 8601 timestamp of last update"),
         ] = m.Field(default_factory=lambda: u.now().isoformat())
 
     class ProjectClassification(m.ArbitraryTypesModel):
@@ -128,7 +139,7 @@ class FlextInfraModelsRefactor(
         project_kind: Annotated[
             t.NonEmptyStr,
             m.Field(
-                description="Project kind (core, domain, platform, integration, app)"
+                description="Project kind (core, domain, platform, integration, app)",
             ),
         ]
         family_chains: Annotated[
@@ -163,13 +174,16 @@ class FlextInfraModelsRefactor(
             m.Field(description="String paths of files changed by the run"),
         ] = m.Field(default_factory=list)
         total_replacements: Annotated[
-            int, m.Field(description="Total replacements applied across the run")
+            int,
+            m.Field(description="Total replacements applied across the run"),
         ] = 0
         total_core_replacements: Annotated[
-            int, m.Field(description="Total Core.Tests chain rewrites applied")
+            int,
+            m.Field(description="Total Core.Tests chain rewrites applied"),
         ] = 0
         import_rewrite_candidates: Annotated[
-            int, m.Field(description="Count of wrapper import rewrite candidates")
+            int,
+            m.Field(description="Count of wrapper import rewrite candidates"),
         ] = 0
         per_project_changes: Annotated[
             defaultdict[str, int],
@@ -186,13 +200,16 @@ class FlextInfraModelsRefactor(
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         class_module: Annotated[
-            str, m.Field(description="Module that declares the owning class")
+            str,
+            m.Field(description="Module that declares the owning class"),
         ]
         class_name: Annotated[
-            str, m.Field(description="Class that currently declares the constant")
+            str,
+            m.Field(description="Class that currently declares the constant"),
         ]
         constant_name: Annotated[
-            str, m.Field(description="Name of the ClassVar constant being moved")
+            str,
+            m.Field(description="Name of the ClassVar constant being moved"),
         ]
         constants_module: Annotated[
             str,
@@ -207,10 +224,12 @@ class FlextInfraModelsRefactor(
             m.Field(description="Rope resource for the constants module"),
         ]
         declaration_line: Annotated[
-            str, m.Field(description="Exact source line that declares the constant")
+            str,
+            m.Field(description="Exact source line that declares the constant"),
         ]
         class_lineno: Annotated[
-            int, m.Field(description="1-based line where the class starts")
+            int,
+            m.Field(description="1-based line where the class starts"),
         ]
 
     class ClassvarConstantAutofixResult(m.ArbitraryTypesModel):
@@ -223,7 +242,8 @@ class FlextInfraModelsRefactor(
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         touched_files: Annotated[
-            t.StrSequence, m.Field(description="Files the autofix created or rewrote")
+            t.StrSequence,
+            m.Field(description="Files the autofix created or rewrote"),
         ]
         source_text: Annotated[
             str | None,
@@ -234,7 +254,8 @@ class FlextInfraModelsRefactor(
             m.Field(description="Rewritten constants-module preview (dry-run only)"),
         ] = None
         constant_module: Annotated[
-            str | None, m.Field(description="Canonical _constants module (apply only)")
+            str | None,
+            m.Field(description="Canonical _constants module (apply only)"),
         ] = None
         rewrites: Annotated[
             t.MappingKV[str, t.SequenceOf[t.Triple[int, int, str]]] | None,
@@ -247,7 +268,8 @@ class FlextInfraModelsRefactor(
         """Validated CLI request for CSV-driven symbol renames."""
 
         csv: Annotated[
-            t.NonEmptyStr, m.Field(description="Path to the old,new rename-list CSV")
+            t.NonEmptyStr,
+            m.Field(description="Path to the old,new rename-list CSV"),
         ]
         roots: Annotated[
             t.StrSequence,
@@ -289,16 +311,18 @@ class FlextInfraModelsRefactor(
 
         label: Annotated[t.NonEmptyStr, m.Field(description="Rename-list label")]
         files_scanned: Annotated[
-            t.NonNegativeInt, m.Field(description="Text files scanned")
+            t.NonNegativeInt,
+            m.Field(description="Text files scanned"),
         ]
         occurrences: Annotated[
             t.NonNegativeInt,
             m.Field(
-                description="Pending authenticated source edit spans from the current scan"
+                description="Pending authenticated source edit spans from the current scan",
             ),
         ] = 0
         files_changed: Annotated[
-            t.NonNegativeInt, m.Field(description="Files rewritten in apply mode")
+            t.NonNegativeInt,
+            m.Field(description="Files rewritten in apply mode"),
         ] = 0
         applied: Annotated[bool, m.Field(description="Whether changes were applied")]
 

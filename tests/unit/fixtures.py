@@ -51,7 +51,7 @@ def _write_modernizer_codegen_config(workspace: Path) -> None:
     (config_dir / c.Infra.CODEGEN_CONFIG_FILENAME).write_bytes(
         (
             _PROJECT_ROOT / c.Infra.CODEGEN_CONFIG_DIR / c.Infra.CODEGEN_CONFIG_FILENAME
-        ).read_bytes()
+        ).read_bytes(),
     )
 
 
@@ -99,13 +99,15 @@ def _provision_detector_template(modules: t.StrSequence) -> None:
     )
     infrastructure = tm.ok(
         u.Infra.configured_repository_ref(
-            codegen=config.Infra.codegen, repository_root=_PROJECT_ROOT
-        )
+            codegen=config.Infra.codegen,
+            repository_root=_PROJECT_ROOT,
+        ),
     )
     integration = tm.ok(
         u.Infra.flext_integration_line(
-            codegen=config.Infra.codegen, repository_root=_PROJECT_ROOT
-        )
+            codegen=config.Infra.codegen,
+            repository_root=_PROJECT_ROOT,
+        ),
     )
     root = u.Tests.mk_project(
         parent,
@@ -134,32 +136,38 @@ def _provision_detector_template(modules: t.StrSequence) -> None:
     )
     u.Tests.copy_tracked_mise_seeds(root)
     repository = u.Tests.repository_ref(
-        root.name, role=c.Infra.MakeProfile.STANDALONE
+        root.name,
+        role=c.Infra.MakeProfile.STANDALONE,
     ).model_copy(update={"editable": True})
     u.Tests.initialize_git_repo(root, origin_url=repository.url)
     workspace = u.Tests.workspace_spec(
-        repository, project=u.Tests.project_spec(root.name)
+        repository,
+        project=u.Tests.project_spec(root.name),
     )
     conform_request = u.Tests.conform_request(
-        root, what=c.Infra.CodegenConformSurface.MAKEFILE
+        root,
+        what=c.Infra.CodegenConformSurface.MAKEFILE,
     )
     plan = tm.ok(
         FlextInfraCodegenConform(
-            repository_root=root, initial_workspace=workspace, request=conform_request
-        ).plan(conform_request)
+            repository_root=root,
+            initial_workspace=workspace,
+            request=conform_request,
+        ).plan(conform_request),
     )
     makefile = next(
         item for item in plan.files if item.path.name == c.Infra.MAKEFILE_FILENAME
     )
     tm.ok(
         u.Cli.atomic_write_text_file(
-            root / c.Infra.MAKEFILE_FILENAME, u.Tests.codegen_file_text(makefile)
-        )
+            root / c.Infra.MAKEFILE_FILENAME,
+            u.Tests.codegen_file_text(makefile),
+        ),
     )
     tm.ok(
         infra.sync_environment_files(
-            m.Infra.WorkspaceEnvironmentSyncRequest(repository_root=root, apply=True)
-        )
+            m.Infra.WorkspaceEnvironmentSyncRequest(repository_root=root, apply=True),
+        ),
     )
     # A newly scaffolded consumer has no committed locks yet. The public upgrade
     # lifecycle is their sole writer; frozen setup starts only after that first
@@ -195,9 +203,10 @@ def _write_receipt(path: Path, output: p.Cli.CommandOutput) -> None:
         u.Cli.atomic_write_text_file(
             path,
             m.Cli.CommandOutput.model_validate(
-                output, from_attributes=True
+                output,
+                from_attributes=True,
             ).model_dump_json(),
-        )
+        ),
     )
 
 
@@ -224,13 +233,15 @@ def _provision_make_template(profile: c.Infra.MakeProfile) -> None:
             ["--no-print-directory", "upg"],
             cwd=root,
             env=u.Tests.hostile_uv_environment(hostile_venv),
-        )
+        ),
     )
     _write_receipt(parent / _MAKE_UPGRADE_RECEIPT, upgrade)
     if not u.Cli.process_succeeded(upgrade.outcome):
         return
     checkout = u.Tests.resolved_make_checkout(
-        root, parent / c.Tests.MAKE_TEMPLATE_CI_CHECKOUT, profile
+        root,
+        parent / c.Tests.MAKE_TEMPLATE_CI_CHECKOUT,
+        profile,
     )
     make = config.Infra.codegen.make
     (checkout / c.Infra.CUSTOM_MAKE_FILENAME).write_text(
@@ -249,10 +260,10 @@ def _provision_make_template(profile: c.Infra.MakeProfile) -> None:
                 **u.Tests.hostile_uv_environment(hostile_venv),
                 make.ci.variable: make.ci.value,
                 u.Infra.mise_bootstrap_environment().storage_root_variable: str(
-                    parent / c.Tests.COLD_MISE_STORAGE
+                    parent / c.Tests.COLD_MISE_STORAGE,
                 ),
             },
-        )
+        ),
     )
     _write_receipt(parent / _MAKE_CI_SETUP_RECEIPT, setup)
 
@@ -262,13 +273,15 @@ def _provision_infra_checkout(scenario: str) -> None:
     parent = _run_scoped("infra-checkouts", scenario)
     root = u.Tests.infra_source_checkout(parent)
     setup = tm.ok(
-        u.Tests.run_isolated_make(["--no-print-directory", "setup"], cwd=root)
+        u.Tests.run_isolated_make(["--no-print-directory", "setup"], cwd=root),
     )
     _write_receipt(parent / _INFRA_SETUP_RECEIPT, setup)
 
 
 def _ensure_provisioned(
-    parent: Path, receipt: str, key: c.Infra.MakeProfile | str | t.StrSequence
+    parent: Path,
+    receipt: str,
+    key: c.Infra.MakeProfile | str | t.StrSequence,
 ) -> None:
     """Provision only a consumed fixture under the canonical filesystem lease.
 
@@ -303,7 +316,8 @@ def hermetic_git_environment() -> t.StrMapping:
         "@".join(source) for source in u.Tests.locked_git_sources(_PROJECT_ROOT)
     )
     parent = _run_scoped(
-        "git-mirrors", hashlib.sha256(sources.encode()).hexdigest()[:16]
+        "git-mirrors",
+        hashlib.sha256(sources.encode()).hexdigest()[:16],
     )
     parent.mkdir(parents=True, exist_ok=True)
     receipt = parent / _GIT_MIRRORS_RECEIPT
@@ -344,7 +358,9 @@ def provisioned_infra_checkout(request: pytest.FixtureRequest) -> t.Pair[str, Pa
     _ensure_provisioned(parent, _INFRA_SETUP_RECEIPT, scenario)
     setup = u.Tests.command_receipt(parent / _INFRA_SETUP_RECEIPT)
     tm.that(
-        u.Cli.process_succeeded(setup.outcome), eq=True, msg=setup.stdout + setup.stderr
+        u.Cli.process_succeeded(setup.outcome),
+        eq=True,
+        msg=setup.stdout + setup.stderr,
     )
     root = parent / config.Infra.name
     tm.that((root / ".venv" / "pyvenv.cfg").is_file(), eq=True)
@@ -363,17 +379,19 @@ def real_detector_project(tmp_path: Path, request: pytest.FixtureRequest) -> Pat
     parent = _detector_template_parent(modules)
     _ensure_provisioned(parent, _DETECTOR_UPGRADE_RECEIPT, modules)
     upgrade = m.Cli.CommandOutput.model_validate_json(
-        (parent / _DETECTOR_UPGRADE_RECEIPT).read_text(encoding="utf-8")
+        (parent / _DETECTOR_UPGRADE_RECEIPT).read_text(encoding="utf-8"),
     )
     tm.that(u.Cli.process_succeeded(upgrade.outcome), eq=True, msg=upgrade.stderr)
     root = tmp_path / _DETECTOR_PROJECT_NAME
     u.Tests.git_bootstrap(
-        tmp_path, ("clone", "-q", str(parent / _DETECTOR_PROJECT_NAME), str(root))
+        tmp_path,
+        ("clone", "-q", str(parent / _DETECTOR_PROJECT_NAME), str(root)),
     )
     u.Tests.initialize_git_repo(
         root,
         origin_url=u.Tests.repository_ref(
-            root.name, role=c.Infra.MakeProfile.STANDALONE
+            root.name,
+            role=c.Infra.MakeProfile.STANDALONE,
         ).url,
     )
     setup = tm.ok(u.Tests.run_isolated_make(["setup"], cwd=root, capture=False))
@@ -384,7 +402,8 @@ def real_detector_project(tmp_path: Path, request: pytest.FixtureRequest) -> Pat
     tool_path = runtime / ("Scripts" if os.name == "nt" else "bin") / executable
     tm.that(tool_path.is_file(), eq=True)
     (root / "limits.toml").write_text(
-        "[typing_libraries]\nexclude = []\n", encoding="utf-8"
+        "[typing_libraries]\nexclude = []\n",
+        encoding="utf-8",
     )
     return root
 
@@ -452,7 +471,7 @@ def real_python_package(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     (project_root / "pyproject.toml").write_text(
-        '[project]\nname = "test-pkg"\nversion = "0.1.0"\n'
+        '[project]\nname = "test-pkg"\nversion = "0.1.0"\n',
     )
     return project_root
 
@@ -479,7 +498,8 @@ def cached_runner_project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
         encoding="utf-8",
     )
     (package_root / "__init__.py").write_text(
-        "def answer() -> int:\n    return 42\n", encoding="utf-8"
+        "def answer() -> int:\n    return 42\n",
+        encoding="utf-8",
     )
     (tests_root / "test_runtime.py").write_text(
         "from flext_tests import tm\n"
@@ -531,7 +551,7 @@ def mod_workspace(tmp_path: Path) -> Path:
                 f'version = "{project.project.version}"\n'
                 f"{c.Infra.DEPENDENCIES} = []\n"
             ),
-        )
+        ),
     )
     # A declared distribution owns a package: resolving the package name from
     # `[project].name` alone is impossible for a `flext-` distribution, so a
@@ -578,7 +598,7 @@ def mod_workspace(tmp_path: Path) -> Path:
                 "\n"
                 "u.Infra.serialization_lock_execute(paths, timeout)\n"
             ),
-        )
+        ),
     )
     package_dir = workspace / "src" / project.project.name.replace("-", "_")
     tm.ok(u.Cli.ensure_dir(package_dir))
@@ -586,7 +606,7 @@ def mod_workspace(tmp_path: Path) -> Path:
         u.Cli.atomic_write_text_file(
             package_dir / c.Infra.INIT_PY,
             '"""Public refactor-mod fixture package."""\n\nfrom __future__ import annotations\n',
-        )
+        ),
     )
     u.Tests.initialize_git_repo(workspace)
     return workspace
@@ -598,16 +618,16 @@ def real_workspace(tmp_path: Path) -> Path:
     repository_root = tmp_path / "workspace"
     repository_root.mkdir()
     (repository_root / "Makefile").write_text(
-        ".PHONY: help\nhelp:\n\t@echo 'Workspace'\n"
+        ".PHONY: help\nhelp:\n\t@echo 'Workspace'\n",
     )
     (repository_root / "pyproject.toml").write_text(
-        '[project]\nname = "workspace"\nversion = "0.1.0"\n'
+        '[project]\nname = "workspace"\nversion = "0.1.0"\n',
     )
     for i in range(1, 4):
         project_dir = repository_root / f"project_{i}"
         project_dir.mkdir()
         (project_dir / "pyproject.toml").write_text(
-            f'[project]\nname = "project-{i}"\nversion = "0.1.0"\n'
+            f'[project]\nname = "project-{i}"\nversion = "0.1.0"\n',
         )
         src_dir = project_dir / "src" / f"project_{i}"
         src_dir.mkdir(parents=True)
@@ -622,10 +642,14 @@ def modernizer_workspace(tmp_path: Path) -> Path:
     # The governed tree above the workspace carries the committed Taplo pin.
     u.Tests.seed_locked_taplo(tmp_path)
     (workspace / c.PYPROJECT_FILENAME).write_text(
-        _modernizer_workspace_pyproject(), encoding="utf-8"
+        _modernizer_workspace_pyproject(),
+        encoding="utf-8",
     )
     u.Tests.write_beads_project(
-        workspace, workspace="workspace", database="workspace", issue_prefix="workspace"
+        workspace,
+        workspace="workspace",
+        database="workspace",
+        issue_prefix="workspace",
     )
     _write_modernizer_codegen_config(workspace)
     return workspace
@@ -634,13 +658,18 @@ def modernizer_workspace(tmp_path: Path) -> Path:
 @pytest.fixture
 def modernizer_workspace_with_projects(modernizer_workspace: Path) -> Path:
     (modernizer_workspace / c.PYPROJECT_FILENAME).write_text(
-        _modernizer_workspace_pyproject("selected", "ignored"), encoding="utf-8"
+        _modernizer_workspace_pyproject("selected", "ignored"),
+        encoding="utf-8",
     )
     selected = u.Tests.mk_project(
-        modernizer_workspace, "selected", pyproject=_modernizer_pyproject("selected")
+        modernizer_workspace,
+        "selected",
+        pyproject=_modernizer_pyproject("selected"),
     )
     ignored = u.Tests.mk_project(
-        modernizer_workspace, "ignored", pyproject=_modernizer_pyproject("ignored")
+        modernizer_workspace,
+        "ignored",
+        pyproject=_modernizer_pyproject("ignored"),
     )
     for project in (selected, ignored):
         u.Tests.write_beads_project(
@@ -672,7 +701,7 @@ def real_docs_project(tmp_path: Path) -> Path:
     (docs_dir / "index.md").write_text("# Index\n")
     (project_root / "README.md").write_text("# Project\n")
     (project_root / "pyproject.toml").write_text(
-        '[project]\nname = "docs-project"\nversion = "0.1.0"\n'
+        '[project]\nname = "docs-project"\nversion = "0.1.0"\n',
     )
     return project_root
 
@@ -719,7 +748,8 @@ def models_resource(
     """Return the Rope resource for the semantic models fixture module."""
     rope_project, repository_root = semantic_rope_workspace
     resource = u.Infra.resolve_resource_from_path(
-        rope_project, repository_root / "src" / "rope_demo" / "models.py"
+        rope_project,
+        repository_root / "src" / "rope_demo" / "models.py",
     )
     validated: t.Infra.RopeResource = tm.not_none(resource)
     return validated
@@ -732,7 +762,8 @@ def services_resource(
     """Return the Rope resource for the semantic services fixture module."""
     rope_project, repository_root = semantic_rope_workspace
     resource = u.Infra.resolve_resource_from_path(
-        rope_project, repository_root / "src" / "rope_demo" / "services.py"
+        rope_project,
+        repository_root / "src" / "rope_demo" / "services.py",
     )
     validated: t.Infra.RopeResource = tm.not_none(resource)
     return validated

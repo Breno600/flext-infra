@@ -48,31 +48,37 @@ class TestsFlextInfraCodegenProjectNewValidation:
         )
 
     def test_whitespace_flext_ref_is_rejected_without_effects(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A whitespace-only FLEXT ref fails before any directory exists."""
         result = self._service(
-            tmp_path / "project", flext_repository_ref="   "
+            tmp_path / "project",
+            flext_repository_ref="   ",
         ).execute()
         tm.fail(result, has="flext repository ref is required")
         tm.that(not (tmp_path / "project").exists())
 
     def test_hostless_flext_url_is_rejected_without_effects(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A URL without a host fails before any directory exists."""
         result = self._service(
-            tmp_path / "project", flext_repository_url="https:///flext-demo.git"
+            tmp_path / "project",
+            flext_repository_url="https:///flext-demo.git",
         ).execute()
         tm.fail(result, has="must name a host and repository path")
         tm.that(not (tmp_path / "project").exists())
 
     def test_unparseable_origin_is_rejected_without_effects(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A project origin that is not a Git URL fails before any effect."""
         result = self._service(
-            tmp_path / "project", repository_url="not-a-url"
+            tmp_path / "project",
+            repository_url="not-a-url",
         ).execute()
         tm.fail(result, has="not canonicalizable to HTTPS")
         tm.that(not (tmp_path / "project").exists())
@@ -80,7 +86,7 @@ class TestsFlextInfraCodegenProjectNewValidation:
     def test_ssh_origin_canonicalizes_to_https(self) -> None:
         """The declared origin is stored in its canonical HTTPS form."""
         canonical = u.Infra.validate_git_remote_url(
-            "git@github.com:flext-sh/flext-demo.git"
+            "git@github.com:flext-sh/flext-demo.git",
         )
         tm.ok(canonical)
         tm.that(canonical.value, eq="https://github.com/flext-sh/flext-demo.git")

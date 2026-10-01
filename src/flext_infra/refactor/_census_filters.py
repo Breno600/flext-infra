@@ -53,7 +53,7 @@ class FlextInfraRefactorCensusFiltersMixin:
                     canonical=canonical.project,
                     value_identical=len({item.fingerprint for item in definitions})
                     == 1,
-                )
+                ),
             )
         return tuple(duplicates)
 
@@ -104,11 +104,13 @@ class FlextInfraRefactorCensusFiltersMixin:
 
     @staticmethod
     def _named_object(
-        objects: t.VariadicTuple[m.Infra.Object], name: str
+        objects: t.VariadicTuple[m.Infra.Object],
+        name: str,
     ) -> m.Infra.Object | None:
         """Named object."""
         return next(
-            (item for item in objects if name in {item.scope_path, item.name}), None
+            (item for item in objects if name in {item.scope_path, item.name}),
+            None,
         )
 
     @staticmethod
@@ -120,7 +122,7 @@ class FlextInfraRefactorCensusFiltersMixin:
         if objects is None:
             return None
         target_name = FlextInfraRefactorCensusFiltersMixin._runtime_alias_target_name(
-            convention
+            convention,
         )
         if not target_name:
             return None
@@ -133,11 +135,16 @@ class FlextInfraRefactorCensusFiltersMixin:
 
     @staticmethod
     def _rewrite_runtime_alias_source(
-        source: str, *, alias: str, target_name: str
+        source: str,
+        *,
+        alias: str,
+        target_name: str,
     ) -> str:
         """Rewrite runtime alias source."""
         updated_source: str = u.Infra.ensure_runtime_alias(
-            source, alias=alias, target_name=target_name
+            source,
+            alias=alias,
+            target_name=target_name,
         )
         return updated_source
 

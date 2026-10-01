@@ -51,19 +51,20 @@ class FlextInfraGateContractReportMixin:
         )
         detail = f"{errors} error(s)" if errors else "contract compliant"
         u.Cli.formatters_print(
-            f"{script.path:<60} {script.role:<10} {status:<22} {detail}"
+            f"{script.path:<60} {script.role:<10} {status:<22} {detail}",
         )
         for violation in script.violations:
             u.Cli.formatters_print(
-                f"  {c.Infra.RED}[{violation.check}]{c.Infra.RESET} {violation.message}"
+                f"  {c.Infra.RED}[{violation.check}]{c.Infra.RESET} {violation.message}",
             )
 
     def _print_results(
-        self, scripts: t.SequenceOf[m.Infra.GateContractScriptInfo]
+        self,
+        scripts: t.SequenceOf[m.Infra.GateContractScriptInfo],
     ) -> None:
         u.Cli.formatters_print(f"{c.Infra.CYAN}Gate Contract Validation{c.Infra.RESET}")
         u.Cli.formatters_print(
-            f"{c.Infra.CYAN}{'SCRIPT':<60} {'ROLE':<10} {'STATUS':<10} DETAILS{c.Infra.RESET}"
+            f"{c.Infra.CYAN}{'SCRIPT':<60} {'ROLE':<10} {'STATUS':<10} DETAILS{c.Infra.RESET}",
         )
         for script in self._visible_scripts(scripts):
             self._print_script_result(script)
@@ -83,13 +84,16 @@ class FlextInfraGateContractReportMixin:
         return tuple(sorted(rows, key=violation_key))
 
     def _summary_for(
-        self, scripts: t.SequenceOf[m.Infra.GateContractScriptInfo]
+        self,
+        scripts: t.SequenceOf[m.Infra.GateContractScriptInfo],
     ) -> m.Infra.GateContractSummary:
         gate_scripts = self._gate_scripts(scripts)
         errors = sum(len(script.violations) for script in scripts)
         ok = sum(1 for script in gate_scripts if not script.violations)
         return m.Infra.GateContractSummary(
-            errors=errors, gate_scripts=len(gate_scripts), ok=ok
+            errors=errors,
+            gate_scripts=len(gate_scripts),
+            ok=ok,
         )
 
     def _write_report(
@@ -102,7 +106,7 @@ class FlextInfraGateContractReportMixin:
         report_path.parent.mkdir(parents=True, exist_ok=True)
         summary = self._summary_for(scripts)
         violations: t.JsonValue = t.json_value_adapter().validate_python(
-            list(self._violation_rows(scripts))
+            list(self._violation_rows(scripts)),
         )
         payload: t.JsonMapping = {
             "checked": len(self._visible_scripts(scripts)),
@@ -120,13 +124,15 @@ class FlextInfraGateContractReportMixin:
         return r[Path].ok(report_path)
 
     def _print_summary(
-        self, summary: m.Infra.GateContractSummary, report_path: Path
+        self,
+        summary: m.Infra.GateContractSummary,
+        report_path: Path,
     ) -> None:
         u.Cli.formatters_print(
             f"\n{c.Infra.CYAN}Summary:{c.Infra.RESET} "
             f"gate_scripts={summary.gate_scripts} "
             f"{c.Infra.GREEN}ok={summary.ok}{c.Infra.RESET} "
-            f"{c.Infra.RED}errors={summary.errors}{c.Infra.RESET}"
+            f"{c.Infra.RED}errors={summary.errors}{c.Infra.RESET}",
         )
         u.Cli.formatters_print(f"Report: {report_path}")
 

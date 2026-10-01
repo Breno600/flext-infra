@@ -17,7 +17,9 @@ class FlextInfraRefactorImportBypassRemover(FlextInfraRopeTransformer):
 
     @override
     def transform(
-        self, rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
+        self,
+        rope_project: t.Infra.RopeProject,
+        resource: t.Infra.RopeResource,
     ) -> t.Infra.TransformResult:
         """Remove try/except ImportError fallback blocks, keep the primary import."""
         source = resource.read()

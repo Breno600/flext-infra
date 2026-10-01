@@ -16,7 +16,8 @@ class TestsFlextInfraAuditorCodeblocks:
     """Regression tests for docs codeblock and exported-docstring auditing."""
 
     def test_docs_python_codeblock_issues_ignore_snippet_only_rules(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir(parents=True, exist_ok=True)
@@ -25,7 +26,9 @@ class TestsFlextInfraAuditorCodeblocks:
             encoding="utf-8",
         )
         scope = m.Infra.DocScope(
-            name="test", path=tmp_path, report_dir=tmp_path / "reports"
+            name="test",
+            path=tmp_path,
+            report_dir=tmp_path / "reports",
         )
 
         issues = u.Infra.docs_python_codeblock_issues(scope)
@@ -33,15 +36,19 @@ class TestsFlextInfraAuditorCodeblocks:
         tm.that(issues, eq=[])
 
     def test_docs_python_codeblock_issues_report_invalid_python(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir(parents=True, exist_ok=True)
         (docs_dir / "broken.md").write_text(
-            "```python\n**Happy coding!** 🚀\n```\n", encoding="utf-8"
+            "```python\n**Happy coding!** 🚀\n```\n",
+            encoding="utf-8",
         )
         scope = m.Infra.DocScope(
-            name="test", path=tmp_path, report_dir=tmp_path / "reports"
+            name="test",
+            path=tmp_path,
+            report_dir=tmp_path / "reports",
         )
 
         issues = u.Infra.docs_python_codeblock_issues(scope)
@@ -51,7 +58,8 @@ class TestsFlextInfraAuditorCodeblocks:
         tm.that(issues[0].file, eq="docs/broken.md")
 
     def test_scanner_excerpt_requires_non_executable_text_fence(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Keep numbered scanner evidence intact without presenting it as Python."""
         docs_dir = tmp_path / "docs"
@@ -63,7 +71,9 @@ class TestsFlextInfraAuditorCodeblocks:
         evidence = docs_dir / "scanner-triage.md"
         evidence.write_text(f"```python\n{excerpt}```\n", encoding="utf-8")
         scope = m.Infra.DocScope(
-            name="test", path=tmp_path, report_dir=tmp_path / "reports"
+            name="test",
+            path=tmp_path,
+            report_dir=tmp_path / "reports",
         )
 
         python_issues = u.Infra.docs_python_codeblock_issues(scope)
@@ -77,12 +87,14 @@ class TestsFlextInfraAuditorCodeblocks:
         tm.that(u.Infra.docs_python_codeblock_issues(scope), eq=[])
 
     def test_docstring_issues_accept_assignment_docstrings(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         package_root = tmp_path / "src" / "demo_pkg"
         package_root.mkdir(parents=True, exist_ok=True)
         (package_root / "__init__.py").write_text(
-            '"""Demo package."""\n', encoding="utf-8"
+            '"""Demo package."""\n',
+            encoding="utf-8",
         )
         (package_root / "lazy.py").write_text(
             '"""Lazy helpers for docs tests."""\n\n'

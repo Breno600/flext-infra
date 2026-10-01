@@ -18,7 +18,9 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
 
     @classmethod
     def _relocate_declared_exports(
-        cls, source: str, exports: t.MappingKV[str, t.Pair[str, str]]
+        cls,
+        source: str,
+        exports: t.MappingKV[str, t.Pair[str, str]],
     ) -> str:
         """Keep lexical scopes and ``as`` aliases while selecting public owners."""
         import libcst as cst
@@ -31,10 +33,13 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
 
             @override
             def leave_ImportFrom(
-                self, original_node: cst.ImportFrom, updated_node: cst.ImportFrom
+                self,
+                original_node: cst.ImportFrom,
+                updated_node: cst.ImportFrom,
             ) -> cst.BaseSmallStatement | cst.FlattenSentinel[cst.BaseSmallStatement]:
                 if original_node.relative or isinstance(
-                    updated_node.names, cst.ImportStar
+                    updated_node.names,
+                    cst.ImportStar,
                 ):
                     return updated_node
                 dotted_name = FlextInfraUtilitiesQualifiedNames.dotted_name
@@ -59,7 +64,8 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
                         if asname is None and public_name != name:
                             asname = cst.AsName(cst.Name(name))
                         replacement = replacement.with_changes(
-                            name=cst.Name(public_name), asname=asname
+                            name=cst.Name(public_name),
+                            asname=asname,
                         )
                         destination_module = cst.parse_expression(public_module)
                     statements.append(
@@ -68,7 +74,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
                             names=(replacement,),
                             lpar=None,
                             rpar=None,
-                        )
+                        ),
                     )
                 return cst.FlattenSentinel(statements)
 
@@ -100,13 +106,17 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
 
             @override
             def leave_Name(
-                self, original_node: cst.Name, updated_node: cst.Name
+                self,
+                original_node: cst.Name,
+                updated_node: cst.Name,
             ) -> cst.BaseExpression:
                 """Replace only names bound to one authenticated private identity."""
                 targets = {
                     replacement
                     for qualified_name in self.get_metadata(
-                        QualifiedNameProvider, original_node, ()
+                        QualifiedNameProvider,
+                        original_node,
+                        (),
                     )
                     if (replacement := self.plan.replacements.get(qualified_name.name))
                     is not None
@@ -121,7 +131,8 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
                     raise ValueError(msg)
                 parent = self.get_metadata(ParentNodeProvider, original_node)
                 if FlextInfraUtilitiesQualifiedNames.rebinds_name_in_place(
-                    parent, original_node
+                    parent,
+                    original_node,
                 ):
                     return updated_node
                 target = targets.pop()
@@ -141,17 +152,19 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
 
             @override
             def leave_ImportFrom(
-                self, original_node: cst.ImportFrom, updated_node: cst.ImportFrom
+                self,
+                original_node: cst.ImportFrom,
+                updated_node: cst.ImportFrom,
             ) -> cst.BaseSmallStatement | cst.RemovalSentinel:
                 """Relativize same-owner imports or remove cross-owner bindings."""
                 module = FlextInfraUtilitiesQualifiedNames.dotted_name(
-                    original_node.module
+                    original_node.module,
                 )
                 module_name = module or ""
                 relative_module = self.plan.relative_imports.get(module_name)
                 if relative_module is not None:
                     relative_level = len(relative_module) - len(
-                        relative_module.lstrip(".")
+                        relative_module.lstrip("."),
                     )
                     relative_name = relative_module[relative_level:]
                     return updated_node.with_changes(
@@ -163,7 +176,8 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
                         ),
                     )
                 removed = self.plan.removals.get(
-                    module_name, frozenset()
+                    module_name,
+                    frozenset(),
                 ) | self.plan.obsolete_imports.get(module_name, frozenset())
                 canonical = {
                     alias
@@ -179,7 +193,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
                     for imported in updated_node.names
                     if (
                         name := FlextInfraUtilitiesQualifiedNames.dotted_name(
-                            imported.name
+                            imported.name,
                         )
                     )
                     not in removed
@@ -189,8 +203,9 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
                     return cst.RemoveFromParent()
                 return updated_node.with_changes(
                     names=FlextInfraUtilitiesQualifiedNames.normalized_import_aliases(
-                        retained, parenthesized=bool(updated_node.lpar)
-                    )
+                        retained,
+                        parenthesized=bool(updated_node.lpar),
+                    ),
                 )
 
         class _TypeCheckingImports(cst.CSTTransformer):
@@ -222,8 +237,8 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
                 self.inserted = True
                 return updated_node.with_changes(
                     body=updated_node.body.with_changes(
-                        body=imports + tuple(updated_node.body.body)
-                    )
+                        body=imports + tuple(updated_node.body.body),
+                    ),
                 )
 
         public_imports = plan.public_imports

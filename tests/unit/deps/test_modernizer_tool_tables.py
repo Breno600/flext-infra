@@ -25,10 +25,10 @@ class TestsFlextInfraDepsModernizerToolTables:
         project_dir = tmp_path / "flext-sample"
         (project_dir / "src" / "flext_sample").mkdir(parents=True, exist_ok=True)
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
-            u.Tests.toml_payload(f'[project]\nname = "flext-sample"\n{source}')
+            u.Tests.toml_payload(f'[project]\nname = "flext-sample"\n{source}'),
         )
         changes = FlextInfraToolTablesPhase(
-            tool_config or config.Infra.tooling
+            tool_config or config.Infra.tooling,
         ).apply_payload(payload, path=project_dir / "pyproject.toml")
         return payload, changes
 
@@ -52,11 +52,13 @@ class TestsFlextInfraDepsModernizerToolTables:
         )
         mypy = self._table(payload, "mypy")
         tm.that(
-            mypy["python_version"], eq=config.Infra.codegen.toolchain.python_version
+            mypy["python_version"],
+            eq=config.Infra.codegen.toolchain.python_version,
         )
         tm.that(mypy, lacks="strict_concatenate")
         tm.that(
-            list(u.Tests.toml_strings(mypy["plugins"])), eq=list(mypy_policy.plugins)
+            list(u.Tests.toml_strings(mypy["plugins"])),
+            eq=list(mypy_policy.plugins),
         )
         tm.that(
             list(u.Tests.toml_list(mypy["overrides"])),
@@ -75,7 +77,8 @@ class TestsFlextInfraDepsModernizerToolTables:
             tm.that(mypy[key], eq=value)
 
     def test_pytest_table_replaces_policy_and_merges_extensions(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Replace policy flags while retaining declared discovery extensions."""
         policy = config.Infra.tooling.tools.pytest
@@ -104,7 +107,10 @@ class TestsFlextInfraDepsModernizerToolTables:
 
     @pytest.mark.parametrize("follow_untyped", [False, True])
     def test_mypy_source_analysis_override_round_trips_policy(
-        self, tmp_path: Path, *, follow_untyped: bool
+        self,
+        tmp_path: Path,
+        *,
+        follow_untyped: bool,
     ) -> None:
         """Project the configured import analysis flag without disabling errors."""
         tooling = config.Infra.tooling
@@ -121,11 +127,11 @@ class TestsFlextInfraDepsModernizerToolTables:
                 "tools": tooling.tools.model_copy(
                     update={
                         "mypy": tooling.tools.mypy.model_copy(
-                            update={"overrides": (entry,)}
-                        )
-                    }
-                )
-            }
+                            update={"overrides": (entry,)},
+                        ),
+                    },
+                ),
+            },
         )
 
         payload, _ = self._applied(tmp_path, tool_config=configured)
@@ -136,7 +142,7 @@ class TestsFlextInfraDepsModernizerToolTables:
                 {
                     "module": list(entry.modules),
                     "follow_untyped_imports": follow_untyped,
-                }
+                },
             ],
         )
 
@@ -175,7 +181,8 @@ class TestsFlextInfraDepsModernizerToolTables:
         """Keep reporting policy and drop a floor left by an older projection."""
         coverage = config.Infra.tooling.tools.coverage
         payload, changes = self._applied(
-            tmp_path, "[tool.coverage.report]\nfail_under = 45\n"
+            tmp_path,
+            "[tool.coverage.report]\nfail_under = 45\n",
         )
         report = self._table(payload, "coverage", "report")
         tm.that(report, lacks="fail_under")
@@ -195,11 +202,11 @@ class TestsFlextInfraDepsModernizerToolTables:
                 "tools": tooling.tools.model_copy(
                     update={
                         "coverage": tooling.tools.coverage.model_copy(
-                            update={"source": arbitrary_source}
-                        )
-                    }
-                )
-            }
+                            update={"source": arbitrary_source},
+                        ),
+                    },
+                ),
+            },
         )
         payload, _ = self._applied(tmp_path, tool_config=configured)
         tm.that(
@@ -208,15 +215,16 @@ class TestsFlextInfraDepsModernizerToolTables:
         )
 
     def test_deptry_first_party_includes_project_and_declared_flext_deps(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Detect the project package and declared FLEXT dependencies as first party."""
         payload, _ = self._applied(tmp_path, 'dependencies = ["flext-core>=0.1.0"]\n')
         tm.that(
             set(
                 u.Tests.toml_strings(
-                    self._table(payload, "deptry")["known_first_party"]
-                )
+                    self._table(payload, "deptry")["known_first_party"],
+                ),
             ),
             eq={
                 *config.Infra.tooling.tools.deptry.known_first_party,
@@ -226,7 +234,8 @@ class TestsFlextInfraDepsModernizerToolTables:
         )
 
     def test_first_party_uses_live_package_when_distribution_name_differs(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A distribution name must not invent an importable package."""
         project_dir = tmp_path / "project"
@@ -234,10 +243,11 @@ class TestsFlextInfraDepsModernizerToolTables:
         package_dir.mkdir(parents=True)
         (package_dir / "__init__.py").write_text('"""Package."""\n', encoding="utf-8")
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
-            u.Tests.toml_payload('[project]\nname = "datacosmos-backup"\n')
+            u.Tests.toml_payload('[project]\nname = "datacosmos-backup"\n'),
         )
         namespaces = FlextInfraToolTablesPhase.first_party_namespaces(
-            payload, path=project_dir / "pyproject.toml"
+            payload,
+            path=project_dir / "pyproject.toml",
         )
         tm.that(namespaces, has="dc_backup", lacks="datacosmos_backup")
 
@@ -245,18 +255,21 @@ class TestsFlextInfraDepsModernizerToolTables:
         """A second application over the converged payload changes nothing."""
         payload, first = self._applied(tmp_path)
         second = FlextInfraToolTablesPhase(config.Infra.tooling).apply_payload(
-            payload, path=tmp_path / "flext-sample" / "pyproject.toml"
+            payload,
+            path=tmp_path / "flext-sample" / "pyproject.toml",
         )
         tm.that(first, empty=False)
         tm.that(second, empty=True)
 
     def test_modernizer_roots_and_members_converge_without_coverage_floor(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Roots and members converge once and never project a coverage floor."""
         u.Tests.seed_locked_taplo(tmp_path)
         modernizer = FlextInfraPyprojectModernizer(
-            repository_root=tmp_path, skip_check=True
+            repository_root=tmp_path,
+            skip_check=True,
         )
         root_path = tmp_path / "pyproject.toml"
         root_topology = m.Infra.PyprojectDeclaredTopology(project_kind="platform")
@@ -266,7 +279,7 @@ class TestsFlextInfraDepsModernizerToolTables:
                 '[project]\nname = "arbitrary-root"\n',
                 path=root_path,
                 topology=root_topology,
-            )
+            ),
         )
         member_path = tmp_path / "arbitrary-member" / "pyproject.toml"
         member_path.parent.mkdir()
@@ -276,21 +289,25 @@ class TestsFlextInfraDepsModernizerToolTables:
                 'dependencies = ["flext-core", "flext-cli", "flext-ldap"]\n',
                 path=member_path,
                 topology=member_topology,
-            )
+            ),
         )
         tm.that(
             tm.ok(
                 modernizer.conform_source(
-                    root_first, path=root_path, topology=root_topology
-                )
+                    root_first,
+                    path=root_path,
+                    topology=root_topology,
+                ),
             ),
             eq=root_first,
         )
         tm.that(
             tm.ok(
                 modernizer.conform_source(
-                    member_first, path=member_path, topology=member_topology
-                )
+                    member_first,
+                    path=member_path,
+                    topology=member_topology,
+                ),
             ),
             eq=member_first,
         )
@@ -337,7 +354,7 @@ class TestsFlextInfraDepsModernizerToolTables:
             version=c.Infra.WORKSPACE_MANIFEST_VERSION,
             name=workspace.repository.name,
             repository=workspace.repository.model_copy(
-                update={"role": c.Infra.MakeProfile.WORKSPACE}
+                update={"role": c.Infra.MakeProfile.WORKSPACE},
             ),
             exclusions=(
                 m.Infra.WorkspaceExclusionSpec(path=Path(excluded), reason="retired"),
@@ -348,7 +365,7 @@ class TestsFlextInfraDepsModernizerToolTables:
             u.Cli.yaml_dump(
                 u.Infra.workspace_manifest_path(project_dir),
                 manifest.model_dump(mode="json"),
-            )
+            ),
         )
         return project_dir
 
@@ -362,10 +379,11 @@ class TestsFlextInfraDepsModernizerToolTables:
         """
         project_dir = self._workspace_with_exclusion(tmp_path, "scripts")
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
-            u.Tests.toml_payload('[project]\nname = "flext-sample"\n')
+            u.Tests.toml_payload('[project]\nname = "flext-sample"\n'),
         )
         FlextInfraToolTablesPhase(config.Infra.tooling).apply_payload(
-            payload, path=project_dir / "pyproject.toml"
+            payload,
+            path=project_dir / "pyproject.toml",
         )
         paths = u.Tests.toml_strings(self._table(payload, "vulture")["paths"])
         tm.that(paths, lacks="scripts", has="src")
@@ -381,10 +399,11 @@ class TestsFlextInfraDepsModernizerToolTables:
 
         project_dir = self._workspace_with_exclusion(tmp_path, "scripts")
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
-            u.Tests.toml_payload('[project]\nname = "flext-sample"\n')
+            u.Tests.toml_payload('[project]\nname = "flext-sample"\n'),
         )
         FlextInfraEnsureRuffConfigPhase(config.Infra.tooling).apply_payload(
-            payload, path=project_dir / "pyproject.toml"
+            payload,
+            path=project_dir / "pyproject.toml",
         )
         table = self._table(payload, "ruff")
         src_roots = u.Tests.toml_strings(table["src"])

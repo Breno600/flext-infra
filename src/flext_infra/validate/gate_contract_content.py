@@ -16,7 +16,9 @@ class FlextInfraGateContractContentMixin:
 
     @staticmethod
     def _check_interactive(
-        script: str, content: str, extension: str
+        script: str,
+        content: str,
+        extension: str,
     ) -> t.SequenceOf[m.Infra.GateContractViolation]:
         if c.Infra.SKILL_INTERACTIVE_GATE_RE.search(content):
             return ()
@@ -41,13 +43,14 @@ class FlextInfraGateContractContentMixin:
                             f"line {i}: interactive prompt without --interactive gate"
                         ),
                         script=script,
-                    )
+                    ),
                 )
         return tuple(violations)
 
     @staticmethod
     def _check_artifact_naming(
-        script: str, content: str
+        script: str,
+        content: str,
     ) -> t.SequenceOf[m.Infra.GateContractViolation]:
         violations: list[m.Infra.GateContractViolation] = []
         for i, line in enumerate(content.splitlines(), 1):
@@ -67,7 +70,7 @@ class FlextInfraGateContractContentMixin:
                             "<skill>--<kind>--<slug>.<ext>"
                         ),
                         script=script,
-                    )
+                    ),
                 )
         return tuple(violations)
 

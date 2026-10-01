@@ -34,7 +34,9 @@ class FlextInfraCodemodGate(FlextInfraGate):
 
     @override
     def check(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
         """Run ast-grep only on this repository's first-class source roots."""
         targets = (
@@ -47,7 +49,10 @@ class FlextInfraCodemodGate(FlextInfraGate):
 
     @override
     def check_files(
-        self, files: t.SequenceOf[Path], project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        files: t.SequenceOf[Path],
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
         """Scan every requested file against every elected provider ruleset."""
         if not files:
@@ -124,7 +129,7 @@ class FlextInfraCodemodGate(FlextInfraGate):
                         file=str(ruleset.config),
                         line=1,
                         column=1,
-                    )
+                    ),
                 )
                 break
             # DiagnosticError (exit 1) requires a valid RuleMatch array,
@@ -142,7 +147,7 @@ class FlextInfraCodemodGate(FlextInfraGate):
                         file=str(ruleset.config),
                         line=1,
                         column=1,
-                    )
+                    ),
                 )
                 break
             findings.extend(
@@ -176,7 +181,8 @@ class FlextInfraCodemodGate(FlextInfraGate):
 
     @staticmethod
     def _validated_scan_report(
-        scan: p.Cli.CommandOutput, ruleset: m.Infra.CodemodRuleset
+        scan: p.Cli.CommandOutput,
+        ruleset: m.Infra.CodemodRuleset,
     ) -> t.Pair[m.Infra.AstGrepReport, str]:
         """Validate findings and derive their exact native terminal diagnostic."""
         report = m.Infra.AstGrepReport.model_validate_json(scan.stdout)
@@ -200,7 +206,8 @@ class FlextInfraCodemodGate(FlextInfraGate):
 
     @staticmethod
     def _scan_command(
-        ruleset: m.Infra.CodemodRuleset, targets: t.StrSequence
+        ruleset: m.Infra.CodemodRuleset,
+        targets: t.StrSequence,
     ) -> t.StrSequence:
         """Canonical ast-grep invocation for one composed provider ruleset."""
         globs: t.StrSequence = tuple(

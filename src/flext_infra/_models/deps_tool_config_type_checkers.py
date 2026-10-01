@@ -19,7 +19,8 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
             """One evidence-backed diagnostic override for an existing path."""
 
             root: Annotated[
-                t.NonEmptyStr, m.Field(description="Project-relative override root.")
+                t.NonEmptyStr,
+                m.Field(description="Project-relative override root."),
             ]
             report_private_usage: Annotated[
                 str,
@@ -39,7 +40,8 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
             model_config: ClassVar[m.ConfigDict] = m.ConfigDict(populate_by_name=True)
 
             root: Annotated[
-                str, m.Field(description="Execution environment root path.")
+                str,
+                m.Field(description="Execution environment root path."),
             ]
             report_private_usage: Annotated[
                 str,
@@ -69,7 +71,8 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
             source_dir: Annotated[
                 str,
                 m.Field(
-                    alias="source-dir", description="Primary source directory name."
+                    alias="source-dir",
+                    description="Primary source directory name.",
                 ),
             ]
             project_root: Annotated[
@@ -155,7 +158,8 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
         strict_settings: Annotated[
             t.StrMapping,
             m.Field(
-                alias="strict-settings", description="Pyright strict baseline options."
+                alias="strict-settings",
+                description="Pyright strict baseline options.",
             ),
         ]
         extended_settings: Annotated[
@@ -182,7 +186,8 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
             source_dir: Annotated[
                 str,
                 m.Field(
-                    alias="source-dir", description="Primary source directory name."
+                    alias="source-dir",
+                    description="Primary source directory name.",
                 ),
             ]
             project_root: Annotated[
@@ -238,7 +243,8 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
         python_version: Annotated[
             str,
             m.Field(
-                alias="python-version", description="Pyrefly python-version baseline."
+                alias="python-version",
+                description="Pyrefly python-version baseline.",
             ),
         ]
         disable_project_excludes_heuristics: Annotated[

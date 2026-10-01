@@ -16,13 +16,14 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesGitSemanticWorktreeMixin(
-    FlextInfraUtilitiesGitSemanticIndexMixin
+    FlextInfraUtilitiesGitSemanticIndexMixin,
 ):
     """Own semantic worktree operations."""
 
     @classmethod
     def git_add_lane_worktree(
-        cls, request: m.Infra.GitWorktreeAddRequest
+        cls,
+        request: m.Infra.GitWorktreeAddRequest,
     ) -> p.Result[m.Infra.GitTextReport]:
         """Add a development lane worktree for an existing or new branch."""
         try:
@@ -32,13 +33,15 @@ class FlextInfraUtilitiesGitSemanticWorktreeMixin(
             return r[m.Infra.GitTextReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitTextReport].fail(
-                f"failed to add worktree for {request.branch}: {exc}", exception=exc
+                f"failed to add worktree for {request.branch}: {exc}",
+                exception=exc,
             )
         return r[m.Infra.GitTextReport].ok(m.Infra.GitTextReport(text=text))
 
     @staticmethod
     def _git_add_worktree_args(
-        repo: Repo, request: m.Infra.GitWorktreeAddRequest
+        repo: Repo,
+        request: m.Infra.GitWorktreeAddRequest,
     ) -> str:
         """Select and execute the correct ``git worktree add`` variant."""
         if request.local_branch_exists:
@@ -52,17 +55,22 @@ class FlextInfraUtilitiesGitSemanticWorktreeMixin(
                     request.branch,
                     str(request.lane),
                     f"origin/{request.branch}",
-                )
+                ),
             )
         return str(
             repo.git.worktree(
-                "add", "-b", request.branch, str(request.lane), request.base
-            )
+                "add",
+                "-b",
+                request.branch,
+                str(request.lane),
+                request.base,
+            ),
         )
 
     @classmethod
     def git_attach_branch_at_head(
-        cls, request: m.Infra.GitBranchRequest
+        cls,
+        request: m.Infra.GitBranchRequest,
     ) -> p.Result[m.Infra.GitBoolReport]:
         """Point ``branch`` at HEAD and attach HEAD to it without moving the tree.
 
@@ -77,7 +85,8 @@ class FlextInfraUtilitiesGitSemanticWorktreeMixin(
             repo.git.symbolic_ref("HEAD", f"refs/heads/{request.branch}")
         except (GitCommandError, OSError, ValueError) as exc:
             return r[m.Infra.GitBoolReport].fail(
-                f"failed to attach {request.branch} at HEAD: {exc}", exception=exc
+                f"failed to attach {request.branch} at HEAD: {exc}",
+                exception=exc,
             )
         try:
             repo.git.branch(

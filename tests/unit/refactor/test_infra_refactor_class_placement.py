@@ -25,14 +25,16 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
     """Behavior contract for test_infra_refactor_class_placement."""
 
     def test_detects_basemodel_in_non_model_file(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+        self,
+        tmp_path: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> None:
         violations = FlextInfraClassPlacementDetector.detect_file(
             u.Tests.detector_context(
                 tmp_path / "consumer.py",
                 "from pydantic import BaseModel\nclass PublicModel(BaseModel):\n    pass\n",
                 rope_project,
-            )
+            ),
         )
 
         tm.that(len(violations), eq=1)
@@ -40,7 +42,9 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         tm.that(violations[0].base_class, eq="BaseModel")
 
     def test_detects_attribute_base_class(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+        self,
+        tmp_path: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> None:
         violations = FlextInfraClassPlacementDetector.detect_file(
             u.Tests.detector_context(
@@ -49,7 +53,7 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
                 "class PublicModel(FlextModels.ArbitraryTypesModel):\n"
                 "    pass\n",
                 rope_project,
-            )
+            ),
         )
 
         tm.that(len(violations), eq=1)
@@ -57,46 +61,54 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         tm.that(violations[0].base_class, eq="ArbitraryTypesModel")
 
     def test_skips_models_file(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+        self,
+        tmp_path: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> None:
         violations = FlextInfraClassPlacementDetector.detect_file(
             u.Tests.detector_context(
                 tmp_path / "models.py",
                 "from pydantic import BaseModel\nclass PublicModel(BaseModel):\n    pass\n",
                 rope_project,
-            )
+            ),
         )
 
         tm.that(violations, eq=[])
 
     def test_skips_models_directory(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+        self,
+        tmp_path: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> None:
         violations = FlextInfraClassPlacementDetector.detect_file(
             u.Tests.detector_context(
                 tmp_path / "models" / "domain.py",
                 "from pydantic import BaseModel\nclass PublicModel(BaseModel):\n    pass\n",
                 rope_project,
-            )
+            ),
         )
 
         tm.that(violations, eq=[])
 
     def test_skips_private_models_directory(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+        self,
+        tmp_path: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> None:
         violations = FlextInfraClassPlacementDetector.detect_file(
             u.Tests.detector_context(
                 tmp_path / "_models" / "domain.py",
                 "from pydantic import BaseModel\nclass PublicModel(BaseModel):\n    pass\n",
                 rope_project,
-            )
+            ),
         )
 
         tm.that(violations, eq=[])
 
     def test_skips_settings_file(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+        self,
+        tmp_path: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> None:
         settings_file_name = min(c.Infra.NAMESPACE_SETTINGS_FILE_NAMES)
         violations = FlextInfraClassPlacementDetector.detect_file(
@@ -104,13 +116,15 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
                 tmp_path / settings_file_name,
                 "from pydantic import BaseModel\nclass PublicModel(BaseModel):\n    pass\n",
                 rope_project,
-            )
+            ),
         )
 
         tm.that(violations, eq=[])
 
     def test_skips_protected_files(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+        self,
+        tmp_path: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> None:
         protected_file_name = min(c.Infra.NAMESPACE_PROTECTED_FILES)
         violations = FlextInfraClassPlacementDetector.detect_file(
@@ -118,26 +132,30 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
                 tmp_path / protected_file_name,
                 "from pydantic import BaseModel\nclass PublicModel(BaseModel):\n    pass\n",
                 rope_project,
-            )
+            ),
         )
 
         tm.that(violations, eq=[])
 
     def test_skips_private_class(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+        self,
+        tmp_path: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> None:
         violations = FlextInfraClassPlacementDetector.detect_file(
             u.Tests.detector_context(
                 tmp_path / "consumer.py",
                 "from pydantic import BaseModel\nclass _PrivateModel(BaseModel):\n    pass\n",
                 rope_project,
-            )
+            ),
         )
 
         tm.that(violations, eq=[])
 
     def test_detects_multiple_models(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+        self,
+        tmp_path: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> None:
         violations = FlextInfraClassPlacementDetector.detect_file(
             u.Tests.detector_context(
@@ -149,7 +167,7 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
                 "class SecondModel(FlextModels.ArbitraryTypesModel):\n"
                 "    pass\n",
                 rope_project,
-            )
+            ),
         )
 
         tm.that(len(violations), eq=2)
@@ -159,12 +177,16 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         )
 
     def test_non_pydantic_class_not_flagged(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+        self,
+        tmp_path: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> None:
         violations = FlextInfraClassPlacementDetector.detect_file(
             u.Tests.detector_context(
-                tmp_path / "consumer.py", "class PlainClass:\n    pass\n", rope_project
-            )
+                tmp_path / "consumer.py",
+                "class PlainClass:\n    pass\n",
+                rope_project,
+            ),
         )
 
         tm.that(violations, eq=[])
@@ -182,11 +204,14 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         ids=["explicit_classvar", "implicit_constant"],
     )
     def test_detects_class_constant_outside_constants(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject, source: str
+        self,
+        tmp_path: Path,
+        rope_project: t.Infra.RopeProject,
+        source: str,
     ) -> None:
         """An annotated ClassVar and a bare UPPER_CASE constant both relocate."""
         violations = FlextInfraClassPlacementDetector.detect_file(
-            u.Tests.detector_context(tmp_path / "consumer.py", source, rope_project)
+            u.Tests.detector_context(tmp_path / "consumer.py", source, rope_project),
         )
 
         tm.that(len(violations), eq=1)
@@ -194,7 +219,9 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         tm.that(violations[0].action, eq="classvar_relocation")
 
     def test_detects_every_class_constant_in_one_class(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+        self,
+        tmp_path: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> None:
         """Every class-level constant is reported, not only the first one."""
         source = (
@@ -203,7 +230,7 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
             "    VENDOR_STRING_MAX_TOKENS = 64\n"
         )
         violations = FlextInfraClassPlacementDetector.detect_file(
-            u.Tests.detector_context(tmp_path / "consumer.py", source, rope_project)
+            u.Tests.detector_context(tmp_path / "consumer.py", source, rope_project),
         )
 
         tm.that(
@@ -213,20 +240,24 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         tm.that({v.action for v in violations}, eq={"classvar_relocation"})
 
     def test_skips_implicit_constant_inside_constants_directory(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+        self,
+        tmp_path: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> None:
         violations = FlextInfraClassPlacementDetector.detect_file(
             u.Tests.detector_context(
                 tmp_path / "_constants" / "domain.py",
                 "class PlainClass:\n    GROUPS = frozenset({'a'})\n",
                 rope_project,
-            )
+            ),
         )
 
         tm.that(violations, eq=[])
 
     def test_detects_constants_nested_inside_a_facade_class(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+        self,
+        tmp_path: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> None:
         """Nested domain-class constants carry a dotted owner and are reported."""
         source = (
@@ -236,7 +267,7 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
             "        MAX_NAME_LENGTH: int = 100\n"
         )
         violations = FlextInfraClassPlacementDetector.detect_file(
-            u.Tests.detector_context(tmp_path / "constants.py", source, rope_project)
+            u.Tests.detector_context(tmp_path / "constants.py", source, rope_project),
         )
 
         tm.that(
@@ -254,7 +285,8 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         (pkg / "_constants").mkdir(parents=True)
         (pkg / "__init__.py").write_text("", encoding="utf-8")
         (pkg / "_constants" / "__init__.py").write_text(
-            '"""Constants."""\n', encoding="utf-8"
+            '"""Constants."""\n',
+            encoding="utf-8",
         )
         (pkg / "facade.py").write_text(
             "class Facade:\n    class Domain:\n        DEFAULT_CHARSET: str = 'UTF8'\n",
@@ -311,7 +343,8 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         tm.that(source_text, lacks="GROUPS = frozenset({'a'})")
 
     def test_autofix_dry_run_fails_missing_constants_module(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Dry-run fails loud when the canonical constants module is absent."""
         pkg = tmp_path / "src" / "demo"
@@ -338,7 +371,8 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         tm.that(not constants_mod.exists(), eq=True)
 
     def test_autofix_dry_run_resolves_project_tests_package(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Project-local Rope roots resolve top-level tests packages."""
         tests_pkg = tmp_path / "tests" / "unit"
@@ -396,22 +430,29 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         return module_path
 
     def test_classvar_relocation_targets_tests_package_constants(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """ENFORCE-079 maps project tests modules to their sibling _constants."""
         project_root = tmp_path / "demo"
         module_path = self._write_classvar_test_module(project_root)
 
         result = u.Tests.run_rope_fixer(
-            tmp_path, project_root, self._classvar_rule(), module_path, apply=False
+            tmp_path,
+            project_root,
+            self._classvar_rule(),
+            module_path,
+            apply=False,
         )
 
         tm.that(
-            " ".join(fix.error for fix in result.failed), has="tests.unit._constants"
+            " ".join(fix.error for fix in result.failed),
+            has="tests.unit._constants",
         )
 
     def test_classvar_relocation_uses_existing_tests_root_constants(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """ENFORCE-079 reuses an existing top-level tests constants SSOT."""
         project_root = tmp_path / "demo"
@@ -421,7 +462,11 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         (constants_root / "__init__.py").write_text("", encoding="utf-8")
 
         result = u.Tests.run_rope_fixer(
-            tmp_path, project_root, self._classvar_rule(), module_path, apply=False
+            tmp_path,
+            project_root,
+            self._classvar_rule(),
+            module_path,
+            apply=False,
         )
 
         tm.that(
@@ -430,7 +475,8 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         )
 
     def test_classvar_relocation_moves_every_constant_in_one_run(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """ENFORCE-079 relocates every class constant in a single pass."""
         project_root = tmp_path / "demo"
@@ -441,7 +487,8 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         constants_root = project_root / "tests" / "_constants"
         constants_root.mkdir(parents=True)
         (constants_root / "__init__.py").write_text(
-            '"""Constants."""\n', encoding="utf-8"
+            '"""Constants."""\n',
+            encoding="utf-8",
         )
         module_path = tests_pkg / "test_execution_result.py"
         module_path.write_text(
@@ -452,7 +499,11 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         )
 
         result = u.Tests.run_rope_fixer(
-            tmp_path, project_root, self._classvar_rule(), module_path, apply=True
+            tmp_path,
+            project_root,
+            self._classvar_rule(),
+            module_path,
+            apply=True,
         )
 
         tm.that(result.failed, eq=[])
@@ -461,7 +512,8 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         tm.that(source_text, lacks="VENDOR_STRING_MAX_TOKENS = 64")
 
     def test_autofix_dry_run_resolves_package_constants_module(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """ENFORCE-079 writes package-backed _constants modules through __init__."""
         tests_root = tmp_path / "tests"
@@ -472,7 +524,8 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         (tests_root / "__init__.py").write_text("", encoding="utf-8")
         (tests_pkg / "__init__.py").write_text("", encoding="utf-8")
         (constants_root / "__init__.py").write_text(
-            '"""Constants."""\n', encoding="utf-8"
+            '"""Constants."""\n',
+            encoding="utf-8",
         )
         (tests_pkg / "test_execution_result.py").write_text(
             "class TestsDemo:\n"
@@ -501,7 +554,8 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         tm.that(" ".join(touched_files), has="tests/_constants/__init__.py")
 
     def test_autofix_apply_inserts_import_after_module_header(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Apply mode inserts constants import at module scope."""
         pkg = tmp_path / "src" / "demo"
@@ -540,7 +594,8 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         tm.that(source_text, has="return _constants.VALUE")
 
     def test_autofix_apply_removes_alias_to_existing_constant_owner(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Apply mode removes class aliases without duplicating constants."""
         pkg = tmp_path / "src" / "demo"
@@ -588,7 +643,8 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         tm.that(updated_source, has="return _constants.VALUE")
 
     def test_autofix_apply_moves_multiline_classvar_to_src_constants(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Apply mode moves multiline constants to the package src tree."""
         pkg = tmp_path / "src" / "demo"
@@ -598,7 +654,8 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         constants_pkg.mkdir()
         (constants_pkg / "__init__.py").write_text("", encoding="utf-8")
         (constants_pkg / "factory.py").write_text(
-            '"""Factory constants."""\n', encoding="utf-8"
+            '"""Factory constants."""\n',
+            encoding="utf-8",
         )
         (pkg / "typings.py").write_text(
             "from typing import TypeAlias\n\n"
@@ -649,7 +706,8 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         tm.that(constants_text, has='"batch_size": 100')
 
     def test_autofix_dry_run_removes_alias_when_constants_owner_exists(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Class-level aliases to an existing constants owner are not duplicated."""
         pkg = tmp_path / "src" / "demo"

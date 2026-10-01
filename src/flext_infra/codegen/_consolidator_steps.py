@@ -25,7 +25,8 @@ class FlextInfraCodegenConsolidatorStepsMixin:
 
     @classmethod
     def _build_value_map_from_constants_file(
-        cls, constants_file: Path
+        cls,
+        constants_file: Path,
     ) -> p.Result[t.StrMapping]:
         """Build value map from a constants file.
 
@@ -39,7 +40,7 @@ class FlextInfraCodegenConsolidatorStepsMixin:
             return r[t.StrMapping].from_failure(read)
         value_map: t.MutableStrMapping = {}
         for name, _, raw, class_path, _ in u.Infra.parse_final_constant_definitions(
-            read.value.splitlines()
+            read.value.splitlines(),
         ):
             if not raw:
                 continue
@@ -74,7 +75,9 @@ class FlextInfraCodegenConsolidatorStepsMixin:
         if not matches:
             return None
         return m.Infra.ConsolidatorScannedFile(
-            resource=resource, source=source, matches=matches
+            resource=resource,
+            source=source,
+            matches=matches,
         )
 
     @staticmethod
@@ -148,10 +151,17 @@ class FlextInfraCodegenConsolidatorStepsMixin:
                 before_source=backup,
                 edit_fn=lambda: (
                     u.Infra.rewrite_source_at_offsets(
-                        rope_project, resource, edits, apply=True
+                        rope_project,
+                        resource,
+                        edits,
+                        apply=True,
                     ),
                     u.Infra.add_import(
-                        rope_project, resource, pkg_name, ["c"], apply=True
+                        rope_project,
+                        resource,
+                        pkg_name,
+                        ["c"],
+                        apply=True,
                     ),
                     None,
                 )[-1],

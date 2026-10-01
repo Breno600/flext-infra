@@ -17,13 +17,16 @@ class TestsFlextInfraCodegenCandidateBootstrap:
     @staticmethod
     def _campaign(tmp_path: Path) -> tuple[Path, Path, Path]:
         source, _ = tests_u.Tests.render_make_environment(
-            tmp_path / "source", c.Infra.MakeProfile.STANDALONE
+            tmp_path / "source",
+            c.Infra.MakeProfile.STANDALONE,
         )
         first, _ = tests_u.Tests.render_make_environment(
-            tmp_path / "first", c.Infra.MakeProfile.STANDALONE
+            tmp_path / "first",
+            c.Infra.MakeProfile.STANDALONE,
         )
         second, _ = tests_u.Tests.render_make_environment(
-            tmp_path / "second", c.Infra.MakeProfile.STANDALONE
+            tmp_path / "second",
+            c.Infra.MakeProfile.STANDALONE,
         )
         for root in (first, second):
             tests_u.Tests.write_workspace_manifest(root, root.name)
@@ -34,17 +37,20 @@ class TestsFlextInfraCodegenCandidateBootstrap:
             for root in (first, second)
         )
         manifest.write_text(
-            manifest.read_text(encoding="utf-8") + "\n" + declaration, encoding="utf-8"
+            manifest.read_text(encoding="utf-8") + "\n" + declaration,
+            encoding="utf-8",
         )
         return source, first, second
 
     def test_empty_campaign_fails_loud(self, tmp_path: Path) -> None:
         """An empty typed list cannot produce a green no-op bootstrap."""
         project_root, _ = tests_u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
         )
         manifest = tests_u.Tests.write_workspace_manifest(
-            project_root, "fixture-project"
+            project_root,
+            "fixture-project",
         )
         manifest.write_text(
             manifest.read_text(encoding="utf-8")
@@ -53,27 +59,28 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         )
 
         result = infra.bootstrap_candidate(
-            m.Infra.CandidateBootstrapCommand(repository_root=project_root)
+            m.Infra.CandidateBootstrapCommand(repository_root=project_root),
         )
 
         tm.that(result.failure, eq=True)
         tm.that(result.error, has="candidate bootstrap targets are not declared")
 
     def test_invalid_second_target_preserves_first_and_allows_retry(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Planning must finish for every target before any bytes are published."""
         source, first, second = self._campaign(tmp_path)
         first_makefile = first / c.Infra.MAKEFILE_FILENAME
         first_makefile.write_text("stale candidate Makefile\n", encoding="utf-8")
         before = tm.ok(
-            u.Cli.atomic_read_binary_file_state(first_makefile, required=True)
+            u.Cli.atomic_read_binary_file_state(first_makefile, required=True),
         )
         second_manifest = second / "config" / "workspace.yaml"
         second_manifest.write_text("invalid: [\n", encoding="utf-8")
 
         failed = infra.bootstrap_candidate(
-            m.Infra.CandidateBootstrapCommand(repository_root=source)
+            m.Infra.CandidateBootstrapCommand(repository_root=source),
         )
 
         tm.that(failed.failure, eq=True)
@@ -84,8 +91,8 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         tests_u.Tests.write_workspace_manifest(second, second.name)
         tm.ok(
             infra.bootstrap_candidate(
-                m.Infra.CandidateBootstrapCommand(repository_root=source)
-            )
+                m.Infra.CandidateBootstrapCommand(repository_root=source),
+            ),
         )
 
     def test_two_targets_reach_one_repeatable_fixed_point(self, tmp_path: Path) -> None:
@@ -93,7 +100,8 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         source, first, second = self._campaign(tmp_path)
         for root in (first, second):
             (root / c.Infra.MAKEFILE_FILENAME).write_text(
-                "stale candidate Makefile\n", encoding="utf-8"
+                "stale candidate Makefile\n",
+                encoding="utf-8",
             )
         command = m.Infra.CandidateBootstrapCommand(repository_root=source)
 
@@ -101,8 +109,9 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         committed = tuple(
             tm.ok(
                 u.Cli.atomic_read_binary_file_state(
-                    root / c.Infra.MAKEFILE_FILENAME, required=True
-                )
+                    root / c.Infra.MAKEFILE_FILENAME,
+                    required=True,
+                ),
             )
             for root in (first, second)
         )
@@ -110,8 +119,9 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         repeated = tuple(
             tm.ok(
                 u.Cli.atomic_read_binary_file_state(
-                    root / c.Infra.MAKEFILE_FILENAME, required=True
-                )
+                    root / c.Infra.MAKEFILE_FILENAME,
+                    required=True,
+                ),
             )
             for root in (first, second)
         )
@@ -127,11 +137,11 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         first_makefile = first / c.Infra.MAKEFILE_FILENAME
         first_makefile.write_text("stale candidate Makefile\n", encoding="utf-8")
         before = tm.ok(
-            u.Cli.atomic_read_binary_file_state(first_makefile, required=True)
+            u.Cli.atomic_read_binary_file_state(first_makefile, required=True),
         )
 
         result = infra.bootstrap_candidate(
-            m.Infra.CandidateBootstrapCommand(repository_root=source, check_only=True)
+            m.Infra.CandidateBootstrapCommand(repository_root=source, check_only=True),
         )
 
         tm.that(result.failure, eq=True)

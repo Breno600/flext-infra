@@ -14,7 +14,9 @@ class FlextInfraRenameSymbols:
 
     @staticmethod
     def resolve_member(
-        project: p.Infra.RopeProject, owner: str, suffix: str
+        project: p.Infra.RopeProject,
+        owner: str,
+        suffix: str,
     ) -> p.Infra.RopePyName | None:
         """Resolve the current destination without importing a retired object."""
         module, *attributes = owner.split(".")
@@ -73,7 +75,8 @@ class FlextInfraRenameSymbols:
                     spans.append((start, start + len(text), False))
                     continue
                 if isinstance(node, ast.Attribute) and not isinstance(
-                    node.ctx, ast.Load
+                    node.ctx,
+                    ast.Load,
                 ):
                     msg = "CSV symbol campaign does not own attribute mutation"
                     raise TypeError(msg)
@@ -81,7 +84,8 @@ class FlextInfraRenameSymbols:
                     prefix = ".".join(old_parts[:depth])
                     declared_prefix = cls.resolve_member(project, owner, prefix)
                     actual_prefix = runtime.resolve_symbol(
-                        scope, ast.parse(f"{receiver_text}.{prefix}", mode="eval").body
+                        scope,
+                        ast.parse(f"{receiver_text}.{prefix}", mode="eval").body,
                     )
                     if actual_prefix is not None and (
                         declared_prefix is None
@@ -90,7 +94,8 @@ class FlextInfraRenameSymbols:
                         msg = f"retired member has an independently owned namespace: {text}"
                         raise ValueError(msg)
                 target = runtime.resolve_symbol(
-                    scope, ast.parse(f"{receiver_text}.{new}", mode="eval").body
+                    scope,
+                    ast.parse(f"{receiver_text}.{new}", mode="eval").body,
                 )
                 if not runtime.same_name(destination, target):
                     msg = f"CSV target overrides the declared destination: {text}"
@@ -118,7 +123,8 @@ class FlextInfraRenameSymbols:
                 msg = f"Rope input changed after authentication: {path}"
                 raise ValueError(msg)
         planned: t.MutableMappingKV[
-            Path, t.MutableSequenceOf[m.Infra.SourceRewrite]
+            Path,
+            t.MutableSequenceOf[m.Infra.SourceRewrite],
         ] = {}
         for old, new in pairs:
             accepted = False
@@ -163,7 +169,9 @@ class FlextInfraRenameSymbols:
                                 text=change.new_contents[updated_start:updated_end],
                             )
                             for kind, start, end, updated_start, updated_end in SequenceMatcher(
-                                a=original, b=change.new_contents, autojunk=False
+                                a=original,
+                                b=change.new_contents,
+                                autojunk=False,
                             ).get_opcodes()
                             if kind != "equal"
                         )

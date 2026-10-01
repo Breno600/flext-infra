@@ -164,7 +164,7 @@ Infra:
           indent-style: space
           line-ending: lf
           quote-style: double
-          skip-magic-trailing-comma: true
+          skip-magic-trailing-comma: false
         lint:
           select:
             - ALL

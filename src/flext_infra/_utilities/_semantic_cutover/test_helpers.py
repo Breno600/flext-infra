@@ -18,13 +18,15 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesSemanticTestHelpers(
-    FlextInfraUtilitiesSemanticHelperReferences
+    FlextInfraUtilitiesSemanticHelperReferences,
 ):
     """Discover live fixture helpers and move them to their tier utilities owner."""
 
     @classmethod
     def _test_helper_edits(
-        cls, workspace: p.Infra.RopeWorkspaceDsl, sources: t.MappingKV[Path, str]
+        cls,
+        workspace: p.Infra.RopeWorkspaceDsl,
+        sources: t.MappingKV[Path, str],
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
         import libcst as cst
 
@@ -36,15 +38,20 @@ class FlextInfraUtilitiesSemanticTestHelpers(
 
             @override
             def leave_Assign[N: (cst.Assign, cst.AnnAssign)](
-                self, original_node: N, updated_node: N
+                self,
+                original_node: N,
+                updated_node: N,
             ) -> N:
                 return FlextInfraUtilitiesQualifiedNames.filter_exports(
-                    updated_node, self.names
+                    updated_node,
+                    self.names,
                 )
 
             @override
             def leave_AnnAssign(
-                self, original_node: cst.AnnAssign, updated_node: cst.AnnAssign
+                self,
+                original_node: cst.AnnAssign,
+                updated_node: cst.AnnAssign,
             ) -> cst.AnnAssign:
                 return self.leave_Assign(original_node, updated_node)
 
@@ -66,16 +73,22 @@ class FlextInfraUtilitiesSemanticTestHelpers(
         for path in candidates:
             while True:
                 project = FlextInfraUtilitiesRopeRuntimeModules.snapshot_project(
-                    workspace.rope_project, working
+                    workspace.rope_project,
+                    working,
                 )
                 try:
                     move = cls._shared_helper_move(
-                        workspace, project, path, working, frozenset(editable)
+                        workspace,
+                        project,
+                        path,
+                        working,
+                        frozenset(editable),
                     )
                     if move is None:
                         break
                     planned = cls._helper_move_plan(
-                        move, sources={path: working[path] for path in editable}
+                        move,
+                        sources={path: working[path] for path in editable},
                     )
                     if not any(edit.file_path == path for edit in planned):
                         msg = f"shared test helper move did not remove its declaration: {path}"
@@ -142,7 +155,11 @@ class FlextInfraUtilitiesSemanticTestHelpers(
                 msg = f"shared helper declaration has no identifier: {path}:{name}"
                 raise ValueError(msg)
             references = FlextInfraUtilitiesRopeRuntimeModules.runtime_find_occurrences(
-                project, resource, offset, resources=resources, in_hierarchy=False
+                project,
+                resource,
+                offset,
+                resources=resources,
+                in_hierarchy=False,
             )
             if not any(
                 reference.resource is not None
@@ -167,7 +184,9 @@ class FlextInfraUtilitiesSemanticTestHelpers(
 
     @staticmethod
     def _test_utilities_owner(
-        workspace: p.Infra.RopeWorkspaceDsl, path: Path, sources: t.MappingKV[Path, str]
+        workspace: p.Infra.RopeWorkspaceDsl,
+        path: Path,
+        sources: t.MappingKV[Path, str],
     ) -> Path:
         """Elect the unique declared utilities facade in this helper's tier."""
         prefix = workspace.convention(path).module_policy.project_prefix

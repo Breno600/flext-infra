@@ -87,12 +87,15 @@ class FlextInfraValidateImportCycles(FlextInfraProjectSelectionServiceBase[bool]
         )
         return r[m.Infra.ValidationReport].ok(
             m.Infra.ValidationReport(
-                passed=passed, violations=violations, summary=summary
-            )
+                passed=passed,
+                violations=violations,
+                summary=summary,
+            ),
         )
 
     def _build_graphs(
-        self, repository_root: Path
+        self,
+        repository_root: Path,
     ) -> list[t.Pair[str, MutableMapping[str, set[str]]]]:
         """Build one import graph per governed project root (one import unit).
 
@@ -121,7 +124,9 @@ class FlextInfraValidateImportCycles(FlextInfraProjectSelectionServiceBase[bool]
         return graph
 
     def _module_name_for(
-        self, project: t.Infra.RopeProject, resource: t.Infra.RopeResource
+        self,
+        project: t.Infra.RopeProject,
+        resource: t.Infra.RopeResource,
     ) -> p.Result[str]:
         """Resolve a rope resource to its fully-qualified module name.
 
@@ -140,7 +145,8 @@ class FlextInfraValidateImportCycles(FlextInfraProjectSelectionServiceBase[bool]
         return r[str].ok(name)
 
     def _iter_imported_modules(
-        self, module_imports: t.Infra.RopeModuleImports
+        self,
+        module_imports: t.Infra.RopeModuleImports,
     ) -> t.StrSequence:
         """Extract imported module names from the boundary import-info collection.
 

@@ -45,7 +45,8 @@ class FlextInfraFixerAdapter:
 
     @staticmethod
     def _merge_project_fix_results(
-        project_dir: Path, results: t.SequenceOf[m.Infra.ProjectFixResult]
+        project_dir: Path,
+        results: t.SequenceOf[m.Infra.ProjectFixResult],
     ) -> m.Infra.ProjectFixResult:
         """Merge per-target or per-file results into the project's one result.
 
@@ -62,7 +63,7 @@ class FlextInfraFixerAdapter:
             skipped=tuple(item for result in results for item in result.skipped),
             failed=tuple(item for result in results for item in result.failed),
             files_modified=tuple(
-                sorted({path for result in results for path in result.files_modified})
+                sorted({path for result in results for path in result.files_modified}),
             ),
         )
 
@@ -72,7 +73,8 @@ class FlextInfraFixerAdapter:
     ) -> MutableMapping[str, list[t.Pair[m.EnforcementRuleSpec, p.AttributeProbe]]]:
         """Group violations by the fix target declared in their catalog action."""
         grouped: MutableMapping[
-            str, list[t.Pair[m.EnforcementRuleSpec, p.AttributeProbe]]
+            str,
+            list[t.Pair[m.EnforcementRuleSpec, p.AttributeProbe]],
         ] = {}
         for rule, probe in violations:
             fix_action = rule.fix_action

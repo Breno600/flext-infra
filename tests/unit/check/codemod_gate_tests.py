@@ -32,7 +32,8 @@ class TestsFlextInfraCodemodGate:
             encoding="utf-8",
         )
         (project / c.Infra.CODEMOD_CONFIG_FILENAME).write_text(
-            "ruleDirs: [rules]\n", encoding="utf-8"
+            "ruleDirs: [rules]\n",
+            encoding="utf-8",
         )
         for name in ("first", "second"):
             (project / "rules" / f"{name}.yml").write_text(
@@ -44,7 +45,9 @@ class TestsFlextInfraCodemodGate:
 
     @pytest.mark.parametrize("severity", ["error", "warning", "info", "hint"])
     def test_native_findings_remain_visible_and_blocking(
-        self, tmp_path: Path, severity: str
+        self,
+        tmp_path: Path,
+        severity: str,
     ) -> None:
         project = self._project(tmp_path, severity=severity)
         source = project / "src" / "subject.py"
@@ -81,7 +84,8 @@ class TestsFlextInfraCodemodGate:
         tm.that(execution.raw_output, has="exit=0")
 
     def test_check_files_uses_every_rule_and_only_requested_files(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         project = self._project(tmp_path)
         selected = project / "src" / "selected.py"
@@ -90,7 +94,9 @@ class TestsFlextInfraCodemodGate:
         other.write_text("second(2)\n", encoding="utf-8")
 
         execution = FlextInfraCodemodGate(tmp_path).check_files(
-            (selected,), project, u.Tests.gate_context(tmp_path)
+            (selected,),
+            project,
+            u.Tests.gate_context(tmp_path),
         )
 
         tm.that(execution.result.passed, eq=False)
@@ -128,8 +134,9 @@ class TestsFlextInfraCodemodGate:
 
         results = tm.ok(
             FlextInfraWorkspaceChecker(
-                repository_root=tmp_path, rope=rope_workspace
-            ).run_projects([project.name], ["codemod"], reports_dir=reports)
+                repository_root=tmp_path,
+                rope=rope_workspace,
+            ).run_projects([project.name], ["codemod"], reports_dir=reports),
         )
 
         result = results[0]
@@ -144,13 +151,13 @@ class TestsFlextInfraCodemodGate:
         )
         tm.that(gate_line, has=f" {execution.finding_count} errors")
         markdown = (reports / c.Infra.CHECK_REPORT_MARKDOWN_FILENAME).read_text(
-            encoding="utf-8"
+            encoding="utf-8",
         )
         tm.that(markdown, has=f"| {project.name} | FAIL | {result.total_findings} |")
         tm.that(markdown, has=f"- codemod: FAIL ({len(execution.issues)} issues)")
         tm.that(markdown, has="contract-second")
         sarif = m.Infra.SarifReport.model_validate_json(
-            (reports / c.Infra.CHECK_REPORT_SARIF_FILENAME).read_text(encoding="utf-8")
+            (reports / c.Infra.CHECK_REPORT_SARIF_FILENAME).read_text(encoding="utf-8"),
         )
         observed = tuple(
             finding
@@ -181,7 +188,8 @@ class TestsFlextInfraCodemodGate:
         tm.that(execution.raw_output, has="second.yml")
 
     def test_native_traversal_error_cannot_be_hidden_by_a_policy_finding(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A partial walk remains red even when another file has an error match."""
         project = self._project(tmp_path)

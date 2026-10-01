@@ -23,7 +23,9 @@ class FlextInfraRefactorCensusSymbolsMixin:
 
     @classmethod
     def _lightweight_symbol_index(
-        cls, rope: p.Infra.RopeWorkspaceDsl, file_path: Path
+        cls,
+        rope: p.Infra.RopeWorkspaceDsl,
+        file_path: Path,
     ) -> MutableMapping[str, t.Pair[str, int]]:
         """Top-level symbol index for detector-only rule sets."""
         resource = rope.resource(file_path)
@@ -31,7 +33,8 @@ class FlextInfraRefactorCensusSymbolsMixin:
             return {}
         try:
             attributes = u.Infra.resolve_pymodule(
-                rope.rope_project, resource
+                rope.rope_project,
+                resource,
             ).get_attributes()
         except (
             *u.Infra.rope_runtime_errors(),
@@ -57,7 +60,9 @@ class FlextInfraRefactorCensusSymbolsMixin:
         for line, name, pyname in sorted(candidates, key=itemgetter(0)):
             obj = pyname.get_object()
             kind = cls._lightweight_symbol_kind(
-                name=name, obj=obj, object_kinds=object_kinds
+                name=name,
+                obj=obj,
+                object_kinds=object_kinds,
             )
             symbols.setdefault(name, (kind, line))
             if kind in {"class", "function"}:

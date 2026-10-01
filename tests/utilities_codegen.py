@@ -64,24 +64,32 @@ class TestsFlextInfraUtilitiesCodegenMixin:
     ) -> m.Infra.CodegenConformRequest:
         """Build one codegen conform request; every default is the model's own."""
         return m.Infra.CodegenConformRequest(
-            root=root, what=what, scope=scope, mode=mode
+            root=root,
+            what=what,
+            scope=scope,
+            mode=mode,
         )
 
     @staticmethod
     def conform_plan(
-        root: Path, workspace: m.Infra.WorkspaceSpec
+        root: Path,
+        workspace: m.Infra.WorkspaceSpec,
     ) -> m.Infra.CodegenPlan:
         """Plan one fixture workspace through the public conform boundary."""
         request = TestsFlextInfraUtilitiesCodegenMixin.conform_request(root)
         return tm.ok(
             FlextInfraCodegenConform(
-                repository_root=root, request=request, initial_workspace=workspace
-            ).plan(request)
+                repository_root=root,
+                request=request,
+                initial_workspace=workspace,
+            ).plan(request),
         )
 
     @staticmethod
     def scaffold_plan(
-        root: Path, *, members: t.StrSequence = ()
+        root: Path,
+        *,
+        members: t.StrSequence = (),
     ) -> m.Infra.CodegenPlan:
         """Plan every artifact conform renders for a fresh repository scaffold.
 
@@ -114,16 +122,20 @@ class TestsFlextInfraUtilitiesCodegenMixin:
 
     @staticmethod
     def scaffold_text(
-        root: Path, destination: str, *, members: t.StrSequence = ()
+        root: Path,
+        destination: str,
+        *,
+        members: t.StrSequence = (),
     ) -> str:
         """Return one rendered scaffold artifact, failing when it is not planned."""
         return tm.not_none(
             TestsFlextInfraUtilitiesCodegenMixin.planned_text(
                 TestsFlextInfraUtilitiesCodegenMixin.scaffold_plan(
-                    root, members=members
+                    root,
+                    members=members,
                 ),
                 destination,
-            )
+            ),
         )
 
     @staticmethod
@@ -131,7 +143,8 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         """Plan every declared artifact of one governed fixture project read-only."""
         for entry in config.Infra.codegen.templates.entries:
             destination = entry.destination.format(
-                package_name="fixture_project", ns="fixture_project"
+                package_name="fixture_project",
+                ns="fixture_project",
             )
             (root / destination).parent.mkdir(parents=True, exist_ok=True)
         for managed in config.Infra.codegen.managed_files:
@@ -149,7 +162,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
                     encoding="utf-8",
                 )
         result = FlextInfraCodegenConform(repository_root=root).plan(
-            TestsFlextInfraUtilitiesCodegenMixin.conform_request(root)
+            TestsFlextInfraUtilitiesCodegenMixin.conform_request(root),
         )
         return m.Infra.CodegenPlan.model_validate(tm.ok(result))
 
@@ -178,7 +191,8 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         package_root = repository_root / c.Infra.DEFAULT_SRC_DIR / package_name
         package_root.mkdir(parents=True)
         (repository_root / "Makefile").write_text(
-            "check:\n\t@true\n", encoding=c.Infra.ENCODING_DEFAULT
+            "check:\n\t@true\n",
+            encoding=c.Infra.ENCODING_DEFAULT,
         )
         (repository_root / c.PYPROJECT_FILENAME).write_text(
             (
@@ -188,10 +202,12 @@ class TestsFlextInfraUtilitiesCodegenMixin:
             encoding=c.Infra.ENCODING_DEFAULT,
         )
         (package_root / c.Infra.INIT_PY).write_text(
-            "", encoding=c.Infra.ENCODING_DEFAULT
+            "",
+            encoding=c.Infra.ENCODING_DEFAULT,
         )
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
-            repository_root, project_name
+            repository_root,
+            project_name,
         )
         # Semantic publication authenticates every changed path against its Git
         # checkout.  The shared workspace fixture therefore owns a real,
@@ -247,7 +263,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         if check_only:
             return len(changed)
         materialized = TestsFlextInfraUtilitiesCodegenMixin.materialize_lazy_init(
-            service
+            service,
         )
         return 0 if materialized.success else 1
 
@@ -269,7 +285,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         if planned.failure:
             return r[bool].from_failure(planned)
         return TestsFlextInfraUtilitiesCodegenMixin.materialize_codegen_plans(
-            r[tuple[m.Infra.CodegenFilePlan, ...]].ok(planned.value.files)
+            r[tuple[m.Infra.CodegenFilePlan, ...]].ok(planned.value.files),
         )
 
     @staticmethod
@@ -300,7 +316,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
             else:
                 if plan.desired_mode is None:
                     return r[bool].fail(
-                        f"lazy-init plan has no desired mode: {plan.path}"
+                        f"lazy-init plan has no desired mode: {plan.path}",
                     )
                 result = u.Cli.atomic_write_binary_file_guarded(
                     before.value,
@@ -325,11 +341,13 @@ class TestsFlextInfraUtilitiesCodegenMixin:
             TestsFlextInfraUtilitiesCodegenMixin.create_lazy_init_workspace(tmp_path)
         )
         TestsFlextInfraUtilitiesCodegenMixin.write_lazy_init_namespace_module(
-            package_root / "models.py", class_name="FlextTestsModels", alias="m"
+            package_root / "models.py",
+            class_name="FlextTestsModels",
+            alias="m",
         )
         init_path = package_root / c.Infra.INIT_PY
         service = TestsFlextInfraUtilitiesCodegenMixin.create_lazy_init_service(
-            repository_root
+            repository_root,
         )
         return package_root, init_path, service
 
@@ -351,11 +369,16 @@ class TestsFlextInfraUtilitiesCodegenMixin:
 
     @staticmethod
     def consolidate_codegen(
-        *, repository_root: Path, project: str | None = None, dry_run: bool = True
+        *,
+        repository_root: Path,
+        project: str | None = None,
+        dry_run: bool = True,
     ) -> p.Result[str]:
         """Provide the typed test helper `consolidate_codegen`."""
         service: FlextInfraCodegenConsolidator = FlextInfraCodegenConsolidator(
-            repository_root=repository_root, dry_run=dry_run, project_name=project
+            repository_root=repository_root,
+            dry_run=dry_run,
+            project_name=project,
         )
         result: p.Result[str] = service.execute()
         return result

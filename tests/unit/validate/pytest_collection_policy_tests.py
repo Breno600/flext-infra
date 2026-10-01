@@ -17,7 +17,8 @@ class TestsFlextInfraPytestCollectionPolicy:
 
     @pytest.mark.slow
     def test_collection_policy_error_fails_loud_and_names_the_offender(
-        self, policy_violation_project: Path
+        self,
+        policy_violation_project: Path,
     ) -> None:
         """A collection-time policy error rejects the run and names the offender."""
         runner = runner_for(policy_violation_project)
@@ -31,11 +32,16 @@ class TestsFlextInfraPytestCollectionPolicy:
     @pytest.mark.parametrize("profile_collection", [False, True])
     @pytest.mark.parametrize("finding", ["warning", "module-skip", "module-error"])
     def test_collection_findings_block_before_suite_execution(
-        self, cached_runner_project: Path, finding: str, *, profile_collection: bool
+        self,
+        cached_runner_project: Path,
+        finding: str,
+        *,
+        profile_collection: bool,
     ) -> None:
         """Collect-only warnings, skips and import failures retain native evidence."""
         runner = runner_for(
-            cached_runner_project, profile_collection=profile_collection
+            cached_runner_project,
+            profile_collection=profile_collection,
         )
         if finding == "warning":
             (cached_runner_project / "conftest.py").write_text(
@@ -52,7 +58,8 @@ class TestsFlextInfraPytestCollectionPolicy:
                 else "raise RuntimeError('first collection failure')\n"
             )
             (cached_runner_project / runner.target / "test_collect.py").write_text(
-                source, encoding="utf-8"
+                source,
+                encoding="utf-8",
             )
 
         expected = (
@@ -74,7 +81,7 @@ class TestsFlextInfraPytestCollectionPolicy:
             execute_blocking_collection()
 
         (events,) = (cached_runner_project / runner.reports).glob(
-            "*/testmon-selection.events.jsonl"
+            "*/testmon-selection.events.jsonl",
         )
         diagnostic = tm.ok(FlextInfraPytestDiagExtractor.extract_report_log(events))
         tm.that(diagnostic.warning_count, eq=int(finding == "warning"))
@@ -82,7 +89,7 @@ class TestsFlextInfraPytestCollectionPolicy:
         tm.that(diagnostic.collection_failed_count, eq=int(finding == "module-error"))
         tm.that((events.parent / "suite-outcome.json").exists(), eq=False)
         outcome = m.Cli.ProcessOutcome.model_validate_json(
-            (events.parent / "selection-outcome.json").read_text()
+            (events.parent / "selection-outcome.json").read_text(),
         )
         tm.that(outcome.raw_return_code != 0, eq=finding == "module-error")
         if finding == "module-error":
@@ -98,7 +105,10 @@ class TestsFlextInfraPytestCollectionPolicy:
     @pytest.mark.slow
     @pytest.mark.parametrize("homonym", [False, True])
     def test_serial_collection_warning_blocks_and_preserves_identity(
-        self, cached_runner_project: Path, *, homonym: bool
+        self,
+        cached_runner_project: Path,
+        *,
+        homonym: bool,
     ) -> None:
         """Serial collection blocks on every warning, MRO violations included."""
         runner = runner_for(cached_runner_project)
@@ -126,21 +136,25 @@ class TestsFlextInfraPytestCollectionPolicy:
             runner.execute()
 
         (receipt,) = (cached_runner_project / runner.reports).glob(
-            "*/testmon-selection.events.diagnostics.json"
+            "*/testmon-selection.events.diagnostics.json",
         )
         diagnostics = m.Infra.PytestDiagnostics.model_validate_json(receipt.read_text())
         tm.that(diagnostics.warning_count, eq=1)
         tm.that(diagnostics.warning_lines[0], contains="serial policy evidence")
         events = receipt.with_name("testmon-selection.events.jsonl")
         identity = m.Infra.PytestWarningEvent.model_validate_json(
-            events.with_suffix(c.Infra.PYTEST_WARNING_EVENTS_SUFFIX).read_text().strip()
+            events
+            .with_suffix(c.Infra.PYTEST_WARNING_EVENTS_SUFFIX)
+            .read_text()
+            .strip(),
         )
         tm.that(identity.category, eq=category)
         tm.that(identity.category_module, eq="runner_sample.notices")
 
     @pytest.mark.slow
     def test_warm_inventory_captures_warnings_from_stable_modules(
-        self, cached_runner_project: Path
+        self,
+        cached_runner_project: Path,
     ) -> None:
         """A file omitted by testmon remains covered by complete collection policy."""
         runner = runner_for(cached_runner_project)
@@ -163,11 +177,11 @@ class TestsFlextInfraPytestCollectionPolicy:
 
         (context,) = set(reports_root.glob("*/run-context.json")) - existing
         selection = m.Infra.PytestCollectionManifest.model_validate_json(
-            (context.parent / "testmon-selection.json").read_text()
+            (context.parent / "testmon-selection.json").read_text(),
         )
         tm.that(selection.node_ids, eq=())
         diagnostics = m.Infra.PytestDiagnostics.model_validate_json(
-            (context.parent / "testmon-inventory.events.diagnostics.json").read_text()
+            (context.parent / "testmon-inventory.events.diagnostics.json").read_text(),
         )
         tm.that(diagnostics.warning_count, eq=1)
         tm.that(diagnostics.warning_lines[0], contains="stable inventory finding")
@@ -175,7 +189,8 @@ class TestsFlextInfraPytestCollectionPolicy:
 
     @pytest.mark.slow
     def test_coverage_pass_fails_loud_on_collection_policy_error(
-        self, policy_violation_project: Path
+        self,
+        policy_violation_project: Path,
     ) -> None:
         """The coverage inventory rejects the same collection policy violation."""
         runner = runner_for(policy_violation_project)

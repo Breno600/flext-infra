@@ -32,13 +32,15 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         )
         cls._write_file(project_root / "Makefile", "check:\n\t@true\n")
         cls._write_file(
-            package_root / "__init__.py", "from __future__ import annotations\n"
+            package_root / "__init__.py",
+            "from __future__ import annotations\n",
         )
         u.Tests.provision_checkout(project_root)
         return (project_root, package_root)
 
     def test_rewrite_manual_protocol_violations_uses_public_runtime_api(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         project_root, package_root = self._build_project(tmp_path)
         protocols_file = package_root / "protocols.py"
@@ -74,13 +76,16 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
             py_files=[source_file, consumer_file],
             violations=[
                 m.Infra.ManualProtocolViolation(
-                    file=str(source_file), line=5, name="External"
-                )
+                    file=str(source_file),
+                    line=5,
+                    name="External",
+                ),
             ],
         )
 
         tm.that(
-            source_file.read_text(encoding="utf-8"), lacks="class External(Protocol):"
+            source_file.read_text(encoding="utf-8"),
+            lacks="class External(Protocol):",
         )
         tm.that(
             consumer_file.read_text(encoding="utf-8"),
@@ -94,13 +99,15 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         tm.that(protocols_file.with_suffix(".py.bak").exists(), eq=True)
 
     def test_rewrite_manual_typing_alias_violations_uses_public_runtime_api(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         project_root, package_root = self._build_project(tmp_path)
         typings_file = package_root / "typings.py"
         source_file = package_root / "service.py"
         self._write_file(
-            typings_file, "from __future__ import annotations\n\nTYPE_READY = True\n"
+            typings_file,
+            "from __future__ import annotations\n\nTYPE_READY = True\n",
         )
         self._write_file(
             source_file,
@@ -117,8 +124,10 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
             project_root=project_root,
             violations=[
                 m.Infra.ManualTypingAliasViolation(
-                    file=str(source_file), line=6, name="PayloadMap"
-                )
+                    file=str(source_file),
+                    line=6,
+                    name="PayloadMap",
+                ),
             ],
             parse_failures=[],
         )
@@ -133,7 +142,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         tm.that(typings_file.with_suffix(".py.bak").exists(), eq=True)
 
     def test_rewrite_compatibility_alias_violations_uses_public_runtime_api(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         _, package_root = self._build_project(tmp_path)
         source_file = package_root / "models.py"
@@ -155,7 +165,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
                     line=6,
                     alias_name="LegacyThing",
                     target_name="NewThing",
-                )
+                ),
             ],
             parse_failures=[],
         )
@@ -166,7 +176,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         tm.that(source_file.with_suffix(".py.bak").exists(), eq=True)
 
     def test_rewrite_compatibility_alias_violations_migrates_foreign_canonical_alias(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         _project_root, package_root = self._build_project(tmp_path)
         source_file = package_root / "service.py"

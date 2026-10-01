@@ -26,7 +26,9 @@ class FlextInfraPyreflyGate(FlextInfraGate):
 
     @override
     def _get_check_dirs(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
         """Check only local Python roots to avoid scanning dependency trees."""
         _ = ctx
@@ -34,7 +36,10 @@ class FlextInfraPyreflyGate(FlextInfraGate):
 
     @override
     def _build_check_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        check_dirs: t.StrSequence,
     ) -> t.StrSequence:
         """Build check command."""
         json_file = self._check_report_path(project_dir, ctx)
@@ -63,7 +68,9 @@ class FlextInfraPyreflyGate(FlextInfraGate):
 
     @override
     def _check_remove_env_keys(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
         """Use configured search paths without Pyrefly's inherited-path warning."""
         return (
@@ -73,14 +80,21 @@ class FlextInfraPyreflyGate(FlextInfraGate):
 
     @override
     def _parse_check_output(
-        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        result: p.Cli.CommandOutput,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
         """Parse check output."""
         json_file = self._check_report_path(project_dir, ctx)
         if not u.Cli.process_succeeded(result.outcome) and not json_file.exists():
             return False, (
                 self._command_error_issue(
-                    result, tool=c.Infra.PYREFLY, file=str(json_file), line=0, column=0
+                    result,
+                    tool=c.Infra.PYREFLY,
+                    file=str(json_file),
+                    line=0,
+                    column=0,
                 ),
             )
         validated: p.Result[m.Infra.PyreflyReport] = u.validate_value(
@@ -92,7 +106,9 @@ class FlextInfraPyreflyGate(FlextInfraGate):
         if validated.failure:
             return False, (
                 self._malformed_report_issue(
-                    str(validated.error), tool=c.Infra.PYREFLY, file=str(json_file)
+                    str(validated.error),
+                    tool=c.Infra.PYREFLY,
+                    file=str(json_file),
                 ),
             )
         report = validated.value
@@ -123,7 +139,7 @@ class FlextInfraPyreflyGate(FlextInfraGate):
                     code="pyrefly-exec",
                     message=message,
                     severity=c.Infra.ERROR,
-                )
+                ),
             )
         return (
             u.Cli.process_succeeded(result.outcome)

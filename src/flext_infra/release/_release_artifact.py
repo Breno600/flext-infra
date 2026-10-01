@@ -37,7 +37,8 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
 
     @classmethod
     def _archive_contents(
-        cls, path: Path
+        cls,
+        path: Path,
     ) -> p.Result[
         t.Pair[t.SequenceOf[t.Triple[str, bool, bool]], t.MappingKV[str, bytes]]
     ]:
@@ -56,7 +57,8 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
                     }
             except (OSError, zipfile.BadZipFile) as exc:
                 return result_type.fail(
-                    f"validate wheel archive {path} failed: {exc}", exception=exc
+                    f"validate wheel archive {path} failed: {exc}",
+                    exception=exc,
                 )
             members = tuple(
                 (i.filename, stat.S_ISLNK(i.external_attr >> 16), True) for i in infos
@@ -74,14 +76,18 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
                 }
         except (OSError, tarfile.TarError) as exc:
             return result_type.fail(
-                f"validate sdist archive {path} failed: {exc}", exception=exc
+                f"validate sdist archive {path} failed: {exc}",
+                exception=exc,
             )
         members = tuple((i.name, i.issym() or i.islnk(), i.isfile()) for i in items)
         return result_type.ok((members, payload))
 
     @classmethod
     def _archive_error(
-        cls, path: Path, project: str, members: t.SequenceOf[t.Triple[str, bool, bool]]
+        cls,
+        path: Path,
+        project: str,
+        members: t.SequenceOf[t.Triple[str, bool, bool]],
     ) -> str:
         """Return why an archive's members leave the public boundary, or ''."""
         wheel = path.suffix == ".whl"
@@ -159,7 +165,7 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
         name = message.get("Name")
         if name is None or canonicalize_name(name) != canonicalize_name(project):
             return result_type.fail(
-                f"artifact Name mismatch: expected {project}, found {name}"
+                f"artifact Name mismatch: expected {project}, found {name}",
             )
         try:
             expected, actual = Version(version), Version(message.get("Version") or "")
@@ -167,7 +173,7 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
             return result_type.fail_op("validate artifact Version", exc)
         if actual != expected:
             return result_type.fail(
-                f"artifact Version mismatch: expected {expected}, found {actual}"
+                f"artifact Version mismatch: expected {expected}, found {actual}",
             )
         for text in message.get_all("Requires-Dist", []):
             try:
@@ -177,7 +183,7 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
             dependency = canonicalize_name(requirement.name)
             # A direct reference is source-declared; only fleet pins derive.
             if requirement.url is not None or not dependency.startswith(
-                c.Infra.PKG_PREFIX_HYPHEN
+                c.Infra.PKG_PREFIX_HYPHEN,
             ):
                 continue
             pin = (
@@ -187,7 +193,7 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
             )
             if pin.failure or str(requirement.specifier) != pin.value:
                 return result_type.fail(
-                    f"artifact contains unpinned FLEXT dependency: {text}"
+                    f"artifact contains unpinned FLEXT dependency: {text}",
                 )
         try:
             digest = u.Cli.sha256_file(path)

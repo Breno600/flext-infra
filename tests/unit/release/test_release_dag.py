@@ -61,7 +61,7 @@ class TestsFlextInfraReleaseDag:
             tm.that(
                 report.build_constraints_sha256,
                 eq=hashlib.sha256(
-                    snapshot(workspace, "build-constraints.txt")
+                    snapshot(workspace, "build-constraints.txt"),
                 ).hexdigest(),
             )
             tm.that(
@@ -144,8 +144,10 @@ class TestsFlextInfraReleaseDag:
             tm.that(result, eq=0, msg=build_log)
             wheel = next(
                 u.Tests.release_artifact_dir(
-                    workspace, c.Tests.RELEASE_VERSION_BASE, project_name
-                ).glob("*.whl")
+                    workspace,
+                    c.Tests.RELEASE_VERSION_BASE,
+                    project_name,
+                ).glob("*.whl"),
             )
             with zipfile.ZipFile(wheel) as archive:
                 tm.that(archive.namelist(), has="flext_a/templates/.github/ci.yml.j2")
@@ -158,7 +160,9 @@ class TestsFlextInfraReleaseDag:
             """Never substitute installed versions for an unavailable release source."""
             project_name = "flext-a"
             workspace = u.Tests.create_release_workspace(
-                tmp_path, project_names=(project_name,), initialize_project_git=True
+                tmp_path,
+                project_names=(project_name,),
+                initialize_project_git=True,
             )
             result = u.Tests.run_release_build(workspace, project_name)
             tm.that(result, ne=0)
@@ -190,7 +194,9 @@ class TestsFlextInfraReleaseDag:
             tm.that(build_log, has="release pyproject must define [tool.hatch]")
             tm.that(
                 u.Tests.release_artifact_dir(
-                    workspace, c.Tests.RELEASE_VERSION_BASE, project_name
+                    workspace,
+                    c.Tests.RELEASE_VERSION_BASE,
+                    project_name,
                 ).exists(),
                 eq=False,
             )
@@ -216,7 +222,8 @@ class TestsFlextInfraReleaseDag:
             u.Tests.commit_git_changes(project, "add synthetic secret fixture")
             ambient_policy = tmp_path / "ambient-gitleaks.toml"
             ambient_policy.write_text(
-                'title = "permissive ambient policy"\n', encoding="utf-8"
+                'title = "permissive ambient policy"\n',
+                encoding="utf-8",
             )
 
             with tm.scope(env={"GITLEAKS_CONFIG": str(ambient_policy)}):
@@ -233,7 +240,8 @@ class TestsFlextInfraReleaseDag:
             workspace = u.Tests.release_internal_workspace(tmp_path, project_name)
             project = workspace / project_name
             (project / ".gitleaks.toml").write_text(
-                'title = "project override"\n', encoding="utf-8"
+                'title = "project override"\n',
+                encoding="utf-8",
             )
             u.Tests.commit_git_changes(project, "add forbidden scanner policy")
 
@@ -254,7 +262,8 @@ class TestsFlextInfraReleaseDag:
             workspace = u.Tests.release_internal_workspace(tmp_path, project_name)
             project = workspace / project_name
             (project / ".env.example").write_text(
-                "FLEXT_A_LOG_LEVEL=INFO\n", encoding="utf-8"
+                "FLEXT_A_LOG_LEVEL=INFO\n",
+                encoding="utf-8",
             )
             u.Tests.commit_git_changes(project, "add the generated environment example")
 
@@ -281,7 +290,9 @@ class TestsFlextInfraReleaseDag:
             tm.that(build_log, has="release project is dirty")
             tm.that(
                 u.Tests.release_artifact_dir(
-                    workspace, c.Tests.RELEASE_VERSION_BASE, project_name
+                    workspace,
+                    c.Tests.RELEASE_VERSION_BASE,
+                    project_name,
                 ).exists(),
                 eq=False,
             )

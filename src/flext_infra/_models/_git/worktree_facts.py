@@ -20,10 +20,12 @@ class FlextInfraModelsGitWorktreeFacts:
 
         total_bytes: Annotated[int, m.Field(ge=0, description="Sum of file sizes")]
         newest_mtime: Annotated[
-            float, m.Field(ge=0, description="Newest file mtime as epoch seconds")
+            float,
+            m.Field(ge=0, description="Newest file mtime as epoch seconds"),
         ]
         exact: Annotated[
-            bool, m.Field(description="Whether the walk completed without skipping")
+            bool,
+            m.Field(description="Whether the walk completed without skipping"),
         ]
 
     class WorktreeFact(m.ContractModel):
@@ -40,17 +42,21 @@ class FlextInfraModelsGitWorktreeFacts:
         ]
         bytes: Annotated[int, m.Field(ge=0, default=0, description="Total tree bytes")]
         deps_bytes: Annotated[
-            int, m.Field(ge=0, default=0, description="Rebuildable dependency bytes")
+            int,
+            m.Field(ge=0, default=0, description="Rebuildable dependency bytes"),
         ]
         stale_days: Annotated[
-            float, m.Field(ge=0, default=0.0, description="Days since newest mtime")
+            float,
+            m.Field(ge=0, default=0.0, description="Days since newest mtime"),
         ]
         exact: Annotated[
-            bool, m.Field(default=True, description="Whether measurement completed")
+            bool,
+            m.Field(default=True, description="Whether measurement completed"),
         ]
         branch: Annotated[str, m.Field(default="", description="Checked-out branch")]
         retire_candidate: Annotated[
-            bool, m.Field(default=False, description="Stale beyond the activity window")
+            bool,
+            m.Field(default=False, description="Stale beyond the activity window"),
         ]
 
     class WorktreesReport(m.ContractModel):

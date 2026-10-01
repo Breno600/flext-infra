@@ -57,21 +57,22 @@ class TestsFlextInfraPytestRunnerSuiteStop:
         reports = config.Infra.codegen.make.testmon_cache.reports_directory
         (bounded,) = (path.parent for path in (project / reports).glob("*/summary.txt"))
         outcome = m.Cli.ProcessOutcome.model_validate_json(
-            self._read(bounded / "suite-outcome.json")
+            self._read(bounded / "suite-outcome.json"),
         )
         tm.that(outcome.raw_return_code, eq=pytest.ExitCode.INTERRUPTED.value)
         tm.that(outcome.timed_out, eq=False)
         tm.that(outcome.forwarded_signal, none=True)
         selected = m.Infra.PytestCollectionManifest.model_validate_json(
-            self._read(bounded / "testmon-selection.json")
+            self._read(bounded / "testmon-selection.json"),
         ).node_ids
         executed = m.Infra.TestmonRunAccounting.model_validate_json(
-            self._read(bounded / "run-accounting.json")
+            self._read(bounded / "run-accounting.json"),
         ).executed_count
         return bounded, selected, executed
 
     def test_stop_reserve_matches_the_runner_dispatch_decision(
-        self, cached_runner_project: Path
+        self,
+        cached_runner_project: Path,
     ) -> None:
         """The typed reserve follows the same serial decision as the workers.
 
@@ -132,7 +133,8 @@ class TestsFlextInfraPytestRunnerSuiteStop:
 
     @pytest.mark.slow
     def test_suite_stop_instant_persists_the_executed_prefix(
-        self, cached_runner_project: Path
+        self,
+        cached_runner_project: Path,
     ) -> None:
         """A run reaching its stop instant ends itself and testmon keeps progress.
 
@@ -168,13 +170,13 @@ class TestsFlextInfraPytestRunnerSuiteStop:
         # pytest-testmon's durable record is what the next selection excludes:
         # collected-but-unexecuted tests keep a row without a measured duration.
         with closing(
-            sqlite3.connect(f"file:{runner.testmon_db}?mode=ro", uri=True)
+            sqlite3.connect(f"file:{runner.testmon_db}?mode=ro", uri=True),
         ) as connection:
             persisted = {
                 name
                 for (name,) in connection.execute(
                     "SELECT test_name FROM test_execution"
-                    " WHERE failed = 0 AND duration IS NOT NULL"
+                    " WHERE failed = 0 AND duration IS NOT NULL",
                 )
             }
         tm.that(len(persisted), eq=executed)
@@ -182,7 +184,8 @@ class TestsFlextInfraPytestRunnerSuiteStop:
 
     @pytest.mark.slow
     def test_stop_instant_after_the_last_selected_test_completes_the_run(
-        self, cached_runner_project: Path
+        self,
+        cached_runner_project: Path,
     ) -> None:
         """A stop requested on the last selected test's teardown ends nothing.
 

@@ -112,13 +112,14 @@ class FlextInfraConstantsCheck:
     "Gates that rewrite files: owned by `fmt`/`fix`, never a read-only `check` vocabulary."
 
     RUFF_FORMAT_FILE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\s*-->\s*(.+?):\d+:\d+\s*$"
+        r"^\s*-->\s*(.+?):\d+:\d+\s*$",
     )
     MARKDOWN_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?P<file>.*?):(?P<line>\d+):(?P<col>\d+):\s+\[(?P<code>MD\d+)\]\s+(?P<msg>.*)$"
+        r"^(?P<file>.*?):(?P<line>\d+):(?P<col>\d+):\s+\[(?P<code>MD\d+)\]\s+(?P<msg>.*)$",
     )
     MARKDOWN_FORMAT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\[warn\]\s+(?P<file>\S+\.md)\s*$", re.MULTILINE
+        r"^\[warn\]\s+(?P<file>\S+\.md)\s*$",
+        re.MULTILINE,
     )
     "Prettier ``--check`` unformatted-file line (``[warn] <file.md>``); config warns never match."
     MARKDOWN_PY_FENCE_RE: ClassVar[t.RegexPattern] = re.compile(
@@ -131,11 +132,12 @@ class FlextInfraConstantsCheck:
     MARKDOWN_CODE_SKIP_MARKER: ClassVar[str] = "notest"
     "Existing fence marker (pytest-markdown-docs) opting a block out of code validation."
     MARKDOWN_CODE_FORMAT_FILE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?P<file>\S+):\d+:\d+:\s+unformatted:\s+"
+        r"^(?P<file>\S+):\d+:\d+:\s+unformatted:\s+",
     )
     "Ruff format ``--check`` concise verdict line over extracted sources."
     MARKDOWN_CODE_FORMAT_ERROR_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^error: Failed to format (?P<file>\S+):", re.MULTILINE
+        r"^error: Failed to format (?P<file>\S+):",
+        re.MULTILINE,
     )
     "Ruff format hard-failure line over extracted sources (parse errors)."
     VALID_GATE_SEVERITIES: ClassVar[frozenset[str]] = frozenset(GateSeverity)
@@ -208,7 +210,8 @@ class FlextInfraConstantsCheck:
     BOUNDARY_SIMPLE_RULES: ClassVar[t.VariadicTuple[t.Pair[t.RegexPattern, str]]] = (
         (
             re.compile(
-                rf"^\s*(import|from)\s+{'sub' + 'process'}(\s|$|\.)", re.MULTILINE
+                rf"^\s*(import|from)\s+{'sub' + 'process'}(\s|$|\.)",
+                re.MULTILINE,
             ),
             "imports subprocess — use cli.run / cli.capture",
         ),
@@ -261,10 +264,11 @@ class FlextInfraConstantsCheck:
         ),
     )
     BOUNDARY_TOML_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\s*(import|from)\s+(tomllib|tomlkit)(\s|$|\.)", re.MULTILINE
+        r"^\s*(import|from)\s+(tomllib|tomlkit)(\s|$|\.)",
+        re.MULTILINE,
     )
     BOUNDARY_FLEXT_CLI_CONCRETE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"\bFlextCli[A-Z]\w*"
+        r"\bFlextCli[A-Z]\w*",
     )
 
     SCC_BINARY: ClassVar[str] = "scc"
@@ -414,7 +418,7 @@ class FlextInfraConstantsCheck:
         "--update-all",
     })
     MANUAL_CMD_SEGMENT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"&&|\|\||;|\||\n|`|\$\("
+        r"&&|\|\||;|\||\n|`|\$\(",
     )
 
     # --- Net-LOC-delta validator (§3.5) SSOT ---

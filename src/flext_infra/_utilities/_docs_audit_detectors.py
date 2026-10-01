@@ -28,7 +28,8 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
 
     @staticmethod
     def _policy_text_files(
-        scope: m.Infra.DocScope, exempt_paths: t.StrSequence
+        scope: m.Infra.DocScope,
+        exempt_paths: t.StrSequence,
     ) -> t.SequenceOf[t.Pair[str, Path]]:
         """Return ``(relative_posix, path)`` for policy checks, skipping exempt prefixes."""
         exempt = tuple(exempt_paths)
@@ -56,7 +57,8 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
             rel,
             md_file,
         ) in FlextInfraUtilitiesDocsAuditDetectorsMixin._policy_text_files(
-            scope, exempt_paths
+            scope,
+            exempt_paths,
         ):
             text = md_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
             for token in tokens:
@@ -67,13 +69,15 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                             issue_type=issue_type,
                             severity="medium",
                             message=f"contains `{token}`",
-                        )
+                        ),
                     )
         return issues
 
     @staticmethod
     def docs_machine_path_issues(
-        scope: m.Infra.DocScope, *, exempt_paths: t.StrSequence
+        scope: m.Infra.DocScope,
+        *,
+        exempt_paths: t.StrSequence,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
         """Collect per-user absolute paths (``/home/<user>``) frozen into markdown.
 
@@ -88,7 +92,8 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
             rel,
             md_file,
         ) in FlextInfraUtilitiesDocsAuditDetectorsMixin._policy_text_files(
-            scope, exempt_paths
+            scope,
+            exempt_paths,
         ):
             text = md_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
             for line_number, line in enumerate(text.splitlines(), start=1):
@@ -104,7 +109,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                                 f"line {line_number} embeds machine-local path "
                                 f"`{match.group(0)}`"
                             ),
-                        )
+                        ),
                     )
         return issues
 
@@ -132,7 +137,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                             issue_type="scope_boundary",
                             severity="high",
                             message=f"root docs mention out-of-scope project `{token}`",
-                        )
+                        ),
                     )
         return issues
 
@@ -152,12 +157,13 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
             rel = path.relative_to(scope.path).as_posix()
             if path.is_relative_to(scope.path / c.Infra.DIR_DOCS) and (
                 FlextInfraUtilitiesDocsScope.excluded_doc_path(
-                    scope.path, path.relative_to(scope.path / c.Infra.DIR_DOCS)
+                    scope.path,
+                    path.relative_to(scope.path / c.Infra.DIR_DOCS),
                 )
             ):
                 continue
             if rel == "docs/api-reference/README.md" or rel.startswith(
-                "docs/api-reference/generated/"
+                "docs/api-reference/generated/",
             ):
                 continue
             issues.append(
@@ -166,7 +172,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                     issue_type="generated_ownership",
                     severity="medium",
                     message="manual API page duplicates generated API ownership",
-                )
+                ),
             )
         return issues
 
@@ -178,7 +184,8 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
         if scope.name == c.Infra.RK_ROOT or not scope.package_name:
             return []
         contract = FlextInfraUtilitiesDocsApi.public_contract(
-            scope.path, scope.package_name
+            scope.path,
+            scope.package_name,
         )
         return FlextInfraUtilitiesDocsApi.docstring_issues(scope.path, contract)
 
@@ -190,7 +197,8 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
         if scope.name == c.Infra.RK_ROOT or not scope.package_name:
             return None
         contract = FlextInfraUtilitiesDocsApi.public_contract(
-            scope.path, scope.package_name
+            scope.path,
+            scope.package_name,
         )
         return FlextInfraUtilitiesDocsApi.docstring_coverage(scope.path, contract)
 
@@ -244,7 +252,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                         issue_type="python_codeblock",
                         severity="medium",
                         message=f"block #{index}: {detail}",
-                    )
+                    ),
                 )
         return issues
 

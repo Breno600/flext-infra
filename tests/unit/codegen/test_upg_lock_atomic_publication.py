@@ -42,7 +42,8 @@ class TestsFlextInfraUpgLockAtomicPublication:
     )
 
     def test_interrupted_upg_leaves_committed_lock_untouched(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A run killed while uv resolves leaves the lock and checkout intact."""
         root, lock, committed = self._committed_project(tmp_path, python=">=3.13")
@@ -58,19 +59,21 @@ class TestsFlextInfraUpgLockAtomicPublication:
                 cwd=root,
                 remove_env_keys=c.Tests.MAKE_ISOLATION_ENV_KEYS,
                 start_new_session=True,
-            )
+            ),
         )
         try:
             deadline = time.monotonic() + self.INTERRUPT_AFTER_SECONDS
             while time.monotonic() < deadline:
                 tm.that(
-                    child.poll(), eq=None, msg="upgrade exited before FIFO observation"
+                    child.poll(),
+                    eq=None,
+                    msg="upgrade exited before FIFO observation",
                 )
                 observed = tm.ok(
                     u.Cli.run(
                         ["ps", "--sid", str(child.pid), "-L", "-o", "comm=,wchan:64="],
                         timeout=self.INTERRUPT_AFTER_SECONDS,
-                    )
+                    ),
                 )
                 if any(
                     row.split() == [c.Infra.UV, "wait_for_partner"]
@@ -90,7 +93,8 @@ class TestsFlextInfraUpgLockAtomicPublication:
                 if primary is not None:
                     message = "upgrade observation and owned-session cleanup failed"
                     raise BaseExceptionGroup(
-                        message, [primary, cleanup_error]
+                        message,
+                        [primary, cleanup_error],
                     ) from primary
                 raise
         tm.that(status != 0, eq=True, msg=child.stderr)
@@ -99,7 +103,10 @@ class TestsFlextInfraUpgLockAtomicPublication:
 
     @pytest.mark.parametrize("conflicted", [False, True])
     def test_upg_replaces_lock_without_rewriting_the_committed_file(
-        self, tmp_path: Path, *, conflicted: bool
+        self,
+        tmp_path: Path,
+        *,
+        conflicted: bool,
     ) -> None:
         """Publication swaps a complete lock in; a reader keeps the old one whole.
 
@@ -126,7 +133,7 @@ class TestsFlextInfraUpgLockAtomicPublication:
                     env={"UV_PYTHON_DOWNLOADS": "never"},
                     timeout=self.INTERRUPT_AFTER_SECONDS,
                     remove_env_keys=(*c.Tests.MAKE_ISOLATION_ENV_KEYS, "SETUP_PYTHON"),
-                )
+                ),
             )
             tm.that(reader.read(), eq=committed)
         tm.that(u.Cli.process_succeeded(execution.outcome), eq=False)
@@ -135,11 +142,16 @@ class TestsFlextInfraUpgLockAtomicPublication:
         tm.ok(u.Cli.run_checked([c.Infra.UV, "lock", "--check", "--offline"], cwd=root))
 
     def _committed_project(
-        self, tmp_path: Path, *, python: str
+        self,
+        tmp_path: Path,
+        *,
+        python: str,
     ) -> tuple[Path, Path, bytes]:
         """Render a real project whose committed lock predates one new dependency."""
         root, _ = u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.STANDALONE, bootstrap=True
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
+            bootstrap=True,
         )
         links = self._wheel_path(tmp_path).parent
         links.mkdir()
@@ -149,9 +161,11 @@ class TestsFlextInfraUpgLockAtomicPublication:
                 u.Cli.atomic_write_text_file(
                     manifest,
                     self.MANIFEST.format(
-                        python=python, dependencies=dependencies, links=links.as_posix()
+                        python=python,
+                        dependencies=dependencies,
+                        links=links.as_posix(),
                     ),
-                )
+                ),
             )
             if not dependencies:
                 tm.ok(u.Cli.run_checked([c.Infra.UV, "lock", "--offline"], cwd=root))

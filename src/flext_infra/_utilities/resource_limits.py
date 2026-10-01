@@ -67,7 +67,9 @@ class FlextInfraUtilitiesResourceLimits:
                 c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
             ),
             timeout_seconds=FlextInfraUtilitiesResourceLimits._environment_integer(
-                process_env, c.Infra.MYPY_TIMEOUT_SECONDS_ENV, project_budget
+                process_env,
+                c.Infra.MYPY_TIMEOUT_SECONDS_ENV,
+                project_budget,
             ),
         )
 
@@ -94,7 +96,7 @@ class FlextInfraUtilitiesResourceLimits:
         interpreter = sys.executable
         if invocation.workspace is not None:
             managed_python = FlextInfraUtilitiesProjectDiscovery.runtime_python(
-                invocation.workspace
+                invocation.workspace,
             )
             if not managed_python.is_file():
                 msg = f"managed workspace interpreter is missing: {managed_python}"
@@ -102,7 +104,7 @@ class FlextInfraUtilitiesResourceLimits:
             interpreter = str(managed_python)
             if invocation.profile_output is None:
                 managed_mypy = managed_python.with_name(
-                    f"{c.Infra.MYPY}.exe" if sys.platform == "win32" else c.Infra.MYPY
+                    f"{c.Infra.MYPY}.exe" if sys.platform == "win32" else c.Infra.MYPY,
                 )
                 if not managed_mypy.is_file():
                     msg = f"managed workspace checker is missing: {managed_mypy}"
@@ -139,10 +141,10 @@ class FlextInfraUtilitiesResourceLimits:
         spec = config.Infra.codegen.make.mypy_cache
         home = settings.env_lookup(str(spec.data_home_environment_variable)) or str(
             Path(settings.env_required(str(spec.user_home_environment_variable)))
-            / spec.home_cache_directory
+            / spec.home_cache_directory,
         )
         metadata = FlextInfraUtilitiesPyproject.read_project_metadata_result(
-            project_dir
+            project_dir,
         )
         if metadata.failure:
             msg = metadata.error or f"project metadata unreadable: {project_dir}"
@@ -173,10 +175,10 @@ class FlextInfraUtilitiesResourceLimits:
                 invocation.model_dump_json(),
             )
         prlimit_executable = FlextInfraUtilitiesResourceLimits._required_executable(
-            c.Infra.PRLIMIT_COMMAND
+            c.Infra.PRLIMIT_COMMAND,
         )
         timeout_executable = FlextInfraUtilitiesResourceLimits._required_executable(
-            c.Infra.TIMEOUT_COMMAND
+            c.Infra.TIMEOUT_COMMAND,
         )
         return (
             timeout_executable,
@@ -218,7 +220,8 @@ class FlextInfraUtilitiesResourceLimits:
             budget = cls._project_mypy_budget(project_dir)
             if budget is not None:
                 limit = m.Infra.MypyResourceLimit(
-                    memory_limit_mb=limit.memory_limit_mb, timeout_seconds=budget
+                    memory_limit_mb=limit.memory_limit_mb,
+                    timeout_seconds=budget,
                 )
         return cls.mypy_runner_timeout(limit)
 
@@ -263,23 +266,30 @@ class FlextInfraUtilitiesResourceLimits:
 
     @classmethod
     def mypy_launch_failure_diagnostic(
-        cls, detail: str, limit: m.Infra.MypyResourceLimit | None = None
+        cls,
+        detail: str,
+        limit: m.Infra.MypyResourceLimit | None = None,
     ) -> str:
         """Report an outer-runner failure that precluded a process exit status."""
         validated_limit = limit or cls.mypy_resource_limit()
         return cls._bounded_mypy_diagnostic(
-            validated_limit, detail=detail, exit_code="unavailable", signal="none"
+            validated_limit,
+            detail=detail,
+            exit_code="unavailable",
+            signal="none",
         )
 
     @classmethod
     def mypy_failure_diagnostic(
-        cls, output: p.Cli.CommandOutput, limit: m.Infra.MypyResourceLimit | None = None
+        cls,
+        output: p.Cli.CommandOutput,
+        limit: m.Infra.MypyResourceLimit | None = None,
     ) -> str | None:
         """Return a controlled diagnostic only for timeout or memory exhaustion."""
         validated_limit = limit or cls.mypy_resource_limit()
         combined = f"{output.stdout}\n{output.stderr}".lower()
         classification = FlextInfraUtilitiesProcess.process_exit_classification(
-            output.outcome.raw_return_code
+            output.outcome.raw_return_code,
         )
         resource_failure = classification != "failure" or any(
             marker in combined for marker in cls._MEMORY_FAILURE_MARKERS

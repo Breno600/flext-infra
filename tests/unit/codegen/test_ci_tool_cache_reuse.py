@@ -18,8 +18,8 @@ class TestsFlextInfraCiToolCacheReuse:
     def test_ci_reuses_and_saves_the_declared_tool_caches(self) -> None:
         steps = CodegenTestSupport.Ci.ci_job_steps(
             TestsFlextInfraCiIntegrationBranchTriggers.render_ci(
-                repository_branch="0.12.0-dev"
-            )
+                repository_branch="0.12.0-dev",
+            ),
         )
         named = {}
         for step in steps:
@@ -48,8 +48,8 @@ class TestsFlextInfraCiToolCacheReuse:
         """
         steps = CodegenTestSupport.Ci.ci_job_steps(
             TestsFlextInfraCiIntegrationBranchTriggers.render_ci(
-                repository_branch="0.12.0-dev"
-            )
+                repository_branch="0.12.0-dev",
+            ),
         )
         names = [step.get("name") for step in steps]
         named = {
@@ -74,5 +74,6 @@ class TestsFlextInfraCiToolCacheReuse:
         restore_prefix = str(restore_with["restore-keys"]).strip()
         tm.that(str(restore_with["key"]).startswith(restore_prefix), eq=True)
         tm.that(
-            names.index("Restore Mypy cache") < names.index("Save Mypy cache"), eq=True
+            names.index("Restore Mypy cache") < names.index("Save Mypy cache"),
+            eq=True,
         )

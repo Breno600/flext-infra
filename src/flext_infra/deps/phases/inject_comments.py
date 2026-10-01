@@ -30,7 +30,8 @@ class FlextInfraInjectCommentsPhase:
 
     @classmethod
     def _strip_managed_lines(
-        cls, lines: t.StrSequence
+        cls,
+        lines: t.StrSequence,
     ) -> t.Pair[t.StrSequence, t.StrSequence]:
         """Strip managed lines."""
         changes: t.MutableSequenceOf[str] = []
@@ -92,7 +93,7 @@ class FlextInfraInjectCommentsPhase:
             markers_result = u.Infra.pyproject_section_markers(stripped)
             if markers_result.failure:
                 raise RuntimeError(
-                    markers_result.error or "pyproject section markers failed"
+                    markers_result.error or "pyproject section markers failed",
                 )
             for marker in markers_result.value:
                 if marker not in emitted_markers:

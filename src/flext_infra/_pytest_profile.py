@@ -22,14 +22,17 @@ class FlextInfraPytestProfile:
         self.context: m.Infra.PytestRunContext | None = None
 
     def run_parent(
-        self, *, started_at_monotonic: float, collection_command_prefix: t.StrTuple
+        self,
+        *,
+        started_at_monotonic: float,
+        collection_command_prefix: t.StrTuple,
     ) -> int:
         """Start profiling before importing the runner or any FLEXT service."""
         if not collection_command_prefix:
             msg = "profile execution requires an injected collection command prefix"
             raise ValueError(msg)
         if not self.output.resolve().is_relative_to(
-            (Path.cwd() / ".reports").resolve()
+            (Path.cwd() / ".reports").resolve(),
         ):
             msg = "parent profile must stay under the repository reports directory"
             raise ValueError(msg)
@@ -39,7 +42,9 @@ class FlextInfraPytestProfile:
         profile = cProfile.Profile()
         try:
             return profile.runcall(
-                self._run_parent, started_at_monotonic, collection_command_prefix
+                self._run_parent,
+                started_at_monotonic,
+                collection_command_prefix,
             )
         finally:
             self._finish(profile)
@@ -65,7 +70,8 @@ class FlextInfraPytestProfile:
         from flext_infra.validate.pytest_runner import FlextInfraPytestRunner
 
         runner = FlextInfraPytestRunner.from_environment(
-            started_at_monotonic=started_at_monotonic, collection_command_prefix=prefix
+            started_at_monotonic=started_at_monotonic,
+            collection_command_prefix=prefix,
         )
         exit_code = runner.execute().unwrap()
         # The runner publishes its run context itself; the parent binds the
@@ -79,8 +85,8 @@ class FlextInfraPytestProfile:
         )
         self._record_context(
             m.Infra.PytestRunContext.model_validate_json(
-                latest.read_text(encoding="utf-8")
-            )
+                latest.read_text(encoding="utf-8"),
+            ),
         )
         return exit_code
 
@@ -88,7 +94,7 @@ class FlextInfraPytestProfile:
         from flext_infra import m
 
         context = m.Infra.PytestRunContext.model_validate_json(
-            receipt_path.read_text(encoding="utf-8")
+            receipt_path.read_text(encoding="utf-8"),
         )
         if (
             context.report_directory is None
@@ -112,7 +118,7 @@ class FlextInfraPytestProfile:
             from flext_infra import u
 
             receipt = self.context.model_copy(
-                update={"profile_sha256": u.Cli.sha256_bytes(self.output.read_bytes())}
+                update={"profile_sha256": u.Cli.sha256_bytes(self.output.read_bytes())},
             )
             u.Cli.atomic_write_text_file(
                 self.output.with_suffix(".pstats.json"),

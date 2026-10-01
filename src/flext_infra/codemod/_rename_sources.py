@@ -45,7 +45,8 @@ class FlextInfraRenameSources:
 
     @staticmethod
     def inventory(
-        roots: t.SequenceOf[Path], params: m.Infra.ApplyRenamesInput
+        roots: t.SequenceOf[Path],
+        params: m.Infra.ApplyRenamesInput,
     ) -> t.MappingKV[Path, m.Cli.AtomicFileState]:
         files: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {}
         ignored = config.Infra.codegen.source_scan_ignored
@@ -81,7 +82,8 @@ class FlextInfraRenameSources:
                 if not python and not text:
                     continue
                 state = u.Cli.atomic_read_binary_file_state(
-                    path, required=True
+                    path,
+                    required=True,
                 ).unwrap()
                 if state.content is None:
                     msg = f"rename source disappeared: {path}"
@@ -101,11 +103,14 @@ class FlextInfraRenameSources:
 
     @staticmethod
     def text_edits(
-        source: str, pairs: t.SequenceOf[t.Pair[str, str]], *, start: int = 0
+        source: str,
+        pairs: t.SequenceOf[t.Pair[str, str]],
+        *,
+        start: int = 0,
     ) -> t.VariadicTuple[m.Infra.SourceRewrite]:
         replacements = dict(pairs)
         pattern = re.compile(
-            r"\b(?:" + "|".join(re.escape(old) for old in replacements) + r")\b"
+            r"\b(?:" + "|".join(re.escape(old) for old in replacements) + r")\b",
         )
         return tuple(
             m.Infra.SourceRewrite(
@@ -118,7 +123,9 @@ class FlextInfraRenameSources:
 
     @classmethod
     def documentation_edits(
-        cls, source: str, pairs: t.SequenceOf[t.Pair[str, str]]
+        cls,
+        source: str,
+        pairs: t.SequenceOf[t.Pair[str, str]],
     ) -> t.VariadicTuple[m.Infra.SourceRewrite]:
         """Select real docstrings and comments; executable literals retain bytes."""
         lines = source.splitlines(keepends=True)
@@ -129,7 +136,8 @@ class FlextInfraRenameSources:
         docstrings: t.MutableSequenceOf[t.Pair[t.Pair[int, int], t.Pair[int, int]]] = []
         for node in ast.walk(tree):
             if not isinstance(
-                node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
+                node,
+                (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef),
             ):
                 continue
             if not node.body or not isinstance(node.body[0], ast.Expr):
@@ -139,7 +147,7 @@ class FlextInfraRenameSources:
                 column = len(
                     lines[value.lineno - 1]
                     .encode(c.Cli.ENCODING_DEFAULT)[: value.col_offset]
-                    .decode(c.Cli.ENCODING_DEFAULT)
+                    .decode(c.Cli.ENCODING_DEFAULT),
                 )
                 if value.end_lineno is None or value.end_col_offset is None:
                     msg = "Python docstring lacks an authenticated source span"
@@ -147,7 +155,7 @@ class FlextInfraRenameSources:
                 end_column = len(
                     lines[value.end_lineno - 1]
                     .encode(c.Cli.ENCODING_DEFAULT)[: value.end_col_offset]
-                    .decode(c.Cli.ENCODING_DEFAULT)
+                    .decode(c.Cli.ENCODING_DEFAULT),
                 )
                 docstrings.append((
                     (value.lineno, column),
@@ -167,7 +175,7 @@ class FlextInfraRenameSources:
                         token.string,
                         pairs,
                         start=offsets[token.start[0] - 1] + token.start[1],
-                    )
+                    ),
                 )
         return tuple(edits)
 

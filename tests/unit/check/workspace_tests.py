@@ -35,29 +35,38 @@ class TestsFlextInfraWorkspaceChecker:
             yield
 
     def test_init_creates_instance(
-        self, tmp_path: Path, rope_workspace: p.Infra.RopeWorkspaceDsl
+        self,
+        tmp_path: Path,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         """Test that checker initializes with default workspace root."""
         checker = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path, rope=rope_workspace
+            repository_root=tmp_path,
+            rope=rope_workspace,
         )
         tm.that(checker, none=False)
 
     def test_init_with_custom_repository_root(
-        self, tmp_path: Path, rope_workspace: p.Infra.RopeWorkspaceDsl
+        self,
+        tmp_path: Path,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         """Test that checker accepts custom workspace root."""
         checker = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path, rope=rope_workspace
+            repository_root=tmp_path,
+            rope=rope_workspace,
         )
         tm.that(checker, none=False)
 
     def test_execute_returns_failure(
-        self, tmp_path: Path, rope_workspace: p.Infra.RopeWorkspaceDsl
+        self,
+        tmp_path: Path,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         """Test that execute() returns failure with helpful message."""
         checker = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path, rope=rope_workspace
+            repository_root=tmp_path,
+            rope=rope_workspace,
         )
         result = checker.execute()
         tm.fail(result)
@@ -66,7 +75,8 @@ class TestsFlextInfraWorkspaceChecker:
         tm.that(result.error, has="Use execute_command() directly")
 
     def test_cli_returns_error_without_discovered_projects(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Test that check run fails when a workspace has no projects."""
         exit_code = main(["check", "run", "--repository-root", str(tmp_path)])
@@ -87,10 +97,12 @@ class TestsFlextInfraWorkspaceChecker:
         package_dir = project_dir / "src" / "flext_core"
         package_dir.mkdir(parents=True, exist_ok=True)
         (package_dir / "__init__.py").write_text(
-            '"""Fixture package."""\n', encoding="utf-8"
+            '"""Fixture package."""\n',
+            encoding="utf-8",
         )
         (package_dir / "module.py").write_text(
-            '"""Fixture module."""\n\nvalue = 1\n', encoding="utf-8"
+            '"""Fixture module."""\n\nvalue = 1\n',
+            encoding="utf-8",
         )
         test_u.Tests.declare_workspace_projects(tmp_path, (project_dir.name,))
         init_result = cli_u.Cli.run_raw(["git", "init"], cwd=tmp_path)
@@ -147,11 +159,14 @@ class TestsFlextInfraWorkspaceChecker:
         tm.fail(result)
 
     def test_run_projects_creates_reports_dir(
-        self, tmp_path: Path, rope_workspace: p.Infra.RopeWorkspaceDsl
+        self,
+        tmp_path: Path,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         """Test that run_projects creates reports directory if missing."""
         checker = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path, rope=rope_workspace
+            repository_root=tmp_path,
+            rope=rope_workspace,
         )
         project_dir = test_u.Tests.mk_project(tmp_path, "p1", with_src=True)
         (project_dir / "src" / "test.py").write_text("value = 1\n", encoding="utf-8")
@@ -161,22 +176,28 @@ class TestsFlextInfraWorkspaceChecker:
         tm.that(reports_dir.exists(), eq=True)
 
     def test_lint_returns_gate_result(
-        self, tmp_path: Path, rope_workspace: p.Infra.RopeWorkspaceDsl
+        self,
+        tmp_path: Path,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         """Test that lint() returns a GateResult."""
         checker = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path, rope=rope_workspace
+            repository_root=tmp_path,
+            rope=rope_workspace,
         )
         result = checker.lint(tmp_path)
         tm.that(result, is_=r)
         tm.ok(result)
 
     def test_format_returns_gate_result(
-        self, tmp_path: Path, rope_workspace: p.Infra.RopeWorkspaceDsl
+        self,
+        tmp_path: Path,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         """Test that format() returns a GateResult."""
         checker = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path, rope=rope_workspace
+            repository_root=tmp_path,
+            rope=rope_workspace,
         )
         result = checker.format(tmp_path)
         tm.that(result, is_=r)

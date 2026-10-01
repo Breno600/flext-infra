@@ -43,7 +43,9 @@ class FlextInfraDocAuditorChecksMixin:
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
         """Return forbidden-term issues configured for one scope."""
         return FlextInfraDocAuditorChecksMixin._policy_token_issues(
-            scope, policy_key="forbidden_terms", issue_type="forbidden_term"
+            scope,
+            policy_key="forbidden_terms",
+            issue_type="forbidden_term",
         )
 
     @staticmethod
@@ -64,12 +66,16 @@ class FlextInfraDocAuditorChecksMixin:
         return u.Infra.docs_machine_path_issues(
             scope,
             exempt_paths=u.Infra.docs_policy_list(
-                scope, section="audit", key="machine_path_exempt_paths"
+                scope,
+                section="audit",
+                key="machine_path_exempt_paths",
             ),
         )
 
     def _collect_issues(
-        self, scope: m.Infra.DocScope, checks: t.StrSequence
+        self,
+        scope: m.Infra.DocScope,
+        checks: t.StrSequence,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
         """Collect issues for the requested check set in canonical order."""
         handlers: t.VariadicTuple[

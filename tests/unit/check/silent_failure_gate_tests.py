@@ -36,7 +36,11 @@ class TestsFlextInfraSilentFailureGate:
     )
 
     def _create_gate_project(
-        self, tmp_path: Path, *, name: str, utilities_src: str
+        self,
+        tmp_path: Path,
+        *,
+        name: str,
+        utilities_src: str,
     ) -> Path:
         project_dir: Path = u.Tests.create_codegen_project(
             tmp_path=tmp_path,
@@ -48,7 +52,9 @@ class TestsFlextInfraSilentFailureGate:
 
     def test_silent_failure_detected_in_any_project(self, tmp_path: Path) -> None:
         project = self._create_gate_project(
-            tmp_path, name="demo-project", utilities_src=self._DIRTY_UTILITIES
+            tmp_path,
+            name="demo-project",
+            utilities_src=self._DIRTY_UTILITIES,
         )
 
         result = u.Tests.run_gate_check(FlextInfraSilentFailureGate, tmp_path, project)
@@ -59,7 +65,9 @@ class TestsFlextInfraSilentFailureGate:
 
     def test_clean_project_passes(self, tmp_path: Path) -> None:
         project = self._create_gate_project(
-            tmp_path, name="demo-project", utilities_src=self._CLEAN_UTILITIES
+            tmp_path,
+            name="demo-project",
+            utilities_src=self._CLEAN_UTILITIES,
         )
 
         result = u.Tests.run_gate_check(FlextInfraSilentFailureGate, tmp_path, project)
