@@ -400,10 +400,10 @@ Infra:
         block_threshold_percent: 95
         allowed_save_refs: ["main", "0.12.0-dev"]
         key_prefix: flext-testmon
-      # One lock-keyed Mypy analysis shared by every checkout on the same
-      # dependency lock. Mypy's cache is content-addressed by module hash, so a
-      # warm cache only removes the cold whole-fleet recompute and can never
-      # mask a finding (flext-7jnr0).
+      # The Mypy gate shares one analysis per project name across checkouts
+      # (u.Infra.mypy_cache_directory). Relocks keep the directory; Mypy
+      # revalidates changed modules by source hash, so a warm cache never masks
+      # a finding. Distinct project names keep separate directories.
       mypy_cache:
         cache_environment_variable: MYPY_CACHE_DIR
         data_home_environment_variable: XDG_CACHE_HOME
