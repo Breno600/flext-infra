@@ -1,4 +1,8 @@
-"""Public conformance preserves authored workflows and release capability."""
+"""Public conformance preserves authored workflows and release capability.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -11,8 +15,7 @@ from flext_infra import c, config, infra, m, u
 from flext_infra.codegen import FlextInfraCodegenConform
 from flext_infra.workspace import FlextInfraWorkspaceDetector
 from tests import u as test_u
-
-from .conform_support import TestsFlextInfraConformSupport
+from tests.unit.codegen.conform_support import TestsFlextInfraConformSupport
 
 pytestmark = pytest.mark.slow
 
@@ -26,7 +29,12 @@ class TestsFlextInfraCodegenWorkflowRetirement:
         *,
         publishes_release: bool,
     ) -> m.Infra.WorkspaceSpec:
-        """Declare release capability through the real repository manifest."""
+        """Declare release capability through the real repository manifest.
+
+        Returns:
+            The resulting ``m.Infra.WorkspaceSpec``.
+
+        """
         TestsFlextInfraConformSupport.seed_infra_package_tree(root)
         manifest_path = test_u.Tests.write_standalone_workspace_manifest(
             root,

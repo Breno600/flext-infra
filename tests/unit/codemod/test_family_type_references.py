@@ -1,4 +1,8 @@
-"""Public family cutovers preserve quoted type identities and literal payloads."""
+"""Public family cutovers preserve quoted type identities and literal payloads.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -16,10 +20,11 @@ if TYPE_CHECKING:
 class TestsFlextInfraFamilyTypeReferences:
     """Exercise the real Rope graph for generic bases and deferred annotations."""
 
+    @staticmethod
     def test_quoted_types_follow_symbols_without_rewriting_literal_homonyms(
-        self,
         tmp_path: Path,
     ) -> None:
+        """Test quoted types follow symbols without rewriting literal homonyms."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         directory = u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory
         family = package / directory

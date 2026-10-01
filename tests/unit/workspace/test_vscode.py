@@ -1,4 +1,8 @@
-"""Canonical VS Code settings codegen merge contract tests."""
+"""Canonical VS Code settings codegen merge contract tests.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -102,8 +106,8 @@ class TestsFlextInfraCodegenVscode:
         tm.ok(second)
         tm.that(second.value, eq=first.value)
 
+    @staticmethod
     def test_python_environment_settings_are_independent_from_repository_topology(
-        self,
         tmp_path: Path,
     ) -> None:
         """Keep opened-folder settings canonical for roots and subprojects."""

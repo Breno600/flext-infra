@@ -1,4 +1,8 @@
-"""Managed file and template entry specification models."""
+"""Managed file and template entry specification models.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,10 +11,10 @@ from typing import Annotated, Literal, Self
 
 from flext_cli import m
 
-from ... import t
-from ..._constants import FlextInfraConstantsCodegenProject
-from .contract import FlextInfraConfigModelsContract
-from .scaffold import FlextInfraConfigModelsScaffold
+from flext_infra import t
+from flext_infra._constants import FlextInfraConstantsCodegenProject
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
+from flext_infra._models._config.scaffold import FlextInfraConfigModelsScaffold
 
 
 class FlextInfraConfigModelsTemplates:
@@ -35,10 +39,6 @@ class FlextInfraConfigModelsTemplates:
             FlextInfraConstantsCodegenProject.TemplateDelegate,
             m.Field(description="Canonical rendering delegate"),
         ]
-        overwrite: Annotated[
-            bool,
-            m.Field(description="Whether the template owns existing content"),
-        ] = False
         requires_release_protocol: Annotated[
             bool,
             m.Field(
@@ -56,7 +56,16 @@ class FlextInfraConfigModelsTemplates:
 
         @m.model_validator(mode="after")
         def validate_delegate_source(self) -> Self:
-            """Require a template only for the delegate that renders one."""
+            """Require a template only for the delegate that renders one.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If render delegate requires a template source; or if
+                    manifest delegate must not declare a template source.
+
+            """
             if (
                 self.delegate
                 == FlextInfraConstantsCodegenProject.TemplateDelegate.RENDER

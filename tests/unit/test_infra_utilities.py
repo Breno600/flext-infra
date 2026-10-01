@@ -18,7 +18,8 @@ from tests import u
 class TestsFlextInfraInfraUtilities:
     """Test u class import and structure."""
 
-    def test_extract_definition_keeps_multiline_class_header_intact(self) -> None:
+    @staticmethod
+    def test_extract_definition_keeps_multiline_class_header_intact() -> None:
         """Multi-line class headers must keep their closing line during extraction."""
         source = (
             "class ExamplesFlextModels(\n"
@@ -34,7 +35,8 @@ class TestsFlextInfraInfraUtilities:
 
         tm.that(block, eq=source.rstrip("\n"))
 
-    def test_ast_grep_command_loads_utility_rules_from_owner_config(self) -> None:
+    @staticmethod
+    def test_ast_grep_command_loads_utility_rules_from_owner_config() -> None:
         """Build scans through sgconfig so shared utility matches always resolve."""
         root = Path(__file__).parents[2]
         rule = (

@@ -1,4 +1,8 @@
-"""Fix-forward ast-grep batch application for ``make mod``."""
+"""Fix-forward ast-grep batch application for ``make mod``.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,35 +11,44 @@ from pathlib import Path
 from typing import override
 
 from flext_core import r
-
-from .. import FlextInfraServiceBase, m, p, t, u
-from . import (
+from flext_infra import FlextInfraServiceBase, m, p, t, u
+from flext_infra.codemod import (
     FlextInfraCodemodSemanticApply,
     FlextInfraModGateEngine,
     FlextInfraModTextGateEngine,
 )
-from .batch_replacements import FlextInfraModReplacements
+from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
 
 
 class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
     """Apply every discovered AST rewrite without destructive rollback."""
 
     rename_runner: t.Port[p.Infra.RenameCampaignRunner] = m.Field(
-        exclude=True, description="Injected CSV campaign execution port"
+        exclude=True,
+        description="Injected CSV campaign execution port",
     )
     progress: t.Port[p.Infra.ModProgress] = m.Field(
-        exclude=True, description="Injected mod progress transport port"
+        exclude=True,
+        description="Injected mod progress transport port",
     )
     rope: t.Port[p.Infra.RopeWorkspaceDsl] = m.Field(
-        exclude=True, description="Injected Rope workspace port"
+        exclude=True,
+        description="Injected Rope workspace port",
     )
     rename_inputs: t.VariadicTuple[m.Infra.ApplyRenamesInput] = m.Field(
-        exclude=True, default=(), description="Typed declared CSV campaigns"
+        exclude=True,
+        default=(),
+        description="Typed declared CSV campaigns",
     )
 
     @override
     def execute(self) -> p.Result[t.Cli.ResultValue]:
-        """Inspect or apply the complete rule cascade with visible phases."""
+        """Inspect or apply the complete rule cascade with visible phases.
+
+        Returns:
+            The resulting ``p.Result[t.Cli.ResultValue]``.
+
+        """
         planned = u.Infra.codemod_rule_plan(self.repository_root)
         if planned.failure:
             return r[t.Cli.ResultValue].from_failure(planned)
@@ -67,15 +80,17 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                     f"{renames_pending.value} pending CSV-rename occurrence(s), "
                     f"across {len(rules)} rule file(s)",
                 )
-            validated = FlextInfraModGateEngine.validate(self.repository_root)
-            if validated.failure:
-                return r[t.Cli.ResultValue].from_failure(validated)
             self.progress.emit("mod: no pending ast-grep or sed-by-list fixes")
             return r[t.Cli.ResultValue].ok(True)
         return self._execute_apply(rules)
 
     def _execute_apply(self, rules: t.SequenceOf[Path]) -> p.Result[t.Cli.ResultValue]:
-        """Converge AST, semantic, and text phases over the same source state."""
+        """Converge AST, semantic, and text phases over the same source state.
+
+        Returns:
+            The resulting ``p.Result[t.Cli.ResultValue]``.
+
+        """
         self.progress.emit("mod: validate ast-grep rule fixtures")
         FlextInfraModGateEngine.validate_rule_fixtures(
             self.repository_root,
@@ -84,7 +99,12 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
         return self._execute_apply_cycle()
 
     def _execute_apply_cycle(self) -> p.Result[t.Cli.ResultValue]:
-        """Converge every mod phase through one shared Rope workspace."""
+        """Converge every mod phase through one shared Rope workspace.
+
+        Returns:
+            The resulting ``p.Result[t.Cli.ResultValue]``.
+
+        """
         root = self.repository_root
         rope_workspace = self.rope
         current = FlextInfraModGateEngine.scan(root, fix=False).unwrap()
@@ -127,14 +147,13 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                 rope_workspace.refresh()
                 after_ast = FlextInfraModGateEngine.scan(root, fix=False).unwrap()
             phase_states.append(fingerprint(root, after_ast))
-            owned = FlextInfraModReplacements.require_authored(after_ast)
-            if owned.failure:
-                return r[t.Cli.ResultValue].from_failure(owned)
             # Detection-only findings and configured import alignment select
             # semantic work even when no AST rule has a textual replacement.
+            # A generated source is never a semantic target: its findings are
+            # its generator's, judged once the authored sources converge.
             semantic = FlextInfraCodemodSemanticApply.apply(
                 root,
-                after_ast,
+                FlextInfraModGateEngine.authored(after_ast),
                 rope_workspace,
             )
             if semantic.failure:
@@ -177,20 +196,11 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                     f"{current.actionable} AST and {current_text.actionable} text "
                     "actionable findings; changes retained for mandatory owner repair",
                 )
-            self.progress.emit(
-                "mod: require canonical formatting and zero Ruff, Pyrefly, and LSP diagnostics",
-            )
-            validated = FlextInfraModGateEngine.validate(root)
-            if validated.failure:
-                return r[t.Cli.ResultValue].from_failure(validated)
-            # Validation is read-only. Authenticate the source identity once;
-            # repeating two complete scanner passes cannot strengthen that
-            # contract and makes a no-change mod run exceed its deadline.
-            if fingerprint(root, current) != after:
-                return r[t.Cli.ResultValue].fail(
-                    "mod validation changed source after the fixed-point scan",
-                )
-            # Repair reports non-rewritable defects; check owns their verdict.
+            owned = FlextInfraModReplacements.require_authored(current.entries)
+            if owned.failure:
+                return r[t.Cli.ResultValue].from_failure(owned)
+            # Repair reports non-rewritable defects; check owns their verdict,
+            # and the Ruff, Pyrefly and Pyright findings are check's alone.
             if current.detection_only or current.non_actionable_with_fix:
                 detection_rules = sorted({
                     finding.rule_id
@@ -215,7 +225,12 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             return r[t.Cli.ResultValue].ok(True)
 
     def _pending_renames(self) -> p.Result[int]:
-        """Count pending rename occurrences across the configured campaigns."""
+        """Count pending rename occurrences across the configured campaigns.
+
+        Returns:
+            The resulting ``p.Result[int]``.
+
+        """
         pending = 0
         for params in self.rename_inputs:
             report = self.rename_runner.run(params)
@@ -229,7 +244,12 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
         before: m.Infra.ModScanReport,
         after_apply: m.Infra.ModScanReport,
     ) -> None:
-        """Reject unresolved rewrites while preserving valid rule cascades."""
+        """Reject unresolved rewrites while preserving valid rule cascades.
+
+        Raises:
+            RuntimeError: If fix!=match.
+
+        """
         # Check that actionable findings were actually resolved
         before_actionable = {
             (f.rule_id, f.file.as_posix(), f.text, f.replacement)

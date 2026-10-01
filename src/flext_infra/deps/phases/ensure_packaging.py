@@ -8,6 +8,9 @@ Directories use the same Hatch selection rules in both archives; explicit files
 are included individually. The source
 distribution is bounded to the package source and those validated data roots,
 preventing caches and ignored workspace state from entering release artifacts.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -27,7 +30,13 @@ class FlextInfraEnsurePackagingPhase:
         source: Path,
         ancestors: frozenset[Path],
     ) -> None:
-        """Follow every link Hatch follows while rejecting cycles and escape."""
+        """Follow every link Hatch follows while rejecting cycles and escape.
+
+        Raises:
+            ValueError: If packaged data path escapes repository; or if packaged data
+                directory cycle; or if packaged data path is not a file or directory.
+
+        """
         resolved = source.resolve(strict=True)
         if not resolved.is_relative_to(root):
             msg = f"packaged data path escapes repository: {source}"
@@ -53,7 +62,18 @@ class FlextInfraEnsurePackagingPhase:
         declarations: t.StrSequence,
         planned_files: t.StrSequence = (),
     ) -> m.Infra.PackagedDataSelection:
-        """Validate existing inputs or exact future scaffold destinations."""
+        """Validate existing inputs or exact future scaffold destinations.
+
+        Returns:
+            The resulting ``m.Infra.PackagedDataSelection``.
+
+        Raises:
+            FileNotFoundError: If declared packaged data path is missing.
+            ValueError: If packaged data path must be repository-relative; or if
+                packaged data path escapes repository; or if packaged data path collides
+                with package source; or if packaged data declarations overlap.
+
+        """
         root = project_dir.resolve()
         package_root = root / c.Infra.DEFAULT_SRC_DIR / package_name
         paths: list[Path] = []
@@ -119,7 +139,15 @@ class FlextInfraEnsurePackagingPhase:
         data: m.Infra.PackagedDataSelection,
         declarations: t.StrSequence,
     ) -> t.StrSequence:
-        """Validate exact files omitted within declared distribution directories."""
+        """Validate exact files omitted within declared distribution directories.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            ValueError: If invalid packaged data exclusion.
+
+        """
         root = project_dir.resolve()
         directories = tuple(Path(item) for item in data.directories)
         excluded: list[str] = []
@@ -140,9 +168,11 @@ class FlextInfraEnsurePackagingPhase:
             if (
                 not valid_path
                 or not declared_child
-                or declaration in excluded
-                or source.is_dir()
-                or source.is_symlink()
+                or (
+                    declaration in excluded
+                    or not source.is_file()
+                    or source.is_symlink()
+                )
             ):
                 msg = f"invalid packaged data exclusion: {declaration}"
                 raise ValueError(msg)
@@ -159,7 +189,12 @@ class FlextInfraEnsurePackagingPhase:
         root_packages: t.StrSequence,
         repository_namespace_packages: t.StrSequence,
     ) -> m.Infra.DepsToml.PhaseConfig:
-        """Build bounded distribution targets for one resolved package name."""
+        """Build bounded distribution targets for one resolved package name.
+
+        Returns:
+            The resulting ``m.Infra.DepsToml.PhaseConfig``.
+
+        """
         package_path = f"{c.Infra.DEFAULT_SRC_DIR}/{package_name}"
         package_paths = (
             package_path,
@@ -292,6 +327,19 @@ class FlextInfraEnsurePackagingPhase:
         ongoing modernization converge. Only declared module/package roots and
         data paths enter those targets after existence, containment and collision
         validation, keeping both distribution formats consistent.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            FileNotFoundError: If declared project root module source is missing; or if
+                declared project root package source is missing a package initializer;
+                or if repository namespace directory is missing.
+            ValueError: If project package name is required when additional distribution
+                roots are declared; or if repository namespace must be one Python
+                identifier; or if repository namespace must be implicit; or if
+                repository namespace overlaps packaged data.
+
         """
         project_dir = path.parent
         docs_meta = u.Infra.docs_meta_from_payload(payload)
@@ -370,7 +418,9 @@ class FlextInfraEnsurePackagingPhase:
             topology.planned_data_files,
         )
         data_excludes = self.resolve_data_excludes(
-            project_dir, data_paths, topology.packaged_data_excludes
+            project_dir,
+            data_paths,
+            topology.packaged_data_excludes,
         )
         return u.Infra.apply_toml_phases(
             payload,

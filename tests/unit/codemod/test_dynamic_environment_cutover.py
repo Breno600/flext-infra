@@ -1,4 +1,8 @@
-"""Execute migrated dynamic environment boundaries with real typed policy."""
+"""Execute migrated dynamic environment boundaries with real typed policy.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -25,6 +29,7 @@ class TestsDynamicEnvironmentCutover:
         *,
         required: bool,
     ) -> None:
+        """Test real settings consumer preserves lookup contract."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "consumer.py"
         access = (
@@ -96,6 +101,7 @@ class TestsDynamicEnvironmentCutover:
         tmp_path: Path,
         access: str,
     ) -> None:
+        """Test unproven environment key stays red."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "consumer.py"
         source = f"import os\ndef value(unknown_key: str):\n    return {access}\n"

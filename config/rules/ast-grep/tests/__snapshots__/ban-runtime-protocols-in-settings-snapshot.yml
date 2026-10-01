@@ -1,0 +1,30 @@
+id: ban-runtime-protocols-in-settings
+snapshots:
+  from pkg import m, p:
+    labels:
+    - source: p
+      style: primary
+      start: 19
+      end: 20
+    - source: pkg
+      style: secondary
+      start: 5
+      end: 8
+    - source: from pkg import m, p
+      style: secondary
+      start: 0
+      end: 20
+  from pkg import p:
+    labels:
+    - source: p
+      style: primary
+      start: 16
+      end: 17
+    - source: pkg
+      style: secondary
+      start: 5
+      end: 8
+    - source: from pkg import p
+      style: secondary
+      start: 0
+      end: 17

@@ -1,4 +1,8 @@
-"""Read-only inventory of retired lazy-init support files."""
+"""Read-only inventory of retired lazy-init support files.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -23,12 +27,22 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
 
     @staticmethod
     def _optional_state(path: Path) -> p.Result[m.Cli.AtomicFileState]:
-        """Read one optional physical file state through the atomic owner."""
+        """Read one optional physical file state through the atomic owner.
+
+        Returns:
+            The resulting ``p.Result[m.Cli.AtomicFileState]``.
+
+        """
         return u.Cli.atomic_read_binary_file_state(path, required=False)
 
     @staticmethod
     def _path_flags(path: Path) -> p.Result[t.Quad[bool, bool, bool, bool]]:
-        """Read one path classification while preserving filesystem failures."""
+        """Read one path classification while preserving filesystem failures.
+
+        Returns:
+            The resulting ``p.Result[t.Quad[bool, bool, bool, bool]]``.
+
+        """
         try:
             flags = (path.is_symlink(), path.is_file(), path.exists(), path.is_dir())
         except OSError as exc:
@@ -45,7 +59,12 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
         *,
         operation: str,
     ) -> p.Result[t.VariadicTuple[Path]]:
-        """Return deterministic glob results with their causal I/O failure."""
+        """Return deterministic glob results with their causal I/O failure.
+
+        Returns:
+            Deterministic glob results with their causal I/O failure.
+
+        """
         try:
             paths = tuple(sorted(directory.glob(pattern)))
         except OSError as exc:
@@ -56,7 +75,12 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
         self,
         plan: m.Infra.LazyInitPlan,
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
-        """Return the complete physical file set selected for deletion."""
+        """Return the complete physical file set selected for deletion.
+
+        Returns:
+            The complete physical file set selected for deletion.
+
+        """
         states: MutableMapping[Path, m.Cli.AtomicFileState] = {}
         for result in (
             self._obsolete_generated_file_states(plan),
@@ -81,7 +105,12 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
         self,
         plan: m.Infra.LazyInitPlan,
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
-        """Inventory closed root registries superseded by inline maps."""
+        """Inventory closed root registries superseded by inline maps.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]``.
+
+        """
         context = plan.context
         if (
             context.pkg_dir.parent.name != c.Infra.DEFAULT_SRC_DIR
@@ -150,7 +179,12 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
         self,
         plan: m.Infra.LazyInitPlan,
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
-        """Inventory generated artifacts retired by the inline-root contract."""
+        """Inventory generated artifacts retired by the inline-root contract.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]``.
+
+        """
         states: list[m.Cli.AtomicFileState] = []
         for filename in c.Infra.OBSOLETE_GENERATED_INIT_FILES:
             path = plan.context.pkg_dir / filename
@@ -165,7 +199,12 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
         self,
         plan: m.Infra.LazyInitPlan,
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
-        """Inventory stale codegen-owned ``__init__.pyi`` files."""
+        """Inventory stale codegen-owned ``__init__.pyi`` files.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]``.
+
+        """
         stub_path = plan.context.pkg_dir / c.Infra.INIT_PYI
         state = self._optional_state(stub_path)
         if state.failure:
@@ -178,7 +217,12 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
         self,
         plan: m.Infra.LazyInitPlan,
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
-        """Inventory legacy generated export files outside the canonical owner."""
+        """Inventory legacy generated export files outside the canonical owner.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]``.
+
+        """
         search_dirs = {
             plan.context.pkg_dir,
             plan.context.pkg_dir / c.Infra.ROOT_EXPORTS_DIR,

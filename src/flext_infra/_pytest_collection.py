@@ -5,6 +5,9 @@ pytest arguments. Testmon still records dependencies in every worker, but its
 worker-local stable/unstable classification must not define xdist's index order.
 Missing, additional or duplicate tests fail loudly. The same installed plugin
 records warning identities before report-log reduces their categories to names.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -17,7 +20,7 @@ from warnings import WarningMessage
 import pytest
 from xdist.dsession import DSession
 
-from ._constants.check import FlextInfraConstantsCheck
+from flext_infra._constants.check import FlextInfraConstantsCheck
 
 
 class FlextInfraPytestCollection:
@@ -66,6 +69,11 @@ class FlextInfraPytestCollection:
         neither imports no model. A requested manifest loads only its owning
         model module, never the whole model facade, because every runner
         collection process pays that import.
+
+        Raises:
+            ValueError: If Runner collection manifest contains duplicate node IDs; or if
+                Runner collection differs from selection.
+
         """
         selected: str | None = session.config.getoption(
             FlextInfraConstantsCheck.PYTEST_SELECTED_COLLECTION_OPTION,

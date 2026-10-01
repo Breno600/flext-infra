@@ -1,4 +1,8 @@
-"""Canonical Git responsibility mixin for ``u.Infra``."""
+"""Canonical Git responsibility mixin for ``u.Infra``.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,8 +12,9 @@ from git import GitCommandError, Repo
 
 from flext_core import r
 from flext_infra import m
-
-from .semantic_index import FlextInfraUtilitiesGitSemanticIndexMixin
+from flext_infra._utilities._git.semantic_index import (
+    FlextInfraUtilitiesGitSemanticIndexMixin,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -25,7 +30,12 @@ class FlextInfraUtilitiesGitSemanticWorktreeMixin(
         cls,
         request: m.Infra.GitWorktreeAddRequest,
     ) -> p.Result[m.Infra.GitTextReport]:
-        """Add a development lane worktree for an existing or new branch."""
+        """Add a development lane worktree for an existing or new branch.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitTextReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             text = cls._git_add_worktree_args(repo, request)
@@ -43,7 +53,12 @@ class FlextInfraUtilitiesGitSemanticWorktreeMixin(
         repo: Repo,
         request: m.Infra.GitWorktreeAddRequest,
     ) -> str:
-        """Select and execute the correct ``git worktree add`` variant."""
+        """Select and execute the correct ``git worktree add`` variant.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         if request.local_branch_exists:
             return str(repo.git.worktree("add", str(request.lane), request.branch))
         if request.track_remote:
@@ -79,6 +94,10 @@ class FlextInfraUtilitiesGitSemanticWorktreeMixin(
         the working tree. Upstream tracking is set only when origin already
         carries the branch (a branch new on this side has no counterpart yet);
         when it does, a failure to set it escapes like any other.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitBoolReport]``.
+
         """
         try:
             repo = cls._repo(request.repo_root)

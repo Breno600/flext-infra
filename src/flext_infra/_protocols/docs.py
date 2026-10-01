@@ -1,4 +1,8 @@
-"""Structural documentation contracts for exact model transport."""
+"""Structural documentation contracts for exact model transport.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

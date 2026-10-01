@@ -8,13 +8,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_core import r
+from flext_core import r, s
 from flext_infra import c, m, p, u
-
-from ._conform import FlextInfraCodegenConformExecute
+from flext_infra.codegen._conform import FlextInfraCodegenConformExecute
 
 if TYPE_CHECKING:
     from pathlib import Path
+
 
 class FlextInfraCodegenConform(s[m.Infra.CodegenResult]):
     """Plan every selected output, then atomically write only a clean plan."""
@@ -114,6 +114,10 @@ class FlextInfraCodegenConform(FlextInfraCodegenConformExecute):
         so the lock resolves against them; it upgrades nothing (only ``upg``
         resolves the newest releases). Identical inputs regenerate identical
         bytes, so a rerun changes nothing.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         conformed = cls.execute_request(
             m.Infra.CodegenConformRequest(
@@ -138,6 +142,7 @@ class FlextInfraCodegenConform(FlextInfraCodegenConformExecute):
                     config_spec.branch_policy.governed_branch_patterns
                 ),
             )
+        )
         selected_result = self._select_repositories(
             request, workspace, current_repository
         )

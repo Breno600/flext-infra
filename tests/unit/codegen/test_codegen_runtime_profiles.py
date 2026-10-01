@@ -1,4 +1,8 @@
-"""Declared profiles and complete CUSTOM requirements survive public generation."""
+"""Declared profiles and complete CUSTOM requirements survive public generation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -14,6 +18,8 @@ from tests import u
 
 
 class TestsFlextInfraCodegenRuntimeProfiles:
+    """Tests for ``FlextInfraCodegenRuntimeProfiles``."""
+
     @pytest.mark.parametrize(
         "upstream",
         tuple(
@@ -184,7 +190,8 @@ class TestsFlextInfraCodegenRuntimeProfiles:
         for path, content in protected.items():
             tm.that(path.read_bytes(), eq=content)
 
-    def test_custom_policy_can_be_explicitly_disabled(self) -> None:
+    @staticmethod
+    def test_custom_policy_can_be_explicitly_disabled() -> None:
         """An empty preservation policy still elects only the rendered requirements."""
         rendered = '[project]\nname = "sample"\ndependencies = ["owned>=2"]\n'
         live = '[project]\nname = "sample"\ndependencies = ["external[extra]>=1"]\n'

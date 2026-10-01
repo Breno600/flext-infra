@@ -1,4 +1,8 @@
-"""Domain models for the workspace subpackage."""
+"""Domain models for the workspace subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,12 +11,11 @@ from typing import Annotated, ClassVar
 
 from flext_cli import m
 
-from .. import c, t
-from ._config.beads import FlextInfraConfigModelsBeads
-from ._config.base import FlextInfraConfigModels
-from ._config.contexts import FlextInfraConfigModelsContexts
-from ._git import FlextInfraModelsGitIdentity
-from .mixins import FlextInfraModelsMixins as mm
+from flext_infra import c, t
+from flext_infra._models._config.base import FlextInfraConfigModels
+from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
+from flext_infra._models._git import FlextInfraModelsGitIdentity
+from flext_infra._models.mixins import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsWorkspace:
@@ -26,11 +29,23 @@ class FlextInfraModelsWorkspace:
     class SuperprojectGovernance(m.ArbitraryTypesModel):
         """Superproject facts every member load validates against."""
 
-        root: Path
-        integration_branch: str | None
-        beads: FlextInfraConfigModelsBeads.BeadsProjectSpec | None
-        members: t.MappingKV[Path, FlextInfraConfigModelsContexts.RepositoryRef]
-        allow_unprovisioned_members: bool
+        root: Annotated[Path, m.Field(description="Superproject checkout root path")]
+        integration_branch: Annotated[
+            str | None,
+            m.Field(description="Integration branch the workspace converges on"),
+        ]
+        beads: Annotated[
+            FlextInfraConfigModelsBeads.BeadsProjectSpec | None,
+            m.Field(description="Beads project spec backing this superproject"),
+        ]
+        members: Annotated[
+            t.MappingKV[Path, FlextInfraConfigModelsContexts.RepositoryRef],
+            m.Field(description="Member checkout path to repository reference map"),
+        ]
+        allow_unprovisioned_members: Annotated[
+            bool,
+            m.Field(description="Whether unprovisioned member checkouts are tolerated"),
+        ]
 
     class WorkspaceEnvironmentRequest(m.ContractModel):
         """Read-only request for validating the active workspace environment."""
@@ -39,24 +54,39 @@ class FlextInfraModelsWorkspace:
 
         repository_root: Annotated[Path, m.Field(description="Repository root path")]
 
-    class SuperprojectGovernance(m.ContractModel):
-        """Resolved superproject facts shared by every composed member load."""
+    class SubprojectLoadContext(m.ContractModel):
+        """Workspace governance scope shared by every declared subproject entry."""
 
-        root: Annotated[Path, m.Field(description="Superproject repository root")]
         integration_branch: Annotated[
-            str | None, m.Field(description="Resolved workspace integration branch")
+            str | None,
+            m.Field(
+                description=(
+                    "Resolved workspace integration line; absent defers to the "
+                    "provider's conventional branch fallback"
+                ),
+            ),
         ] = None
-        beads: Annotated[
+        workspace_beads: Annotated[
             FlextInfraConfigModels.BeadsProjectSpec | None,
-            m.Field(description="Workspace Beads ledger spec"),
+            m.Field(description="Workspace Beads ledger spec; absent disables routing"),
         ] = None
-        members: Annotated[
-            t.MappingKV[Path, FlextInfraConfigModels.RepositoryRef],
-            m.Field(description="Manifest member identities indexed by path"),
-        ]
         allow_unprovisioned_members: Annotated[
-            bool, m.Field(description="Permit declared members before checkout setup")
+            bool,
+            m.Field(
+                description=(
+                    "Whether declared Python members may stay unprovisioned "
+                    "checkouts while CI omits them deliberately"
+                ),
+            ),
         ] = False
+
+        declared_member: Annotated[
+            FlextInfraConfigModelsContexts.RepositoryRef | None,
+            m.Field(
+                default=None,
+                description="Catalog-declared member reference for this entry",
+            ),
+        ]
 
     class EnvironmentContractViolation(mm.PositiveLineMixin, m.ContractModel):
         """One static ``.envrc``/``.envrc.local`` contract violation.

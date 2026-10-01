@@ -1,4 +1,8 @@
-"""Render context models for codegen templates."""
+"""Render context models for codegen templates.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,8 +11,7 @@ from typing import Annotated, ClassVar
 from flext_cli import m
 
 from flext_infra import t
-
-from .deps_tool_config import FlextInfraModelsDepsToolConfig
+from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
 
 
 class FlextInfraModelsCodegenRender:
@@ -101,6 +104,13 @@ class FlextInfraModelsCodegenRender:
 
         autogen_header: t.NonEmptyStr = m.Field(description="Generated file header.")
         docstring: t.NonEmptyStr = m.Field(description="Generated module docstring.")
+        lazy_helpers_module: t.NonEmptyStr = m.Field(
+            description="Module the initializer imports the lazy helpers from.",
+        )
+        lazy_helpers: t.VariadicTuple[t.NonEmptyStr] = m.Field(
+            min_length=1,
+            description="Lazy helper names the initializer imports.",
+        )
         runtime_import_lines: str = m.Field(
             default_factory=str,
             description="Eager runtime imports for explicit reexports.",

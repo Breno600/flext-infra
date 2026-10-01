@@ -4,6 +4,9 @@ pytest, mypy, pydantic-mypy, codespell, hatch metadata, tomlsort, yamlfix,
 deptry namespaces, vulture, and coverage share one behavior: each table is a
 direct projection of ``config.Infra.tooling``. One declarative phase set owns
 them so no per-tool class re-implements the same apply contract.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -26,7 +29,12 @@ class FlextInfraToolTablesPhase:
         *,
         path: Path,
     ) -> t.StrSequence:
-        """Prefer live package names over a distribution-derived fallback."""
+        """Prefer live package names over a distribution-derived fallback.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         discovered = u.Infra.discover_first_party_namespaces(path.parent)
         own = discovered or [
             u.Infra.project_name_from_payload(path, payload).replace("-", "_"),
@@ -38,7 +46,12 @@ class FlextInfraToolTablesPhase:
         })
 
     def _mypy_phase(self) -> m.Infra.DepsToml.PhaseConfig:
-        """Declare the mypy table from toolchain and config-owned policy."""
+        """Declare the mypy table from toolchain and config-owned policy.
+
+        Returns:
+            The resulting ``m.Infra.DepsToml.PhaseConfig``.
+
+        """
         mypy = self._tool_config.tools.mypy
         toml = m.Infra.DepsToml
         replace = c.Infra.TomlMergeMode.REPLACE
@@ -87,6 +100,10 @@ class FlextInfraToolTablesPhase:
         packages/per-file-ignores) filters on this declared set instead of
         probing the disk, which oscillates between the deps pass and the
         root-materializing gen pass. An invalid manifest fails loud.
+
+        Returns:
+            The resulting ``frozenset[str]``.
+
         """
         return frozenset(
             Path(path).parts[0]
@@ -99,7 +116,12 @@ class FlextInfraToolTablesPhase:
         first_party: t.StrSequence,
         path: Path,
     ) -> t.SequenceOf[m.Infra.DepsToml.PhaseConfig]:
-        """Build every policy table; coverage is measured, never floor-gated."""
+        """Build every policy table; coverage is measured, never floor-gated.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.DepsToml.PhaseConfig]``.
+
+        """
         tools = self._tool_config.tools
         toml = m.Infra.DepsToml
         merge, replace = c.Infra.TomlMergeMode.MERGE, c.Infra.TomlMergeMode.REPLACE
@@ -292,7 +314,12 @@ class FlextInfraToolTablesPhase:
         *,
         path: Path,
     ) -> t.StrSequence:
-        """Apply every policy table to one normalized payload."""
+        """Apply every policy table to one normalized payload.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         return u.Infra.apply_toml_phases(
             payload,
             *self._phases(

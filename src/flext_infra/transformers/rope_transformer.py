@@ -1,4 +1,8 @@
-"""Base class for rope-based transformers with change-tracking."""
+"""Base class for rope-based transformers with change-tracking.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -34,7 +38,12 @@ class FlextInfraRopeTransformer:
         rope_project: t.Infra.RopeProject,
         resource: t.Infra.RopeResource,
     ) -> t.Infra.TransformResult:
-        """Read → apply_to_source → write if changed. Override for custom logic."""
+        """Read → apply_to_source → write if changed. Override for custom logic.
+
+        Returns:
+            The resulting ``t.Infra.TransformResult``.
+
+        """
         _ = rope_project
         source = resource.read()
         updated, changes = self.apply_to_source(source)

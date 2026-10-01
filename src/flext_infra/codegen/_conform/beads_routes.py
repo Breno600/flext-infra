@@ -1,14 +1,19 @@
-"""Beads ledger route reconciliation for composed repositories."""
+"""Beads ledger route reconciliation for composed repositories.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 
 from flext_core import r
-
-from ... import c, m, p
-from ...workspace import FlextInfraWorkspaceDetector
-from .docs_ownership import FlextInfraCodegenConformDocsOwnership
+from flext_infra import c, m, p
+from flext_infra.codegen._conform.docs_ownership import (
+    FlextInfraCodegenConformDocsOwnership,
+)
+from flext_infra.workspace import FlextInfraWorkspaceDetector
 
 
 class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership):
@@ -29,6 +34,10 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
         method used to create those links and delete the real directory first;
         now it proves none survive and enforces the client's private-directory
         contract after publication, for the root and its composed members.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         root = request.root.expanduser().resolve()
         workspace_result = FlextInfraWorkspaceDetector.load_workspace_spec(root)
@@ -68,6 +77,10 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
         whose parent is missing. The directory is created empty;
         ``.beads/config.yaml`` and ``.beads/metadata.json`` are rendered into
         it by generation, never copied and never linked.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         allowed_entries = (
             frozenset({
@@ -97,9 +110,7 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
                 f"composed project Beads route is not a directory: {route}",
             )
         unexpected = sorted(
-            entry.name
-            for entry in route.iterdir()
-            if entry.name not in allowed_entries
+            entry.name for entry in route.iterdir() if entry.name not in allowed_entries
         )
         if unexpected:
             return r[bool].fail(

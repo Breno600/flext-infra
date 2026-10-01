@@ -9,9 +9,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_infra import c
-
-from .dependencies import FlextInfraUtilitiesDependencies
-from .pyproject import FlextInfraUtilitiesPyproject
+from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
+from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -27,7 +26,12 @@ class FlextInfraUtilitiesProjectDiscoveryShapeMixin:
         effective_scan_dirs: frozenset[str],
         configured_project_set: frozenset[str],
     ) -> bool:
-        """Return whether one path matches the canonical governed project shape."""
+        """Return whether one path matches the canonical governed project shape.
+
+        Returns:
+            Whether one path matches the canonical governed project shape.
+
+        """
         if not path.is_dir():
             return False
         pyproject_path = path / c.PYPROJECT_FILENAME

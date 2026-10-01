@@ -1,4 +1,8 @@
-"""Public CLI evidence contract for the batch ast-grep ``mod`` verb."""
+"""Public CLI evidence contract for the batch ast-grep ``mod`` verb.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -24,11 +28,12 @@ class TestsFlextInfraModCliRoute:
     once instead of leaving four tests one scheduling decision away from red.
     """
 
+    @staticmethod
     def test_receipt_is_complete_and_replaced_by_zero_scan(
-        self,
         mod_workspace: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
+        """Test receipt is complete and replaced by zero scan."""
         report_path = mod_workspace / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH
         sample_path = mod_workspace / "sample.py"
         generated_hook = mod_workspace / ".agents/hooks/session.py"
@@ -117,8 +122,8 @@ class TestsFlextInfraModCliRoute:
         tm.that(second_console, has=second_digest)
         tm.that(second_console, lacks=first_digest)
 
+    @staticmethod
     def test_apply_reports_detection_only_residue_and_still_succeeds(
-        self,
         mod_workspace: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -131,12 +136,17 @@ class TestsFlextInfraModCliRoute:
         the verdict stays with ``check``.
         """
         actionable_path = mod_workspace / "actionable.py"
+        generated_path = mod_workspace / "generated.py"
+        generated_source = (
+            f"{c.Infra.AUTOGEN_HEADER}\nlock.serialization_lock_execute()\n"
+        )
         tm.ok(
             u.Cli.atomic_write_text_file(
                 actionable_path,
                 "from flext_core import r\npublication=p.Result[int].ok(1)\n",
             ),
         )
+        tm.ok(u.Cli.atomic_write_text_file(generated_path, generated_source))
 
         exit_code = infra_main([
             "refactor",
@@ -156,12 +166,13 @@ class TestsFlextInfraModCliRoute:
         tm.that(exit_code, eq=0)
         tm.that(updated, has="r[int].ok(1)")
         tm.that(updated, lacks="p.Result[int].ok(1)")
+        tm.that(generated_path.read_text(encoding="utf-8"), eq=generated_source)
         tm.that(console, has="detection-only")
         tm.that(console, has="owner repair")
         tm.that(console, has="ban-make-serialization")
 
+    @staticmethod
     def test_apply_repeats_new_actionable_rule_cascades_until_fixed_point(
-        self,
         mod_workspace: Path,
     ) -> None:
         """Carry findings exposed by one rewrite into the next apply iteration."""
@@ -170,8 +181,9 @@ class TestsFlextInfraModCliRoute:
         tm.ok(u.Cli.ensure_dir(rules_root))
         tm.ok(
             u.Cli.atomic_write_text_file(
-                config_path, f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\ntestConfigs: []\n"
-            )
+                config_path,
+                f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\ntestConfigs: []\n",
+            ),
         )
         tm.ok(
             u.Cli.atomic_write_text_file(
@@ -224,7 +236,9 @@ class TestsFlextInfraModCliRoute:
         tm.that(updated, lacks="value = list()")
         tm.that(updated.startswith("from __future__ import annotations"), eq=True)
 
-    def test_scan_keeps_prefix_rule_ids_exact(self, mod_workspace: Path) -> None:
+    @staticmethod
+    def test_scan_keeps_prefix_rule_ids_exact(mod_workspace: Path) -> None:
+        """Test scan keeps prefix rule ids exact."""
         config_path = mod_workspace / c.Infra.CODEMOD_CONFIG_RELPATH
         rules_root = config_path.parent / c.Cli.RULES_DIR_NAME
         first_rule = rules_root / "rewire-first.yml"
@@ -233,8 +247,9 @@ class TestsFlextInfraModCliRoute:
         tm.ok(u.Cli.ensure_dir(rules_root))
         tm.ok(
             u.Cli.atomic_write_text_file(
-                config_path, f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\n"
-            )
+                config_path,
+                f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\n",
+            ),
         )
         tm.ok(
             u.Cli.atomic_write_text_file(
@@ -305,8 +320,9 @@ class TestsFlextInfraModCliRoute:
             },
         )
 
+    @staticmethod
     def test_scan_aggregates_every_local_rule_and_accepts_hint(
-        self, mod_workspace: Path
+        mod_workspace: Path,
     ) -> None:
         """Execute every rule of the local catalog and retain its exact rule file."""
         expected_rule_files: t.MutableMappingKV[str, str] = {}
@@ -318,7 +334,7 @@ class TestsFlextInfraModCliRoute:
             u.Cli.atomic_write_text_file(
                 config_path,
                 f"{c.Infra.CODEMOD_RULE_DIRS_KEY}:\n  - {c.Cli.RULES_DIR_NAME}\n",
-            )
+            ),
         )
         for package, rule_id, severity in (
             ("first_provider", "first-provider-finding", "warning"),
@@ -378,8 +394,8 @@ class TestsFlextInfraModCliRoute:
             eq={"warning", "hint"},
         )
 
+    @staticmethod
     def test_scan_rejects_byte_identical_declared_fix(
-        self,
         mod_workspace: Path,
     ) -> None:
         """Keep a declared fix that changes no bytes in the fixed-point residue."""
@@ -392,7 +408,7 @@ class TestsFlextInfraModCliRoute:
             u.Cli.atomic_write_text_file(
                 config_path,
                 f"{c.Infra.CODEMOD_RULE_DIRS_KEY}:\n  - {c.Cli.RULES_DIR_NAME}\n",
-            )
+            ),
         )
         tm.ok(
             u.Cli.atomic_write_text_file(

@@ -1,4 +1,8 @@
-"""Documentation, GitHub workflow, maintenance, and validation CLI route ownership."""
+"""Documentation, GitHub workflow, maintenance, and validation CLI route ownership.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,9 +10,7 @@ from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import c, m
-
-if TYPE_CHECKING:
-    from flext_infra import t
+from flext_infra.api import infra
 from flext_infra.docs.auditor import FlextInfraDocAuditor
 from flext_infra.docs.builder import FlextInfraDocBuilder
 from flext_infra.docs.collector import FlextInfraDocCollector
@@ -20,9 +22,12 @@ from flext_infra.docs.validator import FlextInfraDocValidator
 from flext_infra.maintenance.clean import FlextInfraCleanService
 from flext_infra.maintenance.python_version import FlextInfraPythonVersionEnforcer
 from flext_infra.maintenance.sonarcloud import FlextInfraSonarcloudSettingsSync
+from flext_infra.services.cli_routes_validate_commands import (
+    FlextInfraValidationCommandRoutes,
+)
 
-from ..api import infra
-from .cli_routes_validate_commands import FlextInfraValidationCommandRoutes
+if TYPE_CHECKING:
+    from flext_infra import t
 
 
 class FlextInfraValidationRoutes(FlextInfraValidationCommandRoutes):

@@ -19,10 +19,9 @@ from typing import TYPE_CHECKING, override
 
 from flext_core import r
 from flext_core.__version__ import FlextVersion
-
-from .. import c, m, u
-from ._execution import FlextInfraCodegenExecutionBase
-from ._mise_artifacts_publication import FlextInfraMisePublication
+from flext_infra import c, m, u
+from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
+from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
 
 if TYPE_CHECKING:
     from .. import p
@@ -42,7 +41,12 @@ class FlextInfraCodegenVersionFile(FlextInfraCodegenExecutionBase[bool]):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Generate __version__.py for each discovered project."""
+        """Generate __version__.py for each discovered project.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         # The exact
         # source metadata model crosses the sole CLI rendering boundary.
         template_path = (

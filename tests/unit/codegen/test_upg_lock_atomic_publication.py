@@ -5,6 +5,9 @@ wrote it left a partial lock behind (flext-idihq). The upgrade lifecycle
 resolves in a scratch mirror and publishes by one rename, so the committed lock
 survives any interruption byte-for-byte and a reader never observes a partial
 file.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -45,7 +48,12 @@ class TestsFlextInfraUpgLockAtomicPublication:
         self,
         tmp_path: Path,
     ) -> None:
-        """A run killed while uv resolves leaves the lock and checkout intact."""
+        """A run killed while uv resolves leaves the lock and checkout intact.
+
+        Raises:
+            BaseExceptionGroup: If upgrade observation and owned-session cleanup failed.
+
+        """
         root, lock, committed = self._committed_project(tmp_path, python=">=3.13")
         # uv opens the find-links wheel to read its metadata. A FIFO without a
         # writer holds that open() in the kernel's ``wait_for_partner``, so the
@@ -63,7 +71,6 @@ class TestsFlextInfraUpgLockAtomicPublication:
         )
         try:
             deadline = time.monotonic() + self.INTERRUPT_AFTER_SECONDS
-            last_observed = ""
             while time.monotonic() < deadline:
                 tm.that(
                     child.poll(),
@@ -75,7 +82,7 @@ class TestsFlextInfraUpgLockAtomicPublication:
                 # and require that one of its threads waits on the FIFO.
                 observed = tm.ok(
                     u.Cli.run(
-                        ["ps", "--sid", str(child.pid), "-L", "-o", "comm=,wchan:64="],
+                        ["ps", "--sid", str(child.pid), "-L", "-o", "wchan:64=,args="],
                         timeout=self.INTERRUPT_AFTER_SECONDS,
                     ),
                 )
@@ -84,27 +91,16 @@ class TestsFlextInfraUpgLockAtomicPublication:
                 # the main ``uv`` thread. The owned uv process is identified by
                 # its main-thread comm (execve names it), and the dependency
                 # observation is any of its threads in wait_for_partner.
-                rows = tuple(
-                    row.split(maxsplit=2) for row in observed.stdout.splitlines()
-                )
-                # uv resolves on a tokio worker pool: the blocking wheel open
-                # parks a thread whose comm is a runtime-internal name, never
-                # the main ``uv`` thread. The owned uv process is identified by
-                # its main-thread comm (execve names it), and the dependency
-                # observation is any of its threads in wait_for_partner.
                 if any(
-                    len(row) > 2
-                    and row[0] in owned
-                    and row[2].split() == ["wait_for_partner"]
-                    for row in rows
+                    len(fields) > 1
+                    and fields[0] == "wait_for_partner"
+                    and Path(fields[1]).name == c.Infra.UV
+                    for fields in (row.split() for row in observed.stdout.splitlines())
                 ):
                     break
                 time.sleep(0.02)
             else:
-                pytest.fail(
-                    "owned uv never opened the dependency for resolution; "
-                    f"last session processes: {last_observed!r}"
-                )
+                pytest.fail("owned uv never opened the dependency for resolution")
         finally:
             primary = sys.exception()
             try:
@@ -169,7 +165,12 @@ class TestsFlextInfraUpgLockAtomicPublication:
         *,
         python: str,
     ) -> tuple[Path, Path, bytes]:
-        """Render a real project whose committed lock predates one new dependency."""
+        """Render a real project whose committed lock predates one new dependency.
+
+        Returns:
+            The resulting ``tuple[Path, Path, bytes]``.
+
+        """
         root, _ = u.Tests.render_make_environment(
             tmp_path,
             c.Infra.MakeProfile.STANDALONE,
@@ -196,7 +197,12 @@ class TestsFlextInfraUpgLockAtomicPublication:
 
     @staticmethod
     def _release_fifo(fifo: Path) -> None:
-        """Give any reader still waiting on the FIFO its end of file."""
+        """Give any reader still waiting on the FIFO its end of file.
+
+        Raises:
+            OSError: If ``error.errno != errno.ENXIO``.
+
+        """
         try:
             writer = os.open(fifo, os.O_WRONLY | os.O_NONBLOCK)
         except OSError as error:

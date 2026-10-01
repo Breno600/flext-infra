@@ -1,4 +1,8 @@
-"""Apply, rollback, and pytest flows for protected edit workflows."""
+"""Apply, rollback, and pytest flows for protected edit workflows.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -10,8 +14,9 @@ from flext_cli import u
 
 from flext_core import r
 from flext_infra import c, m, t
-
-from .protected_edit_preview import FlextInfraUtilitiesProtectedEditPreview
+from flext_infra._utilities.protected_edit_preview import (
+    FlextInfraUtilitiesProtectedEditPreview,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -26,7 +31,12 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
         request: m.Infra.ProtectedSourceWritesRequest,
         new_errors: t.Infra.LintSnapshot,
     ) -> str | None:
-        """Protected write test failure."""
+        """Protected write test failure.
+
+        Returns:
+            The resulting ``str | None``.
+
+        """
         if new_errors or request.skip_pytest:
             return None
         pytest_result = FlextInfraUtilitiesProtectedEditApply._pytest_failure(
@@ -45,7 +55,12 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
         before_lints: t.MappingKV[Path, t.Infra.LintSnapshot],
         request: m.Infra.ProtectedSourceWritesRequest,
     ) -> t.Infra.EditResult:
-        """Protected write reports."""
+        """Protected write reports.
+
+        Returns:
+            The resulting ``t.Infra.EditResult``.
+
+        """
         reports: list[str] = []
         failed = False
         after_lints = FlextInfraUtilitiesProtectedEditApply.lint_snapshots(
@@ -107,13 +122,23 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
 
     @classmethod
     def _has_no_tests_marker(cls, text: str) -> bool:
-        """Return whether *text* contains any pytest "no tests" marker."""
+        """Return whether *text* contains any pytest "no tests" marker.
+
+        Returns:
+            Whether *text* contains any pytest "no tests" marker.
+
+        """
         lowered = text.lower()
         return any(marker in lowered for marker in cls._NO_TESTS_MARKERS)
 
     @classmethod
     def _file_contains_tests(cls, py_file: Path) -> bool:
-        """Return whether *py_file* defines pytest-collectable tests."""
+        """Return whether *py_file* defines pytest-collectable tests.
+
+        Returns:
+            Whether *py_file* defines pytest-collectable tests.
+
+        """
         tree = ast.parse(py_file.read_text(encoding=c.Cli.ENCODING_DEFAULT))
         for node in ast.walk(tree):
             if isinstance(
@@ -127,7 +152,12 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
 
     @classmethod
     def _pytest_failure(cls, py_file: Path, workspace: Path) -> p.Result[bool]:
-        """Run pytest for a single file and surface a failure message via ``r``."""
+        """Run pytest for a single file and surface a failure message via ``r``.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         if "tests" not in py_file.parts and not py_file.name.startswith("test_"):
             return r[bool].ok(True)
         if not cls._file_contains_tests(py_file):
@@ -172,7 +202,12 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
         *,
         request: m.Infra.ProtectedFileEditRequest,
     ) -> t.Infra.EditResult:
-        """Apply one edit, validate lint deltas, and restore on failure."""
+        """Apply one edit, validate lint deltas, and restore on failure.
+
+        Returns:
+            The resulting ``t.Infra.EditResult``.
+
+        """
         rel = FlextInfraUtilitiesProtectedEditApply._relative_path(
             py_file,
             request.workspace,
@@ -258,7 +293,12 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
         *,
         request: m.Infra.ProtectedSourceWriteRequest,
     ) -> t.Infra.EditResult:
-        """Write validated source content with protected validation and rollback."""
+        """Write validated source content with protected validation and rollback.
+
+        Returns:
+            The resulting ``t.Infra.EditResult``.
+
+        """
         original_source = py_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         if request.updated_source == original_source:
             return (True, [])
@@ -288,7 +328,12 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
         *,
         request: m.Infra.ProtectedSourceWritesRequest,
     ) -> t.Infra.EditResult:
-        """Write multiple files transactionally with lint delta validation."""
+        """Write multiple files transactionally with lint delta validation.
+
+        Returns:
+            The resulting ``t.Infra.EditResult``.
+
+        """
         if not updates:
             return (True, [])
 

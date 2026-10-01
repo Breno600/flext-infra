@@ -1,4 +1,8 @@
-"""Refactor CLI route ownership."""
+"""Refactor CLI route ownership.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -35,7 +39,12 @@ class FlextInfraCliModProgress:
 
     @staticmethod
     def render_rename(report: m.Infra.ApplyRenamesReport) -> str:
-        """Render native published paths and pending edit spans."""
+        """Render native published paths and pending edit spans.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return (
             f"{report.label}: {report.files_changed} published file(s), "
             f"{report.occurrences} pending source edit(s), "
@@ -50,7 +59,12 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
     def execute_apply_renames(
         request: m.Infra.ApplyRenamesInput,
     ) -> p.Result[t.Cli.ResultValue]:
-        """Display the real rename result and preserve pending-work failure."""
+        """Display the real rename result and preserve pending-work failure.
+
+        Returns:
+            The resulting ``p.Result[t.Cli.ResultValue]``.
+
+        """
         result = infra.apply_renames(request)
         if result.failure:
             return r[t.Cli.ResultValue].from_failure(result)
@@ -58,27 +72,42 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
         cli.display_text(FlextInfraCliModProgress.render_rename(report))
         if report.occurrences:
             return r[t.Cli.ResultValue].fail(
-                f"{report.occurrences} pending source edits"
+                f"{report.occurrences} pending source edits",
             )
         return r[t.Cli.ResultValue].ok(True)
 
     @staticmethod
     def execute_mod(request: m.Infra.ModCommand) -> p.Result[t.Cli.ResultValue]:
-        """Compose the mod use case and pass through its first failure."""
+        """Compose the mod use case and pass through its first failure.
+
+        Returns:
+            The resulting ``p.Result[t.Cli.ResultValue]``.
+
+        """
         return infra.mod(request, FlextInfraCliModProgress())
 
     @staticmethod
     def execute_mod_text(
         request: m.Infra.ModTextCommand,
     ) -> p.Result[t.Cli.ResultValue]:
-        """Replay the declared text rules without entering Rope or AST phases."""
+        """Replay the declared text rules without entering Rope or AST phases.
+
+        Returns:
+            The resulting ``p.Result[t.Cli.ResultValue]``.
+
+        """
         return infra.mod_text(request)
 
     @staticmethod
     def execute_mod_text_candidate(
         request: m.Infra.ModTextCommand,
     ) -> p.Result[t.Cli.ResultValue]:
-        """Replay a manifest-declared candidate with the healthy provider."""
+        """Replay a manifest-declared candidate with the healthy provider.
+
+        Returns:
+            The resulting ``p.Result[t.Cli.ResultValue]``.
+
+        """
         return infra.mod_text_candidate(request)
 
     refactor_routes: ClassVar[t.VariadicTuple[m.Cli.ResultCommandRoute]] = (
@@ -133,8 +162,8 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
         m.Cli.ResultCommandRoute(
             name="mod",
             help_text=(
-                "Apply ast-grep rules, prove fixed point, then require Ruff, "
-                "Pyrefly, and real LSP diagnostics"
+                "Apply ast-grep, semantic and text rules to a proven fixed point; "
+                "make check owns the lint and type verdicts"
             ),
             model_cls=m.Infra.ModCommand,
             handler=execute_mod,

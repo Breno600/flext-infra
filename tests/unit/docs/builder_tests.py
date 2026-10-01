@@ -25,11 +25,16 @@ class TestsFlextInfraBuilder:
 
     @pytest.fixture
     def builder(self) -> FlextInfraDocBuilder:
-        """Provide the public documentation builder service."""
+        """Provide the public documentation builder service.
+
+        Returns:
+            The resulting ``FlextInfraDocBuilder``.
+
+        """
         return FlextInfraDocBuilder()
 
+    @staticmethod
     def test_build_with_valid_scope_returns_success(
-        self,
         builder: FlextInfraDocBuilder,
         tmp_path: Path,
     ) -> None:
@@ -37,7 +42,8 @@ class TestsFlextInfraBuilder:
         reports: t.SequenceOf[m.Infra.DocsPhaseReport] = tm.ok(builder.build(tmp_path))
         tm.that(len(reports), gte=0)
 
-    def test_build_report_frozen(self) -> None:
+    @staticmethod
+    def test_build_report_frozen() -> None:
         """Test BuildReport is frozen (immutable)."""
         tm.that(m.Infra.DocsPhaseReport.model_config.get("frozen"), eq=True)
 
@@ -87,7 +93,8 @@ class TestsFlextInfraBuilder:
         )
         tm.that(report.result, eq=status)
 
-    def test_build_report_site_dir_field(self) -> None:
+    @staticmethod
+    def test_build_report_site_dir_field() -> None:
         """Test BuildReport site_dir field."""
         report = m.Infra.DocsPhaseReport(
             phase="build",
@@ -98,8 +105,8 @@ class TestsFlextInfraBuilder:
         )
         tm.that(report.site_dir, eq="/path/to/site")
 
+    @staticmethod
     def test_build_with_multiple_projects_returns_list(
-        self,
         builder: FlextInfraDocBuilder,
         tmp_path: Path,
     ) -> None:

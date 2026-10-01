@@ -238,6 +238,20 @@ module = [
 ]
 follow_untyped_imports = {{ override.follow_untyped_imports | lower }}
 {% endfor %}
+{% if tooling_runtime.mypy_facade_rebind_modules %}
+
+[[tool.mypy.overrides]]
+module = [
+{% for item in tooling_runtime.mypy_facade_rebind_modules %}
+  {{ item | tojson }},
+{% endfor %}
+]
+disable_error_code = [
+{% for item in tooling.tools.mypy.facade_rebind_error_codes %}
+  {{ item | tojson }},
+{% endfor %}
+]
+{% endif %}
 
 [tool.pydantic-mypy]
 init_forbid_extra = {{ tooling.tools.pydantic_mypy.init_forbid_extra | lower }}
@@ -390,6 +404,13 @@ extend-safe-fixes = [
   {{ item | tojson }},
 {% endfor %}
 ]
+{# ignore holds only the unscoped operator-authorized exceptions declared at
+   the tooling owner; repositories declare no exception. #}
+ignore = [
+{% for item in tooling.tools.ruff.lint.ignore %}
+  {{ item | tojson }},
+{% endfor %}
+]
 select = [
 {% for item in tooling.tools.ruff.lint.select | sort %}
   {{ item | tojson }},
@@ -422,8 +443,9 @@ known-first-party = [
 ]
 split-on-trailing-comma = {{ tooling.tools.ruff.lint.isort.split_on_trailing_comma | lower }}
 
-{# ruff_per_file_ignores is the fleet exemption map declared at the tooling
-   owner, scoped to this project; repositories declare no exemption. #}
+{# ruff_per_file_ignores holds the scoped operator-authorized exceptions
+   declared at the tooling owner, scoped to this project; repositories declare
+   no exception. #}
 [tool.ruff.lint.per-file-ignores]
 {% for pattern, rules in ruff_per_file_ignores | dictsort %}
 {{ pattern | tojson }} = [
