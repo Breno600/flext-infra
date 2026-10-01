@@ -353,9 +353,13 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         )
         if gitlinks.failure:
             return r[m.Infra.MakefileRenderSpec].from_failure(gitlinks)
+        pytest = config.Infra.tooling.tools.pytest
+        run_timeout_seconds = pytest.run_timeout_overrides.get(
+            target.canonical_project_name, pytest.run_timeout_seconds
+        )
         return r[m.Infra.MakefileRenderSpec].ok(
             m.Infra.MakefileRenderSpec(
-                pytest=config.Infra.tooling.tools.pytest,
+                pytest=pytest,
                 mise_bootstrap=u.Infra.mise_bootstrap_environment(),
                 dist=target.repository.distribution,
                 infra_cli=config.Infra.name,
@@ -400,7 +404,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 timeout_command=c.Infra.TIMEOUT_COMMAND,
                 timeout_kill_after_seconds=c.Infra.TIMEOUT_KILL_AFTER_SECONDS,
                 pytest_process_timeout_seconds=(
-                    config.Infra.tooling.tools.pytest.process_timeout_seconds
+                    run_timeout_seconds + (pytest.termination_grace_seconds * 2)
                 ),
             )
         )

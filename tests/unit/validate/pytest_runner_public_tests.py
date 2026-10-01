@@ -93,6 +93,187 @@ class TestsFlextInfraPytestRunner:
             == names[-1]
         )
 
+    @pytest.mark.slow
+    def test_config_only_changes_invalidate_the_persistent_cache(
+        self, cached_runner_project: Path
+    ) -> None:
+        """A governed YAML change executes again using the same Testmon database."""
+        config_root = cached_runner_project / c.CONFIG_DIR_NAME
+        config_root.mkdir()
+        source = config_root / "behavior.yaml"
+        source.write_text("value: initial\n", encoding="utf-8")
+        cache = config.Infra.codegen.make.testmon_cache
+        (cached_runner_project / cache.target_directory / "test_runtime.py").write_text(
+            "from pathlib import Path\n"
+            "from flext_cli import u\n\n"
+            "def test_runtime():\n"
+            f"    payload = u.Cli.config_load(Path({str(source)!r})).unwrap()\n"
+            "    assert payload['value']\n",
+            encoding="utf-8",
+        )
+        runner = self.runner_for(cached_runner_project)
+        database = runner.testmon_db
+        assert tm.ok(runner.execute()) == 0
+        reports = cached_runner_project / runner.reports
+        assert "executed=1" in self.summary(reports)
+        warm = self.runner_for(cached_runner_project)
+        assert tm.ok(warm.execute()) == 0
+        assert "outcome=cache_hit" in self.summary(reports)
+        warm_latest = (reports / "latest.txt").read_text().strip()
+        warm_accounting = m.Infra.TestmonRunAccounting.model_validate_json(
+            (reports / warm_latest / "run-accounting.json").read_text()
+        )
+        assert warm_accounting.cache_restored
+        assert warm_accounting.executed_count == 0
+        assert warm_accounting.deselected_count == warm_accounting.inventory_count
+        source.write_text("value: changed\n", encoding="utf-8")
+        changed = self.runner_for(cached_runner_project)
+        assert changed.testmon_db == database
+        assert tm.ok(changed.execute()) == 0
+        assert "executed=1" in self.summary(reports)
+        latest = (reports / "latest.txt").read_text().strip()
+        accounting = m.Infra.TestmonRunAccounting.model_validate_json(
+            (reports / latest / "run-accounting.json").read_text()
+        )
+        assert accounting.executed_count == accounting.reported_count
+        assert (
+            accounting.executed_count + accounting.deselected_count
+            == accounting.inventory_count
+        )
+
+    def test_worker_ceiling_defaults_without_declared_project(
+        self, cached_runner_project: Path
+    ) -> None:
+        """A tree without ``[project].name`` takes the fleet-wide ceiling."""
+        policy = config.Infra.tooling.tools.pytest
+        runner = self.runner_for(cached_runner_project)
+        assert runner.parallel_worker_budget(policy) == policy.parallel_workers
+        assert runner.run_timeout_seconds(policy) == policy.run_timeout_seconds
+
+    def test_declared_project_uses_its_configured_run_wall(
+        self, cached_runner_project: Path
+    ) -> None:
+        """The suite argv and process policy share one declared project budget."""
+        policy = config.Infra.tooling.tools.pytest
+        declared_name = next(iter(policy.run_timeout_overrides), config.Infra.name)
+        expected = policy.run_timeout_overrides.get(
+            declared_name, policy.run_timeout_seconds
+        )
+        pyproject = cached_runner_project / "pyproject.toml"
+        pyproject.write_text(
+            pyproject.read_text(encoding="utf-8")
+            + f'\n[project]\nname = "{declared_name}"\nversion = "0.1.0"\n',
+            encoding="utf-8",
+        )
+        runner = self.runner_for(cached_runner_project)
+        report = (
+            cached_runner_project
+            / config.Infra.codegen.make.testmon_cache.reports_directory
+        )
+
+        assert runner.run_timeout_seconds(policy) == expected
+        command = runner.build_command(report)
+        stop = next(
+            item
+            for item in command
+            if item.startswith(c.Infra.PYTEST_SUITE_STOP_OPTION)
+        )
+        tm.that(
+            float(stop.partition("=")[2]),
+            eq=pytest.approx(
+                runner.started_at_monotonic
+                + expected
+                - policy.suite_stop_reserve_seconds
+            ),
+        )
+
+    def test_worker_ceiling_follows_the_declared_project_override(
+        self, cached_runner_project: Path
+    ) -> None:
+        """The runner resolves the declared project's override from the SSOT."""
+        policy = config.Infra.tooling.tools.pytest
+        assert policy.parallel_worker_overrides
+        declared_name = next(iter(policy.parallel_worker_overrides))
+        pyproject = cached_runner_project / "pyproject.toml"
+        pyproject.write_text(
+            pyproject.read_text(encoding="utf-8")
+            + f'\n[project]\nname = "{declared_name}"\nversion = "0.1.0"\n',
+            encoding="utf-8",
+        )
+        runner = self.runner_for(cached_runner_project)
+        report = (
+            cached_runner_project
+            / config.Infra.codegen.make.testmon_cache.reports_directory
+        )
+        declared_ceiling = policy.parallel_worker_overrides[declared_name]
+        expected_workers = runner.resolve_worker_ceiling(
+            declared_ceiling, os.process_cpu_count()
+        )
+        budget = runner.parallel_worker_budget(policy)
+        assert budget == expected_workers
+        command = runner.build_command(report)
+        workers = command[command.index("-n") + 1]
+        assert workers == str(budget)
+
+    @pytest.mark.slow
+    def test_complete_suite_persists_cache_and_zero_diagnostic_evidence(
+        self, cached_runner_project: Path
+    ) -> None:
+        """One public execution collects every test and publishes real evidence."""
+        cache = config.Infra.codegen.make.testmon_cache
+        runner = self.runner_for(cached_runner_project)
+        testmon_db = runner.testmon_db
+
+        exit_code = tm.ok(runner.execute())
+
+        tm.that(exit_code, eq=0)
+        tm.that(testmon_db.is_file(), eq=True)
+        tm.that(testmon_db.is_relative_to(cached_runner_project), eq=False)
+        tm.that((cached_runner_project / cache.database_filename).exists(), eq=False)
+        reports_root = cached_runner_project / cache.reports_directory
+        latest_name = tm.ok(u.Cli.files_read_text(reports_root / "latest.txt")).strip()
+        summary = tm.ok(
+            u.Cli.files_read_text(reports_root / latest_name / "summary.txt")
+        )
+        tm.that(
+            summary,
+            has=[
+                "executed=1",
+                "failed=0",
+                "errors=0",
+                "warnings=0",
+                "skipped=0",
+                "exit=0",
+            ],
+        )
+        tm.that((reports_root / latest_name / "junit.xml").is_file(), eq=True)
+        # The testmon verb owns no coverage plugin (testmon 2.x refuses branch
+        # coverage through the cov plugin), so its command carries --no-cov and
+        # the coverage artifact belongs to the coverage verb alone.
+        selection = tm.ok(
+            u.Cli.files_read_text(reports_root / latest_name / "testmon-selection.txt")
+        )
+        command = tm.ok(
+            u.Cli.files_read_text(reports_root / latest_name / "command.txt")
+        )
+        # A complete selection runs the whole target; the collection plugin
+        # enforces exactly the selected node ids in the recorded order.
+        tm.that(selection.splitlines(), has="tests/test_runtime.py::test_runtime")
+        tm.that(command, has=c.Infra.PYTEST_SELECTED_COLLECTION_OPTION)
+        tm.that(command, has="--no-cov")
+        tm.that(command, has="--testmon --testmon-noselect")
+        tm.that((reports_root / latest_name / "coverage.xml").is_file(), eq=False)
+        # A cold run has no database to inspect before pytest; its only cache
+        # receipt is the post-run seed decision.
+        tm.that((reports_root / latest_name / "cache-before.json").exists(), eq=False)
+        seeded = m.Infra.TestmonCacheState.model_validate_json(
+            tm.ok(
+                u.Cli.files_read_text(reports_root / latest_name / "cache-after.json")
+            )
+        )
+        tm.that(seeded.seed_needed, eq=True)
+        tm.that(seeded.saveable, eq=True)
+
     def _seed_cache(self, cached_runner_project: Path) -> Path:
         """Seed the persistent cache through one public cold run."""
         tm.that(tm.ok(runner_for(cached_runner_project).execute()), eq=0)
