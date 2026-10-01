@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
+from types import MappingProxyType
 from typing import Annotated, Literal, Self
 
 from flext_cli import m, u
@@ -703,6 +704,12 @@ class FlextInfraConfigModelsMake:
                 ),
             ),
         ] = ()
+        standalone_check_gates: Annotated[
+            Mapping[t.NonEmptyStr, t.NonEmptyStr],
+            m.Field(
+                description="Public Make verb to checker gate mapping outside make check",
+            ),
+        ] = MappingProxyType({})
         check_gate_suspensions: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsMake.MakeGateSuspensionSpec],
             m.Field(
@@ -728,6 +735,14 @@ class FlextInfraConfigModelsMake:
                 msg = (
                     "make check_gate_suspensions cannot suspend lint, format "
                     f"or type-checker gates: {', '.join(protected)}"
+                )
+                raise ValueError(msg)
+            standalone = set(self.standalone_check_gates.values())
+            misplaced = sorted(set(gates) & standalone)
+            if misplaced:
+                msg = (
+                    "make check_gate_suspensions cannot suspend standalone gates: "
+                    f"{', '.join(misplaced)}"
                 )
                 raise ValueError(msg)
             families = [
@@ -779,6 +794,39 @@ class FlextInfraConfigModelsMake:
             declared = {verb.name for verb in self.verbs}
             if len(declared) != len(self.verbs):
                 msg = "make public verb names must be unique"
+                raise ValueError(msg)
+            unknown_standalone_verbs = sorted(set(self.standalone_check_gates) - declared)
+            if unknown_standalone_verbs:
+                msg = (
+                    "make standalone_check_gates names undeclared verbs: "
+                    f"{', '.join(unknown_standalone_verbs)}"
+                )
+                raise ValueError(msg)
+            partial_standalone = sorted(
+                verb.name
+                for verb in self.verbs
+                if verb.name in self.standalone_check_gates
+                and set(verb.profiles)
+                != set(FlextInfraConstantsCodegenProject.MakeProfile)
+            )
+            if partial_standalone:
+                msg = (
+                    "make standalone_check_gates requires verbs in every profile: "
+                    f"{', '.join(partial_standalone)}"
+                )
+                raise ValueError(msg)
+            unknown_standalone_gates = sorted(
+                set(self.standalone_check_gates.values()) - set(self.check_gates_allowed)
+            )
+            if unknown_standalone_gates:
+                msg = (
+                    "make standalone_check_gates names unknown gates: "
+                    f"{', '.join(unknown_standalone_gates)}"
+                )
+                raise ValueError(msg)
+            standalone_gates = tuple(self.standalone_check_gates.values())
+            if len(standalone_gates) != len(set(standalone_gates)):
+                msg = "make standalone_check_gates must route each gate once"
                 raise ValueError(msg)
             # Why (hq-36xk, flext-lq86m): the guard that lived here read
             # `if "setup" in serialized` and protected `make setup` from being
@@ -857,11 +905,14 @@ class FlextInfraConfigModelsMake:
         def check_gates_default(self) -> t.VariadicTuple[str]:
             """Active default gates, shared by local, CI, hooks, and project gates."""
             suspended = frozenset(item.gate for item in self.check_gate_suspensions)
+            standalone = frozenset(self.standalone_check_gates.values())
             declared = (
                 *FlextInfraConstantsMake.CANONICAL_DEFAULT_GATE_IDS,
                 *self.project_check_gates,
             )
-            return tuple(gate for gate in declared if gate not in suspended)
+            return tuple(
+                gate for gate in declared if gate not in suspended and gate not in standalone
+            )
 
         @m.computed_field
         @property
