@@ -26,7 +26,9 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         )
         return m.Infra.MypyResourceLimit(
             memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
-            timeout_seconds=min(c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT, available // 2),
+            timeout_seconds=min(
+                config.Infra.tooling.tools.mypy.timeout_seconds, available // 2
+            ),
         )
 
     @staticmethod

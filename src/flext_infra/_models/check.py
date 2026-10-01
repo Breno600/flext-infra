@@ -104,7 +104,7 @@ class FlextInfraModelsCheck:
                     " to the max)"
                 ),
             ),
-        ] = c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT
+        ]
 
         @m.computed_field
         @property

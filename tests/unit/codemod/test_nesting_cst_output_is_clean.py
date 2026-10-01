@@ -25,7 +25,8 @@ class TestsFlextInfraNestingCutoverOutput:
     def _planned_source(tmp_path: Path) -> str:
         """Plan one class-nesting cutover through the public cutover owner."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
-        alias, module_name = next(iter(c.Infra.FAMILY_PUBLIC_MODULES.items()))
+        alias = sorted(c.Infra.FLEXT_FAMILIES)[0]
+        module_name = u.Tests.family_public_module(alias)
         owner_name = (
             f"{u.derive_class_stem(repository_root.name)}"
             f"{c.Infra.FAMILY_SUFFIXES[alias]}"
