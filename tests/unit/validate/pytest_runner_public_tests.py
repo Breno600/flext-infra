@@ -82,9 +82,7 @@ class TestsFlextInfraPytestRunner:
                 complete=True,
                 execution_mode=full,
             ),
-            runner.build_command(
-                report, invocation=m.Infra.PytestInvocation(execution_mode=full)
-            ),
+            runner.build_command(report, execution_mode=full),
         )
         case_timeout = (
             f"--timeout={config.Infra.tooling.tools.pytest.case_timeout_seconds}"
@@ -480,10 +478,7 @@ class TestsFlextInfraPytestRunner:
                 execution_mode=c.Infra.PytestExecutionMode.FULL,
             ),
             runner.build_command(
-                full,
-                invocation=m.Infra.PytestInvocation(
-                    execution_mode=c.Infra.PytestExecutionMode.FULL
-                ),
+                full, execution_mode=c.Infra.PytestExecutionMode.FULL
             ),
         ):
             tm.that("-m" in command[3:], eq=False)

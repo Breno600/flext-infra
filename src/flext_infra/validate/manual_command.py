@@ -42,10 +42,7 @@ class FlextInfraManualCommandValidator(s[bool]):
         """Apply deny rules to a single shell segment after normalisation."""
         if not segment:
             return False
-        try:
-            tokens = cls._strip_wrappers(shlex.split(segment))
-        except ValueError:
-            tokens = cls._strip_wrappers(segment.split())
+        tokens = cls._strip_wrappers(shlex.split(segment))
         if not tokens:
             return False
         head = Path(tokens[0]).name
@@ -70,7 +67,7 @@ class FlextInfraManualCommandValidator(s[bool]):
     @classmethod
     def _strip_wrappers(cls, tokens: t.StrSequence) -> t.MutableSequenceOf[str]:
         """Drop leading wrapper commands and ``env VAR=val`` assignments."""
-        out = list(tokens)
+        out: t.MutableSequenceOf[str] = list(tokens)
         while out:
             name = Path(out[0]).name
             if name == "env":

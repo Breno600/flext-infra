@@ -18,7 +18,7 @@ class FlextInfraModelsDepsToolConfigProjectRuff:
         per_file_ignores: Annotated[
             t.Infra.PerFileIgnores,
             m.Field(
-                description="Project-local per-file rules merged with global policy."
+                description="Project-local per-file rules merged with global policy.",
             ),
         ]
 

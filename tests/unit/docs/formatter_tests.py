@@ -20,7 +20,8 @@ class TestsFlextInfraDocsFormatter:
     def _write_prettier_policy(workspace: Path) -> None:
         """Provide the generated prettier settings owner the gate requires."""
         (workspace / c.Infra.PRETTIER_CONFIG_FILENAME).write_text(
-            "{}\n", encoding="utf-8"
+            "{}\n",
+            encoding="utf-8",
         )
 
     def test_fmt_returns_report_for_root_scope(self, tmp_path: Path) -> None:
@@ -39,7 +40,8 @@ class TestsFlextInfraDocsFormatter:
         workspace = u.Tests.create_docs_workspace(tmp_path)
         self._write_prettier_policy(workspace)
         (workspace / "docs/README.md").write_text(
-            "#   Docs\n\n##   Overview\ntrailing spaces   \n", encoding="utf-8"
+            "#   Docs\n\n##   Overview\ntrailing spaces   \n",
+            encoding="utf-8",
         )
         formatter = FlextInfraDocFormatter()
 
@@ -55,7 +57,8 @@ class TestsFlextInfraDocsFormatter:
         tm.that(applied.value[0].result, eq=c.Infra.ResultStatus.OK)
         tm.that(applied.value[0].passed, eq=True)
         tm.that(
-            (workspace / "docs/README.md").read_text(encoding="utf-8"), has="# Docs\n"
+            (workspace / "docs/README.md").read_text(encoding="utf-8"),
+            has="# Docs\n",
         )
 
         fixed_point = formatter.format(workspace, apply=False)
@@ -77,7 +80,8 @@ class TestsFlextInfraDocsFormatter:
         tm.that((workspace / "docs/README.md").read_text(encoding="utf-8"), eq=drift)
 
     def test_fmt_fails_closed_without_generated_prettier_config(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A missing generated .prettierrc is a generation gap, never a pass."""
         workspace = u.Tests.create_docs_workspace(tmp_path)

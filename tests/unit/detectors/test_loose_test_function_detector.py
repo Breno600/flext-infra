@@ -26,13 +26,16 @@ class TestsFlextInfraLooseTestFunctionDetector:
         tests_dir = project / "tests" / "unit"
         tests_dir.mkdir(parents=True)
         _ = (project / "pyproject.toml").write_text(
-            "[project]\nname='demo-project'\n", encoding="utf-8"
+            "[project]\nname='demo-project'\n",
+            encoding="utf-8",
         )
         return project
 
     @staticmethod
     def _violations(
-        *, project: Path, file_path: Path
+        *,
+        project: Path,
+        file_path: Path,
     ) -> t.VariadicTuple[m.Infra.LooseTestFunctionViolation]:
         with u.Infra.open_project(project) as rope_project:
             violations = FlextInfraLooseTestFunctionDetector.detect_file(
@@ -41,7 +44,7 @@ class TestsFlextInfraLooseTestFunctionDetector:
                     rope_project=rope_project,
                     project_root=project,
                     project_name="demo-project",
-                )
+                ),
             )
         return tuple(violations)
 

@@ -48,7 +48,11 @@ class FlextInfraValidateTierWhitelist(FlextInfraRopeImportBoundaryBase):
 
     @override
     def _is_allowlisted(
-        self, _file_path: Path, _module_name: str, *, repository_root: Path
+        self,
+        _file_path: Path,
+        _module_name: str,
+        *,
+        repository_root: Path,
     ) -> bool:
         """Return True iff ``file_path`` owns ``module_name`` per OWNERS SSOT.
 

@@ -12,8 +12,9 @@ macOS. The platform owns the mechanism:
 - Linux keeps GNU `timeout` and `prlimit --as` unchanged: the kernel limits each
   process's virtual address space.
 - macOS uses the bundled Python supervisor and native `/bin/ps`. It samples the combined
-  resident memory (RSS) of the checker process group every 100 ms and terminates the
-  group when the configured threshold or deadline is reached. This is a sampled
+  resident memory (RSS) of the checker process group every
+  `c.Infra.MYPY_SUPERVISOR_POLL_SECONDS` and terminates the group when the configured
+  threshold or deadline is reached. This is a sampled
   termination threshold, not a kernel allocation barrier; transient memory overshoot and
   sampling latency are possible. Virtual mappings are not charged as resident memory.
   Descendants must remain in the group.

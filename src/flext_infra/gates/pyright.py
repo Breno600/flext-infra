@@ -21,40 +21,13 @@ class FlextInfraPyrightGate(FlextInfraGate):
     gate_id: ClassVar[str] = c.Infra.PYRIGHT
     gate_name: ClassVar[str] = "Pyright"
     can_fix: ClassVar[bool] = False
-
-    @override
-    def _empty_targets_result(
-        self, project_dir: Path, started: float
-    ) -> m.Infra.GateExecution:
-        """Content-only topology: zero python targets is the designed outcome.
-
-        A package:false root (or any project without python files) has no
-        checker inputs by declared design — pass with a typed observation
-        naming the condition instead of the loud empty-targets failure.
-        """
-        return m.Infra.GateExecution(
-            result=self._gate_result(
-                project_dir, passed=True, errors=(), started=started
-            ),
-            issues=(),
-            observational_issues=(
-                m.Infra.Issue(
-                    file=str(project_dir / c.PYPROJECT_FILENAME),
-                    line=1,
-                    column=1,
-                    code="pyright-empty-analysis",
-                    message=(
-                        "no python targets discovered: content-only project topology"
-                    ),
-                    severity="information",
-                ),
-            ),
-            raw_output=f"{self.gate_id}: no check targets were collected",
-        )
+    requires_python_targets: ClassVar[bool] = True
 
     @override
     def _get_check_dirs(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
         """Use the project pyright config as SSOT when it exists."""
         _ = ctx
@@ -64,7 +37,10 @@ class FlextInfraPyrightGate(FlextInfraGate):
 
     @override
     def _build_check_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        check_dirs: t.StrSequence,
     ) -> t.StrSequence:
         """Build check command."""
         _ = project_dir
@@ -98,7 +74,10 @@ class FlextInfraPyrightGate(FlextInfraGate):
 
     @override
     def _parse_check_output(
-        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        result: p.Cli.CommandOutput,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
         """Parse check output."""
         _ = ctx
@@ -113,32 +92,30 @@ class FlextInfraPyrightGate(FlextInfraGate):
                 ),
             )
         validated: p.Result[m.Infra.PyrightReport] = u.validate_value(
-            m.Infra.PyrightReport, result.stdout, from_json=True, strict=True
+            m.Infra.PyrightReport,
+            result.stdout,
+            from_json=True,
+            strict=True,
         )
         if validated.failure:
             return False, (
                 self._malformed_report_issue(
-                    str(validated.error), tool=c.Infra.PYRIGHT, file=str(project_dir)
+                    str(validated.error),
+                    tool=c.Infra.PYRIGHT,
+                    file=str(project_dir),
                 ),
             )
         report = validated.value
-        if report.summary.files_analyzed == 0 and not report.general_diagnostics:
-            # Content-only project topology (package:false root, no python
-            # targets by design): the tool ran, analyzed nothing, and found
-            # nothing — a typed receipt, not a silent pass nor a false red.
-            return True, [
-                m.Infra.Issue(
-                    file=str(project_dir / c.PYPROJECT_FILENAME),
-                    line=1,
-                    column=1,
-                    code="pyright-empty-analysis",
-                    message=(
-                        "no python targets analyzed (filesAnalyzed=0): "
-                        "content-only project topology"
-                    ),
-                    severity="information",
-                )
-            ]
+        if report.summary.files_analyzed == 0:
+            # The gate is selected only for projects with Python targets, so an
+            # empty analysis is a lost scan, never a pass.
+            return False, (
+                self._malformed_report_issue(
+                    "pyright analyzed no files for a project with Python targets",
+                    tool=c.Infra.PYRIGHT,
+                    file=str(project_dir),
+                ),
+            )
         issues: t.MutableSequenceOf[m.Infra.Issue] = [
             m.Infra.Issue(
                 file=diag.file,
@@ -166,7 +143,7 @@ class FlextInfraPyrightGate(FlextInfraGate):
                     code="pyright-exec",
                     message=message,
                     severity=c.Infra.ERROR,
-                )
+                ),
             )
         return (
             u.Cli.process_succeeded(result.outcome)

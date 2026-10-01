@@ -15,35 +15,22 @@ from .base import FlextInfraPytestRunnerBase
 class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
     """Build the single supported pytest command family.
 
-    One suite builder owns every flag. Only the incremental verb carries the
-    testmon plugin; the full and coverage verbs are testmon-free selections
-    over the same builder (testmon 2.x refuses branch coverage through the cov
-    plugin, so the two never share a process).
-
-    The incremental verb names no testmon environment. The database is
-    already keyed by the declared project, and testmon's single default
-    environment keeps its history across worktrees and relocks: a per-lane or
-    per-lock environment name started every lane from an empty history, so
-    selection degenerated into the whole suite. Testmon itself still resets
-    that history when the installed package versions change.
+    One suite builder owns every flag. Only incremental execution uses testmon;
+    full and coverage execution are separate plugin selections.
     """
 
     _NO_COVERAGE: ClassVar[t.VariadicTuple[str]] = ("--no-cov",)
 
     @staticmethod
     def bounded(execution_mode: c.Infra.PytestExecutionMode) -> bool:
-        """Return whether a verb runs under the declared time budget.
-
-        The full verb is the complete local verification and carries no case
-        timeout, suite stop or process deadline.
-        """
+        """The local full verb carries no case, suite, or process deadline."""
         return execution_mode != c.Infra.PytestExecutionMode.FULL
 
     @classmethod
     def _case_timeout_args(
         cls, execution_mode: c.Infra.PytestExecutionMode
     ) -> t.VariadicTuple[str]:
-        """Bound each case, or disable both pytest-timeout budgets for full."""
+        """Apply the typed case limit, or disable timeout plugins for full."""
         pytest = config.Infra.tooling.tools.pytest
         if cls.bounded(execution_mode):
             return (f"--timeout={pytest.case_timeout_seconds}",)
@@ -77,18 +64,44 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         return ()
 
     def _plugin_policy_args(
-        self, *, execution_mode: c.Infra.PytestExecutionMode
+        self,
+        *,
+        execution_mode: c.Infra.PytestExecutionMode,
     ) -> t.VariadicTuple[str]:
-        """Apply the same configured plugin contract to collection and execution."""
+        """Apply the same configured plugin contract to collection and execution.
+
+        The phase split is a native pytest marker expression: the budgeted
+        phase deselects the slow marker, the slow phase selects only it.
+        """
         pytest = config.Infra.tooling.tools.pytest
-        excluded = (
-            (
-                *pytest.external_gate_markers,
-                *self.ci_excluded_markers(execution_mode=execution_mode),
-            )
-            if execution_mode != c.Infra.PytestExecutionMode.FULL
-            else ()
+        excluded = tuple(
+            dict.fromkeys((
+                *(
+                    (
+                        *pytest.external_gate_markers,
+                        *self.ci_excluded_markers(execution_mode=execution_mode),
+                    )
+                    if execution_mode != c.Infra.PytestExecutionMode.FULL
+                    else ()
+                ),
+                *(
+                    ()
+                    if self.slow_phase
+                    or execution_mode == c.Infra.PytestExecutionMode.COVERAGE
+                    else (pytest.slow_marker,)
+                ),
+            ))
         )
+        if self.slow_phase:
+            expression = (
+                f"{pytest.slow_marker} and not ({' or '.join(excluded)})"
+                if excluded
+                else pytest.slow_marker
+            )
+        elif excluded:
+            expression = f"not ({' or '.join(excluded)})"
+        else:
+            expression = ""
         return (
             "-p",
             pytest.enforcement_plugin,
@@ -96,7 +109,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             "no:metadata",
             "-o",
             f"{c.Infra.ASYNCIO_DEFAULT_FIXTURE_LOOP_SCOPE}={pytest.asyncio_default_fixture_loop_scope}",
-            *(("-m", f"not ({' or '.join(excluded)})") if excluded else ()),
+            *(("-m", expression) if expression else ()),
         )
 
     def build_selection_command(
@@ -113,11 +126,13 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         workers reading the database while a third writes it collect different
         sets, which xdist aborts with "Different tests were collected". This
         pass runs no test and records its collection and warning evidence.
-        The full and coverage inventories own no testmon plugin, so they never
-        read or write the persistent database.
+        The coverage inventory owns no testmon plugin, so it never reads or
+        writes the persistent database.
         """
         testmon = (
-            (
+            ()
+            if execution_mode != c.Infra.PytestExecutionMode.INCREMENTAL
+            else (
                 "--testmon",
                 "--testmon-nocollect",
                 # Why: the external-gate deselection is a ``-m`` expression, and
@@ -126,13 +141,8 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                 # exactly that case (never combined with ``--testmon-noselect``).
                 *(("--testmon-noselect",) if complete else ("--testmon-forceselect",)),
             )
-            if execution_mode == c.Infra.PytestExecutionMode.INCREMENTAL
-            else ()
         )
-        return (
-            sys.executable,
-            "-m",
-            "pytest",
+        pytest_arguments = (
             str(self.target),
             *testmon,
             "--collect-only",
@@ -151,28 +161,30 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             "0",
             "--no-cov",
         )
+        if self.collection_command_prefix:
+            return (
+                *self.collection_command_prefix,
+                str(manifest_path.with_suffix(".pstats")),
+                str(manifest_path.parent / "run-context.json"),
+                *pytest_arguments,
+            )
+        return (sys.executable, "-m", "pytest", *pytest_arguments)
 
     def build_command(
         self,
         report_dir: Path,
-        selected_node_ids: t.StrSequence | None = None,
-        invocation: m.Infra.PytestInvocation | None = None,
+        selection_plan: m.Infra.PytestSelectionPlan | None = None,
+        *,
+        serialize: bool = False,
+        execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
     ) -> t.VariadicTuple[str]:
-        """Build the suite argv (never the cov plugin).
+        """Build the testmon suite argv (never the cov plugin).
 
-        A nonempty selection is enforced from its manifest, so it requires
-        ``manifest_path``. Only the incremental verb carries testmon.
+        A resolved plan carries the selected IDs and their manifest together.
         """
         pytest = config.Infra.tooling.tools.pytest
-        invocation = invocation or m.Infra.PytestInvocation()
-        manifest_path = invocation.manifest_path
-        serialize = invocation.serialize
-        whole_target = invocation.whole_target
-        execution_mode = invocation.execution_mode
+        selected_node_ids = selection_plan.node_ids if selection_plan else None
         selection = selected_node_ids or None
-        if selection and manifest_path is None:
-            msg = "a runner selection requires its collection manifest path"
-            raise ValueError(msg)
         # An empty selection needs no workers, and a selection smaller than the
         # worker budget never needs more workers than items: every extra worker
         # only pays startup cost for an empty queue. Explicit serial execution
@@ -190,25 +202,17 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         serial = workers in {"0", "1"}
         if serial:
             workers = "0"
-        testmon = (
-            (
-                "--testmon",
-                *(
-                    ("--testmon-noselect",)
-                    if selection
-                    else ("--testmon-forceselect",)
-                ),
-            )
-            if execution_mode == c.Infra.PytestExecutionMode.INCREMENTAL
-            else ()
-        )
         return self._suite_argv(
             report_dir,
             serial=serial,
             execution_mode=execution_mode,
             targets=(
                 (str(self.target),)
-                if whole_target or selection is None
+                if (
+                    selection_plan is None
+                    or selection_plan.whole_target
+                    or selection is None
+                )
                 else tuple(selection)
             ),
             workers=workers,
@@ -218,18 +222,28 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                     (
                         "-p",
                         FlextInfraPytestCollection.__module__,
-                        f"{c.Infra.PYTEST_SELECTED_COLLECTION_OPTION}={manifest_path}",
+                        f"{c.Infra.PYTEST_SELECTED_COLLECTION_OPTION}={selection_plan.manifest_path}",
                     )
-                    if selection
+                    if selection_plan is not None and selection
                     else ()
                 ),
-                *testmon,
+                *(
+                    (
+                        "--testmon",
+                        *(("--testmon-noselect",) if selection else ("--testmon-forceselect",)),
+                    )
+                    if execution_mode == c.Infra.PytestExecutionMode.INCREMENTAL
+                    else ()
+                ),
                 *self._NO_COVERAGE,
             ),
         )
 
     def build_coverage_command(
-        self, report_dir: Path, *, serialize: bool = False
+        self,
+        report_dir: Path,
+        *,
+        serialize: bool = False,
     ) -> t.VariadicTuple[str]:
         """Build the whole-suite coverage argv (never the testmon plugin).
 
@@ -247,7 +261,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             workers=workers,
             trailing=(
                 *self._plugin_policy_args(
-                    execution_mode=c.Infra.PytestExecutionMode.COVERAGE
+                    execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
                 ),
                 f"--cov={self.root / c.Infra.DEFAULT_SRC_DIR}",
                 f"--cov-report=xml:{report_dir / 'coverage.xml'}",
@@ -270,16 +284,22 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         return (
             sys.executable,
             "-m",
-            "pytest",
+            "flext_infra._pytest_entry" if self.profile_enabled else "pytest",
+            *(
+                (
+                    "profile-collection",
+                    str(report_dir / pytest.profile_suite_filename),
+                    str(report_dir / "run-context.json"),
+                )
+                if self.profile_enabled
+                else ()
+            ),
             *targets,
             *pytest.progress_args,
             *pytest.report_args,
             *self._case_timeout_args(execution_mode),
             *(
-                (
-                    f"{c.Infra.PYTEST_SUITE_STOP_OPTION}="
-                    f"{self.suite_stop_monotonic(serial=serial)!r}",
-                )
+                (f"{c.Infra.PYTEST_SUITE_STOP_OPTION}={self.suite_stop_monotonic(serial=serial)!r}",)
                 if self.bounded(execution_mode)
                 else ()
             ),

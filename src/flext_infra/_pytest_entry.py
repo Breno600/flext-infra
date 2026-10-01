@@ -18,7 +18,8 @@ class FlextInfraPytestEntry:
 
         ``full`` runs the complete suite without testmon or a time limit.
         ``coverage`` selects coverage alone; the default is the incremental
-        testmon operation.
+        testmon operation. ``slow`` runs the incremental slow-marker phase
+        as its own bounded process outside the budgeted clock.
         """
         mode = sys.argv[1] if len(sys.argv) > 1 else ""
         if mode in {"profile", "profile-collection"}:

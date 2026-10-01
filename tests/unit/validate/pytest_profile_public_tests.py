@@ -37,7 +37,10 @@ class TestsFlextInfraPytestProfile:
         ],
     )
     def test_profile_child_preserves_exit_status_and_arguments(
-        self, tmp_path: Path, arguments: t.StrTuple, expected_exit: int
+        self,
+        tmp_path: Path,
+        arguments: t.StrTuple,
+        expected_exit: int,
     ) -> None:
         """The real pytest module exits natively and leaves a bound profile."""
         context = m.Infra.PytestRunContext(
@@ -59,7 +62,7 @@ class TestsFlextInfraPytestProfile:
             assert arguments[0] in result.stderr
         assert pstats.Stats(str(profile)).get_stats_profile().func_profiles
         recorded = m.Infra.PytestRunContext.model_validate_json(
-            profile.with_suffix(".pstats.json").read_text(encoding="utf-8")
+            profile.with_suffix(".pstats.json").read_text(encoding="utf-8"),
         )
         assert recorded.model_copy(update={"profile_sha256": None}) == context
         assert recorded.profile_sha256 is not None
@@ -67,7 +70,10 @@ class TestsFlextInfraPytestProfile:
     @pytest.mark.slow
     @pytest.mark.parametrize("expired", [False, True])
     def test_profile_child_rejects_invalid_run_receipt(
-        self, tmp_path: Path, *, expired: bool
+        self,
+        tmp_path: Path,
+        *,
+        expired: bool,
     ) -> None:
         """A transported receipt cannot silently select another run's artifacts."""
         context = m.Infra.PytestRunContext(
@@ -85,7 +91,8 @@ class TestsFlextInfraPytestProfile:
         receipt.write_text(context.model_dump_json(), encoding="utf-8")
         profile = tmp_path / "collection.pstats"
         profile.with_suffix(".pstats.json").write_text(
-            context.model_dump_json(), encoding="utf-8"
+            context.model_dump_json(),
+            encoding="utf-8",
         )
         result = profile_collection(profile, receipt, ("--version",))
         assert result.outcome.raw_return_code != 0
@@ -121,7 +128,10 @@ class TestsFlextInfraPytestProfile:
 
     @pytest.mark.parametrize("complete", [False, True])
     def test_collection_profile_preserves_pytest_arguments(
-        self, cached_runner_project: Path, *, complete: bool
+        self,
+        cached_runner_project: Path,
+        *,
+        complete: bool,
     ) -> None:
         """Only the interpreter prefix changes; suite execution is not profiled."""
         plain = runner_for(cached_runner_project)
@@ -149,12 +159,16 @@ class TestsFlextInfraPytestProfile:
     @pytest.mark.slow
     @pytest.mark.parametrize("profile_collection", [False, True])
     def test_complete_suite_persists_cache_and_zero_diagnostic_evidence(
-        self, cached_runner_project: Path, *, profile_collection: bool
+        self,
+        cached_runner_project: Path,
+        *,
+        profile_collection: bool,
     ) -> None:
         """One public execution collects every test and publishes real evidence."""
         cache = config.Infra.codegen.make.testmon_cache
         runner = runner_for(
-            cached_runner_project, profile_collection=profile_collection
+            cached_runner_project,
+            profile_collection=profile_collection,
         )
         testmon_db = runner.required_testmon_db()
 
@@ -208,7 +222,7 @@ class TestsFlextInfraPytestProfile:
             receipt = m.Infra.PytestRunContext.model_validate_json(original)
             receipt_path.write_text(
                 receipt.model_copy(
-                    update={"deadline_monotonic": receipt.deadline_monotonic + 1}
+                    update={"deadline_monotonic": receipt.deadline_monotonic + 1},
                 ).model_dump_json(),
                 encoding="utf-8",
             )
@@ -222,7 +236,7 @@ class TestsFlextInfraPytestProfile:
             assert report.execute().failure
         assert not (reports_root / latest_name / "testmon-inventory.pstats").exists()
         summary = tm.ok(
-            u.Cli.files_read_text(reports_root / latest_name / "summary.txt")
+            u.Cli.files_read_text(reports_root / latest_name / "summary.txt"),
         )
         tm.that(
             summary,
@@ -240,10 +254,10 @@ class TestsFlextInfraPytestProfile:
         # coverage through the cov plugin), so its command carries --no-cov and
         # the coverage artifact belongs to the coverage verb alone.
         selection = tm.ok(
-            u.Cli.files_read_text(reports_root / latest_name / "testmon-selection.txt")
+            u.Cli.files_read_text(reports_root / latest_name / "testmon-selection.txt"),
         )
         command = tm.ok(
-            u.Cli.files_read_text(reports_root / latest_name / "command.txt")
+            u.Cli.files_read_text(reports_root / latest_name / "command.txt"),
         )
         # A complete selection runs the whole target; the collection plugin
         # enforces exactly the selected node ids in the recorded order.
@@ -257,8 +271,8 @@ class TestsFlextInfraPytestProfile:
         tm.that((reports_root / latest_name / "cache-before.json").exists(), eq=False)
         seeded = m.Infra.TestmonCacheState.model_validate_json(
             tm.ok(
-                u.Cli.files_read_text(reports_root / latest_name / "cache-after.json")
-            )
+                u.Cli.files_read_text(reports_root / latest_name / "cache-after.json"),
+            ),
         )
         tm.that(seeded.seed_needed, eq=True)
         tm.that(seeded.saveable, eq=True)

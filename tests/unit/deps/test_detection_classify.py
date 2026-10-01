@@ -19,7 +19,7 @@ class TestsFlextInfraDepsDetectionClassify:
         """Verify classify dep001."""
         service = FlextInfraDependencyDetectionService()
         issues: t.SequenceOf[t.JsonMapping] = [
-            {"error": {"code": "DEP001"}, "module": "foo"}
+            {"error": {"code": "DEP001"}, "module": "foo"},
         ]
         tm.that(len(service.classify_issues(issues).dep001), eq=1)
 
@@ -27,7 +27,7 @@ class TestsFlextInfraDepsDetectionClassify:
         """Verify classify dep002."""
         service = FlextInfraDependencyDetectionService()
         issues: t.SequenceOf[t.JsonMapping] = [
-            {"error": {"code": "DEP002"}, "module": "bar"}
+            {"error": {"code": "DEP002"}, "module": "bar"},
         ]
         tm.that(len(service.classify_issues(issues).dep002), eq=1)
 
@@ -35,7 +35,7 @@ class TestsFlextInfraDepsDetectionClassify:
         """Verify classify dep003."""
         service = FlextInfraDependencyDetectionService()
         issues: t.SequenceOf[t.JsonMapping] = [
-            {"error": {"code": "DEP003"}, "module": "baz"}
+            {"error": {"code": "DEP003"}, "module": "baz"},
         ]
         tm.that(len(service.classify_issues(issues).dep003), eq=1)
 
@@ -43,7 +43,7 @@ class TestsFlextInfraDepsDetectionClassify:
         """Verify classify dep004."""
         service = FlextInfraDependencyDetectionService()
         issues: t.SequenceOf[t.JsonMapping] = [
-            {"error": {"code": "DEP004"}, "module": "qux"}
+            {"error": {"code": "DEP004"}, "module": "qux"},
         ]
         tm.that(len(service.classify_issues(issues).dep004), eq=1)
 
@@ -57,7 +57,7 @@ class TestsFlextInfraDepsDetectionClassify:
         """Verify missing code skipped."""
         service = FlextInfraDependencyDetectionService()
         issues: t.SequenceOf[t.JsonMapping] = [
-            {"error": {"other": "data"}, "module": "foo"}
+            {"error": {"other": "data"}, "module": "foo"},
         ]
         tm.that(len(service.classify_issues(issues).dep001), eq=0)
 
@@ -65,7 +65,7 @@ class TestsFlextInfraDepsDetectionClassify:
         """Verify unknown code skipped."""
         service = FlextInfraDependencyDetectionService()
         issues: t.SequenceOf[t.JsonMapping] = [
-            {"error": {"code": "DEP999"}, "module": "foo"}
+            {"error": {"code": "DEP999"}, "module": "foo"},
         ]
         groups = service.classify_issues(issues)
         tm.that(groups.dep001, eq=[])
@@ -106,12 +106,13 @@ class TestsFlextInfraDepsDetectionClassify:
         """Verify module to types package with custom limits."""
         service = FlextInfraDependencyDetectionService()
         inner = FlextInfraDependencyDetectionService.to_infra_value({
-            "custom_module": "types-custom"
+            "custom_module": "types-custom",
         })
         tm.that(inner, none=False)
         limits: t.MappingKV[str, t.JsonValue] = {
-            "typing_libraries": {"module_to_package": inner}
+            "typing_libraries": {"module_to_package": inner},
         }
         tm.that(
-            service.module_to_types_package("custom_module", limits), eq="types-custom"
+            service.module_to_types_package("custom_module", limits),
+            eq="types-custom",
         )

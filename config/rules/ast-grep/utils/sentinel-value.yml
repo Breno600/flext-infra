@@ -1,0 +1,16 @@
+# A value that carries "no result": None, a boolean, an empty literal
+# collection, or an empty set()/frozenset() call. True is a sentinel too: an
+# error branch that returns True is fail-open. 0 and "" are not: a zero count
+# or an empty string is often the correct computed result.
+id: sentinel-value
+language: python
+rule:
+  any:
+    - kind: none
+    - kind: "true"
+    - kind: "false"
+    - pattern: "[]"
+    - pattern: "()"
+    - pattern: "{}"
+    - pattern: set()
+    - pattern: frozenset()

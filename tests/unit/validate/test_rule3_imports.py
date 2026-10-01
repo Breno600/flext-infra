@@ -47,7 +47,9 @@ class TestsFlextInfraRule3ImportRules:
         expected_violation_substr: str,
     ) -> None:
         root = u.Tests.namespace_project(
-            tmp_path, module_source=module_source, module_name=module_name
+            tmp_path,
+            module_source=module_source,
+            module_name=module_name,
         )
         u.Tests.assert_namespace_invalid(
             m.Infra.NamespaceValidateCommand(repository_root=root),
@@ -55,17 +57,18 @@ class TestsFlextInfraRule3ImportRules:
         )
 
     def test_rule3_utilities_facade_import_remains_allowed(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         root = u.Tests.namespace_project(
             tmp_path,
             module_source=u.Tests.namespace_fixture(
-                "rule3_utilities_facade_import.pysrc"
+                "rule3_utilities_facade_import.pysrc",
             ),
             module_name="utilities.py",
         )
         u.Tests.assert_namespace_valid(
-            m.Infra.NamespaceValidateCommand(repository_root=root)
+            m.Infra.NamespaceValidateCommand(repository_root=root),
         )
 
     def test_rule3_models_facade_import_remains_allowed(self, tmp_path: Path) -> None:
@@ -75,11 +78,12 @@ class TestsFlextInfraRule3ImportRules:
             module_name="models.py",
         )
         u.Tests.assert_namespace_valid(
-            m.Infra.NamespaceValidateCommand(repository_root=root)
+            m.Infra.NamespaceValidateCommand(repository_root=root),
         )
 
     def test_rule3_settings_owner_declaration_facade_runtime_imports_allowed(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """D1 carve-out: settings/config owners may runtime-import m/t/u.
 
@@ -91,12 +95,12 @@ class TestsFlextInfraRule3ImportRules:
         root = u.Tests.namespace_project(
             tmp_path,
             module_source=u.Tests.namespace_fixture(
-                "rule3_settings_owner_facade_imports.pysrc"
+                "rule3_settings_owner_facade_imports.pysrc",
             ),
             module_name="_settings.py",
         )
         u.Tests.assert_namespace_valid(
-            m.Infra.NamespaceValidateCommand(repository_root=root)
+            m.Infra.NamespaceValidateCommand(repository_root=root),
         )
 
     def test_rule3_settings_owner_c_import_allowed(self, tmp_path: Path) -> None:
@@ -109,7 +113,7 @@ class TestsFlextInfraRule3ImportRules:
         root = u.Tests.namespace_project(
             tmp_path,
             module_source=u.Tests.namespace_fixture(
-                "rule3_settings_owner_c_import.pysrc"
+                "rule3_settings_owner_c_import.pysrc",
             ),
             module_name="_settings.py",
         )
@@ -119,5 +123,6 @@ class TestsFlextInfraRule3ImportRules:
 
         tm.ok(result)
         u.Tests.assert_namespace_no_violation_contains(
-            request, "reverse runtime import"
+            request,
+            "reverse runtime import",
         )

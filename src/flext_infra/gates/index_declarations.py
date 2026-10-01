@@ -48,7 +48,9 @@ class FlextInfraIndexDeclarationsGate(FlextInfraGate):
 
     @override
     def check(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
         """Report every index entry the repository's declarations contradict."""
         _ = ctx
@@ -63,7 +65,10 @@ class FlextInfraIndexDeclarationsGate(FlextInfraGate):
             )
         defects = errors.unwrap()
         return self._build_project_error_gate_result(
-            project_dir, passed=not defects, errors=list(defects), started=started
+            project_dir,
+            passed=not defects,
+            errors=list(defects),
+            started=started,
         )
 
     @staticmethod
