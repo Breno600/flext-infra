@@ -8,7 +8,7 @@ from collections.abc import MutableMapping
 from io import StringIO
 from pathlib import Path
 
-from flext_infra import c, m, t
+from flext_infra import c, m, p, t
 
 from ._rope_analysis.asthelpers import FlextInfraUtilitiesRopeAnalysisAstHelpers
 from .discovery import FlextInfraUtilitiesDiscovery
@@ -263,9 +263,10 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         *,
         violations: t.SequenceOf[m.Infra.CompatibilityAliasViolation],
         parse_failures: t.MutableSequenceOf[m.Infra.ParseFailureViolation],
+        alias_migrator: p.Infra.ProjectAliasMigratorFactory,
         gates: t.StrSequence | None = None,
     ) -> None:
-        """Rewrite compatibility alias violations."""
+        """Rewrite compatibility alias violations with the caller's alias migrator."""
         assignment_grouped: t.MappingKV[Path, t.MutableStrMapping] = defaultdict(dict)
         compat_import_grouped: t.MappingKV[
             Path, t.MutableSequenceOf[m.Infra.CompatibilityAliasViolation]
@@ -314,6 +315,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                     for violation in file_violations
                 ),
                 parse_failures,
+                alias_migrator=alias_migrator,
             )
             for file_path, file_violations in compat_import_grouped.items():
                 FlextInfraUtilitiesRefactorNamespaceMoves._rewrite_compat_import_aliases_in_file(

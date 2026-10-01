@@ -34,6 +34,9 @@ from flext_infra.detectors.private_import_bypass_detector import (
     FlextInfraPrivateImportBypassDetector,
 )
 from flext_infra.detectors.runtime_alias_detector import FlextInfraRuntimeAliasDetector
+from flext_infra.refactor.project_alias_migrator import (
+    FlextInfraRefactorProjectAliasMigrator,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -286,7 +289,10 @@ class FlextInfraNamespaceEnforcerProjectMixin:
                 )
             ),
             rewrite_fn=lambda vs: u.Infra.rewrite_compatibility_alias_violations(
-                violations=vs, parse_failures=parse_failures, gates=gates
+                violations=vs,
+                parse_failures=parse_failures,
+                alias_migrator=FlextInfraRefactorProjectAliasMigrator,
+                gates=gates,
             ),
             apply=apply,
         )

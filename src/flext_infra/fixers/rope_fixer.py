@@ -26,6 +26,9 @@ from flext_infra.detectors.private_import_bypass_detector import (
 from flext_infra.refactor.classvar_constant_autofix import (
     FlextInfraRefactorClassvarConstantAutofix,
 )
+from flext_infra.refactor.project_alias_migrator import (
+    FlextInfraRefactorProjectAliasMigrator,
+)
 
 from .base import FlextInfraFixerAdapter
 
@@ -432,7 +435,9 @@ class FlextInfraRopeFixerAdapter(FlextInfraFixerAdapter):
         ) -> None:
             if ctx.apply:
                 u.Infra.rewrite_compatibility_alias_violations(
-                    violations=file_violations, parse_failures=[]
+                    violations=file_violations,
+                    parse_failures=[],
+                    alias_migrator=FlextInfraRefactorProjectAliasMigrator,
                 )
 
         return self._run_batch_file_fix_steps(
