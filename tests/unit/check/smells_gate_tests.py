@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import importlib
-import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import pytest
 from flext_tests import tm
@@ -15,17 +12,10 @@ from flext_infra.check.gate_registry import FlextInfraGateRegistry
 from flext_infra.gates.smells import FlextInfraSmellsGate
 from tests import m, u
 
-if TYPE_CHECKING:
-    from collections.abc import Iterator
-
 
 @pytest.fixture
-def smells_project(tmp_path: Path) -> Iterator[Path]:
-    """One declared, importable project inside ``tmp_path``.
-
-    The package name is unique per test so no module cached by another test
-    stands in for this one.
-    """
+def smells_project(tmp_path: Path) -> Path:
+    """One declared project inside ``tmp_path`` for qlty to scan."""
     name = f"smells-{tmp_path.name}"
     project = u.Tests.mk_project(
         tmp_path,
@@ -33,14 +23,7 @@ def smells_project(tmp_path: Path) -> Iterator[Path]:
         pyproject=f'[project]\nname = "{name}"\nversion = "0.1.0"\n',
         with_src=True,
     )
-    src = str(project / "src")
-    sys.path.insert(0, src)
-    importlib.invalidate_caches()
-    try:
-        yield project
-    finally:
-        sys.path.remove(src)
-        importlib.invalidate_caches()
+    return project
 
 
 class TestsFlextInfraSmellsGate:

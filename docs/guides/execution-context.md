@@ -203,7 +203,8 @@ gates still require execution without warnings or residual findings.
 `smells` is not part of the `make check` partitions. The selector-free `make smells`
 verb runs only the qlty smell scan and fails when it finds defects. The
 `runtime-census` gate stays in `make check` and grades every runtime enforcement
-finding, including rules that qlty also classifies as smells.
+finding, including rules that qlty also classifies as smells. An empty or
+malformed qlty SARIF response is a failed scan, not a zero-finding receipt.
 
 ## Bounded Mypy failure status
 
