@@ -139,13 +139,6 @@ class FlextInfraModelsDepsToolConfig(
                 description="Fleet-default wall-clock maximum for one testmon runner operation.",
             ),
         ]
-        run_timeout_overrides: Annotated[
-            Mapping[str, Annotated[int, m.Field(gt=0)]],
-            m.Field(
-                alias="run-timeout-overrides",
-                description="Per-project hard wall for one testmon runner operation.",
-            ),
-        ] = {}
         termination_grace_seconds: Annotated[
             int,
             m.Field(
@@ -395,13 +388,7 @@ class FlextInfraModelsDepsToolConfig(
             if self.slow_timeout_seconds >= self.run_timeout_seconds:
                 msg = "pytest slow timeout must be less than run timeout"
                 raise ValueError(msg)
-            if any(
-                timeout <= self.suite_stop_reserve_seconds
-                for timeout in (
-                    self.run_timeout_seconds,
-                    *self.run_timeout_overrides.values(),
-                )
-            ):
+            if self.run_timeout_seconds <= self.suite_stop_reserve_seconds:
                 msg = "pytest run timeout must exceed the suite stop reserve"
                 raise ValueError(msg)
             derived_options = ("--timeout", "--session-timeout")

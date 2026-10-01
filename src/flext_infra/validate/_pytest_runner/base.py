@@ -109,13 +109,6 @@ class FlextInfraPytestRunnerBase(s[int]):
             return None
         return u.Infra.project_name_from_payload(pyproject_path, payload)
 
-    def run_timeout_seconds(self, policy: PytestPolicy) -> int:
-        """Resolve the declared project's measured wall over the fleet default."""
-        name = self._declared_project_name()
-        if name is None:
-            return policy.run_timeout_seconds
-        return policy.run_timeout_overrides.get(name, policy.run_timeout_seconds)
-
     def _declared_worker_ceiling(
         self, policy: PytestPolicy
     ) -> int | m.Infra.PytestWorkerCeiling:

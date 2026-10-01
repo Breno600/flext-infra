@@ -516,7 +516,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
             has=f"RUNTIME_VENV={u.Infra.runtime_environment_dir(project_root)}",
         )
         testmon = config.Infra.codegen.make.testmon_cache
-        project_key = "$(subst /,_,$(PROJECT_ROOT))"
+        project_key = "$(PROJECT_NAME)"
         database = (
             f"{testmon.external_storage_directory}/{project_key}/"
             f"{testmon.database_filename}"

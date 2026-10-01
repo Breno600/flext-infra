@@ -374,7 +374,7 @@ Infra:
           # families (e.g. ENFORCE-079) stay fully blocking.
           census_rule_families: [ENFORCE-046, ENFORCE-066, ENFORCE-067, ENFORCE-069, class_prefix]
       # One filename and the root-relative runner paths; the runner places the
-      # database in platformdirs' external per-worktree cache.
+      # database in an external cache shared by worktrees of one project.
       runtime_environment_directory: .flext-venvs
       testmon_cache:
         database_filename: .testmondata

@@ -62,7 +62,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         pytest = config.Infra.tooling.tools.pytest
         return (
             self.started_at_monotonic
-            + self.run_timeout_seconds(pytest)
+            + pytest.run_timeout_seconds
             - pytest.suite_stop_reserve_seconds
         )
 
