@@ -1,10 +1,14 @@
-"""Phase: Ensure standard Ruff configuration inline with known-first-party overlay."""
+"""Phase: Ensure standard Ruff configuration inline with known-first-party overlay.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from flext_infra import c, config, m, t, u
+from flext_infra import c, m, t, u
 from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
 from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
@@ -19,7 +23,15 @@ class FlextInfraEnsureRuffConfigPhase:
 
     @staticmethod
     def _workspace_project_namespaces(project_dir: Path) -> t.StrSequence:
-        """Discover child project packages when generating repository root settings."""
+        """Discover child project packages when generating repository root settings.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            ValueError: If ``discovered.failure``.
+
+        """
         if not (project_dir / c.PYPROJECT_FILENAME).is_file():
             return ()
         discovered = u.Infra.discover_projects(project_dir)
@@ -48,6 +60,13 @@ class FlextInfraEnsureRuffConfigPhase:
         Content-only repositories are foreign, read-only trees and therefore
         never enter Ruff. Explicit ``exclusions`` extend that same typed scope
         for non-repository paths without duplicating repository declarations.
+
+        Returns:
+            Immutable repository and explicit exclusion path globs.
+
+        Raises:
+            ValueError: If ``paths.failure``.
+
         """
         if not (project_dir / c.PYPROJECT_FILENAME).is_file():
             return ()
@@ -68,6 +87,13 @@ class FlextInfraEnsureRuffConfigPhase:
         Like the manifest authority it is order-independent: a repository
         declares a retired tree once and every root-scoped projection
         converges.
+
+        Returns:
+            The resulting ``frozenset[str]``.
+
+        Raises:
+            ValueError: If ``paths.failure``.
+
         """
         if not (project_dir / c.PYPROJECT_FILENAME).is_file():
             return frozenset()
@@ -79,35 +105,32 @@ class FlextInfraEnsureRuffConfigPhase:
         return frozenset(p.parts[0] for p in paths.value if Path(p).parts)
 
     @staticmethod
-    def compose_per_file_ignores(
+    def project_per_file_ignores(
         project_dir: Path,
-        *,
-        global_ignores: t.MappingKV[str, t.StrSequence] | None = None,
+        global_ignores: t.MappingKV[str, t.StrSequence],
     ) -> t.MappingKV[str, t.StrSequence]:
-        """Return the declared Ruff exemption map for one project."""
-        effective_global = (
-            config.Infra.tooling.tools.ruff.lint.per_file_ignores
-            if global_ignores is None
-            else global_ignores
-        )
-        # An exemption glob rooted on a first-class directory that the
-        # workspace retired (e.g. scripts/**, declared as an analysis
-        # exclusion in its workspace SSOT) must not survive the render: it
-        # documents scope that no longer exists and re-created stale entries
-        # on every conformance pass. Declared exclusions are order-independent
-        # — a disk probe oscillated between the deps pass and the
-        # root-materializing gen pass.
+        """Return the fleet Ruff exemption map scoped to one project.
+
+        The tooling owner declares every per-file exemption; a repository
+        declares none of its own. Both the in-place pyproject edit and the
+        full template render read this one map. A glob rooted on a directory
+        the workspace retired (declared as an analysis exclusion) is dropped,
+        because it names scope that no longer exists.
+
+        Returns:
+            The fleet Ruff exemption map scoped to one project.
+
+        """
         excluded_roots = FlextInfraToolTablesPhase.excluded_roots(project_dir)
-        scoped_global = {
-            pattern: rules
-            for pattern, rules in effective_global.items()
+        return {
+            pattern: tuple(sorted(rules))
+            for pattern, rules in global_ignores.items()
             if (
                 (root := pattern.split("/")[0]).endswith("**")
                 or not root.isidentifier()
                 or root not in excluded_roots
             )
         }
-        return scoped_global
 
     def _phase(
         self,
@@ -115,7 +138,12 @@ class FlextInfraEnsureRuffConfigPhase:
         path: Path,
         facts: m.Infra.RuffProjectFacts,
     ) -> m.Infra.DepsToml.PhaseConfig:
-        """Build the canonical Ruff phase for one project path."""
+        """Build the canonical Ruff phase for one project path.
+
+        Returns:
+            The resulting ``m.Infra.DepsToml.PhaseConfig``.
+
+        """
         ruff_cfg = self._tool_config.tools.ruff
         workspace_exclusions = (
             self._workspace_exclusion_globs(path.parent)
@@ -162,7 +190,10 @@ class FlextInfraEnsureRuffConfigPhase:
             table_path=(c.Infra.RUFF,),
             operations=(
                 toml.RemoveOp(key=c.Infra.EXTEND),
-                toml.ListOp(key="extend-exclude", values=sorted(workspace_exclusions)),
+                toml.ListOp(
+                    key="extend-exclude",
+                    values=sorted(workspace_exclusions),
+                ),
                 toml.ListOp(
                     key="namespace-packages",
                     values=sorted(existing_namespace_packages),
@@ -222,6 +253,34 @@ class FlextInfraEnsureRuffConfigPhase:
                                 sorted(ruff_cfg.lint.extend_safe_fixes),
                             ),
                         ),
+                        # Only the unscoped operator-authorized exceptions of
+                        # the tooling owner, the same SSOT the template renders.
+                        toml.SetOp(
+                            key="ignore",
+                            value=u.normalize_to_json_value(list(ruff_cfg.lint.ignore)),
+                        ),
+                    ),
+                ),
+                toml.PhaseConfig(
+                    name="ruff",
+                    root_path=(),
+                    table_path=(c.Infra.LINT_SECTION, "flake8-copyright"),
+                    operations=(
+                        toml.SetOp(
+                            key="notice-rgx",
+                            value=ruff_cfg.lint.copyright_notice_rgx,
+                        ),
+                    ),
+                ),
+                toml.PhaseConfig(
+                    name="ruff",
+                    root_path=(),
+                    table_path=(c.Infra.LINT_SECTION, "flake8-tidy-imports"),
+                    operations=(
+                        toml.SetOp(
+                            key="ban-relative-imports",
+                            value=ruff_cfg.lint.ban_relative_imports,
+                        ),
                     ),
                 ),
                 toml.PhaseConfig(
@@ -274,13 +333,21 @@ class FlextInfraEnsureRuffConfigPhase:
         payload: t.MutableJsonMapping,
         *,
         path: Path,
-        generated_python_roots: t.StrSequence = (),
         analysis_exclusions: t.StrSequence | None = None,
+        generated_python_roots: t.StrSequence = (),
     ) -> t.StrSequence:
-        """Apply canonical Ruff settings directly to one normalized payload."""
-        effective_ignores = self.compose_per_file_ignores(
+        """Apply canonical Ruff settings directly to one normalized payload.
+
+        ``analysis_exclusions`` is the caller's declared topology; ``None``
+        derives the workspace exclusion globs on disk.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
+        effective_ignores = self.project_per_file_ignores(
             path.parent,
-            global_ignores=self._tool_config.tools.ruff.lint.per_file_ignores,
+            self._tool_config.tools.ruff.lint.per_file_ignores,
         )
         current_ignores = u.Cli.toml_mapping_path(
             payload,
@@ -302,8 +369,8 @@ class FlextInfraEnsureRuffConfigPhase:
                             if pattern not in effective_ignores
                         ],
                         per_file_ignores=effective_ignores,
-                        generated_python_roots=generated_python_roots,
                         analysis_exclusions=analysis_exclusions,
+                        generated_python_roots=generated_python_roots,
                     ),
                 ),
             ),

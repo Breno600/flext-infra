@@ -22,6 +22,8 @@ if TYPE_CHECKING:
 
 
 class TestsFlextInfraCodegenScaffolder:
+    """Tests for ``FlextInfraCodegenScaffolder``."""
+
     @staticmethod
     def _create_test_project(
         tmp_path: Path,
@@ -48,6 +50,7 @@ class TestsFlextInfraCodegenScaffolder:
         return project_info
 
     def test_all_modules_present_creates_nothing(self, tmp_path: Path) -> None:
+        """Test all modules present creates nothing."""
         project = self._create_test_project(tmp_path, with_all_modules=True)
         scaffolder = FlextInfraCodegenScaffolder(repository_root=tmp_path)
         [result] = scaffolder.run(projects=[self._project_info(project)])
@@ -56,6 +59,7 @@ class TestsFlextInfraCodegenScaffolder:
         tm.that(result.project, eq="test-project")
 
     def test_creates_missing_src_modules(self, tmp_path: Path) -> None:
+        """Test creates missing src modules."""
         project = self._create_test_project(tmp_path, with_all_modules=False)
         scaffolder = FlextInfraCodegenScaffolder(repository_root=tmp_path)
         [result] = scaffolder.run(projects=[self._project_info(project)])
@@ -65,6 +69,7 @@ class TestsFlextInfraCodegenScaffolder:
             tm.that((pkg / mod).exists(), eq=True)
 
     def test_creates_only_missing_modules(self, tmp_path: Path) -> None:
+        """Test creates only missing modules."""
         project = self._create_test_project(tmp_path, with_all_modules=False)
         pkg = project / "src" / "test_project"
         (pkg / "constants.py").write_text("class TestProjectConstants:\n    pass\n")
@@ -77,6 +82,7 @@ class TestsFlextInfraCodegenScaffolder:
         tm.that(created_names, eq=["protocols.py", "typings.py", "utilities.py"])
 
     def test_creates_tests_modules_when_tests_dir_exists(self, tmp_path: Path) -> None:
+        """Test creates tests modules when tests dir exists."""
         project = self._create_test_project(tmp_path, with_all_modules=True)
         tests_dir = project / "tests"
         tests_dir.mkdir()
@@ -100,6 +106,7 @@ class TestsFlextInfraCodegenScaffolder:
         tm.that(constants_source, has="c = TestsTestProjectConstants")
 
     def test_skips_tests_modules_when_no_tests_dir(self, tmp_path: Path) -> None:
+        """Test skips tests modules when no tests dir."""
         project = self._create_test_project(tmp_path, with_all_modules=True)
         scaffolder = FlextInfraCodegenScaffolder(repository_root=tmp_path)
         [result] = scaffolder.run(projects=[self._project_info(project)])
@@ -107,6 +114,7 @@ class TestsFlextInfraCodegenScaffolder:
         tm.that(tests_created, empty=True)
 
     def test_second_run_is_noop(self, tmp_path: Path) -> None:
+        """Test second run is noop."""
         project = self._create_test_project(tmp_path, with_all_modules=False)
         scaffolder = FlextInfraCodegenScaffolder(repository_root=tmp_path)
         [first_result] = scaffolder.run(projects=[self._project_info(project)])
@@ -116,6 +124,7 @@ class TestsFlextInfraCodegenScaffolder:
         tm.that(len(second_result.files_skipped), eq=5)
 
     def test_examples_and_scripts_inherit_project_facade(self, tmp_path: Path) -> None:
+        """Test examples and scripts inherit project facade."""
         project = self._create_test_project(tmp_path, with_all_modules=True)
         (project / "examples").mkdir()
         (project / "scripts").mkdir()

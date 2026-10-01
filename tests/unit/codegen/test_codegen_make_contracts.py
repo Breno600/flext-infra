@@ -26,6 +26,7 @@ class TestsFlextInfraCodegenMakeContracts:
     def test_invalid_public_custom_make_fails_without_side_effects(
         infra_git_repo: Path,
     ) -> None:
+        """Test invalid public custom make fails without side effects."""
         root = infra_git_repo
         custom = root / "custom.mk"
         content = ".PHONY: public-handler\npublic-handler:\n\t@true\n"
@@ -54,6 +55,7 @@ class TestsFlextInfraCodegenMakeContracts:
         infra_git_repo: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
+        """Test valid private custom make has no rejection."""
         root = infra_git_repo
         workspace = TestsFlextInfraConformSupport.standalone_workspace(root)
         custom = root / "custom.mk"
@@ -207,6 +209,7 @@ class TestsFlextInfraCodegenMakeContracts:
 
     @pytest.mark.slow
     def test_non_regular_custom_make_remains_fatal(self, infra_git_repo: Path) -> None:
+        """Test non regular custom make remains fatal."""
         root = infra_git_repo
         workspace = TestsFlextInfraConformSupport.standalone_workspace(root)
         TestsFlextInfraConformSupport.apply_conform_surface(

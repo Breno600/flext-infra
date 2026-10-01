@@ -1,4 +1,8 @@
-"""Render context and repository reference models."""
+"""Render context and repository reference models.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -25,7 +29,15 @@ class FlextInfraConfigModelsContexts:
 
     @staticmethod
     def _validated_hatch_build_hook_path(value: Path | None) -> Path | None:
-        """Return one normalized project-relative Hatch hook declaration."""
+        """Return one normalized project-relative Hatch hook declaration.
+
+        Returns:
+            One normalized project-relative Hatch hook declaration.
+
+        Raises:
+            ValueError: If hatch_build_hook_path must be a safe project-relative path.
+
+        """
         if value is None:
             return None
         raw = str(value)
@@ -335,6 +347,11 @@ class FlextInfraConfigModelsContexts:
             declared dependency profile, never a per-project hand choice: the
             first entry of ``scaffold.project.config_bases`` whose distribution
             the profile depends on (its runtime requirements or its upstream).
+
+            Raises:
+                ValueError: If scaffold.project.config_bases declares no base for the
+                    dependency profile of.
+
             """
             profile = self.dependency_profile
             depended = {
@@ -944,32 +961,6 @@ class FlextInfraConfigModelsContexts:
                 ),
             ),
         ] = None
-
-    class SubprojectPolicy(FlextInfraConfigModelsContract.ConfigContract):
-        """Workspace policy one governed .gitmodules entry loads under."""
-
-        integration_branch: Annotated[
-            str | None,
-            m.Field(
-                default=None,
-                description="Detected integration line; None follows the superproject",
-            ),
-        ]
-        workspace_beads: Annotated[
-            FlextInfraConfigModelsBeads.BeadsProjectSpec | None,
-            m.Field(default=None, description="Inherited workspace beads spec"),
-        ]
-        declared_member: Annotated[
-            FlextInfraConfigModelsContexts.RepositoryRef | None,
-            m.Field(default=None, description="Catalog-declared member reference"),
-        ]
-        allow_unprovisioned_members: Annotated[
-            bool,
-            m.Field(
-                default=False,
-                description="Accept members without provisioned checkouts",
-            ),
-        ]
 
     class RepositoryConformTarget(FlextInfraConfigModelsContract.ConfigContract):
         """Runtime-derived conformance identity for one repository."""

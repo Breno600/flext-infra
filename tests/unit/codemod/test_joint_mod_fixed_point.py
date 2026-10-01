@@ -1,4 +1,8 @@
-"""Public mod circuit converges across semantic, AST, and text boundaries."""
+"""Public mod circuit converges across semantic, AST, and text boundaries.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -17,7 +21,12 @@ class TestsJointModFixedPoint:
 
     @staticmethod
     def _run(root: Path) -> int:
-        """Invoke the same public application route as the workspace dispatcher."""
+        """Invoke the same public application route as the workspace dispatcher.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         return infra_main([
             "refactor",
             "mod",
@@ -75,6 +84,35 @@ class TestsJointModFixedPoint:
         tm.that(first.decode(), has="from __future__ import annotations")
         tm.that(self._run(mod_workspace), eq=0)
         tm.that(sample.read_bytes(), eq=first)
+
+    def test_module_end_relocation_closes_the_module_with_all(
+        self,
+        mod_workspace: Path,
+    ) -> None:
+        """A declared ``__all__`` ahead of other statements moves to the module end."""
+        sample = mod_workspace / "sample.py"
+        u.Cli.atomic_write_text_file(
+            sample,
+            '"""Export order source."""\n\n'
+            "from __future__ import annotations\n\n"
+            '__all__: list[str] = ["run"]\n\n\n'
+            "def run() -> int:\n"
+            '    """Return one."""\n'
+            "    return 1\n",
+        ).unwrap()
+        before = FlextInfraModGateEngine.scan(mod_workspace, fix=False).unwrap()
+        tm.that(
+            any(item.rule_id == "require-all-last" for item in before.entries),
+            eq=True,
+        )
+
+        tm.that(self._run(mod_workspace), eq=0)
+
+        first = sample.read_text(encoding="utf-8")
+        tm.that(first.rstrip().splitlines()[-1], eq='__all__: list[str] = ["run"]')
+        tm.that(first, has='    return 1\n\n\n__all__: list[str] = ["run"]\n')
+        tm.that(self._run(mod_workspace), eq=0)
+        tm.that(sample.read_text(encoding="utf-8"), eq=first)
 
     def test_text_exposes_ast_work_and_both_converge_idempotently(
         self,

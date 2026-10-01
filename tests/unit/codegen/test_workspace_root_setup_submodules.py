@@ -1,4 +1,8 @@
-"""Workspace submodule setup behavior through generated Make surfaces."""
+"""Workspace submodule setup behavior through generated Make surfaces.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -181,6 +185,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test generated setup orders submodules before first uv."""
         rendered = self._render_repository_root_makefile(tmp_path)
 
         tm.that(rendered, has="_builtin_setup_environment: _builtin_setup_submodules")

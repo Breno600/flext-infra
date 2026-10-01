@@ -1,4 +1,8 @@
-"""Release publish phase: upload exactly what the build receipt attests."""
+"""Release publish phase: upload exactly what the build receipt attests.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -17,7 +21,12 @@ class FlextInfraReleasePublishMixin(FlextInfraReleaseBuildMixin):
     """
 
     def phase_publish(self, ctx: m.Infra.ReleasePhaseDispatchConfig) -> p.Result[bool]:
-        """Publish the receipt's artifacts as a GitHub release and, on request, to the index."""
+        """Publish the receipt's artifacts as a GitHub release and, on request, to the index.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         receipt = self._verified_receipt(ctx)
         if receipt.failure:
             return r[bool].from_failure(receipt)
@@ -41,7 +50,12 @@ class FlextInfraReleasePublishMixin(FlextInfraReleaseBuildMixin):
         self,
         ctx: m.Infra.ReleasePhaseDispatchConfig,
     ) -> p.Result[m.Infra.BuildReport]:
-        """Load the receipt and prove every artifact still matches its digest."""
+        """Load the receipt and prove every artifact still matches its digest.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.BuildReport]``.
+
+        """
         path = (
             self._release_dir(ctx.repository_root, ctx.tag)
             / c.Infra.RELEASE_REPORT_FILENAME
@@ -88,7 +102,12 @@ class FlextInfraReleasePublishMixin(FlextInfraReleaseBuildMixin):
         ctx: m.Infra.ReleasePhaseDispatchConfig,
         report: m.Infra.BuildReport,
     ) -> p.Result[bool]:
-        """Create or refresh the GitHub release with the receipt's artifacts."""
+        """Create or refresh the GitHub release with the receipt's artifacts.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         root = ctx.repository_root
         assets = [a.path for record in report.records for a in record.artifacts]
         exists = u.Cli.capture(
@@ -125,6 +144,10 @@ class FlextInfraReleasePublishMixin(FlextInfraReleaseBuildMixin):
 
         ``--check-url`` skips files already on the index, so a rerun after a
         partial failure resumes instead of failing on the first duplicate.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         artifacts = {
             record.project: tuple(a.path for a in record.artifacts)

@@ -5,6 +5,9 @@ owner for every profile) and its gate verbs run the same local bodies as every
 repository: a workspace root consumes its declared members as libraries and
 never fans a verb out across them, locally exactly as in CI (operator ruling
 2026-09-29).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -20,6 +23,8 @@ from tests import u, u as test_u
 
 
 class TestsFlextInfraCodegenRepositoryRootScope:
+    """Tests for ``FlextInfraCodegenRepositoryRootScope``."""
+
     @staticmethod
     def test_conform_owns_repository_root_makefile() -> None:
         """The single Makefile render entry includes the workspace profile."""
@@ -193,7 +198,12 @@ class TestsFlextInfraCodegenRepositoryRootScope:
 
     @staticmethod
     def _render_root_makefile(tmp_path: Path) -> Path:
-        """Render base/Makefile.j2 from a typed workspace fixture."""
+        """Render base/Makefile.j2 from a typed workspace fixture.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         repository = u.Tests.repository_ref("workspace-fixture")
         workspace = u.Tests.workspace_spec(
             repository,

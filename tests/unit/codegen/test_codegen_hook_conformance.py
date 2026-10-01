@@ -1,4 +1,8 @@
-"""Behavioral contracts for generated Git-hook conformance."""
+"""Behavioral contracts for generated Git-hook conformance.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -34,12 +38,22 @@ class TestsFlextInfraCodegenHookConformance:
 
     @staticmethod
     def _standalone_workspace(root: Path) -> m.Infra.WorkspaceSpec:
-        """Load the smallest repository-local topology needed by conform."""
+        """Load the smallest repository-local topology needed by conform.
+
+        Returns:
+            The resulting ``m.Infra.WorkspaceSpec``.
+
+        """
         return test_u.Tests.standalone_workspace(root)
 
     @staticmethod
     def _render_hooks(root: Path) -> str:
-        """Render the manifest-owned hook artifact through the public owner."""
+        """Render the manifest-owned hook artifact through the public owner.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         rendered = tm.ok(
             u.Cli.template_render(
                 _HOOK_TEMPLATE,

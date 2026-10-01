@@ -2,6 +2,9 @@
 
 ``c.Infra.SARIF_TOOL_INFO`` owns the gate ids; the registry classes and the
 `make check` vocabulary are derived from it and must never diverge.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -14,8 +17,11 @@ from tests import c
 
 
 class TestsFlextInfraGateRegistry:
+    """Tests for ``FlextInfraGateRegistry``."""
+
     @staticmethod
     def test_every_allowed_gate_resolves_in_registry() -> None:
+        """Test every allowed gate resolves in registry."""
         registry = FlextInfraGateRegistry.default()
         for gate_id in c.Infra.ALLOWED_GATES:
             gate_cls = registry.get(gate_id)
@@ -24,12 +30,14 @@ class TestsFlextInfraGateRegistry:
 
     @staticmethod
     def test_check_vocabulary_is_allowed_minus_mutating() -> None:
+        """Test check vocabulary is allowed minus mutating."""
         allowed = frozenset(c.Infra.CANONICAL_GATE_IDS)
         tm.that(allowed, eq=c.Infra.ALLOWED_GATES - c.Infra.MUTATING_GATES)
         tm.that(allowed & c.Infra.MUTATING_GATES, eq=frozenset())
 
     @staticmethod
     def test_default_and_fixable_are_subsets_of_check_vocabulary() -> None:
+        """Test default and fixable are subsets of check vocabulary."""
         allowed = frozenset(c.Infra.CANONICAL_GATE_IDS)
         tm.that(frozenset(c.Infra.CANONICAL_DEFAULT_GATE_IDS) <= allowed, eq=True)
         tm.that(frozenset(c.Infra.CANONICAL_FIXABLE_GATE_IDS) <= allowed, eq=True)

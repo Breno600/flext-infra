@@ -28,7 +28,12 @@ class FlextInfraCodegenLayoutApplyMixin(
         project_dir: Path,
         report: m.Infra.LayoutProjectReport,
     ) -> p.Result[m.Infra.LayoutProjectReport]:
-        """Execute every planned finding and return the updated report."""
+        """Execute every planned finding and return the updated report.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.LayoutProjectReport]``.
+
+        """
         findings: list[m.Infra.LayoutFinding] = []
         gitignore_status: t.Infra.LayoutStatus = "noop"
         actionable: t.VariadicTuple[m.Infra.LayoutFinding] = report.actionable
@@ -60,7 +65,12 @@ class FlextInfraCodegenLayoutApplyMixin(
         project_dir: Path,
         finding: m.Infra.LayoutFinding,
     ) -> p.Result[m.Infra.LayoutFinding]:
-        """Execute one move/archive finding; missing sources are no-ops."""
+        """Execute one move/archive finding; missing sources are no-ops.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.LayoutFinding]``.
+
+        """
         source = project_dir / finding.path
         if not source.exists():
             return r[m.Infra.LayoutFinding].ok(
@@ -76,7 +86,12 @@ class FlextInfraCodegenLayoutApplyMixin(
         finding: m.Infra.LayoutFinding,
         source: Path,
     ) -> p.Result[m.Infra.LayoutFinding]:
-        """Move one file/dir to its canonical target, merging dir collisions."""
+        """Move one file/dir to its canonical target, merging dir collisions.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.LayoutFinding]``.
+
+        """
         target = project_dir / finding.target
         if source.is_dir() and target.exists():
             merge = self._merge_directory(project_dir, source, target, finding.path)
@@ -108,7 +123,12 @@ class FlextInfraCodegenLayoutApplyMixin(
         finding: m.Infra.LayoutFinding,
         source: Path,
     ) -> p.Result[m.Infra.LayoutFinding]:
-        """Archive one entry into the archive root, preserving content."""
+        """Archive one entry into the archive root, preserving content.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.LayoutFinding]``.
+
+        """
         archived = self._archive_path(project_dir, source, finding.path, finding)
         if archived.failure:
             return r[m.Infra.LayoutFinding].from_failure(archived)
@@ -124,7 +144,12 @@ class FlextInfraCodegenLayoutApplyMixin(
         target: Path,
         source_rel: str,
     ) -> p.Result[bool]:
-        """Merge a docs dir into an existing target dir file-by-file."""
+        """Merge a docs dir into an existing target dir file-by-file.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         files = sorted(path for path in source.rglob("*") if path.is_file())
         for file_path in files:
             rel = file_path.relative_to(source).as_posix()

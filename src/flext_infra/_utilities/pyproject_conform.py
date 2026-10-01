@@ -1,4 +1,8 @@
-"""Autonomous library pyproject conformance through the flext-cli TOML facade."""
+"""Autonomous library pyproject conformance through the flext-cli TOML facade.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

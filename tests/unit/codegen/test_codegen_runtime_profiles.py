@@ -1,4 +1,8 @@
-"""Declared profiles and complete CUSTOM requirements survive public generation."""
+"""Declared profiles and complete CUSTOM requirements survive public generation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -14,6 +18,8 @@ from tests import u
 
 
 class TestsFlextInfraCodegenRuntimeProfiles:
+    """Tests for ``FlextInfraCodegenRuntimeProfiles``."""
+
     @pytest.mark.parametrize(
         "upstream",
         tuple(

@@ -1,4 +1,8 @@
-"""Public tests for docs scope utilities."""
+"""Public tests for docs scope utilities.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -18,6 +22,7 @@ class TestsFlextInfraDocsShared:
 
     @staticmethod
     def test_doc_scope_creation(tmp_path: Path) -> None:
+        """Test doc scope creation."""
         report_dir = tmp_path / "reports"
         report_dir.mkdir(parents=True, exist_ok=True)
 
@@ -29,6 +34,7 @@ class TestsFlextInfraDocsShared:
 
     @staticmethod
     def test_doc_scope_requires_name(tmp_path: Path) -> None:
+        """Test doc scope requires name."""
         report_dir = tmp_path / "reports"
         report_dir.mkdir(parents=True, exist_ok=True)
 
@@ -39,6 +45,7 @@ class TestsFlextInfraDocsShared:
     def test_build_scopes_returns_root_and_selected_projects(
         tmp_path: Path,
     ) -> None:
+        """Test build scopes returns root and selected projects."""
         workspace = u.Tests.create_docs_workspace(
             tmp_path,
             project_names=("flext-a", "flext-b"),
@@ -61,6 +68,7 @@ class TestsFlextInfraDocsShared:
         # pyproject.toml is a governed single-project scope named after itself
         # ("workspace"), not the synthetic "root" scope used for a member-bearing
         # workspace.
+        """Test build scopes without filter still returns root scope."""
         workspace = u.Tests.create_docs_workspace(tmp_path)
 
         result = u.Infra.build_scopes(
@@ -76,6 +84,7 @@ class TestsFlextInfraDocsShared:
     def test_build_scopes_treats_non_flext_project_as_its_own_root(
         tmp_path: Path,
     ) -> None:
+        """Test build scopes treats non flext project as its own root."""
         project_root = tmp_path / "acme-content"
         project_root.mkdir()
         (project_root / c.PYPROJECT_FILENAME).write_text(
@@ -99,6 +108,7 @@ class TestsFlextInfraDocsShared:
     def test_build_scopes_preserves_declared_repository_root_and_projects(
         tmp_path: Path,
     ) -> None:
+        """Test build scopes preserves declared repository root and projects."""
         workspace = u.Tests.create_docs_workspace(tmp_path, project_names=("flext-a",))
         (workspace / c.PYPROJECT_FILENAME).write_text(
             "[project]\nname='workspace'\n\n[tool.uv.workspace]\nmembers=['flext-a']\n",
@@ -121,6 +131,7 @@ class TestsFlextInfraDocsShared:
     def test_build_scopes_skips_declared_workspace_without_materialized_projects(
         tmp_path: Path,
     ) -> None:
+        """Test build scopes skips declared workspace without materialized projects."""
         workspace = tmp_path / "workspace"
         workspace.mkdir()
         (workspace / c.PYPROJECT_FILENAME).write_text(
@@ -147,6 +158,7 @@ class TestsFlextInfraDocsShared:
 
     @staticmethod
     def test_build_scopes_preserves_disabled_root_policy(tmp_path: Path) -> None:
+        """Test build scopes preserves disabled root policy."""
         project_root = tmp_path / "acme-content"
         project_root.mkdir()
         (project_root / c.PYPROJECT_FILENAME).write_text(
@@ -167,6 +179,7 @@ class TestsFlextInfraDocsShared:
 
     @staticmethod
     def test_build_scopes_uses_custom_output_dir(tmp_path: Path) -> None:
+        """Test build scopes uses custom output dir."""
         workspace = u.Tests.create_docs_workspace(tmp_path, project_names=("flext-a",))
 
         result = u.Infra.build_scopes(
@@ -182,6 +195,7 @@ class TestsFlextInfraDocsShared:
     @staticmethod
     def test_build_scopes_skips_missing_projects(tmp_path: Path) -> None:
         # Why (X-70): see test_build_scopes_without_filter_still_returns_root_scope.
+        """Test build scopes skips missing projects."""
         workspace = u.Tests.create_docs_workspace(tmp_path)
 
         result = u.Infra.build_scopes(
@@ -197,6 +211,7 @@ class TestsFlextInfraDocsShared:
     def test_build_scopes_preserves_discovered_package_name(
         tmp_path: Path,
     ) -> None:
+        """Test build scopes preserves discovered package name."""
         workspace = tmp_path / "workspace"
         project_root = workspace / "flext-demo"
         package_root = project_root / "src" / "demo_pkg"

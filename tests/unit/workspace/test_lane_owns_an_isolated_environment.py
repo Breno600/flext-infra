@@ -1,4 +1,8 @@
-"""Lane provisioning owns a real local environment."""
+"""Lane provisioning owns a real local environment.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -25,9 +29,7 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         (repository / "Makefile").write_text(
             "PROJECT_ROOT := $(CURDIR)\n"
             "RUNTIME_ROOT := $(PROJECT_ROOT)\n"
-            "RUNTIME_VENV := $(dir $(CURDIR))"
-            f"{c.Infra.ENVIRONMENT_DIRECTORY}/"
-            "$(patsubst /%,%,$(CURDIR))\n"
+            f"RUNTIME_VENV := $(RUNTIME_ROOT)/{c.Infra.ENVIRONMENT_DIRECTORY}\n"
             ".PHONY: setup\n"
             "setup:\n"
             '\t@test "$(RUNTIME_ROOT)" = "$(PROJECT_ROOT)"\n'
@@ -82,6 +84,7 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test setup runs in lane and creates real local environment."""
         repository = self._repository(tmp_path)
         primary_sentinel = (
             infra_u.Infra.runtime_environment_dir(repository) / "primary-sentinel"
@@ -110,6 +113,7 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test foreign environment symlink is unlinked without following target."""
         repository = self._repository(tmp_path)
         lane = self._lane(repository, "feature/legacy-link")
         target = tmp_path / "foreign-environment"
@@ -129,6 +133,7 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test setup initializes lane gitlink without mutating primary."""
         repository = self._repository(tmp_path)
         self._declare_child(tmp_path, repository)
         tm.ok(
@@ -145,6 +150,7 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         assert not (repository / "member" / ".git").exists()
 
     def test_existing_real_lane_environment_is_preserved(self, tmp_path: Path) -> None:
+        """Test existing real lane environment is preserved."""
         repository = self._repository(tmp_path)
         lane = self._lane(repository, "feature/preserve-local")
         sentinel = infra_u.Infra.runtime_environment_dir(lane) / "sentinel"
@@ -156,6 +162,7 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         assert sentinel.read_text(encoding="utf-8") == "local\n"
 
     def test_add_only_creates_git_lane_without_setup(self, tmp_path: Path) -> None:
+        """Test add only creates git lane without setup."""
         repository = self._repository(tmp_path)
 
         lane = self._lane(repository, "feature/git-only")

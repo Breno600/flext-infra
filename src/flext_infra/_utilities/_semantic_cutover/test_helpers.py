@@ -1,4 +1,8 @@
-"""Promote shared test behavior using its original Rope declaration identity."""
+"""Promote shared test behavior using its original Rope declaration identity.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -197,7 +201,15 @@ class FlextInfraUtilitiesSemanticTestHelpers(
         path: Path,
         sources: t.MappingKV[Path, str],
     ) -> Path:
-        """Elect the unique declared utilities facade in this helper's tier."""
+        """Elect the unique declared utilities facade in this helper's tier.
+
+        Returns:
+            The resulting ``Path``.
+
+        Raises:
+            ValueError: If shared test helper requires one utilities facade.
+
+        """
         prefix = workspace.convention(path).module_policy.project_prefix
         owners = tuple(
             candidate

@@ -1,4 +1,8 @@
-"""Tests for Rope semantic analysis helpers."""
+"""Tests for Rope semantic analysis helpers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

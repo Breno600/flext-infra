@@ -1,4 +1,8 @@
-"""Census removal of unreferenced objects: dry-run preview and apply."""
+"""Census removal of unreferenced objects: dry-run preview and apply.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -47,6 +51,13 @@ class FlextInfraRefactorCensusRemovalMixin(
 
         A gate rejection is reported as a ``preview_rejected`` finding of the
         project; with ``fail_fast`` it stops the census instead.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.ProjectReport]``.
+
+        Raises:
+            RuntimeError: If removal preview rejected.
+
         """
         validated_reports: list[m.Infra.ProjectReport] = []
         # Preview writes are restored before the next candidate, so one shared
@@ -109,6 +120,13 @@ class FlextInfraRefactorCensusRemovalMixin(
 
         Returns whether any file changed. The touched files are normalized and
         the lazy initializers are re-planned before the Rope session reloads.
+
+        Returns:
+            The resulting ``bool``.
+
+        Raises:
+            RuntimeError: If removal apply failed for.
+
         """
         touched_paths: set[Path] = set()
         for candidate in report.removal_candidates:

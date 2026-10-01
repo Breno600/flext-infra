@@ -1,4 +1,8 @@
-"""Tests for public workspace path resolution utilities."""
+"""Tests for public workspace path resolution utilities.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -14,11 +18,13 @@ class TestsFlextInfraInfraPaths:
 
     @staticmethod
     def test_resolve_repository_root_with_current_directory() -> None:
+        """Test resolve repository root with current directory."""
         result = u.Infra.resolve_repository_root_or_cwd(None)
         tm.that(result.is_absolute(), eq=True)
 
     @staticmethod
     def test_resolve_repository_root_with_absolute_path(tmp_path: Path) -> None:
+        """Test resolve repository root with absolute path."""
         result = u.Infra.resolve_repository_root_or_cwd(tmp_path)
         tm.that(result.is_absolute(), eq=True)
 
@@ -26,11 +32,13 @@ class TestsFlextInfraInfraPaths:
     def test_resolve_repository_root_returns_resolved_path(
         tmp_path: Path,
     ) -> None:
+        """Test resolve repository root returns resolved path."""
         result = u.Infra.resolve_repository_root_or_cwd(tmp_path)
         tm.that(result, eq=tmp_path.resolve())
 
     @staticmethod
     def test_resolve_repository_root_with_none_uses_cwd() -> None:
+        """Test resolve repository root with none uses cwd."""
         result = u.Infra.resolve_repository_root_or_cwd(None)
         tm.that(result, eq=Path.cwd().resolve())
 
@@ -38,6 +46,7 @@ class TestsFlextInfraInfraPaths:
     def test_resolve_repository_root_with_file_returns_parent(
         tmp_path: Path,
     ) -> None:
+        """Test resolve repository root with file returns parent."""
         file_path = tmp_path / "some_file.txt"
         file_path.write_text("", encoding="utf-8")
         result = u.Infra.resolve_repository_root_or_cwd(file_path)

@@ -1,4 +1,8 @@
-"""Rope resource path helpers for FlextInfraUtilitiesRopeCore."""
+"""Rope resource path helpers for FlextInfraUtilitiesRopeCore.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -27,6 +31,10 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
         ``None`` is the documented "unresolvable" outcome: the path sits
         outside the project root or does not exist on disk. Rope failures
         (resource/type contract bugs) are never converted; they escape.
+
+        Returns:
+            Rope File for a filesystem Path, or None if outside project.
+
         """
         root_real_path = getattr(getattr(rope_project, "root", None), "real_path", None)
         if not isinstance(root_real_path, str):
@@ -49,7 +57,12 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
         skip_settings: bool = False,
         skip_init_py: bool = False,
     ) -> t.Infra.RopeResource | None:
-        """Resolve a Python source as a Rope resource, or None when skipped."""
+        """Resolve a Python source as a Rope resource, or None when skipped.
+
+        Returns:
+            The resulting ``t.Infra.RopeResource | None``.
+
+        """
         if not FlextInfraUtilitiesRopeCoreResourcesMixin._python_resource_allowed(
             file_path,
             skip_protected=skip_protected,
@@ -70,7 +83,12 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
         skip_settings: bool,
         skip_init_py: bool,
     ) -> bool:
-        """Return whether a path should be exposed as a Python Rope resource."""
+        """Return whether a path should be exposed as a Python Rope resource.
+
+        Returns:
+            Whether a path should be exposed as a Python Rope resource.
+
+        """
         return (
             file_path.suffix == FlextInfraConstantsSharedInfra.EXT_PYTHON
             and not (
@@ -93,7 +111,12 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
     def python_resources(
         rope_project: t.Infra.RopeProject,
     ) -> t.SequenceOf[t.Infra.RopeResource]:
-        """Return Rope's already-filtered Python resources without a path roundtrip."""
+        """Return Rope's already-filtered Python resources without a path roundtrip.
+
+        Returns:
+            Rope's already-filtered Python resources without a path roundtrip.
+
+        """
         return tuple(
             sorted(
                 (
@@ -107,7 +130,12 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
 
     @staticmethod
     def python_file_paths(rope_project: t.Infra.RopeProject) -> t.SequenceOf[Path]:
-        """Return stable Python file paths for one Rope project."""
+        """Return stable Python file paths for one Rope project.
+
+        Returns:
+            Stable Python file paths for one Rope project.
+
+        """
         resources = FlextInfraUtilitiesRopeCoreResourcesMixin.python_resources(
             rope_project,
         )
@@ -134,7 +162,12 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
         rope_project: t.Infra.RopeProject,
         resource: t.Infra.RopeResource,
     ) -> Path | None:
-        """Resolve one Rope resource back to an absolute filesystem path."""
+        """Resolve one Rope resource back to an absolute filesystem path.
+
+        Returns:
+            The resulting ``Path | None``.
+
+        """
         root_real_path = getattr(getattr(rope_project, "root", None), "real_path", None)
         if not isinstance(root_real_path, str):
             return None

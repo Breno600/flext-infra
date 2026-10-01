@@ -1,4 +1,8 @@
-"""Runtime execution for dependency detector CLI."""
+"""Runtime execution for dependency detector CLI.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -31,7 +35,12 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
         self._deps = deps
 
     def run(self, params: m.Infra.DetectCommand) -> p.Result[bool]:
-        """Execute dependency detection and generate workspace report (orchestrator)."""
+        """Execute dependency detection and generate workspace report (orchestrator).
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         root = params.repository_root
         # The environment under inspection is the repository's own; an ambient
         # UV_PROJECT_ENVIRONMENT would silently redirect detection elsewhere.
@@ -92,7 +101,12 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
         report_model: p.Infra.WorkspaceReport,
         projects_report: Mapping[str, Mapping[str, t.JsonValue]],
     ) -> p.Result[Path]:
-        """Render and persist the canonical workspace dependency report JSON."""
+        """Render and persist the canonical workspace dependency report JSON.
+
+        Returns:
+            The resulting ``p.Result[Path]``.
+
+        """
         out_path: Path = params.output_path or u.Cli.resolve_report_path(
             root,
             c.Infra.PROJECT,
@@ -125,7 +139,12 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
         pip_ok: bool,
         params: m.Infra.DetectCommand,
     ) -> p.Result[bool]:
-        """Aggregate deptry counts, log the summary, decide overall pass/fail."""
+        """Aggregate deptry counts, log the summary, decide overall pass/fail.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         total_issues = sum(
             u.Cli.json_pick_int(
                 u.Cli.json_as_mapping(payload.get(c.Infra.DEPTRY)),

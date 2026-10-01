@@ -1,4 +1,8 @@
-"""Concrete-syntax ownership moves for automatic class nesting."""
+"""Concrete-syntax ownership moves for automatic class nesting.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -29,7 +33,12 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
         bindings_by_module: t.MappingKV[str, t.StrMapping],
         definitions: t.StrMapping,
     ) -> str:
-        """Return a binding-proven structural rewrite without filesystem effects."""
+        """Return a binding-proven structural rewrite without filesystem effects.
+
+        Returns:
+            A binding-proven structural rewrite without filesystem effects.
+
+        """
         rewritten = cls._rewrite_class_nesting_references(
             source,
             module_name=module_name,
@@ -143,7 +152,12 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
 
     @staticmethod
     def _declares_exports(node: cst.BaseStatement) -> bool:
-        """Whether one module-level statement declares ``__all__``."""
+        """Whether one module-level statement declares ``__all__``.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         import libcst as cst
 
         return isinstance(node, cst.SimpleStatementLine) and any(
@@ -165,6 +179,10 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
         separating it from the preceding block (E305 on every moved module),
         and its declared annotation, so a module using a tuple annotation was
         silently rewritten to a list. Only the value changes here.
+
+        Returns:
+            The resulting ``cst.BaseStatement``.
+
         """
         import libcst as cst
 
@@ -191,7 +209,13 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
     def _split_docstring(
         body: t.SequenceOf[cst.BaseStatement],
     ) -> t.Pair[t.VariadicTuple[cst.BaseStatement], t.VariadicTuple[cst.BaseStatement]]:
-        """Split one class body into its leading docstring and the remainder."""
+        """Split one class body into its leading docstring and the remainder.
+
+        Returns:
+            The resulting ``t.Pair[t.VariadicTuple[cst.BaseStatement],
+                t.VariadicTuple[cst.BaseStatement]]``.
+
+        """
         import libcst as cst
 
         if not body:

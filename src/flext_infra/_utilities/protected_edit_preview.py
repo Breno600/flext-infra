@@ -1,4 +1,8 @@
-"""Preview and reverted-report flows for protected edit workflows."""
+"""Preview and reverted-report flows for protected edit workflows.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,7 +23,12 @@ class FlextInfraUtilitiesProtectedEditPreview(FlextInfraUtilitiesProtectedEditLi
     def _normalized_source_updates(
         updates: t.MappingKV[Path, str],
     ) -> MutableMapping[Path, str]:
-        """Return one update map keyed by resolved path in deterministic order."""
+        """Return one update map keyed by resolved path in deterministic order.
+
+        Returns:
+            One update map keyed by resolved path in deterministic order.
+
+        """
         return {
             path.resolve(): content
             for path, content in sorted(updates.items(), key=operator.itemgetter(0))
@@ -34,7 +43,13 @@ class FlextInfraUtilitiesProtectedEditPreview(FlextInfraUtilitiesProtectedEditLi
         MutableMapping[Path, str | None],
         MutableMapping[Path, t.Infra.LintSnapshot],
     ]:
-        """Preview write baselines."""
+        """Preview write baselines.
+
+        Returns:
+            The resulting ``t.Pair[MutableMapping[Path, str | None],
+                MutableMapping[Path, t.Infra.LintSnapshot]]``.
+
+        """
         before_sources: MutableMapping[Path, str | None] = {}
         before_lints: MutableMapping[Path, t.Infra.LintSnapshot] = {}
         existing_paths: list[Path] = []
@@ -82,7 +97,12 @@ class FlextInfraUtilitiesProtectedEditPreview(FlextInfraUtilitiesProtectedEditLi
         new_errors: t.Infra.LintSnapshot,
         pytest_failure: str | None = None,
     ) -> list[str]:
-        """Reverted report lines."""
+        """Reverted report lines.
+
+        Returns:
+            The resulting ``list[str]``.
+
+        """
         rel = FlextInfraUtilitiesProtectedEditPreview._relative_path(path, workspace)
         modified = path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         diff = FlextInfraUtilitiesProtectedEditPreview.unified_diff_lines(
@@ -111,7 +131,12 @@ class FlextInfraUtilitiesProtectedEditPreview(FlextInfraUtilitiesProtectedEditLi
         workspace: Path,
         gates: t.StrSequence | None = None,
     ) -> t.Infra.EditResult:
-        """Preview write reports."""
+        """Preview write reports.
+
+        Returns:
+            The resulting ``t.Infra.EditResult``.
+
+        """
         reports: list[str] = []
         failed = False
         after_lints = FlextInfraUtilitiesProtectedEditPreview.lint_snapshots(
@@ -145,7 +170,12 @@ class FlextInfraUtilitiesProtectedEditPreview(FlextInfraUtilitiesProtectedEditLi
         gates: t.StrSequence | None = None,
         post_write: Callable[[], None] | None = None,
     ) -> t.Infra.EditResult:
-        """Preview multiple file writes transactionally and always restore sources."""
+        """Preview multiple file writes transactionally and always restore sources.
+
+        Returns:
+            The resulting ``t.Infra.EditResult``.
+
+        """
         if not updates:
             return (True, [])
 

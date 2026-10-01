@@ -1,4 +1,8 @@
-"""Tests for the rope-native syntactic structure boundary."""
+"""Tests for the rope-native syntactic structure boundary.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

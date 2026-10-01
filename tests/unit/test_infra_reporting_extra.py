@@ -1,5 +1,8 @@
 """Tests for FlextInfraReportingService — path types.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Tests cover return type validation for report path methods.
 """
 

@@ -1,4 +1,8 @@
-"""Real cold-workspace upgrades materialize gitlinks before Python resolution."""
+"""Real cold-workspace upgrades materialize gitlinks before Python resolution.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -20,6 +24,7 @@ class TestsFlextInfraCodegenUpgWorkspace:
     def test_upg_materializes_member_before_resolving_workspace_lock(
         tmp_path: Path,
     ) -> None:
+        """Test upg materializes member before resolving workspace lock."""
         root, _ = u.Tests.render_make_environment(
             tmp_path,
             c.Infra.MakeProfile.WORKSPACE,

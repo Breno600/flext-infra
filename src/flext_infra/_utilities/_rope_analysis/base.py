@@ -1,4 +1,8 @@
-"""Composed rope analysis base joining the domain responsibility classes."""
+"""Composed rope analysis base joining the domain responsibility classes.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

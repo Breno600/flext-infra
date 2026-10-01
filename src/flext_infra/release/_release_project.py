@@ -1,4 +1,8 @@
-"""Release project build: one committed project to one attested artifact set."""
+"""Release project build: one committed project to one attested artifact set.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -21,7 +25,12 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         target: t.Pair[str, Path],
         versions: t.StrMapping,
     ) -> p.Result[m.Infra.BuildRecord]:
-        """Build one project; its fail-loud error becomes its failed, logged record."""
+        """Build one project; its fail-loud error becomes its failed, logged record.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.BuildRecord]``.
+
+        """
         name = target[0]
         log = self._release_dir(ctx.repository_root, ctx.tag) / f"build-{name}.log"
         try:
@@ -61,6 +70,10 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         The project's hook stays the sole owner of the input names and of
         failing when one is missing; a project without ``dist/`` stages
         unchanged.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         del cls
         source = project_path / "dist"
@@ -87,7 +100,12 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         versions: t.StrMapping,
         temporary: Path,
     ) -> p.Result[m.Infra.BuildRecord]:
-        """Stage, render, build, validate and persist one project in ``temporary``."""
+        """Stage, render, build, validate and persist one project in ``temporary``.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.BuildRecord]``.
+
+        """
         name, path = target
         output_dir = self._release_dir(ctx.repository_root, ctx.tag)
         log, stage = output_dir / f"build-{name}.log", temporary / "source"
@@ -197,6 +215,10 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         """Validate exactly one wheel and one sdist, then persist the set atomically.
 
         An existing set is immutable: it is accepted only byte for byte.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.BuildArtifact]]``.
+
         """
         result_type = r[t.VariadicTuple[m.Infra.BuildArtifact]]
         try:

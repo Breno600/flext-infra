@@ -1,4 +1,8 @@
-"""Stable topology and coherent state snapshots for Mise publication."""
+"""Stable topology and coherent state snapshots for Mise publication.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -28,7 +32,12 @@ class FlextInfraMiseWorkspacePlanner:
         self._owner = owner
 
     def scope_identity(self) -> p.Result[m.Infra.GitIdentityReport]:
-        """Resolve the physical Git identity that owns generation coordination."""
+        """Resolve the physical Git identity that owns generation coordination.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitIdentityReport]``.
+
+        """
         requested = self._owner.repository_root.expanduser().absolute()
         physical = self._physical_directory(requested)
         if physical.failure:
@@ -59,7 +68,12 @@ class FlextInfraMiseWorkspacePlanner:
         return self._exact_git_identity(scope_root)
 
     def scope_root(self) -> p.Result[Path]:
-        """Return the authenticated generation coordination root."""
+        """Return the authenticated generation coordination root.
+
+        Returns:
+            The authenticated generation coordination root.
+
+        """
         identity = self.scope_identity()
         if identity.failure:
             return r[Path].from_failure(identity)
@@ -72,6 +86,10 @@ class FlextInfraMiseWorkspacePlanner:
         # Why: delegates to the promoted `u.Infra.exact_worktree_root` owner
         # (codegen `init` reuses the same exact-root contract) instead of
         # duplicating the check locally.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitIdentityReport]``.
+
         """
         return u.Infra.exact_worktree_root(requested)
 
@@ -81,7 +99,12 @@ class FlextInfraMiseWorkspacePlanner:
         *,
         transaction_id: str | None = None,
     ) -> p.Result[m.Infra.MiseToolchainWorkspaceLayout]:
-        """Resolve governed topology after the stable workspace lock is held."""
+        """Resolve governed topology after the stable workspace lock is held.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.MiseToolchainWorkspaceLayout]``.
+
+        """
         requested = self._owner.repository_root.expanduser().absolute()
         resolved_scope = (
             self.scope_root() if scope_root is None else r[Path].ok(scope_root)
@@ -116,7 +139,12 @@ class FlextInfraMiseWorkspacePlanner:
         *,
         transaction_id: str | None = None,
     ) -> p.Result[m.Infra.MiseToolchainWorkspaceLayout]:
-        """Rebuild exact topology from already authenticated journal selectors."""
+        """Rebuild exact topology from already authenticated journal selectors.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.MiseToolchainWorkspaceLayout]``.
+
+        """
         identity = self._exact_git_identity(scope_root)
         if identity.failure:
             return r[m.Infra.MiseToolchainWorkspaceLayout].from_failure(identity)
@@ -130,7 +158,12 @@ class FlextInfraMiseWorkspacePlanner:
         self,
         identity: m.Infra.GitIdentityReport,
     ) -> p.Result[m.Infra.MiseToolchainWorkspaceLayout]:
-        """Build the no-effect journal layout from the descriptor-locked identity."""
+        """Build the no-effect journal layout from the descriptor-locked identity.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.MiseToolchainWorkspaceLayout]``.
+
+        """
         return self._layout_from_identity(identity, (".",), transaction_id=None)
 
     def file_layout(
@@ -140,7 +173,12 @@ class FlextInfraMiseWorkspacePlanner:
         *,
         transaction_id: str,
     ) -> p.Result[m.Infra.MiseToolchainWorkspaceLayout]:
-        """Bind explicit file capabilities without reading any Mise declaration."""
+        """Bind explicit file capabilities without reading any Mise declaration.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.MiseToolchainWorkspaceLayout]``.
+
+        """
         result_type = r[m.Infra.MiseToolchainWorkspaceLayout]
         identity = self._exact_git_identity(scope_root)
         if identity.failure:
@@ -181,7 +219,12 @@ class FlextInfraMiseWorkspacePlanner:
 
     @staticmethod
     def journal_path(identity: m.Infra.GitIdentityReport) -> Path:
-        """Return the shared journal anchor without materializing layout state."""
+        """Return the shared journal anchor without materializing layout state.
+
+        Returns:
+            The shared journal anchor without materializing layout state.
+
+        """
         return identity.git_dir / c.Infra.JOURNAL_NAME
 
     def _layout_from_identity(
@@ -191,7 +234,12 @@ class FlextInfraMiseWorkspacePlanner:
         *,
         transaction_id: str | None,
     ) -> p.Result[m.Infra.MiseToolchainWorkspaceLayout]:
-        """Build one typed layout from an already exact scope identity."""
+        """Build one typed layout from an already exact scope identity.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.MiseToolchainWorkspaceLayout]``.
+
+        """
         if not selectors or len(set(selectors)) != len(selectors):
             return r[m.Infra.MiseToolchainWorkspaceLayout].fail(
                 "Mise project selectors must be nonempty and unique",
@@ -225,7 +273,12 @@ class FlextInfraMiseWorkspacePlanner:
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         config_plans: t.VariadicTuple[m.Infra.CodegenFilePlan] = (),
     ) -> p.Result[m.Infra.MiseToolchainWorkspaceLayout]:
-        """Select only projects owned by this conform request or direct caller."""
+        """Select only projects owned by this conform request or direct caller.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.MiseToolchainWorkspaceLayout]``.
+
+        """
         if config_plans:
             planned_paths = tuple(item.path for item in config_plans)
             if len(set(planned_paths)) != len(planned_paths):
@@ -273,7 +326,12 @@ class FlextInfraMiseWorkspacePlanner:
         *,
         transaction_id: str | None = None,
     ) -> p.Result[m.Infra.MiseToolchainWorkspaceLayout]:
-        """Derive exact selected project topology from the locked conform plan."""
+        """Derive exact selected project topology from the locked conform plan.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.MiseToolchainWorkspaceLayout]``.
+
+        """
         if not config_plans:
             return r[m.Infra.MiseToolchainWorkspaceLayout].fail(
                 "Mise transaction requires configuration plans",
@@ -312,7 +370,12 @@ class FlextInfraMiseWorkspacePlanner:
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         config_plans: t.VariadicTuple[m.Infra.CodegenFilePlan] = (),
     ) -> p.Result[m.Infra.MiseToolchainWorkspacePlan]:
-        """Capture one complete byte-and-mode snapshot for a stable layout."""
+        """Capture one complete byte-and-mode snapshot for a stable layout.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.MiseToolchainWorkspacePlan]``.
+
+        """
         planned_configs = {item.path: item for item in config_plans}
         expected_paths = {project.artifacts.config for project in layout.projects}
         if config_plans and (
@@ -410,7 +473,12 @@ class FlextInfraMiseWorkspacePlanner:
         *,
         required: bool = False,
     ) -> p.Result[m.Infra.MiseToolchainArtifactSet]:
-        """Read the launcher pair and pin as named file states."""
+        """Read the launcher pair and pin as named file states.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.MiseToolchainArtifactSet]``.
+
+        """
         states: list[m.Cli.AtomicFileState] = []
         for path in (unix_launcher, windows_launcher, version_pin):
             state = files.read_state(path, required=required)
@@ -440,6 +508,10 @@ class FlextInfraMiseWorkspacePlanner:
         land the launcher-baking ``upg`` recipe the same transaction; otherwise
         the validator's own repair path ("run make upg") can never complete on a
         checkout whose committed Makefile predates the bake.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.MiseToolchainArtifactSet]``.
+
         """
         result_type = r[m.Infra.MiseToolchainArtifactSet]
         paths = tuple(scope_root / name for name, _mode in c.Infra.ARTIFACT_SPECS)

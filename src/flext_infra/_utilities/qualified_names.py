@@ -1,4 +1,8 @@
-"""LibCST qualified-name metadata utilities."""
+"""LibCST qualified-name metadata utilities.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -15,7 +19,12 @@ class FlextInfraUtilitiesQualifiedNames:
 
     @staticmethod
     def dotted_name(node: cst.BaseExpression | None) -> str | None:
-        """Return a static dotted name, or ``None`` for a dynamic expression."""
+        """Return a static dotted name, or ``None`` for a dynamic expression.
+
+        Returns:
+            A static dotted name, or ``None`` for a dynamic expression.
+
+        """
         import libcst as cst
 
         if isinstance(node, cst.Name):
@@ -30,7 +39,12 @@ class FlextInfraUtilitiesQualifiedNames:
         value: cst.BaseExpression,
         names: t.Infra.Container[str],
     ) -> cst.BaseExpression:
-        """Drop ``names`` from a literal ``__all__`` list or tuple expression."""
+        """Drop ``names`` from a literal ``__all__`` list or tuple expression.
+
+        Returns:
+            The resulting ``cst.BaseExpression``.
+
+        """
         import libcst as cst
 
         if not isinstance(value, cst.List | cst.Tuple):
@@ -50,7 +64,12 @@ class FlextInfraUtilitiesQualifiedNames:
         node: N,
         names: t.Infra.Container[str],
     ) -> N:
-        """Drop ``names`` from an ``__all__`` assignment; other assignments pass."""
+        """Drop ``names`` from an ``__all__`` assignment; other assignments pass.
+
+        Returns:
+            The resulting ``N``.
+
+        """
         import libcst as cst
 
         targets = (
@@ -75,7 +94,12 @@ class FlextInfraUtilitiesQualifiedNames:
         *,
         parenthesized: bool,
     ) -> t.VariadicTuple[cst.ImportAlias]:
-        """Repair separators after import aliases were dropped or rewritten."""
+        """Repair separators after import aliases were dropped or rewritten.
+
+        Returns:
+            The resulting ``t.VariadicTuple[cst.ImportAlias]``.
+
+        """
         import libcst as cst
 
         last_index = len(aliases) - 1
@@ -97,6 +121,10 @@ class FlextInfraUtilitiesQualifiedNames:
         An import alias, an attribute's own ``attr``, and a keyword argument's
          name are written by the surrounding syntax, so a rename must leave them
          exactly as they are.
+
+        Returns:
+            Whether ``parent`` spells ``node`` as a binding, not a reference.
+
         """
         import libcst as cst
 
@@ -112,7 +140,12 @@ class FlextInfraUtilitiesQualifiedNames:
         source: str,
         candidates: t.Infra.Container[str],
     ) -> frozenset[str]:
-        """Return candidate qualified names referenced by Python source."""
+        """Return candidate qualified names referenced by Python source.
+
+        Returns:
+            Candidate qualified names referenced by Python source.
+
+        """
         import libcst as cst
         from libcst.metadata import MetadataWrapper, QualifiedNameProvider
 

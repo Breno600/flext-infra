@@ -1,5 +1,8 @@
 """The fleet-umbrella question has exactly one owner and one signal.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Why this exists: the workspace-manifest path was re-derived in five places, and
 a sixth copy asked the wrong file. It tested the Beads override, which every
 project carries, so every standalone project was classified as a fleet umbrella.
@@ -43,7 +46,12 @@ class TestsFlextInfraWorkspaceManifest:
 
     @staticmethod
     def _config_dir(root: Path) -> Path:
-        """Create and return the checkout's config directory."""
+        """Create and return the checkout's config directory.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         config = root / c.CONFIG_DIR_NAME
         config.mkdir(parents=True, exist_ok=True)
         return config

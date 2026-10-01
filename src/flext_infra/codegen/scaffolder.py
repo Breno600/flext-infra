@@ -25,7 +25,12 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
 
     @override
     def execute(self) -> p.Result[str]:
-        """Execute scaffolding directly from the validated CLI model."""
+        """Execute scaffolding directly from the validated CLI model.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         dry_run = self.dry_run or not self.apply_changes
         results = self.run(dry_run=dry_run)
         total_created = sum(len(result.files_created) for result in results)
@@ -185,7 +190,16 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
         self,
         request: m.Infra.ScaffoldDirRequest,
     ) -> t.Pair[t.MutableSequenceOf[str], t.MutableSequenceOf[str]]:
-        """Generate missing modules in a directory and return file lists."""
+        """Generate missing modules in a directory and return file lists.
+
+        Returns:
+            The resulting ``t.Pair[t.MutableSequenceOf[str],
+                t.MutableSequenceOf[str]]``.
+
+        Raises:
+            OSError: If writing scaffold.
+
+        """
         files_created: t.MutableSequenceOf[str] = []
         files_skipped: t.MutableSequenceOf[str] = []
         for filename, suffix, base_class, doc_suffix in request.modules:

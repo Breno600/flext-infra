@@ -1,4 +1,8 @@
-"""Make workflow, verb, CI, and cache specification models."""
+"""Make workflow, verb, CI, and cache specification models.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -91,7 +95,16 @@ class FlextInfraConfigModelsMake:
 
         @u.model_validator(mode="after")
         def _validate_contexts(self) -> Self:
-            """Require unique contexts and retain every step in the local workflow."""
+            """Require unique contexts and retain every step in the local workflow.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If make workflow contexts must be unique for; or if make
+                    workflow step.
+
+            """
             if len(set(self.contexts)) != len(self.contexts):
                 msg = f"make workflow contexts must be unique for {self.verb}"
                 raise ValueError(msg)
@@ -229,7 +242,17 @@ class FlextInfraConfigModelsMake:
 
         @u.model_validator(mode="after")
         def _validate_actions(self) -> Self:
-            """Reject unknown, duplicated, or out-of-lifecycle docs actions."""
+            """Reject unknown, duplicated, or out-of-lifecycle docs actions.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If docs actions must be unique; or if docs action is not a
+                    registered CLI action; or if mutable_actions entry is not part of
+                    the docs lifecycle.
+
+            """
             if len(set(self.actions)) != len(self.actions):
                 msg = "docs actions must be unique"
                 raise ValueError(msg)
@@ -324,7 +347,15 @@ class FlextInfraConfigModelsMake:
 
         @u.model_validator(mode="after")
         def _reject_unsafe_fixes(self) -> Self:
-            """Keep the lint repair information-preserving."""
+            """Keep the lint repair information-preserving.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If make.ruff.lint_fix must not enable.
+
+            """
             if FlextInfraConstantsMake.RUFF_UNSAFE_FIXES_FLAG in self.lint_fix:
                 msg = (
                     "make.ruff.lint_fix must not enable "
@@ -389,7 +420,16 @@ class FlextInfraConfigModelsMake:
 
             @u.model_validator(mode="after")
             def require_ascending_quota_ladder(self) -> Self:
-                """Keep the quota ladder strictly ascending within the percent scale."""
+                """Keep the quota ladder strictly ascending within the percent scale.
+
+                Returns:
+                    The resulting ``Self``.
+
+                Raises:
+                    ValueError: If testmon cache quota ladder must ascend warning <
+                        maintenance < block <= 100.
+
+                """
                 full_scale = 100
                 if not (
                     self.warning_threshold_percent
@@ -415,7 +455,15 @@ class FlextInfraConfigModelsMake:
 
             @u.model_validator(mode="after")
             def require_relative_cache_directories(self) -> Self:
-                """Keep both cache directories normalized and repository-relative."""
+                """Keep both cache directories normalized and repository-relative.
+
+                Returns:
+                    The resulting ``Self``.
+
+                Raises:
+                    ValueError: If cache.
+
+                """
                 for name, path in (
                     ("home_cache_directory", self.home_cache_directory),
                     ("external_storage_directory", self.external_storage_directory),
@@ -462,7 +510,16 @@ class FlextInfraConfigModelsMake:
 
             @u.model_validator(mode="after")
             def require_external_database_contract(self) -> Self:
-                """Keep testmon's official path variable and external path policy exact."""
+                """Keep testmon's official path variable and external path policy exact.
+
+                Returns:
+                    The resulting ``Self``.
+
+                Raises:
+                    ValueError: If testmon cache database_filename must be a filename;
+                        or if testmon cache.
+
+                """
                 for name, actual, expected in (
                     (
                         "database_environment_variable",
@@ -532,7 +589,15 @@ class FlextInfraConfigModelsMake:
 
             @u.model_validator(mode="after")
             def require_external_cache_contract(self) -> Self:
-                """Keep the official cache variable and the external path policy exact."""
+                """Keep the official cache variable and the external path policy exact.
+
+                Returns:
+                    The resulting ``Self``.
+
+                Raises:
+                    ValueError: If mypy cache.
+
+                """
                 for name, actual, expected in (
                     (
                         "cache_environment_variable",
@@ -676,7 +741,16 @@ class FlextInfraConfigModelsMake:
 
         @u.model_validator(mode="after")
         def _validate_project_check_gates(self) -> Self:
-            """Project gates must be unique and must not shadow a built-in."""
+            """Project gates must be unique and must not shadow a built-in.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If make project_check_gates must be unique; or if make
+                    project_check_gates shadow built-in gates.
+
+            """
             if len(set(self.project_check_gates)) != len(self.project_check_gates):
                 msg = "make project_check_gates must be unique"
                 raise ValueError(msg)
@@ -706,6 +780,22 @@ class FlextInfraConfigModelsMake:
             `_builtin_require_environment` (`$(filter-out setup,$(PUBLIC_VERBS))`
             and `{% raw %}{% for verb in make.verbs if verb.name != "setup" %}{% endraw %}`),
             so `setup` never depends on the environment it exists to create.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If make public verb names must be unique; or if make
+                    standalone_check_gates names undeclared verbs; or if make
+                    standalone_check_gates requires verbs in every profile; or if make
+                    standalone_check_gates names unknown gates; or if make
+                    standalone_check_gates must route each gate once; or if make
+                    workflow verbs must be unique; or if make workflow verbs are not
+                    declared public verbs; or if make workflow verbs must exist in every
+                    profile; or if make fmt gates are not declared gate vocabulary; or
+                    if make docs verb must be declared; or if make docs reports_dir must
+                    be repository-relative.
+
             """
             declared = {verb.name for verb in self.verbs}
             if len(declared) != len(self.verbs):

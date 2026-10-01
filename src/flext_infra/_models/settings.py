@@ -1,4 +1,8 @@
-"""Pure Pydantic settings declarations for flext-infra."""
+"""Pure Pydantic settings declarations for flext-infra.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -134,14 +138,6 @@ class FlextInfraSettingsModels:
                     "SonarCloud web API token; required only by the explicit "
                     "sonarcloud-sync verb, never read from any other source."
                 ),
-            ),
-        ]
-        mise_github_credential_command: Annotated[
-            str | None,
-            m.Field(
-                default=None,
-                validation_alias="MISE_GITHUB_CREDENTIAL_COMMAND",
-                description="Mise credential command forwarded to isolated builds.",
             ),
         ]
 

@@ -1,4 +1,8 @@
-"""Behavior tests for the canonical ``flext-infra deps`` CLI group."""
+"""Behavior tests for the canonical ``flext-infra deps`` CLI group.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

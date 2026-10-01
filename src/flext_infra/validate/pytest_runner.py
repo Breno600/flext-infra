@@ -1,4 +1,8 @@
-"""Public facade for the canonical persistent-testmon pytest runner."""
+"""Public facade for the canonical persistent-testmon pytest runner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
