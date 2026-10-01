@@ -85,6 +85,17 @@ class TestsFlextInfraBanditAndMarkdownGates:
             ("", None, False, []),
             (HEADING_SKIP, None, True, ["MD001"]),
             ("# Test\n", '{"broken": [', True, ["TOOL_ERROR"]),
+            # Residual MD013 findings remain blocking when the native formatter
+            # cannot repair the configured paragraph width.
+            (
+                REFLOW_HINT,
+                (
+                    '{"MD013": {"line_length": 88, "reflow": true,'
+                    ' "reflow-mode": "normalize"}}'
+                ),
+                True,
+                ["MD013"],
+            ),
             # A hand-wrapped document that rumdl's normalize pass would only
             # hint at must pass under the PROJECTED config: the canonical
             # MD013 declares reflow disabled (flext-md-converge: wrapping is
