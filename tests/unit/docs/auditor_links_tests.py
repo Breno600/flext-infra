@@ -239,15 +239,28 @@ class TestsFlextInfraAuditorLinks:
             tm.that("wrong_github_branch" in types, eq=True)
 
         def test_github_rewrite_fix(self, tmp_path: Path) -> None:
-            """Fix rewrites organization/main flext URLs to governed org/branch."""
+            """Fix rewrites a stale organization on the governed branch only.
+
+            A foreign ref may contain ``/``, so its ref/path boundary is not
+            decidable from the URL: that link is left for the audit to report,
+            never rewritten by guess.
+            """
+            branch = tm.not_none(
+                u.Infra.docs_github_repo_lookup("flext-sh", "flext")
+            ).branch
             docs_dir = tmp_path / "docs"
             docs_dir.mkdir(parents=True, exist_ok=True)
             target = docs_dir / "test.md"
+            foreign = "https://github.com/organization/flext/blob/feature/fix/README.md"
             target.write_text(
-                "[x](https://github.com/organization/flext/blob/main/README.md)\n",
+                f"[x](https://github.com/organization/flext/blob/{branch}/README.md)\n"
+                f"[y]({foreign})\n",
             )
             item = u.Infra.docs_process_markdown_file(target, apply=True)
             tm.that(item.links, gte=1)
             text = target.read_text()
-            tm.that("flext-sh/flext" in text, eq=True)
-            tm.that("0.12.0-dev" in text, eq=True)
+            tm.that(
+                f"https://github.com/flext-sh/flext/blob/{branch}/README.md" in text,
+                eq=True,
+            )
+            tm.that(foreign in text, eq=True)

@@ -297,5 +297,13 @@ class FlextInfraConstantsCodegen(
     QG_CHECK_TYPE_SAFETY: ClassVar[str] = "type_safety"
     QG_CHECK_LINT_CLEAN: ClassVar[str] = "lint_clean"
 
+    # --- Projection lock (.agents/projections.lock.json) ---
+    PROJECTIONS_LOCK_API_VERSION: ClassVar[str] = "flext-infra/projections-lock/v1"
+    "Schema version of the generated projection lock."
+    PROJECTIONS_LOCK_FILENAME: ClassVar[str] = "projections.lock.json"
+    "Basename of the generated projection lock."
+    PROJECTIONS_LOCK_ROOTS: ClassVar[frozenset[str]] = frozenset({".agents", ".codex"})
+    "Projection roots whose files the lock records."
+
 
 __all__: list[str] = ["FlextInfraConstantsCodegen"]

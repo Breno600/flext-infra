@@ -742,36 +742,3 @@ class FlextInfraConfigModelsArtifact:
             t.VariadicTuple[FlextInfraConfigModelsArtifact.RenameCampaignSpec],
             m.Field(default=(), description="Ordered rename campaigns"),
         ] = ()
-
-    class SedPatternSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """One declared literal regex substitution applied across the mod scope."""
-
-        pattern: Annotated[t.NonEmptyStr, m.Field(description="Regex source to match")]
-        replacement: Annotated[
-            str, m.Field(description="Literal replacement text")
-        ]
-        file_glob: Annotated[
-            t.NonEmptyStr | None,
-            m.Field(default=None, description="Optional file glob filter"),
-        ]
-        flags: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                default=(),
-                description=(
-                    "Regex flags by name (IGNORECASE, MULTILINE, DOTALL)"
-                ),
-            ),
-        ] = ()
-        description: Annotated[
-            t.NonEmptyStr | None,
-            m.Field(default=None, description="Why this substitution exists"),
-        ] = None
-
-    class SedPatternsSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Declared sed-by-list substitution set with optional per-pattern filters."""
-
-        patterns: Annotated[
-            t.VariadicTuple[SedPatternSpec],
-            m.Field(default=(), description="Ordered substitution patterns"),
-        ] = ()

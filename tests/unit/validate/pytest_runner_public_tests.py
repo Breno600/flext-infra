@@ -42,6 +42,12 @@ class TestsFlextInfraPytestRunner:
         def marker_expression(command: t.StrSequence) -> str:
             return command[command.index("-m", 3) + 1]
 
+        def deselected(expression: str) -> frozenset[str]:
+            tm.that(
+                expression.startswith("not (") and expression.endswith(")"), eq=True
+            )
+            return frozenset(expression.removeprefix("not (")[:-1].split(" or "))
+
         budgeted = {
             marker_expression(command)
             for command in (
@@ -60,12 +66,17 @@ class TestsFlextInfraPytestRunner:
         tm.that(budgeted, length=1)
         budgeted_expression = next(iter(budgeted))
         coverage_expression = marker_expression(runner.build_coverage_command(report))
-        tm.that(budgeted_expression, has=pytest_policy.slow_marker)
-        for marker in pytest_policy.ci_excluded_markers:
-            tm.that(marker in coverage_expression, eq=ci_context)
-        for marker in pytest_policy.external_gate_markers:
-            tm.that(budgeted_expression, has=marker)
-            tm.that(coverage_expression, has=marker)
+        # Coverage carries slow items and deselects external gates plus, in CI,
+        # the CI-excluded markers; the budgeted phase also negates slow.
+        coverage_expected = frozenset((
+            *pytest_policy.external_gate_markers,
+            *(pytest_policy.ci_excluded_markers if ci_context else ()),
+        ))
+        tm.that(deselected(coverage_expression), eq=coverage_expected)
+        tm.that(
+            deselected(budgeted_expression),
+            eq=coverage_expected | {pytest_policy.slow_marker},
+        )
 
     def test_testmon_commands_name_the_toolchain_environment(
         self,
@@ -95,8 +106,17 @@ class TestsFlextInfraPytestRunner:
             names.append(command[env_index + 1])
         assert len(set(names)) == 1
         (name,) = {name.strip("'") for name in names}
-        assert name.startswith("toolchain-")
-        assert len(name) == len("toolchain-") + 12
+        tm.that(
+            name, eq=runner.testmon_environment(c.Infra.PytestExecutionMode.INCREMENTAL)
+        )
+        # Each marker scope owns its environment: the slow phase never shares
+        # the budgeted phase's records.
+        tm.that(
+            runner_for(cached_runner_project, slow_phase=True).testmon_environment(
+                c.Infra.PytestExecutionMode.INCREMENTAL
+            ),
+            ne=name,
+        )
         # The coverage verb owns no testmon plugin, so it never names one.
         assert "--testmon-env" not in runner.build_coverage_command(report)
         # Rebuilding any argv reuses the same cached fingerprint.
@@ -250,6 +270,48 @@ class TestsFlextInfraPytestRunner:
         tm.that(
             summary(reports_root),
             has=["executed=1", "failed=0", "errors=0", "exit=0"],
+        )
+
+    @pytest.mark.slow
+    def test_failed_slow_item_stays_red_across_budgeted_runs(
+        self, cached_runner_project: Path
+    ) -> None:
+        """A budgeted xdist run never erases the slow phase's failure.
+
+        Both phases share one database; a changed dependency once let the
+        budgeted phase's sync delete the slow failure, after which the slow
+        phase deselected its file as stable and passed without running it.
+        """
+        declare_parallel_project(cached_runner_project)
+        policy = config.Infra.tooling.tools.pytest
+        cache = config.Infra.codegen.make.testmon_cache
+        pyproject = cached_runner_project / c.PYPROJECT_FILENAME
+        pyproject.write_text(
+            pyproject.read_text(encoding="utf-8")
+            + f'markers = ["{policy.slow_marker}: slow phase"]\n',
+            encoding="utf-8",
+        )
+        (cached_runner_project / cache.target_directory / "test_phases.py").write_text(
+            "import pytest\nfrom runner_sample import answer\n\n"
+            + "".join(
+                f"def test_budgeted_{index}() -> None:\n    assert answer()\n\n"
+                for index in range(3)
+            )
+            + f"@pytest.mark.{policy.slow_marker}\n"
+            "def test_slow_red() -> None:\n    assert answer() < 0\n",
+            encoding="utf-8",
+        )
+        source = cached_runner_project / "src" / "runner_sample" / "__init__.py"
+
+        tm.that(tm.ok(runner_for(cached_runner_project).execute()), eq=0)
+        tm.that(
+            tm.ok(runner_for(cached_runner_project, slow_phase=True).execute()), ne=0
+        )
+        source.write_text("def answer() -> int:\n    return 41 + 1\n", encoding="utf-8")
+        tm.that(tm.ok(runner_for(cached_runner_project).execute()), eq=0)
+
+        tm.that(
+            tm.ok(runner_for(cached_runner_project, slow_phase=True).execute()), ne=0
         )
 
     @pytest.mark.slow
@@ -573,7 +635,20 @@ class TestsFlextInfraPytestRunner:
                 ),
             ),
         ):
-            tm.that("-m" in command[3:], eq=False)
+            # The full budgeted phase keeps external and CI markers and leaves
+            # slow items to the full slow phase, which runs on its own clock.
+            marker_index = command.index("-m", 3)
+            tm.that(
+                command[marker_index + 1],
+                eq=f"not ({config.Infra.tooling.tools.pytest.slow_marker})",
+            )
+        slow_full = runner_for(cached_runner_project, slow_phase=True).build_command(
+            full, execution_mode=c.Infra.PytestExecutionMode.FULL
+        )
+        tm.that(
+            slow_full[slow_full.index("-m", 3) + 1],
+            eq=config.Infra.tooling.tools.pytest.slow_marker,
+        )
 
     @pytest.mark.slow
     def test_full_runs_after_warm_cache_and_ignores_node_like_diagnostics(
