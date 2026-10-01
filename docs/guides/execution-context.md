@@ -108,17 +108,18 @@ ou do `upg` e regenere pelo `make gen`; instalações manuais não substituem o 
 
 O código de um checkout executa no ambiente do seu `RUNTIME_ROOT`. O Makefile gerado
 exporta esse `RUNTIME_ROOT` e o `flext-infra` o lê como declaração tipada: a validação
-`fresh-import` roda as sondas com o Python do ambiente físico externo declarado pelo
-Makefile, nunca com o interpretador que hospeda a ferramenta. Sem declaração, o dono
-deriva a raiz Git do checkout; uma declaração sem interpretador falha.
+`fresh-import` roda as sondas com `<RUNTIME_ROOT>/.venv/bin/python`, nunca com o
+interpretador que hospeda a ferramenta. Sem declaração, o dono deriva a raiz Git do
+checkout; uma declaração sem interpretador falha.
 
-O ambiente pertence ao `RUNTIME_ROOT` (D-VENV, `flext-x8gn6`). Um membro anexado como
-submódulo usa o ambiente do superprojeto Git que o contém; um checkout standalone ou uma
-worktree vinculada tem o seu próprio. A pasta física fica no diretório irmão configurado
-por `make.runtime_environment_directory`, com o caminho absoluto do checkout como
-identidade. O Makefile gerado, o `.envrc` gerado e `runtime_environment_dir` resolvem
-essa localização pelo mesmo caminho físico: entrar no checkout por um symlink não muda o
-ambiente selecionado. Nenhum ambiente é emprestado de outro checkout por symlink.
+O `.venv` pertence ao `RUNTIME_ROOT` (D-VENV, `flext-x8gn6`). Um membro anexado como
+submódulo usa o `.venv` do superprojeto Git que o contém; um checkout standalone ou uma
+worktree vinculada tem o seu próprio. Em desenvolvimento não existe outra opção: o
+ambiente é sempre `<RUNTIME_ROOT>/.venv`, e essa localização é lei, nunca configuração
+(operador 2026-10-01, `flext-h2a9h`). O Makefile gerado, o `.envrc` gerado e
+`runtime_environment_dir` resolvem essa raiz pelo mesmo caminho físico: entrar no
+checkout por um symlink não muda o ambiente selecionado. Nenhum ambiente vive fora do
+checkout que o possui, nem é emprestado de outro checkout por symlink.
 
 Uma raiz de workspace declara cada membro anexado, de qualquer família (`flext-*` ou
 não), como fonte Git inline na linha de integração do próprio workspace, a mesma que o
