@@ -21,6 +21,24 @@ class FlextInfraModelsWorkspace:
     - ``ContractModel`` reserved for immutable workspace settings contracts.
     """
 
+    class SubprojectLoadPolicy(m.ContractModel):
+        """Workspace policy and declared identity for one Git subproject."""
+
+        integration_branch: Annotated[
+            str | None, m.Field(description="Detected workspace integration branch")
+        ] = None
+        workspace_beads: Annotated[
+            FlextInfraConfigModels.BeadsProjectSpec | None,
+            m.Field(description="Inherited workspace Beads contract"),
+        ] = None
+        declared_member: Annotated[
+            FlextInfraConfigModels.RepositoryRef | None,
+            m.Field(description="Manifest-declared member identity"),
+        ] = None
+        allow_unprovisioned_members: Annotated[
+            bool, m.Field(description="Accept manifest identity before checkout setup")
+        ] = False
+
     class WorkspaceEnvironmentRequest(m.ContractModel):
         """Read-only request for validating the active workspace environment."""
 
