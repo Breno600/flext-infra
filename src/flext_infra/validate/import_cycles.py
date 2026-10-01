@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_core import r
-from flext_infra import c, m, u
+from flext_infra import m, u
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
 
 if TYPE_CHECKING:
@@ -87,12 +87,15 @@ class FlextInfraValidateImportCycles(FlextInfraProjectSelectionServiceBase[bool]
         )
         return r[m.Infra.ValidationReport].ok(
             m.Infra.ValidationReport(
-                passed=passed, violations=violations, summary=summary
-            )
+                passed=passed,
+                violations=violations,
+                summary=summary,
+            ),
         )
 
     def _build_graphs(
-        self, repository_root: Path
+        self,
+        repository_root: Path,
     ) -> list[t.Pair[str, MutableMapping[str, set[str]]]]:
         """Build one import graph per governed project root (one import unit).
 
@@ -121,13 +124,14 @@ class FlextInfraValidateImportCycles(FlextInfraProjectSelectionServiceBase[bool]
         return graph
 
     def _module_name_for(
-        self, project: t.Infra.RopeProject, resource: t.Infra.RopeResource
+        self,
+        project: t.Infra.RopeProject,
+        resource: t.Infra.RopeResource,
     ) -> p.Result[str]:
         """Resolve a rope resource to its fully-qualified module name.
 
-        ``r.ok(name)`` when rope identifies the module or its on-disk
-        path can be projected onto a dotted name. ``r.fail(reason)`` for
-        rope runtime/type errors or paths that do not yield a name.
+        ``r.ok(name)`` when rope names the module; ``r.fail(reason)`` for rope
+        runtime/type errors or a module rope cannot name.
         """
         try:
             pymodule = u.Infra.resolve_pymodule(project, resource)
@@ -135,22 +139,14 @@ class FlextInfraValidateImportCycles(FlextInfraProjectSelectionServiceBase[bool]
             return r[str].fail(f"resolve_pymodule rope error: {exc!s}", exception=exc)
         except TypeError as exc:
             return r[str].fail(f"resolve_pymodule type error: {exc!s}", exception=exc)
-        try:
-            name = pymodule.get_name()
-        except c.EXC_ATTR_TYPE:
-            name = None
-        if isinstance(name, str) and name:
-            return r[str].ok(name)
-        resource_path = resource.path
-        parts = Path(resource_path).with_suffix("").parts
-        if parts and parts[-1] == "__init__":
-            parts = parts[:-1]
-        if not parts:
-            return r[str].fail(f"could not derive module name for {resource_path}")
-        return r[str].ok(".".join(parts))
+        name = pymodule.get_name()
+        if not name:
+            return r[str].fail(f"rope could not name module {resource.path}")
+        return r[str].ok(name)
 
     def _iter_imported_modules(
-        self, module_imports: t.Infra.RopeModuleImports
+        self,
+        module_imports: t.Infra.RopeModuleImports,
     ) -> t.StrSequence:
         """Extract imported module names from the boundary import-info collection.
 

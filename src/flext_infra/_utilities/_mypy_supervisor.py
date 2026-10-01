@@ -3,7 +3,8 @@
 This supervisor validates the owned checker request before launching Mypy.
 Darwin's initial VM mappings
 can already exceed the configured memory budget; RLIMIT_AS cannot represent a
-usable allocation ceiling there. RSS is sampled every 100 ms instead. It is a
+usable allocation ceiling there. RSS is sampled every
+``c.Infra.MYPY_SUPERVISOR_POLL_SECONDS`` instead. It is a
 termination threshold, not a kernel allocation barrier: transient overshoot is
 possible. Linux retains its kernel-enforced address-space limit.
 """
@@ -79,7 +80,9 @@ class FlextInfraMypyDarwinSupervisor:
         cls._usage(os.getpgrp())
         deadline = time.monotonic() + timeout
         child = u.Cli.process_start(
-            u.Infra.mypy_command(invocation), capture=False, start_new_session=True
+            u.Infra.mypy_command(invocation),
+            capture=False,
+            start_new_session=True,
         ).unwrap()
         received_signal: int = 0
 
@@ -135,5 +138,5 @@ if __name__ == "__main__":
             int(memory),
             int(timeout),
             int(kill_after),
-        )
+        ),
     )

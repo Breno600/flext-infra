@@ -132,7 +132,7 @@ class FlextInfraReleaseBuildMixin(FlextInfraReleaseProjectMixin):
         document = u.Cli.toml_parse_text(text.value)
         if document is None:
             return r[t.MutableStrMapping].fail(
-                f"release build cannot parse {lock_path}: invalid TOML"
+                f"release build cannot parse {lock_path}: invalid TOML",
             )
         versions: t.MutableStrMapping = {}
         for package in document.get("package") or []:
@@ -150,7 +150,9 @@ class FlextInfraReleaseBuildMixin(FlextInfraReleaseProjectMixin):
 
     @classmethod
     def _snapshot_policy(
-        cls, root: Path, policy_dir: Path
+        cls,
+        root: Path,
+        policy_dir: Path,
     ) -> p.Result[m.Infra.BuildPolicy]:
         """Capture the immutable policy pair once, before the first project build.
 
@@ -162,7 +164,7 @@ class FlextInfraReleaseBuildMixin(FlextInfraReleaseProjectMixin):
         try:
             snapshots = {
                 constraints: cls.render_build_constraints(
-                    config.Infra.release.build_constraints
+                    config.Infra.release.build_constraints,
                 ).encode("utf-8"),
                 gitleaks: (root / c.Infra.RELEASE_GITLEAKS_CONFIG_PATH).read_bytes(),
             }
@@ -170,12 +172,13 @@ class FlextInfraReleaseBuildMixin(FlextInfraReleaseProjectMixin):
             for destination, content in snapshots.items():
                 if destination.exists() and destination.read_bytes() != content:
                     return r[m.Infra.BuildPolicy].fail(
-                        f"immutable release policy collision: {destination}"
+                        f"immutable release policy collision: {destination}",
                     )
                 destination.write_bytes(content)
         except OSError as exc:
             return r[m.Infra.BuildPolicy].fail_op(
-                f"snapshot release policy into {policy_dir}", exc
+                f"snapshot release policy into {policy_dir}",
+                exc,
             )
         return r[m.Infra.BuildPolicy].ok(
             m.Infra.BuildPolicy(
@@ -183,7 +186,7 @@ class FlextInfraReleaseBuildMixin(FlextInfraReleaseProjectMixin):
                 build_constraints_sha256=u.Cli.sha256_bytes(snapshots[constraints]),
                 gitleaks_policy_path=str(gitleaks.resolve()),
                 gitleaks_policy_sha256=u.Cli.sha256_bytes(snapshots[gitleaks]),
-            )
+            ),
         )
 
 

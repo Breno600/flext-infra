@@ -20,7 +20,8 @@ if TYPE_CHECKING:
 
 
 class FlextInfraNamespaceEnforcer(
-    FlextInfraNamespaceEnforcerPhasesMixin, FlextInfraNamespaceEnforcerProjectMixin
+    FlextInfraNamespaceEnforcerPhasesMixin,
+    FlextInfraNamespaceEnforcerProjectMixin,
 ):
     """Orchestrate namespace enforcement across a workspace."""
 
@@ -29,7 +30,7 @@ class FlextInfraNamespaceEnforcer(
         super().__init__()
         self._repository_root = repository_root.resolve()
         self._rope_project: t.Infra.RopeProject = u.Infra.init_rope_project(
-            self._repository_root
+            self._repository_root,
         )
 
     @override
@@ -59,12 +60,15 @@ class FlextInfraNamespaceEnforcer(
             )
             project_reports.append(report)
         return m.Infra.WorkspaceEnforcementReport(
-            workspace=str(self._repository_root), projects=project_reports
+            workspace=str(self._repository_root),
+            projects=project_reports,
         )
 
     @override
     def _resolve_project_roots(
-        self, *, project_names: t.StrSequence | None = None
+        self,
+        *,
+        project_names: t.StrSequence | None = None,
     ) -> t.SequenceOf[Path]:
         """Resolve the selected namespace-enabled roots through the topology owner.
 
@@ -133,18 +137,21 @@ class FlextInfraNamespaceEnforcer(
 
     @classmethod
     def execute_command(
-        cls, params: m.Infra.RefactorNamespaceEnforceInput
+        cls,
+        params: m.Infra.RefactorNamespaceEnforceInput,
     ) -> p.Result[m.Infra.WorkspaceEnforcementReport]:
         """Execute namespace enforcement directly from the canonical payload."""
         enforcer = cls(repository_root=params.repository_root)
         report = enforcer.enforce(
-            apply=params.apply, project_names=params.project_names, gates=params.gates
+            apply=params.apply,
+            project_names=params.project_names,
+            gates=params.gates,
         )
         cli.display_text(cls.render_text(report))
         has_violations: bool = report.has_violations
         if has_violations:
             return r[m.Infra.WorkspaceEnforcementReport].fail(
-                "Namespace violations found"
+                "Namespace violations found",
             )
         return r[m.Infra.WorkspaceEnforcementReport].ok(report)
 

@@ -82,7 +82,8 @@ class FlextInfraNamespaceRulesBase:
 
     @classmethod
     def imports_with_context(
-        cls, tree: p.AttributeProbe
+        cls,
+        tree: p.AttributeProbe,
     ) -> t.SequenceOf[t.Pair[t.Infra.PythonImportNode, bool]]:
         """Return every import with its TYPE_CHECKING-only state."""
         guarded = {

@@ -135,8 +135,6 @@ class FlextInfraConstantsBase(
     "Pytest markers settings key."
     PLUGINS: ClassVar[str] = "plugins"
     "Mypy plugins settings key."
-    DISABLE_ERROR_CODE: ClassVar[str] = "disable_error_code"
-    "Mypy disable_error_code settings key."
     IGNORE: ClassVar[str] = "ignore"
     "Pyrefly/sub-settings ignore key."
     INCLUDE: ClassVar[str] = "include"

@@ -46,12 +46,13 @@ class FlextInfraUtilitiesCodegen(
                     "MISE_LOCKFILE_PLATFORMS",
                     ",".join(toolchain.mise_lockfile_platforms),
                 ),
+                ("MISE_PYTHON_COMPILE", str(toolchain.python_compile).lower()),
             ),
             transient_environment=tuple(c.Infra.MISE_BOOTSTRAP_TRANSIENT_ENVIRONMENT),
             persistent_environment=tuple(c.Infra.MISE_BOOTSTRAP_PERSISTENT_ENVIRONMENT),
             empty_files=tuple(c.Infra.MISE_BOOTSTRAP_EMPTY_FILES),
             passthrough_environment=tuple(
-                c.Infra.MISE_BOOTSTRAP_PASSTHROUGH_ENVIRONMENT
+                c.Infra.MISE_BOOTSTRAP_PASSTHROUGH_ENVIRONMENT,
             ),
             version_pin_file=c.Infra.MISE_VERSION_PIN_FILENAME,
             version_pin_header=c.Infra.MISE_VERSION_PIN_HEADER,
@@ -68,7 +69,6 @@ class FlextInfraUtilitiesCodegen(
         """Return the sole typed context every generated ``.envrc`` renders from."""
         toolchain = config.Infra.codegen.toolchain
         return m.Infra.EnvrcRenderSpec(
-            runtime_environment_directory=config.Infra.codegen.make.runtime_environment_directory,
             environment_path_prepends=toolchain.environment_path_prepends,
             mise_bootstrap=FlextInfraUtilitiesCodegen.mise_bootstrap_environment(),
         )
@@ -92,7 +92,7 @@ class FlextInfraUtilitiesCodegen(
         else:
             return r[Path].fail(
                 f"{contract.storage_root_variable}, XDG_DATA_HOME, or HOME must "
-                "identify persistent Mise storage"
+                "identify persistent Mise storage",
             )
         normalized = os.path.normpath(raw_root)
         if raw_root != normalized:
@@ -107,42 +107,42 @@ class FlextInfraUtilitiesCodegen(
         # sandbox instead of the actual defect, which is the storage living
         # inside the checkout it is supposed to outlive.
         if storage_root == physical_project or storage_root.is_relative_to(
-            physical_project
+            physical_project,
         ):
             return r[Path].fail(
-                f"persistent Mise storage must be outside the checkout: {storage_root}"
+                f"persistent Mise storage must be outside the checkout: {storage_root}",
             )
         if storage_root == physical_tmp or storage_root.is_relative_to(physical_tmp):
             return r[Path].fail(
-                f"persistent Mise storage must not live under /tmp: {storage_root}"
+                f"persistent Mise storage must not live under /tmp: {storage_root}",
             )
         if physical_project.is_relative_to(storage_root):
             return r[Path].fail(
-                f"persistent Mise storage must not contain the checkout: {storage_root}"
+                f"persistent Mise storage must not contain the checkout: {storage_root}",
             )
         if storage_root.is_symlink():
             return r[Path].fail(
-                f"Mise storage path must not be a symlink: {storage_root}"
+                f"Mise storage path must not be a symlink: {storage_root}",
             )
         created_root = FlextInfraUtilitiesCodegen._create_mise_storage_directory(
-            storage_root
+            storage_root,
         )
         if created_root.failure:
             return r[Path].from_failure(created_root)
         physical_root = storage_root.resolve(strict=True)
         if physical_root == physical_tmp or physical_root.is_relative_to(physical_tmp):
             return r[Path].fail(
-                f"persistent Mise storage must not live under /tmp: {physical_root}"
+                f"persistent Mise storage must not live under /tmp: {physical_root}",
             )
         if physical_root == physical_project or physical_root.is_relative_to(
-            physical_project
+            physical_project,
         ):
             return r[Path].fail(
-                f"persistent Mise storage must not contain the checkout: {physical_root}"
+                f"persistent Mise storage must not contain the checkout: {physical_root}",
             )
         if physical_project.is_relative_to(physical_root):
             return r[Path].fail(
-                f"persistent Mise storage must not contain the checkout: {physical_root}"
+                f"persistent Mise storage must not contain the checkout: {physical_root}",
             )
         relative_directories = {
             relative
@@ -150,23 +150,23 @@ class FlextInfraUtilitiesCodegen(
             if relative != "."
         }
         relative_directories.add(
-            Path(contract.runtime_install_relative_template).parent.as_posix()
+            Path(contract.runtime_install_relative_template).parent.as_posix(),
         )
         for relative in sorted(relative_directories):
             directory = physical_root / relative
             if directory.is_symlink():
                 return r[Path].fail(
-                    f"persistent Mise path must not be a symlink: {directory}"
+                    f"persistent Mise path must not be a symlink: {directory}",
                 )
             created = FlextInfraUtilitiesCodegen._create_mise_storage_directory(
-                directory
+                directory,
             )
             if created.failure:
                 return r[Path].from_failure(created)
             physical_directory = directory.resolve(strict=True)
             if not physical_directory.is_relative_to(physical_root):
                 return r[Path].fail(
-                    f"persistent Mise path escaped storage: {physical_directory}"
+                    f"persistent Mise path escaped storage: {physical_directory}",
                 )
         return r[Path].ok(physical_root)
 
@@ -185,7 +185,7 @@ class FlextInfraUtilitiesCodegen(
         release = data[0] if len(data) == 1 else ""
         if re.fullmatch(c.Infra.MISE_RELEASE_PATTERN, release) is None:
             return r[str].fail(
-                f"pin records no resolved Mise release ({release or 'empty'})"
+                f"pin records no resolved Mise release ({release or 'empty'})",
             )
         return r[str].ok(release)
 
@@ -196,7 +196,7 @@ class FlextInfraUtilitiesCodegen(
             return r[Path].fail(f"invalid Mise runtime release: {release}")
         suffix = ".exe" if os.name == "nt" else ""
         relative = c.Infra.MISE_RUNTIME_INSTALL_RELATIVE_TEMPLATE.format(
-            release=release
+            release=release,
         )
         return r[Path].ok(storage_root / f"{relative}{suffix}")
 
@@ -211,7 +211,8 @@ class FlextInfraUtilitiesCodegen(
         if planned.failure:
             return r[bool].from_failure(planned)
         created = u.Cli.atomic_create_directory_chain_guarded(
-            planned.value, permission_mode=0o700
+            planned.value,
+            permission_mode=0o700,
         )
         if created.failure:
             return r[bool].from_failure(created)
@@ -219,7 +220,11 @@ class FlextInfraUtilitiesCodegen(
 
     @staticmethod
     def generate_module_skeleton(
-        *, class_name: str, base_class: str, base_module: str, docstring: str
+        *,
+        class_name: str,
+        base_class: str,
+        base_module: str,
+        docstring: str,
     ) -> str:
         """Render one module skeleton through the cli template engine (ADR-005).
 
@@ -247,7 +252,8 @@ class FlextInfraUtilitiesCodegen(
 
     @staticmethod
     def generate_test_module_skeleton(
-        *, context: m.Infra.TestModuleSkeletonRenderContext
+        *,
+        context: m.Infra.TestModuleSkeletonRenderContext,
     ) -> str:
         """Render one canonical test facade skeleton from its validated context."""
         template_path = (

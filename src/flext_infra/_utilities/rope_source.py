@@ -22,14 +22,17 @@ class FlextInfraUtilitiesRopeSource:
         return [
             name
             for name in FlextInfraUtilitiesDiscovery.discover_python_dirs(
-                src_dir, workspace_excluded_top_dirs=frozenset()
+                src_dir,
+                workspace_excluded_top_dirs=frozenset(),
             )
             if name.isidentifier()
         ]
 
     @staticmethod
     def find_import_insert_position(
-        lines: t.StrSequence, *, past_existing: bool = True
+        lines: t.StrSequence,
+        *,
+        past_existing: bool = True,
     ) -> int:
         """Return the module-level line index where an import may be inserted.
 
@@ -57,7 +60,8 @@ class FlextInfraUtilitiesRopeSource:
         position = 0
         for statement in module.body:
             if isinstance(statement, ast.Expr) and isinstance(
-                statement.value, ast.Constant
+                statement.value,
+                ast.Constant,
             ):
                 if isinstance(statement.value.value, str) and position == 0:
                     position = statement.end_lineno or position
@@ -81,7 +85,8 @@ class FlextInfraUtilitiesRopeSource:
     def index_after_docstring_and_future_imports(lines: t.StrSequence) -> int:
         """Return insertion index after module docstring and future imports."""
         return FlextInfraUtilitiesRopeSource.find_import_insert_position(
-            lines, past_existing=False
+            lines,
+            past_existing=False,
         )
 
     @staticmethod

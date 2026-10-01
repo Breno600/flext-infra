@@ -43,6 +43,20 @@ class FlextInfraConstantsCheck:
         WARNING = "warning"
         NOTE = "note"
 
+    @unique
+    class GateKind(StrEnum):
+        """Who owns a gate's rule catalog, which decides where the gate blocks.
+
+        Only ``EXTERNAL`` gates run in the fast contexts (CI and pre-commit):
+        an external tool applying its own per-file rule catalog. Whole-program
+        type checkers and the validators whose rules this package owns run
+        locally and at pre-push, where they block.
+        """
+
+        EXTERNAL = "external"
+        TYPE_CHECKER = "type-checker"
+        INFRA = "infra"
+
     AST_GREP_DOCS_URL: ClassVar[str] = "https://ast-grep.github.io/"
     "Canonical ast-grep documentation URL for gate metadata."
     # Quality gate identifiers shared with the tool-name vocabulary.
@@ -57,13 +71,7 @@ class FlextInfraConstantsCheck:
         "mypy",
         "pyright",
     })
-    "Native type-checker gates: independent read-only analyzers of one tree."
-    UNSUSPENDABLE_GATES: ClassVar[frozenset[str]] = frozenset({
-        LINT,
-        FORMAT,
-        *TYPE_CHECKER_GATES,
-    })
-    "Lint, format and type-checker gates: never suspendable from `make check`."
+    "Gate id -> kind, derived from the registry declaration."
     SARIF_TOOL_INFO: ClassVar[t.MappingKV[str, t.StrPair]] = MappingProxyType({
         "lint": ("Ruff Linter", "https://docs.astral.sh/ruff/"),
         "format": ("Ruff Formatter", "https://docs.astral.sh/ruff/formatter/"),
@@ -101,6 +109,11 @@ class FlextInfraConstantsCheck:
         ),
         "duplication": ("jscpd", "https://github.com/kucherenko/jscpd"),
     })
+    "Gate id -> (tool name, tool url), derived from the registry declaration."
+    TYPE_CHECKER_GATES: ClassVar[frozenset[str]] = frozenset(
+        GATE_TOOLS_BY_KIND[GateKind.TYPE_CHECKER]
+    )
+    "Native type-checker gates: independent read-only analyzers of one tree."
     ALLOWED_GATES: ClassVar[frozenset[str]] = frozenset(SARIF_TOOL_INFO)
     "Gate identifiers — derived from SARIF_TOOL_INFO keys (single SSOT)."
     CHECK_REPORT_MARKDOWN_FILENAME: ClassVar[str] = "check-report.md"
@@ -111,13 +124,14 @@ class FlextInfraConstantsCheck:
     "Gates that rewrite files: owned by `fmt`/`fix`, never a read-only `check` vocabulary."
 
     RUFF_FORMAT_FILE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\s*-->\s*(.+?):\d+:\d+\s*$"
+        r"^\s*-->\s*(.+?):\d+:\d+\s*$",
     )
     MARKDOWN_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?P<file>.*?):(?P<line>\d+):(?P<col>\d+):\s+\[(?P<code>MD\d+)\]\s+(?P<msg>.*)$"
+        r"^(?P<file>.*?):(?P<line>\d+):(?P<col>\d+):\s+\[(?P<code>MD\d+)\]\s+(?P<msg>.*)$",
     )
     MARKDOWN_FORMAT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\[warn\]\s+(?P<file>\S+\.md)\s*$", re.MULTILINE
+        r"^\[warn\]\s+(?P<file>\S+\.md)\s*$",
+        re.MULTILINE,
     )
     "Prettier ``--check`` unformatted-file line (``[warn] <file.md>``); config warns never match."
     MARKDOWN_PY_FENCE_RE: ClassVar[t.RegexPattern] = re.compile(
@@ -130,11 +144,12 @@ class FlextInfraConstantsCheck:
     MARKDOWN_CODE_SKIP_MARKER: ClassVar[str] = "notest"
     "Existing fence marker (pytest-markdown-docs) opting a block out of code validation."
     MARKDOWN_CODE_FORMAT_FILE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?P<file>\S+):\d+:\d+:\s+unformatted:\s+"
+        r"^(?P<file>\S+):\d+:\d+:\s+unformatted:\s+",
     )
     "Ruff format ``--check`` concise verdict line over extracted sources."
     MARKDOWN_CODE_FORMAT_ERROR_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^error: Failed to format (?P<file>\S+):", re.MULTILINE
+        r"^error: Failed to format (?P<file>\S+):",
+        re.MULTILINE,
     )
     "Ruff format hard-failure line over extracted sources (parse errors)."
     VALID_GATE_SEVERITIES: ClassVar[frozenset[str]] = frozenset(GateSeverity)
@@ -293,7 +308,7 @@ class FlextInfraConstantsCheck:
         "--update-all",
     })
     MANUAL_CMD_SEGMENT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"&&|\|\||;|\||\n|`|\$\("
+        r"&&|\|\||;|\||\n|`|\$\(",
     )
 
     # --- Net-LOC-delta validator (§3.5) SSOT ---

@@ -32,7 +32,7 @@ class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis
         if plain_result.failure:
             return r[t.JsonMapping].from_failure(plain_result)
         return r[t.JsonMapping].ok(
-            t.Infra.INFRA_MAPPING_ADAPTER.validate_python(plain_result.value)
+            t.Infra.INFRA_MAPPING_ADAPTER.validate_python(plain_result.value),
         )
 
     @override
@@ -81,7 +81,9 @@ class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis
         return groups
 
     def build_project_report(
-        self, project_name: str, deptry_issues: t.SequenceOf[t.JsonMapping]
+        self,
+        project_name: str,
+        deptry_issues: t.SequenceOf[t.JsonMapping],
     ) -> m.Infra.ProjectDependencyReport:
         """Build a project dependency report from classified deptry issues."""
         classified = self.classify_issues(deptry_issues)
@@ -108,7 +110,9 @@ class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis
         )
 
     def discover_project_paths(
-        self, repository_root: Path, projects_filter: t.StrSequence | None = None
+        self,
+        repository_root: Path,
+        projects_filter: t.StrSequence | None = None,
     ) -> p.Result[t.SequenceOf[Path]]:
         """Discover project paths with pyproject.toml in workspace.
 

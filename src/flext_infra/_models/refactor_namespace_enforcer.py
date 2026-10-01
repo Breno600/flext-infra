@@ -28,7 +28,8 @@ class FlextInfraModelsNamespaceEnforcer:
         class_name: Annotated[str, m.Field(description="Facade class name")] = ""
         file: Annotated[str, m.Field(description="Facade file path")] = ""
         symbol_count: Annotated[
-            t.NonNegativeInt, m.Field(description="Symbol count")
+            t.NonNegativeInt,
+            m.Field(description="Symbol count"),
         ] = 0
 
     class LooseObjectViolation(FileLineViolation):
@@ -43,7 +44,8 @@ class FlextInfraModelsNamespaceEnforcer:
         """Import alias violation."""
 
         suggested_import: Annotated[
-            str, m.Field(description="Suggested import statement")
+            str,
+            m.Field(description="Suggested import statement"),
         ]
 
     class NamespaceSourceViolation(FileLineViolation):
@@ -51,14 +53,17 @@ class FlextInfraModelsNamespaceEnforcer:
 
         alias: Annotated[t.NonEmptyStr, m.Field(description="Runtime alias letter")]
         current_source: Annotated[
-            t.NonEmptyStr, m.Field(description="Current import source")
+            t.NonEmptyStr,
+            m.Field(description="Current import source"),
         ]
         correct_source: Annotated[
-            t.NonEmptyStr, m.Field(description="Correct import source")
+            t.NonEmptyStr,
+            m.Field(description="Correct import source"),
         ]
         current_import: Annotated[str, m.Field(description="Current import statement")]
         suggested_import: Annotated[
-            str, m.Field(description="Suggested import statement")
+            str,
+            m.Field(description="Suggested import statement"),
         ]
 
     class ClassPlacementViolation(FileLineViolation):
@@ -68,16 +73,20 @@ class FlextInfraModelsNamespaceEnforcer:
         base_class: Annotated[t.NonEmptyStr, m.Field(description="Base class name")]
         suggestion: Annotated[str, m.Field(description="Fix suggestion")]
         action: Annotated[
-            str, m.Field(description="Recommended fix action identifier")
+            str,
+            m.Field(description="Recommended fix action identifier"),
         ] = "manual"
         fixable: Annotated[
-            bool, m.Field(description="Whether the violation can be auto-fixed")
+            bool,
+            m.Field(description="Whether the violation can be auto-fixed"),
         ] = False
         target_facade: Annotated[
-            str, m.Field(description="Target facade class suggestion")
+            str,
+            m.Field(description="Target facade class suggestion"),
         ] = ""
         family: Annotated[
-            str, m.Field(description="Canonical family letter (c/m/p/t/u)")
+            str,
+            m.Field(description="Canonical family letter (c/m/p/t/u)"),
         ] = ""
 
     class InternalImportViolation(mm.ViolationDetailMixin, ImportViolationBase):
@@ -96,7 +105,8 @@ class FlextInfraModelsNamespaceEnforcer:
             m.Field(description="Symbol imported from the private module"),
         ]
         suggested_facade: Annotated[
-            t.NonEmptyStr, m.Field(description="Canonical facade module to import from")
+            t.NonEmptyStr,
+            m.Field(description="Canonical facade module to import from"),
         ]
         symbol_exported: Annotated[
             bool,
@@ -108,10 +118,12 @@ class FlextInfraModelsNamespaceEnforcer:
         """Cyclic import violation."""
 
         cycle: Annotated[
-            t.VariadicTuple[str], m.Field(description="Import cycle chain")
+            t.VariadicTuple[str],
+            m.Field(description="Import cycle chain"),
         ]
         files: Annotated[
-            t.VariadicTuple[str], m.Field(description="Files in cycle")
+            t.VariadicTuple[str],
+            m.Field(description="Files in cycle"),
         ] = m.Field(default_factory=tuple)
 
     class RuntimeAliasViolation(
@@ -132,7 +144,8 @@ class FlextInfraModelsNamespaceEnforcer:
         alias_name: Annotated[t.NonEmptyStr, m.Field(description="Alias name")]
         target_name: Annotated[t.NonEmptyStr, m.Field(description="Target name")]
         module_name: Annotated[
-            str, m.Field(description="Source module for import-kind violations")
+            str,
+            m.Field(description="Source module for import-kind violations"),
         ] = ""
 
     class ParseFailureViolation(mm.FilePathMixin, mm.ErrorDetailMixin, m.ContractModel):
@@ -243,7 +256,8 @@ class FlextInfraModelsNamespaceEnforcer:
             ),
         ]
         files_scanned: Annotated[
-            t.NonNegativeInt, m.Field(description="Files scanned")
+            t.NonNegativeInt,
+            m.Field(description="Files scanned"),
         ] = 0
 
         @m.computed_field

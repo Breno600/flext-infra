@@ -100,7 +100,10 @@ class FlextInfraRefactorCensusObjectsMixin:
 
     @classmethod
     def _removal_candidate(
-        cls, item: m.Infra.Object, *, include_unused: bool
+        cls,
+        item: m.Infra.Object,
+        *,
+        include_unused: bool,
     ) -> m.Infra.RemovalCandidate | None:
         """Build a removal candidate for an object."""
         if include_unused and cls._is_unused(item):
@@ -127,7 +130,8 @@ class FlextInfraRefactorCensusObjectsMixin:
 
     @classmethod
     def _impact_map_results(
-        cls, report: m.Infra.WorkspaceReport
+        cls,
+        report: m.Infra.WorkspaceReport,
     ) -> t.VariadicTuple[m.Infra.Result]:
         """Impact map results."""
         changes_by_file: MutableMapping[Path, list[str]] = defaultdict(list)

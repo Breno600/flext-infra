@@ -22,11 +22,15 @@ class FlextInfraCodegenLazyInitPlannerCacheMixin:
         _module_file_by_name: MutableMapping[str, Path]
 
         def build_plan(
-            self, pkg_dir: Path, *, dir_exports: t.MappingKV[str, t.LazyAliasMap]
+            self,
+            pkg_dir: Path,
+            *,
+            dir_exports: t.MappingKV[str, t.LazyAliasMap],
         ) -> m.Infra.LazyInitPlan: ...
 
         def _declared_alias_names_for_package(
-            self, package_name: str
+            self,
+            package_name: str,
         ) -> frozenset[str]: ...
 
     def _export_names_for_package(self, package_name: str) -> frozenset[str]:
@@ -59,7 +63,7 @@ class FlextInfraCodegenLazyInitPlannerCacheMixin:
                 self.rope_workspace.exports(
                     init_path,
                     export_options=m.Infra.ExportOptions(allow_assignments=True),
-                )
+                ),
             )
         # Why (flext-b3xmn/R32): a parent outside the scan scope is read by
         # path from the one package the active environment declares; a name
@@ -100,7 +104,8 @@ class FlextInfraCodegenLazyInitPlannerCacheMixin:
             return ""
         project_pkg: str = (
             self.rope_workspace.workspace_index.project_package_by_root.get(
-                str(package_entry.project_root), ""
+                str(package_entry.project_root),
+                "",
             )
         )
         return project_pkg

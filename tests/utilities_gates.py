@@ -36,7 +36,9 @@ class TestsFlextInfraUtilitiesGatesMixin:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(source, encoding="utf-8")
         return m.Infra.DetectorContext(
-            file_path=target, rope_project=rope_project, project_name=project_name
+            file_path=target,
+            rope_project=rope_project,
+            project_name=project_name,
         )
 
     @staticmethod
@@ -65,7 +67,8 @@ class TestsFlextInfraUtilitiesGatesMixin:
         """Check one gate once, asserting its pass state and issue count."""
         gate = gate_class(tmp_path)
         result = gate.check(
-            project_dir, TestsFlextInfraUtilitiesGatesMixin.gate_context(tmp_path)
+            project_dir,
+            TestsFlextInfraUtilitiesGatesMixin.gate_context(tmp_path),
         )
         tm.that(result.result.passed, eq=passed)
         tm.that(len(result.issues), eq=issues_len)
@@ -82,7 +85,11 @@ class TestsFlextInfraUtilitiesGatesMixin:
         """Create a typed quality-gate execution fixture."""
         return m.Infra.GateExecution(
             result=m.Infra.GateResult(
-                gate=gate, project=project, passed=passed, errors=(), duration=0.0
+                gate=gate,
+                project=project,
+                passed=passed,
+                errors=(),
+                duration=0.0,
             ),
             issues=tuple(issues or ()),
             raw_output="",
@@ -109,7 +116,8 @@ class TestsFlextInfraUtilitiesGatesMixin:
 
     @staticmethod
     def make_project(
-        name: str = "p", gates: t.MappingKV[str, m.Infra.GateExecution] | None = None
+        name: str = "p",
+        gates: t.MappingKV[str, m.Infra.GateExecution] | None = None,
     ) -> m.Infra.ProjectResult:
         """Create a typed project-result fixture."""
         resolved_gates: t.MappingKV[str, m.Infra.GateExecution] = (
@@ -125,11 +133,14 @@ class TestsFlextInfraUtilitiesGatesMixin:
 
     @staticmethod
     def create_gate_context(
-        repository_root: Path, *, reports_dir: Path | None = None
+        repository_root: Path,
+        *,
+        reports_dir: Path | None = None,
     ) -> m.Infra.GateContext:
         """Provide the typed test helper `create_gate_context`."""
         return m.Infra.GateContext(
-            repository_root=repository_root, reports_dir=reports_dir or repository_root
+            repository_root=repository_root,
+            reports_dir=reports_dir or repository_root,
         )
 
     @staticmethod
@@ -147,7 +158,8 @@ class TestsFlextInfraUtilitiesGatesMixin:
             project_dir,
             ctx
             or TestsFlextInfraUtilitiesGatesMixin.create_gate_context(
-                repository_root, reports_dir=reports_dir
+                repository_root,
+                reports_dir=reports_dir,
             ),
         )
 

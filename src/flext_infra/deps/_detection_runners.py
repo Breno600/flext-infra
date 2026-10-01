@@ -21,7 +21,8 @@ class FlextInfraDependencyDetectionRunnersMixin:
         # Conversion helper provided by the concrete analyzer; declared for static
         # resolution only (runtime impl lives on the concrete via FLEXT).
         def _to_toml_config(
-            self, payload: t.MappingKV[str, t.JsonValue]
+            self,
+            payload: t.MappingKV[str, t.JsonValue],
         ) -> t.JsonMapping: ...
 
     def _read_plain(self, path: Path) -> p.Result[t.JsonMapping]:
@@ -77,7 +78,7 @@ class FlextInfraDependencyDetectionRunnersMixin:
             loaded_result = u.Cli.files_read_json(out_file)
             if loaded_result.failure:
                 return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].from_failure(
-                    loaded_result
+                    loaded_result,
                 )
             validation_failure: (
                 p.Result[t.Pair[t.SequenceOf[t.JsonMapping], int]] | None
@@ -87,13 +88,14 @@ class FlextInfraDependencyDetectionRunnersMixin:
                 for index, item in enumerate(loaded_result.value):
                     if not isinstance(item, Mapping):
                         return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].fail(
-                            f"deptry JSON issue {index} must be a mapping"
+                            f"deptry JSON issue {index} must be a mapping",
                         )
                     try:
                         typed_item = t.Infra.INFRA_MAPPING_ADAPTER.validate_python(item)
                     except c.ValidationError as exc:
                         return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].fail_op(
-                            "validate deptry issue", exc
+                            "validate deptry issue",
+                            exc,
                         )
                     converted_issue = self._to_toml_config(typed_item)
                     if len(converted_issue) == len(typed_item):
@@ -104,7 +106,8 @@ class FlextInfraDependencyDetectionRunnersMixin:
                     out_file.unlink()
                 except OSError as exc:
                     return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].fail(
-                        f"failed to cleanup deptry temp output: {exc}", exception=exc
+                        f"failed to cleanup deptry temp output: {exc}",
+                        exception=exc,
                     )
             if validation_failure is not None:
                 return validation_failure
@@ -115,7 +118,8 @@ class FlextInfraDependencyDetectionRunnersMixin:
         ))
 
     def run_mypy_stub_hints(
-        self, project_path: Path
+        self,
+        project_path: Path,
     ) -> p.Result[t.Pair[t.StrSequence, t.StrSequence]]:
         """Run mypy via the command runner to detect missing stubs and hint packages."""
         # Why: current mypy emits ANSI color codes around quoted module/package
@@ -128,16 +132,18 @@ class FlextInfraDependencyDetectionRunnersMixin:
             m.Infra.MypyInvocation(
                 targets=(project_path / c.Infra.DEFAULT_SRC_DIR,),
                 config_file=project_path / c.PYPROJECT_FILENAME,
-            )
+            ),
         )
         result = self._run_raw(
-            cmd, cwd=project_path, timeout=u.Infra.mypy_runner_timeout()
+            cmd,
+            cwd=project_path,
+            timeout=u.Infra.mypy_runner_timeout(),
         )
         if result.failure:
             return r[t.Pair[t.StrSequence, t.StrSequence]].fail(
                 u.Infra.mypy_launch_failure_diagnostic(
-                    result.error or "Mypy process launch failed"
-                )
+                    result.error or "Mypy process launch failed",
+                ),
             )
         command_output: p.Cli.CommandOutput = result.value
         if resource_diagnostic := u.Infra.mypy_failure_diagnostic(command_output):
@@ -159,7 +165,9 @@ class FlextInfraDependencyDetectionRunnersMixin:
         ))
 
     def run_pip_check(
-        self, repository_root: Path, venv_bin: Path
+        self,
+        repository_root: Path,
+        venv_bin: Path,
     ) -> p.Result[t.Pair[t.StrSequence, int]]:
         """Run pip check to detect dependency conflicts in workspace."""
         pip = venv_bin / "pip"

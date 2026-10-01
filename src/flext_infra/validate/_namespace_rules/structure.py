@@ -54,7 +54,7 @@ class FlextInfraNamespaceRulesStructure(FlextInfraNamespaceRulesBase):
                 continue
             if kind == "Expr" and cls.kind(getattr(statement, "value", None)) == "Call":
                 called = cls.dotted_name(
-                    getattr(getattr(statement, "value", None), "func", None)
+                    getattr(getattr(statement, "value", None), "func", None),
                 )
                 entry_calls.append(called.rsplit(".", 1)[-1])
                 continue
@@ -107,7 +107,7 @@ class FlextInfraNamespaceRulesStructure(FlextInfraNamespaceRulesBase):
         ):
             messages.append(
                 f"{filepath}:1 — facade {policy.expected_alias!r} must bind and publish "
-                f"its local owner {policy.expected_family!r} in __all__"
+                f"its local owner {policy.expected_family!r} in __all__",
             )
         expected = (
             policy.expected_family
@@ -119,7 +119,7 @@ class FlextInfraNamespaceRulesStructure(FlextInfraNamespaceRulesBase):
         if len(classes) < 1:
             messages.append(
                 f"{filepath}:1 — module must declare at least one top-level class; "
-                f"found {len(classes)}"
+                f"found {len(classes)}",
             )
         facade_classes = [
             node
@@ -130,14 +130,14 @@ class FlextInfraNamespaceRulesStructure(FlextInfraNamespaceRulesBase):
         if not facade_classes:
             messages.append(
                 f"{filepath}:1 — module must declare at least one class starting with "
-                f"{expected!r} (the facade class)"
+                f"{expected!r} (the facade class)",
             )
         for node in facade_classes:
             name = getattr(node, "name", "")
             if expected and isinstance(name, str) and not name.startswith(expected):
                 messages.append(
                     f"{filepath}:{cls.line(node)} — class {name!r} must start with "
-                    f"{expected!r}"
+                    f"{expected!r}",
                 )
         # Secondary support classes at module level are allowed in facade modules;
         # only the facade class must satisfy the naming and nesting rules.
@@ -148,34 +148,36 @@ class FlextInfraNamespaceRulesStructure(FlextInfraNamespaceRulesBase):
             ):
                 messages.append(
                     f"{filepath}:{cls.line(node)} — top-level function is forbidden; "
-                    "nest behavior in the module class"
+                    "nest behavior in the module class",
                 )
             if kind in {"Assign", "AnnAssign"} and not (
                 cls._dunder_assignment(node)
                 or cls._canonical_facade_alias(
-                    node, tree, policy=policy, exports=exports
+                    node,
+                    tree,
+                    policy=policy,
+                    exports=exports,
                 )
             ):
                 messages.append(
                     f"{filepath}:{cls.line(node)} — module alias/data declaration is "
-                    "forbidden; use the canonical facade class"
+                    "forbidden; use the canonical facade class",
                 )
             if kind == "Expr" and not cls._module_docstring(node):
                 messages.append(
-                    f"{filepath}:{cls.line(node)} — import-time expression is forbidden"
+                    f"{filepath}:{cls.line(node)} — import-time expression is forbidden",
                 )
         logical = sum(
             1
             for node in cls.walk(tree)
             if cls.kind(node) in c.Infra.NAMESPACE_LOGICAL_STATEMENT_KINDS
         )
-        # Why (operator 2026-09-07, codegen.yaml loc_cap): the per-module
-        # ceiling is config-owned SSOT — the superseded hardcoded 200 constant
-        # is retired, so this rule and the loc-cap gate share one source.
+        # The per-module ceiling is the gated config key loc_cap.max_lines;
+        # this rule and the loc-cap gate share that one source.
         cap = config.Infra.codegen.loc_cap.max_lines
         if logical > cap:
             messages.append(
-                f"{filepath}:1 — {logical} logical statements exceed the {cap} limit"
+                f"{filepath}:1 — {logical} logical statements exceed the {cap} limit",
             )
         messages.extend(cls._facade_shape(tree, filepath, policy=policy))
         return cls.violations("NS-STRUCT", messages)
@@ -198,7 +200,7 @@ class FlextInfraNamespaceRulesStructure(FlextInfraNamespaceRulesBase):
         messages: list[str] = []
         if not (getattr(outer, "bases", ()) or ()):
             messages.append(
-                f"{filepath}:{cls.line(outer)} — facade must extend its declared owner"
+                f"{filepath}:{cls.line(outer)} — facade must extend its declared owner",
             )
         if policy.expected_alias not in c.Infra.FAMILY_DIRECTORIES:
             return tuple(messages)
@@ -209,7 +211,7 @@ class FlextInfraNamespaceRulesStructure(FlextInfraNamespaceRulesBase):
         )
         if len(nested) > 1:
             messages.append(
-                f"{filepath}:{cls.line(outer)} — facade must compose one local namespace"
+                f"{filepath}:{cls.line(outer)} — facade must compose one local namespace",
             )
         elif (
             not nested
@@ -222,7 +224,7 @@ class FlextInfraNamespaceRulesStructure(FlextInfraNamespaceRulesBase):
         ):
             messages.append(
                 f"{filepath}:{cls.line(outer)} — facade must declare or inherit "
-                "a nested namespace through its actual MRO"
+                "a nested namespace through its actual MRO",
             )
         elif nested:
             minimum_bases = (
@@ -231,7 +233,7 @@ class FlextInfraNamespaceRulesStructure(FlextInfraNamespaceRulesBase):
             if len(getattr(nested[0], "bases", ()) or ()) < minimum_bases:
                 messages.append(
                     f"{filepath}:{cls.line(nested[0])} — local namespace must compose "
-                    "its declared family bases"
+                    "its declared family bases",
                 )
         return tuple(messages)
 
@@ -309,7 +311,8 @@ class FlextInfraNamespaceRulesStructure(FlextInfraNamespaceRulesBase):
         if value is None:
             return False
         return cls.kind(value) == "Constant" and isinstance(
-            getattr(value, "value", None), str
+            getattr(value, "value", None),
+            str,
         )
 
 

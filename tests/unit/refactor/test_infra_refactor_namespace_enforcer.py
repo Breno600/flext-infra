@@ -20,7 +20,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
     """Behavior contract for test_infra_refactor_namespace_enforcer."""
 
     def test_namespace_enforcer_creates_missing_facades_and_rewrites_imports(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Create missing facades and rewrite imports during enforcement."""
         workspace, _project, pkg = u.Tests.namespace_workspace(tmp_path)
@@ -30,11 +31,12 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         )
 
         report = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(
-            apply=True
+            apply=True,
         )
 
         tm.that(
-            all(status.exists for status in report.projects[0].facade_statuses), eq=True
+            all(status.exists for status in report.projects[0].facade_statuses),
+            eq=True,
         )
         tm.that(report.projects[0].import_violations, empty=True)
         tm.that((pkg / "constants.py").exists(), eq=True)
@@ -51,7 +53,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         tm.that(service_source, lacks="from sample_pkg import")
 
     def test_namespace_enforcer_detects_manual_typings_and_compat_aliases(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Detect manual typings and compatibility aliases."""
         workspace, _project, pkg = u.Tests.namespace_workspace(tmp_path)
@@ -61,14 +64,15 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         )
 
         report = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(
-            apply=False
+            apply=False,
         )
 
         tm.that(report.projects[0].relocation_findings, gte=1)
         tm.that(report.projects[0].compatibility_alias_violations, empty=False)
 
     def test_namespace_enforcer_splits_foreign_canonical_aliases(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """ENFORCE-080 has a distinct report field from legacy aliases."""
         workspace, _project, pkg = u.Tests.namespace_workspace(
@@ -113,7 +117,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         )
 
         report = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(
-            apply=False
+            apply=False,
         )
 
         project_report = report.projects[0]
@@ -132,7 +136,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         tm.that(rendered, has="Foreign canonical alias violations:")
 
     def test_namespace_enforcer_detects_manual_protocol_outside_canonical_files(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Detect manual protocols outside canonical protocol modules."""
         workspace, _project, pkg = u.Tests.namespace_workspace(tmp_path)
@@ -142,7 +147,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         )
 
         report = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(
-            apply=False
+            apply=False,
         )
 
         tm.that(report.projects[0].relocation_findings, gte=1)
@@ -150,7 +155,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         tm.that(rendered, has="Relocation findings:")
 
     def test_namespace_enforcer_detects_internal_private_imports(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Detect imports that cross an internal private boundary."""
         workspace, _project, pkg = u.Tests.namespace_workspace(tmp_path)
@@ -160,7 +166,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         )
 
         report = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(
-            apply=False
+            apply=False,
         )
 
         tm.that(report.projects[0].internal_import_violations, empty=False)
@@ -168,7 +174,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         tm.that(rendered, has="Internal import violations:")
 
     def test_namespace_enforcer_exempts_same_package_facade_assembly_imports(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Allow same-package imports used to assemble a facade."""
         workspace, _project, pkg = u.Tests.namespace_workspace(tmp_path)
@@ -206,13 +213,14 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         )
 
         report = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(
-            apply=False
+            apply=False,
         )
 
         tm.that(report.projects[0].internal_import_violations, empty=True)
 
     def test_namespace_enforcer_flags_cross_package_private_import_from_scripts_tree(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Flag cross-package private imports originating in a scripts tree."""
         workspace, project, pkg = u.Tests.namespace_workspace(
@@ -241,7 +249,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         )
 
         report = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(
-            apply=False
+            apply=False,
         )
 
         tm.that(len(report.projects[0].internal_import_violations), eq=1)
@@ -249,7 +257,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         tm.that(violation.file.replace("\\", "/"), has="scripts/helper.py")
 
     def test_namespace_enforcer_allows_pytest_whitebox_project_private_import(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Allow pytest white-box imports within the same project."""
         workspace, project, pkg = u.Tests.namespace_workspace(
@@ -279,7 +288,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         )
 
         report = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(
-            apply=False
+            apply=False,
         )
 
         tm.that(report.projects[0].internal_import_violations, empty=True)
@@ -289,7 +298,9 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         tm.that(tuple(m.Infra.RefactorNamespaceEnforceInput.model_fields), lacks="diff")
 
     def test_loose_object_detector_detects_module_logger_assignment(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+        self,
+        tmp_path: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> None:
         """Detect a loose module logger assignment."""
         violations = FlextInfraLooseObjectDetector.detect_file(
@@ -302,7 +313,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
                 "    pass\n",
                 rope_project,
                 project_name="sample-proj",
-            )
+            ),
         )
 
         tm.that(len(violations), eq=1)
@@ -310,7 +321,9 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         tm.that(violations[0].name, eq="logger")
 
     def test_loose_object_detector_flags_private_function_as_loose(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+        self,
+        tmp_path: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> None:
         """Flag a private module function as a loose object."""
         violations = FlextInfraLooseObjectDetector.detect_file(
@@ -325,7 +338,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
                 "    pass\n",
                 rope_project,
                 project_name="sample-proj",
-            )
+            ),
         )
 
         function_violations = [v for v in violations if v.kind == "function"]
@@ -333,7 +346,9 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         tm.that(function_violations[0].name, eq="_helper")
 
     def test_loose_object_detector_enforces_single_class_pattern(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+        self,
+        tmp_path: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> None:
         """Enforce one public class per canonical module."""
         violations = FlextInfraLooseObjectDetector.detect_file(
@@ -342,14 +357,16 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
                 "from __future__ import annotations\n\nVALUE = 1\n",
                 rope_project,
                 project_name="sample-proj",
-            )
+            ),
         )
 
         single_class = [v for v in violations if v.kind == "single_class"]
         tm.that(len(single_class), eq=1)
 
     def test_loose_object_detector_skips_private_base_module_flext_contract(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+        self,
+        tmp_path: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> None:
         """Skip the private base-module FLEXT contract exception."""
         violations = FlextInfraLooseObjectDetector.detect_file(
@@ -362,13 +379,15 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
                 "    pass\n",
                 rope_project,
                 project_name="sample-proj",
-            )
+            ),
         )
 
         tm.that([v for v in violations if v.kind == "single_class"], empty=True)
 
     def test_loose_object_detector_skips_pytest_module_functions(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+        self,
+        tmp_path: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> None:
         """Skip pytest module functions in test files."""
         violations = FlextInfraLooseObjectDetector.detect_file(
@@ -383,13 +402,15 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
                 "    assert sample_value == 1\n",
                 rope_project,
                 project_name="sample-proj",
-            )
+            ),
         )
 
         tm.that(violations, empty=True)
 
     def test_loose_object_detector_skips_typings_module_exception(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+        self,
+        tmp_path: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> None:
         """Skip the canonical typings-module exception."""
         violations = FlextInfraLooseObjectDetector.detect_file(
@@ -401,13 +422,15 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
                 "TValue = TypeVar('TValue')\n",
                 rope_project,
                 project_name="sample-proj",
-            )
+            ),
         )
 
         tm.that(violations, empty=True)
 
     def test_loose_object_detector_flags_classvar_outside_constants_class(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+        self,
+        tmp_path: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> None:
         """Flag a public ClassVar outside a constants class."""
         violations = FlextInfraLooseObjectDetector.detect_file(
@@ -421,7 +444,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
                 "    CACHE: ClassVar[Path] = Path('.cache')\n",
                 rope_project,
                 project_name="sample-proj",
-            )
+            ),
         )
 
         classvar_violations = [v for v in violations if v.kind == "classvar"]
@@ -455,13 +478,15 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
                 "    HOME: ClassVar[Path] = Path.home()\n",
                 rope_project,
                 project_name="sample-proj",
-            )
+            ),
         )
 
         tm.that([v for v in violations if v.kind == "classvar"], empty=True)
 
     def test_loose_object_detector_flags_typing_classvar(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+        self,
+        tmp_path: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> None:
         """Flag ClassVar imported through the typing module."""
         violations = FlextInfraLooseObjectDetector.detect_file(
@@ -473,7 +498,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
                 "    HOME: typing.ClassVar[str] = 'home'\n",
                 rope_project,
                 project_name="sample-proj",
-            )
+            ),
         )
 
         classvar_violations = [v for v in violations if v.kind == "classvar"]
@@ -481,7 +506,9 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         tm.that(classvar_violations[0].name, eq="HOME")
 
     def test_loose_object_detector_skips_private_classvar(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+        self,
+        tmp_path: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> None:
         """Skip private ClassVar declarations."""
         violations = FlextInfraLooseObjectDetector.detect_file(
@@ -493,13 +520,15 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
                 "    _INTERNAL: ClassVar[str] = 'secret'\n",
                 rope_project,
                 project_name="sample-proj",
-            )
+            ),
         )
 
         tm.that([v for v in violations if v.kind == "classvar"], empty=True)
 
     def test_loose_object_detector_skips_init_module_exception(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+        self,
+        tmp_path: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> None:
         """Skip the package initializer module exception."""
         violations = FlextInfraLooseObjectDetector.detect_file(
@@ -508,13 +537,15 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
                 "from __future__ import annotations\n\n_LAZY_IMPORTS = {}\n",
                 rope_project,
                 project_name="sample-proj",
-            )
+            ),
         )
 
         tm.that(violations, empty=True)
 
     def test_loose_object_detector_skips_canonical_class_alias_in_single_class_count(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+        self,
+        tmp_path: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> None:
         """Exclude a canonical class alias from the public-class count."""
         violations = FlextInfraLooseObjectDetector.detect_file(
@@ -528,13 +559,15 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
                 "p = SampleProtocols\n",
                 rope_project,
                 project_name="sample-proj",
-            )
+            ),
         )
 
         tm.that(violations, empty=True)
 
+    @pytest.mark.slow
     def test_namespace_enforcer_apply_moves_manual_protocol_to_protocols_file(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Move a manual protocol into the canonical protocols module."""
         workspace, _project, pkg = u.Tests.namespace_workspace(tmp_path)
@@ -546,7 +579,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         u.Tests.provision_checkout(workspace)
 
         report = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(
-            apply=True
+            apply=True,
         )
 
         protocols_file = pkg / "protocols.py"
@@ -557,8 +590,10 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         tm.that(protocols_source, has="from __future__ import annotations")
         tm.that(protocols_source, has="from typing import Protocol")
 
+    @pytest.mark.slow
     def test_namespace_enforcer_apply_keeps_autofixes_when_other_violations_remain(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Keep applied fixes when unrelated violations remain."""
         workspace, _project, pkg = u.Tests.namespace_workspace(tmp_path)
@@ -576,7 +611,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         u.Tests.provision_checkout(workspace)
 
         report = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(
-            apply=True
+            apply=True,
         )
 
         tm.that(report.has_violations, eq=True)
@@ -592,7 +627,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         )
 
     def test_namespace_enforcer_detects_cyclic_imports_in_source_package(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Detect cyclic imports inside the production source package."""
         workspace, _project, pkg = u.Tests.namespace_workspace(tmp_path)
@@ -606,7 +642,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         )
 
         report = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(
-            apply=False
+            apply=False,
         )
 
         tm.that(report.projects[0].cyclic_imports, empty=False)
@@ -616,7 +652,10 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         [("", 0), ('__all__: list[str] = ["DemoConstants", "c"]\n\n', 1)],
     )
     def test_namespace_enforcer_does_not_infer_alias_from_external_filename(
-        self, tmp_path: Path, declaration: str, violations: int
+        self,
+        tmp_path: Path,
+        declaration: str,
+        violations: int,
     ) -> None:
         """Only a letter declared in ``__all__`` is owed; never one from a filename."""
         workspace, project, _pkg = u.Tests.namespace_workspace(tmp_path)
@@ -630,13 +669,14 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         )
 
         report = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(
-            apply=False
+            apply=False,
         )
 
         tm.that(len(report.projects[0].runtime_alias_violations), eq=violations)
 
     def test_namespace_enforcer_respects_tool_flext_namespace_scan_dirs(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Respect configured namespace scan directories."""
         workspace, project, _pkg = u.Tests.namespace_workspace(
@@ -656,7 +696,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         _ = alias_file.write_text(alias_source, encoding="utf-8")
 
         report = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(
-            apply=True
+            apply=True,
         )
 
         tm.that(report.projects, empty=False)
@@ -665,7 +705,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         tm.that(alias_file.read_text(encoding="utf-8"), eq=alias_source)
 
     def test_namespace_enforcer_skips_dynamic_dirs_by_default(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Skip dynamic directories when no scan override is declared."""
         workspace, project, _pkg = u.Tests.namespace_workspace(tmp_path)
@@ -677,13 +718,14 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         )
 
         report = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(
-            apply=False
+            apply=False,
         )
 
         tm.that(report.projects[0].relocation_findings, eq=0)
 
     def test_namespace_enforcer_apply_keeps_script_shebang_when_adding_future(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Preserve a script shebang while adding the future import."""
         workspace, project, _pkg = u.Tests.namespace_workspace(tmp_path)
@@ -703,7 +745,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         tm.that(rewritten_lines, has="from __future__ import annotations")
 
     def test_namespace_enforcer_apply_inserts_future_after_single_line_module_docstring(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Insert the future import after a one-line module docstring."""
         workspace, project, _pkg = u.Tests.namespace_workspace(tmp_path)
@@ -730,7 +773,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         tm.that(future_index < import_index, eq=True)
 
     def test_namespace_enforcer_does_not_rewrite_indented_import_aliases(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Leave indented import aliases unchanged."""
         workspace, _project, pkg = u.Tests.namespace_workspace(tmp_path, declare=False)
@@ -749,7 +793,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         tm.that(service_source, has="    from flext_core import System")
 
     def test_namespace_enforcer_does_not_rewrite_multiline_import_alias_blocks(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Leave multiline import alias blocks unchanged."""
         workspace, _project, pkg = u.Tests.namespace_workspace(tmp_path, declare=False)

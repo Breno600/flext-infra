@@ -51,10 +51,13 @@ class FlextInfraUtilitiesRopeStructure:
                     enclosing_name=name,
                     type_checking_guarded=bool(type_checking_guards),
                     text=text,
-                )
+                ),
             )
             FlextInfraUtilitiesRopeStructure._push_encloser(
-                enclosers=enclosers, category=category, indent=indent, text=text
+                enclosers=enclosers,
+                category=category,
+                indent=indent,
+                text=text,
             )
             # flext-j47u (codex): all detectors consume this single guard fact.
             if (

@@ -103,9 +103,15 @@ class FlextInfraConstantsCodegen(
     "Runtime singleton modules for src/: (filename, class_suffix, base_class, docstring)."
     VIOLATION_PATTERN: ClassVar[t.RegexPattern] = re.compile(
         r"\[(?P<rule>NS-(?:[A-Z]+|\d{3}))-\d{3}\]\s+"
-        r"(?P<module>[^:]+):(?P<line>\d+)\s+\u2014\s+(?P<message>.+)"
+        r"(?P<module>[^:]+):(?P<line>\d+)\s+\u2014\s+(?P<message>.+)",
     )
     "Regex to parse violation strings: [NS-RULE-NNN] path:line — message."
+    PROTOCOL_MODEL_LINE_BUDGET: ClassVar[int] = 170
+    "Line budget of one generated structural-protocol module chunk."
+    PROTOCOL_MODEL_MINIMAL_BODY_LINES: ClassVar[int] = 3
+    "Header lines of a generated protocol class; at or below it the body is empty."
+    LAZY_IMPORTS_BINDING: ClassVar[str] = "_LAZY_IMPORTS"
+    "Module binding the flext-core lazy engine writes and resolves exports from."
     MISE_RELEASE_COMPONENT_COUNT: ClassVar[int] = 3
     "Number of numeric components in a generated Mise release version."
     MISE_RELEASE_PATTERN: ClassVar[str] = (
@@ -175,7 +181,6 @@ class FlextInfraConstantsCodegen(
         ("MISE_EXEC_AUTO_INSTALL", "false"),
         ("MISE_TASK_RUN_AUTO_INSTALL", "false"),
         ("MISE_AUTO_UPDATE", "false"),
-        ("MISE_MINIMUM_RELEASE_AGE", "0s"),
         ("MISE_HTTP_RETRIES", "0"),
         ("MISE_NETRC", "false"),
         ("MISE_NOT_FOUND_AUTO_INSTALL", "false"),

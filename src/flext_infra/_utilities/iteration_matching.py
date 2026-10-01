@@ -22,7 +22,11 @@ class FlextInfraUtilitiesIterationMatching(FlextInfraUtilitiesGitScopeMixin):
 
     @classmethod
     def iter_matching_files(
-        cls, root: Path, *, includes: t.StrSequence, excludes: t.StrSequence = ()
+        cls,
+        root: Path,
+        *,
+        includes: t.StrSequence,
+        excludes: t.StrSequence = (),
     ) -> t.SequenceOf[Path]:
         """Return files in one scope through the canonical git-aware selection path."""
         if not root.is_dir():

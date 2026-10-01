@@ -20,7 +20,8 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
 
     @classmethod
     def snapshot_config_sources(
-        cls, project_dir: Path
+        cls,
+        project_dir: Path,
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
         """Capture one stable, physical, direct ``config/*.yaml`` file set.
 
@@ -30,7 +31,8 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
         if not project_dir.exists() and not project_dir.is_symlink():
             return r[tuple[m.Cli.AtomicFileState, ...]].ok(())
         project_identity = cls._required_directory_identity(
-            project_dir, purpose="project root"
+            project_dir,
+            purpose="project root",
         )
         if project_identity.failure:
             return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(project_identity)
@@ -54,22 +56,26 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
             return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(stable_paths)
         if stable_paths.value != paths.value:
             return r[tuple[m.Cli.AtomicFileState, ...]].fail(
-                f"{c.Infra.CONFIG_SNAPSHOT_TOPOLOGY_RACE_MARKER}: {config_dir}"
+                f"{c.Infra.CONFIG_SNAPSHOT_TOPOLOGY_RACE_MARKER}: {config_dir}",
             )
         stable_project = cls._required_directory_identity(
-            project_dir, purpose="project root"
+            project_dir,
+            purpose="project root",
         )
         if stable_project.failure:
             return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(stable_project)
         if stable_project.value != project_identity.value:
             return r[tuple[m.Cli.AtomicFileState, ...]].fail(
-                f"{c.Infra.CONFIG_SNAPSHOT_ROOT_RACE_MARKER}: {project_dir}"
+                f"{c.Infra.CONFIG_SNAPSHOT_ROOT_RACE_MARKER}: {project_dir}",
             )
         return r[tuple[m.Cli.AtomicFileState, ...]].ok(tuple(sources))
 
     @classmethod
     def _required_directory_identity(
-        cls, path: Path, *, purpose: str
+        cls,
+        path: Path,
+        *,
+        purpose: str,
     ) -> p.Result[t.VariadicTuple[int]]:
         try:
             state = path.lstat()
@@ -79,13 +85,14 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
         reparse = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
         if not stat.S_ISDIR(state.st_mode) or attributes & reparse:
             return r[t.VariadicTuple[int]].fail(
-                f"{purpose} is not a physical directory: {path}"
+                f"{purpose} is not a physical directory: {path}",
             )
         return r[t.VariadicTuple[int]].ok(cls._directory_state_key(state))
 
     @classmethod
     def _config_directory_identity(
-        cls, config_dir: Path
+        cls,
+        config_dir: Path,
     ) -> p.Result[t.VariadicTuple[int]]:
         try:
             state = config_dir.lstat()
@@ -93,13 +100,14 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
             return r[t.VariadicTuple[int]].ok(())
         except OSError as exc:
             return r[t.VariadicTuple[int]].fail_op(
-                "inspect project config directory", exc
+                "inspect project config directory",
+                exc,
             )
         attributes = getattr(state, "st_file_attributes", 0)
         reparse = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
         if not stat.S_ISDIR(state.st_mode) or attributes & reparse:
             return r[t.VariadicTuple[int]].fail(
-                f"project config path is not a physical directory: {config_dir}"
+                f"project config path is not a physical directory: {config_dir}",
             )
         return r[t.VariadicTuple[int]].ok(cls._directory_state_key(state))
 
@@ -120,22 +128,25 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
 
     @classmethod
     def _config_yaml_paths(
-        cls, config_dir: Path, expected_identity: t.VariadicTuple[int]
+        cls,
+        config_dir: Path,
+        expected_identity: t.VariadicTuple[int],
     ) -> p.Result[t.VariadicTuple[Path]]:
         try:
             paths = tuple(
-                sorted(path for path in config_dir.iterdir() if path.suffix == ".yaml")
+                sorted(path for path in config_dir.iterdir() if path.suffix == ".yaml"),
             )
         except OSError as exc:
             return r[t.VariadicTuple[Path]].fail_op(
-                "enumerate project config sources", exc
+                "enumerate project config sources",
+                exc,
             )
         current = cls._config_directory_identity(config_dir)
         if current.failure:
             return r[t.VariadicTuple[Path]].from_failure(current)
         if current.value != expected_identity:
             return r[t.VariadicTuple[Path]].fail(
-                f"project config directory changed during snapshot: {config_dir}"
+                f"project config directory changed during snapshot: {config_dir}",
             )
         return r[t.VariadicTuple[Path]].ok(paths)
 
@@ -154,40 +165,44 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
 
     @classmethod
     def load_project_managed_artifacts(
-        cls, project_dir: Path
+        cls,
+        project_dir: Path,
     ) -> p.Result[m.Infra.ProjectManagedArtifactsResolution]:
         """Snapshot every YAML once and parse that exact source set."""
         snapshot = cls.snapshot_project_managed_artifacts(project_dir)
         if snapshot.failure:
             return r[m.Infra.ProjectManagedArtifactsResolution].from_failure(snapshot)
         return r[m.Infra.ProjectManagedArtifactsResolution].ok(
-            snapshot.value.resolution
+            snapshot.value.resolution,
         )
 
     @classmethod
     def snapshot_project_managed_artifacts(
-        cls, project_dir: Path
+        cls,
+        project_dir: Path,
     ) -> p.Result[m.Infra.ProjectManagedArtifactsSnapshot]:
         """Capture and parse exactly one immutable project configuration view."""
         source_snapshot = cls.snapshot_config_sources(project_dir)
         if source_snapshot.failure:
             return r[m.Infra.ProjectManagedArtifactsSnapshot].from_failure(
-                source_snapshot
+                source_snapshot,
             )
         resolution = cls.load_project_managed_artifacts_from_snapshot(
-            source_snapshot.value
+            source_snapshot.value,
         )
         if resolution.failure:
             return r[m.Infra.ProjectManagedArtifactsSnapshot].from_failure(resolution)
         return r[m.Infra.ProjectManagedArtifactsSnapshot].ok(
             m.Infra.ProjectManagedArtifactsSnapshot(
-                sources=source_snapshot.value, resolution=resolution.value
-            )
+                sources=source_snapshot.value,
+                resolution=resolution.value,
+            ),
         )
 
     @classmethod
     def load_committed_project_managed_artifacts(
-        cls, project_dir: Path
+        cls,
+        project_dir: Path,
     ) -> p.Result[m.Infra.ProjectManagedArtifactsResolution]:
         """Load ManagedArtifacts from the project's committed ``HEAD`` catalog.
 
@@ -200,12 +215,13 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
         if snapshot.failure:
             return r[m.Infra.ProjectManagedArtifactsResolution].from_failure(snapshot)
         return r[m.Infra.ProjectManagedArtifactsResolution].ok(
-            snapshot.value.resolution
+            snapshot.value.resolution,
         )
 
     @classmethod
     def snapshot_committed_project_managed_artifacts(
-        cls, project_dir: Path
+        cls,
+        project_dir: Path,
     ) -> p.Result[m.Infra.ProjectManagedArtifactsSnapshot]:
         """Capture and parse the committed catalog without physical source states.
 
@@ -215,12 +231,13 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
         """
         resolved = project_dir.expanduser().resolve()
         blobs = FlextInfraUtilitiesGit.git_committed_directory_blobs(
-            resolved, c.CONFIG_DIR_NAME
+            resolved,
+            c.CONFIG_DIR_NAME,
         )
         if blobs.failure:
             return r[m.Infra.ProjectManagedArtifactsSnapshot].fail(
                 f"cannot open committed project config catalog at {resolved}: "
-                f"{blobs.error}"
+                f"{blobs.error}",
             )
         payloads: t.MutableMappingKV[Path, bytes] = {
             resolved / c.CONFIG_DIR_NAME / name: content
@@ -234,32 +251,35 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
             return r[m.Infra.ProjectManagedArtifactsSnapshot].from_failure(resolution)
         return r[m.Infra.ProjectManagedArtifactsSnapshot].ok(
             m.Infra.ProjectManagedArtifactsSnapshot(
-                sources=(), resolution=resolution.value
-            )
+                sources=(),
+                resolution=resolution.value,
+            ),
         )
 
     @classmethod
     def load_project_managed_artifacts_from_snapshot(
-        cls, source_snapshot: t.VariadicTuple[m.Cli.AtomicFileState]
+        cls,
+        source_snapshot: t.VariadicTuple[m.Cli.AtomicFileState],
     ) -> p.Result[m.Infra.ProjectManagedArtifactsResolution]:
         """Parse one caller-owned immutable project YAML snapshot."""
         payloads: t.MutableMappingKV[Path, bytes] = {}
         for source_state in source_snapshot:
             if source_state.content is None:
                 return r[m.Infra.ProjectManagedArtifactsResolution].fail(
-                    f"project config snapshot is absent: {source_state.path}"
+                    f"project config snapshot is absent: {source_state.path}",
                 )
             payloads[source_state.path] = source_state.content
         return cls._load_project_managed_artifacts_from_payloads(payloads)
 
     @classmethod
     def _load_project_managed_artifacts_from_payloads(
-        cls, payloads: t.MappingKV[Path, bytes]
+        cls,
+        payloads: t.MappingKV[Path, bytes],
     ) -> p.Result[m.Infra.ProjectManagedArtifactsResolution]:
         """Parse one immutable path-to-bytes project YAML catalog."""
         if not payloads:
             return r[m.Infra.ProjectManagedArtifactsResolution].ok(
-                cls.empty_snapshot().resolution
+                cls.empty_snapshot().resolution,
             )
         ruff_ignores: MutableMapping[str, set[str]] = {}
         mise_tools: MutableMapping[str, m.Infra.ProjectMiseTool] = {}
@@ -271,7 +291,8 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
                 source_text = content.decode(c.Cli.ENCODING_DEFAULT)
             except UnicodeDecodeError as exc:
                 return r[m.Infra.ProjectManagedArtifactsResolution].fail_op(
-                    f"decode project config source {source}", exc
+                    f"decode project config source {source}",
+                    exc,
                 )
             loaded = u.Cli.yaml_parse(source_text)
             if loaded.failure:
@@ -280,7 +301,7 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
             if not managed:
                 continue
             project_config = m.Infra.ProjectConfigDocument.model_validate({
-                "ManagedArtifacts": managed
+                "ManagedArtifacts": managed,
             })
             artifacts = project_config.ManagedArtifacts
             if artifacts.Ruff is not None:
@@ -297,7 +318,7 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
                 if previous is not None:
                     return r[m.Infra.ProjectManagedArtifactsResolution].fail(
                         "duplicate project Mise selector "
-                        f"{selector!r}: {previous} and {source}"
+                        f"{selector!r}: {previous} and {source}",
                     )
 
                 mise_tools[selector] = tool
@@ -307,23 +328,25 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
                 per_file_ignores={
                     pattern: tuple(sorted(rules))
                     for pattern, rules in sorted(ruff_ignores.items())
-                }
+                },
             ),
             Mise=m.Infra.ProjectMiseConfig(tools=dict(sorted(mise_tools.items()))),
             Gitignore=m.Infra.ProjectGitignoreConfig(
-                patterns=tuple(gitignore_patterns)
+                patterns=tuple(gitignore_patterns),
             ),
         )
         return r[m.Infra.ProjectManagedArtifactsResolution].ok(
             m.Infra.ProjectManagedArtifactsResolution(
                 artifacts=artifacts,
                 mise_tool_sources=dict(sorted(mise_sources.items())),
-            )
+            ),
         )
 
     @classmethod
     def compose_mise_toml_from_snapshot(
-        cls, source_snapshot: t.VariadicTuple[m.Cli.AtomicFileState], rendered: str
+        cls,
+        source_snapshot: t.VariadicTuple[m.Cli.AtomicFileState],
+        rendered: str,
     ) -> p.Result[str]:
         """Add local tools from one caller-owned immutable YAML snapshot."""
         resolved = cls.load_project_managed_artifacts_from_snapshot(source_snapshot)
@@ -333,7 +356,9 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
 
     @classmethod
     def compose_mise_toml_from_resolution(
-        cls, resolution: m.Infra.ProjectManagedArtifactsResolution, rendered: str
+        cls,
+        resolution: m.Infra.ProjectManagedArtifactsResolution,
+        rendered: str,
     ) -> p.Result[str]:
         """Add local tools from one caller-owned immutable parsed catalog."""
         local_tools = resolution.artifacts.Mise.tools
@@ -354,7 +379,7 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
                 u.Cli.warning(
                     "project Mise selector "
                     f"{selector!r} ({source}) is now a fleet tool; "
-                    "the fleet version wins — remove the local declaration"
+                    "the fleet version wins — remove the local declaration",
                 )
                 continue
             tools[selector] = tool.version

@@ -59,7 +59,9 @@ class FlextInfraCodegenFixerWorkspaceMixin(FlextInfraCodegenFixerPassesMixin):
         return self._build_result(project_path.name, ctx)
 
     def fix_workspace(
-        self, *, projects: t.SequenceOf[p.Infra.ProjectInfo] | None = None
+        self,
+        *,
+        projects: t.SequenceOf[p.Infra.ProjectInfo] | None = None,
     ) -> t.SequenceOf[m.Infra.AutoFixResult]:
         """Run auto-fix on selected projects."""
         if projects is not None:
@@ -79,7 +81,9 @@ class FlextInfraCodegenFixerWorkspaceMixin(FlextInfraCodegenFixerPassesMixin):
 
         def enforce_namespace(project_name: str) -> m.Infra.WorkspaceEnforcementReport:
             return enforcer.enforce(
-                apply=True, project_names=(project_name,), gates=(c.Infra.LINT,)
+                apply=True,
+                project_names=(project_name,),
+                gates=(c.Infra.LINT,),
             )
 
         return [

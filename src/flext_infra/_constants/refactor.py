@@ -127,7 +127,8 @@ class FlextInfraConstantsRefactor:
     RK_ALLOW_TARGET_SUFFIXES: ClassVar[str] = "allow_target_suffixes"
     CODEMOD_RULE_SUFFIX: ClassVar[str] = ".yml"
     CODEMOD_DOCUMENT_SEPARATOR_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^---\s*$", re.MULTILINE
+        r"^---\s*$",
+        re.MULTILINE,
     )
     CODEMOD_CONFIG_FILENAME: ClassVar[str] = "sgconfig.yml"
     # Static rules are data under the one rule root, config/rules: the
@@ -167,6 +168,7 @@ class FlextInfraConstantsRefactor:
     CODEMOD_TEXT_KEY_REPLACE: ClassVar[str] = "replace"
     CODEMOD_TEXT_KEY_FLAGS: ClassVar[str] = "flags"
     CODEMOD_TEXT_KEY_EXPECTED: ClassVar[str] = "expected"
+    CODEMOD_TEXT_KEY_CAPTURE_EQUALS: ClassVar[str] = "capture_equals"
     # ast-grep rejects unknown top-level keys, so an ast-grep rule declares
     # its finding-count receipt under the `metadata` mapping it does accept.
     CODEMOD_RULE_METADATA_KEY: ClassVar[str] = "metadata"
@@ -317,7 +319,7 @@ class FlextInfraConstantsRefactor:
         | dict.fromkeys(FLEXT_TYPINGS_FILE_NAMES, "t")
         | dict.fromkeys(FLEXT_PROTOCOLS_FILE_NAMES, "p")
         | dict.fromkeys(FLEXT_MODELS_FILE_NAMES, "m")
-        | dict.fromkeys(FLEXT_UTILITIES_FILE_NAMES, "u")
+        | dict.fromkeys(FLEXT_UTILITIES_FILE_NAMES, "u"),
     )
     "Canonical facade file name → family alias mapping."
     FLEXT_FAMILIES: ClassVar[frozenset[str]] = frozenset({"c", "t", "p", "m", "u"})
@@ -380,7 +382,7 @@ class FlextInfraConstantsRefactor:
     MIN_PATH_DEPTH: int = 2
     "Minimum relative path depth for module prefix detection."
     NAMESPACE_CONSTANT_PATTERN: ClassVar[t.RegexPattern] = re.compile(
-        r"^_?[A-Z][A-Z0-9_]+$"
+        r"^_?[A-Z][A-Z0-9_]+$",
     )
     "Regex: namespace constant candidate names."
     CLASSVAR_EXEMPT_NAMES: ClassVar[frozenset[str]] = (
@@ -402,7 +404,8 @@ class FlextInfraConstantsRefactor:
     "Canonical factory calls allowed as ClassVar default values."
     NAMESPACE_MIN_ALIAS_LENGTH: ClassVar[int] = 2
     FACADE_ALIAS_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(\w)\b[^=]*=\s*(\w+)", re.MULTILINE
+        r"^(\w)\b[^=]*=\s*(\w+)",
+        re.MULTILINE,
     )
     "Matches ``m = FlextFooModels`` alias assignments in facade files."
 

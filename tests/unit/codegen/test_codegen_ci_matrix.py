@@ -34,7 +34,7 @@ def rendered_project(tmp_path_factory: pytest.TempPathFactory) -> Path:
     case. Cases that prove repeated-render behavior render their own roots.
     """
     return TestsFlextInfraCodegenCiMatrix.render_project(
-        tmp_path_factory.mktemp("ci-matrix-render")
+        tmp_path_factory.mktemp("ci-matrix-render"),
     )
 
 
@@ -109,7 +109,8 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that((root / ".github" / "workflows" / "ci-matrix.yml").is_file(), eq=True)
 
     def test_latest_mise_is_owned_only_by_make_setup(
-        self, rendered_project: Path
+        self,
+        rendered_project: Path,
     ) -> None:
         """Generated workflows never install Mise or uv beside make setup."""
         root = rendered_project
@@ -122,7 +123,8 @@ class TestsFlextInfraCodegenCiMatrix:
             tm.that(content, lacks="Install direnv")
 
     def test_external_attestation_orchestration_is_not_generated_by_flext(
-        self, rendered_project: Path
+        self,
+        rendered_project: Path,
     ) -> None:
         """FLEXT exposes primitives without selecting AI Hub's GitHub capability."""
         root = rendered_project
@@ -133,7 +135,8 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that((root / ".github/attestations/allowed_signers").exists(), eq=False)
 
     def test_github_apps_are_not_selected_for_draft_prs(
-        self, rendered_project: Path
+        self,
+        rendered_project: Path,
     ) -> None:
         """Versioned app policy reserves external review for non-Draft PRs."""
         root = rendered_project
@@ -141,7 +144,8 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that((root / ".coderabbit.yaml").exists(), eq=False)
 
     def test_ci_workflow_uses_immutable_action_catalog(
-        self, rendered_project: Path
+        self,
+        rendered_project: Path,
     ) -> None:
         """Every generated action reference resolves from the typed action SSOT."""
         root = rendered_project
@@ -179,12 +183,13 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(workflows, lacks="soft-pass")
 
     def test_blocking_ci_bootstraps_only_through_make_setup(
-        self, rendered_project: Path
+        self,
+        rendered_project: Path,
     ) -> None:
         """Generated blocking CI provisions every binary via the Make surface."""
         root = rendered_project
         workflow = (root / ".github" / "workflows" / "ci.yml").read_text(
-            encoding="utf-8"
+            encoding="utf-8",
         )
 
         ci_step_runs = tuple(
@@ -207,8 +212,9 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(workflow, has="CI=Y make gen")
         tm.that(
             workflow,
-            has='test -z "$(git status --porcelain --untracked-files=all --ignore-submodules=none || true)"',
+            has='candidate_status="$(git status --porcelain --untracked-files=all --ignore-submodules=none)"\n          test -z "$candidate_status"',
         )
+        tm.that(workflow, lacks="|| true")
         tm.that(workflow, lacks="run: CI=Y make conform")
         tm.that(workflow, has="run: CI=Y make audit")
         tm.that(workflow, lacks="attest/gates/v1")
@@ -221,7 +227,8 @@ class TestsFlextInfraCodegenCiMatrix:
         audit_index = workflow.index("run: CI=Y make audit")
         check_index = workflow.index("run: CI=Y make check")
         tm.that(
-            setup_index < gen_fixed_point_index < audit_index < check_index, eq=True
+            setup_index < gen_fixed_point_index < audit_index < check_index,
+            eq=True,
         )
         header, jobs = workflow.split("\njobs:\n", maxsplit=1)
         tm.that(header, lacks="permissions:")
@@ -231,12 +238,13 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(jobs, has="Block WIP heads from protected integration branches")
 
     def test_blocking_ci_does_not_configure_github_cli_auth(
-        self, rendered_project: Path
+        self,
+        rendered_project: Path,
     ) -> None:
         """FLEXT codegen never selects GitHub CLI authentication."""
         root = rendered_project
         workflow = (root / ".github" / "workflows" / "ci.yml").read_text(
-            encoding="utf-8"
+            encoding="utf-8",
         )
 
         tm.that(workflow, lacks="- name: Configure GitHub authentication")
@@ -247,7 +255,8 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(steps_index < setup_index, eq=True)
 
     def test_rendered_workflow_python_commands_compile(
-        self, rendered_project: Path
+        self,
+        rendered_project: Path,
     ) -> None:
         """YAML block indentation must preserve executable Python command bodies."""
         root = rendered_project
@@ -272,7 +281,8 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(compiled, gt=0)
 
     def test_rendered_pre_commit_uses_typed_hook_contexts(
-        self, rendered_project: Path
+        self,
+        rendered_project: Path,
     ) -> None:
         """The generated staged hooks render the configured workflow partitions."""
         root = rendered_project
@@ -291,7 +301,8 @@ class TestsFlextInfraCodegenCiMatrix:
             if enabled:
                 tm.that(hooks, has=f"id: {hook_id}")
                 stage = hooks.split(f"id: {hook_id}", maxsplit=1)[1].split(
-                    "pass_filenames:", maxsplit=1
+                    "pass_filenames:",
+                    maxsplit=1,
                 )[0]
                 tm.that(stage, has=f"{commands};")
                 tm.that(stage, has=f"unset MAKEFLAGS {ci.variable};")
@@ -300,12 +311,13 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(hooks, lacks=f"export {ci.variable}={ci.value}")
 
     def test_ci_workflow_cancels_superseded_ref_runs(
-        self, rendered_project: Path
+        self,
+        rendered_project: Path,
     ) -> None:
         """Generated CI groups competing runs by workflow and ref."""
         root = rendered_project
         workflow = (root / ".github" / "workflows" / "ci.yml").read_text(
-            encoding="utf-8"
+            encoding="utf-8",
         )
 
         tm.that(workflow, has="concurrency:")
@@ -313,18 +325,20 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(workflow, has="cancel-in-progress: true")
 
     def test_ci_workflow_stable_blank_line_without_private_submodules(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Empty private_submodules include must not accumulate blank lines."""
-        root = self.render_project(tmp_path / "member")
+        root = rendered_project
         workflow = (root / ".github" / "workflows" / "ci.yml").read_text(
-            encoding="utf-8"
+            encoding="utf-8",
         )
         # The empty include sits between the checkout and the credential-mint
         # step: no blank line may appear there, and exactly one separates the
         # mint step from the setup commentary.
         tm.that(
-            workflow, has="fetch-depth: 0\n      # Cross-repo private git dependencies"
+            workflow,
+            has="fetch-depth: 0\n      # Cross-repo private git dependencies",
         )
         marker = (
             'rm -f "$key_path"\n\n'
@@ -342,7 +356,7 @@ class TestsFlextInfraCodegenCiMatrix:
         # never glued onto the previous comment line.
         for filename in ("ci.yml", "docs.yml"):
             text = (root / ".github" / "workflows" / filename).read_text(
-                encoding="utf-8"
+                encoding="utf-8",
             )
             glued = [
                 line
@@ -352,7 +366,7 @@ class TestsFlextInfraCodegenCiMatrix:
             tm.that(glued, eq=[])
         root2 = self.render_project(tmp_path / "member-again")
         workflow2 = (root2 / ".github" / "workflows" / "ci.yml").read_text(
-            encoding="utf-8"
+            encoding="utf-8",
         )
         tm.that(workflow2, eq=workflow)
 
@@ -379,20 +393,22 @@ class TestsFlextInfraCodegenCiMatrix:
         """Every generated action reference resolves from the typed action SSOT."""
         root = rendered_project
         workflow = (root / ".github" / "workflows" / "ci.yml").read_text(
-            encoding="utf-8"
+            encoding="utf-8",
         )
         actions = config.Infra.codegen.github_actions
         for action in actions.values():
             # Every reference to a catalog repository, or to one of its
             # sub-actions (``actions/cache/restore``), pins the catalog version.
             references = re.findall(
-                rf"uses: ({re.escape(action.repository)}(?:/[\w.-]+)*)@(\S+)", workflow
+                rf"uses: ({re.escape(action.repository)}(?:/[\w.-]+)*)@(\S+)",
+                workflow,
             )
             for _reference, version in references:
                 tm.that(version, eq=action.version)
 
     def test_dependabot_does_not_delay_available_updates(
-        self, rendered_project: Path
+        self,
+        rendered_project: Path,
     ) -> None:
         """Every declared ecosystem can select its newest available release."""
         root = rendered_project
@@ -430,7 +446,7 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.ok(rendered)
         rendered_text: str = rendered.value
         document = t.Cli.JSON_MAPPING_ADAPTER.validate_python(
-            tm.ok(u.Cli.yaml_parse(rendered_text))
+            tm.ok(u.Cli.yaml_parse(rendered_text)),
         )
         updates = t.Cli.JSON_LIST_ADAPTER.validate_python(document["updates"])
         tm.that(len(updates), eq=3)
@@ -456,14 +472,15 @@ class TestsFlextInfraCodegenCiMatrix:
             )
 
     def test_distro_bootstrap_is_fail_closed_and_self_contained(
-        self, rendered_project: Path
+        self,
+        rendered_project: Path,
     ) -> None:
         """Every distro runs the canonical self-bootstrap fail-closed."""
         root = rendered_project
         # The matrix build declares the checkout's Git metadata as a named
         # build context; the Dockerfiles consume only that context by COPY.
         matrix = (root / ".github" / "workflows" / "ci-matrix.yml").read_text(
-            encoding="utf-8"
+            encoding="utf-8",
         )
         tm.that(matrix, has="--build-context git=.git")
         for distro in ("ubuntu", "debian", "fedora", "alpine", "arch"):
@@ -498,7 +515,8 @@ class TestsFlextInfraCodegenCiMatrix:
             tm.that(content, lacks='GITHUB_TOKEN="')
 
     def test_dockerfiles_install_the_node_atomic_library_on_seed_bases(
-        self, rendered_project: Path
+        self,
+        rendered_project: Path,
     ) -> None:
         """The apt and dnf seeds carry the atomic library the Node runtime needs."""
         root = rendered_project
@@ -510,9 +528,9 @@ class TestsFlextInfraCodegenCiMatrix:
             content = (docker_dir / f"{distro}.Dockerfile").read_text(encoding="utf-8")
             tm.that("libatomic" not in content, eq=True, msg=distro)
 
-    def test_dockerfiles_render_byte_idempotently(self, tmp_path: Path) -> None:
+    def test_dockerfiles_render_byte_idempotently(self, rendered_project: Path) -> None:
         """Repeated project generation preserves the generated Dockerfiles."""
-        root = self.render_project(tmp_path / "external")
+        root = rendered_project
         before = {
             distro: (
                 root / "tests" / "fixtures" / "ci" / "docker" / f"{distro}.Dockerfile"
@@ -529,7 +547,8 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(after, eq=before)
 
     def test_ci_matrix_has_only_supported_generic_legs(
-        self, rendered_project: Path
+        self,
+        rendered_project: Path,
     ) -> None:
         """Generic Python CI emits only its complete cross-platform legs."""
         root = rendered_project
@@ -543,15 +562,17 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(jobs, lacks="kind")
 
     def test_host_legs_bootstrap_only_through_make_setup(
-        self, rendered_project: Path
+        self,
+        rendered_project: Path,
     ) -> None:
         """MacOS and Windows bootstrap and run one lifecycle through Make."""
         root = rendered_project
         content = (root / ".github" / "workflows" / "ci-matrix.yml").read_text(
-            encoding="utf-8"
+            encoding="utf-8",
         )
         macos = content.split("\n  macos:", maxsplit=1)[1].split(
-            "\n  windows:", maxsplit=1
+            "\n  windows:",
+            maxsplit=1,
         )[0]
         windows = content.split("\n  windows:", maxsplit=1)[1]
         for host in (macos, windows):
@@ -561,13 +582,14 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(windows.count("shell: bash"), eq=windows.count("run:"))
 
     def test_runtime_jobs_supply_the_native_github_credential(
-        self, rendered_project: Path
+        self,
+        rendered_project: Path,
     ) -> None:
         """Each Make job inherits a token; pure Git jobs require no extra input."""
         root = rendered_project
         for filename in ("ci.yml", "ci-matrix.yml"):
             workflow = u.Cli.yaml_load_mapping(
-                root / ".github" / "workflows" / filename
+                root / ".github" / "workflows" / filename,
             )
             jobs = t.Cli.JSON_MAPPING_ADAPTER.validate_python(workflow["jobs"])
             for value in jobs.values():
@@ -577,7 +599,7 @@ class TestsFlextInfraCodegenCiMatrix:
                     step["run"]
                     for raw in steps
                     if (step := t.Cli.JSON_MAPPING_ADAPTER.validate_python(raw)).get(
-                        "run"
+                        "run",
                     )
                 )
                 invokes_make = any(
@@ -592,16 +614,17 @@ class TestsFlextInfraCodegenCiMatrix:
                     tm.that(environment, lacks="GITHUB_TOKEN")
 
     def test_workflow_ci_policy_matrix_default_dispatch_only(
-        self, rendered_project: Path
+        self,
+        rendered_project: Path,
     ) -> None:
         """Blocking CI covers integration; matrix defaults to dispatch-only."""
         root = rendered_project
         branch = u.Tests.provider_branch()
         blocking = (root / ".github" / "workflows" / "ci.yml").read_text(
-            encoding="utf-8"
+            encoding="utf-8",
         )
         matrix = (root / ".github" / "workflows" / "ci-matrix.yml").read_text(
-            encoding="utf-8"
+            encoding="utf-8",
         )
         integrations = config.Infra.codegen.branch_policy.ci_trigger_branches
         tm.that(integrations, has=branch)
@@ -610,17 +633,19 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(blocking, has="draft == false")
         tm.that(blocking, has="ready_for_review")
         triggers = matrix.split('"on":', maxsplit=1)[1].split(
-            "# End SECTION: triggers", maxsplit=1
+            "# End SECTION: triggers",
+            maxsplit=1,
         )[0]
         self._assert_dispatch_only(triggers)
 
     def test_draft_wip_selects_no_jobs_and_review_blocks_wip_head(
-        self, rendered_project: Path
+        self,
+        rendered_project: Path,
     ) -> None:
         """Draft is remote durability; only a promoted non-WIP head may land."""
         root = rendered_project
         workflow = (root / ".github" / "workflows" / "ci.yml").read_text(
-            encoding="utf-8"
+            encoding="utf-8",
         )
         _, jobs = workflow.split("\njobs:\n", maxsplit=1)
         ci_job, merge_guard = jobs.split("\n  merge-guard:", maxsplit=1)
@@ -638,19 +663,63 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(merge_guard, lacks="DRAFT PR cannot merge")
 
     def test_docs_workflow_covers_every_blocking_ci_branch(
-        self, rendered_project: Path
+        self,
+        rendered_project: Path,
     ) -> None:
         """Docs validation follows the same governed branch lanes as CI."""
         root = rendered_project
         content = (root / ".github" / "workflows" / "docs.yml").read_text(
-            encoding="utf-8"
+            encoding="utf-8",
         )
 
         for branch in config.Infra.codegen.branch_policy.ci_trigger_branches:
             tm.that(content, has=f"      - {branch}")
 
-    def test_docs_workflow_jobs_authenticate_toolchain_resolution(
+    def test_docs_failure_upload_keeps_audit_failure_and_scopes_hidden_reports(
         self, rendered_project: Path
+    ) -> None:
+        """A generated Docs job fails on audit findings and retains safe reports."""
+        workflow = u.Cli.yaml_load_mapping(
+            rendered_project / ".github/workflows/docs.yml"
+        )
+        jobs = t.Cli.JSON_MAPPING_ADAPTER.validate_python(workflow["jobs"])
+        docs_job = t.Cli.JSON_MAPPING_ADAPTER.validate_python(jobs["docs-quality"])
+        raw_steps = docs_job["steps"]
+        if not isinstance(raw_steps, list):
+            msg = "Docs workflow steps must be a sequence"
+            raise TypeError(msg)
+        steps = [t.Cli.JSON_MAPPING_ADAPTER.validate_python(step) for step in raw_steps]
+        docs_step = next(
+            step for step in steps if step["name"] == "Docs lifecycle (blocking)"
+        )
+        upload = next(
+            step for step in steps if step.get("name") == "Upload docs reports on failure"
+        )
+        tm.that(docs_step.get("run"), eq="make docs")
+        tm.that(docs_step.get("continue-on-error"), eq=None)
+        tm.that(upload["if"], eq="failure()")
+        upload_with = t.Cli.JSON_MAPPING_ADAPTER.validate_python(upload["with"])
+        tm.that(upload_with["include-hidden-files"], eq=True)
+        tm.that(upload_with["if-no-files-found"], eq="error")
+        report_path_value = upload_with["path"]
+        if not isinstance(report_path_value, str):
+            msg = "Docs report paths must be text"
+            raise TypeError(msg)
+        report_paths = report_path_value.splitlines()
+        tm.that(report_paths, empty=False)
+        permitted_names = {
+            "audit-summary.json",
+            "audit-report.md",
+            "validate-summary.json",
+            "validate-report.md",
+        }
+        tm.that({Path(path).name for path in report_paths}, eq=permitted_names)
+        for path in report_paths:
+            tm.that(".reports" in Path(path).parts, eq=True)
+
+    def test_docs_workflow_jobs_authenticate_toolchain_resolution(
+        self,
+        rendered_project: Path,
     ) -> None:
         """Every Docs job running make setup resolves the toolchain authenticated.
 
@@ -660,7 +729,7 @@ class TestsFlextInfraCodegenCiMatrix:
         """
         root = rendered_project
         content = (root / ".github" / "workflows" / "docs.yml").read_text(
-            encoding="utf-8"
+            encoding="utf-8",
         )
         _, jobs = content.split("\njobs:\n", maxsplit=1)
         setup_jobs = [
@@ -672,16 +741,18 @@ class TestsFlextInfraCodegenCiMatrix:
             tm.that(job, lacks="MISE_GITHUB_TOKEN")
 
     def test_ci_matrix_checks_each_distro_and_tests_ubuntu(
-        self, rendered_project: Path
+        self,
+        rendered_project: Path,
     ) -> None:
         """Each distro's smoke is help+check; Ubuntu also runs the full lifecycle."""
         root = rendered_project
         matrix = (root / ".github" / "workflows" / "ci-matrix.yml").read_text(
-            encoding="utf-8"
+            encoding="utf-8",
         )
         ci = config.Infra.codegen.make.ci
         smoke = matrix.split("Bootstrap + verb smoke", maxsplit=1)[1].split(
-            "# End SECTION: distro-matrix", maxsplit=1
+            "# End SECTION: distro-matrix",
+            maxsplit=1,
         )[0]
         tm.that(smoke, has=f"-e {ci.variable}={ci.value}")
         tm.that(smoke, has="-e GITHUB_TOKEN")
@@ -692,7 +763,7 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(smoke, has="make upg && make setup && make gen")
         tm.that(smoke, has="make check && make test && make build")
         dockerfiles = list(
-            (root / "tests" / "fixtures" / "ci" / "docker").glob("*.Dockerfile")
+            (root / "tests" / "fixtures" / "ci" / "docker").glob("*.Dockerfile"),
         )
         tm.that(len(dockerfiles) > 0, eq=True)
         for dockerfile in dockerfiles:
@@ -702,7 +773,8 @@ class TestsFlextInfraCodegenCiMatrix:
             tm.that(body, has="RUN --mount=type=secret")
 
     def test_makefile_normalizes_windows_runtime_paths(
-        self, rendered_project: Path
+        self,
+        rendered_project: Path,
     ) -> None:
         """Generated POSIX Make resolves Windows uv and virtualenv executables."""
         root = rendered_project
@@ -752,7 +824,8 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(properties["sonar.tests"], eq=tests_dir)
         tm.that(properties["sonar.test.inclusions"], has=tests_dir)
         tm.that(
-            any(key.startswith("sonar.issue.ignore") for key in properties), eq=False
+            any(key.startswith("sonar.issue.ignore") for key in properties),
+            eq=False,
         )
         comments = "\n".join(
             line for line in rendered.splitlines() if line.startswith("#")
@@ -762,12 +835,13 @@ class TestsFlextInfraCodegenCiMatrix:
             tm.that(comments, has=exclusion.resource_key)
 
     def test_sonarcloud_properties_projects_ssot_scope(
-        self, rendered_project: Path
+        self,
+        rendered_project: Path,
     ) -> None:
         """A generated project carries the SSOT SonarCloud scope and its tests root."""
         root = rendered_project
         rendered = (root / c.Infra.SONARCLOUD_PROPERTIES_FILENAME).read_text(
-            encoding="utf-8"
+            encoding="utf-8",
         )
         tm.that((root / c.Infra.DIR_TESTS).is_dir(), eq=True)
         self._assert_sonarcloud_scope(rendered)
@@ -779,7 +853,8 @@ class TestsFlextInfraCodegenCiMatrix:
         )
 
     def test_sonarcloud_tests_root_is_always_materialized_by_conform(
-        self, infra_git_repo: Path
+        self,
+        infra_git_repo: Path,
     ) -> None:
         """sonar.tests always names a real directory, even from a checkout without one.
 
@@ -809,7 +884,7 @@ class TestsFlextInfraCodegenCiMatrix:
         for relative in managed_tests_files:
             tm.not_none(u.Tests.planned_text(plan, relative))
         rendered = tm.not_none(
-            u.Tests.planned_text(plan, c.Infra.SONARCLOUD_PROPERTIES_FILENAME)
+            u.Tests.planned_text(plan, c.Infra.SONARCLOUD_PROPERTIES_FILENAME),
         )
         self._assert_sonarcloud_scope(rendered)
 

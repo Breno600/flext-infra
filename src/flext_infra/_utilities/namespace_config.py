@@ -33,7 +33,8 @@ class FlextInfraUtilitiesNamespaceConfig:
     def namespace_enabled(project_root: Path) -> bool:
         """Return whether namespace enforcement is enabled for a project."""
         enabled = FlextInfraUtilitiesNamespaceConfig.namespace_meta(project_root).get(
-            "enabled", True
+            "enabled",
+            True,
         )
         return enabled if isinstance(enabled, bool) else True
 
@@ -47,7 +48,7 @@ class FlextInfraUtilitiesNamespaceConfig:
         3. Fixed candidate list filtered by ``is_dir()`` (fallback).
         """
         configured = FlextInfraUtilitiesNamespaceConfig.namespace_meta(
-            project_root
+            project_root,
         ).get("scan_dirs")
         if isinstance(configured, list):
             normalized = frozenset(
@@ -81,7 +82,7 @@ class FlextInfraUtilitiesNamespaceConfig:
     def namespace_include_dynamic_dirs(project_root: Path) -> bool:
         """Return whether namespace enforcement should scan non-canonical dirs."""
         include_dynamic_dirs = FlextInfraUtilitiesNamespaceConfig.namespace_meta(
-            project_root
+            project_root,
         ).get("include_dynamic_dirs")
         return include_dynamic_dirs if isinstance(include_dynamic_dirs, bool) else False
 

@@ -79,7 +79,7 @@ class FlextInfraUtilitiesPromotedExecution(FlextInfraUtilitiesPromotedInvocation
         if result.failure:
             # The process error is literal text, never a message template.
             raise c.Infra.PromotedRegistryError(
-                result.error or message.PROCESS_START_FAILED
+                result.error or message.PROCESS_START_FAILED,
             )
         output: p.Cli.CommandOutput = result.value
         # flext-cli carries the causal completion state instead of a bare status:
