@@ -69,6 +69,18 @@ rules:
     find: '^(from tests import [^\n]*), utilities$'
     replace: '\g<1>, u'
     flags: [MULTILINE]
+  - id: codegen-test-retire-shadowed-facade-imports
+    description: Keep the test c/m/t facades after Rope moves their shared helper.
+    include: [tests/utilities.py]
+    find: '^from flext_infra import FlextInfraUtilities, c, config, m, t$'
+    replace: 'from flext_infra import FlextInfraUtilities, config'
+    flags: [MULTILINE]
+  - id: codegen-test-retire-shadowed-utility-import
+    description: Let the test u facade supply inherited production utilities.
+    include: [tests/unit/codegen/test_release_checkout_credentials.py]
+    find: '^from flext_infra import c, t, u$'
+    replace: 'from flext_infra import c, t'
+    flags: [MULTILINE]
   - id: docs-strict-python-fence-ruff-ignores
     description: Retain only syntax-context docstring and package exceptions for isolated executable fences.
     include: [src/flext_infra/_constants/docs.py]
