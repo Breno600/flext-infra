@@ -199,7 +199,6 @@ if TYPE_CHECKING:
     from .pyrefly import FlextInfraUtilitiesPyrefly
     from .qualified_names import FlextInfraUtilitiesQualifiedNames
     from .refactor import FlextInfraUtilitiesRefactor
-    from .refactor_discovery import FlextInfraUtilitiesRefactorDiscovery
     from .release import FlextInfraUtilitiesRelease
     from .repository import FlextInfraUtilitiesRepository
     from .resource_limits import FlextInfraUtilitiesResourceLimits
@@ -353,7 +352,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesQualifiedNames",
     "FlextInfraUtilitiesRefactor",
     "FlextInfraUtilitiesRefactorCensus",
-    "FlextInfraUtilitiesRefactorDiscovery",
     "FlextInfraUtilitiesRefactorNamespaceCommon",
     "FlextInfraUtilitiesRefactorNamespaceFacades",
     "FlextInfraUtilitiesRefactorNamespaceFlext",
@@ -655,7 +653,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".pyrefly": ("FlextInfraUtilitiesPyrefly",),
             ".qualified_names": ("FlextInfraUtilitiesQualifiedNames",),
             ".refactor": ("FlextInfraUtilitiesRefactor",),
-            ".refactor_discovery": ("FlextInfraUtilitiesRefactorDiscovery",),
             ".release": ("FlextInfraUtilitiesRelease",),
             ".repository": ("FlextInfraUtilitiesRepository",),
             ".resource_limits": ("FlextInfraUtilitiesResourceLimits",),
