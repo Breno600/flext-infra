@@ -230,56 +230,6 @@ class FlextInfraConstantsSourceCode:
             re.MULTILINE,
         )
 
-    @staticmethod
-    def compile_class_header_search(class_name: str) -> t.RegexPattern:
-        r"""Compile ``^class <class_name>\b`` (MULTILINE) for full-source search."""
-        return re.compile(rf"^class\s+{re.escape(class_name)}\b", re.MULTILINE)
-
-    @staticmethod
-    def compile_function_def_block(name: str) -> t.RegexPattern:
-        """Compile a regex matching the full def block of ``name`` (with decorators)."""
-        return re.compile(
-            rf"^((?:@\w[\w.]*(?:\([^)]*\))?\n)*"
-            rf"def\s+{re.escape(name)}\s*\([^)]*\)[^\n]*\n"
-            rf"(?:(?:[ \t]+[^\n]*|[ \t]*)\n)*)",
-            re.MULTILINE,
-        )
-
-    @staticmethod
-    def compile_class_def_block(name: str) -> t.RegexPattern:
-        """Compile a regex matching the full class block of ``name`` (with decorators)."""
-        return re.compile(
-            rf"^((?:@\w[\w.]*(?:\([^)]*\))?\n)*"
-            rf"class\s+{re.escape(name)}\b[^\n]*\n"
-            rf"(?:(?:[ \t]+[^\n]*|[ \t]*)\n)*)",
-            re.MULTILINE,
-        )
-
-    @staticmethod
-    def compile_function_def_remove(name: str) -> t.RegexPattern:
-        """Compile a regex matching the def block of ``name`` for removal (no outer capture)."""
-        return re.compile(
-            rf"^(?:@\w[\w.]*(?:\([^)]*\))?\n)*"
-            rf"def\s+{re.escape(name)}\s*\([^)]*\)[^\n]*\n"
-            rf"(?:(?:[ \t]+[^\n]*|[ \t]*)\n)*",
-            re.MULTILINE,
-        )
-
-    @staticmethod
-    def compile_class_def_remove(name: str) -> t.RegexPattern:
-        """Compile a regex matching the class block of ``name`` for removal (no outer capture)."""
-        return re.compile(
-            rf"^(?:@\w[\w.]*(?:\([^)]*\))?\n)*"
-            rf"class\s+{re.escape(name)}\b[^\n]*\n"
-            rf"(?:(?:[ \t]+[^\n]*|[ \t]*)\n)*",
-            re.MULTILINE,
-        )
-
-    MODULE_ASSIGNMENT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^([A-Za-z_]\w*)\s*(?::\s*[^=]+)?=\s*(.+)$",
-    )
-    "Regex: module-level ``X [: T] = value`` assignment (captures name, value)."
-
     GITHUB_REPO_URL: ClassVar[str] = "https://github.com/flext-sh/flext"
     "Official GitHub repository URL for the FLEXT project."
     GITHUB_REPO_NAME: ClassVar[str] = "flext-sh/flext"

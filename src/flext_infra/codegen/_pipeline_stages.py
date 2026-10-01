@@ -85,6 +85,7 @@ class FlextInfraCodegenPipelineStagesMixin:
                         else c.Infra.CodegenConformMode.APPLY
                     ),
                 ),
+                ports=self.conform_ports,
             )
             if result.failure:
                 msg = result.error or "toolchain conform failed"

@@ -66,6 +66,8 @@ class FlextInfraConstantsCheck:
     MARKDOWN_FORMAT: ClassVar[str] = "markdown-format"
     MARKDOWN_CODE: ClassVar[str] = "markdown-code"
     SMELLS: ClassVar[str] = "smells"
+    RUNTIME_CENSUS: ClassVar[str] = "runtime-census"
+    "Gate id whose census rule families no other gate owns."
     GATE_TOOLS_BY_KIND: ClassVar[
         t.MappingKV[GateKind, t.MappingKV[str, t.StrPair]]
     ] = MappingProxyType({
