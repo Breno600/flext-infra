@@ -487,10 +487,7 @@ class FlextInfraWorkspaceDetector(
 
     @classmethod
     def _load_subproject(
-        cls,
-        repository_root: Path,
-        path: Path,
-        policy: m.Infra.SubprojectPolicy,
+        cls, repository_root: Path, path: Path, policy: m.Infra.SubprojectPolicy
     ) -> p.Result[m.Infra.RepositoryRef | Path]:
         """Load one governed entry, or its declared path for external entries.
 
