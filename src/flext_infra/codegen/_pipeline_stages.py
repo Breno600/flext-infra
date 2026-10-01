@@ -32,7 +32,6 @@ class FlextInfraCodegenPipelineStagesMixin:
         # Provided by the composed facade (FlextInfraCodegenPipeline); declared
         # here so the handlers type-resolve against the facade state + harness.
         _state: m.Infra.CodegenPipelineState
-        rope: p.Infra.RopeWorkspaceDsl
 
         def _run_stage[V](
             self,
@@ -86,6 +85,7 @@ class FlextInfraCodegenPipelineStagesMixin:
                         else c.Infra.CodegenConformMode.APPLY
                     ),
                 ),
+                ports=self.conform_ports,
             )
             if result.failure:
                 msg = result.error or "toolchain conform failed"
@@ -168,7 +168,6 @@ class FlextInfraCodegenPipelineStagesMixin:
         ]:
             census = FlextInfraCodegenCensus(
                 repository_root=ctx.repository_root,
-                rope=self.rope,
             )
             projects = self._state.discovered_projects
             reports_result = census.run(projects=projects)
@@ -229,7 +228,6 @@ class FlextInfraCodegenPipelineStagesMixin:
             return FlextInfraCodegenFixer(
                 repository_root=ctx.repository_root,
                 dry_run=dry_run,
-                rope=self.rope,
             ).fix_workspace(projects=projects)
 
         def _emit(results: t.SequenceOf[m.Infra.AutoFixResult]) -> t.JsonMapping:
@@ -276,7 +274,6 @@ class FlextInfraCodegenPipelineStagesMixin:
             if census is None:
                 census = FlextInfraCodegenCensus(
                     repository_root=ctx.repository_root,
-                    rope=self.rope,
                 )
             projects = self._state.discovered_projects
             reports_result = census.run(projects=projects)

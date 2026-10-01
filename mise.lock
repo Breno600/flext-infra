@@ -61,10 +61,7 @@ checksum = "sha256:3005729dce6f3d3f5ec91dfc49fc75a0095f9cd23bab49efb899657297ac9
 [[tools."aqua:boyter/scc"]]
 version = "4.1.0"
 backend = "aqua:boyter/scc"
-specifiers = [
-    "4.1.0",
-    "latest",
-]
+specifiers = ["latest"]
 
 [tools."aqua:boyter/scc"."platforms.linux-arm64"]
 checksum = "sha256:6e0d2a1f8d3540ba7df185477dec40bb7340f1b214bfd303147de5cad2bd7b8b"
@@ -134,10 +131,7 @@ url_api = "https://api.github.com/repos/direnv/direnv/releases/assets/274610569"
 [[tools."github:kucherenko/jscpd"]]
 version = "5.4.0"
 backend = "github:kucherenko/jscpd"
-specifiers = [
-    "5.4.0",
-    "latest",
-]
+specifiers = ["latest"]
 
 [tools."github:kucherenko/jscpd"."platforms.linux-arm64"]
 checksum = "sha256:e31c723f89228fbd2f4231c2fbaf885074d15d33c4dc6b93ba551a966efe3517"
@@ -178,10 +172,7 @@ provenance = "github-attestations"
 [[tools."github:microsoft/waza"]]
 version = "0.38.8"
 backend = "github:microsoft/waza"
-specifiers = [
-    "0.38.8",
-    "latest",
-]
+specifiers = ["latest"]
 
 [tools."github:microsoft/waza".options]
 version_prefix = "v"
@@ -217,47 +208,44 @@ url = "https://github.com/microsoft/waza/releases/download/v0.38.8/waza-windows-
 url_api = "https://api.github.com/repos/microsoft/waza/releases/assets/599032529"
 
 [[tools."github:qltysh/qlty"]]
-version = "0.650.0"
+version = "0.642.0"
 backend = "github:qltysh/qlty"
-specifiers = [
-    "0.650.0",
-    "latest",
-]
+specifiers = ["0.642.0"]
 
 [tools."github:qltysh/qlty"."platforms.linux-arm64"]
-checksum = "sha256:7f31ebfcabece12fe8d4bc84c61092a50b68bb4ba9749f75f906d891154db03b"
-url = "https://github.com/qltysh/qlty/releases/download/v0.650.0/qlty-aarch64-unknown-linux-gnu.tar.xz"
-url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/601546598"
+checksum = "sha256:700a86c930d64860baba2cb168a2a9778e4dc8e38dc941faf9d4d8b88d57da1d"
+url = "https://github.com/qltysh/qlty/releases/download/v0.642.0/qlty-aarch64-unknown-linux-gnu.tar.xz"
+url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/514936221"
 provenance = "github-attestations"
 
 [tools."github:qltysh/qlty"."platforms.linux-x64"]
-checksum = "sha256:7303d0dcffc23d1e42f02dd72610d44dd6d252fcf2460e377d765e2571efe918"
-url = "https://github.com/qltysh/qlty/releases/download/v0.650.0/qlty-x86_64-unknown-linux-gnu.tar.xz"
-url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/601546637"
+checksum = "sha256:05e665112fdf8a3d7cdcf4879f6c7d989a6cacd5c527b1890ba68e9c2c5c1d2e"
+url = "https://github.com/qltysh/qlty/releases/download/v0.642.0/qlty-x86_64-unknown-linux-gnu.tar.xz"
+url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/514936271"
 provenance = "github-attestations"
 
 [tools."github:qltysh/qlty"."platforms.linux-x64-musl"]
-checksum = "sha256:40932fa952bb094e1422655a1c735cac1f8ccb78fa8abbb035c2df2c4eb4f1cc"
-url = "https://github.com/qltysh/qlty/releases/download/v0.650.0/qlty-x86_64-unknown-linux-musl.tar.xz"
-url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/601546641"
+checksum = "sha256:55bca32d6ee8ae5e31d8e12696203fa24b106704a176e0e80655ec93abb25477"
+url = "https://github.com/qltysh/qlty/releases/download/v0.642.0/qlty-x86_64-unknown-linux-musl.tar.xz"
+url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/514936274"
 provenance = "github-attestations"
 
 [tools."github:qltysh/qlty"."platforms.macos-arm64"]
-checksum = "sha256:c2c14cdd3da60ac940195c3755b7b843735c9b33cc597bcd2e714e6c2b2b58ca"
-url = "https://github.com/qltysh/qlty/releases/download/v0.650.0/qlty-aarch64-apple-darwin.tar.xz"
-url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/601546597"
+checksum = "sha256:b884e1dd05fac9a225130f9df5339ed4c0209d20f4947e58efa1f0e60a8094eb"
+url = "https://github.com/qltysh/qlty/releases/download/v0.642.0/qlty-aarch64-apple-darwin.tar.xz"
+url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/514936220"
 provenance = "github-attestations"
 
 [tools."github:qltysh/qlty"."platforms.macos-x64"]
-checksum = "sha256:793429fa09324ed241db76e0ab3c6574e225db266a7b90415f61f647ee11783c"
-url = "https://github.com/qltysh/qlty/releases/download/v0.650.0/qlty-x86_64-apple-darwin.tar.xz"
-url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/601546613"
+checksum = "sha256:206a916d11b5437a778a3da83686487a75f15c89bf8db371605c407ecf975838"
+url = "https://github.com/qltysh/qlty/releases/download/v0.642.0/qlty-x86_64-apple-darwin.tar.xz"
+url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/514936261"
 provenance = "github-attestations"
 
 [tools."github:qltysh/qlty"."platforms.windows-x64"]
-checksum = "sha256:5ae3b76ddb316df1851acee66b0cf1d0ac71536c9e0595e619c15903698705c5"
-url = "https://github.com/qltysh/qlty/releases/download/v0.650.0/qlty-x86_64-pc-windows-msvc.zip"
-url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/601546622"
+checksum = "sha256:ab80a508bd19447887931865ef78bbe58f044a78e8920a2d26b85d0c4ce185b1"
+url = "https://github.com/qltysh/qlty/releases/download/v0.642.0/qlty-x86_64-pc-windows-msvc.zip"
+url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/514936269"
 provenance = "github-attestations"
 
 [[tools.gitleaks]]
@@ -550,13 +538,10 @@ specifiers = [
 allow_builds = '["@ast-grep/cli"]'
 
 [[tools."npm:prettier"]]
-version = "3.9.9"
-aube = { path = ".mise/locks/npm-prettier/3.9.9", digest = "sha256:815f6667505e41ac2d03ecbac86b79f1beb78d45783879428193c9adc80760a3" }
+version = "3.5.3"
+aube = { path = ".mise/locks/npm-prettier/3.5.3", digest = "sha256:6d0a982291c7b0df742d82eeb58af64bc255d35cfc9238567e0438e647363113" }
 backend = "npm:prettier"
-specifiers = [
-    "3.9.9",
-    "latest",
-]
+specifiers = ["3.5.3"]
 
 [[tools.python]]
 version = "3.13.15"
@@ -623,42 +608,42 @@ url = "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-windows-x
 url_api = "https://api.github.com/repos/tamasfe/taplo/releases/assets/257323062"
 
 [[tools.uv]]
-version = "0.12.18"
+version = "0.12.21"
 backend = "aqua:astral-sh/uv"
 specifiers = ["latest"]
 
 [tools.uv."platforms.linux-arm64"]
-checksum = "sha256:afb6291f3f0a6b4521fc67b947822506c41dde5b60d2189dd8f3695b2ac8c9e7"
-url = "https://github.com/astral-sh/uv/releases/download/0.12.18/uv-aarch64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/582430569"
+checksum = "sha256:030b69227b40af8c1981b7301793dc66e71ed3c796ea8688209dd268bd91ec51"
+url = "https://github.com/astral-sh/uv/releases/download/0.12.21/uv-aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/599237845"
 provenance = "github-attestations"
 
 [tools.uv."platforms.linux-x64"]
-checksum = "sha256:89eadd7c76fc063887959510d5ba0ab1264dfd5f1143b925ddb73021a40acf16"
-url = "https://github.com/astral-sh/uv/releases/download/0.12.18/uv-x86_64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/582430671"
+checksum = "sha256:23f02075b652bb1df64178cfae41b5caf160822e720e2663568f3f5d63bc52c0"
+url = "https://github.com/astral-sh/uv/releases/download/0.12.21/uv-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/599238020"
 provenance = "github-attestations"
 
 [tools.uv."platforms.linux-x64-musl"]
-checksum = "sha256:e38d97460b98ebfd31b197de0fe9fa578add4bc8ba0179b203dd3f87b99f98e6"
-url = "https://github.com/astral-sh/uv/releases/download/0.12.18/uv-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/582430675"
+checksum = "sha256:d69d543a55ec9cdf9d3d9f2648b0a161847e3dbddc477e3be6b5813a6d46f639"
+url = "https://github.com/astral-sh/uv/releases/download/0.12.21/uv-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/599238034"
 provenance = "github-attestations"
 
 [tools.uv."platforms.macos-arm64"]
-checksum = "sha256:cf40e0c6a202190ccd9e0406dcfdd5b2d6668a9a5c779b17948963df32aafe5b"
-url = "https://github.com/astral-sh/uv/releases/download/0.12.18/uv-aarch64-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/582430554"
+checksum = "sha256:b88bda573e566ef9bced66b155fe0408626fbbc053aee1c30ba686f0728c9447"
+url = "https://github.com/astral-sh/uv/releases/download/0.12.21/uv-aarch64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/599237829"
 provenance = "github-attestations"
 
 [tools.uv."platforms.macos-x64"]
-checksum = "sha256:2e4108f5395397c8bc5d43bf83d3bdbb2d0e92b90d0efa607756be704905fa33"
-url = "https://github.com/astral-sh/uv/releases/download/0.12.18/uv-x86_64-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/582430660"
+checksum = "sha256:2b336763b396ec6afa20c5a8b083538ca7402445b868311979d740a4344c17d8"
+url = "https://github.com/astral-sh/uv/releases/download/0.12.21/uv-x86_64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/599237993"
 provenance = "github-attestations"
 
 [tools.uv."platforms.windows-x64"]
-checksum = "sha256:cae6a3bc25239f83dffb467a4b180508d9da23986c04639ebfa44e43e6a84bff"
-url = "https://github.com/astral-sh/uv/releases/download/0.12.18/uv-x86_64-pc-windows-msvc.zip"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/582430665"
+checksum = "sha256:5d223efa0bf00208c3853246af09420419dfbd352536aa6bb8163d6170e23890"
+url = "https://github.com/astral-sh/uv/releases/download/0.12.21/uv-x86_64-pc-windows-msvc.zip"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/599238008"
 provenance = "github-attestations"

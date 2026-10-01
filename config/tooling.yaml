@@ -466,6 +466,12 @@ Infra:
           # cold run because per-window dispatch overhead dominates.
           flext-infra:
             workers: 4
+          # algar-oud-mig measurement 2026-10-01: a cold run of 401 items on
+          # one worker executed 2 (each < 1 s) before the suite stop instant;
+          # worker start-up and collection consumed the window. Same measured
+          # ceiling as flext-infra.
+          algar-oud-mig:
+            workers: 4
           # CPU-fraction ceilings (cpu_fraction: "n/d") resolve at runtime
           # against the process CPU count.
         # Reserve physical memory for each xdist worker and its child process

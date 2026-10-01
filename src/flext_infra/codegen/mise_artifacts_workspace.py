@@ -282,18 +282,12 @@ class FlextInfraMiseWorkspacePlanner:
                 return r[m.Infra.MiseToolchainWorkspaceLayout].fail(
                     f"invalid Mise configuration plan path: {plan.path}",
                 )
-            try:
-                selector = (
-                    plan.path.parent
-                    .absolute()
-                    .relative_to(scope_root.absolute())
-                    .as_posix()
-                )
-            except ValueError:
+            plan_dir = plan.path.parent.absolute()
+            if not plan_dir.is_relative_to(scope_root.absolute()):
                 return r[m.Infra.MiseToolchainWorkspaceLayout].fail(
                     f"Mise configuration plan escapes scope: {plan.path}",
                 )
-            selectors.append(selector)
+            selectors.append(plan_dir.relative_to(scope_root.absolute()).as_posix())
             expected_paths.append(plan.path)
         layout = self.layout_from_selectors(
             scope_root,

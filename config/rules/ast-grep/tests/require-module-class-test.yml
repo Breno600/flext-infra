@@ -1,0 +1,21 @@
+id: require-module-class
+valid:
+  - |
+    class FlextFoo:
+        pass
+  - |
+    from pkg import r
+    __all__ = ["r"]
+  - |
+    from pkg.cli import main
+    if __name__ == "__main__":
+        raise SystemExit(main())
+  - |
+    from pkg.cli import main
+    raise SystemExit(main())
+invalid:
+  - |
+    import os
+    VALUE = os.sep
+  - |
+    import os

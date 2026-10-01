@@ -25,8 +25,10 @@ class FlextInfraRefactorCensusObjectsMixin:
         """Return the selected families."""
         if not family_names:
             return frozenset()
+        families = u.Infra.facade_families()
         resolved = {
-            c.Infra.FAMILY_SUFFIXES.get(name, name).lower() for name in family_names
+            (families[name].suffix if name in families else name).lower()
+            for name in family_names
         }
         return frozenset(resolved)
 

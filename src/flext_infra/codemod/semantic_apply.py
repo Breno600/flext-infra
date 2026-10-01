@@ -341,13 +341,12 @@ class FlextInfraCodemodSemanticApply:
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
         """Normalize every handwritten canonical model source from its AST."""
         edits: list[m.Infra.SemanticMigrationEdit] = []
-        model_directories = c.Infra.FLEXT_MODELS_DIRECTORIES
+        models = u.Infra.facade_family_declared_by(c.Infra.MODELS_PY)
         for path, source in sorted(sources.items()):
             if source.startswith("# AUTO-GENERATED FILE"):
                 continue
-            if (
-                path.name not in c.Infra.FLEXT_MODELS_FILE_NAMES
-                and not model_directories.intersection(path.parts)
+            if path.name not in models.file_names and not models.directories.intersection(
+                path.parts
             ):
                 continue
             updated = u.Infra.normalize_deferred_self_references(source)
