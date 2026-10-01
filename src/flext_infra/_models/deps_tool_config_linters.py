@@ -6,7 +6,7 @@ from typing import Annotated, Literal
 
 from flext_cli import m
 
-from flext_infra import t
+from flext_infra import c, t
 
 from .deps_tool_config_project import FlextInfraModelsDepsToolConfigProject
 
