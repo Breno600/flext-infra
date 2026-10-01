@@ -370,7 +370,7 @@ addopts = [
   "--durations=10",
   "--timeout=10",
 ]
-flext_slow_timeout_seconds = "180"
+flext_slow_timeout_seconds = "30"
 asyncio_default_fixture_loop_scope = "function"
 filterwarnings = [
   "error",
@@ -418,6 +418,11 @@ skip-magic-trailing-comma = false
 
 [tool.ruff.lint]
 extend-safe-fixes = []
+ignore = [
+  "camelcase-imported-as-lowercase",
+  "typing-only-standard-library-import",
+  "typing-only-third-party-import",
+]
 select = ["ALL"]
 unfixable = [
   "duplicate-value",
@@ -430,6 +435,12 @@ unfixable = [
   "redefined-while-unused",
   "unused-variable",
 ]
+
+[tool.ruff.lint.flake8-copyright]
+notice-rgx = "Copyright \\(c\\) \\d{4} \\S[^\\n]*\\. All rights reserved\\."
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api.argparse]
 msg = "Use cli.register_result_command + Pydantic model from flext_cli."
@@ -453,6 +464,11 @@ known-first-party = ["flext_core", "flext_infra"]
 split-on-trailing-comma = false
 
 [tool.ruff.lint.per-file-ignores]
+"**/__init__.py" = [
+  "non-empty-init-module",
+  "runtime-import-in-type-checking-block",
+  "unused-import",
+]
 
 [tool.tomlsort]
 all = true

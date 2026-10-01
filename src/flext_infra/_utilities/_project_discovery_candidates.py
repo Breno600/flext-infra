@@ -10,9 +10,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import c
-
-from ._project_discovery_shape import FlextInfraUtilitiesProjectDiscoveryShapeMixin
-from .git import FlextInfraUtilitiesGit
+from flext_infra._utilities._project_discovery_shape import (
+    FlextInfraUtilitiesProjectDiscoveryShapeMixin,
+)
+from flext_infra._utilities.git import FlextInfraUtilitiesGit
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -30,7 +31,15 @@ class FlextInfraUtilitiesProjectDiscoveryCandidatesMixin(
         *,
         scan_dirs: frozenset[str] | None = None,
     ) -> t.SequenceOf[Path]:
-        """Return the root and projects declared by its own ``.gitmodules``."""
+        """Return the root and projects declared by its own ``.gitmodules``.
+
+        Returns:
+            The root and projects declared by its own ``.gitmodules``.
+
+        Raises:
+            ValueError: If ``declared_paths.failure``.
+
+        """
         roots: t.MutableSequenceOf[Path] = []
         effective_scan_dirs = scan_dirs or frozenset()
         declared_paths = FlextInfraUtilitiesGit.git_declared_submodule_paths(

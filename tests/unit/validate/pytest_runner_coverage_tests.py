@@ -1,4 +1,8 @@
-"""Coverage verb contract of the public cached-pytest runner."""
+"""Coverage verb contract of the public cached-pytest runner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -53,7 +57,7 @@ class TestsFlextInfraPytestRunnerCoverage:
             (reports_root / latest_name / "testmon-inventory.json").is_file(),
             eq=True,
         )
-        tm.that(runner.required_testmon_db().exists(), eq=False)
+        tm.that(runner.testmon_db.exists(), eq=False)
 
     @pytest.mark.slow
     def test_failed_coverage_suite_preserves_original_failure_and_accounting(
@@ -100,4 +104,4 @@ class TestsFlextInfraPytestRunnerCoverage:
             summary(reports_root),
             has=["failed=1", "accounting_complete=True", f"exit={exit_code}"],
         )
-        tm.that(runner.required_testmon_db().exists(), eq=False)
+        tm.that(runner.testmon_db.exists(), eq=False)

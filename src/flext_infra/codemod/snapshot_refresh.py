@@ -1,4 +1,8 @@
-"""Explicit regeneration of the owned ast-grep rule-test snapshots."""
+"""Explicit regeneration of the owned ast-grep rule-test snapshots.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,9 +11,8 @@ from typing import override
 from flext_cli import cli
 
 from flext_core import r
-
-from .. import FlextInfraServiceBase, p, t, u
-from . import FlextInfraModGateEngine
+from flext_infra import FlextInfraServiceBase, p, t, u
+from flext_infra.codemod import FlextInfraModGateEngine
 
 
 class FlextInfraCodemodSnapshotRefresh(FlextInfraServiceBase[t.Cli.ResultValue]):
@@ -24,7 +27,12 @@ class FlextInfraCodemodSnapshotRefresh(FlextInfraServiceBase[t.Cli.ResultValue])
 
     @override
     def execute(self) -> p.Result[t.Cli.ResultValue]:
-        """Rebuild or preview the owned snapshot projections."""
+        """Rebuild or preview the owned snapshot projections.
+
+        Returns:
+            The resulting ``p.Result[t.Cli.ResultValue]``.
+
+        """
         planned = u.Infra.codemod_rule_plan(self.repository_root)
         if planned.failure:
             return r[t.Cli.ResultValue].from_failure(planned)

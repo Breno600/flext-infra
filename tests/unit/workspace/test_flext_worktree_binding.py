@@ -8,6 +8,9 @@ The binding is a SESSION override, not a declaration: the consumer's
 ``pyproject.toml`` keeps its pins untouched, so nothing local is ever committed
 and canonical setup restores the pinned resolution. Which distributions get
 rebound is derived from the worktree's own manifest, never a hardcoded list.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -28,7 +31,12 @@ class TestsFlextInfraWorktreeBinding:
 
     @staticmethod
     def _consumer(tmp_path: Path) -> Path:
-        """Return an external consumer declaring flext packages by pinned git URL."""
+        """Return an external consumer declaring flext packages by pinned git URL.
+
+        Returns:
+            An external consumer declaring flext packages by pinned git URL.
+
+        """
         provider = u.Tests.provider()
         consumer = tmp_path / "consumer"
         consumer.mkdir()
@@ -52,7 +60,12 @@ class TestsFlextInfraWorktreeBinding:
 
     @staticmethod
     def _python(consumer: Path) -> Path:
-        """Use the fixture consumer's physical environment."""
+        """Use the fixture consumer's physical environment.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         environment = u.Infra.runtime_environment_dir(consumer)
         return (
             Path(
@@ -74,6 +87,10 @@ class TestsFlextInfraWorktreeBinding:
         declares with what the worktree PROVIDES, and only a fixture that owns
         both sides can prove the intersection rather than inherit it from one
         machine's disk.
+
+        Returns:
+            A self-contained flext workspace supplying flext-core and flext-cli.
+
         """
         flext_root = tmp_path / "flext"
         u.Tests.WorktreeFixture.initialize_governed_project(
@@ -230,8 +247,8 @@ class TestsFlextInfraWorktreeBinding:
             none=True,
         )
 
+    @staticmethod
     def test_ci_binding_rejects_before_consumer_or_supplier_access(
-        self,
         tmp_path: Path,
     ) -> None:
         """The real public CLI rejects CI before any environment mutation."""

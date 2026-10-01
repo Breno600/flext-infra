@@ -1,4 +1,8 @@
-"""Immutable source-bundle preparation for the documentation generator."""
+"""Immutable source-bundle preparation for the documentation generator.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -32,6 +36,10 @@ class FlextInfraDocGeneratorBundleMixin:
         ``root_scope`` is ``None`` whenever the root does not participate as
         a docs output scope (e.g. conform's DECLARED scope); no scope can be
         collocated with an absent root.
+
+        Returns:
+            Whether a project scope shares the aggregate root path.
+
         """
         return (
             root_scope is not None
@@ -44,7 +52,12 @@ class FlextInfraDocGeneratorBundleMixin:
         scopes: t.SequenceOf[m.Infra.DocScope],
         output_dir: Path,
     ) -> p.Result[bool]:
-        """Require builders to preserve each lexical scope and report target."""
+        """Require builders to preserve each lexical scope and report target.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         for scope in scopes:
             expected = scope.path / output_dir
             if scope.report_dir != expected:
@@ -63,6 +76,10 @@ class FlextInfraDocGeneratorBundleMixin:
 
         Source-state race verification is owned by ``docs_file_plans``, the
         single pre-publication barrier of the docs cycle.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.DocsGenerationBundle]``.
+
         """
         started_at = perf_counter()
         roots = u.Infra.docs_repository_roots(request.repository_root)

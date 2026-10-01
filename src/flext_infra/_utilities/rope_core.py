@@ -1,4 +1,8 @@
-"""Shared Rope lifecycle helpers."""
+"""Shared Rope lifecycle helpers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,11 +11,14 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from flext_infra import config, t
-
-from ._rope_core_pymodule import FlextInfraUtilitiesRopeCorePyModuleMixin
-from ._rope_core_resources import FlextInfraUtilitiesRopeCoreResourcesMixin
-from .project_discovery import FlextInfraUtilitiesProjectDiscovery
-from .rope_runtime import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities._rope_core_pymodule import (
+    FlextInfraUtilitiesRopeCorePyModuleMixin,
+)
+from flext_infra._utilities._rope_core_resources import (
+    FlextInfraUtilitiesRopeCoreResourcesMixin,
+)
+from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
+from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeCore(
@@ -22,7 +29,12 @@ class FlextInfraUtilitiesRopeCore(
 
     @staticmethod
     def init_rope_project(repository_root: Path) -> t.Infra.RopeProject:
-        """Create a project-scoped Rope session with no disk artifacts."""
+        """Create a project-scoped Rope session with no disk artifacts.
+
+        Returns:
+            The resulting ``t.Infra.RopeProject``.
+
+        """
         resolved_root = repository_root.resolve()
         return FlextInfraUtilitiesRopeCore._new_project(
             resolved_root,
@@ -31,7 +43,12 @@ class FlextInfraUtilitiesRopeCore(
 
     @staticmethod
     def init_rope_workspace(repository_root: Path) -> t.Infra.RopeProject:
-        """Create a Rope session spanning every project below a workspace root."""
+        """Create a Rope session spanning every project below a workspace root.
+
+        Returns:
+            The resulting ``t.Infra.RopeProject``.
+
+        """
         resolved_root = repository_root.resolve()
         project_roots = tuple(
             project_root
@@ -51,7 +68,12 @@ class FlextInfraUtilitiesRopeCore(
         *,
         project_roots: t.SequenceOf[Path],
     ) -> t.Infra.RopeProject:
-        """Create one Rope project from validated source roots."""
+        """Create one Rope project from validated source roots.
+
+        Returns:
+            The resulting ``t.Infra.RopeProject``.
+
+        """
         source_folders = sorted({
             str(scan_path.relative_to(resolved_root))
             for project_root in project_roots
@@ -74,7 +96,16 @@ class FlextInfraUtilitiesRopeCore(
         *,
         project_roots: t.SequenceOf[Path] | None = None,
     ) -> Generator[t.Infra.RopeProject]:
-        """Open one Rope project and always close it through the core boundary."""
+        """Open one Rope project and always close it through the core boundary.
+
+        Yields:
+            Each ``t.Infra.RopeProject``.
+
+        Raises:
+            ValueError: If Rope project roots must be nonempty and remain inside the
+                declared workspace.
+
+        """
         resolved = repository_root.resolve()
         roots = (
             (resolved,)

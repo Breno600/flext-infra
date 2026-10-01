@@ -1,4 +1,8 @@
-"""Public format-workflow tests for docs services."""
+"""Public format-workflow tests for docs services.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,6 +11,7 @@ from typing import TYPE_CHECKING
 from flext_tests import tm
 
 from flext_infra import infra
+from flext_infra.docs.fixer import FlextInfraDocFixer
 from flext_infra.docs.formatter import FlextInfraDocFormatter
 from tests import c, u
 
@@ -19,7 +24,12 @@ class TestsFlextInfraDocsFormatter:
 
     @staticmethod
     def _formatter() -> FlextInfraDocFormatter:
-        """Bind the formatter to the facade's markdown format gate."""
+        """Bind the formatter to the facade's markdown format gate.
+
+        Returns:
+            The resulting ``FlextInfraDocFormatter``.
+
+        """
         return FlextInfraDocFormatter(format_gate=infra.markdown_format_gate)
 
     @staticmethod

@@ -6,6 +6,9 @@ then read the letter as a variable, so every ``m.X`` annotation reached through
 the facade resolves to Unknown. An annotated rebind (``m: type[X] = X``) has the
 same effect. This phase extends the class the parent declares for the letter in
 its own ``__all__`` and keeps the letter a plain alias of the facade.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -15,11 +18,18 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import m, t
-
-from ..private_import_facades import FlextInfraUtilitiesPrivateImportFacades
-from .edits import FlextInfraUtilitiesSemanticCutoverEdits
-from .facade_base_cst import FlextInfraUtilitiesSemanticCutoverFacadeBaseCst
-from .facade_owners import FlextInfraUtilitiesSemanticCutoverFacadeOwners
+from flext_infra._utilities._semantic_cutover.edits import (
+    FlextInfraUtilitiesSemanticCutoverEdits,
+)
+from flext_infra._utilities._semantic_cutover.facade_base_cst import (
+    FlextInfraUtilitiesSemanticCutoverFacadeBaseCst,
+)
+from flext_infra._utilities._semantic_cutover.facade_owners import (
+    FlextInfraUtilitiesSemanticCutoverFacadeOwners,
+)
+from flext_infra._utilities.private_import_facades import (
+    FlextInfraUtilitiesPrivateImportFacades,
+)
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
@@ -42,7 +52,12 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
         sources: t.MappingKV[Path, str],
         findings: t.SequenceOf[m.Infra.ModScanFinding],
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
-        """Plan the class-name base for every facade the detector selected."""
+        """Plan the class-name base for every facade the detector selected.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
+
+        """
         selected = frozenset((root / finding.file).resolve() for finding in findings)
         items = tuple(
             item for item in cls._editable_sources(sources) if item[0] in selected
@@ -110,6 +125,13 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
 
         One facade may extend several parents by their letters; the shapes
         are ordered by parent module so the rewrite is deterministic.
+
+        Returns:
+            Every ``(module, letter, local, facade)`` rebound letter base.
+
+        Raises:
+            ValueError: If relative facade base import is not a declared owner in.
+
         """
         imports: MutableMapping[str, t.Triple[str, str, int]] = {}
         rebinds: MutableMapping[str, str] = {}
@@ -164,6 +186,10 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
         bases, class bodies, decorators, defaults) evaluates the imported
         parent, so writing the parent class there keeps runtime identical.
         Function and lambda bodies run after the rebind and keep the letter.
+
+        Returns:
+            The resulting ``str``.
+
         """
         rebind_line = max(
             node.lineno
@@ -207,7 +233,12 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
 
     @staticmethod
     def _facade_bound_imports(tree: ast.Module, module: str) -> frozenset[str]:
-        """Return names a module already imports unaliased from ``module``."""
+        """Return names a module already imports unaliased from ``module``.
+
+        Returns:
+            Names a module already imports unaliased from ``module``.
+
+        """
         return frozenset(
             imported.name
             for node in tree.body
@@ -220,7 +251,12 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
 
     @staticmethod
     def _facade_module_bindings(tree: ast.Module) -> frozenset[str]:
-        """Return every module-scope binding name."""
+        """Return every module-scope binding name.
+
+        Returns:
+            Every module-scope binding name.
+
+        """
         names: set[str] = set()
         for node in tree.body:
             if isinstance(node, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef):

@@ -6,6 +6,9 @@ unconditionally from ``Project.__init__``.  A strict warnings-as-errors runtime
 therefore cannot construct the documented public ``Project`` at all.  The
 boundary below preserves Rope's initializer semantics without filtering the
 warning or weakening the process warning policy.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -37,7 +40,12 @@ class FlextInfraRopeProject(Project):
             }
 
         def read(self, path: str) -> bytes:
-            """Read the exact captured source, including proposed edits."""
+            """Read the exact captured source, including proposed edits.
+
+            Returns:
+                The resulting ``bytes``.
+
+            """
             return self._sources[Path(path).resolve()]
 
     @classmethod
@@ -47,7 +55,15 @@ class FlextInfraRopeProject(Project):
         sources: Mapping[Path, str],
         source_folders: t.SequenceOf[str],
     ) -> Self:
-        """Construct a fresh Rope identity graph without persistent state."""
+        """Construct a fresh Rope identity graph without persistent state.
+
+        Returns:
+            The resulting ``Self``.
+
+        Raises:
+            ValueError: If Rope snapshot root must already exist.
+
+        """
         if not Path(root).is_dir():
             msg = f"Rope snapshot root must already exist: {root}"
             raise ValueError(msg)
@@ -62,7 +78,13 @@ class FlextInfraRopeProject(Project):
 
     @override
     def _init_source_folders(self) -> None:
-        """Initialize configured source roots without Rope's warning wrapper."""
+        """Initialize configured source roots without Rope's warning wrapper.
+
+        Raises:
+            ValueError: If rope preference 'source_folders' is None; expected a list of
+                source folder paths.
+
+        """
         source_folders = self.prefs.get("source_folders", [])
         if source_folders is None:
             msg = (

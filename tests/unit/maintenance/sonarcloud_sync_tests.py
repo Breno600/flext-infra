@@ -5,6 +5,9 @@ decides what is written and when, without opening a network socket: the
 project key derived from a real Git origin, the request plan derived from the
 codegen SSOT, the no-op decision against the measured response shape, and the
 token preflight that fails before any effect through the public CLI.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -33,7 +36,12 @@ class TestsFlextInfraSonarcloudSettingsSync:
 
     @staticmethod
     def _spec(count: int | None = None) -> m.Infra.SonarcloudSpec:
-        """Use the current SSOT or validate a different exclusion cardinality."""
+        """Use the current SSOT or validate a different exclusion cardinality.
+
+        Returns:
+            The resulting ``m.Infra.SonarcloudSpec``.
+
+        """
         spec = config.Infra.codegen.sonarcloud
         if count is None:
             return spec
@@ -56,7 +64,12 @@ class TestsFlextInfraSonarcloudSettingsSync:
         inherited: bool = False,
         include_setting: bool = True,
     ) -> str:
-        """Render an ``api/settings/values`` body in the measured shape."""
+        """Render an ``api/settings/values`` body in the measured shape.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         settings: list[t.JsonValue] = []
         if include_setting:
             field_values: list[t.JsonValue] = [
@@ -71,18 +84,28 @@ class TestsFlextInfraSonarcloudSettingsSync:
 
     @staticmethod
     def _pairs(spec: m.Infra.SonarcloudSpec) -> t.VariadicTuple[t.Pair[str, str]]:
-        """Read expectations from the exact typed config the service receives."""
+        """Read expectations from the exact typed config the service receives.
+
+        Returns:
+            The resulting ``t.VariadicTuple[t.Pair[str, str]]``.
+
+        """
         return tuple(
             (exclusion.rule_key, exclusion.resource_key)
             for exclusion in spec.issue_exclusions
         )
 
+    @staticmethod
     def _cli(
-        self,
         repository_root: Path,
         env: t.StrMapping | None = None,
     ) -> t.Pair[int, str]:
-        """Run the public CLI route in a child process without SONAR_TOKEN."""
+        """Run the public CLI route in a child process without SONAR_TOKEN.
+
+        Returns:
+            The resulting ``t.Pair[int, str]``.
+
+        """
         result = tm.ok(
             u.Cli.run_raw(
                 [

@@ -1,4 +1,8 @@
-"""Domain models for the refactor subpackage."""
+"""Domain models for the refactor subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -10,10 +14,12 @@ from typing import Annotated, ClassVar
 
 from flext_cli import m
 
-from .. import t
-from .mixins import FlextInfraModelsMixins as mm
-from .refactor_ast_grep import FlextInfraModelsRefactorGrep
-from .refactor_namespace_enforcer import FlextInfraModelsNamespaceEnforcer
+from flext_infra import t
+from flext_infra._models.mixins import FlextInfraModelsMixins as mm
+from flext_infra._models.refactor_ast_grep import FlextInfraModelsRefactorGrep
+from flext_infra._models.refactor_namespace_enforcer import (
+    FlextInfraModelsNamespaceEnforcer,
+)
 
 
 class FlextInfraModelsRefactor(
@@ -179,7 +185,8 @@ class FlextInfraModelsRefactor(
 
         check: Annotated[bool, m.Field(description="Validate without writing")] = False
         dry_run_mode: Annotated[
-            bool, m.Field(alias="dry-run", description="Inspect without writing")
+            bool,
+            m.Field(alias="dry-run", description="Inspect without writing"),
         ] = False
 
     class ApplyRenamesInput(mm.WriteMixin, m.ContractModel):

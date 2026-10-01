@@ -1,4 +1,8 @@
-"""Strict worktree versus physical file-scope classification for writers."""
+"""Strict worktree versus physical file-scope classification for writers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -49,7 +53,12 @@ class FlextInfraUtilitiesGitMutationScopeMixin:
         cls,
         request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitMutationScope]:
-        """Reject malformed declared Git roots; marker-free roots remain file scopes."""
+        """Reject malformed declared Git roots; marker-free roots remain file scopes.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitMutationScope]``.
+
+        """
         try:
             scope = cls._git_mutation_scope(request.repo_root)
         except (GitError, OSError, ValueError) as exc:

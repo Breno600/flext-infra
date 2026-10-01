@@ -1,4 +1,8 @@
-"""Immutable source and journal preconditions for generation transactions."""
+"""Immutable source and journal preconditions for generation transactions.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,9 +12,10 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import m
-
-from ._mise_artifacts_state import FlextInfraMiseArtifactsState
-from ._mise_artifacts_verification import FlextInfraMiseArtifactsVerification
+from flext_infra.codegen._mise_artifacts_state import FlextInfraMiseArtifactsState
+from flext_infra.codegen._mise_artifacts_verification import (
+    FlextInfraMiseArtifactsVerification,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -24,7 +29,13 @@ class FlextInfraCodegenPreconditions:
         phase: str,
         plans: t.VariadicTuple[m.Infra.CodegenFilePlan],
     ) -> p.Result[t.VariadicTuple[t.Pair[str, m.Cli.AtomicFileState]]]:
-        """Reject conflicting observations and tag each source with its phase."""
+        """Reject conflicting observations and tag each source with its phase.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[t.Pair[str,
+                m.Cli.AtomicFileState]]]``.
+
+        """
         result_type = r[tuple[tuple[str, m.Cli.AtomicFileState], ...]]
         sources: MutableMapping[Path, m.Cli.AtomicFileState] = {}
         for plan in plans:
@@ -41,7 +52,12 @@ class FlextInfraCodegenPreconditions:
     def unique_states(
         states: t.VariadicTuple[m.Cli.AtomicFileState],
     ) -> t.VariadicTuple[m.Cli.AtomicFileState]:
-        """Coalesce repeated states by their publication path."""
+        """Coalesce repeated states by their publication path.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Cli.AtomicFileState]``.
+
+        """
         by_path: MutableMapping[Path, m.Cli.AtomicFileState] = {}
         for file_state in states:
             by_path[file_state.path] = file_state
@@ -53,7 +69,12 @@ class FlextInfraCodegenPreconditions:
         sources: t.VariadicTuple[m.Cli.AtomicFileState],
         destinations: t.VariadicTuple[m.Cli.AtomicFileState],
     ) -> p.Result[bool]:
-        """Require unchanged source and destination identities before writing."""
+        """Require unchanged source and destination identities before writing.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         source_barrier = FlextInfraMiseArtifactsVerification.states_current(
             FlextInfraCodegenPreconditions.unique_states(sources),
         )
@@ -71,7 +92,12 @@ class FlextInfraCodegenPreconditions:
         session: m.Infra.CodegenTransactionSession,
         changed_error: str,
     ) -> p.Result[m.Infra.CodegenTransactionSession]:
-        """Require the complete journal receipt; a lease cannot authorize replacement."""
+        """Require the complete journal receipt; a lease cannot authorize replacement.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenTransactionSession]``.
+
+        """
         result_type = r[m.Infra.CodegenTransactionSession]
         observed = FlextInfraMiseArtifactsState.journal_state(session.plan.layout)
         observed_snapshot = (

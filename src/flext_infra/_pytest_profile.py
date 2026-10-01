@@ -1,4 +1,8 @@
-"""Cold-start pytest execution adapter; runtime imports here are stdlib only."""
+"""Cold-start pytest execution adapter; runtime imports here are stdlib only.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -28,7 +32,17 @@ class FlextInfraPytestProfile:
         started_at_monotonic: float,
         collection_command_prefix: t.StrTuple,
     ) -> int:
-        """Start profiling before importing the runner or any FLEXT service."""
+        """Start profiling before importing the runner or any FLEXT service.
+
+        Returns:
+            The resulting ``int``.
+
+        Raises:
+            ValueError: If profile execution requires an injected collection command
+                prefix; or if parent profile must stay under the repository reports
+                directory.
+
+        """
         if not collection_command_prefix:
             msg = "profile execution requires an injected collection command prefix"
             raise ValueError(msg)
@@ -51,7 +65,12 @@ class FlextInfraPytestProfile:
             self._finish(profile)
 
     def run_collection(self, receipt_path: Path, arguments: t.StrTuple) -> int:
-        """Measure receipt/model imports and pytest itself; restore the original argv."""
+        """Measure receipt/model imports and pytest itself; restore the original argv.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         self.context = None
         self.output.with_suffix(".pstats.json").unlink(missing_ok=True)
         original_argv = sys.argv
@@ -73,6 +92,7 @@ class FlextInfraPytestProfile:
         runner = FlextInfraPytestRunner.from_environment(
             started_at_monotonic=started_at_monotonic,
             collection_command_prefix=prefix,
+            profile_enabled=True,
         )
         # The runner publishes its run context before any child can fail; the
         # parent binds the profile to the receipt THIS invocation wrote, also
@@ -96,8 +116,8 @@ class FlextInfraPytestProfile:
             if owned:
                 self._record_context(
                     m.Infra.PytestRunContext.model_validate_json(
-                        owned[0].read_text(encoding="utf-8")
-                    )
+                        owned[0].read_text(encoding="utf-8"),
+                    ),
                 )
 
         try:
@@ -132,11 +152,8 @@ class FlextInfraPytestProfile:
         ):
             msg = "collection profile run receipt does not match its report directory"
             raise ValueError(msg)
-        if (
-            context.deadline_monotonic is None
-            or time.monotonic() >= context.deadline_monotonic
-        ):
-            msg = "collection profile run receipt has no live deadline"
+        if time.monotonic() >= context.deadline_monotonic:
+            msg = "collection profile run receipt has an expired deadline"
             raise ValueError(msg)
         self.context = context
         runpy.run_module("pytest", run_name="__main__", alter_sys=True)
@@ -152,7 +169,7 @@ class FlextInfraPytestProfile:
             process_dir = self.output.parent / policy.profile_process_directory
             process_dir.mkdir(parents=True, exist_ok=True)
             (process_dir / f"{os.getpid()}{self.output.suffix}").hardlink_to(
-                self.output
+                self.output,
             )
         if self.context is not None:
             from flext_infra import u

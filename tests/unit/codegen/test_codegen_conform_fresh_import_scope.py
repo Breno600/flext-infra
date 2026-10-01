@@ -17,7 +17,8 @@ from tests import c, u
 class TestFreshImportRepositoryScope:
     """Only declared Python packages enter the fresh-import probe scope."""
 
-    def test_package_false_roots_are_excluded_from_probe_scope(self) -> None:
+    @staticmethod
+    def test_package_false_roots_are_excluded_from_probe_scope() -> None:
         """A workspace umbrella root that publishes no package is not probed.
 
         The manifest of a ``package: false`` repository is the authority for
@@ -40,7 +41,8 @@ class TestFreshImportRepositoryScope:
 
         tm.that(resolved, eq=(Path("/checkouts/demo-member"),))
 
-    def test_package_true_roots_resolve_under_the_workspace_root(self) -> None:
+    @staticmethod
+    def test_package_true_roots_resolve_under_the_workspace_root() -> None:
         """Every declared package repository resolves under the workspace root."""
         first = u.Tests.repository_ref("demo-first", path=Path("demo-first"))
         second = u.Tests.repository_ref("demo-second", path=Path("demo-second"))

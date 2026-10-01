@@ -1,4 +1,8 @@
-"""Workspace-wide Rope-only census orchestration."""
+"""Workspace-wide Rope-only census orchestration.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -11,15 +15,16 @@ from flext_cli import cli
 from flext_core import r
 from flext_infra import c, m, p, t, u
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
+from flext_infra.refactor._census_collect import FlextInfraRefactorCensusCollectMixin
+from flext_infra.refactor._census_collect_helpers import (
+    FlextInfraRefactorCensusCollectHelpersMixin,
+)
+from flext_infra.refactor._census_filters import FlextInfraRefactorCensusFiltersMixin
+from flext_infra.refactor._census_objects import FlextInfraRefactorCensusObjectsMixin
+from flext_infra.refactor._census_project import FlextInfraRefactorCensusProjectMixin
+from flext_infra.refactor._census_removal import FlextInfraRefactorCensusRemovalMixin
+from flext_infra.refactor._census_render import FlextInfraRefactorCensusRenderMixin
 from flext_infra.workspace.rope import FlextInfraRopeWorkspace
-
-from ._census_collect import FlextInfraRefactorCensusCollectMixin
-from ._census_collect_helpers import FlextInfraRefactorCensusCollectHelpersMixin
-from ._census_filters import FlextInfraRefactorCensusFiltersMixin
-from ._census_objects import FlextInfraRefactorCensusObjectsMixin
-from ._census_project import FlextInfraRefactorCensusProjectMixin
-from ._census_removal import FlextInfraRefactorCensusRemovalMixin
-from ._census_render import FlextInfraRefactorCensusRenderMixin
 
 
 class FlextInfraRefactorCensus(
@@ -115,6 +120,10 @@ class FlextInfraRefactorCensus(
 
         Workspace-wide scans (zero or many projects) keep the canonical workspace
         root so cross-project rules such as duplicate detection remain accurate.
+
+        Returns:
+            A project-scoped Rope root when exactly one project is selected.
+
         """
         names: t.StrSequence | None = self.project_names
         if names is None or len(names) != 1:
@@ -128,10 +137,16 @@ class FlextInfraRefactorCensus(
     def _execution_reports(
         self,
     ) -> t.Pair[m.Infra.WorkspaceReport, m.Infra.WorkspaceReport]:
-        """Return the final report and the pre-apply report the impact map reads."""
+        """Return the final report and the pre-apply report the impact map reads.
+
+        Returns:
+            The final report and the pre-apply report the impact map reads.
+
+        """
         started = time.monotonic()
         with FlextInfraRopeWorkspace.open_workspace(
-            self.root, rope_repository_root=self._rope_root_for_selection()
+            self.root,
+            rope_repository_root=self._rope_root_for_selection(),
         ) as rope:
             impact_report = self._collect_report(rope)
             report = impact_report
@@ -142,18 +157,28 @@ class FlextInfraRefactorCensus(
             ):
                 report = self._collect_report(rope)
         finalized = report.model_copy(
-            update={"scan_duration_seconds": time.monotonic() - started}
+            update={"scan_duration_seconds": time.monotonic() - started},
         )
         return finalized, impact_report
 
     def build_report(self) -> m.Infra.WorkspaceReport:
-        """Build the canonical workspace census report without CLI side effects."""
+        """Build the canonical workspace census report without CLI side effects.
+
+        Returns:
+            The resulting ``m.Infra.WorkspaceReport``.
+
+        """
         report, _ = self._execution_reports()
         return report
 
     @override
     def execute(self) -> p.Result[m.Infra.WorkspaceReport]:
-        """Execute the census with one shared Rope session."""
+        """Execute the census with one shared Rope session.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.WorkspaceReport]``.
+
+        """
         report, impact_report = self._execution_reports()
         cli.display_text(self.render_text(report))
         if self.json_output_path is not None:
@@ -161,7 +186,8 @@ class FlextInfraRefactorCensus(
             u.Cli.info(f"JSON report exported to: {self.json_output_path}")
         if self.impact_map_output_path is not None:
             impact_result = u.Infra.write_impact_map(
-                self._impact_map_results(impact_report), self.impact_map_output_path
+                self._impact_map_results(impact_report),
+                self.impact_map_output_path,
             )
             if impact_result.failure:
                 return r[m.Infra.WorkspaceReport].from_failure(impact_result)

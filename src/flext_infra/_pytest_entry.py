@@ -1,4 +1,8 @@
-"""Source-live pytest entrypoint with a pre-import absolute clock."""
+"""Source-live pytest entrypoint with a pre-import absolute clock.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -16,10 +20,17 @@ class FlextInfraPytestEntry:
     def main(cls) -> int:
         """Parse the Make boundary and return the exact child process status.
 
-        ``full`` runs the complete suite without testmon or a time limit.
-        ``coverage`` selects coverage alone; the default is the incremental
-        testmon operation. ``slow`` runs the incremental slow-marker phase
-        as its own bounded process outside the budgeted clock.
+        ``full`` runs incremental then complete testmon execution. ``coverage``
+        selects coverage alone; the default is the incremental operation. The
+        ``slow`` operation runs the incremental phase over the slow marker
+        only, as its own bounded process outside the budgeted clock.
+
+        Returns:
+            The resulting ``int``.
+
+        Raises:
+            ValueError: If unsupported pytest operation.
+
         """
         mode = sys.argv[1] if len(sys.argv) > 1 else ""
         if mode in {"profile", "profile-collection"}:
@@ -40,14 +51,14 @@ class FlextInfraPytestEntry:
 
         from flext_infra.validate.pytest_runner import FlextInfraPytestRunner
 
+        slow_phase = mode in {"slow", "full-slow"}
         runner = FlextInfraPytestRunner.from_environment(
             started_at_monotonic=cls._STARTED_AT_MONOTONIC,
-            testmon=mode not in {"coverage", "full"},
-            slow_phase=mode == "slow",
+            slow_phase=slow_phase,
         )
         if mode == "coverage":
             return runner.execute_coverage().unwrap()
-        if mode == "full":
+        if mode in {"full", "full-slow"}:
             return runner.execute_full().unwrap()
         if mode in {"", "slow"}:
             return runner.execute().unwrap()

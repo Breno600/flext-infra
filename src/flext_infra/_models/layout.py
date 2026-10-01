@@ -16,8 +16,7 @@ from typing import Annotated
 from flext_cli import m
 
 from flext_infra import t
-
-from .mixins import FlextInfraModelsMixins as mm
+from flext_infra._models.mixins import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsLayout:

@@ -71,7 +71,12 @@ class FlextInfraValidateLazyMapFreshness(FlextInfraProjectSelectionServiceBase[b
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute the freshness validation using the repository owner."""
+        """Execute the freshness validation using the repository owner.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         return self._report_execution(self.build_report(self.repository_root))
 
 

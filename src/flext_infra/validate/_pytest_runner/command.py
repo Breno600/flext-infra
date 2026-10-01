@@ -1,77 +1,162 @@
-"""Canonical pytest argv for persistent testmon execution."""
+"""Canonical pytest argv for persistent testmon execution.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
+import hashlib
 import sys
+from functools import lru_cache
+from importlib.metadata import distributions
 from pathlib import Path
 from typing import ClassVar
 
 from flext_infra import c, config, m, t
-
-from ..._pytest_collection import FlextInfraPytestCollection
-from .base import FlextInfraPytestRunnerBase
+from flext_infra._pytest_collection import FlextInfraPytestCollection
+from flext_infra.validate._pytest_runner.base import FlextInfraPytestRunnerBase
 
 
 class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
     """Build the single supported pytest command family.
 
-    One suite builder owns every flag. Only incremental execution uses testmon;
-    full and coverage execution are separate plugin selections.
+    One suite builder owns every flag; the testmon and coverage verbs are two
+    selections over it (testmon 2.x refuses branch coverage through the cov
+    plugin, so the two never share a process).
     """
 
     _NO_COVERAGE: ClassVar[t.VariadicTuple[str]] = ("--no-cov",)
 
     @staticmethod
-    def bounded(execution_mode: c.Infra.PytestExecutionMode) -> bool:
-        """The local full verb carries no case, suite, or process deadline."""
-        return execution_mode != c.Infra.PytestExecutionMode.FULL
+    @lru_cache(maxsize=1)
+    def _toolchain_testmon_environment() -> str:
+        """Fingerprint the interpreter and installed distribution provenance.
 
-    @classmethod
-    def _case_timeout_args(
-        cls, execution_mode: c.Infra.PytestExecutionMode
-    ) -> t.VariadicTuple[str]:
-        """Apply the typed case limit, or disable timeout plugins for full."""
-        pytest = config.Infra.tooling.tools.pytest
-        if cls.bounded(execution_mode):
-            return (f"--timeout={pytest.case_timeout_seconds}",)
-        return ("--timeout=0", "-o", f"{c.Infra.FLEXT_SLOW_TIMEOUT_SECONDS}=")
+        Git branch dependencies can change commits while retaining the same
+        package version, so their PEP 610 receipts participate in cache identity.
+        Registry distributions legitimately have no direct-URL receipt. An
+        editable install names a checkout path, not a toolchain: testmon already
+        tracks that source by file checksum, so every checkout of one project
+        on the same lock shares one environment record.
 
-    def suite_stop_monotonic(self, *, serial: bool = False) -> float:
+        Returns:
+            The resulting ``str``.
+
+        """
+        provenance: t.MutableSequenceOf[str] = []
+        for distribution in distributions():
+            receipt = distribution.read_text("direct_url.json")
+            dir_info = (
+                None
+                if receipt is None
+                else m.Infra.DirectUrlReceipt.model_validate_json(receipt).dir_info
+            )
+            identity = (
+                "editable" if dir_info is not None and dir_info.editable else receipt
+            )
+            provenance.append(
+                f"{distribution.name}={distribution.version}:{identity!r}",
+            )
+        fingerprint = "\n".join((sys.version, *sorted(provenance)))
+        digest = hashlib.sha256(fingerprint.encode()).hexdigest()[:12]
+        return f"toolchain-{digest}"
+
+    def carries_slow_items(self, execution_mode: c.Infra.PytestExecutionMode) -> bool:
+        """Whether this invocation may run slow-marked items.
+
+        The budgeted phase deselects the slow marker and the slow phase
+        selects it, for the incremental and the full operation alike: each
+        phase is its own process on its own clock (gate-budget law), so the
+        full operation runs the whole suite as two complete phases. Coverage
+        runs the whole suite in one process. One predicate drives both the
+        marker expression and the stop reserve, so an in-flight slow item
+        always has its slow drain.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
+        return self.slow_phase or execution_mode == c.Infra.PytestExecutionMode.COVERAGE
+
+    def suite_stop_monotonic(
+        self,
+        *,
+        serial: bool = False,
+        execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
+    ) -> float:
         """Derive the graceful suite stop instant from the entrypoint deadline.
 
         Selection and inventory consume the same clock, so the instant leaves
         exactly the typed stop reserve before the process deadline: pytest
         ends its own session there and testmon persists what ran, instead of
         the deadline SIGTERM discarding every unflushed result. Serial runs
-        keep at most one item in flight, so their reserve is smaller.
+        keep at most one item in flight, so their reserve is smaller; a run
+        that carries slow items reserves the slow per-item bound.
+
+        Returns:
+            The resulting ``float``.
+
         """
         pytest = config.Infra.tooling.tools.pytest
-        reserve = (
-            pytest.serial_suite_stop_reserve_seconds
-            if serial
-            else pytest.suite_stop_reserve_seconds
-        )
-        return self.started_at_monotonic + pytest.run_timeout_seconds - reserve
+        if self.carries_slow_items(execution_mode):
+            reserve = (
+                pytest.slow_serial_suite_stop_reserve_seconds
+                if serial
+                else pytest.slow_suite_stop_reserve_seconds
+            )
+        else:
+            reserve = (
+                pytest.serial_suite_stop_reserve_seconds
+                if serial
+                else pytest.suite_stop_reserve_seconds
+            )
+        return self.started_at_monotonic + self.run_timeout_seconds(pytest) - reserve
 
     def ci_excluded_markers(
         self,
         *,
         execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
     ) -> t.StrTuple:
-        """Use the same CI token as generated workflows and pre-commit hooks."""
+        """Use the same CI token as generated workflows and pre-commit hooks.
+
+        Returns:
+            The resulting ``t.StrTuple``.
+
+        """
         if self.ci_context and execution_mode != c.Infra.PytestExecutionMode.FULL:
             return config.Infra.tooling.tools.pytest.ci_excluded_markers
         return ()
 
-    def _plugin_policy_args(
-        self,
-        *,
-        execution_mode: c.Infra.PytestExecutionMode,
-    ) -> t.VariadicTuple[str]:
-        """Apply the same configured plugin contract to collection and execution.
+    def testmon_environment(self, execution_mode: c.Infra.PytestExecutionMode) -> str:
+        """Name the testmon environment of one marker scope on this toolchain.
 
-        The phase split is a native pytest marker expression: the budgeted
-        phase deselects the slow marker, the slow phase selects only it.
+        Under xdist, testmon syncs its records from the ids the workers
+        collected and deletes every changed test outside them. Phases that
+        deselect each other's markers inside one environment therefore erase
+        each other's executions — a failed slow test vanished after the next
+        budgeted run, its file then read as stable, and the slow phase passed
+        without running it. testmon's environment is its declared separation
+        between run configurations, so each marker scope owns one.
+
+        Returns:
+            The resulting ``str``.
+
+        """
+        scope = hashlib.sha256(
+            self._marker_expression(execution_mode).encode(),
+        ).hexdigest()[:8]
+        return f"{self._toolchain_testmon_environment()}-{scope}"
+
+    def _marker_expression(self, execution_mode: c.Infra.PytestExecutionMode) -> str:
+        """Return the native pytest marker expression of one execution scope.
+
+        The phase split is a marker expression: the budgeted phase deselects
+        the slow marker, the slow phase selects only it.
+
+        Returns:
+            The native pytest marker expression of one execution scope.
+
         """
         pytest = config.Infra.tooling.tools.pytest
         excluded = tuple(
@@ -86,22 +171,32 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                 ),
                 *(
                     ()
-                    if self.slow_phase
-                    or execution_mode == c.Infra.PytestExecutionMode.COVERAGE
+                    if self.carries_slow_items(execution_mode)
                     else (pytest.slow_marker,)
                 ),
-            ))
+            )),
         )
         if self.slow_phase:
-            expression = (
+            return (
                 f"{pytest.slow_marker} and not ({' or '.join(excluded)})"
                 if excluded
                 else pytest.slow_marker
             )
-        elif excluded:
-            expression = f"not ({' or '.join(excluded)})"
-        else:
-            expression = ""
+        return f"not ({' or '.join(excluded)})" if excluded else ""
+
+    def _plugin_policy_args(
+        self,
+        *,
+        execution_mode: c.Infra.PytestExecutionMode,
+    ) -> t.VariadicTuple[str]:
+        """Apply the same configured plugin contract to collection and execution.
+
+        Returns:
+            The resulting ``t.VariadicTuple[str]``.
+
+        """
+        pytest = config.Infra.tooling.tools.pytest
+        expression = self._marker_expression(execution_mode)
         return (
             "-p",
             pytest.enforcement_plugin,
@@ -128,10 +223,14 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         pass runs no test and records its collection and warning evidence.
         The coverage inventory owns no testmon plugin, so it never reads or
         writes the persistent database.
+
+        Returns:
+            The resulting ``t.VariadicTuple[str]``.
+
         """
         testmon = (
             ()
-            if execution_mode != c.Infra.PytestExecutionMode.INCREMENTAL
+            if execution_mode == c.Infra.PytestExecutionMode.COVERAGE
             else (
                 "--testmon",
                 "--testmon-nocollect",
@@ -140,6 +239,8 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                 # ``--testmon-forceselect`` is testmon's declared override for
                 # exactly that case (never combined with ``--testmon-noselect``).
                 *(("--testmon-noselect",) if complete else ("--testmon-forceselect",)),
+                "--testmon-env",
+                f"'{self.testmon_environment(execution_mode)}'",
             )
         )
         pytest_arguments = (
@@ -152,7 +253,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             *self._plugin_policy_args(execution_mode=execution_mode),
             "--benchmark-disable",
             "--strict-markers",
-            *self._case_timeout_args(execution_mode),
+            f"--timeout={config.Infra.tooling.tools.pytest.case_timeout_seconds}",
             "-o",
             "filterwarnings=",
             "-p",
@@ -181,6 +282,10 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         """Build the testmon suite argv (never the cov plugin).
 
         A resolved plan carries the selected IDs and their manifest together.
+
+        Returns:
+            The resulting ``t.VariadicTuple[str]``.
+
         """
         pytest = config.Infra.tooling.tools.pytest
         selected_node_ids = selection_plan.node_ids if selection_plan else None
@@ -227,14 +332,10 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                     if selection_plan is not None and selection
                     else ()
                 ),
-                *(
-                    (
-                        "--testmon",
-                        *(("--testmon-noselect",) if selection else ("--testmon-forceselect",)),
-                    )
-                    if execution_mode == c.Infra.PytestExecutionMode.INCREMENTAL
-                    else ()
-                ),
+                "--testmon",
+                *(("--testmon-noselect",) if selection else ("--testmon-forceselect",)),
+                "--testmon-env",
+                f"'{self.testmon_environment(execution_mode)}'",
                 *self._NO_COVERAGE,
             ),
         )
@@ -250,6 +351,10 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         The measurement source is the declared package source directory — the
         same boundary every fleet coverage config declares — so imported
         third-party/Cython modules can never emit parse warnings.
+
+        Returns:
+            The resulting ``t.VariadicTuple[str]``.
+
         """
         pytest = config.Infra.tooling.tools.pytest
         workers = "0" if serialize else str(self.parallel_worker_budget(pytest))
@@ -279,7 +384,12 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         workers: str,
         trailing: t.StrSequence,
     ) -> t.VariadicTuple[str]:
-        """Assemble one suite invocation; ``trailing`` owns the plugin split."""
+        """Assemble one suite invocation; ``trailing`` owns the plugin split.
+
+        Returns:
+            The resulting ``t.VariadicTuple[str]``.
+
+        """
         pytest = config.Infra.tooling.tools.pytest
         return (
             sys.executable,
@@ -297,12 +407,8 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             *targets,
             *pytest.progress_args,
             *pytest.report_args,
-            *self._case_timeout_args(execution_mode),
-            *(
-                (f"{c.Infra.PYTEST_SUITE_STOP_OPTION}={self.suite_stop_monotonic(serial=serial)!r}",)
-                if self.bounded(execution_mode)
-                else ()
-            ),
+            f"--timeout={pytest.case_timeout_seconds}",
+            f"{c.Infra.PYTEST_SUITE_STOP_OPTION}={self.suite_stop_monotonic(serial=serial, execution_mode=execution_mode)!r}",
             f"--maxfail={pytest.max_failures}",
             f"--junitxml={report_dir / 'junit.xml'}",
             f"--report-log={report_dir / 'events.jsonl'}",

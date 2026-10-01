@@ -1,4 +1,8 @@
-"""Scoped transition preflight and recoverable file/directory ordering."""
+"""Scoped transition preflight and recoverable file/directory ordering.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,8 +12,9 @@ from pathlib import Path
 from flext_cli import u
 
 from flext_infra import c, m, t
-
-from .state_files import FlextInfraUtilitiesGitStateFilesMixin
+from flext_infra._utilities._git.state_files import (
+    FlextInfraUtilitiesGitStateFilesMixin,
+)
 
 
 class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFilesMixin):

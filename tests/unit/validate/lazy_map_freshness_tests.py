@@ -28,32 +28,40 @@ class TestsFlextInfraLazyMapFreshness:
 
     @pytest.fixture
     def v(self) -> FlextInfraValidateLazyMapFreshness:
-        """Shared validator instance."""
+        """Shared validator instance.
+
+        Returns:
+            The resulting ``FlextInfraValidateLazyMapFreshness``.
+
+        """
         return FlextInfraValidateLazyMapFreshness()
 
+    @staticmethod
     def test_empty_workspace_yields_passing_report(
-        self,
         tmp_path: Path,
         v: FlextInfraValidateLazyMapFreshness,
     ) -> None:
+        """Test empty workspace yields passing report."""
         report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))
         tm.that(report, is_=m.Infra.ValidationReport)
         tm.that(report.passed, eq=True)
         tm.that(report.violations, length=0)
 
+    @staticmethod
     def test_passing_summary_mentions_lazy_maps(
-        self,
         tmp_path: Path,
         v: FlextInfraValidateLazyMapFreshness,
     ) -> None:
+        """Test passing summary mentions lazy maps."""
         report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))
         tm.that(report.summary, has="lazy")
 
+    @staticmethod
     def test_report_is_validation_report(
-        self,
         tmp_path: Path,
         v: FlextInfraValidateLazyMapFreshness,
     ) -> None:
+        """Test report is validation report."""
         report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))
         tm.that(report, is_=m.Infra.ValidationReport)
 

@@ -1,4 +1,8 @@
-"""Public evidence for discovery-driven utility-facade projection."""
+"""Public evidence for discovery-driven utility-facade projection.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -133,7 +137,8 @@ class TestsFlextInfraUtilityFacadeProjection:
         with pytest.raises(ValueError, match="have no public facade"):
             u.Infra.render_utility_facade(package)
 
-    def test_empty_owner_directory_needs_no_facade(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_empty_owner_directory_needs_no_facade(tmp_path: Path) -> None:
         """A preflight-created empty directory is not a private implementation."""
         package = tmp_path / "src" / "flext_sample"
         (package / "_utilities").mkdir(parents=True)

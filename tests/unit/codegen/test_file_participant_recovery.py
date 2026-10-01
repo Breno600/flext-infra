@@ -1,4 +1,8 @@
-"""Public recovery behavior for file-only transaction participants."""
+"""Public recovery behavior for file-only transaction participants.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -80,10 +84,11 @@ class TestsFlextInfraFileParticipantRecovery:
         # the previous implementation refuses its unregistered phase directory.
         tm.ok(owner.run_files_locked(roots, lambda _scope: r[bool].ok(True)))
 
+    @staticmethod
     def test_fresh_import_failure_restores_published_initializer(
-        self,
         tmp_path: Path,
     ) -> None:
+        """Test fresh import failure restores published initializer."""
         root = test_u.Tests.git_repository(tmp_path)
         package = root / c.Infra.DEFAULT_SRC_DIR / "flext_import_probe"
         package.mkdir(parents=True)
@@ -125,7 +130,9 @@ class TestsFlextInfraFileParticipantRecovery:
         tm.that(restored.mode, eq=before.mode)
         tm.ok(owner.run_files_locked(roots, lambda _scope: r[bool].ok(True)))
 
-    def test_recovers_external_only_prepared_journal(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_recovers_external_only_prepared_journal(tmp_path: Path) -> None:
+        """Test recovers external only prepared journal."""
         workspace = test_u.Tests.create_docs_workspace(tmp_path, project_names=())
         docs_root = tmp_path / "published-docs"
         docs_root.mkdir()

@@ -1,4 +1,8 @@
-"""Read-only publication plans for generated package initializers."""
+"""Read-only publication plans for generated package initializers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -137,8 +141,8 @@ class TestsFlextInfraCodegenLazyInitFilePlans:
             )
         tm.ok(infra.codegen_conform(request, workspace))
 
+    @staticmethod
     def test_scope_outside_workspace_is_a_causal_plan_failure(
-        self,
         tmp_path: Path,
     ) -> None:
         """A selected repository outside the workspace fails instead of widening."""
@@ -164,8 +168,8 @@ class TestsFlextInfraCodegenLazyInitFilePlans:
         tm.that(result.error, contains="lazy-init repository scope is missing")
         tm.that(init_path.read_bytes(), eq=before)
 
+    @staticmethod
     def test_plan_files_binds_init_and_sidecar_effects_without_writing(
-        self,
         tmp_path: Path,
     ) -> None:
         """Return exact target/source states while preserving every target byte."""
@@ -219,8 +223,8 @@ class TestsFlextInfraCodegenLazyInitFilePlans:
         tm.that(u.Infra.codegen_file_requires_effect(unit_plan), eq=True)
         tm.that({path: path.read_bytes() for path in (init_path, unit_path)}, eq=before)
 
+    @staticmethod
     def test_plan_files_includes_all_retired_generated_sidecars(
-        self,
         tmp_path: Path,
     ) -> None:
         """Describe the closed sidecar cleanup set, including one-pass constants."""
@@ -269,8 +273,8 @@ class TestsFlextInfraCodegenLazyInitFilePlans:
         tm.that(expected_deletes.issubset(deletes), eq=True)
         tm.that({path: path.read_bytes() for path in expected_deletes}, eq=before)
 
+    @staticmethod
     def test_execute_rejects_apply_and_preserves_planned_targets(
-        self,
         tmp_path: Path,
     ) -> None:
         """The standalone command is a check surface, never a second writer."""
@@ -284,7 +288,8 @@ class TestsFlextInfraCodegenLazyInitFilePlans:
         tm.that(result.error, contains="owned by codegen conform")
         tm.that(init_path.read_bytes(), eq=before)
 
-    def test_unknown_target_is_a_causal_plan_failure(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_unknown_target_is_a_causal_plan_failure(tmp_path: Path) -> None:
         """A missing target fails instead of widening to the workspace."""
         _, init_path, service = u.Tests.lazy_init_scenario(tmp_path)
         before = init_path.read_bytes()
