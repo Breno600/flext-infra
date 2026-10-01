@@ -46,7 +46,8 @@ class TestsFlextInfraFileParticipantRecovery:
                     path=destination,
                     before=tm.ok(
                         u.Cli.atomic_read_binary_file_state(
-                            destination, required=False,
+                            destination,
+                            required=False,
                         ),
                     ),
                     desired_content=b"generated replacement\n",

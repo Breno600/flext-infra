@@ -40,7 +40,8 @@ class TestsFlextInfraDocsValidator:
 
         result = FlextInfraDocValidator().validate_workspace(
             m.Infra.DocsGenerateRequest(
-                repository_root=workspace, projects=["flext-a"],
+                repository_root=workspace,
+                projects=["flext-a"],
             ),
         )
 
@@ -61,7 +62,8 @@ class TestsFlextInfraDocsValidator:
         tm.ok(generated)
         result = FlextInfraDocValidator().validate_workspace(
             m.Infra.DocsGenerateRequest(
-                repository_root=workspace, projects=["flext-a"],
+                repository_root=workspace,
+                projects=["flext-a"],
             ),
         )
 
@@ -108,7 +110,8 @@ class TestsFlextInfraDocsValidator:
         tm.ok(u.Tests.materialize_docs_bundle(prepared.value))
         result = FlextInfraDocValidator().validate_workspace(
             m.Infra.DocsGenerateRequest(
-                repository_root=workspace, projects=["flext-a"],
+                repository_root=workspace,
+                projects=["flext-a"],
             ),
         )
 

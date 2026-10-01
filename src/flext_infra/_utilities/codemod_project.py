@@ -312,7 +312,9 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                 )
             case c.Infra.CodemodContextPredicate.RUNTIME_ALIAS:
                 return value in cls._codemod_runtime_aliases(
-                    root, own if of is None else cls._top_module(of), own,
+                    root,
+                    own if of is None else cls._top_module(of),
+                    own,
                 )
             case c.Infra.CodemodContextPredicate.LOCAL_ALIAS:
                 layout = FlextInfraUtilitiesCodegenNamespace.layout(root)

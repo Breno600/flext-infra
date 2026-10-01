@@ -341,7 +341,8 @@ class TestsFlextInfraScriptDispatchMakefile:
         tm.that(report, has="$(PROFILE_REPORTS_DIR)/pytest.pstats.json")
 
     def test_test_verbs_split_testmon_budget_from_unbounded_full(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Make test is bounded and testmon-backed; make test-full is neither.
 
@@ -349,7 +350,9 @@ class TestsFlextInfraScriptDispatchMakefile:
         every checkout of a project shares one testmon history.
         """
         rendered = self._render_root_makefile(
-            tmp_path, extra_verbs=(), script_dispatch=None,
+            tmp_path,
+            extra_verbs=(),
+            script_dispatch=None,
         )
         cache = config.Infra.codegen.make.testmon_cache
         database_line = next(

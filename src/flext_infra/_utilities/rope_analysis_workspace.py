@@ -84,7 +84,9 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
                 for alias in node.names
             }
             bases_by_class = {
-                node.name: {base.id for base in node.bases if isinstance(base, ast.Name)}
+                node.name: {
+                    base.id for base in node.bases if isinstance(base, ast.Name)
+                }
                 for node in tree.body
                 if isinstance(node, ast.ClassDef)
             }
