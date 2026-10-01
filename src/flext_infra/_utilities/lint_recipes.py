@@ -376,21 +376,18 @@ class FlextInfraUtilitiesLintRecipes:
             for node in ast.walk(function)
             for child in ast.iter_child_nodes(node)
         }
-        conditions = [
-            condition
+        clauses = [
+            cls._raise_condition(function, raised, parents)
             for raised in ast.walk(function)
             if isinstance(raised, ast.Raise)
             and name.rsplit(".", maxsplit=1)[-1]
             in cls._raised_names(raised, parents)
-            and (condition := cls._raise_condition(function, raised, parents))
         ]
-        if not conditions:
-            msg = (
-                f"{path}: no raise of {name} in {function.name} states or is "
-                "guarded by a condition"
-            )
+        if not clauses:
+            msg = f"{path}: {function.name} holds no raise of {name}"
             raise ValueError(msg)
-        return f"{name}: If {'; or if '.join(dict.fromkeys(conditions))}."
+        joined = "; or ".join(dict.fromkeys(clauses))
+        return f"{name}: {joined[:1].upper()}{joined[1:]}."
 
     @staticmethod
     def _raised_names(
@@ -431,11 +428,12 @@ class FlextInfraUtilitiesLintRecipes:
         raised: ast.Raise,
         parents: t.MappingKV[ast.AST, ast.AST],
     ) -> str:
-        """Return the condition one ``raise`` states or is guarded by.
+        """Return the clause under which one ``raise`` statement runs.
 
         Returns:
-            The static text of the raised message up to its first colon, else
-            the guarding ``if`` test as an inline literal, else an empty string.
+            ``if`` and the static text of the raised message up to its first
+            colon; else ``if`` and the nearest guarding ``if`` test or caught
+            exception; else ``always``, for a raise the body always reaches.
 
         """
         if isinstance(raised.exc, ast.Call) and raised.exc.args:
@@ -455,16 +453,20 @@ class FlextInfraUtilitiesLintRecipes:
                     message = max(assigned, key=lambda value: value.lineno)
             stated = cls._static_text(message).split(":", maxsplit=1)[0]
             if stated.strip().rstrip("."):
-                return stated.strip().rstrip(".")
+                return f"if {stated.strip().rstrip('.')}"
         node: ast.AST = raised
         while (parent := parents.get(node)) is not None and parent is not function:
             if isinstance(parent, ast.If):
                 test = ast.unparse(parent.test)
-                return f"``{test}``" if node in parent.body else f"``not ({test})``"
+                return (
+                    f"if ``{test}``"
+                    if node in parent.body
+                    else f"if ``not ({test})``"
+                )
             if isinstance(parent, ast.ExceptHandler) and parent.type is not None:
-                return f"a ``{ast.unparse(parent.type)}`` is caught"
+                return f"if a ``{ast.unparse(parent.type)}`` is caught"
             node = parent
-        return ""
+        return "always"
 
     @staticmethod
     def _static_text(node: ast.expr) -> str:
