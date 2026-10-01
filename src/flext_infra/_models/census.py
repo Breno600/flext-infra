@@ -131,10 +131,7 @@ class FlextInfraModelsCensus:
             m.Field(description="Object kind (constant/type/protocol/model/utility)"),
         ]
         kind: Annotated[
-            str,
-            m.Field(
-                description="Analysis kind (duplicate/unused/wrong_tier)"
-            ),
+            str, m.Field(description="Analysis kind (duplicate/unused/wrong_tier)")
         ]
         severity: Annotated[str, m.Field(description="Severity level")] = (
             c.Infra.GateSeverity.WARNING.value
@@ -171,6 +168,7 @@ class FlextInfraModelsCensus:
         include_local_scopes: Annotated[
             bool, m.Field(description="Whether to include local/nested scopes")
         ]
+
     class ScanFindings(m.ArbitraryTypesModel):
         """Per-project census findings accumulated across the scanned modules.
 

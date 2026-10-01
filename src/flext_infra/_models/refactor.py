@@ -133,9 +133,8 @@ class FlextInfraModelsRefactor(
             m.Field(description="Family letter to FLEXT chain mapping"),
         ]
 
-    # NOTE (multi-agent): the two models below replace the
-    # dataclass payloads that lived in refactor/_wrapper_rewrite.py and
-    # refactor/classvar_constant_autofix.py (deep-FLEXT: models only in m).
+    # NOTE (multi-agent): the model below replaces the dataclass payload that
+    # lived in refactor/_wrapper_rewrite.py (deep-FLEXT: models only in m).
     class WrapperRewriteAccumulator(m.ArbitraryTypesModel):
         """Aggregates per-file rewrite stats across the wrapper-root verb run.
 
@@ -151,10 +150,6 @@ class FlextInfraModelsRefactor(
             MutableMapping[Path, str],
             m.Field(description="Original content keyed by every pending update path"),
         ] = m.Field(default_factory=dict)
-        wrapper_candidates: Annotated[
-            MutableSequence[Path],
-            m.Field(description="Files that carry wrapper import candidates"),
-        ] = m.Field(default_factory=list)
         changed_files: Annotated[
             MutableSequence[str],
             m.Field(description="String paths of files changed by the run"),
@@ -176,67 +171,6 @@ class FlextInfraModelsRefactor(
             defaultdict[str, int],
             m.Field(description="Replacement count keyed by project name"),
         ] = m.Field(default_factory=lambda: defaultdict(int))
-
-    class ClassvarConstantAutofixPlan(m.ArbitraryTypesModel):
-        """Planned edits for one ENFORCE-079 ClassVar-constant autofix."""
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
-
-        class_module: Annotated[
-            str, m.Field(description="Module that declares the owning class")
-        ]
-        class_name: Annotated[
-            str, m.Field(description="Class that currently declares the constant")
-        ]
-        constant_name: Annotated[
-            str, m.Field(description="Name of the ClassVar constant being moved")
-        ]
-        constants_module: Annotated[
-            str,
-            m.Field(description="Canonical _constants module receiving the constant"),
-        ]
-        source_resource: Annotated[
-            t.Infra.RopeResource,
-            m.Field(description="Rope resource for the class module"),
-        ]
-        target_resource: Annotated[
-            t.Infra.RopeResource,
-            m.Field(description="Rope resource for the constants module"),
-        ]
-        declaration_line: Annotated[
-            str, m.Field(description="Exact source line that declares the constant")
-        ]
-        class_lineno: Annotated[
-            int, m.Field(description="1-based line where the class starts")
-        ]
-
-    class ClassvarConstantAutofixResult(m.ArbitraryTypesModel):
-        """Outcome of one ENFORCE-079 ClassVar-constant autofix.
-
-        Dry-run populates ``source_text``/``target_text``/``rewrites``; apply
-        populates ``constant_module``. ``touched_files`` is always present.
-        """
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
-
-        touched_files: Annotated[
-            t.StrSequence, m.Field(description="Files the autofix created or rewrote")
-        ]
-        source_text: Annotated[
-            str | None,
-            m.Field(description="Rewritten source-module preview (dry-run only)"),
-        ] = None
-        target_text: Annotated[
-            str | None,
-            m.Field(description="Rewritten constants-module preview (dry-run only)"),
-        ] = None
-        constant_module: Annotated[
-            str | None, m.Field(description="Canonical _constants module (apply only)")
-        ] = None
-        rewrites: Annotated[
-            t.MappingKV[str, t.SequenceOf[t.Triple[int, int, str]]] | None,
-            m.Field(description="Per-file textual edits planned (dry-run only)"),
-        ] = None
 
     # -- CSV-driven Rename Models ---------------------------------------------
 

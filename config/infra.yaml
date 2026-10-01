@@ -54,9 +54,9 @@ Infra:
   source_scan:
     # tests/ and examples/ are first-class code under the same gates as src/
     # (operator law 19). Leaving them out of the scan made every flext-infra
-    # analyzer blind to them: the canonical-alias gate could not see a consumer
-    # it was supposed to rewrite, and the namespace, boundary, silent-failure
-    # and runtime-census checks graded only half the repository.
+    # analyzer blind to them: an import rule could not see the consumer it was
+    # supposed to rewrite, and the namespace, boundary, silent-failure and
+    # runtime-census checks graded only half the repository.
     roots:
       - src
       - scripts

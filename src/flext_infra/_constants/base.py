@@ -359,7 +359,6 @@ class FlextInfraConstantsBase(
     RK_ID: ClassVar[str] = "id"
     RK_URL: ClassVar[str] = "url"
     RK_CONFIDENCE: ClassVar[str] = "confidence"
-    RK_FIX_ACTION: ClassVar[str] = "fix_action"
     RK_DESCRIPTION: ClassVar[str] = "description"
     RK_SEVERITY: ClassVar[str] = "severity"
 

@@ -32,10 +32,7 @@ class FlextInfraRefactorCensusObjectsMixin:
 
     @staticmethod
     def _violation(
-        item: m.Infra.Object,
-        *,
-        kind: str,
-        description: str,
+        item: m.Infra.Object, *, kind: str, description: str
     ) -> m.Infra.Violation:
         """Violation."""
         return m.Infra.Violation(

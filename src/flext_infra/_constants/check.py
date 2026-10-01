@@ -91,10 +91,6 @@ class FlextInfraConstantsCheck:
         SMELLS: ("Flext Code Smell Detector", "internal://flext-infra/smells"),
         "codemod": ("ast-grep", AST_GREP_DOCS_URL),
         "layout": ("Flext Project Layout Gate", "internal://flext-infra/layout"),
-        "canonical-alias": (
-            "Flext Canonical Alias Detector",
-            "internal://flext-infra/canonical-alias",
-        ),
         "direnv": (
             "Flext Direnv Environment Contract Gate",
             "internal://flext-infra/direnv",

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
-from tests import m, u
+from tests import u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -121,78 +121,3 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         tm.that(typings_text, has="from flext_core import t")
         tm.that(source_file.with_suffix(".py.bak").exists(), eq=True)
         tm.that(typings_file.with_suffix(".py.bak").exists(), eq=True)
-
-    def test_rewrite_compatibility_alias_violations_uses_public_runtime_api(
-        self, tmp_path: Path
-    ) -> None:
-        _, package_root = self._build_project(tmp_path)
-        source_file = package_root / "models.py"
-        self._write_file(
-            source_file,
-            (
-                "from __future__ import annotations\n\n"
-                "class NewThing:\n"
-                "    pass\n\n"
-                "LegacyThing = NewThing\n"
-                "REGISTRY = [LegacyThing]\n"
-            ),
-        )
-
-        u.Infra.rewrite_compatibility_alias_violations(
-            violations=[
-                m.Infra.CompatibilityAliasViolation(
-                    file=str(source_file),
-                    line=6,
-                    alias_name="LegacyThing",
-                    target_name="NewThing",
-                )
-            ],
-            parse_failures=[],
-        )
-
-        source_text = source_file.read_text(encoding="utf-8")
-        tm.that(source_text, lacks="LegacyThing = NewThing")
-        tm.that(source_text, has="REGISTRY = [NewThing]")
-        tm.that(source_file.with_suffix(".py.bak").exists(), eq=True)
-
-    def test_rewrite_compatibility_alias_violations_migrates_foreign_canonical_alias(
-        self, tmp_path: Path
-    ) -> None:
-        _project_root, package_root = self._build_project(tmp_path)
-        source_file = package_root / "service.py"
-        self._write_file(
-            source_file,
-            (
-                "from __future__ import annotations\n\n"
-                "from flext_core import c, t, r\n\n"
-                "VALUE = c.MAX_SIZE\n"
-                "def fn(x: t.StrSequence) -> r.Result[str]:\n"
-                "    return r.ok(x[0])\n"
-            ),
-        )
-
-        u.Infra.rewrite_compatibility_alias_violations(
-            violations=[
-                m.Infra.CompatibilityAliasViolation(
-                    file=str(source_file),
-                    line=4,
-                    alias_name="c",
-                    target_name="c",
-                    module_name="flext_infra",
-                ),
-                m.Infra.CompatibilityAliasViolation(
-                    file=str(source_file),
-                    line=4,
-                    alias_name="t",
-                    target_name="t",
-                    module_name="flext_infra",
-                ),
-            ],
-            parse_failures=[],
-        )
-
-        source_text = source_file.read_text(encoding="utf-8")
-        tm.that(source_text, lacks="from flext_core import c, t, r")
-        tm.that(source_text, has="from flext_infra.constants import c")
-        tm.that(source_text, has="from flext_infra.typings import t")
-        tm.that(source_text, has="from flext_core import r")

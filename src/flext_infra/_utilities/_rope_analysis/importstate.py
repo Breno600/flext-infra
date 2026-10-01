@@ -524,22 +524,6 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         return class_infos
 
     @staticmethod
-    def count_class_symbols(
-        rope_project: t.Infra.RopeProject,
-        resource: t.Infra.RopeResource,
-        class_name: str,
-    ) -> int:
-        """Return direct symbol count for a top-level class without semantic imports."""
-        pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
-        tree: t.Infra.RopeAstNode = pymodule.get_ast()
-        class_body = FlextInfraUtilitiesRopeAnalysisAstHelpers.class_body_nodes(
-            tree, class_name=class_name
-        )
-        return len(
-            FlextInfraUtilitiesRopeAnalysisAstHelpers.class_symbol_names(class_body)
-        )
-
-    @staticmethod
     def resolve_class_bases(
         rope_project: t.Infra.RopeProject,
         resource: t.Infra.RopeResource,
@@ -665,61 +649,3 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         finally:
             rope_project.close()
         return target_map
-
-    @classmethod
-    def parent_constants_targets(
-        cls,
-        constants_file: Path,
-        project_root: Path,
-        *,
-        return_module: bool,
-        current_root: str,
-    ) -> t.StrSequence:
-        """Resolve parent ``Constants`` import targets via rope semantic state.
-
-        Uses ``resolve_module_semantic_state`` (PyObject-backed class info plus
-        ``get_module_imports`` declared-imports table) — no ``ast`` walks.
-        """
-        opened = cls._open_pymodule(project_root, constants_file)
-        if opened is None:
-            return ()
-        pymodule, rope_project = opened
-        try:
-            resource = pymodule.get_resource()
-            if resource is None:
-                return ()
-            source_class_bases = {
-                class_info.name: class_info.bases
-                for class_info in FlextInfraUtilitiesRopeAnalysisAstHelpers.class_info_from_source(
-                    resource.read()
-                )
-            }
-            state = cls.resolve_module_semantic_state(rope_project, resource)
-        finally:
-            rope_project.close()
-        seen: set[str] = set()
-        resolved: list[str] = []
-        for class_info in state.class_infos:
-            if "Constants" not in class_info.name:
-                continue
-            for base_name in (
-                *class_info.bases,
-                *source_class_bases.get(class_info.name, ()),
-            ):
-                full_path = state.declared_imports.get(
-                    base_name, ""
-                ) or state.declared_imports.get(base_name.split(".", maxsplit=1)[0], "")
-                if not full_path:
-                    continue
-                package_root = full_path.split(".", maxsplit=1)[0]
-                if package_root == current_root:
-                    continue
-                target = (
-                    package_root
-                    if return_module
-                    else full_path.rsplit(".", maxsplit=1)[-1]
-                )
-                if target and target not in seen:
-                    seen.add(target)
-                    resolved.append(target)
-        return tuple(resolved)

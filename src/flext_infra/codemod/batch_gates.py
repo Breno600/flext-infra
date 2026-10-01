@@ -362,7 +362,7 @@ class FlextInfraModGateEngine:
                 root,
                 rules_by_id[entry.rule_id],
                 entry.file,
-                FlextInfraModGateEngine._single_captures(entry.payload),
+                FlextInfraModGateEngine._captures(entry.payload),
             )
         )
         if len(entries) == len(report.entries):
@@ -380,11 +380,15 @@ class FlextInfraModGateEngine:
         )
 
     @staticmethod
-    def _single_captures(payload: t.JsonMapping) -> t.JsonMapping:
-        """Return ast-grep's ``metaVariables.single`` mapping of one finding."""
+    def _captures(payload: t.JsonMapping) -> t.JsonMapping:
+        """Return one finding's single and transformed metavariables."""
         meta = payload.get("metaVariables")
-        single = meta.get("single") if isinstance(meta, Mapping) else None
-        captures: t.JsonMapping = single if isinstance(single, Mapping) else {}
+        captures: t.MutableMappingKV[str, t.JsonValue] = {}
+        if isinstance(meta, Mapping):
+            for group in ("single", "transformed"):
+                values = meta.get(group)
+                if isinstance(values, Mapping):
+                    captures.update(values)
         return captures
 
     @staticmethod

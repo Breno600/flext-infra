@@ -75,7 +75,6 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
         accumulator.total_core_replacements += len(core_rewrites)
         if has_import_candidate:
             accumulator.import_rewrite_candidates += 1
-            accumulator.wrapper_candidates.append(file_path)
         accumulator.per_project_changes[project_name] += 1
         accumulator.per_project_replacements[project_name] += replacements
         if not self.effective_dry_run and core_updated != source:

@@ -48,6 +48,16 @@ class FlextInfraModelsRefactorGrep:
             bool,
             m.Field(description="Whether the predicate must hold (is) or fail (not)"),
         ]
+        of: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(
+                description=(
+                    "Captured metavariable naming the module the predicate is "
+                    "evaluated against; absent for predicates of the project "
+                    "or of the finding's own module"
+                )
+            ),
+        ] = None
 
     class CodemodRule(m.ArbitraryTypesModel):
         """One validated ast-grep rule document from a composed provider."""

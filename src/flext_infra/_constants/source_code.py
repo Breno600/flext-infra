@@ -197,10 +197,6 @@ class FlextInfraConstantsSourceCode:
         """Compile a user-supplied pattern with ``re.MULTILINE`` (centralized)."""
         return re.compile(pattern, re.MULTILINE)
 
-
-
-
-
     @staticmethod
     def compile(pattern: str, *, multiline: bool = False) -> t.RegexPattern:
         """Compile an arbitrary pattern (centralized so consumers needn't import re)."""
@@ -210,12 +206,6 @@ class FlextInfraConstantsSourceCode:
     def compile_class_base_with_generic(name: str) -> t.RegexPattern:
         r"""Compile ``<escaped name>(?:\[.*\])?`` for class-base + generic match."""
         return re.compile(rf"{re.escape(name)}(?:\[.*\])?")
-
-
-
-
-
-
 
     @staticmethod
     def escape(literal: str) -> str:
@@ -235,24 +225,9 @@ class FlextInfraConstantsSourceCode:
         )
 
     @staticmethod
-    def compile_class_header_match(class_name: str) -> t.RegexPattern:
-        r"""Compile ``^class <class_name>\b`` for header equality check."""
-        return re.compile(rf"^class\s+{re.escape(class_name)}\b")
-
-    @staticmethod
     def compile_class_header_search(class_name: str) -> t.RegexPattern:
         r"""Compile ``^class <class_name>\b`` (MULTILINE) for full-source search."""
         return re.compile(rf"^class\s+{re.escape(class_name)}\b", re.MULTILINE)
-
-
-
-
-
-
-
-
-
-
 
     @staticmethod
     def compile_function_def_block(name: str) -> t.RegexPattern:
@@ -294,11 +269,6 @@ class FlextInfraConstantsSourceCode:
             re.MULTILINE,
         )
 
-    # --- Single-line patterns shared across consumers ---
-    CLASS_HEADER_ANY_RE: ClassVar[t.RegexPattern] = re.compile(r"^class\s+\w+")
-    "Regex: any class header at start of line (no MULTILINE — matches single line)."
-    DUNDER_ALL_DECL_RE: ClassVar[t.RegexPattern] = re.compile(r"^__all__\s*:")
-    "Regex: ``__all__: ...`` declaration line."
     MODULE_ASSIGNMENT_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^([A-Za-z_]\w*)\s*(?::\s*[^=]+)?=\s*(.+)$"
     )
@@ -316,67 +286,6 @@ class FlextInfraConstantsSourceCode:
     "Official GitHub repository URL for the FLEXT project."
     GITHUB_REPO_NAME: ClassVar[str] = "flext-sh/flext"
     "GitHub repository name in owner/repo format."
-
-    # --- Class placement detection (was: class ClassPlacement) ---
-    PLACEMENT_PYDANTIC_BASE_NAMES: ClassVar[frozenset[str]] = frozenset({
-        "BaseModel",
-        "FrozenModel",
-        "ArbitraryTypesModel",
-        "ContractModel",
-        "FrozenValueModel",
-        "TimestampedModel",
-    })
-    "Pydantic model base class names for placement detection."
-    PLACEMENT_PROTOCOL_BASE_NAMES: ClassVar[frozenset[str]] = frozenset({"Protocol"})
-    "Protocol base class names for placement detection."
-    PLACEMENT_ENUM_BASE_NAMES: ClassVar[frozenset[str]] = frozenset({
-        "StrEnum",
-        "IntEnum",
-        "Enum",
-    })
-    "Enum base class names for placement detection."
-    PLACEMENT_UTILITY_NAME_SUFFIXES: ClassVar[frozenset[str]] = frozenset({
-        "Utilities",
-        "Utility",
-    })
-    "Class-name suffixes that identify a utility class for placement detection."
-    PLACEMENT_CANONICAL_MODEL_FILES: ClassVar[frozenset[str]] = frozenset({"models.py"})
-    "Canonical file names where Pydantic models should live."
-    PLACEMENT_CANONICAL_PROTOCOL_FILES: ClassVar[frozenset[str]] = frozenset({
-        "protocols.py"
-    })
-    "Canonical file names where Protocol classes should live."
-    PLACEMENT_CANONICAL_CONSTANTS_FILES: ClassVar[frozenset[str]] = frozenset({
-        "constants.py"
-    })
-    "Canonical file names where Enum constants should live."
-    PLACEMENT_CANONICAL_UTILITY_FILES: ClassVar[frozenset[str]] = frozenset({
-        "utilities.py"
-    })
-    "Canonical file names where utility classes should live."
-    PLACEMENT_CANONICAL_MODEL_DIRS: ClassVar[frozenset[str]] = frozenset({
-        "_models",
-        "models",
-    })
-    "Canonical directory names where Pydantic models should live."
-    PLACEMENT_CANONICAL_PROTOCOL_DIRS: ClassVar[frozenset[str]] = frozenset({
-        "_protocols"
-    })
-    "Canonical directory names where Protocol classes should live."
-    PLACEMENT_CANONICAL_CONSTANTS_DIRS: ClassVar[frozenset[str]] = frozenset({
-        "_constants"
-    })
-    "Canonical directory names where Enum constants should live."
-    PLACEMENT_CANONICAL_UTILITY_DIRS: ClassVar[frozenset[str]] = frozenset({
-        "_utilities"
-    })
-    "Canonical directory names where utility classes should live."
-    PLACEMENT_CANONICAL_TYPING_FILES: ClassVar[frozenset[str]] = frozenset({
-        "typings.py"
-    })
-    "Canonical file names where type aliases should live."
-    PLACEMENT_CANONICAL_TYPING_DIRS: ClassVar[frozenset[str]] = frozenset({"_typings"})
-    "Canonical directory names where type aliases should live."
 
     # --- Shared threshold constants (was: class Thresholds) ---
     MIN_UNION_MEMBERS: ClassVar[int] = 2
