@@ -385,8 +385,6 @@ class FlextInfraConstantsBase(
         M = "m"
         U = "u"
 
-    SAFE_EXECUTION_BAK_SUFFIX: ClassVar[str] = ".bak"
-    "File backup suffix for copy-on-write safety."
     ENV_VAR_FORCE_COLOR: ClassVar[str] = "FORCE_COLOR"
     "Color-forcing variable: its mere presence makes ruff emit ANSI sequences."
 
@@ -399,19 +397,6 @@ class FlextInfraConstantsBase(
     ENV_DEFAULT_STANDALONE: ClassVar[bool] = False
     ENV_DEFAULT_USE_HTTPS: ClassVar[bool] = False
     ENV_DEFAULT_GITHUB_ACTIONS: ClassVar[bool] = False
-
-    @unique
-    class ExecutionMode(StrEnum):
-        """Execution mode for commands that modify files."""
-
-        DRY_RUN = "dry-run"
-        "Preview changes without writing."
-        CHECK_ONLY = "check-only"
-        "Detect violations without fixing."
-        APPLY_SAFE = "apply-safe"
-        "Apply with backup, validate, rollback on failure."
-        APPLY_FORCE = "apply-force"
-        "Apply without post-validation."
 
 
 __all__: list[str] = ["FlextInfraConstantsBase"]

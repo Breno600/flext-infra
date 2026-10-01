@@ -124,7 +124,6 @@ class FlextInfraConstantsCodegen(
     "Canonical Unix Mise launcher filename."
     MISE_WINDOWS_LAUNCHER_FILENAME: ClassVar[str] = "mise.cmd"
     "Canonical Windows Mise launcher filename."
-    "UTC basic stamp for `{filename}.{stamp}.bak` written before gen apply."
     CODEGEN_TRANSACTION_LOCK_FILENAME: ClassVar[str] = "flext-infra-codegen.lock"
     "Worktree-specific administrative lock for complete generation."
     CODEGEN_TRANSACTION_LOCK_MODE: ClassVar[int] = 0o600
