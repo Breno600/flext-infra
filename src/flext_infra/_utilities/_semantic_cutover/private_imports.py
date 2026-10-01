@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import ast
 from collections.abc import MutableMapping
-from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -248,12 +247,9 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
         """Plan owner-aware relative and binding-aware public import rewrites."""
         planned_edits = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
-        references = r[t.Infra.PrivateImportReferences].create_from_callable(
-            partial(cls._private_import_references, root, sources, findings)
+        specs, direct_specs, facades = cls._private_import_references(
+            root, sources, findings
         )
-        if references.failure:
-            return planned_edits.from_failure(references)
-        specs, direct_specs, facades = references.value
         missing = sorted(str(path) for path in specs if path not in sources)
         if missing:
             return planned_edits.fail(

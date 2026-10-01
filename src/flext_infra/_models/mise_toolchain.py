@@ -95,6 +95,13 @@ class FlextInfraModelsMiseToolchain:
                 description="Python major.minor line, e.g. '3.13'",
             ),
         ]
+        python_tool_version: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                pattern=r"^[0-9]+\.[0-9]+\.[0-9]+$",
+                description="Python runtime patch available on every locked platform",
+            ),
+        ]
         uv_link_mode: Annotated[
             t.NonEmptyStr, m.Field(description="Portable uv installation link mode")
         ]
@@ -321,7 +328,7 @@ class FlextInfraModelsMiseToolchain:
         @m.computed_field
         @property
         def python_selector(self) -> str:
-            """Mise/pyenv-style selector for the configured Python minor line."""
+            """Pyenv-style selector for the configured Python minor line."""
             return self.python_version
 
         @u.model_validator(mode="after")
@@ -335,6 +342,9 @@ class FlextInfraModelsMiseToolchain:
             (``latest``, a major.minor line, or a released version) may reach
             the lock.
             """
+            if not self.python_tool_version.startswith(f"{self.python_version}."):
+                msg = "Python runtime patch must match the declared language minor line"
+                raise ValueError(msg)
             offenders = sorted(
                 field
                 for field, value in self

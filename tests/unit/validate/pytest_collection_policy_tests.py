@@ -93,7 +93,7 @@ class TestsFlextInfraPytestCollectionPolicy:
             assert pstats.Stats(str(profile)).get_stats_profile().func_profiles
             parent = cached_runner_project / ".reports" / "profiles" / "pytest.pstats"
             assert pstats.Stats(str(parent)).get_stats_profile().func_profiles
-            assert parent.with_suffix(".pstats.json").is_file()
+            assert not parent.with_suffix(".pstats.json").exists()
 
     @pytest.mark.slow
     @pytest.mark.parametrize("homonym", [False, True])

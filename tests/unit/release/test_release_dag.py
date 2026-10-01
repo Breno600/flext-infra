@@ -209,7 +209,7 @@ class TestsFlextInfraReleaseDag:
             content = pyproject.read_text(encoding="utf-8")
             header = f"[tool.hatch.build.targets.{target}]\n"
             replacement = header + 'exclude = ["/src/flext_a/**"]\n'
-            expected = "Hatch targets must use source patterns without exclusions"
+            expected = "Hatch wheel and sdist exclusions must match"
             if target == "build":
                 header = "[tool.hatch.build.targets.sdist]\n"
                 replacement = (

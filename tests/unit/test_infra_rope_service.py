@@ -359,11 +359,7 @@ class TestsFlextInfraInfraRopeService:
     def test_open_workspace_keeps_the_requested_repository_boundary(
         self, tmp_path: Path
     ) -> None:
-        """A workspace root treats declared submodules as external repositories.
-
-        Premise (operator ruling 2026-09-29): every repository evaluates only
-        itself, so a superproject's Rope workspace never indexes its members.
-        """
+        """A workspace root treats declared submodules as external repositories."""
         monorepo_root = tmp_path / "repo"
         monorepo_root.mkdir()
         u.Tests.declare_workspace_projects(monorepo_root, ("flext-infra", "flext-demo"))

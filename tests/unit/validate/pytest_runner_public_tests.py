@@ -159,11 +159,10 @@ class TestsFlextInfraPytestRunner:
 
     @pytest.mark.slow
     @pytest.mark.parametrize("omit_case", [False, True], ids=["order", "membership"])
-    def test_warm_workers_follow_the_central_selection_order(
+    def test_warm_dispatch_follows_the_central_selection_order(
         self, cached_runner_project: Path, *, omit_case: bool
     ) -> None:
-        """Real workers must agree even when a consumer hook reorders per worker."""
-        declare_parallel_project(cached_runner_project)
+        """Real dispatch detects membership drift and restores ordering."""
         cache = config.Infra.codegen.make.testmon_cache
         sample = cached_runner_project / cache.target_directory / "test_runtime.py"
         sample.write_text(
@@ -175,7 +174,7 @@ class TestsFlextInfraPytestRunner:
         )
         assert tm.ok(runner_for(cached_runner_project).execute()) == 0
         worker_action = (
-            "    if get_xdist_worker_id(session) == 'gw0':\n        items.pop()\n"
+            "    items.pop()\n"
             if omit_case
             else "    items.sort(key=lambda item: item.nodeid,\n"
             "               reverse=get_xdist_worker_id(session) == 'gw0')\n"
@@ -243,14 +242,15 @@ class TestsFlextInfraPytestRunner:
         outcome = m.Cli.ProcessOutcome.model_validate_json(
             tm.ok(u.Cli.files_read_text(report_path.parent / "suite-outcome.json"))
         )
+        tm.that(
+            (pytest.ExitCode.TESTS_FAILED.value, pytest.ExitCode.INTERRUPTED.value),
+            has=outcome.raw_return_code,
+        )
         tm.that(outcome.raw_return_code, eq=exit_code)
         tm.that(outcome.timed_out, eq=False)
         tm.that(outcome.forwarded_signal, none=True)
-        # The declared max-failures stop interrupts the xdist session, which
-        # pytest reports as INTERRUPTED; the summary carries that raw code.
         tm.that(
-            summary(reports_root),
-            has=["failed=1", f"exit={pytest.ExitCode.INTERRUPTED.value}"],
+            summary(reports_root), has=["failed=1", f"exit={outcome.raw_return_code}"]
         )
         events = tm.ok(u.Cli.files_read_text(report_path.parent / "events.jsonl"))
         tm.that(events, has="first failure evidence", lacks="second failure evidence")

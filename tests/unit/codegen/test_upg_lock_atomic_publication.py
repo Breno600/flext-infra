@@ -62,6 +62,7 @@ class TestsFlextInfraUpgLockAtomicPublication:
         )
         try:
             deadline = time.monotonic() + self.INTERRUPT_AFTER_SECONDS
+            last_observed = ""
             while time.monotonic() < deadline:
                 tm.that(
                     child.poll(), eq=None, msg="upgrade exited before FIFO observation"
@@ -71,20 +72,33 @@ class TestsFlextInfraUpgLockAtomicPublication:
                 # and require that one of its threads waits on the FIFO.
                 observed = tm.ok(
                     u.Cli.run(
-                        ["ps", "--sid", str(child.pid), "-L", "-o", "wchan:64=,args="],
+                        [
+                            "ps",
+                            "--sid",
+                            str(child.pid),
+                            "-L",
+                            "-o",
+                            "pid=,comm=,wchan:64=",
+                        ],
                         timeout=self.INTERRUPT_AFTER_SECONDS,
                     )
                 )
+                last_observed = observed.stdout
+                process_rows = tuple(
+                    row.split() for row in observed.stdout.splitlines() if row.split()
+                )
+                uv_processes = {row[0] for row in process_rows if row[1] == c.Infra.UV}
                 if any(
-                    len(fields) > 1
-                    and fields[0] == "wait_for_partner"
-                    and Path(fields[1]).name == c.Infra.UV
-                    for fields in (row.split() for row in observed.stdout.splitlines())
+                    row[0] in uv_processes and row[-1] == "wait_for_partner"
+                    for row in process_rows
                 ):
                     break
                 time.sleep(0.02)
             else:
-                pytest.fail("owned uv never opened the dependency for resolution")
+                pytest.fail(
+                    "owned uv never opened the dependency for resolution; "
+                    f"last session processes: {last_observed!r}"
+                )
         finally:
             primary = sys.exception()
             try:

@@ -19,8 +19,8 @@ Infra:
       max_lines: 1000
 
     toolchain:
-      # Single-source Python minor line. The environment resolves the newest
-      # compatible 3.13 patch; no patch is pinned in generated repositories.
+      # The language floor is a minor line. The runtime tool is pinned to the
+      # newest Python patch whose lock resolves on all declared platforms.
       # Derived as computed fields on ToolchainSpec:
       #   python_required_version -> >=3.13,<3.14
       # Every fleet binary is declared `latest`. Only `make upg` resolves the
@@ -28,6 +28,7 @@ Infra:
       # writes the committed uv.lock and mise.lock; setup, gen, and fmt install
       # frozen from those locks (operator 2026-09-24).
       python_version: "3.13"
+      python_tool_version: "3.13.15"
       uv_link_mode: copy
       uv_environments: ["sys_platform == 'linux'", "sys_platform == 'darwin'"]
       # Global compatibility exceptions become [tool.uv] constraint-dependencies
@@ -93,11 +94,7 @@ Infra:
       qlty_version: 0.642.0
       node_version: latest
       jscpd_selector: github:kucherenko/jscpd
-      # 5.4.0 shipped without resolvable release assets on any fleet platform;
-      # mise correctly refuses to replace the working locked 5.3.3, which left
-      # `make upg` red fleet-wide. Pinned to the last resolvable release until
-      # upstream publishes a good 5.4.x (bump deliberately, never "latest").
-      jscpd_version: 5.3.3
+      jscpd_version: "5.4.0"
       # Prettier is the markdown formatter (markdown-format gate): provisioned
       # through npm so the fleet binary version is owned by this SSOT alone.
       # Pinned to 3.5.x: prettier 3.7+ silently dropped markdown prose
@@ -376,6 +373,18 @@ Infra:
         external_storage_directory: flext/infra/testmon
         target_directory: tests
         reports_directory: .reports/tests
+      # Shared testmon cache policy: bounded generations, quota and save refs.
+      testmon_cache_policy:
+        mode: stable
+        save_enabled: true
+        max_bootstrap_generations: 3
+        max_stable_generations: 3
+        per_repo_budget_bytes: 52428800
+        warning_threshold_percent: 80
+        maintenance_threshold_percent: 90
+        block_threshold_percent: 95
+        allowed_save_refs: ["main", "0.12.0-dev"]
+        key_prefix: flext-testmon
       # The Mypy gate shares analysis across checkouts of the same project name.
       # Relocks retain the directory; Mypy revalidates changed modules. Distinct
       # project names keep their module namespaces in separate directories.
