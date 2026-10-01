@@ -33,12 +33,12 @@ class FlextInfraWorkspaceCheckReportsMixin:
             "",
             "## Summary",
             "",
-            "| Project | Status | Errors |",
+            "| Project | Status | Findings |",
             "|---|---:|---:|",
         ]
         for project in results:
             status = "PASS" if project.passed else "FAIL"
-            lines.append(f"| {project.project} | {status} | {project.total_errors} |")
+            lines.append(f"| {project.project} | {status} | {project.total_findings} |")
         lines.extend(["", "## Details", ""])
         for project in results:
             lines.append(f"### {project.project}")
@@ -135,7 +135,7 @@ class FlextInfraWorkspaceCheckReportsMixin:
             return r[t.SequenceOf[m.Infra.ProjectResult]].fail(
                 f"failed to write sarif report: {exc}", exception=exc
             )
-        total_errors = sum(project.total_errors for project in results)
+        total_findings = sum(project.total_findings for project in results)
         success = len(results) - outcome.failed
         u.Cli.summary(
             m.Infra.SummaryStats(
@@ -149,20 +149,20 @@ class FlextInfraWorkspaceCheckReportsMixin:
         )
         u.Cli.info(f"Reports: {md_path}")
         u.Cli.info(f"         {sarif_path}")
-        if total_errors > 0:
+        if total_findings > 0:
             u.Cli.info("Findings by project (report-only; see reports for detail):")
             for project in sorted(
-                results, key=operator.attrgetter("total_errors"), reverse=True
+                results, key=operator.attrgetter("total_findings"), reverse=True
             ):
-                if project.total_errors == 0:
+                if project.total_findings == 0:
                     continue
                 breakdown = ", ".join(
-                    f"{gate}={project.gates[gate].error_count}"
+                    f"{gate}={project.gates[gate].finding_count}"
                     for gate in resolved_gates
-                    if gate in project.gates and project.gates[gate].error_count
+                    if gate in project.gates and project.gates[gate].finding_count
                 )
                 u.Cli.info(
-                    f"{project.project:30s} {project.total_errors:6d}  ({breakdown})"
+                    f"{project.project:30s} {project.total_findings:6d}  ({breakdown})"
                 )
         return r[t.SequenceOf[m.Infra.ProjectResult]].ok(results)
 

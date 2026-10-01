@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import docs_main, main as infra_main
+from flext_infra import FlextInfraCli, main as infra_main
 from tests import u
 
 if TYPE_CHECKING:
@@ -48,9 +48,9 @@ class TestsFlextInfraDocsMainEntry:
 
     def test_package_entrypoint_routes_through_docs_group(self) -> None:
         """Route the package entry point through the public docs command group."""
-        tm.that(docs_main(["--help"]), eq=0)
-        tm.that(docs_main(["audit", "--help"]), eq=0)
-        tm.that(docs_main([]), eq=1)
+        tm.that(FlextInfraCli.docs_main(["--help"]), eq=0)
+        tm.that(FlextInfraCli.docs_main(["audit", "--help"]), eq=0)
+        tm.that(FlextInfraCli.docs_main([]), eq=1)
 
     def test_audit_projects_filter_writes_selected_reports(
         self, tmp_path: Path

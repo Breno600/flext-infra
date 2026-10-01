@@ -211,11 +211,9 @@ class FlextInfraModelsCheck:
 
         @m.computed_field
         @property
-        def error_count(self) -> int:
-            """Number of diagnostics with error severity."""
-            return sum(
-                1 for issue in self.issues if issue.severity.lower() == c.Infra.ERROR
-            )
+        def finding_count(self) -> int:
+            """Number of findings that fail the gate: every issue blocks."""
+            return len(self.issues)
 
     class ProjectResult(mm.ProjectNameMixin, m.ArbitraryTypesModel):
         """Aggregated gate results for a single project.
@@ -237,9 +235,9 @@ class FlextInfraModelsCheck:
 
         @m.computed_field
         @property
-        def total_errors(self) -> int:
-            """Total error-severity diagnostic count across all gates."""
-            return sum(v.error_count for v in self.gates.values())
+        def total_findings(self) -> int:
+            """Total blocking findings across all gates."""
+            return sum(v.finding_count for v in self.gates.values())
 
     class LoopOutcome(m.ArbitraryTypesModel):
         """Bundled results from the project-checking loop."""

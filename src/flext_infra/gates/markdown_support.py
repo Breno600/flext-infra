@@ -7,7 +7,6 @@ ignore-projection reader live here exactly once.
 
 from __future__ import annotations
 
-import time
 from pathlib import Path
 from typing import TYPE_CHECKING, override
 
@@ -60,6 +59,11 @@ class FlextInfraMarkdownGateBase(FlextInfraGate):
         return tuple(patterns)
 
     @override
+    def selected_for(self, project_dir: Path) -> bool:
+        """Only a project with governed Markdown selects a Markdown gate."""
+        return bool(self.collect_markdown_files(project_dir))
+
+    @override
     def _get_check_dirs(
         self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> t.StrSequence:
@@ -69,21 +73,6 @@ class FlextInfraMarkdownGateBase(FlextInfraGate):
             str(path.relative_to(project_dir))
             for path in self.collect_markdown_files(project_dir)
         ]
-
-    @override
-    def check(
-        self, project_dir: Path, ctx: m.Infra.GateContext
-    ) -> m.Infra.GateExecution:
-        """Validate the selected Markdown files or report an empty surface."""
-        started = time.monotonic()
-        check_dirs = self._get_check_dirs(project_dir, ctx)
-        if not check_dirs:
-            return self._neutral_skip_result(
-                project_dir,
-                started,
-                message=f"{self.gate_id}: no markdown files to check",
-            )
-        return self._execute_check_command(project_dir, ctx, check_dirs, started)
 
 
 __all__: list[str] = ["FlextInfraMarkdownGateBase"]

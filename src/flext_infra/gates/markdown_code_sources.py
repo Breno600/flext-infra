@@ -1,15 +1,15 @@
-"""Embedded-Python source extraction for the ``markdown-code`` gate.
+"""Embedded-Python source collection for the ``markdown-code`` gate.
 
 Fenced ``python``` blocks on the governed markdown surface and doctest
-examples inside tracked docstrings are extracted once into a temporary source
-tree, so ruff validates and formats them in single invocations. Every
-temporary file maps back through the returned origin dictionary.
+examples inside tracked docstrings are collected once as named sources, each
+mapped back to its documentation origin. The gate writes them into one
+temporary tree so ruff validates and formats them in single invocations, and
+selects itself only for a project whose content yields at least one source.
 """
 
 from __future__ import annotations
 
 import ast
-from collections.abc import MutableMapping
 from doctest import DocTestParser
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraMarkdownCodeSources:
-    """Extract embedded Python from documentation into one source tree."""
+    """Collect embedded Python from documentation as named, located sources."""
 
     @staticmethod
     def syntax_broken(code: str, origin: Path) -> bool:
@@ -40,16 +40,16 @@ class FlextInfraMarkdownCodeSources:
         )
 
     @staticmethod
-    def write_fenced_block_sources(
-        project_dir: Path, markdown_files: t.SequenceOf[Path], target_dir: Path
-    ) -> MutableMapping[str, t.Pair[str, int]]:
-        """Write one temp source per parseable fenced ``python`` block.
+    def fenced_block_sources(
+        project_dir: Path, markdown_files: t.SequenceOf[Path]
+    ) -> t.VariadicTuple[t.Triple[str, str, t.Pair[str, int]]]:
+        """Collect one named source per parseable fenced ``python`` block.
 
         Blocks carrying the ``notest`` fence marker and unparseable fragments
         are excluded. The Markdown validator owns syntax errors; this gate owns
         only formatting of Python blocks that compile.
         """
-        origin_by_source: t.MutableMappingKV[str, t.Pair[str, int]] = {}
+        collected: list[t.Triple[str, str, t.Pair[str, int]]] = []
         for md_path in markdown_files:
             relative_posix = md_path.relative_to(project_dir).as_posix()
             content = md_path.read_text(c.Cli.ENCODING_DEFAULT)
@@ -61,19 +61,18 @@ class FlextInfraMarkdownCodeSources:
                 source_text = match.group("code")
                 if FlextInfraMarkdownCodeSources.syntax_broken(source_text, md_path):
                     continue
-                name = FlextInfraMarkdownCodeSources.source_name(relative_posix, index)
-                (target_dir / name).write_text(source_text, c.Cli.ENCODING_DEFAULT)
-                origin_by_source[name] = (
-                    relative_posix,
-                    content[: match.start()].count("\n") + 1,
-                )
-        return origin_by_source
+                collected.append((
+                    FlextInfraMarkdownCodeSources.source_name(relative_posix, index),
+                    source_text,
+                    (relative_posix, content[: match.start()].count("\n") + 1),
+                ))
+        return tuple(collected)
 
     @staticmethod
-    def write_docstring_sources(
-        project_dir: Path, target_dir: Path
-    ) -> t.MappingKV[str, t.Pair[str, int]]:
-        """Write one temp source per doctest example found in tracked docstrings.
+    def docstring_sources(
+        project_dir: Path,
+    ) -> t.VariadicTuple[t.Triple[str, str, t.Pair[str, int]]]:
+        """Collect one named source per doctest example in tracked docstrings.
 
         Docstring write-back stays outside the fix contract on purpose: a
         formatter rewrite inside prose is a semantics risk, so docstring
@@ -81,7 +80,7 @@ class FlextInfraMarkdownCodeSources:
         within the docstring (stdlib ``doctest`` reports positions relative to
         its input).
         """
-        origin_by_source: t.MutableMappingKV[str, t.Pair[str, int]] = {}
+        collected: list[t.Triple[str, str, t.Pair[str, int]]] = []
         parser = DocTestParser()
         for py_path in u.Infra.iter_matching_files(project_dir, includes=["*.py"]):
             relative_parts = py_path.relative_to(project_dir).parts
@@ -104,15 +103,14 @@ class FlextInfraMarkdownCodeSources:
                 for index, example in enumerate(parser.get_examples(docstring)):
                     source_text = example.source
                     compile(source_text, str(py_path), "exec")
-                    name = FlextInfraMarkdownCodeSources.source_name(
-                        relative_posix, index
-                    )
-                    (target_dir / name).write_text(source_text, c.Cli.ENCODING_DEFAULT)
-                    origin_by_source[name] = (
-                        relative_posix,
-                        body_start + example.lineno,
-                    )
-        return origin_by_source
+                    collected.append((
+                        FlextInfraMarkdownCodeSources.source_name(
+                            relative_posix, index
+                        ),
+                        source_text,
+                        (relative_posix, body_start + example.lineno),
+                    ))
+        return tuple(collected)
 
 
 __all__: list[str] = ["FlextInfraMarkdownCodeSources"]

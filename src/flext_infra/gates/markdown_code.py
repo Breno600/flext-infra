@@ -143,28 +143,47 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
             )
         return issues
 
+    def _embedded_sources(
+        self, project_dir: Path
+    ) -> t.MappingKV[str, t.Pair[str, t.Pair[str, int]]]:
+        """Name every embedded source with its text and documentation origin."""
+        markdown_files = self._ignore_filtered(
+            project_dir, markdown.collect_markdown_files(project_dir)
+        )
+        return {
+            name: (text, origin)
+            for name, text, origin in (
+                *sources.fenced_block_sources(project_dir, markdown_files),
+                *sources.docstring_sources(project_dir),
+            )
+        }
+
+    @override
+    def selected_for(self, project_dir: Path) -> bool:
+        """Only a project carrying embedded documentation code selects the gate."""
+        return bool(self._embedded_sources(project_dir))
+
     def _run_extracted(
-        self, project_dir: Path, markdown_files: t.SequenceOf[Path], *, fix: bool
+        self, project_dir: Path, *, fix: bool
     ) -> t.Triple[bool, bool, t.SequenceOf[m.Infra.Issue]]:
         """Run the single format operation over extracted sources.
 
         Returns ``(ran, passed, issues)``: ``ran`` is False when the project
-        carries no parseable embedded documentation code at all, which is the
-        neutral skip both verbs report instead of an empty verdict. Only the
-        format contract lives here — syntax ownership belongs to the
-        flext-tests markdown validator, so unparseable fragments never enter
-        the extracted tree and cannot turn into gate findings.
+        carries no parseable embedded documentation code, which the checker
+        never selects. Only the format contract lives here — syntax ownership
+        belongs to the flext-tests markdown validator, so unparseable fragments
+        never enter the extracted tree and cannot turn into gate findings.
         """
         findings: t.MutableSequenceOf[m.Infra.Issue] = []
-        ran = False
+        embedded = self._embedded_sources(project_dir)
+        if not embedded:
+            return False, False, ()
         with tempfile.TemporaryDirectory(prefix="flext-markdown-code-") as tmp:
             sources_dir = Path(tmp)
-            origin = sources.write_fenced_block_sources(
-                project_dir, markdown_files, sources_dir
-            )
-            origin.update(sources.write_docstring_sources(project_dir, sources_dir))
-            if not origin:
-                return False, True, ()
+            origin: t.MutableMappingKV[str, t.Pair[str, int]] = {}
+            for name, (text, located) in embedded.items():
+                (sources_dir / name).write_text(text, c.Cli.ENCODING_DEFAULT)
+                origin[name] = located
             ran = True
             formatted = self._run(
                 self._format_command(project_dir, sources_dir, write=fix), project_dir
@@ -270,19 +289,9 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         """Validate embedded sources read-only when documentation code exists."""
         _ = ctx
         started = time.monotonic()
-        ran, passed, issues = self._run_extracted(
-            project_dir,
-            self._ignore_filtered(
-                project_dir, markdown.collect_markdown_files(project_dir)
-            ),
-            fix=False,
-        )
+        ran, passed, issues = self._run_extracted(project_dir, fix=False)
         if not ran:
-            return self._neutral_skip_result(
-                project_dir,
-                started,
-                message=f"{self.gate_id}: no embedded documentation code found",
-            )
+            return self._skip_result(project_dir, started)
         return self._build_check_gate_execution(
             project_dir,
             passed=passed,
@@ -298,19 +307,9 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
             return self._check_only_fix_result(project_dir)
         started = time.monotonic()
         with self._mutation_lease(project_dir):
-            ran, passed, issues = self._run_extracted(
-                project_dir,
-                self._ignore_filtered(
-                    project_dir, markdown.collect_markdown_files(project_dir)
-                ),
-                fix=True,
-            )
+            ran, passed, issues = self._run_extracted(project_dir, fix=True)
         if not ran:
-            return self._neutral_skip_result(
-                project_dir,
-                started,
-                message=f"{self.gate_id}: no embedded documentation code found",
-            )
+            return self._skip_result(project_dir, started)
         return self._build_gate_execution(
             project_dir,
             verdict=passed,

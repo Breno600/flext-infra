@@ -65,12 +65,7 @@ class TestsFlextInfraCodemodGate:
             tuple(execution.result.errors),
             eq=tuple(issue.formatted for issue in execution.issues),
         )
-        tm.that(
-            execution.error_count,
-            eq=sum(
-                issue.severity.lower() == c.Infra.ERROR for issue in execution.issues
-            ),
-        )
+        tm.that(execution.finding_count, eq=len(execution.issues))
         if severity == "error":
             tm.that(execution.raw_output, has="exit=1")
             tm.that(execution.raw_output, has="error(s) found in code")
@@ -116,9 +111,17 @@ class TestsFlextInfraCodemodGate:
 
     @pytest.mark.parametrize("severity", ["error", "warning"])
     def test_workspace_pipeline_reports_every_finding_as_blocking(
-        self, tmp_path: Path, rope_workspace: p.Infra.RopeWorkspaceDsl, severity: str
+        self,
+        tmp_path: Path,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
+        severity: str,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """The public check facade fails the project on any rule finding."""
+        """The public check facade fails the project on any rule finding.
+
+        The gate line, the report row and the summary count the same findings
+        that fail the gate, whatever their native severity.
+        """
         project = self._project(tmp_path, severity=severity)
         (project / "src" / "subject.py").write_text("second(1)\n", encoding="utf-8")
         reports = tmp_path / "reports"
@@ -131,12 +134,19 @@ class TestsFlextInfraCodemodGate:
 
         result = results[0]
         execution = result.gates["codemod"]
+        output = capsys.readouterr().out
         tm.that(result.passed, eq=False)
         tm.that(tuple(issue.code for issue in execution.issues), has="contract-second")
+        tm.that(execution.finding_count, eq=len(execution.issues))
+        tm.that(result.total_findings, eq=execution.finding_count)
+        gate_line = next(
+            line for line in output.splitlines() if "[FAIL] codemod" in line
+        )
+        tm.that(gate_line, has=f" {execution.finding_count} errors")
         markdown = (reports / c.Infra.CHECK_REPORT_MARKDOWN_FILENAME).read_text(
             encoding="utf-8"
         )
-        tm.that(markdown, has=f"| {project.name} | FAIL | {result.total_errors} |")
+        tm.that(markdown, has=f"| {project.name} | FAIL | {result.total_findings} |")
         tm.that(markdown, has=f"- codemod: FAIL ({len(execution.issues)} issues)")
         tm.that(markdown, has="contract-second")
         sarif = m.Infra.SarifReport.model_validate_json(

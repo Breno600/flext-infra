@@ -80,9 +80,6 @@ class TestsFlextInfraBanditAndMarkdownGates:
     @pytest.mark.parametrize(
         ("markdown_text", "config_text", "findings_block", "codes"),
         [
-            # A project with no markdown has nothing to check, so the gate is
-            # not applicable and skips neutrally (4dc7027ed).
-            ("", None, False, []),
             (HEADING_SKIP, None, True, ["MD001"]),
             ("# Test\n", '{"broken": [', True, ["TOOL_ERROR"]),
             # Residual MD013 findings remain blocking when the native formatter
@@ -137,6 +134,27 @@ class TestsFlextInfraBanditAndMarkdownGates:
                 [issue.severity.lower() for issue in result.issues],
                 eq=[str(c.Infra.GateSeverity.ERROR.value)] * len(codes),
             )
+
+    def test_markdown_gate_is_not_selected_without_markdown(
+        self, tmp_path: Path
+    ) -> None:
+        """A project without governed Markdown never selects the gate."""
+        project_dir = u.Tests.mk_project(tmp_path, "markdown-empty")
+        gate = FlextInfraMarkdownGate(tmp_path)
+
+        tm.that(gate.selected_for(project_dir), eq=False)
+        tm.that(
+            gate.check(project_dir, u.Tests.gate_context(tmp_path)).result.passed,
+            eq=False,
+        )
+
+    def test_bandit_is_not_selected_without_a_src_tree(self, tmp_path: Path) -> None:
+        """A project without a ``src`` package surface never selects bandit."""
+        bare = u.Tests.mk_project(tmp_path, "bandit-bare")
+        packaged = u.Tests.mk_project(tmp_path, "bandit-packaged", with_src=True)
+
+        tm.that(FlextInfraBanditGate(tmp_path).selected_for(bare), eq=False)
+        tm.that(FlextInfraBanditGate(tmp_path).selected_for(packaged), eq=True)
 
     def test_markdown_applies_only_the_local_config(self, tmp_path: Path) -> None:
         """A standalone project's gate never crosses its repository boundary."""

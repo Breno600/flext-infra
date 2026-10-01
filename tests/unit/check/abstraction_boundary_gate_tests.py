@@ -110,20 +110,22 @@ class TestsFlextInfraAbstractionBoundaryGate:
 
         tm.that(result.result.passed, eq=True)
 
-    def test_declared_boundary_owner_passes_by_design(self, tmp_path: Path) -> None:
-        """A declared boundary owner is exempt: the gate passes with no issues."""
+    def test_declared_boundary_owner_never_selects_the_gate(
+        self, tmp_path: Path
+    ) -> None:
+        """A declared boundary owner is not selected, and a direct call never passes."""
         owner = min(c.Infra.BOUNDARY_SKIP_PROJECTS)
         project = self._project(
             tmp_path, name=owner, filename="logic.py", src="import typer\n"
         )
+        gate = FlextInfraAbstractionBoundaryGate(tmp_path)
 
+        tm.that(gate.selected_for(project), eq=False)
         result = u.Tests.run_gate_check(
             FlextInfraAbstractionBoundaryGate, tmp_path, project
         )
-
-        tm.that(result.result.passed, eq=True)
+        tm.that(result.result.passed, eq=False)
         tm.that(len(result.issues), eq=0)
-        tm.that(len(result.result.errors), eq=0)
 
     def test_renamed_owner_retains_declared_boundary_policy(
         self, tmp_path: Path
@@ -136,11 +138,9 @@ class TestsFlextInfraAbstractionBoundaryGate:
             src="import typer\n",
         )
         renamed = project.rename(tmp_path / "owner-worktree")
-        result = u.Tests.run_gate_check(
-            FlextInfraAbstractionBoundaryGate, tmp_path, renamed
+        tm.that(
+            FlextInfraAbstractionBoundaryGate(tmp_path).selected_for(renamed), eq=False
         )
-        tm.that(result.result.passed, eq=True)
-        tm.that(result.issues, eq=[])
 
     def test_owner_directory_does_not_exempt_consumer(self, tmp_path: Path) -> None:
         """A consumer cannot acquire an owner's policy by renaming its checkout."""

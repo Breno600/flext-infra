@@ -47,7 +47,7 @@ if TYPE_CHECKING:
     from .check.gate_registry import FlextInfraGateRegistry
     from .check.workspace_check import FlextInfraWorkspaceChecker
     from .check.workspace_check_gates import FlextInfraWorkspaceCheckGatesMixin
-    from .cli import FlextInfraCli, docs_main, main
+    from .cli import FlextInfraCli, main
     from .codegen.census import FlextInfraCodegenCensus
     from .codegen.codegen_generation import FlextInfraCodegenGeneration
     from .codegen.codegen_transaction import FlextInfraCodegenTransaction
@@ -476,7 +476,6 @@ __all__: tuple[str, ...] = (
     "deps",
     "detectors",
     "docs",
-    "docs_main",
     "e",
     "fixers",
     "gates",
@@ -512,7 +511,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".check.gate_registry": ("FlextInfraGateRegistry",),
             ".check.workspace_check": ("FlextInfraWorkspaceChecker",),
             ".check.workspace_check_gates": ("FlextInfraWorkspaceCheckGatesMixin",),
-            ".cli": ("FlextInfraCli", "docs_main", "main"),
+            ".cli": ("FlextInfraCli", "main"),
             ".codegen": ("codegen",),
             ".codegen.census": ("FlextInfraCodegenCensus",),
             ".codegen.codegen_generation": ("FlextInfraCodegenGeneration",),
