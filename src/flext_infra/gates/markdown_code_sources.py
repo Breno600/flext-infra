@@ -42,10 +42,33 @@ class FlextInfraMarkdownCodeSources:
 
     @staticmethod
     def fenced_block_sources(
-        project_dir: Path,
-        markdown_files: t.SequenceOf[Path],
+        project_dir: Path, markdown_files: t.SequenceOf[Path]
     ) -> t.VariadicTuple[t.Triple[str, str, t.Pair[str, int]]]:
         """Collect one named source per parseable fenced ``python`` block.
+
+        Blocks carrying the ``notest`` fence marker and unparseable fragments
+        are excluded. The Markdown validator owns syntax errors; this gate owns
+        only formatting of Python blocks that compile.
+        """
+        collected: list[t.Triple[str, str, t.Pair[str, int]]] = []
+        for md_path in markdown_files:
+            relative_posix = md_path.relative_to(project_dir).as_posix()
+            content = md_path.read_text(c.Cli.ENCODING_DEFAULT)
+            for index, match in enumerate(
+                match
+                for match in c.Infra.MARKDOWN_PY_FENCE_RE.finditer(content)
+                if c.Infra.MARKDOWN_CODE_SKIP_MARKER not in match.group("info")
+            ):
+                source_text = match.group("code")
+                if FlextInfraMarkdownCodeSources.syntax_broken(source_text, md_path):
+                    continue
+                collected.append((
+                    FlextInfraMarkdownCodeSources.source_name(relative_posix, index),
+                    source_text,
+                    (relative_posix, content[: match.start()].count("\n") + 1),
+                ))
+        return tuple(collected)
+
 
 def write_fenced_block_sources(
     project_dir: Path, markdown_files: t.SequenceOf[Path], target_dir: Path
