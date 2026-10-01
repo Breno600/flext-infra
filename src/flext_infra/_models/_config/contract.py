@@ -8,9 +8,9 @@ from typing import Annotated, Self
 
 from flext_cli import m, u
 
-from ... import t
-from ..._constants.validate import FlextInfraConstantsSharedInfra
-from ..mise_toolchain import FlextInfraModelsMiseToolchain
+from flext_infra import t
+from flext_infra._constants.validate import FlextInfraConstantsSharedInfra
+from flext_infra._models.mise_toolchain import FlextInfraModelsMiseToolchain
 
 
 class FlextInfraConfigModelsContract:
@@ -42,7 +42,7 @@ class FlextInfraConfigModelsContract:
         historical_evidence_files: Annotated[
             t.VariadicTuple[Path],
             m.Field(
-                description="Exact dated Markdown records preserving observed paths"
+                description="Exact dated Markdown records preserving observed paths",
             ),
         ] = ()
 

@@ -13,8 +13,8 @@ from tests import t, u as test_u
 
 
 class TestsFlextInfraCodegenPyprojectConform:
+    @staticmethod
     def _repository(
-        self,
         distribution: str,
         *,
         role: c.Infra.MakeProfile,
@@ -167,7 +167,8 @@ class TestsFlextInfraCodegenPyprojectConform:
         )
         tm.that(second, eq=first)
 
-    def test_custom_entry_point_groups_survive_conformance(self) -> None:
+    @staticmethod
+    def test_custom_entry_point_groups_survive_conformance() -> None:
         """Plugin registrations remain owned by their declaring distribution."""
         rendered = '[project]\nname = "sample"\n'
         live = (
@@ -188,7 +189,8 @@ class TestsFlextInfraCodegenPyprojectConform:
             eq="sample.plugin:main",
         )
 
-    def test_overlay_defaults_only_the_omitted_policy(self) -> None:
+    @staticmethod
+    def test_overlay_defaults_only_the_omitted_policy() -> None:
         """Explicit empty policies survive default resolution of the other policy."""
         spec = next(
             item
@@ -494,8 +496,8 @@ dependencies = []
         )
         tm.that("project" not in test_u.Tests.toml_mapping(excludes[0]), eq=True)
 
+    @staticmethod
     def test_workspace_root_routes_only_exclusions_of_local_projects(
-        self,
         tmp_path: Path,
     ) -> None:
         """An exclusion for an absent project would drop its only install edge."""

@@ -11,10 +11,13 @@ from typing import TypeAliasType, get_args, override
 from flext_cli import cli
 
 from flext_core import r
-
-from .. import FlextInfraServiceBase, m, p, t, u
-from ._protocol_model_annotations import FlextInfraCodegenProtocolModelAnnotations
-from ._protocol_model_render import FlextInfraCodegenProtocolModelRender
+from flext_infra import FlextInfraServiceBase, m, p, t, u
+from flext_infra.codegen._protocol_model_annotations import (
+    FlextInfraCodegenProtocolModelAnnotations,
+)
+from flext_infra.codegen._protocol_model_render import (
+    FlextInfraCodegenProtocolModelRender,
+)
 
 
 class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):

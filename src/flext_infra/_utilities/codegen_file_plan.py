@@ -42,7 +42,9 @@ class FlextInfraUtilitiesCodegenFilePlan:
     @staticmethod
     @contextmanager
     def codegen_transaction_lease(
-        journal_path: Path, *, wait_seconds: float = c.Infra.JOURNAL_LEASE_WAIT_SECONDS
+        journal_path: Path,
+        *,
+        wait_seconds: float = c.Infra.JOURNAL_LEASE_WAIT_SECONDS,
     ) -> Generator[None]:
         """Hold native ownership without unlinking the journal's lock identity.
 

@@ -64,7 +64,8 @@ class TestsFlextInfraDepsDetectionDeptry:
         tm.that(exit_code, eq=1)
         tm.that(len(issues), eq=1)
 
-    def test_project_without_config_is_skipped(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_project_without_config_is_skipped(tmp_path: Path) -> None:
         venv_bin = tmp_path / "venv" / "bin"
         venv_bin.mkdir(parents=True)
         project = tmp_path / "project"
@@ -146,7 +147,8 @@ class TestsFlextInfraDepsDetectionDeptry:
         )
         tm.that(list(report.deptry.unused), eq=["six"])
 
-    def test_project_without_profile_keeps_every_finding(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_project_without_profile_keeps_every_finding(tmp_path: Path) -> None:
         """A project no shared profile governs keeps deptry's findings intact."""
         project = u.Tests.mk_project(
             tmp_path,

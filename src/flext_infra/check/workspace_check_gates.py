@@ -11,9 +11,8 @@ from flext_cli import cli
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
+from flext_infra.check.gate_registry import FlextInfraGateRegistry
 from flext_infra.gates.base_gate import FlextInfraGate
-
-from .gate_registry import FlextInfraGateRegistry
 
 
 class FlextInfraWorkspaceCheckGatesMixin:
@@ -80,11 +79,7 @@ class FlextInfraWorkspaceCheckGatesMixin:
         loop_start = time.monotonic()
         for index, target in enumerate(projects, 1):
             u.Cli.progress(index, total, target.name, c.Infra.VERB_CHECK)
-            project_result = self._run_single_project(
-                target,
-                resolved_gates,
-                ctx,
-            )
+            project_result = self._run_single_project(target, resolved_gates, ctx)
             results.append(project_result)
             project_passed: bool = project_result.passed
             if not project_passed:
@@ -233,11 +228,7 @@ class FlextInfraWorkspaceCheckGatesMixin:
                 ruff_args=ctx.ruff_args,
                 pyright_args=ctx.pyright_args,
             )
-            execution = self._execute_gate(
-                gate_instance,
-                project_dir,
-                gate_ctx,
-            )
+            execution = self._execute_gate(gate_instance, project_dir, gate_ctx)
             gates_sink[gate_id] = execution
             self._gate_logger.info(
                 "gate_executed",

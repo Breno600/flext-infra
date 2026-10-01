@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import StrEnum, unique
 from typing import TYPE_CHECKING, ClassVar
 
-from .codegen_project import FlextInfraConstantsCodegenProject
+from flext_infra._constants.codegen_project import FlextInfraConstantsCodegenProject
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -81,7 +81,7 @@ class FlextInfraConstantsWorkspace:
         "BEADS_DOLT_",
     )
     "Beads activation tokens forbidden in ``.envrc.local`` overrides."
-    ENVIRONMENT_DIRECTORY: ClassVar[str] = ".venv"
+    ENVIRONMENT_DIRECTORY: ClassVar[str] = ".flext-venvs"
     "Python environment directory owned by the runtime checkout (D-VENV)."
     ENVIRONMENT_METADATA: ClassVar[str] = "pyvenv.cfg"
     "Interpreter metadata identifying a provisioned virtual environment."

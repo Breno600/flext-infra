@@ -35,8 +35,8 @@ class TestsFlextInfraCodegenConsolidator:
             TestsFlextInfraCodegenConsolidator._ConsolidatorFilePayload
         ] = cli_m.Field(description="Per-file consolidator results")
 
+    @staticmethod
     def _consolidator_payload(
-        self,
         value: str,
     ) -> TestsFlextInfraCodegenConsolidator._ConsolidatorJsonPayload:
         """Load and validate consolidator JSON output."""
@@ -45,7 +45,8 @@ class TestsFlextInfraCodegenConsolidator:
         )
         return payload
 
-    def _consolidator_layout(self, tmp_path: Path) -> t.Triple[Path, Path, Path]:
+    @staticmethod
+    def _consolidator_layout(tmp_path: Path) -> t.Triple[Path, Path, Path]:
         """Create the consolidator workspace, project root, and package directory."""
         repository_root = tmp_path / "workspace"
         repository_root.mkdir(parents=True)
@@ -127,7 +128,8 @@ class TestsFlextInfraCodegenConsolidator:
         u.Tests.provision_checkout(repository_root)
         return repository_root
 
-    def _write_wrapper_consumer(self, repository_root: Path, segment: str) -> Path:
+    @staticmethod
+    def _write_wrapper_consumer(repository_root: Path, segment: str) -> Path:
         """Create one wrapper-surface consumer for constants consolidation."""
         project_root = repository_root / "flext-demo"
         consumer_path = project_root / segment / "consumer.py"

@@ -21,10 +21,12 @@ from fnmatch import fnmatch
 from pathlib import Path
 
 from flext_core import r
-
-from .. import c, m, p, t, u
-from .._config import FlextInfraConfig
-from ..codegen import FlextInfraCodegenMiseArtifacts, FlextInfraCodegenTransaction
+from flext_infra import c, m, p, t, u
+from flext_infra._config import FlextInfraConfig
+from flext_infra.codegen import (
+    FlextInfraCodegenMiseArtifacts,
+    FlextInfraCodegenTransaction,
+)
 
 
 class FlextInfraModTextGateEngine:
@@ -45,11 +47,11 @@ class FlextInfraModTextGateEngine:
             return r[t.Cli.ResultValue].from_failure(remaining)
         if remaining.value.findings:
             return r[t.Cli.ResultValue].fail(
-                f"mod-text has {remaining.value.findings} pending finding(s)"
+                f"mod-text has {remaining.value.findings} pending finding(s)",
             )
         return r[t.Cli.ResultValue].ok(
             f"mod-text: {pending.value.actionable if apply else 0} "
-            "actionable finding(s) applied; fixed point verified"
+            "actionable finding(s) applied; fixed point verified",
         )
 
     @classmethod
@@ -190,7 +192,7 @@ class FlextInfraModTextGateEngine:
             for name, value in capture_equals.items()
         ):
             return r[m.Infra.ModTextRule].fail(
-                f"text rule capture_equals must map capture names to strings in {source}"
+                f"text rule capture_equals must map capture names to strings in {source}",
             )
         try:
             compiled = re.compile(find)
@@ -201,7 +203,7 @@ class FlextInfraModTextGateEngine:
         unknown_captures = set(capture_equals).difference(compiled.groupindex)
         if unknown_captures:
             return r[m.Infra.ModTextRule].fail(
-                f"unknown regex captures {sorted(unknown_captures)} in {source}"
+                f"unknown regex captures {sorted(unknown_captures)} in {source}",
             )
         rule = m.Infra.ModTextRule(
             rule_id=str(raw.get(c.Infra.CODEMOD_TEXT_KEY_ID, "")),
@@ -226,7 +228,8 @@ class FlextInfraModTextGateEngine:
 
     @staticmethod
     def _source_paths(
-        root: Path, rules: t.VariadicTuple[m.Infra.ModTextRule]
+        root: Path,
+        rules: t.VariadicTuple[m.Infra.ModTextRule],
     ) -> p.Result[t.VariadicTuple[Path]]:
         """Inventory Python sources and only explicitly declared Markdown globs."""
         paths: set[Path] = set()
@@ -243,12 +246,12 @@ class FlextInfraModTextGateEngine:
                     continue
                 if declared.is_absolute() or ".." in declared.parts:
                     return r[t.VariadicTuple[Path]].fail(
-                        f"text Markdown include escapes repository: {pattern}"
+                        f"text Markdown include escapes repository: {pattern}",
                     )
                 matches = tuple(sorted(root.glob(pattern)))
                 if not matches:
                     return r[t.VariadicTuple[Path]].fail(
-                        f"text Markdown include has no source: {pattern}"
+                        f"text Markdown include has no source: {pattern}",
                     )
                 for path in matches:
                     if (
@@ -258,7 +261,7 @@ class FlextInfraModTextGateEngine:
                         or path.stat().st_nlink != 1
                     ):
                         return r[t.VariadicTuple[Path]].fail(
-                            f"text Markdown source must be physical: {path}"
+                            f"text Markdown source must be physical: {path}",
                         )
                     paths.add(path)
         return r[t.VariadicTuple[Path]].ok(tuple(sorted(paths)))

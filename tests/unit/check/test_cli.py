@@ -54,7 +54,8 @@ class TestsFlextInfraWorkspaceCheckCli:
         module_path.write_text(f'"""Fixture module."""\n\n{content}', encoding="utf-8")
         return module_path
 
-    def test_resolve_gates_rejects_duplicate_explicit_gate(self) -> None:
+    @staticmethod
+    def test_resolve_gates_rejects_duplicate_explicit_gate() -> None:
         result = FlextInfraWorkspaceChecker.resolve_gates([
             c.Infra.LINT,
             c.Infra.PYREFLY,

@@ -42,13 +42,15 @@ _HTTP_OK = 200
 class TestsFlextInfraIntegrationDocsServeE2e:
     """Real serve: a governed scope with mkdocs.yml answers HTTP requests."""
 
-    def _free_local_port(self) -> int:
+    @staticmethod
+    def _free_local_port() -> int:
         """Reserve and release an ephemeral localhost port for the dev server."""
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
             probe.bind(("127.0.0.1", 0))
             return int(probe.getsockname()[1])
 
-    def _http_get_body(self, host: str, port: int) -> p.Result[str]:
+    @staticmethod
+    def _http_get_body(host: str, port: int) -> p.Result[str]:
         """Return the response body when the dev server answers HTTP 200, else fail."""
         connection = http.client.HTTPConnection(host, port, timeout=0.25)
         try:

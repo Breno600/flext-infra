@@ -7,11 +7,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
-
-from .. import c, m, t, u
-from ._execution import FlextInfraCodegenExecutionBase
-from ._mise_artifacts_derivation import FlextInfraMiseArtifactsDerivation
-from .mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
+from flext_infra import c, m, t, u
+from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
+from flext_infra.codegen._mise_artifacts_derivation import (
+    FlextInfraMiseArtifactsDerivation,
+)
+from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
 
 if TYPE_CHECKING:
     from .. import p

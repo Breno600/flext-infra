@@ -38,8 +38,8 @@ class TestsFlextInfraDepsDetectorReport:
         report = u.Cli.json_as_mapping(tm.ok(u.Cli.json_read(destination)))
         tm.that(u.Cli.json_as_mapping(report.get("projects")), keys=[root.name])
 
+    @staticmethod
     def test_blocked_report_path_preserves_writer_failure(
-        self,
         real_detector_project: Path,
     ) -> None:
         root = real_detector_project

@@ -8,11 +8,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 from flext_infra import c
-
-from .namespace import FlextInfraUtilitiesCodegenNamespace
-from .rope_core import FlextInfraUtilitiesRopeCore
-from .rope_module_patch import FlextInfraUtilitiesRopeModulePatch
-from .rope_runtime import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities.rope_module_patch import FlextInfraUtilitiesRopeModulePatch
+from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -35,7 +34,7 @@ class FlextInfraUtilitiesCodegenFacades:
             if module.name != c.Infra.INIT_PY
             and family
             in FlextInfraUtilitiesRopeModulePatch.facade_letter_names_source(
-                module.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+                module.read_text(encoding=c.Cli.ENCODING_DEFAULT),
             )
         )
         if len(owners) > 1:
@@ -313,8 +312,7 @@ class FlextInfraUtilitiesCodegenFacades:
             family
         ].directory
         rendered = [
-            f"from {package}.{directory}.{module} import (\n"
-            f"    {class_name},\n)\n"
+            f"from {package}.{directory}.{module} import (\n    {class_name},\n)\n"
             for module, class_name in additions
         ]
         lines[facade.lineno - 1 : facade.lineno - 1] = [*rendered, "\n"]

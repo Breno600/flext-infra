@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from flext_infra._constants.adapters import FlextInfraConstantsAdapters
     from flext_infra._constants.base import FlextInfraConstantsBase
     from flext_infra._constants.census import FlextInfraConstantsCensus
     from flext_infra._constants.check import FlextInfraConstantsCheck
@@ -45,7 +44,6 @@ if TYPE_CHECKING:
 
 
 __all__: tuple[str, ...] = (
-    "FlextInfraConstantsAdapters",
     "FlextInfraConstantsBase",
     "FlextInfraConstantsCensus",
     "FlextInfraConstantsCheck",
@@ -73,7 +71,6 @@ __all__: tuple[str, ...] = (
 _LAZY_IMPORTS = MappingProxyType(
     build_lazy_import_map(
         MappingProxyType({
-            ".adapters": ("FlextInfraConstantsAdapters",),
             ".base": ("FlextInfraConstantsBase",),
             ".census": ("FlextInfraConstantsCensus",),
             ".check": ("FlextInfraConstantsCheck",),

@@ -9,8 +9,7 @@ from packaging.utils import canonicalize_name
 
 from flext_core import r
 from flext_infra import c, p, t, u
-
-from ._release_source import FlextInfraReleaseSourceMixin
+from flext_infra.release._release_source import FlextInfraReleaseSourceMixin
 
 
 class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
@@ -138,13 +137,13 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
         )
         if targets is None or wheel is None or sdist is None:
             return r[t.StrSequence].fail(
-                "release pyproject must define Hatch wheel and sdist targets"
+                "release pyproject must define Hatch wheel and sdist targets",
             )
         if build is not None and any(
             key in build for key in ("only-include", "packages", "exclude")
         ):
             return r[t.StrSequence].fail(
-                "Hatch build must use target source patterns without exclusions"
+                "Hatch build must use target source patterns without exclusions",
             )
         wheel_includes: p.Result[t.StrSequence] = u.validate_value(
             t.Infra.STR_SEQ_ADAPTER,
@@ -163,20 +162,21 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
         )
         if sdist_includes.failure:
             return r[t.StrSequence].fail_op(
-                "validate Hatch sdist include", sdist_includes.error
+                "validate Hatch sdist include",
+                sdist_includes.error,
             )
         if not wheel_includes.value or set(wheel_includes.value) != set(
-            sdist_includes.value
+            sdist_includes.value,
         ):
             return r[t.StrSequence].fail(
-                "Hatch wheel and sdist source patterns must match"
+                "Hatch wheel and sdist source patterns must match",
             )
         roots = tuple(
             sorted({
                 PurePosixPath(pattern.removeprefix("/").removesuffix("/**")).parts[0]
                 for pattern in wheel_includes.value
                 if pattern.startswith("/") and pattern.endswith("/**")
-            })
+            }),
         )
         wheel_forced = u.Cli.toml_table_child(wheel, "force-include")
         sdist_forced = u.Cli.toml_table_child(sdist, "force-include")
@@ -191,7 +191,7 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
             != {source: source for source in sources}
         ):
             return r[t.StrSequence].fail(
-                "Hatch sdist must retain every forced wheel source"
+                "Hatch sdist must retain every forced wheel source",
             )
         wheel_excludes = u.Cli.json_as_sequence(u.Cli.toml_value(wheel, "exclude"))
         sdist_excludes = u.Cli.json_as_sequence(u.Cli.toml_value(sdist, "exclude"))
@@ -247,7 +247,7 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
                 or not cls._sdist_member_allowed(("release-root", *path.parts), roots)
             ):
                 return r[t.StrSequence].fail(
-                    f"Hatch source path is outside the release boundary: {source}"
+                    f"Hatch source path is outside the release boundary: {source}",
                 )
         return r[t.StrSequence].ok(roots)
 

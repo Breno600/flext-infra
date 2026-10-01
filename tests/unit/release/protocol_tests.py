@@ -37,14 +37,16 @@ pytestmark = pytest.mark.slow
 class TestsFlextInfraReleaseProtocol:
     """Behavior contract for the release protocol."""
 
-    def _plan(self, workspace: Path) -> m.Infra.ReleasePlan:
+    @staticmethod
+    def _plan(workspace: Path) -> m.Infra.ReleasePlan:
         """Read the plan receipt the last ``plan`` phase wrote."""
         payload = workspace / ".reports" / "release" / c.Infra.RELEASE_PLAN_FILENAME
         return m.Infra.ReleasePlan.model_validate_json(
             payload.read_text(encoding="utf-8"),
         )
 
-    def _tag(self, repo: Path, tag: str) -> None:
+    @staticmethod
+    def _tag(repo: Path, tag: str) -> None:
         """Mark HEAD as an already-released version."""
         tm.ok(cli.run_checked([c.Infra.GIT, "tag", "-a", tag, "-m", tag], cwd=repo))
 
@@ -55,7 +57,8 @@ class TestsFlextInfraReleaseProtocol:
         self._tag(workspace, "v0.1.0")
         return workspace
 
-    def _release_lane_workspace(self, tmp_path: Path) -> Path:
+    @staticmethod
+    def _release_lane_workspace(tmp_path: Path) -> Path:
         """Return a pre-release workspace that can push to a local bare origin."""
         workspace = u.Tests.create_release_workspace(
             tmp_path,
@@ -96,7 +99,8 @@ class TestsFlextInfraReleaseProtocol:
         u.Tests.checkout_integration(workspace)
         return workspace
 
-    def _commit_merge_subject(self, workspace: Path, subject: str) -> None:
+    @staticmethod
+    def _commit_merge_subject(workspace: Path, subject: str) -> None:
         """Record one empty commit whose subject a merge left on the lane."""
         tm.ok(
             cli.run_checked(
@@ -124,7 +128,8 @@ class TestsFlextInfraReleaseProtocol:
         with u.Tests.env_vars_context(env_vars={"PATH": shim_path}):
             yield workspace, gh_log
 
-    def _apply_release_version(self, workspace: Path, integration: str) -> None:
+    @staticmethod
+    def _apply_release_version(workspace: Path, integration: str) -> None:
         """Stamp the release version once and return to the integration branch."""
         tm.that(
             u.Tests.run_release_main(workspace, "--phase", "version", "--apply"),
@@ -299,7 +304,8 @@ class TestsFlextInfraReleaseProtocol:
 
         tm.that(u.Tests.run_release_main(workspace, "--phase", "plan"), ne=0)
 
-    def test_pull_request_title_is_validated_when_given(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_pull_request_title_is_validated_when_given(tmp_path: Path) -> None:
         """A CI check passes a title; only a Conventional title is accepted."""
         workspace = u.Tests.create_release_workspace(tmp_path)
 
@@ -503,7 +509,8 @@ class TestsFlextInfraReleaseProtocol:
             ne=0,
         )
 
-    def test_non_integration_branch_is_refused(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_non_integration_branch_is_refused(tmp_path: Path) -> None:
         """The release pull request is cut from the integration branch only."""
         workspace = u.Tests.create_release_workspace(
             tmp_path,

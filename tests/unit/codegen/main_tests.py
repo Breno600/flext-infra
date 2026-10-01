@@ -78,7 +78,7 @@ class TestsFlextInfraCodegenMain:
                 "def main(args: list[str] | None = None) -> int:\n"
                 '    """Resolve the declared console script entry point."""\n'
                 "    return 0\n",
-            )
+            ),
         )
         tests_init = root / "tests" / "__init__.py"
         tests_init.parent.mkdir(parents=True, exist_ok=True)
@@ -106,7 +106,7 @@ class TestsFlextInfraCodegenMain:
                 u.Cli.atomic_write_text_file(
                     package_init.parent / c.Infra.CODEGEN_CLI_MODULE_FILENAME,
                     "def main() -> int:\n    return 0\n",
-                )
+                ),
             )
 
     @staticmethod
@@ -137,7 +137,8 @@ class TestsFlextInfraCodegenMain:
     class TestsHandleLazyInit:
         """Tests for direct init command dispatch."""
 
-        def test_success(self, real_git_repo: Path) -> None:
+        @staticmethod
+        def test_success(real_git_repo: Path) -> None:
             """Init returns 0 on empty workspace."""
             result = infra_main([
                 "codegen",
@@ -147,7 +148,8 @@ class TestsFlextInfraCodegenMain:
             ])
             tm.that(result, eq=0)
 
-        def test_check_mode(self, real_git_repo: Path) -> None:
+        @staticmethod
+        def test_check_mode(real_git_repo: Path) -> None:
             """Init check reports managed drift without mutating the repository."""
             repository = TestsFlextInfraCodegenMain._with_pep621_identity(real_git_repo)
             pyproject = repository / c.PYPROJECT_FILENAME
@@ -164,7 +166,8 @@ class TestsFlextInfraCodegenMain:
             tm.that(makefile.exists(), eq=False)
             tm.that(pyproject.read_bytes(), eq=before)
 
-        def test_enforce_mode(self, real_git_repo: Path) -> None:
+        @staticmethod
+        def test_enforce_mode(real_git_repo: Path) -> None:
             """Init in enforce mode (not check)."""
             result = infra_main([
                 "codegen",
@@ -177,7 +180,8 @@ class TestsFlextInfraCodegenMain:
     class TestsMainCommandDispatch:
         """Tests for main() command routing."""
 
-        def test_init_command(self, real_git_repo: Path) -> None:
+        @staticmethod
+        def test_init_command(real_git_repo: Path) -> None:
             """main() with init command returns 0."""
             result = infra_main([
                 "codegen",
@@ -187,18 +191,20 @@ class TestsFlextInfraCodegenMain:
             ])
             tm.that(result, eq=0)
 
-        def test_unknown_command(self) -> None:
+        @staticmethod
+        def test_unknown_command() -> None:
             """main() with unknown command returns non-zero exit code."""
             result = infra_main(["codegen", "unknown-command"])
             tm.that(result, ne=0)
 
-        def test_no_command(self) -> None:
+        @staticmethod
+        def test_no_command() -> None:
             """main() with no command returns non-zero exit code."""
             result = infra_main(["codegen"])
             tm.that(result, ne=0)
 
+        @staticmethod
         def test_init_rejects_nested_non_worktree_root(
-            self,
             real_git_repo: Path,
         ) -> None:
             """Initialization accepts only the exact Git worktree root."""
@@ -219,7 +225,8 @@ class TestsFlextInfraCodegenMain:
     class TestsMainEntryPoint:
         """Tests for the centralized process entrypoint."""
 
-        def test_entry_point_returns_int(self, real_git_repo: Path) -> None:
+        @staticmethod
+        def test_entry_point_returns_int(real_git_repo: Path) -> None:
             """main() returns an integer exit code."""
             result = infra_main([
                 "codegen",
@@ -229,7 +236,8 @@ class TestsFlextInfraCodegenMain:
             ])
             tm.that(type(result).__name__, eq="int")
 
-        def test_entry_point_via_sys_exit(self) -> None:
+        @staticmethod
+        def test_entry_point_via_sys_exit() -> None:
             """The root process entrypoint serves the route owner's declared help."""
             route = next(
                 item
@@ -325,8 +333,8 @@ class TestsFlextInfraCodegenMain:
             tm.that(journal.exists(), eq=False)
             tm.that(transaction.exists(), eq=False)
 
+        @staticmethod
         def test_present_invalid_mise_artifact_never_enters_external_resolution(
-            self,
             infra_git_repo: Path,
         ) -> None:
             """Reject a present invalid artifact before credential/network work."""
@@ -372,7 +380,8 @@ class TestsFlextInfraCodegenMain:
             tm.that(journal.exists(), eq=False)
             tm.that(transaction.exists(), eq=False)
 
-        def test_unknown_command_surfaces_root_cause_via_subprocess(self) -> None:
+        @staticmethod
+        def test_unknown_command_surfaces_root_cause_via_subprocess() -> None:
             """Unknown codegen subcommands must print the actual CLI failure."""
             # The child renders through the CLI console, which honours COLUMNS and
             # would otherwise wrap the message at the developer's terminal width,

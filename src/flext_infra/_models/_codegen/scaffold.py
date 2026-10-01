@@ -8,8 +8,8 @@ from typing import Annotated, ClassVar
 
 from flext_cli import m
 
-from ... import t
-from .. import FlextInfraModelsMixins as mm
+from flext_infra import t
+from flext_infra._models import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsCodegenScaffoldModels:
@@ -19,9 +19,7 @@ class FlextInfraModelsCodegenScaffoldModels:
         """A single namespace violation detected by the census service."""
 
         module: t.NonEmptyStr = m.Field(description="Module file path")
-        rule: t.NonEmptyStr = m.Field(
-            description="Violated catalog rule identifier",
-        )
+        rule: t.NonEmptyStr = m.Field(description="Violated catalog rule identifier")
         message: t.NonEmptyStr = m.Field(description="Human-readable violation message")
         fixable: bool = m.Field(description="Whether this violation can be auto-fixed")
 

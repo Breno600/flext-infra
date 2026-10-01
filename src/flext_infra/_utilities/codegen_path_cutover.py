@@ -5,7 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from .rope_runtime_refactors import FlextInfraUtilitiesRopeRuntimeRefactors
+from flext_infra._utilities.rope_runtime_refactors import (
+    FlextInfraUtilitiesRopeRuntimeRefactors,
+)
 
 if TYPE_CHECKING:
     from flext_infra import m, p, t

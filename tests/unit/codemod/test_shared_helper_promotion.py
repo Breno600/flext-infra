@@ -279,6 +279,75 @@ class TestsFlextInfraSharedHelperPromotion:
         for path, original in sources.items():
             tm.that(path.read_text(encoding="utf-8"), eq=original)
 
+    def test_private_support_with_nested_behavior_moves_to_utilities(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        root, source, helper = self._workspace(tmp_path, reexport=False)
+        destination = source.parent.parent / "_support.py"
+        source.unlink()
+        destination.write_text(
+            f"class {helper}:\n"
+            "    class Nested:\n"
+            "        @staticmethod\n"
+            "        def value() -> str:\n"
+            "            return 'shared behavior'\n",
+            encoding="utf-8",
+        )
+        consumer = root / c.Infra.DIR_TESTS / "unit" / "consumer.py"
+        consumer.write_text(
+            f"from tests.unit._support import {helper}\n\n"
+            f"VALUE = {helper}.Nested.value()\n",
+            encoding="utf-8",
+        )
+        (root / c.Infra.DIR_TESTS / "unit" / "quoted.py").unlink()
+        sources = {
+            path: path.read_text(encoding="utf-8") for path in root.rglob("*.py")
+        }
+        with infra.rope_workspace(root) as rope:
+            edits = tm.ok(
+                u.Infra.plan_semantic_cutover(
+                    c.Infra.SemanticCutoverPhase.CLASS_NESTING,
+                    rope_workspace=rope,
+                    sources=sources,
+                ),
+            )
+        plans = tuple(
+            m.Infra.SemanticFilePlan(
+                project=root,
+                path=edit.file_path,
+                before=(
+                    state := tm.ok(
+                        u.Cli.atomic_read_binary_file_state(
+                            edit.file_path,
+                            required=True,
+                        ),
+                    )
+                ),
+                desired_content=edit.updated_source.encode(),
+                desired_mode=state.mode,
+                changes=edit.changes,
+            )
+            for edit in edits
+        )
+        tm.ok(
+            FlextInfraSemanticPublication.publish_semantic_file_plans(
+                plans,
+                repository_root=root,
+            ),
+        )
+        tm.ok(u.Tests.materialize_lazy_init(u.Tests.create_lazy_init_service(root)))
+        tm.that(
+            self._run(
+                root,
+                "from tests import u\n"
+                "from tests.unit.consumer import VALUE\n"
+                f"assert VALUE == u.{helper}.Nested.value()\n"
+                "print(VALUE)\n",
+            ),
+            eq="shared behavior",
+        )
+
     def test_two_declared_utilities_owners_fail_without_changing_consumers(
         self,
         tmp_path: Path,

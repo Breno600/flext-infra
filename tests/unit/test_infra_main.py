@@ -19,17 +19,20 @@ if TYPE_CHECKING:
 class TestsFlextInfraInfraMain:
     """Behavior contract for test_infra_main."""
 
-    def test_main_returns_error_when_no_args(self) -> None:
+    @staticmethod
+    def test_main_returns_error_when_no_args() -> None:
         tm.that(main([]), eq=1)
 
-    def test_main_help_flag_returns_zero(self) -> None:
+    @staticmethod
+    def test_main_help_flag_returns_zero() -> None:
         tm.that(main(["--help"]), eq=0)
 
-    def test_main_unknown_group_returns_error(self) -> None:
+    @staticmethod
+    def test_main_unknown_group_returns_error() -> None:
         tm.that(main(["unknown"]), eq=1)
 
+    @staticmethod
     def test_main_help_lists_core_groups(
-        self,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
         tm.that(main(["--help"]), eq=0)

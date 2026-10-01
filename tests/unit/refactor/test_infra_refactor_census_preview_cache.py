@@ -18,8 +18,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraRefactorCensusPreview:
     """Validate removal planning only through public FLEXT facades."""
 
+    @staticmethod
     def test_build_simple_removal_sources_collapse_excess_blank_lines(
-        self,
         tmp_path: Path,
     ) -> None:
         """Plan one class removal without leaving excess blank lines."""
@@ -63,8 +63,8 @@ class TestsFlextInfraRefactorCensusPreview:
         tm.that(updated_source, has="def after")
         tm.that(updated_source, lacks="\n\n\n\n")
 
+    @staticmethod
     def test_build_simple_removal_sources_updates_multiline_consumers(
-        self,
         tmp_path: Path,
     ) -> None:
         """Plan removal of a base used by a multiline test facade."""
@@ -130,8 +130,8 @@ class TestsFlextInfraRefactorCensusPreview:
         tm.that(updated_consumer, lacks="Shared,")
         tm.that(updated_consumer, has="Other,")
 
+    @staticmethod
     def test_preview_simple_removal_candidate_does_not_write_source(
-        self,
         tmp_path: Path,
     ) -> None:
         """Validate a public preview while preserving the source artifact."""

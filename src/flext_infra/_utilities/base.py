@@ -14,8 +14,7 @@ from pathlib import Path
 from flext_cli import u as cli_u
 
 from flext_infra import c, t
-
-from .._settings import FlextInfraSettings
+from flext_infra._settings import FlextInfraSettings
 
 if os.name != "nt":
     import pwd

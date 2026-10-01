@@ -11,8 +11,7 @@ from tempfile import TemporaryDirectory
 from flext_cli import r, u
 
 from flext_infra import c, m, p, t
-
-from .dependencies import FlextInfraUtilitiesDependencies
+from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
 
 
 class FlextInfraUtilitiesRelease:

@@ -6,8 +6,7 @@ from pathlib import Path
 
 from flext_core import r
 from flext_infra import c, config, m, p, u
-
-from ._release_build import FlextInfraReleaseBuildMixin
+from flext_infra.release._release_build import FlextInfraReleaseBuildMixin
 
 
 class FlextInfraReleasePublishMixin(FlextInfraReleaseBuildMixin):

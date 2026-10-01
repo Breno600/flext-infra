@@ -22,7 +22,9 @@ class FlextInfraModReplacements:
     def require_authored(report: m.Infra.ModScanReport) -> p.Result[bool]:
         """Retain generator findings as blocking evidence, never writable targets."""
         generated = tuple(
-            item for item in report.entries if item.source_owner == "generator"
+            item
+            for item in report.entries
+            if item.actionable and item.source_owner == "generator"
         )
         if generated:
             details = ", ".join(

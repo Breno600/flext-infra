@@ -12,7 +12,8 @@ from flext_infra.validate.loc_delta import FlextInfraLocDeltaValidator
 
 
 class TestsFlextInfraLocDelta:
-    def test_refactor_positive_delta_fails(self) -> None:
+    @staticmethod
+    def test_refactor_positive_delta_fails() -> None:
         result = FlextInfraLocDeltaValidator.evaluate(
             subject="refactor: collapse helpers",
             insertions=10,
@@ -20,7 +21,8 @@ class TestsFlextInfraLocDelta:
         )
         tm.that(result.failure, eq=True)
 
-    def test_refactor_negative_delta_passes(self) -> None:
+    @staticmethod
+    def test_refactor_negative_delta_passes() -> None:
         result = FlextInfraLocDeltaValidator.evaluate(
             subject="refactor: collapse helpers",
             insertions=3,
@@ -28,7 +30,8 @@ class TestsFlextInfraLocDelta:
         )
         tm.that(result.success, eq=True)
 
-    def test_refactor_zero_delta_passes(self) -> None:
+    @staticmethod
+    def test_refactor_zero_delta_passes() -> None:
         result = FlextInfraLocDeltaValidator.evaluate(
             subject="cleanup: drop dead code",
             insertions=5,
@@ -36,7 +39,8 @@ class TestsFlextInfraLocDelta:
         )
         tm.that(result.success, eq=True)
 
-    def test_non_labelled_subject_is_exempt(self) -> None:
+    @staticmethod
+    def test_non_labelled_subject_is_exempt() -> None:
         result = FlextInfraLocDeltaValidator.evaluate(
             subject="feat: add new gate",
             insertions=120,

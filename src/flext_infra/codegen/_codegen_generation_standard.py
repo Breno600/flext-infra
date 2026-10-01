@@ -7,8 +7,9 @@ from sys import stdlib_module_names
 from typing import TYPE_CHECKING
 
 from flext_infra import c, config, m, t, u
-
-from ._codegen_generation_renderers import FlextInfraCodegenGenerationRenderersMixin
+from flext_infra.codegen._codegen_generation_renderers import (
+    FlextInfraCodegenGenerationRenderersMixin,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path

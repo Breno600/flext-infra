@@ -13,8 +13,8 @@ from flext_infra.services.codegen import FlextInfraCodegen
 class TestsFlextInfraVscodeOwnerMerge:
     """Prove the vscode owner merge renders canonical settings in conform."""
 
+    @staticmethod
     def test_merge_marks_drift_and_renders_canonical_content(
-        self,
         tmp_path: Path,
     ) -> None:
         """Plan a changed merge artifact with canonical and custom keys."""
@@ -40,7 +40,8 @@ class TestsFlextInfraVscodeOwnerMerge:
         tm.that(search_paths_key in config.Infra.codegen.vscode.list_settings, eq=False)
         tm.that(search_paths_key in doc, eq=False)
 
-    def test_merge_reaches_fixed_point_after_apply(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_merge_reaches_fixed_point_after_apply(tmp_path: Path) -> None:
         """Replan a written merge artifact with zero residual drift."""
         root = tmp_path / "project"
         settings_path = root / ".vscode" / "settings.json"
@@ -55,8 +56,8 @@ class TestsFlextInfraVscodeOwnerMerge:
         tm.ok(second)
         tm.that(second.value, eq=first.value)
 
+    @staticmethod
     def test_merge_removes_keys_absent_from_artifact_authority(
-        self,
         tmp_path: Path,
     ) -> None:
         """Artifact exclude maps are exact projections, not append-only unions."""
@@ -80,7 +81,8 @@ class TestsFlextInfraVscodeOwnerMerge:
             eq=dict(config.Infra.codegen.vscode_files_exclude_map),
         )
 
-    def test_merge_strips_retired_pyright_keys(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_merge_strips_retired_pyright_keys(tmp_path: Path) -> None:
         """Pylance settingsNotOverridable keys must be stripped, not preserved."""
         root = tmp_path / "project"
         settings_path = root / ".vscode" / "settings.json"

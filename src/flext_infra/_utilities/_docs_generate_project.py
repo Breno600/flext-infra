@@ -7,12 +7,13 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, t
-
-from ._docs_generate_plan import FlextInfraUtilitiesDocsGeneratePlanMixin
-from ._docs_guides import FlextInfraUtilitiesDocsGuidesMixin
-from .docs_api import FlextInfraUtilitiesDocsApi
-from .docs_contract import FlextInfraUtilitiesDocsContract
-from .docs_render import FlextInfraUtilitiesDocsRender
+from flext_infra._utilities._docs_generate_plan import (
+    FlextInfraUtilitiesDocsGeneratePlanMixin,
+)
+from flext_infra._utilities._docs_guides import FlextInfraUtilitiesDocsGuidesMixin
+from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
+from flext_infra._utilities.docs_contract import FlextInfraUtilitiesDocsContract
+from flext_infra._utilities.docs_render import FlextInfraUtilitiesDocsRender
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -129,7 +130,9 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
             (
                 scope.path / "docs/api-reference/README.md",
                 FlextInfraUtilitiesDocsRender.docs_api_readme(
-                    scope, contract, module_names
+                    scope,
+                    contract,
+                    module_names,
                 ),
             ),
             (
@@ -151,7 +154,9 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
             (
                 scope.path / "docs/api-reference/generated/overview.md",
                 FlextInfraUtilitiesDocsRender.docs_overview_page(
-                    scope, contract, module_names
+                    scope,
+                    contract,
+                    module_names,
                 ),
             ),
             *FlextInfraUtilitiesDocsGenerateProjectMixin.docs_project_api_artifacts(

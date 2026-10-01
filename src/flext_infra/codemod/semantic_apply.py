@@ -8,9 +8,8 @@ from pathlib import Path
 from flext_cli import cli
 
 from flext_core import r
-
-from .. import c, config, m, p, t, u
-from ..transformers import FlextInfraSemanticPublication
+from flext_infra import c, config, m, p, t, u
+from flext_infra.transformers import FlextInfraSemanticPublication
 
 
 class FlextInfraCodemodSemanticApply:
@@ -345,8 +344,9 @@ class FlextInfraCodemodSemanticApply:
         for path, source in sorted(sources.items()):
             if source.startswith("# AUTO-GENERATED FILE"):
                 continue
-            if path.name not in models.file_names and not models.directories.intersection(
-                path.parts
+            if (
+                path.name not in models.file_names
+                and not models.directories.intersection(path.parts)
             ):
                 continue
             updated = u.Infra.normalize_deferred_self_references(source)

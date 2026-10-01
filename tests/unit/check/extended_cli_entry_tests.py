@@ -30,7 +30,8 @@ class TestsFlextInfraExtendedCliEntry:
         u.Tests.declare_workspace_projects(workspace, ("p1",))
         return workspace
 
-    def test_empty_workspace_errors(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_empty_workspace_errors(tmp_path: Path) -> None:
         tm.that(main(["check", "run", "--repository-root", str(tmp_path)]), eq=1)
 
     def test_run_accepts_explicit_scope(self, tmp_path: Path) -> None:
@@ -116,10 +117,12 @@ class TestsFlextInfraExtendedCliEntry:
             eq=1,
         )
 
-    def test_check_main_routes_real_help(self) -> None:
+    @staticmethod
+    def test_check_main_routes_real_help() -> None:
         tm.that(main(["check", "run", "--help"]), eq=0)
 
-    def test_fix_pyrefly_config_routes_real_help(self) -> None:
+    @staticmethod
+    def test_fix_pyrefly_config_routes_real_help() -> None:
         tm.that(main(["check", "fix-pyrefly-settings", "--help"]), eq=0)
 
     def test_run_cli_anchors_relative_reports_dir_at_repository_root(

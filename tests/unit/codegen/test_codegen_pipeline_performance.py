@@ -27,7 +27,8 @@ _MODULES_PER_PROJECT = c.Tests.GEN_PIPELINE_MODULES_PER_PROJECT
 class TestsFlextInfraCodegenPipelinePerformance:
     """Benchmark gen pipeline wall-clock and memory on a synthetic workspace."""
 
-    def _build_synthetic_workspace(self, tmp_path: Path) -> Path:
+    @staticmethod
+    def _build_synthetic_workspace(tmp_path: Path) -> Path:
         """Create a workspace with N projects, each with M namespace modules."""
         repository_root = tmp_path / "gen-perf-workspace"
         repository_root.mkdir()

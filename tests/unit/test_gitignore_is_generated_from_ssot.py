@@ -22,11 +22,13 @@ from tests import u as test_u
 
 
 class TestsFlextInfraGitignoreIsGeneratedFromSsot:
-    def _repository_root(self) -> Path:
+    @staticmethod
+    def _repository_root() -> Path:
         """Return the workspace root that owns this checkout."""
         return Path(flext_infra.__file__).resolve().parents[2]
 
-    def _is_allowed_by_policy(self, rendered: str, relative_path: str) -> bool:
+    @staticmethod
+    def _is_allowed_by_policy(rendered: str, relative_path: str) -> bool:
         """Return whether one policy snapshot keeps *relative_path* trackable."""
         return test_u.Tests.is_tracked_under(rendered, relative_path)
 
@@ -50,7 +52,8 @@ class TestsFlextInfraGitignoreIsGeneratedFromSsot:
 
         tm.that(blocked, eq=())
 
-    def test_vendored_package_directory_is_trackable(self) -> None:
+    @staticmethod
+    def test_vendored_package_directory_is_trackable() -> None:
         """A vendored tree inside the package stays tracked and therefore packaged.
 
         Why (flext-f6gqq): hatchling honours .gitignore, so an unanchored
@@ -74,7 +77,8 @@ class TestsFlextInfraGitignoreIsGeneratedFromSsot:
         )
         tm.that(test_u.Tests.is_tracked_under(rendered, "vendor/module.go"), eq=False)
 
-    def test_declared_projects_are_trackable_under_the_rendered_policy(self) -> None:
+    @staticmethod
+    def test_declared_projects_are_trackable_under_the_rendered_policy() -> None:
         """A project declared in the manifest is trackable in the rendered body.
 
         The workspace policy denies every top-level directory (``/*`` and
