@@ -255,7 +255,8 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             tm.that(archive.read("infra/pulumi/__main__.py"), eq=source.read_bytes())
         with tarfile.open(next(sdist_dir.glob("*.tar.gz"))) as archive:
             member = next(
-                item for item in archive.getmembers()
+                item
+                for item in archive.getmembers()
                 if item.name.endswith("/infra/pulumi/__main__.py")
             )
             stream = archive.extractfile(member)

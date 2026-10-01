@@ -50,13 +50,11 @@ class FlextInfraCodegenLazyInitProjectionManifest:
                 continue
             if relative.name == MANIFEST_FILENAME:
                 continue
-            projected.setdefault(plan.project, []).append(
-                {
-                    "path": relative.as_posix(),
-                    "sha256": hashlib.sha256(plan.desired_content).hexdigest(),
-                    "bytes": len(plan.desired_content),
-                }
-            )
+            projected.setdefault(plan.project, []).append({
+                "path": relative.as_posix(),
+                "sha256": hashlib.sha256(plan.desired_content).hexdigest(),
+                "bytes": len(plan.desired_content),
+            })
         plans: list[m.Infra.CodegenFilePlan] = []
         for project in sorted(projected):
             payload: t.JsonDict = {

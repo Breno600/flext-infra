@@ -399,13 +399,18 @@ class FlextInfraWorkspaceDetector(
         result_type = r[tuple[tuple[m.Infra.RepositoryRef, ...], t.VariadicTuple[Path]]]
         if declared.failure:
             return result_type.from_failure(declared)
-        governance = cls._superproject_governance(
+        members = cls._declared_members(repository_root)
+        if members.failure:
+            return result_type.from_failure(members)
+        baseline = u.Infra.repository_baseline_branch(
             repository_root,
-            beads=workspace_beads,
+            preference=config.Infra.codegen.branch_policy.integration_branch_preference,
+        )
+        context = m.Infra.SubprojectLoadContext(
+            integration_branch=baseline.value if baseline.success else None,
+            workspace_beads=workspace_beads,
             allow_unprovisioned_members=allow_unprovisioned_members,
         )
-        if governance.failure:
-            return result_type.from_failure(governance)
         subprojects: list[m.Infra.RepositoryRef] = []
         external: list[Path] = []
         seen: set[Path] = set()
@@ -418,12 +423,8 @@ class FlextInfraWorkspaceDetector(
             loaded = cls._load_subproject(
                 repository_root,
                 path,
-                m.Infra.SubprojectPolicy(
-                    integration_branch=integration_branch,
-                    workspace_beads=workspace_beads,
-                    declared_member=members.value.get(path),
-                    allow_unprovisioned_members=allow_unprovisioned_members,
-                ),
+                context,
+                declared_member=members.value.get(path),
             )
             if loaded.failure:
                 return result_type.from_failure(loaded)
@@ -453,7 +454,9 @@ class FlextInfraWorkspaceDetector(
         cls,
         repository_root: Path,
         path: Path,
-        policy: m.Infra.SubprojectPolicy,
+        context: m.Infra.SubprojectLoadContext,
+        *,
+        declared_member: m.Infra.RepositoryRef | None = None,
     ) -> p.Result[m.Infra.RepositoryRef | Path]:
         """Load one governed entry, or its declared path for external entries.
 
@@ -467,8 +470,6 @@ class FlextInfraWorkspaceDetector(
         superproject.
         """
         result_type = r[m.Infra.RepositoryRef | Path]
-        repository_root = governance.root
-        declared_member = governance.members.get(path)
         if path.is_absolute() or not path.parts or ".." in path.parts:
             return result_type.fail(f"invalid .gitmodules path: {path.as_posix()}")
         contract = cls._gitmodule_contract(repository_root, path)
@@ -484,7 +485,7 @@ class FlextInfraWorkspaceDetector(
             return result_type.ok(path)
         if not u.Infra.gitmodule_branch_is_governed(
             declared_branch,
-            integration_branch=policy.integration_branch,
+            integration_branch=context.integration_branch,
         ):
             return result_type.fail(
                 "governed subproject branch differs from the workspace "
@@ -497,7 +498,7 @@ class FlextInfraWorkspaceDetector(
             )
         if declared_member is not None:
             if u.Infra.git_remote_identity(
-                policy.declared_member.url,
+                declared_member.url,
             ) != u.Infra.git_remote_identity(declared_url):
                 return result_type.fail(
                     "declared workspace member URL differs from its .gitmodules "
@@ -509,7 +510,7 @@ class FlextInfraWorkspaceDetector(
             ):
                 if (
                     subproject_root / c.Infra.GIT_DIR
-                ).exists() and not governance.allow_unprovisioned_members:
+                ).exists() and not context.allow_unprovisioned_members:
                     return result_type.fail(
                         "declared Python member checkout has no "
                         f"{c.PYPROJECT_FILENAME}: {path.as_posix()}",
@@ -536,13 +537,13 @@ class FlextInfraWorkspaceDetector(
         if not (subproject_root / c.PYPROJECT_FILENAME).is_file():
             return result_type.ok(path)
         route_error = (
-            cls._composed_beads_identity_error(subproject_root, governance.beads)
-            if governance.beads is not None
+            cls._composed_beads_identity_error(subproject_root, context.workspace_beads)
+            if context.workspace_beads is not None
             and (subproject_root / c.Infra.BEADS_DIRNAME).is_symlink()
             else None
         )
         if (
-            governance.beads is not None
+            context.workspace_beads is not None
             and route_error is None
             and not (subproject_root / c.Infra.BEADS_DIRNAME).is_symlink()
         ):
@@ -568,7 +569,7 @@ class FlextInfraWorkspaceDetector(
         if not member_manifest.value:
             return result_type.ok(repository.value)
         member_beads: m.Infra.BeadsProjectSpec | None = None
-        if governance.beads is not None:
+        if context.workspace_beads is not None:
             loaded_member_beads = cls.load_beads_spec(subproject_root)
             if loaded_member_beads.failure:
                 return result_type.from_failure(loaded_member_beads)
@@ -660,19 +661,21 @@ class FlextInfraWorkspaceDetector(
                 )
             # Same owner as the parent load, so a composed member validates
             # against exactly the facts its superproject governs with.
-            governance = cls._superproject_governance(
-                superproject_root, beads=inherited_beads.value
+            superproject_members = cls._declared_members(superproject_root)
+            if superproject_members.failure:
+                return r[m.Infra.WorkspaceSpec].from_failure(superproject_members)
+            baseline = u.Infra.repository_baseline_branch(
+                superproject_root,
+                preference=config.Infra.codegen.branch_policy.integration_branch_preference,
             )
-            if governance.failure:
-                return r[m.Infra.WorkspaceSpec].from_failure(governance)
             loaded_member = cls._load_subproject(
                 superproject_root,
                 member_path,
-                m.Infra.SubprojectPolicy(
+                m.Infra.SubprojectLoadContext(
                     integration_branch=baseline.value if baseline.success else None,
                     workspace_beads=inherited_beads.value,
-                    declared_member=superproject_members.value.get(member_path),
                 ),
+                declared_member=superproject_members.value.get(member_path),
             )
             if loaded_member.failure or isinstance(loaded_member.value, Path):
                 return r[m.Infra.WorkspaceSpec].fail(

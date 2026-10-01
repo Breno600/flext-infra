@@ -231,6 +231,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             return r[p.Model].ok(
                 m.Infra.EnvrcRenderSpec(
                     repository_root_rel=self._repository_root_rel(workspace),
+                    runtime_environment_directory=codegen.make.runtime_environment_directory,
                     environment_path_prepends=(
                         codegen.toolchain.environment_path_prepends
                     ),

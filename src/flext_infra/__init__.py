@@ -29,6 +29,7 @@ if TYPE_CHECKING:
         deps,
         detectors,
         docs,
+        fixers,
         gates,
         maintenance,
         refactor,
@@ -41,12 +42,12 @@ if TYPE_CHECKING:
     from ._config import FlextInfraConfig, config
     from ._settings import FlextInfraSettings, settings
     from .api import FlextInfra, infra
-    from .base import FlextInfraServiceBase, s
+    from .base import FlextInfraServiceBase, FlextInfraServiceBase as s
     from .base_selection import FlextInfraProjectSelectionServiceBase
     from .check.gate_registry import FlextInfraGateRegistry
     from .check.workspace_check import FlextInfraWorkspaceChecker
     from .check.workspace_check_gates import FlextInfraWorkspaceCheckGatesMixin
-    from .cli import FlextInfraCli, docs_main, main
+    from .cli import FlextInfraCli, main
     from .codegen.census import FlextInfraCodegenCensus
     from .codegen.codegen_generation import FlextInfraCodegenGeneration
     from .codegen.codegen_transaction import FlextInfraCodegenTransaction
@@ -66,7 +67,7 @@ if TYPE_CHECKING:
         FlextInfraCodegenPipeline,
         FlextInfraCodegenPipelineStagesMixin,
         FlextInfraMiseArtifactsFiles,
-        publish_file_plan,
+        FlextInfraMisePublication,
     )
     from .codegen.project_new import FlextInfraCodegenProjectNew
     from .codegen.protocol_models import FlextInfraCodegenProtocolModels
@@ -99,10 +100,25 @@ if TYPE_CHECKING:
     from .deps.phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
     from .deps.phases.inject_comments import FlextInfraInjectCommentsPhase
     from .deps.phases.tool_tables import FlextInfraToolTablesPhase
+    from .detectors.consumer_import_violations_detector import (
+        FlextInfraConsumerImportViolationsDetector,
+    )
     from .detectors.deferred_self_reference_detector import (
         FlextInfraDeferredSelfReferenceDetector,
     )
+    from .detectors.future_annotations_detector import (
+        FlextInfraFutureAnnotationsDetector,
+    )
+    from .detectors.inline_import_detector import FlextInfraInlineImportDetector
+    from .detectors.loose_test_function_detector import (
+        FlextInfraLooseTestFunctionDetector,
+    )
     from .detectors.lsp_diagnostics import FlextInfraLspDiagnosticsDetector
+    from .detectors.manual_protocol_detector import FlextInfraManualProtocolDetector
+    from .detectors.manual_typing_alias_detector import (
+        FlextInfraManualTypingAliasDetector,
+    )
+    from .detectors.silent_failure_detector import FlextInfraSilentFailureDetector
     from .docs.auditor import FlextInfraDocAuditor
     from .docs.auditor_mixin import FlextInfraDocAuditorMixin
     from .docs.base import FlextInfraDocServiceBase
@@ -113,6 +129,10 @@ if TYPE_CHECKING:
     from .docs.generator import FlextInfraDocGenerator
     from .docs.server import FlextInfraDocServer
     from .docs.validator import FlextInfraDocValidator
+    from .fixers.base import FlextInfraFixerAdapter
+    from .fixers.orchestrator import FlextInfraEnforcementFixerOrchestrator
+    from .fixers.transformer_fixer import FlextInfraTransformerFixerAdapter
+    from .gates.abstraction_boundary import FlextInfraAbstractionBoundaryGate
     from .gates.bandit import FlextInfraBanditGate
     from .gates.base_gate import FlextInfraGate
     from .gates.deferred_self_reference import FlextInfraDeferredSelfReferenceGate
@@ -123,18 +143,9 @@ if TYPE_CHECKING:
     from .gates.loc_cap import FlextInfraLocCapGate
     from .gates.markdown import FlextInfraMarkdownGate
     from .gates.markdown_code import FlextInfraMarkdownCodeGate
-    from .gates.markdown_code_sources import (
-        is_syntax_broken,
-        source_name,
-        write_docstring_sources,
-        write_fenced_block_sources,
-    )
+    from .gates.markdown_code_sources import FlextInfraMarkdownCodeSources
     from .gates.markdown_format import FlextInfraMarkdownFormatGate
-    from .gates.markdown_support import (
-        FlextInfraMarkdownGateBase,
-        collect_markdown_files,
-        read_ignore_patterns,
-    )
+    from .gates.markdown_support import FlextInfraMarkdownGateBase
     from .gates.mypy import FlextInfraMypyGate
     from .gates.namespace import FlextInfraNamespaceGate
     from .gates.pyrefly import FlextInfraPyreflyGate
@@ -143,7 +154,9 @@ if TYPE_CHECKING:
     from .gates.ruff_lint import FlextInfraRuffLintGate
     from .gates.runtime_census import FlextInfraRuntimeCensusGate
     from .gates.scanner_gate import FlextInfraScannerGateMixin
+    from .gates.silent_failure import FlextInfraSilentFailureGate
     from .gates.smells import FlextInfraSmellsGate
+    from .gates.tier_whitelist import FlextInfraTierWhitelistGate
     from .git import FlextInfraGitService
     from .maintenance.clean import FlextInfraCleanService
     from .maintenance.python_version import FlextInfraPythonVersionEnforcer
@@ -157,8 +170,10 @@ if TYPE_CHECKING:
     )
     from .refactor.accessor_migration import FlextInfraAccessorMigrationOrchestrator
     from .refactor.census import FlextInfraRefactorCensus
+    from .refactor.modernize_orchestrator import FlextInfraModernizeOrchestrator
     from .refactor.namespace_enforcer import FlextInfraNamespaceEnforcer
     from .refactor.project_classifier import FlextInfraProjectClassifier
+    from .refactor.signature_propagation import FlextInfraRefactorSignaturePropagation
     from .refactor.wrapper_root_namespace import FlextInfraWrapperRootNamespaceRefactor
     from .release.orchestrator import FlextInfraReleaseOrchestrator
     from .services.candidate_bootstrap import FlextInfraCandidateBootstrapService
@@ -171,25 +186,49 @@ if TYPE_CHECKING:
     from .services.cli_routes_validate_commands import FlextInfraValidationCommandRoutes
     from .services.cli_routes_workspace import FlextInfraWorkspaceRoutes
     from .services.codegen import FlextInfraCodegen
+    from .transformers.class_reconstructor import FlextInfraRefactorClassReconstructor
+    from .transformers.compatibility_alias import FlextInfraRefactorCompatibilityAlias
+    from .transformers.dataclass_modelizer import FlextInfraRefactorDataclassModelizer
+    from .transformers.deprecated_remover import FlextInfraRefactorDeprecatedRemover
+    from .transformers.hardcoded_version import FlextInfraRefactorHardcodedVersion
+    from .transformers.import_bypass_remover import (
+        FlextInfraRefactorImportBypassRemover,
+    )
+    from .transformers.import_modernizer import FlextInfraRefactorImportModernizer
+    from .transformers.lazy_import_fixer import FlextInfraRefactorLazyImportFixer
+    from .transformers.mro_remover import FlextInfraRefactorMroRemover
+    from .transformers.open_encoding import FlextInfraRefactorOpenEncoding
+    from .transformers.pydantic_modernizer import FlextInfraRefactorPydanticModernizer
     from .transformers.rope_transformer import FlextInfraRopeTransformer
+    from .transformers.signature_propagator import FlextInfraRefactorSignaturePropagator
+    from .transformers.symbol_propagator import FlextInfraRefactorSymbolPropagator
+    from .transformers.typing_unifier import FlextInfraRefactorTypingUnifier
     from .typings import FlextInfraTypes, FlextInfraTypes as t
     from .utilities import FlextInfraUtilities, FlextInfraUtilities as u
     from .validate.cprofile_report import FlextInfraCProfileReport
     from .validate.fresh_import import FlextInfraValidateFreshImport
+    from .validate.gate_contract import FlextInfraGateContractValidator
+    from .validate.gate_contract_checks import FlextInfraGateContractChecksMixin
+    from .validate.gate_contract_content import FlextInfraGateContractContentMixin
+    from .validate.gate_contract_report import FlextInfraGateContractReportMixin
+    from .validate.gate_contract_scan import FlextInfraGateContractScanMixin
     from .validate.import_cycles import FlextInfraValidateImportCycles
     from .validate.inventory import FlextInfraInventoryService
     from .validate.lazy_map_freshness import FlextInfraValidateLazyMapFreshness
     from .validate.loc_delta import FlextInfraLocDeltaValidator
     from .validate.manual_command import FlextInfraManualCommandValidator
+    from .validate.metadata_discipline import FlextInfraValidateMetadataDiscipline
     from .validate.namespace_rules import FlextInfraNamespaceRules
     from .validate.namespace_validator import FlextInfraNamespaceValidator
     from .validate.pytest_diag import FlextInfraPytestDiagExtractor
     from .validate.pytest_runner import FlextInfraPytestRunner
     from .validate.runtime_census import FlextInfraRuntimeCensusValidator
     from .validate.scanner import FlextInfraTextPatternScanner
+    from .validate.silent_failure import FlextInfraSilentFailureValidator
     from .validate.skill_validator import FlextInfraSkillValidator
     from .validate.stub_chain import FlextInfraStubSupplyChain
     from .validate.testmon_db import FlextInfraTestmonDbInspector
+    from .validate.tier_whitelist import FlextInfraValidateTierWhitelist
     from .workspace.detector import FlextInfraWorkspaceDetector
     from .workspace.environment import FlextInfraWorkspaceEnvironmentMixin
     from .workspace.environment_contracts import FlextInfraWorkspaceEnvironmentContracts
@@ -204,6 +243,7 @@ if TYPE_CHECKING:
 
 __all__: tuple[str, ...] = (
     "FlextInfra",
+    "FlextInfraAbstractionBoundaryGate",
     "FlextInfraAccessorMigrationOrchestrator",
     "FlextInfraApplyRenames",
     "FlextInfraBanditGate",
@@ -247,6 +287,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraConfigFixer",
     "FlextInfraConsolidateGroupsPhase",
     "FlextInfraConstants",
+    "FlextInfraConsumerImportViolationsDetector",
     "FlextInfraDeferredSelfReferenceDetector",
     "FlextInfraDeferredSelfReferenceGate",
     "FlextInfraDependencyDetectionAnalysis",
@@ -264,34 +305,49 @@ __all__: tuple[str, ...] = (
     "FlextInfraDocServiceBase",
     "FlextInfraDocValidator",
     "FlextInfraDuplicationGate",
+    "FlextInfraEnforcementFixerOrchestrator",
     "FlextInfraEnsurePackagingPhase",
     "FlextInfraEnsurePyreflyConfigPhase",
     "FlextInfraEnsurePyrightConfigPhase",
     "FlextInfraEnsureRuffConfigPhase",
     "FlextInfraExtraPathsManager",
+    "FlextInfraFixerAdapter",
     "FlextInfraFlextBindingService",
+    "FlextInfraFutureAnnotationsDetector",
     "FlextInfraGate",
+    "FlextInfraGateContractChecksMixin",
+    "FlextInfraGateContractContentMixin",
+    "FlextInfraGateContractReportMixin",
+    "FlextInfraGateContractScanMixin",
+    "FlextInfraGateContractValidator",
     "FlextInfraGateRegistry",
     "FlextInfraGitService",
     "FlextInfraIndexDeclarationsGate",
     "FlextInfraInjectCommentsPhase",
+    "FlextInfraInlineImportDetector",
     "FlextInfraInventoryService",
     "FlextInfraLayoutGate",
     "FlextInfraLocCapGate",
     "FlextInfraLocDeltaValidator",
     "FlextInfraLockIntegrityVerifier",
+    "FlextInfraLooseTestFunctionDetector",
     "FlextInfraLspDiagnosticsDetector",
     "FlextInfraManualCommandValidator",
+    "FlextInfraManualProtocolDetector",
+    "FlextInfraManualTypingAliasDetector",
     "FlextInfraMarkdownCodeGate",
+    "FlextInfraMarkdownCodeSources",
     "FlextInfraMarkdownFormatGate",
     "FlextInfraMarkdownGate",
     "FlextInfraMarkdownGateBase",
     "FlextInfraMiseArtifactsFiles",
+    "FlextInfraMisePublication",
     "FlextInfraMiseWorkspacePlanner",
     "FlextInfraModGateEngine",
     "FlextInfraModReplacements",
     "FlextInfraModTextGateEngine",
     "FlextInfraModels",
+    "FlextInfraModernizeOrchestrator",
     "FlextInfraMypyGate",
     "FlextInfraNamespaceEnforcer",
     "FlextInfraNamespaceGate",
@@ -309,7 +365,22 @@ __all__: tuple[str, ...] = (
     "FlextInfraPytestRunner",
     "FlextInfraPythonVersionEnforcer",
     "FlextInfraRefactorCensus",
+    "FlextInfraRefactorClassReconstructor",
+    "FlextInfraRefactorCompatibilityAlias",
+    "FlextInfraRefactorDataclassModelizer",
+    "FlextInfraRefactorDeprecatedRemover",
+    "FlextInfraRefactorHardcodedVersion",
+    "FlextInfraRefactorImportBypassRemover",
+    "FlextInfraRefactorImportModernizer",
+    "FlextInfraRefactorLazyImportFixer",
+    "FlextInfraRefactorMroRemover",
+    "FlextInfraRefactorOpenEncoding",
+    "FlextInfraRefactorPydanticModernizer",
     "FlextInfraRefactorRoutes",
+    "FlextInfraRefactorSignaturePropagation",
+    "FlextInfraRefactorSignaturePropagator",
+    "FlextInfraRefactorSymbolPropagator",
+    "FlextInfraRefactorTypingUnifier",
     "FlextInfraReleaseOrchestrator",
     "FlextInfraRopeTransformer",
     "FlextInfraRopeWorkspace",
@@ -321,18 +392,25 @@ __all__: tuple[str, ...] = (
     "FlextInfraScannerGateMixin",
     "FlextInfraServiceBase",
     "FlextInfraSettings",
+    "FlextInfraSilentFailureDetector",
+    "FlextInfraSilentFailureGate",
+    "FlextInfraSilentFailureValidator",
     "FlextInfraSkillValidator",
     "FlextInfraSmellsGate",
     "FlextInfraSonarcloudSettingsSync",
     "FlextInfraStubSupplyChain",
     "FlextInfraTestmonDbInspector",
     "FlextInfraTextPatternScanner",
+    "FlextInfraTierWhitelistGate",
     "FlextInfraToolTablesPhase",
+    "FlextInfraTransformerFixerAdapter",
     "FlextInfraTypes",
     "FlextInfraUtilities",
     "FlextInfraValidateFreshImport",
     "FlextInfraValidateImportCycles",
     "FlextInfraValidateLazyMapFreshness",
+    "FlextInfraValidateMetadataDiscipline",
+    "FlextInfraValidateTierWhitelist",
     "FlextInfraValidationCommandRoutes",
     "FlextInfraValidationRoutes",
     "FlextInfraWorkspaceCheckGatesMixin",
@@ -357,38 +435,31 @@ __all__: tuple[str, ...] = (
     "check",
     "codegen",
     "codemod",
-    "collect_markdown_files",
     "config",
     "d",
     "deps",
     "detectors",
     "docs",
-    "docs_main",
     "e",
+    "fixers",
     "gates",
     "h",
     "infra",
-    "is_syntax_broken",
     "m",
     "main",
     "maintenance",
     "p",
-    "publish_file_plan",
     "r",
-    "read_ignore_patterns",
     "refactor",
     "release",
     "s",
     "services",
     "settings",
-    "source_name",
     "t",
     "transformers",
     "u",
     "validate",
     "workspace",
-    "write_docstring_sources",
-    "write_fenced_block_sources",
     "x",
 )
 
@@ -404,7 +475,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".check.gate_registry": ("FlextInfraGateRegistry",),
             ".check.workspace_check": ("FlextInfraWorkspaceChecker",),
             ".check.workspace_check_gates": ("FlextInfraWorkspaceCheckGatesMixin",),
-            ".cli": ("FlextInfraCli", "docs_main", "main"),
+            ".cli": ("FlextInfraCli", "main"),
             ".codegen": ("codegen",),
             ".codegen.census": ("FlextInfraCodegenCensus",),
             ".codegen.codegen_generation": ("FlextInfraCodegenGeneration",),
@@ -425,7 +496,7 @@ _LAZY_IMPORTS = MappingProxyType(
                 "FlextInfraCodegenPipeline",
                 "FlextInfraCodegenPipelineStagesMixin",
                 "FlextInfraMiseArtifactsFiles",
-                "publish_file_plan",
+                "FlextInfraMisePublication",
             ),
             ".codegen.project_new": ("FlextInfraCodegenProjectNew",),
             ".codegen.protocol_models": ("FlextInfraCodegenProtocolModels",),
@@ -461,10 +532,27 @@ _LAZY_IMPORTS = MappingProxyType(
             ".deps.phases.inject_comments": ("FlextInfraInjectCommentsPhase",),
             ".deps.phases.tool_tables": ("FlextInfraToolTablesPhase",),
             ".detectors": ("detectors",),
+            ".detectors.consumer_import_violations_detector": (
+                "FlextInfraConsumerImportViolationsDetector",
+            ),
             ".detectors.deferred_self_reference_detector": (
                 "FlextInfraDeferredSelfReferenceDetector",
             ),
+            ".detectors.future_annotations_detector": (
+                "FlextInfraFutureAnnotationsDetector",
+            ),
+            ".detectors.inline_import_detector": ("FlextInfraInlineImportDetector",),
+            ".detectors.loose_test_function_detector": (
+                "FlextInfraLooseTestFunctionDetector",
+            ),
             ".detectors.lsp_diagnostics": ("FlextInfraLspDiagnosticsDetector",),
+            ".detectors.manual_protocol_detector": (
+                "FlextInfraManualProtocolDetector",
+            ),
+            ".detectors.manual_typing_alias_detector": (
+                "FlextInfraManualTypingAliasDetector",
+            ),
+            ".detectors.silent_failure_detector": ("FlextInfraSilentFailureDetector",),
             ".docs": ("docs",),
             ".docs.auditor": ("FlextInfraDocAuditor",),
             ".docs.auditor_mixin": ("FlextInfraDocAuditorMixin",),
@@ -476,7 +564,12 @@ _LAZY_IMPORTS = MappingProxyType(
             ".docs.generator": ("FlextInfraDocGenerator",),
             ".docs.server": ("FlextInfraDocServer",),
             ".docs.validator": ("FlextInfraDocValidator",),
+            ".fixers": ("fixers",),
+            ".fixers.base": ("FlextInfraFixerAdapter",),
+            ".fixers.orchestrator": ("FlextInfraEnforcementFixerOrchestrator",),
+            ".fixers.transformer_fixer": ("FlextInfraTransformerFixerAdapter",),
             ".gates": ("gates",),
+            ".gates.abstraction_boundary": ("FlextInfraAbstractionBoundaryGate",),
             ".gates.bandit": ("FlextInfraBanditGate",),
             ".gates.base_gate": ("FlextInfraGate",),
             ".gates.deferred_self_reference": ("FlextInfraDeferredSelfReferenceGate",),
@@ -487,18 +580,9 @@ _LAZY_IMPORTS = MappingProxyType(
             ".gates.loc_cap": ("FlextInfraLocCapGate",),
             ".gates.markdown": ("FlextInfraMarkdownGate",),
             ".gates.markdown_code": ("FlextInfraMarkdownCodeGate",),
-            ".gates.markdown_code_sources": (
-                "is_syntax_broken",
-                "source_name",
-                "write_docstring_sources",
-                "write_fenced_block_sources",
-            ),
+            ".gates.markdown_code_sources": ("FlextInfraMarkdownCodeSources",),
             ".gates.markdown_format": ("FlextInfraMarkdownFormatGate",),
-            ".gates.markdown_support": (
-                "FlextInfraMarkdownGateBase",
-                "collect_markdown_files",
-                "read_ignore_patterns",
-            ),
+            ".gates.markdown_support": ("FlextInfraMarkdownGateBase",),
             ".gates.mypy": ("FlextInfraMypyGate",),
             ".gates.namespace": ("FlextInfraNamespaceGate",),
             ".gates.pyrefly": ("FlextInfraPyreflyGate",),
@@ -507,7 +591,9 @@ _LAZY_IMPORTS = MappingProxyType(
             ".gates.ruff_lint": ("FlextInfraRuffLintGate",),
             ".gates.runtime_census": ("FlextInfraRuntimeCensusGate",),
             ".gates.scanner_gate": ("FlextInfraScannerGateMixin",),
+            ".gates.silent_failure": ("FlextInfraSilentFailureGate",),
             ".gates.smells": ("FlextInfraSmellsGate",),
+            ".gates.tier_whitelist": ("FlextInfraTierWhitelistGate",),
             ".git": ("FlextInfraGitService",),
             ".maintenance": ("maintenance",),
             ".maintenance.clean": ("FlextInfraCleanService",),
@@ -521,8 +607,12 @@ _LAZY_IMPORTS = MappingProxyType(
                 "FlextInfraAccessorMigrationOrchestrator",
             ),
             ".refactor.census": ("FlextInfraRefactorCensus",),
+            ".refactor.modernize_orchestrator": ("FlextInfraModernizeOrchestrator",),
             ".refactor.namespace_enforcer": ("FlextInfraNamespaceEnforcer",),
             ".refactor.project_classifier": ("FlextInfraProjectClassifier",),
+            ".refactor.signature_propagation": (
+                "FlextInfraRefactorSignaturePropagation",
+            ),
             ".refactor.wrapper_root_namespace": (
                 "FlextInfraWrapperRootNamespaceRefactor",
             ),
@@ -542,26 +632,62 @@ _LAZY_IMPORTS = MappingProxyType(
             ".services.cli_routes_workspace": ("FlextInfraWorkspaceRoutes",),
             ".services.codegen": ("FlextInfraCodegen",),
             ".transformers": ("transformers",),
+            ".transformers.class_reconstructor": (
+                "FlextInfraRefactorClassReconstructor",
+            ),
+            ".transformers.compatibility_alias": (
+                "FlextInfraRefactorCompatibilityAlias",
+            ),
+            ".transformers.dataclass_modelizer": (
+                "FlextInfraRefactorDataclassModelizer",
+            ),
+            ".transformers.deprecated_remover": (
+                "FlextInfraRefactorDeprecatedRemover",
+            ),
+            ".transformers.hardcoded_version": ("FlextInfraRefactorHardcodedVersion",),
+            ".transformers.import_bypass_remover": (
+                "FlextInfraRefactorImportBypassRemover",
+            ),
+            ".transformers.import_modernizer": ("FlextInfraRefactorImportModernizer",),
+            ".transformers.lazy_import_fixer": ("FlextInfraRefactorLazyImportFixer",),
+            ".transformers.mro_remover": ("FlextInfraRefactorMroRemover",),
+            ".transformers.open_encoding": ("FlextInfraRefactorOpenEncoding",),
+            ".transformers.pydantic_modernizer": (
+                "FlextInfraRefactorPydanticModernizer",
+            ),
             ".transformers.rope_transformer": ("FlextInfraRopeTransformer",),
+            ".transformers.signature_propagator": (
+                "FlextInfraRefactorSignaturePropagator",
+            ),
+            ".transformers.symbol_propagator": ("FlextInfraRefactorSymbolPropagator",),
+            ".transformers.typing_unifier": ("FlextInfraRefactorTypingUnifier",),
             ".typings": ("FlextInfraTypes", "t"),
             ".utilities": ("FlextInfraUtilities", "u"),
             ".validate": ("validate",),
             ".validate.cprofile_report": ("FlextInfraCProfileReport",),
             ".validate.fresh_import": ("FlextInfraValidateFreshImport",),
+            ".validate.gate_contract": ("FlextInfraGateContractValidator",),
+            ".validate.gate_contract_checks": ("FlextInfraGateContractChecksMixin",),
+            ".validate.gate_contract_content": ("FlextInfraGateContractContentMixin",),
+            ".validate.gate_contract_report": ("FlextInfraGateContractReportMixin",),
+            ".validate.gate_contract_scan": ("FlextInfraGateContractScanMixin",),
             ".validate.import_cycles": ("FlextInfraValidateImportCycles",),
             ".validate.inventory": ("FlextInfraInventoryService",),
             ".validate.lazy_map_freshness": ("FlextInfraValidateLazyMapFreshness",),
             ".validate.loc_delta": ("FlextInfraLocDeltaValidator",),
             ".validate.manual_command": ("FlextInfraManualCommandValidator",),
+            ".validate.metadata_discipline": ("FlextInfraValidateMetadataDiscipline",),
             ".validate.namespace_rules": ("FlextInfraNamespaceRules",),
             ".validate.namespace_validator": ("FlextInfraNamespaceValidator",),
             ".validate.pytest_diag": ("FlextInfraPytestDiagExtractor",),
             ".validate.pytest_runner": ("FlextInfraPytestRunner",),
             ".validate.runtime_census": ("FlextInfraRuntimeCensusValidator",),
             ".validate.scanner": ("FlextInfraTextPatternScanner",),
+            ".validate.silent_failure": ("FlextInfraSilentFailureValidator",),
             ".validate.skill_validator": ("FlextInfraSkillValidator",),
             ".validate.stub_chain": ("FlextInfraStubSupplyChain",),
             ".validate.testmon_db": ("FlextInfraTestmonDbInspector",),
+            ".validate.tier_whitelist": ("FlextInfraValidateTierWhitelist",),
             ".workspace": ("workspace",),
             ".workspace.detector": ("FlextInfraWorkspaceDetector",),
             ".workspace.environment": ("FlextInfraWorkspaceEnvironmentMixin",),
@@ -579,7 +705,7 @@ _LAZY_IMPORTS = MappingProxyType(
         }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,
-    )
+    ),
 )
 
 install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

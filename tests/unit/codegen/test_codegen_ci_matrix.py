@@ -278,6 +278,10 @@ class TestsFlextInfraCodegenCiMatrix:
         repository = tmp_path / "dirty-repository"
         repository.mkdir()
         u.Tests.initialize_git_repo(repository)
+        clean_outcome = tm.ok(
+            u.Cli.run_raw(["sh", "-eu", "-c", post_generation], cwd=repository)
+        )
+        tm.that(u.Cli.process_succeeded(clean_outcome.outcome), eq=True)
         (repository / "untracked.txt").write_text("dirty\n", encoding="utf-8")
         outcome = tm.ok(
             u.Cli.run_raw(["sh", "-eu", "-c", post_generation], cwd=repository)
@@ -754,7 +758,9 @@ class TestsFlextInfraCodegenCiMatrix:
             step for step in steps if step["name"] == "Docs lifecycle (blocking)"
         )
         upload = next(
-            step for step in steps if step.get("name") == "Upload docs reports on failure"
+            step
+            for step in steps
+            if step.get("name") == "Upload docs reports on failure"
         )
         tm.that(docs_step.get("run"), eq="make docs")
         tm.that(docs_step.get("continue-on-error"), eq=None)

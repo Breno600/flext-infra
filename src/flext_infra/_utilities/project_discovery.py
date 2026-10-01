@@ -14,6 +14,7 @@ from typing import override
 
 from flext_cli import u
 
+from .._config import config
 from ..constants import c
 from ..models import m
 from ..typings import t
@@ -290,8 +291,8 @@ class FlextInfraUtilitiesProjectDiscovery(
         checked out inside a workspace uses the workspace environment; a
         standalone checkout or a linked worktree owns its own, exactly as the
         generated Makefile resolves ``REPOSITORY_ROOT``. The environment is
-        always ``<runtime root>/.venv``; its location is law, never
-        configuration (operator law 2026-10-01, flext-h2a9h).
+        located in the declared sibling environment directory, outside the
+        checkout and keyed by the physical runtime path.
         """
         if runtime_root is None:
             runtime = FlextInfraUtilitiesGit.git_repository_root(

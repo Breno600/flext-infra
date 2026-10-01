@@ -655,6 +655,32 @@ class FlextInfraConfigModelsArtifact:
             m.Field(description="Fail-closed validation or write errors"),
         ] = ()
 
+    class SedPatternSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """One declared regex substitution applied by the mod command."""
+
+        pattern: Annotated[t.NonEmptyStr, m.Field(description="Regex source to match")]
+        replacement: Annotated[str, m.Field(description="Replacement text")]
+        file_glob: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(default=None, description="Optional file glob filter"),
+        ] = None
+        flags: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(default=(), description="Regex flags by name"),
+        ] = ()
+        description: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(default=None, description="Reason for the substitution"),
+        ] = None
+
+    class SedPatternsSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """Declared substitutions for the mod command."""
+
+        patterns: Annotated[
+            t.VariadicTuple[FlextInfraConfigModelsArtifact.SedPatternSpec],
+            m.Field(default=(), description="Ordered substitution patterns"),
+        ] = ()
+
     class RenameCampaignSpec(FlextInfraConfigModelsContract.ConfigContract):
         """One declared CSV-driven rename campaign applied by the mod verb."""
 

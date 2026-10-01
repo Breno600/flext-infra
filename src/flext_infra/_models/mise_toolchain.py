@@ -112,6 +112,13 @@ class FlextInfraModelsMiseToolchain:
                 description="Python major.minor line, e.g. '3.13'",
             ),
         ]
+        python_tool_version: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                pattern=r"^[0-9]+\.[0-9]+\.[0-9]+$",
+                description="Python runtime patch available on every locked platform",
+            ),
+        ]
         dependency_cooldown_days: Annotated[
             int,
             m.Field(

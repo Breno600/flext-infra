@@ -682,7 +682,8 @@ class FlextInfraConfigModelsMake:
             m.Field(description="Generate and install the pre-commit git-hook stage"),
         ]
         pre_push: Annotated[
-            bool, m.Field(description="Generate and install the pre-push git-hook stage")
+            bool,
+            m.Field(description="Generate and install the pre-push git-hook stage"),
         ]
         workflow: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsMake.MakeWorkflowStepSpec],
