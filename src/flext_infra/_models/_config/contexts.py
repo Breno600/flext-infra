@@ -433,6 +433,12 @@ class FlextInfraConfigModelsContexts:
                 ),
             ),
         ] = ()
+        repository_namespace_packages: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                description="Implicit namespace directories shipped from the repository root"
+            ),
+        ] = ()
         root_modules: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
@@ -472,6 +478,12 @@ class FlextInfraConfigModelsContexts:
         python_required_version: Annotated[
             t.NonEmptyStr,
             m.Field(description="PEP 440 project Python requirement"),
+        ]
+        dependency_cooldown_days: Annotated[
+            int,
+            m.Field(
+                ge=1, description="Supply-chain cooldown rendered as mise release age"
+            ),
         ]
         kubectl_version: Annotated[
             t.NonEmptyStr,
@@ -681,6 +693,12 @@ class FlextInfraConfigModelsContexts:
                     "package. Declared per repository because the layout is a "
                     "fact of that repository, not of its upstream profile."
                 ),
+            ),
+        ] = ()
+        repository_namespace_packages: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                description="Implicit namespace directories shipped from the repository root"
             ),
         ] = ()
         root_modules: Annotated[

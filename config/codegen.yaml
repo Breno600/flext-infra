@@ -28,11 +28,14 @@ Infra:
       # writes the committed uv.lock and mise.lock; setup, gen, and fmt install
       # frozen from those locks.
       python_version: "3.13"
-      # Projection: .mise.toml [settings.python] compile and bootstrap
-      # MISE_PYTHON_COMPILE. false lists and installs only precompiled
-      # python-build-standalone releases, so `latest` within the minor line
-      # never selects a CPython release that has no prebuilt build.
-      python_compile: false
+      # Supply-chain cooldown (operator 2026-10-01): ONE value for every
+      # resolver — the generated mise `minimum_release_age` (so `make upg`
+      # never selects a release younger than this, e.g. a Python patch with
+      # no precompiled builds yet) and every dependabot ecosystem entry.
+      # Forks and local projects never enter it: dependabot excludes the
+      # requirements a project takes by direct git reference. uv carries no
+      # cooldown key (`exclude-newer` stays banned, operator 2026-09-16).
+      dependency_cooldown_days: 7
       uv_link_mode: copy
       uv_environments: ["sys_platform == 'linux'", "sys_platform == 'darwin'"]
       # Global compatibility exceptions become [tool.uv] constraint-dependencies
@@ -150,12 +153,6 @@ Infra:
     # config/codegen-overrides.yaml.
     checkout_submodules: "false"
     checkout_submodules_overrides: {}
-
-    # Dependabot cooldown (default-days): a rolling delay of at least seven
-    # days before a new release is proposed (supply-chain policy). The map
-    # holds per-distribution overrides only.
-    dependabot_cooldown_days: {}
-    dependabot_cooldown_default_days: 7
 
     # Runner packages a distribution's own tests need (Ubuntu apt names),
     # installed by the generated CI before the gates run. A test that drives
@@ -322,8 +319,8 @@ Infra:
     make:
       examples_timeout_seconds: 120
       submodule_timeout_seconds: 120
-      runtime_environment_directory: .flext-venvs
-      # Ruff is the formatting and autofix rule. Every ruff invocation uses --preview. Never weaken ruff to keep a
+      # Operator 2026-09-08: ruff is the formatting and autofix rule.
+      # Every ruff invocation uses --preview. Never weaken ruff to keep a
       # file; change the code. [tool.ruff] preview: true in tooling.yaml is
       # the same policy projected into pyproject.
       # Repair and formatting apply fixes and retain a failing exit status

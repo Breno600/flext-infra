@@ -26,8 +26,9 @@ config/codegen-overrides.local.yaml
   **last** — the local file wins every scalar collision.
 - **Merge semantics**: identical to the tracked pipeline — recursive dict merge, lists
   concatenate, scalars replace. Dict-typed registries (`ci_private_submodules`,
-  `layout.project_overrides`, `dependabot_cooldown_days`) gain local entries beside the
-  public ones.
+  `layout.project_overrides`) gain local entries beside the public ones. The fleet
+  supply-chain cooldown is one scalar (`toolchain.dependency_cooldown_days`) honoured by
+  every resolver, never a per-repository map.
 - **Validation**: the merged document passes the same typed models (`extra="forbid"`),
   so a typo in the local file fails loudly at load time instead of silently diverging.
 - **Read timing**: the file is read once, when the config singleton is first fetched
@@ -52,8 +53,6 @@ Infra:
         organization: my-org
         base_url: https://github.com/my-org
         branch: main
-    dependabot_cooldown_days:
-      my-repo: 7
   release:
     publishable_prefixes:
       - my-repo-

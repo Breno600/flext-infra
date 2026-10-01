@@ -90,6 +90,8 @@ class TestsFlextInfraPytestRunnerSuiteStop:
 
         def dispatch_plan(node_ids: t.StrSequence) -> m.Infra.PytestSelectionPlan:
             """Synthetic selection whose manifest path matches the real argv."""
+            # The plan is a strict value: it takes typed fields, never the
+            # JSON-shaped str/list a lax validation would coerce.
             return m.Infra.PytestSelectionPlan(
                 manifest_path=Path("m.json"),
                 node_ids=tuple(node_ids),
