@@ -493,4 +493,4 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
 
 u = TestsFlextInfraUtilities
 
-__all__: list[str] = ["TestsFlextInfraUtilities"]
+__all__: list[str] = ["TestsFlextInfraUtilities", "u"]
