@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from flext_tests import api, d, e, h, r, td, tf, tk, tm, tv, x
+    from flext_tests import api, d, e, h, r, td, tf, tk, tm, x
 
     from . import fixtures, integration, refactor, unit
     from .base import TestsFlextInfraServiceBase, TestsFlextInfraServiceBase as s
@@ -72,7 +72,6 @@ __all__: tuple[str, ...] = (
     "tf",
     "tk",
     "tm",
-    "tv",
     "u",
     "unit",
     "x",
@@ -110,19 +109,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".utilities_release": ("TestsFlextInfraUtilitiesReleaseMixin",),
             ".utilities_toml": ("TestsFlextInfraUtilitiesTomlMixin",),
             ".utilities_workspace_env": ("TestsFlextInfraUtilitiesWorkspaceEnvMixin",),
-            "flext_tests": (
-                "api",
-                "d",
-                "e",
-                "h",
-                "r",
-                "td",
-                "tf",
-                "tk",
-                "tm",
-                "tv",
-                "x",
-            ),
+            "flext_tests": ("api", "d", "e", "h", "r", "td", "tf", "tk", "tm", "x"),
         }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,

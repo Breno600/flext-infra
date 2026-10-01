@@ -93,7 +93,9 @@ Infra:
       qlty_version: 0.642.0
       node_version: latest
       jscpd_selector: github:kucherenko/jscpd
-      jscpd_version: latest
+      # Mise 2026.9.16 resolves `latest` to v5.3.3 even though GitHub marks
+      # v5.4.0 latest; declare the verified release until that resolver is fixed.
+      jscpd_version: 5.4.0
       # Prettier is the markdown formatter (markdown-format gate): provisioned
       # through npm so the fleet binary version is owned by this SSOT alone.
       # Pinned to 3.5.x: prettier 3.7+ silently dropped markdown prose
