@@ -663,10 +663,11 @@ Infra:
         # Slow marks cover nested public runner executions, including a cold
         # cache seed and a warm replay under parallel suite load.
         slow-timeout-seconds: 180
-        # The complete selected suite currently contains more than 2700 cases;
-        # a 120-second process wall stopped after 31 executions with no failure.
-        # Keep one bounded aggregate wall while permitting complete accounting.
-        run-timeout-seconds: 900
+        # The complete inventory exceeds 3300 cases. A 189-case incremental
+        # execution took 127 seconds, projecting over 2200 seconds for the
+        # inventory before the slowest integration cases. Keep a bounded wall
+        # that permits complete accounting instead of truncating the suite.
+        run-timeout-seconds: 3600
         termination-grace-seconds: 2
         # Operator decision 2026-09-26: one failure stops the invocation. The
         # next run starts from the corrected owner instead of accumulating a
