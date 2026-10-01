@@ -27,16 +27,12 @@ class FlextInfraMiseColdStart:
     other repository plans nothing and nobody maintains a hand-written seed.
     """
 
-    @classmethod
-    def candidate_plans(
-        cls, root: Path
-    ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
+    @staticmethod
+    def candidate_plans(root: Path) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
         """Recover one complete candidate triple from the packaged upg output."""
         result_type = r[t.SequenceOf[m.Infra.CodegenFilePlan]]
         source_root = files.cold_start_directory()
-        validated = FlextInfraMiseArtifactsDerivation.validate(
-            source_root, source_root
-        )
+        validated = FlextInfraMiseArtifactsDerivation.validate_packaged(source_root)
         if validated.failure:
             return result_type.from_failure(validated)
         sources: list[m.Cli.AtomicFileState] = []
