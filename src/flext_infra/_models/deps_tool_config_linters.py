@@ -6,7 +6,7 @@ from typing import Annotated, Literal
 
 from flext_cli import m
 
-from flext_infra import t
+from flext_infra import c, t
 from flext_infra._models.deps_tool_config_project import (
     FlextInfraModelsDepsToolConfigProject,
 )
@@ -142,6 +142,16 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
             m.Field(
                 alias="copyright-notice-rgx",
                 description="Regex every module's copyright notice must match.",
+            ),
+        ]
+        fix_recipes: Annotated[
+            t.MappingKV[str, c.Infra.LintFixRecipe],
+            m.Field(
+                alias="fix-recipes",
+                description=(
+                    "Ruff rule code -> repair make fix applies to the findings "
+                    "Ruff reports without a fix of its own."
+                ),
             ),
         ]
         isort: FlextInfraModelsDepsToolConfigLinters.RuffIsortConfig = m.Field(

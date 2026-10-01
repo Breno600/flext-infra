@@ -260,34 +260,6 @@ class FlextInfraCodegenGenerationStandardMixin(
         return None
 
     @staticmethod
-    def _copyright_notice(pkg_dir: Path) -> str:
-        """Render the copyright notice of the project that owns ``pkg_dir``.
-
-        The author is the manifest's first declared author and the year is
-        the scaffold copyright year, the same owners the scaffold templates
-        render; a package outside any project, or a project without a named
-        author, raises.
-        """
-        for candidate in (pkg_dir, *pkg_dir.parents):
-            if not (candidate / c.PYPROJECT_FILENAME).is_file():
-                continue
-            authors = (
-                u.Infra.read_project_metadata_result(candidate).unwrap().project.authors
-            )
-            author = authors[0].name if authors else None
-            if not author:
-                msg = f"project manifest declares no author name: {candidate}"
-                raise ValueError(msg)
-            scaffold = config.Infra.codegen.scaffold.project
-            return (
-                f"Copyright (c) {scaffold.copyright_year} {author}. "
-                "All rights reserved.\n"
-                f"SPDX-License-Identifier: {scaffold.supported_licenses[0]}"
-            )
-        msg = f"package is outside any project manifest: {pkg_dir}"
-        raise ValueError(msg)
-
-    @staticmethod
     def _project_first_party_names(project_root: Path) -> t.StrSequence:
         """Read strict Ruff policy, deriving namespaces only when it is absent."""
         project_payload = u.Infra.pyproject_payload(
@@ -364,7 +336,7 @@ class FlextInfraCodegenGenerationStandardMixin(
             autogen_header=c.Infra.AUTOGEN_HEADER,
             docstring=cls._format_root_package_docstring(
                 current_pkg,
-                cls._copyright_notice(plan.context.pkg_dir),
+                u.Infra.copyright_notice(plan.context.pkg_dir),
             ),
             runtime_import_lines=runtime_import_lines,
             blank_lines_before_exports=(
@@ -395,7 +367,7 @@ class FlextInfraCodegenGenerationStandardMixin(
             autogen_header=c.Infra.AUTOGEN_HEADER,
             docstring=cls._format_root_package_docstring(
                 plan.context.current_pkg.rsplit(".", maxsplit=1)[-1],
-                cls._copyright_notice(plan.context.pkg_dir),
+                u.Infra.copyright_notice(plan.context.pkg_dir),
             ),
         )
 

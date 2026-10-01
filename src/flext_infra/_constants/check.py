@@ -57,6 +57,21 @@ class FlextInfraConstantsCheck:
         TYPE_CHECKER = "type-checker"
         INFRA = "infra"
 
+    @unique
+    class LintFixRecipe(StrEnum):
+        """Repair the lint gate applies to a finding Ruff reports without a fix.
+
+        The tooling owner maps each Ruff rule code to one recipe; ``make fix``
+        applies Ruff's own fixes first and then the recipe of every finding
+        left, so no rule code or repair text lives in the gate.
+        """
+
+        RETURNS_SECTION = "returns-section"
+        YIELDS_SECTION = "yields-section"
+        RAISES_SECTION = "raises-section"
+        SUMMARY_DOCSTRING = "summary-docstring"
+        COPYRIGHT_NOTICE = "copyright-notice"
+
     AST_GREP_DOCS_URL: ClassVar[str] = "https://ast-grep.github.io/"
     "Canonical ast-grep documentation URL for gate metadata."
     # Quality gate identifiers shared with the tool-name vocabulary.

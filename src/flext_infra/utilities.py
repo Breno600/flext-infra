@@ -46,6 +46,7 @@ from flext_infra._utilities.namespace_common import (
 from flext_infra._utilities.namespace_moves import (
     FlextInfraUtilitiesRefactorNamespaceMoves,
 )
+from flext_infra._utilities.lint_recipes import FlextInfraUtilitiesLintRecipes
 from flext_infra._utilities.network import FlextInfraUtilitiesNetwork
 from flext_infra._utilities.private_import_ancestry import (
     FlextInfraUtilitiesPrivateImportAncestry,
@@ -153,6 +154,7 @@ class FlextInfraUtilities(FlextCliUtilities):
         FlextInfraUtilitiesDeferredSelfReferenceRewrite,
         FlextInfraUtilitiesGit,
         FlextInfraUtilitiesIteration,
+        FlextInfraUtilitiesLintRecipes,
         FlextInfraUtilitiesLogParser,
         FlextInfraUtilitiesManagedConflicts,
         FlextInfraUtilitiesSemanticCutover,

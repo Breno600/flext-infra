@@ -1,0 +1,382 @@
+"""Repairs for lint findings Ruff reports without a fix of its own.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
+The tooling owner maps each Ruff rule code to one recipe
+(``tools.ruff.lint.fix-recipes``); ``make fix`` applies Ruff's own fixes and
+then these recipes to the findings left. Every repair is derived from the
+source itself: a docstring section from the signature, the summary and the
+raise statement, a summary from the declared name, the notice from the
+project's declared author and copyright year. A finding the recipe cannot
+place raises; nothing is skipped.
+"""
+
+from __future__ import annotations
+
+import ast
+import re
+import textwrap
+from collections.abc import MutableMapping
+from pathlib import Path
+
+from flext_infra import c, config, m, t
+from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
+
+
+
+class FlextInfraUtilitiesLintRecipes:
+    """Apply the declared recipe of each lint finding to one module source."""
+
+    @staticmethod
+    def copyright_notice(pkg_dir: Path) -> str:
+        """Render the copyright notice of the project that owns ``pkg_dir``.
+
+        The author is the manifest's first declared author and the year is the
+        scaffold copyright year, the same owners the scaffold templates
+        render.
+
+        Returns:
+            The two-line notice: the copyright line and the SPDX line.
+
+        Raises:
+            ValueError: If the path is outside any project manifest or the
+                manifest declares no author name.
+        """
+        for candidate in (pkg_dir, *pkg_dir.parents):
+            if not (candidate / c.PYPROJECT_FILENAME).is_file():
+                continue
+            authors = (
+                FlextInfraUtilitiesPyproject.read_project_metadata_result(candidate)
+                .unwrap()
+                .project.authors
+            )
+            author = authors[0].name if authors else None
+            if not author:
+                msg = f"project manifest declares no author name: {candidate}"
+                raise ValueError(msg)
+            scaffold = config.Infra.codegen.scaffold.project
+            return (
+                f"Copyright (c) {scaffold.copyright_year} {author}. "
+                "All rights reserved.\n"
+                f"SPDX-License-Identifier: {scaffold.supported_licenses[0]}"
+            )
+        msg = f"package is outside any project manifest: {pkg_dir}"
+        raise ValueError(msg)
+
+    @classmethod
+    def apply_lint_recipes(
+        cls,
+        source: str,
+        issues: t.SequenceOf[m.Infra.Issue],
+        *,
+        recipes: t.MappingKV[str, c.Infra.LintFixRecipe],
+        notice: str,
+    ) -> str:
+        """Return ``source`` with the declared recipe of every issue applied.
+
+        Returns:
+            The repaired module source.
+
+        Raises:
+            ValueError: If an issue's code has no recipe or its recipe cannot
+                be placed in the module.
+        """
+        tree = ast.parse(source)
+        lines = source.splitlines(keepends=True)
+        sections: MutableMapping[ast.FunctionDef | ast.AsyncFunctionDef, MutableMapping[str, list[str]]] = {}
+        summaries: MutableMapping[ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef, str] = {}
+        notice_target: ast.Expr | None = None
+        for issue in issues:
+            recipe = recipes.get(issue.code)
+            if recipe is None:
+                msg = f"lint finding {issue.code} has no declared fix recipe"
+                raise ValueError(msg)
+            match recipe:
+                case c.Infra.LintFixRecipe.RETURNS_SECTION:
+                    function = cls._documented_at(tree, issue.line)
+                    sections.setdefault(function, {}).setdefault("Returns", []).append(
+                        cls._returns_entry(function),
+                    )
+                case c.Infra.LintFixRecipe.YIELDS_SECTION:
+                    function = cls._documented_at(tree, issue.line)
+                    sections.setdefault(function, {}).setdefault("Yields", []).append(
+                        cls._yields_entry(function),
+                    )
+                case c.Infra.LintFixRecipe.RAISES_SECTION:
+                    function = cls._enclosing_function(tree, issue.line)
+                    sections.setdefault(function, {}).setdefault("Raises", []).append(
+                        cls._raises_entry(function, issue),
+                    )
+                case c.Infra.LintFixRecipe.SUMMARY_DOCSTRING:
+                    definition = cls._defined_at(tree, issue.line)
+                    summaries[definition] = cls._summary_for(definition)
+                case c.Infra.LintFixRecipe.COPYRIGHT_NOTICE:
+                    notice_target = cls._docstring_expr(tree)
+                    if notice_target is None:
+                        msg = "the copyright notice needs a module docstring"
+                        raise ValueError(msg)
+        edits: list[t.Triple[int, int, str]] = []
+        for function, wanted in sections.items():
+            docstring = cls._docstring_expr(function)
+            if docstring is None:
+                msg = f"function at line {function.lineno} has no docstring"
+                raise ValueError(msg)
+            start, end, raw = cls._literal(lines, docstring)
+            edits.append((
+                start,
+                end,
+                cls._with_sections(raw, " " * docstring.col_offset, wanted),
+            ))
+        for definition, text in summaries.items():
+            first = definition.body[0]
+            decorators = (
+                first.decorator_list
+                if isinstance(
+                    first,
+                    ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+                )
+                else []
+            )
+            first_line = min((first.lineno, *(item.lineno for item in decorators)))
+            offset = cls._offset(lines, first_line, 0)
+            edits.append((offset, offset, f'{" " * first.col_offset}"""{text}"""\n'))
+        if notice_target is not None:
+            start, end, raw = cls._literal(lines, notice_target)
+            edits.append((start, end, cls._with_notice(raw, notice)))
+        rewritten = source
+        for start, end, text in sorted(edits, key=lambda edit: edit[0], reverse=True):
+            rewritten = f"{rewritten[:start]}{text}{rewritten[end:]}"
+        return rewritten
+
+    @staticmethod
+    def _docstring_expr(node: ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef) -> ast.Expr | None:
+        """Return the docstring statement of a module, class or function."""
+        first = node.body[0] if node.body else None
+        if (
+            isinstance(first, ast.Expr)
+            and isinstance(first.value, ast.Constant)
+            and isinstance(first.value.value, str)
+        ):
+            return first
+        return None
+
+    @classmethod
+    def _documented_at(cls, tree: ast.Module, line: int) -> ast.FunctionDef | ast.AsyncFunctionDef:
+        """Return the function whose docstring starts at ``line``."""
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                docstring = cls._docstring_expr(node)
+                if docstring is not None and docstring.lineno == line:
+                    return node
+        msg = f"no function docstring starts at line {line}"
+        raise ValueError(msg)
+
+    @staticmethod
+    def _enclosing_function(tree: ast.Module, line: int) -> ast.FunctionDef | ast.AsyncFunctionDef:
+        """Return the innermost function whose body spans ``line``."""
+        enclosing = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+            and node.lineno <= line <= (node.end_lineno or node.lineno)
+        ]
+        if not enclosing:
+            msg = f"no function encloses line {line}"
+            raise ValueError(msg)
+        return max(enclosing, key=lambda node: node.lineno)
+
+    @staticmethod
+    def _defined_at(tree: ast.Module, line: int) -> ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef:
+        """Return the class or function defined at ``line``."""
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef)
+                and node.lineno == line
+            ):
+                if node.body[0].lineno == node.lineno:
+                    msg = f"definition at line {line} has its body on the same line"
+                    raise ValueError(msg)
+                return node
+        msg = f"no class or function is defined at line {line}"
+        raise ValueError(msg)
+
+    @staticmethod
+    def _offset(lines: t.StrSequence, lineno: int, col_offset: int) -> int:
+        """Convert an AST position (1-based line, UTF-8 column) to a str index."""
+        prefix = sum(len(text) for text in lines[: lineno - 1])
+        column = len(
+            lines[lineno - 1]
+            .encode(c.Cli.ENCODING_DEFAULT)[:col_offset]
+            .decode(c.Cli.ENCODING_DEFAULT),
+        )
+        return prefix + column
+
+    @classmethod
+    def _literal(
+        cls,
+        lines: t.StrSequence,
+        docstring: ast.Expr,
+    ) -> t.Triple[int, int, str]:
+        """Return the span and text of one triple-double-quoted docstring."""
+        value = docstring.value
+        start = cls._offset(lines, value.lineno, value.col_offset)
+        end = cls._offset(
+            lines,
+            value.end_lineno or value.lineno,
+            value.end_col_offset or 0,
+        )
+        raw = "".join(lines)[start:end]
+        if not (raw.startswith('"""') and raw.endswith('"""') and len(raw) >= 6):
+            msg = f'docstring at line {value.lineno} is not a plain """ literal'
+            raise ValueError(msg)
+        return start, end, raw
+
+    @staticmethod
+    def _returns_entry(function: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
+        """Describe the returned value: the summary's object, else its type."""
+        summary = (ast.get_docstring(function) or "").splitlines()[0]
+        match = re.match(r"(?i)returns?\s+(?P<rest>.+)", summary.strip().rstrip("."))
+        if match:
+            rest = match.group("rest")
+            return f"{rest[:1].upper()}{rest[1:]}."
+        if function.returns is None:
+            return "The resulting value."
+        return f"The resulting ``{ast.unparse(function.returns)}``."
+
+    @staticmethod
+    def _yields_entry(function: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
+        """Describe each yielded value by the iterator's element type."""
+        if isinstance(function.returns, ast.Subscript):
+            element = function.returns.slice
+            if isinstance(element, ast.Tuple) and element.elts:
+                element = element.elts[0]
+            return f"Each ``{ast.unparse(element)}``."
+        return "Each yielded value."
+
+    @classmethod
+    def _raises_entry(cls, function: ast.FunctionDef | ast.AsyncFunctionDef, issue: m.Infra.Issue) -> str:
+        """Name the raised exception and the condition its message states."""
+        named = re.search(r"`(?P<name>[^`]+)`", issue.message)
+        if named is None:
+            msg = f"raise finding names no exception: {issue.message}"
+            raise ValueError(msg)
+        name = named.group("name")
+        condition = cls._raise_condition(function, issue.line)
+        return f"{name}: If {condition}." if condition else f"{name}: On failure."
+
+    @classmethod
+    def _raise_condition(cls, function: ast.FunctionDef | ast.AsyncFunctionDef, line: int) -> str:
+        """Return the static text of the message raised at ``line``."""
+        raised = next(
+            (
+                node
+                for node in ast.walk(function)
+                if isinstance(node, ast.Raise) and node.lineno == line
+            ),
+            None,
+        )
+        if (
+            raised is None
+            or not isinstance(raised.exc, ast.Call)
+            or not raised.exc.args
+        ):
+            return ""
+        message = raised.exc.args[0]
+        if isinstance(message, ast.Name):
+            assigned = [
+                node.value
+                for node in ast.walk(function)
+                if isinstance(node, ast.Assign)
+                and node.lineno < line
+                and any(
+                    isinstance(target, ast.Name) and target.id == message.id
+                    for target in node.targets
+                )
+            ]
+            if not assigned:
+                return ""
+            message = max(assigned, key=lambda value: value.lineno)
+        text = cls._static_text(message)
+        return text.split(":", maxsplit=1)[0].strip().rstrip(".")
+
+    @staticmethod
+    def _static_text(node: ast.expr) -> str:
+        """Return the literal prefix of a string or f-string expression."""
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return node.value
+        if isinstance(node, ast.JoinedStr):
+            prefix: list[str] = []
+            for part in node.values:
+                if not (isinstance(part, ast.Constant) and isinstance(part.value, str)):
+                    break
+                prefix.append(part.value)
+            return "".join(prefix)
+        return ""
+
+    @staticmethod
+    def _summary_for(definition: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef) -> str:
+        """Derive a one-line summary from a definition's declared name."""
+        name = definition.name
+        if isinstance(definition, ast.ClassDef):
+            return (
+                f"Tests for ``{name.removeprefix('Tests')}``."
+                if name.startswith("Tests") and name != "Tests"
+                else f"Define ``{name}``."
+            )
+        if name.startswith("test_"):
+            return f"Test {name.removeprefix('test_').replace('_', ' ')}."
+        return f"Provide ``{name}``."
+
+    @staticmethod
+    def _with_sections(
+        raw: str,
+        indent: str,
+        wanted: t.MappingKV[str, t.StrSequence],
+    ) -> str:
+        """Return the docstring literal with the wanted sections appended."""
+        width = config.Infra.tooling.tools.ruff.line_length
+        inner = raw[3:-3].rstrip()
+        appended: list[str] = []
+        for header in ("Returns", "Yields", "Raises"):
+            entries = wanted.get(header)
+            if not entries:
+                continue
+            block = [
+                wrapped
+                for entry in dict.fromkeys(entries)
+                for wrapped in textwrap.wrap(
+                    entry,
+                    width=width,
+                    initial_indent=f"{indent}    ",
+                    subsequent_indent=f"{indent}        ",
+                    break_long_words=False,
+                    break_on_hyphens=False,
+                )
+            ]
+            existing = re.search(rf"^{re.escape(indent)}{header}:\s*$", inner, re.MULTILINE)
+            if existing is None:
+                appended.append("\n".join((f"{indent}{header}:", *block)))
+                continue
+            following = re.search(
+                rf"^{re.escape(indent)}\S[^\n]*:\s*$",
+                inner[existing.end() :],
+                re.MULTILINE,
+            )
+            cut = existing.end() + following.start() if following else len(inner)
+            inner = f"{inner[:cut].rstrip()}\n" + "\n".join(block) + inner[cut:]
+        if appended:
+            inner = f"{inner}\n\n" + "\n\n".join(appended)
+        return f'"""{inner}\n{indent}"""'
+
+    @staticmethod
+    def _with_notice(raw: str, notice: str) -> str:
+        """Return the module docstring with the notice after its summary."""
+        summary, _, rest = raw[3:-3].partition("\n")
+        remainder = rest.strip("\n")
+        if remainder.strip():
+            return f'"""{summary}\n\n{notice}\n\n{remainder}\n"""'
+        return f'"""{summary.rstrip()}\n\n{notice}\n"""'
+
+
+__all__: list[str] = ["FlextInfraUtilitiesLintRecipes"]

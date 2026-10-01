@@ -176,6 +176,19 @@ Infra:
           # scaffold templates render from the project's declared author and
           # copyright year; the SPDX line follows it in the module docstring.
           copyright-notice-rgx: 'Copyright \(c\) \d{4} \S[^\n]*\. All rights reserved\.'
+          # Repairs make fix applies after Ruff's own fixes, to findings Ruff
+          # reports without a fix: each code maps to one recipe the lint gate
+          # derives from the source (docstring sections from the signature,
+          # summary and raise statement; summaries from the declared name; the
+          # notice from the project's declared author and copyright year).
+          fix-recipes:
+            CPY001: copyright-notice
+            D101: summary-docstring
+            D102: summary-docstring
+            D103: summary-docstring
+            DOC201: returns-section
+            DOC402: yields-section
+            DOC501: raises-section
           # Banned API messages are policy data, never template literals.
           banned-api:
             argparse: "Use cli.register_result_command + Pydantic model from flext_cli."

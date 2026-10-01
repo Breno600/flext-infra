@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, MutableMapping
+from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, config, m, u
 from flext_infra.gates.base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from flext_infra import p, t
 
 
@@ -59,6 +58,67 @@ class FlextInfraRuffLintGate(FlextInfraGate):
         """Build the explicit Ruff fix command."""
         _ = project_dir
         return self._lint_command(ctx, targets, config.Infra.codegen.make.ruff.lint_fix)
+
+    @override
+    def fix(self, project_dir: Path, ctx: m.Infra.GateContext) -> m.Infra.GateExecution:
+        """Apply Ruff's own fixes, then the declared recipe of each finding left.
+
+        A recipe that creates a docstring runs before the recipes that extend
+        one, since a new summary exposes the sections its function needs.
+        Ruff re-reads the tree after each phase; a recipe-owned finding that
+        survives both phases is a recipe defect and raises.
+
+        Returns:
+            The gate execution of Ruff's final pass.
+
+        Raises:
+            ValueError: If a recipe-owned finding survives every recipe phase.
+        """
+        execution = super().fix(project_dir, ctx)
+        recipes = config.Infra.tooling.tools.ruff.lint.fix_recipes
+        for phase in (
+            frozenset({
+                c.Infra.LintFixRecipe.SUMMARY_DOCSTRING,
+                c.Infra.LintFixRecipe.COPYRIGHT_NOTICE,
+            }),
+            frozenset({
+                c.Infra.LintFixRecipe.RETURNS_SECTION,
+                c.Infra.LintFixRecipe.YIELDS_SECTION,
+                c.Infra.LintFixRecipe.RAISES_SECTION,
+            }),
+        ):
+            by_file: MutableMapping[Path, list[m.Infra.Issue]] = {}
+            for issue in execution.issues:
+                if recipes.get(issue.code) in phase:
+                    by_file.setdefault(Path(issue.file), []).append(issue)
+            if not by_file:
+                continue
+            with self._mutation_lease(project_dir):
+                for path, issues in sorted(by_file.items()):
+                    before = u.Cli.atomic_read_binary_file_state(
+                        path,
+                        required=True,
+                    ).unwrap()
+                    source = (before.content or b"").decode(c.Cli.ENCODING_DEFAULT)
+                    u.Cli.atomic_write_text_file_guarded(
+                        before,
+                        u.Infra.apply_lint_recipes(
+                            source,
+                            issues,
+                            recipes=recipes,
+                            notice=u.Infra.copyright_notice(path.parent),
+                        ),
+                    ).unwrap()
+            execution = super().fix(project_dir, ctx)
+        left = sorted(
+            f"{issue.file}:{issue.line}:{issue.code}"
+            for issue in execution.issues
+            if issue.code in recipes
+        )
+        if left:
+            msg = f"lint recipes left their own findings: {', '.join(left)}"
+            raise ValueError(msg)
+        return execution
 
     def _lint_command(
         self,
