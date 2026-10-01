@@ -647,8 +647,9 @@ _builtin_build_artifacts:
 
 # Check is read-only: it runs the gates without --apply, so the tree is left
 # unchanged; fix applies the declared repairs of the fixable gates.
-# CI={{ make.ci.value }} keeps make.check_gates_ci, the strict complement of
-# make.check_gates_local; CI={{ make.ci.local_value }} runs that local partition.
+# CI={{ make.ci.value }} runs make.check_gates_ci, the external gates of the
+# registry; CI={{ make.ci.local_value }} runs make.check_gates_local, its strict
+# complement (type checkers and flext-infra validators).
 # An absent CI token runs every active default gate.
 _builtin_check_all: _builtin_require_environment
 {{ local_check_body() }}
