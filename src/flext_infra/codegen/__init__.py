@@ -64,7 +64,6 @@ if TYPE_CHECKING:
     from ._mise_artifacts_verification import FlextInfraMiseArtifactsVerification
     from ._protocol_model_annotations import FlextInfraCodegenProtocolModelAnnotations
     from ._protocol_model_render import FlextInfraCodegenProtocolModelRender
-    from .candidate_bootstrap import FlextInfraCodegenCandidateBootstrap
     from .census import FlextInfraCodegenCensus
     from .codegen_generation import FlextInfraCodegenGeneration
     from .codegen_transaction import FlextInfraCodegenTransaction
@@ -94,7 +93,6 @@ if TYPE_CHECKING:
 
 
 __all__: tuple[str, ...] = (
-    "FlextInfraCodegenCandidateBootstrap",
     "FlextInfraCodegenCensus",
     "FlextInfraCodegenConform",
     "FlextInfraCodegenConformArtifactRender",
@@ -232,7 +230,6 @@ _LAZY_IMPORTS = MappingProxyType(
                 "FlextInfraCodegenProtocolModelAnnotations",
             ),
             "._protocol_model_render": ("FlextInfraCodegenProtocolModelRender",),
-            ".candidate_bootstrap": ("FlextInfraCodegenCandidateBootstrap",),
             ".census": ("FlextInfraCodegenCensus",),
             ".codegen_generation": ("FlextInfraCodegenGeneration",),
             ".codegen_transaction": ("FlextInfraCodegenTransaction",),
