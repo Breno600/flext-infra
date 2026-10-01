@@ -331,15 +331,10 @@ class TestsFlextInfraCodegenMain:
             applied = u.Cli.run_raw(
                 [*TestsFlextInfraCodegenMain._public_conform_command(root), "apply"],
                 cwd=root,
-                env={"MISE_GITHUB_CREDENTIAL_COMMAND": ""},
             )
 
             tm.ok(applied)
             tm.that(applied.value.outcome.raw_return_code, eq=1)
-            tm.that(
-                applied.value.stdout + applied.value.stderr,
-                lacks="MISE_GITHUB_CREDENTIAL_COMMAND is required",
-            )
             tm.that(launcher.read_bytes(), eq=corrupted)
             tm.that(journal.exists(), eq=False)
             tm.that(transaction.exists(), eq=False)

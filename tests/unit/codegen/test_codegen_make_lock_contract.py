@@ -352,7 +352,7 @@ class TestsFlextInfraCodegenMakeLockContract:
                 cwd=project_root,
                 env={
                     **os.environ,
-                    "GH_TOKEN": "invalid-test-credential",
+                    "GITHUB_TOKEN": "invalid-test-credential",
                     storage_variable: "relative-storage",
                 },
             ),

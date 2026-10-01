@@ -93,9 +93,6 @@ class FlextInfraMiseArtifactsProcess:
         for name in contract.passthrough_environment:
             if value := u.Infra.env_lookup(name):
                 isolated[name] = value
-        credential_command = settings.Infra.mise_github_credential_command
-        if credential_command:
-            isolated["MISE_GITHUB_CREDENTIAL_COMMAND"] = credential_command
         return r[MutableMapping[str, str]].ok(isolated)
 
     @classmethod

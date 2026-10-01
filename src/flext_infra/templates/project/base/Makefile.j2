@@ -90,18 +90,13 @@ export GEN_INIT_ONLY
 endif
 endif
 
-# An explicit process credential is required for network bootstrap. GH_TOKEN
-# takes precedence over GITHUB_TOKEN, and no host credential store is read.
-# Local provisioned operations need no authentication preflight or network call.
-# Keep the selected value in the environment, never in a rendered recipe.
-ifneq ($(strip $(GH_TOKEN)),)
-override GITHUB_TOKEN := $(GH_TOKEN)
-endif
+# GITHUB_TOKEN is the one GitHub credential variable every tool reads (mise,
+# gh, uv). The credential is optional: local operations need none, and the
+# network bootstrap fills an absent one from gh. A tool-scoped alias of the same
+# credential never reaches a recipe, where it would shadow or outrank it. The
+# value stays in the environment, never in a rendered recipe.
 export GITHUB_TOKEN
-override export GH_TOKEN := $(GITHUB_TOKEN)
-# One credential, one variable: mise reads GITHUB_TOKEN, and a tool-scoped
-# alias inherited from a caller would silently outrank it.
-unexport MISE_GITHUB_TOKEN
+unexport GH_TOKEN MISE_GITHUB_TOKEN GITHUB_API_TOKEN
 
 # === SECTION: project identity (managed) ===
 # Source: config:dist / config:make_profile / config:repository_root_rel / config:uv_link_mode

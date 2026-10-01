@@ -14,7 +14,7 @@
 {% for name in bootstrap.passthrough_environment if name != "PATH" -%}
 	caller_{{ name | lower }}="{{ '$${' ~ name ~ ':-}' }}"; \
 {% endfor -%}
-	if [ -z "$$caller_github_token$$caller_gh_token$$caller_mise_github_credential_command" ] \
+	if [ -z "$$caller_github_token" ] \
 		&& command -v gh >/dev/null 2>&1 \
 		&& gh_auth_token="$$(gh auth token 2>/dev/null)"; then \
 		caller_github_token="$$gh_auth_token"; \

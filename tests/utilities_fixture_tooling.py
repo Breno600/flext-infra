@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -180,11 +181,21 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         env: t.StrMapping | None = None,
         capture: bool = True,
     ) -> p.Result[p.Cli.CommandOutput]:
-        """Run Make without undeclared state inherited from outer pytest."""
+        """Run Make without undeclared state inherited from outer pytest.
+
+        The network bootstrap asks gh for a token when no GITHUB_TOKEN is set.
+        gh here reads no configuration (``os.devnull`` is not a directory) and
+        reaches no keyring (the session bus is disabled), so the host
+        operator's stored credential never enters a test.
+        """
         return u.Cli.run_raw(
             [c.Infra.MAKE, *args],
             cwd=cwd,
-            env=env,
+            env={
+                "GH_CONFIG_DIR": os.devnull,
+                "DBUS_SESSION_BUS_ADDRESS": "disabled:",
+                **(env or {}),
+            },
             capture=capture,
             remove_env_keys=tuple(
                 key

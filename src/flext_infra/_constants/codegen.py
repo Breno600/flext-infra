@@ -238,12 +238,9 @@ class FlextInfraConstantsCodegen(
         "PATHEXT",
         "SYSTEMROOT",
         "WINDIR",
-        # Credential and network-policy keys the lock-time provenance fetch
-        # requires: without them the shared-host GitHub rate limit fails the
-        # lock generation closed. Reinjection stays explicit (allowlist).
+        # The one GitHub credential variable (optional) and the network
+        # policy key the lock-time provenance fetch reads.
         "GITHUB_TOKEN",
-        "GH_TOKEN",
-        "MISE_GITHUB_CREDENTIAL_COMMAND",
         "MISE_HTTP_TIMEOUT",
         "FLEXT_MYPY_PROFILE_OUTPUT",
         # The generated launchers bake their release; the bootstrap passes the

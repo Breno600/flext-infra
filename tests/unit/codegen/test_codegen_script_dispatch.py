@@ -236,7 +236,6 @@ class TestsFlextInfraScriptDispatchMakefile:
                 "deps modernize",
             ],
         )
-        tm.that(gen_all_body, lacks="MISE_GITHUB_CREDENTIAL_COMMAND")
         tm.that(
             gen_all_body,
             lacks=["codegen lazy-init", "docs generate", "_generated_docs"],

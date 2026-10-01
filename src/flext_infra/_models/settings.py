@@ -136,14 +136,6 @@ class FlextInfraSettingsModels:
                 ),
             ),
         ]
-        mise_github_credential_command: Annotated[
-            str | None,
-            m.Field(
-                default=None,
-                validation_alias="MISE_GITHUB_CREDENTIAL_COMMAND",
-                description="Mise credential command forwarded to isolated builds.",
-            ),
-        ]
 
 
 __all__: list[str] = ["FlextInfraSettingsModels"]
