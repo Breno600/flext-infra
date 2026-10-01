@@ -280,7 +280,9 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
                 return r[t.Cli.ResultValue].fail(
                     f"CSV campaign driver escapes config directory: {csv}"
                 )
-            campaign_roots = tuple(root / value for value in declared.roots) or (root,)
+            campaign_roots = (
+                tuple((root / value).resolve() for value in declared.roots) or (root,)
+            )
             for path in campaign_roots:
                 if not path.resolve().is_relative_to(repository_root):
                     return r[t.Cli.ResultValue].fail(
