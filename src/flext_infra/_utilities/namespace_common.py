@@ -2,17 +2,11 @@
 
 from __future__ import annotations
 
-import operator
-import token
-import tokenize
-from collections import defaultdict
-from io import StringIO
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import c
 
-from .iteration import FlextInfraUtilitiesIteration
 from .rope_source import FlextInfraUtilitiesRopeSource
 
 if TYPE_CHECKING:
@@ -21,21 +15,6 @@ if TYPE_CHECKING:
 
 class FlextInfraUtilitiesRefactorNamespaceCommon:
     """Shared text and path helpers for namespace refactor utilities."""
-
-    @staticmethod
-    def shared_repository_root(*, py_files: t.SequenceOf[Path]) -> Path:
-        """Shared repository root."""
-        existing_files = [path.resolve() for path in py_files if path.exists()]
-        if not existing_files:
-            return Path.cwd()
-        project_root = FlextInfraUtilitiesIteration.resolve_project_root(
-            existing_files[0],
-        )
-        return (
-            project_root.parent
-            if project_root is not None
-            else existing_files[0].parent
-        )
 
     @staticmethod
     def _parse_simple_from_import_line(line: str) -> t.Infra.TransformResult | None:
@@ -110,52 +89,6 @@ class FlextInfraUtilitiesRefactorNamespaceCommon:
                 end_idx = idx
                 break
         return (start_idx, end_idx)
-
-    @staticmethod
-    def compat_assignment_target(line: str, *, alias_map: t.StrMapping) -> str | None:
-        """Compat assignment target."""
-        stripped = line.strip()
-        if "=" not in stripped or stripped.startswith("#"):
-            return None
-        left, right = [part.strip() for part in stripped.split("=", 1)]
-        return left if alias_map.get(left) == right else None
-
-    @staticmethod
-    def apply_token_replacements(*, source: str, alias_map: t.StrMapping) -> str:
-        """Apply token replacements."""
-        line_buffer = source.splitlines(keepends=True)
-        replacements_by_line: t.MappingKV[
-            int,
-            t.MutableSequenceOf[t.Triple[int, int, str]],
-        ] = defaultdict(list)
-        token_generator = tokenize.generate_tokens(StringIO(source).readline)
-        for tok in token_generator:
-            if tok.type != token.NAME:
-                continue
-            replacement = alias_map.get(tok.string)
-            if replacement is None:
-                continue
-            start_line, start_col = tok.start
-            end_line, end_col = tok.end
-            if start_line != end_line:
-                continue
-            replacements_by_line[start_line - 1].append((
-                start_col,
-                end_col,
-                replacement,
-            ))
-        for line_idx, replacements in replacements_by_line.items():
-            if line_idx < 0 or line_idx >= len(line_buffer):
-                continue
-            line_text = line_buffer[line_idx]
-            for start_col, end_col, replacement in sorted(
-                replacements,
-                key=operator.itemgetter(0),
-                reverse=True,
-            ):
-                line_text = line_text[:start_col] + replacement + line_text[end_col:]
-            line_buffer[line_idx] = line_text
-        return "".join(line_buffer)
 
 
 __all__: list[str] = ["FlextInfraUtilitiesRefactorNamespaceCommon"]
