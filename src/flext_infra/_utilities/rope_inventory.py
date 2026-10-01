@@ -7,6 +7,7 @@ from pathlib import Path
 
 from flext_infra import c, m, p, t
 
+from .namespace import FlextInfraUtilitiesCodegenNamespace
 from .rope_core import FlextInfraUtilitiesRopeCore
 from .rope_imports import FlextInfraUtilitiesRopeImports
 from .rope_runtime import FlextInfraUtilitiesRopeRuntime
@@ -608,8 +609,9 @@ class FlextInfraUtilitiesRopeInventory:
         if expected:
             return expected
         if kind == "constant":
-            # Closed SSOT map: an absent key is a defect, never a fallback.
-            return c.Infra.FAMILY_SUFFIXES["c"]
+            return FlextInfraUtilitiesCodegenNamespace.facade_family_declared_by(
+                c.Infra.CONSTANTS_PY,
+            ).suffix
         return FlextInfraUtilitiesRopeInventory._actual_tier(convention)
 
     @staticmethod

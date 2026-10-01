@@ -9,8 +9,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, main as infra_main
-from flext_infra.codegen import FlextInfraCodegenConform
+from flext_infra import c, config, infra, main as infra_main
 from tests import t, u
 
 if TYPE_CHECKING:
@@ -527,7 +526,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             mode=c.Infra.CodegenConformMode.APPLY,
         )
         tm.that(root.exists(), eq=False)
-        tm.ok(FlextInfraCodegenConform.execute_request(request, workspace))
+        tm.ok(infra.codegen_conform(request, workspace))
         tm.that((root / "config/workspace.yaml").is_file(), eq=True)
         tm.that(
             self._wheel_force_include(root).get("config/workspace.yaml"),

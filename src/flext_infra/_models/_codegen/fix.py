@@ -70,6 +70,40 @@ class FlextInfraModelsCodegenFixModels:
             m.Field(default_factory=tuple, description="Per-file processing results"),
         ]
 
+    class FacadeFamily(m.ContractModel):
+        """One facade family the core package declares (c, t, p, m, u)."""
+
+        letter: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Facade letter of the import-layer order"),
+        ]
+        module: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Stem of the facade module declaring the letter"),
+        ]
+        suffix: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Facade class suffix past the shared class stem"),
+        ]
+
+        @m.computed_field
+        @property
+        def directory(self) -> str:
+            """Private family package beside the facade module."""
+            return f"_{self.module}"
+
+        @m.computed_field
+        @property
+        def directories(self) -> frozenset[str]:
+            """Public and private family package directory names."""
+            return frozenset({self.module, f"_{self.module}"})
+
+        @m.computed_field
+        @property
+        def file_names(self) -> frozenset[str]:
+            """Public and private facade module file names."""
+            return frozenset({f"{self.module}.py", f"_{self.module}.py"})
+
     class NamespaceModulePolicy(m.ArbitraryTypesModel):
         """Derived gen-init policy for one governed module."""
 

@@ -7,8 +7,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c
-from flext_infra.codegen import FlextInfraCodegenConform
+from flext_infra import c, infra
 from tests import t, u
 
 _TRANSACTION_MARKER = "-transaction-"
@@ -56,13 +55,11 @@ class TestsFlextInfraCodegenConformNoTransactionWorktrees:
         before = self._transaction_worktree_siblings(root)
         drifted_bytes = drifted.read_bytes()
 
-        result = FlextInfraCodegenConform.execute_request(
-            u.Tests.conform_request(
-                root,
-                scope=c.Infra.CodegenConformScope.SELF,
-                mode=c.Infra.CodegenConformMode.CHECK,
-            ),
-        )
+        result = infra.codegen_conform(u.Tests.conform_request(
+            root,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.CHECK,
+        ),)
 
         tm.fail(result, has="codegen drift detected")
         tm.that(self._transaction_worktree_siblings(root), eq=before)
@@ -79,21 +76,17 @@ class TestsFlextInfraCodegenConformNoTransactionWorktrees:
         # Convergence is proven behaviorally: the drift marker is rewritten
         # away and a second apply reaches a byte-identical fixed point; the
         # execute return shape is not part of this invariant.
-        FlextInfraCodegenConform.execute_request(
-            u.Tests.conform_request(
-                root,
-                scope=c.Infra.CodegenConformScope.SELF,
-                mode=c.Infra.CodegenConformMode.APPLY,
-            ),
-        )
+        infra.codegen_conform(u.Tests.conform_request(
+            root,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.APPLY,
+        ),)
         tm.that(drifted.read_text(encoding="utf-8"), lacks="# managed drift")
         converged_bytes = drifted.read_bytes()
-        FlextInfraCodegenConform.execute_request(
-            u.Tests.conform_request(
-                root,
-                scope=c.Infra.CodegenConformScope.SELF,
-                mode=c.Infra.CodegenConformMode.APPLY,
-            ),
-        )
+        infra.codegen_conform(u.Tests.conform_request(
+            root,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.APPLY,
+        ),)
         tm.that(drifted.read_bytes(), eq=converged_bytes)
         tm.that(self._transaction_worktree_siblings(root), eq=before)
