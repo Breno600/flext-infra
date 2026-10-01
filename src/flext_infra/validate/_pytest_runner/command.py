@@ -58,15 +58,15 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
     def carries_slow_items(self, execution_mode: c.Infra.PytestExecutionMode) -> bool:
         """Whether this invocation may run slow-marked items.
 
-        Only the incremental budgeted phase deselects the slow marker; the
-        slow phase selects it, and coverage and the full operation run the
-        whole suite. One predicate drives both the marker expression and the
-        stop reserve, so an in-flight slow item always has its slow drain.
+        The budgeted phase deselects the slow marker and the slow phase
+        selects it, for the incremental and the full operation alike: each
+        phase is its own process on its own clock (gate-budget law), so the
+        full operation runs the whole suite as two complete phases. Coverage
+        runs the whole suite in one process. One predicate drives both the
+        marker expression and the stop reserve, so an in-flight slow item
+        always has its slow drain.
         """
-        return self.slow_phase or execution_mode in {
-            c.Infra.PytestExecutionMode.COVERAGE,
-            c.Infra.PytestExecutionMode.FULL,
-        }
+        return self.slow_phase or execution_mode == c.Infra.PytestExecutionMode.COVERAGE
 
     def suite_stop_monotonic(
         self,
@@ -108,13 +108,27 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             return config.Infra.tooling.tools.pytest.ci_excluded_markers
         return ()
 
-    def _plugin_policy_args(
-        self, *, execution_mode: c.Infra.PytestExecutionMode
-    ) -> t.VariadicTuple[str]:
-        """Apply the same configured plugin contract to collection and execution.
+    def testmon_environment(self, execution_mode: c.Infra.PytestExecutionMode) -> str:
+        """Name the testmon environment of one marker scope on this toolchain.
 
-        The phase split is a native pytest marker expression: the budgeted
-        phase deselects the slow marker, the slow phase selects only it.
+        Under xdist, testmon syncs its records from the ids the workers
+        collected and deletes every changed test outside them. Phases that
+        deselect each other's markers inside one environment therefore erase
+        each other's executions — a failed slow test vanished after the next
+        budgeted run, its file then read as stable, and the slow phase passed
+        without running it. testmon's environment is its declared separation
+        between run configurations, so each marker scope owns one.
+        """
+        scope = hashlib.sha256(
+            self._marker_expression(execution_mode).encode()
+        ).hexdigest()[:8]
+        return f"{self._toolchain_testmon_environment()}-{scope}"
+
+    def _marker_expression(self, execution_mode: c.Infra.PytestExecutionMode) -> str:
+        """Return the native pytest marker expression of one execution scope.
+
+        The phase split is a marker expression: the budgeted phase deselects
+        the slow marker, the slow phase selects only it.
         """
         pytest = config.Infra.tooling.tools.pytest
         excluded = tuple(
@@ -135,15 +149,19 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             ))
         )
         if self.slow_phase:
-            expression = (
+            return (
                 f"{pytest.slow_marker} and not ({' or '.join(excluded)})"
                 if excluded
                 else pytest.slow_marker
             )
-        elif excluded:
-            expression = f"not ({' or '.join(excluded)})"
-        else:
-            expression = ""
+        return f"not ({' or '.join(excluded)})" if excluded else ""
+
+    def _plugin_policy_args(
+        self, *, execution_mode: c.Infra.PytestExecutionMode
+    ) -> t.VariadicTuple[str]:
+        """Apply the same configured plugin contract to collection and execution."""
+        pytest = config.Infra.tooling.tools.pytest
+        expression = self._marker_expression(execution_mode)
         return (
             "-p",
             pytest.enforcement_plugin,
@@ -183,7 +201,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                 # exactly that case (never combined with ``--testmon-noselect``).
                 *(("--testmon-noselect",) if complete else ("--testmon-forceselect",)),
                 "--testmon-env",
-                f"'{self._toolchain_testmon_environment()}'",
+                f"'{self.testmon_environment(execution_mode)}'",
             )
         )
         pytest_arguments = (
@@ -276,7 +294,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                 "--testmon",
                 *(("--testmon-noselect",) if selection else ("--testmon-forceselect",)),
                 "--testmon-env",
-                f"'{self._toolchain_testmon_environment()}'",
+                f"'{self.testmon_environment(execution_mode)}'",
                 *self._NO_COVERAGE,
             ),
         )

@@ -16,6 +16,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import FlextInfraCliRouteService, c, config, main as infra_main
+from flext_infra.workspace import FlextInfraWorkspaceDetector
 from tests import m, t, u
 
 
@@ -80,6 +81,17 @@ class TestsFlextInfraCodegenMain:
                 root / c.Infra.MISE_TOML_FILENAME,
             )
         )
+        # The copied manifest declares the project; conform loads every entry
+        # point it declares, so the seed ships the cli module it declares.
+        (manifest,) = tm.ok(FlextInfraWorkspaceDetector.load_workspace_manifest(root))
+        project = tm.not_none(manifest.project)
+        if project.cli_module:
+            tm.ok(
+                u.Cli.atomic_write_text_file(
+                    package_init.parent / c.Infra.CODEGEN_CLI_MODULE_FILENAME,
+                    "def main() -> int:\n    return 0\n",
+                )
+            )
 
     @staticmethod
     def _mise_transaction_state(root: Path) -> t.Pair[Path, Path]:
