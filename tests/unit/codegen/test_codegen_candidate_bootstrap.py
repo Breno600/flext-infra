@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+import pytest
 from flext_tests import tm
 
 from flext_infra import c, infra, m, u
@@ -59,6 +60,10 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         tm.that(result.failure, eq=True)
         tm.that(result.error, has="candidate bootstrap targets are not declared")
 
+    # Real conform transactions over a fixture repository (several full plans
+    # per case): integration-scale, so it runs in the slow phase under its
+    # per-item bound (rules/workflow/gate-budget.md), never a raised limit.
+    @pytest.mark.slow
     def test_invalid_second_target_preserves_first_and_allows_retry(
         self, tmp_path: Path
     ) -> None:
@@ -88,6 +93,7 @@ class TestsFlextInfraCodegenCandidateBootstrap:
             )
         )
 
+    @pytest.mark.slow
     def test_two_targets_reach_one_repeatable_fixed_point(self, tmp_path: Path) -> None:
         """A successful campaign publishes both and repeats without drift."""
         source, first, second = self._campaign(tmp_path)
@@ -121,6 +127,7 @@ class TestsFlextInfraCodegenCandidateBootstrap:
             eq=True,
         )
 
+    @pytest.mark.slow
     def test_check_only_reports_drift_without_publication(self, tmp_path: Path) -> None:
         """A check does not enter the recoverable writer or change a target."""
         source, first, _ = self._campaign(tmp_path)
@@ -140,6 +147,7 @@ class TestsFlextInfraCodegenCandidateBootstrap:
             eq=before,
         )
 
+    @pytest.mark.slow
     def test_docs_config_conflict_recovers_from_declared_template(
         self, tmp_path: Path
     ) -> None:

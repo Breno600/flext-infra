@@ -1024,9 +1024,9 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, has="_builtin-fix-enforcement: _builtin_fix_enforcement")
         tm.that(makefile, has="_builtin-fix-namespace: _builtin_fix_namespace")
         tm.that(makefile, has="_builtin-fix-accessors: _builtin_fix_accessors")
-        tm.that(makefile, has="_builtin-self-fix-enforcement: _builtin_fix_enforcement")
-        tm.that(makefile, has="_builtin-self-fix-namespace: _builtin_fix_namespace")
-        tm.that(makefile, has="_builtin-self-fix-accessors: _builtin_fix_accessors")
+        # Operator ruling 2026-09-29: every repository evaluates only itself, so
+        # the self-* fan-out aliases are retired; fix-* already acts on itself.
+        tm.that(makefile, lacks="_builtin-self-fix")
         tm.that(makefile, has="_builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all")
         tm.that(
             makefile, has="_builtin_sonarcloud_sync_all: _builtin_require_environment"

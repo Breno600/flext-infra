@@ -56,21 +56,31 @@ class TestsFlextInfraCodegenManifestlessExisting:
             ),
             *(u.Cli.json_as_mapping(group) for group in entry_groups.values()),
         )
-        targets: dict[Path, set[str]] = {}
+        # A dotted target (``Class.member``) resolves through attribute access,
+        # so the seeded class carries each declared member.
+        targets: dict[Path, dict[str, set[str]]] = {}
         for entries in declared_groups:
             for target in entries.values():
                 module_name, _, attribute = str(target).partition(":")
                 module_path = (
                     root / c.Infra.DEFAULT_SRC_DIR / Path(*module_name.split("."))
                 ).with_suffix(".py")
-                targets.setdefault(module_path, set()).add(attribute.split(".")[0])
-        for module_path, attributes in targets.items():
+                owner, _, member = attribute.partition(".")
+                members = targets.setdefault(module_path, {}).setdefault(owner, set())
+                if member:
+                    members.add(member)
+        for module_path, owners in targets.items():
             tm.ok(
                 u.Cli.atomic_write_text_file(
                     module_path,
                     "".join(
-                        f"class {attribute}:\n    pass\n\n\n"
-                        for attribute in sorted(attributes)
+                        f"class {owner}:\n"
+                        + (
+                            "".join(f"    {member} = None\n" for member in sorted(members))
+                            or "    pass\n"
+                        )
+                        + "\n\n"
+                        for owner, members in sorted(owners.items())
                     ),
                 )
             )

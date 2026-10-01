@@ -50,14 +50,18 @@ class TestsFlextInfraBanditAndMarkdownGates:
     def test_bandit_without_source_tree_has_no_audit_surface(
         self, tmp_path: Path
     ) -> None:
-        """A project without ``src`` declares no package to audit (d94decf10)."""
+        """A project without ``src`` does not select bandit at all.
+
+        Premise (#1223 content selection): an unselected gate never runs and
+        never passes; a direct check without inputs establishes no acceptance.
+        """
         project_dir = u.Tests.mk_project(tmp_path, "p1")
 
+        tm.that(FlextInfraBanditGate(tmp_path).selected_for(project_dir), eq=False)
         result = u.Tests.run_gate_check(FlextInfraBanditGate, tmp_path, project_dir)
 
-        tm.that(result.result.passed, eq=True)
-        tm.that(result.result.errors, empty=True)
-        tm.that(result.issues, empty=True)
+        tm.that(result.result.passed, eq=False)
+        tm.that(" | ".join(result.result.errors), has="no check targets were collected")
 
     def test_bandit_scans_large_tree_with_sanitized_path(self, tmp_path: Path) -> None:
         """The workspace interpreter runs Bandit without any PATH-provided tool."""
