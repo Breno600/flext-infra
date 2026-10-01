@@ -492,7 +492,6 @@ Infra:
         # fatal. See flext-core test_enforcement_warning_visibility.
         filter-warnings:
           [error, "module::flext_core._constants.enforcement.FlextMroViolation"]
-        slow-marker: slow
         standard-markers:
           - "smoke: public-interface smoke tests"
           - "unit: unit tests"
