@@ -85,16 +85,21 @@ that explicit contract, avoiding host-interpreter marker evaluation.
 
 An Infra integration lane can bootstrap declared candidate worktrees with
 `make bootstrap-candidate`. Its handwritten `config/workspace.yaml` lists
-`candidate_bootstrap_targets`, each with a relative `path` and `what: makefile`.
-The verb uses the current branch-matched Infra generator and validates every target as
-an exact Git worktree root. It plans all Makefiles before starting one recoverable,
-multi-root publication, then verifies every target before committing. A failed target
+`candidate_bootstrap_targets`, each with a relative `path` and a `what` value of
+`makefile`, `docs-config`, or `pyproject`.
+The verb uses the current branch-matched Infra generator and validates every target
+as an exact Git worktree root. It plans all declared recovery projections before
+starting one recoverable, multi-root publication, then verifies every target before
+committing. A failed target
 leaves the campaign unpublished. The integration manifest keeps this list empty; a
 candidate campaign adds exact paths only in its worktree lane and removes them before
 landing. An empty list
 fails loud when the verb runs, rather than claiming a completed bootstrap. After
-Makefile bootstrap, run `make setup` and `make gen` in that consumer's worktree. The
-generated target Makefile and other projections are never edited directly. The
+Makefile bootstrap, run `make setup` and `make gen` in that consumer's worktree.
+`docs-config` renders only the declared docs policy template when a conflicted
+generated JSON file prevents ordinary generation from parsing it; afterward run
+`make gen` to verify the full projection. Generated targets are never edited
+directly. The
 `makefile` surface reads declared member identity from the workspace manifest even when
 a member checkout has been initialized only partially and still lacks its
 `pyproject.toml`; that is the state the new Make setup must repair. All other conform

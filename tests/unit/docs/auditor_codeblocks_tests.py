@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
 from flext_tests import tm
 
 from tests import m, u
@@ -15,13 +16,13 @@ if TYPE_CHECKING:
 class TestsFlextInfraAuditorCodeblocks:
     """Regression tests for docs codeblock and exported-docstring auditing."""
 
-    def test_docs_python_codeblock_issues_ignore_snippet_only_rules(
+    def test_docs_python_codeblock_issues_accept_self_contained_example(
         self, tmp_path: Path
     ) -> None:
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir(parents=True, exist_ok=True)
         (docs_dir / "snippet.md").write_text(
-            "```python\ndef ready() -> bool:\n    return True\n\n\nassert ready()\n```\n",
+            '```python\ndef ready() -> bool:\n    """Report readiness."""\n    return True\n```\n',
             encoding="utf-8",
         )
         scope = m.Infra.DocScope(
@@ -31,6 +32,23 @@ class TestsFlextInfraAuditorCodeblocks:
         issues = u.Infra.docs_python_codeblock_issues(scope)
 
         tm.that(issues, eq=[])
+
+    def test_docs_python_codeblock_issues_report_unbound_name(
+        self, tmp_path: Path
+    ) -> None:
+        """Executable snippets cannot rely on an unseen surrounding import."""
+        docs_dir = tmp_path / "docs"
+        docs_dir.mkdir(parents=True, exist_ok=True)
+        (docs_dir / "snippet.md").write_text(
+            "```python\nresult = unavailable_name()\n```\n", encoding="utf-8"
+        )
+        scope = m.Infra.DocScope(
+            name="test", path=tmp_path, report_dir=tmp_path / "reports"
+        )
+        issues = u.Infra.docs_python_codeblock_issues(scope)
+        tm.that(len(issues), eq=1)
+        tm.that(issues[0].file, eq="docs/snippet.md")
+        tm.that(issues[0].issue_type, eq="python_codeblock")
 
     def test_docs_python_codeblock_issues_report_invalid_python(
         self, tmp_path: Path
@@ -49,6 +67,9 @@ class TestsFlextInfraAuditorCodeblocks:
         tm.that(len(issues), eq=1)
         tm.that(issues[0].issue_type, eq="python_codeblock")
         tm.that(issues[0].file, eq="docs/broken.md")
+
+        with pytest.raises(RuntimeError, match="Ruff could not fix"):
+            u.Infra.docs_fix_python_codeblocks(scope, apply=True)
 
     def test_scanner_excerpt_requires_non_executable_text_fence(
         self, tmp_path: Path

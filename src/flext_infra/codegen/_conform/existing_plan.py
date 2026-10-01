@@ -49,6 +49,11 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             )
         if contract.destinations == frozenset({c.Infra.MAKEFILE_FILENAME}):
             return self._plan_existing_makefile(target, workspace, codegen)
+        docs_config = (Path(c.Infra.DIR_DOCS) / c.Infra.DOCS_CONFIG_FILENAME).as_posix()
+        if contract.destinations == frozenset({docs_config}):
+            return self._plan_existing_docs_config(
+                target, workspace, codegen, docs_config
+            )
         managed_artifacts = u.Infra.snapshot_committed_project_managed_artifacts(root)
         if managed_artifacts.failure:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
@@ -165,6 +170,49 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             )
         plan = self.file_plan(
             target.root, destination, rendered.value, mode=managed[0].mode
+        )
+        if plan.failure:
+            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(plan)
+        return r[t.SequenceOf[m.Infra.CodegenFilePlan]].ok((plan.value,))
+
+    def _plan_existing_docs_config(
+        self,
+        target: m.Infra.RepositoryConformTarget,
+        workspace: m.Infra.WorkspaceSpec,
+        codegen: m.Infra.CodegenConfigSpec,
+        destination: str,
+    ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
+        """Render the declared docs policy before consumers parse its projection."""
+        entries = tuple(
+            entry
+            for entry in codegen.templates.entries
+            if entry.destination == destination
+            and entry.delegate == c.Infra.TemplateDelegate.RENDER
+            and target.make_profile in entry.profiles
+        )
+        managed = tuple(
+            item for item in codegen.managed_files if item.path == Path(destination)
+        )
+        if len(entries) != 1 or entries[0].source is None or len(managed) != 1:
+            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
+                f"docs config requires one declared render template and owner: {destination}"
+            )
+        template = u.Infra.codegen_templates_root(codegen) / entries[0].source
+        source = u.Cli.atomic_read_binary_file_state(template, required=True)
+        if source.failure:
+            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(source)
+        rendered = u.Cli.template_render(template, workspace)
+        if rendered.failure:
+            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(rendered)
+        parsed = u.Cli.json_loads(rendered.value)
+        if parsed.failure:
+            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(parsed)
+        plan = self.file_plan(
+            target.root,
+            destination,
+            rendered.value,
+            mode=managed[0].mode,
+            source_states=(source.value,),
         )
         if plan.failure:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(plan)

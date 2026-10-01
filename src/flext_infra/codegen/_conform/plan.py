@@ -29,7 +29,12 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
             workspace_result = FlextInfraWorkspaceDetector.load_workspace_spec(
                 repository_root,
                 allow_unprovisioned_members=(
-                    request.what == c.Infra.CodegenConformSurface.MAKEFILE
+                    request.what
+                    in {
+                        c.Infra.CodegenConformSurface.MAKEFILE,
+                        c.Infra.CodegenConformSurface.DOCS_CONFIG,
+                        c.Infra.CodegenConformSurface.PYPROJECT,
+                    }
                 ),
             )
             if workspace_result.failure:
@@ -125,6 +130,7 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                     # and the namespace production scope it declares.
                     local_workspace = m.Infra.WorkspaceSpec(
                         name=repository.name,
+                        docs_audit=declared_member.value.docs_audit,
                         beads=workspace.beads,
                         repository=local_repository,
                         project=declared_member.value.project,

@@ -135,8 +135,8 @@ endif
 # === SECTION: verb dispatch (managed) ===
 # Source: config:make.verbs and the canonical gate vocabulary. A verb exists
 # only in the profiles it declares (make.verbs[].profiles).
-PUBLIC_VERBS := help setup upg build check smells test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status docs clean release-plan release-version release-tag release-build publication gen bootstrap-candidate initialize mod mod-snapshots waza duplication sonarcloud-sync
-BUILTIN_VERBS := help setup upg build check smells test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status docs clean release-plan release-version release-tag release-build publication gen bootstrap-candidate initialize mod mod-snapshots waza duplication sonarcloud-sync
+PUBLIC_VERBS := help setup upg build check smells test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status docs clean release-plan release-version release-tag release-build publication gen bootstrap-candidate initialize mod mod-text mod-text-candidate mod-snapshots waza duplication sonarcloud-sync
+BUILTIN_VERBS := help setup upg build check smells test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status docs clean release-plan release-version release-tag release-build publication gen bootstrap-candidate initialize mod mod-text mod-text-candidate mod-snapshots waza duplication sonarcloud-sync
 SCRIPT_VERBS :=
 
 CUSTOM_MAKEFILE := $(MAKEFILE_ROOT)/custom.mk
@@ -1148,6 +1148,28 @@ _activated-mod: _builtin_require_environment
 
 
 
+mod-text: _builtin_require_workspace
+	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-mod-text
+
+.PHONY: _activated-mod-text
+_activated-mod-text: _builtin_require_environment
+
+	$(call RUN_PUBLIC,mod-text)
+
+
+
+
+mod-text-candidate: _builtin_require_workspace
+	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-mod-text-candidate
+
+.PHONY: _activated-mod-text-candidate
+_activated-mod-text-candidate: _builtin_require_environment
+
+	$(call RUN_PUBLIC,mod-text-candidate)
+
+
+
+
 mod-snapshots: _builtin_require_workspace
 	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-mod-snapshots
 
@@ -1283,6 +1305,10 @@ _builtin-help:
 	@printf '  %-16s %s\n' 'initialize' 'Materialize the declared package initializer graph.';
 
 	@printf '  %-16s %s\n' 'mod' 'Apply the declared structural codemods; committed rule-test snapshots are verified, never rewritten.';
+
+	@printf '  %-16s %s\n' 'mod-text' 'Apply only declared Sed text rules with syntax preflight and atomic publication.';
+
+	@printf '  %-16s %s\n' 'mod-text-candidate' 'Replay Sed rules in the single candidate worktree declared by the workspace manifest.';
 
 	@printf '  %-16s %s\n' 'mod-snapshots' 'Regenerate the owned ast-grep rule-test snapshots from their tests for a reviewed commit.';
 

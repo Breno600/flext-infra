@@ -94,6 +94,12 @@ class FlextInfraProtocolsBase(Protocol):
     class CandidateBootstrapPlanner(Protocol):
         """Conform plan boundary consumed by the candidate campaign."""
 
+        def surface_contract(
+            self, surface: c.Infra.CodegenConformSurface
+        ) -> m.Infra.CodegenConformSurfaceContract:
+            """Resolve the declared output set for a recovery surface."""
+            ...
+
         def plan(
             self, request: m.Infra.CodegenConformRequest
         ) -> p.Result[m.Infra.CodegenPlan]:
