@@ -11,9 +11,9 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, main as infra_main, u
+from flext_infra import c, main as infra_main
 from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
-from tests import t
+from tests import t, u
 
 
 class TestsFlextInfraModRuleFixtureSnapshots:
@@ -29,10 +29,14 @@ class TestsFlextInfraModRuleFixtureSnapshots:
     ) -> Path:
         """Declare one governed rule with its test under ``root``; return the rule.
 
+        Snapshot verification reads the Git tracked status of the rule tests,
+        so the root is a repository.
+
         Returns:
             The resulting ``Path``.
 
         """
+        u.Tests.initialize_git_repo(root)
         for directory in ("src", f"{fixtures}/rules", f"{fixtures}/tests"):
             tm.ok(u.Cli.ensure_dir(root / directory))
         tm.ok(
