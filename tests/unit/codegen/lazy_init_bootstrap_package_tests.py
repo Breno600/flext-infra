@@ -142,6 +142,15 @@ class TestsFlextInfraLazyInitBootstrapPackage:
             project_name=c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE.replace("_", "-"),
             package_name=c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE,
         )
+        # A root without a public module has nothing to initialize, so the
+        # generator leaves it untouched; one public facade makes it render.
+        (package_root / "models.py").write_text(
+            '"""Bootstrap root model facade."""\n\n'
+            "class FlextModels:\n"
+            '    """Root model facade."""\n\n'
+            '__all__ = ["FlextModels"]\n',
+            encoding=c.Cli.ENCODING_DEFAULT,
+        )
 
         result = u.Tests.run_lazy_init(repository_root)
 

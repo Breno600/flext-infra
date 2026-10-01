@@ -38,6 +38,8 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
         return m.Infra.LazyInitRootRender(
             autogen_header=c.Infra.AUTOGEN_HEADER,
             docstring='"""Tests package."""',
+            lazy_helpers_module=c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE,
+            lazy_helpers=c.Infra.LAZY_BOOTSTRAP_HELPERS,
             exports_tuple="()",
             lazy_module_mapping="        MappingProxyType({}),",
             lazy_alias_mapping="        alias_groups=MappingProxyType({}),",

@@ -249,10 +249,14 @@ class FlextInfraModTextGateEngine:
             )
         capture_equals = raw.get(c.Infra.CODEMOD_TEXT_KEY_CAPTURE_EQUALS, {})
         distributions = raw.get(c.Infra.CODEMOD_TEXT_KEY_DISTRIBUTIONS, ())
-        if not isinstance(distributions, (list, tuple)) or any(
-            not isinstance(name, str) or not name.strip() or name != name.strip()
-            for name in distributions
-        ) or len(set(distributions)) != len(distributions):
+        if (
+            not isinstance(distributions, (list, tuple))
+            or any(
+                not isinstance(name, str) or not name.strip() or name != name.strip()
+                for name in distributions
+            )
+            or len(set(distributions)) != len(distributions)
+        ):
             return r[m.Infra.ModTextRule].fail(
                 f"text rule distributions must be unique non-empty names in {source}",
             )

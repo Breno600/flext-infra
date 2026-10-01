@@ -251,7 +251,8 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         )
         (repository_root / c.PYPROJECT_FILENAME).write_text(
             (
-                f'[project]\nname = "{project_name}"\nversion = "0.1.0"\n\n'
+                f'[project]\nname = "{project_name}"\nversion = "0.1.0"\n'
+                'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n\n'
                 + TestsFlextInfraUtilitiesCodegenMixin.ruff_per_file_ignores_toml()
             ),
             encoding=c.Infra.ENCODING_DEFAULT,

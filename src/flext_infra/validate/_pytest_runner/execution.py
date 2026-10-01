@@ -92,15 +92,29 @@ class FlextInfraPytestRunnerExecution(
         Each collection is one deadline-bound child of the flext-cli process
         owner, which runs deadline processes on the main interpreter thread
         only; the selection and the complete inventory therefore run in order.
+
+        Returns:
+            The typed testmon selection and its manifest owner.
+
+        Raises:
+            RuntimeError: If testmon selected node IDs outside the complete collection
+                inventory.
+
         """
         selection = self._collect_selection(
-            report_dir, complete=complete, execution_mode=execution_mode
+            report_dir,
+            complete=complete,
+            execution_mode=execution_mode,
         )
         if complete or not verify_inventory:
             return selection
         inventory = self._collect_selection(
-            report_dir, complete=True, execution_mode=execution_mode
+            report_dir,
+            complete=True,
+            execution_mode=execution_mode,
         )
+        if inventory.owns_no_tests:
+            return inventory
         if not set(selection.node_ids).issubset(inventory.node_ids):
             msg = "testmon selected node IDs outside the complete collection inventory"
             raise RuntimeError(msg)
@@ -108,7 +122,7 @@ class FlextInfraPytestRunnerExecution(
             update={
                 "whole_target": selection.node_ids == inventory.node_ids,
                 "inventory_collected": True,
-            }
+            },
         )
 
     def _collect_selection(
@@ -118,7 +132,18 @@ class FlextInfraPytestRunnerExecution(
         execution_mode: c.Infra.PytestExecutionMode,
         complete: bool,
     ) -> m.Infra.PytestSelectionPlan:
-        """Run one read-only collection and publish its manifest artifacts."""
+        """Run one read-only collection and publish its manifest artifacts.
+
+        Returns:
+            The selection plan of the published manifest.
+
+        Raises:
+            RuntimeError: If the collection exits with an unaccepted code, times
+                out or is signalled; if pytest reports no collection with a
+                nonempty manifest; or if a complete inventory outside the slow
+                phase holds no test.
+
+        """
         artifact = "testmon-inventory" if complete else "testmon-selection"
         selection_log = report_dir / f"{artifact}.log"
         manifest_path = report_dir / f"{artifact}.json"
@@ -131,7 +156,7 @@ class FlextInfraPytestRunnerExecution(
         )
         if self.collection_command_prefix:
             sys.stdout.write(
-                f"pytest {artifact} profile: {manifest_path.with_suffix('.pstats')}\n"
+                f"pytest {artifact} profile: {manifest_path.with_suffix('.pstats')}\n",
             )
         outcome = u.Cli.run_to_file(
             command,
@@ -199,20 +224,6 @@ class FlextInfraPytestRunnerExecution(
             report_dir / f"{artifact}.txt",
             "\n".join(node_ids) + "\n",
         ).unwrap()
-        if not complete and verify_inventory:
-            inventory = self._resolve_selection(
-                report_dir,
-                complete=True,
-                execution_mode=execution_mode,
-            )
-            if inventory.owns_no_tests:
-                return inventory
-            if not set(node_ids).issubset(inventory.node_ids):
-                msg = "testmon selected node IDs outside the complete collection inventory"
-                raise RuntimeError(msg)
-            whole_target = node_ids == inventory.node_ids
-        else:
-            whole_target = True
         return m.Infra.PytestSelectionPlan(
             manifest_path=manifest_path,
             node_ids=node_ids,
