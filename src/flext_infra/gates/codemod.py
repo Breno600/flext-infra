@@ -179,7 +179,6 @@ class FlextInfraCodemodGate(FlextInfraGate):
                 started=started,
             ),
             issues=issues,
-            observational_issues=(),
             raw_output="\n".join((
                 (f"{len(findings)} policy findings; {len(failures)} native failures"),
                 *raw_output,
