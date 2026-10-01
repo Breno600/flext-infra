@@ -74,9 +74,11 @@ class TestsFlextInfraUpgLockAtomicPublication:
                     )
                 )
                 last_observed = observed.stdout
-                if any(
-                    row.split() == [c.Infra.UV, "wait_for_partner"]
-                    for row in observed.stdout.splitlines()
+                process_rows = tuple(
+                    row.split() for row in observed.stdout.splitlines() if row.split()
+                )
+                if any(row[0] == c.Infra.UV for row in process_rows) and any(
+                    row[-1] == "wait_for_partner" for row in process_rows
                 ):
                     break
                 time.sleep(0.02)

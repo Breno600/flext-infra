@@ -415,6 +415,7 @@ class FlextInfraPytestRunnerExecution(
                 execution_mode=execution_mode,
                 testmon_db=self.testmon_db,
                 deadline_monotonic=self._process_deadline().expires_at_monotonic,
+                report_directory=report_dir,
             ),
         )
         pre_digest = FlextInfraTestmonDbInspector.digest_file(self.testmon_db)
@@ -510,6 +511,7 @@ class FlextInfraPytestRunnerExecution(
                 execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
                 testmon_db=None,
                 deadline_monotonic=self._process_deadline().expires_at_monotonic,
+                report_directory=report_dir,
             ),
         )
         # The inventory pass enforces the same collection policy before coverage.

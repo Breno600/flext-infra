@@ -661,7 +661,7 @@ Infra:
         case-timeout-seconds: 10
         # Slow marks cover nested public runner executions, including a cold
         # cache seed and a warm replay under parallel suite load.
-        slow-timeout-seconds: 60
+        slow-timeout-seconds: 180
         # The complete selected suite currently contains more than 2700 cases;
         # a 120-second process wall stopped after 31 executions with no failure.
         # Keep one bounded aggregate wall while permitting complete accounting.
