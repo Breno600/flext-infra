@@ -103,7 +103,7 @@ class TestsFlextInfraLintRecipes:
         source = (
             "def literal(body: str) -> str:\n"
             '    """Return the literal."""\n'
-            "    if not body.startswith('\"\"\"'):\n"
+            '    if not body.startswith(\'"""\'):\n'
             '        msg = f"{body} is not a literal"\n'
             "        raise ValueError(msg)\n"
             "    return body\n"
@@ -123,7 +123,7 @@ class TestsFlextInfraLintRecipes:
         tm.that(function, is_=ast.FunctionDef)
         tm.that(
             ast.get_docstring(function) or "",
-            has="ValueError: If ``not body.startswith('\"\"\"')``.",
+            has='ValueError: If ``not body.startswith(\'"""\')``.',
         )
 
     def test_summary_docstring_derives_from_the_name(self) -> None:

@@ -474,8 +474,7 @@ class TestsFlextInfraRepositoryLocalTopology:
         root = member.parents[1]
         before = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
         declared = tuple(
-            item.model_copy(update={"package": False})
-            for item in before.subprojects
+            item.model_copy(update={"package": False}) for item in before.subprojects
         )
         self._declare_members(root, declared)
         relative = member.relative_to(root).as_posix()
@@ -505,7 +504,10 @@ class TestsFlextInfraRepositoryLocalTopology:
         before = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
         self._declare_members(
             root,
-            tuple(item.model_copy(update={"package": False}) for item in before.subprojects),
+            tuple(
+                item.model_copy(update={"package": False})
+                for item in before.subprojects
+            ),
         )
         relative = member.relative_to(root).as_posix()
         tm.ok(
