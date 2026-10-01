@@ -8,9 +8,10 @@ from typing import TYPE_CHECKING
 from flext_cli import u
 
 from flext_infra import c
-
-from .discovery import FlextInfraUtilitiesDiscovery
-from .namespace_common import FlextInfraUtilitiesRefactorNamespaceCommon
+from flext_infra._utilities.discovery import FlextInfraUtilitiesDiscovery
+from flext_infra._utilities.namespace_common import (
+    FlextInfraUtilitiesRefactorNamespaceCommon,
+)
 
 if TYPE_CHECKING:
     from flext_infra import t

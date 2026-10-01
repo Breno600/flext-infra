@@ -15,8 +15,8 @@ pytestmark = pytest.mark.slow
 class TestsFlextInfraCodegenMakeAuthentication:
     """Prove the one credential reaches tools and local operations need none."""
 
+    @staticmethod
     def test_make_exports_the_one_credential_to_real_mise(
-        self,
         tmp_path: Path,
     ) -> None:
         """A generated public verb passes GITHUB_TOKEN and never an alias of it."""

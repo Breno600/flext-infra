@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from flext_infra import t
-
-from ._pytest_runner.execution import FlextInfraPytestRunnerExecution
+from flext_infra.validate._pytest_runner.execution import (
+    FlextInfraPytestRunnerExecution,
+)
 
 
 class FlextInfraPytestRunner(FlextInfraPytestRunnerExecution):

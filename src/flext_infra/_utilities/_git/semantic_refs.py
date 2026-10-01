@@ -9,8 +9,7 @@ from git import BadName, GitCommandError
 
 from flext_core import r
 from flext_infra import c, m
-
-from .worktree import FlextInfraUtilitiesGitWorktreeMixin
+from flext_infra._utilities._git.worktree import FlextInfraUtilitiesGitWorktreeMixin
 
 if TYPE_CHECKING:
     from flext_infra import p

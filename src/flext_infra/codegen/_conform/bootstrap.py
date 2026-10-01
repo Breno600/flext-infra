@@ -6,7 +6,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import Annotated
 
-from ... import c, m, s, t
+from flext_infra import c, m, s, t
 
 
 class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):

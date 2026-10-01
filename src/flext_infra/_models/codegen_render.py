@@ -7,8 +7,7 @@ from typing import Annotated, ClassVar
 from flext_cli import m
 
 from flext_infra import t
-
-from .deps_tool_config import FlextInfraModelsDepsToolConfig
+from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
 
 
 class FlextInfraModelsCodegenRender:

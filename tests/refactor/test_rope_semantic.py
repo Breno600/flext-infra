@@ -14,8 +14,8 @@ type RopeWorkspace = t.Pair[t.Infra.RopeProject, Path]
 class TestsFlextInfraRefactorRopeSemantic:
     """Tests for rope semantic-model helpers via the public surface."""
 
+    @staticmethod
     def test_returns_imports(
-        self,
         semantic_rope_workspace: RopeWorkspace,
         services_resource: t.Infra.RopeResource,
     ) -> None:
@@ -23,8 +23,8 @@ class TestsFlextInfraRefactorRopeSemantic:
         imports = u.Infra.resolve_semantic_module_imports(proj, services_resource)
         tm.that(imports, has="Dog")
 
+    @staticmethod
     def test_no_imports_returns_empty(
-        self,
         semantic_rope_workspace: RopeWorkspace,
         models_resource: t.Infra.RopeResource,
     ) -> None:
@@ -35,8 +35,8 @@ class TestsFlextInfraRefactorRopeSemantic:
         # Expect: Animal is defined locally, so it is absent from imports
         tm.that(imports, lacks="Animal")
 
+    @staticmethod
     def test_returns_defined_classes(
-        self,
         semantic_rope_workspace: RopeWorkspace,
         models_resource: t.Infra.RopeResource,
     ) -> None:
@@ -45,8 +45,8 @@ class TestsFlextInfraRefactorRopeSemantic:
         tm.that(classes, has="Animal")
         tm.that(classes, has="Dog")
 
+    @staticmethod
     def test_excludes_imported_classes(
-        self,
         semantic_rope_workspace: RopeWorkspace,
         services_resource: t.Infra.RopeResource,
     ) -> None:
@@ -55,8 +55,8 @@ class TestsFlextInfraRefactorRopeSemantic:
         # Dog is imported, not defined here
         tm.that(classes, lacks="Dog")
 
+    @staticmethod
     def test_returns_base_classes(
-        self,
         semantic_rope_workspace: RopeWorkspace,
         models_resource: t.Infra.RopeResource,
     ) -> None:
@@ -64,8 +64,8 @@ class TestsFlextInfraRefactorRopeSemantic:
         bases = u.Infra.resolve_class_bases(proj, models_resource, "Dog")
         tm.that(bases, has="Animal")
 
+    @staticmethod
     def test_no_bases_for_root_class(
-        self,
         semantic_rope_workspace: RopeWorkspace,
         models_resource: t.Infra.RopeResource,
     ) -> None:
@@ -74,8 +74,8 @@ class TestsFlextInfraRefactorRopeSemantic:
         # object is implicit base, rope may or may not return it
         tm.that(bases, lacks="Dog")
 
+    @staticmethod
     def test_nonexistent_class_returns_empty(
-        self,
         semantic_rope_workspace: RopeWorkspace,
         models_resource: t.Infra.RopeResource,
     ) -> None:
@@ -83,8 +83,8 @@ class TestsFlextInfraRefactorRopeSemantic:
         bases = u.Infra.resolve_class_bases(proj, models_resource, "DoesNotExist")
         tm.that(not bases, eq=True)
 
+    @staticmethod
     def test_returns_public_methods(
-        self,
         semantic_rope_workspace: RopeWorkspace,
         models_resource: t.Infra.RopeResource,
     ) -> None:
@@ -95,8 +95,8 @@ class TestsFlextInfraRefactorRopeSemantic:
         tm.that(methods, has="breed")
         tm.that(methods["breed"], eq="classmethod")
 
+    @staticmethod
     def test_excludes_private_by_default(
-        self,
         semantic_rope_workspace: RopeWorkspace,
         models_resource: t.Infra.RopeResource,
     ) -> None:
@@ -104,8 +104,8 @@ class TestsFlextInfraRefactorRopeSemantic:
         methods = u.Infra.resolve_class_methods(proj, models_resource, "Dog")
         tm.that(methods, lacks="_wag")
 
+    @staticmethod
     def test_includes_private_when_requested(
-        self,
         semantic_rope_workspace: RopeWorkspace,
         models_resource: t.Infra.RopeResource,
     ) -> None:
@@ -119,8 +119,8 @@ class TestsFlextInfraRefactorRopeSemantic:
         tm.that(methods, has="_wag")
         tm.that(methods["_wag"], eq="method")
 
+    @staticmethod
     def test_returns_character_offset_for_semantic_definition(
-        self,
         semantic_rope_workspace: RopeWorkspace,
         models_resource: t.Infra.RopeResource,
     ) -> None:

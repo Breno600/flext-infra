@@ -121,7 +121,8 @@ class TestsFlextInfraCodegenGeneration:
         tm.that(content, has='".._base.constants": ("BaseConstants",)')
         tm.that(content, lacks="from demo_pkg.servers._base.constants import")
 
-    def test_generated_runtime_surfaces_import_without_bootstrap_cycles(self) -> None:
+    @staticmethod
+    def test_generated_runtime_surfaces_import_without_bootstrap_cycles() -> None:
         tm.that(flext_core.__all__, has="c")
         tm.that(dir(flext_core), has="c")
         tm.that(flext_core.c.__name__, eq="FlextConstants")
@@ -433,7 +434,8 @@ class TestsFlextInfraCodegenGeneration:
         )
         tm.that(content, contains="FlextDemoServiceBase as s")
 
-    def test_type_checking_renderer_keeps_explicit_aliases(self) -> None:
+    @staticmethod
+    def test_type_checking_renderer_keeps_explicit_aliases() -> None:
         """Static imports bind aliases to their facade types explicitly."""
         lines = FlextInfraCodegenGeneration.generate_type_checking({
             "module": [("c", "FlextConstants"), ("m", "FlextModels")],

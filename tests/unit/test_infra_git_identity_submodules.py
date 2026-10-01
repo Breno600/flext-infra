@@ -120,7 +120,8 @@ class TestsFlextInfraGitIdentitySubmodules:
         tm.that(identity.origin_remote, eq=origin)
         tm.that(identity.upstream_remote, eq=upstream)
 
-    def test_unborn_repository_returns_typed_failure(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_unborn_repository_returns_typed_failure(tmp_path: Path) -> None:
         """Discovery can reject an initialized repository with no committed HEAD."""
         unborn = tmp_path / "unborn"
         unborn.mkdir()

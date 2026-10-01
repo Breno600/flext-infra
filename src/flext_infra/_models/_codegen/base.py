@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
-from ..codegen_render import FlextInfraModelsCodegenRender
-from ..codegen_toolchain import FlextInfraModelsCodegenToolchain
-from .fix import FlextInfraModelsCodegenFixModels
-from .journal import FlextInfraModelsCodegenJournalModels
-from .lazy_init import FlextInfraModelsCodegenLazyInitModels
-from .pipeline import FlextInfraModelsCodegenPipelineModels
-from .scaffold import FlextInfraModelsCodegenScaffoldModels
-from .transaction import FlextInfraModelsCodegenTransactionModels
+from flext_infra._models._codegen.fix import FlextInfraModelsCodegenFixModels
+from flext_infra._models._codegen.journal import FlextInfraModelsCodegenJournalModels
+from flext_infra._models._codegen.lazy_init import FlextInfraModelsCodegenLazyInitModels
+from flext_infra._models._codegen.pipeline import FlextInfraModelsCodegenPipelineModels
+from flext_infra._models._codegen.scaffold import FlextInfraModelsCodegenScaffoldModels
+from flext_infra._models._codegen.transaction import (
+    FlextInfraModelsCodegenTransactionModels,
+)
+from flext_infra._models.codegen_render import FlextInfraModelsCodegenRender
+from flext_infra._models.codegen_toolchain import FlextInfraModelsCodegenToolchain
 
 
 class FlextInfraCodegen(

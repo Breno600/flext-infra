@@ -73,8 +73,8 @@ class TestsFlextInfraDepsModernizerPyright:
         u.Tests.declare_workspace_projects(tmp_path, members)
         u.Tests.write_project_beads_config(tmp_path, "workspace")
 
+    @staticmethod
     def test_python_discovery_ignores_member_only_container(
-        self,
         tmp_path: Path,
     ) -> None:
         """A directory containing only nested projects is not a root source tree."""
@@ -107,8 +107,8 @@ class TestsFlextInfraDepsModernizerPyright:
             eq=["src"],
         )
 
+    @staticmethod
     def test_python_discovery_uses_caller_resolved_exclusions(
-        self,
         tmp_path: Path,
     ) -> None:
         """Honor the command-scoped topology projection without rediscovery."""

@@ -7,10 +7,11 @@ from pathlib import Path
 from flext_cli import u
 
 from flext_infra import c, m, p, t
-
-from ._rope_core_pymodule import FlextInfraUtilitiesRopeCorePyModuleMixin
-from .namespace import FlextInfraUtilitiesCodegenNamespace
-from .rope_runtime import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities._rope_core_pymodule import (
+    FlextInfraUtilitiesRopeCorePyModuleMixin,
+)
+from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeClassMove:

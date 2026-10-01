@@ -5,9 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_core import r
-
-from ... import c, config, m, p, t, u
-from .beads_routes import FlextInfraCodegenConformBeadsRoutes
+from flext_infra import c, config, m, p, t, u
+from flext_infra.codegen._conform.beads_routes import (
+    FlextInfraCodegenConformBeadsRoutes,
+)
 
 
 class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):

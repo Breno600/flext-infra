@@ -156,8 +156,8 @@ class TestsFlextInfraFamilyFlatten:
         tm.that(planned.value, empty=True)
         tm.that(path.read_text(encoding="utf-8"), eq=source)
 
+    @staticmethod
     def test_flatten_removes_wrapper_docstring_and_promotes_alias_member(
-        self,
         tmp_path: Path,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)

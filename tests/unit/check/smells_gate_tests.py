@@ -49,14 +49,16 @@ def smells_project(tmp_path: Path) -> Iterator[Path]:
 class TestsFlextInfraSmellsGate:
     """Exercise observable gate behavior with the real setup-provisioned tool."""
 
-    def _ctx(self, root: Path) -> m.Infra.GateContext:
+    @staticmethod
+    def _ctx(root: Path) -> m.Infra.GateContext:
         return m.Infra.GateContext(repository_root=root, reports_dir=root / "reports")
 
     @staticmethod
     def _package(project: Path) -> Path:
         return project / "src" / project.name.replace("-", "_")
 
-    def test_registry_exposes_the_canonical_gate(self) -> None:
+    @staticmethod
+    def test_registry_exposes_the_canonical_gate() -> None:
         gate = FlextInfraGateRegistry.default().get("smells")
         tm.that(gate is FlextInfraSmellsGate, eq=True)
 
@@ -78,7 +80,8 @@ class TestsFlextInfraSmellsGate:
             eq=True,
         )
 
-    def _configure(self, root: Path) -> None:
+    @staticmethod
+    def _configure(root: Path) -> None:
         tm.ok(u.Cli.run_checked(["git", "init", "-q", str(root)]))
         config_dir = root / c.Infra.QLTY_CONFIG_DIRNAME
         config_dir.mkdir()

@@ -8,9 +8,10 @@ from typing import TYPE_CHECKING
 from flext_cli import r, u
 
 from flext_infra import c, m, t
-
-from ..dependencies import FlextInfraUtilitiesDependencies
-from .uv_sources import FlextInfraUtilitiesPyprojectUvSources
+from flext_infra._utilities._pyproject.uv_sources import (
+    FlextInfraUtilitiesPyprojectUvSources,
+)
+from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
 
 if TYPE_CHECKING:
     from flext_infra import p

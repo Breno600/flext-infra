@@ -14,10 +14,13 @@ from urllib.parse import urlparse
 
 from flext_core import r
 from flext_infra import c, m, p, t
-
-from ._git.worktree_discovery import FlextInfraUtilitiesGitWorktreeDiscoveryMixin
-from .dependencies import FlextInfraUtilitiesDependencies
-from .workspace_manifest import FlextInfraUtilitiesWorkspaceManifest
+from flext_infra._utilities._git.worktree_discovery import (
+    FlextInfraUtilitiesGitWorktreeDiscoveryMixin,
+)
+from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
+from flext_infra._utilities.workspace_manifest import (
+    FlextInfraUtilitiesWorkspaceManifest,
+)
 
 
 class FlextInfraUtilitiesRepository:

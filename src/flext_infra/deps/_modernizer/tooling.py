@@ -6,9 +6,8 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, config, m, t, u
-
-from ..extra_paths import FlextInfraExtraPathsManager
-from ..phases.ensure_pyright import FlextInfraEnsurePyrightConfigPhase
+from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
+from flext_infra.deps.phases.ensure_pyright import FlextInfraEnsurePyrightConfigPhase
 
 if TYPE_CHECKING:
     from pathlib import Path

@@ -10,10 +10,12 @@ from typing import Annotated, ClassVar
 
 from flext_cli import m
 
-from .. import t
-from .mixins import FlextInfraModelsMixins as mm
-from .refactor_ast_grep import FlextInfraModelsRefactorGrep
-from .refactor_namespace_enforcer import FlextInfraModelsNamespaceEnforcer
+from flext_infra import t
+from flext_infra._models.mixins import FlextInfraModelsMixins as mm
+from flext_infra._models.refactor_ast_grep import FlextInfraModelsRefactorGrep
+from flext_infra._models.refactor_namespace_enforcer import (
+    FlextInfraModelsNamespaceEnforcer,
+)
 
 
 class FlextInfraModelsRefactor(

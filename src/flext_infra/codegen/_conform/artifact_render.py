@@ -5,9 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_core import r
-
-from ... import c, config, m, p, t, u
-from .context_render import FlextInfraCodegenConformContextRender
+from flext_infra import c, config, m, p, t, u
+from flext_infra.codegen._conform.context_render import (
+    FlextInfraCodegenConformContextRender,
+)
 
 
 class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRender):
@@ -44,7 +45,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         if render_inputs.planned_direct_sources is not None:
             return r[t.VariadicTuple[str]].ok(render_inputs.planned_direct_sources)
         document = u.Cli.toml_read_document(
-            render_inputs.target.root / c.Infra.PYPROJECT_FILENAME,
+            render_inputs.target.root / c.PYPROJECT_FILENAME,
         )
         if document.failure:
             return r[t.VariadicTuple[str]].from_failure(document)

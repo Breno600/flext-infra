@@ -158,8 +158,8 @@ class TestsSemanticPublication:
         )
         tm.that(first.path.read_bytes(), eq=first.before.content)
 
+    @staticmethod
     def test_declared_template_input_is_not_its_generated_projection(
-        self,
         mod_workspace: Path,
     ) -> None:
         template_root = mod_workspace / "templates"

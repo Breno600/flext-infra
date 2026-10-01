@@ -23,7 +23,8 @@ class TestsFlextInfraCodegenConformNoTransactionWorktrees:
     unreachable from any branch (one ``git gc`` away from destruction).
     """
 
-    def _transaction_worktree_siblings(self, root: Path) -> t.VariadicTuple[str]:
+    @staticmethod
+    def _transaction_worktree_siblings(root: Path) -> t.VariadicTuple[str]:
         """Name sibling directories that look like detached transaction worktrees."""
         return tuple(
             entry.name
@@ -31,7 +32,8 @@ class TestsFlextInfraCodegenConformNoTransactionWorktrees:
             if entry.is_dir() and _TRANSACTION_MARKER in entry.name
         )
 
-    def _seed_committed_drift(self, tmp_path: Path) -> t.Pair[Path, Path]:
+    @staticmethod
+    def _seed_committed_drift(tmp_path: Path) -> t.Pair[Path, Path]:
         """Materialize the managed tree, then commit one drifted managed Makefile.
 
         Returns the conformed repository root and the drifted file: the shared

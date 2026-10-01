@@ -297,8 +297,8 @@ class TestsFlextInfraTransactionDirectoryJournal:
         tm.that(target.exists(), eq=False)
         tm.ok(owner.run_locked(prepare=True, operation=r[Path].ok))
 
+    @staticmethod
     def test_appended_phase_rejects_replaced_created_parent(
-        self,
         tmp_path: Path,
     ) -> None:
         """Never adopt a foreign parent while staging a previously absent file."""

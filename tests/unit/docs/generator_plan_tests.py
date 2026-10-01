@@ -16,7 +16,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraDocsGeneratorPlan:
     """Read-only publication-plan contracts for generated documentation."""
 
-    def _prepare_generated_parents(self, workspace: Path, project_name: str) -> None:
+    @staticmethod
+    def _prepare_generated_parents(workspace: Path, project_name: str) -> None:
         """Materialize only parents until the directory transaction owns creation."""
         for path in (
             workspace
@@ -28,8 +29,8 @@ class TestsFlextInfraDocsGeneratorPlan:
         ):
             path.mkdir(parents=True, exist_ok=True)
 
+    @staticmethod
     def test_required_directories_are_unique_parent_first_and_read_only(
-        self,
         tmp_path: Path,
     ) -> None:
         """Plan arbitrary nested target parents without materializing any directory."""
@@ -83,8 +84,8 @@ class TestsFlextInfraDocsGeneratorPlan:
         )
         tm.that(all(not path.exists() for path in result.value), eq=True)
 
+    @staticmethod
     def test_required_directories_reject_duplicate_targets(
-        self,
         tmp_path: Path,
     ) -> None:
         """Fail before effects when two rendered artifacts claim one target."""
@@ -99,8 +100,8 @@ class TestsFlextInfraDocsGeneratorPlan:
         tm.fail(prepared)
         tm.that(prepared.error or "", has="duplicate docs publication target")
 
+    @staticmethod
     def test_required_directories_match_final_file_plan_targets(
-        self,
         tmp_path: Path,
     ) -> None:
         """Keep the pre-snapshot directory plan bound to the final artifact owner."""
@@ -170,8 +171,8 @@ class TestsFlextInfraDocsGeneratorPlan:
         )
         tm.that((workspace / ".reports").exists(), eq=False)
 
+    @staticmethod
     def test_generate_publishes_and_reaches_an_unchanged_second_run(
-        self,
         tmp_path: Path,
     ) -> None:
         """The public fixed-effect command writes and converges without a mode flag."""
@@ -218,8 +219,8 @@ class TestsFlextInfraDocsGeneratorPlan:
         )
         tm.that(stale.exists(), eq=True)
 
+    @staticmethod
     def test_scope_failure_is_not_normalized_to_empty_aggregate(
-        self,
         tmp_path: Path,
     ) -> None:
         """Propagate malformed workspace topology instead of rendering an empty root."""

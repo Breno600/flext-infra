@@ -7,7 +7,7 @@ instead of importing scattered generators.
 
 from __future__ import annotations
 
-from ._codegen.vscode import FlextInfraCodegenVscodeMixin
+from flext_infra.services._codegen.vscode import FlextInfraCodegenVscodeMixin
 
 
 class FlextInfraCodegen(FlextInfraCodegenVscodeMixin):

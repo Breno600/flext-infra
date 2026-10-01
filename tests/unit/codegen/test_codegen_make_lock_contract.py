@@ -18,8 +18,8 @@ pytestmark = pytest.mark.slow
 class TestsFlextInfraCodegenMakeLockContract:
     """A frozen operation fails before activation or any launcher execution."""
 
+    @staticmethod
     def test_conform_publication_preserves_committed_lock_graph(
-        self,
         tmp_path: Path,
     ) -> None:
         root, _ = u.Tests.render_make_environment(
@@ -61,8 +61,8 @@ class TestsFlextInfraCodegenMakeLockContract:
             eq=config.Infra.codegen.toolchain.mise_lockfile,
         )
 
+    @staticmethod
     def test_direnv_isolates_nested_checkout_from_parent_mise_config(
-        self,
         tmp_path: Path,
     ) -> None:
         """The real Mise reader cannot observe an unrelated ancestor config."""
@@ -104,8 +104,8 @@ class TestsFlextInfraCodegenMakeLockContract:
         tm.that(process.stderr, lacks="mise WARN")
         tm.that(process.stderr, lacks="invalid-parent")
 
+    @staticmethod
     def test_direnv_runs_real_make_from_pinned_tool_paths_without_lock_changes(
-        self,
         tmp_path: Path,
     ) -> None:
         """An outer direnv entry never delegates Make to an older shared shim."""
@@ -171,8 +171,8 @@ class TestsFlextInfraCodegenMakeLockContract:
             eq={path for path in paths if path.is_relative_to(sidecars)},
         )
 
+    @staticmethod
     def test_direnv_rejects_unprovisioned_runtime_without_installing(
-        self,
         tmp_path: Path,
     ) -> None:
         """Activation names setup instead of downloading a missing pinned runtime."""

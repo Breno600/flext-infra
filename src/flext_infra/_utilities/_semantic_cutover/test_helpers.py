@@ -7,11 +7,16 @@ from pathlib import Path
 from typing import TYPE_CHECKING, override
 
 from flext_infra import c, m, p, t
-
-from .._rope_core_pymodule import FlextInfraUtilitiesRopeCorePyModuleMixin
-from ..qualified_names import FlextInfraUtilitiesQualifiedNames
-from ..rope_runtime_modules import FlextInfraUtilitiesRopeRuntimeModules
-from .helper_references import FlextInfraUtilitiesSemanticHelperReferences
+from flext_infra._utilities._rope_core_pymodule import (
+    FlextInfraUtilitiesRopeCorePyModuleMixin,
+)
+from flext_infra._utilities._semantic_cutover.helper_references import (
+    FlextInfraUtilitiesSemanticHelperReferences,
+)
+from flext_infra._utilities.qualified_names import FlextInfraUtilitiesQualifiedNames
+from flext_infra._utilities.rope_runtime_modules import (
+    FlextInfraUtilitiesRopeRuntimeModules,
+)
 
 if TYPE_CHECKING:
     import libcst as cst

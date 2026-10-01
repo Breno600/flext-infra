@@ -10,7 +10,8 @@ from flext_infra import config
 class TestsFlextInfraToolchainGoBackend:
     """The independent Go runtime follows the moving fleet selector."""
 
-    def test_go_version_tracks_latest_without_coupling_to_beads(self) -> None:
+    @staticmethod
+    def test_go_version_tracks_latest_without_coupling_to_beads() -> None:
         """Keep Go policy explicit while mise resolves its newest release."""
         toolchain = config.Infra.codegen.toolchain
 

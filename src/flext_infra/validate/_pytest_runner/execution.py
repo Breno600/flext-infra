@@ -12,10 +12,9 @@ import pytest
 
 from flext_core import r
 from flext_infra import c, config, m, t, u
+from flext_infra.validate._pytest_runner.command import FlextInfraPytestRunnerCommand
+from flext_infra.validate._pytest_runner.reports import FlextInfraPytestRunnerReports
 from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
-
-from .command import FlextInfraPytestRunnerCommand
-from .reports import FlextInfraPytestRunnerReports
 
 if TYPE_CHECKING:
     from flext_infra import p

@@ -22,16 +22,21 @@ from flext_cli import u
 from packaging.utils import canonicalize_name
 
 from flext_infra import c, config, m, p, r, t
-
-from ._rope_analysis.asthelpers import FlextInfraUtilitiesRopeAnalysisAstHelpers
-from ._rope_analysis.exports import FlextInfraUtilitiesRopeAnalysisExports
-from ._rope_analysis.importstate import FlextInfraUtilitiesRopeAnalysisImportState
-from .base import FlextInfraUtilitiesBase
-from .codemod_rules import FlextInfraUtilitiesCodemodRules
-from .namespace import FlextInfraUtilitiesCodegenNamespace
-from .pyproject import FlextInfraUtilitiesPyproject
-from .rope_core import FlextInfraUtilitiesRopeCore
-from .rope_imports import FlextInfraUtilitiesRopeImports
+from flext_infra._utilities._rope_analysis.asthelpers import (
+    FlextInfraUtilitiesRopeAnalysisAstHelpers,
+)
+from flext_infra._utilities._rope_analysis.exports import (
+    FlextInfraUtilitiesRopeAnalysisExports,
+)
+from flext_infra._utilities._rope_analysis.importstate import (
+    FlextInfraUtilitiesRopeAnalysisImportState,
+)
+from flext_infra._utilities.base import FlextInfraUtilitiesBase
+from flext_infra._utilities.codemod_rules import FlextInfraUtilitiesCodemodRules
+from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
+from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities.rope_imports import FlextInfraUtilitiesRopeImports
 
 
 class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
@@ -295,7 +300,10 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             case c.Infra.CodemodContextPredicate.STDLIB_MODULE:
                 return module in sys.stdlib_module_names
             case c.Infra.CodemodContextPredicate.OWN_PACKAGE:
-                return module == own
+                # The project owns its public package and its internal tiers
+                # (tests, examples, scripts); an absolute import between them
+                # never crosses a package boundary.
+                return module == own or module in c.Infra.NON_PUBLIC_LAZY_ROOTS
             case c.Infra.CodemodContextPredicate.RUNTIME_PACKAGE:
                 return module in cls._runtime_modules(root)
             case c.Infra.CodemodContextPredicate.FACADE_PACKAGE:

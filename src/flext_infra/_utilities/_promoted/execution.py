@@ -9,8 +9,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import c
-
-from .invocation import FlextInfraUtilitiesPromotedInvocation
+from flext_infra._utilities._promoted.invocation import (
+    FlextInfraUtilitiesPromotedInvocation,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p, t

@@ -13,10 +13,9 @@ from typing import ClassVar
 from flext_cli import u
 
 from flext_infra import c, config, m, t
-
-from .discovery import FlextInfraUtilitiesDiscovery
-from .project_discovery import FlextInfraUtilitiesProjectDiscovery
-from .resource_limits import FlextInfraUtilitiesResourceLimits
+from flext_infra._utilities.discovery import FlextInfraUtilitiesDiscovery
+from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
+from flext_infra._utilities.resource_limits import FlextInfraUtilitiesResourceLimits
 
 
 class FlextInfraUtilitiesProtectedEditLinting:

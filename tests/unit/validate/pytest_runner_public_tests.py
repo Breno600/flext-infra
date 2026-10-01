@@ -79,8 +79,8 @@ class TestsFlextInfraPytestRunner:
             eq=coverage_expected | {pytest_policy.slow_marker},
         )
 
+    @staticmethod
     def test_testmon_commands_name_the_toolchain_environment(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """Every testmon argv names one stable toolchain-fingerprinted env."""
@@ -176,8 +176,8 @@ class TestsFlextInfraPytestRunner:
             == accounting.inventory_count
         )
 
+    @staticmethod
     def test_declared_project_uses_its_configured_run_wall(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """The suite argv and process policy share one declared project budget."""
@@ -215,7 +215,8 @@ class TestsFlextInfraPytestRunner:
             ),
         )
 
-    def _seed_cache(self, cached_runner_project: Path) -> Path:
+    @staticmethod
+    def _seed_cache(cached_runner_project: Path) -> Path:
         """Seed the persistent cache through one public cold run."""
         tm.that(tm.ok(runner_for(cached_runner_project).execute()), eq=0)
         return (
@@ -827,8 +828,8 @@ class TestsFlextInfraPytestRunner:
         )
         tm.that(outcome.raw_return_code, eq=exit_code)
 
+    @staticmethod
     def test_full_preserves_corrupt_database_failure_before_execution(
-        self,
         cached_runner_project: Path,
     ) -> None:
         runner = runner_for(cached_runner_project)

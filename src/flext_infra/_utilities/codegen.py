@@ -12,10 +12,9 @@ from flext_cli import u
 
 from flext_core import r
 from flext_infra import c, config, m, p, t
-
-from .codegen_facades import FlextInfraUtilitiesCodegenFacades
-from .codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
-from .gitignore import FlextInfraUtilitiesGitignore
+from flext_infra._utilities.codegen_facades import FlextInfraUtilitiesCodegenFacades
+from flext_infra._utilities.codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
+from flext_infra._utilities.gitignore import FlextInfraUtilitiesGitignore
 
 
 class FlextInfraUtilitiesCodegen(

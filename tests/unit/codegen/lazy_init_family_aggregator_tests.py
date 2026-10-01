@@ -25,8 +25,8 @@ from tests import c, u
 class TestsFlextInfraLazyInitFamilyAggregator:
     """A multi-name aggregator module never wins family/alias ownership."""
 
+    @staticmethod
     def test_aggregator_sidecar_never_shadows_real_constants_owner(
-        self,
         tmp_path: Path,
     ) -> None:
         """The real ``constants.py`` owner survives a re-export aggregator."""

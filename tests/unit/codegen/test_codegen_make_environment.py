@@ -456,8 +456,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         )
         return {path.relative_to(root).as_posix(): path.read_bytes() for path in paths}
 
+    @staticmethod
     def test_setup_fails_when_the_tracked_mise_launcher_is_missing(
-        self,
         tmp_path: Path,
     ) -> None:
         """Never substitute a system Mise for the generated launcher owner."""
@@ -493,8 +493,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(mise_log.exists(), eq=False)
         tm.that(u.Infra.runtime_environment_dir(project_root).exists(), eq=False)
 
+    @staticmethod
     def test_dispatched_runner_preserves_provisioned_external_tools(
-        self,
         tmp_path: Path,
     ) -> None:
         """Keep managed tools reachable while removing the hostile active venv.
@@ -523,7 +523,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, has="SANITIZED_CALLER_PATH")
         tm.that(makefile, lacks="hostile")
 
-    def test_generated_operations_bind_uv_to_runtime_root(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_generated_operations_bind_uv_to_runtime_root(tmp_path: Path) -> None:
         """All generated uv operations use the profile-owned environment."""
         project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path,
@@ -717,8 +718,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
             tm.that(invocation, lacks="--apply")
         tm.that(makefile, has="--apply --report-findings")
 
+    @staticmethod
     def test_standalone_check_executes_its_declared_default_gates(
-        self,
         tmp_path: Path,
     ) -> None:
         """Standalone check runs exactly the owner-declared default gate set."""
@@ -856,8 +857,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(waza.get("version"), eq=toolchain.waza_version)
         tm.that(waza.get("version_prefix"), eq=toolchain.waza_version_prefix)
 
+    @staticmethod
     def test_public_gate_fails_closed_before_managed_environment_exists(
-        self,
         tmp_path: Path,
     ) -> None:
         """A public gate preserves the canonical setup-required diagnostic."""
@@ -924,8 +925,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
             eq=True,
         )
 
+    @staticmethod
     def test_workspace_without_local_members_retains_external_flext_sources(
-        self,
         tmp_path: Path,
     ) -> None:
         """Workspace role alone cannot turn external dependencies into members."""
@@ -981,8 +982,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that((project_root / "make-effect").exists(), eq=False)
         tm.that((project_root / "shell-effect").exists(), eq=False)
 
+    @staticmethod
     def test_generated_make_ignores_forbidden_makeflags_overrides(
-        self,
         tmp_path: Path,
     ) -> None:
         """An undeclared MAKEFLAGS override is inert, never a validation error.
@@ -1021,8 +1022,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(output, lacks="Unsupported Make input")
         tm.that(output, lacks="declared public inputs are")
 
+    @staticmethod
     def test_generated_make_dispatches_script_verbs_to_builtin_targets(
-        self,
         tmp_path: Path,
     ) -> None:
         """Auto-discovered script verbs get _builtin-<verb> dispatch targets."""
@@ -1052,8 +1053,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that("scripts/dispatch.py" in makefile, eq=True)
         tm.that("sync" in makefile, eq=True)
 
+    @staticmethod
     def test_arbitrary_unknown_command_line_variable_is_ignored(
-        self,
         tmp_path: Path,
     ) -> None:
         """An arbitrary unknown command-line variable never blocks a verb.
@@ -1081,8 +1082,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
             msg=process.stdout + process.stderr,
         )
 
+    @staticmethod
     def test_generated_makefile_routes_every_verb_unconditionally(
-        self,
         tmp_path: Path,
     ) -> None:
         """Every public verb maps unconditionally to its one implementation.
@@ -1147,8 +1148,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         ):
             tm.that(makefile, lacks=forbidden)
 
+    @staticmethod
     def test_every_declared_verb_renders_implementation_target(
-        self,
         tmp_path: Path,
     ) -> None:
         """Every codegen.yaml-declared verb renders a reachable implementation.

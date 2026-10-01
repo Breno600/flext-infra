@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .. import c, m, t, u
-from ..deps import FlextInfraRuntimeDevDependencyDetector
-from . import (
+from flext_infra import c, m, t, u
+from flext_infra.codegen import (
     FlextInfraCodegenCensus,
     FlextInfraCodegenConform,
     FlextInfraCodegenFixer,
@@ -14,6 +13,7 @@ from . import (
     FlextInfraCodegenPyTyped,
     FlextInfraCodegenScaffolder,
 )
+from flext_infra.deps import FlextInfraRuntimeDevDependencyDetector
 
 if TYPE_CHECKING:
     from collections.abc import Callable

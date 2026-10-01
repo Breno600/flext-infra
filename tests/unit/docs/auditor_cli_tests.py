@@ -19,11 +19,12 @@ if TYPE_CHECKING:
 class TestsFlextInfraAuditorCli:
     """Public entrypoint behavior for ``FlextInfraDocAuditor.main``."""
 
-    def test_auditor_main_help_exits_zero(self) -> None:
+    @staticmethod
+    def test_auditor_main_help_exits_zero() -> None:
         tm.that(main(["docs", "audit", "--help"]), eq=0)
 
+    @staticmethod
     def test_auditor_main_writes_reports_for_selected_project(
-        self,
         tmp_path: Path,
     ) -> None:
         workspace = u.Tests.create_docs_workspace(
@@ -94,7 +95,8 @@ class TestsFlextInfraAuditorCli:
         )
         tm.that((workspace / ".reports/docs/audit-report.md").exists(), eq=False)
 
-    def test_auditor_cli_medium_finding_exits_nonzero(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_auditor_cli_medium_finding_exits_nonzero(tmp_path: Path) -> None:
         """A policy finding stays reported and fails the public entrypoint."""
         workspace = u.Tests.create_docs_workspace(tmp_path)
         (workspace / "docs/README.md").write_text("Retired phrase\n", encoding="utf-8")

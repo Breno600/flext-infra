@@ -80,8 +80,8 @@ class TestsFlextInfraPytestRunnerSuiteStop:
         ).executed_count
         return bounded, selected, executed
 
+    @staticmethod
     def test_stop_reserve_matches_the_runner_dispatch_decision(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """The typed reserve follows the same serial decision as the workers.

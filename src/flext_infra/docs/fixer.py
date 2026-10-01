@@ -6,8 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, override
 
 from flext_infra import c, m, u
-
-from .base import FlextInfraDocServiceBase
+from flext_infra.docs.base import FlextInfraDocServiceBase
 
 if TYPE_CHECKING:
     from flext_infra import p, t

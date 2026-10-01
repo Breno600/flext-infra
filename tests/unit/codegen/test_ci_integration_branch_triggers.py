@@ -8,8 +8,7 @@ from pathlib import Path
 from flext_tests import tm
 
 from flext_infra import c, config, u
-
-from ._support import CodegenTestSupport
+from tests.unit.codegen._support import CodegenTestSupport
 
 
 class TestsFlextInfraCiIntegrationBranchTriggers:

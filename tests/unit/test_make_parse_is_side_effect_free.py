@@ -39,7 +39,8 @@ class TestsFlextInfraMakeParseIsSideEffectFree:
         r"(?<!command -v )(?:\buv run\b|\bpython[0-9.]*\s+-[cm]\b|\bnode\s+-e\b)",
     )
 
-    def _repository_root(self) -> Path:
+    @staticmethod
+    def _repository_root() -> Path:
         """Return the repository root that owns this checkout."""
         return Path(__file__).resolve().parents[2]
 
@@ -76,7 +77,8 @@ class TestsFlextInfraMakeParseIsSideEffectFree:
             if self._is_immediate_shell_assignment(line)
         )
 
-    def _silencing_lines(self, surface: Path) -> t.VariadicTuple[str]:
+    @staticmethod
+    def _silencing_lines(surface: Path) -> t.VariadicTuple[str]:
         """Return recipe lines that discard a command's exit status."""
         return tuple(
             f"{surface.name}:{number}: {line.strip()}"

@@ -9,8 +9,7 @@ from flext_cli import m as cli_m
 
 from flext_core import m, u
 from flext_infra import t
-
-from ._config.artifact import FlextInfraConfigModelsArtifact
+from flext_infra._models._config.artifact import FlextInfraConfigModelsArtifact
 
 
 class FlextInfraModelsDocsCollection:

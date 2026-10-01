@@ -10,15 +10,14 @@ from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 
 from flext_core import r
-
-from .. import c, m, p, settings, t, u
-from ..detectors import FlextInfraLspDiagnosticsDetector
-from ..gates import (
+from flext_infra import c, m, p, settings, t, u
+from flext_infra.codemod import FlextInfraCodemodSnapshotReconciler
+from flext_infra.detectors import FlextInfraLspDiagnosticsDetector
+from flext_infra.gates import (
     FlextInfraPyreflyGate,
     FlextInfraRuffFormatGate,
     FlextInfraRuffLintGate,
 )
-from . import FlextInfraCodemodSnapshotReconciler
 
 
 class FlextInfraModGateEngine:
@@ -147,7 +146,8 @@ class FlextInfraModGateEngine:
         if not provider.is_relative_to(governed_root):
             return False
         return (
-            u.Infra.git_is_tracked(
+            u.Infra
+            .git_is_tracked(
                 m.Infra.GitRelativePathRequest(
                     repo_root=governed_root,
                     relative_path=provider.relative_to(governed_root).as_posix(),
@@ -450,7 +450,9 @@ class FlextInfraModGateEngine:
         holds back the rewrites of the authored sources.
         """
         return cls.recounted(
-            tuple(entry for entry in report.entries if entry.source_owner != "generator"),
+            tuple(
+                entry for entry in report.entries if entry.source_owner != "generator"
+            ),
         )
 
     @staticmethod

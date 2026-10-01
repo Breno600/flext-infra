@@ -9,14 +9,14 @@ from typing import Annotated, Literal, Self
 
 from flext_cli import m, u
 
-from ... import t
-from ..._constants import (
+from flext_infra import t
+from flext_infra._constants import (
     FlextInfraConstantsCheck,
     FlextInfraConstantsCodegenProject,
     FlextInfraConstantsDocs,
     FlextInfraConstantsMake,
 )
-from .contract import FlextInfraConfigModelsContract
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
 
 
 class FlextInfraConfigModelsMake:

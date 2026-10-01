@@ -25,8 +25,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraGateErrorReporting:
     """Verify real gate issue reporting through the public ``check()`` contract."""
 
+    @staticmethod
     def test_workspace_report_retains_all_executed_failures(
-        self,
         tmp_path: Path,
     ) -> None:
         project_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
@@ -63,8 +63,8 @@ class TestsFlextInfraGateErrorReporting:
         for gate in gates:
             tm.that(report, has=f"- {gate}: FAIL")
 
+    @staticmethod
     def test_ruff_format_reports_each_unformatted_file_once(
-        self,
         tmp_path: Path,
     ) -> None:
         proj_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)

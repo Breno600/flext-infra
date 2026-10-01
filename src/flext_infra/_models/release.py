@@ -6,10 +6,9 @@ from pathlib import Path
 from typing import Annotated, Self
 
 from flext_core import m, u
-
-from .. import t
-from .._constants import FlextInfraConstantsRelease as cr
-from . import FlextInfraModelsMixins as mm
+from flext_infra import t
+from flext_infra._constants import FlextInfraConstantsRelease as cr
+from flext_infra._models import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsRelease:

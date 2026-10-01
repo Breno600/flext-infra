@@ -112,7 +112,8 @@ class TestsFlextInfraCodegenCensus:
 
         tm.fail(u.Infra.parse_namespace_validation(report, project), has="scan failed")
 
-    def test_execute_fails_when_apply_changes_requested(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_execute_fails_when_apply_changes_requested(tmp_path: Path) -> None:
         result = FlextInfraCodegenCensus(
             repository_root=tmp_path,
             apply_changes=True,

@@ -8,8 +8,7 @@ from typing import TYPE_CHECKING, ClassVar
 from flext_cli import cli as cli_facade
 
 from flext_infra import c, t, u
-
-from .cli_routes import FlextInfraCliRouteService
+from flext_infra.services.cli_routes import FlextInfraCliRouteService
 
 if TYPE_CHECKING:
     from flext_infra import p

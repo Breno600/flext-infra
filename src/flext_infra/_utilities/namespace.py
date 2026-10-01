@@ -16,12 +16,11 @@ from typing import ClassVar
 from flext_cli import r, u
 
 from flext_infra import c, config, m, p, t
-
-from .discovery import FlextInfraUtilitiesDiscovery
-from .docs_scope import FlextInfraUtilitiesDocsScope
-from .rope_analysis import FlextInfraUtilitiesRopeAnalysis
-from .rope_core import FlextInfraUtilitiesRopeCore
-from .rope_source import FlextInfraUtilitiesRopeSource
+from flext_infra._utilities.discovery import FlextInfraUtilitiesDiscovery
+from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
+from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
+from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities.rope_source import FlextInfraUtilitiesRopeSource
 
 
 class FlextInfraUtilitiesCodegenNamespace:

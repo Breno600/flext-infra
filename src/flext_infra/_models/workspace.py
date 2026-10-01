@@ -7,10 +7,10 @@ from typing import Annotated, ClassVar
 
 from flext_cli import m
 
-from .. import c, t
-from ._config.base import FlextInfraConfigModels
-from ._git import FlextInfraModelsGitIdentity
-from .mixins import FlextInfraModelsMixins as mm
+from flext_infra import c, t
+from flext_infra._models._config.base import FlextInfraConfigModels
+from flext_infra._models._git import FlextInfraModelsGitIdentity
+from flext_infra._models.mixins import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsWorkspace:

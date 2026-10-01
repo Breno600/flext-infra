@@ -322,7 +322,8 @@ class TestsFlextInfraTypeGates:
         with pytest.raises(c.ValidationError):
             report_model.model_validate_json(payload, strict=True)
 
-    def test_pyright_incomplete_counts(self) -> None:
+    @staticmethod
+    def test_pyright_incomplete_counts() -> None:
         payload = (
             '{"version":"1.1.411","time":"1","generalDiagnostics":[], '
             '"summary":{"filesAnalyzed":1,"errorCount":0,"warningCount":1,'
@@ -331,11 +332,13 @@ class TestsFlextInfraTypeGates:
         with pytest.raises(c.ValidationError, match="warning count"):
             m.Infra.PyrightReport.model_validate_json(payload, strict=True)
 
-    def test_pyrefly_empty_native_report(self) -> None:
+    @staticmethod
+    def test_pyrefly_empty_native_report() -> None:
         report = m.Infra.PyreflyReport.model_validate_json('{"errors":[]}', strict=True)
         assert not report.errors
 
-    def test_pyright_information_without_location(self) -> None:
+    @staticmethod
+    def test_pyright_information_without_location() -> None:
         report = m.Infra.PyrightReport.model_validate_json(
             '{"version":"1.1.411","time":"1","generalDiagnostics":['
             '{"file":"source.py","severity":"information","message":"type info"}],'
@@ -346,7 +349,8 @@ class TestsFlextInfraTypeGates:
         assert report.general_diagnostics[0].range is None
         assert report.summary.information_count == 1
 
-    def test_pyright_zero_collection(self) -> None:
+    @staticmethod
+    def test_pyright_zero_collection() -> None:
         """filesAnalyzed=0 parses; the gate, not the model, judges it."""
         report = m.Infra.PyrightReport.model_validate_json(
             '{"version":"1.1.411","time":"1","generalDiagnostics":[], '
@@ -357,8 +361,8 @@ class TestsFlextInfraTypeGates:
         assert report.summary.files_analyzed == 0
         assert not report.general_diagnostics
 
+    @staticmethod
     def test_checker_does_not_run_type_gates_on_content_only_project(
-        self,
         real_python_package: Path,
     ) -> None:
         """A project without Python targets gets no type-gate row at all."""

@@ -121,8 +121,8 @@ class TestsBatchReplacements:
         invalid = report.model_copy(update={"entries": (finding,)})
         tm.fail(FlextInfraModReplacements.publish(root, invalid))
 
+    @staticmethod
     def test_emptied_statement_publishes_formatter_clean_file(
-        self,
         tmp_path: Path,
     ) -> None:
         """An emptied statement fix publishes skeleton-free, format-clean bytes.

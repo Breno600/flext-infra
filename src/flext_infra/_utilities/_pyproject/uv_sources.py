@@ -8,10 +8,13 @@ from typing import TYPE_CHECKING
 from flext_cli import r, u
 
 from flext_infra import c, t
-
-from ..dependencies import FlextInfraUtilitiesDependencies
-from .requirements import FlextInfraUtilitiesPyprojectRequirements
-from .session import FlextInfraUtilitiesPyprojectSession
+from flext_infra._utilities._pyproject.requirements import (
+    FlextInfraUtilitiesPyprojectRequirements,
+)
+from flext_infra._utilities._pyproject.session import (
+    FlextInfraUtilitiesPyprojectSession,
+)
+from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
 
 if TYPE_CHECKING:
     from flext_infra import m, p

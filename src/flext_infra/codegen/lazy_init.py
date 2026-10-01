@@ -14,13 +14,16 @@ from time import perf_counter
 from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
-
-from .. import c, config, m, t, u
-from ..workspace.rope import FlextInfraRopeWorkspace
-from ._execution import FlextInfraCodegenExecutionBase
-from ._lazy_init_generation import FlextInfraCodegenLazyInitGenerationMixin
-from ._lazy_init_projection_manifest import FlextInfraCodegenLazyInitProjectionManifest
-from .lazy_init_planner import FlextInfraCodegenLazyInitPlanner
+from flext_infra import c, config, m, t, u
+from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
+from flext_infra.codegen._lazy_init_generation import (
+    FlextInfraCodegenLazyInitGenerationMixin,
+)
+from flext_infra.codegen._lazy_init_projection_manifest import (
+    FlextInfraCodegenLazyInitProjectionManifest,
+)
+from flext_infra.codegen.lazy_init_planner import FlextInfraCodegenLazyInitPlanner
+from flext_infra.workspace.rope import FlextInfraRopeWorkspace
 
 if TYPE_CHECKING:
     from .. import p

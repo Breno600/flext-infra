@@ -55,7 +55,8 @@ class TestsFlextInfraDepsDetectionPipCheck:
 
         tm.that(tm.ok(result), eq=([], 0))
 
-    def test_unlaunchable_pip_is_a_failure(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_unlaunchable_pip_is_a_failure(tmp_path: Path) -> None:
         venv_bin = tmp_path / "venv" / "bin"
         venv_bin.mkdir(parents=True)
         (venv_bin / "pip").write_text("", encoding="utf-8")

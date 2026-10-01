@@ -13,8 +13,7 @@ from pathlib import Path
 from flext_tests import tm
 
 from flext_infra import c, m
-
-from ._support import CodegenTestSupport
+from tests.unit.codegen._support import CodegenTestSupport
 
 
 class TestsFlextInfraCodegenCiCustomSteps:
@@ -43,7 +42,8 @@ class TestsFlextInfraCodegenCiCustomSteps:
 
         tm.that(spec.custom_steps, eq=block)
 
-    def test_the_extension_file_sits_beside_the_workflows(self) -> None:
+    @staticmethod
+    def test_the_extension_file_sits_beside_the_workflows() -> None:
         """GitHub parses everything inside ``workflows``; a step list is not one.
 
         Placing the extension there would surface as a permanent workflow syntax

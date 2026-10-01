@@ -24,8 +24,8 @@ class TestsFlextInfraModCliRoute:
     once instead of leaving four tests one scheduling decision away from red.
     """
 
+    @staticmethod
     def test_receipt_is_complete_and_replaced_by_zero_scan(
-        self,
         mod_workspace: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -117,8 +117,8 @@ class TestsFlextInfraModCliRoute:
         tm.that(second_console, has=second_digest)
         tm.that(second_console, lacks=first_digest)
 
+    @staticmethod
     def test_apply_reports_detection_only_residue_and_still_succeeds(
-        self,
         mod_workspace: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -160,8 +160,8 @@ class TestsFlextInfraModCliRoute:
         tm.that(console, has="owner repair")
         tm.that(console, has="ban-make-serialization")
 
+    @staticmethod
     def test_apply_repeats_new_actionable_rule_cascades_until_fixed_point(
-        self,
         mod_workspace: Path,
     ) -> None:
         """Carry findings exposed by one rewrite into the next apply iteration."""
@@ -225,7 +225,8 @@ class TestsFlextInfraModCliRoute:
         tm.that(updated, lacks="value = list()")
         tm.that(updated.startswith("from __future__ import annotations"), eq=True)
 
-    def test_scan_keeps_prefix_rule_ids_exact(self, mod_workspace: Path) -> None:
+    @staticmethod
+    def test_scan_keeps_prefix_rule_ids_exact(mod_workspace: Path) -> None:
         config_path = mod_workspace / c.Infra.CODEMOD_CONFIG_RELPATH
         rules_root = config_path.parent / c.Cli.RULES_DIR_NAME
         first_rule = rules_root / "rewire-first.yml"
@@ -307,8 +308,8 @@ class TestsFlextInfraModCliRoute:
             },
         )
 
+    @staticmethod
     def test_scan_aggregates_every_local_rule_and_accepts_hint(
-        self,
         mod_workspace: Path,
     ) -> None:
         """Execute every rule of the local catalog and retain its exact rule file."""
@@ -381,8 +382,8 @@ class TestsFlextInfraModCliRoute:
             eq={"warning", "hint"},
         )
 
+    @staticmethod
     def test_scan_rejects_byte_identical_declared_fix(
-        self,
         mod_workspace: Path,
     ) -> None:
         """Keep a declared fix that changes no bytes in the fixed-point residue."""

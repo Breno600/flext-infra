@@ -15,12 +15,16 @@ from typing import override
 from flext_cli import u
 
 from flext_infra import config
-
-from ..constants import c
-from ..models import m
-from ..typings import t
-from . import FlextInfraUtilitiesGit, FlextInfraUtilitiesProjectDiscoveryCandidatesMixin
-from .workspace_manifest import FlextInfraUtilitiesWorkspaceManifest
+from flext_infra._utilities import (
+    FlextInfraUtilitiesGit,
+    FlextInfraUtilitiesProjectDiscoveryCandidatesMixin,
+)
+from flext_infra._utilities.workspace_manifest import (
+    FlextInfraUtilitiesWorkspaceManifest,
+)
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.typings import t
 
 
 class FlextInfraUtilitiesProjectDiscovery(

@@ -7,9 +7,8 @@ from typing import Annotated, ClassVar, Self, override
 
 from flext_core import FlextService, r
 from flext_infra import c, m, p, t, u
-
-from ._base_payload import FlextInfraCommandPayloadMixin
-from ._settings import settings
+from flext_infra._base_payload import FlextInfraCommandPayloadMixin
+from flext_infra._settings import settings
 
 
 class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from ._codegen_generation_file import FlextInfraCodegenGenerationFileMixin
+from flext_infra.codegen._codegen_generation_file import (
+    FlextInfraCodegenGenerationFileMixin,
+)
 
 
 class FlextInfraCodegenGeneration(FlextInfraCodegenGenerationFileMixin):

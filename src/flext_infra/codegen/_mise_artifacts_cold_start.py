@@ -7,11 +7,14 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, t, u
-
-from ._mise_artifacts_derivation import FlextInfraMiseArtifactsDerivation
-from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles as files
-from .mise_artifacts import FlextInfraCodegenMiseArtifacts
-from .mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
+from flext_infra.codegen._mise_artifacts_derivation import (
+    FlextInfraMiseArtifactsDerivation,
+)
+from flext_infra.codegen._mise_artifacts_files import (
+    FlextInfraMiseArtifactsFiles as files,
+)
+from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
 
 if TYPE_CHECKING:
     from flext_infra import p

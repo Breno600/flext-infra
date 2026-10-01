@@ -60,7 +60,8 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         tm.that(result.issues[0].code, eq=c.Infra.MARKDOWN_FORMAT)
         tm.that(result.issues[0].file, eq="README.md")
 
-    def test_format_gate_without_markdown_is_red(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_format_gate_without_markdown_is_red(tmp_path: Path) -> None:
         """Zero collected markdown is red, never a neutral pass."""
         project_dir = u.Tests.mk_project(tmp_path, "markdown-format-empty")
 
@@ -206,8 +207,8 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
             eq=True,
         )
 
+    @staticmethod
     def test_code_gate_reports_unformatted_docstring_example(
-        self,
         tmp_path: Path,
     ) -> None:
         """Parseable docstring examples answer to the format contract."""
@@ -229,8 +230,8 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
 
         tm.that(result.issues[0].file, eq="src/widget.py")
 
+    @staticmethod
     def test_code_gate_is_not_selected_without_embedded_code(
-        self,
         tmp_path: Path,
     ) -> None:
         """Prose-only documentation never selects the embedded-code gate."""

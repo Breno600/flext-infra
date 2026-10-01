@@ -8,8 +8,9 @@ from typing import TYPE_CHECKING
 from git import GitCommandError, Repo
 
 from flext_core import r
-
-from .worktree_patch import FlextInfraUtilitiesGitWorktreePatchMixin
+from flext_infra._utilities._git.worktree_patch import (
+    FlextInfraUtilitiesGitWorktreePatchMixin,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p, t

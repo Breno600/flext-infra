@@ -8,11 +8,12 @@ from pathlib import Path
 from flext_cli import u
 
 from flext_infra import c, t
-
-from .._models.workspace import FlextInfraModelsWorkspace as mw
-from .._utilities._docs_scope_paths import FlextInfraUtilitiesDocsScopePathsMixin
-from .._utilities.dependencies import FlextInfraUtilitiesDependencies
-from .._utilities.pyproject import FlextInfraUtilitiesPyproject
+from flext_infra._models.workspace import FlextInfraModelsWorkspace as mw
+from flext_infra._utilities._docs_scope_paths import (
+    FlextInfraUtilitiesDocsScopePathsMixin,
+)
+from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
+from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
 
 
 class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMixin):

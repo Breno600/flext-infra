@@ -11,10 +11,9 @@ from typing import TYPE_CHECKING, ClassVar
 from flext_cli import u
 
 from flext_infra import c, config, m, settings, t
-
-from .process import FlextInfraUtilitiesProcess
-from .project_discovery import FlextInfraUtilitiesProjectDiscovery
-from .pyproject import FlextInfraUtilitiesPyproject
+from flext_infra._utilities.process import FlextInfraUtilitiesProcess
+from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
+from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
 
 if TYPE_CHECKING:
     from flext_infra import p

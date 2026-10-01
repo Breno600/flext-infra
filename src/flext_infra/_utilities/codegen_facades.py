@@ -8,11 +8,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 from flext_infra import c
-
-from .namespace import FlextInfraUtilitiesCodegenNamespace
-from .rope_core import FlextInfraUtilitiesRopeCore
-from .rope_module_patch import FlextInfraUtilitiesRopeModulePatch
-from .rope_runtime import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities.rope_module_patch import FlextInfraUtilitiesRopeModulePatch
+from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 if TYPE_CHECKING:
     from flext_infra import t
