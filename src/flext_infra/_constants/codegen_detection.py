@@ -40,20 +40,6 @@ class FlextInfraConstantsCodegenDetection:
     "Regex: NAME: ClassVar[TYPE] = VALUE (with optional inline comment)."
     DETECTION_CLASS_DECL_RE: ClassVar[t.RegexPattern] = re.compile(r"class\s+(\w+)")
     "Regex: class ClassName (captures class name)."
-    DETECTION_CANONICAL_ALIASES: ClassVar[frozenset[str]] = frozenset({
-        "c",
-        "m",
-        "p",
-        "t",
-        "u",
-        "r",
-        "e",
-        "s",
-        "d",
-        "h",
-        "x",
-    })
-    "Canonical single-letter runtime aliases."
 
 
 __all__: list[str] = ["FlextInfraConstantsCodegenDetection"]

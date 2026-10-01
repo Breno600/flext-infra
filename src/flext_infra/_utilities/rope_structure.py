@@ -105,11 +105,6 @@ class FlextInfraUtilitiesRopeStructure:
             ))
 
     @staticmethod
-    def header_name(statement: m.Infra.LogicalStatement) -> str:
-        """Return the declared name from a ``class``/``def`` statement header."""
-        return FlextInfraUtilitiesRopeStructure._header_name(statement.text)
-
-    @staticmethod
     def _header_name(text: str) -> str:
         """Return the declared name from a ``class``/``def`` header line."""
         stripped = text.strip().removeprefix("async ").strip()
@@ -195,35 +190,6 @@ class FlextInfraUtilitiesRopeStructure:
         return name if name.isidentifier() else ""
 
     @staticmethod
-    def annotation_contains(statement: m.Infra.LogicalStatement, name: str) -> bool:
-        """Return whether an annotation contains one identifier token."""
-        annotation = FlextInfraUtilitiesRopeStructure._annotation_source(statement.text)
-        return name in FlextInfraUtilitiesRopeStructure._identifiers(annotation)
-
-    @staticmethod
-    def _annotation_source(text: str) -> str:
-        """Return the annotation slice of an annotated statement."""
-        stripped = text.strip()
-        head = FlextInfraUtilitiesRopeStructure._assignment_head(stripped)
-        left = head if head is not None else stripped
-        _target, separator, annotation = left.partition(":")
-        return annotation.strip() if separator else ""
-
-    @staticmethod
-    def call_callee_name(statement: m.Infra.LogicalStatement) -> str:
-        """Return the trailing identifier of an assignment call, or empty."""
-        head = FlextInfraUtilitiesRopeStructure._assignment_head(statement.text.strip())
-        if head is None:
-            return ""
-        value = statement.text.strip()[len(head) + 1 :].strip()
-        open_paren = value.find("(")
-        return (
-            value[:open_paren].strip().rsplit(".", maxsplit=1)[-1]
-            if open_paren > 0
-            else ""
-        )
-
-    @staticmethod
     def class_base_names(statement: m.Infra.LogicalStatement) -> t.Infra.StrSet:
         """Return terminal base-class names from a class header."""
         stripped = statement.text.strip()
@@ -237,21 +203,6 @@ class FlextInfraUtilitiesRopeStructure:
             if (item := part.strip())
             if (terminal := item.split("[", maxsplit=1)[0].strip().rsplit(".", 1)[-1])
         }
-
-    @staticmethod
-    def _identifiers(source: str) -> t.Infra.StrSet:
-        """Return identifier tokens from a source slice."""
-        identifiers: t.Infra.StrSet = set()
-        token: list[str] = []
-        for char in source:
-            if char.isalnum() or char == "_":
-                token.append(char)
-            elif token:
-                identifiers.add("".join(token))
-                token = []
-        if token:
-            identifiers.add("".join(token))
-        return identifiers
 
 
 __all__: list[str] = ["FlextInfraUtilitiesRopeStructure"]
