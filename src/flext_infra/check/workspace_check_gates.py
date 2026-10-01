@@ -26,7 +26,9 @@ class FlextInfraWorkspaceCheckGatesMixin:
     _gate_logger: ClassVar[p.Logger] = u.fetch_logger(__name__)
 
     def _isolate_context(
-        self, ctx: m.Infra.GateContext, target: m.Infra.CheckProjectTarget
+        self,
+        ctx: m.Infra.GateContext,
+        target: m.Infra.CheckProjectTarget,
     ) -> m.Infra.GateContext:
         """Create a fresh GateContext scoped to a single project."""
         return m.Infra.GateContext(
@@ -52,7 +54,10 @@ class FlextInfraWorkspaceCheckGatesMixin:
         _ = u.Cli.ensure_dir(project_ctx.reports_dir)
         start = time.monotonic()
         project_result = self._check_project_with_ctx(
-            project_dir, resolved_gates, project_ctx, rope_outcomes
+            project_dir,
+            resolved_gates,
+            project_ctx,
+            rope_outcomes,
         )
         elapsed = time.monotonic() - start
         u.Cli.status(
@@ -80,7 +85,10 @@ class FlextInfraWorkspaceCheckGatesMixin:
         for index, target in enumerate(projects, 1):
             u.Cli.progress(index, total, target.name, c.Infra.VERB_CHECK)
             project_result = self._run_single_project(
-                target, resolved_gates, ctx, rope_outcomes
+                target,
+                resolved_gates,
+                ctx,
+                rope_outcomes,
             )
             results.append(project_result)
             project_passed: bool = project_result.passed
@@ -162,9 +170,13 @@ class FlextInfraWorkspaceCheckGatesMixin:
                         else frozenset()
                     ),
                     handler=self._make_gate_handler(
-                        gate_instance, project_dir, ctx, executions, rope_outcomes
+                        gate_instance,
+                        project_dir,
+                        ctx,
+                        executions,
+                        rope_outcomes,
                     ),
-                )
+                ),
             )
             previous_gate_id = gate_id
 
@@ -216,7 +228,8 @@ class FlextInfraWorkspaceCheckGatesMixin:
         project_name = project_dir.name
 
         def _handler(
-            _pipeline_ctx: p.Cli.PipelineStageContext, /
+            _pipeline_ctx: p.Cli.PipelineStageContext,
+            /,
         ) -> p.Result[m.Cli.PipelineStageResult]:
             """Run the gate and record its execution in the sink."""
             gate_ctx = m.Infra.GateContext(
@@ -229,7 +242,10 @@ class FlextInfraWorkspaceCheckGatesMixin:
                 pyright_args=ctx.pyright_args,
             )
             execution = self._execute_gate(
-                gate_instance, project_dir, gate_ctx, rope_outcomes
+                gate_instance,
+                project_dir,
+                gate_ctx,
+                rope_outcomes,
             )
             gates_sink[gate_id] = execution
             self._gate_logger.info(
@@ -242,14 +258,14 @@ class FlextInfraWorkspaceCheckGatesMixin:
             if not execution.result.passed:
                 return r[m.Cli.PipelineStageResult].fail(
                     f"{gate_id} failed for {project_name} "
-                    f"with {len(execution.issues)} findings"
+                    f"with {len(execution.issues)} findings",
                 )
             return r[m.Cli.PipelineStageResult].ok(
                 m.Cli.PipelineStageResult(
                     stage_id=gate_id,
                     status=c.Cli.PipelineStageStatus.OK,
                     output={"findings": execution.finding_count},
-                )
+                ),
             )
 
         return _handler

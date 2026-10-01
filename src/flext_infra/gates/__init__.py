@@ -9,10 +9,8 @@ from typing import TYPE_CHECKING
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from .abstraction_boundary import FlextInfraAbstractionBoundaryGate
     from .bandit import FlextInfraBanditGate
     from .base_gate import FlextInfraGate
-    from .canonical_alias import FlextInfraCanonicalAliasGate
     from .deferred_self_reference import FlextInfraDeferredSelfReferenceGate
     from .direnv import FlextInfraDirenvGate
     from .duplication import FlextInfraDuplicationGate
@@ -21,9 +19,18 @@ if TYPE_CHECKING:
     from .loc_cap import FlextInfraLocCapGate
     from .markdown import FlextInfraMarkdownGate
     from .markdown_code import FlextInfraMarkdownCodeGate
-    from .markdown_code_sources import FlextInfraMarkdownCodeSources
+    from .markdown_code_sources import (
+        is_syntax_broken,
+        source_name,
+        write_docstring_sources,
+        write_fenced_block_sources,
+    )
     from .markdown_format import FlextInfraMarkdownFormatGate
-    from .markdown_support import FlextInfraMarkdownGateBase
+    from .markdown_support import (
+        FlextInfraMarkdownGateBase,
+        collect_markdown_files,
+        read_ignore_patterns,
+    )
     from .mypy import FlextInfraMypyGate
     from .namespace import FlextInfraNamespaceGate
     from .pyrefly import FlextInfraPyreflyGate
@@ -32,15 +39,11 @@ if TYPE_CHECKING:
     from .ruff_lint import FlextInfraRuffLintGate
     from .runtime_census import FlextInfraRuntimeCensusGate
     from .scanner_gate import FlextInfraScannerGateMixin
-    from .silent_failure import FlextInfraSilentFailureGate
     from .smells import FlextInfraSmellsGate
-    from .tier_whitelist import FlextInfraTierWhitelistGate
 
 
 __all__: tuple[str, ...] = (
-    "FlextInfraAbstractionBoundaryGate",
     "FlextInfraBanditGate",
-    "FlextInfraCanonicalAliasGate",
     "FlextInfraDeferredSelfReferenceGate",
     "FlextInfraDirenvGate",
     "FlextInfraDuplicationGate",
@@ -49,7 +52,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraLayoutGate",
     "FlextInfraLocCapGate",
     "FlextInfraMarkdownCodeGate",
-    "FlextInfraMarkdownCodeSources",
     "FlextInfraMarkdownFormatGate",
     "FlextInfraMarkdownGate",
     "FlextInfraMarkdownGateBase",
@@ -61,18 +63,20 @@ __all__: tuple[str, ...] = (
     "FlextInfraRuffLintGate",
     "FlextInfraRuntimeCensusGate",
     "FlextInfraScannerGateMixin",
-    "FlextInfraSilentFailureGate",
     "FlextInfraSmellsGate",
-    "FlextInfraTierWhitelistGate",
+    "collect_markdown_files",
+    "is_syntax_broken",
+    "read_ignore_patterns",
+    "source_name",
+    "write_docstring_sources",
+    "write_fenced_block_sources",
 )
 
 _LAZY_IMPORTS = MappingProxyType(
     build_lazy_import_map(
         MappingProxyType({
-            ".abstraction_boundary": ("FlextInfraAbstractionBoundaryGate",),
             ".bandit": ("FlextInfraBanditGate",),
             ".base_gate": ("FlextInfraGate",),
-            ".canonical_alias": ("FlextInfraCanonicalAliasGate",),
             ".deferred_self_reference": ("FlextInfraDeferredSelfReferenceGate",),
             ".direnv": ("FlextInfraDirenvGate",),
             ".duplication": ("FlextInfraDuplicationGate",),
@@ -81,9 +85,18 @@ _LAZY_IMPORTS = MappingProxyType(
             ".loc_cap": ("FlextInfraLocCapGate",),
             ".markdown": ("FlextInfraMarkdownGate",),
             ".markdown_code": ("FlextInfraMarkdownCodeGate",),
-            ".markdown_code_sources": ("FlextInfraMarkdownCodeSources",),
+            ".markdown_code_sources": (
+                "is_syntax_broken",
+                "source_name",
+                "write_docstring_sources",
+                "write_fenced_block_sources",
+            ),
             ".markdown_format": ("FlextInfraMarkdownFormatGate",),
-            ".markdown_support": ("FlextInfraMarkdownGateBase",),
+            ".markdown_support": (
+                "FlextInfraMarkdownGateBase",
+                "collect_markdown_files",
+                "read_ignore_patterns",
+            ),
             ".mypy": ("FlextInfraMypyGate",),
             ".namespace": ("FlextInfraNamespaceGate",),
             ".pyrefly": ("FlextInfraPyreflyGate",),
@@ -92,9 +105,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".ruff_lint": ("FlextInfraRuffLintGate",),
             ".runtime_census": ("FlextInfraRuntimeCensusGate",),
             ".scanner_gate": ("FlextInfraScannerGateMixin",),
-            ".silent_failure": ("FlextInfraSilentFailureGate",),
             ".smells": ("FlextInfraSmellsGate",),
-            ".tier_whitelist": ("FlextInfraTierWhitelistGate",),
         }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,

@@ -35,20 +35,25 @@ class TestsFlextInfraMetadataDiscipline:
         package = project_root / c.Infra.METADATA_TARGET_SCOPE_MARKERS[0].strip("/")
         package.mkdir(parents=True, exist_ok=True)
         (project_root / "pyproject.toml").write_text(
-            "[project]\nname = 'project'\nversion = '0.0.0'\n", encoding="utf-8"
+            "[project]\nname = 'project'\nversion = '0.0.0'\n",
+            encoding="utf-8",
         )
         (package / "__init__.py").write_text("", encoding="utf-8")
         return project_root
 
     def test_empty_workspace_passes(
-        self, tmp_path: Path, v: FlextInfraValidateMetadataDiscipline
+        self,
+        tmp_path: Path,
+        v: FlextInfraValidateMetadataDiscipline,
     ) -> None:
         report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))
         tm.that(report, is_=m.Infra.ValidationReport)
         tm.that(report.passed, eq=True)
 
     def test_non_tomllib_import_passes(
-        self, tmp_path: Path, v: FlextInfraValidateMetadataDiscipline
+        self,
+        tmp_path: Path,
+        v: FlextInfraValidateMetadataDiscipline,
     ) -> None:
         project_root = self._seed_project(tmp_path)
         package = project_root / c.Infra.METADATA_TARGET_SCOPE_MARKERS[0].strip("/")
@@ -57,7 +62,9 @@ class TestsFlextInfraMetadataDiscipline:
         tm.that(report.passed, eq=True)
 
     def test_direct_tomllib_import_fails(
-        self, tmp_path: Path, v: FlextInfraValidateMetadataDiscipline
+        self,
+        tmp_path: Path,
+        v: FlextInfraValidateMetadataDiscipline,
     ) -> None:
         project_root = self._seed_project(tmp_path)
         package = project_root / c.Infra.METADATA_TARGET_SCOPE_MARKERS[0].strip("/")
@@ -67,7 +74,9 @@ class TestsFlextInfraMetadataDiscipline:
         tm.that(" | ".join(report.violations), has="tomllib")
 
     def test_allowlisted_metadata_module_passes(
-        self, tmp_path: Path, v: FlextInfraValidateMetadataDiscipline
+        self,
+        tmp_path: Path,
+        v: FlextInfraValidateMetadataDiscipline,
     ) -> None:
         project_root = self._seed_project(tmp_path)
         scope = c.Infra.METADATA_TARGET_SCOPE_MARKERS[0]
@@ -77,13 +86,16 @@ class TestsFlextInfraMetadataDiscipline:
             if marker.startswith(scope)
         )
         (project_root / allowlisted.lstrip("/")).write_text(
-            "import tomllib\n", encoding="utf-8"
+            "import tomllib\n",
+            encoding="utf-8",
         )
         report: m.Infra.ValidationReport = tm.ok(v.build_report(project_root))
         tm.that(report.passed, eq=True)
 
     def test_outside_target_scope_is_ignored(
-        self, tmp_path: Path, v: FlextInfraValidateMetadataDiscipline
+        self,
+        tmp_path: Path,
+        v: FlextInfraValidateMetadataDiscipline,
     ) -> None:
         external = tmp_path / "other"
         package = external / "src" / "other_pkg"

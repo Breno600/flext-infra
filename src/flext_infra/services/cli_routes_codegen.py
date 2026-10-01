@@ -22,7 +22,6 @@ from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
 from flext_infra.deps.fix_pyrefly_config import FlextInfraConfigFixer
 from flext_infra.deps.lock_integrity import FlextInfraLockIntegrityVerifier
 from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
-from flext_infra.fixers.orchestrator import FlextInfraEnforcementFixerOrchestrator
 
 from ..api import infra
 from .cli_route_base import FlextInfraCliRouteBase
@@ -49,15 +48,7 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                 help_text="Repair [tool.pyrefly] blocks",
                 model_cls=m.Infra.FixPyreflyConfigCommand,
                 handler=FlextInfraCliRouteBase.result_handler(
-                    FlextInfraConfigFixer.execute_payload
-                ),
-            ),
-            m.Cli.ResultCommandRoute(
-                name="fix-enforcement",
-                help_text="Auto-fix enforcement-catalog violations",
-                model_cls=m.Infra.FixEnforcementCommand,
-                handler=FlextInfraCliRouteBase.result_handler(
-                    FlextInfraEnforcementFixerOrchestrator.execute_payload
+                    FlextInfraConfigFixer.execute_payload,
                 ),
             ),
         ),
@@ -67,7 +58,7 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                 help_text="Atomically conform all declared candidate Makefiles",
                 model_cls=m.Infra.CandidateBootstrapCommand,
                 handler=FlextInfraCliRouteBase.result_handler(
-                    infra.bootstrap_candidate
+                    infra.bootstrap_candidate,
                 ),
                 success_message="candidate bootstrap complete",
             ),
@@ -92,7 +83,7 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                         "Create a new FLEXT project from the canonical templates",
                         FlextInfraCodegenProjectNew,
                         FlextInfraCliRouteBase.result_handler(
-                            FlextInfraCodegenProjectNew.execute
+                            FlextInfraCodegenProjectNew.execute,
                         ),
                         "project created",
                     ),
@@ -101,7 +92,7 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                         "Bootstrap only the canonical generated Makefile",
                         FlextInfraCodegenMakeBootstrap,
                         FlextInfraCliRouteBase.result_handler(
-                            FlextInfraCodegenMakeBootstrap.execute
+                            FlextInfraCodegenMakeBootstrap.execute,
                         ),
                         "Makefile bootstrap complete",
                     ),
@@ -115,7 +106,7 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                         ),
                         FlextInfraCodegenLazyInit,
                         FlextInfraCliRouteBase.result_handler(
-                            FlextInfraCodegenLazyInit.execute
+                            FlextInfraCodegenLazyInit.execute,
                         ),
                         "lazy-init complete",
                     ),
@@ -131,7 +122,7 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                         "Generate missing base modules in src/ and tests/",
                         FlextInfraCodegenScaffolder,
                         FlextInfraCliRouteBase.result_handler(
-                            FlextInfraCodegenScaffolder.execute
+                            FlextInfraCodegenScaffolder.execute,
                         ),
                         None,
                     ),
@@ -147,7 +138,7 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                         "Create/remove PEP 561 py.typed markers",
                         FlextInfraCodegenPyTyped,
                         FlextInfraCliRouteBase.result_handler(
-                            FlextInfraCodegenPyTyped.execute
+                            FlextInfraCodegenPyTyped.execute,
                         ),
                         "py-typed markers updated",
                     ),
@@ -163,7 +154,7 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                         "Run constants migration quality gate",
                         FlextInfraCodegenQualityGate,
                         FlextInfraCliRouteBase.result_handler(
-                            FlextInfraCodegenQualityGate.execute
+                            FlextInfraCodegenQualityGate.execute,
                         ),
                         "constants quality gate passed",
                     ),
@@ -172,7 +163,7 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                         "Consolidate inline constants into c.Infra.* references",
                         FlextInfraCodegenConsolidator,
                         FlextInfraCliRouteBase.result_handler(
-                            FlextInfraCodegenConsolidator.execute
+                            FlextInfraCodegenConsolidator.execute,
                         ),
                         None,
                     ),
@@ -181,7 +172,7 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                         "Check/apply the canonical project layout (SSOT-driven)",
                         FlextInfraCodegenLayout,
                         FlextInfraCliRouteBase.result_handler(
-                            FlextInfraCodegenLayout.execute
+                            FlextInfraCodegenLayout.execute,
                         ),
                         "layout conformance complete",
                     ),
@@ -190,7 +181,7 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                         "Validate the generated Mise bundle read-only",
                         FlextInfraCodegenMiseArtifacts,
                         FlextInfraCliRouteBase.result_handler(
-                            FlextInfraCodegenMiseArtifacts.execute
+                            FlextInfraCodegenMiseArtifacts.execute,
                         ),
                         "Mise artifact validation complete",
                     ),
@@ -199,7 +190,7 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                         "Generate __version__.py from project-metadata SSOT",
                         FlextInfraCodegenVersionFile,
                         FlextInfraCliRouteBase.result_handler(
-                            FlextInfraCodegenVersionFile.execute
+                            FlextInfraCodegenVersionFile.execute,
                         ),
                         "version-file generation complete",
                     ),

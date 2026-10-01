@@ -12,6 +12,7 @@ preventing caches and ignored workspace state from entering release artifacts.
 
 from __future__ import annotations
 
+import keyword
 from pathlib import Path
 
 from flext_infra import c, m, t, u
@@ -22,7 +23,9 @@ class FlextInfraEnsurePackagingPhase:
 
     @staticmethod
     def _validate_data_tree(
-        root: Path, source: Path, ancestors: frozenset[Path]
+        root: Path,
+        source: Path,
+        ancestors: frozenset[Path],
     ) -> None:
         """Follow every link Hatch follows while rejecting cycles and escape."""
         resolved = source.resolve(strict=True)
@@ -35,7 +38,9 @@ class FlextInfraEnsurePackagingPhase:
         if source.is_dir():
             for child in source.iterdir():
                 FlextInfraEnsurePackagingPhase._validate_data_tree(
-                    root, child, ancestors | {resolved}
+                    root,
+                    child,
+                    ancestors | {resolved},
                 )
         elif not source.is_file():
             msg = f"packaged data path is not a file or directory: {source}"
@@ -70,7 +75,9 @@ class FlextInfraEnsurePackagingPhase:
                 raise ValueError(msg)
             if source.exists() or source.is_symlink():
                 FlextInfraEnsurePackagingPhase._validate_data_tree(
-                    root, source, frozenset()
+                    root,
+                    source,
+                    frozenset(),
                 )
             elif not any(
                 Path(planned).is_relative_to(relative) for planned in planned_files
@@ -102,44 +109,9 @@ class FlextInfraEnsurePackagingPhase:
             else:
                 directories.append(declaration)
         return m.Infra.PackagedDataSelection(
-            files=tuple(files), directories=tuple(directories)
+            files=tuple(files),
+            directories=tuple(directories),
         )
-
-    @staticmethod
-    def resolve_data_excludes(
-        project_dir: Path,
-        data: m.Infra.PackagedDataSelection,
-        declarations: t.StrSequence,
-    ) -> t.StrSequence:
-        """Validate exact files omitted within declared distribution directories."""
-        root = project_dir.resolve()
-        directories = tuple(Path(item) for item in data.directories)
-        excluded: list[str] = []
-        for declaration in declarations:
-            relative = Path(declaration)
-            source = root / relative
-            valid_path = (
-                bool(declaration)
-                and not relative.is_absolute()
-                and ".." not in relative.parts
-                and relative.as_posix() == declaration
-                and source.resolve().is_relative_to(root)
-            )
-            declared_child = any(
-                relative.is_relative_to(directory) and relative != directory
-                for directory in directories
-            )
-            if (
-                not valid_path
-                or not declared_child
-                or declaration in excluded
-                or not source.is_file()
-                or source.is_symlink()
-            ):
-                msg = f"invalid packaged data exclusion: {declaration}"
-                raise ValueError(msg)
-            excluded.append(declaration)
-        return tuple(excluded)
 
     def _phase(
         self,
@@ -149,6 +121,7 @@ class FlextInfraEnsurePackagingPhase:
         data_excludes: t.StrSequence,
         root_modules: t.StrSequence,
         root_packages: t.StrSequence,
+        repository_namespace_packages: t.StrSequence,
     ) -> m.Infra.DepsToml.PhaseConfig:
         """Build bounded distribution targets for one resolved package name."""
         package_path = f"{c.Infra.DEFAULT_SRC_DIR}/{package_name}"
@@ -175,22 +148,17 @@ class FlextInfraEnsurePackagingPhase:
                     root_path=(),
                     table_path=("wheel",),
                     operations=(
+                        toml.ListOp(key="packages", values=package_paths),
                         toml.ListOp(
                             key="include",
                             values=(
                                 *(f"/{path}/**" for path in package_paths),
                                 *(f"/{path}/**" for path in data.directories),
+                                *(
+                                    f"/{path}/**"
+                                    for path in repository_namespace_packages
+                                ),
                             ),
-                        ),
-                        toml.RemoveOp(key="packages"),
-                        toml.RemoveOp(key="only-include"),
-                        (
-                            toml.ListOp(
-                                key="exclude",
-                                values=tuple(f"/{item}" for item in data_excludes),
-                            )
-                            if data_excludes
-                            else toml.RemoveOp(key="exclude")
                         ),
                         toml.SetOp(
                             key="sources",
@@ -200,11 +168,15 @@ class FlextInfraEnsurePackagingPhase:
                                         package_paths,
                                         (package_name, *root_packages),
                                         strict=True,
-                                    )
+                                    ),
                                 ),
                                 **{
                                     directory: f"{package_name}/{directory}"
                                     for directory in data.directories
+                                },
+                                **{
+                                    namespace: namespace
+                                    for namespace in repository_namespace_packages
                                 },
                             },
                         ),
@@ -217,10 +189,14 @@ class FlextInfraEnsurePackagingPhase:
                     table_path=("sdist",),
                     operations=(
                         toml.ListOp(
-                            key="include",
+                            key="only-include",
                             values=(
                                 *(f"/{path}/**" for path in package_paths),
                                 *(f"/{path}/**" for path in data.directories),
+                                *(
+                                    f"/{path}/**"
+                                    for path in repository_namespace_packages
+                                ),
                             ),
                         ),
                         toml.RemoveOp(key="only-include"),
@@ -292,13 +268,16 @@ class FlextInfraEnsurePackagingPhase:
         project_dir = path.parent
         docs_meta = u.Infra.docs_meta_from_payload(payload)
         package_name = u.Infra.package_name_from_payload(
-            project_dir, payload, docs_meta
+            project_dir,
+            payload,
+            docs_meta,
         )
         if not package_name:
             if (
                 topology.root_modules
                 or topology.root_packages
                 or topology.packaged_data_paths
+                or topology.repository_namespace_packages
             ):
                 msg = (
                     "project package name is required when additional distribution "
@@ -333,6 +312,29 @@ class FlextInfraEnsurePackagingPhase:
                 f"initializer: {missing_package / c.Infra.INIT_PY}"
             )
             raise FileNotFoundError(msg)
+        for namespace in topology.repository_namespace_packages:
+            relative = Path(namespace)
+            source = project_dir / relative
+            if (
+                len(relative.parts) != 1
+                or not namespace.isidentifier()
+                or keyword.iskeyword(namespace)
+            ):
+                msg = f"repository namespace must be one Python identifier: {namespace}"
+                raise ValueError(msg)
+            if not source.is_dir() or source.is_symlink():
+                msg = f"repository namespace directory is missing: {source}"
+                raise FileNotFoundError(msg)
+            if (source / c.Infra.INIT_PY).exists():
+                msg = f"repository namespace must be implicit: {source}"
+                raise ValueError(msg)
+            self._validate_data_tree(project_dir.resolve(), source, frozenset())
+            if any(
+                path == namespace or path.startswith(f"{namespace}/")
+                for path in topology.packaged_data_paths
+            ):
+                msg = f"repository namespace overlaps packaged data: {namespace}"
+                raise ValueError(msg)
         data_paths = self.resolve_data_paths(
             project_dir,
             package_name,
@@ -350,6 +352,7 @@ class FlextInfraEnsurePackagingPhase:
                 data_excludes=data_excludes,
                 root_modules=topology.root_modules,
                 root_packages=topology.root_packages,
+                repository_namespace_packages=topology.repository_namespace_packages,
             ),
         )
 

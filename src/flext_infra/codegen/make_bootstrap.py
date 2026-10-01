@@ -54,7 +54,7 @@ class FlextInfraCodegenMakeBootstrap(FlextInfraCodegenExecutionBase[bool]):
                 what=surface,
                 scope=c.Infra.CodegenConformScope.SELF,
                 mode=mode,
-            )
+            ),
         )
         if conformed.failure:
             return r[bool].from_failure(conformed)

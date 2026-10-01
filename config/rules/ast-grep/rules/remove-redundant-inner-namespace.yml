@@ -1,0 +1,97 @@
+# Remove a redundant inner namespace class (ENFORCE-048).
+#
+# AGENTS.md 2.3 (Single Root Nested Namespace): an inner class whose only base
+# is the class that encloses it, and whose body declares nothing (`pass`, `...`
+# or a docstring), re-exposes a namespace the parent already provides through
+# its own MRO. Deleting it is behaviour-preserving.
+#
+# Redundancy and the emptied-body case are both expressed structurally; the
+# second is a precondition instead of a repair.
+#
+# Every removal precondition below is positive and metavariable-consistent, so
+# the rule cannot match text that merely looks like the construct: ast-grep
+# matches tree-sitter nodes, so an identical snippet inside a docstring, a
+# string literal or a comment is never a candidate.
+#
+# Preconditions, all required:
+#
+# 1. Exactly one base, and it is the enclosing class. `$OUTER` is bound from
+#    the base list and re-proved against the enclosing `class_definition` name,
+#    so `class Cli(Other)` nested in `Keeps` never matches. The negative
+#    `identifier` clause rejects a second base (`class Cli(Outer, Mixin)`),
+#    where removal would drop `Mixin` from the MRO and change behaviour.
+# 2. The body declares nothing: every statement is `pass`, `...` or a string.
+# 3. At least one sibling in the same class body is provably NOT removable by
+#    this rule — it is not a class, or its base list does not carry `$OUTER`,
+#    or its body declares something. A local matcher cannot see which of its
+#    own matches will be applied, so without this guard two redundant siblings
+#    would both be deleted and leave an empty class body (a SyntaxError). The
+#    guard therefore states the survivor positively and stays conservative: a
+#    class body whose entire content is redundant is left for a human.
+#
+# `fix: ""` deletes the statement and leaves the line's indentation behind;
+# the ruff-format gate that `make mod` runs after applying removes it.
+
+id: remove-redundant-inner-namespace
+language: python
+severity: error
+files:
+  - "**/src/**/*.py"
+  - "src/**/*.py"
+message: >-
+  Inner namespace class `$INNER` declares nothing and re-inherits its enclosing
+  class `$OUTER`; the parent already exposes the namespace through its MRO.
+note: >-
+  Delete the inner class. The enclosing class keeps exposing the same
+  attributes, so no consumer changes. AGENTS.md 2.3 (Single Root Nested
+  Namespace), ENFORCE-048.
+rule:
+  all:
+    - kind: class_definition
+    - has: { field: name, pattern: $INNER }
+    - has:
+        field: superclasses
+        has: { pattern: $OUTER }
+    - not:
+        has:
+          field: body
+          has:
+            not:
+              any:
+                - kind: pass_statement
+                - kind: expression_statement
+                  has: { kind: ellipsis }
+                - kind: expression_statement
+                  has: { kind: string }
+    - inside:
+        kind: block
+        has:
+          not:
+            all:
+              - kind: class_definition
+              - has:
+                  field: superclasses
+                  has: { pattern: $OUTER }
+              - not:
+                  has:
+                    field: body
+                    has:
+                      not:
+                        any:
+                          - kind: pass_statement
+                          - kind: expression_statement
+                            has: { kind: ellipsis }
+                          - kind: expression_statement
+                            has: { kind: string }
+    - inside:
+        kind: block
+        inside:
+          kind: class_definition
+          has: { field: name, pattern: $OUTER }
+    - not:
+        has:
+          field: superclasses
+          has:
+            kind: identifier
+            not: { pattern: $OUTER }
+fix: ""

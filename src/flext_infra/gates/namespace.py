@@ -24,7 +24,9 @@ class FlextInfraNamespaceGate(FlextInfraGate):
 
     @override
     def check(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
         """Reject execution outside the injected shared Rope cycle."""
         _ = ctx
@@ -36,7 +38,9 @@ class FlextInfraNamespaceGate(FlextInfraGate):
         )
 
     def rope_callback_binding(
-        self, project_dir: Path, rope: p.Infra.RopeWorkspaceDsl
+        self,
+        project_dir: Path,
+        rope: p.Infra.RopeWorkspaceDsl,
     ) -> m.Infra.RopeCallbackBinding:
         """Return the namespace callback bound to one project and shared Rope."""
         validator = FlextInfraNamespaceValidator(repository_root=project_dir, rope=rope)
@@ -60,7 +64,10 @@ class FlextInfraNamespaceGate(FlextInfraGate):
             for violation in outcome.violations
         ]
         return self._build_project_error_gate_result(
-            project_dir, passed=not violations, errors=violations, started=started
+            project_dir,
+            passed=not violations,
+            errors=violations,
+            started=started,
         )
 
 

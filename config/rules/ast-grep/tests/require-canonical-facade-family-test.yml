@@ -1,0 +1,11 @@
+id: require-canonical-facade-family
+valid:
+  - |
+    _LAZY_IMPORTS = {"c": ".constants", "t": ".typings", "p": ".protocols", "m": ".models", "u": ".utilities"}
+  - |
+    __all__ = ["main"]
+invalid:
+  - |
+    _LAZY_IMPORTS = {"c": ".constants", "t": ".typings", "p": ".protocols", "m": ".models"}
+  - |
+    _LAZY_IMPORTS = {"r": ".result"}

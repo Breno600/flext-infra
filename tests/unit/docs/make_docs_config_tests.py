@@ -18,10 +18,11 @@ def _spec_payload(**overrides: t.JsonValue) -> dict[str, object]:
     """Build one valid synthetic spec payload; overrides mutate one field."""
     payload: dict[str, object] = {
         "actions": ["generate", "fix", "validate"],
-        "api_modules": {"flext-demo": ("api", "base")},
         "mutable_actions": ["fix"],
         "reports_dir": ".reports/docs",
         "cross_project_relative_link_pattern": "^(?:../)+flext-[a-z0-9-]+(?:/|$)",
+        "stale_github_organizations": ["placeholder-org"],
+        "overview_preview_limits": {"aliases": 3},
     }
     payload.update(overrides)
     return payload
@@ -43,13 +44,13 @@ class TestsFlextInfraMakeDocsActionsConfig:
     def test_unknown_action_is_rejected(self) -> None:
         with pytest.raises(c.ValidationError, match="not a registered CLI action"):
             m.Infra.MakeDocsSpec.model_validate(
-                _spec_payload(actions=["generate", "deploy"])
+                _spec_payload(actions=["generate", "deploy"]),
             )
 
     def test_duplicate_action_is_rejected(self) -> None:
         with pytest.raises(c.ValidationError, match="must be unique"):
             m.Infra.MakeDocsSpec.model_validate(
-                _spec_payload(actions=["generate", "generate"])
+                _spec_payload(actions=["generate", "generate"]),
             )
 
     def test_mutable_action_outside_lifecycle_is_rejected(self) -> None:
@@ -59,5 +60,5 @@ class TestsFlextInfraMakeDocsActionsConfig:
     def test_warning_posture_is_not_a_docs_option(self) -> None:
         with pytest.raises(c.ValidationError):
             m.Infra.MakeDocsSpec.model_validate(
-                _spec_payload(warning_actions=["audit"])
+                _spec_payload(warning_actions=["audit"]),
             )

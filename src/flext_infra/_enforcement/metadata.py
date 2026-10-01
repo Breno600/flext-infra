@@ -18,7 +18,8 @@ class FlextInfraEnforcementMetadata:
 
     @staticmethod
     def detect_declarative(
-        rule: m.EnforcementRuleSpec, ctx: m.Infra.DetectorContext
+        rule: m.EnforcementRuleSpec,
+        ctx: m.Infra.DetectorContext,
     ) -> t.SequenceOf[p.AttributeProbe]:
         """Detect one declarative rule for one detector context."""
         return FlextInfraRefactorDeclarativeEnforcement.detect(rule, ctx)
@@ -59,7 +60,9 @@ class FlextInfraEnforcementMetadata:
 
     @staticmethod
     def description(
-        rule: m.EnforcementRuleSpec, probe: p.AttributeProbe, object_name: str
+        rule: m.EnforcementRuleSpec,
+        probe: p.AttributeProbe,
+        object_name: str,
     ) -> str:
         """Return a human-readable description for a declarative violation."""
         base = rule.description

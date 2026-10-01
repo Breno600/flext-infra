@@ -35,7 +35,8 @@ class TestsFlextInfraDeferredSelfReferenceDetector:
         package_dir = project / "src" / "demo_project"
         package_dir.mkdir(parents=True)
         _ = (project / "pyproject.toml").write_text(
-            "[project]\nname='demo-project'\n", encoding="utf-8"
+            "[project]\nname='demo-project'\n",
+            encoding="utf-8",
         )
         _ = (package_dir / "__init__.py").write_text("", encoding="utf-8")
         module = package_dir / "subject.py"
@@ -43,13 +44,16 @@ class TestsFlextInfraDeferredSelfReferenceDetector:
         with u.Infra.open_project(project) as rope_project:
             issues = FlextInfraDeferredSelfReferenceDetector.detect_file(
                 m.Infra.DetectorContext(
-                    file_path=module, project_root=project, rope_project=rope_project
-                )
+                    file_path=module,
+                    project_root=project,
+                    rope_project=rope_project,
+                ),
             )
         return tuple(issue.code for issue in issues)
 
     def test_lambda_factory_reaching_the_enclosing_class_is_reported(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A default_factory deferring the outer class name is the core defect."""
         source = (
@@ -84,7 +88,8 @@ class TestsFlextInfraDeferredSelfReferenceDetector:
         tm.that(self._codes(tmp_path, source), eq=())
 
     def test_self_annotated_field_is_reported_as_recursive(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A field typed as its own owner cannot be instantiated."""
         source = "class Node:\n    child: Node | None = None\n"
@@ -106,7 +111,8 @@ class TestsFlextInfraDeferredSelfReferenceDetector:
         tm.that(self._codes(tmp_path, source), eq=())
 
     def test_annotated_local_inside_a_method_is_not_a_field(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A method body runs after the class is bound, so neither defect applies."""
         source = (
@@ -123,7 +129,8 @@ class TestsFlextInfraDeferredSelfReferenceDetector:
         package_dir = project / "src" / "demo_project"
         package_dir.mkdir(parents=True)
         _ = (project / "pyproject.toml").write_text(
-            "[project]\nname='demo-project'\n", encoding="utf-8"
+            "[project]\nname='demo-project'\n",
+            encoding="utf-8",
         )
         _ = (package_dir / "__init__.py").write_text("", encoding="utf-8")
         module = package_dir / "subject.py"
@@ -138,8 +145,10 @@ class TestsFlextInfraDeferredSelfReferenceDetector:
         with u.Infra.open_project(project) as rope_project:
             issues = FlextInfraDeferredSelfReferenceDetector.detect_file(
                 m.Infra.DetectorContext(
-                    file_path=module, project_root=project, rope_project=rope_project
-                )
+                    file_path=module,
+                    project_root=project,
+                    rope_project=rope_project,
+                ),
             )
         tm.that(len(issues), eq=1)
         tm.that(issues[0].message, has="FLEXT")
@@ -230,7 +239,8 @@ class TestsFlextInfraDeferredSelfReferenceDetector:
         ],
     )
     def test_public_normalizer_accepts_declared_owner_aliases(
-        self, declaration: str
+        self,
+        declaration: str,
     ) -> None:
         """An existing qualified alias must not block unrelated sibling repairs."""
         source = (
@@ -249,7 +259,8 @@ class TestsFlextInfraDeferredSelfReferenceDetector:
         tm.that(
             normalized,
             eq=source.replace(
-                "dependency: Dependency", "dependency: Models.Dependency"
+                "dependency: Dependency",
+                "dependency: Models.Dependency",
             ),
         )
         tm.that(u.Infra.normalize_deferred_self_references(normalized), eq=normalized)
@@ -267,10 +278,12 @@ class TestsFlextInfraDeferredSelfReferenceDetector:
         tm.that(u.Infra.normalize_deferred_self_references(source), eq=source)
 
     @pytest.mark.parametrize(
-        "declaration", ["_Kind: object", "class Other:\n        _Kind = str"]
+        "declaration",
+        ["_Kind: object", "class Other:\n        _Kind = str"],
     )
     def test_public_normalizer_rejects_unbound_or_foreign_owner_members(
-        self, declaration: str
+        self,
+        declaration: str,
     ) -> None:
         """An annotation-only slot or another class's member is not an owner binding."""
         source = (

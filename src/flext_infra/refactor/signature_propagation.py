@@ -23,7 +23,8 @@ class FlextInfraRefactorSignaturePropagation:
 
     @classmethod
     def execute_command(
-        cls, payload: m.Infra.ModernizeInput
+        cls,
+        payload: m.Infra.ModernizeInput,
     ) -> p.Result[t.Cli.ResultValue]:
         """Apply every declared migration across the governed project set."""
         declared = u.Infra.load(payload.repository_root)
@@ -35,12 +36,12 @@ class FlextInfraRefactorSignaturePropagation:
             # declared for one cutover and removed once applied. Reporting is
             # the honest answer; inventing a rewrite would not be.
             return r[t.Cli.ResultValue].ok(
-                "signature propagation: no migration declared"
+                "signature propagation: no migration declared",
             )
         return FlextInfraModernizeOrchestrator.execute_command(
             payload,
             transformer_factory=lambda: FlextInfraRefactorSignaturePropagator(
-                migrations=migrations
+                migrations=migrations,
             ),
             description=f"signature propagation ({len(migrations)} migration(s))",
         )

@@ -18,15 +18,15 @@ class FlextInfraWorkspaceEnvironmentContracts:
     """Static contract lint for one managed direnv environment file."""
 
     _UNGUARDED_DIRENV_DIR: Final[re.Pattern[str]] = re.compile(
-        r"\$\{?DIRENV_DIR(?![\s]*[:\-])"
+        r"\$\{?DIRENV_DIR(?![\s]*[:\-])",
     )
     _QUOTED_ENV_TARGET: Final[re.Pattern[str]] = re.compile(
-        r'^(?:source_env|watch_file)\s+"([^"]+)"\s*$'
+        r'^(?:source_env|watch_file)\s+"([^"]+)"\s*$',
     )
     _HOME_PREFIX: Final[re.Pattern[str]] = re.compile(r"^\$\{?HOME\}?(.*)$")
 
     _MANAGED_SECTION_START: Final[re.Pattern[str]] = re.compile(
-        r"^# === SECTION: .* \(managed\) ===$"
+        r"^# === SECTION: .* \(managed\) ===$",
     )
     _MANAGED_SECTION_END: Final[re.Pattern[str]] = re.compile(r"^# End SECTION: .*$")
     _ENVRC_LOCAL_GENERATED_MARKERS: Final[t.StrSequence] = (
@@ -42,7 +42,11 @@ class FlextInfraWorkspaceEnvironmentContracts:
 
     @classmethod
     def _resolve_env_target(
-        cls, raw: str, root: Path, *, resolve_home: bool
+        cls,
+        raw: str,
+        root: Path,
+        *,
+        resolve_home: bool,
     ) -> Path | None:
         """Resolve one quoted target to a concrete path, or None when dynamic.
 
@@ -74,7 +78,11 @@ class FlextInfraWorkspaceEnvironmentContracts:
 
     @classmethod
     def envrc_contract_violations(
-        cls, content: str, *, root: Path, resolve_home: bool = True
+        cls,
+        content: str,
+        *,
+        root: Path,
+        resolve_home: bool = True,
     ) -> t.VariadicTuple[m.Infra.EnvironmentContractViolation]:
         """Return one typed violation per direnv contract issue in ``content``.
 
@@ -90,23 +98,25 @@ class FlextInfraWorkspaceEnvironmentContracts:
         """
         violations: list[m.Infra.EnvironmentContractViolation] = []
         for match in cls._UNGUARDED_DIRENV_DIR.finditer(content):
-            line = content.count("\n", 0, match.start()) + 1
+            match_line = content.count("\n", 0, match.start()) + 1
             violations.append(
                 m.Infra.EnvironmentContractViolation(
-                    line=line,
+                    line=match_line,
                     message=(
                         "DIRENV_DIR read without a `:-` guard "
                         f"(strict_env does not export it): {match.group(0)!r}"
                     ),
                     token=match.group(0),
-                )
+                ),
             )
         for line_number, line in enumerate(content.splitlines(), start=1):
             target_match = cls._QUOTED_ENV_TARGET.match(line.strip())
             if target_match is None:
                 continue
             resolved = cls._resolve_env_target(
-                target_match.group(1), root, resolve_home=resolve_home
+                target_match.group(1),
+                root,
+                resolve_home=resolve_home,
             )
             if resolved is None:
                 continue
@@ -116,7 +126,7 @@ class FlextInfraWorkspaceEnvironmentContracts:
                         line=line_number,
                         message=f"environment target does not exist: {resolved}",
                         token=str(resolved),
-                    )
+                    ),
                 )
         return tuple(violations)
 
@@ -152,7 +162,8 @@ class FlextInfraWorkspaceEnvironmentContracts:
 
     @classmethod
     def envrc_local_contract_violations(
-        cls, content: str
+        cls,
+        content: str,
     ) -> t.VariadicTuple[m.Infra.EnvironmentContractViolation]:
         """Return one typed violation per activation residue in ``.envrc.local``.
 
@@ -166,7 +177,7 @@ class FlextInfraWorkspaceEnvironmentContracts:
             if not stripped:
                 continue
             if cls._MANAGED_SECTION_START.match(
-                stripped
+                stripped,
             ) or cls._MANAGED_SECTION_END.match(stripped):
                 violations.append(
                     m.Infra.EnvironmentContractViolation(
@@ -175,7 +186,7 @@ class FlextInfraWorkspaceEnvironmentContracts:
                             f"managed section marker in local overrides: {stripped!r}"
                         ),
                         token=stripped,
-                    )
+                    ),
                 )
                 continue
             if any(
@@ -190,7 +201,7 @@ class FlextInfraWorkspaceEnvironmentContracts:
                             f"{stripped!r}"
                         ),
                         token=stripped,
-                    )
+                    ),
                 )
                 continue
             for token in cls._ENVRC_LOCAL_FORBIDDEN_VARS:
@@ -202,7 +213,7 @@ class FlextInfraWorkspaceEnvironmentContracts:
                                 f"Beads activation variable in local overrides: {token}"
                             ),
                             token=token,
-                        )
+                        ),
                     )
                     break
         return tuple(violations)

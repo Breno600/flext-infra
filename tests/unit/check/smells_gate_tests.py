@@ -61,7 +61,8 @@ class TestsFlextInfraSmellsGate:
         tm.that(gate is FlextInfraSmellsGate, eq=True)
 
     def test_missing_project_configuration_is_a_blocking_failure(
-        self, tmp_path: Path, smells_project: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         execution = FlextInfraSmellsGate(tmp_path).check(
             smells_project, self._ctx(tmp_path)
@@ -102,14 +103,16 @@ class TestsFlextInfraSmellsGate:
         tm.that(len(execution.issues), eq=0)
 
     def test_finding_states_the_concrete_problem_and_the_fix(
-        self, tmp_path: Path, smells_project: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         self._configure(tmp_path)
         params = ", ".join(
             f"p{index}" for index in range(c.SMELL_THRESHOLDS["params"] * 2)
         )
-        (self._package(smells_project) / "wide.py").write_text(
-            f"def wide({params}):\n    return p0\n", encoding=c.Cli.ENCODING_DEFAULT
+        (project / "src" / "smells_project" / "wide.py").write_text(
+            f"def wide({params}):\n    return p0\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
 
         execution = FlextInfraSmellsGate(tmp_path).check(

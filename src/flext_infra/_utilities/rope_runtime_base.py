@@ -19,7 +19,8 @@ class FlextInfraUtilitiesRopeRuntimeBase:
     @classmethod
     def runtime_type(cls, module_name: str, attribute: str) -> type[p.AttributeProbe]:
         candidate: type[p.AttributeProbe] | p.AttributeProbe = getattr(
-            cls._module(module_name), attribute
+            cls._module(module_name),
+            attribute,
         )
         if not isinstance(candidate, type):
             msg = f"rope attribute is not a type: {module_name}.{attribute}"
@@ -28,10 +29,13 @@ class FlextInfraUtilitiesRopeRuntimeBase:
 
     @classmethod
     def _runtime_callable(
-        cls, module_name: str, attribute: str
+        cls,
+        module_name: str,
+        attribute: str,
     ) -> Callable[..., p.AttributeProbe]:
         candidate: Callable[..., p.AttributeProbe] | p.AttributeProbe = getattr(
-            cls._module(module_name), attribute
+            cls._module(module_name),
+            attribute,
         )
         if not callable(candidate):
             msg = f"rope attribute is not callable: {module_name}.{attribute}"
