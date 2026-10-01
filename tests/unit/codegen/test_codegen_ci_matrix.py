@@ -199,8 +199,7 @@ class TestsFlextInfraCodegenCiMatrix:
         )
         for run_line in ci_step_runs:
             tm.that(workflow, has=run_line)
-        # A verb whose workflow row omits the ci context never renders into CI
-        # (operator ruling 2026-09-23: make test runs locally and on pre-push).
+        # A verb whose workflow row omits the ci context never renders into CI.
         for step in config.Infra.codegen.make.workflow:
             if "ci" not in step.contexts:
                 tm.that(workflow, lacks=f"run: CI=Y make {step.verb}\n")
@@ -232,6 +231,34 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(ci_job, has="permissions:\n      contents: read")
         tm.that(jobs, has="merge-guard:")
         tm.that(jobs, has="Block WIP heads from protected integration branches")
+
+    def test_ci_runs_make_test_through_the_persistent_testmon_database(
+        self, rendered_project: Path
+    ) -> None:
+        """CI selects through testmon and hands its database to the next run.
+
+        The database directory is restored before ``make test`` and saved on
+        every outcome after it; the full verb never renders into CI.
+        """
+        workflow = (rendered_project / ".github" / "workflows" / "ci.yml").read_text(
+            encoding="utf-8"
+        )
+        make = config.Infra.codegen.make
+        cache = make.testmon_cache
+        test_run = f"run: {make.ci.variable}={make.ci.value} make test\n"
+        tm.that(workflow, has=test_run)
+        tm.that(workflow, lacks="make test-full")
+        path = f"path: ~/{cache.home_cache_directory}/{cache.external_storage_directory}"
+        restore = workflow.index("- name: Restore testmon database")
+        save = workflow.index("- name: Save testmon database")
+        tm.that(restore < workflow.index(test_run) < save, eq=True)
+        for step_start in (restore, save):
+            step = workflow[step_start:].split("\n      - name:", maxsplit=1)[0]
+            tm.that(step, has=[path, make.testmon_cache_policy.key_prefix])
+        tm.that(
+            workflow[save:].split("\n      - name:", maxsplit=1)[0],
+            has="if: ${{ always() }}",
+        )
 
     def test_blocking_ci_does_not_configure_github_cli_auth(
         self,

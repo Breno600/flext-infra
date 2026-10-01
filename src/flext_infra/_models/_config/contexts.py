@@ -264,16 +264,21 @@ class FlextInfraConfigModelsContexts:
 
         docs_audit: Annotated[
             FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
-            m.Field(description="Repository documentation audit declarations"),
+            m.Field(
+                default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+                description="Repository-owned documentation audit declarations",
+            ),
         ]
-        packaged_data_paths: Annotated[
-            t.StrTuple,
-            m.Field(description="Validated packaged data paths"),
-        ] = ()
         packaged_data_excludes: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(description="Validated packaged data exclusions"),
-        ] = ()
+            t.StrSequence,
+            m.Field(
+                default=(),
+                description=(
+                    "Repository-relative files omitted from declared data directories"
+                ),
+            ),
+        ]
+
         # This render field is the exact
         # projection of ProjectSpec; templates must not infer or default a hook.
         hatch_build_hook_path: Annotated[

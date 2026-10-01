@@ -1,5 +1,9 @@
 # AUTO-GENERATED FILE — Regenerate with: make gen
-"""Flext Infra.codegen package."""
+"""Flext Infra.codegen package.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,48 +13,83 @@ from typing import TYPE_CHECKING
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from . import _conform
-    from ._codegen_generation_file import FlextInfraCodegenGenerationFileMixin
-    from ._codegen_generation_imports import FlextInfraCodegenGenerationImportsMixin
-    from ._codegen_generation_lazy_entries import (
+    from flext_infra.codegen import _conform
+    from flext_infra.codegen._codegen_generation_file import (
+        FlextInfraCodegenGenerationFileMixin,
+    )
+    from flext_infra.codegen._codegen_generation_imports import (
+        FlextInfraCodegenGenerationImportsMixin,
+    )
+    from flext_infra.codegen._codegen_generation_lazy_entries import (
         FlextInfraCodegenGenerationLazyEntriesMixin,
     )
-    from ._codegen_generation_paths import FlextInfraCodegenGenerationPathsMixin
-    from ._codegen_generation_renderers import FlextInfraCodegenGenerationRenderersMixin
-    from ._codegen_generation_standard import FlextInfraCodegenGenerationStandardMixin
-    from ._codegen_generation_type_checking import (
+    from flext_infra.codegen._codegen_generation_paths import (
+        FlextInfraCodegenGenerationPathsMixin,
+    )
+    from flext_infra.codegen._codegen_generation_renderers import (
+        FlextInfraCodegenGenerationRenderersMixin,
+    )
+    from flext_infra.codegen._codegen_generation_standard import (
+        FlextInfraCodegenGenerationStandardMixin,
+    )
+    from flext_infra.codegen._codegen_generation_type_checking import (
         FlextInfraCodegenGenerationTypeCheckingMixin,
     )
-    from ._codegen_staging import FlextInfraCodegenStaging
-    from ._conform.artifact_render import FlextInfraCodegenConformArtifactRender
-    from ._conform.beads_routes import FlextInfraCodegenConformBeadsRoutes
-    from ._conform.bootstrap import FlextInfraCodegenConformBootstrap
-    from ._conform.context_render import FlextInfraCodegenConformContextRender
-    from ._conform.docs_ownership import FlextInfraCodegenConformDocsOwnership
-    from ._conform.execute import FlextInfraCodegenConformExecute
-    from ._conform.existing_plan import FlextInfraCodegenConformExistingPlan
-    from ._conform.file_plans import FlextInfraCodegenConformFilePlans
-    from ._conform.gitignore import FlextInfraCodegenConformGitignore
-    from ._conform.plan import FlextInfraCodegenConformPlan
-    from ._conform.pyproject_policy import FlextInfraCodegenConformPyprojectPolicy
-    from ._conform.scaffold_plan import FlextInfraCodegenConformScaffoldPlan
-    from ._consolidator_steps import FlextInfraCodegenConsolidatorStepsMixin
-    from ._execution import FlextInfraCodegenExecutionBase
-    from ._fixer_passes import FlextInfraCodegenFixerPassesMixin
-    from ._fixer_results import FlextInfraCodegenFixerResultsMixin
-    from ._fixer_workspace import FlextInfraCodegenFixerWorkspaceMixin
-    from ._layout_apply import FlextInfraCodegenLayoutApplyMixin
-    from ._layout_files import FlextInfraCodegenLayoutFilesMixin
-    from ._layout_gitignore import FlextInfraCodegenLayoutGitignoreMixin
-    from ._layout_plan import FlextInfraCodegenLayoutPlanMixin
-    from ._lazy_init_generation_files import (
+    from flext_infra.codegen._codegen_staging import FlextInfraCodegenStaging
+    from flext_infra.codegen._conform.artifact_render import (
+        FlextInfraCodegenConformArtifactRender,
+    )
+    from flext_infra.codegen._conform.beads_routes import (
+        FlextInfraCodegenConformBeadsRoutes,
+    )
+    from flext_infra.codegen._conform.bootstrap import FlextInfraCodegenConformBootstrap
+    from flext_infra.codegen._conform.context_render import (
+        FlextInfraCodegenConformContextRender,
+    )
+    from flext_infra.codegen._conform.docs_ownership import (
+        FlextInfraCodegenConformDocsOwnership,
+    )
+    from flext_infra.codegen._conform.execute import FlextInfraCodegenConformExecute
+    from flext_infra.codegen._conform.existing_plan import (
+        FlextInfraCodegenConformExistingPlan,
+    )
+    from flext_infra.codegen._conform.file_plans import (
+        FlextInfraCodegenConformFilePlans,
+    )
+    from flext_infra.codegen._conform.gitignore import FlextInfraCodegenConformGitignore
+    from flext_infra.codegen._conform.plan import FlextInfraCodegenConformPlan
+    from flext_infra.codegen._conform.pyproject_policy import (
+        FlextInfraCodegenConformPyprojectPolicy,
+    )
+    from flext_infra.codegen._conform.scaffold_plan import (
+        FlextInfraCodegenConformScaffoldPlan,
+    )
+    from flext_infra.codegen._consolidator_steps import (
+        FlextInfraCodegenConsolidatorStepsMixin,
+    )
+    from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
+    from flext_infra.codegen._fixer_passes import FlextInfraCodegenFixerPassesMixin
+    from flext_infra.codegen._fixer_results import FlextInfraCodegenFixerResultsMixin
+    from flext_infra.codegen._fixer_workspace import (
+        FlextInfraCodegenFixerWorkspaceMixin,
+    )
+    from flext_infra.codegen._layout_apply import FlextInfraCodegenLayoutApplyMixin
+    from flext_infra.codegen._layout_files import FlextInfraCodegenLayoutFilesMixin
+    from flext_infra.codegen._layout_gitignore import (
+        FlextInfraCodegenLayoutGitignoreMixin,
+    )
+    from flext_infra.codegen._layout_plan import FlextInfraCodegenLayoutPlanMixin
+    from flext_infra.codegen._lazy_init_generation_files import (
         FlextInfraCodegenLazyInitGenerationFilePlanMixin,
     )
-    from ._lazy_init_generation_registry import (
+    from flext_infra.codegen._lazy_init_generation_registry import (
         FlextInfraCodegenLazyInitGenerationRegistryMixin,
     )
-    from ._lazy_init_planner_public_root import (
+    from flext_infra.codegen._lazy_init_planner_public_root import (
         FlextInfraCodegenLazyInitPlannerPublicRootMixin,
+    )
+    from ._lazy_init_projection_manifest import (
+        FlextInfraCodegenLazyInitProjectionManifest,
     )
     from ._mise_artifacts_candidates import FlextInfraMiseArtifactsCandidates
     from ._mise_artifacts_cold_start import FlextInfraMiseColdStart
@@ -84,11 +123,11 @@ if TYPE_CHECKING:
         FlextInfraMiseArtifactsFiles,
         FlextInfraMisePublication,
     )
-    from .project_new import FlextInfraCodegenProjectNew
-    from .protocol_models import FlextInfraCodegenProtocolModels
-    from .py_typed import FlextInfraCodegenPyTyped
-    from .scaffolder import FlextInfraCodegenScaffolder
-    from .version_file import FlextInfraCodegenVersionFile
+    from flext_infra.codegen.project_new import FlextInfraCodegenProjectNew
+    from flext_infra.codegen.protocol_models import FlextInfraCodegenProtocolModels
+    from flext_infra.codegen.py_typed import FlextInfraCodegenPyTyped
+    from flext_infra.codegen.scaffolder import FlextInfraCodegenScaffolder
+    from flext_infra.codegen.version_file import FlextInfraCodegenVersionFile
 
 
 __all__: tuple[str, ...] = (
@@ -133,6 +172,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenLazyInitGenerationRegistryMixin",
     "FlextInfraCodegenLazyInitPlanner",
     "FlextInfraCodegenLazyInitPlannerPublicRootMixin",
+    "FlextInfraCodegenLazyInitProjectionManifest",
     "FlextInfraCodegenMakeBootstrap",
     "FlextInfraCodegenMiseArtifacts",
     "FlextInfraCodegenPipeline",
@@ -214,6 +254,9 @@ _LAZY_IMPORTS = MappingProxyType(
             "._lazy_init_planner_public_root": (
                 "FlextInfraCodegenLazyInitPlannerPublicRootMixin",
             ),
+            "._lazy_init_projection_manifest": (
+                "FlextInfraCodegenLazyInitProjectionManifest",
+            ),
             "._mise_artifacts_candidates": ("FlextInfraMiseArtifactsCandidates",),
             "._mise_artifacts_cold_start": ("FlextInfraMiseColdStart",),
             "._mise_artifacts_derivation": ("FlextInfraMiseArtifactsDerivation",),
@@ -256,7 +299,7 @@ _LAZY_IMPORTS = MappingProxyType(
         }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,
-    ),
+    )
 )
 
 install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

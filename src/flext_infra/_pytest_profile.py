@@ -132,8 +132,11 @@ class FlextInfraPytestProfile:
         ):
             msg = "collection profile run receipt does not match its report directory"
             raise ValueError(msg)
-        if time.monotonic() >= context.deadline_monotonic:
-            msg = "collection profile run receipt has an expired deadline"
+        if (
+            context.deadline_monotonic is None
+            or time.monotonic() >= context.deadline_monotonic
+        ):
+            msg = "collection profile run receipt has no live deadline"
             raise ValueError(msg)
         self.context = context
         runpy.run_module("pytest", run_name="__main__", alter_sys=True)

@@ -127,14 +127,17 @@ class FlextInfraCodegenProjectNew(
         ),
     ]
     year: Annotated[int, m.Field(ge=2025, description="Deterministic copyright year.")]
-    conform_collaborators: m.Infra.CodegenConformPorts | None = m.Field(
-        default=None,
-        exclude=True,
-        description=(
-            "Docs and fresh-import ports bound by FlextInfra.codegen_new; the "
-            "scaffold conform fails before any effect without them"
+    conform_ports: Annotated[
+        m.Infra.CodegenConformPorts | None,
+        m.Field(
+            default=None,
+            exclude=True,
+            description=(
+                "Docs and fresh-import ports bound by FlextInfra.codegen_new; the "
+                "scaffold conform fails before any effect without them"
+            ),
         ),
-    )
+    ]
 
     @override
     def execute(self) -> p.Result[m.Infra.CodegenResult]:

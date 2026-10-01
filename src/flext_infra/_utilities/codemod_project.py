@@ -243,6 +243,17 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             raise ValueError(msg)
         return text.strip()
 
+    @staticmethod
+    def _codemod_runtime_aliases(root: Path, package: str, own: str) -> frozenset[str]:
+        """Read local aliases from source and dependency aliases from runtime."""
+        if package == own:
+            layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
+            if layout is None:
+                msg = f"project layout is unresolved: {root}"
+                raise ValueError(msg)
+            return frozenset(layout.runtime_aliases)
+        return frozenset(u.runtime_alias_names(package))
+
     @classmethod
     def _context_holds(
         cls,
@@ -265,11 +276,11 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                 return module in cls._runtime_modules(root)
             case c.Infra.CodemodContextPredicate.FACADE_PACKAGE:
                 return module in cls._runtime_modules(root) and bool(
-                    u.runtime_alias_names(module)
+                    cls._codemod_runtime_aliases(root, module, own)
                 )
             case c.Infra.CodemodContextPredicate.RUNTIME_ALIAS:
-                return value in u.runtime_alias_names(
-                    own if of is None else cls._top_module(of)
+                return value in cls._codemod_runtime_aliases(
+                    root, own if of is None else cls._top_module(of), own
                 )
             case c.Infra.CodemodContextPredicate.LOCAL_ALIAS:
                 layout = FlextInfraUtilitiesCodegenNamespace.layout(root)

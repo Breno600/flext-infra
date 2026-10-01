@@ -53,7 +53,7 @@ class TestsFlextInfraPytestRunnerCoverage:
             (reports_root / latest_name / "testmon-inventory.json").is_file(),
             eq=True,
         )
-        tm.that(runner.testmon_db.exists(), eq=False)
+        tm.that(runner.required_testmon_db().exists(), eq=False)
 
     @pytest.mark.slow
     def test_failed_coverage_suite_preserves_original_failure_and_accounting(
@@ -100,4 +100,4 @@ class TestsFlextInfraPytestRunnerCoverage:
             summary(reports_root),
             has=["failed=1", "accounting_complete=True", f"exit={exit_code}"],
         )
-        tm.that(runner.testmon_db.exists(), eq=False)
+        tm.that(runner.required_testmon_db().exists(), eq=False)

@@ -385,6 +385,38 @@ class FlextInfraWorkspaceDetector(
         )
 
     @classmethod
+    def _superproject_governance(
+        cls,
+        repository_root: Path,
+        *,
+        beads: m.Infra.BeadsProjectSpec | None,
+        allow_unprovisioned_members: bool = False,
+    ) -> p.Result[m.Infra.SuperprojectGovernance]:
+        """Resolve once the superproject facts every member load validates."""
+        members = cls._declared_members(repository_root)
+        if members.failure:
+            return r[m.Infra.SuperprojectGovernance].from_failure(members)
+        # The workspace-declared preference owns the baseline order: a fleet
+        # integrating on a versioned release line (0.12.0-dev) is not covered
+        # by the provider's conventional fallback names alone.
+        baseline = u.Infra.repository_baseline_branch(
+            repository_root,
+            preference=(
+                config.Infra.codegen.branch_policy.integration_branch_preference
+            ),
+        )
+        return r[m.Infra.SuperprojectGovernance].ok(
+            m.Infra.SuperprojectGovernance(
+                root=repository_root,
+                integration_branch=baseline.value if baseline.success else None,
+                beads=beads,
+                members=members.value,
+                allow_unprovisioned_members=allow_unprovisioned_members,
+            )
+        )
+
+
+    @classmethod
     def _load_subprojects(
         cls,
         repository_root: Path,
@@ -460,6 +492,37 @@ class FlextInfraWorkspaceDetector(
         })
 
     @classmethod
+    def _superproject_governance(
+        cls,
+        repository_root: Path,
+        *,
+        beads: m.Infra.BeadsProjectSpec | None,
+        allow_unprovisioned_members: bool = False,
+    ) -> p.Result[m.Infra.SuperprojectGovernance]:
+        """Resolve once the superproject facts every member load validates."""
+        members = cls._declared_members(repository_root)
+        if members.failure:
+            return r[m.Infra.SuperprojectGovernance].from_failure(members)
+        # The workspace-declared preference owns the baseline order: a fleet
+        # integrating on a versioned release line (0.12.0-dev) is not covered
+        # by the provider's conventional fallback names alone.
+        baseline = u.Infra.repository_baseline_branch(
+            repository_root,
+            preference=(
+                config.Infra.codegen.branch_policy.integration_branch_preference
+            ),
+        )
+        return r[m.Infra.SuperprojectGovernance].ok(
+            m.Infra.SuperprojectGovernance(
+                root=repository_root,
+                integration_branch=baseline.value if baseline.success else None,
+                beads=beads,
+                members=members.value,
+                allow_unprovisioned_members=allow_unprovisioned_members,
+            )
+        )
+
+    @classmethod
     def _load_subproject(
         cls,
         repository_root: Path,
@@ -515,10 +578,11 @@ class FlextInfraWorkspaceDetector(
                     "declared workspace member URL differs from its .gitmodules "
                     f"URL: {path.as_posix()}",
                 )
-            if (
-                declared_member.package
-                and not (subproject_root / c.PYPROJECT_FILENAME).is_file()
-            ):
+            # Content-only members have no pyproject by contract. Their
+            # manifest identity still governs an uninitialized Git link.
+            if not declared_member.package:
+                return result_type.ok(declared_member)
+            if not (subproject_root / c.PYPROJECT_FILENAME).is_file():
                 if (
                     subproject_root / c.Infra.GIT_DIR
                 ).exists() and not context.allow_unprovisioned_members:
@@ -530,10 +594,9 @@ class FlextInfraWorkspaceDetector(
                 # stays identical when CI deliberately omits member checkouts.
                 return result_type.ok(declared_member)
         if not subproject_root.is_dir():
-            # An indexed gitlink whose checkout was never initialized is an
-            # intentionally absent working tree: Git already records the
-            # commit it must materialize, so the entry classifies as an
-            # external dependency instead of a missing governed checkout.
+            # An undeclared indexed gitlink whose checkout was never
+            # initialized remains external. Manifest-declared members above
+            # retain their governed identity for setup materialization.
             indexed = u.Infra.git_index_gitlink_paths(repository_root)
             if indexed.failure:
                 return result_type.from_failure(indexed)

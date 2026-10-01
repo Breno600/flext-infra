@@ -112,7 +112,6 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         target: t.Pair[str, str] | None = None
         declared = False
         lazy = cls._facade_lazy_bindings(source, module)
-        inline: dict[str, str] = {}
         for node in cls._facade_module_statements(source, module):
             if isinstance(node, ast.AnnAssign) and node.value is None:
                 # An annotation without a value does not rebind an existing name.
@@ -143,47 +142,12 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
                             else node.module or ""
                         )
                         target, declared = (source_module, imported.name), False
-            elif (
-                isinstance(node, ast.Assign | ast.AnnAssign)
-                and node.value is not None
-                and any(
-                    isinstance(bound, ast.Name)
-                    and bound.id == c.Infra.LAZY_IMPORTS_BINDING
-                    for bound in (
-                        node.targets if isinstance(node, ast.Assign) else (node.target,)
-                    )
-                )
-            ):
-                # The generated lazy publication IS a binding statement: every
-                # name it lists resolves through its submodule entry, exactly
-                # as install_lazy_exports resolves it at runtime.
-                for dict_node in (
-                    d for d in ast.walk(node.value) if isinstance(d, ast.Dict)
-                ):
-                    for key, value in zip(
-                        dict_node.keys,
-                        dict_node.values,
-                        strict=False,
-                    ):
-                        if (
-                            isinstance(key, ast.Constant)
-                            and isinstance(key.value, str)
-                            and isinstance(value, ast.Tuple | ast.List)
-                        ):
-                            for element in value.elts:
-                                if isinstance(element, ast.Constant) and isinstance(
-                                    element.value,
-                                    str,
-                                ):
-                                    inline.setdefault(element.value, key.value)
         if declared:
             return module, name
-        # The cached lazy map is immutable: bindings discovered during this
-        # walk stay in the local inline view, merged read-only below.
-        sub = lazy.get(name) or inline.get(name)
-        if target is None and sub is not None:
+        if target is None and name in lazy:
             # A lazy entry binds the name through its submodule; resolution
             # continues where the submodule defines it.
+            sub = lazy[name]
             target = (f"{module}{sub}" if sub.startswith(".") else sub, name)
         # A submodule import binds a module, never a facade class.
         if target is None or ".".join(target) in modules:

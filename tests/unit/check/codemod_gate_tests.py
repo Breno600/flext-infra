@@ -57,7 +57,6 @@ class TestsFlextInfraCodemodGate:
         execution = u.Tests.run_gate_check(FlextInfraCodemodGate, tmp_path, project)
 
         tm.that(execution.result.passed, eq=False)
-        tm.that(execution.observational_issues, empty=True)
         policy_findings = tuple(
             issue for issue in execution.issues if issue.code == "contract-second"
         )
@@ -71,10 +70,8 @@ class TestsFlextInfraCodemodGate:
             eq=tuple(issue.formatted for issue in execution.issues),
         )
         tm.that(
-            execution.error_count,
-            eq=sum(
-                issue.severity.lower() == c.Infra.ERROR for issue in execution.issues
-            ),
+            execution.finding_count,
+            eq=len(execution.issues),
         )
         if severity == "error":
             tm.that(execution.raw_output, has="exit=1")

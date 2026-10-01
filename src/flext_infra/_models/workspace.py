@@ -8,7 +8,9 @@ from typing import Annotated, ClassVar
 from flext_cli import m
 
 from .. import c, t
+from ._config.beads import FlextInfraConfigModelsBeads
 from ._config.base import FlextInfraConfigModels
+from ._config.contexts import FlextInfraConfigModelsContexts
 from ._git import FlextInfraModelsGitIdentity
 from .mixins import FlextInfraModelsMixins as mm
 
@@ -20,6 +22,15 @@ class FlextInfraModelsWorkspace:
     - ``ArbitraryTypesModel`` for mutable discovery payloads.
     - ``ContractModel`` reserved for immutable workspace settings contracts.
     """
+
+    class SuperprojectGovernance(m.ArbitraryTypesModel):
+        """Superproject facts every member load validates against."""
+
+        root: Path
+        integration_branch: str | None
+        beads: FlextInfraConfigModelsBeads.BeadsProjectSpec | None
+        members: t.MappingKV[Path, FlextInfraConfigModelsContexts.RepositoryRef]
+        allow_unprovisioned_members: bool
 
     class WorkspaceEnvironmentRequest(m.ContractModel):
         """Read-only request for validating the active workspace environment."""
@@ -110,16 +121,12 @@ class FlextInfraModelsWorkspace:
         ]
 
     class DirectUrlDirectoryInfo(m.ContractModel):
-        """PEP 610 directory metadata for one installed distribution.
-
-        PEP 610 makes ``editable`` optional with a ``false`` default, so a
-        local directory install that omits it is a plain directory install.
-        """
+        """PEP 610 directory metadata for one installed distribution."""
 
         editable: Annotated[
             bool,
             m.Field(description="Distribution is installed as editable"),
-        ] = False
+        ]
 
     class DirectUrlReceipt(m.ContractModel):
         """Any installed distribution's PEP 610 receipt, read for its kind only.

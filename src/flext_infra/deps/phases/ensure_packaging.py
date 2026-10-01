@@ -118,29 +118,36 @@ class FlextInfraEnsurePackagingPhase:
         project_dir: Path,
         data: m.Infra.PackagedDataSelection,
         declarations: t.StrSequence,
-    ) -> t.StrTuple:
-        """Validate repository-relative files omitted from declared data paths."""
+    ) -> t.StrSequence:
+        """Validate exact files omitted within declared distribution directories."""
         root = project_dir.resolve()
-        declared = (*data.files, *data.directories)
-        excludes: list[str] = []
+        directories = tuple(Path(item) for item in data.directories)
+        excluded: list[str] = []
         for declaration in declarations:
             relative = Path(declaration)
+            source = root / relative
+            valid_path = (
+                bool(declaration)
+                and not relative.is_absolute()
+                and ".." not in relative.parts
+                and relative.as_posix() == declaration
+                and source.resolve().is_relative_to(root)
+            )
+            declared_child = any(
+                relative.is_relative_to(directory) and relative != directory
+                for directory in directories
+            )
             if (
-                relative.is_absolute()
-                or not relative.parts
-                or ".." in relative.parts
-                or relative.as_posix() != declaration
+                not valid_path
+                or not declared_child
+                or declaration in excluded
+                or source.is_dir()
+                or source.is_symlink()
             ):
-                msg = f"packaged data exclude must be repository-relative: {declaration}"
+                msg = f"invalid packaged data exclusion: {declaration}"
                 raise ValueError(msg)
-            if not (root / relative).resolve().is_relative_to(root):
-                msg = f"packaged data exclude escapes repository: {declaration}"
-                raise ValueError(msg)
-            if not any(relative.is_relative_to(Path(base)) for base in declared):
-                msg = f"packaged data exclude is outside declared data: {declaration}"
-                raise ValueError(msg)
-            excludes.append(declaration)
-        return tuple(excludes)
+            excluded.append(declaration)
+        return tuple(excluded)
 
     def _phase(
         self,
