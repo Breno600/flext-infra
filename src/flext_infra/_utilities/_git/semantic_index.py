@@ -42,22 +42,14 @@ class FlextInfraUtilitiesGitSemanticIndexMixin(
         a physical source state. A directory absent from HEAD is the typed
         empty mapping; an unreadable repository or object fails loud.
         """
+        opened = cls._open_repo(repo_root)
+        if opened.failure:
+            return r[t.MappingKV[str, bytes]].from_failure(opened)
         try:
-            repo = Repo(repo_root, search_parent_directories=True)
-            tree = repo.head.commit.tree / relative_dir
+            tree = opened.value.head.commit.tree / relative_dir
         except KeyError:
+            # GitPython's only signal for a path absent from the tree.
             return r[t.MappingKV[str, bytes]].ok({})
-        except (
-            GitCommandError,
-            InvalidGitRepositoryError,
-            NoSuchPathError,
-            OSError,
-            ValueError,
-        ) as exc:
-            return r[t.MappingKV[str, bytes]].fail(
-                f"cannot open committed directory {relative_dir} at {repo_root}: {exc}",
-                exception=exc,
-            )
         try:
             return r[t.MappingKV[str, bytes]].ok({
                 blob.name: blob.data_stream.read() for blob in tree.blobs
