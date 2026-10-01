@@ -174,16 +174,6 @@ class FlextInfraConfigModelsMake:
                 ),
             ),
         ]
-        api_modules: Annotated[
-            Mapping[t.NonEmptyStr, t.VariadicTuple[t.NonEmptyStr]],
-            m.Field(
-                min_length=1,
-                description=(
-                    "Public API modules generated per distribution; absent "
-                    "distributions own no module pages"
-                ),
-            ),
-        ]
         mutable_actions: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(min_length=1, description="Docs actions that mutate"),
@@ -196,6 +186,15 @@ class FlextInfraConfigModelsMake:
             FlextInfraConfigModelsMake.DocsOverviewPreviewLimitsSpec,
             m.Field(description="Maximum preview sizes for generated API overviews"),
         ]
+        overview_preview_limits: Annotated[
+            Mapping[t.NonEmptyStr, t.PositiveInt],
+            m.Field(
+                description=(
+                    "Items listed per contract field on the generated API "
+                    "overview page before the preview is truncated"
+                )
+            ),
+        ]
         cross_project_relative_link_pattern: Annotated[
             t.NonEmptyStr,
             m.Field(
@@ -204,11 +203,8 @@ class FlextInfraConfigModelsMake:
         ]
         stale_github_organizations: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                default=("organization",),
-                description="Placeholder GitHub orgs that must be rewritten",
-            ),
-        ] = ("organization",)
+            m.Field(description="Placeholder GitHub orgs that must be rewritten"),
+        ]
         github_repos: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsMake.DocsGithubRepoSpec],
             m.Field(
@@ -629,6 +625,12 @@ class FlextInfraConfigModelsMake:
                         raise ValueError(msg)
                 return self
 
+        runtime_environment_directory: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description="Sibling directory for physical workspace environments",
+            ),
+        ]
         examples_timeout_seconds: Annotated[
             int,
             m.Field(gt=0, le=120, description="Workspace examples process deadline"),
@@ -644,7 +646,6 @@ class FlextInfraConfigModelsMake:
         fmt_gates: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                default=("markdown-format",),
                 description=(
                     "Gates whose mutating side `make fmt` drives (formatters). "
                     "The read-only side runs in `make check`; `make fix` never "

@@ -52,23 +52,13 @@ class FlextInfraGate:
 
         """
         return not self.requires_python_targets or bool(
-            self._python_targets(project_dir),
-        )
-
-    @staticmethod
-    def _python_targets(project_dir: Path) -> t.StrSequence:
-        """First-party Python targets outside the workspace's analysis exclusions.
-
-        Returns:
-            The resulting ``t.StrSequence``.
-
-        """
-        return u.Infra.discover_python_targets(
-            project_dir,
-            workspace_excluded_top_dirs=(
-                FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
-                    project_dir,
-                ).unwrap()
+            u.Infra.discover_python_targets(
+                project_dir,
+                workspace_excluded_top_dirs=(
+                    FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
+                        project_dir
+                    ).unwrap()
+                ),
             ),
         )
 
