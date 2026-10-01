@@ -113,6 +113,35 @@ class FlextInfraEnsurePackagingPhase:
             directories=tuple(directories),
         )
 
+    @staticmethod
+    def resolve_data_excludes(
+        project_dir: Path,
+        data: m.Infra.PackagedDataSelection,
+        declarations: t.StrSequence,
+    ) -> t.StrTuple:
+        """Validate repository-relative files omitted from declared data paths."""
+        root = project_dir.resolve()
+        declared = (*data.files, *data.directories)
+        excludes: list[str] = []
+        for declaration in declarations:
+            relative = Path(declaration)
+            if (
+                relative.is_absolute()
+                or not relative.parts
+                or ".." in relative.parts
+                or relative.as_posix() != declaration
+            ):
+                msg = f"packaged data exclude must be repository-relative: {declaration}"
+                raise ValueError(msg)
+            if not (root / relative).resolve().is_relative_to(root):
+                msg = f"packaged data exclude escapes repository: {declaration}"
+                raise ValueError(msg)
+            if not any(relative.is_relative_to(Path(base)) for base in declared):
+                msg = f"packaged data exclude is outside declared data: {declaration}"
+                raise ValueError(msg)
+            excludes.append(declaration)
+        return tuple(excludes)
+
     def _phase(
         self,
         *,

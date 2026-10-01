@@ -591,7 +591,7 @@ class FlextInfraUtilitiesDocsRender:
         the analysed contract's public modules, so the count matches the pages.
         """
         data = contract
-        limits = config.Infra.codegen.make.docs.overview_preview_limits
+        limits = config.Infra.codegen.make.docs.overview_preview_limits.model_dump()
         aliases, exports, facades, module_exports, keywords = (
             FlextInfraUtilitiesDocsRender._preview(
                 FlextInfraUtilitiesDocsRender.as_string_sequence(data, field),

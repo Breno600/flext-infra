@@ -397,8 +397,13 @@ class FlextInfraWorkspaceDetector(
         """Validate every direct governed .gitmodules entry before planning writes."""
         declared = u.Infra.git_declared_submodule_paths(repository_root)
         result_type = r[tuple[tuple[m.Infra.RepositoryRef, ...], t.VariadicTuple[Path]]]
-        if declared.failure:
-            return result_type.from_failure(declared)
+        baseline = u.Infra.resolve_integration_branch(
+            repository_root,
+            preference=(
+                config.Infra.codegen.branch_policy.integration_branch_preference
+            ),
+        )
+        integration_branch = baseline.value if baseline.success else None
         members = cls._declared_members(repository_root)
         if members.failure:
             return result_type.from_failure(members)
