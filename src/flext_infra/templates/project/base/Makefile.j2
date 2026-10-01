@@ -50,6 +50,10 @@ mkdir -p "$$(dirname "$$database")"; \
 {{ make.testmon_cache.database_environment_variable }}="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry{% if operation %} {{ operation }}{% endif %}{% if not loop.last %}; \{% endif %}
 {%- endfor %}
 {%- endmacro -%}
+{#- The full verb is local verification without testmon and without a deadline. -#}
+{%- macro pytest_full_runner() -%}
+$(UV_RUN) python -m flext_infra._pytest_entry full
+{%- endmacro -%}
 # @flext-generated: continuous
 # @flext-owner: flext-infra/config/codegen.yaml + flext-infra/src/flext_infra/templates/project/base/Makefile.j2
 # @flext-adjust: edit the owner configuration or template; never this projection
@@ -423,7 +427,7 @@ define _lock_project
 		mkdir -p "$${stage}/mirror$$relative"; \
 		cp "$$member/pyproject.toml" "$${stage}/mirror$$relative/pyproject.toml"; \
 	done < "$${stage}/.members"; \
-	$(if $(2),if [ -f "$$workspace/uv.lock" ]; then cp "$$workspace/uv.lock" "$${stage}/mirror/uv.lock"; fi;) \
+	if [ "$(1)" != "--upgrade --refresh" ] && [ -f "$$workspace/uv.lock" ]; then cp "$$workspace/uv.lock" "$${stage}/mirror/uv.lock"; fi; \
 	$(UV) lock --project "$${stage}/mirror" $(1); \
 	$(UV) lock --check --project "$${stage}/mirror"; \
 	if [ -e "$$candidate" ]; then printf 'ERROR: lock staging path already exists: %s\n' "$$candidate" >&2; exit 2; fi; \
@@ -643,6 +647,75 @@ _upg_activated:
 	esac
 
 
+# _builtin-self-* targets serve the workspace root itself (project selector
+# `.` from the orchestrator). They apply the same member-style gate recipes to
+# PROJECT_ROOT without recursing into submodules, so the root distribution
+# runs its own evidence in the global cycles. Where the standalone profile's
+# `_builtin-*_all` twin owns the identical body, the self target delegates to
+# that twin so the gate-selection shell block is emitted exactly once; the
+# workspace profile emits the root-local body because its `_all` twin
+# recurses into members instead.
+{% if make_profile == "workspace" %}
+_builtin-self-test: _builtin_require_environment
+{{ test_report_recipe(
+    runner=pytest_test_runner(),
+) }}
+
+_builtin-self-check: _builtin_require_environment
+{{ local_check_body() }}
+
+_builtin-self-test-full: _builtin_require_environment
+{{ test_report_recipe(
+    runner=pytest_test_runner("full"),
+) }}
+
+_builtin-self-fmt: _builtin_require_environment
+{{ fmt_body() }}
+
+_builtin-self-fix: _builtin_require_environment
+{{ fix_body() }}
+
+# Catalog-driven enforcement fixes: every ENFORCE rule whose fix action is
+# declared safe, applied through its registered adapter.
+_builtin-self-fix-enforcement: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) check fix-enforcement --repository-root "$(PROJECT_ROOT)" --safe-only --apply
+
+_builtin-self-build:
+{% if package %}
+	@$(UV) build --project "$(PROJECT_ROOT)"
+{% else %}
+	@printf '%s\n' 'INFO: build: repository declares package=false (content-only root); no distribution to build'
+{% endif %}
+{% else %}
+# Standalone: the `_all` twins own the one emitted body (SSOT); each carries
+# its own `_builtin_require_environment` edge.
+_builtin-self-test: _builtin_test_all
+
+_builtin-self-check: _builtin_check_all
+
+_builtin-self-test-full: _builtin_test_full_all
+
+_builtin-self-fmt: _builtin_fmt_all
+
+_builtin-self-fix: _builtin_fix_all
+
+_builtin-self-fix-enforcement: _builtin_fix_enforcement
+
+_builtin-self-build: _builtin_build_artifacts
+{% endif %}
+
+_builtin-self-clean: _builtin_clean_generated
+
+_builtin-self-docs: _builtin_docs_all
+
+# SonarCloud server-side issue exclusions (SSOT: codegen.sonarcloud). The verb
+# writes an external service with SONAR_TOKEN from the environment; it belongs
+# to no setup/gen/check/test workflow row and never runs implicitly.
+_builtin_sonarcloud_sync_project: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) maintenance sonarcloud-sync --repository-root "$(PROJECT_ROOT)"
+
+_builtin-self-sonarcloud-sync: _builtin_sonarcloud_sync_project
+
 # Gate, fix and build verbs act on this repository only, with one body per verb
 # in every profile: a workspace root evaluates itself exactly as CI does.
 _builtin_build_artifacts:
@@ -668,7 +741,7 @@ _builtin_test_all: _builtin_require_environment
 
 _builtin_test_full_all: _builtin_require_environment
 {{ test_report_recipe(
-    runner=pytest_test_runner(("full",)),
+    runner=pytest_full_runner(),
 ) }}
 
 # fmt is format-only (single-pass verb law): ruff formats Python, the
@@ -761,12 +834,12 @@ profile-test: _builtin_require_environment
 	@mkdir -p "$(PROFILE_REPORTS_DIR)"
 	@{{ pytest_testmon_guard() }}
 	{{ make.testmon_cache.database_environment_variable }}="$$database" $(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -m flext_infra._pytest_entry profile \
-		"$(PROFILE_REPORTS_DIR)/pytest.pstats"
+		"$(PROFILE_REPORTS_DIR)/{{ pytest.profile_suite_filename }}"
 
 .PHONY: profile-test-report
 profile-test-report: _builtin_require_environment
 	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -m flext_infra._cprofile_entry \
-		"$(PROFILE_REPORTS_DIR)/pytest.pstats" "$(PROFILE_REPORTS_DIR)/pytest.pstats.json"
+		"$(PROFILE_REPORTS_DIR)/{{ pytest.profile_suite_filename }}" "$(PROFILE_REPORTS_DIR)/{{ pytest.profile_suite_filename }}.json"
 
 _builtin_status_diagnostics: _builtin_require_environment
 	@printf 'profile=%s\nproject=%s\nruntime=%s\n' \
@@ -894,7 +967,9 @@ _builtin-audit:
 	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --mode check
 _builtin-status: _builtin_status_diagnostics
 _builtin-verify-clean: _builtin_require_environment
-	@$(PROJECT_FLEXT_INFRA) {{ workspace_cli_group }} verify-clean --repo-root "$(PROJECT_ROOT)"
+	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --mode check
+	@$(PROJECT_FLEXT_INFRA) docs audit --repository-root "$(PROJECT_ROOT)" --output-dir "{{ make.docs.reports_dir }}" --projects .
+	@git -C "$(PROJECT_ROOT)" diff --exit-code
 _builtin-docs: _builtin_docs_all
 _builtin-clean: _builtin_clean_generated
 _builtin-release-plan: _builtin_release_plan

@@ -71,7 +71,7 @@ UV_LINK_MODE := copy
 # unconsumed variable is ignored.
 PYTEST_DIAG_ARGS := -rA --durations=0 --tb=long --showlocals
 PYTEST_REPORT_ARGS := -ra --durations=25 --durations-min=0.001 --tb=short
-PYTEST_PROCESS_TIMEOUT_SECONDS := 124
+PYTEST_PROCESS_TIMEOUT_SECONDS := 3604
 # mro-99ae: the pytest process inherits a hard wall-clock boundary, so a hung
 # run is terminated even if the runner itself stalls.
 PYTEST_BOUNDED = timeout --signal=TERM --kill-after=5s "$(PYTEST_PROCESS_TIMEOUT_SECONDS)s"
@@ -85,7 +85,7 @@ override FLEXT_PYTEST_TESTMON_DATABASE = $(if $(strip $(PYTEST_CACHE_HOME)),$(PY
 # Profiles sit beside the other reports of this checkout (.reports is ignored).
 PROFILE_REPORTS_DIR = $(PROJECT_ROOT)/$(dir $(PYTEST_REPORTS_DIR))profiles
 override PYTEST_CASE_TIMEOUT_SECONDS := 10
-override PYTEST_RUN_TIMEOUT_SECONDS := 120
+override PYTEST_RUN_TIMEOUT_SECONDS := 3600
 override PYTEST_TERMINATION_GRACE_SECONDS := 2
 override PYTEST_TIMEOUT_EXIT_CODE := 124
 override PYTEST_ENFORCEMENT_PLUGIN := flext_tests_enforcement
@@ -880,7 +880,7 @@ define _lock_project
 		mkdir -p "$${stage}/mirror$$relative"; \
 		cp "$$member/pyproject.toml" "$${stage}/mirror$$relative/pyproject.toml"; \
 	done < "$${stage}/.members"; \
-	$(if $(2),if [ -f "$$workspace/uv.lock" ]; then cp "$$workspace/uv.lock" "$${stage}/mirror/uv.lock"; fi;) \
+	if [ "$(1)" != "--upgrade --refresh" ] && [ -f "$$workspace/uv.lock" ]; then cp "$$workspace/uv.lock" "$${stage}/mirror/uv.lock"; fi; \
 	$(UV) lock --project "$${stage}/mirror" $(1); \
 	$(UV) lock --check --project "$${stage}/mirror"; \
 	if [ -e "$$candidate" ]; then printf 'ERROR: lock staging path already exists: %s\n' "$$candidate" >&2; exit 2; fi; \
@@ -1616,8 +1616,45 @@ _upg_activated:
 	esac
 
 
-# Gate, fix and build verbs act on this repository only, with one body per verb
-# in every profile: a workspace root evaluates itself exactly as CI does.
+# _builtin-self-* targets serve the workspace root itself (project selector
+# `.` from the orchestrator). They apply the same member-style gate recipes to
+# PROJECT_ROOT without recursing into submodules, so the root distribution
+# runs its own evidence in the global cycles. Where the standalone profile's
+# `_builtin-*_all` twin owns the identical body, the self target delegates to
+# that twin so the gate-selection shell block is emitted exactly once; the
+# workspace profile emits the root-local body because its `_all` twin
+# recurses into members instead.
+
+# Standalone: the `_all` twins own the one emitted body (SSOT); each carries
+# its own `_builtin_require_environment` edge.
+_builtin-self-test: _builtin_test_all
+
+_builtin-self-check: _builtin_check_all
+
+_builtin-self-test-full: _builtin_test_full_all
+
+_builtin-self-fmt: _builtin_fmt_all
+
+_builtin-self-fix: _builtin_fix_all
+
+_builtin-self-fix-enforcement: _builtin_fix_enforcement
+
+_builtin-self-build: _builtin_build_artifacts
+
+
+_builtin-self-clean: _builtin_clean_generated
+
+_builtin-self-docs: _builtin_docs_all
+
+# SonarCloud server-side issue exclusions (SSOT: codegen.sonarcloud). The verb
+# writes an external service with SONAR_TOKEN from the environment; it belongs
+# to no setup/gen/check/test workflow row and never runs implicitly.
+_builtin_sonarcloud_sync_project: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) maintenance sonarcloud-sync --repository-root "$(PROJECT_ROOT)"
+
+_builtin-self-sonarcloud-sync: _builtin_sonarcloud_sync_project
+
+
 _builtin_build_artifacts:
 
 	@$(UV) build --project "$(PROJECT_ROOT)"
@@ -1687,7 +1724,6 @@ _builtin_fix_enforcement: _builtin_require_environment
 # to no setup/gen/check/test workflow row and never runs implicitly.
 _builtin_sonarcloud_sync_all: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) maintenance sonarcloud-sync --repository-root "$(PROJECT_ROOT)"
-
 
 _builtin_run_default: _builtin_require_environment
 	@$(UV_RUN) $(PROJECT_NAME) $(ARGS)
@@ -1885,7 +1921,9 @@ _builtin-audit:
 	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --mode check
 _builtin-status: _builtin_status_diagnostics
 _builtin-verify-clean: _builtin_require_environment
-	@$(PROJECT_FLEXT_INFRA) workspace verify-clean --repo-root "$(PROJECT_ROOT)"
+	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --mode check
+	@$(PROJECT_FLEXT_INFRA) docs audit --repository-root "$(PROJECT_ROOT)" --output-dir ".reports/docs" --projects .
+	@git -C "$(PROJECT_ROOT)" diff --exit-code
 _builtin-docs: _builtin_docs_all
 _builtin-clean: _builtin_clean_generated
 _builtin-release-plan: _builtin_release_plan

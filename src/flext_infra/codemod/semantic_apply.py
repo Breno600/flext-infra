@@ -18,7 +18,9 @@ class FlextInfraCodemodSemanticApply:
 
     @classmethod
     def source_fingerprint(
-        cls, root: Path, preflight: m.Infra.ModScanReport
+        cls,
+        root: Path,
+        preflight: m.Infra.ModScanReport,
     ) -> t.VariadicTuple[t.Pair[str, str]]:
         """Identify the complete governed source state between mod phases."""
         return tuple(
@@ -40,12 +42,15 @@ class FlextInfraCodemodSemanticApply:
         )
 
         return FlextInfraUtilitiesCodegenPathCutover.plan_transaction_path_cutover(
-            rope_workspace=rope_workspace, sources=original
+            rope_workspace=rope_workspace,
+            sources=original,
         )
 
     @classmethod
     def apply_transaction_paths(
-        cls, root: Path, edits: t.VariadicTuple[m.Infra.SemanticMigrationEdit]
+        cls,
+        root: Path,
+        edits: t.VariadicTuple[m.Infra.SemanticMigrationEdit],
     ) -> None:
         """Publish the exact callback included in the existing progress fingerprint."""
         original = {edit.file_path: edit.original_source for edit in edits}
@@ -91,7 +96,7 @@ class FlextInfraCodemodSemanticApply:
             residue = cls._check_residue(
                 "future-annotations",
                 r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]].ok(
-                    cls._phase_future_annotations(root, preflight, working)
+                    cls._phase_future_annotations(root, preflight, working),
                 ),
             )
         # Class nesting establishes declaration scopes before references are
@@ -129,16 +134,16 @@ class FlextInfraCodemodSemanticApply:
                         lambda _: cls._check_residue(
                             "deferred-models",
                             r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]].ok(
-                                cls._deferred_model_edits(working)
+                                cls._deferred_model_edits(working),
                             ),
-                        )
+                        ),
                     )
             if residue.failure:
                 return r[bool].from_failure(residue)
             cli.display_text(f"mod: semantic phase {phase} complete")
         cli.display_text(
             "mod: semantic cutover "
-            + " ".join(f"{name}={count}" for name, count in counts.items())
+            + " ".join(f"{name}={count}" for name, count in counts.items()),
         )
         if not changed:
             # Every phase just planned against this identical source snapshot.
@@ -149,16 +154,23 @@ class FlextInfraCodemodSemanticApply:
             published = dict(cls._source_inventory(root, preflight))
             rope_workspace.refresh()
             return cls._verify_fixed_point(
-                root, published, preflight, rope_workspace
+                root,
+                published,
+                preflight,
+                rope_workspace,
             ).flat_map(
                 lambda _: cls._check_residue(
                     "import-alignment",
                     cls._phase_import_alignment(root, published, rope_workspace),
-                )
+                ),
             )
 
         return cls._publish(
-            root, original, working, changed, validator=validate_published
+            root,
+            original,
+            working,
+            changed,
+            validator=validate_published,
         )
 
     @classmethod
@@ -168,25 +180,18 @@ class FlextInfraCodemodSemanticApply:
         working: t.MappingKV[Path, str],
         rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
-        """Plan rope-native cross-layer import alignment when tooling enables it."""
+        """Plan rope-native absolute import alignment when tooling enables it."""
         planned_edits = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
         if not config.Infra.tooling.mod.phases.import_alignment:
-            return planned_edits.ok(())
-        project_package = rope_workspace.workspace_index.project_package_by_root.get(
-            str(root.resolve())
-        )
-        if project_package is None:
             return planned_edits.ok(())
         planned = u.Infra.align_module_imports(
             rope_project=rope_workspace.rope_project,
             repository_root=root.resolve(),
             index=rope_workspace.workspace_index,
-            project_package=project_package,
-            config=config.Infra.tooling.lazy_init,
         )
         if planned.failure:
             return planned_edits.fail(
-                f"import-alignment failed to plan: {planned.error}"
+                f"import-alignment failed to plan: {planned.error}",
             )
         return planned_edits.ok(
             tuple(
@@ -194,17 +199,19 @@ class FlextInfraCodemodSemanticApply:
                     file_path=plan.path,
                     original_source=working[plan.path],
                     updated_source=(plan.desired_content or b"").decode(
-                        c.Cli.ENCODING_DEFAULT
+                        c.Cli.ENCODING_DEFAULT,
                     ),
                 )
                 for plan in planned.value
                 if plan.path in working
-            )
+            ),
         )
 
     @staticmethod
     def _phase_future_annotations(
-        root: Path, preflight: m.Infra.ModScanReport, working: MutableMapping[Path, str]
+        root: Path,
+        preflight: m.Infra.ModScanReport,
+        working: MutableMapping[Path, str],
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
         """Plan the future-annotations phase; the pipeline applies the edits."""
         future_annotations: list[m.Infra.SemanticMigrationEdit] = []
@@ -216,7 +223,8 @@ class FlextInfraCodemodSemanticApply:
             original_source = working.get(file_path)
             if original_source is None:
                 state = u.Cli.atomic_read_binary_file_state(
-                    file_path, required=True
+                    file_path,
+                    required=True,
                 ).unwrap()
                 content = state.content
                 if content is None:
@@ -235,13 +243,14 @@ class FlextInfraCodemodSemanticApply:
                         original_source=original_source,
                         updated_source=updated_source,
                         changes=("inserted canonical future annotations import",),
-                    )
+                    ),
                 )
         return tuple(future_annotations)
 
     @staticmethod
     def _check_residue(
-        phase: str, planned: p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
+        phase: str,
+        planned: p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]],
     ) -> p.Result[bool]:
         """Reject a replan failure or edits replanned by a completed phase."""
         if planned.failure:
@@ -249,7 +258,7 @@ class FlextInfraCodemodSemanticApply:
         if planned.value:
             files = ", ".join(edit.file_path.as_posix() for edit in planned.value)
             return r[bool].fail(
-                f"{phase} phase left residue after application: {files}"
+                f"{phase} phase left residue after application: {files}",
             )
         return r[bool].ok(True)
 
@@ -268,8 +277,9 @@ class FlextInfraCodemodSemanticApply:
             edits.ok(cls._phase_future_annotations(root, preflight, working)),
         ).flat_map(
             lambda _: cls._check_residue(
-                "deferred-models", edits.ok(cls._deferred_model_edits(working))
-            )
+                "deferred-models",
+                edits.ok(cls._deferred_model_edits(working)),
+            ),
         )
         for phase in c.Infra.SemanticCutoverPhase:
             if verified.failure:
@@ -287,7 +297,8 @@ class FlextInfraCodemodSemanticApply:
 
     @staticmethod
     def _source_inventory(
-        root: Path, preflight: m.Infra.ModScanReport
+        root: Path,
+        preflight: m.Infra.ModScanReport,
     ) -> t.MappingKV[Path, str]:
         """Read governed sources and every Python path reported by preflight."""
         project_roots = u.Infra.governed_project_roots(root)
@@ -330,13 +341,12 @@ class FlextInfraCodemodSemanticApply:
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
         """Normalize every handwritten canonical model source from its AST."""
         edits: list[m.Infra.SemanticMigrationEdit] = []
-        model_directories = c.Infra.FLEXT_MODELS_DIRECTORIES
+        models = u.Infra.facade_family_declared_by(c.Infra.MODELS_PY)
         for path, source in sorted(sources.items()):
             if source.startswith("# AUTO-GENERATED FILE"):
                 continue
-            if (
-                path.name not in c.Infra.FLEXT_MODELS_FILE_NAMES
-                and not model_directories.intersection(path.parts)
+            if path.name not in models.file_names and not models.directories.intersection(
+                path.parts
             ):
                 continue
             updated = u.Infra.normalize_deferred_self_references(source)
@@ -347,7 +357,7 @@ class FlextInfraCodemodSemanticApply:
                         original_source=source,
                         updated_source=updated,
                         changes=("normalized definition-time model references",),
-                    )
+                    ),
                 )
         return tuple(edits)
 
@@ -396,7 +406,9 @@ class FlextInfraCodemodSemanticApply:
             if project_root is None:
                 project_root = root
             normalized = FlextInfraRefactorCensusApplyFormattingMixin.normalize_source(
-                root, path, updated[path]
+                root,
+                path,
+                updated[path],
             )
             if normalized.failure:
                 return r[bool].from_failure(normalized)
@@ -411,12 +423,14 @@ class FlextInfraCodemodSemanticApply:
                     desired_content=new_content,
                     desired_mode=state.mode,
                     changes=("semantic migration",),
-                )
+                ),
             )
         if not semantic_plans:
             return validator() if validator is not None else r[bool].ok(True)
         return FlextInfraSemanticPublication.publish_semantic_file_plans(
-            semantic_plans, repository_root=root, validator=validator
+            semantic_plans,
+            repository_root=root,
+            validator=validator,
         ).map(lambda _: True)
 
     @staticmethod

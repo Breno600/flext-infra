@@ -19,7 +19,7 @@ PROJECT_ROOT="${PROJECT_ROOT%/*}"
 PROJECT_ROOT="$(cd "${PROJECT_ROOT}" && pwd -P)"
 # A nested standalone checkout never inherits an enclosing repository's tools.
 # A member checked out as a submodule shares its Git superproject runtime, the
-# same root its Makefile resolves (flext-x8gn6).
+# same root its Makefile resolves.
 RUNTIME_ROOT="$(git -C "${PROJECT_ROOT}" rev-parse --show-superproject-working-tree)"
 RUNTIME_ROOT="${RUNTIME_ROOT:-${PROJECT_ROOT}}"
 RUNTIME_ROOT="$(cd "${RUNTIME_ROOT}" && pwd -P)"
@@ -34,7 +34,7 @@ export MISE_CEILING_PATHS="${runtime_parent}"
 # D-VENV: a member inside a workspace uses the workspace .venv; a standalone
 # checkout or linked worktree owns its own .venv. The location is law, never
 # configuration: nothing lives outside the checkout (flext-h2a9h).
-VENV_DIR="${RUNTIME_ROOT}/{{ environment_directory }}"
+VENV_DIR="${RUNTIME_ROOT}/.venv"
 export PROJECT_ROOT
 export PYTHON_KEYRING_BACKEND="keyring.backends.null.Keyring"
 export PYTHONUNBUFFERED=1

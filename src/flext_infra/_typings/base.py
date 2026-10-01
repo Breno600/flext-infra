@@ -81,7 +81,8 @@ class FlextInfraTypesBase:
     type Container[ItemT] = _Container[ItemT]
     "Generic membership-testable collection (supports ``in``)."
     type PipelineHandler = Callable[
-        [_cli_p.Cli.PipelineStageContext], _cli_p.Result[_cli_m.Cli.PipelineStageResult]
+        [_cli_p.Cli.PipelineStageContext],
+        _cli_p.Result[_cli_m.Cli.PipelineStageResult],
     ]
     "Stage handler contract for the flext-infra check/codegen DAG pipelines."
     type PipelineHandlerMap = t.MappingKV[str, PipelineHandler]
@@ -135,7 +136,9 @@ class FlextInfraTypesBase:
     # ── Lint policy types ────────────────────────────────────────────
 
     type RuffRule = Annotated[
-        str, t.StringConstraints(min_length=1), m.AfterValidator(_reject_blanket_mask)
+        str,
+        t.StringConstraints(min_length=1),
+        m.AfterValidator(_reject_blanket_mask),
     ]
     """One named Ruff rule exempted for a path.
 
@@ -159,15 +162,18 @@ class FlextInfraTypesBase:
     type ReleaseArtifactKind = Literal["sdist", "wheel"]
     "Closed artifact kind emitted by a release build."
     type ReleaseAbsolutePath = Annotated[
-        str, t.StringConstraints(min_length=1, pattern=r"^(?:/|[A-Za-z]:[\\/])")
+        str,
+        t.StringConstraints(min_length=1, pattern=r"^(?:/|[A-Za-z]:[\\/])"),
     ]
     "Absolute POSIX or Windows path serialized in a release report."
     type ReleaseArtifactSha256 = Annotated[
-        str, t.StringConstraints(pattern=r"^[0-9a-f]{64}$")
+        str,
+        t.StringConstraints(pattern=r"^[0-9a-f]{64}$"),
     ]
     "Lowercase SHA-256 digest serialized in a release report."
     type ReleaseCommitOid = Annotated[
-        str, t.StringConstraints(pattern=r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
+        str,
+        t.StringConstraints(pattern=r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$"),
     ]
     "Lowercase Git SHA-1 or SHA-256 commit object identifier."
     # ── Git type aliases ────────────────────────────────────────────

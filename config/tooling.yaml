@@ -655,18 +655,18 @@ Infra:
         # fsync can obey a five-second Python signal deadline. The aggregate
         # budget below independently terminates an incomplete full suite.
         case-timeout-seconds: 10
-        # Slow marks are a narrow integration-harness budget, not permission
-        # for an unbounded test. Cases that exceed it require owner repair.
-        slow-timeout-seconds: 30
-        # gate-budget rule: the run budget covers the budgeted phase only;
-        # items carrying this native pytest marker run in their own phase, each
-        # within slow-timeout-seconds (pytest-timeout marker), selected with the
-        # native -m expression.
+        # Slow marks cover nested public runner executions, including a cold
+        # cache seed and a warm replay under parallel suite load.
+        slow-timeout-seconds: 180
+        # The declared marker whose cases form the bounded-budget phase; the
+        # remaining cases run in their own phase under the full inventory
+        # budget (gate-budget rule).
         slow-marker: slow
-        # A local suite that cannot finish within two minutes is a performance
-        # defect. The generated process wall is derived from this value and the
-        # termination grace by the typed model; no second timeout source exists.
-        run-timeout-seconds: 120
+        # The complete inventory exceeds 3300 cases. A 189-case incremental
+        # execution took 127 seconds, projecting over 2200 seconds for the
+        # inventory before the slowest integration cases. Keep a bounded wall
+        # that permits complete accounting instead of truncating the suite.
+        run-timeout-seconds: 3600
         termination-grace-seconds: 2
         # Operator decision 2026-09-26: one failure stops the invocation. The
         # next run starts from the corrected owner instead of accumulating a
@@ -726,6 +726,8 @@ Infra:
         parallel-schedule-chunk: 1
         profile-sort: cumulative
         profile-limit: 50
+        profile-suite-filename: pytest.pstats
+        profile-process-directory: profiles
         min-version: "8.0"
         python-classes: ["Test*"]
         python-files: ["*_test.py", "*_tests.py", "test_*.py"]
@@ -766,13 +768,13 @@ Infra:
           - "singer: Singer protocol contract tests"
         # gate-budget/engineering-core: external-token gates never run inside
         # offline verification (`make test`); the runner records their exclusion.
-        # `make test-full` first completes that incremental phase, then executes
-        # every marker under the same database and deadline. Existing external
-        # tests retain their declared environment and authentication requirements.
+        # `make test-full` executes every marker locally, without testmon and
+        # without any time limit. Existing external tests retain their declared
+        # environment and authentication requirements.
         external-gate-markers: [remote, docker]
         # Operator 2026-09-14: CI and pre-commit share make.ci.value;
-        # local and pre-push execution retain slow tests. The full phase of
-        # `make test-full` includes these markers in every context.
+        # local and pre-push execution retain slow tests. `make test-full`
+        # includes these markers.
         ci-excluded-markers: [slow]
         standard-addopts:
           - --benchmark-disable

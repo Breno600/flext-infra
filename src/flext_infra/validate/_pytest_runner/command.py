@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import hashlib
 import sys
-from functools import lru_cache
-from importlib.metadata import distributions
 from pathlib import Path
 from typing import ClassVar
 
@@ -18,42 +15,26 @@ from .base import FlextInfraPytestRunnerBase
 class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
     """Build the single supported pytest command family.
 
-    One suite builder owns every flag; the testmon and coverage verbs are two
-    selections over it (testmon 2.x refuses branch coverage through the cov
-    plugin, so the two never share a process).
+    One suite builder owns every flag. Only incremental execution uses testmon;
+    full and coverage execution are separate plugin selections.
     """
 
     _NO_COVERAGE: ClassVar[t.VariadicTuple[str]] = ("--no-cov",)
 
     @staticmethod
-    @lru_cache(maxsize=1)
-    def _toolchain_testmon_environment() -> str:
-        """Fingerprint the interpreter and installed distribution provenance.
+    def bounded(execution_mode: c.Infra.PytestExecutionMode) -> bool:
+        """The local full verb carries no case, suite, or process deadline."""
+        return execution_mode != c.Infra.PytestExecutionMode.FULL
 
-        Git branch dependencies can change commits while retaining the same
-        package version, so their PEP 610 receipts participate in cache identity.
-        Registry distributions legitimately have no direct-URL receipt. An
-        editable install names a checkout path, not a toolchain: testmon already
-        tracks that source by file checksum, so every checkout of one project
-        on the same lock shares one environment record (flext-3l1gk).
-        """
-        provenance: t.MutableSequenceOf[str] = []
-        for distribution in distributions():
-            receipt = distribution.read_text("direct_url.json")
-            dir_info = (
-                None
-                if receipt is None
-                else m.Infra.DirectUrlReceipt.model_validate_json(receipt).dir_info
-            )
-            identity = (
-                "editable" if dir_info is not None and dir_info.editable else receipt
-            )
-            provenance.append(
-                f"{distribution.name}={distribution.version}:{identity!r}"
-            )
-        fingerprint = "\n".join((sys.version, *sorted(provenance)))
-        digest = hashlib.sha256(fingerprint.encode()).hexdigest()[:12]
-        return f"toolchain-{digest}"
+    @classmethod
+    def _case_timeout_args(
+        cls, execution_mode: c.Infra.PytestExecutionMode
+    ) -> t.VariadicTuple[str]:
+        """Apply the typed case limit, or disable timeout plugins for full."""
+        pytest = config.Infra.tooling.tools.pytest
+        if cls.bounded(execution_mode):
+            return (f"--timeout={pytest.case_timeout_seconds}",)
+        return ("--timeout=0", "-o", f"{c.Infra.FLEXT_SLOW_TIMEOUT_SECONDS}=")
 
     def suite_stop_monotonic(self, *, serial: bool = False) -> float:
         """Derive the graceful suite stop instant from the entrypoint deadline.
@@ -65,18 +46,11 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         keep at most one item in flight, so their reserve is smaller.
         """
         pytest = config.Infra.tooling.tools.pytest
-        if self.slow_phase:
-            reserve = (
-                pytest.slow_serial_suite_stop_reserve_seconds
-                if serial
-                else pytest.slow_suite_stop_reserve_seconds
-            )
-        else:
-            reserve = (
-                pytest.serial_suite_stop_reserve_seconds
-                if serial
-                else pytest.suite_stop_reserve_seconds
-            )
+        reserve = (
+            pytest.serial_suite_stop_reserve_seconds
+            if serial
+            else pytest.suite_stop_reserve_seconds
+        )
         return self.started_at_monotonic + pytest.run_timeout_seconds - reserve
 
     def ci_excluded_markers(
@@ -90,7 +64,9 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         return ()
 
     def _plugin_policy_args(
-        self, *, execution_mode: c.Infra.PytestExecutionMode
+        self,
+        *,
+        execution_mode: c.Infra.PytestExecutionMode,
     ) -> t.VariadicTuple[str]:
         """Apply the same configured plugin contract to collection and execution.
 
@@ -155,7 +131,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         """
         testmon = (
             ()
-            if execution_mode == c.Infra.PytestExecutionMode.COVERAGE
+            if execution_mode != c.Infra.PytestExecutionMode.INCREMENTAL
             else (
                 "--testmon",
                 "--testmon-nocollect",
@@ -164,8 +140,6 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                 # ``--testmon-forceselect`` is testmon's declared override for
                 # exactly that case (never combined with ``--testmon-noselect``).
                 *(("--testmon-noselect",) if complete else ("--testmon-forceselect",)),
-                "--testmon-env",
-                f"'{self._toolchain_testmon_environment()}'",
             )
         )
         pytest_arguments = (
@@ -178,7 +152,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             *self._plugin_policy_args(execution_mode=execution_mode),
             "--benchmark-disable",
             "--strict-markers",
-            f"--timeout={config.Infra.tooling.tools.pytest.case_timeout_seconds}",
+            *self._case_timeout_args(execution_mode),
             "-o",
             "filterwarnings=",
             "-p",
@@ -187,8 +161,6 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             "0",
             "--no-cov",
         )
-        # A profiled run routes the collection child through the profiling
-        # adapter declared at the outer boundary; otherwise pytest runs as is.
         if self.collection_command_prefix:
             return (
                 *self.collection_command_prefix,
@@ -233,6 +205,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         return self._suite_argv(
             report_dir,
             serial=serial,
+            execution_mode=execution_mode,
             targets=(
                 (str(self.target),)
                 if (
@@ -254,16 +227,23 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                     if selection_plan is not None and selection
                     else ()
                 ),
-                "--testmon",
-                *(("--testmon-noselect",) if selection else ("--testmon-forceselect",)),
-                "--testmon-env",
-                f"'{self._toolchain_testmon_environment()}'",
+                *(
+                    (
+                        "--testmon",
+                        *(("--testmon-noselect",) if selection else ("--testmon-forceselect",)),
+                    )
+                    if execution_mode == c.Infra.PytestExecutionMode.INCREMENTAL
+                    else ()
+                ),
                 *self._NO_COVERAGE,
             ),
         )
 
     def build_coverage_command(
-        self, report_dir: Path, *, serialize: bool = False
+        self,
+        report_dir: Path,
+        *,
+        serialize: bool = False,
     ) -> t.VariadicTuple[str]:
         """Build the whole-suite coverage argv (never the testmon plugin).
 
@@ -276,11 +256,12 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         return self._suite_argv(
             report_dir,
             serial=workers == "0",
+            execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
             targets=(str(self.target),),
             workers=workers,
             trailing=(
                 *self._plugin_policy_args(
-                    execution_mode=c.Infra.PytestExecutionMode.COVERAGE
+                    execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
                 ),
                 f"--cov={self.root / c.Infra.DEFAULT_SRC_DIR}",
                 f"--cov-report=xml:{report_dir / 'coverage.xml'}",
@@ -293,6 +274,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         report_dir: Path,
         *,
         serial: bool,
+        execution_mode: c.Infra.PytestExecutionMode,
         targets: t.StrSequence,
         workers: str,
         trailing: t.StrSequence,
@@ -302,12 +284,25 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         return (
             sys.executable,
             "-m",
-            "pytest",
+            "flext_infra._pytest_entry" if self.profile_enabled else "pytest",
+            *(
+                (
+                    "profile-collection",
+                    str(report_dir / pytest.profile_suite_filename),
+                    str(report_dir / "run-context.json"),
+                )
+                if self.profile_enabled
+                else ()
+            ),
             *targets,
             *pytest.progress_args,
             *pytest.report_args,
-            f"--timeout={pytest.case_timeout_seconds}",
-            f"{c.Infra.PYTEST_SUITE_STOP_OPTION}={self.suite_stop_monotonic(serial=serial)!r}",
+            *self._case_timeout_args(execution_mode),
+            *(
+                (f"{c.Infra.PYTEST_SUITE_STOP_OPTION}={self.suite_stop_monotonic(serial=serial)!r}",)
+                if self.bounded(execution_mode)
+                else ()
+            ),
             f"--maxfail={pytest.max_failures}",
             f"--junitxml={report_dir / 'junit.xml'}",
             f"--report-log={report_dir / 'events.jsonl'}",

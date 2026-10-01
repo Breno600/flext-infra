@@ -71,6 +71,11 @@ directory; the aggregate includes fixture setup, test calls, and teardown. A fai
 interrupted profiled run remains RED with its original process outcome. The profile is
 diagnostic evidence, not a substitute for a complete test result.
 
+The suite deadline is declared once as `Infra.tooling.tools.pytest.run-timeout-seconds`
+in `config/tooling.yaml`. The typed runner and generated Make process bound
+derive from that policy. Use the profile and complete run receipts to repair
+a slow owner; an interrupted selection or suite remains a failed invocation.
+
 The runner first completes the incremental operation, then executes the full suite using
 the same database and one monotonic deadline. The first failure stops the sequence. The
 full phase includes both configured `external-gate-markers` and `ci-excluded-markers` in

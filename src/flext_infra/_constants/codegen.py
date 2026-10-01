@@ -303,5 +303,10 @@ class FlextInfraConstantsCodegen(
     QG_CHECK_TYPE_SAFETY: ClassVar[str] = "type_safety"
     QG_CHECK_LINT_CLEAN: ClassVar[str] = "lint_clean"
 
+    # Lazy-init projection manifest (.agents/projections.lock.json, v1): the
+    # projected OUTPUT lock owned by the generator alone.
+    PROJECTIONS_LOCK_API_VERSION: ClassVar[str] = "flext-infra/projections-lock/v1"
+    PROJECTIONS_LOCK_FILENAME: ClassVar[str] = "projections.lock.json"
+
 
 __all__: list[str] = ["FlextInfraConstantsCodegen"]

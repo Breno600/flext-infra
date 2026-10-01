@@ -37,6 +37,10 @@ class FlextInfraConfigModelsMake:
                 )
             ),
         ] = "N"
+        local_check_gates: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(description="Declared local check partition within active gates"),
+        ]
 
     class MakeVerbSpec(FlextInfraConfigModelsContract.ConfigContract):
         """One selector-free public Make operation."""
@@ -132,6 +136,19 @@ class FlextInfraConfigModelsMake:
             m.Field(description="Trace/profile globs removed anywhere in the tree"),
         ]
 
+    class DocsOverviewPreviewLimitsSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """Maximum list sizes in the generated public API overview."""
+
+        aliases: Annotated[int, m.Field(gt=0, description="Alias preview limit")]
+        public_symbols: Annotated[
+            int, m.Field(gt=0, description="Public symbol preview limit")
+        ]
+        facades: Annotated[int, m.Field(gt=0, description="Facade preview limit")]
+        module_exports: Annotated[
+            int, m.Field(gt=0, description="Module export preview limit")
+        ]
+        keywords: Annotated[int, m.Field(gt=0, description="Keyword preview limit")]
+
     class MakeDocsSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Generated Makefile docs verb lifecycle and audit policy."""
 
@@ -145,22 +162,16 @@ class FlextInfraConfigModelsMake:
                 ),
             ),
         ]
-        api_modules: Annotated[
-            Mapping[t.NonEmptyStr, t.VariadicTuple[t.NonEmptyStr]],
-            m.Field(
-                min_length=1,
-                description=(
-                    "Public API modules generated per distribution; absent "
-                    "distributions own no module pages"
-                ),
-            ),
-        ]
         mutable_actions: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(min_length=1, description="Docs actions that mutate"),
         ]
         reports_dir: Annotated[
             Path, m.Field(description="Repository-relative docs reports directory")
+        ]
+        overview_preview_limits: Annotated[
+            FlextInfraConfigModelsMake.DocsOverviewPreviewLimitsSpec,
+            m.Field(description="Maximum preview sizes for generated API overviews"),
         ]
         cross_project_relative_link_pattern: Annotated[
             t.NonEmptyStr,
@@ -182,29 +193,6 @@ class FlextInfraConfigModelsMake:
                 description="Governed org/repo/branch map for cross-repo doc URLs",
             ),
         ] = ()
-
-        @u.model_validator(mode="after")
-        def _validate_api_modules(self) -> Self:
-            """Reject duplicate or non-importable API module declarations."""
-            for distribution, modules in self.api_modules.items():
-                if not modules:
-                    msg = f"docs api_modules must not be empty: {distribution}"
-                    raise ValueError(msg)
-                if len(set(modules)) != len(modules):
-                    msg = f"docs api_modules must be unique: {distribution}"
-                    raise ValueError(msg)
-                invalid = next(
-                    (
-                        module
-                        for module in modules
-                        if not all(part.isidentifier() for part in module.split("."))
-                    ),
-                    None,
-                )
-                if invalid is not None:
-                    msg = f"docs api module is not importable: {invalid}"
-                    raise ValueError(msg)
-            return self
 
         @u.model_validator(mode="after")
         def _validate_actions(self) -> Self:
@@ -233,74 +221,6 @@ class FlextInfraConfigModelsMake:
             )
             if outside is not None:
                 msg = f"mutable_actions entry is not part of the docs lifecycle: {outside}"
-                raise ValueError(msg)
-            return self
-
-    class TestmonCacheSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Persistent pytest-testmon database and runner paths."""
-
-        database_filename: Annotated[
-            t.NonEmptyStr, m.Field(description="pytest-testmon database filename")
-        ]
-        database_environment_variable: Annotated[
-            FlextInfraConstantsMake.PytestCacheEnvironment,
-            m.Field(description="pytest-testmon's supported database-path variable"),
-        ]
-        data_home_environment_variable: Annotated[
-            FlextInfraConstantsMake.PytestCacheEnvironment,
-            m.Field(description="XDG persistent cache-home variable"),
-        ]
-        user_home_environment_variable: Annotated[
-            FlextInfraConstantsMake.PytestCacheEnvironment,
-            m.Field(description="User home variable for the XDG default"),
-        ]
-        home_cache_directory: Annotated[
-            Path, m.Field(description="Standard cache directory below the user home")
-        ]
-        external_storage_directory: Annotated[
-            Path, m.Field(description="FLEXT-owned directory below the cache home")
-        ]
-        target_directory: Annotated[
-            Path, m.Field(description="Repository-relative pytest target")
-        ]
-        reports_directory: Annotated[
-            Path, m.Field(description="Repository-relative pytest reports root")
-        ]
-
-        @u.model_validator(mode="after")
-        def require_external_database_contract(self) -> Self:
-            """Keep testmon's official path variable and external path policy exact."""
-            for name, actual, expected in (
-                (
-                    "database_environment_variable",
-                    self.database_environment_variable,
-                    FlextInfraConstantsMake.PytestCacheEnvironment.DATABASE_FILE,
-                ),
-                (
-                    "data_home_environment_variable",
-                    self.data_home_environment_variable,
-                    FlextInfraConstantsMake.PytestCacheEnvironment.DATA_HOME,
-                ),
-                (
-                    "user_home_environment_variable",
-                    self.user_home_environment_variable,
-                    FlextInfraConstantsMake.PytestCacheEnvironment.USER_HOME,
-                ),
-            ):
-                if actual != expected:
-                    msg = f"testmon cache {name} must be {expected.value}"
-                    raise ValueError(msg)
-            for name, path in (
-                ("home_cache_directory", self.home_cache_directory),
-                ("external_storage_directory", self.external_storage_directory),
-            ):
-                if path.is_absolute() or any(
-                    part in {"", ".", ".."} for part in path.parts
-                ):
-                    msg = f"testmon cache {name} must be normalized and relative"
-                    raise ValueError(msg)
-            if Path(self.database_filename).name != self.database_filename:
-                msg = "testmon cache database_filename must be a filename"
                 raise ValueError(msg)
             return self
 
@@ -384,6 +304,11 @@ class FlextInfraConfigModelsMake:
     class MakeSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Complete generated Makefile public and extension contract."""
 
+        runtime_environment_directory: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Sibling directory for physical workspace environments"),
+        ]
+
         class TestmonCachePolicySpec(FlextInfraConfigModelsContract.ConfigContract):
             """Declarative Actions-cache policy for the shared testmon database.
 
@@ -441,7 +366,89 @@ class FlextInfraConfigModelsMake:
                     raise ValueError(msg)
                 return self
 
-        class MypyCacheSpec(FlextInfraConfigModelsContract.ConfigContract):
+        class ExternalCacheDirectorySpec(FlextInfraConfigModelsContract.ConfigContract):
+            """External-cache path pair every tool cache spec owns identically."""
+
+            home_cache_directory: Annotated[
+                Path, m.Field(description="Standard cache directory below the user home")
+            ]
+            external_storage_directory: Annotated[
+                Path, m.Field(description="FLEXT-owned directory below the cache home")
+            ]
+
+            @u.model_validator(mode="after")
+            def require_relative_cache_directories(self) -> Self:
+                """Keep both cache directories normalized and repository-relative."""
+                for name, path in (
+                    ("home_cache_directory", self.home_cache_directory),
+                    ("external_storage_directory", self.external_storage_directory),
+                ):
+                    if path.is_absolute() or any(
+                        part in {"", ".", ".."} for part in path.parts
+                    ):
+                        msg = f"cache {name} must be normalized and relative"
+                        raise ValueError(msg)
+                return self
+
+        class TestmonCacheSpec(
+            ExternalCacheDirectorySpec, FlextInfraConfigModelsContract.ConfigContract
+        ):
+            """Persistent pytest-testmon database and runner paths."""
+
+            database_filename: Annotated[
+                t.NonEmptyStr, m.Field(description="pytest-testmon database filename")
+            ]
+            database_environment_variable: Annotated[
+                FlextInfraConstantsMake.PytestCacheEnvironment,
+                m.Field(description="pytest-testmon's supported database-path variable"),
+            ]
+            data_home_environment_variable: Annotated[
+                FlextInfraConstantsMake.PytestCacheEnvironment,
+                m.Field(description="XDG persistent cache-home variable"),
+            ]
+            user_home_environment_variable: Annotated[
+                FlextInfraConstantsMake.PytestCacheEnvironment,
+                m.Field(description="User home variable for the XDG default"),
+            ]
+            target_directory: Annotated[
+                Path, m.Field(description="Repository-relative pytest target")
+            ]
+            reports_directory: Annotated[
+                Path, m.Field(description="Repository-relative pytest reports root")
+            ]
+
+            @u.model_validator(mode="after")
+            def require_external_database_contract(self) -> Self:
+                """Keep testmon's official path variable and external path policy exact."""
+                for name, actual, expected in (
+                    (
+                        "database_environment_variable",
+                        self.database_environment_variable,
+                        FlextInfraConstantsMake.PytestCacheEnvironment.DATABASE_FILE,
+                    ),
+                    (
+                        "data_home_environment_variable",
+                        self.data_home_environment_variable,
+                        FlextInfraConstantsMake.PytestCacheEnvironment.DATA_HOME,
+                    ),
+                    (
+                        "user_home_environment_variable",
+                        self.user_home_environment_variable,
+                        FlextInfraConstantsMake.PytestCacheEnvironment.USER_HOME,
+                    ),
+                ):
+                    if actual != expected:
+                        msg = f"testmon cache {name} must be {expected.value}"
+                        raise ValueError(msg)
+                if Path(self.database_filename).name != self.database_filename:
+                    msg = "testmon cache database_filename must be a filename"
+                    raise ValueError(msg)
+                return self
+
+        class MypyCacheSpec(
+            ExternalCacheDirectorySpec,
+            FlextInfraConfigModelsContract.ConfigContract,
+        ):
             """Project-keyed shared Mypy cache: one analysis per project, reused across relocks."""
 
             cache_environment_variable: Annotated[
@@ -503,17 +510,12 @@ class FlextInfraConfigModelsMake:
                     if actual != expected:
                         msg = f"mypy cache {name} must be {expected.value}"
                         raise ValueError(msg)
-                for name, path in (
-                    ("home_cache_directory", self.home_cache_directory),
-                    ("external_storage_directory", self.external_storage_directory),
-                ):
-                    if path.is_absolute() or any(
-                        part in {"", ".", ".."} for part in path.parts
-                    ):
-                        msg = f"mypy cache {name} must be normalized and relative"
-                        raise ValueError(msg)
                 return self
 
+        runtime_environment_directory: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Sibling directory for physical project environments"),
+        ]
         examples_timeout_seconds: Annotated[
             int,
             m.Field(gt=0, le=120, description="Workspace examples process deadline"),
@@ -565,7 +567,7 @@ class FlextInfraConfigModelsMake:
             m.Field(description="Config-owned CI-only environment delta"),
         ]
         testmon_cache: Annotated[
-            FlextInfraConfigModelsMake.TestmonCacheSpec,
+            TestmonCacheSpec,
             m.Field(description="Adaptive testmon Actions cache policy"),
         ]
         # A member may override either declared policy; the defaults spare
@@ -790,24 +792,16 @@ class FlextInfraConfigModelsMake:
         @m.computed_field
         @property
         def check_gates_ci(self) -> t.VariadicTuple[str]:
-            """Fast partition run by CI and pre-commit, derived from gate kind.
-
-            Only active default gates the registry declares ``EXTERNAL`` run
-            here. Type checkers, validators whose rules this package owns, and
-            project-declared gates are never part of the fast contexts.
-            """
-            kinds = FlextInfraConstantsCheck.GATE_KINDS
-            external = FlextInfraConstantsCheck.GateKind.EXTERNAL
-            return tuple(
-                gate for gate in self.check_gates_default if kinds.get(gate) is external
-            )
+            """CI runs the active gates outside the declared local partition."""
+            local = frozenset(self.ci.local_check_gates)
+            return tuple(gate for gate in self.check_gates_default if gate not in local)
 
         @m.computed_field
         @property
         def check_gates_local(self) -> t.VariadicTuple[str]:
-            """Strict complement of the fast partition within the active universe."""
-            fast = frozenset(self.check_gates_ci)
-            return tuple(gate for gate in self.check_gates_default if gate not in fast)
+            """Declared local partition intersected with the active gates."""
+            active = frozenset(self.check_gates_default)
+            return tuple(gate for gate in self.ci.local_check_gates if gate in active)
 
         @m.computed_field
         @property

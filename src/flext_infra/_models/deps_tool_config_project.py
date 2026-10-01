@@ -12,17 +12,13 @@ from .deps_tool_config_project_artifacts import (
 
 
 class FlextInfraModelsDepsToolConfigProject(
-    FlextInfraModelsDepsToolConfigProjectArtifacts
+    FlextInfraModelsDepsToolConfigProjectArtifacts,
 ):
     """Document layer composing every project-owned managed-artifact model."""
 
     class ProjectManagedArtifactsFragment(m.ArbitraryTypesModel):
         """Optional project-owned sections present in one configuration source."""
 
-        Ruff: Annotated[
-            FlextInfraModelsDepsToolConfigProjectArtifacts.ProjectRuffConfig | None,
-            m.Field(description="Ruff section declared by this source"),
-        ] = None
         Mise: Annotated[
             FlextInfraModelsDepsToolConfigProjectArtifacts.ProjectMiseConfig | None,
             m.Field(description="Mise section declared by this source"),

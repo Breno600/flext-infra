@@ -21,6 +21,7 @@ from flext_infra.maintenance.clean import FlextInfraCleanService
 from flext_infra.maintenance.python_version import FlextInfraPythonVersionEnforcer
 from flext_infra.maintenance.sonarcloud import FlextInfraSonarcloudSettingsSync
 
+from ..api import infra
 from .cli_routes_validate_commands import FlextInfraValidationCommandRoutes
 
 
@@ -36,7 +37,7 @@ class FlextInfraValidationRoutes(FlextInfraValidationCommandRoutes):
                 help_text="Collect associated plan sources and publish authenticated projections",
                 model_cls=m.Infra.DocsCollectRequest,
                 handler=FlextInfraValidationCommandRoutes.result_handler(
-                    FlextInfraDocCollector.collect
+                    FlextInfraDocCollector.collect,
                 ),
                 success_message="Configured plan sources collected and published",
             ),
@@ -45,9 +46,18 @@ class FlextInfraValidationRoutes(FlextInfraValidationCommandRoutes):
                 help_text="Generate project docs through the publication transaction",
                 model_cls=m.Infra.DocsGenerateRequest,
                 handler=FlextInfraValidationCommandRoutes.result_handler(
-                    FlextInfraDocGenerator.execute_request
+                    FlextInfraDocGenerator.execute_request,
                 ),
                 success_message="Generated documentation committed and verified",
+            ),
+            m.Cli.ResultCommandRoute(
+                name="fmt",
+                help_text="Format documentation through the canonical markdown-format gate",
+                model_cls=FlextInfraDocFormatter,
+                handler=FlextInfraValidationCommandRoutes.result_handler(
+                    infra.docs_format,
+                ),
+                success_message="Format completed successfully",
             ),
             *tuple(
                 m.Cli.ResultCommandRoute(
@@ -55,7 +65,7 @@ class FlextInfraValidationRoutes(FlextInfraValidationCommandRoutes):
                     help_text=help_text,
                     model_cls=model_cls,
                     handler=FlextInfraValidationCommandRoutes.result_handler(
-                        model_cls.execute_command
+                        model_cls.execute_command,
                     ),
                     success_message=success_message,
                 )
@@ -71,12 +81,6 @@ class FlextInfraValidationRoutes(FlextInfraValidationCommandRoutes):
                         "Fix documentation issues",
                         FlextInfraDocFixer,
                         "Fix completed successfully",
-                    ),
-                    (
-                        "fmt",
-                        "Format documentation through the canonical markdown-format gate",
-                        FlextInfraDocFormatter,
-                        "Format completed successfully",
                     ),
                     (
                         "build",

@@ -88,12 +88,14 @@ class TestsFlextInfraTypeGates:
         reports = real_python_package / ".reports"
         reports.mkdir()
         return m.Infra.GateContext(
-            repository_root=real_python_package, reports_dir=reports
+            repository_root=real_python_package,
+            reports_dir=reports,
         )
 
     @pytest.mark.slow
     def test_mypy_preserves_protocol_member_diagnostics(
-        self, checker_context: m.Infra.GateContext
+        self,
+        checker_context: m.Infra.GateContext,
     ) -> None:
         """Native protocol conflict details remain visible in reported issues."""
         project = checker_context.repository_root
@@ -117,7 +119,8 @@ class TestsFlextInfraTypeGates:
 
     @pytest.mark.slow
     def test_mypy_preserves_malformed_native_output(
-        self, checker_context: m.Infra.GateContext
+        self,
+        checker_context: m.Infra.GateContext,
     ) -> None:
         """Unexpected plugin output remains a causal, visible tool failure."""
         project = checker_context.repository_root
@@ -132,7 +135,8 @@ class TestsFlextInfraTypeGates:
         pyproject = project / "pyproject.toml"
         pyproject.write_text(
             pyproject.read_text(encoding="utf-8").replace(
-                "[tool.mypy]\n", '[tool.mypy]\nplugins = ["plugin.py"]\n'
+                "[tool.mypy]\n",
+                '[tool.mypy]\nplugins = ["plugin.py"]\n',
             ),
             encoding="utf-8",
         )
@@ -148,10 +152,13 @@ class TestsFlextInfraTypeGates:
 
     @pytest.mark.slow
     @pytest.mark.parametrize(
-        "gate_class", [FlextInfraMypyGate, FlextInfraPyrightGate, FlextInfraPyreflyGate]
+        "gate_class",
+        [FlextInfraMypyGate, FlextInfraPyrightGate, FlextInfraPyreflyGate],
     )
     def test_real_check_and_repair(
-        self, checker_context: m.Infra.GateContext, gate_class: type[FlextInfraGate]
+        self,
+        checker_context: m.Infra.GateContext,
+        gate_class: type[FlextInfraGate],
     ) -> None:
         project = checker_context.repository_root
         reports = checker_context.reports_dir
@@ -196,22 +203,26 @@ class TestsFlextInfraTypeGates:
         project = real_python_package
         pyproject = project / "pyproject.toml"
         pyproject.write_text(
-            pyproject.read_text(encoding="utf-8") + "\n" + config_text, encoding="utf-8"
+            pyproject.read_text(encoding="utf-8") + "\n" + config_text,
+            encoding="utf-8",
         )
         (project / "src" / "test_pkg" / "warning.py").write_text(
-            'value: int = "incorrect"\n', encoding="utf-8"
+            'value: int = "incorrect"\n',
+            encoding="utf-8",
         )
         reports = project / ".reports"
         reports.mkdir()
         result = gate_class(project).check(
-            project, m.Infra.GateContext(repository_root=project, reports_dir=reports)
+            project,
+            m.Infra.GateContext(repository_root=project, reports_dir=reports),
         )
         assert result.result.passed is False
         assert any(issue.severity in {"warn", "warning"} for issue in result.issues)
 
     @pytest.mark.slow
     def test_failed_pyrefly_cannot_reuse_previous_report(
-        self, checker_context: m.Infra.GateContext
+        self,
+        checker_context: m.Infra.GateContext,
     ) -> None:
         project = checker_context.repository_root
         pyproject = project / "pyproject.toml"
@@ -222,7 +233,8 @@ class TestsFlextInfraTypeGates:
         native_reports = tuple(reports.glob("*-pyrefly.json"))
         assert len(native_reports) == 1
         assert not m.Infra.PyreflyReport.model_validate_json(
-            native_reports[0].read_text(encoding="utf-8"), strict=True
+            native_reports[0].read_text(encoding="utf-8"),
+            strict=True,
         ).errors
         pyproject.write_text("[tool.pyrefly\n", encoding="utf-8")
         failed = gate.check(project, checker_context)
@@ -231,10 +243,13 @@ class TestsFlextInfraTypeGates:
 
     @pytest.mark.slow
     @pytest.mark.parametrize(
-        "gate_class", [FlextInfraMypyGate, FlextInfraPyrightGate, FlextInfraPyreflyGate]
+        "gate_class",
+        [FlextInfraMypyGate, FlextInfraPyrightGate, FlextInfraPyreflyGate],
     )
     def test_explicit_files_keep_selected_scope(
-        self, checker_context: m.Infra.GateContext, gate_class: type[FlextInfraGate]
+        self,
+        checker_context: m.Infra.GateContext,
+        gate_class: type[FlextInfraGate],
     ) -> None:
         project = checker_context.repository_root
         package = project / "src" / "test_pkg"
@@ -258,10 +273,13 @@ class TestsFlextInfraTypeGates:
         )
 
     @pytest.mark.parametrize(
-        "gate_class", [FlextInfraMypyGate, FlextInfraPyrightGate, FlextInfraPyreflyGate]
+        "gate_class",
+        [FlextInfraMypyGate, FlextInfraPyrightGate, FlextInfraPyreflyGate],
     )
     def test_empty_source_is_not_passed(
-        self, tmp_path: Path, gate_class: type[FlextInfraGate]
+        self,
+        tmp_path: Path,
+        gate_class: type[FlextInfraGate],
     ) -> None:
         """A checker invoked without inputs never reads as a clean pass."""
         result = gate_class(tmp_path).check(
@@ -274,7 +292,8 @@ class TestsFlextInfraTypeGates:
         assert result.result.errors
 
     @pytest.mark.parametrize(
-        "gate_class", [FlextInfraPyrightGate, FlextInfraPyreflyGate]
+        "gate_class",
+        [FlextInfraPyrightGate, FlextInfraPyreflyGate],
     )
     def test_python_analysis_gates_follow_detected_content(
         self,
@@ -285,7 +304,8 @@ class TestsFlextInfraTypeGates:
         """Detected Python content, not a pass receipt, selects the type gates."""
         tm.that(gate_class(tmp_path).selected_for(tmp_path), eq=False)
         tm.that(
-            gate_class(real_python_package).selected_for(real_python_package), eq=True
+            gate_class(real_python_package).selected_for(real_python_package),
+            eq=True,
         )
 
     @pytest.mark.parametrize("payload", ["", " ", "not JSON", "{}", "[]", "null"])
@@ -339,7 +359,8 @@ class TestsFlextInfraTypeGates:
         assert not report.general_diagnostics
 
     def test_checker_does_not_run_type_gates_on_content_only_project(
-        self, real_python_package: Path, rope_workspace: p.Infra.RopeWorkspaceDsl
+        self,
+        real_python_package: Path,
     ) -> None:
         """A project without Python targets gets no type-gate row at all."""
         for module in (real_python_package / "src").rglob("*.py"):
@@ -348,17 +369,17 @@ class TestsFlextInfraTypeGates:
 
         results = tm.ok(
             FlextInfraWorkspaceChecker(
-                repository_root=real_python_package.parent, rope=rope_workspace
+                repository_root=real_python_package.parent,
             ).run_projects(
                 [real_python_package.name],
                 [FlextInfraPyrightGate.gate_id, FlextInfraPyreflyGate.gate_id],
                 reports_dir=reports,
-            )
+            ),
         )
 
         tm.that(results[0].gates, empty=True)
         markdown = (reports / c.Infra.CHECK_REPORT_MARKDOWN_FILENAME).read_text(
-            encoding="utf-8"
+            encoding="utf-8",
         )
         tm.that(markdown, lacks=f"- {FlextInfraPyrightGate.gate_id}:")
         tm.that(markdown, lacks=f"- {FlextInfraPyreflyGate.gate_id}:")

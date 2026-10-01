@@ -19,10 +19,13 @@ class TestsFlextInfraFamilyFlatten:
 
     @pytest.mark.parametrize("collision", [False, True])
     def test_snapshot_rewrites_alias_and_inherited_consumers_without_effects(
-        self, tmp_path: Path, *, collision: bool
+        self,
+        tmp_path: Path,
+        *,
+        collision: bool,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
-        directory = c.Infra.FAMILY_DIRECTORIES["m"]
+        directory = u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory
         family = package / directory
         family.mkdir()
         (family / "__init__.py").write_text("", encoding="utf-8")
@@ -99,10 +102,12 @@ class TestsFlextInfraFamilyFlatten:
         ],
     )
     def test_entity_classes_are_not_namespace_wrappers(
-        self, tmp_path: Path, entity: str
+        self,
+        tmp_path: Path,
+        entity: str,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
-        family = package / c.Infra.FAMILY_DIRECTORIES["m"]
+        family = package / u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory
         family.mkdir()
         (family / "__init__.py").write_text("", encoding="utf-8")
         path = family / "payload.py"
@@ -119,13 +124,16 @@ class TestsFlextInfraFamilyFlatten:
         tm.that(planned.value, empty=True)
 
     @pytest.mark.parametrize(
-        "reference", ["ALIAS = {owner}.Wrapper", 'alias: "{owner}.Wrapper"']
+        "reference",
+        ["ALIAS = {owner}.Wrapper", 'alias: "{owner}.Wrapper"'],
     )
     def test_wrapper_used_as_an_entity_is_preserved_without_edits(
-        self, tmp_path: Path, reference: str
+        self,
+        tmp_path: Path,
+        reference: str,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
-        directory = c.Infra.FAMILY_DIRECTORIES["c"]
+        directory = u.Infra.facade_family_declared_by(c.Infra.CONSTANTS_PY).directory
         family = package / directory
         family.mkdir()
         (family / "__init__.py").write_text("", encoding="utf-8")
@@ -147,10 +155,11 @@ class TestsFlextInfraFamilyFlatten:
         tm.that(path.read_text(encoding="utf-8"), eq=source)
 
     def test_flatten_removes_wrapper_docstring_and_promotes_alias_member(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
-        family = package / c.Infra.FAMILY_DIRECTORIES["m"]
+        family = package / u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory
         family.mkdir()
         (family / c.Infra.INIT_PY).write_text("", encoding="utf-8")
         path = family / "payload.py"
@@ -169,7 +178,7 @@ class TestsFlextInfraFamilyFlatten:
         path.write_text(source, encoding="utf-8")
         consumer = package / "consumer.py"
         references = (
-            f"from {package.name}.{c.Infra.FAMILY_DIRECTORIES['m']}.payload import "
+            f"from {package.name}.{u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory}.payload import "
             f"{owner} as Part\n\nmember: Part.Wrapper.Grouped\n"
         )
         consumer.write_text(references, encoding="utf-8")
