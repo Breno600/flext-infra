@@ -45,7 +45,7 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                     dict.fromkeys((
                         *config.Infra.codegen.branch_policy.ci_trigger_branches,
                         repository_branch,
-                    ))
+                    )),
                 )
 
             @staticmethod

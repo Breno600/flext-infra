@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from flext_tests import tm
 
-from tests import u
 from flext_infra import config
+from tests import u
 from tests.unit.codegen.test_ci_integration_branch_triggers import (
     TestsFlextInfraCiIntegrationBranchTriggers,
 )

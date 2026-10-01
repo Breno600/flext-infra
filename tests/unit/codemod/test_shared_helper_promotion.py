@@ -319,7 +319,8 @@ class TestsFlextInfraSharedHelperPromotion:
                 before=(
                     state := tm.ok(
                         u.Cli.atomic_read_binary_file_state(
-                            edit.file_path, required=True
+                            edit.file_path,
+                            required=True,
                         ),
                     )
                 ),

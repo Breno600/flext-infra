@@ -74,8 +74,7 @@ class FlextInfraWorkspaceChecker(
 
     def execute_payload(self, params: m.Infra.RunCommand) -> p.Result[bool]:
         """Execute quality gates from the canonical check command payload."""
-        checker = cls(repository_root=params.repository_root)
-        project_targets_result = cls._resolve_project_targets(params)
+        project_targets_result = self._resolve_project_targets(params)
         if project_targets_result.failure:
             return r[bool].from_failure(project_targets_result)
         project_targets = project_targets_result.value
@@ -136,7 +135,8 @@ class FlextInfraWorkspaceChecker(
             return r[t.SequenceOf[m.Infra.CheckProjectTarget]].ok(
                 tuple(
                     m.Infra.CheckProjectTarget.from_workspace_name(
-                        params.repository_root, project_name
+                        params.repository_root,
+                        project_name,
                     )
                     for project_name in requested
                 ),
@@ -148,6 +148,7 @@ class FlextInfraWorkspaceChecker(
             m.Infra.CheckProjectTarget(name=project.name, path=project.path)
             for project in discovered.value
         )
+        return r[t.SequenceOf[m.Infra.CheckProjectTarget]].ok(project_targets)
 
     def format(self, project_dir: Path) -> p.Result[m.Infra.GateResult]:
         """Run format checks for one project."""

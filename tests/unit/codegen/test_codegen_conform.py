@@ -1165,7 +1165,8 @@ class TestsFlextInfraCodegenConform:
     # the default case timeout only holds on an idle machine.
 
     def test_invalid_public_custom_make_fails_without_side_effects(
-        self, infra_git_repo: Path
+        self,
+        infra_git_repo: Path,
     ) -> None:
         root = infra_git_repo
         custom = root / "custom.mk"
@@ -1177,19 +1178,23 @@ class TestsFlextInfraCodegenConform:
             ]
         )
         result = FlextInfraCodegenConform.validate_custom_make(
-            tm.ok(u.Cli.files_read_text(custom)), policy
+            tm.ok(u.Cli.files_read_text(custom)),
+            policy,
         )
         tm.fail(result)
         rejection = Path(f"{custom}.rej")
         tm.that(
-            result.error or "", has="custom.mk line 1 is not a private custom handler"
+            result.error or "",
+            has="custom.mk line 1 is not a private custom handler",
         )
         tm.that(rejection.exists(), eq=False)
         tm.that(custom.read_text(encoding="utf-8"), eq=content)
 
     @pytest.mark.slow
     def test_valid_private_custom_make_has_no_rejection(
-        self, infra_git_repo: Path, capsys: pytest.CaptureFixture[str]
+        self,
+        infra_git_repo: Path,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         root = infra_git_repo
         workspace = _standalone_workspace(root)
@@ -1204,7 +1209,7 @@ class TestsFlextInfraCodegenConform:
                     "_custom_check_demo:\n\t@true\n"
                     "_custom_run_demo:\n\t@true\n"
                 ),
-            )
+            ),
         )
         result = FlextInfraCodegenConform.execute_request(
             u.Tests.conform_request(
@@ -1228,14 +1233,16 @@ class TestsFlextInfraCodegenConform:
         )
 
         result = FlextInfraCodegenConform.validate_custom_make(
-            ".PHONY: \\\n\t_custom_check_demo \\", policy
+            ".PHONY: \\\n\t_custom_check_demo \\",
+            policy,
         )
 
         tm.fail(result, has="unterminated .PHONY continuation")
 
     @pytest.mark.slow
     def test_scaffold_make_help_documents_and_lists_custom_hooks(
-        self, infra_git_repo: Path
+        self,
+        infra_git_repo: Path,
     ) -> None:
         """Scaffold help lists the selector-free interface; hooks stay lifecycle-only."""
         root = infra_git_repo
@@ -1248,10 +1255,11 @@ class TestsFlextInfraCodegenConform:
                 "pre-check:\n\t@true\n"
                 "post-test-all:\n\t@true\n"
                 "_custom-check-myscan:\n\t@true\n",
-            )
+            ),
         )
         outcome = u.Cli.run_raw(
-            ["make", "-C", str(root), "help"], remove_env_keys=("MAKEFLAGS",)
+            ["make", "-C", str(root), "help"],
+            remove_env_keys=("MAKEFLAGS",),
         )
         output = tm.ok(outcome)
         tm.that(output.stderr, eq="")
@@ -1265,7 +1273,8 @@ class TestsFlextInfraCodegenConform:
 
     @pytest.mark.slow
     def test_scaffold_make_runs_pre_and_post_verb_hooks_in_order(
-        self, infra_git_repo: Path
+        self,
+        infra_git_repo: Path,
     ) -> None:
         """Generated dispatch runs pre-<verb>, custom handler, post-<verb> in order."""
         root = infra_git_repo
@@ -1278,12 +1287,13 @@ class TestsFlextInfraCodegenConform:
                 "pre-check:\n\t@echo HOOK_PRE\n"
                 "_custom-check:\n\t@echo HANDLER_BODY\n"
                 "post-check:\n\t@echo HOOK_POST\n",
-            )
+            ),
         )
         # `check` requires a provisioned interpreter, which `make setup` would
         # build. Stub it so this test stays about hook ordering.
         u.Tests.write_executable(
-            root / ".venv" / "bin" / "python", "#!/bin/sh\nexit 0\n"
+            root / ".venv" / "bin" / "python",
+            "#!/bin/sh\nexit 0\n",
         )
         outcome = u.Cli.run_raw(["make", "-C", str(root), "check", "APPLY=Y"])
         output = tm.ok(outcome)
@@ -1297,7 +1307,9 @@ class TestsFlextInfraCodegenConform:
         tm.that(body_at < post_at, eq=True)
 
     def test_custom_make_accepts_pre_post_verb_hooks(
-        self, infra_git_repo: Path, capsys: pytest.CaptureFixture[str]
+        self,
+        infra_git_repo: Path,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """custom.mk may append pre/post verb hooks (verb-wide and WHAT-scoped)."""
         root = infra_git_repo
@@ -1311,7 +1323,7 @@ class TestsFlextInfraCodegenConform:
                 "post-check:\n\t@true\n"
                 "pre-test-all:\n\t@true\n"
                 "post-test-all:\n\t@true\n",
-            )
+            ),
         )
         result = FlextInfraCodegenConform.execute_request(
             u.Tests.conform_request(
@@ -1391,7 +1403,9 @@ class TestScriptDispatchMakefile:
             mode=c.Infra.CodegenConformMode.CHECK,
         )
         planned = FlextInfraCodegenConform(
-            repository_root=root, request=request, initial_workspace=workspace
+            repository_root=root,
+            request=request,
+            initial_workspace=workspace,
         ).plan(request)
         plan = tm.ok(planned)
         makefile = next(
@@ -1401,7 +1415,8 @@ class TestScriptDispatchMakefile:
         return rendered
 
     def test_script_dispatch_repo_routes_extra_verbs_and_normalizes_what(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Extra verbs join PUBLIC_VERBS and dispatch through the declared dispatcher."""
         rendered = self._render_root_makefile(
@@ -1443,7 +1458,9 @@ class TestScriptDispatchMakefile:
         dispatches them instead of falling through to _builtin-<verb>.
         """
         rendered = self._render_root_makefile(
-            tmp_path, extra_verbs=(), script_dispatch=None
+            tmp_path,
+            extra_verbs=(),
+            script_dispatch=None,
         )
         # RUN_PUBLIC checks CUSTOM_DECLARED_TARGETS first and calls _custom-$(1)
         # when it exists, falling back to _builtin-$(1).
@@ -1452,18 +1469,22 @@ class TestScriptDispatchMakefile:
         tm.that("_builtin-$(1)" in rendered, eq=True)
 
     def test_repo_without_script_dispatch_omits_script_routing(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A repo with no script dispatch omits every script-routing projection."""
         rendered = self._render_root_makefile(
-            tmp_path, extra_verbs=(), script_dispatch=None
+            tmp_path,
+            extra_verbs=(),
+            script_dispatch=None,
         )
         # No script routing leaks into non-opted-in repositories.
         tm.that("tr '-' '_'" in rendered, eq=False)
         tm.that("scripts/dispatch.py" in rendered, eq=False)
 
     def test_gen_replaces_codegen_as_the_single_conform_verb(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """``make gen`` is THE conform verb; ``codegen`` no longer exists.
 
@@ -1483,7 +1504,9 @@ class TestScriptDispatchMakefile:
         tm.that("initialize" in verb_names, eq=True)
         tm.that(hasattr(make_config, "serialization"), eq=False)
         rendered = self._render_root_makefile(
-            tmp_path, extra_verbs=(), script_dispatch=None
+            tmp_path,
+            extra_verbs=(),
+            script_dispatch=None,
         )
         public_line = next(
             line for line in rendered.splitlines() if line.startswith("PUBLIC_VERBS :=")
@@ -1562,18 +1585,21 @@ class TestScriptDispatchMakefile:
         tm.that("# @flext-regenerate: make gen APPLY=Y" in rendered, eq=True)
         # The custom-surface policy names gen (not codegen) for hooks/handlers.
         handler_policies: dict[str, m.Infra.CustomHandlerPolicy] = dict(
-            config.Infra.codegen.make.custom_handler_policies
+            config.Infra.codegen.make.custom_handler_policies,
         )
         for policy in handler_policies.values():
             tm.that("|gen|" in policy.target_pattern, eq=True)
             tm.that("|codegen|" in policy.target_pattern, eq=False)
 
     def test_make_gen_init_bypasses_runtime_and_topology_discovery(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Execute the public selector with process sentinels around its owner."""
         rendered = self._render_root_makefile(
-            tmp_path, extra_verbs=(), script_dispatch=None
+            tmp_path,
+            extra_verbs=(),
+            script_dispatch=None,
         )
         root = tmp_path / "declared-target"
         package = root / "src" / "demo_root"
@@ -1581,7 +1607,8 @@ class TestScriptDispatchMakefile:
         makefile = root / c.Infra.MAKEFILE_FILENAME
         makefile.write_text(rendered, encoding="utf-8")
         (root / "custom.mk").write_text(
-            "$(error init selector evaluated custom.mk)\n", encoding="utf-8"
+            "$(error init selector evaluated custom.mk)\n",
+            encoding="utf-8",
         )
 
         calls = root / "init.calls"
@@ -1640,7 +1667,9 @@ class TestScriptDispatchMakefile:
         verb_names = {verb.name for verb in make_config.verbs}
         tm.that("work" in verb_names, eq=False)
         rendered = self._render_root_makefile(
-            tmp_path, extra_verbs=(), script_dispatch=None
+            tmp_path,
+            extra_verbs=(),
+            script_dispatch=None,
         )
         public_line = next(
             line for line in rendered.splitlines() if line.startswith("PUBLIC_VERBS :=")
@@ -1654,7 +1683,8 @@ class TestScriptDispatchMakefile:
     # declares extra_verbs/script_dispatch in its own typed repository input. The
     # generic capability stays covered by the fixture-driven cases below.
     def test_script_dispatch_adds_scripts_to_lint_and_type_paths(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Opted-in repos scan scripts alongside src and tests."""
         rendered = self._render_root_makefile(
@@ -1677,7 +1707,8 @@ class TestScriptDispatchMakefile:
                 ),
             ),
             script_dispatch=m.Infra.ScriptDispatchSpec(
-                dispatcher="scripts/dispatch.py", roots=("scripts",)
+                dispatcher="scripts/dispatch.py",
+                roots=("scripts",),
             ),
         )
         tm.that(
@@ -1694,11 +1725,14 @@ class TestScriptDispatchMakefile:
         )
 
     def test_repo_without_script_dispatch_retains_canonical_lint_and_type_paths(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A repo without script dispatch keeps src/tests/scripts paths and excludes scripts."""
         rendered = self._render_root_makefile(
-            tmp_path, extra_verbs=(), script_dispatch=None
+            tmp_path,
+            extra_verbs=(),
+            script_dispatch=None,
         )
         tm.that(
             "RUFF_PATHS := $(strip $(foreach d,src tests examples,"

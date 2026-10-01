@@ -78,7 +78,7 @@ class TestsFlextInfraCodegenMain:
                 "def main(args: list[str] | None = None) -> int:\n"
                 '    """Resolve the declared console script entry point."""\n'
                 "    return 0\n",
-            )
+            ),
         )
         tests_init = root / "tests" / "__init__.py"
         tests_init.parent.mkdir(parents=True, exist_ok=True)

@@ -56,7 +56,8 @@ class FlextInfraModelsWorkspace:
 
         root: Annotated[Path, m.Field(description="Superproject repository root")]
         integration_branch: Annotated[
-            str | None, m.Field(description="Resolved workspace integration branch")
+            str | None,
+            m.Field(description="Resolved workspace integration branch"),
         ] = None
         beads: Annotated[
             FlextInfraConfigModels.BeadsProjectSpec | None,
@@ -67,7 +68,8 @@ class FlextInfraModelsWorkspace:
             m.Field(description="Manifest member identities indexed by path"),
         ]
         allow_unprovisioned_members: Annotated[
-            bool, m.Field(description="Permit declared members before checkout setup")
+            bool,
+            m.Field(description="Permit declared members before checkout setup"),
         ] = False
 
     class EnvironmentContractViolation(mm.PositiveLineMixin, m.ContractModel):
