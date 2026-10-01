@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
     from tests import m
 
+
 class TestsFlextInfraDepsModernizerTooling:
     """Declarative tests for the Ruff phase and analyzer surface policy."""
 
