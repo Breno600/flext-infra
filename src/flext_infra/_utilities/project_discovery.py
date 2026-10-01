@@ -14,6 +14,7 @@ from typing import override
 
 from flext_cli import u
 
+from .._config import config
 from ..constants import c
 from ..models import m
 from ..typings import t
