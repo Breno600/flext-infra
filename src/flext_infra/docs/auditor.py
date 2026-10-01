@@ -26,10 +26,7 @@ class FlextInfraDocAuditor(
     """Audit governed docs scopes; every finding is reported.
 
     There is no issue budget and no findings are dropped: the report always
-    carries the complete issue list. The phase verdict follows the configured
-    posture — audit is blocking unless ``make.docs.warning_actions`` lists it
-    (operator law 2026-09-22: findings then warn, owned by cleanup beads,
-    while ``docstring_min`` stays an additional floor in blocking posture).
+    carries the complete issue list and every finding fails the phase.
     """
 
     checks: Annotated[

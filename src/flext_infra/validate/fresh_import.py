@@ -7,6 +7,7 @@ consumer-order defects. Imported workspace modules must belong to this checkout.
 
 from __future__ import annotations
 
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Annotated, ClassVar, override
@@ -117,24 +118,48 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
                             ),
                         )
                     )
-            owned = tuple(
+            # A publication plan is the generation transaction's own receipt for
+            # a package it rewrote. The lazy-init planner only covers the
+            # packages of a single Rope workspace index, so a workspace root
+            # plans its own packages while a transaction that also declares
+            # member repositories leaves those members planless (their
+            # initializers are owned by their own self-scoped runs). A layout no
+            # plan claims is therefore verified against its real on-disk
+            # contract: import it in the fresh runtime and resolve the exports
+            # it declares. A plan that does claim the layout must still carry a
+            # usable importable WRITE/SKIP contract, and a broken live package
+            # fails on its import or on a declared name that cannot resolve.
+            layout_plans = tuple(
                 plan
                 for plan in publications
-                if plan.context.importable
-                and plan.action
-                in {c.Infra.LazyInitAction.WRITE, c.Infra.LazyInitAction.SKIP}
-                and plan.context.pkg_dir.is_relative_to(layout.package_dir)
+                if plan.context.pkg_dir.is_relative_to(layout.package_dir)
             )
-            if not any(plan.context.pkg_dir == layout.package_dir for plan in owned):
-                return r[m.Infra.ValidationReport].fail(
-                    f"missing public export contract for {layout.package_name}"
+            if layout_plans:
+                owned = tuple(
+                    plan
+                    for plan in layout_plans
+                    if plan.context.importable
+                    and plan.action
+                    in {c.Infra.LazyInitAction.WRITE, c.Infra.LazyInitAction.SKIP}
                 )
-            body = "".join(
-                self._EXPORT_IMPORT_CODE.format(package=plan.context.current_pkg)
-                + origin_code
-                + self._EXPORT_RESOLVE_CODE.format(exports=tuple(plan.exports))
-                for plan in owned
-            )
+                if not any(
+                    plan.context.pkg_dir == layout.package_dir for plan in owned
+                ):
+                    return r[m.Infra.ValidationReport].fail(
+                        f"missing public export contract for {layout.package_name}"
+                    )
+                body = "".join(
+                    self._EXPORT_IMPORT_CODE.format(package=plan.context.current_pkg)
+                    + origin_code
+                    + self._EXPORT_RESOLVE_CODE.format(exports=tuple(plan.exports))
+                    for plan in owned
+                )
+            else:
+                body = (
+                    self._EXPORT_IMPORT_CODE.format(package=layout.package_name)
+                    + origin_code
+                    + self._EXPORT_RESOLVE_CODE.format(exports=())
+                )
             probes.append(
                 m.Infra.FreshImportProbe(
                     subject=layout.package_name, code=self._PRELUDE + body + origin_code
@@ -168,6 +193,15 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
         interpreter = u.Infra.runtime_python(
             self.repository_root, runtime_root=self.runtime_root
         )
+        if not interpreter.is_file():
+            # A physical runtime environment beside the worktree (D-VENV) is
+            # the declared owner; a fresh CI checkout may not have it yet,
+            # while its own ``.venv`` is provisioned by setup from the same
+            # committed lock - the identical dependency set, so the probes
+            # still grade the target against what it declares.
+            interpreter = self.repository_root / ".venv" / (
+                "Scripts" if sys.platform == "win32" else "bin"
+            ) / c.Infra.PYTHON
         if not interpreter.is_file():
             return r[m.Infra.ValidationReport].fail(
                 f"fresh-import target interpreter is missing: {interpreter}; "

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import override
 
@@ -81,7 +82,7 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
         """Converge every mod phase through one shared Rope workspace."""
         current = FlextInfraModGateEngine.scan(root, fix=False).unwrap()
         fingerprint = FlextInfraCodemodSemanticApply.source_fingerprint
-        seen: dict[t.VariadicTuple[t.Pair[str, str]], int] = {}
+        seen: MutableMapping[t.VariadicTuple[t.Pair[str, str]], int] = {}
         iteration = 0
         text_precondition_pending = True
         while True:
@@ -228,7 +229,13 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             )
             inputs.append(
                 m.Infra.ApplyRenamesInput(
-                    csv=str(csv), roots=roots or (str(root),), apply=apply
+                    csv=str(csv),
+                    roots=roots or (str(root),),
+                    apply=apply,
+                    bindings=campaign.bindings,
+                    text_globs=campaign.text_globs,
+                    python_documentation=campaign.python_documentation,
+                    exclude_globs=campaign.exclude_globs,
                 )
             )
         return tuple(inputs)

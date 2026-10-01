@@ -18,6 +18,21 @@ class FlextInfraUtilitiesGitignore:
         return (package_root / "templates" / codegen.templates.root).resolve()
 
     @staticmethod
+    def codegen_template_sources(codegen: m.Infra.CodegenConfigSpec) -> frozenset[Path]:
+        """Resolve only manifest-declared template inputs, never output suffixes."""
+        root = FlextInfraUtilitiesGitignore.codegen_templates_root(codegen)
+        sources: set[Path] = set()
+        for entry in codegen.templates.entries:
+            if entry.source is None:
+                continue
+            path = (root / entry.source).resolve()
+            if not path.is_relative_to(root):
+                msg = f"declared template source escapes its owner root: {entry.source}"
+                raise ValueError(msg)
+            sources.add(path)
+        return frozenset(sources)
+
+    @staticmethod
     def render_project_gitignore(
         codegen: m.Infra.CodegenConfigSpec,
         *,

@@ -74,6 +74,16 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
     # ``fix-enforcement`` working for every other rule while guaranteeing the
     # deactivated target never reaches a transformer and never rewrites a file.
     _DEACTIVATED_TARGETS: ClassVar[t.MappingKV[str, str]] = {
+        "pattern": (
+            "fix deactivated: the pattern target once drove a whole-file regex "
+            "transformer (ENFORCE-026/027/028/091/092/094) that could not tell "
+            "code from a docstring, comment or string — it rewrote the "
+            "documentation of the defects it forbids. The rewrites are owned "
+            "by ast-grep codemod rules applied through make mod; violations "
+            "stay reported and only the automatic rewrite is off (flext-oolmd "
+            "family: the missing registry entry made the fix-enforcement "
+            "preflight reject the whole catalog for every member)."
+        ),
         "cast_remover": (
             "fix deactivated: the cast remover rewrote sources through the raw "
             "ast module (whole-file ast.unparse), which is not an approved "

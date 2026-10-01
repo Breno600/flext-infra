@@ -7,9 +7,12 @@ from typing import TYPE_CHECKING, assert_never
 from flext_infra import c, m, t
 
 from .aliases import FlextInfraUtilitiesSemanticCutoverAliases
+from .dynamic_environment import FlextInfraUtilitiesSemanticCutoverDynamicEnvironment
 from .facade_bases import FlextInfraUtilitiesSemanticCutoverFacadeBases
+from .model_fields import FlextInfraUtilitiesSemanticCutoverModelFields
 from .nesting import FlextInfraUtilitiesSemanticCutoverNesting
 from .private_imports import FlextInfraUtilitiesSemanticCutoverPrivateImports
+from .self_facade import FlextInfraUtilitiesSemanticCutoverSelfFacade
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -22,6 +25,9 @@ class FlextInfraUtilitiesSemanticCutoverBase(
     FlextInfraUtilitiesSemanticCutoverAliases,
     FlextInfraUtilitiesSemanticCutoverPrivateImports,
     FlextInfraUtilitiesSemanticCutoverFacadeBases,
+    FlextInfraUtilitiesSemanticCutoverModelFields,
+    FlextInfraUtilitiesSemanticCutoverSelfFacade,
+    FlextInfraUtilitiesSemanticCutoverDynamicEnvironment,
 ):
     """Plan every semantic ``make mod`` cutover through one typed contract."""
 
@@ -52,6 +58,12 @@ class FlextInfraUtilitiesSemanticCutoverBase(
                 return cls._plan_private_imports(root, sources, selected)
             case c.Infra.SemanticCutoverPhase.FACADE_BASE:
                 return cls._plan_facade_bases(root, sources, selected)
+            case c.Infra.SemanticCutoverPhase.MODEL_FIELDS:
+                return cls._plan_model_fields(sources)
+            case c.Infra.SemanticCutoverPhase.SELF_FACADE_IMPORT:
+                return cls._plan_self_facade_imports(root, sources, selected)
+            case c.Infra.SemanticCutoverPhase.DYNAMIC_ENVIRONMENT:
+                return cls._plan_dynamic_environment(root, sources, selected)
             case _:
                 assert_never(phase)
 

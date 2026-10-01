@@ -6,7 +6,7 @@ from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING, override
 
-from flext_infra import c, m, p, r, t, u
+from flext_infra import c, m, p, r, t
 from flext_infra.base import FlextInfraServiceBase
 
 if TYPE_CHECKING:
@@ -27,6 +27,8 @@ class FlextInfraRopeRuleLoaderService(FlextInfraServiceBase[t.Cli.ResultValue]):
     @classmethod
     def load_rules(cls) -> p.Result[t.SequenceOf[m.Infra.RopeRule]]:
         """Parse each rule file once at the boundary; fail loud on any defect."""
+        from flext_infra import u
+
         rule_files = sorted(cls._rule_files())
         if not rule_files:
             return r.fail("no declarative rope rules found in the engine package")

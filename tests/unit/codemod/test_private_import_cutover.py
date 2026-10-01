@@ -13,6 +13,51 @@ from flext_infra import c, infra, m, p, t, u
 class TestsFlextInfraPrivateImportCutover:
     """Exercise private-import automation only through ``u.Infra``."""
 
+    @pytest.mark.parametrize("bad_source_reachable", [False, True])
+    def test_installed_import_validation_follows_public_reachability(
+        self,
+        tmp_path: Path,
+        installed_dependency_path: Path,
+        *,
+        bad_source_reachable: bool,
+    ) -> None:
+        """An invalid import blocks only a cutover that reaches its module."""
+        consumer, statement, facade_sources = self._facade_case(
+            tmp_path, "constants", "profile", "Profile", "c"
+        )
+        package = installed_dependency_path / "flext_sample"
+        package.mkdir()
+        (package / "__init__.py").write_text("", encoding="utf-8")
+        invalid_import = "from ..outside import Invalid\n"
+        facade_source = next(iter(facade_sources.values()))
+        (package / "constants.py").write_text(
+            facade_source + (invalid_import if bad_source_reachable else ""),
+            encoding="utf-8",
+        )
+        private = package / "_constants/profile.py"
+        private.parent.mkdir()
+        private.write_text(
+            "class FlextSampleConstantsProfile:\n    Value = str\n", encoding="utf-8"
+        )
+        unrelated = package / "unrelated.py"
+        unrelated.write_text(invalid_import, encoding="utf-8")
+        sources = {
+            consumer: f"{statement}\nprofile = FlextSampleConstantsProfile.Value\n"
+        }
+
+        if bad_source_reachable:
+            tm.fail(
+                self._plan(tmp_path, sources, consumer, statement),
+                has="attempted relative import beyond top-level package",
+            )
+            return
+        edits = self._edits(tmp_path, sources, consumer, statement)
+
+        tm.that(tuple(edit.file_path for edit in edits), eq=(consumer,))
+        tm.that(edits[0].updated_source, has="from flext_sample import c")
+        tm.that(edits[0].updated_source, has="profile = c.Profile.Value")
+        tm.that(unrelated.read_text(encoding="utf-8"), eq=invalid_import)
+
     @pytest.mark.parametrize("case", ["unique", "ambiguous", "shadowed"])
     @pytest.mark.parametrize("depth", [0, 2])
     def test_installed_facades_are_read_only_discovery_inputs(
@@ -697,6 +742,30 @@ class TestsFlextInfraPrivateImportCutover:
         tm.that(updated, has="model = mp.BaseModel")
         tm.that(updated, lacks=private_import)
         tm.that(updated, lacks="from flext_sample import m")
+
+    def test_same_owner_import_ignores_unrelated_installed_package(
+        self, tmp_path: Path, installed_dependency_path: Path
+    ) -> None:
+        """A local sibling import must not inspect an ambient namesake package."""
+        package_name = "local_imports"
+        installed = installed_dependency_path / package_name
+        installed.mkdir()
+        (installed / "__init__.py").write_text(
+            "from ..outside import Invalid\n", encoding="utf-8"
+        )
+        consumer_path = tmp_path / package_name / "utilities.py"
+        private_import = (
+            f"from {package_name}._utilities.base import LocalUtilitiesBase"
+        )
+        updated = self._updated_source(
+            tmp_path,
+            {consumer_path: f"{private_import}\n\nvalue = LocalUtilitiesBase\n"},
+            consumer_path,
+            private_import,
+        )
+
+        tm.that(updated, has="from ._utilities.base import LocalUtilitiesBase")
+        tm.that(updated, lacks=private_import)
 
     def test_relativizes_handwritten_package_initializer(self, tmp_path: Path) -> None:
         """Apply the same owner rule to handwritten ``__init__.py`` modules."""

@@ -6,7 +6,6 @@ from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import c, m
-from flext_infra.codegen.candidate_bootstrap import FlextInfraCodegenCandidateBootstrap
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from flext_infra.codegen.consolidator import FlextInfraCodegenConsolidator
 from flext_infra.codegen.constants_quality_gate import FlextInfraCodegenQualityGate
@@ -21,6 +20,7 @@ from flext_infra.codegen.version_file import FlextInfraCodegenVersionFile
 from flext_infra.deps.detector import FlextInfraRuntimeDevDependencyDetector
 from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
 from flext_infra.deps.fix_pyrefly_config import FlextInfraConfigFixer
+from flext_infra.deps.lock_integrity import FlextInfraLockIntegrityVerifier
 from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
 from flext_infra.fixers.orchestrator import FlextInfraEnforcementFixerOrchestrator
 
@@ -64,10 +64,10 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
         c.Infra.CLI_GROUP_CODEGEN: (
             m.Cli.ResultCommandRoute(
                 name="candidate-bootstrap",
-                help_text="Conform one declared sibling candidate worktree",
-                model_cls=FlextInfraCodegenCandidateBootstrap,
+                help_text="Atomically conform all declared candidate Makefiles",
+                model_cls=m.Infra.CandidateBootstrapCommand,
                 handler=FlextInfraCliRouteBase.result_handler(
-                    FlextInfraCodegenCandidateBootstrap.execute
+                    infra.bootstrap_candidate
                 ),
                 success_message="candidate bootstrap complete",
             ),
@@ -228,6 +228,11 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                     "modernize",
                     "Modernize workspace pyproject files",
                     FlextInfraPyprojectModernizer,
+                ),
+                (
+                    "verify-locks",
+                    "Verify committed generated TOML locks parse and repeat no section",
+                    FlextInfraLockIntegrityVerifier,
                 ),
             )
         ),
