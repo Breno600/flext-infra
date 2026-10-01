@@ -208,44 +208,44 @@ url = "https://github.com/microsoft/waza/releases/download/v0.38.8/waza-windows-
 url_api = "https://api.github.com/repos/microsoft/waza/releases/assets/599032529"
 
 [[tools."github:qltysh/qlty"]]
-version = "0.642.0"
+version = "0.645.0"
 backend = "github:qltysh/qlty"
-specifiers = ["0.642.0"]
+specifiers = ["latest"]
 
 [tools."github:qltysh/qlty"."platforms.linux-arm64"]
-checksum = "sha256:700a86c930d64860baba2cb168a2a9778e4dc8e38dc941faf9d4d8b88d57da1d"
-url = "https://github.com/qltysh/qlty/releases/download/v0.642.0/qlty-aarch64-unknown-linux-gnu.tar.xz"
-url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/514936221"
+checksum = "sha256:5e283bfe1cbb376b66e03cc10628aa10f8cf55eb38ad29a40dab9835f1077346"
+url = "https://github.com/qltysh/qlty/releases/download/v0.645.0/qlty-aarch64-unknown-linux-gnu.tar.xz"
+url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/584509804"
 provenance = "github-attestations"
 
 [tools."github:qltysh/qlty"."platforms.linux-x64"]
-checksum = "sha256:05e665112fdf8a3d7cdcf4879f6c7d989a6cacd5c527b1890ba68e9c2c5c1d2e"
-url = "https://github.com/qltysh/qlty/releases/download/v0.642.0/qlty-x86_64-unknown-linux-gnu.tar.xz"
-url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/514936271"
+checksum = "sha256:cc32b1f9c8f6ea365ece19c7da437663d11eb878cd5b0964b47c684db47037f1"
+url = "https://github.com/qltysh/qlty/releases/download/v0.645.0/qlty-x86_64-unknown-linux-gnu.tar.xz"
+url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/584509845"
 provenance = "github-attestations"
 
 [tools."github:qltysh/qlty"."platforms.linux-x64-musl"]
-checksum = "sha256:55bca32d6ee8ae5e31d8e12696203fa24b106704a176e0e80655ec93abb25477"
-url = "https://github.com/qltysh/qlty/releases/download/v0.642.0/qlty-x86_64-unknown-linux-musl.tar.xz"
-url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/514936274"
+checksum = "sha256:bd099788012cd6517e5dee152d8c68d20410834f794af51c3a3f92075c4e559e"
+url = "https://github.com/qltysh/qlty/releases/download/v0.645.0/qlty-x86_64-unknown-linux-musl.tar.xz"
+url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/584509854"
 provenance = "github-attestations"
 
 [tools."github:qltysh/qlty"."platforms.macos-arm64"]
-checksum = "sha256:b884e1dd05fac9a225130f9df5339ed4c0209d20f4947e58efa1f0e60a8094eb"
-url = "https://github.com/qltysh/qlty/releases/download/v0.642.0/qlty-aarch64-apple-darwin.tar.xz"
-url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/514936220"
+checksum = "sha256:18c27cb6c8a4ca3cf45375236dd102e7dcbb433a67235ef9ed8b4a67e15f0800"
+url = "https://github.com/qltysh/qlty/releases/download/v0.645.0/qlty-aarch64-apple-darwin.tar.xz"
+url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/584509806"
 provenance = "github-attestations"
 
 [tools."github:qltysh/qlty"."platforms.macos-x64"]
-checksum = "sha256:206a916d11b5437a778a3da83686487a75f15c89bf8db371605c407ecf975838"
-url = "https://github.com/qltysh/qlty/releases/download/v0.642.0/qlty-x86_64-apple-darwin.tar.xz"
-url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/514936261"
+checksum = "sha256:fe4ce76901da04fbb7c851edee91ffe0fe12bfcd0820135f418b02ca08112170"
+url = "https://github.com/qltysh/qlty/releases/download/v0.645.0/qlty-x86_64-apple-darwin.tar.xz"
+url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/584509820"
 provenance = "github-attestations"
 
 [tools."github:qltysh/qlty"."platforms.windows-x64"]
-checksum = "sha256:ab80a508bd19447887931865ef78bbe58f044a78e8920a2d26b85d0c4ce185b1"
-url = "https://github.com/qltysh/qlty/releases/download/v0.642.0/qlty-x86_64-pc-windows-msvc.zip"
-url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/514936269"
+checksum = "sha256:192db61f71d03369505b6f441ba1a13c63b34477548a7ae3202b2af041a065cc"
+url = "https://github.com/qltysh/qlty/releases/download/v0.645.0/qlty-x86_64-pc-windows-msvc.zip"
+url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/584509836"
 provenance = "github-attestations"
 
 [[tools.gitleaks]]
@@ -538,10 +538,10 @@ specifiers = [
 allow_builds = '["@ast-grep/cli"]'
 
 [[tools."npm:prettier"]]
-version = "3.5.3"
-aube = { path = ".mise/locks/npm-prettier/3.5.3", digest = "sha256:6d0a982291c7b0df742d82eeb58af64bc255d35cfc9238567e0438e647363113" }
+version = "3.9.9"
+aube = { path = ".mise/locks/npm-prettier/3.9.9", digest = "sha256:815f6667505e41ac2d03ecbac86b79f1beb78d45783879428193c9adc80760a3" }
 backend = "npm:prettier"
-specifiers = ["3.5.3"]
+specifiers = ["latest"]
 
 [[tools.python]]
 version = "3.13.15"
