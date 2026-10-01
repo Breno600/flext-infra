@@ -30,7 +30,12 @@ class FlextInfraEnsurePackagingPhase:
         source: Path,
         ancestors: frozenset[Path],
     ) -> None:
-        """Follow every link Hatch follows while rejecting cycles and escape."""
+        """Follow every link Hatch follows while rejecting cycles and escape.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         resolved = source.resolve(strict=True)
         if not resolved.is_relative_to(root):
             msg = f"packaged data path escapes repository: {source}"
@@ -56,7 +61,16 @@ class FlextInfraEnsurePackagingPhase:
         declarations: t.StrSequence,
         planned_files: t.StrSequence = (),
     ) -> m.Infra.PackagedDataSelection:
-        """Validate existing inputs or exact future scaffold destinations."""
+        """Validate existing inputs or exact future scaffold destinations.
+
+        Returns:
+            The resulting ``m.Infra.PackagedDataSelection``.
+
+        Raises:
+            FileNotFoundError: On failure.
+            ValueError: On failure.
+
+        """
         root = project_dir.resolve()
         package_root = root / c.Infra.DEFAULT_SRC_DIR / package_name
         paths: list[Path] = []
@@ -122,7 +136,15 @@ class FlextInfraEnsurePackagingPhase:
         data: m.Infra.PackagedDataSelection,
         declarations: t.StrSequence,
     ) -> t.StrSequence:
-        """Validate exact files omitted within declared distribution directories."""
+        """Validate exact files omitted within declared distribution directories.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         root = project_dir.resolve()
         directories = tuple(Path(item) for item in data.directories)
         excluded: list[str] = []
@@ -162,7 +184,12 @@ class FlextInfraEnsurePackagingPhase:
         root_packages: t.StrSequence,
         repository_namespace_packages: t.StrSequence,
     ) -> m.Infra.DepsToml.PhaseConfig:
-        """Build bounded distribution targets for one resolved package name."""
+        """Build bounded distribution targets for one resolved package name.
+
+        Returns:
+            The resulting ``m.Infra.DepsToml.PhaseConfig``.
+
+        """
         package_path = f"{c.Infra.DEFAULT_SRC_DIR}/{package_name}"
         package_paths = (
             package_path,
@@ -303,6 +330,14 @@ class FlextInfraEnsurePackagingPhase:
         ongoing modernization converge. Only declared module/package roots and
         data paths enter those targets after existence, containment and collision
         validation, keeping both distribution formats consistent.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            FileNotFoundError: On failure.
+            ValueError: On failure.
+
         """
         project_dir = path.parent
         docs_meta = u.Infra.docs_meta_from_payload(payload)

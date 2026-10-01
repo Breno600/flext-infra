@@ -441,7 +441,12 @@ class TestsFlextInfraPrivateImportCutover:
 
     @staticmethod
     def _finding(file_path: Path, text: str) -> m.Infra.ModScanFinding:
-        """Build one authenticated-shape semantic finding."""
+        """Build one authenticated-shape semantic finding.
+
+        Returns:
+            The resulting ``m.Infra.ModScanFinding``.
+
+        """
         return m.Infra.ModScanFinding(
             rule_file="ban-private-import.yml",
             rule_id="ban-private-import",
@@ -464,7 +469,12 @@ class TestsFlextInfraPrivateImportCutover:
         alias: str,
         root_bases: str = "",
     ) -> str:
-        """Build one public facade module that nests ``private_class``."""
+        """Build one public facade module that nests ``private_class``.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return (
             f"from {private_module} import {private_class}\n\n"
             f"class {root_class}{root_bases}:\n"
@@ -489,6 +499,10 @@ class TestsFlextInfraPrivateImportCutover:
 
         Every name follows the FLEXT naming contract, so the case is declared
         by ``family``/``leaf`` rather than by frozen literals repeated per test.
+
+        Returns:
+            The resulting ``t.Triple[Path, str, t.MutableMappingKV[Path, str]]``.
+
         """
         private_module = f"flext_sample._{family}.{leaf}"
         private_class = f"FlextSample{family.title()}{leaf.title()}"
@@ -516,7 +530,12 @@ class TestsFlextInfraPrivateImportCutover:
         consumer_path: Path,
         *private_imports: str,
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
-        """Plan the cutover for every private import reported in the consumer."""
+        """Plan the cutover for every private import reported in the consumer.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
+
+        """
         with infra.rope_workspace(tmp_path) as rope:
             return u.Infra.plan_semantic_cutover(
                 c.Infra.SemanticCutoverPhase.PRIVATE_IMPORT,
@@ -536,7 +555,12 @@ class TestsFlextInfraPrivateImportCutover:
         consumer_path: Path,
         *private_imports: str,
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
-        """Return the successful plan's edits."""
+        """Return the successful plan's edits.
+
+        Returns:
+            The successful plan's edits.
+
+        """
         planned = cls._plan(tmp_path, sources, consumer_path, *private_imports)
         tm.ok(planned)
         return planned.value
@@ -549,7 +573,12 @@ class TestsFlextInfraPrivateImportCutover:
         consumer_path: Path,
         *private_imports: str,
     ) -> str:
-        """Return the single planned edit's rewritten consumer source."""
+        """Return the single planned edit's rewritten consumer source.
+
+        Returns:
+            The single planned edit's rewritten consumer source.
+
+        """
         return cls._edits(tmp_path, sources, consumer_path, *private_imports)[
             0
         ].updated_source

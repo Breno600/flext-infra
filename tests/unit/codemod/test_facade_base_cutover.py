@@ -265,7 +265,12 @@ class TestsFlextInfraFacadeBaseCutover:
         *,
         parent_exports: t.StrSequence = (),
     ) -> t.Pair[Path, t.MutableMappingKV[Path, str]]:
-        """Declare a parent whose class name no package naming could infer."""
+        """Declare a parent whose class name no package naming could infer.
+
+        Returns:
+            The resulting ``t.Pair[Path, t.MutableMappingKV[Path, str]]``.
+
+        """
         exports = parent_exports or (self.PARENT_CLASS, "m")
         parent = tmp_path / "parent/src/parent_pkg"
         child = tmp_path / "child/src/child_pkg/models.py"
@@ -287,7 +292,12 @@ class TestsFlextInfraFacadeBaseCutover:
 
     @staticmethod
     def _finding(file_path: Path) -> m.Infra.ModScanFinding:
-        """Build one detector finding for the facade module."""
+        """Build one detector finding for the facade module.
+
+        Returns:
+            The resulting ``m.Infra.ModScanFinding``.
+
+        """
         return m.Infra.ModScanFinding(
             rule_file="facade-base-by-class-name.yml",
             rule_id="facade-base-by-class-name",
@@ -307,7 +317,12 @@ class TestsFlextInfraFacadeBaseCutover:
         sources: t.MappingKV[Path, str],
         child: Path,
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
-        """Plan the facade-base phase for the detector finding in ``child``."""
+        """Plan the facade-base phase for the detector finding in ``child``.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
+
+        """
         with infra.rope_workspace(tmp_path) as rope:
             return u.Infra.plan_semantic_cutover(
                 c.Infra.SemanticCutoverPhase.FACADE_BASE,
@@ -323,7 +338,12 @@ class TestsFlextInfraFacadeBaseCutover:
         sources: t.MappingKV[Path, str],
         child: Path,
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
-        """Return the successful plan's edits."""
+        """Return the successful plan's edits.
+
+        Returns:
+            The successful plan's edits.
+
+        """
         planned = cls._plan(tmp_path, sources, child)
         tm.ok(planned)
         return planned.value

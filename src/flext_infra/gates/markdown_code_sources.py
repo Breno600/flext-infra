@@ -28,7 +28,12 @@ class FlextInfraMarkdownCodeSources:
 
     @staticmethod
     def syntax_broken(code: str, origin: Path) -> bool:
-        """Identify documentation fragments owned by the Markdown syntax validator."""
+        """Identify documentation fragments owned by the Markdown syntax validator.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         try:
             compile(code, str(origin), "exec")
         except SyntaxError:
@@ -37,7 +42,12 @@ class FlextInfraMarkdownCodeSources:
 
     @staticmethod
     def source_name(relative_posix: str, index: int) -> str:
-        """Encode one block's documentation location into a temp source filename."""
+        """Encode one block's documentation location into a temp source filename.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return c.Infra.MARKDOWN_CODE_SOURCE_FORMAT.format(
             relative_posix.replace("/", "__").replace(".", "_"),
             index,
@@ -53,6 +63,10 @@ class FlextInfraMarkdownCodeSources:
         Blocks carrying the ``notest`` fence marker and unparseable fragments
         are excluded. The Markdown validator owns syntax errors; this gate owns
         only formatting of Python blocks that compile.
+
+        Returns:
+            The resulting ``t.VariadicTuple[t.Triple[str, str, t.Pair[str, int]]]``.
+
         """
         collected: list[t.Triple[str, str, t.Pair[str, int]]] = []
         for md_path in markdown_files:
@@ -84,6 +98,10 @@ class FlextInfraMarkdownCodeSources:
         findings remain manual repairs. Example line numbers are approximate
         within the docstring (stdlib ``doctest`` reports positions relative to
         its input).
+
+        Returns:
+            The resulting ``t.VariadicTuple[t.Triple[str, str, t.Pair[str, int]]]``.
+
         """
         collected: list[t.Triple[str, str, t.Pair[str, int]]] = []
         parser = DocTestParser()

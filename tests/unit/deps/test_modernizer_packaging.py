@@ -23,7 +23,12 @@ class TestsFlextInfraDepsModernizerPackaging:
 
     @staticmethod
     def _declared_roots() -> t.Pair[t.NonEmptyStr, t.NonEmptyStr]:
-        """Derive arbitrary valid roots from the typed project fixture owner."""
+        """Derive arbitrary valid roots from the typed project fixture owner.
+
+        Returns:
+            The resulting ``t.Pair[t.NonEmptyStr, t.NonEmptyStr]``.
+
+        """
         package_name = u.Tests.project_spec("flext-packaging-fixture").package_name
         return f"{package_name}_entry", f"{package_name}_client"
 
@@ -34,7 +39,12 @@ class TestsFlextInfraDepsModernizerPackaging:
         materialize_module: bool,
         materialize_package: bool,
     ) -> t.Pair[t.NonEmptyStr, t.NonEmptyStr]:
-        """Materialize one provider-governed project through shared typed fixtures."""
+        """Materialize one provider-governed project through shared typed fixtures.
+
+        Returns:
+            The resulting ``t.Pair[t.NonEmptyStr, t.NonEmptyStr]``.
+
+        """
         _ = u.Tests.standalone_workspace(root, "flext-packaging-fixture")
         root_module, root_package = self._declared_roots()
         source_root = root / c.Infra.DEFAULT_SRC_DIR
@@ -92,7 +102,12 @@ class TestsFlextInfraDepsModernizerPackaging:
 
     @pytest.mark.slow
     def _conform_self(self, infra_git_repo: Path) -> int:
-        """Run codegen conform self-apply through the public CLI entrypoint."""
+        """Run codegen conform self-apply through the public CLI entrypoint.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         return infra_main([
             c.Infra.CLI_GROUP_CODEGEN,
             "conform",

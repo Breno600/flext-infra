@@ -37,13 +37,23 @@ class TestsFlextInfraUtilitiesTomlMixin:
 
     @staticmethod
     def repo_mise_lock() -> str:
-        """Return the repository's committed mise.lock text."""
+        """Return the repository's committed mise.lock text.
+
+        Returns:
+            The repository's committed mise.lock text.
+
+        """
         lock = Path(__file__).resolve().parents[1] / c.Infra.MISE_LOCK_FILENAME
         return lock.read_text(encoding=c.Cli.ENCODING_DEFAULT)
 
     @staticmethod
     def pinned_mise_version(lock_text: str, tool: str) -> str:
-        """Return the ``str`` version a mise.lock text pins for ``tool``."""
+        """Return the ``str`` version a mise.lock text pins for ``tool``.
+
+        Returns:
+            The ``str`` version a mise.lock text pins for ``tool``.
+
+        """
         entry = TestsFlextInfraUtilitiesTomlMixin.toml_tables_at(
             lock_text,
             "tools",
@@ -72,18 +82,33 @@ class TestsFlextInfraUtilitiesTomlMixin:
 
     @staticmethod
     def codegen_file_text(plan: m.Infra.CodegenFilePlan) -> str:
-        """Decode the present text payload of a generated-file test plan."""
+        """Decode the present text payload of a generated-file test plan.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return tm.not_none(plan.desired_content).decode(c.Cli.ENCODING_DEFAULT)
 
     @staticmethod
     def infra_mapping(value: t.JsonMapping) -> t.JsonMapping:
-        """Provide the typed test helper `infra_mapping`."""
+        """Provide the typed test helper `infra_mapping`.
+
+        Returns:
+            The resulting ``t.JsonMapping``.
+
+        """
         result: t.JsonMapping = t.Infra.INFRA_MAPPING_ADAPTER.validate_python(value)
         return result
 
     @staticmethod
     def toml_table_at(content: str, *path: str) -> t.JsonMapping:
-        """Provide ``toml_table_at``."""
+        """Provide ``toml_table_at``.
+
+        Returns:
+            The resulting ``t.JsonMapping``.
+
+        """
         current = TestsFlextInfraUtilitiesTomlMixin.toml_doc_mapping(
             TestsFlextInfraUtilitiesTomlMixin.toml_doc(content),
         )
@@ -93,7 +118,12 @@ class TestsFlextInfraUtilitiesTomlMixin:
 
     @staticmethod
     def toml_strings_at(content: str, *path: str) -> t.StrSequence:
-        """Provide ``toml_strings_at``."""
+        """Provide ``toml_strings_at``.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         if not path:
             return ()
         table = TestsFlextInfraUtilitiesTomlMixin.toml_table_at(content, *path[:-1])
@@ -101,7 +131,12 @@ class TestsFlextInfraUtilitiesTomlMixin:
 
     @staticmethod
     def toml_tables_at(content: str, *path: str) -> t.SequenceOf[t.JsonMapping]:
-        """Provide ``toml_tables_at``."""
+        """Provide ``toml_tables_at``.
+
+        Returns:
+            The resulting ``t.SequenceOf[t.JsonMapping]``.
+
+        """
         if not path:
             return ()
         table = TestsFlextInfraUtilitiesTomlMixin.toml_table_at(content, *path[:-1])
@@ -112,7 +147,12 @@ class TestsFlextInfraUtilitiesTomlMixin:
 
     @staticmethod
     def infra_mapping_result(value: t.JsonMapping) -> p.Result[t.JsonMapping]:
-        """Provide the typed test helper `infra_mapping_result`."""
+        """Provide the typed test helper `infra_mapping_result`.
+
+        Returns:
+            The resulting ``p.Result[t.JsonMapping]``.
+
+        """
         return r[t.JsonMapping].ok(
             TestsFlextInfraUtilitiesTomlMixin.infra_mapping(value),
         )
@@ -121,7 +161,12 @@ class TestsFlextInfraUtilitiesTomlMixin:
     def tool_config_document() -> m.Infra.ToolConfigDocument:
         # Tests consume the validated config singleton; the removed utility
         # loader must not survive as a hidden test path.
-        """Provide the typed test helper `tool_config_document`."""
+        """Provide the typed test helper `tool_config_document`.
+
+        Returns:
+            The resulting ``m.Infra.ToolConfigDocument``.
+
+        """
         return config.Infra.tooling
 
     @staticmethod
@@ -132,6 +177,13 @@ class TestsFlextInfraUtilitiesTomlMixin:
         untrusted files. A fixture literal is authored valid, so a ``None``
         here means the fixture itself is broken and the test must fail with
         that reason instead of propagating an optional into every call.
+
+        Returns:
+            The resulting ``t.Cli.TomlDocument``.
+
+        Raises:
+            TypeError: On failure.
+
         """
         document = u.Cli.toml_parse_text(text)
         tm.that(document, none=False, msg="fixture TOML failed to parse")
@@ -142,7 +194,15 @@ class TestsFlextInfraUtilitiesTomlMixin:
 
     @staticmethod
     def toml_doc_mapping(doc: t.Cli.TomlDocument) -> t.JsonMapping:
-        """Provide the typed test helper `toml_doc_mapping`."""
+        """Provide the typed test helper `toml_doc_mapping`.
+
+        Returns:
+            The resulting ``t.JsonMapping``.
+
+        Raises:
+            TypeError: On failure.
+
+        """
         normalized: t.JsonValue = u.normalize_to_json_value(doc.unwrap())
         tm.that(normalized, is_=Mapping)
         if not isinstance(normalized, Mapping):
@@ -153,7 +213,15 @@ class TestsFlextInfraUtilitiesTomlMixin:
 
     @staticmethod
     def toml_mapping(value: t.JsonPayload | None) -> t.JsonMapping:
-        """Provide the typed test helper `toml_mapping`."""
+        """Provide the typed test helper `toml_mapping`.
+
+        Returns:
+            The resulting ``t.JsonMapping``.
+
+        Raises:
+            TypeError: On failure.
+
+        """
         normalized: t.JsonValue = u.normalize_to_json_value(value)
         tm.that(normalized, is_=Mapping)
         if not isinstance(normalized, Mapping):
@@ -164,7 +232,15 @@ class TestsFlextInfraUtilitiesTomlMixin:
 
     @staticmethod
     def toml_list(value: t.JsonPayload | None) -> t.JsonList:
-        """Provide the typed test helper `toml_list`."""
+        """Provide the typed test helper `toml_list`.
+
+        Returns:
+            The resulting ``t.JsonList``.
+
+        Raises:
+            TypeError: On failure.
+
+        """
         normalized: t.JsonValue = u.normalize_to_json_value(value)
         tm.that(normalized, is_=list)
         if not isinstance(normalized, list):
@@ -176,7 +252,15 @@ class TestsFlextInfraUtilitiesTomlMixin:
 
     @staticmethod
     def toml_strings(value: t.JsonPayload | None) -> t.StrSequence:
-        """Provide the typed test helper `toml_strings`."""
+        """Provide the typed test helper `toml_strings`.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            TypeError: On failure.
+
+        """
         normalized: t.JsonValue = u.normalize_to_json_value(value)
         tm.that(normalized, is_=list)
         if not isinstance(normalized, list):
@@ -186,7 +270,12 @@ class TestsFlextInfraUtilitiesTomlMixin:
 
     @staticmethod
     def strings(value: t.JsonPayload | None) -> t.StrSequence:
-        """Validate and return one JSON payload as a string sequence."""
+        """Validate and return one JSON payload as a string sequence.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         result: t.StrSequence = t.Infra.STR_SEQ_ADAPTER.validate_python(value)
         return result
 

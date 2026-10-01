@@ -25,7 +25,12 @@ class FlextInfraUtilitiesDocsCommandContractMixin:
         fence_marker: str,
         fence_language: str,
     ) -> t.StrSequence:
-        """Return executable shell snippets, excluding surrounding prose."""
+        """Return executable shell snippets, excluding surrounding prose.
+
+        Returns:
+            Executable shell snippets, excluding surrounding prose.
+
+        """
         if fence_marker:
             return (
                 (line,) if fence_language in c.Infra.DOCS_SHELL_FENCE_LANGUAGES else ()
@@ -48,7 +53,12 @@ class FlextInfraUtilitiesDocsCommandContractMixin:
         relative_path: str,
         effective_verbs: t.SequenceOf[m.Infra.MakeVerbSpec],
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Return command-contract issues from one Markdown document."""
+        """Return command-contract issues from one Markdown document.
+
+        Returns:
+            Command-contract issues from one Markdown document.
+
+        """
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         fence_marker = ""
         fence_language = ""
@@ -133,6 +143,13 @@ class FlextInfraUtilitiesDocsCommandContractMixin:
 
         ``iter_scope_markdown_files`` owns every formal scope exclusion; this
         detector carries no path allowlist or bypass.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
+
+        Raises:
+            ValueError: On failure.
+
         """
         from flext_infra import u
 

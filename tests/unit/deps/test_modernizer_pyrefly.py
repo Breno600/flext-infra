@@ -36,7 +36,13 @@ class TestsFlextInfraModernizerPyrefly:
         project_dir: Path | None = None,
         declared_python_dirs: t.StrSequence | None = None,
     ) -> t.Triple[t.MutableJsonMapping, t.JsonMapping, t.StrSequence]:
-        """Apply the Pyrefly phase once; return payload, pyrefly table, and changes."""
+        """Apply the Pyrefly phase once; return payload, pyrefly table, and changes.
+
+        Returns:
+            The resulting ``t.Triple[t.MutableJsonMapping, t.JsonMapping,
+                t.StrSequence]``.
+
+        """
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
             u.Tests.toml_payload(source),
         )

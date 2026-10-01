@@ -19,7 +19,15 @@ class FlextInfraCliRouteService:
 
     @classmethod
     def route_table_for(cls, group: str) -> t.VariadicTuple[m.Cli.ResultCommandRoute]:
-        """Return the routes for one command group, importing only its owner."""
+        """Return the routes for one command group, importing only its owner.
+
+        Returns:
+            The routes for one command group, importing only its owner.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         if group in {
             c.Infra.CLI_GROUP_CHECK,
             c.Infra.CLI_GROUP_CODEGEN,

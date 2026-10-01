@@ -17,7 +17,12 @@ class FlextInfraConsolidateGroupsPhase:
         existing: t.MappingKV[str, t.StrSequence],
         canonical_dev: t.StrSequence,
     ) -> t.StrSequence:
-        """Merge the canonical dev requirements with every legacy dev group."""
+        """Merge the canonical dev requirements with every legacy dev group.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         return u.Infra.dedupe_specs([
             *canonical_dev,
             *[
@@ -32,7 +37,12 @@ class FlextInfraConsolidateGroupsPhase:
         payload: t.MutableJsonMapping,
         canonical_dev: t.StrSequence,
     ) -> t.StrSequence:
-        """Merge legacy groups into one canonical dev group in one plain payload."""
+        """Merge legacy groups into one canonical dev group in one plain payload.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         changes: t.MutableSequenceOf[str] = []
         project = u.Cli.toml_mapping_ensure_table(payload, c.Infra.PROJECT)
         optional = u.Cli.toml_mapping_ensure_table(

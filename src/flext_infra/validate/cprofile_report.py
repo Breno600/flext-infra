@@ -48,7 +48,15 @@ class FlextInfraCProfileReport(s[bool]):
 
     @u.model_validator(mode="after")
     def _validate_report_paths(self) -> Self:
-        """Keep profile input and output inside the workspace report tree."""
+        """Keep profile input and output inside the workspace report tree.
+
+        Returns:
+            The resulting ``Self``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         report_root = (self.repository_root / ".reports").resolve()
         for path in (
             self.profile,
@@ -63,7 +71,15 @@ class FlextInfraCProfileReport(s[bool]):
         return self
 
     def _run_profiles(self) -> t.VariadicTuple[Path]:
-        """Validate run identity and artifact digests without consulting latest."""
+        """Validate run identity and artifact digests without consulting latest.
+
+        Returns:
+            The resulting ``t.VariadicTuple[Path]``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         if self.run_receipt is None:
             return (self.profile,)
         parent = m.Infra.PytestRunContext.model_validate_json(
@@ -119,7 +135,12 @@ class FlextInfraCProfileReport(s[bool]):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Load, sort, and render the profile without executing user code."""
+        """Load, sort, and render the profile without executing user code.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         if not self.profile.is_file():
             return r[bool].fail(f"cProfile artifact does not exist: {self.profile}")
         try:

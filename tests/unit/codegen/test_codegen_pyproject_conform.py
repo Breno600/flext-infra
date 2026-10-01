@@ -62,7 +62,12 @@ class TestsFlextInfraCodegenPyprojectConform:
         toolchain: m.Infra.ToolchainSpec,
         exclusions: t.VariadicTuple[m.Infra.UvScopedDependencyExclusionSpec] = (),
     ) -> m.Infra.UvResolutionSpec:
-        """Route the toolchain's uv resolver keys the way conform declares them."""
+        """Route the toolchain's uv resolver keys the way conform declares them.
+
+        Returns:
+            The resulting ``m.Infra.UvResolutionSpec``.
+
+        """
         return m.Infra.UvResolutionSpec(
             link_mode=toolchain.uv_link_mode,
             constraint_dependencies=tuple(toolchain.uv_constraint_dependencies),
@@ -78,6 +83,10 @@ class TestsFlextInfraCodegenPyprojectConform:
         context root; every other project must carry its declared direct Git
         source (the scaffold seeds exactly this line), so the same SSOT floor
         set is rendered the way a real detached checkout declares it.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
         """
         branch = test_u.Tests.provider_branch()
         return tuple(

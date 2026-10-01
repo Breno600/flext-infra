@@ -20,7 +20,12 @@ class FlextInfraUtilitiesRopeSource:
 
     @staticmethod
     def discover_first_party_namespaces(project_dir: Path) -> t.StrSequence:
-        """Discover live regular, namespace, and stub packages under ``src/``."""
+        """Discover live regular, namespace, and stub packages under ``src/``.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         src_dir = project_dir / c.Infra.DEFAULT_SRC_DIR
         return [
             name
@@ -57,6 +62,10 @@ class FlextInfraUtilitiesRopeSource:
         ``splitlines()`` and ``splitlines(keepends=True)``), so separators are
         normalized here: a ``"".join`` collapse would hand ``ast.parse`` one
         broken line.
+
+        Returns:
+            The module-level line index where an import may be inserted.
+
         """
         source = "\n".join(line.removesuffix("\n") for line in lines)
         module = ast.parse(source)
@@ -86,7 +95,12 @@ class FlextInfraUtilitiesRopeSource:
 
     @staticmethod
     def index_after_docstring_and_future_imports(lines: t.StrSequence) -> int:
-        """Return insertion index after module docstring and future imports."""
+        """Return insertion index after module docstring and future imports.
+
+        Returns:
+            Insertion index after module docstring and future imports.
+
+        """
         return FlextInfraUtilitiesRopeSource.find_import_insert_position(
             lines,
             past_existing=False,
@@ -94,7 +108,12 @@ class FlextInfraUtilitiesRopeSource:
 
     @staticmethod
     def parse_import_names(names_str: str) -> t.StrPairSequence:
-        """Parse ``A, B as C`` into ``[(name, bound), ...]``."""
+        """Parse ``A, B as C`` into ``[(name, bound), ...]``.
+
+        Returns:
+            The resulting ``t.StrPairSequence``.
+
+        """
         result: t.MutableSequenceOf[t.StrPair] = []
         for part in names_str.split(","):
             candidate = part.strip().rstrip("\\").strip()
@@ -120,6 +139,10 @@ class FlextInfraUtilitiesRopeSource:
         function bodies and their dedented text is added once after the
         module's last top-level import. A body left empty, or a result that no
         longer parses, raises: the move is never half-applied.
+
+        Returns:
+            The resulting ``bool``.
+
         """
         if not statement_lines:
             return False
@@ -149,7 +172,12 @@ class FlextInfraUtilitiesRopeSource:
         *,
         apply: bool = True,
     ) -> str:
-        """Apply offset-based edits (start, end, replacement) to source."""
+        """Apply offset-based edits (start, end, replacement) to source.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         _ = rope_project
         source: str = resource.read()
         for start, end, replacement in sorted(changes, key=itemgetter(0), reverse=True):

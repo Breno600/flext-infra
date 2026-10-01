@@ -33,7 +33,12 @@ class FlextInfraUtilitiesGitSemanticSubmoduleMixin(
         cls,
         request: m.Infra.GitRefRequest,
     ) -> p.Result[m.Infra.GitBoolReport]:
-        """Initialize one declared submodule at its recorded gitlink."""
+        """Initialize one declared submodule at its recorded gitlink.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitBoolReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             repo.git.submodule("update", "--init", "--", request.reference)
@@ -49,7 +54,12 @@ class FlextInfraUtilitiesGitSemanticSubmoduleMixin(
         cls,
         request: m.Infra.GitSubmoduleConfigRequest,
     ) -> p.Result[m.Infra.GitTextReport]:
-        """Read one ``.gitmodules`` value, returning empty text when unset."""
+        """Read one ``.gitmodules`` value, returning empty text when unset.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitTextReport]``.
+
+        """
         gitmodules = request.repo_root / c.Infra.GITMODULES
         try:
             with GitConfigParser(file_or_files=gitmodules, read_only=True) as parser:
@@ -74,6 +84,10 @@ class FlextInfraUtilitiesGitSemanticSubmoduleMixin(
 
         A duplicated path is a declaration defect rather than a state defect, so
         it fails here instead of silently resolving to the last writer.
+
+        Returns:
+            The resulting ``p.Result[t.StrMapping]``.
+
         """
         gitmodules = request.repo_root / c.Infra.GITMODULES
         if not gitmodules.is_file():
@@ -112,6 +126,10 @@ class FlextInfraUtilitiesGitSemanticSubmoduleMixin(
         An absent ``flext-managed`` key keeps the member governed. Any explicit
         value other than ``true`` declares a vendored or non-Python checkout
         that no governed stage may treat as a workspace project.
+
+        Returns:
+            Declared submodule paths that opt out of workspace governance.
+
         """
         sections = cls.git_submodule_sections(request)
         if sections.failure:

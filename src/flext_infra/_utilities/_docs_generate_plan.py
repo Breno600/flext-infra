@@ -29,14 +29,25 @@ class FlextInfraUtilitiesDocsGeneratePlanMixin(
 
     @staticmethod
     def _directory_sort_key(path: Path) -> t.Pair[int, str]:
-        """Return the stable parent-first ordering key for a directory."""
+        """Return the stable parent-first ordering key for a directory.
+
+        Returns:
+            The stable parent-first ordering key for a directory.
+
+        """
         return len(path.parts), path.as_posix()
 
     @staticmethod
     def docs_normalize_artifacts(
         artifacts: t.SequenceOf[t.Infra.DocsRenderedArtifactTuple],
     ) -> p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]:
-        """Validate one unique lexical owner and target without dereferencing."""
+        """Validate one unique lexical owner and target without dereferencing.
+
+        Returns:
+            The resulting
+                ``p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]``.
+
+        """
         normalized: list[t.Infra.DocsRenderedArtifactTuple] = []
         targets: set[Path] = set()
         for project, target, content in artifacts:
@@ -67,7 +78,12 @@ class FlextInfraUtilitiesDocsGeneratePlanMixin(
     def docs_required_directories(
         bundle: m.Infra.DocsGenerationBundle,
     ) -> p.Result[t.VariadicTuple[Path]]:
-        """Return unique target directories ordered parent before child."""
+        """Return unique target directories ordered parent before child.
+
+        Returns:
+            Unique target directories ordered parent before child.
+
+        """
         required: set[Path] = set()
         for scoped in bundle.scopes:
             for artifact in scoped.artifacts:
@@ -90,7 +106,12 @@ class FlextInfraUtilitiesDocsGeneratePlanMixin(
     def docs_file_plans(
         bundle: m.Infra.DocsGenerationBundle,
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]:
-        """Snapshot targets from the canonical rendered artifact inventory."""
+        """Snapshot targets from the canonical rendered artifact inventory.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]``.
+
+        """
         # The physical repository root is carried by the bundle: the first output
         # scope is a member when the root is excluded from the render.
         repository_root = bundle.repository_root
@@ -126,7 +147,13 @@ class FlextInfraUtilitiesDocsGeneratePlanMixin(
         root: Path,
         rendered: t.SequenceOf[t.Pair[Path, str]],
     ) -> p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]:
-        """Describe stale files owned by one generated tree as absent artifacts."""
+        """Describe stale files owned by one generated tree as absent artifacts.
+
+        Returns:
+            The resulting
+                ``p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]``.
+
+        """
         planned = cli_u.Cli.atomic_plan_directory_chain(root)
         if planned.failure:
             return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(

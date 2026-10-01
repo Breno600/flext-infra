@@ -139,7 +139,12 @@ class FlextInfraModelsMixins:
         @m.field_validator("gates", mode="before")
         @classmethod
         def _parse_gates(cls, value: str | t.SequenceOf[str] | None) -> t.StrSequence:
-            """Accept CSV string, sequence, or None; normalize to StrSequence."""
+            """Accept CSV string, sequence, or None; normalize to StrSequence.
+
+            Returns:
+                The resulting ``t.StrSequence``.
+
+            """
             if value is None:
                 return ()
             if isinstance(value, str):

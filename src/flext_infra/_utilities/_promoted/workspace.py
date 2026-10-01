@@ -23,7 +23,12 @@ class FlextInfraUtilitiesPromotedWorkspace:
 
     @staticmethod
     def promoted_fail(template: str, **fields: t.Scalar | Path) -> NoReturn:
-        """Raise the promoted registry error rendered from one message template."""
+        """Raise the promoted registry error rendered from one message template.
+
+        Raises:
+            PromotedRegistryError: On failure.
+
+        """
         raise c.Infra.PromotedRegistryError(template.format(**fields))
 
     @staticmethod
@@ -32,6 +37,10 @@ class FlextInfraUtilitiesPromotedWorkspace:
 
         A project root is its own owner, so discovery from the repository root
         resolves; command ownership follows the same boundary.
+
+        Returns:
+            ``start`` or its nearest ancestor owning ``scripts/`` + ``pyproject.toml``.
+
         """
         resolved = start.resolve()
         for candidate in (resolved, *resolved.parents):
@@ -43,7 +52,12 @@ class FlextInfraUtilitiesPromotedWorkspace:
 
     @staticmethod
     def promoted_workspace_spec(root: Path) -> p.Infra.PromotedWorkspaceSpec:
-        """Build the workspace spec owned by one explicit repository root."""
+        """Build the workspace spec owned by one explicit repository root.
+
+        Returns:
+            The resulting ``p.Infra.PromotedWorkspaceSpec``.
+
+        """
         from flext_infra import m, u
 
         return m.Infra.PromotedWorkspaceSpec(
@@ -54,7 +68,12 @@ class FlextInfraUtilitiesPromotedWorkspace:
 
     @classmethod
     def promoted_discovered_workspace_spec(cls) -> p.Infra.PromotedWorkspaceSpec:
-        """Resolve the spec of the workspace owning the current working directory."""
+        """Resolve the spec of the workspace owning the current working directory.
+
+        Returns:
+            The resulting ``p.Infra.PromotedWorkspaceSpec``.
+
+        """
         root = cls.promoted_find_owner_root(Path.cwd())
         if root is None:
             cls.promoted_fail(c.Infra.PromotedMessage.NO_SCRIPTS_DIR)
@@ -91,6 +110,10 @@ class FlextInfraUtilitiesPromotedWorkspace:
 
         The guard writes the same canonical line as the shell guard, so consumer
         gates match one contract for ``.sh`` and ``.py`` commands.
+
+        Raises:
+            SystemExit: On failure.
+
         """
         from flext_infra import settings
 

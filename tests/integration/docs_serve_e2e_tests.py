@@ -47,14 +47,24 @@ class TestsFlextInfraIntegrationDocsServeE2e:
 
     @staticmethod
     def _free_local_port() -> int:
-        """Reserve and release an ephemeral localhost port for the dev server."""
+        """Reserve and release an ephemeral localhost port for the dev server.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
             probe.bind(("127.0.0.1", 0))
             return int(probe.getsockname()[1])
 
     @staticmethod
     def _http_get_body(host: str, port: int) -> p.Result[str]:
-        """Return the response body when the dev server answers HTTP 200, else fail."""
+        """Return the response body when the dev server answers HTTP 200, else fail.
+
+        Returns:
+            The response body when the dev server answers HTTP 200, else fail.
+
+        """
         connection = http.client.HTTPConnection(host, port, timeout=0.25)
         try:
             connection.request("GET", "/")

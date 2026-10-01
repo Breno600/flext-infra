@@ -25,7 +25,12 @@ class TestsFlextInfraDepsModernizerToolTables:
         *,
         tool_config: m.Infra.ToolConfigDocument | None = None,
     ) -> t.Pair[t.MutableJsonMapping, t.StrSequence]:
-        """Apply the phase to one named project payload; return payload and changes."""
+        """Apply the phase to one named project payload; return payload and changes.
+
+        Returns:
+            The resulting ``t.Pair[t.MutableJsonMapping, t.StrSequence]``.
+
+        """
         project_dir = tmp_path / "flext-sample"
         (project_dir / "src" / "flext_sample").mkdir(parents=True, exist_ok=True)
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
@@ -38,7 +43,12 @@ class TestsFlextInfraDepsModernizerToolTables:
 
     @staticmethod
     def _table(payload: t.JsonMapping, *path: str) -> t.JsonMapping:
-        """Unwrap one nested table below ``[tool]``."""
+        """Unwrap one nested table below ``[tool]``.
+
+        Returns:
+            The resulting ``t.JsonMapping``.
+
+        """
         table = u.Tests.toml_mapping(payload["tool"])
         for segment in path:
             table = u.Tests.toml_mapping(table[segment])
@@ -329,6 +339,10 @@ class TestsFlextInfraDepsModernizerToolTables:
         its manifest declares the retired tree under the analyzer-exclusion
         contract the detector owns (external dependency paths are the
         read-only trees the src and namespace-packages projections drop).
+
+        Returns:
+            The resulting ``Path``.
+
         """
         project_dir = tmp_path / "flext-sample"
         workspace = u.Tests.standalone_workspace(project_dir, project_dir.name)

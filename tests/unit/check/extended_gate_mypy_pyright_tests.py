@@ -80,7 +80,12 @@ class TestsFlextInfraTypeGates:
 
     @pytest.fixture
     def checker_context(self, real_python_package: Path) -> m.Infra.GateContext:
-        """Configure the existing real package for native checker execution."""
+        """Configure the existing real package for native checker execution.
+
+        Returns:
+            The resulting ``m.Infra.GateContext``.
+
+        """
         pyproject = real_python_package / "pyproject.toml"
         pyproject.write_text(
             pyproject.read_text(encoding="utf-8")

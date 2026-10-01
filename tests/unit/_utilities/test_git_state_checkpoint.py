@@ -252,7 +252,12 @@ class TestsFlextInfraGitStateCheckpoint:
 
     @staticmethod
     def _diverge_remote(checkpoint: m.Infra.GitWorktreeStateCheckpoint) -> str:
-        """Force-move the published remote ref to an unrelated capture."""
+        """Force-move the published remote ref to an unrelated capture.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         source = checkpoint.snapshot.repo_root
         tree = test_u.Tests.git_capture(
             source,

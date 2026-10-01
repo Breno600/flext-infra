@@ -168,7 +168,12 @@ class FlextInfraUtilitiesSemanticNestingTypes(
 
     @classmethod
     def _captured_names(cls, module: p.Infra.RopePyModule) -> frozenset[str]:
-        """Collect identifiers any nested scope binds over the module level."""
+        """Collect identifiers any nested scope binds over the module level.
+
+        Returns:
+            The resulting ``frozenset[str]``.
+
+        """
         captured: set[str] = set()
 
         class Visitor(ast.NodeVisitor):
@@ -239,7 +244,16 @@ class FlextInfraUtilitiesSemanticNestingTypes(
 
     @classmethod
     def _checked_type_reference(cls, scope: p.Infra.RopeScope, expression: str) -> str:
-        """Reject a destination import captured by an existing lexical binding."""
+        """Reject a destination import captured by an existing lexical binding.
+
+        Returns:
+            The resulting ``str``.
+
+        Raises:
+            TypeError: On failure.
+            ValueError: On failure.
+
+        """
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         node = ast.parse(expression, mode="eval").body
         while isinstance(node, ast.Attribute):

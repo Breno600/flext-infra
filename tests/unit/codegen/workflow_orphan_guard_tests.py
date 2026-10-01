@@ -32,7 +32,12 @@ class TestsFlextInfraWorkflowOrphanGuard:
     )
 
     def _declared_workflows(self) -> set[str]:
-        """Return every workflow filename the SSOT owns."""
+        """Return every workflow filename the SSOT owns.
+
+        Returns:
+            Every workflow filename the SSOT owns.
+
+        """
         declared: set[str] = set()
         for entry in config.Infra.codegen.templates.entries:
             destination = entry.destination

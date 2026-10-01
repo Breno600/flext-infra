@@ -28,7 +28,12 @@ class TestsFlextInfraLazyMapFreshness:
 
     @pytest.fixture
     def v(self) -> FlextInfraValidateLazyMapFreshness:
-        """Shared validator instance."""
+        """Shared validator instance.
+
+        Returns:
+            The resulting ``FlextInfraValidateLazyMapFreshness``.
+
+        """
         return FlextInfraValidateLazyMapFreshness()
 
     @staticmethod

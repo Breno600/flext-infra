@@ -22,7 +22,12 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
 
     @staticmethod
     def mypy_deadline_limit() -> m.Infra.MypyResourceLimit:
-        """Reserve harness startup and cleanup inside the configured slow budget."""
+        """Reserve harness startup and cleanup inside the configured slow budget.
+
+        Returns:
+            The resulting ``m.Infra.MypyResourceLimit``.
+
+        """
         policy = config.Infra.tooling.tools.pytest
         available = (
             policy.slow_timeout_seconds
@@ -39,7 +44,12 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
 
     @staticmethod
     def reap_mypy_descendant(pid_file: Path, timeout: int) -> None:
-        """Reap a registered workload in pytest teardown, preserving call failures."""
+        """Reap a registered workload in pytest teardown, preserving call failures.
+
+        Raises:
+            RuntimeError: On failure.
+
+        """
         pid = pid_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         snapshot = u.Cli.run_raw(
             ("/bin/ps", "-p", str(int(pid)), "-o", "stat="),
@@ -53,7 +63,12 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
 
     @staticmethod
     def mypy_workload(root: Path, plugin_body: str = "") -> m.Infra.MypyInvocation:
-        """Create a real checker project with an optional workload plugin."""
+        """Create a real checker project with an optional workload plugin.
+
+        Returns:
+            The resulting ``m.Infra.MypyInvocation``.
+
+        """
         source = root / "checked.py"
         source.write_text("value: int = 1\n", encoding=c.Cli.ENCODING_DEFAULT)
         config_file = root / "mypy.ini"
@@ -78,7 +93,12 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
 
     @staticmethod
     def create_python_environment(root: Path) -> p.Result[bool]:
-        """Provision a physical fixture environment with the current interpreter."""
+        """Provision a physical fixture environment with the current interpreter.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         environment = u.Infra.runtime_environment_dir(root)
         environment.parent.mkdir(parents=True, exist_ok=True)
         return u.Cli.run_checked(
@@ -96,6 +116,11 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         The fixture becomes one through the single fixture Git owner and
         receives the real binaries this suite was provisioned with, linked
         inside the pytest-managed tree; a missing tool fails the fixture.
+
+        Raises:
+            FileExistsError: On failure.
+            FileNotFoundError: On failure.
+
         """
         TestsFlextInfraUtilitiesGitMixin.initialize_git_repo(root)
         provisioned = Path(sys.executable).parent
@@ -136,6 +161,10 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         boundaries a warm install silently skips. The directory sits beside
         — never inside — the fixture checkout the generated Make rejects as
         storage, and inside the pytest-managed tree so teardown reclaims it.
+
+        Returns:
+            The resulting ``Path``.
+
         """
         storage = project_root.parent / "mise-data"
         storage.mkdir(parents=True, exist_ok=True)
@@ -192,6 +221,10 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         gh here reads no configuration (``os.devnull`` is not a directory) and
         reaches no keyring (the session bus is disabled), so the host
         operator's stored credential never enters a test.
+
+        Returns:
+            The resulting ``p.Result[p.Cli.CommandOutput]``.
+
         """
         return u.Cli.run_raw(
             [c.Infra.MAKE, *args],
@@ -211,7 +244,12 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
 
     @staticmethod
     def is_docker_available() -> bool:
-        """Return whether Docker is available to integration tests."""
+        """Return whether Docker is available to integration tests.
+
+        Returns:
+            Whether Docker is available to integration tests.
+
+        """
         return shutil.which("docker") is not None
 
     @staticmethod
@@ -221,6 +259,10 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         ``gh`` and ``uv publish`` talk to GitHub and to a package index; a
         unit test proves the protocol's command contract against a recorded
         invocation, never against the real remote.
+
+        Returns:
+            The resulting ``Path``.
+
         """
         bin_dir.mkdir(parents=True, exist_ok=True)
         log = bin_dir / f"{name}.log"

@@ -33,7 +33,12 @@ class TestsFlextInfraUtilitiesPromotedMixin:
         verb: str = "probe",
         what: str = "all",
     ) -> m.Infra.PromotedCommand:
-        """Build one real promoted command model for contract tests."""
+        """Build one real promoted command model for contract tests.
+
+        Returns:
+            The resulting ``m.Infra.PromotedCommand``.
+
+        """
         return m.Infra.PromotedCommand(
             verb=verb,
             what=what,

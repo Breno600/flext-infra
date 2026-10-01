@@ -63,7 +63,12 @@ class FlextInfraMiseRecovery:
         journal: m.Infra.CodegenTransactionJournal,
         journal_state: m.Cli.AtomicFileState,
     ) -> p.Result[bool]:
-        """Recover an authenticated journal without consulting source topology."""
+        """Recover an authenticated journal without consulting source topology.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         topology = verify.journal_topology(layout, journal)
         if topology.failure:
             return topology
@@ -117,6 +122,10 @@ class FlextInfraMiseRecovery:
         count exceeds one by construction; the atomic-state reader rejects
         such leaves. Package resources are immutable data read as bytes, and
         their physical identities still come from lstat for the action log.
+
+        Returns:
+            The resulting ``m.Cli.AtomicFileState``.
+
         """
         content = path.read_bytes()
         leaf = path.lstat()
@@ -139,7 +148,12 @@ class FlextInfraMiseRecovery:
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         journal: m.Infra.CodegenTransactionJournal,
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenRecoveryAction]]:
-        """Classify every live target before preparing any recovery effect."""
+        """Classify every live target before preparing any recovery effect.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.CodegenRecoveryAction]]``.
+
+        """
         result_type = r[tuple[m.Infra.CodegenRecoveryAction, ...]]
         actions: list[m.Infra.CodegenRecoveryAction] = []
         for entry in journal.entries:
@@ -206,7 +220,12 @@ class FlextInfraMiseRecovery:
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         entry: m.Infra.CodegenJournalEntry,
     ) -> bool:
-        """Whether the entry's staged rollback tree is gone entirely."""
+        """Whether the entry's staged rollback tree is gone entirely.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         if entry.original_backup is None:
             return False
         backup = files.resolve_transaction(
@@ -421,7 +440,12 @@ class FlextInfraMiseRecovery:
 
     @staticmethod
     def _classify_identity(state: m.Cli.AtomicFileState) -> _FileOwnershipIdentity:
-        """Classify by durable content and parent identity, never per-copy inode."""
+        """Classify by durable content and parent identity, never per-copy inode.
+
+        Returns:
+            The resulting ``_FileOwnershipIdentity``.
+
+        """
         return (
             state.content is not None,
             state.parent_device,
@@ -487,7 +511,12 @@ class FlextInfraMiseRecovery:
         entry: m.Infra.CodegenJournalEntry,
         prefix: Literal["original", "desired", "rollback"],
     ) -> _FileIdentity:
-        """Build one journal identity without dynamically addressing model fields."""
+        """Build one journal identity without dynamically addressing model fields.
+
+        Returns:
+            The resulting ``_FileIdentity``.
+
+        """
         stored: t.MappingKV[str, t.Pair[bool | None, _FileIdentity]] = {
             "original": (
                 entry.original_exists,

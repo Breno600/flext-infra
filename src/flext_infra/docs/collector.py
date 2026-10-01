@@ -23,7 +23,12 @@ class FlextInfraDocCollector:
 
     @staticmethod
     def collect(request: m.Infra.DocsCollectRequest) -> p.Result[bool]:
-        """Authenticate configuration, collect sources, and commit one file phase."""
+        """Authenticate configuration, collect sources, and commit one file phase.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         root = request.repository_root
         if not root.is_absolute() or ".." in root.parts or root.resolve() != root:
             return r[bool].fail(

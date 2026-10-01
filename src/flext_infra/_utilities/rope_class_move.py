@@ -23,7 +23,12 @@ class FlextInfraUtilitiesRopeClassMove:
 
     @classmethod
     def move_class(cls, request: m.Infra.ClassMoveRequest) -> Path:
-        """Move one top-level class or return its validated preview target."""
+        """Move one top-level class or return its validated preview target.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         target_file, mover = cls._class_mover(request)
         root = Path(request.rope_project.root.real_path).resolve()
         if not request.apply:
@@ -54,7 +59,16 @@ class FlextInfraUtilitiesRopeClassMove:
         *,
         sources: t.MappingKV[Path, str],
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
-        """Preview one identity-preserving move inside a closed source inventory."""
+        """Preview one identity-preserving move inside a closed source inventory.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.SemanticMigrationEdit]``.
+
+        Raises:
+            TypeError: On failure.
+            ValueError: On failure.
+
+        """
         if request.apply:
             msg = "immutable class move planning requires apply=False"
             raise ValueError(msg)
@@ -100,7 +114,16 @@ class FlextInfraUtilitiesRopeClassMove:
         cls,
         request: m.Infra.ClassMoveRequest,
     ) -> t.Pair[Path, p.Infra.RopeMoveGlobal]:
-        """Resolve both execution and planning from the exact original declaration."""
+        """Resolve both execution and planning from the exact original declaration.
+
+        Returns:
+            The resulting ``t.Pair[Path, p.Infra.RopeMoveGlobal]``.
+
+        Raises:
+            FileNotFoundError: On failure.
+            ValueError: On failure.
+
+        """
         root = Path(request.rope_project.root.real_path).resolve()
         source_file = cls._owned_path(root, request.source_file)
         target_file = cls._owned_path(root, request.target_file)
@@ -133,7 +156,12 @@ class FlextInfraUtilitiesRopeClassMove:
 
     @staticmethod
     def class_module_stem(class_name: str) -> str:
-        """Derive one module stem from the core CamelCase boundary authority."""
+        """Derive one module stem from the core CamelCase boundary authority.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return c.CAMEL_TO_SNAKE_RE.sub(r"\1_\2", class_name).lower()
 
     @classmethod
@@ -145,7 +173,12 @@ class FlextInfraUtilitiesRopeClassMove:
         class_name: str,
         family: str,
     ) -> Path:
-        """Derive a canonical destination without a project-owned registry."""
+        """Derive a canonical destination without a project-owned registry.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         module_stem = cls.class_module_stem(class_name)
         if family:
             family_dir = FlextInfraUtilitiesCodegenNamespace.facade_families()[

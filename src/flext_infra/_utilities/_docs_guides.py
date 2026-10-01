@@ -33,7 +33,12 @@ class FlextInfraUtilitiesDocsGuidesMixin:
         project_name: str,
         guide_name: str,
     ) -> str:
-        """Render a member guide with explicit source and regeneration ownership."""
+        """Render a member guide with explicit source and regeneration ownership.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         lines = content.splitlines()
         title = Path(guide_name).stem.replace("_", " ").replace("-", " ").strip()
         body_lines = lines
@@ -57,7 +62,12 @@ class FlextInfraUtilitiesDocsGuidesMixin:
 
     @staticmethod
     def docs_sanitize_internal_anchor_links(content: str) -> str:
-        """Replace local Markdown links with text while retaining external links."""
+        """Replace local Markdown links with text while retaining external links.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         preserved = (
             *(f"{scheme}:" for scheme in sorted(c.Infra.DOCS_EXTERNAL_SCHEMES)),
             c.Infra.DOCS_FRAGMENT_PREFIX,
@@ -79,7 +89,16 @@ class FlextInfraUtilitiesDocsGuidesMixin:
         repository_root: Path,
         source_states: t.SequenceOf[m.Cli.AtomicFileState],
     ) -> p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]:
-        """Plan root-owned guide projections from authenticated snapshot bytes."""
+        """Plan root-owned guide projections from authenticated snapshot bytes.
+
+        Returns:
+            The resulting
+                ``p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         from flext_infra import u
 
         source_root = repository_root / c.Infra.DIR_DOCS / "guides"

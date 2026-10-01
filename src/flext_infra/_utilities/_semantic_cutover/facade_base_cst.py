@@ -28,7 +28,12 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBaseCst:
         owner: str,
         owner_bound: bool,
     ) -> str:
-        """Return the facade source extending ``owner`` with its layout kept."""
+        """Return the facade source extending ``owner`` with its layout kept.
+
+        Returns:
+            The facade source extending ``owner`` with its layout kept.
+
+        """
         import libcst as cst
 
         class _FacadeBaseTransformer(cst.CSTTransformer):

@@ -40,7 +40,12 @@ class FlextInfraRopeProject(Project):
             }
 
         def read(self, path: str) -> bytes:
-            """Read the exact captured source, including proposed edits."""
+            """Read the exact captured source, including proposed edits.
+
+            Returns:
+                The resulting ``bytes``.
+
+            """
             return self._sources[Path(path).resolve()]
 
     @classmethod
@@ -50,7 +55,15 @@ class FlextInfraRopeProject(Project):
         sources: Mapping[Path, str],
         source_folders: t.SequenceOf[str],
     ) -> Self:
-        """Construct a fresh Rope identity graph without persistent state."""
+        """Construct a fresh Rope identity graph without persistent state.
+
+        Returns:
+            The resulting ``Self``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         if not Path(root).is_dir():
             msg = f"Rope snapshot root must already exist: {root}"
             raise ValueError(msg)
@@ -65,7 +78,12 @@ class FlextInfraRopeProject(Project):
 
     @override
     def _init_source_folders(self) -> None:
-        """Initialize configured source roots without Rope's warning wrapper."""
+        """Initialize configured source roots without Rope's warning wrapper.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         source_folders = self.prefs.get("source_folders", [])
         if source_folders is None:
             msg = (

@@ -38,6 +38,10 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
         while the workspace manifest and ``.gitmodules`` keep HTTPS on
         ``github.com``. Compare the repository path only so gen does not
         false-fail after a successful private checkout.
+
+        Returns:
+            The resulting ``str``.
+
         """
         value = url.strip().removesuffix(".git")
         remote_path = ""
@@ -68,6 +72,10 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
         Unlike ``git submodule status``, this contract includes uninitialized
         submodules and treats an empty file as an empty topology. Malformed,
         duplicate, absolute, or escaping paths fail closed.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[Path]]``.
+
         """
         gitmodules = repository_root / c.Infra.GITMODULES
         if not gitmodules.exists():
@@ -112,6 +120,10 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
 
         The path must be declared exactly once in ``.gitmodules``; a missing
         URL or branch fails closed.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitSubmoduleContractReport]``.
+
         """
         gitmodules = request.repo_root / c.Infra.GITMODULES
         try:
@@ -138,7 +150,15 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
         gitmodules: Path,
         member_path: str,
     ) -> t.Pair[str, str]:
-        """Read URL and branch for one submodule from .gitmodules."""
+        """Read URL and branch for one submodule from .gitmodules.
+
+        Returns:
+            The resulting ``t.Pair[str, str]``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         with GitConfigParser(file_or_files=gitmodules, read_only=True) as config:
             matching_sections = tuple(
                 section
@@ -165,7 +185,15 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
 
     @classmethod
     def git_submodule_paths(cls, repository_root: Path) -> p.Result[t.SequenceOf[Path]]:
-        """Resolve every initialized recursive submodule path."""
+        """Resolve every initialized recursive submodule path.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[Path]]``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         try:
             repo = cls._repo(repository_root)
             status = repo.git.submodule("status", "--recursive")

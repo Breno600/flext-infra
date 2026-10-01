@@ -34,7 +34,12 @@ class FlextInfraRuntimeCensusGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
-        """Run the runtime census scoped to ``project_dir``."""
+        """Run the runtime census scoped to ``project_dir``.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
+        """
         _ = ctx
         started = time.monotonic()
         validator = FlextInfraRuntimeCensusValidator.for_project(

@@ -24,6 +24,10 @@ class FlextInfraUtilitiesCompatibilityAliasValidation:
         """Return the value one module-level statement assigns to ``__all__``.
 
         ``None`` when the statement does not declare the export list at all.
+
+        Returns:
+            The value one module-level statement assigns to ``__all__``.
+
         """
         if (
             isinstance(node, ast.Assign)
@@ -45,7 +49,12 @@ class FlextInfraUtilitiesCompatibilityAliasValidation:
         file_path: Path,
         aliases: frozenset[str],
     ) -> None:
-        """Reject dynamic export ownership before changing an alias owner."""
+        """Reject dynamic export ownership before changing an alias owner.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         if not aliases:
             return
         for node in tree.body:
@@ -70,7 +79,12 @@ class FlextInfraUtilitiesCompatibilityAliasValidation:
         qualified_aliases: t.StrMapping,
         exported_aliases: frozenset[str],
     ) -> None:
-        """Require removed identities and their literal exports to disappear."""
+        """Require removed identities and their literal exports to disappear.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         tree = ast.parse(source, filename=str(file_path))
         for node in tree.body:
             value = FlextInfraUtilitiesCompatibilityAliasValidation._dunder_all_value(

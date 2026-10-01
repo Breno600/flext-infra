@@ -86,7 +86,12 @@ class FlextInfraUtilitiesGitStateCaptureMixin(
         checkpoint: m.Infra.GitWorktreeStateCheckpoint,
         destination_root: Path,
     ) -> p.Result[bool]:
-        """Apply only retained bytes, resuming proven partial prior effects."""
+        """Apply only retained bytes, resuming proven partial prior effects.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         try:
             cls._state_apply(checkpoint, destination_root)
         except (GitCommandError, OSError, ValueError) as exc:
@@ -141,7 +146,12 @@ class FlextInfraUtilitiesGitStateCaptureMixin(
         *,
         publication: m.Infra.GitWorktreeCheckpointPublication,
     ) -> p.Result[bool]:
-        """Restore owned source entries only after live remote retention proof."""
+        """Restore owned source entries only after live remote retention proof.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         try:
             cls._state_cleanup(checkpoint, destination_root, saved_commit, publication)
         except (GitCommandError, OSError, ValueError) as exc:

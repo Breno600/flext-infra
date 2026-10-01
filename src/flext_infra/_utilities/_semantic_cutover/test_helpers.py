@@ -197,7 +197,15 @@ class FlextInfraUtilitiesSemanticTestHelpers(
         path: Path,
         sources: t.MappingKV[Path, str],
     ) -> Path:
-        """Elect the unique declared utilities facade in this helper's tier."""
+        """Elect the unique declared utilities facade in this helper's tier.
+
+        Returns:
+            The resulting ``Path``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         prefix = workspace.convention(path).module_policy.project_prefix
         owners = tuple(
             candidate

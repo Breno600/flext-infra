@@ -20,7 +20,12 @@ class TestsFlextInfraDepsDetectionTypingsFlow:
 
     @staticmethod
     def _governed_follow() -> bool:
-        """Read the governed mypy policy from the typed tooling SSOT."""
+        """Read the governed mypy policy from the typed tooling SSOT.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         return config.Infra.tooling.tools.mypy.boolean_settings.get(
             c.Infra.MYPY_FOLLOW_UNTYPED_IMPORTS,
             c.Infra.MYPY_FOLLOW_UNTYPED_IMPORTS_DEFAULT,
@@ -28,7 +33,12 @@ class TestsFlextInfraDepsDetectionTypingsFlow:
 
     @classmethod
     def _typed_reader(cls, root: Path, *, follow: bool) -> Path:
-        """Write a project declaring CUSTOM typings and one mypy policy."""
+        """Write a project declaring CUSTOM typings and one mypy policy.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         (root / "src" / "typed_reader").mkdir(parents=True)
         (root / "src" / "typed_reader" / c.Infra.INIT_PY).write_text(
             "",

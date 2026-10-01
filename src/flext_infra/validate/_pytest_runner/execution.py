@@ -35,7 +35,12 @@ class FlextInfraPytestRunnerExecution(
         *,
         digest: str | None,
     ) -> p.Result[m.Infra.TestmonCacheState]:
-        """Run the SQLite integrity owner for the testmon database."""
+        """Run the SQLite integrity owner for the testmon database.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.TestmonCacheState]``.
+
+        """
         return FlextInfraTestmonDbInspector(
             repository_root=self.root,
             db_path=self.testmon_db,
@@ -51,6 +56,10 @@ class FlextInfraPytestRunnerExecution(
 
         The coverage verb owns no testmon plugin, so its children neither
         receive nor inherit a testmon database location.
+
+        Returns:
+            The child environment shared by every runner invocation.
+
         """
         testmon_keys = (
             config.Infra.codegen.make.testmon_cache.database_environment_variable,
@@ -78,7 +87,15 @@ class FlextInfraPytestRunnerExecution(
         complete: bool = False,
         verify_inventory: bool = True,
     ) -> m.Infra.PytestSelectionPlan:
-        """Return the typed testmon selection and its manifest owner."""
+        """Return the typed testmon selection and its manifest owner.
+
+        Returns:
+            The typed testmon selection and its manifest owner.
+
+        Raises:
+            RuntimeError: On failure.
+
+        """
         artifact = "testmon-inventory" if complete else "testmon-selection"
         selection_log = report_dir / f"{artifact}.log"
         manifest_path = report_dir / f"{artifact}.json"
@@ -185,6 +202,10 @@ class FlextInfraPytestRunnerExecution(
         content-only workspace shell), not a broken collection. A project that
         DOES own test files but collects nothing keeps the loud failure —
         zero-execution of an existing suite is never a silent pass (law 14).
+
+        Returns:
+            Whether the project owns zero test files by design.
+
         """
         pytest_settings = config.Infra.tooling.tools.pytest
         patterns = ("test_*.py", "*_test.py")
@@ -198,7 +219,12 @@ class FlextInfraPytestRunnerExecution(
         return True
 
     def _process_deadline(self) -> p.Cli.ProcessDeadline:
-        """Use the entrypoint clock for selection, execution, and cleanup."""
+        """Use the entrypoint clock for selection, execution, and cleanup.
+
+        Returns:
+            The resulting ``p.Cli.ProcessDeadline``.
+
+        """
         pytest_settings = config.Infra.tooling.tools.pytest
         return m.Cli.ProcessDeadline(
             expires_at_monotonic=self.started_at_monotonic
@@ -213,7 +239,12 @@ class FlextInfraPytestRunnerExecution(
         *,
         execution_mode: c.Infra.PytestExecutionMode,
     ) -> p.Cli.ProcessOutcome:
-        """Execute one suite argv under the shared deadline and environment."""
+        """Execute one suite argv under the shared deadline and environment.
+
+        Returns:
+            The resulting ``p.Cli.ProcessOutcome``.
+
+        """
         u.Cli.atomic_write_text_file(
             report_dir / "command.txt",
             f"{shlex.join(command)}\n",
@@ -235,7 +266,12 @@ class FlextInfraPytestRunnerExecution(
         phase: str,
         outcome: p.Cli.ProcessOutcome,
     ) -> None:
-        """Preserve the process owner's causal fields even when JUnit is absent."""
+        """Preserve the process owner's causal fields even when JUnit is absent.
+
+        Raises:
+            RuntimeError: On failure.
+
+        """
         recorded = m.Cli.ProcessOutcome.model_validate(outcome, from_attributes=True)
         receipt = report_dir / f"{phase}-outcome.json"
         u.Cli.atomic_write_text_file(
@@ -260,6 +296,10 @@ class FlextInfraPytestRunnerExecution(
         TestsFailed; it is still one completed suite lifecycle whose bounded
         evidence must be published. An operator signal keeps forwarded_signal
         set and never qualifies.
+
+        Returns:
+            Whether a failing suite still finished its lifecycle.
+
         """
         return (
             outcome.raw_return_code
@@ -288,7 +328,15 @@ class FlextInfraPytestRunnerExecution(
         raw_return_code: int = 0,
         cache_hit: bool = False,
     ) -> p.Result[int]:
-        """Reject incomplete evidence and publish one bounded summary."""
+        """Reject incomplete evidence and publish one bounded summary.
+
+        Returns:
+            The resulting ``p.Result[int]``.
+
+        Raises:
+            RuntimeError: On failure.
+
+        """
         diagnostics = self._diagnostics(report_dir).unwrap()
         accounting = self._accounting(
             report_dir / "junit.xml",
@@ -415,18 +463,33 @@ class FlextInfraPytestRunnerExecution(
 
     @override
     def execute(self) -> p.Result[int]:
-        """Execute the incremental testmon operation."""
+        """Execute the incremental testmon operation.
+
+        Returns:
+            The resulting ``p.Result[int]``.
+
+        """
         return self._execute_testmon(complete=False)
 
     def execute_full(self) -> p.Result[int]:
-        """Run incremental then full under one deadline and persistent database."""
+        """Run incremental then full under one deadline and persistent database.
+
+        Returns:
+            The resulting ``p.Result[int]``.
+
+        """
         incremental_exit = self.execute().unwrap()
         if incremental_exit:
             return r.ok(incremental_exit)
         return self._execute_testmon(complete=True)
 
     def _execute_testmon(self, *, complete: bool) -> p.Result[int]:
-        """Execute one selected testmon phase without resetting shared state."""
+        """Execute one selected testmon phase without resetting shared state.
+
+        Returns:
+            The resulting ``p.Result[int]``.
+
+        """
         execution_mode = (
             c.Infra.PytestExecutionMode.FULL
             if complete
@@ -460,7 +523,15 @@ class FlextInfraPytestRunnerExecution(
         complete: bool,
         execution_mode: c.Infra.PytestExecutionMode,
     ) -> p.Result[int]:
-        """Run one testmon phase while holding the database lease."""
+        """Run one testmon phase while holding the database lease.
+
+        Returns:
+            The resulting ``p.Result[int]``.
+
+        Raises:
+            RuntimeError: On failure.
+
+        """
         report_dir = self._report_directory()
         self._write_run_context(
             report_dir,
@@ -554,6 +625,10 @@ class FlextInfraPytestRunnerExecution(
         The coverage artifact is validated here; coverage is reported, never gated.
         A completed failing suite writes no coverage artifact but still
         publishes its accounting and diagnostics with the original exit code.
+
+        Returns:
+            The resulting ``p.Result[int]``.
+
         """
         report_dir = self._report_directory()
         self._write_run_context(

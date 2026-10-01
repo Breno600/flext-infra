@@ -34,7 +34,12 @@ class FlextInfraScannerGateMixin(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
-        """Scan all Python files in ``project_dir`` and report detected issues."""
+        """Scan all Python files in ``project_dir`` and report detected issues.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
+        """
         _ = ctx
         started = time.monotonic()
         files_result = u.Infra.iter_python_files(
@@ -75,7 +80,12 @@ class FlextInfraScannerGateMixin(FlextInfraGate):
         project_dir: Path,
         rope_project: t.Infra.RopeProject,
     ) -> t.SequenceOf[m.Infra.Issue]:
-        """Override in subclass to detect issues for a single file."""
+        """Override in subclass to detect issues for a single file.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.Issue]``.
+
+        """
         _ = file_path, project_dir, rope_project
         return ()
 

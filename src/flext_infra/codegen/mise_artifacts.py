@@ -48,7 +48,12 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
 
     @staticmethod
     def _tool_version(raw_tool: t.JsonValue) -> str | None:
-        """Return one version selector from either supported Mise tool shape."""
+        """Return one version selector from either supported Mise tool shape.
+
+        Returns:
+            One version selector from either supported Mise tool shape.
+
+        """
         candidate = (
             raw_tool.get("version") if isinstance(raw_tool, Mapping) else raw_tool
         )
@@ -82,6 +87,10 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
         belongs to the lockfile's cache key (``aube.path``). Copied into the
         selector it makes ``mise install`` fail with "not in the lockfile" and
         aborts the fleet's ``make setup`` before any verb can run.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         annotated = tuple(
             f"{selector}={version}"
@@ -97,7 +106,12 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
 
     @classmethod
     def _validate_config(cls, project_root: Path) -> p.Result[bool]:
-        """Validate the generated ``.mise.toml`` declaration offline."""
+        """Validate the generated ``.mise.toml`` declaration offline.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         config_result = cls._read_toml(project_root / c.Infra.CONFIG_SPEC[0])
         if config_result.failure:
             return r[bool].from_failure(config_result)
@@ -116,6 +130,10 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
         The pin and launchers derive from the runtime root's `make upg`
         output: every launcher bakes the pinned release, and a member's triple
         is byte-identical to its runtime root's.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         declared = self._validate_config(project_root)
         if declared.failure:
@@ -124,7 +142,12 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Validate generated Mise declarations and launchers entirely offline."""
+        """Validate generated Mise declarations and launchers entirely offline.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         declared = self._validate_config(self.repository_root)
         if declared.failure or self.config_only:
             return declared

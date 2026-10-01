@@ -26,12 +26,22 @@ class FlextInfraGitService(s[m.Infra.GitStatusReport]):
     ] = None
 
     def _repo(self) -> Path:
-        """Resolve the single repository root for this invocation."""
+        """Resolve the single repository root for this invocation.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         return (self.repository or self.repository_root).expanduser().resolve()
 
     @override
     def execute(self) -> p.Result[m.Infra.GitStatusReport]:
-        """Capture porcelain status for the selected repository."""
+        """Capture porcelain status for the selected repository.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitStatusReport]``.
+
+        """
         return u.Infra.git_status(m.Infra.GitStatusRequest(repo_root=self._repo()))
 
     @classmethod
@@ -39,7 +49,12 @@ class FlextInfraGitService(s[m.Infra.GitStatusReport]):
         cls,
         request: m.Infra.GitStatusRequest,
     ) -> p.Result[m.Infra.GitStatusReport]:
-        """Fail when the selected repository has staged, unstaged, or untracked work."""
+        """Fail when the selected repository has staged, unstaged, or untracked work.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitStatusReport]``.
+
+        """
         report = cls(repository_root=request.repo_root).execute()
         if report.failure:
             return report

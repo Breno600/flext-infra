@@ -27,7 +27,12 @@ class TestsFlextInfraCodegenLayout:
 
     @staticmethod
     def _fresh_layout_report(project: Path) -> m.Infra.LayoutProjectReport:
-        """Load consumer-owned configuration in a new public-service process."""
+        """Load consumer-owned configuration in a new public-service process.
+
+        Returns:
+            The resulting ``m.Infra.LayoutProjectReport``.
+
+        """
         process = tm.ok(
             u.Cli.run_raw(
                 [

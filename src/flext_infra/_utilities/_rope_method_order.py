@@ -31,7 +31,12 @@ class FlextInfraUtilitiesRopeMethodOrderMixin:
         method: m.Infra.MethodInfo,
         rule: m.Infra.MethodOrderRule,
     ) -> bool:
-        """Check if a method matches an ordering rule."""
+        """Check if a method matches an ordering rule.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         decorators = set(method.decorators)
         excludes = set(rule.exclude_decorators)
         match rule.visibility:
@@ -64,7 +69,12 @@ class FlextInfraUtilitiesRopeMethodOrderMixin:
         method: m.Infra.MethodInfo,
         order_config: t.SequenceOf[m.Infra.MethodOrderRule],
     ) -> t.Triple[int, int, str]:
-        """Build a sort key tuple for method ordering."""
+        """Build a sort key tuple for method ordering.
+
+        Returns:
+            The resulting ``t.Triple[int, int, str]``.
+
+        """
         cls = FlextInfraUtilitiesRopeMethodOrderMixin
         for index, rule in enumerate(order_config):
             if rule.category == "class_attributes":
@@ -82,7 +92,12 @@ class FlextInfraUtilitiesRopeMethodOrderMixin:
 
     @staticmethod
     def categorize_method(name: str, decorators: t.StrSequence) -> str:
-        """Categorize a method by its decorators and name pattern."""
+        """Categorize a method by its decorators and name pattern.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         result: str
         if c.Infra.PROPERTY_DECORATORS.intersection(decorators):
             result = c.Infra.MethodCategory.PROPERTY

@@ -283,7 +283,12 @@ class TestsFlextInfraRefactorMainCli:
 
     @staticmethod
     def _impact_map_entries(impact_map_path: Path) -> list[t.JsonMapping]:
-        """Read the written impact map and return its typed file entries."""
+        """Read the written impact map and return its typed file entries.
+
+        Returns:
+            The resulting ``list[t.JsonMapping]``.
+
+        """
         payload_result = u.Cli.json_read(impact_map_path)
         tm.ok(payload_result)
         payload = u.Tests.toml_mapping(payload_result.unwrap())
@@ -306,7 +311,12 @@ class TestsFlextInfraRefactorMainCli:
         tmp_path: Path,
         module_source: str,
     ) -> t.Pair[Path, Path]:
-        """Build a lazy-init demo package holding one authored ``models.py``."""
+        """Build a lazy-init demo package holding one authored ``models.py``.
+
+        Returns:
+            The resulting ``t.Pair[Path, Path]``.
+
+        """
         workspace, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
             project_name="flext-demo",
@@ -325,7 +335,12 @@ class TestsFlextInfraRefactorMainCli:
         test_source: str | None = None,
         init_source: str = _FUTURE_INIT,
     ) -> t.Pair[Path, Path]:
-        """Build the ``sample_pkg`` workspace around one service module."""
+        """Build the ``sample_pkg`` workspace around one service module.
+
+        Returns:
+            The resulting ``t.Pair[Path, Path]``.
+
+        """
         workspace = tmp_path / "workspace"
         cls._write_workspace_pyproject(workspace)
         cls._write(workspace / "src" / "sample_pkg" / "__init__.py", init_source)

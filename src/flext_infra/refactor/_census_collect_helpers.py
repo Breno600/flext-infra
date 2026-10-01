@@ -73,7 +73,12 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
 
     @staticmethod
     def _should_collect_object_references(rule_names: t.StrSequence | None) -> bool:
-        """Decide whether to collect object references."""
+        """Decide whether to collect object references.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         if rule_names is None:
             return True
         return "unused" in rule_names
@@ -83,7 +88,12 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
         module: m.Infra.RopeModuleIndexEntry,
         convention: m.Infra.RopeModuleConvention,
     ) -> str:
-        """Project name for a module entry."""
+        """Project name for a module entry.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         layout = convention.project_layout
         if layout is not None:
             return layout.project_name
@@ -93,7 +103,12 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
 
     @staticmethod
     def _is_production_module(module: m.Infra.RopeModuleIndexEntry) -> bool:
-        """Return whether a module belongs to one configured production root."""
+        """Return whether a module belongs to one configured production root.
+
+        Returns:
+            Whether a module belongs to one configured production root.
+
+        """
         project_root = module.project_root
         if project_root is None:
             return False
@@ -108,7 +123,12 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
         self,
         rope: p.Infra.RopeWorkspaceDsl,
     ) -> m.Infra.WorkspaceReport:
-        """Inventory the selected modules then assemble the census report."""
+        """Inventory the selected modules then assemble the census report.
+
+        Returns:
+            The resulting ``m.Infra.WorkspaceReport``.
+
+        """
         kind_names = self.kind_names
         rule_names = self.rule_names
         scan_config = m.Infra.ScanConfig(

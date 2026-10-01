@@ -25,7 +25,12 @@ class TestsFlextInfraDocsRenderGuidesIndex:
 
     @staticmethod
     def _scope(tmp_path: Path) -> m.Infra.DocScope:
-        """Return one isolated doc scope rooted at the fixture directory."""
+        """Return one isolated doc scope rooted at the fixture directory.
+
+        Returns:
+            One isolated doc scope rooted at the fixture directory.
+
+        """
         return m.Infra.DocScope(
             name="fixture-project",
             path=tmp_path,

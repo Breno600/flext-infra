@@ -42,7 +42,12 @@ class TestsFlextInfraReleaseDag:
 
         @staticmethod
         def policy_snapshot(workspace: Path, name: str) -> bytes:
-            """Read one immutable policy file a build phase snapshotted."""
+            """Read one immutable policy file a build phase snapshotted.
+
+            Returns:
+                The resulting ``bytes``.
+
+            """
             return (
                 u.Tests.release_report_dir(workspace, c.Tests.RELEASE_VERSION_BASE)
                 / "policy"

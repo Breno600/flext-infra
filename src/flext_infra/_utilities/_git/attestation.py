@@ -122,7 +122,12 @@ class FlextInfraUtilitiesGitAttestationMixin(
         cls,
         request: m.Infra.GateAttestationCreateRequest,
     ) -> p.Result[m.Infra.GateAttestationReport]:
-        """Create the exact signed tag for a validated HEAD predicate."""
+        """Create the exact signed tag for a validated HEAD predicate.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GateAttestationReport]``.
+
+        """
         repo_root = Path(request.workspace).expanduser().resolve()
         predicate_result = cls._attestation_predicate(request)
         if predicate_result.failure:
@@ -150,7 +155,12 @@ class FlextInfraUtilitiesGitAttestationMixin(
         cls,
         request: m.Infra.GateAttestationVerifyRequest,
     ) -> p.Result[m.Infra.GateAttestationReport]:
-        """Verify signature, signer, HEAD identity, and exact gate coverage."""
+        """Verify signature, signer, HEAD identity, and exact gate coverage.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GateAttestationReport]``.
+
+        """
         repo_root = Path(request.workspace).expanduser().resolve()
         allowed = Path(request.allowed_signers).expanduser().resolve()
         if not allowed.is_file():

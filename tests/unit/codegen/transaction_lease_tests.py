@@ -95,6 +95,10 @@ class TestsFlextInfraTransactionLease:
         ``Path`` specialization at the call site (a second, independent type
         variable on ``ok`` itself), so a concretely annotated wrapper is the
         typed fix rather than widening ``run_locked``'s signature.
+
+        Returns:
+            The resulting ``p.Result[Path]``.
+
         """
         return r[Path].ok(scope)
 

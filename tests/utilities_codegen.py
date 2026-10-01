@@ -26,7 +26,12 @@ class TestsFlextInfraUtilitiesCodegenMixin:
 
     @staticmethod
     def family_public_module(family: str) -> str:
-        """Return the public facade module stem the core package gives a letter."""
+        """Return the public facade module stem the core package gives a letter.
+
+        Returns:
+            The public facade module stem the core package gives a letter.
+
+        """
         return u.Infra.facade_families()[family].module
 
     @staticmethod
@@ -36,6 +41,10 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         Reads the same typed SSOT production reads (P0): fixture
         workspaces carry the real policy — select, preview and the
         per-file-ignores map — never a hand-rolled fragment.
+
+        Returns:
+            The resulting ``str``.
+
         """
         ruff_cfg = config.Infra.tooling.tools.ruff
         select = ", ".join(f'"{rule}"' for rule in sorted(ruff_cfg.lint.select))
@@ -71,7 +80,12 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         scope: c.Infra.CodegenConformScope = c.Infra.CodegenConformScope.SELF,
         mode: c.Infra.CodegenConformMode = c.Infra.CodegenConformMode.CHECK,
     ) -> m.Infra.CodegenConformRequest:
-        """Build one codegen conform request; every default is the model's own."""
+        """Build one codegen conform request; every default is the model's own.
+
+        Returns:
+            The resulting ``m.Infra.CodegenConformRequest``.
+
+        """
         return m.Infra.CodegenConformRequest(
             root=root,
             what=what,
@@ -84,7 +98,12 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         root: Path,
         workspace: m.Infra.WorkspaceSpec,
     ) -> m.Infra.CodegenPlan:
-        """Plan one fixture workspace through the public conform boundary."""
+        """Plan one fixture workspace through the public conform boundary.
+
+        Returns:
+            The resulting ``m.Infra.CodegenPlan``.
+
+        """
         request = TestsFlextInfraUtilitiesCodegenMixin.conform_request(root)
         return tm.ok(
             FlextInfraCodegenConform(
@@ -105,6 +124,10 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         Without members the fixture repository is standalone; each member
         makes it a workspace composing that project, so generated surfaces
         are observed exactly as the public codegen owner renders them.
+
+        Returns:
+            The resulting ``m.Infra.CodegenPlan``.
+
         """
         fixture = TestsFlextInfraUtilitiesProjectFixtureMixin
         # A governed repository carries its committed Mise lock; generation
@@ -136,7 +159,12 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         *,
         members: t.StrSequence = (),
     ) -> str:
-        """Return one rendered scaffold artifact, failing when it is not planned."""
+        """Return one rendered scaffold artifact, failing when it is not planned.
+
+        Returns:
+            One rendered scaffold artifact, failing when it is not planned.
+
+        """
         return tm.not_none(
             TestsFlextInfraUtilitiesCodegenMixin.planned_text(
                 TestsFlextInfraUtilitiesCodegenMixin.scaffold_plan(
@@ -149,7 +177,12 @@ class TestsFlextInfraUtilitiesCodegenMixin:
 
     @staticmethod
     def governed_project_plan(root: Path) -> m.Infra.CodegenPlan:
-        """Plan every declared artifact of one governed fixture project read-only."""
+        """Plan every declared artifact of one governed fixture project read-only.
+
+        Returns:
+            The resulting ``m.Infra.CodegenPlan``.
+
+        """
         for entry in config.Infra.codegen.templates.entries:
             destination = entry.destination.format(
                 package_name="fixture_project",
@@ -180,7 +213,12 @@ class TestsFlextInfraUtilitiesCodegenMixin:
 
     @staticmethod
     def planned_text(plan: m.Infra.CodegenPlan, destination: str) -> str | None:
-        """Return the desired text of the plan entry ending with ``destination``."""
+        """Return the desired text of the plan entry ending with ``destination``.
+
+        Returns:
+            The desired text of the plan entry ending with ``destination``.
+
+        """
         match = next(
             (item for item in plan.files if item.path.as_posix().endswith(destination)),
             None,
@@ -198,7 +236,12 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         project_name: str = "flext-test-project",
         package_name: str = "flext_test_project",
     ) -> t.Pair[Path, Path]:
-        """Provide the typed test helper `create_lazy_init_workspace`."""
+        """Provide the typed test helper `create_lazy_init_workspace`.
+
+        Returns:
+            The resulting ``t.Pair[Path, Path]``.
+
+        """
         repository_root = tmp_path / project_name
         package_root = repository_root / c.Infra.DEFAULT_SRC_DIR / package_name
         package_root.mkdir(parents=True)
@@ -266,7 +309,12 @@ class TestsFlextInfraUtilitiesCodegenMixin:
 
     @staticmethod
     def run_lazy_init(repository_root: Path, *, check_only: bool = False) -> int:
-        """Materialize immutable lazy-init plans only inside test workspaces."""
+        """Materialize immutable lazy-init plans only inside test workspaces.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         service = FlextInfraCodegenLazyInit(repository_root=repository_root)
         planned = service.plan_files().unwrap()
         changed = tuple(
@@ -287,12 +335,21 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         ownership stops the phase before a single file plan is built. A helper
         that unwraps turns that refusal into an exception and makes the
         pre-effect contract unobservable through the public surface.
+
+        Returns:
+            The lazy-init planning receipt WITHOUT unwrapping it.
+
         """
         return FlextInfraCodegenLazyInit(repository_root=repository_root).plan_files()
 
     @staticmethod
     def materialize_lazy_init(service: FlextInfraCodegenLazyInit) -> p.Result[bool]:
-        """Publish one service plan through canonical guarded file primitives."""
+        """Publish one service plan through canonical guarded file primitives.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         planned = service.plan_files()
         if planned.failure:
             return r[bool].from_failure(planned)
@@ -304,7 +361,12 @@ class TestsFlextInfraUtilitiesCodegenMixin:
     def materialize_codegen_plans(
         planned: p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]],
     ) -> p.Result[bool]:
-        """Publish immutable codegen plans only inside test workspaces."""
+        """Publish immutable codegen plans only inside test workspaces.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         if planned.failure:
             return r[bool].from_failure(planned)
         changed = tuple(
@@ -341,14 +403,24 @@ class TestsFlextInfraUtilitiesCodegenMixin:
 
     @staticmethod
     def create_lazy_init_service(repository_root: Path) -> FlextInfraCodegenLazyInit:
-        """Provide the typed test helper `create_lazy_init_service`."""
+        """Provide the typed test helper `create_lazy_init_service`.
+
+        Returns:
+            The resulting ``FlextInfraCodegenLazyInit``.
+
+        """
         return FlextInfraCodegenLazyInit(repository_root=repository_root)
 
     @staticmethod
     def lazy_init_scenario(
         tmp_path: Path,
     ) -> t.Triple[Path, Path, FlextInfraCodegenLazyInit]:
-        """Create the workspace, write its namespace module, build the service."""
+        """Create the workspace, write its namespace module, build the service.
+
+        Returns:
+            The resulting ``t.Triple[Path, Path, FlextInfraCodegenLazyInit]``.
+
+        """
         repository_root, package_root = (
             TestsFlextInfraUtilitiesCodegenMixin.create_lazy_init_workspace(tmp_path)
         )
@@ -365,7 +437,12 @@ class TestsFlextInfraUtilitiesCodegenMixin:
 
     @staticmethod
     def extract_lazy_init_exports(source: str) -> t.Pair[bool, t.StrSequence]:
-        """Read the published lazy export contract through the public source reader."""
+        """Read the published lazy export contract through the public source reader.
+
+        Returns:
+            The resulting ``t.Pair[bool, t.StrSequence]``.
+
+        """
         exports = u.Infra.module_assignment_strings_source(source, c.Infra.DUNDER_ALL)
         return (bool(exports), exports)
 
@@ -376,7 +453,12 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         project: str | None = None,
         dry_run: bool = True,
     ) -> p.Result[str]:
-        """Provide the typed test helper `consolidate_codegen`."""
+        """Provide the typed test helper `consolidate_codegen`.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         service: FlextInfraCodegenConsolidator = FlextInfraCodegenConsolidator(
             repository_root=repository_root,
             dry_run=dry_run,

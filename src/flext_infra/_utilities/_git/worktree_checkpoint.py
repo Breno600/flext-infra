@@ -34,7 +34,12 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
         message: str,
         excluded: t.SequenceOf[Path] = (),
     ) -> p.Result[str]:
-        """Commit the complete isolated state as a synthetic checkpoint."""
+        """Commit the complete isolated state as a synthetic checkpoint.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         # `make setup` fast-forwards every declared submodule to its branch tip by
         # contract, so staging gitlinks made the checkpoint differ from HEAD before
         # the verb even ran: every later verb then reported pending changes for
@@ -65,6 +70,13 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
         GitPython types every command result as ``bytes | str |`` the
         extended-output tuple; the tuple shape only exists behind
         ``with_extended_output``, which the checkpoint commands never request.
+
+        Returns:
+            The resulting ``str``.
+
+        Raises:
+            TypeError: On failure.
+
         """
         if isinstance(output, bytes):
             return output.decode(c.Cli.ENCODING_DEFAULT)
@@ -81,7 +93,15 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
         excluded: t.SequenceOf[Path],
         message: str,
     ) -> str:
-        """Stage all state and create a synthetic checkpoint commit-tree."""
+        """Stage all state and create a synthetic checkpoint commit-tree.
+
+        Returns:
+            The resulting ``str``.
+
+        Raises:
+            OSError: On failure.
+
+        """
         repo = cls._repo(worktree_root)
         if excluded:
             tracked_output = repo.git.ls_files(
@@ -137,7 +157,12 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
 
     @staticmethod
     def _transaction_exclusion_pathspecs() -> t.VariadicTuple[str]:
-        """Pathspecs that exclude tool-cache directories from operation deltas."""
+        """Pathspecs that exclude tool-cache directories from operation deltas.
+
+        Returns:
+            The resulting ``t.VariadicTuple[str]``.
+
+        """
         return tuple(
             f":(exclude){name}"
             for name in sorted(c.Infra.WORKTREE_TRANSACTION_EXCLUDED_DIRS)
@@ -150,7 +175,12 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
         *,
         source_gitlinks: t.MappingKV[str, str] | None = None,
     ) -> p.Result[m.Infra.RepositoryDelta]:
-        """Stage and capture the operation-only patch after a checkpoint."""
+        """Stage and capture the operation-only patch after a checkpoint.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.RepositoryDelta]``.
+
+        """
         head_result = cls._git_head_oid(repository.worktree_root)
         if head_result.failure or head_result.value != repository.checkpoint_sha:
             return r[m.Infra.RepositoryDelta].fail(

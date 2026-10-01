@@ -29,7 +29,12 @@ class FlextInfraLspDiagnosticsDetector:
 
     @classmethod
     def validate(cls, repository_root: Path, files: Iterable[Path]) -> p.Result[bool]:
-        """Require clean diagnostics from a complete request/response lifecycle."""
+        """Require clean diagnostics from a complete request/response lifecycle.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         root = repository_root.resolve()
         targets = tuple(
             sorted({
@@ -226,7 +231,12 @@ class FlextInfraLspDiagnosticsDetector:
 
     @classmethod
     def _frame(cls, payload: t.JsonMapping) -> bytes:
-        """Frame one validated JSON-RPC payload for LSP stdio transport."""
+        """Frame one validated JSON-RPC payload for LSP stdio transport.
+
+        Returns:
+            The resulting ``bytes``.
+
+        """
         body = u.Cli.json_dumps(dict(payload)).unwrap().encode(c.Cli.ENCODING_DEFAULT)
         return (
             cls._CONTENT_LENGTH

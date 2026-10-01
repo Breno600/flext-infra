@@ -29,7 +29,12 @@ class TestsFlextInfraCodegenWorkflowRetirement:
         *,
         publishes_release: bool,
     ) -> m.Infra.WorkspaceSpec:
-        """Declare release capability through the real repository manifest."""
+        """Declare release capability through the real repository manifest.
+
+        Returns:
+            The resulting ``m.Infra.WorkspaceSpec``.
+
+        """
         TestsFlextInfraConformSupport.seed_infra_package_tree(root)
         manifest_path = test_u.Tests.write_standalone_workspace_manifest(
             root,

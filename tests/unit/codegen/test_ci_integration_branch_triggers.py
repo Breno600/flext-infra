@@ -26,7 +26,12 @@ class TestsFlextInfraCiIntegrationBranchTriggers:
 
     @classmethod
     def render_ci(cls, *, repository_branch: str) -> str:
-        """Provide ``render_ci``."""
+        """Provide ``render_ci``.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         spec = CodegenTestSupport.Ci.workflow_spec(
             dist="mcb",
             make_profile=c.Infra.MakeProfile.STANDALONE,

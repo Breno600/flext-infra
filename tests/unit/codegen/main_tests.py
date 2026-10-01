@@ -29,6 +29,10 @@ class TestsFlextInfraCodegenMain:
         The bootstrap projection reads declarations only: ``config/workspace.yaml``
         when present, otherwise the project name and its provider-matched
         Repository URL. A checkout with neither has no identity to render.
+
+        Returns:
+            The resulting ``Path``.
+
         """
         repository = u.Tests.repository_ref(repo.name)
         (repo / "pyproject.toml").write_text(
@@ -83,7 +87,12 @@ class TestsFlextInfraCodegenMain:
 
     @staticmethod
     def _mise_transaction_state(root: Path) -> t.Pair[Path, Path]:
-        """Return the workspace journal and the Mise transaction state root."""
+        """Return the workspace journal and the Mise transaction state root.
+
+        Returns:
+            The workspace journal and the Mise transaction state root.
+
+        """
         identity = u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=root)).unwrap()
         return (
             identity.git_dir / c.Infra.JOURNAL_NAME,
@@ -92,7 +101,12 @@ class TestsFlextInfraCodegenMain:
 
     @staticmethod
     def _public_conform_command(root: Path) -> list[str]:
-        """Build the real CLI command whose final argument selects check or apply."""
+        """Build the real CLI command whose final argument selects check or apply.
+
+        Returns:
+            The resulting ``list[str]``.
+
+        """
         return [
             sys.executable,
             "-m",
@@ -309,7 +323,12 @@ class TestsFlextInfraCodegenMain:
         def test_present_invalid_mise_artifact_never_enters_external_resolution(
             infra_git_repo: Path,
         ) -> None:
-            """Reject a present invalid artifact before credential/network work."""
+            """Reject a present invalid artifact before credential/network work.
+
+            Raises:
+                AssertionError: On failure.
+
+            """
             root = infra_git_repo
             TestsFlextInfraCodegenMain._seed_public_conform_checkout(root)
             launcher = root / "bin" / "mise"

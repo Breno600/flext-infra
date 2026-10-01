@@ -31,7 +31,12 @@ class TestsFlextInfraDepsModernizerPyright:
         tool_config_document: m.Infra.ToolConfigDocument,
         context: m.Infra.PyprojectAnalyzerContext,
     ) -> t.JsonMapping:
-        """Apply the phase twice to an empty payload; return the converged table."""
+        """Apply the phase twice to an empty payload; return the converged table.
+
+        Returns:
+            The resulting ``t.JsonMapping``.
+
+        """
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python({})
         phase = FlextInfraEnsurePyrightConfigPhase(tool_config_document)
         changes = [phase.apply_payload(payload, context=context) for _ in range(2)]
@@ -45,7 +50,12 @@ class TestsFlextInfraDepsModernizerPyright:
 
     @staticmethod
     def _sample_project(tmp_path: Path, source_dir_name: str) -> Path:
-        """Create one governed flext-sample project with a src package and manifest."""
+        """Create one governed flext-sample project with a src package and manifest.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         u.Tests.seed_locked_taplo(tmp_path)
         project_dir = tmp_path / "flext-sample"
         source_dir = project_dir / source_dir_name / "flext_sample"

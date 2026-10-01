@@ -76,6 +76,10 @@ class FlextInfraPyprojectModernizerTooling:
         scaffold knows its future roots before they exist on disk; filesystem
         discovery would find none and silently produce a different fixed point
         than the post-write conformance pass. An empty topology keeps discovery.
+
+        Returns:
+            One canonical pyproject using the same phases as workspace apply.
+
         """
         state = self._read_document_state(path, source=source)
         if state.failure:
@@ -109,7 +113,12 @@ class FlextInfraPyprojectModernizerTooling:
         path: Path,
         topology: m.Infra.PyprojectDeclaredTopology,
     ) -> p.Result[m.Infra.ToolingRuntimeContext]:
-        """Resolve typed Jinja values from the seed conformed to one topology."""
+        """Resolve typed Jinja values from the seed conformed to one topology.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ToolingRuntimeContext]``.
+
+        """
         result_type = r[m.Infra.ToolingRuntimeContext]
         seed: t.JsonMapping = {
             c.Infra.PROJECT: {c.Infra.NAME: project_name},

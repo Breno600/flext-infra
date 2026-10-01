@@ -49,7 +49,12 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
         tree: ast.Module,
         plan: m.Infra.PrivateImportRewritePlan,
     ) -> frozenset[str]:
-        """Return facades required outside a ``TYPE_CHECKING`` boundary."""
+        """Return facades required outside a ``TYPE_CHECKING`` boundary.
+
+        Returns:
+            Facades required outside a ``TYPE_CHECKING`` boundary.
+
+        """
         parents = {
             child: parent
             for parent in ast.walk(tree)
@@ -100,7 +105,15 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
         sources: t.MappingKV[Path, str],
         findings: t.SequenceOf[m.Infra.ModScanFinding],
     ) -> t.Infra.PrivateImportReferences:
-        """Resolve every reported cross-owner private import to its public owner."""
+        """Resolve every reported cross-owner private import to its public owner.
+
+        Returns:
+            The resulting ``t.Infra.PrivateImportReferences``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         cross_owner_statements: list[str] = []
         for finding in findings:
             statement = cls._finding_statement(finding)
@@ -205,7 +218,12 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
         sources: t.MappingKV[Path, str],
         findings: t.SequenceOf[m.Infra.ModScanFinding],
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
-        """Plan binding-aware public import rewrites."""
+        """Plan binding-aware public import rewrites.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
+
+        """
         planned_edits = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
         specs, direct_specs, facades = cls._private_import_references(
             root,
@@ -242,7 +260,15 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
         direct_specs: t.MappingKV[str, t.Pair[str, str]],
         facades: t.MappingKV[str, t.VariadicTuple[t.Quad[ast.Module, str, str, str]]],
     ) -> t.Infra.TransformResult:
-        """Rewrite one module's private imports and prove zero residue."""
+        """Rewrite one module's private imports and prove zero residue.
+
+        Returns:
+            The resulting ``t.Infra.TransformResult``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         tree = ast.parse(source, filename=str(file_path))
         removals: MutableMapping[str, set[str]] = {}
         obsolete_imports: MutableMapping[str, set[str]] = {}

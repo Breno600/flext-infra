@@ -43,7 +43,12 @@ class FlextInfraWrapperRootNamespaceRefactor(
 
     @override
     def execute(self) -> p.Result[t.JsonPayload]:
-        """Discover wrapper files, rewrite ``Core.Tests`` chains, persist results."""
+        """Discover wrapper files, rewrite ``Core.Tests`` chains, persist results.
+
+        Returns:
+            The resulting ``p.Result[t.JsonPayload]``.
+
+        """
         scan = self._scan_workspace()
         if scan.failure:
             return r[t.JsonPayload].from_failure(scan)
@@ -80,7 +85,13 @@ class FlextInfraWrapperRootNamespaceRefactor(
             frozenset[str],
         ]
     ]:
-        """Resolve project paths and discover Python files + runtime alias map."""
+        """Resolve project paths and discover Python files + runtime alias map.
+
+        Returns:
+            The resulting ``p.Result[t.Triple[t.SequenceOf[Path], MutableMapping[str,
+                frozenset[str]], frozenset[str]]]``.
+
+        """
         selected_projects: t.StrSequence = (
             self.project_names if self.project_names is not None else ()
         )
@@ -129,7 +140,12 @@ class FlextInfraWrapperRootNamespaceRefactor(
         *,
         expected_sources: Mapping[Path, str],
     ) -> str | None:
-        """Write batched updates via the protected pipeline; ``None`` on success."""
+        """Write batched updates via the protected pipeline; ``None`` on success.
+
+        Returns:
+            The resulting ``str | None``.
+
+        """
         if not updates:
             return None
         ok, report = u.Infra.protected_source_writes(
@@ -149,7 +165,12 @@ class FlextInfraWrapperRootNamespaceRefactor(
         files_scanned: int,
         accumulator: m.Infra.WrapperRewriteAccumulator,
     ) -> t.MutableJsonMapping:
-        """Build the canonical JSON payload from the accumulated wrapper run state."""
+        """Build the canonical JSON payload from the accumulated wrapper run state.
+
+        Returns:
+            The resulting ``t.MutableJsonMapping``.
+
+        """
         mode_value = (
             "check"
             if self.check_only

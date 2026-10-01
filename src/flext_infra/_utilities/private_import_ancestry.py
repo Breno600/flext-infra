@@ -19,7 +19,12 @@ class FlextInfraUtilitiesPrivateImportAncestry:
     def class_bases(
         sources: t.MappingKV[str, t.Pair[str, bool]],
     ) -> t.MappingKV[str, t.VariadicTuple[str]]:
-        """Index static class ancestry, including private intermediate owners."""
+        """Index static class ancestry, including private intermediate owners.
+
+        Returns:
+            The resulting ``t.MappingKV[str, t.VariadicTuple[str]]``.
+
+        """
         bases: t.MutableMappingKV[str, t.VariadicTuple[str]] = {}
         for module, (source, is_package) in sources.items():
             tree = ast.parse(source, filename=module)

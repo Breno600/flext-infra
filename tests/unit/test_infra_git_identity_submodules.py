@@ -26,14 +26,24 @@ class TestsFlextInfraGitIdentitySubmodules:
 
     @staticmethod
     def _repo(root: Path) -> Path:
-        """Initialize one real Git repository carrying a single commit."""
+        """Initialize one real Git repository carrying a single commit.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         root.mkdir(parents=True, exist_ok=True)
         test_u.Tests.initialize_git_repo(root)
         return root
 
     @classmethod
     def _superproject(cls, tmp_path: Path) -> Path:
-        """Build a real superproject whose index carries a gitlink entry."""
+        """Build a real superproject whose index carries a gitlink entry.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         child = cls._repo(tmp_path / "child")
         parent = cls._repo(tmp_path / "parent")
         tm.ok(

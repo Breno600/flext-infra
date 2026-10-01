@@ -27,7 +27,12 @@ class TestsFlextInfraFreshImport:
 
     @pytest.fixture
     def v(self) -> FlextInfraValidateFreshImport:
-        """Shared validator instance."""
+        """Shared validator instance.
+
+        Returns:
+            The resulting ``FlextInfraValidateFreshImport``.
+
+        """
         return FlextInfraValidateFreshImport()
 
     @staticmethod

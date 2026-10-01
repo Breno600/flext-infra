@@ -20,7 +20,12 @@ class FlextInfraCodegenConformDocsOwnership(FlextInfraCodegenConformGitignore):
         request: m.Infra.CodegenConformRequest,
         plan: m.Infra.CodegenPlan,
     ) -> t.VariadicTuple[Path]:
-        """Return the physical roots of the declared member repositories."""
+        """Return the physical roots of the declared member repositories.
+
+        Returns:
+            The physical roots of the declared member repositories.
+
+        """
         return tuple(
             (request.root / repository.path).resolve()
             for repository in plan.repositories
@@ -42,6 +47,10 @@ class FlextInfraCodegenConformDocsOwnership(FlextInfraCodegenConformGitignore):
         owner is a member; otherwise the root and member scopes publish
         different content to the same file and gen never reaches a fixed
         point across the root and member CI gates.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.CodegenFilePlan]``.
+
         """
         root = request.root.resolve()
         return tuple(file for file in files if file.project.resolve() == root)
@@ -53,7 +62,12 @@ class FlextInfraCodegenConformDocsOwnership(FlextInfraCodegenConformGitignore):
         plan: m.Infra.CodegenPlan,
         directories: t.SequenceOf[Path],
     ) -> t.VariadicTuple[Path]:
-        """Keep only docs directory chains inside the invoked repository."""
+        """Keep only docs directory chains inside the invoked repository.
+
+        Returns:
+            The resulting ``t.VariadicTuple[Path]``.
+
+        """
         root = request.root.resolve()
         member_roots = cls._member_repository_roots(request, plan)
         owned: list[Path] = []

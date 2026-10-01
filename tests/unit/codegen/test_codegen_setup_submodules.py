@@ -30,7 +30,12 @@ class TestsFlextInfraCodegenSetupSubmodules:
         self,
         resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
     ) -> Path:
-        """Return the run's standalone consumer, resolved once by ``make upg``."""
+        """Return the run's standalone consumer, resolved once by ``make upg``.
+
+        Returns:
+            The run's standalone consumer, resolved once by ``make upg``.
+
+        """
         return resolved_make_templates[c.Infra.MakeProfile.STANDALONE]
 
     @staticmethod
@@ -80,7 +85,12 @@ class TestsFlextInfraCodegenSetupSubmodules:
 
     @staticmethod
     def _setup(root: Path) -> p.Cli.CommandOutput:
-        """Invoke the generated public verb with real managed executables."""
+        """Invoke the generated public verb with real managed executables.
+
+        Returns:
+            The resulting ``p.Cli.CommandOutput``.
+
+        """
         return tm.ok(
             test_u.Tests.run_isolated_make(
                 ["--no-print-directory", "setup"],
@@ -91,7 +101,12 @@ class TestsFlextInfraCodegenSetupSubmodules:
 
     @classmethod
     def _assert_setup(cls, root: Path) -> p.Cli.CommandOutput:
-        """Require installed metadata and activation from the real post-setup hook."""
+        """Require installed metadata and activation from the real post-setup hook.
+
+        Returns:
+            The resulting ``p.Cli.CommandOutput``.
+
+        """
         process = cls._setup(root)
         tm.that(
             u.Cli.process_succeeded(process.outcome),
@@ -149,7 +164,12 @@ class TestsFlextInfraCodegenSetupSubmodules:
         superproject_branch: str,
         member_branch: str,
     ) -> Path:
-        """Provision a project whose member sits on the requested branch."""
+        """Provision a project whose member sits on the requested branch.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         source = tmp_path / "source"
         cls._commit_repository(source, "declared-dev", "source")
         project = tmp_path / "project"

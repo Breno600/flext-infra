@@ -25,7 +25,12 @@ class TestsFlextInfraInfraSelection:
 
     @pytest.fixture
     def workspace_with_projects(self, tmp_path: Path) -> Path:
-        """Create a temporary workspace with test projects."""
+        """Create a temporary workspace with test projects.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         for name in ["alpha", "beta", "gamma"]:
             proj = tmp_path / name
             proj.mkdir()
@@ -48,13 +53,23 @@ class TestsFlextInfraInfraSelection:
 
     @pytest.fixture
     def selector(self) -> type[u.Infra]:
-        """Provide project selector utilities class."""
+        """Provide project selector utilities class.
+
+        Returns:
+            The resulting ``type[u.Infra]``.
+
+        """
         selector_cls: type[u.Infra] = u.Infra
         return selector_cls
 
     @pytest.fixture
     def workspace_with_declared_names(self, tmp_path: Path) -> Path:
-        """Create projects whose declared names differ from directory names."""
+        """Create projects whose declared names differ from directory names.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         for directory_name, project_name in [
             ("core-alias", "flext-core"),
             ("cli-alias", "flext-cli"),
@@ -83,7 +98,12 @@ class TestsFlextInfraInfraSelection:
 
     @pytest.fixture
     def workspace_with_nested_members(self, tmp_path: Path) -> Path:
-        """Provide ``workspace_with_nested_members``."""
+        """Provide ``workspace_with_nested_members``.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         (tmp_path / ".git").mkdir()
         (tmp_path / "Makefile").touch()
         (tmp_path / "pyproject.toml").write_text(

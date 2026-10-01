@@ -34,7 +34,13 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
         repository_root: Path,
         scopes: t.SequenceOf[m.Infra.DocScope],
     ) -> p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]:
-        """Render aggregate root targets from the complete discovered project set."""
+        """Render aggregate root targets from the complete discovered project set.
+
+        Returns:
+            The resulting
+                ``p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]``.
+
+        """
         workspace_contract = FlextInfraUtilitiesDocsContract.docs_workspace_contract(
             repository_root,
         )
@@ -204,6 +210,10 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
         """Return the rendered artifact inventory for one docs scope.
 
         The scope label is the only topology input (see ``build_scopes``).
+
+        Returns:
+            The rendered artifact inventory for one docs scope.
+
         """
         if scope.name == c.Infra.RK_ROOT:
             return FlextInfraUtilitiesDocsGenerateRootMixin.docs_root_artifacts(

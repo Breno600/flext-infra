@@ -23,7 +23,12 @@ class TestsFlextInfraDepsExtraPathsSync:
 
     @pytest.fixture
     def pyright_content(self) -> str:
-        """Provide minimal Pyright configuration content."""
+        """Provide minimal Pyright configuration content.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return "[tool.pyright]\nextraPaths = []\n"
 
     @staticmethod

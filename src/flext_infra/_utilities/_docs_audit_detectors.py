@@ -36,7 +36,12 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
         tokens: t.StrSequence,
         issue_type: str,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Collect token-presence issues in the complete Markdown scope."""
+        """Collect token-presence issues in the complete Markdown scope.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
+
+        """
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         if not tokens:
             return issues
@@ -61,7 +66,12 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
         *,
         patterns: t.StrSequence,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Find unfinished markers using declared lexical patterns."""
+        """Find unfinished markers using declared lexical patterns.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
+
+        """
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         compiled = tuple(re.compile(pattern) for pattern in patterns)
         for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
@@ -91,6 +101,10 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
         container and CI identities declared in ``c.Infra.MACHINE_PATH_CONTAINER_USERS``
         are image contracts and pass. Only exact declared dated evidence files
         retain the observed machine path.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
+
         """
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         evidence = set(historical_evidence_files)
@@ -120,7 +134,12 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
     def docs_scope_boundary_issues(
         scope: m.Infra.DocScope,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Collect mentions of excluded non-FLEXT roots in root docs."""
+        """Collect mentions of excluded non-FLEXT roots in root docs.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
+
+        """
         if scope.name != c.Infra.RK_ROOT:
             return []
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
@@ -148,7 +167,12 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
     def docs_generated_ownership_issues(
         scope: m.Infra.DocScope,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Collect manual API pages that duplicate generated ownership."""
+        """Collect manual API pages that duplicate generated ownership.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
+
+        """
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         candidates: t.MutableSequenceOf[Path] = [scope.path / "docs/api-reference.md"]
         for parent in (scope.path / "docs/api-reference", scope.path / "docs/api"):
@@ -183,7 +207,12 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
     def docs_public_docstring_issues(
         scope: m.Infra.DocScope,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Collect missing docstring issues for public exports and modules."""
+        """Collect missing docstring issues for public exports and modules.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
+
+        """
         if scope.name == c.Infra.RK_ROOT or not scope.package_name:
             return []
         contract = FlextInfraUtilitiesDocsApi.public_contract(
@@ -196,7 +225,12 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
     def docs_public_docstring_coverage(
         scope: m.Infra.DocScope,
     ) -> m.Infra.DocstringCoverage | None:
-        """Aggregate docstring coverage for a project scope (None at root)."""
+        """Aggregate docstring coverage for a project scope (None at root).
+
+        Returns:
+            The resulting ``m.Infra.DocstringCoverage | None``.
+
+        """
         if scope.name == c.Infra.RK_ROOT or not scope.package_name:
             return None
         contract = FlextInfraUtilitiesDocsApi.public_contract(
@@ -215,6 +249,10 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
         and gates each block through ``ruff check --stdin-filename`` (piped
         body bytes — no temp files). Failures land as ``m.Infra.AuditIssue``
         records flowing through the standard audit report pipeline.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
+
         """
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):

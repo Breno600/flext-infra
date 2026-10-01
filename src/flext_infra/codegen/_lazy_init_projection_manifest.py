@@ -41,6 +41,10 @@ class FlextInfraCodegenLazyInitProjectionManifest:
         Entries derive only from the other plans' desired states, so the
         manifest bytes are a pure function of the phase plan: stable order,
         stable digests, no self-reference.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]``.
+
         """
         projected: MutableMapping[Path, list[t.JsonDict]] = {}
         for plan in files:

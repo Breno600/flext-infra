@@ -14,7 +14,12 @@ class FlextInfraUtilitiesProcess:
 
     @staticmethod
     def process_exit_classification(exit_code: int) -> str:
-        """Classify a process exit without discarding its original status."""
+        """Classify a process exit without discarding its original status.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         if exit_code == c.Infra.PROCESS_TIMEOUT_EXIT_CODE:
             return "timeout"
         if exit_code < 0:

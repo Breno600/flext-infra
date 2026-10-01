@@ -28,7 +28,12 @@ class TestsFlextInfraUtilitiesDocsFixtureMixin:
         project_names: t.StrSequence = (),
         include_fixable_link: bool = False,
     ) -> Path:
-        """Create a documentation workspace fixture."""
+        """Create a documentation workspace fixture.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         workspace = root / "workspace"
         workspace.mkdir(parents=True, exist_ok=True)
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
@@ -125,7 +130,12 @@ class TestsFlextInfraUtilitiesDocsFixtureMixin:
         project_names: t.StrSequence = (),
         source_workflow: str = "name: CI\n",
     ) -> Path:
-        """Create a GitHub workflow workspace fixture."""
+        """Create a GitHub workflow workspace fixture.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         workspace = root / "workspace"
         workspace.mkdir(parents=True, exist_ok=True)
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
@@ -168,7 +178,12 @@ class TestsFlextInfraUtilitiesDocsFixtureMixin:
         project_names: t.StrSequence = (),
         selected_projects: t.StrSequence | None = None,
     ) -> t.Pair[Path, FlextInfraDocGenerator]:
-        """Create one docs workspace plus the generator scoped to its selection."""
+        """Create one docs workspace plus the generator scoped to its selection.
+
+        Returns:
+            The resulting ``t.Pair[Path, FlextInfraDocGenerator]``.
+
+        """
         workspace = TestsFlextInfraUtilitiesDocsFixtureMixin.create_docs_workspace(
             root,
             project_names=project_names,
@@ -183,7 +198,12 @@ class TestsFlextInfraUtilitiesDocsFixtureMixin:
     def prepare_docs_bundle(
         generator: FlextInfraDocGenerator,
     ) -> m.Infra.DocsGenerationBundle:
-        """Freeze one docs bundle and create every parent directory it requires."""
+        """Freeze one docs bundle and create every parent directory it requires.
+
+        Returns:
+            The resulting ``m.Infra.DocsGenerationBundle``.
+
+        """
         prepared = generator.prepare_bundle()
         tm.ok(prepared)
         required = generator.required_directories(prepared.value)
@@ -196,7 +216,12 @@ class TestsFlextInfraUtilitiesDocsFixtureMixin:
     def plan_docs_bundle(
         generator: FlextInfraDocGenerator,
     ) -> t.VariadicTuple[m.Infra.CodegenFilePlan]:
-        """Prepare one docs bundle, create its required parents, and plan files."""
+        """Prepare one docs bundle, create its required parents, and plan files.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.CodegenFilePlan]``.
+
+        """
         bundle = TestsFlextInfraUtilitiesDocsFixtureMixin.prepare_docs_bundle(generator)
         planned = generator.plan_files(bundle)
         tm.ok(planned)
@@ -206,7 +231,12 @@ class TestsFlextInfraUtilitiesDocsFixtureMixin:
     def publish_docs_bundle(
         generator: FlextInfraDocGenerator,
     ) -> t.VariadicTuple[m.Infra.CodegenFilePlan]:
-        """Publish one planned docs bundle through the test transaction adapter."""
+        """Publish one planned docs bundle through the test transaction adapter.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.CodegenFilePlan]``.
+
+        """
         plans = TestsFlextInfraUtilitiesDocsFixtureMixin.plan_docs_bundle(generator)
         published = TestsFlextInfraUtilitiesCodegenMixin.materialize_codegen_plans(
             r[tuple[m.Infra.CodegenFilePlan, ...]].ok(plans),

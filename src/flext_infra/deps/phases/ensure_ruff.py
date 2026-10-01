@@ -23,7 +23,15 @@ class FlextInfraEnsureRuffConfigPhase:
 
     @staticmethod
     def _workspace_project_namespaces(project_dir: Path) -> t.StrSequence:
-        """Discover child project packages when generating repository root settings."""
+        """Discover child project packages when generating repository root settings.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         if not (project_dir / c.PYPROJECT_FILENAME).is_file():
             return ()
         discovered = u.Infra.discover_projects(project_dir)
@@ -52,6 +60,13 @@ class FlextInfraEnsureRuffConfigPhase:
         Content-only repositories are foreign, read-only trees and therefore
         never enter Ruff. Explicit ``exclusions`` extend that same typed scope
         for non-repository paths without duplicating repository declarations.
+
+        Returns:
+            Immutable repository and explicit exclusion path globs.
+
+        Raises:
+            ValueError: On failure.
+
         """
         if not (project_dir / c.PYPROJECT_FILENAME).is_file():
             return ()
@@ -72,6 +87,13 @@ class FlextInfraEnsureRuffConfigPhase:
         Like the manifest authority it is order-independent: a repository
         declares a retired tree once and every root-scoped projection
         converges.
+
+        Returns:
+            The resulting ``frozenset[str]``.
+
+        Raises:
+            ValueError: On failure.
+
         """
         if not (project_dir / c.PYPROJECT_FILENAME).is_file():
             return frozenset()
@@ -94,6 +116,10 @@ class FlextInfraEnsureRuffConfigPhase:
         full template render read this one map. A glob rooted on a directory
         the workspace retired (declared as an analysis exclusion) is dropped,
         because it names scope that no longer exists.
+
+        Returns:
+            The fleet Ruff exemption map scoped to one project.
+
         """
         excluded_roots = FlextInfraToolTablesPhase.excluded_roots(project_dir)
         return {
@@ -112,7 +138,12 @@ class FlextInfraEnsureRuffConfigPhase:
         path: Path,
         facts: m.Infra.RuffProjectFacts,
     ) -> m.Infra.DepsToml.PhaseConfig:
-        """Build the canonical Ruff phase for one project path."""
+        """Build the canonical Ruff phase for one project path.
+
+        Returns:
+            The resulting ``m.Infra.DepsToml.PhaseConfig``.
+
+        """
         ruff_cfg = self._tool_config.tools.ruff
         workspace_exclusions = (
             self._workspace_exclusion_globs(path.parent)
@@ -303,6 +334,10 @@ class FlextInfraEnsureRuffConfigPhase:
 
         ``analysis_exclusions`` is the caller's declared topology; ``None``
         derives the workspace exclusion globs on disk.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
         """
         effective_ignores = self.project_per_file_ignores(
             path.parent,

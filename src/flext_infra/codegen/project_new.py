@@ -140,7 +140,12 @@ class FlextInfraCodegenProjectNew(
 
     @override
     def execute(self) -> p.Result[m.Infra.CodegenResult]:
-        """Build one typed manifest and delegate all output to conform."""
+        """Build one typed manifest and delegate all output to conform.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenResult]``.
+
+        """
         if self.effective_dry_run:
             return r[m.Infra.CodegenResult].fail("codegen new requires apply mode")
         # Every identity fact is an explicit caller declaration: for a

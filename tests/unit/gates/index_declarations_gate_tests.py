@@ -32,6 +32,10 @@ class TestsFlextInfraIndexDeclarationsGate:
 
         One owner for the whole arrange-act pair: the tests differ only in which
         defect they seed.
+
+        Returns:
+            The resulting ``Callable[..., m.Infra.GateResult]``.
+
         """
 
         def run(

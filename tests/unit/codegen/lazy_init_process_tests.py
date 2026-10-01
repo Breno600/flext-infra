@@ -18,7 +18,12 @@ class TestsFlextInfraLazyInitProcessing:
 
     @staticmethod
     def _read(package_dir: Path) -> str:
-        """Read one generated package initializer."""
+        """Read one generated package initializer.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return package_dir.joinpath(c.Infra.INIT_PY).read_text(
             encoding=c.Cli.ENCODING_DEFAULT,
         )

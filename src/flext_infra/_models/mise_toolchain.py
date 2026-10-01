@@ -80,7 +80,15 @@ class FlextInfraModelsMiseToolchain:
 
         @u.model_validator(mode="after")
         def _validate_required_custom_types(self) -> Self:
-            """Reject ambiguous duplicate type declarations at the owner."""
+            """Reject ambiguous duplicate type declarations at the owner.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: On failure.
+
+            """
             if len(set(self.required_custom_types)) != len(self.required_custom_types):
                 msg = "beads required_custom_types must be unique"
                 raise ValueError(msg)
@@ -386,6 +394,13 @@ class FlextInfraModelsMiseToolchain:
             (make upg/gen/setup, and therefore CI) breaks. Only real selectors
             (``latest``, a major.minor line, or a released version) may reach
             the lock.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: On failure.
+
             """
             offenders = sorted(
                 field
@@ -501,7 +516,15 @@ class FlextInfraModelsMiseToolchain:
 
         @u.model_validator(mode="after")
         def _validate_environment_contract(self) -> Self:
-            """Reject shell-unsafe, ambiguous, or escaping generated values."""
+            """Reject shell-unsafe, ambiguous, or escaping generated values.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: On failure.
+
+            """
             groups = (
                 self.fixed_environment,
                 self.transient_environment,

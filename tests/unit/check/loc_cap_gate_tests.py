@@ -29,7 +29,12 @@ class TestsFlextInfraLocCapGate:
 
     @staticmethod
     def gate_project(tmp_path: Path, *, code_lines: int) -> Path:
-        """Create one real project whose sample module carries ``code_lines``."""
+        """Create one real project whose sample module carries ``code_lines``.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         module = "from __future__ import annotations\n\n" + "".join(
             f"x{index} = {index}\n" for index in range(code_lines)
         )

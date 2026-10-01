@@ -25,7 +25,12 @@ class TestsFlextInfraProviderResolutionAcceptsSshRemotes:
 
     @staticmethod
     def _governed_project(root: Path, name: str) -> Path:
-        """Create one governed repository owned by the configured provider."""
+        """Create one governed repository owned by the configured provider.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         u.Tests.WorktreeFixture.initialize_governed_project(
             root,
             name,

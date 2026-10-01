@@ -37,6 +37,10 @@ class TestsFlextInfraFacadeEnvironmentSync:
         ``HOME`` is isolated so activation never reads the operator's home; the
         inherited Mise storage still provides the pinned runtime ``make setup``
         installed.
+
+        Returns:
+            One variable as the real direnv activation of ``workspace`` sees it.
+
         """
         # A governed checkout is a Git work tree (activation resolves its
         # runtime root from the Git superproject topology) carrying its Mise

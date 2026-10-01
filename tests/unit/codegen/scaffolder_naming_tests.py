@@ -30,6 +30,10 @@ class TestsFlextInfraCodegenScaffolderNaming:
         """Extract all class names from Python source via the codegen regex authority.
 
         Single Responsibility: detect class definitions only.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
         """
         return c.Infra.DETECTION_CLASS_DECL_RE.findall(source)
 

@@ -31,7 +31,12 @@ class FlextInfraCodegenGenerationLazyEntriesMixin(
         lazy_filtered: t.LazyAliasMap,
         context: _LazyEntryContext,
     ) -> t.SequenceOf[t.Triple[str, str, str]]:
-        """Build normalized lazy entries for template rendering."""
+        """Build normalized lazy entries for template rendering.
+
+        Returns:
+            The resulting ``t.SequenceOf[t.Triple[str, str, str]]``.
+
+        """
         current_pkg, child_aliases, include_module_exports = context
         entries: t.MutableSequenceOf[t.Triple[str, str, str]] = []
         for exp in exports:
@@ -63,7 +68,13 @@ class FlextInfraCodegenGenerationLazyEntriesMixin(
     def _group_lazy_entries(
         lazy_entries: t.SequenceOf[t.Triple[str, str, str]],
     ) -> t.Pair[t.SequenceOf[t.StrSequencePair], t.SequenceOf[t.StrPairSequencePair]]:
-        """Group lazy entries by module and alias group."""
+        """Group lazy entries by module and alias group.
+
+        Returns:
+            The resulting ``t.Pair[t.SequenceOf[t.StrSequencePair],
+                t.SequenceOf[t.StrPairSequencePair]]``.
+
+        """
         module_groups: MutableMapping[str, list[str]] = defaultdict(list)
         alias_groups: MutableMapping[str, list[t.StrPair]] = defaultdict(list)
         for export_name, mod, attr_name in lazy_entries:
@@ -86,7 +97,12 @@ class FlextInfraCodegenGenerationLazyEntriesMixin(
         exports: t.StrSequence,
         lazy_filtered: t.LazyAliasMap,
     ) -> t.StrSequence:
-        """Build root public exports in Ruff's canonical isort-style order."""
+        """Build root public exports in Ruff's canonical isort-style order.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         # The planner is the sole ABI filter; rendering
         # only orders its validated contract and must not reinterpret target paths.
         _ = lazy_filtered
@@ -100,7 +116,12 @@ class FlextInfraCodegenGenerationLazyEntriesMixin(
 
     @staticmethod
     def _public_export_order_key(export_name: str) -> t.Pair[int, str]:
-        """Classify one export using Ruff's canonical ``RUF022`` order."""
+        """Classify one export using Ruff's canonical ``RUF022`` order.
+
+        Returns:
+            The resulting ``t.Pair[int, str]``.
+
+        """
         category = 0 if export_name.isupper() else 1 if export_name[:1].isupper() else 2
         # Dependency order belongs to facade imports;
         # published __all__ values follow Ruff RUF022 (case-sensitive ASCII

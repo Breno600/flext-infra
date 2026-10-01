@@ -19,7 +19,12 @@ class TestsFlextInfraGitRefsSemantics:
 
     @staticmethod
     def _linked_lane(tmp_path: Path, repository: Path, branch: str) -> Path:
-        """Register ``branch`` as a linked worktree lane beside the primary."""
+        """Register ``branch`` as a linked worktree lane beside the primary.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         lane = tmp_path / branch
         _ = test_u.Tests.git_run(repository, "branch", branch)
         _ = test_u.Tests.git_run(repository, "worktree", "add", str(lane), branch)

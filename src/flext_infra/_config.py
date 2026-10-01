@@ -24,7 +24,12 @@ class FlextInfraConfig(FlextCliConfig):
 
     @classmethod
     def ssot_config_dir(cls) -> Path:
-        """Public resolution of the packaged/workspace ``config/`` directory."""
+        """Public resolution of the packaged/workspace ``config/`` directory.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         return cls._config_dir()
 
     @classmethod
@@ -39,6 +44,10 @@ class FlextInfraConfig(FlextCliConfig):
         precedence of any file source. The governed repository's tracked org
         layer is appended after it, so a checkout root always speaks with the
         last word on its own org data.
+
+        Returns:
+            The resulting ``list[Path]``.
+
         """
         files = [
             item

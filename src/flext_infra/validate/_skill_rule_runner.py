@@ -70,7 +70,15 @@ class FlextInfraSkillRuleRunnerMixin:
         include_globs: t.StrSequence,
         exclude_globs: t.StrSequence,
     ) -> int:
-        """Run an ast-grep rule and return match count."""
+        """Run an ast-grep rule and return match count.
+
+        Returns:
+            The resulting ``int``.
+
+        Raises:
+            RuntimeError: On failure.
+
+        """
         rule_file_raw = u.Cli.json_get_str_key(rule, c.Infra.RK_FILE)
         if not rule_file_raw:
             msg = "ast-grep rule must declare a non-empty file"
@@ -114,7 +122,12 @@ class FlextInfraSkillRuleRunnerMixin:
 
     @staticmethod
     def _parse_violation_count(stdout: str) -> int:
-        """Parse violation count from JSON-line stdout of a custom script."""
+        """Parse violation count from JSON-line stdout of a custom script.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         count = 0
         for raw_line in stdout.splitlines():
             line = raw_line.strip()
@@ -135,7 +148,15 @@ class FlextInfraSkillRuleRunnerMixin:
         project_path: Path,
         mode: c.Infra.OperationMode,
     ) -> int:
-        """Run a custom rule script and return violation count."""
+        """Run a custom rule script and return violation count.
+
+        Returns:
+            The resulting ``int``.
+
+        Raises:
+            RuntimeError: On failure.
+
+        """
         script_raw = u.Cli.json_get_str_key(rule, "script")
         if not script_raw:
             msg = "custom rule must declare a non-empty script"

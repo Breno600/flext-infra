@@ -16,7 +16,12 @@ class TestsFlextInfraModels:
 
     @staticmethod
     def _sample_issues() -> t.Triple[m.Infra.Issue, m.Infra.Issue, m.Infra.Issue]:
-        """Build three distinct sample gate issues for summary assertions."""
+        """Build three distinct sample gate issues for summary assertions.
+
+        Returns:
+            The resulting ``t.Triple[m.Infra.Issue, m.Infra.Issue, m.Infra.Issue]``.
+
+        """
         issue1 = m.Infra.Issue(
             file="a.py",
             line=1,

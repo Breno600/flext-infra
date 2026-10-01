@@ -33,7 +33,12 @@ class FlextInfraUtilitiesPyprojectOverlay:
         preserve_project_keys: t.StrSequence | None = None,
         managed_tool_tables: t.StrSequence | None = None,
     ) -> p.Result[str]:
-        """Keep live CUSTOM project keys and unmanaged tool tables."""
+        """Keep live CUSTOM project keys and unmanaged tool tables.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         spec = FlextInfraUtilitiesManagedConflicts.pyproject_managed_file()
         if spec.failure:
             return r[str].from_failure(spec)

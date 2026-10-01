@@ -18,7 +18,12 @@ class FlextInfraRenameSymbols:
 
     @staticmethod
     def _member_paths(source: str, path: Path) -> frozenset[tuple[str, ...]]:
-        """Index AST attribute paths that can match a declared Rope pattern."""
+        """Index AST attribute paths that can match a declared Rope pattern.
+
+        Returns:
+            The resulting ``frozenset[tuple[str, ...]]``.
+
+        """
         paths: set[tuple[str, ...]] = set()
         for node in ast.walk(ast.parse(source, filename=str(path))):
             if not isinstance(node, ast.Attribute):
@@ -37,7 +42,12 @@ class FlextInfraRenameSymbols:
         owner: str,
         suffix: str,
     ) -> p.Infra.RopePyName | None:
-        """Resolve the current destination without importing a retired object."""
+        """Resolve the current destination without importing a retired object.
+
+        Returns:
+            The resulting ``p.Infra.RopePyName | None``.
+
+        """
         module, *attributes = owner.split(".")
         value: p.Infra.RopePyModule | p.Infra.RopePyObject = project.get_module(module)
         binding: p.Infra.RopePyName | None = None
@@ -57,7 +67,16 @@ class FlextInfraRenameSymbols:
         symbols: t.Triple[str, str, str],
         rewrites: t.SequenceOf[m.Infra.SourceRewrite],
     ) -> t.VariadicTuple[t.Triple[int, int, bool]]:
-        """Retain effective-member identity after Rope's receiver/MRO match."""
+        """Retain effective-member identity after Rope's receiver/MRO match.
+
+        Returns:
+            The resulting ``t.VariadicTuple[t.Triple[int, int, bool]]``.
+
+        Raises:
+            TypeError: On failure.
+            ValueError: On failure.
+
+        """
         runtime = u.Infra
         module = project.get_pymodule(change.resource)
         owner, old, new = symbols
@@ -130,7 +149,16 @@ class FlextInfraRenameSymbols:
         pairs: t.SequenceOf[t.Pair[str, str]],
         bindings: t.MappingKV[str, t.StrSequence],
     ) -> t.MappingKV[Path, t.VariadicTuple[m.Infra.SourceRewrite]]:
-        """Merge non-overlapping Rope previews against one immutable snapshot."""
+        """Merge non-overlapping Rope previews against one immutable snapshot.
+
+        Returns:
+            The resulting ``t.MappingKV[Path, t.VariadicTuple[m.Infra.SourceRewrite]]``.
+
+        Raises:
+            TypeError: On failure.
+            ValueError: On failure.
+
+        """
         root = Path(project.root.real_path)
         ordered_paths = tuple(sorted(sources))
         members = {

@@ -34,7 +34,12 @@ class FlextInfraDirenvGate(FlextInfraGate):
 
     @staticmethod
     def _contract_boundary() -> type[p.Infra.WorkspaceEnvironmentContracts]:
-        """Return the contract owner typed at its published ``p.Infra`` boundary."""
+        """Return the contract owner typed at its published ``p.Infra`` boundary.
+
+        Returns:
+            The contract owner typed at its published ``p.Infra`` boundary.
+
+        """
         return FlextInfraWorkspaceEnvironmentContracts
 
     @staticmethod
@@ -42,7 +47,12 @@ class FlextInfraDirenvGate(FlextInfraGate):
         file: str,
         violation: m.Infra.EnvironmentContractViolation,
     ) -> m.Infra.Issue:
-        """Render one typed contract violation as a gate issue."""
+        """Render one typed contract violation as a gate issue.
+
+        Returns:
+            The resulting ``m.Infra.Issue``.
+
+        """
         return m.Infra.Issue(
             file=file,
             line=violation.line,
@@ -58,7 +68,12 @@ class FlextInfraDirenvGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
-        """Run the static contracts, then the activation smoke."""
+        """Run the static contracts, then the activation smoke.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
+        """
         started = time.monotonic()
         envrc = project_dir / c.Infra.ENVRC_FILENAME
         if not envrc.is_file():
@@ -134,7 +149,12 @@ class FlextInfraDirenvGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
-        """One marker dir drives the base flow; the smoke targets the root."""
+        """One marker dir drives the base flow; the smoke targets the root.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         _ = ctx
         return (
             (str(project_dir),)
@@ -149,7 +169,12 @@ class FlextInfraDirenvGate(FlextInfraGate):
         ctx: m.Infra.GateContext,
         check_dirs: t.StrSequence,
     ) -> t.StrSequence:
-        """Activate the workspace environment for one no-op command."""
+        """Activate the workspace environment for one no-op command.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         _ = ctx, check_dirs
         return (c.Infra.CLI_DIRENV, "exec", str(project_dir), "true")
 
@@ -160,7 +185,12 @@ class FlextInfraDirenvGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Pass only on a zero-exit activation."""
+        """Pass only on a zero-exit activation.
+
+        Returns:
+            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
+
+        """
         _ = project_dir, ctx
         if u.Cli.process_succeeded(result.outcome):
             return True, ()

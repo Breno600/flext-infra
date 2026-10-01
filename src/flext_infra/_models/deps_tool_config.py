@@ -104,7 +104,12 @@ class FlextInfraModelsDepsToolConfig(
         @m.model_validator(mode="before")
         @classmethod
         def _coerce_legacy_int(cls, data: t.JsonValue) -> t.JsonValue:
-            """Accept the legacy bare-integer form as an absolute ceiling."""
+            """Accept the legacy bare-integer form as an absolute ceiling.
+
+            Returns:
+                The resulting ``t.JsonValue``.
+
+            """
             if isinstance(data, int) and not isinstance(data, bool):
                 return {"workers": data}
             return data
@@ -113,7 +118,15 @@ class FlextInfraModelsDepsToolConfig(
         def _require_exactly_one_form(
             self,
         ) -> FlextInfraModelsDepsToolConfig.PytestWorkerCeiling:
-            """Reject ambiguous (both or neither) ceiling forms."""
+            """Reject ambiguous (both or neither) ceiling forms.
+
+            Returns:
+                The resulting ``FlextInfraModelsDepsToolConfig.PytestWorkerCeiling``.
+
+            Raises:
+                ValueError: On failure.
+
+            """
             if (self.workers is None) == (self.cpu_fraction is None):
                 msg = "PytestWorkerCeiling requires exactly one of workers or cpu_fraction"
                 raise ValueError(msg)
@@ -428,7 +441,15 @@ class FlextInfraModelsDepsToolConfig(
 
         @u.model_validator(mode="after")
         def _validate_execution_limits(self) -> Self:
-            """Keep item and termination budgets inside the hard invocation cap."""
+            """Keep item and termination budgets inside the hard invocation cap.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: On failure.
+
+            """
             if self.case_timeout_seconds >= self.run_timeout_seconds:
                 msg = "pytest case timeout must be less than run timeout"
                 raise ValueError(msg)

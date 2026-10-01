@@ -41,7 +41,13 @@ class FlextInfraUtilitiesSemanticCutoverAliases(
     ) -> p.Result[
         t.Pair[t.MappingKV[Path, t.StrMapping], t.MappingKV[str, t.StrMapping]]
     ]:
-        """Index every API alias finding by owner file and importable module."""
+        """Index every API alias finding by owner file and importable module.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[t.MappingKV[Path, t.StrMapping],
+                t.MappingKV[str, t.StrMapping]]]``.
+
+        """
         planned = r[
             t.Pair[t.MappingKV[Path, t.StrMapping], t.MappingKV[str, t.StrMapping]]
         ]
@@ -78,7 +84,12 @@ class FlextInfraUtilitiesSemanticCutoverAliases(
         sources: t.MappingKV[Path, str],
         findings: t.SequenceOf[m.Infra.ModScanFinding],
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
-        """Plan API alias removals and AST-proven consumer rewrites."""
+        """Plan API alias removals and AST-proven consumer rewrites.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
+
+        """
         specs = cls._api_alias_specs(
             root,
             tuple(
@@ -160,7 +171,12 @@ class FlextInfraUtilitiesSemanticCutoverAliases(
 
     @staticmethod
     def _bound_names(tree: ast.Module) -> frozenset[str]:
-        """Return statically bound module names for redundant-import removal."""
+        """Return statically bound module names for redundant-import removal.
+
+        Returns:
+            Statically bound module names for redundant-import removal.
+
+        """
         names: set[str] = set()
         for node in tree.body:
             if isinstance(node, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef):

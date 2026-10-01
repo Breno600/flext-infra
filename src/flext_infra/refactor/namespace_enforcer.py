@@ -47,6 +47,9 @@ class FlextInfraNamespaceEnforcer(FlextInfraNamespaceEnforcerProjectMixin):
             project_names: If provided, only enforce these projects.
             gates: If provided, only run these enforcement gates.
 
+        Returns:
+            The resulting ``m.Infra.WorkspaceEnforcementReport``.
+
         """
         project_roots = self._resolve_project_roots(project_names=project_names)
         project_reports: list[m.Infra.ProjectEnforcementReport] = []
@@ -72,6 +75,13 @@ class FlextInfraNamespaceEnforcer(FlextInfraNamespaceEnforcerProjectMixin):
 
         ``.`` names this repository itself; an unknown name is a caller error
         and escapes loud instead of silently enforcing nothing.
+
+        Returns:
+            The resulting ``t.SequenceOf[Path]``.
+
+        Raises:
+            ValueError: On failure.
+
         """
         resolved = u.Infra.resolve_projects(self._repository_root, project_names or ())
         if resolved.failure:
@@ -84,7 +94,12 @@ class FlextInfraNamespaceEnforcer(FlextInfraNamespaceEnforcerProjectMixin):
 
     @staticmethod
     def render_text(report: m.Infra.WorkspaceEnforcementReport) -> str:
-        """Render a workspace enforcement report as plain text."""
+        """Render a workspace enforcement report as plain text.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         projects = report.projects
         lines = [
             "Namespace Enforcement Report",
@@ -101,7 +116,12 @@ class FlextInfraNamespaceEnforcer(FlextInfraNamespaceEnforcerProjectMixin):
         cls,
         params: m.Infra.RefactorNamespaceEnforceInput,
     ) -> p.Result[m.Infra.WorkspaceEnforcementReport]:
-        """Execute namespace enforcement directly from the canonical payload."""
+        """Execute namespace enforcement directly from the canonical payload.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.WorkspaceEnforcementReport]``.
+
+        """
         enforcer = cls(repository_root=params.repository_root)
         report = enforcer.enforce(
             apply=params.apply,

@@ -24,7 +24,12 @@ class TestsFlextInfraAuditorCommandContract:
 
     @pytest.fixture
     def command_contract_scope(self, infra_test_workspace: Path) -> m.Infra.DocScope:
-        """Declare the same repository identity in Git and the typed topology."""
+        """Declare the same repository identity in Git and the typed topology.
+
+        Returns:
+            The resulting ``m.Infra.DocScope``.
+
+        """
         name = "infra-pkg"
         u.Tests.write_project_beads_config(infra_test_workspace, name)
         u.Tests.write_standalone_workspace_manifest(infra_test_workspace, name)

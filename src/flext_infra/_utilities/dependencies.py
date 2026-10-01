@@ -39,7 +39,12 @@ class FlextInfraUtilitiesDependencies:
         *,
         environment: t.StrMapping,
     ) -> str | None:
-        """Evaluate a strictly parsed requirement on the consumer interpreter."""
+        """Evaluate a strictly parsed requirement on the consumer interpreter.
+
+        Returns:
+            The resulting ``str | None``.
+
+        """
         parsed = Requirement(requirement)
         return (
             str(parsed)
@@ -50,7 +55,12 @@ class FlextInfraUtilitiesDependencies:
 
     @staticmethod
     def dependency_extras(requirements: t.StrSequence, name: str) -> str:
-        """Retain the union of requested extras for one selected distribution."""
+        """Retain the union of requested extras for one selected distribution.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         extras: set[str] = set()
         for requirement in requirements:
             parsed = Requirement(requirement)
@@ -60,7 +70,12 @@ class FlextInfraUtilitiesDependencies:
 
     @staticmethod
     def dependency_constraint(requirement: str, *, replace_source: bool) -> str:
-        """Keep version bounds while installation inputs own extras and sources."""
+        """Keep version bounds while installation inputs own extras and sources.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         parsed = Requirement(requirement)
         source = (
             f" @ {parsed.url}"
@@ -72,7 +87,12 @@ class FlextInfraUtilitiesDependencies:
 
     @staticmethod
     def dep_name(requirement: str, *, active_only: bool = False) -> str | None:
-        """Extract one normalized dependency name, optionally evaluating markers."""
+        """Extract one normalized dependency name, optionally evaluating markers.
+
+        Returns:
+            The resulting ``str | None``.
+
+        """
         text = requirement.strip()
         if not text:
             return None
@@ -105,7 +125,16 @@ class FlextInfraUtilitiesDependencies:
         cls,
         payload: t.JsonMapping,
     ) -> t.StrSequence:
-        """Return strict names from the PEP 621 runtime dependency array."""
+        """Return strict names from the PEP 621 runtime dependency array.
+
+        Returns:
+            Strict names from the PEP 621 runtime dependency array.
+
+        Raises:
+            TypeError: On failure.
+            ValueError: On failure.
+
+        """
         project = payload.get(c.Infra.PROJECT)
         if not isinstance(project, Mapping):
             msg = "pyproject payload must define a [project] mapping"
@@ -134,7 +163,12 @@ class FlextInfraUtilitiesDependencies:
         prefix: str = "",
         normalize: Callable[[str], str] = canonicalize_name,
     ) -> t.StrSequence:
-        """Return a dependency-first order for any named dependency graph."""
+        """Return a dependency-first order for any named dependency graph.
+
+        Returns:
+            A dependency-first order for any named dependency graph.
+
+        """
         graph: MutableMapping[str, t.VariadicTuple[str]] = {}
 
         def collect(dependency_name: str) -> None:
@@ -194,6 +228,10 @@ class FlextInfraUtilitiesDependencies:
         a key of ``edges``; an unknown reference or a cycle fails the result
         instead of raising, so callers (release publish ordering, codemod
         provider ordering) compose it through ``p.Result`` chaining.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[t.StrSequence]]``.
+
         """
         unknown = sorted({
             dependency
@@ -231,7 +269,12 @@ class FlextInfraUtilitiesDependencies:
         distribution_prefix: str = "",
         suffix: str = "",
     ) -> t.SequenceOf[Path]:
-        """Resolve runtime, local, and test dependency resources in order."""
+        """Resolve runtime, local, and test dependency resources in order.
+
+        Returns:
+            The resulting ``t.SequenceOf[Path]``.
+
+        """
         pyproject = project_root / c.PYPROJECT_FILENAME
         payload = u.Cli.toml_read_json(pyproject).unwrap()
         project_name = canonicalize_name(
@@ -300,6 +343,10 @@ class FlextInfraUtilitiesDependencies:
         ended up pinned to ``pydantic>=2.14.0b1`` from a single runtime resolution. The
         empty string means "this resolution cannot serve as a public floor", and
         every caller keeps the declared constraint instead of rewriting it.
+
+        Returns:
+            The resolved installed version as an open-ended dependency floor.
+
         """
         public_version = version.strip().partition("+")[0]
         if not public_version:
@@ -314,7 +361,16 @@ class FlextInfraUtilitiesDependencies:
 
     @classmethod
     def resolved_dependency_versions(cls) -> t.MappingKV[str, str]:
-        """Read registry versions from the provisioned runtime, never release provenance."""
+        """Read registry versions from the provisioned runtime, never release provenance.
+
+        Returns:
+            The resulting ``t.MappingKV[str, str]``.
+
+        Raises:
+            TypeError: On failure.
+            ValueError: On failure.
+
+        """
         versions: MutableMapping[str, str] = {}
         for distribution in distributions():
             if distribution.read_text("direct_url.json") is not None:
@@ -345,7 +401,12 @@ class FlextInfraUtilitiesDependencies:
         resolved_versions: t.MappingKV[str, str],
         internal_names: t.StrSequence = (),
     ) -> str | None:
-        """Rewrite one PEP 621 requirement to the resolved runtime floor."""
+        """Rewrite one PEP 621 requirement to the resolved runtime floor.
+
+        Returns:
+            The resulting ``str | None``.
+
+        """
         result: str | None = None
         raw_text = requirement.strip()
         if raw_text:
@@ -396,7 +457,12 @@ class FlextInfraUtilitiesDependencies:
 
     @staticmethod
     def dedupe_specs(specs: t.StrSequence) -> t.StrSequence:
-        """Return deterministic unique dependency specs keyed by normalized name."""
+        """Return deterministic unique dependency specs keyed by normalized name.
+
+        Returns:
+            Deterministic unique dependency specs keyed by normalized name.
+
+        """
         selected_by_name: MutableMapping[str, str] = {}
         for raw in specs:
             item = raw.strip()
@@ -410,7 +476,12 @@ class FlextInfraUtilitiesDependencies:
 
     @classmethod
     def declared_dependency_names(cls, document: t.Cli.TomlDocument) -> t.StrSequence:
-        """Return normalized dependency names from one TOML document."""
+        """Return normalized dependency names from one TOML document.
+
+        Returns:
+            Normalized dependency names from one TOML document.
+
+        """
         normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
         if not normalized:
             return ()
@@ -421,7 +492,12 @@ class FlextInfraUtilitiesDependencies:
         cls,
         payload: t.JsonMapping,
     ) -> t.StrSequence:
-        """Return normalized dependency names across supported dependency tables."""
+        """Return normalized dependency names across supported dependency tables.
+
+        Returns:
+            Normalized dependency names across supported dependency tables.
+
+        """
         names: set[str] = set()
         cls._append_project_dependency_names(payload=payload, names=names)
         cls._append_dependency_group_names(payload=payload, names=names)
@@ -537,7 +613,12 @@ class FlextInfraUtilitiesDependencies:
         *,
         workspace_project_names: t.StrSequence = (),
     ) -> t.StrSequence:
-        """Return workspace-local dependency names from one payload."""
+        """Return workspace-local dependency names from one payload.
+
+        Returns:
+            Workspace-local dependency names from one payload.
+
+        """
         declared = set(cls.declared_dependency_names_from_payload(payload))
         if not workspace_project_names:
             return ()
@@ -548,7 +629,12 @@ class FlextInfraUtilitiesDependencies:
     def project_dev_groups_from_payload(
         payload: t.JsonMapping,
     ) -> t.MappingKV[str, t.StrSequence]:
-        """Collect optional dependency groups from one normalized payload."""
+        """Collect optional dependency groups from one normalized payload.
+
+        Returns:
+            The resulting ``t.MappingKV[str, t.StrSequence]``.
+
+        """
         project = u.Cli.json_as_mapping(payload.get(c.Infra.PROJECT, None))
         optional = u.Cli.json_as_mapping(
             project.get(c.Infra.OPTIONAL_DEPENDENCIES, None),
@@ -566,7 +652,12 @@ class FlextInfraUtilitiesDependencies:
         cls,
         document: t.Cli.TomlDocument,
     ) -> t.MappingKV[str, t.StrSequence]:
-        """Collect optional dependency groups from one TOML document."""
+        """Collect optional dependency groups from one TOML document.
+
+        Returns:
+            The resulting ``t.MappingKV[str, t.StrSequence]``.
+
+        """
         normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
         if not normalized:
             # Keep the empty mapping immutable and fully typed.
@@ -575,7 +666,12 @@ class FlextInfraUtilitiesDependencies:
 
     @classmethod
     def canonical_dev_dependencies(cls, document: t.Cli.TomlDocument) -> t.StrSequence:
-        """Merge all canonical dev dependency groups from one TOML document."""
+        """Merge all canonical dev dependency groups from one TOML document.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
         if not normalized:
             return ()
@@ -586,7 +682,12 @@ class FlextInfraUtilitiesDependencies:
         cls,
         payload: t.JsonMapping,
     ) -> t.StrSequence:
-        """Merge all canonical dev dependency groups from one normalized payload."""
+        """Merge all canonical dev dependency groups from one normalized payload.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         groups = cls.project_dev_groups_from_payload(payload)
         return cls.dedupe_specs([
             requirement
@@ -596,7 +697,12 @@ class FlextInfraUtilitiesDependencies:
 
     @classmethod
     def flext_dependency_namespaces(cls, document: t.Cli.TomlDocument) -> t.StrSequence:
-        """Extract declared FLEXT dependency namespaces from one TOML document."""
+        """Extract declared FLEXT dependency namespaces from one TOML document.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
         if not normalized:
             return ()
@@ -607,7 +713,12 @@ class FlextInfraUtilitiesDependencies:
         cls,
         payload: t.MappingKV[str, t.JsonValue],
     ) -> t.StrSequence:
-        """Extract every declared ``flext-*`` dependency as a Python namespace."""
+        """Extract every declared ``flext-*`` dependency as a Python namespace.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         # FLEXT dependencies are first-party contracts even
         # when their uv source declaration is owned by an enclosing workspace.
         normalized = FlextInfraUtilitiesPyproject.validate_infra_payload(payload)
@@ -634,6 +745,10 @@ class FlextInfraUtilitiesDependencies:
         candidate, and a candidate implied by another candidate's runtime is
         dropped. One entry is the governed selection; none means no declared
         profile governs the project; several are an ambiguous declaration.
+
+        Returns:
+            The most specific shared profile upstreams one project selects.
+
         """
         shared = tuple(item for item in profiles if item.project is None)
         own = next(
@@ -681,6 +796,10 @@ class FlextInfraUtilitiesDependencies:
         """Return the shared upstream profile followed by the project's additions.
 
         Empty when the upstream declares no shared profile.
+
+        Returns:
+            The shared upstream profile followed by the project's additions.
+
         """
         base = next(
             (

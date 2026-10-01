@@ -29,7 +29,12 @@ class FlextInfraUtilitiesRopeCore(
 
     @staticmethod
     def init_rope_project(repository_root: Path) -> t.Infra.RopeProject:
-        """Create a project-scoped Rope session with no disk artifacts."""
+        """Create a project-scoped Rope session with no disk artifacts.
+
+        Returns:
+            The resulting ``t.Infra.RopeProject``.
+
+        """
         resolved_root = repository_root.resolve()
         return FlextInfraUtilitiesRopeCore._new_project(
             resolved_root,
@@ -38,7 +43,12 @@ class FlextInfraUtilitiesRopeCore(
 
     @staticmethod
     def init_rope_workspace(repository_root: Path) -> t.Infra.RopeProject:
-        """Create a Rope session spanning every project below a workspace root."""
+        """Create a Rope session spanning every project below a workspace root.
+
+        Returns:
+            The resulting ``t.Infra.RopeProject``.
+
+        """
         resolved_root = repository_root.resolve()
         project_roots = tuple(
             project_root
@@ -58,7 +68,12 @@ class FlextInfraUtilitiesRopeCore(
         *,
         project_roots: t.SequenceOf[Path],
     ) -> t.Infra.RopeProject:
-        """Create one Rope project from validated source roots."""
+        """Create one Rope project from validated source roots.
+
+        Returns:
+            The resulting ``t.Infra.RopeProject``.
+
+        """
         source_folders = sorted({
             str(scan_path.relative_to(resolved_root))
             for project_root in project_roots
@@ -81,7 +96,15 @@ class FlextInfraUtilitiesRopeCore(
         *,
         project_roots: t.SequenceOf[Path] | None = None,
     ) -> Generator[t.Infra.RopeProject]:
-        """Open one Rope project and always close it through the core boundary."""
+        """Open one Rope project and always close it through the core boundary.
+
+        Yields:
+            Each ``t.Infra.RopeProject``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         resolved = repository_root.resolve()
         roots = (
             (resolved,)

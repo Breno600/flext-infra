@@ -55,7 +55,13 @@ class FlextInfraAccessorMigrationRewriteMixin:
         py_file: Path,
         source: str,
     ) -> t.Pair[str, t.SequenceOf[m.Infra.AccessorMigrationChange]]:
-        """Apply automated rewrites."""
+        """Apply automated rewrites.
+
+        Returns:
+            The resulting ``t.Pair[str,
+                t.SequenceOf[m.Infra.AccessorMigrationChange]]``.
+
+        """
         resource = u.Infra.resolve_resource_from_path(rope_project, py_file)
         if resource is None:
             return source, ()
@@ -77,7 +83,13 @@ class FlextInfraAccessorMigrationRewriteMixin:
         rule: m.Infra.AccessorMigrationRule,
         file_path: Path,
     ) -> t.Pair[str, t.SequenceOf[m.Infra.AccessorMigrationChange]]:
-        """Rename symbol tokens."""
+        """Rename symbol tokens.
+
+        Returns:
+            The resulting ``t.Pair[str,
+                t.SequenceOf[m.Infra.AccessorMigrationChange]]``.
+
+        """
         token_lines: t.MutableSequenceOf[m.Infra.AccessorMigrationChange] = []
         rewrite_ranges: t.MutableSequenceOf[t.Triple[int, int, str]] = []
         for token in generate_tokens(io.StringIO(source).readline):
@@ -114,7 +126,12 @@ class FlextInfraAccessorMigrationRewriteMixin:
 
     @staticmethod
     def _offset_from_position(source: str, line: int, column: int) -> int:
-        """Offset from position."""
+        """Offset from position.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         source_lines = source.splitlines(keepends=True)
         line_offset = sum(len(item) for item in source_lines[: line - 1])
         return line_offset + column
@@ -124,7 +141,12 @@ class FlextInfraAccessorMigrationRewriteMixin:
         py_file: Path,
         source: str,
     ) -> t.SequenceOf[m.Infra.AccessorMigrationChange]:
-        """Collect manual warnings."""
+        """Collect manual warnings.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.AccessorMigrationChange]``.
+
+        """
         lines = source.splitlines()
         warnings: t.MutableSequenceOf[m.Infra.AccessorMigrationChange] = []
         scope_stack: t.MutableSequenceOf[t.Pair[str, int]] = []

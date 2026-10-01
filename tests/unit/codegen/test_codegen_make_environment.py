@@ -450,7 +450,12 @@ class TestsFlextInfraCodegenMakeEnvironment:
 
     @staticmethod
     def _locks(root: Path) -> t.MappingKV[str, bytes]:
-        """Return every lock artifact ``make upg`` owns, keyed by relative path."""
+        """Return every lock artifact ``make upg`` owns, keyed by relative path.
+
+        Returns:
+            Every lock artifact ``make upg`` owns, keyed by relative path.
+
+        """
         sidecars = root / ".mise" / "locks"
         paths = (
             root / c.Infra.UV_LOCK_FILENAME,
@@ -764,7 +769,12 @@ class TestsFlextInfraCodegenMakeEnvironment:
 
     @staticmethod
     def _recipe_targets_containing(makefile: str, needle: str) -> set[str]:
-        """Return every rule target whose recipe (not comments) carries *needle*."""
+        """Return every rule target whose recipe (not comments) carries *needle*.
+
+        Returns:
+            Every rule target whose recipe (not comments) carries *needle*.
+
+        """
         targets: set[str] = set()
         current: str | None = None
         continued = False

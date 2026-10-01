@@ -21,7 +21,12 @@ class TestsJointModFixedPoint:
 
     @staticmethod
     def _run(root: Path) -> int:
-        """Invoke the same public application route as the workspace dispatcher."""
+        """Invoke the same public application route as the workspace dispatcher.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         return infra_main([
             "refactor",
             "mod",

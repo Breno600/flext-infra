@@ -20,7 +20,12 @@ class TestsFlextInfraDepsModernizerConsolidate:
         source: str,
         canonical_dev: t.StrSequence = (),
     ) -> t.Pair[t.JsonMapping, t.StrSequence]:
-        """Consolidate one payload twice; return the payload and first changes."""
+        """Consolidate one payload twice; return the payload and first changes.
+
+        Returns:
+            The resulting ``t.Pair[t.JsonMapping, t.StrSequence]``.
+
+        """
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
             u.Tests.toml_payload(source),
         )

@@ -27,7 +27,12 @@ class TestsFlextInfraDepsModernizerTooling:
         project_dir: Path,
         source: str = "",
     ) -> t.Pair[t.MutableJsonMapping, t.JsonMapping]:
-        """Apply the Ruff phase twice to one named payload; return payload and ruff."""
+        """Apply the Ruff phase twice to one named payload; return payload and ruff.
+
+        Returns:
+            The resulting ``t.Pair[t.MutableJsonMapping, t.JsonMapping]``.
+
+        """
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
             u.Tests.toml_payload(f'[project]\nname = "{project_dir.name}"\n{source}'),
         )

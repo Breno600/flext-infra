@@ -194,7 +194,15 @@ class FlextInfraModelsCodegenToolchain:
 
         @u.model_validator(mode="after")
         def _validate_destination_paths(self) -> Self:
-            """Bind every captured state to its declared live destination."""
+            """Bind every captured state to its declared live destination.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: On failure.
+
+            """
             expected = (
                 self.layout.artifacts.config,
                 self.layout.artifacts.unix_launcher,
@@ -274,7 +282,15 @@ class FlextInfraModelsCodegenToolchain:
 
         @u.model_validator(mode="after")
         def _validate_project_layouts(self) -> Self:
-            """Bind every mutable project snapshot to the exact stable layout."""
+            """Bind every mutable project snapshot to the exact stable layout.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: On failure.
+
+            """
             if (
                 tuple(project.layout for project in self.projects)
                 != self.layout.projects

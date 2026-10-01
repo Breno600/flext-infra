@@ -35,7 +35,12 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
         *,
         reverse: bool,
     ) -> p.Result[bool]:
-        """Check one patch direction against an explicit repository root."""
+        """Check one patch direction against an explicit repository root.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         if not patch:
             return r[bool].ok(True)
         direction: list[str] = ["--reverse"] if reverse else []
@@ -51,22 +56,42 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
 
     @classmethod
     def git_check_patch(cls, delta: m.Infra.RepositoryDelta) -> p.Result[bool]:
-        """Forward-check one operation patch against the live source worktree."""
+        """Forward-check one operation patch against the live source worktree.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         return cls._git_check_patch_at(delta.source_root, delta.patch, reverse=False)
 
     @classmethod
     def git_check_isolated_patch(cls, delta: m.Infra.RepositoryDelta) -> p.Result[bool]:
-        """Reverse-check that the isolated worktree contains the patch target."""
+        """Reverse-check that the isolated worktree contains the patch target.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         return cls._git_check_patch_at(delta.worktree_root, delta.patch, reverse=True)
 
     @classmethod
     def _git_source_has_patch(cls, delta: m.Infra.RepositoryDelta) -> p.Result[bool]:
-        """Return success when the live source already contains the patch target."""
+        """Return success when the live source already contains the patch target.
+
+        Returns:
+            Success when the live source already contains the patch target.
+
+        """
         return cls._git_check_patch_at(delta.source_root, delta.patch, reverse=True)
 
     @staticmethod
     def _git_patch_added_paths(patch: bytes) -> t.VariadicTuple[Path]:
-        """Return paths declared as new files by one binary Git patch."""
+        """Return paths declared as new files by one binary Git patch.
+
+        Returns:
+            Paths declared as new files by one binary Git patch.
+
+        """
         added: list[Path] = []
         current: Path | None = None
         for raw_line in patch.splitlines():
@@ -80,7 +105,12 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
 
     @classmethod
     def _git_apply_gitlinks(cls, repository_root: Path, patch: bytes) -> p.Result[bool]:
-        """Apply submodule entries that have no working-tree file representation."""
+        """Apply submodule entries that have no working-tree file representation.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         current: Path | None = None
         gitlink = False
         gitlink_mode = c.Infra.GIT_GITLINK_MODE_TEXT.encode()
@@ -123,7 +153,12 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
         cls,
         delta: m.Infra.RepositoryDelta,
     ) -> p.Result[bool]:
-        """Apply additions over existing ignored projections with rollback."""
+        """Apply additions over existing ignored projections with rollback.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         collisions = tuple(
             path
             for path in cls._git_patch_added_paths(delta.patch)
@@ -156,7 +191,12 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
 
     @classmethod
     def git_apply_patch(cls, delta: m.Infra.RepositoryDelta) -> p.Result[bool]:
-        """Forward-check and idempotently converge one source operation patch."""
+        """Forward-check and idempotently converge one source operation patch.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         if not delta.patch:
             return r[bool].ok(True)
         check_result = cls.git_check_patch(delta)

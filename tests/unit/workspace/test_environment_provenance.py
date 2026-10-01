@@ -85,7 +85,12 @@ class TestsFlextInfraWorkspaceEnvironmentProvenance:
         )
 
     def _stale_checkout(self, tmp_path: Path) -> t.Triple[Path, Path, Path]:
-        """Create the governed workspace, its member, and one stale checkout tree."""
+        """Create the governed workspace, its member, and one stale checkout tree.
+
+        Returns:
+            The resulting ``t.Triple[Path, Path, Path]``.
+
+        """
         workspace = self._workspace(tmp_path / "workspace")
         member = workspace / "sample-member"
         stale = tmp_path / "stale" / "sample-member"
@@ -94,7 +99,12 @@ class TestsFlextInfraWorkspaceEnvironmentProvenance:
 
     @staticmethod
     def _provenance_failure(workspace: Path, site_packages: Path) -> str:
-        """Validate provenance once and return its typed failure message."""
+        """Validate provenance once and return its typed failure message.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         result = FlextInfraWorkspaceEnvironmentProvenance.validate(
             workspace,
             metadata_paths=(str(site_packages),),

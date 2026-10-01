@@ -51,7 +51,12 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
         self,
         package_entry: m.Infra.RopePackageIndexEntry,
     ) -> bool:
-        """Return whether a package owns a module or a manual initializer."""
+        """Return whether a package owns a module or a manual initializer.
+
+        Returns:
+            Whether a package owns a module or a manual initializer.
+
+        """
         candidates = (package_entry.package_dir, *package_entry.descendant_child_dirs)
         for candidate in candidates:
             entry = self._package_entry(candidate)
@@ -71,7 +76,12 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
         lazy_map: t.MutableLazyAliasMap,
         dir_exports: t.MappingKV[str, t.LazyAliasMap],
     ) -> t.StrSequence:
-        """Merge direct child packages into the parent lazy map."""
+        """Merge direct child packages into the parent lazy map.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         package_entry = self._package_entry(pkg_dir)
         if package_entry is None:
             return ()
@@ -165,6 +175,10 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
         root) while ``tests/unit/io/`` and ``pkg/services/http/`` do not.
         The generator's own Ruff gate rejects the shadowing render, and no
         generated content can repair the package name.
+
+        Returns:
+            True when the package's importable name shadows a stdlib module.
+
         """
         current_pkg = self.context(pkg_dir).current_pkg
         parts = (

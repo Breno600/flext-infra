@@ -56,7 +56,12 @@ class FlextInfraPyprojectModernizerRun:
         ) -> p.Result[t.StrSequence]: ...
 
     def _selected_project_paths(self) -> p.Result[t.SequenceOf[Path]]:
-        """Resolve selected names by path, directory basename, or declared name."""
+        """Resolve selected names by path, directory basename, or declared name.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[Path]]``.
+
+        """
         result_type = r[t.SequenceOf[Path]]
         declared = {
             name: self.root / name
@@ -117,7 +122,12 @@ class FlextInfraPyprojectModernizerRun:
         return result_type.ok(paths)
 
     def run(self) -> int:
-        """Run pyproject modernization for the workspace."""
+        """Run pyproject modernization for the workspace.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         check_mode = self.audit or self.check_only
         dry_run = check_mode or self.effective_dry_run
         # Modernization writes only the requested repository root and its
@@ -220,7 +230,12 @@ class FlextInfraPyprojectModernizerRun:
         *,
         dry_run: bool,
     ) -> int:
-        """Write runtime-resolved floors to the codegen SSOT."""
+        """Write runtime-resolved floors to the codegen SSOT.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         try:
             root_project_name = u.Infra.project_name_from_payload(
                 root_state.pyproject_path,
@@ -257,7 +272,12 @@ class FlextInfraPyprojectModernizerRun:
         *,
         invalid_paths: t.SequenceOf[Path],
     ) -> int:
-        """Validate every pyproject declares the hatchling build backend."""
+        """Validate every pyproject declares the hatchling build backend.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         warnings = [f"{path}: invalid TOML" for path in invalid_paths]
         for state in states:
             build_system = u.Cli.toml_mapping_child(state.payload, "build-system")

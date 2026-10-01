@@ -26,7 +26,12 @@ class TestsFlextInfraDepsDetectionDeptry:
         *,
         exit_code: int = 0,
     ) -> t.Pair[Path, Path]:
-        """Create a project and a ``deptry`` that writes ``report`` as its JSON."""
+        """Create a project and a ``deptry`` that writes ``report`` as its JSON.
+
+        Returns:
+            The resulting ``t.Pair[Path, Path]``.
+
+        """
         venv_bin = tmp_path / "venv" / "bin"
         venv_bin.mkdir(parents=True)
         project = tmp_path / "project"
@@ -113,7 +118,12 @@ class TestsFlextInfraDepsDetectionDeptry:
 
     @staticmethod
     def _profile_runtime(upstream: str) -> t.StrSequence:
-        """Read one shared dependency profile's runtime from the codegen SSOT."""
+        """Read one shared dependency profile's runtime from the codegen SSOT.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         return next(
             item.runtime
             for item in config.Infra.codegen.scaffold.project.dependency_profiles

@@ -19,14 +19,24 @@ class ExtraPathsTestSupport:
 
     @staticmethod
     def manager(repository_root: Path | None = None) -> FlextInfraExtraPathsManager:
-        """Return a manager built through the Pydantic validation path."""
+        """Return a manager built through the Pydantic validation path.
+
+        Returns:
+            A manager built through the Pydantic validation path.
+
+        """
         return FlextInfraExtraPathsManager(
             repository_root=repository_root or _TEST_REPOSITORY_ROOT,
         )
 
     @staticmethod
     def project(root: Path, name: str, package: str, *, with_git: bool = True) -> Path:
-        """Materialize one importable project with a declared distribution name."""
+        """Materialize one importable project with a declared distribution name.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         project = root / name
         (project / "src" / package).mkdir(parents=True)
         (project / "src" / package / "__init__.py").write_text("", encoding="utf-8")
@@ -46,7 +56,12 @@ class ExtraPathsTestSupport:
         *,
         uv_workspace: bool = True,
     ) -> t.Pair[Path, Path]:
-        """Write one governed root and its ``flext-core`` dependency checkout."""
+        """Write one governed root and its ``flext-core`` dependency checkout.
+
+        Returns:
+            The resulting ``t.Pair[Path, Path]``.
+
+        """
         (root / ".git").mkdir()
         (root / "src").mkdir()
         pyproject = "[project]\nname = 'flext'\ndependencies = ['flext-core']\n"

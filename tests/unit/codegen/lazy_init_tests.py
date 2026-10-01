@@ -24,7 +24,12 @@ if TYPE_CHECKING:
 
 @pytest.fixture
 def governed_project(tmp_path: Path) -> Path:
-    """Provide a valid project identity for package discovery."""
+    """Provide a valid project identity for package discovery.
+
+    Returns:
+        The resulting ``Path``.
+
+    """
     (tmp_path / "pyproject.toml").write_text(
         '[project]\nname = "test-helpers"\nversion = "0.1.0"\n',
         encoding="utf-8",

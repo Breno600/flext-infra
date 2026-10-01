@@ -32,7 +32,15 @@ class FlextInfraPytestProfile:
         started_at_monotonic: float,
         collection_command_prefix: t.StrTuple,
     ) -> int:
-        """Start profiling before importing the runner or any FLEXT service."""
+        """Start profiling before importing the runner or any FLEXT service.
+
+        Returns:
+            The resulting ``int``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         if not collection_command_prefix:
             msg = "profile execution requires an injected collection command prefix"
             raise ValueError(msg)
@@ -55,7 +63,12 @@ class FlextInfraPytestProfile:
             self._finish(profile)
 
     def run_collection(self, receipt_path: Path, arguments: t.StrTuple) -> int:
-        """Measure receipt/model imports and pytest itself; restore the original argv."""
+        """Measure receipt/model imports and pytest itself; restore the original argv.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         self.context = None
         self.output.with_suffix(".pstats.json").unlink(missing_ok=True)
         original_argv = sys.argv

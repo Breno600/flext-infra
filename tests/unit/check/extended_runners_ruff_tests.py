@@ -27,7 +27,12 @@ class TestsFlextInfraRealGateRunners:
 
     @staticmethod
     def make_ctx(root: Path) -> m.Infra.GateContext:
-        """Provide ``make_ctx``."""
+        """Provide ``make_ctx``.
+
+        Returns:
+            The resulting ``m.Infra.GateContext``.
+
+        """
         return m.Infra.GateContext(repository_root=root, reports_dir=root)
 
     def test_ruff_lint_reports_real_issue(self, tmp_path: Path) -> None:

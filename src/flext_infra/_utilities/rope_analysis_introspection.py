@@ -39,7 +39,12 @@ class FlextInfraUtilitiesRopeAnalysisIntrospection:
         resource: t.Infra.RopeResource,
         class_name: str,
     ) -> t.StrSequence:
-        """Return names of nested classes within a given class."""
+        """Return names of nested classes within a given class.
+
+        Returns:
+            Names of nested classes within a given class.
+
+        """
         return FlextInfraUtilitiesRopeAnalysisIntrospection._nested_class_names(
             rope_project,
             resource,
@@ -52,7 +57,12 @@ class FlextInfraUtilitiesRopeAnalysisIntrospection:
         resource: t.Infra.RopeResource,
         class_name: str,
     ) -> t.StrSequence:
-        """Return nested class names from a resolved Rope class object."""
+        """Return nested class names from a resolved Rope class object.
+
+        Returns:
+            Nested class names from a resolved Rope class object.
+
+        """
         result: list[str] = []
         pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
         attributes = pymodule.get_attributes()
@@ -72,7 +82,12 @@ class FlextInfraUtilitiesRopeAnalysisIntrospection:
         rope_project: t.Infra.RopeProject,
         resource: t.Infra.RopeResource,
     ) -> t.SequenceOf[m.Infra.SymbolInfo]:
-        """Return top-level symbols defined in one module through Rope metadata."""
+        """Return top-level symbols defined in one module through Rope metadata.
+
+        Returns:
+            Top-level symbols defined in one module through Rope metadata.
+
+        """
         result: t.MutableSequenceOf[m.Infra.SymbolInfo] = []
         pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
         tree: p.AttributeProbe = pymodule.get_ast()
@@ -91,7 +106,12 @@ class FlextInfraUtilitiesRopeAnalysisIntrospection:
     def _module_symbols_from_node(
         node: p.AttributeProbe,
     ) -> t.SequenceOf[m.Infra.SymbolInfo]:
-        """Return top-level symbol entries represented by one Rope AST node."""
+        """Return top-level symbol entries represented by one Rope AST node.
+
+        Returns:
+            Top-level symbol entries represented by one Rope AST node.
+
+        """
         node_kind = node.__class__.__name__
         line = FlextInfraUtilitiesRopeAnalysisIntrospection._ast_line(node)
         if node_kind == "ClassDef":
@@ -118,7 +138,12 @@ class FlextInfraUtilitiesRopeAnalysisIntrospection:
 
     @staticmethod
     def _assignment_names(node: p.AttributeProbe, node_kind: str) -> t.StrSequence:
-        """Return assignment-like target names from one top-level AST node."""
+        """Return assignment-like target names from one top-level AST node.
+
+        Returns:
+            Assignment-like target names from one top-level AST node.
+
+        """
         if node_kind == "Assign":
             raw_targets: p.AttributeProbe = getattr(node, "targets", ())
             if not isinstance(raw_targets, (list, tuple)):
@@ -144,7 +169,12 @@ class FlextInfraUtilitiesRopeAnalysisIntrospection:
 
     @staticmethod
     def _ast_named_value(node: p.AttributeProbe | None) -> str:
-        """Return ``name``/``id`` carried by a Rope AST node."""
+        """Return ``name``/``id`` carried by a Rope AST node.
+
+        Returns:
+            ``name``/``id`` carried by a Rope AST node.
+
+        """
         if node is None:
             return ""
         direct: p.AttributeProbe = getattr(node, "name", "")
@@ -160,7 +190,12 @@ class FlextInfraUtilitiesRopeAnalysisIntrospection:
 
     @staticmethod
     def _ast_line(node: p.AttributeProbe) -> int:
-        """Return a stable one-based source line for a Rope AST node."""
+        """Return a stable one-based source line for a Rope AST node.
+
+        Returns:
+            A stable one-based source line for a Rope AST node.
+
+        """
         line: p.AttributeProbe = getattr(node, "lineno", 1)
         return line if isinstance(line, int) and line > 0 else 1
 
@@ -169,7 +204,12 @@ class FlextInfraUtilitiesRopeAnalysisIntrospection:
         cls: type[p.Infra.RopeAnalysisMethods],
         package_dir: Path,
     ) -> t.MappingKV[str, t.SequenceOf[t.Triple[str, str, str]]]:
-        """Extract public methods from all Python files in a package directory."""
+        """Extract public methods from all Python files in a package directory.
+
+        Returns:
+            The resulting ``t.MappingKV[str, t.SequenceOf[t.Triple[str, str, str]]]``.
+
+        """
         result: MutableMapping[str, t.MutableSequenceOf[t.Triple[str, str, str]]] = {}
         project_root = FlextInfraUtilitiesDiscovery.project_root(package_dir / "foo.py")
         if project_root is None:

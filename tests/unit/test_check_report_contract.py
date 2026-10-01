@@ -51,7 +51,12 @@ class TestsFlextInfraCheckReportContract:
 
     @staticmethod
     def _check_run(project: Path, reports: Path, *mode: str) -> int:
-        """Run the same ``check run`` argument vector the generated verbs render."""
+        """Run the same ``check run`` argument vector the generated verbs render.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         return main([
             "check",
             "run",

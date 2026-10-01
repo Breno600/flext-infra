@@ -22,7 +22,12 @@ class FlextInfraCodegenFileLeases:
     @staticmethod
     @contextmanager
     def mutation_lease(root: Path) -> Generator[None]:
-        """Serialize one nontransactional writer with its canonical scope owner."""
+        """Serialize one nontransactional writer with its canonical scope owner.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         scope = u.Infra.git_mutation_scope(
             m.Infra.GitRepoRequest(repo_root=root),
         ).unwrap()
@@ -65,7 +70,12 @@ class FlextInfraCodegenFileLeases:
         *,
         held_roots: frozenset[Path] = frozenset(),
     ) -> Generator[None]:
-        """Serialize destinations not already covered by the outer root lease."""
+        """Serialize destinations not already covered by the outer root lease.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         for participant in participants:
             physical = files.physical_directory_identity(participant.root).unwrap()
             if physical != (participant.device, participant.inode):

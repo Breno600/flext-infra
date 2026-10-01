@@ -36,7 +36,12 @@ class FlextInfraMiseColdStart:
 
     @staticmethod
     def candidate_plans(root: Path) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
-        """Recover one complete candidate triple from the packaged upg output."""
+        """Recover one complete candidate triple from the packaged upg output.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
+
+        """
         result_type = r[t.SequenceOf[m.Infra.CodegenFilePlan]]
         source_root = files.cold_start_directory()
         validated = FlextInfraMiseArtifactsDerivation.validate_packaged(source_root)
@@ -75,7 +80,12 @@ class FlextInfraMiseColdStart:
 
     @classmethod
     def plans(cls, root: Path) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]:
-        """Plan the packaged copy when ``root`` holds the running package."""
+        """Plan the packaged copy when ``root`` holds the running package.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]``.
+
+        """
         result_type = r[tuple[m.Infra.CodegenFilePlan, ...]]
         project = root.expanduser().resolve()
         package = files.package_directory()

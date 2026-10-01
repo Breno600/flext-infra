@@ -26,14 +26,24 @@ class FlextInfraUtilitiesWorkspaceFingerprint:
 
     @staticmethod
     def _excluded(path: Path, exclusions: frozenset[Path]) -> bool:
-        """Return whether a path is an explicit excluded artifact or descendant."""
+        """Return whether a path is an explicit excluded artifact or descendant.
+
+        Returns:
+            Whether a path is an explicit excluded artifact or descendant.
+
+        """
         return any(
             path == excluded or path.is_relative_to(excluded) for excluded in exclusions
         )
 
     @staticmethod
     def _read_content_digest(path: Path) -> bytes:
-        """Hash one path without following symlinks."""
+        """Hash one path without following symlinks.
+
+        Returns:
+            The resulting ``bytes``.
+
+        """
         digest = hashlib.sha256()
         try:
             metadata = path.lstat()
@@ -59,7 +69,12 @@ class FlextInfraUtilitiesWorkspaceFingerprint:
 
     @classmethod
     def _file_content_digest(cls, path: Path) -> p.Result[bytes]:
-        """Return a typed content digest or one precise read failure."""
+        """Return a typed content digest or one precise read failure.
+
+        Returns:
+            A typed content digest or one precise read failure.
+
+        """
         try:
             return r[bytes].ok(cls._read_content_digest(path))
         except OSError as exc:
@@ -72,7 +87,12 @@ class FlextInfraUtilitiesWorkspaceFingerprint:
         *,
         excluded_paths: t.SequenceOf[Path] = (),
     ) -> p.Result[m.Infra.WorkspaceFingerprint]:
-        """Capture a content-addressed snapshot of one Git checkout."""
+        """Capture a content-addressed snapshot of one Git checkout.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.WorkspaceFingerprint]``.
+
+        """
         root = checkout.resolve()
         inputs = FlextInfraUtilitiesGit.git_fingerprint_inputs(
             m.Infra.GitRepoRequest(repo_root=root),
@@ -140,7 +160,12 @@ class FlextInfraUtilitiesWorkspaceFingerprint:
         before: m.Infra.WorkspaceFingerprint,
         after: m.Infra.WorkspaceFingerprint,
     ) -> t.StrSequence:
-        """Return repository paths whose content or index state changed."""
+        """Return repository paths whose content or index state changed.
+
+        Returns:
+            Repository paths whose content or index state changed.
+
+        """
         before_entries = {entry.path: entry.digest for entry in before.entries}
         after_entries = {entry.path: entry.digest for entry in after.entries}
         return tuple(

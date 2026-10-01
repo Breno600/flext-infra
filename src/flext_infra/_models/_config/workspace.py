@@ -250,7 +250,15 @@ class FlextInfraConfigModelsWorkspace:
 
         @u.model_validator(mode="after")
         def _validate_references(self) -> Self:
-            """Reject ambiguous paths and policy references in the full document."""
+            """Reject ambiguous paths and policy references in the full document.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: On failure.
+
+            """
             external_paths = (*self.external_dependency_paths, *self.content_only)
             invalid_paths = tuple(
                 path
@@ -383,7 +391,15 @@ class FlextInfraConfigModelsWorkspace:
 
         @u.model_validator(mode="after")
         def _validate_topology_paths(self) -> Self:
-            """Reject duplicate, ambiguous, or escaping topology paths."""
+            """Reject duplicate, ambiguous, or escaping topology paths.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: On failure.
+
+            """
             invalid_external_paths = tuple(
                 path
                 for path in self.external_dependency_paths

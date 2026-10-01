@@ -26,7 +26,12 @@ class FlextInfraDocAuditorReportMixin:
         params: m.Infra.AuditScopeParams,
         docstring_coverage: m.Infra.DocstringCoverage | None = None,
     ) -> m.Infra.DocsPhaseReport:
-        """Build the standard docs audit phase report."""
+        """Build the standard docs audit phase report.
+
+        Returns:
+            The resulting ``m.Infra.DocsPhaseReport``.
+
+        """
         issue_count = len(issues)
         coverage_breached = (
             params.docstring_min is not None

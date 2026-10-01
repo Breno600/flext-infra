@@ -32,6 +32,10 @@ def smells_project(tmp_path: Path) -> Iterator[Path]:
     either gap — exactly as in a real lane, whose package is importable from
     its environment. The package name is unique per test so no module cached
     by another test stands in for this one.
+
+    Yields:
+        Each ``Path``.
+
     """
     name = f"smells-{tmp_path.name}"
     project = u.Tests.mk_project(

@@ -72,7 +72,15 @@ class FlextInfraModelsCodegenTransactionModels:
 
         @u.model_validator(mode="after")
         def _validate_lifecycle(self) -> Self:
-            """Bind staging and publication payloads to one safe project set."""
+            """Bind staging and publication payloads to one safe project set.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: On failure.
+
+            """
             selectors = tuple(
                 project.selector
                 for project in (*self.projects, *self.file_participants)

@@ -43,7 +43,12 @@ class FlextInfraPyprojectModernizerDocument:
         payload: t.JsonMapping,
         project_kind: str | None,
     ) -> str:
-        """Return the declared kind, classifying member projects on demand."""
+        """Return the declared kind, classifying member projects on demand.
+
+        Returns:
+            The declared kind, classifying member projects on demand.
+
+        """
         if project_kind is not None:
             return project_kind
         if path.parent.resolve() == self.root.resolve():
@@ -60,7 +65,12 @@ class FlextInfraPyprojectModernizerDocument:
         *,
         source: str | None = None,
     ) -> p.Result[m.Infra.PyprojectDocumentState]:
-        """Parse one pyproject once into one validated plain payload state."""
+        """Parse one pyproject once into one validated plain payload state.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.PyprojectDocumentState]``.
+
+        """
         result_type = r[m.Infra.PyprojectDocumentState]
         if source is None:
             read = u.Cli.files_read_text(path)
@@ -86,7 +96,12 @@ class FlextInfraPyprojectModernizerDocument:
 
     @staticmethod
     def _normalize_build_payload(payload: t.MutableJsonMapping) -> t.StrSequence:
-        """Pin the hatchling backend and drop empty Poetry dependency groups."""
+        """Pin the hatchling backend and drop empty Poetry dependency groups.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         changes: t.MutableSequenceOf[str] = []
         if u.Cli.toml_mapping_child(payload, "build-system") is None:
             changes.append("created [build-system]")
@@ -135,7 +150,12 @@ class FlextInfraPyprojectModernizerDocument:
         container: t.Cli.TomlDocument | t.Cli.TomlTable,
         preferred_first: t.StrSequence,
     ) -> t.Pair[t.StrSequence, t.StrSequence]:
-        """Return current keys and their preferred-first, then alphabetical order."""
+        """Return current keys and their preferred-first, then alphabetical order.
+
+        Returns:
+            Current keys and their preferred-first, then alphabetical order.
+
+        """
         current = [str(key) for key in container]
         ordered = [key for key in preferred_first if key in current]
         ordered.extend(sorted(set(current) - set(ordered)))
@@ -198,7 +218,12 @@ class FlextInfraPyprojectModernizerDocument:
         dry_run: bool,
         skip_comments: bool,
     ) -> p.Result[t.StrSequence]:
-        """Run every phase over one discovered state; write unless ``dry_run``."""
+        """Run every phase over one discovered state; write unless ``dry_run``.
+
+        Returns:
+            The resulting ``p.Result[t.StrSequence]``.
+
+        """
         return self._render_document_state(
             state,
             self._apply_document_phases(
@@ -217,7 +242,12 @@ class FlextInfraPyprojectModernizerDocument:
         canonical_dev: t.StrSequence,
         topology: m.Infra.PyprojectDeclaredTopology,
     ) -> t.StrSequence:
-        """Run every managed phase, in order, over one parsed payload."""
+        """Run every managed phase, in order, over one parsed payload.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         path, payload = state.pyproject_path, state.payload
         is_root = path.parent.resolve() == self.root.resolve()
         # Scaffold (pre-write) contexts have no on-disk project root yet: derive
@@ -301,6 +331,10 @@ class FlextInfraPyprojectModernizerDocument:
         """Order, annotate, and format one payload; write unless ``dry_run``.
 
         A formatter failure is the result's failure, never a reported change.
+
+        Returns:
+            The resulting ``p.Result[t.StrSequence]``.
+
         """
         path = state.pyproject_path
         doc = u.Cli.toml_document_from_mapping(state.payload)

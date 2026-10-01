@@ -24,7 +24,12 @@ class TestsFlextInfraCodegenArtifactSsot:
 
     @pytest.fixture(scope="module")
     def codegen(self) -> CodegenSpec:
-        """Return the production configuration consumed by every projection."""
+        """Return the production configuration consumed by every projection.
+
+        Returns:
+            The production configuration consumed by every projection.
+
+        """
         return config.Infra.codegen
 
     @staticmethod

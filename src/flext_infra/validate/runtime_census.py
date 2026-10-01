@@ -60,6 +60,10 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         the census discovery keys projects by exactly that pyproject name.
         An unreadable manifest is a typed failure so every gate grades it on
         its own failure path instead of an exception escaping the gate.
+
+        Returns:
+            The resulting ``p.Result[FlextInfraRuntimeCensusValidator]``.
+
         """
         # A checkout without a manifest declares no project: the census then
         # selects nothing and reports that typed failure. A present manifest
@@ -88,6 +92,10 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         from the flext-core smell catalog — every smell tag plus the rule id
         of every catalog row carrying one — so a smell added to the catalog
         moves to the smells gate in the same edit, with no second list.
+
+        Returns:
+            The resulting ``t.MappingKV[str, frozenset[str]]``.
+
         """
         smell_tags = c.ENFORCEMENT_SMELL_TAGS
         rules_by_tag = u.rules_by_tag()
@@ -100,12 +108,22 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
 
     @staticmethod
     def _is_local_class(klass: type, module_name: str) -> bool:
-        """Return True when ``klass`` is defined in ``module_name`` (not imported)."""
+        """Return True when ``klass`` is defined in ``module_name`` (not imported).
+
+        Returns:
+            True when ``klass`` is defined in ``module_name`` (not imported).
+
+        """
         return klass.__module__ == module_name
 
     @classmethod
     def _walk_modules(cls, package_name: str) -> t.SequenceOf[str]:
-        """Return all importable module names under ``package_name``."""
+        """Return all importable module names under ``package_name``.
+
+        Returns:
+            All importable module names under ``package_name``.
+
+        """
         package = importlib.import_module(package_name)
         prefix = package.__name__ + "."
         modules: list[str] = [package.__name__]
@@ -119,7 +137,12 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
 
     @staticmethod
     def _raise_package_walk_error(module_name: str) -> None:
-        """Propagate the package import exception with its original traceback."""
+        """Propagate the package import exception with its original traceback.
+
+        Raises:
+            RuntimeError: On failure.
+
+        """
         exception = sys.exception()
         if exception is None:
             msg = f"package discovery failed without an exception: {module_name}"
@@ -127,7 +150,12 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         raise exception.with_traceback(exception.__traceback__)
 
     def _check_module(self, module_name: str) -> t.SequenceOf[m.Infra.ValidationReport]:
-        """Import one module and run runtime enforcement on its local classes."""
+        """Import one module and run runtime enforcement on its local classes.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.ValidationReport]``.
+
+        """
         module = importlib.import_module(module_name)
         violations: list[str] = []
         for _name, obj in inspect.getmembers(module, inspect.isclass):
@@ -162,6 +190,10 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
 
         A project without an importable package establishes no census: it
         fails, never passes on empty input.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ValidationReport]``.
+
         """
         layout = u.Infra.layout(project.path, project=project)
         if layout is None:
@@ -211,6 +243,10 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         when the catalog maps the tag, else the raw tag itself
         (``[class_prefix]``); bracketless lines (import failures) own no rule
         family and stay with the runtime census.
+
+        Returns:
+            The trailing ``[rule]`` token of one census violation line.
+
         """
         match = re.search(r"\[([^[\]]+)\]$", violation)
         if match is None:
@@ -225,6 +261,10 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         ENFORCE-* families name one exact catalog rule and must never
         prefix-capture a sibling (``ENFORCE-04`` would otherwise swallow
         ``ENFORCE-046``); every other family is a tag prefix.
+
+        Returns:
+            The resulting ``bool``.
+
         """
         if family.startswith("ENFORCE-"):
             return token == family
@@ -238,6 +278,10 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         is routing, never suppression: a family another gate owns is neither
         counted nor reported here. Bracketless lines (import failures) own no
         family and stay with the runtime census.
+
+        Returns:
+            The resulting ``tuple[str, ...]``.
+
         """
         owned = self._gate_rule_families()
         own_families = owned.get(self.census_gate)
@@ -265,7 +309,12 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         return tuple(kept)
 
     def build_report(self) -> p.Result[m.Infra.ValidationReport]:
-        """Build one validation report for the selected workspace projects."""
+        """Build one validation report for the selected workspace projects.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ValidationReport]``.
+
+        """
         owning_gates = frozenset({c.Infra.RUNTIME_CENSUS, *self._gate_rule_families()})
         if self.census_gate not in owning_gates:
             return r[m.Infra.ValidationReport].fail(
@@ -312,7 +361,12 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute runtime census and collapse the report to ``r[bool]``."""
+        """Execute runtime census and collapse the report to ``r[bool]``.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         report_result = self.build_report()
         if report_result.failure:
             return r[bool].from_failure(report_result)
@@ -331,6 +385,10 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         rule or file owned the bulk of the debt. Grouping by rule_id (falling
         back to 'UNKNOWN' when a violation string carries no bracket) gives the
         operator a histogram and a per-rule file list in one read.
+
+        Returns:
+            The resulting ``str``.
+
         """
         rule_buckets: MutableMapping[str, list[str]] = defaultdict(list)
         for violation in report.violations:

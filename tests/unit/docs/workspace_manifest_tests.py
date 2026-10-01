@@ -46,7 +46,12 @@ class TestsFlextInfraWorkspaceManifest:
 
     @staticmethod
     def _config_dir(root: Path) -> Path:
-        """Create and return the checkout's config directory."""
+        """Create and return the checkout's config directory.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         config = root / c.CONFIG_DIR_NAME
         config.mkdir(parents=True, exist_ok=True)
         return config

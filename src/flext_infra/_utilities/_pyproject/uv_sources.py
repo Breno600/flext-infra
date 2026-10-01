@@ -35,7 +35,12 @@ class FlextInfraUtilitiesPyprojectUvSources(
         cls,
         document: t.Cli.TomlDocument,
     ) -> p.Result[list[str]]:
-        """Collect every declared requirement line of one pyproject document."""
+        """Collect every declared requirement line of one pyproject document.
+
+        Returns:
+            The resulting ``p.Result[list[str]]``.
+
+        """
         payload = u.Cli.toml_as_mapping(document)
         if payload is None:
             return r[list[str]].fail("pyproject document is not a TOML mapping")
@@ -57,7 +62,12 @@ class FlextInfraUtilitiesPyprojectUvSources(
         *,
         environment: t.StrMapping,
     ) -> t.VariadicTuple[str]:
-        """Read strictly parsed requirements active on the consumer interpreter."""
+        """Read strictly parsed requirements active on the consumer interpreter.
+
+        Returns:
+            The resulting ``t.VariadicTuple[str]``.
+
+        """
         return tuple(
             active
             for item in cls._document_requirement_lines(document).unwrap()
@@ -79,6 +89,10 @@ class FlextInfraUtilitiesPyprojectUvSources(
 
         Forks and local projects reach a project only this way, never from a
         registry, so this is the derived set the supply-chain cooldown skips.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[str]]``.
+
         """
         lines = cls._document_requirement_lines(document)
         if lines.failure:
@@ -107,6 +121,10 @@ class FlextInfraUtilitiesPyprojectUvSources(
 
         The resolver keys are always declared, so the table always exists and
         never ends empty.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
         if tool is None:
@@ -208,6 +226,10 @@ class FlextInfraUtilitiesPyprojectUvSources(
         ``project.dependencies`` is one array while ``optional-dependencies``
         and ``dependency-groups`` are tables of arrays; this is the single
         owner of that shape for read-only requirement scans.
+
+        Returns:
+            The resulting ``list[str]``.
+
         """
         if isinstance(raw, Mapping):
             values: list[str] = []

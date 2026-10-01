@@ -28,7 +28,12 @@ class TestsFlextInfraInfraRopeService:
         module_name: str,
         source: str,
     ) -> t.Pair[Path, Path]:
-        """Create one flext-demo workspace and write ``source`` into its module."""
+        """Create one flext-demo workspace and write ``source`` into its module.
+
+        Returns:
+            The resulting ``t.Pair[Path, Path]``.
+
+        """
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
             project_name="flext-demo",
@@ -42,7 +47,12 @@ class TestsFlextInfraInfraRopeService:
     def _paired_namespace_projects(
         root: Path,
     ) -> tuple[Path, Path, Path, Path, Path]:
-        """Declare two sibling namespace projects and return their roots and modules."""
+        """Declare two sibling namespace projects and return their roots and modules.
+
+        Returns:
+            The resulting ``tuple[Path, Path, Path, Path, Path]``.
+
+        """
         project_root, package_root = u.Tests.create_lazy_init_workspace(
             root,
             project_name="flext-infra",
@@ -81,7 +91,12 @@ class TestsFlextInfraInfraRopeService:
         module_path: Path,
         options: t.JsonMapping,
     ) -> t.VariadicTuple[str]:
-        """Read one module's public export contract through the Rope workspace."""
+        """Read one module's public export contract through the Rope workspace.
+
+        Returns:
+            The resulting ``t.VariadicTuple[str]``.
+
+        """
         with flext_infra.infra.rope_workspace(repository_root) as rope:
             return tuple(
                 rope.exports(
@@ -95,7 +110,12 @@ class TestsFlextInfraInfraRopeService:
         repository_root: Path,
         module_path: Path,
     ) -> t.MutableMappingKV[str, m.Infra.Object]:
-        """Index one module's non-local objects by their declared name."""
+        """Index one module's non-local objects by their declared name.
+
+        Returns:
+            The resulting ``t.MutableMappingKV[str, m.Infra.Object]``.
+
+        """
         with flext_infra.infra.rope_workspace(repository_root) as rope:
             return {
                 item.name: item

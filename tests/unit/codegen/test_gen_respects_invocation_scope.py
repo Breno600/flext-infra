@@ -45,7 +45,12 @@ class TestsFlextInfraGenRespectsInvocationScope:
 
     @pytest.fixture
     def rendered_makefile(self, tmp_path: Path) -> str:
-        """Render the workspace Makefile through the conform owner."""
+        """Render the workspace Makefile through the conform owner.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return u.Tests.scaffold_text(
             tmp_path / "fixture-project",
             c.Infra.MAKEFILE_FILENAME,
@@ -54,7 +59,12 @@ class TestsFlextInfraGenRespectsInvocationScope:
 
     @staticmethod
     def _recipe_bodies(text: str) -> t.MutableMappingKV[str, list[str]]:
-        """Return each rendered ``_builtin_*`` target mapped to its recipe lines."""
+        """Return each rendered ``_builtin_*`` target mapped to its recipe lines.
+
+        Returns:
+            Each rendered ``_builtin_*`` target mapped to its recipe lines.
+
+        """
         bodies: t.MutableMappingKV[str, list[str]] = {}
         current: str | None = None
         for line in text.splitlines():

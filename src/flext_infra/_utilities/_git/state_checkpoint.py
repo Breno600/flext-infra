@@ -125,7 +125,12 @@ class FlextInfraUtilitiesGitStateCheckpointMixin(FlextInfraUtilitiesGitStateTree
         snapshot: m.Infra.GitWorktreeStateSnapshot,
         checkpoint_ref: str,
     ) -> p.Result[m.Infra.GitWorktreeStateCheckpoint]:
-        """Create a dedicated checkpoint, or verify an identical prior receipt."""
+        """Create a dedicated checkpoint, or verify an identical prior receipt.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitWorktreeStateCheckpoint]``.
+
+        """
         try:
             checkpoint = cls._state_checkpoint(snapshot, checkpoint_ref)
         except (GitCommandError, OSError, ValueError) as exc:
@@ -167,7 +172,12 @@ class FlextInfraUtilitiesGitStateCheckpointMixin(FlextInfraUtilitiesGitStateTree
         destination_root: Path,
         saved_commit: str,
     ) -> p.Result[bool]:
-        """Verify original retention and an independently saved descendant."""
+        """Verify original retention and an independently saved descendant.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         try:
             cls._state_verify_saved(checkpoint, destination_root, saved_commit)
         except (GitCommandError, OSError, ValueError) as exc:

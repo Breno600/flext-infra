@@ -174,7 +174,12 @@ class TestsFlextInfraReleaseHelpers:
 
         @staticmethod
         def write_notes(workspace: Path) -> Path:
-            """Write the release-notes fixture the changelog updates consume."""
+            """Write the release-notes fixture the changelog updates consume.
+
+            Returns:
+                The resulting ``Path``.
+
+            """
             notes_path = workspace / "notes.md"
             notes_path.parent.mkdir(parents=True, exist_ok=True)
             notes_path.write_text(
@@ -185,7 +190,12 @@ class TestsFlextInfraReleaseHelpers:
 
         @staticmethod
         def update_changelog_at(workspace: Path, notes_path: Path) -> p.Result[bool]:
-            """Run the public changelog update at the canonical release targets."""
+            """Run the public changelog update at the canonical release targets.
+
+            Returns:
+                The resulting ``p.Result[bool]``.
+
+            """
             return u.Infra.update_changelog(
                 workspace,
                 c.Tests.RELEASE_VERSION_TARGET,
@@ -195,7 +205,12 @@ class TestsFlextInfraReleaseHelpers:
 
         @staticmethod
         def update_changelog_from_seed(workspace: Path, changelog_text: str) -> str:
-            """Seed one existing changelog, update it, and return the rewritten text."""
+            """Seed one existing changelog, update it, and return the rewritten text.
+
+            Returns:
+                The resulting ``str``.
+
+            """
             docs_dir = workspace / "docs"
             docs_dir.mkdir(parents=True, exist_ok=True)
             (docs_dir / "CHANGELOG.md").write_text(changelog_text, encoding="utf-8")
@@ -486,7 +501,12 @@ class TestsFlextInfraReleaseHelpers:
 
         @staticmethod
         def write_lock(workspace: Path, body: str) -> Path:
-            """Write one uv.lock body into the workspace root."""
+            """Write one uv.lock body into the workspace root.
+
+            Returns:
+                The resulting ``Path``.
+
+            """
             lock = workspace / c.Infra.UV_LOCK_FILENAME
             lock.write_text(body, encoding="utf-8")
             return lock

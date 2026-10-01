@@ -35,7 +35,12 @@ class FlextInfraProjectClassifierFamilyMixin:
     def _discover_facade_inheritance(
         self,
     ) -> t.Pair[t.MappingKV[str, t.Infra.StrSet], t.Infra.StrSet]:
-        """Discover facade inheritance."""
+        """Discover facade inheritance.
+
+        Returns:
+            The resulting ``t.Pair[t.MappingKV[str, t.Infra.StrSet], t.Infra.StrSet]``.
+
+        """
         families = u.Infra.facade_families()
         family_bases: t.MappingKV[str, t.Infra.StrSet] = {
             family: set() for family in families
@@ -61,7 +66,12 @@ class FlextInfraProjectClassifierFamilyMixin:
         file_path: Path,
         suffix: str,
     ) -> t.Pair[t.Infra.StrSet, t.Infra.StrSet]:
-        """Parse family file."""
+        """Parse family file.
+
+        Returns:
+            The resulting ``t.Pair[t.Infra.StrSet, t.Infra.StrSet]``.
+
+        """
         source = u.Cli.files_read_text(file_path).unwrap()
         base_names: t.Infra.StrSet = set()
         class_names: t.Infra.StrSet = set()
@@ -86,7 +96,12 @@ class FlextInfraProjectClassifierFamilyMixin:
         internal_dependencies: t.StrSequence,
         family_bases: t.MappingKV[str, t.Infra.StrSet],
     ) -> t.MappingKV[str, t.StrSequence]:
-        """Build confirmed family chains."""
+        """Build confirmed family chains.
+
+        Returns:
+            The resulting ``t.MappingKV[str, t.StrSequence]``.
+
+        """
         family_chains: MutableMapping[str, t.StrSequence] = {}
         for family, declared in u.Infra.facade_families().items():
             expected_parents = self._expected_parents_for_family(
@@ -109,7 +124,12 @@ class FlextInfraProjectClassifierFamilyMixin:
         family_suffix: str,
         internal_dependencies: t.StrSequence,
     ) -> t.StrSequence:
-        """Return the expected parents for a family."""
+        """Return the expected parents for a family.
+
+        Returns:
+            The expected parents for a family.
+
+        """
         expected: t.MutableSequenceOf[str] = []
         for dependency in internal_dependencies:
             stem = self._dependency_to_class_stem(dependency)
@@ -121,7 +141,12 @@ class FlextInfraProjectClassifierFamilyMixin:
         return expected
 
     def _dependency_to_class_stem(self, dependency: str) -> str:
-        """Dependency to class stem."""
+        """Dependency to class stem.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         normalized = self._normalize_dependency_name(dependency)
         if normalized == c.Infra.PKG_CORE:
             return "Flext"
@@ -142,7 +167,12 @@ class FlextInfraProjectClassifierFamilyMixin:
         internal_dependencies: t.StrSequence,
         local_facade_classes: t.Infra.StrSet,
     ) -> str:
-        """Infer project kind."""
+        """Infer project kind.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         if not internal_dependencies:
             return "core"
         has_domain_dependency = any(

@@ -55,7 +55,12 @@ class FlextInfraAccessorMigrationOrchestrator(
 
     @override
     def execute(self) -> p.Result[m.Infra.AccessorMigrationReport]:
-        """Execute."""
+        """Execute.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.AccessorMigrationReport]``.
+
+        """
         selected_projects: t.StrSequence = (
             self.project_names if self.project_names is not None else ()
         )
@@ -125,7 +130,12 @@ class FlextInfraAccessorMigrationOrchestrator(
         cls,
         params: m.Infra.AccessorMigrationInput,
     ) -> p.Result[m.Infra.AccessorMigrationReport]:
-        """Execute accessor migration from the validated command service."""
+        """Execute accessor migration from the validated command service.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.AccessorMigrationReport]``.
+
+        """
         result = cls(
             repository_root=params.repository_root,
             selected_projects=params.projects,

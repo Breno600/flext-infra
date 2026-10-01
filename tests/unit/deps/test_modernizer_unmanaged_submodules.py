@@ -22,7 +22,12 @@ class TestsFlextInfraDepsModernizerUnmanagedSubmodules:
 
     @staticmethod
     def _workspace(modernizer_workspace: Path, *, managed_has_pyproject: bool) -> Path:
-        """Declare one governed member and one ``flext-managed = false`` checkout."""
+        """Declare one governed member and one ``flext-managed = false`` checkout.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         member = modernizer_workspace / "member"
         member.mkdir()
         if managed_has_pyproject:

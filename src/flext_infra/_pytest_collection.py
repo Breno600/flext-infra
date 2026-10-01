@@ -69,6 +69,10 @@ class FlextInfraPytestCollection:
         neither imports no model. A requested manifest loads only its owning
         model module, never the whole model facade, because every runner
         collection process pays that import.
+
+        Raises:
+            ValueError: On failure.
+
         """
         selected: str | None = session.config.getoption(
             FlextInfraConstantsCheck.PYTEST_SELECTED_COLLECTION_OPTION,

@@ -26,12 +26,22 @@ class FlextInfraWorkspaceDetector(
 
     @staticmethod
     def _beads_path(repository_root: Path) -> Path:
-        """Return the repository-local Beads identity path when enabled."""
+        """Return the repository-local Beads identity path when enabled.
+
+        Returns:
+            The repository-local Beads identity path when enabled.
+
+        """
         return repository_root / c.CONFIG_DIR_NAME / c.Infra.BEADS_CONFIG_FILENAME
 
     @staticmethod
     def _beads_enabled(manifest: m.Infra.WorkspaceManifestSpec) -> bool:
-        """Resolve Beads participation from the manifest's matched policy."""
+        """Resolve Beads participation from the manifest's matched policy.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         return next(
             (
                 overlay.beads_enabled
@@ -87,7 +97,12 @@ class FlextInfraWorkspaceDetector(
         cls,
         repository_root: Path,
     ) -> p.Result[m.Infra.BeadsProjectSpec]:
-        """Load and validate the required local ``config/beads.yaml``."""
+        """Load and validate the required local ``config/beads.yaml``.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.BeadsProjectSpec]``.
+
+        """
         resolved_root = repository_root.expanduser().resolve()
         beads_path = cls._beads_path(resolved_root)
         if not beads_path.is_file():
@@ -113,7 +128,12 @@ class FlextInfraWorkspaceDetector(
 
     @staticmethod
     def _git_origin_url(repository_root: Path) -> p.Result[str]:
-        """Read the repository's required origin without inventing one."""
+        """Read the repository's required origin without inventing one.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         result = u.Infra.git_remote_url(
             m.Infra.GitRemoteUrlRequest(repo_root=repository_root, remote="origin"),
         )
@@ -138,6 +158,10 @@ class FlextInfraWorkspaceDetector(
         shape). Post-G1, repositories without a manifest take their provider
         identity from the live Git origin organization itself — no catalog,
         no invented rows.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
         """
         loaded = u.Infra.load_workspace_manifest(repository_root)
         if loaded.failure:
@@ -177,7 +201,12 @@ class FlextInfraWorkspaceDetector(
         declared: m.Infra.RepositoryRef,
         observed: m.Infra.RepositoryRef,
     ) -> list[str]:
-        """Describe every manifest identity or topology conflict with Git."""
+        """Describe every manifest identity or topology conflict with Git.
+
+        Returns:
+            The resulting ``list[str]``.
+
+        """
         comparisons = (
             (
                 declared.name != observed.name,
@@ -233,6 +262,11 @@ class FlextInfraWorkspaceDetector(
         must agree with the immutable identity and topology observed from Git.
         The matched repository policy overlay's Gas City participation rides
         along: ``True`` when the manifest declares no overlay.
+
+        Returns:
+            The resulting ``p.Result[t.Triple[m.Infra.RepositoryRef, bool,
+                m.Infra.ProjectSpec | None]]``.
+
         """
         manifest_path = u.Infra.workspace_manifest_path(repository_root)
         loaded = u.Infra.load_workspace_manifest(repository_root)
@@ -304,7 +338,12 @@ class FlextInfraWorkspaceDetector(
         repository_root: Path,
         subproject_path: Path,
     ) -> p.Result[t.Pair[str, str]]:
-        """Read one exact URL/branch pair from the local ``.gitmodules``."""
+        """Read one exact URL/branch pair from the local ``.gitmodules``.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[str, str]]``.
+
+        """
         contract = u.Infra.gitmodule_contract(
             m.Infra.GitSubmoduleContractRequest(
                 repo_root=repository_root,
@@ -324,7 +363,12 @@ class FlextInfraWorkspaceDetector(
         composed: bool = False,
         declared_url: str | None = None,
     ) -> p.Result[m.Infra.RepositoryRef]:
-        """Build repository policy from local metadata and an immutable Git URL."""
+        """Build repository policy from local metadata and an immutable Git URL.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.RepositoryRef]``.
+
+        """
         metadata = u.Infra.read_project_metadata_result(repository_root)
         if metadata.failure:
             return r[m.Infra.RepositoryRef].from_failure(metadata)
@@ -393,7 +437,13 @@ class FlextInfraWorkspaceDetector(
     ) -> p.Result[
         t.Pair[t.VariadicTuple[m.Infra.RepositoryRef], t.VariadicTuple[Path]]
     ]:
-        """Validate every direct governed .gitmodules entry before planning writes."""
+        """Validate every direct governed .gitmodules entry before planning writes.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[t.VariadicTuple[m.Infra.RepositoryRef],
+                t.VariadicTuple[Path]]]``.
+
+        """
         declared = u.Infra.git_declared_submodule_paths(repository_root)
         result_type = r[tuple[tuple[m.Infra.RepositoryRef, ...], t.VariadicTuple[Path]]]
         if declared.failure:
@@ -443,7 +493,12 @@ class FlextInfraWorkspaceDetector(
         cls,
         repository_root: Path,
     ) -> p.Result[t.MappingKV[Path, m.Infra.RepositoryRef]]:
-        """Index the manifest's declared member contracts by composed path."""
+        """Index the manifest's declared member contracts by composed path.
+
+        Returns:
+            The resulting ``p.Result[t.MappingKV[Path, m.Infra.RepositoryRef]]``.
+
+        """
         loaded = u.Infra.load_workspace_manifest(repository_root)
         if loaded.failure:
             return r[t.MappingKV[Path, m.Infra.RepositoryRef]].from_failure(loaded)
@@ -472,6 +527,10 @@ class FlextInfraWorkspaceDetector(
         subprojects must declare their own identity (manifest) and integrate
         on the workspace's detected integration line or follow the
         superproject.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.RepositoryRef | Path]``.
+
         """
         workspace_beads = context.workspace_beads
         result_type = r[m.Infra.RepositoryRef | Path]
@@ -603,7 +662,12 @@ class FlextInfraWorkspaceDetector(
         project_metadata: p.ProjectMetadata | None = None,
         allow_unprovisioned_members: bool = False,
     ) -> p.Result[m.Infra.WorkspaceSpec]:
-        """Load local identity and validate local, read-only Git topology."""
+        """Load local identity and validate local, read-only Git topology.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.WorkspaceSpec]``.
+
+        """
         del project_metadata
         resolved_root = repository_root.expanduser().resolve()
         if not resolved_root.is_dir():
@@ -775,7 +839,12 @@ class FlextInfraWorkspaceDetector(
         *,
         project_metadata: p.ProjectMetadata | None = None,
     ) -> p.Result[m.Infra.RepositoryConformTarget]:
-        """Resolve a target exclusively from the requested checkout."""
+        """Resolve a target exclusively from the requested checkout.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.RepositoryConformTarget]``.
+
+        """
         del project_metadata
         resolved_root = repository_root.expanduser().resolve()
         workspace = workspace_spec
@@ -814,7 +883,12 @@ class FlextInfraWorkspaceDetector(
 
     @staticmethod
     def resolve_repository_root(repository_root: Path) -> p.Result[Path]:
-        """Return the requested checkout; parent and primary trees are irrelevant."""
+        """Return the requested checkout; parent and primary trees are irrelevant.
+
+        Returns:
+            The requested checkout; parent and primary trees are irrelevant.
+
+        """
         resolved_root = repository_root.expanduser().resolve()
         if not resolved_root.is_dir():
             return r[Path].fail(f"repository root is not a directory: {resolved_root}")
@@ -824,7 +898,12 @@ class FlextInfraWorkspaceDetector(
     def workspace_analysis_exclusion_paths(
         workspace: m.Infra.WorkspaceSpec,
     ) -> t.VariadicTuple[Path]:
-        """Return read-only external Git dependencies excluded from analysis."""
+        """Return read-only external Git dependencies excluded from analysis.
+
+        Returns:
+            Read-only external Git dependencies excluded from analysis.
+
+        """
         return workspace.external_dependency_paths
 
     @classmethod
@@ -832,7 +911,12 @@ class FlextInfraWorkspaceDetector(
         cls,
         repository_root: Path,
     ) -> p.Result[t.VariadicTuple[Path]]:
-        """Load exclusions for governed repositories; ignore ungoverned trees."""
+        """Load exclusions for governed repositories; ignore ungoverned trees.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[Path]]``.
+
+        """
         resolved_root = repository_root.expanduser().resolve()
         if not u.Infra.workspace_manifest_path(resolved_root).is_file():
             return r[t.VariadicTuple[Path]].ok(())
@@ -873,13 +957,22 @@ class FlextInfraWorkspaceDetector(
 
         This is the analysis scope that discovery utilities receive from their
         callers: the topology owner computes it, the utilities only apply it.
+
+        Returns:
+            The first segments of the read-only external topology paths.
+
         """
         return cls.analysis_exclusion_paths(repository_root).map(
             lambda paths: frozenset(path.parts[0] for path in paths if path.parts),
         )
 
     def detect(self, project_root: Path) -> p.Result[c.Infra.MakeProfile]:
-        """Classify from governed members, not mere vendored Git topology."""
+        """Classify from governed members, not mere vendored Git topology.
+
+        Returns:
+            The resulting ``p.Result[c.Infra.MakeProfile]``.
+
+        """
         try:
             resolved_root = project_root.expanduser().resolve()
         except c.EXC_OS_RUNTIME_TYPE as exc:
@@ -895,7 +988,12 @@ class FlextInfraWorkspaceDetector(
 
     @override
     def execute(self) -> p.Result[c.Infra.MakeProfile]:
-        """Execute workspace detection for the configured root."""
+        """Execute workspace detection for the configured root.
+
+        Returns:
+            The resulting ``p.Result[c.Infra.MakeProfile]``.
+
+        """
         return self.detect(self.repository_root)
 
 

@@ -43,7 +43,12 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
 
     @override
     def execute(self) -> p.Result[t.Cli.ResultValue]:
-        """Inspect or apply the complete rule cascade with visible phases."""
+        """Inspect or apply the complete rule cascade with visible phases.
+
+        Returns:
+            The resulting ``p.Result[t.Cli.ResultValue]``.
+
+        """
         planned = u.Infra.codemod_rule_plan(self.repository_root)
         if planned.failure:
             return r[t.Cli.ResultValue].from_failure(planned)
@@ -83,7 +88,12 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
         return self._execute_apply(rules)
 
     def _execute_apply(self, rules: t.SequenceOf[Path]) -> p.Result[t.Cli.ResultValue]:
-        """Converge AST, semantic, and text phases over the same source state."""
+        """Converge AST, semantic, and text phases over the same source state.
+
+        Returns:
+            The resulting ``p.Result[t.Cli.ResultValue]``.
+
+        """
         self.progress.emit("mod: validate ast-grep rule fixtures")
         FlextInfraModGateEngine.validate_rule_fixtures(
             self.repository_root,
@@ -92,7 +102,12 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
         return self._execute_apply_cycle()
 
     def _execute_apply_cycle(self) -> p.Result[t.Cli.ResultValue]:
-        """Converge every mod phase through one shared Rope workspace."""
+        """Converge every mod phase through one shared Rope workspace.
+
+        Returns:
+            The resulting ``p.Result[t.Cli.ResultValue]``.
+
+        """
         root = self.repository_root
         rope_workspace = self.rope
         current = FlextInfraModGateEngine.scan(root, fix=False).unwrap()
@@ -225,7 +240,12 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             return r[t.Cli.ResultValue].ok(True)
 
     def _pending_renames(self) -> p.Result[int]:
-        """Count pending rename occurrences across the configured campaigns."""
+        """Count pending rename occurrences across the configured campaigns.
+
+        Returns:
+            The resulting ``p.Result[int]``.
+
+        """
         pending = 0
         for params in self.rename_inputs:
             report = self.rename_runner.run(params)
@@ -239,7 +259,12 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
         before: m.Infra.ModScanReport,
         after_apply: m.Infra.ModScanReport,
     ) -> None:
-        """Reject unresolved rewrites while preserving valid rule cascades."""
+        """Reject unresolved rewrites while preserving valid rule cascades.
+
+        Raises:
+            RuntimeError: On failure.
+
+        """
         # Check that actionable findings were actually resolved
         before_actionable = {
             (f.rule_id, f.file.as_posix(), f.text, f.replacement)

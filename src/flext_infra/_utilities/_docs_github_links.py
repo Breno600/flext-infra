@@ -33,12 +33,22 @@ class FlextInfraUtilitiesDocsGithubLinks:
 
     @staticmethod
     def docs_github_repos() -> t.VariadicTuple[m.Infra.DocsGithubRepoSpec]:
-        """Return the typed GitHub repo map from make.docs SSOT."""
+        """Return the typed GitHub repo map from make.docs SSOT.
+
+        Returns:
+            The typed GitHub repo map from make.docs SSOT.
+
+        """
         return config.Infra.codegen.make.docs.github_repos
 
     @staticmethod
     def docs_stale_github_organizations() -> frozenset[str]:
-        """Placeholder organizations that must not appear in doc URLs."""
+        """Placeholder organizations that must not appear in doc URLs.
+
+        Returns:
+            The resulting ``frozenset[str]``.
+
+        """
         return frozenset(
             FlextInfraUtilitiesDocsGithubLinks._config().Infra.codegen.make.docs.stale_github_organizations,
         )
@@ -48,7 +58,12 @@ class FlextInfraUtilitiesDocsGithubLinks:
         organization: str,
         repository: str,
     ) -> m.Infra.DocsGithubRepoSpec | None:
-        """Find one governed repo by organization and repository name."""
+        """Find one governed repo by organization and repository name.
+
+        Returns:
+            The resulting ``m.Infra.DocsGithubRepoSpec | None``.
+
+        """
         for repo in FlextInfraUtilitiesDocsGithubLinks.docs_github_repos():
             if repo.organization == organization and repo.repository == repository:
                 return repo
@@ -66,7 +81,12 @@ class FlextInfraUtilitiesDocsGithubLinks:
 
     @staticmethod
     def docs_expand_local_checkout(path: str) -> Path | None:
-        """Expand ``~`` local_checkout paths; empty means no local check."""
+        """Expand ``~`` local_checkout paths; empty means no local check.
+
+        Returns:
+            The resulting ``Path | None``.
+
+        """
         value = path.strip()
         if not value:
             return None
@@ -74,7 +94,12 @@ class FlextInfraUtilitiesDocsGithubLinks:
 
     @staticmethod
     def docs_parse_github_doc_url(target: str) -> re.Match[str] | None:
-        """Parse a github.com blob/tree documentation URL."""
+        """Parse a github.com blob/tree documentation URL.
+
+        Returns:
+            The resulting ``re.Match[str] | None``.
+
+        """
         return c.Infra.DOCS_GITHUB_BLOB_TREE_RE.match(target.strip())
 
     @staticmethod
@@ -84,6 +109,10 @@ class FlextInfraUtilitiesDocsGithubLinks:
         Git refs may contain ``/`` (``feature/fix``), so a URL alone cannot say
         where the ref ends. Only the governed branch is a trusted boundary; any
         other ref is unresolvable and yields ``None``.
+
+        Returns:
+            The path after ``branch`` when ``refpath`` starts with it.
+
         """
         prefix = f"{branch}/"
         if not refpath.startswith(prefix):
@@ -98,7 +127,12 @@ class FlextInfraUtilitiesDocsGithubLinks:
         *,
         is_dir: bool = False,
     ) -> str | None:
-        """Build a canonical GitHub URL for a governed repository path."""
+        """Build a canonical GitHub URL for a governed repository path.
+
+        Returns:
+            The resulting ``str | None``.
+
+        """
         repo = FlextInfraUtilitiesDocsGithubLinks.docs_github_repo_lookup(
             organization,
             repository,
@@ -118,6 +152,10 @@ class FlextInfraUtilitiesDocsGithubLinks:
         A different ref is never rewritten: refs may contain ``/``, so its
         extent (and thus the path) is undecidable from the URL alone. Any
         ``?query``/``#fragment`` suffix is carried over unchanged.
+
+        Returns:
+            The resulting ``str | None``.
+
         """
         match = FlextInfraUtilitiesDocsGithubLinks.docs_parse_github_doc_url(target)
         if match is None:
@@ -162,7 +200,12 @@ class FlextInfraUtilitiesDocsGithubLinks:
 
     @staticmethod
     def docs_github_local_path(target: str) -> Path | None:
-        """Resolve a governed GitHub URL to a local checkout path when configured."""
+        """Resolve a governed GitHub URL to a local checkout path when configured.
+
+        Returns:
+            The resulting ``Path | None``.
+
+        """
         match = FlextInfraUtilitiesDocsGithubLinks.docs_parse_github_doc_url(target)
         if match is None:
             return None
@@ -208,7 +251,12 @@ class FlextInfraUtilitiesDocsGithubLinks:
         raw: str,
         target: str,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Emit audit issues for stale or locally-missing GitHub doc URLs."""
+        """Emit audit issues for stale or locally-missing GitHub doc URLs.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
+
+        """
         issues: list[m.Infra.AuditIssue] = []
         match = FlextInfraUtilitiesDocsGithubLinks.docs_parse_github_doc_url(target)
         if match is None:

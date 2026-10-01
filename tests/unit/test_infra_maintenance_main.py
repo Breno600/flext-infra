@@ -36,7 +36,12 @@ class TestsFlextInfraInfraMaintenanceMain:
 
     @staticmethod
     def _create_workspace(root: Path, *, python_minor: int = 13) -> Path:
-        """Create a valid workspace structure for testing."""
+        """Create a valid workspace structure for testing.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         root.mkdir(exist_ok=True)
         (root / ".git").mkdir(exist_ok=True)
         (root / "Makefile").touch()

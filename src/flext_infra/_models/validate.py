@@ -129,7 +129,15 @@ class FlextInfraModelsCore:
 
         @u.model_validator(mode="after")
         def require_unique_node_ids(self) -> Self:
-            """Reject incomplete identifiers and ambiguous worker manifests."""
+            """Reject incomplete identifiers and ambiguous worker manifests.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: On failure.
+
+            """
             if any(not node_id for node_id in self.node_ids) or len(
                 self.node_ids,
             ) != len(set(self.node_ids)):
@@ -245,7 +253,15 @@ class FlextInfraModelsCore:
 
         @u.model_validator(mode="after")
         def require_event_payload(self) -> Self:
-            """Reject incomplete runtime events instead of reporting zero findings."""
+            """Reject incomplete runtime events instead of reporting zero findings.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: On failure.
+
+            """
             if self.report_type == "WarningMessage" and any(
                 value is None
                 for value in (self.category, self.filename, self.lineno, self.message)

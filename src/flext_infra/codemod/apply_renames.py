@@ -82,7 +82,12 @@ class FlextInfraApplyRenames:
         cls,
         params: m.Infra.ApplyRenamesInput,
     ) -> p.Result[m.Infra.ApplyRenamesReport]:
-        """Apply one declared campaign; check and verification share the planner."""
+        """Apply one declared campaign; check and verification share the planner.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ApplyRenamesReport]``.
+
+        """
         roots = tuple(sorted({Path(value).resolve() for value in params.roots}))
         for root in roots:
             if not root.is_dir():

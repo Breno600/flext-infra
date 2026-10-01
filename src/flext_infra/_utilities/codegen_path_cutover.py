@@ -27,7 +27,16 @@ class FlextInfraUtilitiesCodegenPathCutover:
         rope_workspace: p.Infra.RopeWorkspaceDsl,
         sources: t.MappingKV[Path, str],
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
-        """Migrate exact owner calls, preserving homonyms and root-only callers."""
+        """Migrate exact owner calls, preserving homonyms and root-only callers.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.SemanticMigrationEdit]``.
+
+        Raises:
+            TypeError: On failure.
+            ValueError: On failure.
+
+        """
         from flext_infra import m, p
 
         project = rope_workspace.rope_project

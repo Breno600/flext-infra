@@ -22,7 +22,12 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
 
     @staticmethod
     def _read_plain(path: Path) -> p.Result[t.JsonMapping]:
-        """Read one TOML document as a plain JSON mapping."""
+        """Read one TOML document as a plain JSON mapping.
+
+        Returns:
+            The resulting ``p.Result[t.JsonMapping]``.
+
+        """
         plain_result = u.Cli.toml_read_json(path)
         if plain_result.failure:
             return r[t.JsonMapping].from_failure(plain_result)
@@ -32,7 +37,12 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
 
     @override
     def _to_toml_config(self, payload: t.MappingKV[str, t.JsonValue]) -> t.JsonMapping:
-        """To toml config."""
+        """To toml config.
+
+        Returns:
+            The resulting ``t.JsonMapping``.
+
+        """
         normalized: MutableMapping[str, t.JsonValue] = {}
         for key, value in payload.items():
             if value is None:
@@ -46,7 +56,12 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
 
     @staticmethod
     def to_infra_value(value: t.JsonValue | None) -> t.JsonValue | None:
-        """Convert container value to namespaced infra value."""
+        """Convert container value to namespaced infra value.
+
+        Returns:
+            The resulting ``t.JsonValue | None``.
+
+        """
         if value is None:
             return None
         if isinstance(value, core_c.PRIMITIVES_TYPES):
@@ -84,7 +99,16 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         *,
         include_dev: bool = True,
     ) -> t.StrSequence:
-        """Read CUSTOM typing requirements and the canonical development group."""
+        """Read CUSTOM typing requirements and the canonical development group.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            RuntimeError: On failure.
+            ValueError: On failure.
+
+        """
         pyproject = project_path / c.PYPROJECT_FILENAME
         if not pyproject.is_file():
             return []
@@ -122,7 +146,12 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         self,
         project_path: Path,
     ) -> p.Result[t.Pair[Path, t.JsonMapping]]:
-        """Read one project's pyproject once, as a plain mapping, with its path."""
+        """Read one project's pyproject once, as a plain mapping, with its path.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[Path, t.JsonMapping]]``.
+
+        """
         pyproject = project_path / c.PYPROJECT_FILENAME
         read_result = self._read_plain(pyproject)
         if read_result.failure:
@@ -141,6 +170,10 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         The profile is selected from the typed codegen config exactly as the
         pyproject projection selects it; a project no shared profile governs
         injects nothing.
+
+        Returns:
+            The runtime requirement names a declared dependency profile injects.
+
         """
         table = self._project_table(project_path)
         if table.failure:
@@ -202,6 +235,10 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
 
         Conform renders the selected profile's runtime requirements into every
         governed consumer, so declaring them is policy, not a finding.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[t.JsonMapping]]``.
+
         """
         governed = self.governed_profile_dependencies(project_path)
         if governed.failure:
@@ -226,6 +263,10 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         projection renders. A project whose own mypy table declares otherwise
         is a policy conflict, never a second source of truth. An absent key
         carries mypy's own default on both sides.
+
+        Returns:
+            The governed mypy ``follow_untyped_imports`` policy for a project.
+
         """
         key = c.Infra.MYPY_FOLLOW_UNTYPED_IMPORTS
         governed = config.Infra.tooling.tools.mypy.boolean_settings.get(
@@ -257,6 +298,10 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         Under the governed policy that follows untyped imports, mypy analyzes
         untyped packages directly and reports no missing stub, so stub
         packages are neither required nor removable findings.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.TypingsReport]``.
+
         """
         followed = self.untyped_imports_followed(project_path)
         if followed.failure:
@@ -318,7 +363,15 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         self,
         limits_path: Path | None = None,
     ) -> t.MappingKV[str, t.JsonValue]:
-        """Load dependency limits configuration from TOML file."""
+        """Load dependency limits configuration from TOML file.
+
+        Returns:
+            The resulting ``t.MappingKV[str, t.JsonValue]``.
+
+        Raises:
+            RuntimeError: On failure.
+
+        """
         path = (
             limits_path
             or Path(__file__).resolve().parent / c.Infra.DEPENDENCY_LIMITS_FILENAME
@@ -334,7 +387,12 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         module_name: str,
         limits: t.MappingKV[str, t.JsonValue],
     ) -> str | None:
-        """Map a module name to its corresponding types-* package."""
+        """Map a module name to its corresponding types-* package.
+
+        Returns:
+            The resulting ``str | None``.
+
+        """
         root = module_name.split(".", 1)[0]
         if root.startswith(c.Infra.INTERNAL_PREFIXES):
             return None

@@ -32,7 +32,12 @@ class FlextInfraPyrightGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
-        """Use the project pyright config as SSOT when it exists."""
+        """Use the project pyright config as SSOT when it exists.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         _ = ctx
         if self._has_project_pyright_config(project_dir):
             return [c.Infra.PYRIGHT_PROJECT_ARG, c.Infra.PYRIGHT_PROJECT_CONFIG_TARGET]
@@ -45,7 +50,12 @@ class FlextInfraPyrightGate(FlextInfraGate):
         ctx: m.Infra.GateContext,
         check_dirs: t.StrSequence,
     ) -> t.StrSequence:
-        """Build check command."""
+        """Build check command.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         _ = project_dir
         return self._python_module_command(
             c.Infra.PYRIGHT,
@@ -58,7 +68,12 @@ class FlextInfraPyrightGate(FlextInfraGate):
 
     @staticmethod
     def _has_project_pyright_config(project_dir: Path) -> bool:
-        """Return whether pyproject.toml declares [tool.pyright]."""
+        """Return whether pyproject.toml declares [tool.pyright].
+
+        Returns:
+            Whether pyproject.toml declares [tool.pyright].
+
+        """
         doc = u.Cli.toml_read(project_dir / c.PYPROJECT_FILENAME)
         if doc is None:
             return False
@@ -70,7 +85,12 @@ class FlextInfraPyrightGate(FlextInfraGate):
 
     @override
     def _check_timeout(self, project_dir: Path, ctx: m.Infra.GateContext) -> int:
-        """Check timeout."""
+        """Check timeout.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         _ = project_dir, ctx
         timeout: int = c.Infra.TIMEOUT_LONG
         return timeout
@@ -82,7 +102,12 @@ class FlextInfraPyrightGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Parse check output."""
+        """Parse check output.
+
+        Returns:
+            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
+
+        """
         _ = ctx
         if not u.Cli.process_succeeded(result.outcome) and not result.stdout.strip():
             return False, (

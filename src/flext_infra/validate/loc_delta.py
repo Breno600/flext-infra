@@ -31,7 +31,12 @@ class FlextInfraLocDeltaValidator(s[bool]):
         insertions: int,
         deletions: int,
     ) -> p.Result[bool]:
-        """Pure rule: net positive delta on a labelled commit is a violation."""
+        """Pure rule: net positive delta on a labelled commit is a violation.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         lowered = subject.lower()
         if not any(label in lowered for label in c.Infra.REFACTOR_COMMIT_LABELS):
             return r[bool].ok(True)
@@ -46,7 +51,12 @@ class FlextInfraLocDeltaValidator(s[bool]):
 
     @staticmethod
     def _sum_numstat(numstat: str) -> t.Pair[int, int]:
-        """Sum insertions/deletions from `git diff --numstat` output (skip binary)."""
+        """Sum insertions/deletions from `git diff --numstat` output (skip binary).
+
+        Returns:
+            The resulting ``t.Pair[int, int]``.
+
+        """
         insertions = 0
         deletions = 0
         for line in numstat.splitlines():
@@ -60,7 +70,12 @@ class FlextInfraLocDeltaValidator(s[bool]):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Evaluate the workspace HEAD commit's labelled net-LOC delta."""
+        """Evaluate the workspace HEAD commit's labelled net-LOC delta.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         report = u.Infra.git_head_numstat(
             m.Infra.GitRepoRequest(repo_root=self.repository_root),
         )

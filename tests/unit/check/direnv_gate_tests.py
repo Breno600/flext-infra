@@ -29,7 +29,12 @@ class TestsFlextInfraDirenvGate:
 
     @staticmethod
     def allowed_check(root: Path) -> m.Infra.GateExecution:
-        """Check one workspace whose ``.envrc`` the real direnv approved."""
+        """Check one workspace whose ``.envrc`` the real direnv approved.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
+        """
         allow = (c.Infra.CLI_DIRENV, "allow", str(root))
         tm.ok(u.Cli.run_checked(allow, cwd=root))
         execution = FlextInfraDirenvGate(root).check(root, u.Tests.gate_context(root))
@@ -38,14 +43,24 @@ class TestsFlextInfraDirenvGate:
 
     @staticmethod
     def issue_codes(execution: m.Infra.GateExecution) -> t.StrSequence:
-        """Return the issue codes one gate execution reported, in order."""
+        """Return the issue codes one gate execution reported, in order.
+
+        Returns:
+            The issue codes one gate execution reported, in order.
+
+        """
         return [issue.code for issue in execution.issues]
 
     @staticmethod
     def messages(
         violations: t.VariadicTuple[m.Infra.EnvironmentContractViolation],
     ) -> t.StrSequence:
-        """Render typed violations exactly as the gate reports them."""
+        """Render typed violations exactly as the gate reports them.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         return [f"line {v.line}: {v.message}" for v in violations]
 
     class TestsDirenvContractLint:

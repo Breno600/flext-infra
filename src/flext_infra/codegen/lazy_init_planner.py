@@ -92,7 +92,12 @@ class FlextInfraCodegenLazyInitPlanner(
         *,
         dir_exports: t.MappingKV[str, t.LazyAliasMap],
     ) -> m.Infra.LazyInitPlan:
-        """Build the lazy-init render plan for one package directory."""
+        """Build the lazy-init render plan for one package directory.
+
+        Returns:
+            The resulting ``m.Infra.LazyInitPlan``.
+
+        """
         context = self.context(pkg_dir)
         if not context.importable or self._shadows_stdlib_module(pkg_dir):
             # No generated content can repair a package name that
@@ -288,13 +293,22 @@ class FlextInfraCodegenLazyInitPlanner(
         SKIP decided before rendering, is published so the parent inventory in
         ``_merge_children`` sees the child's action instead of the on-disk
         initializer.
+
+        Returns:
+            The resulting ``m.Infra.LazyInitPlan``.
+
         """
         self._source_plan_cache[str(plan.context.pkg_dir.resolve())] = plan
         return plan
 
     @override
     def context(self, pkg_dir: Path) -> m.Infra.LazyInitPackageContext:
-        """Return the lazy-init package context for the requested package directory."""
+        """Return the lazy-init package context for the requested package directory.
+
+        Returns:
+            The lazy-init package context for the requested package directory.
+
+        """
         return self.rope_workspace.package_context(pkg_dir)
 
 

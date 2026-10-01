@@ -40,7 +40,12 @@ class FlextInfraDocServer(FlextInfraDocServiceBase):
         projects: t.StrSequence | None = None,
         output_dir: Path | str | None = None,
     ) -> p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]:
-        """Serve the single matching docs scope (blocks until stopped)."""
+        """Serve the single matching docs scope (blocks until stopped).
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]``.
+
+        """
         scopes_result = u.Infra.build_scopes(
             repository_root,
             projects=self.selected_projects if projects is None else projects,
@@ -69,7 +74,12 @@ class FlextInfraDocServer(FlextInfraDocServiceBase):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute the configured docs serve flow."""
+        """Execute the configured docs serve flow.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         return self._propagate_phase_outcome(
             "serve",
             self.serve(
@@ -81,7 +91,12 @@ class FlextInfraDocServer(FlextInfraDocServiceBase):
         )
 
     def _serve_scope(self, scope: m.Infra.DocScope) -> m.Infra.DocsPhaseReport:
-        """Serve one scope through the docs build utilities (blocking)."""
+        """Serve one scope through the docs build utilities (blocking).
+
+        Returns:
+            The resulting ``m.Infra.DocsPhaseReport``.
+
+        """
         self.logger.info(
             "docs_serve_scope_started",
             project=scope.name,

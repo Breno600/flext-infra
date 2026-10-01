@@ -28,7 +28,12 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
     can_fix: ClassVar[bool] = True
 
     def _resolve_config_args(self, project_dir: Path) -> t.StrSequence:
-        """Resolve only the repository-local markdown settings owner."""
+        """Resolve only the repository-local markdown settings owner.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         config_path = project_dir / c.Infra.MARKDOWNLINT_CONFIG_FILENAME
         if not config_path.is_file():
             return ["--no-config"]
@@ -42,6 +47,10 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
         collects files explicitly, so the generated ignore projection is read
         once and its patterns are forwarded via ``--exclude`` to replicate
         standard tool behavior.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
         """
         patterns = self.read_ignore_patterns(
             project_dir,
@@ -58,7 +67,12 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
         ctx: m.Infra.GateContext,
         check_dirs: t.StrSequence,
     ) -> t.StrSequence:
-        """Build check command."""
+        """Build check command.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         _ = ctx
         return self._python_console_script_command(
             c.Infra.RUMDL,
@@ -81,7 +95,12 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
         ctx: m.Infra.GateContext,
         targets: t.StrSequence,
     ) -> t.StrSequence:
-        """Repair fixable findings and return the linter's residual verdict."""
+        """Repair fixable findings and return the linter's residual verdict.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         _ = ctx
         args: t.SequenceOf[str] = [
             c.Infra.RUMDL,
@@ -106,7 +125,12 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Parse rumdl output, discarding lines marking already-applied fixes."""
+        """Parse rumdl output, discarding lines marking already-applied fixes.
+
+        Returns:
+            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
+
+        """
         _ = ctx
         issues: t.MutableSequenceOf[m.Infra.Issue] = []
         for line in (result.stdout + "\n" + result.stderr).splitlines():

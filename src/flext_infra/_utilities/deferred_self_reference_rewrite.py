@@ -18,7 +18,12 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
 
     @classmethod
     def normalize_deferred_self_references(cls, source: str) -> str:
-        """Return source with bare sibling annotations qualified by their owner."""
+        """Return source with bare sibling annotations qualified by their owner.
+
+        Returns:
+            Source with bare sibling annotations qualified by their owner.
+
+        """
         tree = ast.parse(source)
         cls._reject_model_rebuild(tree)
         edits = tuple(
@@ -38,7 +43,15 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
         source: str,
         outer: ast.ClassDef,
     ) -> t.SequenceOf[t.Triple[int, int, str]]:
-        """Make already-defined sibling bases executable inside the owner body."""
+        """Make already-defined sibling bases executable inside the owner body.
+
+        Returns:
+            The resulting ``t.SequenceOf[t.Triple[int, int, str]]``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         siblings = tuple(node for node in outer.body if isinstance(node, ast.ClassDef))
         sibling_names = frozenset(node.name for node in siblings)
         available: set[str] = set()
@@ -66,7 +79,12 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
 
     @staticmethod
     def _reject_model_rebuild(tree: ast.Module) -> None:
-        """Reject runtime schema repair in favor of definition-time correctness."""
+        """Reject runtime schema repair in favor of definition-time correctness.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         rebuilds = tuple(
             node
             for node in ast.walk(tree)
@@ -85,7 +103,15 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
         source: str,
         outer: ast.ClassDef,
     ) -> t.SequenceOf[t.Triple[int, int, str]]:
-        """Plan owner-qualified sibling references inside deferred annotations."""
+        """Plan owner-qualified sibling references inside deferred annotations.
+
+        Returns:
+            The resulting ``t.SequenceOf[t.Triple[int, int, str]]``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         siblings = tuple(node for node in outer.body if isinstance(node, ast.ClassDef))
         owned_names = frozenset({
             *(node.name for node in outer.body if isinstance(node, ast.ClassDef)),
@@ -134,7 +160,12 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
 
     @classmethod
     def _annotation_expressions(cls, node: ast.ClassDef) -> t.SequenceOf[ast.expr]:
-        """Collect deferred annotations while excluding executable class bases."""
+        """Collect deferred annotations while excluding executable class bases.
+
+        Returns:
+            The resulting ``t.SequenceOf[ast.expr]``.
+
+        """
         expressions: list[ast.expr] = []
 
         def collect(statement: ast.stmt) -> None:
@@ -165,7 +196,12 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
     def _evaluated_function_annotations(
         node: ast.FunctionDef | ast.AsyncFunctionDef,
     ) -> t.SequenceOf[ast.expr]:
-        """Return annotations evaluated when one function is defined."""
+        """Return annotations evaluated when one function is defined.
+
+        Returns:
+            Annotations evaluated when one function is defined.
+
+        """
         arguments = (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs)
         annotations = [
             arg.annotation for arg in arguments if arg.annotation is not None
@@ -181,7 +217,12 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
 
     @staticmethod
     def _line_offsets(source: str) -> t.VariadicTuple[int]:
-        """Return the character offset of each source line."""
+        """Return the character offset of each source line.
+
+        Returns:
+            The character offset of each source line.
+
+        """
         offsets = [0]
         for line in source.splitlines(keepends=True):
             offsets.append(offsets[-1] + len(line))
@@ -189,7 +230,12 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
 
     @staticmethod
     def _node_span(offsets: t.VariadicTuple[int], node: ast.expr) -> t.Pair[int, int]:
-        """Return one expression's exact source character span."""
+        """Return one expression's exact source character span.
+
+        Returns:
+            One expression's exact source character span.
+
+        """
         end_line = node.end_lineno or node.lineno
         end_column = node.end_col_offset or node.col_offset
         return (
@@ -199,7 +245,15 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
 
     @staticmethod
     def _apply_edits(source: str, edits: t.SequenceOf[t.Triple[int, int, str]]) -> str:
-        """Apply non-overlapping source edits from the end of the file."""
+        """Apply non-overlapping source edits from the end of the file.
+
+        Returns:
+            The resulting ``str``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         updated = source
         previous_start = len(source)
         for start, end, replacement in sorted(edits, key=itemgetter(0), reverse=True):

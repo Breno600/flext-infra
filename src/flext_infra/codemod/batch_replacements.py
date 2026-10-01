@@ -26,7 +26,12 @@ class FlextInfraModReplacements:
     def require_authored(
         entries: t.SequenceOf[m.Infra.ModScanFinding],
     ) -> p.Result[bool]:
-        """Retain generator findings as blocking evidence, never writable targets."""
+        """Retain generator findings as blocking evidence, never writable targets.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         generated = tuple(item for item in entries if item.source_owner == "generator")
         if generated:
             # One entry per file and rule: the per-finding detail is in the
@@ -41,7 +46,12 @@ class FlextInfraModReplacements:
 
     @classmethod
     def publish(cls, root: Path, report: m.Infra.ModScanReport) -> p.Result[bool]:
-        """Validate byte coordinates and publish complete CAS-owned file plans."""
+        """Validate byte coordinates and publish complete CAS-owned file plans.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         allowed = cls.require_authored(
             tuple(finding for finding in report.entries if finding.actionable),
         )

@@ -31,6 +31,10 @@ class FlextInfraUtilitiesPrivateImportValidation:
 
         ``removals`` is every import binding that must disappear: the plan's
         private removals, its superseded public roots, and relocated exports.
+
+        Raises:
+            ValueError: On failure.
+
         """
         tree = ast.parse(source, filename=str(file_path))
         for module, symbols in removals.items():

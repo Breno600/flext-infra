@@ -28,7 +28,12 @@ class FlextInfraUtilitiesPyprojectSession:
         selected: t.StrSequence,
         environment: t.StrMapping,
     ) -> p.Result[m.Infra.BindingResolution]:
-        """Resolve only consumer declarations; never restore retired topology."""
+        """Resolve only consumer declarations; never restore retired topology.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.BindingResolution]``.
+
+        """
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
         if (
             tool is not None

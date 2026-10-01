@@ -25,7 +25,12 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
         source: str,
         plan: m.Infra.CompatibilityAliasRewritePlan,
     ) -> str:
-        """Return the structurally rewritten source without changing its layout."""
+        """Return the structurally rewritten source without changing its layout.
+
+        Returns:
+            The structurally rewritten source without changing its layout.
+
+        """
         import libcst as cst
         from libcst.metadata import (
             MetadataWrapper,

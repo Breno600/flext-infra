@@ -32,6 +32,13 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
         signal). When the pyproject is present but missing ``[project]`` or
         ``[project].name``, :meth:`project_name_from_payload` raises — no
         silent fallback to directory-name.
+
+        Returns:
+            Project state bound to the current authenticated file bytes.
+
+        Raises:
+            ValueError: On failure.
+
         """
         root = FlextInfraUtilitiesDocsScopeStateMixin.absolute_lexical(project_root)
         pyproject_path = root / c.PYPROJECT_FILENAME
@@ -53,7 +60,15 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
         pyproject_path: Path,
         content: bytes | None,
     ) -> mw.ProjectPyprojectState:
-        """Parse once per byte-identical canonical pyproject snapshot."""
+        """Parse once per byte-identical canonical pyproject snapshot.
+
+        Returns:
+            The resulting ``mw.ProjectPyprojectState``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         if content is None:
             payload: t.JsonMapping = {}
         else:
@@ -114,24 +129,44 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
 
     @staticmethod
     def project_state(project_root: Path) -> mw.ProjectPyprojectState:
-        """Return one fresh state bound to authenticated pyproject bytes."""
+        """Return one fresh state bound to authenticated pyproject bytes.
+
+        Returns:
+            One fresh state bound to authenticated pyproject bytes.
+
+        """
         return FlextInfraUtilitiesDocsScopeStateMixin._project_state(project_root)
 
     @staticmethod
     def project_name_from_payload(entry: Path, payload: t.JsonMapping) -> str:
-        """Return the declared project name from ``[project].name``."""
+        """Return the declared project name from ``[project].name``.
+
+        Returns:
+            The declared project name from ``[project].name``.
+
+        """
         return FlextInfraUtilitiesPyproject.project_name_from_payload(entry, payload)
 
     @staticmethod
     def project_payload(project_root: Path) -> t.JsonMapping:
-        """Return a project's ``pyproject.toml`` payload as a plain mapping."""
+        """Return a project's ``pyproject.toml`` payload as a plain mapping.
+
+        Returns:
+            A project's ``pyproject.toml`` payload as a plain mapping.
+
+        """
         return FlextInfraUtilitiesDocsScopeStateMixin.project_state(
             project_root,
         ).payload
 
     @staticmethod
     def docs_meta_from_payload(payload: t.JsonMapping) -> t.JsonMapping:
-        """Extract ``tool.flext.docs`` metadata from an already-parsed payload."""
+        """Extract ``tool.flext.docs`` metadata from an already-parsed payload.
+
+        Returns:
+            The resulting ``t.JsonMapping``.
+
+        """
         return FlextInfraUtilitiesPyproject.docs_meta_from_payload(payload)
 
     @staticmethod
@@ -141,6 +176,13 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
         The flag defaults to ``True`` only when the key is absent. A present
         but non-bool value is config drift and fails loud — it must never be
         coerced into silently opting the project in or out.
+
+        Returns:
+            The ``enabled`` docs-scope flag for pre-loaded metadata.
+
+        Raises:
+            TypeError: On failure.
+
         """
         enabled = docs_meta.get("enabled", True)
         if not isinstance(enabled, bool):
@@ -163,6 +205,10 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
           4. Empty string for non-flext projects (roots).
 
         Raises ``ValueError`` only for flext- projects unable to resolve.
+
+        Returns:
+            The primary package name using pre-loaded payload.
+
         """
         return FlextInfraUtilitiesPyproject.package_name_from_payload(
             project_root,
@@ -172,7 +218,12 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
 
     @staticmethod
     def project_package_name(project_root: Path) -> str:
-        """Return the primary Python package name for a project."""
+        """Return the primary Python package name for a project.
+
+        Returns:
+            The primary Python package name for a project.
+
+        """
         return FlextInfraUtilitiesDocsScopeStateMixin.project_state(
             project_root,
         ).package_name

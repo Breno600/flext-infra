@@ -302,5 +302,10 @@ class FlextInfraModelsCodegenFixModels:
         ]
 
         def __hash__(self) -> int:
-            """Hash by stable business identity so keys work in sets and frozensets."""
+            """Hash by stable business identity so keys work in sets and frozensets.
+
+            Returns:
+                The resulting ``int``.
+
+            """
             return hash((self.module, self.rule, self.content_hash))

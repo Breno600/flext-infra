@@ -27,7 +27,12 @@ class FlextInfraCodemodSnapshotRefresh(FlextInfraServiceBase[t.Cli.ResultValue])
 
     @override
     def execute(self) -> p.Result[t.Cli.ResultValue]:
-        """Rebuild or preview the owned snapshot projections."""
+        """Rebuild or preview the owned snapshot projections.
+
+        Returns:
+            The resulting ``p.Result[t.Cli.ResultValue]``.
+
+        """
         planned = u.Infra.codemod_rule_plan(self.repository_root)
         if planned.failure:
             return r[t.Cli.ResultValue].from_failure(planned)

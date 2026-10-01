@@ -33,7 +33,13 @@ class TestsFlextInfraCodegenLazyInitService:
         apply_changes: bool = False,
         dry_run: bool = False,
     ) -> t.Quad[FlextInfraCodegenLazyInit, p.Result[bool], Path, bytes]:
-        """Run one lazy-init pass without writing and return its observable drift."""
+        """Run one lazy-init pass without writing and return its observable drift.
+
+        Returns:
+            The resulting ``t.Quad[FlextInfraCodegenLazyInit, p.Result[bool], Path,
+                bytes]``.
+
+        """
         u.Tests.write_lazy_init_namespace_module(
             package_root / "models.py",
             class_name="FlextTestsModels",

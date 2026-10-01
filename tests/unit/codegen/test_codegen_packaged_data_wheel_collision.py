@@ -29,7 +29,12 @@ class TestsFlextInfraCodegenPackagedDataWheel:
 
     @staticmethod
     def _package_config_path(root: Path) -> Path:
-        """Resolve the in-package data dir of the governed fixture project."""
+        """Resolve the in-package data dir of the governed fixture project.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         package_name = u.Tests.project_spec(FIXTURE_DISTRIBUTION).package_name
         return (
             root
@@ -95,7 +100,12 @@ class TestsFlextInfraCodegenPackagedDataWheel:
 
     @staticmethod
     def _conform_self(root: Path) -> int:
-        """Run codegen conform self-apply through the public CLI entrypoint."""
+        """Run codegen conform self-apply through the public CLI entrypoint.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         return infra_main([
             c.Infra.CLI_GROUP_CODEGEN,
             "conform",
@@ -109,7 +119,12 @@ class TestsFlextInfraCodegenPackagedDataWheel:
 
     @staticmethod
     def _wheel_target(root: Path) -> t.JsonMapping:
-        """Read the rendered wheel target of the conformed project."""
+        """Read the rendered wheel target of the conformed project.
+
+        Returns:
+            The resulting ``t.JsonMapping``.
+
+        """
         manifest = (root / c.PYPROJECT_FILENAME).read_text(encoding="utf-8")
         return u.Tests.toml_table_at(
             manifest,
@@ -122,7 +137,12 @@ class TestsFlextInfraCodegenPackagedDataWheel:
 
     @staticmethod
     def _wheel_force_include(root: Path) -> t.JsonMapping:
-        """Read the rendered force-include map, empty when the table is absent."""
+        """Read the rendered force-include map, empty when the table is absent.
+
+        Returns:
+            The resulting ``t.JsonMapping``.
+
+        """
         wheel = TestsFlextInfraCodegenPackagedDataWheel._wheel_target(root)
         return (
             u.Tests.toml_mapping(wheel["force-include"])
@@ -132,7 +152,12 @@ class TestsFlextInfraCodegenPackagedDataWheel:
 
     @staticmethod
     def _sdist_include(root: Path) -> t.JsonList:
-        """Read the rendered sdist source patterns of the conformed project."""
+        """Read the rendered sdist source patterns of the conformed project.
+
+        Returns:
+            The resulting ``t.JsonList``.
+
+        """
         manifest = (root / c.PYPROJECT_FILENAME).read_text(encoding="utf-8")
         sdist = u.Tests.toml_table_at(
             manifest,
@@ -146,7 +171,12 @@ class TestsFlextInfraCodegenPackagedDataWheel:
 
     @staticmethod
     def _sdist_force_include(root: Path) -> t.JsonMapping:
-        """Read declared source files retained unchanged by the sdist."""
+        """Read declared source files retained unchanged by the sdist.
+
+        Returns:
+            The resulting ``t.JsonMapping``.
+
+        """
         manifest = (root / c.PYPROJECT_FILENAME).read_text(encoding="utf-8")
         sdist = u.Tests.toml_table_at(
             manifest,

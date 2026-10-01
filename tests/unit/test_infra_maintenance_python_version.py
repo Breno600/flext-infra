@@ -27,7 +27,12 @@ class TestsFlextInfraInfraMaintenancePythonVersion:
     _BAD: int = _MINOR + 1
 
     def _ws(self, root: Path, *, minor: int | None = None) -> Path:
-        """Create repository root with required markers."""
+        """Create repository root with required markers.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         resolved_minor = self._MINOR if minor is None else minor
         root.mkdir(exist_ok=True)
         (root / ".git").mkdir(exist_ok=True)

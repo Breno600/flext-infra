@@ -26,7 +26,13 @@ class FlextInfraUtilitiesPromotedCommands(FlextInfraUtilitiesPromotedWorkspace):
     def promoted_command_headers(
         verb_dir: Path,
     ) -> t.MappingKV[Path, t.JsonMapping | c.Infra.PromotedRegistryError]:
-        """Parse every candidate header of one verb directory."""
+        """Parse every candidate header of one verb directory.
+
+        Returns:
+            The resulting ``t.MappingKV[Path, t.JsonMapping |
+                c.Infra.PromotedRegistryError]``.
+
+        """
         from flext_infra import u
 
         header = c.Infra.PromotedHeader
@@ -76,7 +82,12 @@ class FlextInfraUtilitiesPromotedCommands(FlextInfraUtilitiesPromotedWorkspace):
         expected_verb: str,
         data: t.JsonMapping,
     ) -> p.Infra.PromotedCommand:
-        """Validate one header against its directory and file, once at ingress."""
+        """Validate one header against its directory and file, once at ingress.
+
+        Returns:
+            The resulting ``p.Infra.PromotedCommand``.
+
+        """
         from flext_infra import m
 
         key = c.Infra.PromotedHeader
@@ -149,7 +160,12 @@ class FlextInfraUtilitiesPromotedCommands(FlextInfraUtilitiesPromotedWorkspace):
         key: str,
         path: Path,
     ) -> str:
-        """Return one required non-blank stripped header string."""
+        """Return one required non-blank stripped header string.
+
+        Returns:
+            One required non-blank stripped header string.
+
+        """
         value = data.get(key)
         if not isinstance(value, str) or not value.strip():
             cls.promoted_fail(
@@ -166,7 +182,12 @@ class FlextInfraUtilitiesPromotedCommands(FlextInfraUtilitiesPromotedWorkspace):
         key: str,
         path: Path,
     ) -> t.VariadicTuple[str]:
-        """Return one optional header list of non-blank stripped strings."""
+        """Return one optional header list of non-blank stripped strings.
+
+        Returns:
+            One optional header list of non-blank stripped strings.
+
+        """
         if not isinstance(values, list):
             cls.promoted_fail(
                 c.Infra.PromotedMessage.STRING_LIST_TYPE,

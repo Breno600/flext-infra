@@ -198,7 +198,12 @@ class TestsFlextInfraCodegenRepositoryRootScope:
 
     @staticmethod
     def _render_root_makefile(tmp_path: Path) -> Path:
-        """Render base/Makefile.j2 from a typed workspace fixture."""
+        """Render base/Makefile.j2 from a typed workspace fixture.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         repository = u.Tests.repository_ref("workspace-fixture")
         workspace = u.Tests.workspace_spec(
             repository,

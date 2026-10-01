@@ -44,7 +44,12 @@ class TestsFlextInfraValidateCli:
 
     @staticmethod
     def _rule_project(tmp_path: Path, source: str) -> Path:
-        """Create a project whose own catalog declares one rule."""
+        """Create a project whose own catalog declares one rule.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         project = tmp_path / "namespace-contract"
         config_path = project / c.Infra.CODEMOD_CONFIG_RELPATH
         rules = config_path.parent / c.Cli.RULES_DIR_NAME

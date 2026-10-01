@@ -21,7 +21,12 @@ class TestsFlextInfraCodegenRenderPurityGolden:
 
     @staticmethod
     def _project(root: Path) -> Path:
-        """Materialize one governed fixture repository."""
+        """Materialize one governed fixture repository.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         project = u.Tests.mk_project(
             root,
             "render-purity",

@@ -30,7 +30,12 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
 
     @staticmethod
     def _non_module_files(package_root: Path) -> t.VariadicTuple[str]:
-        """Return files the rewrite left beside the package modules."""
+        """Return files the rewrite left beside the package modules.
+
+        Returns:
+            Files the rewrite left beside the package modules.
+
+        """
         return tuple(
             sorted(
                 path.name

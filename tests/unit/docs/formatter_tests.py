@@ -23,7 +23,12 @@ class TestsFlextInfraDocsFormatter:
 
     @staticmethod
     def _formatter() -> FlextInfraDocFormatter:
-        """Bind the formatter to the facade's markdown format gate."""
+        """Bind the formatter to the facade's markdown format gate.
+
+        Returns:
+            The resulting ``FlextInfraDocFormatter``.
+
+        """
         return FlextInfraDocFormatter(format_gate=infra.markdown_format_gate)
 
     @staticmethod

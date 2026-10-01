@@ -23,7 +23,12 @@ class TestsFlextInfraDocsGeneratorBundle:
 
     @staticmethod
     def _generator(workspace: Path) -> FlextInfraDocGenerator:
-        """Return the public generator for the governed fixture project."""
+        """Return the public generator for the governed fixture project.
+
+        Returns:
+            The public generator for the governed fixture project.
+
+        """
         return FlextInfraDocGenerator(
             repository_root=workspace,
             selected_projects=["flext-a"],

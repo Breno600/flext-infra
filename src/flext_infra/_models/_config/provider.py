@@ -175,7 +175,15 @@ class FlextInfraConfigModelsProvider:
 
         @u.model_validator(mode="after")
         def _validate_private_submodule_identity(self) -> Self:
-            """Keep path, key, and host identities complete and unambiguous."""
+            """Keep path, key, and host identities complete and unambiguous.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: On failure.
+
+            """
             key_paths = tuple(key.path for key in self.deploy_keys)
             if key_paths != self.paths:
                 msg = "private submodule deploy-key paths must exactly match paths"

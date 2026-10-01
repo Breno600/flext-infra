@@ -22,7 +22,15 @@ class FlextInfraUtilitiesNetwork:
 
     @staticmethod
     def _connection(url: str, *, timeout_seconds: float) -> HTTPConnection:
-        """Open one connection for an ``http``/``https`` URL, or raise."""
+        """Open one connection for an ``http``/``https`` URL, or raise.
+
+        Returns:
+            The resulting ``HTTPConnection``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         parts = urlsplit(url)
         if parts.scheme not in {"http", "https"} or not parts.hostname:
             msg = f"HTTP exchange requires an http(s) URL, got {url!r}"
@@ -39,6 +47,10 @@ class FlextInfraUtilitiesNetwork:
         can succeed. Only a connection failure or a timeout means offline. The
         endpoint must be ``http`` or ``https``; any other scheme is a caller
         defect and raises.
+
+        Returns:
+            Whether one HEAD request receives any HTTP answer in time.
+
         """
         connection = FlextInfraUtilitiesNetwork._connection(
             url,
@@ -73,6 +85,10 @@ class FlextInfraUtilitiesNetwork:
         status, a connection failure, or a timeout fails with the status and
         body the server sent. The token travels only in the ``Authorization``
         header and never appears in a failure message.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
         """
         connection = FlextInfraUtilitiesNetwork._connection(
             url,

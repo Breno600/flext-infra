@@ -27,6 +27,10 @@ class FlextInfraUtilitiesPromotedRendering:
 
         An empty or ``help`` WHAT always does; ``all`` does only when the verb
         declares no ``all`` command, so a declared ``all`` command still runs.
+
+        Returns:
+            Whether a selected WHAT renders the verb help.
+
         """
         return what in c.Infra.PROMOTED_VERB_HELP_SELECTORS or (
             what == c.Infra.PromotedSelector.ALL
@@ -39,7 +43,12 @@ class FlextInfraUtilitiesPromotedRendering:
         registry: p.Infra.PromotedRegistry,
         selector: str,
     ) -> str:
-        """Render global help, ``<verb>`` help, or ``<verb>/<WHAT>`` help."""
+        """Render global help, ``<verb>`` help, or ``<verb>/<WHAT>`` help.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         help_, join = c.Infra.PromotedHelp, c.Infra.PromotedJoin
         if selector in c.Infra.PROMOTED_GLOBAL_HELP_SELECTORS:
             lines: list[str] = [help_.GLOBAL_HEADER, ""]
@@ -102,7 +111,12 @@ class FlextInfraUtilitiesPromotedRendering:
         registry: p.Infra.PromotedRegistry,
         requested_verb: str,
     ) -> str:
-        """Render one verb, its actions, parameters, rules, and examples."""
+        """Render one verb, its actions, parameters, rules, and examples.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         help_, join = c.Infra.PromotedHelp, c.Infra.PromotedJoin
         verb = registry.resolve_verb(requested_verb)
         suffix = cls._promoted_alias_suffix(registry, verb)
@@ -162,7 +176,12 @@ class FlextInfraUtilitiesPromotedRendering:
 
     @staticmethod
     def _promoted_alias_suffix(registry: p.Infra.PromotedRegistry, verb: str) -> str:
-        """Render the alias suffix of one canonical verb, empty without aliases."""
+        """Render the alias suffix of one canonical verb, empty without aliases.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         aliases = registry.aliases_for(verb)
         if not aliases:
             return ""
@@ -172,7 +191,12 @@ class FlextInfraUtilitiesPromotedRendering:
 
     @staticmethod
     def _promoted_param_details(param: p.Infra.PromotedParam) -> t.Pair[str, str]:
-        """Render the ``default=`` and ``choices=`` details, empty when undeclared."""
+        """Render the ``default=`` and ``choices=`` details, empty when undeclared.
+
+        Returns:
+            The resulting ``t.Pair[str, str]``.
+
+        """
         help_ = c.Infra.PromotedHelp
         choices = c.Infra.PromotedJoin.VALUES.join(param.choices)
         return (
@@ -186,14 +210,24 @@ class FlextInfraUtilitiesPromotedRendering:
         template: str,
         items: t.StrSequence,
     ) -> t.StrSequence:
-        """Render one titled help section, empty without items."""
+        """Render one titled help section, empty without items.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         if not items:
             return ()
         return ("", title, *(template.format(item=item) for item in items))
 
     @staticmethod
     def _promoted_example(command: p.Infra.PromotedCommand, requested_verb: str) -> str:
-        """Render a declared example through the requested alias when needed."""
+        """Render a declared example through the requested alias when needed.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         help_ = c.Infra.PromotedHelp
         canonical = help_.MAKE_VERB.format(verb=command.verb)
         requested = help_.MAKE_VERB.format(verb=requested_verb)

@@ -30,7 +30,12 @@ class FlextInfraValidationCommandRoutes(FlextInfraCliRouteBase):
     def _validate_namespace_command(
         request: m.Infra.NamespaceValidateCommand,
     ) -> p.Result[m.Infra.ValidationReport]:
-        """Run namespace validation through the rule engine."""
+        """Run namespace validation through the rule engine.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ValidationReport]``.
+
+        """
         result = infra.validate_namespace(request)
         if result.failure:
             return r[m.Infra.ValidationReport].from_failure(result)

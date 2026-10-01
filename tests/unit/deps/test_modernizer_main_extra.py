@@ -23,7 +23,12 @@ class TestsFlextInfraDepsModernizerMainExtra:
 
     @staticmethod
     def _ran_modernizer(modernizer_workspace: Path) -> str:
-        """Run the constraint-rewriting modernizer and return the rendered root."""
+        """Run the constraint-rewriting modernizer and return the rendered root.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         modernizer = FlextInfraPyprojectModernizer(
             repository_root=modernizer_workspace,
             apply_changes=True,

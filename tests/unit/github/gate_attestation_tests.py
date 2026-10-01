@@ -101,7 +101,12 @@ class TestsFlextInfraGithubGateAttestation:
 
     @pytest.fixture
     def signed_repository_factory(self) -> Callable[[Path], Path]:
-        """Create one SSH-signing fixture repository per test invocation."""
+        """Create one SSH-signing fixture repository per test invocation.
+
+        Returns:
+            The resulting ``Callable[[Path], Path]``.
+
+        """
         return self._signed_repository
 
     @staticmethod

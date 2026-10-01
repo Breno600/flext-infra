@@ -100,6 +100,10 @@ class FlextInfraRefactorCensusCollectMixin:
 
         In dry-run the removal candidates are previewed through the gates and
         only the ones that pass stay candidates.
+
+        Returns:
+            The resulting ``m.Infra.WorkspaceReport``.
+
         """
         duplicates = self._duplicate_groups(tuple(findings.project_objects.values()))
         duplicate_keys = frozenset(

@@ -40,7 +40,12 @@ class TestsFlextInfraCodegenVersionFile:
         tmp_path: Path,
         project_name: str,
     ) -> t.Triple[Path, Path, Path]:
-        """Create minimal workspace/project/package structure."""
+        """Create minimal workspace/project/package structure.
+
+        Returns:
+            The resulting ``t.Triple[Path, Path, Path]``.
+
+        """
         ws = tmp_path / "workspace"
         ws.mkdir()
         (ws / "pyproject.toml").write_text(

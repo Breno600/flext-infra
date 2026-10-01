@@ -27,7 +27,12 @@ class FlextInfraMiseArtifactsCandidates:
         projects: t.VariadicTuple[m.Infra.MiseToolchainProjectState],
         stages: t.VariadicTuple[Path],
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenStagedFile]]:
-        """Retain every staged artifact receipt, including unchanged destinations."""
+        """Retain every staged artifact receipt, including unchanged destinations.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.CodegenStagedFile]]``.
+
+        """
         publications: list[m.Infra.CodegenStagedFile] = []
         for project, stage in zip(projects, stages, strict=True):
             before_states = (

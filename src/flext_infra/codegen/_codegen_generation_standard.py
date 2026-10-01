@@ -28,7 +28,12 @@ class FlextInfraCodegenGenerationStandardMixin(
 
     @staticmethod
     def _is_stdlib_import(target: t.StrPair) -> bool:
-        """Return whether an absolute import target belongs to the stdlib."""
+        """Return whether an absolute import target belongs to the stdlib.
+
+        Returns:
+            Whether an absolute import target belongs to the stdlib.
+
+        """
         module = target[0]
         return (
             not module.startswith(".")
@@ -37,7 +42,12 @@ class FlextInfraCodegenGenerationStandardMixin(
 
     @staticmethod
     def _type_checking_filtered(plan: m.Infra.LazyInitPlan) -> t.LazyAliasMap:
-        """Filter static imports already resolved by the semantic planner."""
+        """Filter static imports already resolved by the semantic planner.
+
+        Returns:
+            The resulting ``t.LazyAliasMap``.
+
+        """
         source = plan.type_checking_map or plan.lazy_map
         public_names = frozenset(plan.exports)
         wildcard_modules = frozenset(plan.wildcard_runtime_modules)
@@ -55,7 +65,12 @@ class FlextInfraCodegenGenerationStandardMixin(
 
     @classmethod
     def _runtime_import_lines(cls, plan: m.Infra.LazyInitPlan) -> str:
-        """Render explicit eager and wildcard runtime imports."""
+        """Render explicit eager and wildcard runtime imports.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         current_pkg = plan.context.current_pkg
         lines: t.MutableSequenceOf[str] = [
             f"from {cls._absolute_import_module(current_pkg, module)} import *"
@@ -97,7 +112,13 @@ class FlextInfraCodegenGenerationStandardMixin(
         t.SequenceOf[t.StrPairSequencePair],
         t.LazyAliasMap,
     ]:
-        """Build owned lazy metadata groups and their filtered public map."""
+        """Build owned lazy metadata groups and their filtered public map.
+
+        Returns:
+            The resulting ``t.Triple[t.SequenceOf[t.StrSequencePair],
+                t.SequenceOf[t.StrPairSequencePair], t.LazyAliasMap]``.
+
+        """
         current_pkg = plan.context.current_pkg
         public_names = frozenset(plan.exports)
         lazy_map = {
@@ -132,6 +153,10 @@ class FlextInfraCodegenGenerationStandardMixin(
         rewrote the projection and the following ``make gen`` restored it,
         looping forever. The item comma belongs to the ``trailing`` decision
         (multi-entry mapping), exactly like the expanded form below.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
         """
         inner = ", ".join(values)
         if len(values) == 1:
@@ -149,7 +174,12 @@ class FlextInfraCodegenGenerationStandardMixin(
 
     @classmethod
     def _format_exports_tuple(cls, exports: t.StrSequence) -> str:
-        """Render a canonical public export tuple, including the empty form."""
+        """Render a canonical public export tuple, including the empty form.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         if not exports:
             return "()"
         inner = ", ".join(f'"{name}"' for name in exports)
@@ -173,6 +203,10 @@ class FlextInfraCodegenGenerationStandardMixin(
 
         The caller keeps the inline form only when its line fits; it carries no
         trailing comma inside the braces, so Ruff keeps it joined.
+
+        Returns:
+            The resulting ``str``.
+
         """
         entries: t.MutableSequenceOf[str] = []
         for module, names in groups:
@@ -184,7 +218,12 @@ class FlextInfraCodegenGenerationStandardMixin(
 
     @staticmethod
     def _lazy_alias_argument_inline(groups: t.SequenceOf[t.StrPairSequencePair]) -> str:
-        """Render the alias mapping as one indent-free call argument."""
+        """Render the alias mapping as one indent-free call argument.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         entries: t.MutableSequenceOf[str] = []
         for module, pairs in groups:
             values = tuple(
@@ -201,7 +240,12 @@ class FlextInfraCodegenGenerationStandardMixin(
         cls,
         groups: t.SequenceOf[t.StrSequencePair],
     ) -> str:
-        """Render the immutable module mapping without a formatter subprocess."""
+        """Render the immutable module mapping without a formatter subprocess.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         compact = f"        {cls._lazy_module_argument_inline(groups)},"
         if len(compact) <= config.Infra.tooling.tools.ruff.line_length:
             return compact
@@ -222,7 +266,12 @@ class FlextInfraCodegenGenerationStandardMixin(
         cls,
         groups: t.SequenceOf[t.StrPairSequencePair],
     ) -> str:
-        """Render the immutable alias mapping without a formatter subprocess."""
+        """Render the immutable alias mapping without a formatter subprocess.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         compact = f"        {cls._lazy_alias_argument_inline(groups)},"
         if len(compact) <= config.Infra.tooling.tools.ruff.line_length:
             return compact
@@ -256,6 +305,10 @@ class FlextInfraCodegenGenerationStandardMixin(
         CI renders and failing ruff I001 at the generated fixed point.
         Return ``None`` when no manifest is reachable; an unreadable manifest
         raises with the metadata reader's diagnostic.
+
+        Returns:
+            The distribution package that owns ``pkg_dir``.
+
         """
         for candidate in (pkg_dir, *pkg_dir.parents):
             if not (candidate / c.PYPROJECT_FILENAME).is_file():
@@ -265,7 +318,15 @@ class FlextInfraCodegenGenerationStandardMixin(
 
     @staticmethod
     def _project_first_party_names(project_root: Path) -> t.StrSequence:
-        """Read strict Ruff policy, deriving namespaces only when it is absent."""
+        """Read strict Ruff policy, deriving namespaces only when it is absent.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            TypeError: On failure.
+
+        """
         project_payload = u.Infra.pyproject_payload(
             (project_root / c.PYPROJECT_FILENAME).resolve(),
         )
@@ -286,7 +347,12 @@ class FlextInfraCodegenGenerationStandardMixin(
 
     @classmethod
     def _root_context(cls, plan: m.Infra.LazyInitPlan) -> m.Infra.LazyInitRootRender:
-        """Build one lazy context for a public package root."""
+        """Build one lazy context for a public package root.
+
+        Returns:
+            The resulting ``m.Infra.LazyInitRootRender``.
+
+        """
         lazy_module_groups, lazy_alias_groups, lazy_map = cls._lazy_groups(plan)
         current_pkg = plan.context.current_pkg
         public_type_checking_imports = cls._type_checking_filtered(plan)
@@ -366,7 +432,12 @@ class FlextInfraCodegenGenerationStandardMixin(
         cls,
         plan: m.Infra.LazyInitPlan,
     ) -> m.Infra.StaticPackageInitRender:
-        """Build a side-effect-free private or non-production initializer."""
+        """Build a side-effect-free private or non-production initializer.
+
+        Returns:
+            The resulting ``m.Infra.StaticPackageInitRender``.
+
+        """
         return m.Infra.StaticPackageInitRender(
             autogen_header=c.Infra.AUTOGEN_HEADER,
             docstring=cls._format_root_package_docstring(
@@ -377,7 +448,12 @@ class FlextInfraCodegenGenerationStandardMixin(
 
     @classmethod
     def _render_root(cls, plan: m.Infra.LazyInitPlan) -> str:
-        """Render one inline lazy public-root initializer."""
+        """Render one inline lazy public-root initializer.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return cls._render_model(
             c.Infra.TEMPLATE_ROOT_INIT,
             cls._root_context(plan),
@@ -386,7 +462,12 @@ class FlextInfraCodegenGenerationStandardMixin(
 
     @classmethod
     def _render_static(cls, plan: m.Infra.LazyInitPlan) -> str:
-        """Render one explicit static or empty subpackage initializer."""
+        """Render one explicit static or empty subpackage initializer.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return cls._render_model(
             c.Infra.TEMPLATE_STATIC_INIT,
             cls._static_context(plan),

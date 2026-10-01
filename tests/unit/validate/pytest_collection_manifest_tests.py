@@ -21,7 +21,12 @@ class TestsFlextInfraPytestCollectionManifest:
 
     @staticmethod
     def _collect(project: Path, *options: str) -> str:
-        """Collect with the real collection plugin as the only external plugin."""
+        """Collect with the real collection plugin as the only external plugin.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         tests = project / "tests"
         tests.mkdir(exist_ok=True)
         (project / "pytest.ini").write_text("[pytest]\n", encoding="utf-8")

@@ -21,13 +21,23 @@ class FlextInfraInjectCommentsPhase:
 
     @staticmethod
     def _is_section_header(line: str) -> bool:
-        """Is section header."""
+        """Is section header.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         stripped = line.strip()
         return stripped.startswith("[") and stripped.endswith("]")
 
     @staticmethod
     def _managed_marker_lines() -> t.Infra.StrSet:
-        """Return banner lines to strip."""
+        """Return banner lines to strip.
+
+        Returns:
+            Banner lines to strip.
+
+        """
         markers = {c.Infra.LEGACY_AUTO_BANNER_LINE}
         markers.update(c.Infra.BANNER.splitlines())
         return markers
@@ -37,7 +47,12 @@ class FlextInfraInjectCommentsPhase:
         cls,
         lines: t.StrSequence,
     ) -> t.Pair[t.StrSequence, t.StrSequence]:
-        """Strip managed lines."""
+        """Strip managed lines.
+
+        Returns:
+            The resulting ``t.Pair[t.StrSequence, t.StrSequence]``.
+
+        """
         changes: t.MutableSequenceOf[str] = []
         managed_lines = cls._managed_marker_lines()
         cleaned: t.MutableSequenceOf[str] = []
@@ -65,7 +80,12 @@ class FlextInfraInjectCommentsPhase:
 
     @staticmethod
     def _collapse_blank_lines(lines: t.StrSequence) -> t.StrSequence:
-        """Collapse repeated blank lines into a single canonical separator."""
+        """Collapse repeated blank lines into a single canonical separator.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         normalized: t.MutableSequenceOf[str] = []
         previous_blank = False
         for line in lines:
@@ -77,7 +97,15 @@ class FlextInfraInjectCommentsPhase:
         return normalized
 
     def apply(self, rendered: str) -> t.Pair[str, t.StrSequence]:
-        """Inject managed banner/markers and return updated TOML plus change messages."""
+        """Inject managed banner/markers and return updated TOML plus change messages.
+
+        Returns:
+            The resulting ``t.Pair[str, t.StrSequence]``.
+
+        Raises:
+            RuntimeError: On failure.
+
+        """
         changes: t.MutableSequenceOf[str] = []
         lines = rendered.splitlines()
         cleaned_lines, cleanup_changes = self._strip_managed_lines(lines)

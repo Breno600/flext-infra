@@ -26,7 +26,12 @@ class FlextInfraUtilitiesDocsFix:
 
     @staticmethod
     def docs_maybe_fix_link(md_file: Path, raw_link: str) -> str | None:
-        """Return a corrected link target when a simple fix is possible."""
+        """Return a corrected link target when a simple fix is possible.
+
+        Returns:
+            A corrected link target when a simple fix is possible.
+
+        """
         if FlextInfraUtilitiesDocs.docs_is_secure_web_url(raw_link):
             return FlextInfraUtilitiesDocsGithubLinks.docs_rewrite_github_url(raw_link)
         result: str | None = None
@@ -56,6 +61,10 @@ class FlextInfraUtilitiesDocsFix:
         Apply only fixes that ``ruff`` resolves completely. An unfixable
         diagnostic fails this phase with the original process detail so the
         authored Markdown can be corrected before publication.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.GeneratedFile]``.
+
         """
         changed: t.MutableSequenceOf[m.Infra.GeneratedFile] = []
         for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
@@ -135,7 +144,12 @@ class FlextInfraUtilitiesDocsFix:
         *,
         apply: bool,
     ) -> m.Infra.DocsPhaseItemModel:
-        """Fix one markdown file and return the phase item summary."""
+        """Fix one markdown file and return the phase item summary.
+
+        Returns:
+            The resulting ``m.Infra.DocsPhaseItemModel``.
+
+        """
         original = md_file.read_text(
             encoding=c.Cli.ENCODING_DEFAULT,
             errors=c.Infra.IGNORE,
@@ -143,7 +157,12 @@ class FlextInfraUtilitiesDocsFix:
         link_count = 0
 
         def replace_link(match: t.RegexMatch) -> str:
-            """Replace link."""
+            """Replace link.
+
+            Returns:
+                The resulting ``str``.
+
+            """
             nonlocal link_count
             text, link = match.groups()
             fixed = FlextInfraUtilitiesDocsFix.docs_maybe_fix_link(md_file, link)

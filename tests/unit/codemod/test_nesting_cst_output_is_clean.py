@@ -27,7 +27,12 @@ class TestsFlextInfraNestingCutoverOutput:
 
     @staticmethod
     def _planned_source(tmp_path: Path) -> str:
-        """Plan one class-nesting cutover through the public cutover owner."""
+        """Plan one class-nesting cutover through the public cutover owner.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         alias = sorted(u.Infra.facade_families())[0]
         module_name = u.Tests.family_public_module(alias)

@@ -128,6 +128,10 @@ class FlextInfraCodegenLazyInitPlannerPublicRootMixin:
 
         Any underscore-prefixed source segment below the root marks the owner as
         private; its symbols stay behind their facade and never widen the root ABI.
+
+        Returns:
+            Whether a module below ``root_pkg`` sits behind a private segment.
+
         """
         if not module_path.startswith(f"{root_pkg}."):
             return False
@@ -136,7 +140,12 @@ class FlextInfraCodegenLazyInitPlannerPublicRootMixin:
 
     @staticmethod
     def _is_facade_root(context: m.Infra.LazyInitPackageContext) -> bool:
-        """Return whether a package is a public project root or the tests facade root."""
+        """Return whether a package is a public project root or the tests facade root.
+
+        Returns:
+            Whether a package is a public project root or the tests facade root.
+
+        """
         is_public_project_root = bool(
             context.pkg_dir.parent.name == c.Infra.DEFAULT_SRC_DIR
             and context.current_pkg

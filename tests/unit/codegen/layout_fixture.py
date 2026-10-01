@@ -14,7 +14,12 @@ from tests import u
 
 
 def build_loose_project(tmp_path: Path, name: str = "flext-demo") -> Path:
-    """Create a minimal project carrying one violation of each layout kind."""
+    """Create a minimal project carrying one violation of each layout kind.
+
+    Returns:
+        The resulting ``Path``.
+
+    """
     project = tmp_path / name
     package_dir = project / "src" / name.replace("-", "_")
     package_dir.mkdir(parents=True)
@@ -49,6 +54,10 @@ def layout_engine(
     Apply mode journals through the generation transaction, whose receipt
     resolves the Git identity of the owning checkout, so the fixture root is
     initialized as a repository exactly like every governed checkout.
+
+    Returns:
+        The resulting ``FlextInfraCodegenLayout``.
+
     """
     if not (repository_root / ".git").exists():
         provider = u.Tests.provider()
@@ -79,5 +88,10 @@ def layout_engine(
 
 
 def archive_root() -> str:
-    """Archive root from the same typed SSOT the engine consumes."""
+    """Archive root from the same typed SSOT the engine consumes.
+
+    Returns:
+        The resulting ``str``.
+
+    """
     return config.Infra.codegen.layout.archive_root

@@ -20,7 +20,15 @@ class FlextInfraDepsFloorProfileWriter:
 
     @staticmethod
     def _source_paths(root: Path) -> t.SequenceOf[Path]:
-        """Elect the local owner from the caller's typed workspace declaration."""
+        """Elect the local owner from the caller's typed workspace declaration.
+
+        Returns:
+            The resulting ``t.SequenceOf[Path]``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         root = root.resolve()
         manifests = u.Infra.load_workspace_manifest(root).unwrap()
         relative = Path(c.Infra.CODEGEN_CONFIG_DIR) / c.Infra.CODEGEN_CONFIG_FILENAME
@@ -65,6 +73,14 @@ class FlextInfraDepsFloorProfileWriter:
         route consults the installed package location.
 
         Returns a list of change descriptions for the deps report.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            TypeError: On failure.
+            ValueError: On failure.
+
         """
         sources = cls._source_paths(root)
         if not sources:

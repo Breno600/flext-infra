@@ -34,6 +34,10 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
         method used to create those links and delete the real directory first;
         now it proves none survive and enforces the client's private-directory
         contract after publication, for the root and its composed members.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         root = request.root.expanduser().resolve()
         workspace_result = FlextInfraWorkspaceDetector.load_workspace_spec(root)
@@ -73,6 +77,10 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
         whose parent is missing. The directory is created empty;
         ``.beads/config.yaml`` and ``.beads/metadata.json`` are rendered into
         it by generation, never copied and never linked.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         allowed_entries = (
             frozenset({

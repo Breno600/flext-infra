@@ -27,7 +27,12 @@ class FlextInfraMiseArtifactsFiles:
     ) -> t.VariadicTuple[
         m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant
     ]:
-        """Return only explicitly registered publication owners."""
+        """Return only explicitly registered publication owners.
+
+        Returns:
+            Only explicitly registered publication owners.
+
+        """
         return (*layout.projects, *layout.file_participants)
 
     @classmethod
@@ -36,7 +41,12 @@ class FlextInfraMiseArtifactsFiles:
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         path: Path,
     ) -> p.Result[str]:
-        """Encode a file capability path without weakening workspace containment."""
+        """Encode a file capability path without weakening workspace containment.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         participants = sorted(
             layout.file_participants,
             key=lambda item: -len(item.root.parts),
@@ -60,7 +70,12 @@ class FlextInfraMiseArtifactsFiles:
         *,
         purpose: str,
     ) -> p.Result[Path]:
-        """Resolve one journal path against its exact registered physical root."""
+        """Resolve one journal path against its exact registered physical root.
+
+        Returns:
+            The resulting ``p.Result[Path]``.
+
+        """
         if not selector.startswith("@"):
             return cls.resolve_relative(layout.scope_root, selector, purpose=purpose)
         identity, separator, relative = selector.partition("/")
@@ -81,12 +96,22 @@ class FlextInfraMiseArtifactsFiles:
 
     @classmethod
     def digest(cls, content: bytes) -> str:
-        """Return the exact lowercase SHA-256 identity for raw bytes."""
+        """Return the exact lowercase SHA-256 identity for raw bytes.
+
+        Returns:
+            The exact lowercase SHA-256 identity for raw bytes.
+
+        """
         return u.Cli.sha256_bytes(content)
 
     @classmethod
     def package_directory(cls) -> Path:
-        """Return the physical directory of the running ``flext_infra`` package."""
+        """Return the physical directory of the running ``flext_infra`` package.
+
+        Returns:
+            The physical directory of the running ``flext_infra`` package.
+
+        """
         return Path(__file__).resolve().parents[1]
 
     @classmethod
@@ -97,6 +122,10 @@ class FlextInfraMiseArtifactsFiles:
         runtime-root ``bin/mise``, ``bin/mise.cmd`` and ``mise.version`` here;
         a repository that has never carried a triple, or carries the pre-bake
         projection whose launchers resolve the latest release, starts from it.
+
+        Returns:
+            The packaged copy of flext-infra's own upg-written triple.
+
         """
         return cls.package_directory() / c.Infra.MISE_COLD_START_DIRECTORY
 
@@ -107,12 +136,22 @@ class FlextInfraMiseArtifactsFiles:
         *,
         required: bool,
     ) -> p.Result[m.Cli.AtomicFileState]:
-        """Read exact state through the canonical descriptor-authenticated owner."""
+        """Read exact state through the canonical descriptor-authenticated owner.
+
+        Returns:
+            The resulting ``p.Result[m.Cli.AtomicFileState]``.
+
+        """
         return u.Cli.atomic_read_binary_file_state(path, required=required)
 
     @classmethod
     def physical_directory_identity(cls, path: Path) -> p.Result[t.Pair[int, int]]:
-        """Return the device/inode identity of one physical directory."""
+        """Return the device/inode identity of one physical directory.
+
+        Returns:
+            The device/inode identity of one physical directory.
+
+        """
         try:
             observed = path.lstat()
         except OSError as exc:
@@ -137,6 +176,10 @@ class FlextInfraMiseArtifactsFiles:
 
         Publication is a guarded atomic replace; the zero-residue law
         prohibits leaving backup copies beside managed destinations.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         before = publication.before
         replacement = publication.replacement
@@ -182,7 +225,12 @@ class FlextInfraMiseArtifactsFiles:
 
     @classmethod
     def delete_state(cls, state: m.Cli.AtomicFileState) -> p.Result[bool]:
-        """Delete one exact existing state through the CLI owner."""
+        """Delete one exact existing state through the CLI owner.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         if (
             state.content is None
             or state.mode is None
@@ -196,7 +244,12 @@ class FlextInfraMiseArtifactsFiles:
 
     @classmethod
     def workspace_relative(cls, root: Path, path: Path) -> p.Result[str]:
-        """Return a canonical lexical workspace-relative path selector."""
+        """Return a canonical lexical workspace-relative path selector.
+
+        Returns:
+            A canonical lexical workspace-relative path selector.
+
+        """
         absolute_root = root.absolute()
         try:
             relative = path.absolute().relative_to(absolute_root)
@@ -215,7 +268,12 @@ class FlextInfraMiseArtifactsFiles:
         *,
         purpose: str,
     ) -> p.Result[Path]:
-        """Resolve a lexical relative selector without dereferencing its leaf."""
+        """Resolve a lexical relative selector without dereferencing its leaf.
+
+        Returns:
+            The resulting ``p.Result[Path]``.
+
+        """
         relative = Path(selector)
         if (
             relative.is_absolute()

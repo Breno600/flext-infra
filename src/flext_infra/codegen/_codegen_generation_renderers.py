@@ -27,7 +27,15 @@ class FlextInfraCodegenGenerationRenderersMixin(
 
     @staticmethod
     def _template_path(template_name: str) -> Path:
-        """Resolve one packaged lazy-init template source."""
+        """Resolve one packaged lazy-init template source.
+
+        Returns:
+            The resulting ``Path``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         template_root = (Path(__file__).resolve().parent.parent / "templates").resolve()
         template_path = (template_root / template_name).resolve()
         if not template_path.is_relative_to(template_root):
@@ -42,7 +50,12 @@ class FlextInfraCodegenGenerationRenderersMixin(
         *,
         target_filename: str,
     ) -> str:
-        """Render one deterministic, already-canonical typed Python artifact."""
+        """Render one deterministic, already-canonical typed Python artifact.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         template_path = FlextInfraCodegenGenerationRenderersMixin._template_path(
             template_name,
         )

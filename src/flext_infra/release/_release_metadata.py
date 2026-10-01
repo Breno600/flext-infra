@@ -35,6 +35,10 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
 
         A dependency this build cannot see is not publishable: a guessed
         range would be a silent contract.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         raw = u.Cli.toml_value(container, key)
         if raw is None:
@@ -79,7 +83,12 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
         version: str,
         versions: t.StrMapping,
     ) -> p.Result[str]:
-        """Render a pyproject a public registry accepts: pinned, sourceless, bounded."""
+        """Render a pyproject a public registry accepts: pinned, sourceless, bounded.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         document = u.Cli.toml_parse_text(source)
         project = (
             u.Cli.toml_table_child(document, c.Infra.PROJECT)
@@ -128,7 +137,12 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
 
     @classmethod
     def _sdist_boundary(cls, hatch: t.Cli.TomlTable) -> p.Result[t.StrSequence]:
-        """Verify matching, bounded source selection for both archive targets."""
+        """Verify matching, bounded source selection for both archive targets.
+
+        Returns:
+            The resulting ``p.Result[t.StrSequence]``.
+
+        """
         build = u.Cli.toml_table_child(hatch, "build")
         targets = (
             u.Cli.toml_table_child(build, "targets") if build is not None else None

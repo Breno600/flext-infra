@@ -31,7 +31,12 @@ class TestsFlextInfraCodegenGeneration:
         child_packages: t.StrSequence = (),
         type_checking_map: t.LazyAliasMap | None = None,
     ) -> m.Infra.LazyInitPlan:
-        """Build one validated render plan for a synthetic package path."""
+        """Build one validated render plan for a synthetic package path.
+
+        Returns:
+            The resulting ``m.Infra.LazyInitPlan``.
+
+        """
         package_dir = Path.cwd() / current_pkg.replace(".", "/")
         return m.Infra.LazyInitPlan(
             context=m.Infra.LazyInitPackageContext(

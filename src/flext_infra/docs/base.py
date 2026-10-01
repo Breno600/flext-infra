@@ -45,6 +45,10 @@ class FlextInfraDocServiceBase(FlextInfraProjectSelectionServiceBase[bool], ABC)
         surfaced as one ``e.fail_operation`` failure. Phases whose reports carry
         a ``passed`` contract must provide a predicate so drift cannot be
         accepted as successful execution.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         if result.failure:
             return e.fail_operation(label, result.error)

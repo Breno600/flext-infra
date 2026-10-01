@@ -20,7 +20,12 @@ class FlextInfraUtilitiesSemanticCutoverModelFieldsBindings(
 
     @classmethod
     def _require_unshadowed_guard(cls, tree: ast.Module) -> None:
-        """Require every referenced builtin and the imported guard to be unbound."""
+        """Require every referenced builtin and the imported guard to be unbound.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         required = {"u", "isinstance", "type", "getattr", "object", "dict"}
         for node in ast.walk(tree):
             if not isinstance(node, ast.ImportFrom) and required.intersection(

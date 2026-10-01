@@ -32,11 +32,21 @@ class TestsFlextInfraCustomSurfaceNeverShadowsPublicVerbs:
 
     @staticmethod
     def _repository_root() -> Path:
-        """Return the repository root that owns this checkout."""
+        """Return the repository root that owns this checkout.
+
+        Returns:
+            The repository root that owns this checkout.
+
+        """
         return Path(__file__).resolve().parents[2]
 
     def _custom_surfaces(self) -> t.VariadicTuple[Path]:
-        """Return every custom Make surface present in the workspace."""
+        """Return every custom Make surface present in the workspace.
+
+        Returns:
+            Every custom Make surface present in the workspace.
+
+        """
         root = self._repository_root()
         name = c.Infra.CUSTOM_MAKE_FILENAME
         return tuple(
@@ -48,7 +58,12 @@ class TestsFlextInfraCustomSurfaceNeverShadowsPublicVerbs:
         )
 
     def _shadowed_verbs(self, surface: Path) -> t.VariadicTuple[str]:
-        """Return public verbs this custom surface declares as targets."""
+        """Return public verbs this custom surface declares as targets.
+
+        Returns:
+            Public verbs this custom surface declares as targets.
+
+        """
         public = frozenset(verb.name for verb in config.Infra.codegen.make.verbs)
         found: list[str] = []
         for line in surface.read_text(encoding="utf-8").splitlines():

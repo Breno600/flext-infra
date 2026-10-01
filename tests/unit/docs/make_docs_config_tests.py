@@ -19,7 +19,12 @@ if TYPE_CHECKING:
 
 
 def _spec_payload(**overrides: t.JsonValue) -> dict[str, object]:
-    """Build one valid synthetic spec payload; overrides mutate one field."""
+    """Build one valid synthetic spec payload; overrides mutate one field.
+
+    Returns:
+        The resulting ``dict[str, object]``.
+
+    """
     payload: dict[str, object] = {
         "actions": ["generate", "fix", "validate"],
         "mutable_actions": ["fix"],

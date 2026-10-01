@@ -34,6 +34,10 @@ class FlextInfraPromotedDiscovery(FlextInfraPromotedRegistry):
         workspace can inject ``scripts/`` before its subrepos while each isolated
         subrepo stays authoritative over its own commands. Without injection the
         order is ``spec.scripts``, sorted submodule roots, then the consumer root.
+
+        Returns:
+            The resulting ``Self``.
+
         """
         message = c.Infra.PromotedMessage
         workspace = spec or u.Infra.promoted_discovered_workspace_spec()

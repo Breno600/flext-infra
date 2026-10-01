@@ -58,7 +58,12 @@ class FlextInfraUtilitiesGit(
 
     @staticmethod
     def git_attribute_pattern(path: str) -> str:
-        """Encode one literal path with Git's glob escaping and C quoting."""
+        """Encode one literal path with Git's glob escaping and C quoting.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         literal = (
             path
             .replace("\\", "\\\\")

@@ -24,12 +24,22 @@ class TestsFlextInfraAuditor:
 
     @pytest.fixture
     def auditor(self) -> FlextInfraDocAuditor:
-        """Provide ``auditor``."""
+        """Provide ``auditor``.
+
+        Returns:
+            The resulting ``FlextInfraDocAuditor``.
+
+        """
         return FlextInfraDocAuditor()
 
     @pytest.fixture
     def normalize_link(self) -> Callable[[str], str]:
-        """Provide ``normalize_link``."""
+        """Provide ``normalize_link``.
+
+        Returns:
+            The resulting ``Callable[[str], str]``.
+
+        """
         def _normalize(value: str) -> str:
             normalized: str = u.Infra.docs_normalize_link(value)
             return normalized
@@ -38,7 +48,12 @@ class TestsFlextInfraAuditor:
 
     @pytest.fixture
     def should_skip_target(self) -> Callable[[str, str], bool]:
-        """Provide ``should_skip_target``."""
+        """Provide ``should_skip_target``.
+
+        Returns:
+            The resulting ``Callable[[str, str], bool]``.
+
+        """
         def _should_skip(link: str, target: str) -> bool:
             should_skip: bool = u.Infra.docs_should_skip_target(link, target)
             return should_skip
@@ -47,7 +62,12 @@ class TestsFlextInfraAuditor:
 
     @pytest.fixture
     def is_external(self) -> Callable[[str], bool]:
-        """Provide ``is_external``."""
+        """Provide ``is_external``.
+
+        Returns:
+            The resulting ``Callable[[str], bool]``.
+
+        """
         def _is_external(value: str) -> bool:
             external: bool = u.Infra.docs_is_external(value)
             return external

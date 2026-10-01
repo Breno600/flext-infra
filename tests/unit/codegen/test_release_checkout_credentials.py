@@ -24,7 +24,12 @@ class TestsFlextInfraReleaseCheckoutCredentials:
 
     @classmethod
     def render_release(cls) -> t.JsonMapping:
-        """Provide ``render_release``."""
+        """Provide ``render_release``.
+
+        Returns:
+            The resulting ``t.JsonMapping``.
+
+        """
         repository_branch = "develop"
         spec = CodegenTestSupport.Ci.workflow_spec(
             dist="example-workspace",
@@ -47,7 +52,15 @@ class TestsFlextInfraReleaseCheckoutCredentials:
 
     @staticmethod
     def checkout_credentials(job: t.JsonValue) -> bool:
-        """Provide ``checkout_credentials``."""
+        """Provide ``checkout_credentials``.
+
+        Returns:
+            The resulting ``bool``.
+
+        Raises:
+            TypeError: On failure.
+
+        """
         mapping = t.Cli.JSON_MAPPING_ADAPTER.validate_python(job)
         steps = mapping["steps"]
         if not isinstance(steps, list):

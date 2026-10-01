@@ -38,6 +38,10 @@ class TestsFlextInfraWorkflowCommentSpacing:
         and it is inline when it starts on the line where the previous token
         ends. Block-scalar bodies are token content, so shell ``#`` never
         counts.
+
+        Returns:
+            Inline comments closer than two spaces to their content.
+
         """
         offenders: list[str] = []
         lines = text.splitlines()

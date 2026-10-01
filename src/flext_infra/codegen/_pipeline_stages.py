@@ -55,6 +55,10 @@ class FlextInfraCodegenPipelineStagesMixin:
         Failure to enumerate projects propagates as a stage failure — no
         silent empty-tuple fallback, since downstream stages depend on the
         actual workspace inventory.
+
+        Returns:
+            The resulting ``p.Result[m.Cli.PipelineStageResult]``.
+
         """
 
         def _action() -> t.VariadicTuple[m.Infra.ProjectInfo]:
@@ -75,7 +79,12 @@ class FlextInfraCodegenPipelineStagesMixin:
         ctx: p.Cli.PipelineStageContext,
         /,
     ) -> p.Result[m.Cli.PipelineStageResult]:
-        """Conform workspace toolchains through the canonical codegen planner."""
+        """Conform workspace toolchains through the canonical codegen planner.
+
+        Returns:
+            The resulting ``p.Result[m.Cli.PipelineStageResult]``.
+
+        """
 
         def _action() -> m.Infra.CodegenResult:
             dry_run = bool(ctx.settings.get(c.Infra.PIPELINE_KEY_DRY_RUN, False))
@@ -118,6 +127,10 @@ class FlextInfraCodegenPipelineStagesMixin:
         ``types-*`` stub hints). Apply declares missing requirements in CUSTOM
         ``project.optional-dependencies.typings`` and installs them through UV;
         dry-run reports only. Mutation failures remain stage failures.
+
+        Returns:
+            The resulting ``p.Result[m.Cli.PipelineStageResult]``.
+
         """
 
         def _action() -> bool:
@@ -148,7 +161,12 @@ class FlextInfraCodegenPipelineStagesMixin:
         ctx: p.Cli.PipelineStageContext,
         /,
     ) -> p.Result[m.Cli.PipelineStageResult]:
-        """Run PEP 561 py.typed marker generation."""
+        """Run PEP 561 py.typed marker generation.
+
+        Returns:
+            The resulting ``p.Result[m.Cli.PipelineStageResult]``.
+
+        """
 
         def _action() -> int:
             py_typed = FlextInfraCodegenPyTyped(repository_root=ctx.repository_root)
@@ -165,7 +183,12 @@ class FlextInfraCodegenPipelineStagesMixin:
         ctx: p.Cli.PipelineStageContext,
         /,
     ) -> p.Result[m.Cli.PipelineStageResult]:
-        """Run census (before fixes) and cache reports in typed state."""
+        """Run census (before fixes) and cache reports in typed state.
+
+        Returns:
+            The resulting ``p.Result[m.Cli.PipelineStageResult]``.
+
+        """
 
         def _action() -> t.Pair[
             FlextInfraCodegenCensus,
@@ -199,7 +222,12 @@ class FlextInfraCodegenPipelineStagesMixin:
         ctx: p.Cli.PipelineStageContext,
         /,
     ) -> p.Result[m.Cli.PipelineStageResult]:
-        """Run scaffold stage and cache results."""
+        """Run scaffold stage and cache results.
+
+        Returns:
+            The resulting ``p.Result[m.Cli.PipelineStageResult]``.
+
+        """
 
         def _action() -> t.SequenceOf[m.Infra.ScaffoldResult]:
             dry_run = bool(ctx.settings.get(c.Infra.PIPELINE_KEY_DRY_RUN, False))
@@ -223,7 +251,12 @@ class FlextInfraCodegenPipelineStagesMixin:
         ctx: p.Cli.PipelineStageContext,
         /,
     ) -> p.Result[m.Cli.PipelineStageResult]:
-        """Run auto-fix stage and cache results."""
+        """Run auto-fix stage and cache results.
+
+        Returns:
+            The resulting ``p.Result[m.Cli.PipelineStageResult]``.
+
+        """
 
         def _action() -> t.SequenceOf[m.Infra.AutoFixResult]:
             dry_run = bool(ctx.settings.get(c.Infra.PIPELINE_KEY_DRY_RUN, False))
@@ -247,7 +280,12 @@ class FlextInfraCodegenPipelineStagesMixin:
         ctx: p.Cli.PipelineStageContext,
         /,
     ) -> p.Result[m.Cli.PipelineStageResult]:
-        """Measure lazy-init drift without publishing outside conform."""
+        """Measure lazy-init drift without publishing outside conform.
+
+        Returns:
+            The resulting ``p.Result[m.Cli.PipelineStageResult]``.
+
+        """
 
         def _action() -> int:
             analysis = (
@@ -270,7 +308,12 @@ class FlextInfraCodegenPipelineStagesMixin:
         ctx: p.Cli.PipelineStageContext,
         /,
     ) -> p.Result[m.Cli.PipelineStageResult]:
-        """Run census (after fixes) and cache reports."""
+        """Run census (after fixes) and cache reports.
+
+        Returns:
+            The resulting ``p.Result[m.Cli.PipelineStageResult]``.
+
+        """
 
         def _action() -> t.SequenceOf[m.Infra.CensusReport]:
             census = self._state.census_service

@@ -56,7 +56,15 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
 
         @staticmethod
         def number(value: t.JsonValue) -> float:
-            """Narrow one parsed payload value to a real number."""
+            """Narrow one parsed payload value to a real number.
+
+            Returns:
+                The resulting ``float``.
+
+            Raises:
+                TypeError: On failure.
+
+            """
             tm.that(isinstance(value, (int, float)), eq=True)
             if not isinstance(value, (int, float)):
                 msg = "payload value is not a number"
@@ -65,7 +73,12 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
 
         @staticmethod
         def json_payload(content: str) -> t.JsonMapping:
-            """Parse JSON text through the canonical reader and narrow it."""
+            """Parse JSON text through the canonical reader and narrow it.
+
+            Returns:
+                The resulting ``t.JsonMapping``.
+
+            """
             return TestsFlextInfraUtilitiesTomlMixin.toml_mapping(
                 tm.ok(u.Cli.json_loads(content)),
             )
@@ -77,6 +90,13 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             The facade returns an absent mapping for unparseable text; a test
             that asked for a payload has already decided the text is one, so
             the absence is a defect rather than a value to carry forward.
+
+            Returns:
+                The resulting ``t.JsonMapping``.
+
+            Raises:
+                ValueError: On failure.
+
             """
             parsed = u.Cli.toml_mapping_from_text(content)
             if parsed is None:
@@ -94,7 +114,12 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             extra_verbs: t.VariadicTuple[m.Infra.MakeVerbSpec] = (),
             script_dispatch: m.Infra.ScriptDispatchSpec | None = None,
         ) -> t.Pair[Path, Path]:
-            """Build the generated Make and activation fixture consumed by real verbs."""
+            """Build the generated Make and activation fixture consumed by real verbs.
+
+            Returns:
+                The resulting ``t.Pair[Path, Path]``.
+
+            """
             role = c.Infra.MakeProfile(profile.value)
             repository = u.Tests.repository_ref(
                 "fixture-project",
@@ -250,6 +275,10 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             The checkout carries the source and locks the upgrade wrote, never
             the template's environment or Git store; frozen setup provisions
             its own environment from those locks.
+
+            Returns:
+                The resulting ``Path``.
+
             """
             root = parent / profile.value / template.name
             shutil.copytree(
@@ -273,7 +302,12 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
 
         @staticmethod
         def hostile_uv_environment(hostile_venv: Path) -> t.StrMapping:
-            """Point every uv and interpreter selector at a foreign environment."""
+            """Point every uv and interpreter selector at a foreign environment.
+
+            Returns:
+                The resulting ``t.StrMapping``.
+
+            """
             hostile_bin = hostile_venv / "bin"
             return {
                 "PATH": f"{hostile_bin}:{os.environ['PATH']}",
@@ -287,14 +321,24 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
 
         @staticmethod
         def command_receipt(path: Path) -> m.Cli.CommandOutput:
-            """Read one recorded provisioning command outcome."""
+            """Read one recorded provisioning command outcome.
+
+            Returns:
+                The resulting ``m.Cli.CommandOutput``.
+
+            """
             return m.Cli.CommandOutput.model_validate_json(
                 path.read_text(encoding="utf-8"),
             )
 
         @staticmethod
         def infra_source_checkout(parent: Path) -> Path:
-            """Copy this repository's Git-visible inputs into a fresh Git checkout."""
+            """Copy this repository's Git-visible inputs into a fresh Git checkout.
+
+            Returns:
+                The resulting ``Path``.
+
+            """
             source = Path(__file__).resolve().parents[1]
             root = parent / config.Infra.name
             paths = tm.not_none(u.Infra.git_tracked_scope_paths(source))
@@ -314,7 +358,12 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
         def materialize_docs_bundle(
             bundle: m.Infra.DocsGenerationBundle,
         ) -> p.Result[bool]:
-            """Publish one immutable docs bundle through atomic file primitives."""
+            """Publish one immutable docs bundle through atomic file primitives.
+
+            Returns:
+                The resulting ``p.Result[bool]``.
+
+            """
             required = u.Infra.docs_required_directories(bundle)
             if required.failure:
                 return r[bool].from_failure(required)
@@ -335,7 +384,12 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
 
         @staticmethod
         def write_package_init(directory: Path, content: str) -> Path:
-            """Materialize one importable package initializer under a test root."""
+            """Materialize one importable package initializer under a test root.
+
+            Returns:
+                The resulting ``Path``.
+
+            """
             directory.mkdir(parents=True, exist_ok=True)
             init_file = directory / c.Infra.INIT_PY
             init_file.write_text(content, encoding=c.Infra.ENCODING_DEFAULT)

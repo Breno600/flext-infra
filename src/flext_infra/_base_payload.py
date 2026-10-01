@@ -29,7 +29,12 @@ class FlextInfraCommandPayloadMixin:
         output_dir: Path | None
 
     def command_payload(self) -> t.JsonMapping:
-        """Return the normalized shared command payload once."""
+        """Return the normalized shared command payload once.
+
+        Returns:
+            The normalized shared command payload once.
+
+        """
         payload: t.MutableJsonMapping = {
             "repository_root": str(self.repository_root),
             "apply_changes": self.apply_changes,

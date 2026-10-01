@@ -30,12 +30,22 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
 
     @staticmethod
     def _is_license(name: str) -> bool:
-        """Whether an archive member is a license file."""
+        """Whether an archive member is a license file.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         return PurePosixPath(name).name.casefold() in c.Infra.RELEASE_LICENSE_NAMES
 
     @classmethod
     def _carried(cls, name: str) -> bool:
-        """Whether an archive file's bytes take part in the proof."""
+        """Whether an archive file's bytes take part in the proof.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         return cls._is_license(name) or name.endswith(("/METADATA", "/PKG-INFO"))
 
     @classmethod
@@ -45,7 +55,13 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
     ) -> p.Result[
         t.Pair[t.SequenceOf[t.Triple[str, bool, bool]], t.MappingKV[str, bytes]]
     ]:
-        """Read one wheel or sdist's members and the bytes the proof needs."""
+        """Read one wheel or sdist's members and the bytes the proof needs.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[t.SequenceOf[t.Triple[str, bool, bool]],
+                t.MappingKV[str, bytes]]]``.
+
+        """
         result_type = r[
             t.Pair[t.SequenceOf[t.Triple[str, bool, bool]], t.MappingKV[str, bytes]]
         ]
@@ -93,7 +109,12 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
         members: t.SequenceOf[t.Triple[str, bool, bool]],
         allowed_roots: t.StrSequence,
     ) -> str:
-        """Return why an archive's members leave the public boundary, or ''."""
+        """Return why an archive's members leave the public boundary, or ''.
+
+        Returns:
+            Why an archive's members leave the public boundary, or ''.
+
+        """
         wheel = path.suffix == ".whl"
         package = project.replace("-", "_").casefold()
         roots: t.Infra.StrSet = set()
@@ -140,7 +161,13 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
         path: Path,
         expectation: m.Infra.ArtifactExpectation,
     ) -> p.Result[t.Pair[t.Infra.ReleaseArtifactKind, t.Infra.ReleaseArtifactSha256]]:
-        """Validate one artifact's boundary, identity and pins; return kind and digest."""
+        """Validate one artifact's boundary, identity and pins; return kind and digest.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[t.Infra.ReleaseArtifactKind,
+                t.Infra.ReleaseArtifactSha256]]``.
+
+        """
         result_type = r[
             t.Pair[t.Infra.ReleaseArtifactKind, t.Infra.ReleaseArtifactSha256]
         ]

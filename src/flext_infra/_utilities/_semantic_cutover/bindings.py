@@ -18,7 +18,12 @@ class FlextInfraUtilitiesSemanticCutoverBindings:
 
     @staticmethod
     def _bound_identifiers(node: ast.AST) -> t.VariadicTuple[str]:
-        """Include match, exception, import, type-parameter and scope targets."""
+        """Include match, exception, import, type-parameter and scope targets.
+
+        Returns:
+            The resulting ``t.VariadicTuple[str]``.
+
+        """
         match node:
             case ast.Name(id=name, ctx=ast.Store() | ast.Del()):
                 return (name,)

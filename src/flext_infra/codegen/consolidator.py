@@ -28,7 +28,12 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
 
     @override
     def execute(self) -> p.Result[str]:
-        """Execute constants consolidation with normalized command context."""
+        """Execute constants consolidation with normalized command context.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         output_lines: t.MutableSequenceOf[str] = (
             ["[DRY-RUN] Scanning...\n"] if self.dry_run else []
         )
@@ -115,7 +120,12 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
         rope_workspace: p.Infra.RopeWorkspaceDsl,
         project_root: Path,
     ) -> p.Result[t.SequenceOf[Path]]:
-        """Return indexed Python wrapper files for one consolidation pass."""
+        """Return indexed Python wrapper files for one consolidation pass.
+
+        Returns:
+            Indexed Python wrapper files for one consolidation pass.
+
+        """
         resolved_root = project_root.resolve()
         constants_directory = u.Infra.facade_family_declared_by(
             c.Infra.CONSTANTS_PY,
@@ -145,7 +155,12 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
         self,
         rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> p.Result[t.SequenceOf[p.Infra.ProjectInfo]]:
-        """Return the selected projects."""
+        """Return the selected projects.
+
+        Returns:
+            The selected projects.
+
+        """
         _ = rope_workspace
         discovered = u.Infra.projects(self.repository_root)
         if discovered.failure:

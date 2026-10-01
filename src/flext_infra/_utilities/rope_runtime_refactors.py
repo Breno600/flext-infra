@@ -26,6 +26,13 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
 
         The body statements own the dedent width and the wrapper docstring, so
         both derive from the logical facts instead of being passed alongside.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.SourceRewrite]``.
+
+        Raises:
+            ValueError: On failure.
+
         """
         from rope.base import codeanalyze, simplify
 
@@ -90,7 +97,16 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
         source: str,
         rewrites: t.SequenceOf[m.Infra.SourceRewrite],
     ) -> p.Infra.RopeChangeContents:
-        """Preview checked, disjoint edits through Rope's change machinery."""
+        """Preview checked, disjoint edits through Rope's change machinery.
+
+        Returns:
+            The resulting ``p.Infra.RopeChangeContents``.
+
+        Raises:
+            TypeError: On failure.
+            ValueError: On failure.
+
+        """
         collector = cls._runtime_callable("rope.base.codeanalyze", "ChangeCollector")(
             source,
         )
@@ -133,7 +149,15 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
         arguments: t.MappingKV[str, str],
         resources: t.SequenceOf[p.Infra.RopeResource],
     ) -> p.Infra.RopeChangeSet:
-        """Plan Rope 1.14 semantic changes without invoking Project.do."""
+        """Plan Rope 1.14 semantic changes without invoking Project.do.
+
+        Returns:
+            The resulting ``p.Infra.RopeChangeSet``.
+
+        Raises:
+            TypeError: On failure.
+
+        """
         factory = cls._runtime_callable("rope.refactor.restructure", "Restructure")
         restructuring = factory(rope_project, pattern, goal, args=dict(arguments))
         if not isinstance(restructuring, p.Infra.RopeRestructure):
@@ -222,7 +246,15 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
 
     @classmethod
     def word_is_function_call(cls, source: str, offset: int) -> bool:
-        """Return Rope's syntactic call fact for the primary at ``offset``."""
+        """Return Rope's syntactic call fact for the primary at ``offset``.
+
+        Returns:
+            Rope's syntactic call fact for the primary at ``offset``.
+
+        Raises:
+            TypeError: On failure.
+
+        """
         word_finder = cls._word_finder(source)
         is_called = getattr(word_finder, "is_a_function_being_called", None)
         if not callable(is_called):

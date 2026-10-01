@@ -26,7 +26,12 @@ class FlextInfraUtilitiesProjectDiscoveryShapeMixin:
         effective_scan_dirs: frozenset[str],
         configured_project_set: frozenset[str],
     ) -> bool:
-        """Return whether one path matches the canonical governed project shape."""
+        """Return whether one path matches the canonical governed project shape.
+
+        Returns:
+            Whether one path matches the canonical governed project shape.
+
+        """
         if not path.is_dir():
             return False
         pyproject_path = path / c.PYPROJECT_FILENAME

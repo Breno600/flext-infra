@@ -21,12 +21,22 @@ class FlextInfraUtilitiesManagedConflicts:
 
     @staticmethod
     def toml_section_is_owned(section: str, owned: t.StrSequence) -> bool:
-        """True when ``section`` is an owned table or a child of one."""
+        """True when ``section`` is an owned table or a child of one.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         return any(section == item or section.startswith(f"{item}.") for item in owned)
 
     @staticmethod
     def pyproject_managed_file() -> p.Result[m.Infra.ManagedFileSpec]:
-        """Return the pyproject ManagedFileSpec. Missing declaration is a bug."""
+        """Return the pyproject ManagedFileSpec. Missing declaration is a bug.
+
+        Returns:
+            The pyproject ManagedFileSpec. Missing declaration is a bug.
+
+        """
         for item in config.Infra.codegen.managed_files:
             if item.path.as_posix() == c.PYPROJECT_FILENAME:
                 return r[m.Infra.ManagedFileSpec].ok(item)
@@ -36,7 +46,12 @@ class FlextInfraUtilitiesManagedConflicts:
 
     @classmethod
     def pyproject_section_markers(cls, section_header: str) -> p.Result[t.StrSequence]:
-        """Render CUSTOM/MANAGED comments from the pyproject ManagedFileSpec."""
+        """Render CUSTOM/MANAGED comments from the pyproject ManagedFileSpec.
+
+        Returns:
+            The resulting ``p.Result[t.StrSequence]``.
+
+        """
         spec_result = cls.pyproject_managed_file()
         if spec_result.failure:
             return r[t.StrSequence].from_failure(spec_result)
@@ -76,7 +91,12 @@ class FlextInfraUtilitiesManagedConflicts:
         *,
         conflict_sections: t.StrSequence,
     ) -> p.Result[str]:
-        """Choose current TOML bytes only inside explicitly owned sections."""
+        """Choose current TOML bytes only inside explicitly owned sections.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         if FlextInfraUtilitiesBase.first_merge_conflict_marker(content) is None:
             return r[str].ok(content)
         lines = content.splitlines(keepends=True)

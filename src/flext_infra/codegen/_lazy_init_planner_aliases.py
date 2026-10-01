@@ -141,6 +141,10 @@ class FlextInfraCodegenLazyInitPlannerAliasesMixin:
         a workspace run reached the distant declaring owner (``flext_core``)
         and elected it over the nearest re-exporting parent that a standalone
         run of the same project elects.
+
+        Returns:
+            Package_names plus transitive parents, nearest-first.
+
         """
         ordered: list[str] = []
         queue: list[str] = list(package_names)
@@ -164,7 +168,12 @@ class FlextInfraCodegenLazyInitPlannerAliasesMixin:
         return tuple(ordered)
 
     def _parent_packages(self, pkg_dir: Path) -> t.StrSequence:
-        """Return the list of parent package names declared in constants.py."""
+        """Return the list of parent package names declared in constants.py.
+
+        Returns:
+            The list of parent package names declared in constants.py.
+
+        """
         cache_key = str(pkg_dir.resolve())
         cached = self._parent_package_cache.get(cache_key)
         if cached is not None:

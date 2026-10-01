@@ -27,6 +27,10 @@ class FlextInfraCodegenGenerationFileMixin(FlextInfraCodegenGenerationStandardMi
         still initializing. Every other distribution's private packages load
         normally and receive the populated lazy facade (operator init law
         2026-09-16: light init WITH exports — never an empty facade).
+
+        Returns:
+            The resulting ``str``.
+
         """
         root_package = plan.context.current_pkg.split(".", maxsplit=1)[0]
         segments = frozenset(plan.context.current_pkg.split("."))
@@ -39,12 +43,22 @@ class FlextInfraCodegenGenerationFileMixin(FlextInfraCodegenGenerationStandardMi
 
     @classmethod
     def init_template_path(cls, plan: m.Infra.LazyInitPlan) -> Path:
-        """Return the exact template path consumed by one initializer plan."""
+        """Return the exact template path consumed by one initializer plan.
+
+        Returns:
+            The exact template path consumed by one initializer plan.
+
+        """
         return cls._template_path(cls._init_template_name(plan))
 
     @classmethod
     def init_template_paths(cls) -> t.Pair[Path, Path]:
-        """Return the closed lazy-init template input set."""
+        """Return the closed lazy-init template input set.
+
+        Returns:
+            The closed lazy-init template input set.
+
+        """
         return (
             cls._template_path(c.Infra.TEMPLATE_ROOT_INIT),
             cls._template_path(c.Infra.TEMPLATE_STATIC_INIT),
@@ -57,6 +71,10 @@ class FlextInfraCodegenGenerationFileMixin(FlextInfraCodegenGenerationStandardMi
         Real cycle exceptions (bootstrap packages imported during lazy-runtime
         initialization) keep side-effect-free empty inits. All other packages
         get PEP 562 lazy-loading facades.
+
+        Returns:
+            The resulting ``str``.
+
         """
         if cls._init_template_name(plan) == c.Infra.TEMPLATE_STATIC_INIT:
             return cls._render_static(plan)

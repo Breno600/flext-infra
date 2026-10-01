@@ -29,7 +29,15 @@ class FlextInfraConfigModelsContexts:
 
     @staticmethod
     def _validated_hatch_build_hook_path(value: Path | None) -> Path | None:
-        """Return one normalized project-relative Hatch hook declaration."""
+        """Return one normalized project-relative Hatch hook declaration.
+
+        Returns:
+            One normalized project-relative Hatch hook declaration.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         if value is None:
             return None
         raw = str(value)
@@ -325,6 +333,10 @@ class FlextInfraConfigModelsContexts:
             declared dependency profile, never a per-project hand choice: the
             first entry of ``scaffold.project.config_bases`` whose distribution
             the profile depends on (its runtime requirements or its upstream).
+
+            Raises:
+                ValueError: On failure.
+
             """
             profile = self.dependency_profile
             depended = {

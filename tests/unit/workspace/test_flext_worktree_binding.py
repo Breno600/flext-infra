@@ -31,7 +31,12 @@ class TestsFlextInfraWorktreeBinding:
 
     @staticmethod
     def _consumer(tmp_path: Path) -> Path:
-        """Return an external consumer declaring flext packages by pinned git URL."""
+        """Return an external consumer declaring flext packages by pinned git URL.
+
+        Returns:
+            An external consumer declaring flext packages by pinned git URL.
+
+        """
         provider = u.Tests.provider()
         consumer = tmp_path / "consumer"
         consumer.mkdir()
@@ -55,7 +60,12 @@ class TestsFlextInfraWorktreeBinding:
 
     @staticmethod
     def _python(consumer: Path) -> Path:
-        """Use the fixture consumer's physical environment."""
+        """Use the fixture consumer's physical environment.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         environment = u.Infra.runtime_environment_dir(consumer)
         return (
             Path(
@@ -77,6 +87,10 @@ class TestsFlextInfraWorktreeBinding:
         declares with what the worktree PROVIDES, and only a fixture that owns
         both sides can prove the intersection rather than inherit it from one
         machine's disk.
+
+        Returns:
+            A self-contained flext workspace supplying flext-core and flext-cli.
+
         """
         flext_root = tmp_path / "flext"
         u.Tests.WorktreeFixture.initialize_governed_project(

@@ -29,7 +29,12 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         cls,
         pyproject_content: str,
     ) -> p.Result[t.Pair[t.Cli.TomlDocument, str]]:
-        """Parse one pyproject source and return it with its declared project name."""
+        """Parse one pyproject source and return it with its declared project name.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[t.Cli.TomlDocument, str]]``.
+
+        """
         source = u.Cli.toml_parse_text(pyproject_content)
         if source is None:
             return r[t.Pair[t.Cli.TomlDocument, str]].fail(
@@ -65,6 +70,10 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         render on the workspace's declared integration line; ``family_line``
         is the detected FLEXT integration branch that re-renders commit residue
         in the other internal requirements. Without a line, both fail loudly.
+
+        Returns:
+            Canonical TOML with autonomous dependencies and uv policy.
+
         """
         parsed = cls._parsed_pyproject(pyproject_content)
         if parsed.failure:
@@ -163,6 +172,10 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         ``None`` or an empty sequence leaves the section untouched: projects
         without a declared scope keep the dynamic every-root behavior. A
         non-empty sequence is the workspace manifest's production scope.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         if not namespace_scan_dirs:
             return r[bool].ok(True)
@@ -177,6 +190,10 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         Search paths belong to FlextInfraExtraPathsManager. Top-level
         ``venv`` / ``venvPath`` belong to deps modernize (root vs child
         runtime). Conform must not strip those or gen oscillates.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
         if tool is None:

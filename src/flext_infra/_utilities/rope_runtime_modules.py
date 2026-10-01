@@ -19,7 +19,15 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
 
     @classmethod
     def parse_rope_module(cls, source: str, *, filename: str) -> t.Infra.RopeAstNode:
-        """Parse one source snapshot through Rope's canonical syntax boundary."""
+        """Parse one source snapshot through Rope's canonical syntax boundary.
+
+        Returns:
+            The resulting ``t.Infra.RopeAstNode``.
+
+        Raises:
+            TypeError: On failure.
+
+        """
         parsed = cls._runtime_callable("rope.base.ast", "parse")(
             source,
             filename=filename,
@@ -42,6 +50,14 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         Governed project-root entry modules (e.g. conftest.py) are real project
         resources outside every source folder; they join the closed inventory
         from disk so consumer rewrites still resolve inside the snapshot.
+
+        Returns:
+            The resulting ``p.Infra.RopeProject``.
+
+        Raises:
+            TypeError: On failure.
+            ValueError: On failure.
+
         """
         inventory = {
             Path(resource.real_path).resolve(): resource.read()
@@ -86,14 +102,28 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         pymodule: t.Infra.RopePyModule,
         offset: int,
     ) -> p.Infra.RopeImportedName | None:
-        """Resolve a lexical binding; local shadows are not imported names."""
+        """Resolve a lexical binding; local shadows are not imported names.
+
+        Returns:
+            The resulting ``p.Infra.RopeImportedName | None``.
+
+        """
         resolver = cls._runtime_callable("rope.base.evaluate", "eval_location")
         result = resolver(pymodule, offset)
         return result if isinstance(result, p.Infra.RopeImportedName) else None
 
     @staticmethod
     def source_offset(source: str, node: p.Infra.RopeAstNode) -> int:
-        """Resolve Rope AST byte coordinates to a Python source offset."""
+        """Resolve Rope AST byte coordinates to a Python source offset.
+
+        Returns:
+            The resulting ``int``.
+
+        Raises:
+            TypeError: On failure.
+            ValueError: On failure.
+
+        """
         line = getattr(node, "lineno", None)
         column = getattr(node, "col_offset", None)
         lines = source.splitlines(keepends=True)
@@ -114,7 +144,15 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         *,
         declaration_line: int | None = None,
     ) -> p.Infra.RopeScope:
-        """Return Rope's lexical scope for a source position."""
+        """Return Rope's lexical scope for a source position.
+
+        Returns:
+            Rope's lexical scope for a source position.
+
+        Raises:
+            TypeError: On failure.
+
+        """
         scope = pymodule.get_scope()
         lookup = getattr(scope, "get_inner_scope_for_offset", None)
         if not callable(lookup):
@@ -141,7 +179,15 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         scope: p.Infra.RopeScope,
         expression: p.Infra.RopeAstNode,
     ) -> p.Infra.RopePyName | None:
-        """Resolve an identifier chain without evaluating Python expressions."""
+        """Resolve an identifier chain without evaluating Python expressions.
+
+        Returns:
+            The resulting ``p.Infra.RopePyName | None``.
+
+        Raises:
+            TypeError: On failure.
+
+        """
         primary = expression
         while isinstance(primary, ast.Attribute):
             primary = primary.value
@@ -162,7 +208,15 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         expected: p.Infra.RopePyName,
         actual: p.Infra.RopePyName | None,
     ) -> bool:
-        """Use Rope's imported-name identity contract for semantic comparisons."""
+        """Use Rope's imported-name identity contract for semantic comparisons.
+
+        Returns:
+            The resulting ``bool``.
+
+        Raises:
+            TypeError: On failure.
+
+        """
         result = cls._runtime_callable("rope.refactor.occurrences", "same_pyname")(
             expected,
             actual,
@@ -181,6 +235,13 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
 
         Generated initializers may still await publication. Their content is
         not required to identify which module an authored import names.
+
+        Returns:
+            The resulting ``Path``.
+
+        Raises:
+            ValueError: On failure.
+
         """
         imported = binding.imported_module
         resource = imported.resource
@@ -260,7 +321,15 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         module_name: str,
         name: str,
     ) -> t.Pair[str, str]:
-        """Plan an import and use the expression elected by Rope's import owner."""
+        """Plan an import and use the expression elected by Rope's import owner.
+
+        Returns:
+            The resulting ``t.Pair[str, str]``.
+
+        Raises:
+            TypeError: On failure.
+
+        """
         result = cls._runtime_callable(c.Infra.ROPE_IMPORTUTILS_MODULE, "add_import")(
             project,
             module,

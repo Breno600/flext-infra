@@ -33,7 +33,12 @@ class FlextInfraRuffLintGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
-        """Ruff always runs — never skip."""
+        """Ruff always runs — never skip.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         _ = ctx
         return self._existing_check_dirs(project_dir) or ["."]
 
@@ -44,7 +49,12 @@ class FlextInfraRuffLintGate(FlextInfraGate):
         ctx: m.Infra.GateContext,
         check_dirs: t.StrSequence,
     ) -> t.StrSequence:
-        """Build check command."""
+        """Build check command.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         _ = project_dir
         return self._lint_command(
             ctx,
@@ -59,7 +69,12 @@ class FlextInfraRuffLintGate(FlextInfraGate):
         ctx: m.Infra.GateContext,
         targets: t.StrSequence,
     ) -> t.StrSequence:
-        """Build the explicit Ruff fix command."""
+        """Build the explicit Ruff fix command.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         _ = project_dir
         return self._lint_command(ctx, targets, config.Infra.codegen.make.ruff.lint_fix)
 
@@ -136,7 +151,12 @@ class FlextInfraRuffLintGate(FlextInfraGate):
         targets: t.StrSequence,
         mode_args: t.StrSequence,
     ) -> t.StrSequence:
-        """Keep check and fix on the same Ruff lint invocation contract."""
+        """Keep check and fix on the same Ruff lint invocation contract.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         return self._python_module_command(
             c.Infra.RUFF,
             c.Infra.VERB_CHECK,
@@ -155,7 +175,12 @@ class FlextInfraRuffLintGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Parse check output."""
+        """Parse check output.
+
+        Returns:
+            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
+
+        """
         _ = project_dir, ctx
         issues: t.MutableSequenceOf[m.Infra.Issue] = []
         parsed_result = u.Cli.json_parse(result.stdout or "[]")

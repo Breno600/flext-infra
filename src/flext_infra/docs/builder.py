@@ -27,7 +27,12 @@ class FlextInfraDocBuilder(FlextInfraDocServiceBase):
         projects: t.StrSequence | None = None,
         output_dir: Path | str | None = None,
     ) -> p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]:
-        """Build MkDocs sites across project scopes."""
+        """Build MkDocs sites across project scopes.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]``.
+
+        """
         return self.run_scoped_docs(
             repository_root,
             projects=projects,
@@ -37,7 +42,12 @@ class FlextInfraDocBuilder(FlextInfraDocServiceBase):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute the configured docs build flow."""
+        """Execute the configured docs build flow.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         return self._propagate_phase_outcome(
             "build",
             self.build(
@@ -49,7 +59,12 @@ class FlextInfraDocBuilder(FlextInfraDocServiceBase):
         )
 
     def _build_scope(self, scope: m.Infra.DocScope) -> m.Infra.DocsPhaseReport:
-        """Build one scope via the docs build utilities and persist its reports."""
+        """Build one scope via the docs build utilities and persist its reports.
+
+        Returns:
+            The resulting ``m.Infra.DocsPhaseReport``.
+
+        """
         report: m.Infra.DocsPhaseReport = u.Infra.docs_run_mkdocs(scope)
         u.Infra.docs_write_build_reports(scope, report)
         self.logger.info(

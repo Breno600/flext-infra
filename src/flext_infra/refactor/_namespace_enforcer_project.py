@@ -42,7 +42,12 @@ class FlextInfraNamespaceEnforcerProjectMixin:
         apply: bool,
         gates: t.StrSequence | None = None,
     ) -> m.Infra.ProjectEnforcementReport:
-        """Run the relocations of one project and report what remains."""
+        """Run the relocations of one project and report what remains.
+
+        Returns:
+            The resulting ``m.Infra.ProjectEnforcementReport``.
+
+        """
         py_files = self._collect_py_files(project_root=project_root)
         return m.Infra.ProjectEnforcementReport(
             project=project_name,
@@ -58,7 +63,15 @@ class FlextInfraNamespaceEnforcerProjectMixin:
 
     @staticmethod
     def _collect_py_files(*, project_root: Path) -> t.SequenceOf[Path]:
-        """Collect Python files for scanning."""
+        """Collect Python files for scanning.
+
+        Returns:
+            The resulting ``t.SequenceOf[Path]``.
+
+        Raises:
+            RuntimeError: On failure.
+
+        """
         py_files_result = u.Infra.iter_python_files(
             m.Infra.SourceScanRequest(project_roots=(project_root,)),
         )
@@ -89,6 +102,10 @@ class FlextInfraNamespaceEnforcerProjectMixin:
 
         With ``apply`` the relocations run once over the captured values and
         the catalog is scanned again; the returned count is what remains.
+
+        Returns:
+            The resulting ``t.NonNegativeInt``.
+
         """
         findings = self._relocation_findings(project_root, py_files)
         if not (apply and findings):
@@ -170,7 +187,12 @@ class FlextInfraNamespaceEnforcerProjectMixin:
         self,
         imports: t.MappingKV[Path, t.MappingKV[t.StrPair, set[str]]],
     ) -> None:
-        """Move each captured name from its source import to its target module."""
+        """Move each captured name from its source import to its target module.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         for file_path, moves in imports.items():
             resource = u.Infra.fetch_python_resource(self._rope_project, file_path)
             if resource is None:
@@ -190,7 +212,12 @@ class FlextInfraNamespaceEnforcerProjectMixin:
         project_root: Path,
         classes: t.SequenceOf[tuple[Path, str, str, int]],
     ) -> None:
-        """Move each captured class to the module of its facade family."""
+        """Move each captured class to the module of its facade family.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         if not classes:
             return
         layout = u.Infra.layout(project_root)
@@ -228,6 +255,10 @@ class FlextInfraNamespaceEnforcerProjectMixin:
         The scope is the project's namespace file set (its declared scan
         directories), so a relocation never reaches a file the namespace pass
         does not govern.
+
+        Returns:
+            The engine's relocation findings inside the enforcer's file scope.
+
         """
         relocation_by_rule = {
             rule.id: rule.relocation
@@ -245,7 +276,15 @@ class FlextInfraNamespaceEnforcerProjectMixin:
 
     @staticmethod
     def _finding_lines(finding: m.Infra.ModScanFinding) -> t.IntPair:
-        """Return the 1-based inclusive line span of one finding."""
+        """Return the 1-based inclusive line span of one finding.
+
+        Returns:
+            The 1-based inclusive line span of one finding.
+
+        Raises:
+            TypeError: On failure.
+
+        """
         start = finding.range["start"]
         end = finding.range["end"]
         if not (isinstance(start, Mapping) and isinstance(end, Mapping)):
@@ -260,7 +299,15 @@ class FlextInfraNamespaceEnforcerProjectMixin:
 
     @staticmethod
     def _captured(finding: m.Infra.ModScanFinding, variable: str) -> str:
-        """Return one metavariable a relocation rule captured or derived."""
+        """Return one metavariable a relocation rule captured or derived.
+
+        Returns:
+            One metavariable a relocation rule captured or derived.
+
+        Raises:
+            TypeError: On failure.
+
+        """
         metavariables = finding.payload["metaVariables"]
         if not isinstance(metavariables, Mapping):
             msg = f"ast-grep finding without metaVariables: {finding.rule_id}"

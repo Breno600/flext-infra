@@ -166,7 +166,12 @@ class FlextInfraUtilitiesLintRecipes:
 
     @staticmethod
     def _docstring_expr(node: ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef) -> ast.Expr | None:
-        """Return the docstring statement of a module, class or function."""
+        """Return the docstring statement of a module, class or function.
+
+        Returns:
+            The docstring statement of a module, class or function.
+
+        """
         first = node.body[0] if node.body else None
         if (
             isinstance(first, ast.Expr)
@@ -183,7 +188,15 @@ class FlextInfraUtilitiesLintRecipes:
         line: int,
         path: Path,
     ) -> ast.FunctionDef | ast.AsyncFunctionDef:
-        """Return the function whose docstring starts at ``line``."""
+        """Return the function whose docstring starts at ``line``.
+
+        Returns:
+            The function whose docstring starts at ``line``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
                 docstring = cls._docstring_expr(node)
@@ -198,7 +211,15 @@ class FlextInfraUtilitiesLintRecipes:
         line: int,
         path: Path,
     ) -> ast.FunctionDef | ast.AsyncFunctionDef:
-        """Return the innermost function whose body spans ``line``."""
+        """Return the innermost function whose body spans ``line``.
+
+        Returns:
+            The innermost function whose body spans ``line``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         enclosing = [
             node
             for node in ast.walk(tree)
@@ -216,7 +237,15 @@ class FlextInfraUtilitiesLintRecipes:
         line: int,
         path: Path,
     ) -> ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef:
-        """Return the class or function defined at ``line``."""
+        """Return the class or function defined at ``line``.
+
+        Returns:
+            The class or function defined at ``line``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         for node in ast.walk(tree):
             if (
                 isinstance(node, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef)
@@ -231,7 +260,12 @@ class FlextInfraUtilitiesLintRecipes:
 
     @staticmethod
     def _offset(lines: t.StrSequence, lineno: int, col_offset: int) -> int:
-        """Convert an AST position (1-based line, UTF-8 column) to a str index."""
+        """Convert an AST position (1-based line, UTF-8 column) to a str index.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         prefix = sum(len(text) for text in lines[: lineno - 1])
         column = len(
             lines[lineno - 1]
@@ -247,7 +281,15 @@ class FlextInfraUtilitiesLintRecipes:
         docstring: ast.Expr,
         path: Path,
     ) -> t.Triple[int, int, str]:
-        """Return the span and text of one triple-double-quoted docstring."""
+        """Return the span and text of one triple-double-quoted docstring.
+
+        Returns:
+            The span and text of one triple-double-quoted docstring.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         value = docstring.value
         start = cls._offset(lines, value.lineno, value.col_offset)
         end = cls._offset(
@@ -264,13 +306,23 @@ class FlextInfraUtilitiesLintRecipes:
 
     @staticmethod
     def _split_literal(raw: str) -> t.Pair[str, str]:
-        """Split a docstring literal into its string prefix and inner text."""
+        """Split a docstring literal into its string prefix and inner text.
+
+        Returns:
+            The resulting ``t.Pair[str, str]``.
+
+        """
         prefix = raw[: len(raw) - len(raw.lstrip("rRuU"))]
         return prefix, raw[len(prefix) + 3 : -3]
 
     @staticmethod
     def _returns_entry(function: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
-        """Describe the returned value: the summary's object, else its type."""
+        """Describe the returned value: the summary's object, else its type.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         summary = (ast.get_docstring(function) or "").splitlines()[0]
         match = re.match(r"(?i)returns?\s+(?P<rest>.+)", summary.strip().rstrip("."))
         if match:
@@ -282,7 +334,12 @@ class FlextInfraUtilitiesLintRecipes:
 
     @staticmethod
     def _yields_entry(function: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
-        """Describe each yielded value by the iterator's element type."""
+        """Describe each yielded value by the iterator's element type.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         if isinstance(function.returns, ast.Subscript):
             element = function.returns.slice
             if isinstance(element, ast.Tuple) and element.elts:
@@ -297,7 +354,15 @@ class FlextInfraUtilitiesLintRecipes:
         issue: m.Infra.Issue,
         path: Path,
     ) -> str:
-        """Name the raised exception and the condition its message states."""
+        """Name the raised exception and the condition its message states.
+
+        Returns:
+            The resulting ``str``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         named = re.search(r"`(?P<name>[^`]+)`", issue.message)
         if named is None:
             msg = f"{path}: raise finding names no exception: {issue.message}"
@@ -308,7 +373,12 @@ class FlextInfraUtilitiesLintRecipes:
 
     @classmethod
     def _raise_condition(cls, function: ast.FunctionDef | ast.AsyncFunctionDef, line: int) -> str:
-        """Return the static text of the message raised at ``line``."""
+        """Return the static text of the message raised at ``line``.
+
+        Returns:
+            The static text of the message raised at ``line``.
+
+        """
         raised = next(
             (
                 node
@@ -343,7 +413,12 @@ class FlextInfraUtilitiesLintRecipes:
 
     @staticmethod
     def _static_text(node: ast.expr) -> str:
-        """Return the literal prefix of a string or f-string expression."""
+        """Return the literal prefix of a string or f-string expression.
+
+        Returns:
+            The literal prefix of a string or f-string expression.
+
+        """
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
             return node.value
         if isinstance(node, ast.JoinedStr):
@@ -357,7 +432,12 @@ class FlextInfraUtilitiesLintRecipes:
 
     @staticmethod
     def _summary_for(definition: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef) -> str:
-        """Derive a one-line summary from a definition's declared name."""
+        """Derive a one-line summary from a definition's declared name.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         name = definition.name
         if isinstance(definition, ast.ClassDef):
             return (
@@ -376,7 +456,12 @@ class FlextInfraUtilitiesLintRecipes:
         indent: str,
         wanted: t.MappingKV[str, t.StrSequence],
     ) -> str:
-        """Return the docstring literal with the wanted sections appended."""
+        """Return the docstring literal with the wanted sections appended.
+
+        Returns:
+            The docstring literal with the wanted sections appended.
+
+        """
         width = config.Infra.tooling.tools.ruff.line_length
         prefix, inner = cls._split_literal(raw)
         inner = inner.rstrip()
@@ -414,7 +499,12 @@ class FlextInfraUtilitiesLintRecipes:
 
     @classmethod
     def _with_notice(cls, raw: str, notice: str) -> str:
-        """Return the module docstring with the notice after its summary."""
+        """Return the module docstring with the notice after its summary.
+
+        Returns:
+            The module docstring with the notice after its summary.
+
+        """
         prefix, inner = cls._split_literal(raw)
         summary, _, rest = inner.partition("\n")
         remainder = rest.strip("\n")

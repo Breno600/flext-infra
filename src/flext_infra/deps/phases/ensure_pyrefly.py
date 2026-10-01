@@ -28,7 +28,12 @@ class FlextInfraEnsurePyreflyConfigPhase:
         paths_manager: FlextInfraExtraPathsManager | None,
         stale_error_keys: t.StrSequence,
     ) -> m.Infra.DepsToml.PhaseConfig:
-        """Build the canonical pyrefly phase definition."""
+        """Build the canonical pyrefly phase definition.
+
+        Returns:
+            The resulting ``m.Infra.DepsToml.PhaseConfig``.
+
+        """
         pyrefly_rules = self._tool_config.tools.pyrefly
         path_rules = pyrefly_rules.path_rules
         project_dir = context.project_dir
@@ -143,7 +148,12 @@ class FlextInfraEnsurePyreflyConfigPhase:
         context: m.Infra.PyprojectAnalyzerContext,
         paths_manager: FlextInfraExtraPathsManager | None = None,
     ) -> t.StrSequence:
-        """Apply canonical pyrefly settings to one normalized payload."""
+        """Apply canonical pyrefly settings to one normalized payload.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         configured_error_keys = frozenset(self._tool_config.tools.pyrefly.strict_errors)
         errors_table = u.Cli.toml_mapping_path(
             payload,

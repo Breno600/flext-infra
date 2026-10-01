@@ -68,7 +68,15 @@ class FlextInfraModelsRelease:
 
         @u.model_validator(mode="after")
         def validate_kind_filename(self) -> Self:
-            """Require the declared artifact kind to match its immutable filename."""
+            """Require the declared artifact kind to match its immutable filename.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: On failure.
+
+            """
             name = Path(self.path).name
             valid = (self.kind == "wheel" and name.endswith(".whl")) or (
                 self.kind == "sdist" and name.endswith(".tar.gz")
@@ -130,7 +138,15 @@ class FlextInfraModelsRelease:
 
         @u.model_validator(mode="after")
         def validate_provenance(self) -> Self:
-            """Require source provenance to be complete whenever it is available."""
+            """Require source provenance to be complete whenever it is available.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: On failure.
+
+            """
             values = (
                 self.commit_oid,
                 self.source_date_epoch,
@@ -215,7 +231,15 @@ class FlextInfraModelsRelease:
 
         @u.model_validator(mode="after")
         def validate_manifest(self) -> Self:
-            """Require totals, project identity, outcomes, and artifacts to agree."""
+            """Require totals, project identity, outcomes, and artifacts to agree.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: On failure.
+
+            """
             if self.total != len(self.records):
                 msg = "build report total does not match record count"
                 raise ValueError(msg)

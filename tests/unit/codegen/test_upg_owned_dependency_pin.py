@@ -40,7 +40,12 @@ class TestsFlextInfraUpgOwnedDependencyPin:
         infra_ref: str = LINE,
         flext_source: str = "",
     ) -> str:
-        """Write one standalone consumer declaring the family on the given refs."""
+        """Write one standalone consumer declaring the family on the given refs.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         (root / "config").mkdir(parents=True)
         repository: t.JsonDict = {
             "name": "consumer",

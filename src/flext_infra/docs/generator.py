@@ -38,7 +38,12 @@ class FlextInfraDocGenerator(
 
     @classmethod
     def execute_request(cls, request: m.Infra.DocsGenerateRequest) -> p.Result[bool]:
-        """Expose one fixed-effect CLI request without inherited mode controls."""
+        """Expose one fixed-effect CLI request without inherited mode controls.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         owner = cls(repository_root=request.repository_root)
         return owner._propagate_phase_outcome(
             "generate",
@@ -50,7 +55,12 @@ class FlextInfraDocGenerator(
         self,
         request: m.Infra.DocsGenerateRequest,
     ) -> p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]:
-        """Publish generated docs through the existing durable file lifecycle."""
+        """Publish generated docs through the existing durable file lifecycle.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]``.
+
+        """
         prepared = self._prepare_request(request)
         if prepared.failure:
             return r[t.SequenceOf[m.Infra.DocsPhaseReport]].from_failure(prepared)
@@ -114,7 +124,12 @@ class FlextInfraDocGenerator(
         bundle: m.Infra.DocsGenerationBundle,
         plans: t.VariadicTuple[m.Infra.CodegenFilePlan],
     ) -> p.Result[bool]:
-        """Require exact untouched sources and a fresh unchanged render."""
+        """Require exact untouched sources and a fresh unchanged render.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         outputs = {plan.path for plan in plans}
         for expected in bundle.source_states:
             if expected.path in outputs:
@@ -146,7 +161,12 @@ class FlextInfraDocGenerator(
         committed_plans: t.VariadicTuple[m.Infra.CodegenFilePlan],
         written: frozenset[Path],
     ) -> p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]:
-        """Report only destinations committed by the shared transaction."""
+        """Report only destinations committed by the shared transaction.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]``.
+
+        """
         reports: list[m.Infra.DocsPhaseReport] = []
         first_scope = bundle.scopes[0].scope
         root_scope = first_scope if first_scope.name == c.Infra.RK_ROOT else None
@@ -195,7 +215,12 @@ class FlextInfraDocGenerator(
         self,
         bundle: m.Infra.DocsGenerationBundle,
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]:
-        """Bind one prepared render bundle to exact live destination states."""
+        """Bind one prepared render bundle to exact live destination states.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]``.
+
+        """
         return u.Infra.docs_file_plans(bundle)
 
     def required_directories(
@@ -205,6 +230,10 @@ class FlextInfraDocGenerator(
         """Derive target parent chains from the exact prepared render bundle.
 
         Source-state race verification is owned by ``docs_file_plans``.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[Path]]``.
+
         """
         # Why (X-47): the physical workspace root is not necessarily
         # `bundle.scopes[0]` once the root is excluded as an output scope
@@ -212,12 +241,22 @@ class FlextInfraDocGenerator(
         return u.Infra.docs_required_directories(bundle)
 
     def prepare_bundle(self) -> p.Result[m.Infra.DocsGenerationBundle]:
-        """Freeze the configured render and all of its authenticated inputs."""
+        """Freeze the configured render and all of its authenticated inputs.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.DocsGenerationBundle]``.
+
+        """
         return self._prepare_request(self._configured_request())
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute the configured docs generation flow."""
+        """Execute the configured docs generation flow.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         return self._propagate_phase_outcome(
             "generate",
             self.generate(
@@ -232,7 +271,12 @@ class FlextInfraDocGenerator(
         )
 
     def _configured_request(self) -> m.Infra.DocsGenerateRequest:
-        """Return the pure render request shared by both planner entry points."""
+        """Return the pure render request shared by both planner entry points.
+
+        Returns:
+            The pure render request shared by both planner entry points.
+
+        """
         return m.Infra.DocsGenerateRequest(
             repository_root=self.repository_root,
             projects=self.selected_projects,
@@ -244,7 +288,12 @@ class FlextInfraDocGenerator(
     def _plan_bundle(
         bundle: m.Infra.DocsGenerationBundle,
     ) -> p.Result[t.VariadicTuple[_DocsScopePlan]]:
-        """Build every scope plan from one already prepared docs bundle."""
+        """Build every scope plan from one already prepared docs bundle.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[_DocsScopePlan]]``.
+
+        """
         planned = u.Infra.docs_file_plans(bundle)
         if planned.failure:
             return r[tuple[_DocsScopePlan, ...]].from_failure(planned)

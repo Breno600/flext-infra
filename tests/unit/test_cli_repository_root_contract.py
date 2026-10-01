@@ -22,7 +22,12 @@ class TestsFlextInfraCliRepositoryRootContract:
 
     @pytest.fixture
     def rendered_makefile(self, tmp_path: Path) -> str:
-        """Use the conform owner and typed fixtures, not a copied Make recipe."""
+        """Use the conform owner and typed fixtures, not a copied Make recipe.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         repository = u.Tests.repository_ref("scope-contract-fixture")
         request = u.Tests.conform_request(
             tmp_path,

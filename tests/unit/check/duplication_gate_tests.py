@@ -59,7 +59,12 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
 
     @staticmethod
     def _governed_with_declared_trees(tmp_path: Path, *, declare_trees: bool) -> Path:
-        """One governed checkout whose clones live only inside charts/."""
+        """One governed checkout whose clones live only inside charts/.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         root = tmp_path / "governed-duplication"
         u.Tests.WorktreeFixture.initialize_governed_project(
             root,
@@ -142,6 +147,10 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
         ``fixture-dup`` and ``fixture-dup-extra`` share a string prefix but are
         distinct projects; a clone between them must never be attributed to the
         shorter one.
+
+        Returns:
+            The resulting ``Path``.
+
         """
         root = tmp_path / "sibling-workspace"
         root.mkdir()

@@ -24,6 +24,10 @@ class FlextInfraReleaseBuildMixin(FlextInfraReleaseProjectMixin):
 
         One ``name==version`` record per pin, continued by one ``--hash``
         line per digest; identical pins render identical bytes.
+
+        Returns:
+            The resulting ``str``.
+
         """
         records = (
             " \\\n".join((
@@ -42,7 +46,12 @@ class FlextInfraReleaseBuildMixin(FlextInfraReleaseProjectMixin):
         )
 
     def phase_build(self, ctx: m.Infra.ReleasePhaseDispatchConfig) -> p.Result[bool]:
-        """Build registry-safe member artifacts and write the receipt."""
+        """Build registry-safe member artifacts and write the receipt.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         root = ctx.repository_root
         output_dir = self._release_dir(root, ctx.tag)
         selected = u.Infra.resolve_projects(root, ctx.project_names)
@@ -124,6 +133,10 @@ class FlextInfraReleaseBuildMixin(FlextInfraReleaseProjectMixin):
         workspace project — the lock's declared version is the only honest
         pin. Workspace projects keep precedence in the caller; a name absent
         from both remains unknown to the render and fails loud there.
+
+        Returns:
+            The resulting ``p.Result[t.MutableStrMapping]``.
+
         """
         lock_path = repository_root / c.Infra.UV_LOCK_FILENAME
         text = u.Cli.files_read_text(lock_path)
@@ -161,6 +174,10 @@ class FlextInfraReleaseBuildMixin(FlextInfraReleaseProjectMixin):
 
         Build constraints render from the typed config SSOT; the Gitleaks
         policy is the repository's codegen projection.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.BuildPolicy]``.
+
         """
         constraints = policy_dir / "build-constraints.txt"
         gitleaks = policy_dir / "gitleaks-release.toml"

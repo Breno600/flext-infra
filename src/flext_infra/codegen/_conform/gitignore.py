@@ -29,6 +29,10 @@ class FlextInfraCodegenConformGitignore(FlextInfraCodegenConformBootstrap):
         The section projection and template rendering are owned by
         ``u.Infra.render_project_gitignore``; conform exposes the same seam so
         conform planning and the layout engine never diverge.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
         """
         return u.Infra.render_project_gitignore(
             codegen,

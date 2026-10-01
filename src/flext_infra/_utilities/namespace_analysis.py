@@ -28,7 +28,13 @@ class FlextInfraUtilitiesRefactorNamespaceFlext(
 
     @staticmethod
     def rewrite_missing_future_annotations(*, py_files: t.SequenceOf[Path]) -> None:
-        """Rewrite missing future annotations."""
+        """Rewrite missing future annotations.
+
+        Raises:
+            RuntimeError: On failure.
+            ValueError: On failure.
+
+        """
         for file_path in py_files:
             project_root = FlextInfraUtilitiesDiscovery.project_root(file_path)
             resolved_file = file_path.resolve()

@@ -19,7 +19,12 @@ class TestsFlextInfraDetectorOwnsNoProjectRegistry:
 
     @staticmethod
     def _standalone(root: Path, *, name: str) -> Path:
-        """Create a real Git repository that flext-infra has never heard of."""
+        """Create a real Git repository that flext-infra has never heard of.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         u.Tests.WorktreeFixture.initialize_governed_project(
             root,
             name,

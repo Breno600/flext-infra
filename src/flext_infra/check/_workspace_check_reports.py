@@ -28,7 +28,12 @@ class FlextInfraWorkspaceCheckReportsMixin:
         gates: t.StrSequence,
         timestamp: str,
     ) -> str:
-        """Render markdown check report from project gate results."""
+        """Render markdown check report from project gate results.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         lines: list[str] = [
             "# Workspace Check Report",
             "",
@@ -64,7 +69,12 @@ class FlextInfraWorkspaceCheckReportsMixin:
         results: t.SequenceOf[m.Infra.ProjectResult],
         gates: t.StrSequence,
     ) -> m.Infra.SarifReport:
-        """Build the SARIF 2.1.0 report model from workspace gate results."""
+        """Build the SARIF 2.1.0 report model from workspace gate results.
+
+        Returns:
+            The resulting ``m.Infra.SarifReport``.
+
+        """
         rules_by_id: MutableMapping[str, m.Infra.SarifRule] = {}
         sarif_results: list[m.Infra.SarifResult] = []
         for project in results:
@@ -97,7 +107,12 @@ class FlextInfraWorkspaceCheckReportsMixin:
 
     @staticmethod
     def _sarif_issue(issue: m.Infra.Issue, rule_id: str) -> m.Infra.SarifResult:
-        """Render one blocking occurrence while retaining its native severity."""
+        """Render one blocking occurrence while retaining its native severity.
+
+        Returns:
+            The resulting ``m.Infra.SarifResult``.
+
+        """
         level = (
             "warning"
             if issue.severity.lower() == c.Infra.SeverityLevel.WARNING
@@ -123,7 +138,12 @@ class FlextInfraWorkspaceCheckReportsMixin:
         report_base: Path,
         outcome: p.Infra.WorkspaceLoopOutcome,
     ) -> p.Result[t.SequenceOf[m.Infra.ProjectResult]]:
-        """Write markdown/SARIF reports and print summary to output."""
+        """Write markdown/SARIF reports and print summary to output.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.ProjectResult]]``.
+
+        """
         results = outcome.results
         timestamp = u.now().strftime("%Y-%m-%d %H:%M:%S %Z")
         md_path = report_base / c.Infra.CHECK_REPORT_MARKDOWN_FILENAME

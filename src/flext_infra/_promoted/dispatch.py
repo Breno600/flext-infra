@@ -34,6 +34,10 @@ class FlextInfraPromotedDispatch(FlextInfraPromotedDiscovery):
 
         WHAT is resolved from the live settings singleton on every run, so
         ``FlextSettings.update_global`` propagates without monkeypatching.
+
+        Returns:
+            The resulting ``int``.
+
         """
         args = tuple(sys.argv[1:] if argv is None else argv)
         try:
@@ -50,7 +54,12 @@ class FlextInfraPromotedDispatch(FlextInfraPromotedDiscovery):
         script_roots: Sequence[Path] | None,
         spec: p.Infra.PromotedWorkspaceSpec | None,
     ) -> int:
-        """Discover the registry, then validate, dispatch, or render help."""
+        """Discover the registry, then validate, dispatch, or render help.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         workspace = spec or u.Infra.promoted_discovered_workspace_spec()
         u.Infra.promoted_ensure_local_python(workspace)
         registry = cls.discover(script_roots=script_roots, spec=workspace)
@@ -77,6 +86,10 @@ class FlextInfraPromotedDispatch(FlextInfraPromotedDiscovery):
         explicitly, so dispatch never reads ambient settings. An alias pointing
         at a concrete WHAT selects it when WHAT is empty; an undeclared ``all``
         renders the verb help like an empty WHAT.
+
+        Returns:
+            The resulting ``int``.
+
         """
         alias_target = registry.alias_target(requested_verb)
         what = requested_what

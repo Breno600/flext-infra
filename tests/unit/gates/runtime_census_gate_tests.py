@@ -61,7 +61,12 @@ _GENUINE_SOURCES: t.MappingKV[str, str] = {
 
 
 def _write_project(root: Path, sources: t.MappingKV[str, str]) -> Path:
-    """Materialize one fixture project and return its repository root."""
+    """Materialize one fixture project and return its repository root.
+
+    Returns:
+        The resulting ``Path``.
+
+    """
     for relative, text in sources.items():
         target = root / relative
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -71,20 +76,35 @@ def _write_project(root: Path, sources: t.MappingKV[str, str]) -> Path:
 
 @pytest.fixture
 def mixed_project(tmp_path: Path) -> Iterator[Path]:
-    """Importable project tripping several census rule families at once."""
+    """Importable project tripping several census rule families at once.
+
+    Yields:
+        Each ``Path``.
+
+    """
     root = _write_project(tmp_path / "mixed", _MIXED_SOURCES)
     yield from _importable_project(root)
 
 
 @pytest.fixture
 def genuine_project(tmp_path: Path) -> Iterator[Path]:
-    """Importable project tripping exactly one genuine census rule."""
+    """Importable project tripping exactly one genuine census rule.
+
+    Yields:
+        Each ``Path``.
+
+    """
     root = _write_project(tmp_path / "genuine", _GENUINE_SOURCES)
     yield from _importable_project(root)
 
 
 def _importable_project(root: Path) -> Iterator[Path]:
-    """Expose one fixture ``src`` tree to the import system for the census."""
+    """Expose one fixture ``src`` tree to the import system for the census.
+
+    Yields:
+        Each ``Path``.
+
+    """
     src = str(root / "src")
     sys.path.insert(0, src)
     importlib.invalidate_caches()
@@ -168,7 +188,12 @@ class TestsRuntimeCensusSmellOwnership:
 
     @staticmethod
     def _smell_tokens(violations: t.SequenceOf[str]) -> tuple[str, ...]:
-        """Violations whose trailing rule token is a flext-core smell tag."""
+        """Violations whose trailing rule token is a flext-core smell tag.
+
+        Returns:
+            The resulting ``tuple[str, ...]``.
+
+        """
         return tuple(
             violation
             for violation in violations

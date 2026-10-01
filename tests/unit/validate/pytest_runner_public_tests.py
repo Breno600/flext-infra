@@ -221,7 +221,12 @@ class TestsFlextInfraPytestRunner:
 
     @staticmethod
     def _seed_cache(cached_runner_project: Path) -> Path:
-        """Seed the persistent cache through one public cold run."""
+        """Seed the persistent cache through one public cold run.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         tm.that(tm.ok(runner_for(cached_runner_project).execute()), eq=0)
         return (
             cached_runner_project

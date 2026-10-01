@@ -83,7 +83,12 @@ class FlextInfraUtilitiesGitWorktreeRemovalMixin(
         source_root: Path,
         worktree_root: Path,
     ) -> p.Result[bool]:
-        """Remove an explicitly selected clean worktree and prune metadata."""
+        """Remove an explicitly selected clean worktree and prune metadata.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         preflight = cls._preflight_clean_worktree(source_root, worktree_root)
         if preflight.failure:
             return r[bool].from_failure(preflight)

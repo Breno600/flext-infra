@@ -27,7 +27,12 @@ class FlextInfraUtilitiesSemanticCutoverEdits:
     def _editable_sources(
         sources: t.MappingKV[Path, str],
     ) -> t.VariadicTuple[t.Pair[Path, str]]:
-        """Return resolved hand-written sources in stable path order."""
+        """Return resolved hand-written sources in stable path order.
+
+        Returns:
+            Resolved hand-written sources in stable path order.
+
+        """
         return tuple(
             sorted(
                 (path.resolve(), source)
@@ -38,7 +43,12 @@ class FlextInfraUtilitiesSemanticCutoverEdits:
 
     @staticmethod
     def _finding_statement(finding: m.Infra.ModScanFinding) -> ast.stmt | None:
-        """Parse the single statement an ast-grep finding reports."""
+        """Parse the single statement an ast-grep finding reports.
+
+        Returns:
+            The resulting ``ast.stmt | None``.
+
+        """
         body = ast.parse(finding.text).body
         return body[0] if len(body) == 1 else None
 
@@ -51,6 +61,10 @@ class FlextInfraUtilitiesSemanticCutoverEdits:
 
         A module that cannot be planned yields a failure naming that module;
         the remaining modules are still planned so one run reports them all.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
+
         """
         edits: list[m.Infra.SemanticMigrationEdit] = []
         failures: list[str] = []

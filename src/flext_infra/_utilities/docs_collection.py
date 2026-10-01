@@ -27,7 +27,15 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
         repository_root: Path,
         configuration: m.Infra.PlanCollectionConfig,
     ) -> m.Infra.PlanCollectionBundle:
-        """Capture sources before any canonical or home projection writes."""
+        """Capture sources before any canonical or home projection writes.
+
+        Returns:
+            The resulting ``m.Infra.PlanCollectionBundle``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         root = repository_root.absolute()
         relative = configuration.canonical_dir
         if relative.is_absolute() or not relative.parts or ".." in relative.parts:
@@ -306,6 +314,13 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
         ``artifacts`` starts with the plan itself, followed by its companion
         attachments; a previously recorded revision keeps its identity and its
         canonical destination, which must stay inside ``canonical``.
+
+        Returns:
+            The resulting ``m.Infra.PlanCollectionRevision``.
+
+        Raises:
+            ValueError: On failure.
+
         """
         path = artifacts[0].path
         identity = (
@@ -367,7 +382,15 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
         *,
         states: t.MutableMappingKV[Path, m.Cli.AtomicFileState],
     ) -> m.Infra.PlanCollectionRevision:
-        """Keep curated canonical text intact while recording incoming revisions."""
+        """Keep curated canonical text intact while recording incoming revisions.
+
+        Returns:
+            The resulting ``m.Infra.PlanCollectionRevision``.
+
+        Raises:
+            ValueError: On failure.
+
+        """
         target = canonical / incoming_revision.canonical_path
         incoming = target.with_suffix("") / "incoming" / incoming_revision.digest
         plan = artifacts[0].content

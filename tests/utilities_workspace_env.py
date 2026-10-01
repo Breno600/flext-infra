@@ -29,7 +29,12 @@ class TestsFlextInfraUtilitiesWorkspaceEnvMixin:
 
     @staticmethod
     def repository_profile(root: Path) -> c.Infra.MakeProfile:
-        """Return the Make profile derived from the repository itself."""
+        """Return the Make profile derived from the repository itself.
+
+        Returns:
+            The Make profile derived from the repository itself.
+
+        """
         from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
         mode = tm.ok(FlextInfraWorkspaceDetector().detect(root))
@@ -47,6 +52,10 @@ class TestsFlextInfraUtilitiesWorkspaceEnvMixin:
         profile-split rule from the SSOT alone. Deriving it from a path makes
         the same assertion depend on where the checkout happens to sit, which
         differs between the workspace and a standalone CI clone.
+
+        Returns:
+            Every SSOT ignore pattern whose section targets *profile*.
+
         """
         gitignore_sections: t.VariadicTuple[m.Infra.ScaffoldGitignoreSectionSpec] = (
             config.Infra.codegen.gitignore_sections

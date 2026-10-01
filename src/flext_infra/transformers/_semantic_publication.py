@@ -36,6 +36,10 @@ class FlextInfraSemanticPublication:
 
         ``None`` content means no semantic change, never deletion. The existing
         transaction owns identity checks, staging, durable recovery and rollback.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[Path]]``.
+
         """
         files: list[m.Infra.CodegenFilePlan] = []
         template_sources = u.Infra.codegen_template_sources(

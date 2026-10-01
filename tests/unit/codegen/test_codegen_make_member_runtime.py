@@ -30,7 +30,12 @@ class TestsFlextInfraCodegenMakeMemberRuntime:
 
     @classmethod
     def _runtime_values(cls, project_root: Path) -> dict[str, str]:
-        """Print the resolved runtime through the public help verb's post hook."""
+        """Print the resolved runtime through the public help verb's post hook.
+
+        Returns:
+            The resulting ``dict[str, str]``.
+
+        """
         (project_root / "custom.mk").write_text(
             "post-help:\n\t@printf '%s\\n' "
             + " ".join(f"'{name}=$({name})'" for name in cls.RUNTIME_NAMES)
@@ -52,7 +57,12 @@ class TestsFlextInfraCodegenMakeMemberRuntime:
 
     @staticmethod
     def _workspace_with_member(tmp_path: Path, member_source: Path) -> Path:
-        """Check the rendered member out as a submodule of a real superproject."""
+        """Check the rendered member out as a submodule of a real superproject.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         tm.ok(u.Cli.run_checked(["git", "add", "-A"], cwd=member_source))
         tm.ok(
             u.Cli.run_checked(
@@ -82,7 +92,12 @@ class TestsFlextInfraCodegenMakeMemberRuntime:
 
     @staticmethod
     def _direnv_venv(entry: Path) -> str:
-        """Read the ``VENV_DIR`` the real generated ``.envrc`` activation resolves."""
+        """Read the ``VENV_DIR`` the real generated ``.envrc`` activation resolves.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         (entry / ".envrc.local").write_text(
             'export OBSERVED_VENV_DIR="${VENV_DIR}"\n',
             encoding="utf-8",

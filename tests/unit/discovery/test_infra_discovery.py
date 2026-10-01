@@ -25,12 +25,22 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
 
     @pytest.fixture
     def service(self) -> u.Infra:
-        """Provide ``service``."""
+        """Provide ``service``.
+
+        Returns:
+            The resulting ``u.Infra``.
+
+        """
         return u.Infra()
 
     @pytest.fixture
     def workspace_with_projects(self, tmp_path: Path) -> Path:
-        """Provide ``workspace_with_projects``."""
+        """Provide ``workspace_with_projects``.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         (tmp_path / "pyproject.toml").write_text(
             "[project]\nname='workspace'\n",
             encoding="utf-8",

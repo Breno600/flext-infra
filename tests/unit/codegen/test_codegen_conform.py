@@ -43,7 +43,12 @@ class _FlextInfraCodegenConformLifecycleProbe(FlextInfraCodegenConform):
         self,
         request: m.Infra.CodegenConformRequest,
     ) -> p.Result[m.Infra.CodegenPlan]:
-        """Exercise recovery from real journal, staging, and CAS state changes."""
+        """Exercise recovery from real journal, staging, and CAS state changes.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenPlan]``.
+
+        """
         planned = super().plan(request)
         if planned.failure:
             return planned
@@ -104,6 +109,10 @@ class TestsFlextInfraCodegenConform:
         this template, so the journal (which anchors inside the clone's Git
         directory), staging, and CAS state under test are always the clone's
         own; only the expensive seed apply is shared provisioning.
+
+        Returns:
+            The resulting ``Path``.
+
         """
         template = tmp_path_factory.mktemp("conform-template") / "conformed"
         template.mkdir()
@@ -128,7 +137,13 @@ class TestsFlextInfraCodegenConform:
         scenario: str,
         template: Path,
     ) -> tuple[Path, m.Infra.CodegenConformRequest, Path, bytes, Path]:
-        """Clone the conformed template, then introduce one recoverable publication."""
+        """Clone the conformed template, then introduce one recoverable publication.
+
+        Returns:
+            The resulting ``tuple[Path, m.Infra.CodegenConformRequest, Path, bytes,
+                Path]``.
+
+        """
         root = tmp_path / scenario
         shutil.copytree(template, root)
         published = root / c.Infra.MAKEFILE_FILENAME
@@ -254,7 +269,12 @@ class TestsFlextInfraCodegenConform:
 
     @staticmethod
     def _hook_workspace(hook_path: str | Path | None) -> m.Infra.WorkspaceSpec:
-        """Build one standalone project whose manifest owns the Hatch hook."""
+        """Build one standalone project whose manifest owns the Hatch hook.
+
+        Returns:
+            The resulting ``m.Infra.WorkspaceSpec``.
+
+        """
         repository = u.Tests.repository_ref("hook-project").model_copy(
             update={"role": c.Infra.MakeProfile.STANDALONE},
         )
@@ -274,7 +294,13 @@ class TestsFlextInfraCodegenConform:
         m.Infra.CodegenConformRequest,
         m.Infra.CodegenFilePlan,
     ]:
-        """Plan the canonical pyproject through the public conform owner."""
+        """Plan the canonical pyproject through the public conform owner.
+
+        Returns:
+            The resulting ``t.Triple[FlextInfraCodegenConform,
+                m.Infra.CodegenConformRequest, m.Infra.CodegenFilePlan]``.
+
+        """
         u.Tests.seed_locked_taplo(root.parent)
         workspace = TestsFlextInfraCodegenConform._hook_workspace(hook_path)
         request = u.Tests.conform_request(
@@ -423,6 +449,10 @@ class TestsFlextInfraCodegenConform:
         ``extra_verbs`` entry into its help block, so a repository manifest
         carrying multi-line help puts those exact lines in the rendered
         artifact through the production renderer -- no substitution of it.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenResult]``.
+
         """
         distribution = u.Tests.repository_ref(config.Infra.name).distribution
         (root / "pyproject.toml").write_text(

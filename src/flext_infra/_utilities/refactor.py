@@ -29,7 +29,15 @@ class FlextInfraUtilitiesRefactor:
 
     @staticmethod
     def string_list(value: t.JsonValue | None) -> t.StrSequence:
-        """Normalize policy fields that should contain string collections."""
+        """Normalize policy fields that should contain string collections.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            TypeError: On failure.
+
+        """
         if value is None:
             return []
         if isinstance(value, str):
@@ -45,7 +53,12 @@ class FlextInfraUtilitiesRefactor:
 
     @staticmethod
     def normalize_module_path(path_value: str | Path) -> str:
-        """Normalize module path."""
+        """Normalize module path.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         path = Path(str(path_value).replace("\\", "/"))
         parts = path.parts
         if c.Infra.DEFAULT_SRC_DIR in parts:
@@ -60,7 +73,12 @@ class FlextInfraUtilitiesRefactor:
         results: t.SequenceOf[m.Infra.Result],
         output_path: Path,
     ) -> p.Result[bool]:
-        """Write refactor impact map JSON to disk."""
+        """Write refactor impact map JSON to disk.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         payload = {
             "files": [
                 {
@@ -89,7 +107,12 @@ class FlextInfraUtilitiesRefactor:
         command: c.Infra.ModScanCommand,
         scope: t.StrSequence,
     ) -> p.Result[m.Infra.ModScanEvidenceReceipt]:
-        """Atomically replace the complete structured evidence for one mod scan."""
+        """Atomically replace the complete structured evidence for one mod scan.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ModScanEvidenceReceipt]``.
+
+        """
         classified = (
             report.actionable + report.detection_only + report.non_actionable_with_fix
         )
