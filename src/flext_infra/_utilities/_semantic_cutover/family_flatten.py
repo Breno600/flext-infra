@@ -128,14 +128,6 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
         if not body:
             msg = f"inline namespace wrapper cannot be flattened safely: {path}"
             raise ValueError(msg)
-        wrapper_docstring = (
-            (body[0].line, body[0].end_line)
-            if sources[path]
-            .splitlines()[body[0].line - 1]
-            .lstrip()
-            .startswith(('"""', "'''", '"', "'"))
-            else None
-        )
         if any(
             item.enclosing_name == wrapper_name
             and item.category
@@ -192,14 +184,7 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
                 candidate_rewrites.setdefault(consumer, []).extend(changes)
         candidate_rewrites.setdefault(path, []).extend(
             FlextInfraUtilitiesRopeRuntimeRefactors.unwrap_class_rewrites(
-                sources[path],
-                span=m.Infra.WrapperSourceSpan(
-                    header_start=header.line,
-                    header_end=header.end_line,
-                    body_end=child.get_end(),
-                    indentation=body[0].indent - header.indent,
-                    docstring_span=wrapper_docstring,
-                ),
+                sources[path], header=header, body=body, body_end=child.get_end()
             )
         )
         for consumer, changes in candidate_rewrites.items():

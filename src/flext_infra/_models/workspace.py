@@ -21,20 +21,24 @@ class FlextInfraModelsWorkspace:
     - ``ContractModel`` reserved for immutable workspace settings contracts.
     """
 
-    class SubprojectLoadPolicy(m.ContractModel):
-        """Workspace policy and declared identity for one Git subproject."""
+    class SuperprojectGovernance(m.ContractModel):
+        """Facts of one superproject that govern every composed subproject.
 
+        Resolved once per superproject, then shared by each member load.
+        """
+
+        root: Annotated[Path, m.Field(description="Superproject repository root")]
         integration_branch: Annotated[
             str | None, m.Field(description="Detected workspace integration branch")
         ] = None
-        workspace_beads: Annotated[
+        beads: Annotated[
             FlextInfraConfigModels.BeadsProjectSpec | None,
-            m.Field(description="Inherited workspace Beads contract"),
+            m.Field(description="Workspace Beads contract members inherit"),
         ] = None
-        declared_member: Annotated[
-            FlextInfraConfigModels.RepositoryRef | None,
-            m.Field(description="Manifest-declared member identity"),
-        ] = None
+        members: Annotated[
+            t.MappingKV[Path, FlextInfraConfigModels.RepositoryRef],
+            m.Field(description="Manifest-declared member identities by path"),
+        ]
         allow_unprovisioned_members: Annotated[
             bool, m.Field(description="Accept manifest identity before checkout setup")
         ] = False
