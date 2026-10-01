@@ -780,6 +780,41 @@ class TestsFlextInfraCodegenMakeEnvironment:
         return targets
 
     @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
+    def test_bootstrap_github_credential_is_optional_and_gh_backed(
+        self,
+        tmp_path: Path,
+        profile: c.Infra.MakeProfile,
+    ) -> None:
+        """A caller token wins; otherwise an authenticated gh supplies one.
+
+        Mise reads GITHUB_TOKEN, not GH_TOKEN, so a caller GH_TOKEN and the gh
+        token both reach the isolated environment as GITHUB_TOKEN. Without any
+        source the bootstrap stays anonymous: the credential is never required.
+        """
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path,
+            profile,
+            bootstrap=True,
+        )
+        makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding="utf-8",
+        )
+
+        tm.that(
+            makefile,
+            has=[
+                'if [ -z "$$caller_github_token" ] && [ -n "$$caller_gh_token" ]; then',
+                'caller_github_token="$$caller_gh_token";',
+                'if [ -z "$$caller_github_token'
+                '$$caller_mise_github_credential_command" ]',
+                "command -v gh >/dev/null 2>&1",
+                "gh auth status --hostname github.com >/dev/null 2>&1; then",
+                'caller_github_token="$$(gh auth token --hostname github.com)";',
+                '$${caller_github_token:+"GITHUB_TOKEN=$$caller_github_token"}',
+            ],
+        )
+
+    @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
     def test_upg_is_the_only_resolver_and_setup_installs_frozen(
         self,
         tmp_path: Path,
