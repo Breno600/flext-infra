@@ -49,13 +49,12 @@ class FlextInfraCProfileReport(s[bool]):
     @u.model_validator(mode="after")
     def _validate_report_paths(self) -> Self:
         """Keep profile input and output inside the workspace report tree.
-
+        
         Returns:
             The resulting ``Self``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         report_root = (self.repository_root / ".reports").resolve()
         for path in (
@@ -72,13 +71,12 @@ class FlextInfraCProfileReport(s[bool]):
 
     def _run_profiles(self) -> t.VariadicTuple[Path]:
         """Validate run identity and artifact digests without consulting latest.
-
+        
         Returns:
             The resulting ``t.VariadicTuple[Path]``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         if self.run_receipt is None:
             return (self.profile,)

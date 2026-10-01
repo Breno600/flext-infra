@@ -128,13 +128,12 @@ class FlextInfraUtilitiesRopeModulePatch:
     @staticmethod
     def _rewrite_all_declaration(source: str, *, names: list[str]) -> str:
         """Publish exactly ``names`` through the canonical ``__all__`` rewrite.
-
+        
         Returns:
             The resulting ``str``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         declarations = [
             node

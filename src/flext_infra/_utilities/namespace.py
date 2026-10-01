@@ -41,18 +41,17 @@ class FlextInfraUtilitiesCodegenNamespace:
     @cache
     def facade_families() -> t.MappingKV[str, m.Infra.FacadeFamily]:
         """Derive the facade families from the core package's declarations.
-
+        
         A family is a layer of the import-layer order that the core package
         binds to a class whose module has a private ``_<module>/`` package
         beside it. Its suffix is the bound class name past the stem every
         family class shares. No letter, file or suffix is listed here.
-
+        
         Returns:
             The resulting ``t.MappingKV[str, m.Infra.FacadeFamily]``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         core = import_module(c.Infra.PKG_CORE_UNDERSCORE)
         core_dir = Path(getfile(core)).parent
@@ -97,13 +96,12 @@ class FlextInfraUtilitiesCodegenNamespace:
     @classmethod
     def facade_family_declared_by(cls, file_name: str) -> m.Infra.FacadeFamily:
         """Return the family whose facade module is ``file_name``.
-
+        
         Returns:
             The family whose facade module is ``file_name``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         letter = cls.facade_family_of_file(file_name)
         if letter is None:
@@ -268,13 +266,12 @@ class FlextInfraUtilitiesCodegenNamespace:
         file_path: Path,
     ) -> t.StrSequence:
         """Resolve a literal ``__all__`` or the former generated tuple alias.
-
+        
         Returns:
             The resulting ``t.StrSequence``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         assignments: MutableMapping[str, ast.expr] = {}
         for node in tree.body:
@@ -407,13 +404,12 @@ class FlextInfraUtilitiesCodegenNamespace:
         project_layout: m.Infra.RopeProjectLayout | None = None,
     ) -> t.Quad[str | None, str | None, str | None, t.StrSequence]:
         """Return (family_alias, expected_family, expected_alias, family_tokens).
-
+        
         Returns:
             (family_alias, expected_family, expected_alias, family_tokens).
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         family_alias = cls.facade_family_of_directory(file_path.parent.name)
         declared_exports = cls._declared_exports(file_path)
@@ -668,13 +664,12 @@ class FlextInfraUtilitiesCodegenNamespace:
         current_pkg: str = "",
     ) -> m.Infra.NamespaceModulePolicy:
         """Enrich publication declarations with repair and inherited-shape evidence.
-
+        
         Returns:
             The resulting ``m.Infra.NamespaceModulePolicy``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         policy = cls.publication_policy(
             file_path,

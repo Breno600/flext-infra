@@ -29,13 +29,12 @@ class FlextInfraUtilitiesGitignore:
     @staticmethod
     def codegen_template_sources(codegen: m.Infra.CodegenConfigSpec) -> frozenset[Path]:
         """Resolve only manifest-declared template inputs, never output suffixes.
-
+        
         Returns:
             The resulting ``frozenset[Path]``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         root = FlextInfraUtilitiesGitignore.codegen_templates_root(codegen)
         sources: set[Path] = set()

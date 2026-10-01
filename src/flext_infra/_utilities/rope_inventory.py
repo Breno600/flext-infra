@@ -29,15 +29,12 @@ class FlextInfraUtilitiesRopeInventory:
         include_references: bool = True,
     ) -> t.VariadicTuple[m.Infra.Object]:
         """Return all same-file defined objects for one workspace module.
-
+        
         Returns:
             All same-file defined objects for one workspace module.
-
+        
         Raises:
-            RuntimeError: On failure.
-            TypeError: On failure.
-            ValueError: On failure.
-
+        
         """
         rope_project = rope_workspace.rope_project
         resource = rope_workspace.resource(file_path)

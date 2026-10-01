@@ -32,13 +32,12 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
     @staticmethod
     def docs_url_scheme(target: str) -> str:
         """Return the normalized scheme and reject insecure documentation URLs.
-
+        
         Returns:
             The normalized scheme and reject insecure documentation URLs.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         normalized = u.norm_str(target, case="lower").lstrip("<")
         scheme = urlsplit(normalized).scheme

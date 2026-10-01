@@ -134,13 +134,12 @@ class FlextInfraCodegenProtocolModelRender:
         target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
     ) -> str:
         """Render one pydantic field annotation through the facade mapper.
-
+        
         Returns:
             The resulting ``str``.
-
+        
         Raises:
-            TypeError: On failure.
-
+        
         """
         if annotation is None:
             msg = f"field {name!r} has no annotation; close it at the model owner"
@@ -171,13 +170,12 @@ class FlextInfraCodegenProtocolModelRender:
         target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
     ) -> str:
         """Render one owned property return annotation, failing when missing.
-
+        
         Returns:
             The resulting ``str``.
-
+        
         Raises:
-            TypeError: On failure.
-
+        
         """
         descriptor = getattr_static(model, name)
         getter = descriptor.fget if isinstance(descriptor, property) else descriptor

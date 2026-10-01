@@ -88,13 +88,12 @@ class FlextInfraPytestRunnerExecution(
         verify_inventory: bool = True,
     ) -> m.Infra.PytestSelectionPlan:
         """Return the typed testmon selection and its manifest owner.
-
+        
         Returns:
             The typed testmon selection and its manifest owner.
-
+        
         Raises:
-            RuntimeError: On failure.
-
+        
         """
         artifact = "testmon-inventory" if complete else "testmon-selection"
         selection_log = report_dir / f"{artifact}.log"
@@ -267,10 +266,9 @@ class FlextInfraPytestRunnerExecution(
         outcome: p.Cli.ProcessOutcome,
     ) -> None:
         """Preserve the process owner's causal fields even when JUnit is absent.
-
+        
         Raises:
-            RuntimeError: On failure.
-
+        
         """
         recorded = m.Cli.ProcessOutcome.model_validate(outcome, from_attributes=True)
         receipt = report_dir / f"{phase}-outcome.json"
@@ -329,13 +327,12 @@ class FlextInfraPytestRunnerExecution(
         cache_hit: bool = False,
     ) -> p.Result[int]:
         """Reject incomplete evidence and publish one bounded summary.
-
+        
         Returns:
             The resulting ``p.Result[int]``.
-
+        
         Raises:
-            RuntimeError: On failure.
-
+        
         """
         diagnostics = self._diagnostics(report_dir).unwrap()
         accounting = self._accounting(
@@ -524,13 +521,12 @@ class FlextInfraPytestRunnerExecution(
         execution_mode: c.Infra.PytestExecutionMode,
     ) -> p.Result[int]:
         """Run one testmon phase while holding the database lease.
-
+        
         Returns:
             The resulting ``p.Result[int]``.
-
+        
         Raises:
-            RuntimeError: On failure.
-
+        
         """
         report_dir = self._report_directory()
         self._write_run_context(

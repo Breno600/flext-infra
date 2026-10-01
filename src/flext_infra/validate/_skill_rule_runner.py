@@ -71,13 +71,12 @@ class FlextInfraSkillRuleRunnerMixin:
         exclude_globs: t.StrSequence,
     ) -> int:
         """Run an ast-grep rule and return match count.
-
+        
         Returns:
             The resulting ``int``.
-
+        
         Raises:
-            RuntimeError: On failure.
-
+        
         """
         rule_file_raw = u.Cli.json_get_str_key(rule, c.Infra.RK_FILE)
         if not rule_file_raw:
@@ -149,13 +148,12 @@ class FlextInfraSkillRuleRunnerMixin:
         mode: c.Infra.OperationMode,
     ) -> int:
         """Run a custom rule script and return violation count.
-
+        
         Returns:
             The resulting ``int``.
-
+        
         Raises:
-            RuntimeError: On failure.
-
+        
         """
         script_raw = u.Cli.json_get_str_key(rule, "script")
         if not script_raw:

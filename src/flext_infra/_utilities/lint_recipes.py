@@ -189,13 +189,12 @@ class FlextInfraUtilitiesLintRecipes:
         path: Path,
     ) -> ast.FunctionDef | ast.AsyncFunctionDef:
         """Return the function whose docstring starts at ``line``.
-
+        
         Returns:
             The function whose docstring starts at ``line``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
@@ -212,13 +211,12 @@ class FlextInfraUtilitiesLintRecipes:
         path: Path,
     ) -> ast.FunctionDef | ast.AsyncFunctionDef:
         """Return the innermost function whose body spans ``line``.
-
+        
         Returns:
             The innermost function whose body spans ``line``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         enclosing = [
             node
@@ -238,13 +236,12 @@ class FlextInfraUtilitiesLintRecipes:
         path: Path,
     ) -> ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef:
         """Return the class or function defined at ``line``.
-
+        
         Returns:
             The class or function defined at ``line``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         for node in ast.walk(tree):
             if (
@@ -282,13 +279,12 @@ class FlextInfraUtilitiesLintRecipes:
         path: Path,
     ) -> t.Triple[int, int, str]:
         """Return the span and text of one triple-double-quoted docstring.
-
+        
         Returns:
             The span and text of one triple-double-quoted docstring.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         value = docstring.value
         start = cls._offset(lines, value.lineno, value.col_offset)
@@ -354,13 +350,18 @@ class FlextInfraUtilitiesLintRecipes:
         issue: m.Infra.Issue,
         path: Path,
     ) -> str:
-        """Name the raised exception and the condition its message states.
+        """Name the raised exception and the conditions that raise it.
+
+        Every ``raise`` of the named exception in the function contributes
+        its condition: the static text its message states, else the ``if``
+        test that guards it.
 
         Returns:
-            The resulting ``str``.
+            The ``Raises`` entry for the exception.
 
         Raises:
-            ValueError: On failure.
+            ValueError: If the finding names no exception, or no raise of it
+                in the function states or is guarded by a condition.
 
         """
         named = re.search(r"`(?P<name>[^`]+)`", issue.message)
@@ -368,48 +369,69 @@ class FlextInfraUtilitiesLintRecipes:
             msg = f"{path}: raise finding names no exception: {issue.message}"
             raise ValueError(msg)
         name = named.group("name")
-        condition = cls._raise_condition(function, issue.line)
-        return f"{name}: If {condition}." if condition else f"{name}: On failure."
+        parents = {
+            child: node
+            for node in ast.walk(function)
+            for child in ast.iter_child_nodes(node)
+        }
+        conditions = [
+            condition
+            for raised in ast.walk(function)
+            if isinstance(raised, ast.Raise)
+            and raised.exc is not None
+            and ast.unparse(
+                raised.exc.func if isinstance(raised.exc, ast.Call) else raised.exc,
+            ).rsplit(".", maxsplit=1)[-1]
+            == name.rsplit(".", maxsplit=1)[-1]
+            and (condition := cls._raise_condition(function, raised, parents))
+        ]
+        if not conditions:
+            msg = (
+                f"{path}: no raise of {name} in {function.name} states or is "
+                "guarded by a condition"
+            )
+            raise ValueError(msg)
+        return f"{name}: If {'; or if '.join(dict.fromkeys(conditions))}."
 
     @classmethod
-    def _raise_condition(cls, function: ast.FunctionDef | ast.AsyncFunctionDef, line: int) -> str:
-        """Return the static text of the message raised at ``line``.
+    def _raise_condition(
+        cls,
+        function: ast.FunctionDef | ast.AsyncFunctionDef,
+        raised: ast.Raise,
+        parents: t.MappingKV[ast.AST, ast.AST],
+    ) -> str:
+        """Return the condition one ``raise`` states or is guarded by.
 
         Returns:
-            The static text of the message raised at ``line``.
+            The static text of the raised message up to its first colon, else
+            the guarding ``if`` test as an inline literal, else an empty string.
 
         """
-        raised = next(
-            (
-                node
-                for node in ast.walk(function)
-                if isinstance(node, ast.Raise) and node.lineno == line
-            ),
-            None,
-        )
-        if (
-            raised is None
-            or not isinstance(raised.exc, ast.Call)
-            or not raised.exc.args
-        ):
-            return ""
-        message = raised.exc.args[0]
-        if isinstance(message, ast.Name):
-            assigned = [
-                node.value
-                for node in ast.walk(function)
-                if isinstance(node, ast.Assign)
-                and node.lineno < line
-                and any(
-                    isinstance(target, ast.Name) and target.id == message.id
-                    for target in node.targets
-                )
-            ]
-            if not assigned:
-                return ""
-            message = max(assigned, key=lambda value: value.lineno)
-        text = cls._static_text(message)
-        return text.split(":", maxsplit=1)[0].strip().rstrip(".")
+        if isinstance(raised.exc, ast.Call) and raised.exc.args:
+            message = raised.exc.args[0]
+            if isinstance(message, ast.Name):
+                assigned = [
+                    node.value
+                    for node in ast.walk(function)
+                    if isinstance(node, ast.Assign)
+                    and node.lineno < raised.lineno
+                    and any(
+                        isinstance(target, ast.Name) and target.id == message.id
+                        for target in node.targets
+                    )
+                ]
+                if assigned:
+                    message = max(assigned, key=lambda value: value.lineno)
+            stated = cls._static_text(message).split(":", maxsplit=1)[0]
+            if stated.strip().rstrip("."):
+                return stated.strip().rstrip(".")
+        node: ast.AST = raised
+        while (parent := parents.get(node)) is not None and parent is not function:
+            if isinstance(parent, ast.If):
+                test = ast.unparse(parent.test)
+                return f"``{test}``" if node in parent.body else f"``not ({test})``"
+            node = parent
+        return ""
 
     @staticmethod
     def _static_text(node: ast.expr) -> str:

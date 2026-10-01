@@ -50,10 +50,9 @@ class FlextInfraUtilitiesCompatibilityAliasValidation:
         aliases: frozenset[str],
     ) -> None:
         """Reject dynamic export ownership before changing an alias owner.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         if not aliases:
             return
@@ -80,10 +79,9 @@ class FlextInfraUtilitiesCompatibilityAliasValidation:
         exported_aliases: frozenset[str],
     ) -> None:
         """Require removed identities and their literal exports to disappear.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         tree = ast.parse(source, filename=str(file_path))
         for node in tree.body:

@@ -56,13 +56,12 @@ class FlextInfraRopeProject(Project):
         source_folders: t.SequenceOf[str],
     ) -> Self:
         """Construct a fresh Rope identity graph without persistent state.
-
+        
         Returns:
             The resulting ``Self``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         if not Path(root).is_dir():
             msg = f"Rope snapshot root must already exist: {root}"
@@ -79,10 +78,9 @@ class FlextInfraRopeProject(Project):
     @override
     def _init_source_folders(self) -> None:
         """Initialize configured source roots without Rope's warning wrapper.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         source_folders = self.prefs.get("source_folders", [])
         if source_folders is None:

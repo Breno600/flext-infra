@@ -216,10 +216,9 @@ class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(
     @staticmethod
     def _require_settings_owner(package: str, sources: t.MappingKV[Path, str]) -> None:
         """Require the destination settings API to exist in the source inventory.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         owners = [
             source

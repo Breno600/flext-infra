@@ -19,13 +19,12 @@ class FlextInfraCodemodSnapshotReconciler:
     @staticmethod
     def config_root(rule: Path) -> Path:
         """Resolve the nearest ast-grep configuration that owns a rule.
-
+        
         Returns:
             The resulting ``Path``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         for ancestor in rule.resolve().parents:
             if (ancestor / c.Infra.CODEMOD_CONFIG_FILENAME).is_file():
@@ -36,14 +35,12 @@ class FlextInfraCodemodSnapshotReconciler:
     @staticmethod
     def fixture_directories(config_root: Path) -> m.Infra.ModFixtureDirectories:
         """Resolve only declared fixture directories without crossing symlinks.
-
+        
         Returns:
             The resulting ``m.Infra.ModFixtureDirectories``.
-
+        
         Raises:
-            TypeError: On failure.
-            ValueError: On failure.
-
+        
         """
         config_path = config_root / c.Infra.CODEMOD_CONFIG_FILENAME
         if not stat.S_ISREG(config_path.lstat().st_mode):
@@ -150,13 +147,12 @@ class FlextInfraCodemodSnapshotReconciler:
     @staticmethod
     def _invalid_cases(test_dir: Path) -> t.MappingKV[str, frozenset[str]]:
         """Map every rule test in one test directory to its invalid cases.
-
+        
         Returns:
             The resulting ``t.MappingKV[str, frozenset[str]]``.
-
+        
         Raises:
-            TypeError: On failure.
-
+        
         """
         cases: MutableMapping[str, frozenset[str]] = {}
         for test_file in sorted(test_dir.glob(f"*{c.Infra.CODEMOD_RULE_SUFFIX}")):
@@ -177,13 +173,12 @@ class FlextInfraCodemodSnapshotReconciler:
     @staticmethod
     def _snapshot_cases(snapshot: Path) -> t.StrSequence:
         """Return the test cases one committed snapshot file projects.
-
+        
         Returns:
             The test cases one committed snapshot file projects.
-
+        
         Raises:
-            TypeError: On failure.
-
+        
         """
         payload = u.Cli.yaml_safe_load(snapshot).unwrap()
         projections = payload.get(c.Infra.CODEMOD_SNAPSHOTS_KEY, {})

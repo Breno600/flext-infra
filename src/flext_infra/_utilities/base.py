@@ -203,13 +203,12 @@ class FlextInfraUtilitiesBase:
         update_all: bool = False,
     ) -> t.StrSequence:
         """Build one ast-grep scan command with explicit cwd-relative targets.
-
+        
         Returns:
             The resulting ``t.StrSequence``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         if not targets or any(Path(target).is_absolute() for target in targets):
             msg = "ast-grep scan targets must be nonempty and cwd-relative"
@@ -255,13 +254,12 @@ class FlextInfraUtilitiesBase:
         rule_path: Path,
     ) -> t.Pair[frozenset[str], frozenset[str]]:
         """Return every document ID and the subset carrying an automatic fix.
-
+        
         Returns:
             Every document ID and the subset carrying an automatic fix.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         rule_ids: set[str] = set()
         fixable_ids: set[str] = set()

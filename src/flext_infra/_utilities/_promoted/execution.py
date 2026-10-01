@@ -27,17 +27,16 @@ class FlextInfraUtilitiesPromotedExecution(FlextInfraUtilitiesPromotedInvocation
     @classmethod
     def promoted_run(cls, command: p.Infra.PromotedCommand) -> int:
         """Run one promoted command from its owner root and stream it live.
-
+        
         The single workspace venv is authoritative for every inherited command;
         the owner root only fixes the working directory. The child is not
         captured, so output, Ctrl-C/SIGINT, and the exact exit code propagate.
-
+        
         Returns:
             The resulting ``int``.
-
+        
         Raises:
-            PromotedRegistryError: On failure.
-
+        
         """
         from flext_infra import settings, u
 

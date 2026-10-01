@@ -148,13 +148,12 @@ def _write_member(root: Path) -> None:
 
 def _load_module(path: Path) -> ModuleType:
     """Import one real module from its file path.
-
+    
     Returns:
         The resulting ``ModuleType``.
-
+    
     Raises:
-        RuntimeError: On failure.
-
+    
     """
     spec = importlib.util.spec_from_file_location(path.stem, path)
     if spec is None or spec.loader is None:

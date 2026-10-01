@@ -35,10 +35,9 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         preserve_canonical_aliases: bool = False,
     ) -> None:
         """Normalize imports for one rewritten file; a failed cleanup is loud.
-
+        
         Raises:
-            RuntimeError: On failure.
-
+        
         """
         cleanup_result = FlextInfraUtilitiesRopeImports.normalize_imports(
             rope_project,
@@ -102,13 +101,12 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         gates: t.StrSequence | None,
     ) -> t.Triple[Path, Path, t.VariadicTuple[str]] | None:
         """Move named top-level protocol classes into the canonical protocols module.
-
+        
         Returns:
             The resulting ``t.Triple[Path, Path, t.VariadicTuple[str]] | None``.
-
+        
         Raises:
-            RuntimeError: On failure.
-
+        
         """
         source = source_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         lines = source.splitlines()
@@ -287,17 +285,16 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         gates: t.StrSequence | None,
     ) -> None:
         """Move typing alias lines.
-
+        
         A module-private alias stays where it is. Promoting one to the shared
         public typings module publishes a name its own declaration says is not
         published: pyright then rejects every consumer with
         ``reportPrivateUsage`` and ruff reports the alias as unused at its new
         home, so the whole move validates red and is reverted. Filtering here
         rather than at each caller keeps one owner for the rule.
-
+        
         Raises:
-            RuntimeError: On failure.
-
+        
         """
         public_alias_names = {name for name in alias_names if not name.startswith("_")}
         if not public_alias_names:
@@ -673,11 +670,9 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         moves: t.SequenceOf[t.Triple[Path, Path, t.VariadicTuple[str]]],
     ) -> None:
         """Rewrite moved imports.
-
+        
         Raises:
-            RuntimeError: On failure.
-            ValueError: On failure.
-
+        
         """
         with FlextInfraUtilitiesRopeCore.open_project(project_root) as rope_project:
             mappings: t.MutableSequenceOf[t.Triple[str, str, t.VariadicTuple[str]]] = []

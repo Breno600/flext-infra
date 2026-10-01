@@ -49,10 +49,9 @@ class TestsFlextInfraUpgLockAtomicPublication:
         tmp_path: Path,
     ) -> None:
         """A run killed while uv resolves leaves the lock and checkout intact.
-
+        
         Raises:
-            BaseExceptionGroup: On failure.
-
+        
         """
         root, lock, committed = self._committed_project(tmp_path, python=">=3.13")
         # uv opens the find-links wheel to read its metadata. A FIFO without a
@@ -198,10 +197,9 @@ class TestsFlextInfraUpgLockAtomicPublication:
     @staticmethod
     def _release_fifo(fifo: Path) -> None:
         """Give any reader still waiting on the FIFO its end of file.
-
+        
         Raises:
-            OSError: On failure.
-
+        
         """
         try:
             writer = os.open(fifo, os.O_WRONLY | os.O_NONBLOCK)

@@ -155,13 +155,12 @@ class FlextInfraSmellsGate(FlextInfraGate):
         check_dirs: t.StrSequence,
     ) -> t.StrSequence:
         """The project's scan command (check() names its check dirs itself).
-
+        
         Returns:
             The resulting ``t.StrSequence``.
-
+        
         Raises:
-            FileNotFoundError: On failure.
-
+        
         """
         _ = ctx, check_dirs
         binary = self._resolve_binary()
@@ -188,13 +187,12 @@ class FlextInfraSmellsGate(FlextInfraGate):
 
     def _scan_command(self, binary: str, project_dir: Path) -> t.StrSequence:
         """Name the project's paths explicitly; qlty scans them in full.
-
+        
         Returns:
             The resulting ``t.StrSequence``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         paths = tuple(
             (project_dir / directory).relative_to(self._repository_root).as_posix()

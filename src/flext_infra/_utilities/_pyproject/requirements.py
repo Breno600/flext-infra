@@ -137,13 +137,12 @@ class FlextInfraUtilitiesPyprojectRequirements:
     @staticmethod
     def dependency_order_key(requirement: str) -> t.Pair[str, str]:
         """Order preserved and conformed requirements by name and complete spec.
-
+        
         Returns:
             The resulting ``t.Pair[str, str]``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         name = FlextInfraUtilitiesDependencies.dep_name(requirement)
         if name is None:

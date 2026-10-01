@@ -119,13 +119,12 @@ class FlextInfraModelsDepsToolConfig(
             self,
         ) -> FlextInfraModelsDepsToolConfig.PytestWorkerCeiling:
             """Reject ambiguous (both or neither) ceiling forms.
-
+            
             Returns:
                 The resulting ``FlextInfraModelsDepsToolConfig.PytestWorkerCeiling``.
-
+            
             Raises:
-                ValueError: On failure.
-
+            
             """
             if (self.workers is None) == (self.cpu_fraction is None):
                 msg = "PytestWorkerCeiling requires exactly one of workers or cpu_fraction"
@@ -442,13 +441,12 @@ class FlextInfraModelsDepsToolConfig(
         @u.model_validator(mode="after")
         def _validate_execution_limits(self) -> Self:
             """Keep item and termination budgets inside the hard invocation cap.
-
+            
             Returns:
                 The resulting ``Self``.
-
+            
             Raises:
-                ValueError: On failure.
-
+            
             """
             if self.case_timeout_seconds >= self.run_timeout_seconds:
                 msg = "pytest case timeout must be less than run timeout"

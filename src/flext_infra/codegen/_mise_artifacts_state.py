@@ -31,7 +31,7 @@ class FlextInfraMiseArtifactsState:
     @classmethod
     def _hosting_device(cls, path: Path) -> int:
         """Return the filesystem device that will host ``path``.
-
+        
         The check below proves every destination shares one device with the
         project root, because the transaction publishes by rename and a rename
         cannot cross filesystems. A destination directory need not exist yet --
@@ -40,13 +40,12 @@ class FlextInfraMiseArtifactsState:
         `FileNotFoundError`, failing generation for every new project. What will
         host it is its nearest existing ancestor, which is what the rename
         actually has to satisfy.
-
+        
         Returns:
             The filesystem device that will host ``path``.
-
+        
         Raises:
-            FileNotFoundError: On failure.
-
+        
         """
         for candidate in (path, *path.parents):
             if candidate.exists():

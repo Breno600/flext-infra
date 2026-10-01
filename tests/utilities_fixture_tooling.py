@@ -45,10 +45,9 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
     @staticmethod
     def reap_mypy_descendant(pid_file: Path, timeout: int) -> None:
         """Reap a registered workload in pytest teardown, preserving call failures.
-
+        
         Raises:
-            RuntimeError: On failure.
-
+        
         """
         pid = pid_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         snapshot = u.Cli.run_raw(
@@ -109,18 +108,16 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
     @staticmethod
     def provision_checkout(root: Path) -> None:
         """Make a fixture root a checkout whose environment owns the edit tools.
-
+        
         Protected edits resolve every ``c.Infra.LINT_TOOLS`` executable plus
         python and pytest fail-closed from the checkout's runtime environment
         (``u.Infra.runtime_environment_dir``), which requires a Git checkout.
         The fixture becomes one through the single fixture Git owner and
         receives the real binaries this suite was provisioned with, linked
         inside the pytest-managed tree; a missing tool fails the fixture.
-
+        
         Raises:
-            FileExistsError: On failure.
-            FileNotFoundError: On failure.
-
+        
         """
         TestsFlextInfraUtilitiesGitMixin.initialize_git_repo(root)
         provisioned = Path(sys.executable).parent

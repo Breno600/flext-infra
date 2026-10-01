@@ -64,15 +64,14 @@ class FlextInfraPytestCollection:
     @pytest.hookimpl(wrapper=True, tryfirst=True)
     def pytest_collection_finish(session: pytest.Session) -> Generator[None]:
         """Validate before xdist publishes worker IDs, preserving raw failures.
-
+        
         Both manifest routes are runner-passed options: a session that names
         neither imports no model. A requested manifest loads only its owning
         model module, never the whole model facade, because every runner
         collection process pays that import.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         selected: str | None = session.config.getoption(
             FlextInfraConstantsCheck.PYTEST_SELECTED_COLLECTION_OPTION,

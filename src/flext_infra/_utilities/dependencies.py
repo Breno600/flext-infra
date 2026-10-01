@@ -126,14 +126,12 @@ class FlextInfraUtilitiesDependencies:
         payload: t.JsonMapping,
     ) -> t.StrSequence:
         """Return strict names from the PEP 621 runtime dependency array.
-
+        
         Returns:
             Strict names from the PEP 621 runtime dependency array.
-
+        
         Raises:
-            TypeError: On failure.
-            ValueError: On failure.
-
+        
         """
         project = payload.get(c.Infra.PROJECT)
         if not isinstance(project, Mapping):
@@ -362,14 +360,12 @@ class FlextInfraUtilitiesDependencies:
     @classmethod
     def resolved_dependency_versions(cls) -> t.MappingKV[str, str]:
         """Read registry versions from the provisioned runtime, never release provenance.
-
+        
         Returns:
             The resulting ``t.MappingKV[str, str]``.
-
+        
         Raises:
-            TypeError: On failure.
-            ValueError: On failure.
-
+        
         """
         versions: MutableMapping[str, str] = {}
         for distribution in distributions():

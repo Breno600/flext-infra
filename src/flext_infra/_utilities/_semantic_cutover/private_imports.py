@@ -106,13 +106,12 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
         findings: t.SequenceOf[m.Infra.ModScanFinding],
     ) -> t.Infra.PrivateImportReferences:
         """Resolve every reported cross-owner private import to its public owner.
-
+        
         Returns:
             The resulting ``t.Infra.PrivateImportReferences``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         cross_owner_statements: list[str] = []
         for finding in findings:
@@ -261,13 +260,12 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
         facades: t.MappingKV[str, t.VariadicTuple[t.Quad[ast.Module, str, str, str]]],
     ) -> t.Infra.TransformResult:
         """Rewrite one module's private imports and prove zero residue.
-
+        
         Returns:
             The resulting ``t.Infra.TransformResult``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         tree = ast.parse(source, filename=str(file_path))
         removals: MutableMapping[str, set[str]] = {}

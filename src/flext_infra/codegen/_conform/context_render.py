@@ -529,11 +529,11 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
     @staticmethod
     def _beads_project_id(repository_root: Path) -> str | None:
         """Return the checkout's own ledger identity, or None if unminted.
-
+        
         `.beads/identity.toml` is the canonical owner (`[project] id`); the
         generated marker is its projection. An absent file is not a failure —
         it means Beads has not minted an identity for this checkout yet.
-
+        
         Why the marker read-back: identity.toml is a gitignored per-checkout
         file, so CI clones and fresh runners run unminted while the TRACKED
         marker still carries the ledger identity the repository was cloned
@@ -543,14 +543,12 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         observed in a consumer rig. When identity.toml is absent, read the id back from the
         existing marker so an unminted checkout preserves the identity it
         cloned instead of clobbering it.
-
+        
         Returns:
             The checkout's own ledger identity, or None if unminted.
-
+        
         Raises:
-            RuntimeError: On failure.
-            ValueError: On failure.
-
+        
         """
         identity = repository_root / c.Infra.BEADS_DIRNAME / "identity.toml"
         if identity.is_file():

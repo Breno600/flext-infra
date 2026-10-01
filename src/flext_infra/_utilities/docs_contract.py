@@ -201,13 +201,12 @@ class FlextInfraUtilitiesDocsContract:
         rendered_contract: t.JsonMapping,
     ) -> t.JsonMapping:
         """Bind rendered API analysis to the current authenticated pyproject bytes.
-
+        
         Returns:
             The resulting ``t.JsonMapping``.
-
+        
         Raises:
-            TypeError: On failure.
-
+        
         """
         payload = FlextInfraUtilitiesDocsScope.project_payload(project_root)
         project_value = payload.get(c.Infra.PROJECT)

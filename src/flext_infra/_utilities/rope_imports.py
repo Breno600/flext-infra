@@ -121,13 +121,12 @@ class FlextInfraUtilitiesRopeImports:
         in_hierarchy: bool = False,
     ) -> t.SequenceOf[t.Infra.RopeLocation]:
         """Find all occurrences of the symbol at offset across the project.
-
+        
         Returns:
             The resulting ``t.SequenceOf[t.Infra.RopeLocation]``.
-
+        
         Raises:
-            RuntimeError: On failure.
-
+        
         """
         try:
             return FlextInfraUtilitiesRopeRuntime.runtime_find_occurrences(
@@ -175,18 +174,17 @@ class FlextInfraUtilitiesRopeImports:
         dependent_import_targets: t.StrSequence = (),
     ) -> t.VariadicTuple[t.Infra.RopeResource]:
         """Build the minimal Rope resource set for semantic occurrence searches.
-
+        
         The workspace name index already narrows the candidate module set to
         files that contain ``name`` textually. This helper converts that cheap
         index into concrete Rope resources so callers can still rely on Rope's
         semantic identity checks without scanning the full project.
-
+        
         Returns:
             The resulting ``t.VariadicTuple[t.Infra.RopeResource]``.
-
+        
         Raises:
-            RuntimeError: On failure.
-
+        
         """
         occurrences = rope_workspace.name_index().get(name, ())
         resolved_definition = definition_path.resolve()
@@ -335,14 +333,13 @@ class FlextInfraUtilitiesRopeImports:
         file_paths: t.SequenceOf[Path],
     ) -> MutableMapping[Path, list[t.Pair[str, t.VariadicTuple[str]]]]:
         """Collect canonical runtime-alias imports eligible for semantic restore.
-
+        
         Returns:
             The resulting ``MutableMapping[Path, list[t.Pair[str,
                 t.VariadicTuple[str]]]]``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         runtime_aliases = u.runtime_alias_names(c.Infra.PKG_INFRA_UNDERSCORE)
         canonical_modules = frozenset({
@@ -640,13 +637,12 @@ class FlextInfraUtilitiesRopeImports:
         moved_aliases: t.Infra.StrSet,
     ) -> t.SequenceOf[t.Pair[str, str | None]]:
         """Merge ``moved_aliases`` into the target import; create one if missing.
-
+        
         Returns:
             The resulting ``t.SequenceOf[t.Pair[str, str | None]]``.
-
+        
         Raises:
-            RuntimeError: On failure.
-
+        
         """
         sorted_moved = sorted(moved_aliases)
         if target_import_stmt is None:
@@ -860,16 +856,15 @@ class FlextInfraUtilitiesRopeImports:
         index: m.Infra.RopeWorkspaceIndex,
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]:
         """Plan absolute-form rewrites for every relative from-import.
-
+        
         Package initializers are generated and render their own imports, so
         only authored modules are planned.
-
+        
         Returns:
             The resulting ``p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         file_plans: list[m.Infra.CodegenFilePlan] = []
         for entry in sorted(

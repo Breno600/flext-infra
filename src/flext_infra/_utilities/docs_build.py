@@ -28,13 +28,12 @@ class FlextInfraUtilitiesDocsBuild:
     @staticmethod
     def _module_callable(module: ModuleType, name: str) -> p.Infra.MkDocsAnyCallable:
         """Return a named callable from a lazily loaded module.
-
+        
         Returns:
             A named callable from a lazily loaded module.
-
+        
         Raises:
-            OSError: On failure.
-
+        
         """
         value: p.AttributeProbe = getattr(module, name)
         if callable(value):

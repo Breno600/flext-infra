@@ -75,13 +75,12 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
     @staticmethod
     def _git_head_is_unborn(repo: Repo) -> bool:
         """Distinguish an absent symbolic branch from broken refs or objects.
-
+        
         Returns:
             The resulting ``bool``.
-
+        
         Raises:
-            GitCommandError: On failure.
-
+        
         """
         if repo.head.is_valid():
             return False

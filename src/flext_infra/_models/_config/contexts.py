@@ -30,13 +30,12 @@ class FlextInfraConfigModelsContexts:
     @staticmethod
     def _validated_hatch_build_hook_path(value: Path | None) -> Path | None:
         """Return one normalized project-relative Hatch hook declaration.
-
+        
         Returns:
             One normalized project-relative Hatch hook declaration.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         if value is None:
             return None
@@ -327,16 +326,15 @@ class FlextInfraConfigModelsContexts:
         @property
         def _config_base(self) -> FlextInfraConfigModelsScaffold.ScaffoldConfigBaseSpec:
             """ENFORCE-042 config base selected from the declared profile.
-
+            
             The fleet-converged ``_config.py`` composes ``FlextSettings`` FIRST
             with the project's capability base. The base is a property of the
             declared dependency profile, never a per-project hand choice: the
             first entry of ``scaffold.project.config_bases`` whose distribution
             the profile depends on (its runtime requirements or its upstream).
-
+            
             Raises:
-                ValueError: On failure.
-
+            
             """
             profile = self.dependency_profile
             depended = {

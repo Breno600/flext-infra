@@ -20,13 +20,12 @@ class FlextInfraMypyProfiler:
     @staticmethod
     def run(invocation: m.Infra.MypyInvocation) -> int:
         """Run the public checker API, whose clean exit lets cProfile save data.
-
+        
         Returns:
             The resulting ``int``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         from flext_infra import u
 

@@ -64,14 +64,13 @@ class FlextInfraRefactorCensusApplyFormattingMixin:
     @staticmethod
     def normalize_touched_files(paths: Iterable[Path]) -> None:
         """Normalize import order and whitespace on files an apply touched.
-
+        
         Two apply paths need this and there is one owner: the census apply
         cascade and the semantic cutover publication. It is public because
         it is consumed across surfaces, not because it is a helper.
-
+        
         Raises:
-            RuntimeError: On failure.
-
+        
         """
         existing = sorted({str(path) for path in paths if path.is_file()})
         if not existing:

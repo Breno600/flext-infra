@@ -57,13 +57,12 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
         total: int,
     ) -> bool:
         """Compare counts against the baseline file and return pass/fail.
-
+        
         Returns:
             The resulting ``bool``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         baseline_obj = u.Cli.json_deep_mapping(
             rules,

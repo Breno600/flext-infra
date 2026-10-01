@@ -68,14 +68,12 @@ class FlextInfraRenameSymbols:
         rewrites: t.SequenceOf[m.Infra.SourceRewrite],
     ) -> t.VariadicTuple[t.Triple[int, int, bool]]:
         """Retain effective-member identity after Rope's receiver/MRO match.
-
+        
         Returns:
             The resulting ``t.VariadicTuple[t.Triple[int, int, bool]]``.
-
+        
         Raises:
-            TypeError: On failure.
-            ValueError: On failure.
-
+        
         """
         runtime = u.Infra
         module = project.get_pymodule(change.resource)
@@ -150,14 +148,12 @@ class FlextInfraRenameSymbols:
         bindings: t.MappingKV[str, t.StrSequence],
     ) -> t.MappingKV[Path, t.VariadicTuple[m.Infra.SourceRewrite]]:
         """Merge non-overlapping Rope previews against one immutable snapshot.
-
+        
         Returns:
             The resulting ``t.MappingKV[Path, t.VariadicTuple[m.Infra.SourceRewrite]]``.
-
+        
         Raises:
-            TypeError: On failure.
-            ValueError: On failure.
-
+        
         """
         root = Path(project.root.real_path)
         ordered_paths = tuple(sorted(sources))

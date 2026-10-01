@@ -319,13 +319,12 @@ class FlextInfraCodegenGenerationStandardMixin(
     @staticmethod
     def _project_first_party_names(project_root: Path) -> t.StrSequence:
         """Read strict Ruff policy, deriving namespaces only when it is absent.
-
+        
         Returns:
             The resulting ``t.StrSequence``.
-
+        
         Raises:
-            TypeError: On failure.
-
+        
         """
         project_payload = u.Infra.pyproject_payload(
             (project_root / c.PYPROJECT_FILENAME).resolve(),

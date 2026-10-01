@@ -122,16 +122,15 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
         tree: ast.Module,
     ) -> t.VariadicTuple[t.Quad[str, str, str, str]]:
         """Return every ``(module, letter, local, facade)`` rebound letter base.
-
+        
         One facade may extend several parents by their letters; the shapes
         are ordered by parent module so the rewrite is deterministic.
-
+        
         Returns:
             Every ``(module, letter, local, facade)`` rebound letter base.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         imports: MutableMapping[str, t.Triple[str, str, int]] = {}
         rebinds: MutableMapping[str, str] = {}

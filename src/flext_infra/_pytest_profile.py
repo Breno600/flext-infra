@@ -33,13 +33,12 @@ class FlextInfraPytestProfile:
         collection_command_prefix: t.StrTuple,
     ) -> int:
         """Start profiling before importing the runner or any FLEXT service.
-
+        
         Returns:
             The resulting ``int``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         if not collection_command_prefix:
             msg = "profile execution requires an injected collection command prefix"

@@ -126,13 +126,12 @@ class FlextInfraMypyGate(FlextInfraGate):
         check_dirs: t.StrSequence,
     ) -> t.StrSequence:
         """Build check command.
-
+        
         Returns:
             The resulting ``t.StrSequence``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         cfg = self._resolve_config(project_dir, ctx)
         profile_output = u.Cli.process_env().get(c.Infra.MYPY_PROFILE_OUTPUT_ENV)
@@ -161,11 +160,9 @@ class FlextInfraMypyGate(FlextInfraGate):
         targets: t.StrSequence,
     ) -> None:
         """Account for every submitted target from Mypy's native build trace.
-
+        
         Raises:
-            TypeError: On failure.
-            ValueError: On failure.
-
+        
         """
         _ = ctx
         source_lines = (

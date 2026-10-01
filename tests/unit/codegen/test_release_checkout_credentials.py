@@ -53,13 +53,12 @@ class TestsFlextInfraReleaseCheckoutCredentials:
     @staticmethod
     def checkout_credentials(job: t.JsonValue) -> bool:
         """Provide ``checkout_credentials``.
-
+        
         Returns:
             The resulting ``bool``.
-
+        
         Raises:
-            TypeError: On failure.
-
+        
         """
         mapping = t.Cli.JSON_MAPPING_ADAPTER.validate_python(job)
         steps = mapping["steps"]

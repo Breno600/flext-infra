@@ -21,13 +21,12 @@ class FlextInfraDepsFloorProfileWriter:
     @staticmethod
     def _source_paths(root: Path) -> t.SequenceOf[Path]:
         """Elect the local owner from the caller's typed workspace declaration.
-
+        
         Returns:
             The resulting ``t.SequenceOf[Path]``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         root = root.resolve()
         manifests = u.Infra.load_workspace_manifest(root).unwrap()
@@ -66,21 +65,19 @@ class FlextInfraDepsFloorProfileWriter:
         internal_names: t.StrSequence,
     ) -> t.StrSequence:
         """Update dependency_profiles in the caller's local codegen owner.
-
+        
         ``root`` is the modernizer's own declared ``--repository-root``.
         A workspace declares its infrastructure member through its typed
         manifest; a standalone owner carries its own configuration. Neither
         route consults the installed package location.
-
+        
         Returns a list of change descriptions for the deps report.
-
+        
         Returns:
             The resulting ``t.StrSequence``.
-
+        
         Raises:
-            TypeError: On failure.
-            ValueError: On failure.
-
+        
         """
         sources = cls._source_paths(root)
         if not sources:

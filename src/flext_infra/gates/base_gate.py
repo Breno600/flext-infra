@@ -732,13 +732,12 @@ class FlextInfraGate:
         remove_env_keys: t.StrSequence = (),
     ) -> p.Cli.CommandOutput:
         """Run.
-
+        
         Returns:
             The resulting ``p.Cli.CommandOutput``.
-
+        
         Raises:
-            RuntimeError: On failure.
-
+        
         """
         runner = self._runner or u.Cli
         result = runner.run_raw(

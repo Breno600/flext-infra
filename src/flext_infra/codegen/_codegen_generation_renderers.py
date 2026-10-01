@@ -28,13 +28,12 @@ class FlextInfraCodegenGenerationRenderersMixin(
     @staticmethod
     def _template_path(template_name: str) -> Path:
         """Resolve one packaged lazy-init template source.
-
+        
         Returns:
             The resulting ``Path``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         template_root = (Path(__file__).resolve().parent.parent / "templates").resolve()
         template_path = (template_root / template_name).resolve()

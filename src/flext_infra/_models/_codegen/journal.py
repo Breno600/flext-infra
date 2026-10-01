@@ -43,13 +43,12 @@ class FlextInfraModelsCodegenJournalModels:
         @u.model_validator(mode="after")
         def _validate_publication(self) -> Self:
             """Bind a complete staged state to one physical project destination.
-
+            
             Returns:
                 The resulting ``Self``.
-
+            
             Raises:
-                ValueError: On failure.
-
+            
             """
             if not self.project.is_absolute() or not self.before.path.is_relative_to(
                 self.project,
@@ -133,13 +132,12 @@ class FlextInfraModelsCodegenJournalModels:
         @classmethod
         def _validate_path(cls, value: str) -> str:
             """Keep the durable authority lexical and inside the workspace.
-
+            
             Returns:
                 The resulting ``str``.
-
+            
             Raises:
-                ValueError: On failure.
-
+            
             """
             relative = Path(value)
             if (
@@ -155,13 +153,12 @@ class FlextInfraModelsCodegenJournalModels:
         @u.model_validator(mode="after")
         def _validate_disposition(self) -> Self:
             """Bind lifecycle metadata to one physical leaf path.
-
+            
             Returns:
                 The resulting ``Self``.
-
+            
             Raises:
-                ValueError: On failure.
-
+            
             """
             if (self.phase == "transaction") != (self.disposition == "temporary"):
                 msg = "transaction phase and temporary disposition must coincide"
@@ -279,13 +276,12 @@ class FlextInfraModelsCodegenJournalModels:
         @classmethod
         def _validate_source_path(cls, value: Path) -> Path:
             """Reject relative or lexically escaping source identities.
-
+            
             Returns:
                 The resulting ``Path``.
-
+            
             Raises:
-                ValueError: On failure.
-
+            
             """
             if not value.is_absolute() or ".." in value.parts:
                 msg = f"unsafe generation source path: {value}"
@@ -295,13 +291,12 @@ class FlextInfraModelsCodegenJournalModels:
         @u.model_validator(mode="after")
         def _validate_source_physical_state(self) -> Self:
             """Reject a persisted source identity that represents a reparse point.
-
+            
             Returns:
                 The resulting ``Self``.
-
+            
             Raises:
-                ValueError: On failure.
-
+            
             """
             physical = (
                 self.sha256,
@@ -540,13 +535,12 @@ class FlextInfraModelsCodegenJournalModels:
         @u.model_validator(mode="after")
         def _validate_original_tuple(self) -> Self:
             """Require complete recovery identity exactly when original existed.
-
+            
             Returns:
                 The resulting ``Self``.
-
+            
             Raises:
-                ValueError: On failure.
-
+            
             """
             original = (
                 self.original_backup,

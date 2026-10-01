@@ -39,17 +39,16 @@ class FlextInfraGateRegistry:
         runners: t.MappingKV[str, p.Cli.CommandRunner] | None = None,
     ) -> None:
         """Build the gate-id to gate-class mapping used by check execution.
-
+        
         The gate classes and ``c.Infra.SARIF_TOOL_INFO`` are two producers of
         the same conclusion — the gate vocabulary — keyed by ``gate_id``. They
         collapse here; any divergence (a registered class the vocabulary does
         not know, a vocabulary id with no class, or two classes claiming one
         id) is a defect that fails the registry before a single gate can run,
         never a gate that silently cannot be reached through ``make check``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         classes = self._gate_classes()
         self._gates: MutableMapping[str, type[FlextInfraGate]] = {

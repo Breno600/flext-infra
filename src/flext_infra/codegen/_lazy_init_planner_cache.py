@@ -56,13 +56,12 @@ class FlextInfraCodegenLazyInitPlannerCacheMixin:
 
     def _package_init_exports(self, package_name: str) -> frozenset[str]:
         """Return names exported from the package __init__.py.
-
+        
         Returns:
             Names exported from the package __init__.py.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         index = self.rope_workspace.workspace_index
         package_dir = index.package_dir_by_name.get(package_name)

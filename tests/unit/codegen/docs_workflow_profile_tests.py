@@ -26,13 +26,12 @@ class TestsFlextInfraCodegenDocsWorkflowProfile:
     @staticmethod
     def _artifact(destination: str) -> m.Infra.TemplateEntrySpec:
         """Return the declared render artifact for one destination.
-
+        
         Returns:
             The declared render artifact for one destination.
-
+        
         Raises:
-            AssertionError: On failure.
-
+        
         """
         for entry in config.Infra.codegen.templates.entries:
             if entry.destination == destination:

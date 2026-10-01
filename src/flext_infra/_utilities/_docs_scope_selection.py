@@ -97,13 +97,12 @@ class FlextInfraUtilitiesDocsScopeSelectionMixin:
         output_dir: Path | str,
     ) -> m.Infra.DocScope | None:
         """Build a selected path scope when it is a local pyproject project.
-
+        
         Returns:
             The resulting ``m.Infra.DocScope | None``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         relative = Path(name)
         if relative.is_absolute() or ".." in relative.parts:
@@ -131,13 +130,12 @@ class FlextInfraUtilitiesDocsScopeSelectionMixin:
     @staticmethod
     def _report_directory(project_root: Path, output_dir: Path | str) -> Path:
         """Return one lexical report path owned by its project root.
-
+        
         Returns:
             One lexical report path owned by its project root.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         relative = Path(output_dir)
         if relative.is_absolute() or ".." in relative.parts:

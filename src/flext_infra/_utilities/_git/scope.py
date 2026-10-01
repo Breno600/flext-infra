@@ -27,19 +27,17 @@ class FlextInfraUtilitiesGitScopeMixin(FlextInfraUtilitiesGitSemanticIndexMixin)
     @classmethod
     def _git_repo_root(cls, scope_root: str) -> str | None:
         """Return the enclosing Git worktree root, or ``None`` outside any worktree.
-
+        
         Only the canonical three-way work-tree probe may classify a path as
         outside Git; a genuine probe or open failure raises instead of being
         reported as absence. Git is a required dependency of this scope probe;
         unavailable executables must fail rather than hide tracked-file scope.
-
+        
         Returns:
             The enclosing Git worktree root, or ``None`` outside any worktree.
-
+        
         Raises:
-            OSError: On failure.
-            RuntimeError: On failure.
-
+        
         """
         resolved_scope = Path(scope_root).resolve()
         probe = FlextInfraUtilitiesGitSemanticIdentityMixin.git_is_inside_work_tree

@@ -23,13 +23,12 @@ class FlextInfraUtilitiesNetwork:
     @staticmethod
     def _connection(url: str, *, timeout_seconds: float) -> HTTPConnection:
         """Open one connection for an ``http``/``https`` URL, or raise.
-
+        
         Returns:
             The resulting ``HTTPConnection``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         parts = urlsplit(url)
         if parts.scheme not in {"http", "https"} or not parts.hostname:

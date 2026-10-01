@@ -424,13 +424,12 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         profile: str | None = None,
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
         """Validate the handwritten Make surface against its profile contract.
-
+        
         Returns:
             The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         policy = config.make.custom_handler_policies.get(
             profile or "",

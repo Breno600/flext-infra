@@ -66,13 +66,12 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
         context: m.Infra.LazyInitPackageContext,
     ) -> t.MutableLazyAliasMap:
         """Return the lazy export map for a package (excluding child packages).
-
+        
         Returns:
             The lazy export map for a package (excluding child packages).
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         package_entry = self._package_entry(context.pkg_dir)
         # Operator init law (2026-09-16): every package with public children —

@@ -132,13 +132,12 @@ class FlextInfraRenameSources:
         pairs: t.SequenceOf[t.Pair[str, str]],
     ) -> t.VariadicTuple[m.Infra.SourceRewrite]:
         """Select real docstrings and comments; executable literals retain bytes.
-
+        
         Returns:
             The resulting ``t.VariadicTuple[m.Infra.SourceRewrite]``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         lines = source.splitlines(keepends=True)
         offsets = [0]

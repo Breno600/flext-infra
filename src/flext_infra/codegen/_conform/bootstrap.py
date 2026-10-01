@@ -95,7 +95,7 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
         canonical_names: frozenset[str],
     ) -> t.VariadicTuple[m.Infra.MakeVerbSpec]:
         """Union declared and discovered script verbs deduplicated by name.
-
+        
         Why: object-level dedup never converges because declared
         verbs carry their canonical config descriptions while discoveries carry
         ``Script command: <name>``, so every verb entered ``extra_verbs`` twice
@@ -104,13 +104,12 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
         a discovery is dropped when it would shadow a canonical ``make.verbs``
         builtin, whose native ``_builtin-<verb>`` implementation is the only
         owner of that name in the generated Makefile.
-
+        
         Returns:
             The resulting ``t.VariadicTuple[m.Infra.MakeVerbSpec]``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         merged: MutableMapping[str, m.Infra.MakeVerbSpec] = {}
         for verb in discovered:

@@ -52,18 +52,17 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         root: Path,
     ) -> t.Pair[t.MappingKV[str, frozenset[str]], t.MappingKV[Path, str]]:
         """Return the runtime import graph and the module name of each file.
-
+        
         Edges come from Rope's module-level import table, which leaves
         ``if TYPE_CHECKING:`` imports and function-local imports out: only
         imports that run when the module loads can form a cycle. Each target
         is truncated to the longest module the project defines.
-
+        
         Returns:
             The runtime import graph and the module name of each file.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         raw: MutableMapping[str, set[str]] = {}
         modules: MutableMapping[Path, str] = {}
@@ -131,17 +130,16 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         name: str | None,
     ) -> bool:
         """Return whether one import of ``file_path`` is an edge of a cycle.
-
+        
         ``imported`` is the import's module as written (relative dots
         included); ``name`` is the imported name of a from-import, which is
         itself a module when the statement imports a submodule.
-
+        
         Returns:
             Whether one import of ``file_path`` is an edge of a cycle.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         graph, modules = cls.project_import_graph(root)
         source = modules.get(file_path.resolve())
@@ -228,13 +226,12 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
     @staticmethod
     def _nested_class_bases(facade_file: Path, namespace: str) -> t.StrSequence:
         """Return the base names of class ``namespace`` nested in the facade.
-
+        
         Returns:
             The base names of class ``namespace`` nested in the facade.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         tree = FlextInfraUtilitiesRopeAnalysisAstHelpers.parse_string_module(
             facade_file.read_text(encoding=c.Cli.ENCODING_DEFAULT),
@@ -313,13 +310,12 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
     @staticmethod
     def _codemod_runtime_aliases(root: Path, package: str, own: str) -> frozenset[str]:
         """Read local aliases from source and dependency aliases from runtime.
-
+        
         Returns:
             The resulting ``frozenset[str]``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         if package == own:
             layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
@@ -338,13 +334,12 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         file_path: Path,
     ) -> bool:
         """Evaluate one predicate against the project SSOT it names.
-
+        
         Returns:
             The resulting ``bool``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         value, of = captured
         predicate = condition.predicate
@@ -490,13 +485,12 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
     @lru_cache(maxsize=256)
     def _package_exports(cls, module: str) -> frozenset[str]:
         """Names an installed module declares in its ``__all__`` (not imported).
-
+        
         Returns:
             The resulting ``frozenset[str]``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         spec = find_spec(module)
         if spec is None or spec.origin is None:
@@ -547,16 +541,15 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
     @staticmethod
     def _has_class_stem(root: Path, file_path: Path, name: str) -> bool:
         """Return whether a class name carries the project's class stem.
-
+        
         The stem is derived from the project name; a module of the project's
         tests tree prefixes it with ``Tests``.
-
+        
         Returns:
             Whether a class name carries the project's class stem.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
         if layout is None:
@@ -662,16 +655,15 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         root: Path,
     ) -> p.Result[t.VariadicTuple[m.Infra.CensusViolation]]:
         """Convert the engine-backed namespace report into census violations.
-
+        
         A violation is fixable when its rule declares a token fix or a rope
         relocation in the project's rule plan.
-
+        
         Returns:
             The resulting ``p.Result[t.VariadicTuple[m.Infra.CensusViolation]]``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         if validation.failure:
             return r[t.VariadicTuple[m.Infra.CensusViolation]].from_failure(validation)

@@ -90,14 +90,13 @@ class FlextInfraUtilitiesDocsGuidesMixin:
         source_states: t.SequenceOf[m.Cli.AtomicFileState],
     ) -> p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]:
         """Plan root-owned guide projections from authenticated snapshot bytes.
-
+        
         Returns:
             The resulting
                 ``p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         from flext_infra import u
 

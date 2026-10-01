@@ -60,14 +60,12 @@ class FlextInfraUtilitiesRopeClassMove:
         sources: t.MappingKV[Path, str],
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
         """Preview one identity-preserving move inside a closed source inventory.
-
+        
         Returns:
             The resulting ``t.VariadicTuple[m.Infra.SemanticMigrationEdit]``.
-
+        
         Raises:
-            TypeError: On failure.
-            ValueError: On failure.
-
+        
         """
         if request.apply:
             msg = "immutable class move planning requires apply=False"
@@ -115,14 +113,12 @@ class FlextInfraUtilitiesRopeClassMove:
         request: m.Infra.ClassMoveRequest,
     ) -> t.Pair[Path, p.Infra.RopeMoveGlobal]:
         """Resolve both execution and planning from the exact original declaration.
-
+        
         Returns:
             The resulting ``t.Pair[Path, p.Infra.RopeMoveGlobal]``.
-
+        
         Raises:
-            FileNotFoundError: On failure.
-            ValueError: On failure.
-
+        
         """
         root = Path(request.rope_project.root.real_path).resolve()
         source_file = cls._owned_path(root, request.source_file)

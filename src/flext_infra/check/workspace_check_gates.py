@@ -159,18 +159,17 @@ class FlextInfraWorkspaceCheckGatesMixin:
         ctx: m.Infra.GateContext,
     ) -> m.Infra.ProjectResult:
         """Run gates for one project and retain every executed gate in order.
-
+        
         Fixers mutate shared files, so an ``--apply`` run chains every gate on
         the previous one. Read-only gates share no mutable state and run as one
         parallel wave; reporting retains the complete wave, including failures
         after the first one. Serialized fail-fast runs stop at their failed gate.
-
+        
         Returns:
             The resulting ``m.Infra.ProjectResult``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         project_name = project_dir.name
         result = m.Infra.ProjectResult(project=project_name)

@@ -26,19 +26,18 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
     @staticmethod
     def _project_state(project_root: Path) -> mw.ProjectPyprojectState:
         """Return project state bound to the current authenticated file bytes.
-
+        
         When the pyproject is absent or empty, the returned state carries
         empty ``project_name``/``package_name`` (legitimate "not a project"
         signal). When the pyproject is present but missing ``[project]`` or
         ``[project].name``, :meth:`project_name_from_payload` raises — no
         silent fallback to directory-name.
-
+        
         Returns:
             Project state bound to the current authenticated file bytes.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         root = FlextInfraUtilitiesDocsScopeStateMixin.absolute_lexical(project_root)
         pyproject_path = root / c.PYPROJECT_FILENAME
@@ -61,13 +60,12 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
         content: bytes | None,
     ) -> mw.ProjectPyprojectState:
         """Parse once per byte-identical canonical pyproject snapshot.
-
+        
         Returns:
             The resulting ``mw.ProjectPyprojectState``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         if content is None:
             payload: t.JsonMapping = {}
@@ -172,17 +170,16 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
     @staticmethod
     def docs_scope_enabled(docs_meta: t.JsonMapping) -> bool:
         """Return the ``enabled`` docs-scope flag for pre-loaded metadata.
-
+        
         The flag defaults to ``True`` only when the key is absent. A present
         but non-bool value is config drift and fails loud — it must never be
         coerced into silently opting the project in or out.
-
+        
         Returns:
             The ``enabled`` docs-scope flag for pre-loaded metadata.
-
+        
         Raises:
-            TypeError: On failure.
-
+        
         """
         enabled = docs_meta.get("enabled", True)
         if not isinstance(enabled, bool):

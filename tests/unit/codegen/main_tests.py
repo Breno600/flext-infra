@@ -324,10 +324,9 @@ class TestsFlextInfraCodegenMain:
             infra_git_repo: Path,
         ) -> None:
             """Reject a present invalid artifact before credential/network work.
-
+            
             Raises:
-                AssertionError: On failure.
-
+            
             """
             root = infra_git_repo
             TestsFlextInfraCodegenMain._seed_public_conform_checkout(root)

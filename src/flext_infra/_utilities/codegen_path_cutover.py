@@ -28,14 +28,12 @@ class FlextInfraUtilitiesCodegenPathCutover:
         sources: t.MappingKV[Path, str],
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
         """Migrate exact owner calls, preserving homonyms and root-only callers.
-
+        
         Returns:
             The resulting ``t.VariadicTuple[m.Infra.SemanticMigrationEdit]``.
-
+        
         Raises:
-            TypeError: On failure.
-            ValueError: On failure.
-
+        
         """
         from flext_infra import m, p
 

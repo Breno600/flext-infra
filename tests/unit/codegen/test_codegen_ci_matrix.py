@@ -296,10 +296,9 @@ class TestsFlextInfraCodegenCiMatrix:
         tmp_path: Path,
     ) -> None:
         """Run the generated post-generation shell check in a dirty repository.
-
+        
         Raises:
-            TypeError: On failure.
-
+        
         """
         workflow = u.Cli.yaml_load_mapping(
             rendered_project / ".github" / "workflows" / "ci.yml",
@@ -336,10 +335,9 @@ class TestsFlextInfraCodegenCiMatrix:
         rendered_project: Path,
     ) -> None:
         """YAML block indentation must preserve executable Python command bodies.
-
+        
         Raises:
-            TypeError: On failure.
-
+        
         """
         root = rendered_project
         workflow = root / ".github" / "workflows" / "ci.yml"
@@ -799,10 +797,9 @@ class TestsFlextInfraCodegenCiMatrix:
         rendered_project: Path,
     ) -> None:
         """A generated Docs job fails on audit findings and retains safe reports.
-
+        
         Raises:
-            TypeError: On failure.
-
+        
         """
         workflow = u.Cli.yaml_load_mapping(
             rendered_project / ".github/workflows/docs.yml",

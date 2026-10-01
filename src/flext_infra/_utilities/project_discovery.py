@@ -173,23 +173,22 @@ class FlextInfraUtilitiesProjectDiscovery(
         scan_dirs: frozenset[str] | None = None,
     ) -> t.SequenceOf[Path]:
         """Discover all project directories under repository root.
-
+        
         Algorithm:
           1. Check if repository_root itself looks like a project
           2. Enumerate only projects declared by the root's own ``.gitmodules``.
           3. Return the root and declared projects in deterministic order.
-
+        
         Args:
             repository_root: Root directory to start search from.
             scan_dirs: Directory names indicating a project exists (e.g., "src", "tests").
                 Must be frozenset for use as constant. Defaults to standard project dirs.
-
+        
         Returns:
             Project roots sorted by their ``.gitmodules`` declaration order.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         declared_paths = FlextInfraUtilitiesGit.git_declared_submodule_paths(
             repository_root,
@@ -224,7 +223,7 @@ class FlextInfraUtilitiesProjectDiscovery(
     @classmethod
     def discover_rope_project_roots(cls, repository_root: Path) -> t.SequenceOf[Path]:
         """Return every Python project this repository's Rope workspace owns.
-
+        
         A declared submodule is another repository: it is consumed as an
         installed library and never indexed from here (every repository
         evaluates only itself). The raw child scan
@@ -234,13 +233,12 @@ class FlextInfraUtilitiesProjectDiscovery(
         manifest had just excluded, and lazy-init planned files for a directory
         the transaction has no participant for -- which aborts staging after the
         phase root already exists on disk.
-
+        
         Returns:
             Every Python project this repository's Rope workspace owns.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         resolved_root = repository_root.resolve()
         declared_paths = FlextInfraUtilitiesGit.git_declared_submodule_paths(

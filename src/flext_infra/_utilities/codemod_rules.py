@@ -77,13 +77,12 @@ class FlextInfraUtilitiesCodemodRules:
     @staticmethod
     def codemod_rule_filter(rule_ids: t.StrSequence) -> str:
         """Return one exact ast-grep rule-ID filter for an elected ruleset.
-
+        
         Returns:
             One exact ast-grep rule-ID filter for an elected ruleset.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         if not rule_ids:
             msg = "codemod rule filter requires at least one rule ID"

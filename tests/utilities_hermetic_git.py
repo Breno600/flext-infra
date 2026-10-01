@@ -69,7 +69,7 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
     @staticmethod
     def build_git_mirrors(project_root: Path, mirrors: Path) -> t.StrSequence:
         """Mirror each locked source's exact commit under its host and path.
-
+        
         Objects come from this checkout or from the Git databases ``make setup``
         and ``make upg`` fetched into the persistent uv cache of the typed Mise
         storage contract — not the ambient ``uv cache dir``, which the activated
@@ -79,13 +79,12 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
         and pins only the branch ref: full history at zero copy cost (git
         refuses to update shallow roots, so a shallow mirror cannot serve a
         client whose uv cache lacks the history).
-
+        
         Returns:
             The resulting ``t.StrSequence``.
-
+        
         Raises:
-            FileNotFoundError: On failure.
-
+        
         """
         storage_root = Path(os.environ[c.Infra.MISE_BOOTSTRAP_STORAGE_ROOT_VARIABLE])
         cache = (

@@ -118,16 +118,15 @@ class CodegenTestSupport:
         @staticmethod
         def ci_job_steps(rendered: str) -> t.VariadicTuple[t.JsonMapping]:
             """Parse the rendered ci workflow into its ordered job steps.
-
+            
             One owner for the YAML parse and the jobs/ci/steps navigation every
             CI-contract test shares; consumers assert on the returned steps.
-
+            
             Returns:
                 The resulting ``t.VariadicTuple[t.JsonMapping]``.
-
+            
             Raises:
-                TypeError: On failure.
-
+            
             """
             document = t.Cli.JSON_MAPPING_ADAPTER.validate_python(
                 tm.ok(u.Cli.yaml_parse(rendered)),

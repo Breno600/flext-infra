@@ -107,13 +107,12 @@ class FlextInfraCodegenLayoutPlanMixin:
         override: m.Infra.LayoutProjectOverrideSpec | None,
     ) -> frozenset[str]:
         """Canonical root names for one project, profile extras included.
-
+        
         Returns:
             The resulting ``frozenset[str]``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         allowed = {
             *spec.canonical_root_files,

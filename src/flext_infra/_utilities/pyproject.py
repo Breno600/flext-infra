@@ -396,16 +396,15 @@ class FlextInfraUtilitiesPyproject:
     @cache
     def pyproject_payload(pyproject_path: Path) -> t.JsonMapping:
         """Return one parsed ``pyproject.toml`` payload validated against ``t.Infra``.
-
+        
         The payload is parsed from the live text with managed merge
         conflicts resolved (``live_pyproject_text``).
-
+        
         Returns:
             One parsed ``pyproject.toml`` payload validated against ``t.Infra``.
-
+        
         Raises:
-            RuntimeError: On failure.
-
+        
         """
         if not pyproject_path.is_file():
             return {}
@@ -469,14 +468,12 @@ class FlextInfraUtilitiesPyproject:
     @staticmethod
     def project_name_from_payload(entry: Path, payload: t.JsonMapping) -> str:
         """Return the declared project name from ``[project].name``.
-
+        
         Returns:
             The declared project name from ``[project].name``.
-
+        
         Raises:
-            TypeError: On failure.
-            ValueError: On failure.
-
+        
         """
         project_section = payload.get("project")
         if not isinstance(project_section, dict):
@@ -495,13 +492,12 @@ class FlextInfraUtilitiesPyproject:
         docs_meta: t.JsonMapping,
     ) -> str:
         """Return the primary package name using pre-loaded pyproject payload.
-
+        
         Returns:
             The primary package name using pre-loaded pyproject payload.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         configured = docs_meta.get("package_name")
         if isinstance(configured, str) and configured.strip():
@@ -560,7 +556,7 @@ class FlextInfraUtilitiesPyproject:
     @cache
     def workspace_project_paths(repository_root: Path) -> t.StrSequence:
         """Return governed project paths declared by this directory's ``.gitmodules``.
-
+        
         A missing file denotes a standalone project and therefore an empty
         sequence. A malformed declaration is an invalid workspace contract and
         remains a loud error; no pyproject table or parent directory is used as
@@ -568,13 +564,12 @@ class FlextInfraUtilitiesPyproject:
         ``flext-managed`` is not a workspace project, the same contract the
         workspace detector applies; every governed path stays in the sequence
         so a missing or unreadable member pyproject still fails at its reader.
-
+        
         Returns:
             Governed project paths declared by this directory's ``.gitmodules``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         declared = FlextInfraUtilitiesGit.git_declared_submodule_paths(repository_root)
         if declared.failure:

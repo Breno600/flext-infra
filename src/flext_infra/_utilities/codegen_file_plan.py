@@ -47,11 +47,11 @@ class FlextInfraUtilitiesCodegenFilePlan:
         wait_seconds: float = c.Infra.JOURNAL_LEASE_WAIT_SECONDS,
     ) -> Generator[None]:
         """Hold native ownership without unlinking the journal's lock identity.
-
+        
         The lease holds an OS-native exclusive lock on a persistent lock file.
         POSIX uses ``flock``; Windows locks the first byte with ``msvcrt``.
         Neither path removes the lock identity when ownership ends.
-
+        
         Acquisition waits politely for a held lease up to
         ``c.Infra.JOURNAL_LEASE_WAIT_SECONDS``: a legitimate fleet
         ``make gen`` holds the lease for minutes, so an immediate non-blocking
@@ -62,11 +62,9 @@ class FlextInfraUtilitiesCodegenFilePlan:
         ``wait_seconds=0``: one attempt, then the loud refusal.
         Only native contention (EACCES, EAGAIN or EWOULDBLOCK) enters this wait;
         every other acquisition error escapes unchanged.
-
+        
         Raises:
-            OSError: On failure.
-            JournalLeaseTimeoutError: On failure.
-
+        
         """
         lock_path = journal_path.with_name(f"{journal_path.name}.lock")
         lock_path.parent.mkdir(parents=True, exist_ok=True)
@@ -184,16 +182,15 @@ class FlextInfraUtilitiesCodegenFilePlan:
         limit: int = 40,
     ) -> str:
         """Report a bounded byte-exact diff, including line endings and presence.
-
+        
         Escaped byte lines preserve CRLF, missing final newlines, and non-UTF-8
         content. Only equal bytes with different modes are mode-only drift.
-
+        
         Returns:
             The resulting ``str``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         if limit <= 0:
             msg = "codegen drift report limit must be positive"

@@ -457,13 +457,12 @@ class FlextInfraModTextGateEngine:
         report: m.Infra.ModTextReport,
     ) -> None:
         """Require exact migration preconditions, including zero-match mismatches.
-
+        
         A positive expected count is a one-invocation precondition, not an
         idempotence promise after that migration has consumed its matches.
-
+        
         Raises:
-            RuntimeError: On failure.
-
+        
         """
         counts: MutableMapping[str, int] = {}
         for entry in report.entries:
@@ -527,13 +526,12 @@ class FlextInfraModTextGateEngine:
         match: re.Match[str],
     ) -> str:
         """Record and expand one match, binding every loop value explicitly.
-
+        
         Returns:
             The resulting ``str``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         for name, expected in rule.capture_equals.items():
             actual = match.group(name)

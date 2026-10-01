@@ -99,13 +99,12 @@ class FlextInfraConfigModelsRelease:
         @u.model_validator(mode="after")
         def _validate_anchors(self) -> Self:
             """Every anchor must name a target, or the tool rewrites nothing.
-
+            
             Returns:
                 The resulting ``Self``.
-
+            
             Raises:
-                ValueError: On failure.
-
+            
             """
             for anchor in (*self.version_variables, *self.version_toml):
                 if ":" not in anchor:

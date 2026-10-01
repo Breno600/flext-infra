@@ -119,13 +119,12 @@ class FlextInfraFlextBindingService:
     @staticmethod
     def _document(consumer_root: Path) -> t.Cli.TomlDocument:
         """Read the consumer declaration through its canonical parser.
-
+        
         Returns:
             The resulting ``t.Cli.TomlDocument``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         document = u.Cli.toml_parse_text(
             u.Cli.files_read_text(consumer_root / c.PYPROJECT_FILENAME).unwrap(),

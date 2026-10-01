@@ -37,13 +37,12 @@ class FlextInfraUtilitiesProtectedEditLinting:
         max_lines: int,
     ) -> t.StrSequence:
         """Return a bounded unified diff without materializing omitted lines.
-
+        
         Returns:
             A bounded unified diff without materializing omitted lines.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         if max_lines < 1:
             msg = "max_lines must be positive"
@@ -64,13 +63,12 @@ class FlextInfraUtilitiesProtectedEditLinting:
     @staticmethod
     def _workspace_tool_command(workspace: Path, tool_name: str) -> t.StrSequence:
         """Resolve one tool from the managed external workspace environment.
-
+        
         Returns:
             The resulting ``t.StrSequence``.
-
+        
         Raises:
-            FileNotFoundError: On failure.
-
+        
         """
         environment = FlextInfraUtilitiesProjectDiscovery.runtime_environment_dir(
             workspace,
@@ -132,13 +130,12 @@ class FlextInfraUtilitiesProtectedEditLinting:
         gates: t.StrSequence | None = None,
     ) -> t.StrSequencePairTuple:
         """Return the lint tools for the requested gates (SSOT gates when omitted).
-
+        
         Returns:
             The lint tools for the requested gates (SSOT gates when omitted).
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         requested = tuple(
             gate.strip().lower() for gate in (gates or ()) if gate.strip()
@@ -179,14 +176,13 @@ class FlextInfraUtilitiesProtectedEditLinting:
     @classmethod
     def ruff_fix_files(cls, paths: t.SequenceOf[Path], workspace: Path) -> None:
         """Run ``ruff check --fix`` on *paths* with snapshot-identical resolution.
-
+        
         Same venv-resolved binary and same working directory as the lint
         snapshots, so the fix pass and the before/after diff always resolve
         the SAME Ruff configuration for the same file.
-
+        
         Raises:
-            RuntimeError: On failure.
-
+        
         """
         for py_file in paths:
             output = u.Cli.run_raw(

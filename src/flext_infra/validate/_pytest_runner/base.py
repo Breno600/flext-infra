@@ -101,13 +101,12 @@ class FlextInfraPytestRunnerBase(s[int]):
     @u.model_validator(mode="after")
     def _validate_paths(self) -> Self:
         """Require repository-contained target and report paths.
-
+        
         Returns:
             The resulting ``Self``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         for name, path in (("target", self.target), ("reports", self.reports)):
             raw = str(path)
@@ -138,13 +137,12 @@ class FlextInfraPytestRunnerBase(s[int]):
     @staticmethod
     def _memory_gb() -> int:
         """Read physical memory from the operating-system owner.
-
+        
         Returns:
             The resulting ``int``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         page_size = os.sysconf("SC_PAGE_SIZE")
         pages = os.sysconf("SC_PHYS_PAGES")
@@ -226,20 +224,19 @@ class FlextInfraPytestRunnerBase(s[int]):
 
     def parallel_worker_budget(self, policy: PytestPolicy) -> int:
         """Bound xdist by configuration, CPU, and physical memory.
-
+        
         The per-project override map (``[project].name`` → absolute workers or
         CPU fraction) is where a consumer whose measured suite cannot fit the
         single-worker process boundary declares its ceiling; the fleet-wide
         default stays one worker so ``max-failures: 1`` remains exact
         everywhere else. CPU capacity is the process-scoped count (the cgroup
         affinity the runner actually gets), not the host-wide count.
-
+        
         Returns:
             The resulting ``int``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         ceiling = self._declared_worker_ceiling(policy)
         cpu_count = os.process_cpu_count()

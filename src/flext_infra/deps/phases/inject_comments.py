@@ -98,13 +98,12 @@ class FlextInfraInjectCommentsPhase:
 
     def apply(self, rendered: str) -> t.Pair[str, t.StrSequence]:
         """Inject managed banner/markers and return updated TOML plus change messages.
-
+        
         Returns:
             The resulting ``t.Pair[str, t.StrSequence]``.
-
+        
         Raises:
-            RuntimeError: On failure.
-
+        
         """
         changes: t.MutableSequenceOf[str] = []
         lines = rendered.splitlines()

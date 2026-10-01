@@ -36,13 +36,12 @@ class FlextInfraUtilitiesResourceLimits:
     @staticmethod
     def _required_executable(command: str) -> str:
         """Resolve one required resource-control executable or fail loud.
-
+        
         Returns:
             The resulting ``str``.
-
+        
         Raises:
-            RuntimeError: On failure.
-
+        
         """
         executable = shutil.which(command)
         if executable is None:
@@ -53,13 +52,12 @@ class FlextInfraUtilitiesResourceLimits:
     @staticmethod
     def _environment_integer(process_env: t.StrMapping, name: str, default: int) -> int:
         """Convert one ASCII integer environment value at the ingress boundary.
-
+        
         Returns:
             The resulting ``int``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         raw_value = process_env.get(name)
         if raw_value is None:
@@ -114,13 +112,12 @@ class FlextInfraUtilitiesResourceLimits:
     @staticmethod
     def mypy_command(invocation: m.Infra.MypyInvocation) -> t.StrSequence:
         """Construct the owned checker entrypoint from typed data, never command text.
-
+        
         Returns:
             The resulting ``t.StrSequence``.
-
+        
         Raises:
-            FileNotFoundError: On failure.
-
+        
         """
         interpreter = sys.executable
         if invocation.workspace is not None:
@@ -159,20 +156,19 @@ class FlextInfraUtilitiesResourceLimits:
     @staticmethod
     def mypy_cache_directory(project_dir: Path) -> Path:
         """Resolve the one shared Mypy cache of a project across relocks.
-
+        
         Mypy keys its cache by module and revalidates each entry by source hash,
         so every checkout and every relock of one project reuse one analysis: a
         dependency bump recomputes only the modules it changed. Keying by lock
         content forced a cold full-fleet analysis after every
         relock and broke the bounded Mypy run. Projects keep distinct
         directories because their ``tests`` packages share one module name.
-
+        
         Returns:
             The resulting ``Path``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         spec = config.Infra.codegen.make.mypy_cache
         home = settings.env_lookup(str(spec.data_home_environment_variable)) or str(
@@ -255,16 +251,15 @@ class FlextInfraUtilitiesResourceLimits:
     @classmethod
     def mypy_runner_timeout_for_project(cls, project_dir: Path) -> int:
         """Runner timeout honoring the project ``config/tooling.yaml`` budget.
-
+        
         A project budget may only lower the fleet ``tools.mypy.timeout_seconds``
         bound; a budget above it fails loud.
-
+        
         Returns:
             The resulting ``int``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         limit = cls.mypy_resource_limit()
         budget = cls._project_mypy_budget(project_dir)
@@ -284,17 +279,16 @@ class FlextInfraUtilitiesResourceLimits:
     @staticmethod
     def _project_mypy_budget(project_dir: Path) -> int | None:
         """Read ``Infra.tooling.tools.mypy.timeout_seconds`` from the overlay.
-
+        
         The overlay has the same nesting as the packaged ``tooling.yaml``. A
         level the overlay does not declare is a typed absence (no project
         budget); a declared level that is not a mapping fails loud.
-
+        
         Returns:
             The resulting ``int | None``.
-
+        
         Raises:
-            TypeError: On failure.
-
+        
         """
         tooling = project_dir / "config" / "tooling.yaml"
         if not tooling.is_file():

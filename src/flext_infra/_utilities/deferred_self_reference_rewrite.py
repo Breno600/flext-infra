@@ -44,13 +44,12 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
         outer: ast.ClassDef,
     ) -> t.SequenceOf[t.Triple[int, int, str]]:
         """Make already-defined sibling bases executable inside the owner body.
-
+        
         Returns:
             The resulting ``t.SequenceOf[t.Triple[int, int, str]]``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         siblings = tuple(node for node in outer.body if isinstance(node, ast.ClassDef))
         sibling_names = frozenset(node.name for node in siblings)
@@ -80,10 +79,9 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
     @staticmethod
     def _reject_model_rebuild(tree: ast.Module) -> None:
         """Reject runtime schema repair in favor of definition-time correctness.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         rebuilds = tuple(
             node
@@ -104,13 +102,12 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
         outer: ast.ClassDef,
     ) -> t.SequenceOf[t.Triple[int, int, str]]:
         """Plan owner-qualified sibling references inside deferred annotations.
-
+        
         Returns:
             The resulting ``t.SequenceOf[t.Triple[int, int, str]]``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         siblings = tuple(node for node in outer.body if isinstance(node, ast.ClassDef))
         owned_names = frozenset({
@@ -246,13 +243,12 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
     @staticmethod
     def _apply_edits(source: str, edits: t.SequenceOf[t.Triple[int, int, str]]) -> str:
         """Apply non-overlapping source edits from the end of the file.
-
+        
         Returns:
             The resulting ``str``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         updated = source
         previous_start = len(source)

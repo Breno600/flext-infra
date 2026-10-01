@@ -31,17 +31,16 @@ class FlextInfraTypesBase:
     @staticmethod
     def _reject_blanket_mask(rule: str) -> str:
         """Return the bare rule name, rejecting ``ALL`` and blank padding.
-
+        
         Normalizing here keeps the rendered TOML free of accidental padding: a
         padded name would otherwise reach a generated pyproject verbatim and no
         longer match the rule Ruff knows.
-
+        
         Returns:
             The bare rule name, rejecting ``ALL`` and blank padding.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         normalized = rule.strip()
         if not normalized:

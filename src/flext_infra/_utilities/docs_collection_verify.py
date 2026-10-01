@@ -52,10 +52,9 @@ class FlextInfraUtilitiesDocsCollectionVerify(FlextInfraUtilitiesDocsCollectionS
         bundle: m.Infra.PlanCollectionBundle,
     ) -> None:
         """Require original inputs and discovery topology before effects.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         if (
             cls._collection_topology(root, configuration, bundle.excluded_outputs)
@@ -80,10 +79,9 @@ class FlextInfraUtilitiesDocsCollectionVerify(FlextInfraUtilitiesDocsCollectionS
         bundle: m.Infra.PlanCollectionBundle,
     ) -> None:
         """Verify exact effects while preserving every unrelated source snapshot.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         outputs = {plan.path: plan for plan in bundle.files}
         original_paths = {path for item in bundle.inventories for path in item.paths}

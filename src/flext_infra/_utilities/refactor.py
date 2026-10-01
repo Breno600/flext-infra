@@ -30,13 +30,12 @@ class FlextInfraUtilitiesRefactor:
     @staticmethod
     def string_list(value: t.JsonValue | None) -> t.StrSequence:
         """Normalize policy fields that should contain string collections.
-
+        
         Returns:
             The resulting ``t.StrSequence``.
-
+        
         Raises:
-            TypeError: On failure.
-
+        
         """
         if value is None:
             return []

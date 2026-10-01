@@ -132,10 +132,9 @@ class TestsFlextInfraRopeSignaturePatch:
     @staticmethod
     def test_rename_writes_pep701_nested_quote_expression(tmp_path: Path) -> None:
         """Rope preserves f-string fragments while writing a renamed AST child.
-
+        
         Raises:
-            AssertionError: On failure.
-
+        
         """
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
@@ -173,10 +172,9 @@ class TestsFlextInfraRopeSignaturePatch:
     @staticmethod
     def test_rename_writes_generator_inside_format_spec(tmp_path: Path) -> None:
         """Rope patches generator scopes nested in an f-string format spec.
-
+        
         Raises:
-            AssertionError: On failure.
-
+        
         """
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,

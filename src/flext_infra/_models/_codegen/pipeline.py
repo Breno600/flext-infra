@@ -84,13 +84,12 @@ class FlextInfraModelsCodegenPipelineModels:
         @u.model_validator(mode="after")
         def _validate_unique_paths(self) -> Self:
             """Reject ambiguous receipts with competing path authorities.
-
+            
             Returns:
                 The resulting ``Self``.
-
+            
             Raises:
-                ValueError: On failure.
-
+            
             """
             file_paths = tuple(file.path for file in self.files)
             if len(set(file_paths)) != len(file_paths):

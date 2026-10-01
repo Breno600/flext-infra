@@ -24,13 +24,12 @@ class FlextInfraUtilitiesDocsCollectionSources:
         source: m.Infra.PlanCollectionSource,
     ) -> Path:
         """Resolve a declared source without allowing lexical parent traversal.
-
+        
         Returns:
             The resulting ``Path``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         selected = source.root.expanduser()
         if ".." in selected.parts:
@@ -46,14 +45,12 @@ class FlextInfraUtilitiesDocsCollectionSources:
         excluded_outputs: t.VariadicTuple[Path] = (),
     ) -> t.VariadicTuple[Path]:
         """Inventory physical regular files, rejecting inaccessible sources.
-
+        
         Returns:
             The resulting ``t.VariadicTuple[Path]``.
-
+        
         Raises:
-            FileNotFoundError: On failure.
-            ValueError: On failure.
-
+        
         """
         selected = cls.collection_source_root(root, source)
         chain = cli_u.Cli.atomic_plan_directory_chain(selected).unwrap()
@@ -101,13 +98,12 @@ class FlextInfraUtilitiesDocsCollectionSources:
     @staticmethod
     def collection_read(path: Path) -> m.Cli.AtomicFileState:
         """Capture one required regular source through the shared CAS owner.
-
+        
         Returns:
             The resulting ``m.Cli.AtomicFileState``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         state = cli_u.Cli.atomic_read_binary_file_state(path, required=True).unwrap()
         if state.content is None:
@@ -121,13 +117,12 @@ class FlextInfraUtilitiesDocsCollectionSources:
         states: t.MutableMappingKV[Path, m.Cli.AtomicFileState],
     ) -> m.Cli.AtomicFileState:
         """Bind every influential read, including absence, to its first state.
-
+        
         Returns:
             The resulting ``m.Cli.AtomicFileState``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         state = cli_u.Cli.atomic_read_binary_file_state(path, required=False).unwrap()
         previous = states.get(path)
@@ -145,13 +140,12 @@ class FlextInfraUtilitiesDocsCollectionSources:
         excluded_outputs: t.VariadicTuple[Path] = (),
     ) -> t.VariadicTuple[m.Cli.AtomicFileState]:
         """Read the plan and its same-basename companion directory.
-
+        
         Returns:
             The resulting ``t.VariadicTuple[m.Cli.AtomicFileState]``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         states = [cls.collection_read(path)]
         if source.companion_directory:
@@ -176,13 +170,12 @@ class FlextInfraUtilitiesDocsCollectionSources:
         fields: t.VariadicTuple[str],
     ) -> t.Pair[str | None, str | None]:
         """Retain explicit source precision; never promote filesystem time.
-
+        
         Returns:
             The resulting ``t.Pair[str | None, str | None]``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         lines = content.decode("utf-8-sig", errors="strict").splitlines()
         if not lines or lines[0] != "---":
@@ -224,14 +217,13 @@ class FlextInfraUtilitiesDocsCollectionSources:
         states: t.MutableMappingKV[Path, m.Cli.AtomicFileState],
     ) -> t.Pair[m.Infra.PlanCollectionManifest, t.VariadicTuple[Path]]:
         """Exclude only outputs attested by the canonical generated manifest.
-
+        
         Returns:
             The resulting ``t.Pair[m.Infra.PlanCollectionManifest,
                 t.VariadicTuple[Path]]``.
-
+        
         Raises:
-            ValueError: On failure.
-
+        
         """
         manifest_path = canonical / "collection-manifest.json"
         before = cls.collection_capture(manifest_path, states)
