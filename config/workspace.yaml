@@ -23,6 +23,9 @@ repository:
   package: true
   editable: true
   read_only: false
+  extra_verbs:
+    - name: test-package-namespace
+      description: Verify root namespace packaging from the declared workspace topology.
 members: []
 
 candidate_dependencies:

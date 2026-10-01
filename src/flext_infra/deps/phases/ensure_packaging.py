@@ -110,24 +110,23 @@ class FlextInfraEnsurePackagingPhase:
         *,
         package_name: str,
         data: m.Infra.PackagedDataSelection,
-        root_modules: t.StrSequence,
-        root_packages: t.StrSequence,
+        topology: m.Infra.PyprojectDeclaredTopology,
     ) -> m.Infra.DepsToml.PhaseConfig:
         """Build bounded distribution targets for one resolved package name."""
         package_path = f"{c.Infra.DEFAULT_SRC_DIR}/{package_name}"
         package_paths = (
             package_path,
-            *(f"{c.Infra.DEFAULT_SRC_DIR}/{package}" for package in root_packages),
+            *(f"{c.Infra.DEFAULT_SRC_DIR}/{package}" for package in topology.root_packages),
         )
         module_paths = tuple(
-            f"{c.Infra.DEFAULT_SRC_DIR}/{module}.py" for module in root_modules
+            f"{c.Infra.DEFAULT_SRC_DIR}/{module}.py" for module in topology.root_modules
         )
         toml = m.Infra.DepsToml
         force_include = tuple(
             (data_dir, f"{package_name}/{data_dir}") for data_dir in data.files
         ) + tuple(
             (module_path, f"{module}.py")
-            for module_path, module in zip(module_paths, root_modules, strict=True)
+            for module_path, module in zip(module_paths, topology.root_modules, strict=True)
         )
         return toml.PhaseConfig(
             name="packaging",
@@ -141,7 +140,7 @@ class FlextInfraEnsurePackagingPhase:
                         toml.ListOp(key="packages", values=package_paths),
                         toml.ListOp(
                             key="only-include",
-                            values=(*package_paths, *data.directories),
+                            values=(*package_paths, *data.directories, *topology.repository_namespace_packages),
                         ),
                         toml.SetOp(
                             key="sources",
@@ -149,7 +148,7 @@ class FlextInfraEnsurePackagingPhase:
                                 **dict(
                                     zip(
                                         package_paths,
-                                        (package_name, *root_packages),
+                                        (package_name, *topology.root_packages),
                                         strict=True,
                                     )
                                 ),
@@ -157,6 +156,7 @@ class FlextInfraEnsurePackagingPhase:
                                     directory: f"{package_name}/{directory}"
                                     for directory in data.directories
                                 },
+                                **{namespace: namespace for namespace in topology.repository_namespace_packages},
                             },
                         ),
                         toml.RemoveOp(key="force-include"),
@@ -174,6 +174,7 @@ class FlextInfraEnsurePackagingPhase:
                                 *module_paths,
                                 *data.files,
                                 *data.directories,
+                                *topology.repository_namespace_packages,
                             ),
                         ),
                     ),
@@ -204,10 +205,7 @@ class FlextInfraEnsurePackagingPhase:
         payload: t.MutableJsonMapping,
         *,
         path: Path,
-        root_modules: t.StrSequence = (),
-        root_packages: t.StrSequence = (),
-        packaged_data_paths: t.StrSequence = (),
-        planned_data_files: t.StrSequence = (),
+        topology: m.Infra.PyprojectDeclaredTopology,
     ) -> t.StrSequence:
         """Emit bounded build targets for a distributable project.
 
@@ -222,7 +220,7 @@ class FlextInfraEnsurePackagingPhase:
             project_dir, payload, docs_meta
         )
         if not package_name:
-            if root_modules or root_packages or packaged_data_paths:
+            if topology.root_modules or topology.root_packages or topology.packaged_data_paths or topology.repository_namespace_packages:
                 msg = (
                     "project package name is required when additional distribution "
                     "roots are declared"
@@ -233,7 +231,7 @@ class FlextInfraEnsurePackagingPhase:
         missing_module = next(
             (
                 source_root / f"{module}.py"
-                for module in root_modules
+                for module in topology.root_modules
                 if not (source_root / f"{module}.py").is_file()
             ),
             None,
@@ -244,7 +242,7 @@ class FlextInfraEnsurePackagingPhase:
         missing_package = next(
             (
                 source_root / package
-                for package in root_packages
+                for package in topology.root_packages
                 if not (source_root / package).is_dir()
                 or not (source_root / package / c.Infra.INIT_PY).is_file()
             ),
@@ -256,16 +254,31 @@ class FlextInfraEnsurePackagingPhase:
                 f"initializer: {missing_package / c.Infra.INIT_PY}"
             )
             raise FileNotFoundError(msg)
+        for namespace in topology.repository_namespace_packages:
+            relative = Path(namespace)
+            source = project_dir / relative
+            if len(relative.parts) != 1 or not namespace.isidentifier():
+                msg = f"repository namespace must be one Python identifier: {namespace}"
+                raise ValueError(msg)
+            if not source.is_dir() or source.is_symlink():
+                msg = f"repository namespace directory is missing: {source}"
+                raise FileNotFoundError(msg)
+            if (source / c.Infra.INIT_PY).exists():
+                msg = f"repository namespace must be implicit: {source}"
+                raise ValueError(msg)
+            self._validate_data_tree(project_dir.resolve(), source, frozenset())
+            if namespace in topology.packaged_data_paths:
+                msg = f"repository namespace overlaps packaged data: {namespace}"
+                raise ValueError(msg)
         data_paths = self.resolve_data_paths(
-            project_dir, package_name, packaged_data_paths, planned_data_files
+            project_dir, package_name, topology.packaged_data_paths, topology.planned_data_files
         )
         return u.Infra.apply_toml_phases(
             payload,
             self._phase(
                 package_name=package_name,
                 data=data_paths,
-                root_modules=root_modules,
-                root_packages=root_packages,
+                topology=topology,
             ),
         )
 

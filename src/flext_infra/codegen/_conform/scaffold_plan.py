@@ -77,6 +77,7 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
             topology=m.Infra.PyprojectDeclaredTopology(
                 root_modules=project.root_modules,
                 root_packages=project.root_packages,
+                repository_namespace_packages=project.repository_namespace_packages,
                 packaged_data_paths=project.packaged_data_paths,
                 planned_data_files=tuple(
                     destination for _, destination in scaffold_entries

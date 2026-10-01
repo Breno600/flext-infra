@@ -387,6 +387,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 upstream_facades=u.Infra.facade_classes(project.upstream),
                 inherited_facets=project.inherited_facets,
                 root_packages=project.root_packages,
+                repository_namespace_packages=project.repository_namespace_packages,
                 root_modules=project.root_modules,
                 cli_module=project.cli_module,
                 runtime_dependency_overlay=project.runtime_dependency_overlay,

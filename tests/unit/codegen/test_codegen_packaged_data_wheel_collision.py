@@ -37,7 +37,8 @@ class TestsFlextInfraCodegenPackagedDataWheel:
 
     @staticmethod
     def _prepare_project(
-        root: Path, *, package_config: bool, packaged_data_paths: tuple[str, ...] = ()
+        root: Path, *, package_config: bool, packaged_data_paths: tuple[str, ...] = (),
+        repository_namespace_packages: tuple[str, ...] = (),
     ) -> None:
         """Materialize one governed project, optionally shipping in-package data."""
         _ = u.Tests.standalone_workspace(root, FIXTURE_DISTRIBUTION)
@@ -73,6 +74,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             FIXTURE_DISTRIBUTION,
             cli_module=False,
             packaged_data_paths=packaged_data_paths,
+            repository_namespace_packages=repository_namespace_packages,
         )
         u.Tests.git_bootstrap(
             root,
@@ -183,6 +185,25 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             ),
             eq=f"{package_name}/infra",
         )
+        tm.that("infra" in self._sdist_only_include(infra_git_repo), eq=True)
+
+    @pytest.mark.slow
+    def test_repository_namespace_keeps_its_import_path(
+        self, infra_git_repo: Path
+    ) -> None:
+        """Ship a root IaC namespace without duplicating the maintained tree."""
+        self._prepare_project(
+            infra_git_repo,
+            package_config=False,
+            repository_namespace_packages=("infra",),
+        )
+        infrastructure = infra_git_repo / "infra" / "pulumi" / "__main__.py"
+        tm.ok(u.Cli.atomic_write_text_file(infrastructure, "value = 1\n"))
+
+        tm.that(self._conform_self(infra_git_repo), eq=0)
+
+        sources = u.Tests.toml_mapping(self._wheel_target(infra_git_repo)["sources"])
+        tm.that(sources.get("infra"), eq="infra")
         tm.that("infra" in self._sdist_only_include(infra_git_repo), eq=True)
 
     @pytest.mark.slow

@@ -73,7 +73,11 @@ class FlextInfraUtilitiesGitStateFilesMixin(
     def _state_write_symlink(destination: Path, target: str) -> None:
         """Atomically point ``destination`` at the raw ``target`` text."""
         staged = destination.parent / f".{destination.name}.symlink-{os.getpid()}"
-        u.Cli.remove_symlink_target(staged).unwrap()
+        # The staged path is this process's own scratch name (pid-scoped),
+        # never a real tree: unlink covers both fresh and stale states,
+        # including a broken symlink left by a killed predecessor.
+        if staged.is_symlink() or staged.exists():
+            staged.unlink()
         staged.symlink_to(target)
         staged.replace(destination)
 
@@ -100,7 +104,10 @@ class FlextInfraUtilitiesGitStateFilesMixin(
                 payload = cls._state_blob_payload(root, desired.oid)
                 cls._state_write_symlink(destination, os.fsdecode(payload))
                 return
-            u.Cli.remove_symlink_target(destination).unwrap()
+            # This branch only reaches a 120000-mode destination: a governed
+            # symlink, so plain unlink is the entire removal (no tree cases).
+            if destination.is_symlink() or destination.exists():
+                destination.unlink()
         else:
             before_file = u.Cli.atomic_read_binary_file_state(
                 destination, required=False

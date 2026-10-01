@@ -204,6 +204,10 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             t.StrTuple,
             m.Field(description="Top-level packages shipped beyond the primary one"),
         ] = ()
+        repository_namespace_packages: Annotated[
+            t.StrTuple,
+            m.Field(description="Implicit namespace directories shipped from the repository root"),
+        ] = ()
         packaged_data_paths: Annotated[
             t.StrTuple,
             m.Field(description="Repository-declared relative data paths to ship"),

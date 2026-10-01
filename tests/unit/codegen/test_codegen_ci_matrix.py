@@ -11,7 +11,6 @@ import shutil
 from pathlib import Path
 
 import pytest
-import yaml
 from flext_tests import tm
 
 from flext_infra import c, config, t
@@ -654,22 +653,32 @@ class TestsFlextInfraCodegenCiMatrix:
         self, rendered_project: Path
     ) -> None:
         """A generated Docs job fails on audit findings and retains safe reports."""
-        workflow = yaml.safe_load(
-            (rendered_project / ".github/workflows/docs.yml").read_text(
-                encoding="utf-8"
-            )
+        workflow = u.Cli.yaml_load_mapping(
+            rendered_project / ".github/workflows/docs.yml"
         )
-        steps = workflow["jobs"]["docs-quality"]["steps"]
-        docs_step = next(step for step in steps if step["name"] == "Docs lifecycle (blocking)")
+        jobs = workflow["jobs"]
+        assert isinstance(jobs, dict)
+        docs_job = jobs["docs-quality"]
+        assert isinstance(docs_job, dict)
+        raw_steps = docs_job["steps"]
+        assert isinstance(raw_steps, list)
+        steps = [step for step in raw_steps if isinstance(step, dict)]
+        docs_step = next(
+            step for step in steps if step.get("name") == "Docs lifecycle (blocking)"
+        )
         upload = next(
-            step for step in steps if step["name"] == "Upload docs reports on failure"
+            step for step in steps if step.get("name") == "Upload docs reports on failure"
         )
-        tm.that(docs_step["run"], eq="make docs")
+        tm.that(docs_step.get("run"), eq="make docs")
         tm.that(docs_step.get("continue-on-error"), eq=None)
-        tm.that(upload["if"], eq="failure()")
-        tm.that(upload["with"]["include-hidden-files"], eq=True)
-        tm.that(upload["with"]["if-no-files-found"], eq="error")
-        report_paths = upload["with"]["path"].splitlines()
+        tm.that(upload.get("if"), eq="failure()")
+        upload_with = upload.get("with")
+        assert isinstance(upload_with, dict)
+        tm.that(upload_with.get("include-hidden-files"), eq=True)
+        tm.that(upload_with.get("if-no-files-found"), eq="error")
+        report_raw = upload_with.get("path")
+        assert isinstance(report_raw, str)
+        report_paths = report_raw.splitlines()
         tm.that(report_paths, empty=False)
         permitted_names = {
             "audit-summary.json",
