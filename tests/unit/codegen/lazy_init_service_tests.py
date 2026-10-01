@@ -31,7 +31,7 @@ class TestsFlextInfraCodegenLazyInitService:
     ) -> t.Quad[FlextInfraCodegenLazyInit, p.Result[bool], Path, bytes]:
         """Run one lazy-init pass without writing and return its observable drift."""
         u.Tests.write_lazy_init_namespace_module(
-            package_root / "models.py", class_name="FlextTestsModels", alias="m"
+            package_root / "models.py", class_name="FlextTestsModels", alias="m",
         )
         init_path = package_root / c.Infra.INIT_PY
         original_init = init_path.read_bytes()
@@ -45,7 +45,7 @@ class TestsFlextInfraCodegenLazyInitService:
         return service, result, init_path, original_init
 
     def test_execute_applies_only_selected_root_artifact_set(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """Apply writes one initializer for exactly the selected package root."""
         selected_repo, selected_root = u.Tests.create_lazy_init_workspace(
@@ -61,7 +61,7 @@ class TestsFlextInfraCodegenLazyInitService:
         # Declaring topology does not grant an implicit cross-repository scan;
         # publication receives its selected owners explicitly.
         u.Tests.declare_workspace_projects(
-            tmp_path, ("flext-test-selected", "flext-test-unrelated")
+            tmp_path, ("flext-test-selected", "flext-test-unrelated"),
         )
         # Each Git checkout owns its own Rope index; the sibling repository
         # must remain untouched by publication of the selected checkout.
@@ -91,7 +91,7 @@ class TestsFlextInfraCodegenLazyInitService:
         tm.that(service.modified_files, eq=(str(selected_root / c.Infra.INIT_PY),))
 
     def test_selected_root_reads_its_own_declared_public_contract(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """Keep distinct root ABI declarations isolated across source roots."""
         repository_root, selected_root = u.Tests.create_lazy_init_workspace(
@@ -130,7 +130,7 @@ class TestsFlextInfraCodegenLazyInitService:
 
         result = u.Tests.materialize_lazy_init(service)
         selected_generated = selected_root.joinpath(c.Infra.INIT_PY).read_text(
-            encoding=c.Cli.ENCODING_DEFAULT
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
 
         tm.that(result.success, eq=True)
@@ -139,7 +139,7 @@ class TestsFlextInfraCodegenLazyInitService:
         tm.that(unrelated_init.read_bytes(), eq=unrelated_before)
 
     def test_root_aggregates_declared_module_and_subpackage_publics(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         package_root.joinpath("runner.py").write_text(
@@ -150,7 +150,7 @@ class TestsFlextInfraCodegenLazyInitService:
         services_root = package_root / "services"
         services_root.mkdir()
         services_root.joinpath(c.Infra.INIT_PY).write_text(
-            "", encoding=c.Cli.ENCODING_DEFAULT
+            "", encoding=c.Cli.ENCODING_DEFAULT,
         )
         services_root.joinpath("dbt.py").write_text(
             'class FlextTestsDbtServiceBase:\n    """DBT service."""\n\n'
@@ -162,10 +162,10 @@ class TestsFlextInfraCodegenLazyInitService:
 
         result = u.Tests.materialize_lazy_init(service)
         generated_root = package_root.joinpath(c.Infra.INIT_PY).read_text(
-            encoding=c.Cli.ENCODING_DEFAULT
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
         generated_services = services_root.joinpath(c.Infra.INIT_PY).read_text(
-            encoding=c.Cli.ENCODING_DEFAULT
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
 
         tm.that(result.success, eq=True)
@@ -174,7 +174,7 @@ class TestsFlextInfraCodegenLazyInitService:
         tm.that(generated_services, contains="FlextTestsDbtServiceBase")
 
     def test_target_plans_private_children_without_writing_them(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """A selected root consumes child plans while writing only its own init."""
         repository_root, selected_root = u.Tests.create_lazy_init_workspace(
@@ -215,7 +215,7 @@ class TestsFlextInfraCodegenLazyInitService:
 
         result = u.Tests.materialize_lazy_init(service)
         generated_root = selected_root.joinpath(c.Infra.INIT_PY).read_text(
-            encoding=c.Cli.ENCODING_DEFAULT
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
 
         tm.that(result.success, eq=True)
@@ -224,7 +224,7 @@ class TestsFlextInfraCodegenLazyInitService:
         tm.that(service.modified_files, eq=(str(selected_root / c.Infra.INIT_PY),))
 
     def test_explicit_wrapper_target_generates_only_that_initializer(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """Generate a declared examples root without widening default scope."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
@@ -255,7 +255,7 @@ class TestsFlextInfraCodegenLazyInitService:
         tm.that(service.modified_files, eq=(str(examples_init),))
 
     def test_explicit_tests_target_generates_only_facade_exports(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """Keep test aliases while excluding collected test classes."""
         repository_root, _package_root = u.Tests.create_lazy_init_workspace(tmp_path)
@@ -276,7 +276,7 @@ class TestsFlextInfraCodegenLazyInitService:
         unit_root = tests_root / "unit"
         unit_root.mkdir()
         unit_root.joinpath(c.Infra.INIT_PY).write_text(
-            "", encoding=c.Cli.ENCODING_DEFAULT
+            "", encoding=c.Cli.ENCODING_DEFAULT,
         )
         unit_root.joinpath("test_noise.py").write_text(
             'class TestsCollectedNoise:\n    """Collected test class."""\n\n'
@@ -298,7 +298,7 @@ class TestsFlextInfraCodegenLazyInitService:
         tm.that(generated, lacks="TestsCollectedNoise")
         tm.that(generated, lacks=".unit.test_noise")
         child_generated = unit_root.joinpath(c.Infra.INIT_PY).read_text(
-            encoding=c.Cli.ENCODING_DEFAULT
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
         tm.that(child_generated, contains="TestsCollectedNoise")
         tm.that(child_generated, contains="install_lazy_exports")
@@ -307,7 +307,7 @@ class TestsFlextInfraCodegenLazyInitService:
         """Check reports missing generated artifacts as a failure without writing."""
         service, result, init_path, original_init = (
             TestsFlextInfraCodegenLazyInitService.read_only_check_result(
-                *u.Tests.create_lazy_init_workspace(tmp_path)
+                *u.Tests.create_lazy_init_workspace(tmp_path),
             )
         )
         package_root = init_path.parent
@@ -318,7 +318,7 @@ class TestsFlextInfraCodegenLazyInitService:
         tm.that(service.modified_files, eq=(str(init_path),))
 
     def test_dry_run_is_read_only_even_when_apply_is_requested(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """Explicit dry-run wins over apply and reports drift without writing."""
         service, result, init_path, original_init = (
@@ -339,7 +339,7 @@ class TestsFlextInfraCodegenLazyInitService:
         """A check after apply succeeds and preserves the generated initializer."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         u.Tests.write_lazy_init_namespace_module(
-            package_root / "models.py", class_name="FlextTestsModels", alias="m"
+            package_root / "models.py", class_name="FlextTestsModels", alias="m",
         )
         init_path = package_root / c.Infra.INIT_PY
         apply_service = u.Tests.create_lazy_init_service(repository_root)
@@ -360,12 +360,12 @@ class TestsFlextInfraCodegenLazyInitService:
         tm.that((package_root / "__unit__.py").exists(), eq=False)
 
     def test_unknown_target_fails_without_workspace_fallback(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """An unknown target fails loudly instead of planning the full workspace."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         u.Tests.write_lazy_init_namespace_module(
-            package_root / "models.py", class_name="FlextTestsModels", alias="m"
+            package_root / "models.py", class_name="FlextTestsModels", alias="m",
         )
         init_path = package_root / c.Infra.INIT_PY
         original_init = init_path.read_bytes()
@@ -381,23 +381,23 @@ class TestsFlextInfraCodegenLazyInitService:
         tm.that(service.modified_files, eq=())
 
     def test_ambiguous_target_fails_without_writing_either_project(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """Duplicate package roots fail instead of selecting a collapsed map entry."""
         _, first_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-test-first", package_name="flext_shared"
+            tmp_path, project_name="flext-test-first", package_name="flext_shared",
         )
         _, second_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-test-second", package_name="flext_shared"
+            tmp_path, project_name="flext-test-second", package_name="flext_shared",
         )
         u.Tests.declare_workspace_projects(
-            tmp_path, ("flext-test-first", "flext-test-second")
+            tmp_path, ("flext-test-first", "flext-test-second"),
         )
         u.Tests.write_lazy_init_namespace_module(
-            first_root / "models.py", class_name="FlextTestsFirstModels", alias="m"
+            first_root / "models.py", class_name="FlextTestsFirstModels", alias="m",
         )
         u.Tests.write_lazy_init_namespace_module(
-            second_root / "models.py", class_name="FlextTestsSecondModels", alias="m"
+            second_root / "models.py", class_name="FlextTestsSecondModels", alias="m",
         )
         first_init = first_root / c.Infra.INIT_PY
         second_init = second_root / c.Infra.INIT_PY
@@ -420,12 +420,12 @@ class TestsFlextInfraCodegenLazyInitService:
     # generation, not per rendered template. Applied initializers must still be
     # Ruff-clean regardless of where the check executes.
     def test_applied_initializer_passes_batched_ruff_check(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """An applied lazy-init artifact is Ruff-clean after batched validation."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         u.Tests.write_lazy_init_namespace_module(
-            package_root / "models.py", class_name="FlextTestsModels", alias="m"
+            package_root / "models.py", class_name="FlextTestsModels", alias="m",
         )
         init_path = package_root / c.Infra.INIT_PY
         service = u.Tests.create_lazy_init_service(repository_root)
@@ -451,7 +451,7 @@ class TestsFlextInfraCodegenLazyInitService:
 
     @pytest.mark.parametrize("width_offset", [-1, 0, 1])
     def test_export_tuple_is_formatter_stable_at_line_width(
-        self, tmp_path: Path, width_offset: int
+        self, tmp_path: Path, width_offset: int,
     ) -> None:
         """Public generation agrees with Ruff on both sides of its wrap boundary."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
@@ -490,7 +490,7 @@ class TestsFlextInfraCodegenLazyInitService:
         )
 
     def test_multi_group_module_mapping_is_formatter_stable(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """A multi-entry child mapping that fits renders on Ruff's single line."""
         repository_root, _package_root = u.Tests.create_lazy_init_workspace(tmp_path)
@@ -499,7 +499,7 @@ class TestsFlextInfraCodegenLazyInitService:
         for package in (tests_root, unit_root):
             package.mkdir()
             package.joinpath(c.Infra.INIT_PY).write_text(
-                "", encoding=c.Cli.ENCODING_DEFAULT
+                "", encoding=c.Cli.ENCODING_DEFAULT,
             )
         for child, class_name in (
             ("_models", "TestsUnitModels"),
@@ -508,7 +508,7 @@ class TestsFlextInfraCodegenLazyInitService:
             child_root = unit_root / child
             child_root.mkdir()
             child_root.joinpath(c.Infra.INIT_PY).write_text(
-                "", encoding=c.Cli.ENCODING_DEFAULT
+                "", encoding=c.Cli.ENCODING_DEFAULT,
             )
             child_root.joinpath("base.py").write_text(
                 f'class {class_name}:\n    """Child export."""\n\n'
@@ -543,12 +543,12 @@ class TestsFlextInfraCodegenLazyInitService:
         )
 
     def test_execute_command_rejects_publication_outside_conform(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """The public route checks plans while conform alone owns publication."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         u.Tests.write_lazy_init_namespace_module(
-            package_root / "models.py", class_name="FlextTestsModels", alias="m"
+            package_root / "models.py", class_name="FlextTestsModels", alias="m",
         )
         init_path = package_root / c.Infra.INIT_PY
         original_init = init_path.read_bytes()
@@ -585,17 +585,17 @@ class TestsFlextInfraCodegenLazyInitService:
     # like flext-ldif, ban parent-relative imports in their own Ruff
     # config). Check and apply must now agree and neither may error.
     def test_nested_package_consuming_only_inherited_root_alias(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """A nested package inheriting a root alias plans without error."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         u.Tests.write_lazy_init_namespace_module(
-            package_root / "models.py", class_name="FlextTestsModels", alias="m"
+            package_root / "models.py", class_name="FlextTestsModels", alias="m",
         )
         nested_root = package_root / "servers" / "_base"
         nested_root.mkdir(parents=True)
         nested_root.joinpath(c.Infra.INIT_PY).write_text(
-            "", encoding=c.Cli.ENCODING_DEFAULT
+            "", encoding=c.Cli.ENCODING_DEFAULT,
         )
         nested_root.joinpath("constants.py").write_text(
             '"""Base constants consumer."""\n\n'
@@ -638,7 +638,7 @@ class TestsFlextInfraCodegenLazyInitService:
     # in the same pass, and a following check must be a byte fixed point.
     @pytest.mark.parametrize("directory_name", ["typing", "done-check", "class", "123"])
     def test_invalid_directory_is_never_a_generated_package(
-        self, tmp_path: Path, directory_name: str
+        self, tmp_path: Path, directory_name: str,
     ) -> None:
         """Unimportable and stdlib-shadowing directories lose generated residue."""
         repository_root, _package_root = u.Tests.create_lazy_init_workspace(tmp_path)
@@ -662,7 +662,7 @@ class TestsFlextInfraCodegenLazyInitService:
         nested_io_root = tests_root / "unit" / "io"
         nested_io_root.mkdir(parents=True)
         tests_root.joinpath("unit", c.Infra.INIT_PY).write_text(
-            "", encoding=c.Cli.ENCODING_DEFAULT
+            "", encoding=c.Cli.ENCODING_DEFAULT,
         )
         nested_io_root.joinpath("test_streams.py").write_text(
             'class TestsIoStreams:\n    """Collected test class."""\n',

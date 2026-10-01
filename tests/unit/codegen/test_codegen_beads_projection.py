@@ -27,7 +27,7 @@ class TestsFlextInfraCodegenBeadsProjection:
         return root
 
     def test_local_identity_renders_declarative_beads_routing(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         root = self._project(
             tmp_path / "project",
@@ -60,7 +60,7 @@ class TestsFlextInfraCodegenBeadsProjection:
         tm.that(metadata["database"], eq="dolt")
         tm.that(metadata["dolt_database"], eq="project_database")
         tm.that(
-            metadata["dolt_mode"], eq=config.Infra.codegen.toolchain.beads.dolt_mode
+            metadata["dolt_mode"], eq=config.Infra.codegen.toolchain.beads.dolt_mode,
         )
         # A fresh checkout has no checkout-owned identity.toml. Conform owns
         # the portable routing marker but never mints the ledger identity.
@@ -68,7 +68,7 @@ class TestsFlextInfraCodegenBeadsProjection:
         tm.that(set(metadata), eq={"backend", "database", "dolt_mode", "dolt_database"})
 
     def test_gascity_disabled_renders_standalone_beads_config(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """A disabled city never moves runtime ownership into generated config."""
         root = self._project(
@@ -77,7 +77,7 @@ class TestsFlextInfraCodegenBeadsProjection:
             issue_prefix="project-prefix",
         )
         u.Tests.write_standalone_workspace_manifest(
-            root, "fixture-project", gascity_enabled=False
+            root, "fixture-project", gascity_enabled=False,
         )
 
         plan = u.Tests.governed_project_plan(root)
@@ -119,7 +119,7 @@ class TestsFlextInfraCodegenBeadsProjection:
         if rendered_mise is None:
             pytest.fail("conform must produce the managed .mise.toml")
         tm.that(
-            rendered_mise, has=f'make = "{config.Infra.codegen.toolchain.make_version}"'
+            rendered_mise, has=f'make = "{config.Infra.codegen.toolchain.make_version}"',
         )
         tm.that(rendered_mise, lacks="conda")
         tm.that(rendered_mise, lacks="stale")
@@ -132,7 +132,7 @@ class TestsFlextInfraCodegenBeadsProjection:
             issue_prefix="project-prefix",
         )
         u.Tests.write_standalone_workspace_manifest(
-            root, "fixture-project", gascity_enabled=False
+            root, "fixture-project", gascity_enabled=False,
         )
 
         plan = u.Tests.governed_project_plan(root)
@@ -187,7 +187,7 @@ class TestsFlextInfraCodegenBeadsProjection:
         tm.that(desired, lacks="GT_ROOT")
 
     def test_envrc_local_without_custom_content_is_removed(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """A .envrc.local carrying only generated residue is deleted."""
         root = self._project(
@@ -219,7 +219,7 @@ class TestsFlextInfraCodegenBeadsProjection:
     @pytest.mark.slow
     @pytest.mark.parametrize("gascity_enabled", [True, False])
     def test_envrc_is_storage_neutral_in_both_workspace_modes(
-        self, tmp_path: Path, *, gascity_enabled: bool
+        self, tmp_path: Path, *, gascity_enabled: bool,
     ) -> None:
         """Workspace association never changes the storage-neutral activation."""
         root = self._project(
@@ -228,11 +228,11 @@ class TestsFlextInfraCodegenBeadsProjection:
             issue_prefix="project-prefix",
         )
         u.Tests.write_standalone_workspace_manifest(
-            root, "fixture-project", gascity_enabled=gascity_enabled
+            root, "fixture-project", gascity_enabled=gascity_enabled,
         )
 
         rendered_envrc = u.Tests.planned_text(
-            u.Tests.governed_project_plan(root), ".envrc"
+            u.Tests.governed_project_plan(root), ".envrc",
         )
 
         if rendered_envrc is None:
@@ -241,7 +241,7 @@ class TestsFlextInfraCodegenBeadsProjection:
         tm.that(rendered_envrc, lacks="BEADS_DOLT_")
 
     def test_metadata_projection_preserves_a_minted_ledger_identity(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """Regenerating must not strip the checkout's own ledger identity.
 
@@ -259,11 +259,11 @@ class TestsFlextInfraCodegenBeadsProjection:
         identity.parent.mkdir(parents=True, exist_ok=True)
         identity.write_text(f'[project]\nid = "{minted}"\n')
         (root / c.Infra.BEADS_METADATA_RELPATH).write_text(
-            '{"backend":"dolt"}\n', encoding="utf-8"
+            '{"backend":"dolt"}\n', encoding="utf-8",
         )
 
         rendered = u.Tests.planned_text(
-            u.Tests.governed_project_plan(root), c.Infra.BEADS_METADATA_RELPATH
+            u.Tests.governed_project_plan(root), c.Infra.BEADS_METADATA_RELPATH,
         )
         if rendered is None:
             pytest.fail("local identity must produce the Beads marker")
@@ -275,7 +275,7 @@ class TestsFlextInfraCodegenBeadsProjection:
         )
 
     def test_projection_preserves_the_manual_identity_input(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         root = self._project(
             tmp_path / "project",
@@ -300,7 +300,7 @@ class TestsFlextInfraCodegenBeadsProjection:
         route = tmp_path / c.Infra.BEADS_DIRNAME
         route.mkdir(mode=0o700)
         (route / Path(c.Infra.BEADS_CONFIG_RELPATH).name).write_text(
-            "{}\n", encoding="utf-8"
+            "{}\n", encoding="utf-8",
         )
         (route / "dolt.gate.lock").write_text("", encoding="utf-8")
 

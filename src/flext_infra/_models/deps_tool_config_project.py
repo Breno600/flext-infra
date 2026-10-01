@@ -12,7 +12,7 @@ from .deps_tool_config_project_artifacts import (
 
 
 class FlextInfraModelsDepsToolConfigProject(
-    FlextInfraModelsDepsToolConfigProjectArtifacts
+    FlextInfraModelsDepsToolConfigProjectArtifacts,
 ):
     """Document layer composing every project-owned managed-artifact model."""
 

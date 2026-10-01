@@ -38,18 +38,18 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
             scope = runtime.scope_at(module, start, declaration_line=declaration_line)
             for node in cls._type_nodes(annotation, flatten.project, scope):
                 if not isinstance(node, ast.Constant) or not isinstance(
-                    node.value, str
+                    node.value, str,
                 ):
                     continue
                 blocked, updated = cls._quoted_type_source(
-                    node.value, resource, scope, flatten=flatten
+                    node.value, resource, scope, flatten=flatten,
                 )
                 if blocked:
                     return (True, ())
                 if updated != node.value:
                     start, end = cls._expression_range(source, node)
                     edits.append(
-                        m.Infra.SourceRewrite(start=start, end=end, text=repr(updated))
+                        m.Infra.SourceRewrite(start=start, end=end, text=repr(updated)),
                     )
         return (False, tuple(edits))
 
@@ -64,12 +64,12 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
     ) -> t.Pair[bool, str]:
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         nodes = tuple(
-            cls._type_nodes(ast.parse(source, mode="eval").body, flatten.project, scope)
+            cls._type_nodes(ast.parse(source, mode="eval").body, flatten.project, scope),
         )
         edits: list[m.Infra.SourceRewrite] = []
         for node in nodes:
             blocked, edit = cls._quoted_node_rewrite(
-                node, source, resource, scope, flatten=flatten
+                node, source, resource, scope, flatten=flatten,
             )
             if blocked:
                 return (True, source)
@@ -80,11 +80,11 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
             if not any(
                 edit.start <= start and end <= edit.end for edit in edits
             ) and runtime.same_name(
-                flatten.wrapper, runtime.resolve_symbol(scope, node)
+                flatten.wrapper, runtime.resolve_symbol(scope, node),
             ):
                 return (True, source)
         change = FlextInfraUtilitiesRopeRuntimeRefactors.content_change(
-            resource, source, edits
+            resource, source, edits,
         )
         return (False, change.new_contents)
 
@@ -104,7 +104,7 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
         start, end = cls._expression_range(source, node)
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
             blocked, updated = cls._quoted_type_source(
-                node.value, resource, scope, flatten=flatten
+                node.value, resource, scope, flatten=flatten,
             )
             if blocked or updated == node.value:
                 return (blocked, None)
@@ -113,12 +113,12 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
                 m.Infra.SourceRewrite(start=start, end=end, text=repr(updated)),
             )
         if isinstance(node, ast.Attribute) and runtime.same_name(
-            flatten.wrapper, runtime.resolve_symbol(scope, node.value)
+            flatten.wrapper, runtime.resolve_symbol(scope, node.value),
         ):
             if node.attr not in names:
                 return (True, None)
             text = cls._promoted_attribute(
-                node, scope, flatten.owner_name, names[node.attr]
+                node, scope, flatten.owner_name, names[node.attr],
             )
             return (False, m.Infra.SourceRewrite(start=start, end=end, text=text))
         if (
@@ -137,7 +137,7 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
 
     @staticmethod
     def _promoted_attribute(
-        node: ast.Attribute, scope: p.Infra.RopeScope, owner_name: str, name: str
+        node: ast.Attribute, scope: p.Infra.RopeScope, owner_name: str, name: str,
     ) -> str:
         """Keep an explicit parent or the method's owning class after promotion."""
         if isinstance(node.value, ast.Attribute):
@@ -148,7 +148,7 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
 
     @classmethod
     def _annotation_roots(
-        cls, module: ast.Module
+        cls, module: ast.Module,
     ) -> Iterator[t.Pair[ast.expr, int | None]]:
         for node in ast.walk(module):
             if isinstance(node, ast.AnnAssign):
@@ -193,7 +193,7 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
 
     @classmethod
     def _type_nodes(
-        cls, node: ast.expr, project: p.Infra.RopeProject, scope: p.Infra.RopeScope
+        cls, node: ast.expr, project: p.Infra.RopeProject, scope: p.Infra.RopeScope,
     ) -> Iterator[ast.expr]:
         yield node
         if isinstance(node, ast.Subscript):
@@ -228,12 +228,12 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
         start = sum(map(len, lines[: expression.lineno - 1])) + len(
             lines[expression.lineno - 1]
             .encode("utf-8")[: expression.col_offset]
-            .decode("utf-8")
+            .decode("utf-8"),
         )
         end = sum(map(len, lines[: expression.end_lineno - 1])) + len(
             lines[expression.end_lineno - 1]
             .encode("utf-8")[: expression.end_col_offset]
-            .decode("utf-8")
+            .decode("utf-8"),
         )
         return (start, end)
 

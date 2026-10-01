@@ -28,7 +28,7 @@ class TestsFlextInfraRopeAnalysis:
         ],
     )
     def test_declared_imports_preserve_relative_levels(
-        self, tmp_path: Path, statement: str, suffix: str
+        self, tmp_path: Path, statement: str, suffix: str,
     ) -> None:
         """Bare dots and renamed symbols retain their actual package provenance."""
         project, package = test_u.Tests.demo_project(tmp_path)
@@ -36,7 +36,7 @@ class TestsFlextInfraRopeAnalysis:
         nested.mkdir(parents=True)
         for directory in (package, nested.parent, nested):
             (directory / "__init__.py").write_text(
-                "class Owner:\n    pass\n", encoding="utf-8"
+                "class Owner:\n    pass\n", encoding="utf-8",
             )
         source = nested / "consumer.py"
         source.write_text(
@@ -51,7 +51,7 @@ class TestsFlextInfraRopeAnalysis:
         tm.that(imports["Path"], eq="pathlib.Path")
 
     def test_declared_imports_reject_relative_level_beyond_package(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """An invalid relative import is not converted into an absolute import."""
         project, package = test_u.Tests.demo_project(tmp_path)

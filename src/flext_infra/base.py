@@ -13,7 +13,7 @@ from ._settings import settings
 
 
 class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
-    FlextService[TDomainResult], FlextInfraCommandPayloadMixin
+    FlextService[TDomainResult], FlextInfraCommandPayloadMixin,
 ):
     """Domain command context shared by all flext-infra CLI services.
 
@@ -22,7 +22,7 @@ class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
     """
 
     model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-        validate_by_name=True, validate_by_alias=True
+        validate_by_name=True, validate_by_alias=True,
     )
 
     @classmethod
@@ -35,8 +35,8 @@ class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
         Path,
         m.BeforeValidator(
             lambda v: u.Infra.resolve_repository_root_or_cwd(
-                v if isinstance(v, Path) else Path(v)
-            )
+                v if isinstance(v, Path) else Path(v),
+            ),
         ),
     ] = m.Field(
         default_factory=u.Infra.resolve_repository_root_or_cwd,
@@ -81,7 +81,7 @@ class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
         m.BeforeValidator(u.Infra.normalize_optional_path),
     ] = None
     output_dir: Annotated[
-        Path | None, m.Field(description="Output directory", exclude=True)
+        Path | None, m.Field(description="Output directory", exclude=True),
     ] = None
 
     @m.field_validator("project_filter", mode="before")
@@ -124,7 +124,7 @@ class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
         return self.dry_run or self.check_only or (not self.apply_changes)
 
     def _filtered_projects(
-        self, projects: t.SequenceOf[p.Infra.ProjectInfo]
+        self, projects: t.SequenceOf[p.Infra.ProjectInfo],
     ) -> t.SequenceOf[p.Infra.ProjectInfo]:
         """Apply the comma-separated ``project_filter`` when one is configured."""
         if self.project_filter is None:

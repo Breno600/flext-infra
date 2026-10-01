@@ -15,7 +15,7 @@ class FlextInfraModelsSonarcloud:
         """One ``sonar.issue.ignore.multicriteria`` entry as the API spells it."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-            extra="forbid", frozen=True, populate_by_name=True
+            extra="forbid", frozen=True, populate_by_name=True,
         )
 
         rule_key: Annotated[
@@ -44,7 +44,7 @@ class FlextInfraModelsSonarcloud:
         """
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-            extra="ignore", frozen=True, populate_by_name=True
+            extra="ignore", frozen=True, populate_by_name=True,
         )
 
         key: Annotated[t.NonEmptyStr, m.Field(description="Setting key")]
@@ -81,13 +81,13 @@ class FlextInfraModelsSonarcloud:
 
         api_url: Annotated[t.NonEmptyStr, m.Field(description="Web API origin")]
         timeout_seconds: Annotated[
-            t.PositiveInt, m.Field(description="Per-request timeout")
+            t.PositiveInt, m.Field(description="Per-request timeout"),
         ]
         project_key: Annotated[
-            t.NonEmptyStr, m.Field(description="<organization>_<repository>")
+            t.NonEmptyStr, m.Field(description="<organization>_<repository>"),
         ]
         setting_key: Annotated[
-            t.NonEmptyStr, m.Field(description="PROPERTY_SET setting key")
+            t.NonEmptyStr, m.Field(description="PROPERTY_SET setting key"),
         ]
         field_values: Annotated[
             t.VariadicTuple[FlextInfraModelsSonarcloud.SonarcloudIssueFieldValue],

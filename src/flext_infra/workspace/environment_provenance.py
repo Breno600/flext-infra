@@ -23,19 +23,19 @@ class FlextInfraWorkspaceEnvironmentProvenance:
 
     @classmethod
     def execute_request(
-        cls, request: p.Infra.WorkspaceEnvironmentRequest
+        cls, request: p.Infra.WorkspaceEnvironmentRequest,
     ) -> p.Result[int]:
         """Validate one CLI request without mutating the environment."""
         return cls.validate(request.repository_root)
 
     @classmethod
     def validate(
-        cls, repository_root: Path, *, metadata_paths: t.StrSequence | None = None
+        cls, repository_root: Path, *, metadata_paths: t.StrSequence | None = None,
     ) -> p.Result[int]:
         """Validate PEP 610 and editable path metadata for active members."""
         resolved_root = repository_root.resolve()
         workspace_result = FlextInfraWorkspaceDetector.load_workspace_spec(
-            resolved_root
+            resolved_root,
         )
         if workspace_result.failure:
             return r[int].from_failure(workspace_result)
@@ -51,15 +51,15 @@ class FlextInfraWorkspaceEnvironmentProvenance:
                 if metadata_paths is None
                 else tuple(
                     distributions(
-                        name=repository.distribution, path=list(metadata_paths)
-                    )
+                        name=repository.distribution, path=list(metadata_paths),
+                    ),
                 )
             )
             if len(matches) != 1:
                 return r[int].fail(
                     "editable provenance distribution count mismatch: "
                     f"distribution={repository.distribution} expected=1 "
-                    f"actual={len(matches)}"
+                    f"actual={len(matches)}",
                 )
             distribution = matches[0]
             expected_root = (resolved_root / repository.path).resolve()
@@ -74,7 +74,7 @@ class FlextInfraWorkspaceEnvironmentProvenance:
             if files is None:
                 return r[int].fail(
                     "editable provenance has no installed file inventory: "
-                    f"distribution={repository.distribution}"
+                    f"distribution={repository.distribution}",
                 )
             pth_files = tuple(
                 Path(str(distribution.locate_file(file)))
@@ -85,10 +85,10 @@ class FlextInfraWorkspaceEnvironmentProvenance:
                 return r[int].fail(
                     "editable provenance pth count mismatch: "
                     f"distribution={repository.distribution} expected=1 "
-                    f"actual={len(pth_files)}"
+                    f"actual={len(pth_files)}",
                 )
             pth_result = cls._validate_pth(
-                repository.distribution, pth_files[0], expected_root
+                repository.distribution, pth_files[0], expected_root,
             )
             if pth_result.failure:
                 return pth_result
@@ -97,40 +97,40 @@ class FlextInfraWorkspaceEnvironmentProvenance:
 
     @classmethod
     def _validate_direct_url(
-        cls, distribution: str, raw_payload: str | None, expected_root: Path
+        cls, distribution: str, raw_payload: str | None, expected_root: Path,
     ) -> p.Result[int]:
         """Validate one PEP 610 payload against the declared member root."""
         if raw_payload is None:
             return r[int].fail(
                 "editable provenance missing direct_url.json: "
-                f"distribution={distribution} expected={expected_root}"
+                f"distribution={distribution} expected={expected_root}",
             )
         try:
             payload = m.Infra.EditableDirectUrl.model_validate_json(
-                raw_payload, strict=True
+                raw_payload, strict=True,
             )
         except ValueError as exc:
             return r[int].fail_op(
-                f"editable provenance direct_url validation ({distribution})", exc
+                f"editable provenance direct_url validation ({distribution})", exc,
             )
         parsed = urlparse(payload.url)
         if parsed.scheme != "file" or not payload.dir_info.editable:
             return r[int].fail(
                 "editable provenance is not an editable file URL: "
-                f"distribution={distribution} url={payload.url}"
+                f"distribution={distribution} url={payload.url}",
             )
         actual_root = Path(url2pathname(unquote(parsed.path))).resolve()
         if actual_root != expected_root:
             return r[int].fail(
                 "editable provenance direct_url mismatch: "
                 f"distribution={distribution} expected={expected_root} "
-                f"actual={actual_root}"
+                f"actual={actual_root}",
             )
         return r[int].ok(1)
 
     @classmethod
     def _validate_pth(
-        cls, distribution: str, pth_file: Path, expected_root: Path
+        cls, distribution: str, pth_file: Path, expected_root: Path,
     ) -> p.Result[int]:
         """Validate the distribution-owned editable path file."""
         read_result = u.Cli.files_read_text(pth_file)
@@ -144,20 +144,20 @@ class FlextInfraWorkspaceEnvironmentProvenance:
         if not entries:
             return r[int].fail(
                 "editable provenance pth is empty: "
-                f"distribution={distribution} path={pth_file}"
+                f"distribution={distribution} path={pth_file}",
             )
         for entry in entries:
             if re.match(r"^import\s", entry) or not Path(entry).is_absolute():
                 return r[int].fail(
                     "editable provenance pth entry is not an absolute source path: "
-                    f"distribution={distribution} entry={entry}"
+                    f"distribution={distribution} entry={entry}",
                 )
             actual_source = Path(entry).resolve()
             if not actual_source.is_relative_to(expected_root):
                 return r[int].fail(
                     "editable provenance pth mismatch: "
                     f"distribution={distribution} expected_root={expected_root} "
-                    f"actual={actual_source}"
+                    f"actual={actual_source}",
                 )
         return r[int].ok(1)
 

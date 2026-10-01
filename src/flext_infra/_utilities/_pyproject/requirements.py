@@ -23,7 +23,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
     @staticmethod
     def requirement_group_fields(
-        document: t.Cli.TomlDocument, project: t.Cli.TomlTable
+        document: t.Cli.TomlDocument, project: t.Cli.TomlTable,
     ) -> Iterator[t.Pair[t.Cli.TomlTable, str]]:
         """Yield ``(section, group_name)`` for every declared requirement group.
 
@@ -89,11 +89,11 @@ class FlextInfraUtilitiesPyprojectRequirements:
             return r[bool].ok(True)
         raw_items = u.Cli.json_as_sequence(raw_value)
         validated_items: p.Result[t.StrSequence] = u.validate_value(
-            t.Infra.STR_SEQ_ADAPTER, raw_items, strict=True
+            t.Infra.STR_SEQ_ADAPTER, raw_items, strict=True,
         )
         if validated_items.failure:
             return r[bool].fail_op(
-                f"validate dependency group {key}", validated_items.error
+                f"validate dependency group {key}", validated_items.error,
             )
         items = validated_items.value
         normalized_items: t.MutableSequenceOf[str] = []
@@ -108,7 +108,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
                 return r[bool].from_failure(normalized)
             normalized_items.append(normalized.value)
         canonical = tuple(
-            sorted(dict.fromkeys(normalized_items), key=cls.dependency_order_key)
+            sorted(dict.fromkeys(normalized_items), key=cls.dependency_order_key),
         )
         u.Cli.toml_sync_string_list(container, key, canonical)
         return r[bool].ok(True)
@@ -166,7 +166,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
         if declared is not None:
             # An attached member renders on the line its declaration carries.
             parsed = FlextInfraUtilitiesRepository.declared_git_source(
-                f"{head} @ {declared}"
+                f"{head} @ {declared}",
             )
             if parsed.failure:
                 return r[str].from_failure(parsed)
@@ -178,44 +178,44 @@ class FlextInfraUtilitiesPyprojectRequirements:
             if not url:
                 return r[str].fail(
                     "candidate dependency has no declared Git provenance: "
-                    f"{dependency_name}"
+                    f"{dependency_name}",
                 )
             selected = FlextInfraUtilitiesRepository.declared_git_source(
-                f"{head} @ {candidate}"
+                f"{head} @ {candidate}",
             )
             if selected.failure:
                 return r[str].from_failure(selected)
             candidate_url, candidate_commit = selected.value
             if not FlextInfraUtilitiesRepository.ref_is_commit(candidate_commit):
                 return r[str].fail(
-                    f"candidate dependency must pin a full Git commit: {dependency_name}"
+                    f"candidate dependency must pin a full Git commit: {dependency_name}",
                 )
             if url and url != candidate_url:
                 return r[str].fail(
                     "candidate dependency Git URL differs from declared provenance: "
-                    f"{dependency_name}"
+                    f"{dependency_name}",
                 )
             url, declared_ref = candidate_url, candidate_commit
             line = candidate_commit
         if not url:
             return r[str].fail(
-                f"internal dependency declares no direct git source: {dependency_name}"
+                f"internal dependency declares no direct git source: {dependency_name}",
             )
         if candidate is None and FlextInfraUtilitiesRepository.ref_is_commit(
-            declared_ref
+            declared_ref,
         ):
             if line is None:
                 return r[str].fail(
                     f"internal dependency {dependency_name} pins commit "
                     f"{declared_ref} and no line is declared to re-render "
-                    "it: uv.lock records the commit and only `make upg` moves it"
+                    "it: uv.lock records the commit and only `make upg` moves it",
                 )
             declared_ref = line
         # The inline Git source is the sole provenance for each independent
         # project lock, including the orchestration repository.
         inline = f"{head} @ git+{url}@{declared_ref}"
         return r[str].ok(
-            f"{inline}; {marker_text}" if separator and marker_text else inline
+            f"{inline}; {marker_text}" if separator and marker_text else inline,
         )
 
     @classmethod
@@ -234,7 +234,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
         optional_dev: t.StrSequence = ()
         if optional is not None:
             optional_dev = u.Cli.toml_as_string_list(
-                u.Cli.toml_value(optional, str(c.Infra.DEV))
+                u.Cli.toml_value(optional, str(c.Infra.DEV)),
             )
         # SSOT required floors win over existing same-name pins: dedupe_specs
         # keeps the first occurrence, so toolchain floors must lead the merge.
@@ -255,7 +255,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
             for requirement in required_dev_dependencies
             if FlextInfraUtilitiesDependencies.dep_name(requirement) != project_name
             and not cls._floor_yields_to_declared_source(
-                requirement, sourced_live_names
+                requirement, sourced_live_names,
             )
         )
         dev = [*required_dev, *live_dev, *optional_dev]
@@ -291,7 +291,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
     @staticmethod
     def _floor_yields_to_declared_source(
-        requirement: str, sourced_live_names: frozenset[str] | set[str]
+        requirement: str, sourced_live_names: frozenset[str] | set[str],
     ) -> bool:
         """Whether a bare internal floor name must yield to a declared source."""
         name = FlextInfraUtilitiesDependencies.dep_name(requirement)
@@ -299,14 +299,14 @@ class FlextInfraUtilitiesPyprojectRequirements:
             name is not None
             and name.startswith("flext-")
             and not FlextInfraUtilitiesPyprojectRequirements._declares_direct_source(
-                requirement
+                requirement,
             )
             and name in sourced_live_names
         )
 
     @staticmethod
     def _sync_workspace_dependency_group(
-        document: t.Cli.TomlDocument, workspace_members: t.StrSequence
+        document: t.Cli.TomlDocument, workspace_members: t.StrSequence,
     ) -> None:
         """Declare the attached members in the workspace root's own group.
 
@@ -320,7 +320,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
         if workspace_members:
             groups = u.Cli.toml_ensure_table(document, c.Infra.DEPENDENCY_GROUPS)
             u.Cli.toml_sync_string_list(
-                groups, "workspace", tuple(sorted(workspace_members))
+                groups, "workspace", tuple(sorted(workspace_members)),
             )
             return
         groups = u.Cli.toml_table_child(document, c.Infra.DEPENDENCY_GROUPS)
@@ -329,7 +329,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
     @staticmethod
     def _validate_dependency_provenance(
-        document: t.Cli.TomlDocument, *, workspace: p.Infra.WorkspaceSpec
+        document: t.Cli.TomlDocument, *, workspace: p.Infra.WorkspaceSpec,
     ) -> p.Result[bool]:
         """Require one internal dependency provenance for the active topology."""
         payload = u.Cli.toml_as_mapping(document)
@@ -370,18 +370,18 @@ class FlextInfraUtilitiesPyprojectRequirements:
             if member is not None and not member.url.startswith("https://"):
                 return r[bool].fail(
                     "internal dependency manifest provenance must be HTTPS: "
-                    f"{dependency_name} ({member.url})"
+                    f"{dependency_name} ({member.url})",
                 )
             if member is not None and "@" in requirement.partition(";")[0]:
                 declared = FlextInfraUtilitiesRepository.declared_git_source(
-                    requirement
+                    requirement,
                 )
                 if declared.failure:
                     return r[bool].from_failure(declared)
                 if declared.value[0] != member.url:
                     return r[bool].fail(
                         "internal dependency Git URL differs from manifest: "
-                        f"{dependency_name}"
+                        f"{dependency_name}",
                     )
         return r[bool].ok(True)
 

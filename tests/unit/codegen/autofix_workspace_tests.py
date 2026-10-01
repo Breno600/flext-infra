@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import p
 from flext_infra.codegen.fixer import FlextInfraCodegenFixer
 from tests import u
 
@@ -26,10 +25,10 @@ class TestsFlextInfraCodegenAutofixWorkspace:
     """Test suite for FlextInfraCodegenFixer workspace-level operations."""
 
     def _project_info(
-        self, project: Path, *, package_name: str = "test_proj"
+        self, project: Path, *, package_name: str = "test_proj",
     ) -> m.Infra.ProjectInfo:
         return u.Tests.create_project_info(
-            project, name=project.name, package_name=package_name
+            project, name=project.name, package_name=package_name,
         )
 
     @pytest.mark.slow
@@ -51,7 +50,7 @@ class TestsFlextInfraCodegenAutofixWorkspace:
             files={
                 "base.py": "import typing\nT = typing.TypeVar('T')\n"
                 "class TestProjBase:\n    pass\n\n"
-                '__all__: list[str] = ["TestProjBase", "T"]\n'
+                '__all__: list[str] = ["TestProjBase", "T"]\n',
             },
         )
         u.Tests.declare_workspace_projects(tmp_path, (managed_project.name,))
@@ -70,7 +69,7 @@ class TestsFlextInfraCodegenAutofixWorkspace:
         (project / ".git").mkdir()
         fixer = FlextInfraCodegenFixer(repository_root=tmp_path)
         [result] = fixer.fix_workspace(
-            projects=[self._project_info(project, package_name="")]
+            projects=[self._project_info(project, package_name="")],
         )
         tm.that(result.project, eq="no-src-proj")
         tm.that(result.violations_fixed, empty=True)

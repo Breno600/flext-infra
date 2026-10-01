@@ -31,7 +31,7 @@ class TestsFlextInfraGitWorktreeState:
             )
 
     def test_partial_staging_binary_modes_deletions_and_untracked(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         source = test_u.Tests.git_repository(tmp_path)
         partial = source / "partial.txt"
@@ -43,7 +43,7 @@ class TestsFlextInfraGitWorktreeState:
         recreated = source / "recreated.txt"
         recreated.write_text("base\n", encoding="utf-8")
         test_u.Tests.git_run(
-            source, "add", "partial.txt", "binary.dat", "deleted.txt", "recreated.txt"
+            source, "add", "partial.txt", "binary.dat", "deleted.txt", "recreated.txt",
         )
         test_u.Tests.git_run(source, "commit", "-m", "tracked fixtures")
         lane = self._lane(tmp_path, source)
@@ -93,7 +93,7 @@ class TestsFlextInfraGitWorktreeState:
         (source / "public.txt").write_text("public\n", encoding="utf-8")
 
         tm.ok(
-            u.Infra.git_copy_worktree_state(source, lane, excluded=(Path("[private]"),))
+            u.Infra.git_copy_worktree_state(source, lane, excluded=(Path("[private]"),)),
         )
 
         tm.that((lane / "[private]/tracked.txt").read_text(), eq="base\n")
@@ -101,7 +101,7 @@ class TestsFlextInfraGitWorktreeState:
         tm.that((lane / "public.txt").read_text(), eq="public\n")
 
     def test_dirty_destination_is_rejected_before_any_effect(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         source = test_u.Tests.git_repository(tmp_path)
         lane = self._lane(tmp_path, source)

@@ -22,7 +22,7 @@ class TestsFlextInfraWorkspaceCheckCli:
 
     @staticmethod
     def _create_workspace(
-        tmp_path: Path, *, project_names: t.StrSequence = ("flext-core",)
+        tmp_path: Path, *, project_names: t.StrSequence = ("flext-core",),
     ) -> Path:
         workspace = tmp_path / "workspace"
         workspace.mkdir(parents=True, exist_ok=True)
@@ -35,7 +35,7 @@ class TestsFlextInfraWorkspaceCheckCli:
             )
             package = project / "src" / project_name.replace("-", "_")
             package.joinpath("__init__.py").write_text(
-                f'"""{project_name} fixture package."""\n', encoding="utf-8"
+                f'"""{project_name} fixture package."""\n', encoding="utf-8",
             )
         return workspace
 
@@ -65,7 +65,7 @@ class TestsFlextInfraWorkspaceCheckCli:
         ids=["passing_project", "failing_project"],
     )
     def test_run_cli_lint_exit_code_matches_source_validity(
-        self, tmp_path: Path, source: str, expected_exit: int
+        self, tmp_path: Path, source: str, expected_exit: int,
     ) -> None:
         workspace = self._create_workspace(tmp_path)
         _ = self._write_module(workspace, "flext-core", source)
@@ -84,7 +84,7 @@ class TestsFlextInfraWorkspaceCheckCli:
         tm.that(exit_code, eq=expected_exit)
 
     def test_run_cli_returns_one_for_report_directory_error(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         workspace = self._create_workspace(tmp_path)
         _ = self._write_module(workspace, "flext-core", "value = 1\n")
@@ -108,7 +108,7 @@ class TestsFlextInfraWorkspaceCheckCli:
 
     @pytest.mark.parametrize("reports_directory", [None, "artifacts/check"])
     def test_run_cli_handles_multiple_projects(
-        self, tmp_path: Path, reports_directory: str | None
+        self, tmp_path: Path, reports_directory: str | None,
     ) -> None:
         workspace = self._create_workspace(tmp_path, project_names=("proj1", "proj2"))
         _ = self._write_module(workspace, "proj1", "value = 1\n")
@@ -141,7 +141,7 @@ class TestsFlextInfraWorkspaceCheckCli:
 
         tm.that(exit_code, eq=0)
         report = (workspace / relative_reports / report_name).read_text(
-            encoding="utf-8"
+            encoding="utf-8",
         )
         tm.that(report, has=["proj1", "proj2"])
         tm.that(
@@ -150,7 +150,7 @@ class TestsFlextInfraWorkspaceCheckCli:
         )
 
     def test_run_cli_fix_contract_preserves_failure_when_reporting(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         workspace = self._create_workspace(tmp_path)
         module_path = self._write_module(workspace, "flext-core", "def broken(:\n")
@@ -179,7 +179,7 @@ class TestsFlextInfraWorkspaceCheckCli:
         )
 
     def test_run_cli_check_contract_fails_on_remaining_findings(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """Apply without ``--report-findings`` still fails on remaining findings."""
         workspace = self._create_workspace(tmp_path)
@@ -210,7 +210,7 @@ class TestsFlextInfraWorkspaceCheckCli:
     def test_run_cli_check_only_preserves_source(self, tmp_path: Path) -> None:
         workspace = self._create_workspace(tmp_path)
         module_path = self._write_module(
-            workspace, "flext-core", "import os\n\nvalue = 1\n"
+            workspace, "flext-core", "import os\n\nvalue = 1\n",
         )
 
         exit_code = main([

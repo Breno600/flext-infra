@@ -20,13 +20,13 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesDocsScopeBuildMixin(
-    FlextInfraUtilitiesDocsScopeSelectionMixin
+    FlextInfraUtilitiesDocsScopeSelectionMixin,
 ):
     """Build canonical DocScope models for docs commands."""
 
     @staticmethod
     def _selected_project_names(
-        repository_root: Path, projects: t.StrSequence | None
+        repository_root: Path, projects: t.StrSequence | None,
     ) -> list[str]:
         """Return normalized project filters for docs-scoped operations."""
         _ = repository_root
@@ -49,7 +49,7 @@ class FlextInfraUtilitiesDocsScopeBuildMixin(
         """
         try:
             scopes = FlextInfraUtilitiesDocsScopeBuildMixin._build_scopes_unchecked(
-                repository_root, projects, output_dir, include_root=include_root
+                repository_root, projects, output_dir, include_root=include_root,
             )
         except c.EXC_OS_TYPE_VALUE as exc:
             return r[t.SequenceOf[m.Infra.DocScope]].fail_op("scope resolution", exc)
@@ -67,13 +67,13 @@ class FlextInfraUtilitiesDocsScopeBuildMixin(
         resolved_root = repository_root.resolve()
         project_state = FlextInfraUtilitiesDocsScope.project_state(resolved_root)
         is_enabled = FlextInfraUtilitiesDocsScope.docs_scope_enabled(
-            project_state.docs_meta
+            project_state.docs_meta,
         )
         discovered = FlextInfraUtilitiesDocsScopeBuildMixin._discover_projects(
-            resolved_root
+            resolved_root,
         )
         has_declared_members = bool(
-            FlextInfraUtilitiesPyproject.workspace_project_paths(resolved_root)
+            FlextInfraUtilitiesPyproject.workspace_project_paths(resolved_root),
         )
         has_child_projects = any(
             project.path.resolve() != resolved_root for project in discovered
@@ -88,7 +88,7 @@ class FlextInfraUtilitiesDocsScopeBuildMixin(
         # `_workspace_scopes`, collapsing its own docs scope onto an identical
         # root scope and silently dropping README.md/docs/index.md/guides.
         has_workspace_topology = FlextInfraUtilitiesWorkspaceManifest.fleet_umbrella(
-            resolved_root
+            resolved_root,
         )
         if (
             (resolved_root / c.PYPROJECT_FILENAME).is_file()
@@ -99,11 +99,11 @@ class FlextInfraUtilitiesDocsScopeBuildMixin(
         ):
             return (
                 FlextInfraUtilitiesDocsScopeBuildMixin._governed_scope(
-                    resolved_root, output_dir, repository_root=resolved_root
+                    resolved_root, output_dir, repository_root=resolved_root,
                 ),
             )
         return FlextInfraUtilitiesDocsScopeBuildMixin._workspace_scopes(
-            resolved_root, projects, output_dir, discovered, include_root=include_root
+            resolved_root, projects, output_dir, discovered, include_root=include_root,
         )
 
     @staticmethod
@@ -130,24 +130,24 @@ class FlextInfraUtilitiesDocsScopeBuildMixin(
                     report_dir=(repository_root / output_dir).resolve(),
                     project_class="root",
                     package_name="",
-                )
+                ),
             ]
             if include_root
             else []
         )
         selected_names = FlextInfraUtilitiesDocsScopeBuildMixin._selected_project_names(
-            repository_root, projects
+            repository_root, projects,
         )
         if selected_names:
             scopes.extend(
                 FlextInfraUtilitiesDocsScopeBuildMixin._selected_project_scopes(
-                    repository_root, discovered, selected_names, output_dir
-                )
+                    repository_root, discovered, selected_names, output_dir,
+                ),
             )
             return tuple(scopes)
         scopes.extend(
             FlextInfraUtilitiesDocsScopeBuildMixin._doc_scope(
-                project=project, output_dir=output_dir, repository_root=repository_root
+                project=project, output_dir=output_dir, repository_root=repository_root,
             )
             for project in discovered
         )
@@ -157,7 +157,7 @@ class FlextInfraUtilitiesDocsScopeBuildMixin(
     def _discover_projects(repository_root: Path) -> t.SequenceOf[m.Infra.ProjectInfo]:
         """Discover workspace projects or raise a typed value error."""
         discovered_result = FlextInfraUtilitiesDocsScope.resolve_projects(
-            repository_root, ()
+            repository_root, (),
         )
         if discovered_result.failure:
             msg = discovered_result.error or "project discovery failed"

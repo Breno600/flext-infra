@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesGitStatePublicationMixin(
-    FlextInfraUtilitiesGitStateCheckpointMixin
+    FlextInfraUtilitiesGitStateCheckpointMixin,
 ):
     """Bind retained history to one configured credential-free Git endpoint."""
 
@@ -67,16 +67,16 @@ class FlextInfraUtilitiesGitStatePublicationMixin(
             msg = "checkpoint remote endpoint changed since publication"
             raise ValueError(msg)
         if cls._state_advertised(
-            root, publication.remote_name, checkpoint.checkpoint_ref
+            root, publication.remote_name, checkpoint.checkpoint_ref,
         ).splitlines() != [
-            f"{checkpoint.worktree_commit}\t{checkpoint.checkpoint_ref}"
+            f"{checkpoint.worktree_commit}\t{checkpoint.checkpoint_ref}",
         ]:
             msg = "remote no longer advertises the retained checkpoint"
             raise ValueError(msg)
 
     @classmethod
     def _state_publish(
-        cls, checkpoint: m.Infra.GitWorktreeStateCheckpoint, remote: str
+        cls, checkpoint: m.Infra.GitWorktreeStateCheckpoint, remote: str,
     ) -> m.Infra.GitWorktreeCheckpointPublication:
         cls._state_validate_checkpoint(checkpoint)
         root = checkpoint.snapshot.repo_root
@@ -87,10 +87,10 @@ class FlextInfraUtilitiesGitStatePublicationMixin(
             checkpoint_oid=checkpoint.worktree_commit,
         )
         advertised = cls._state_advertised(
-            root, remote, checkpoint.checkpoint_ref
+            root, remote, checkpoint.checkpoint_ref,
         ).splitlines()
         if advertised and advertised != [
-            f"{checkpoint.worktree_commit}\t{checkpoint.checkpoint_ref}"
+            f"{checkpoint.worktree_commit}\t{checkpoint.checkpoint_ref}",
         ]:
             msg = "remote checkpoint reference belongs to a different capture"
             raise ValueError(msg)
@@ -105,14 +105,14 @@ class FlextInfraUtilitiesGitStatePublicationMixin(
 
     @classmethod
     def git_publish_worktree_checkpoint(
-        cls, checkpoint: m.Infra.GitWorktreeStateCheckpoint, remote: str
+        cls, checkpoint: m.Infra.GitWorktreeStateCheckpoint, remote: str,
     ) -> p.Result[m.Infra.GitWorktreeCheckpointPublication]:
         """Publish once by ordinary atomic push and return its exact remote proof."""
         try:
             publication = cls._state_publish(checkpoint, remote)
         except (GitCommandError, OSError, ValueError) as exc:
             return r[m.Infra.GitWorktreeCheckpointPublication].fail(
-                str(exc), exception=exc
+                str(exc), exception=exc,
             )
         return r[m.Infra.GitWorktreeCheckpointPublication].ok(publication)
 

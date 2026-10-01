@@ -28,7 +28,7 @@ class TestsModelFieldsCutover:
         ],
     )
     def test_public_boundary_rejects_non_models_without_attribute_access(
-        self, tmp_path: Path, access: str
+        self, tmp_path: Path, access: str,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "validation.py"
@@ -62,7 +62,7 @@ class TestsModelFieldsCutover:
                     c.Infra.SemanticCutoverPhase.MODEL_FIELDS,
                     rope_workspace=rope,
                     sources={path: source},
-                )
+                ),
             )
             tm.that(len(edits), eq=1)
             remaining = tm.ok(
@@ -70,7 +70,7 @@ class TestsModelFieldsCutover:
                     c.Infra.SemanticCutoverPhase.MODEL_FIELDS,
                     rope_workspace=rope,
                     sources={path: edits[0].updated_source},
-                )
+                ),
             )
         tm.that(remaining, empty=True)
         path.write_text(edits[0].updated_source, encoding="utf-8")
@@ -79,7 +79,7 @@ class TestsModelFieldsCutover:
         tm.that(outcome.stderr, eq="")
 
     def test_ambiguous_rejection_keeps_the_source_untouched(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "validation.py"
@@ -128,7 +128,7 @@ class TestsModelFieldsCutover:
         ],
     )
     def test_shadowed_contract_is_rejected(
-        self, tmp_path: Path, declaration: str
+        self, tmp_path: Path, declaration: str,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "validation.py"
@@ -162,7 +162,7 @@ class TestsModelFieldsCutover:
         ],
     )
     def test_unsafe_statement_layout_or_receiver_rebinding_fails(
-        self, tmp_path: Path, body: str
+        self, tmp_path: Path, body: str,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "validation.py"

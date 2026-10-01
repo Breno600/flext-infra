@@ -39,7 +39,7 @@ class TestsFlextInfraDepsDetectorInit:
         tm.that(str(params.limits_path), eq=str(Path("/custom/limits.toml").resolve()))
 
     def test_detect_command_project_names_with_single_project(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """Verify detect command project names with single project."""
         params = m.Infra.DetectCommand(repository_root=tmp_path, projects=["test-proj"])
@@ -48,7 +48,7 @@ class TestsFlextInfraDepsDetectorInit:
     def test_detect_command_project_names_split_csv(self, tmp_path: Path) -> None:
         """Verify detect command project names split csv."""
         params = m.Infra.DetectCommand(
-            repository_root=tmp_path, projects=["proj-a,proj-b", "proj-c"]
+            repository_root=tmp_path, projects=["proj-a,proj-b", "proj-c"],
         )
         tm.that(params.project_names, eq=["proj-a", "proj-b", "proj-c"])
 

@@ -101,7 +101,7 @@ class TestsFlextInfraDocsGeneratorInternals:
 
     def test_update_toc_replaces_existing_block(self) -> None:
         updated, changed = u.Infra.update_toc(
-            "# Main\n\n<!-- TOC START -->\n- stale\n<!-- TOC END -->\n\n## Section\n"
+            "# Main\n\n<!-- TOC START -->\n- stale\n<!-- TOC END -->\n\n## Section\n",
         )
 
         tm.that(changed, eq=1)
@@ -109,12 +109,12 @@ class TestsFlextInfraDocsGeneratorInternals:
         tm.that(updated, has="Section")
 
     def test_generated_markdown_is_toc_normalized_before_write(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         generated = tmp_path / "generated.md"
 
         result = u.Infra.docs_write_if_needed(
-            generated, "# Generated\n\n## Section\n", apply=True
+            generated, "# Generated\n\n## Section\n", apply=True,
         )
 
         tm.that(result.changed, eq=True)
@@ -129,7 +129,7 @@ class TestsFlextInfraDocsGeneratorInternals:
         tm.that(updated, lacks="# Main\n\n\n<!-- TOC START -->")
 
     def test_generated_non_markdown_preserves_exact_content(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         generated = tmp_path / "mkdocs.yml"
         content = "site_name: Generated\n"
@@ -148,7 +148,7 @@ class TestsFlextInfraDocsGeneratorInternals:
         _ = u.Tests.prepare_docs_bundle(generator)
 
         result = generator.generate(
-            m.Infra.DocsGenerateRequest(repository_root=workspace, projects=["flext-a"])
+            m.Infra.DocsGenerateRequest(repository_root=workspace, projects=["flext-a"]),
         )
 
         tm.ok(result)

@@ -20,7 +20,7 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
     """Keep topology inputs and writes owned by the repository being conformed."""
 
     def test_linked_lane_reads_its_local_beads_identity_and_only_writes_lane(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """Use dirty lane-local policy without reading or mutating the primary."""
         primary = tmp_path / "primary"
@@ -39,8 +39,8 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
                     lane=lane,
                     branch="bugfix/lane-local-topology",
                     base=c.Infra.GIT_HEAD,
-                )
-            )
+                ),
+            ),
         )
         lane_beads = u.Tests.WorktreeFixture.write_beads_project(
             lane,
@@ -63,13 +63,13 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
         )
         plan = tm.ok(
             FlextInfraCodegenConform(repository_root=lane, request=request).plan(
-                request
-            )
+                request,
+            ),
         )
 
         (makefile_plan,) = plan.files
         tm.that(
-            u.Tests.codegen_file_text(makefile_plan), has="MAKE_PROFILE := standalone"
+            u.Tests.codegen_file_text(makefile_plan), has="MAKE_PROFILE := standalone",
         )
         beads = tm.not_none(plan.workspace.beads)
         tm.that(beads.workspace, eq="lane-workspace")
@@ -84,7 +84,7 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
         tm.that((lane / c.Infra.MAKEFILE_FILENAME).exists(), eq=False)
         tm.that((primary / c.Infra.MAKEFILE_FILENAME).exists(), eq=False)
         tm.that(
-            u.Tests.WorktreeFixture.repository_snapshot(primary), eq=primary_snapshot
+            u.Tests.WorktreeFixture.repository_snapshot(primary), eq=primary_snapshot,
         )
 
     @pytest.mark.parametrize(
@@ -96,12 +96,12 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
                 id="missing",
             ),
             pytest.param(
-                "version: [\nworkspace: invalid\n", "YAML parse error", id="malformed"
+                "version: [\nworkspace: invalid\n", "YAML parse error", id="malformed",
             ),
         ],
     )
     def test_invalid_local_beads_identity_fails_before_any_write(
-        self, tmp_path: Path, beads_content: str | None, expected_error: str
+        self, tmp_path: Path, beads_content: str | None, expected_error: str,
     ) -> None:
         """Fail planning atomically when the required local input is invalid."""
         root = tmp_path / "project"
@@ -124,14 +124,14 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
                 root,
                 scope=c.Infra.CodegenConformScope.SELF,
                 mode=c.Infra.CodegenConformMode.APPLY,
-            )
+            ),
         )
 
         tm.fail(result, has=expected_error)
         tm.that(u.Tests.WorktreeFixture.repository_snapshot(root), eq=before)
 
     def test_workspace_members_inherit_identity_and_topology_inputs_are_never_rewritten(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """Members declare the workspace identity; conform never rewrites inputs."""
         root = tmp_path / "workspace"
@@ -154,7 +154,7 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
         gitmodules = u.Tests.WorktreeFixture.write_gitmodules(root, project_names)
         u.Tests.git_bootstrap(root, ("add", c.Infra.GITMODULES, *project_names))
         u.Tests.git_bootstrap(
-            root, ("commit", "-m", "fixture: declare workspace subprojects")
+            root, ("commit", "-m", "fixture: declare workspace subprojects"),
         )
         protected_bytes = {gitmodules: gitmodules.read_bytes()}
 
@@ -165,7 +165,7 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
         )
         for project_name in project_names:
             beads = tm.ok(
-                FlextInfraWorkspaceDetector.load_beads_spec(root / project_name)
+                FlextInfraWorkspaceDetector.load_beads_spec(root / project_name),
             )
             tm.that(beads.workspace, eq="root-workspace")
             tm.that(beads.database, eq="root-database")
@@ -177,8 +177,8 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
                     root,
                     scope=c.Infra.CodegenConformScope.DECLARED,
                     mode=c.Infra.CodegenConformMode.APPLY,
-                )
-            )
+                ),
+            ),
         )
 
         tm.that(bool(applied.written_files), eq=True)
@@ -201,7 +201,7 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
             tm.that((route / "config.yaml").is_file(), eq=True)
 
     def test_declared_subproject_cannot_escape_through_a_linked_path(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """Reject a declared subproject whose path resolves outside its owner."""
         root = tmp_path / "workspace"
@@ -230,10 +230,10 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
                 what=c.Infra.CodegenConformSurface.MAKEFILE,
                 scope=c.Infra.CodegenConformScope.DECLARED,
                 mode=c.Infra.CodegenConformMode.CHECK,
-            )
+            ),
         )
 
         tm.fail(result, has="escapes workspace root")
         tm.that(
-            u.Tests.WorktreeFixture.repository_snapshot(outside), eq=outside_snapshot
+            u.Tests.WorktreeFixture.repository_snapshot(outside), eq=outside_snapshot,
         )

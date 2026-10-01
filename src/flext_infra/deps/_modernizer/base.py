@@ -27,13 +27,13 @@ class FlextInfraPyprojectModernizerBase(
         return config.Infra.tooling.tools.tomlsort.sort_first
 
     audit: Annotated[
-        bool, m.Field(False, description="Audit pyproject changes without writing")
+        bool, m.Field(False, description="Audit pyproject changes without writing"),
     ] = False
     skip_check: Annotated[
-        bool, m.Field(alias="skip-check", description="Skip post-write validation")
+        bool, m.Field(alias="skip-check", description="Skip post-write validation"),
     ] = False
     skip_comments: Annotated[
-        bool, m.Field(alias="skip-comments", description="Skip managed comment updates")
+        bool, m.Field(alias="skip-comments", description="Skip managed comment updates"),
     ] = False
     rewrite_constraints: Annotated[
         bool,

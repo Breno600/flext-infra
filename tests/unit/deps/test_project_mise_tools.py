@@ -19,7 +19,7 @@ class TestsFlextInfraProjectMiseTools:
         root.mkdir(parents=True)
         (root / "config").mkdir()
         (root / "config" / "managed-artifacts.yaml").write_text(
-            tools_yaml, encoding="utf-8"
+            tools_yaml, encoding="utf-8",
         )
         return root
 
@@ -36,7 +36,7 @@ class TestsFlextInfraProjectMiseTools:
         snapshot = tm.ok(u.Infra.snapshot_project_managed_artifacts(root))
         python_version = config.Infra.codegen.toolchain.python_version
         composed = u.Infra.compose_mise_toml_from_snapshot(
-            snapshot.sources, f'[tools]\npython = "{python_version}"\n'
+            snapshot.sources, f'[tools]\npython = "{python_version}"\n',
         )
 
         tools = u.Tests.toml_table_at(tm.ok(composed), "tools")
@@ -44,7 +44,7 @@ class TestsFlextInfraProjectMiseTools:
         assert tools["python"] == python_version
 
     def test_version_string_shorthand_is_not_a_declaration(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         root = self._project(
             tmp_path / "project",

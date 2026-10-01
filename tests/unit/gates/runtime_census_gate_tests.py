@@ -96,7 +96,7 @@ class TestRuntimeCensusSelection:
 
     def test_empty_checkout_fails_the_gate(self, tmp_path: Path) -> None:
         context = m.Infra.GateContext(
-            repository_root=tmp_path, reports_dir=tmp_path / ".reports"
+            repository_root=tmp_path, reports_dir=tmp_path / ".reports",
         )
         gate = FlextInfraRuntimeCensusGate(repository_root=tmp_path)
         result = gate.check(tmp_path, context).result
@@ -108,7 +108,7 @@ class TestsRuntimeCensusBlocking:
     """Every census violation blocks; no rule family is set aside."""
 
     def test_every_rule_family_in_the_project_blocks(
-        self, mixed_project: Path, genuine_project: Path
+        self, mixed_project: Path, genuine_project: Path,
     ) -> None:
         """Prefix and constant violations count against the check census run.
 
@@ -118,13 +118,13 @@ class TestsRuntimeCensusBlocking:
         """
         mixed = tm.ok(
             FlextInfraRuntimeCensusValidator(
-                repository_root=mixed_project
-            ).build_report()
+                repository_root=mixed_project,
+            ).build_report(),
         )
         genuine = tm.ok(
             FlextInfraRuntimeCensusValidator(
-                repository_root=genuine_project
-            ).build_report()
+                repository_root=genuine_project,
+            ).build_report(),
         )
         tm.that(mixed.passed, eq=False)
         tm.that("\n".join(mixed.violations), has="[ENFORCE-079]")
@@ -136,13 +136,13 @@ class TestsRuntimeCensusBlocking:
         )
 
     def test_single_violation_reports_verbatim(
-        self, genuine_project: Path, capsys: pytest.CaptureFixture[str]
+        self, genuine_project: Path, capsys: pytest.CaptureFixture[str],
     ) -> None:
         """One genuine finding is one violation, reported exactly once."""
         report = tm.ok(
             FlextInfraRuntimeCensusValidator(
-                repository_root=genuine_project
-            ).build_report()
+                repository_root=genuine_project,
+            ).build_report(),
         )
         output = capsys.readouterr().out
         tm.that(report.passed, eq=False)
@@ -165,7 +165,7 @@ class TestsRuntimeCensusSmellOwnership:
         )
 
     def test_check_census_never_sees_smell_families(
-        self, mixed_project: Path, capsys: pytest.CaptureFixture[str]
+        self, mixed_project: Path, capsys: pytest.CaptureFixture[str],
     ) -> None:
         """The runtime-census gate neither reports nor counts any smell.
 
@@ -175,8 +175,8 @@ class TestsRuntimeCensusSmellOwnership:
         """
         report = tm.ok(
             FlextInfraRuntimeCensusValidator(
-                repository_root=mixed_project
-            ).build_report()
+                repository_root=mixed_project,
+            ).build_report(),
         )
         output = capsys.readouterr().out
         tm.that(self._smell_tokens(report.violations), length=0)
@@ -185,25 +185,25 @@ class TestsRuntimeCensusSmellOwnership:
             tm.that(report.summary, lacks=tag)
 
     def test_smells_census_reports_only_smell_families(
-        self, mixed_project: Path
+        self, mixed_project: Path,
     ) -> None:
         """The smells-scoped census grades exactly the smell families."""
         report = tm.ok(
             FlextInfraRuntimeCensusValidator(
-                repository_root=mixed_project, census_gate=c.Infra.SMELLS
-            ).build_report()
+                repository_root=mixed_project, census_gate=c.Infra.SMELLS,
+            ).build_report(),
         )
         tm.that(report.passed, eq=False)
         tm.that(report.violations, length=len(self._smell_tokens(report.violations)))
         tm.that("\n".join(report.violations), has="[smell_function_parameters]")
 
     def test_gate_without_census_families_is_a_failure(
-        self, mixed_project: Path
+        self, mixed_project: Path,
     ) -> None:
         """A gate that owns no census family cannot grade a census run."""
         tm.fail(
             FlextInfraRuntimeCensusValidator(
-                repository_root=mixed_project, census_gate=c.Infra.LINT
+                repository_root=mixed_project, census_gate=c.Infra.LINT,
             ).build_report(),
             has="has no rule families",
         )

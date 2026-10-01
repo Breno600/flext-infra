@@ -28,7 +28,7 @@ class TestsFlextInfraDetectorOwnsNoProjectRegistry:
     def test_unknown_project_derives_its_own_identity(self, tmp_path: Path) -> None:
         """A repository absent from any catalog still derives from itself."""
         root = self._standalone(
-            tmp_path / "totally-unknown-project", name="totally-unknown"
+            tmp_path / "totally-unknown-project", name="totally-unknown",
         )
 
         spec = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))

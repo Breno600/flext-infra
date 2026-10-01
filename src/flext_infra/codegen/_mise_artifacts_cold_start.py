@@ -38,7 +38,7 @@ class FlextInfraMiseColdStart:
         sources: list[m.Cli.AtomicFileState] = []
         for name, _mode in c.Infra.ARTIFACT_SPECS:
             state = u.Cli.atomic_read_binary_file_state(
-                source_root / Path(name).name, required=True
+                source_root / Path(name).name, required=True,
             )
             if state.failure:
                 return result_type.from_failure(state)
@@ -61,7 +61,7 @@ class FlextInfraMiseColdStart:
                     desired_content=source.content,
                     desired_mode=mode,
                     source_states=(source,),
-                )
+                ),
             )
         return result_type.ok(tuple(plans))
 
@@ -76,7 +76,7 @@ class FlextInfraMiseColdStart:
         ] != (c.Infra.DEFAULT_SRC_DIR,):
             return result_type.ok(())
         planner = FlextInfraMiseWorkspacePlanner(
-            FlextInfraCodegenMiseArtifacts(repository_root=project)
+            FlextInfraCodegenMiseArtifacts(repository_root=project),
         )
         scope_root = planner.scope_root()
         if scope_root.failure:
@@ -99,7 +99,7 @@ class FlextInfraMiseColdStart:
                     desired_content=source.content,
                     desired_mode=mode,
                     source_states=(source,),
-                )
+                ),
             )
         return result_type.ok(tuple(plans))
 

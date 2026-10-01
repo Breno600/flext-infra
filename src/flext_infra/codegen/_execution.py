@@ -10,26 +10,26 @@ from flext_infra.base import FlextInfraServiceBase
 
 
 class FlextInfraCodegenExecutionBase[TResult: t.Cli.ResultValue](
-    FlextInfraServiceBase[TResult]
+    FlextInfraServiceBase[TResult],
 ):
     """Own explicit repository execution state shared by codegen services."""
 
     repository_root: Annotated[
         Path,
         m.Field(
-            default=Path(), description="Repository selected for codegen execution"
+            default=Path(), description="Repository selected for codegen execution",
         ),
     ] = Path()
     dry_run: Annotated[
-        bool, m.Field(default=False, description="Whether the service may mutate files")
+        bool, m.Field(default=False, description="Whether the service may mutate files"),
     ] = False
     check_only: Annotated[
-        bool, m.Field(default=False, description="Whether the service validates only")
+        bool, m.Field(default=False, description="Whether the service validates only"),
     ] = False
     apply_changes: Annotated[
         bool,
         m.Field(
-            default=True, description="Whether the requested operation applies changes"
+            default=True, description="Whether the requested operation applies changes",
         ),
     ] = True
     output_format: Annotated[

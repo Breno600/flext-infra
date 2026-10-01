@@ -24,7 +24,7 @@ class TestsFlextInfraExtendedCliEntry:
             with_src=True,
         )
         (workspace / "p1/src/p1/__init__.py").write_text(
-            '"""Test package."""\n', encoding="utf-8"
+            '"""Test package."""\n', encoding="utf-8",
         )
         u.Tests.declare_workspace_projects(workspace, ("p1",))
         return workspace
@@ -49,7 +49,7 @@ class TestsFlextInfraExtendedCliEntry:
         )
 
     def test_run_without_projects_evaluates_only_the_repository(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """An omitted --projects is the repository itself, never its members.
 
@@ -58,13 +58,13 @@ class TestsFlextInfraExtendedCliEntry:
         """
         workspace = self._workspace(tmp_path)
         (workspace / "pyproject.toml").write_text(
-            '[project]\nname = "workspace"\nversion = "0.1.0"\n', encoding="utf-8"
+            '[project]\nname = "workspace"\nversion = "0.1.0"\n', encoding="utf-8",
         )
         package = workspace / "src" / "workspace"
         package.mkdir(parents=True)
         (package / "__init__.py").write_text('"""Root package."""\n', encoding="utf-8")
         (workspace / "p1" / "src" / "broken.py").write_text(
-            "def broken(:\n", encoding="utf-8"
+            "def broken(:\n", encoding="utf-8",
         )
         tm.that(
             main([
@@ -119,7 +119,7 @@ class TestsFlextInfraExtendedCliEntry:
         tm.that(main(["check", "fix-pyrefly-settings", "--help"]), eq=0)
 
     def test_run_cli_anchors_relative_reports_dir_at_repository_root(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """A relative ``--reports-dir`` never lands under the caller's cwd."""
         workspace = self._workspace(tmp_path)

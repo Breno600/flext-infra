@@ -32,17 +32,17 @@ class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
             return r[t.Cli.ResultValue].from_failure(resolved)
         if not resolved.value:
             cli.display_text(
-                "protocol-models: no referenced model protocols to assemble"
+                "protocol-models: no referenced model protocols to assemble",
             )
             return r[t.Cli.ResultValue].ok(True)
         modules = FlextInfraCodegenProtocolModelRender.render_member_modules(
-            resolved.value, target
+            resolved.value, target,
         )
         return self._settle(self.repository_root, modules, dry=self.effective_dry_run)
 
     @classmethod
     def _resolve_target(
-        cls, root: Path
+        cls, root: Path,
     ) -> p.Result[FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget]:
         """Derive the member target from its declared pyproject name."""
         manifest = root / "pyproject.toml"
@@ -56,7 +56,7 @@ class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
                 FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget
             ].from_failure(declared)
         name = u.Cli.json_pick_str(
-            u.Cli.json_deep_mapping(declared.value, "project"), "name"
+            u.Cli.json_deep_mapping(declared.value, "project"), "name",
         )
         if not name:
             return r[
@@ -77,7 +77,7 @@ class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
                     ("c", f"{package}.constants.{container}Constants"),
                     ("t", f"{package}.typings.{container}Types"),
                 ),
-            )
+            ),
         )
 
     @classmethod
@@ -96,12 +96,12 @@ class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
             facade = import_module(f"{target.package_name}.models")
         except ImportError as exc:
             return r[t.SequenceOf[type[m.BaseModel]]].fail(
-                f"member models facade not importable: {exc}", exception=exc
+                f"member models facade not importable: {exc}", exception=exc,
             )
         container = getattr(facade, f"{target.facade_container}Models", None)
         if container is None:
             return r[t.SequenceOf[type[m.BaseModel]]].fail(
-                f"models facade declares no {target.facade_container}Models container"
+                f"models facade declares no {target.facade_container}Models container",
             )
         models: list[type[m.BaseModel]] = []
         for name in wanted:
@@ -109,14 +109,14 @@ class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
             if candidate is None:
                 return r[t.SequenceOf[type[m.BaseModel]]].fail(
                     f"referenced protocol {target.protocol_ref_prefix}.{name} "
-                    f"resolves to no model on {target.facade_container}Models"
+                    f"resolves to no model on {target.facade_container}Models",
                 )
             models.extend(cls._model_leaves(candidate))
         return r[t.SequenceOf[type[m.BaseModel]]].ok(tuple(models))
 
     @classmethod
     def _model_leaves(
-        cls, candidate: p.AttributeProbe
+        cls, candidate: p.AttributeProbe,
     ) -> t.VariadicTuple[type[m.BaseModel]]:
         """Expand discriminated-union aliases into their leaf models."""
         if isinstance(candidate, TypeAliasType):
@@ -140,7 +140,7 @@ class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
     ) -> set[str]:
         """Scan member sources for ``<protocols_ref>.<Name>`` references."""
         pattern = re.compile(
-            rf"\b{re.escape(target.protocol_ref_prefix)}\.([A-Z]\w*)\b"
+            rf"\b{re.escape(target.protocol_ref_prefix)}\.([A-Z]\w*)\b",
         )
         found: set[str] = set()
         source = root / "src" / target.package_name
@@ -168,7 +168,7 @@ class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
 
     @classmethod
     def _settle(
-        cls, root: Path, modules: t.MappingKV[str, str], *, dry: bool
+        cls, root: Path, modules: t.MappingKV[str, str], *, dry: bool,
     ) -> p.Result[t.Cli.ResultValue]:
         """Compare or write generated modules under the member protocols dir."""
         changed: list[str] = []
@@ -186,11 +186,11 @@ class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
         if changed and dry:
             return r[t.Cli.ResultValue].fail(
                 f"{len(changed)} generated protocol module(s) drifted: "
-                f"{', '.join(changed)}"
+                f"{', '.join(changed)}",
             )
         verb = "checked" if dry else "assembled"
         cli.display_text(
-            f"protocol-models: {verb} {len(modules)} module(s), {len(changed)} updated"
+            f"protocol-models: {verb} {len(modules)} module(s), {len(changed)} updated",
         )
         return r[t.Cli.ResultValue].ok(True)
 

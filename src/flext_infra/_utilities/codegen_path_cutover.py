@@ -73,7 +73,7 @@ class FlextInfraUtilitiesCodegenPathCutover:
         )
         for pattern, goal in transformations:
             changes = FlextInfraUtilitiesRopeRuntimeRefactors.restructure_changes(
-                project, pattern, goal, arguments={"files": owner}, resources=resources
+                project, pattern, goal, arguments={"files": owner}, resources=resources,
             )
             edits: list[m.Infra.SemanticMigrationEdit] = []
             for change in changes.changes:
@@ -90,7 +90,7 @@ class FlextInfraUtilitiesCodegenPathCutover:
                         original_source=sources[path],
                         updated_source=change.new_contents,
                         changes=("Rope transaction path capability migration",),
-                    )
+                    ),
                 )
             if edits:
                 return tuple(edits)

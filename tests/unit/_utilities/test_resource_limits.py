@@ -17,7 +17,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
     """Behavior tests for the canonical Mypy resource-limit command."""
 
     def test_mypy_command_checks_source_with_memory_and_time_limits(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """Check a real typed source through both validated resource ceilings."""
         limit = m.Infra.MypyResourceLimit(
@@ -25,7 +25,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
             timeout_seconds=config.Infra.tooling.tools.mypy.timeout_seconds,
         )
         command = u.Infra.mypy_limited_command(
-            test_u.Tests.mypy_workload(tmp_path), limit
+            test_u.Tests.mypy_workload(tmp_path), limit,
         )
         result = u.Cli.run_raw(command, timeout=u.Infra.mypy_runner_timeout(limit))
 
@@ -48,11 +48,11 @@ class TestsFlextInfraUtilitiesResourceLimits:
         tm.ok(result)
         tm.that(u.Cli.process_succeeded(result.value.outcome), eq=True)
         tm.that(
-            bool(pstats.Stats(str(profile)).get_stats_profile().func_profiles), eq=True
+            bool(pstats.Stats(str(profile)).get_stats_profile().func_profiles), eq=True,
         )
 
     def test_mypy_budget_resolves_the_project_tooling_overlay(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """A project tooling.yaml budget drives the runner timeout."""
         budget = config.Infra.tooling.tools.mypy.timeout_seconds // 2
@@ -72,7 +72,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         )
 
     def test_mypy_budget_overlay_above_the_fleet_bound_fails_loud(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """A project budget can only lower the fleet tooling bound."""
         above = config.Infra.tooling.tools.mypy.timeout_seconds + 1
@@ -86,7 +86,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
             u.Infra.mypy_runner_timeout_for_project(tmp_path)
 
     def test_mypy_budget_without_overlay_uses_the_fleet_default(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """No project overlay falls back to the fleet tooling SSOT."""
         tm.that(
@@ -95,13 +95,13 @@ class TestsFlextInfraUtilitiesResourceLimits:
         )
 
     def test_workspace_checker_requires_its_own_environment(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """An unprovisioned target never borrows the orchestrator's interpreter."""
         test_u.Tests.initialize_git_repo(tmp_path)
         project = test_u.Tests.mypy_workload(tmp_path)
         invocation = m.Infra.MypyInvocation(
-            targets=project.targets, config_file=project.config_file, workspace=tmp_path
+            targets=project.targets, config_file=project.config_file, workspace=tmp_path,
         )
         with pytest.raises(FileNotFoundError, match="managed workspace interpreter"):
             u.Infra.mypy_command(invocation)
@@ -110,14 +110,14 @@ class TestsFlextInfraUtilitiesResourceLimits:
             u.Infra.mypy_command(invocation)
 
     def test_supervisor_rejects_executable_selection_before_launch(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """A hostile request cannot turn the supervisor into an arbitrary executor."""
         project = test_u.Tests.mypy_workload(tmp_path)
         command = u.Infra.mypy_limited_command(project, host_system="Darwin")
         injected = project.model_dump_json()[:-1] + ',"command":["/bin/sh"]}'
         result = u.Cli.run_raw(
-            (*command[:-1], injected), timeout=u.Infra.mypy_runner_timeout()
+            (*command[:-1], injected), timeout=u.Infra.mypy_runner_timeout(),
         )
         tm.ok(result)
         tm.that(result.value.outcome.raw_return_code, eq=1)
@@ -136,7 +136,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         ],
     )
     def test_resource_limit_enforces_exit_deadline_and_memory(
-        self, tmp_path: Path, scenario: str, expected: int | None
+        self, tmp_path: Path, scenario: str, expected: int | None,
     ) -> None:
         """Exercise a real exit, deadline and resident allocation through the owner."""
         limit = m.Infra.MypyResourceLimit(
@@ -155,7 +155,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
                 source += f"allocation = bytearray({limit.memory_limit_bytes * 2}); "
             source += f"time.sleep({limit.timeout_seconds + 1})"
         command = u.Infra.mypy_limited_command(
-            test_u.Tests.mypy_workload(tmp_path, source), limit
+            test_u.Tests.mypy_workload(tmp_path, source), limit,
         )
         result = u.Cli.run_raw(command, timeout=u.Infra.mypy_runner_timeout(limit))
         tm.ok(result)
@@ -172,7 +172,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
             # public diagnostic, so an unrelated checker failure after the
             # workload start can no longer satisfy this scenario.
             diagnostic = tm.not_none(
-                u.Infra.mypy_failure_diagnostic(result.value, limit)
+                u.Infra.mypy_failure_diagnostic(result.value, limit),
             )
             tm.that(diagnostic, has=f"memory_limit={limit.memory_limit_mb} MiB")
             if sys.platform == "darwin":
@@ -183,7 +183,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
     @pytest.mark.slow
     @pytest.mark.parametrize("expected", [7, 124])
     def test_resource_limit_stops_resistant_descendant_group(
-        self, tmp_path: Path, expected: int, request: pytest.FixtureRequest
+        self, tmp_path: Path, expected: int, request: pytest.FixtureRequest,
     ) -> None:
         """Kill a TERM-resistant descendant after leader exit or deadline."""
         limit = test_u.Tests.mypy_deadline_limit()
@@ -192,8 +192,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
         error_file = tmp_path / "descendant.stderr"
         request.addfinalizer(
             lambda: test_u.Tests.reap_mypy_descendant(
-                pid_file, policy.termination_grace_seconds
-            )
+                pid_file, policy.termination_grace_seconds,
+            ),
         )
         sleep = f"time.sleep({u.Infra.mypy_runner_timeout(limit) + policy.slow_timeout_seconds})"
         tail = "sys.exit(7)" if expected == 7 else sleep
@@ -216,7 +216,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         )
         result = u.Cli.run_raw(
             u.Infra.mypy_limited_command(
-                test_u.Tests.mypy_workload(tmp_path, source), limit
+                test_u.Tests.mypy_workload(tmp_path, source), limit,
             ),
             timeout=u.Infra.mypy_runner_timeout(limit),
         )
@@ -254,7 +254,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
                     f"time.sleep({limit.timeout_seconds + 1})",
                 ),
                 limit,
-            )
+            ),
         )
         tm.ok(started)
         child = started.value
@@ -283,7 +283,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
 
         tm.that(limit.memory_limit_mb, eq=memory_limit)
         tm.that(
-            limit.timeout_seconds, eq=config.Infra.tooling.tools.mypy.timeout_seconds
+            limit.timeout_seconds, eq=config.Infra.tooling.tools.mypy.timeout_seconds,
         )
 
     @pytest.mark.parametrize(
@@ -300,7 +300,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         ],
     )
     def test_mypy_resource_limit_rejects_non_integer_environment(
-        self, invalid_value: str
+        self, invalid_value: str,
     ) -> None:
         """Reject non-integer process text before constructing the strict model.
 
@@ -373,7 +373,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
                 stdout="Traceback: checker frame",
                 stderr="INTERNAL ERROR",
                 outcome=m.Cli.ProcessOutcome(
-                    raw_return_code=-11, timed_out=False, forwarded_signal=None
+                    raw_return_code=-11, timed_out=False, forwarded_signal=None,
                 ),
             ),
             limit,
@@ -382,7 +382,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         tm.that(diagnostic, has=["Traceback: checker frame", "INTERNAL ERROR"])
 
     def test_mypy_cache_directory_is_project_keyed_and_survives_relocks(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """One shared Mypy cache per project, reused by every checkout and relock."""
         spec = config.Infra.codegen.make.mypy_cache
@@ -391,7 +391,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
             root = tmp_path / name
             root.mkdir()
             (root / c.PYPROJECT_FILENAME).write_text(
-                f"[project]\nname = '{project}'\nversion = '0.0.0'\n", encoding="utf-8"
+                f"[project]\nname = '{project}'\nversion = '0.0.0'\n", encoding="utf-8",
             )
             return root
 

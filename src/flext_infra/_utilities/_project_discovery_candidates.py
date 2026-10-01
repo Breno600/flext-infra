@@ -19,19 +19,19 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesProjectDiscoveryCandidatesMixin(
-    FlextInfraUtilitiesProjectDiscoveryShapeMixin
+    FlextInfraUtilitiesProjectDiscoveryShapeMixin,
 ):
     """Private candidate enumeration for workspace project discovery."""
 
     @classmethod
     def discover_project_candidates(
-        cls, repository_root: Path, *, scan_dirs: frozenset[str] | None = None
+        cls, repository_root: Path, *, scan_dirs: frozenset[str] | None = None,
     ) -> t.SequenceOf[Path]:
         """Return the root and projects declared by its own ``.gitmodules``."""
         roots: t.MutableSequenceOf[Path] = []
         effective_scan_dirs = scan_dirs or frozenset()
         declared_paths = FlextInfraUtilitiesGit.git_declared_submodule_paths(
-            repository_root
+            repository_root,
         )
         if declared_paths.failure:
             raise ValueError(declared_paths.error or "invalid .gitmodules")
@@ -51,7 +51,7 @@ class FlextInfraUtilitiesProjectDiscoveryCandidatesMixin(
             roots.append(resolved_repository_root)
         if configured_projects:
             candidate_entries: t.SequenceOf[Path] = sorted(
-                configured_entries, key=Path.as_posix
+                configured_entries, key=Path.as_posix,
             )
             roots.extend([
                 entry.resolve()

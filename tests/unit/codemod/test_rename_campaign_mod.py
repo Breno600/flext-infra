@@ -20,7 +20,7 @@ class TestsRenameCampaignMod:
     def _declare(config_dir: Path) -> None:
         shutil.copytree(FlextInfraConfig.ssot_config_dir(), config_dir)
         (config_dir / "renames.csv").write_text(
-            "old,new\ncampaign_token,campaign_renamed_token\n", encoding="utf-8"
+            "old,new\ncampaign_token,campaign_renamed_token\n", encoding="utf-8",
         )
         (config_dir / c.Infra.CODEGEN_LOCAL_OVERRIDES_FILENAME).write_text(
             "Infra:\n  refactor_csv_campaigns:\n    campaigns:\n"
@@ -33,7 +33,7 @@ class TestsRenameCampaignMod:
     @pytest.mark.slow
     @pytest.mark.parametrize("apply", [False, True])
     def test_public_mod_consumes_declared_text_campaign(
-        self, mod_workspace: Path, tmp_path: Path, *, apply: bool
+        self, mod_workspace: Path, tmp_path: Path, *, apply: bool,
     ) -> None:
         config_dir = tmp_path / "campaign_config"
         self._declare(config_dir)
@@ -58,7 +58,7 @@ class TestsRenameCampaignMod:
                     *(("--apply",) if apply else ()),
                 ),
                 env={"FLEXT_INFRA_CONFIG_DIR": str(config_dir)},
-            )
+            ),
         )
         tm.that(u.Cli.process_succeeded(result.outcome), eq=apply, msg=result.stderr)
         if apply:
@@ -73,12 +73,12 @@ class TestsRenameCampaignMod:
             u.Cli.run(
                 (sys.executable, "-c", "import sample; print(sample.PAYLOAD)"),
                 cwd=mod_workspace,
-            )
+            ),
         )
         tm.that(consumer.stdout, eq="campaign_token\n")
 
     def test_packaged_campaigns_preserve_prose_and_converge(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         mod_workspace, _package = u.Tests.create_lazy_init_workspace(tmp_path)
         config_dir = FlextInfraConfig.ssot_config_dir()
@@ -88,13 +88,13 @@ class TestsRenameCampaignMod:
         tm.that(campaigns, empty=False)
         for index, campaign in enumerate(campaigns):
             rows = tm.ok(
-                u.Cli.csv_loads((config_dir / campaign.csv).read_text(encoding="utf-8"))
+                u.Cli.csv_loads((config_dir / campaign.csv).read_text(encoding="utf-8")),
             )
             pairs = tuple((row[0], row[1]) for row in rows[1:])
             mentions = "".join(f"- {old}\n" for old, _new in pairs)
             guide = mod_workspace / f"campaign_{index}.md"
             guide.write_text(
-                "# Guide\n\nSurrounding prose remains.\n" + mentions, encoding="utf-8"
+                "# Guide\n\nSurrounding prose remains.\n" + mentions, encoding="utf-8",
             )
             consumer = mod_workspace / f"consumer_{index}.py"
             consumer.write_text(f'"""{mentions}"""\n', encoding="utf-8")

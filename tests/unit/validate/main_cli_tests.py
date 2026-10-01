@@ -48,7 +48,7 @@ class TestsFlextInfraValidateCli:
             encoding="utf-8",
         )
         config_path.write_text(
-            f"ruleDirs: [{c.Cli.RULES_DIR_NAME}]\n", encoding="utf-8"
+            f"ruleDirs: [{c.Cli.RULES_DIR_NAME}]\n", encoding="utf-8",
         )
         (rules / "contract.yml").write_text(
             "id: namespace-contract\nlanguage: Python\nseverity: error\n"
@@ -72,7 +72,7 @@ class TestsFlextInfraValidateCli:
         tm.that(exit_code, eq=0)
 
     def test_namespace_validate_exits_nonzero_for_rule_findings(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         project = self._rule_project(tmp_path, "first(1)\n")
 

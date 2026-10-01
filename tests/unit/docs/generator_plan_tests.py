@@ -29,7 +29,7 @@ class TestsFlextInfraDocsGeneratorPlan:
             path.mkdir(parents=True, exist_ok=True)
 
     def test_required_directories_are_unique_parent_first_and_read_only(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """Plan arbitrary nested target parents without materializing any directory."""
         project = tmp_path / "project"
@@ -83,13 +83,13 @@ class TestsFlextInfraDocsGeneratorPlan:
         tm.that(all(not path.exists() for path in result.value), eq=True)
 
     def test_required_directories_reject_duplicate_targets(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """Fail before effects when two rendered artifacts claim one target."""
         workspace = u.Tests.create_docs_workspace(tmp_path, project_names=("flext-a",))
 
         generator = FlextInfraDocGenerator(
-            repository_root=workspace, selected_projects=["flext-a", "flext-a"]
+            repository_root=workspace, selected_projects=["flext-a", "flext-a"],
         )
         prepared = generator.prepare_bundle()
 
@@ -97,11 +97,11 @@ class TestsFlextInfraDocsGeneratorPlan:
         tm.that(prepared.error or "", has="duplicate docs publication target")
 
     def test_required_directories_match_final_file_plan_targets(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """Keep the pre-snapshot directory plan bound to the final artifact owner."""
         workspace, generator = u.Tests.docs_workspace_generator(
-            tmp_path, project_names=("flext-a",), selected_projects=["flext-a"]
+            tmp_path, project_names=("flext-a",), selected_projects=["flext-a"],
         )
         # `rglob` never yields the root it walks, and a scope root always exists,
         # so it is a directory the plan writes into and never has to create.
@@ -135,7 +135,7 @@ class TestsFlextInfraDocsGeneratorPlan:
         tm.that(planned_new_parents.difference(required.value), eq=set())
 
     def test_plan_files_returns_exact_read_only_docs_plans(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """Describe generated artifacts without changing the workspace."""
         workspace = u.Tests.create_docs_workspace(tmp_path, project_names=("flext-a",))
@@ -145,7 +145,7 @@ class TestsFlextInfraDocsGeneratorPlan:
         }
 
         generator = FlextInfraDocGenerator(
-            repository_root=workspace, selected_projects=["flext-a"]
+            repository_root=workspace, selected_projects=["flext-a"],
         )
         plans = u.Tests.plan_docs_bundle(generator)
 
@@ -163,7 +163,7 @@ class TestsFlextInfraDocsGeneratorPlan:
         tm.that((workspace / ".reports").exists(), eq=False)
 
     def test_generate_publishes_and_reaches_an_unchanged_second_run(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """The public fixed-effect command writes and converges without a mode flag."""
         workspace = u.Tests.create_docs_workspace(tmp_path)
@@ -195,7 +195,7 @@ class TestsFlextInfraDocsGeneratorPlan:
         stale.write_text("stale\n", encoding="utf-8")
 
         generator = FlextInfraDocGenerator(
-            repository_root=workspace, selected_projects=["flext-a"]
+            repository_root=workspace, selected_projects=["flext-a"],
         )
         plans = u.Tests.plan_docs_bundle(generator)
 
@@ -203,17 +203,17 @@ class TestsFlextInfraDocsGeneratorPlan:
         tm.that(stale_plan.desired_content, eq=None)
         tm.that(u.Infra.codegen_file_requires_effect(stale_plan), eq=True)
         tm.that(
-            tm.ok(u.Infra.codegen_file_before_state(stale_plan)).content, eq=b"stale\n"
+            tm.ok(u.Infra.codegen_file_before_state(stale_plan)).content, eq=b"stale\n",
         )
         tm.that(stale.exists(), eq=True)
 
     def test_scope_failure_is_not_normalized_to_empty_aggregate(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """Propagate malformed workspace topology instead of rendering an empty root."""
         workspace = u.Tests.create_docs_workspace(tmp_path)
         (workspace / ".gitmodules").write_text(
-            '[submodule "broken"]\n\tpath = ../outside\n', encoding="utf-8"
+            '[submodule "broken"]\n\tpath = ../outside\n', encoding="utf-8",
         )
 
         generator = FlextInfraDocGenerator(repository_root=workspace)

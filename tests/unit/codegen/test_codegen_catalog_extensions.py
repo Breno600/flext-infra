@@ -18,7 +18,7 @@ class TestsFlextInfraCodegenCatalogExtensions:
     """Prove generic extensions without a repository registry or second manifest."""
 
     def test_scaffold_source_resolves_before_the_project_exists(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """An explicit source supplies provenance without guessing from the consumer."""
         root = tmp_path / "unborn"
@@ -30,14 +30,14 @@ class TestsFlextInfraCodegenCatalogExtensions:
                     url=u.Tests.repository_ref(config.Infra.name).url,
                     ref=u.Tests.provider_branch(),
                 ),
-            )
+            ),
         )
         tm.that(line.base_url, eq=u.Tests.provider().base_url)
         tm.that(line.branch, eq=u.Tests.provider_branch())
         tm.that(root.exists(), eq=False)
 
     def test_invalid_scaffold_source_fails_before_filesystem_effects(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """Source validation happens before creating a directory or Git metadata."""
         root = tmp_path / "unborn"
@@ -46,13 +46,13 @@ class TestsFlextInfraCodegenCatalogExtensions:
         # bootstrap source; naming a repository other than the infrastructure
         # distribution makes it invalid.
         workspace = u.Tests.workspace_spec(
-            consumer, project=u.Tests.project_spec(consumer.name)
+            consumer, project=u.Tests.project_spec(consumer.name),
         ).model_copy(
             update={
                 "flext_source": m.Infra.CodegenBootstrapSource(
-                    url=consumer.url, ref=u.Tests.provider_branch()
-                )
-            }
+                    url=consumer.url, ref=u.Tests.provider_branch(),
+                ),
+            },
         )
         result = infra.codegen_conform(
             u.Tests.conform_request(
@@ -70,16 +70,16 @@ class TestsFlextInfraCodegenCatalogExtensions:
         tm.that(root.exists(), eq=False)
 
     def _repository(
-        self, name: str, *, path: str, role: c.Infra.MakeProfile
+        self, name: str, *, path: str, role: c.Infra.MakeProfile,
     ) -> m.Infra.RepositoryRef:
         reference = u.Tests.repository_ref(name, path=Path(path), role=role)
         is_standalone = role is c.Infra.MakeProfile.STANDALONE
         return reference.model_copy(
-            update={"package": is_standalone, "editable": is_standalone}
+            update={"package": is_standalone, "editable": is_standalone},
         )
 
     def test_infra_repository_identity_is_detected_from_the_checkout(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """The infra URL is detected from the checkout's own dependency line."""
         codegen = config.Infra.codegen
@@ -97,7 +97,7 @@ class TestsFlextInfraCodegenCatalogExtensions:
         )
 
         resolved = tm.ok(
-            u.Infra.configured_repository_ref(codegen=codegen, repository_root=root)
+            u.Infra.configured_repository_ref(codegen=codegen, repository_root=root),
         )
 
         tm.that(resolved.distribution, eq=source.distribution)
@@ -106,7 +106,7 @@ class TestsFlextInfraCodegenCatalogExtensions:
         tm.that(source.internal_distribution_prefix, eq="flext-")
 
     def test_flext_line_follows_the_declared_infra_source_not_the_consumer(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """Every internal floor renders from the infra dependency's own source."""
         codegen = config.Infra.codegen
@@ -124,7 +124,7 @@ class TestsFlextInfraCodegenCatalogExtensions:
             encoding="utf-8",
         )
         line = tm.ok(
-            u.Infra.flext_integration_line(codegen=codegen, repository_root=root)
+            u.Infra.flext_integration_line(codegen=codegen, repository_root=root),
         )
         tm.that(line.provider, eq=codegen.infra_repository.provider)
         tm.that(line.branch, eq=branch)
@@ -132,7 +132,7 @@ class TestsFlextInfraCodegenCatalogExtensions:
         tm.that(line.organization, eq=provider.organization)
 
     def test_flext_line_fails_loud_on_conflicting_infra_sources(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """Family members declared from two lines in one document are a defect."""
         codegen = config.Infra.codegen
@@ -165,7 +165,7 @@ class TestsFlextInfraCodegenCatalogExtensions:
         ],
     )
     def test_infra_identity_respects_managed_conflict_ownership(
-        self, tmp_path: Path, section: str | None
+        self, tmp_path: Path, section: str | None,
     ) -> None:
         """Identity planning recovers managed bytes without touching the file."""
         codegen = config.Infra.codegen
@@ -203,7 +203,7 @@ class TestsFlextInfraCodegenCatalogExtensions:
         tm.that(path.read_text(encoding=c.Cli.ENCODING_DEFAULT), eq=content)
 
     def test_infra_repository_identity_fails_loud_when_undeclared(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """A checkout that declares the infra distribution nowhere fails loudly."""
         codegen = config.Infra.codegen
@@ -215,18 +215,18 @@ class TestsFlextInfraCodegenCatalogExtensions:
         )
 
         result = u.Infra.configured_repository_ref(
-            codegen=codegen, repository_root=root
+            codegen=codegen, repository_root=root,
         )
 
         tm.that(result.failure, eq=True)
         tm.that(result.error, has="is undeclared by this checkout")
 
     def test_bootstrap_toolchain_tracks_latest_mise_release(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """The rendered bootstrap launches the tracked Mise and records its receipt."""
         makefile = u.Tests.scaffold_text(
-            tmp_path / "fixture-project", c.Infra.MAKEFILE_FILENAME
+            tmp_path / "fixture-project", c.Infra.MAKEFILE_FILENAME,
         )
         tm.that(makefile, lacks="latest_release_url")
         tm.that(makefile, lacks="curl ")
@@ -235,12 +235,12 @@ class TestsFlextInfraCodegenCatalogExtensions:
         tm.that(makefile, has='pinned_mise="$$mise"')
         tm.that(makefile, has="mise_receipt runtime-version")
         mise_toml = u.Tests.scaffold_text(
-            tmp_path / "fixture-project", c.Infra.MISE_TOML_FILENAME
+            tmp_path / "fixture-project", c.Infra.MISE_TOML_FILENAME,
         )
         tm.that(mise_toml, lacks="jdx/mise")
 
     def test_setup_provisions_only_and_gen_owns_conformance(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """``make setup`` provisions tooling; ``make gen`` owns conformance."""
         plan = u.Tests.scaffold_plan(tmp_path / "fixture-project")
@@ -260,7 +260,7 @@ class TestsFlextInfraCodegenCatalogExtensions:
         tm.that(mise, has=f'make = "{toolchain.make_version}"')
         tm.that(mise, lacks="credential_command")
         tm.that(
-            mise, has=f'minimum_release_age = "{toolchain.dependency_cooldown_days}d"'
+            mise, has=f'minimum_release_age = "{toolchain.dependency_cooldown_days}d"',
         )
         # S1 (operator law 2026-09-14): gen has one always-apply recipe; the
         # CHECK_ONLY-selected check/apply pair no longer exists.
@@ -275,7 +275,7 @@ class TestsFlextInfraCodegenCatalogExtensions:
         tm.that(verb_names, has="gen")
 
     def test_codegen_composes_project_mise_tools_through_toml(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """The codegen artifact boundary consumes the project YAML overlay."""
         config_dir = tmp_path / "config"
@@ -288,23 +288,23 @@ class TestsFlextInfraCodegenCatalogExtensions:
         u.Tests.initialize_git_repo(tmp_path)
 
         result = FlextInfraCodegenConform.compose_project_artifact(
-            tmp_path, c.Infra.MISE_TOML_FILENAME, '[tools]\npython = "3.13"\n'
+            tmp_path, c.Infra.MISE_TOML_FILENAME, '[tools]\npython = "3.13"\n',
         )
 
         rendered = u.Tests.toml_payload(tm.ok(result).rendered)
         tm.that(rendered["tools"], eq={"python": "3.13", "node": "26"})
 
     def test_local_manifest_conforms_without_global_repository_rows(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         root = self._repository(
-            "acme-platform", path=".", role=c.Infra.MakeProfile.WORKSPACE
+            "acme-platform", path=".", role=c.Infra.MakeProfile.WORKSPACE,
         )
         member = self._repository(
-            "acme-charts", path="acme-charts", role=c.Infra.MakeProfile.STANDALONE
+            "acme-charts", path="acme-charts", role=c.Infra.MakeProfile.STANDALONE,
         )
         workspace = u.Tests.workspace_spec(
-            root, project=u.Tests.project_spec(root.name), subprojects=(member,)
+            root, project=u.Tests.project_spec(root.name), subprojects=(member,),
         )
         member_source = tmp_path / "member-source"
         u.Tests.WorktreeFixture.initialize_governed_project(
@@ -315,7 +315,7 @@ class TestsFlextInfraCodegenCatalogExtensions:
             issue_prefix=member.name,
         )
         member_head = tm.ok(
-            u.Cli.capture([c.Infra.GIT, "rev-parse", "HEAD"], cwd=member_source)
+            u.Cli.capture([c.Infra.GIT, "rev-parse", "HEAD"], cwd=member_source),
         )
         bare_repo = tmp_path / "acme-charts.git"
         tm.ok(
@@ -325,7 +325,7 @@ class TestsFlextInfraCodegenCatalogExtensions:
                 "--bare",
                 member_source.as_posix(),
                 bare_repo.as_posix(),
-            ])
+            ]),
         )
         tm.ok(
             u.Cli.run_checked([
@@ -335,7 +335,7 @@ class TestsFlextInfraCodegenCatalogExtensions:
                 "update-ref",
                 f"refs/heads/{u.Tests.provider_branch()}",
                 member_head,
-            ])
+            ]),
         )
 
         repository_root = tmp_path / "workspace"
@@ -360,20 +360,20 @@ class TestsFlextInfraCodegenCatalogExtensions:
                     member.name,
                 ],
                 cwd=repository_root,
-            )
+            ),
         )
         member_checkout = repository_root / member.name
         tm.ok(
             u.Cli.run_checked(
                 [c.Infra.GIT, "remote", "set-url", "origin", member.url],
                 cwd=member_checkout,
-            )
+            ),
         )
         tm.ok(
             u.Cli.run_checked(
                 [c.Infra.GIT, "config", "remote.origin.skipDefaultUpdate", "true"],
                 cwd=member_checkout,
-            )
+            ),
         )
         tm.ok(
             u.Cli.run_checked(
@@ -384,25 +384,25 @@ class TestsFlextInfraCodegenCatalogExtensions:
                     member_head,
                 ],
                 cwd=member_checkout,
-            )
+            ),
         )
         gitmodules = u.Tests.WorktreeFixture.write_gitmodules(
-            repository_root, (member.name,)
+            repository_root, (member.name,),
         )
         tm.ok(
             u.Cli.run_checked(
                 [c.Infra.GIT, "add", c.Infra.GITMODULES, member.name],
                 cwd=repository_root,
-            )
+            ),
         )
         tm.ok(
             u.Cli.run_checked(
                 [c.Infra.GIT, "commit", "-q", "-m", "Attach governed member"],
                 cwd=repository_root,
-            )
+            ),
         )
         root_head = tm.ok(
-            u.Cli.capture([c.Infra.GIT, "rev-parse", "HEAD"], cwd=repository_root)
+            u.Cli.capture([c.Infra.GIT, "rev-parse", "HEAD"], cwd=repository_root),
         )
         tm.ok(
             u.Cli.run_checked(
@@ -413,7 +413,7 @@ class TestsFlextInfraCodegenCatalogExtensions:
                     root_head,
                 ],
                 cwd=repository_root,
-            )
+            ),
         )
         declared_gitmodules = gitmodules.read_bytes()
         result = FlextInfraCodegenConform(initial_workspace=workspace).plan(
@@ -422,12 +422,12 @@ class TestsFlextInfraCodegenCatalogExtensions:
                 what=c.Infra.CodegenConformSurface.ALL,
                 scope=c.Infra.CodegenConformScope.ALL,
                 mode=c.Infra.CodegenConformMode.CHECK,
-            )
+            ),
         )
 
         plan = tm.ok(result)
         tm.that(
-            tuple(item.name for item in plan.repositories), eq=(root.name, member.name)
+            tuple(item.name for item in plan.repositories), eq=(root.name, member.name),
         )
         root_makefile = next(
             file

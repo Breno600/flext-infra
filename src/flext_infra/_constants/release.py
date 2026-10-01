@@ -40,14 +40,14 @@ class FlextInfraConstantsRelease:
         MAJOR = "major"
 
     VERSION_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^version\s*=\s*['\"](.+?)['\"]", re.MULTILINE
+        r"^version\s*=\s*['\"](.+?)['\"]", re.MULTILINE,
     )
     CONVENTIONAL_SUBJECT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?P<type>[a-z]+)(?:\([^)]+\))?(?P<breaking>!)?: \S"
+        r"^(?P<type>[a-z]+)(?:\([^)]+\))?(?P<breaking>!)?: \S",
     )
     "Conventional Commits subject: ``type(scope)!: description``."
     PULL_REQUEST_MERGE_SUBJECT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^Merge pull request #\d+\b"
+        r"^Merge pull request #\d+\b",
     )
     "GitHub's default merge subject, which carries no release information."
     TAG_FORMAT: ClassVar[str] = "v{version}"
@@ -55,7 +55,7 @@ class FlextInfraConstantsRelease:
     "One bot-owned lane per repository; the open release pull request lives here."
     RELEASE_COMMIT_SUBJECT: ClassVar[str] = "chore(release): v{version}"
     RELEASE_COMMIT_SUBJECT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^chore\(release\): v(?P<version>\S+?)(?: \(#\d+\))?$"
+        r"^chore\(release\): v(?P<version>\S+?)(?: \(#\d+\))?$",
     )
     "The release commit as Git carries it: GitHub appends ` (#N)` when merging."
     RELEASE_PLAN_FILENAME: ClassVar[str] = "plan.json"
@@ -65,7 +65,7 @@ class FlextInfraConstantsRelease:
     RELEASE_NOTES_CONTINUATION_INDENT: ClassVar[str] = "  "
     "Continuation indent aligning a wrapped bullet's text under its marker."
     MARKDOWN_INLINE_ESCAPE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"([\\`*_\[\]<>~|])"
+        r"([\\`*_\[\]<>~|])",
     )
     "Inline markdown punctuation escaped so an untrusted subject renders literally."
     RELEASE_REPORT_FILENAME: ClassVar[str] = "build-report.json"

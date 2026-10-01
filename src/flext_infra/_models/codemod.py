@@ -24,7 +24,7 @@ class FlextInfraModelsCodemod:
 
         file: Annotated[str, m.Field(min_length=1, description="Reported source path")]
         rule_id: Annotated[
-            str, m.Field(alias="ruleId", min_length=1, description="Native rule ID")
+            str, m.Field(alias="ruleId", min_length=1, description="Native rule ID"),
         ]
         severity: Annotated[
             Literal["error", "warning", "info", "hint"],
@@ -123,13 +123,13 @@ class FlextInfraModelsCodemod:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         rule_dirs: t.VariadicTuple[Path] = m.Field(
-            description="Validated rule directories declared by the ast-grep owner"
+            description="Validated rule directories declared by the ast-grep owner",
         )
         util_dirs: t.VariadicTuple[Path] = m.Field(
-            description="Validated utility directories declared by the ast-grep owner"
+            description="Validated utility directories declared by the ast-grep owner",
         )
         test_dirs: t.VariadicTuple[Path] = m.Field(
-            description="Validated fixture directories declared by the ast-grep owner"
+            description="Validated fixture directories declared by the ast-grep owner",
         )
 
     class ModRuleBatch(m.ArbitraryTypesModel):
@@ -138,16 +138,16 @@ class FlextInfraModelsCodemod:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         inline_rules: Annotated[
-            t.NonEmptyStr, m.Field(description="Executable YAML document stream")
+            t.NonEmptyStr, m.Field(description="Executable YAML document stream"),
         ]
         rule_count: Annotated[
-            t.PositiveInt, m.Field(description="Discovered rule file count")
+            t.PositiveInt, m.Field(description="Discovered rule file count"),
         ]
         all_ids: Annotated[
-            frozenset[str], m.Field(description="Every validated rule ID")
+            frozenset[str], m.Field(description="Every validated rule ID"),
         ]
         fixable_ids: Annotated[
-            frozenset[str], m.Field(description="Rule IDs owning an automatic rewrite")
+            frozenset[str], m.Field(description="Rule IDs owning an automatic rewrite"),
         ]
 
 

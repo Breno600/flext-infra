@@ -95,7 +95,7 @@ class TestsFlextInfraInventory:
         for name in ("z_script.py", "a_script.py", "m_script.py"):
             (scripts / name).write_text("")
         report: m.Infra.InventoryReport = tm.ok(
-            service.generate(tmp_path, output_dir=output_dir)
+            service.generate(tmp_path, output_dir=output_dir),
         )
         payloads = [
             tm.ok(u.Cli.json_read(Path(path))) for path in report.reports_written
@@ -112,7 +112,7 @@ class TestsFlextInfraInventory:
         output_dir = tmp_path / "reports"
         output_dir.mkdir()
         report: m.Infra.InventoryReport = tm.ok(
-            service.generate(tmp_path, output_dir=output_dir)
+            service.generate(tmp_path, output_dir=output_dir),
         )
         tm.that(report.reports_written, is_=list)
 

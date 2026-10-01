@@ -36,7 +36,7 @@ class TestsFlextInfraInfraVersioning:
         ids=["standard", "development", "release-candidate", "zero", "large"],
     )
     def test_parse_semver_valid(
-        self, version: str, expected: t.Triple[int, int, int]
+        self, version: str, expected: t.Triple[int, int, int],
     ) -> None:
         """Accept only supported canonical PEP 440 release spellings."""
         tm.ok(u.Infra.parse_semver(version), eq=expected)
@@ -71,7 +71,7 @@ class TestsFlextInfraInfraVersioning:
         ids=["major", "minor", "patch", "from-zero"],
     )
     def test_bump_version_valid(
-        self, version: str, bump_type: str, expected: str
+        self, version: str, bump_type: str, expected: str,
     ) -> None:
         """Bump each supported semantic release component."""
         tm.ok(u.Infra.bump_version(version, bump_type), eq=expected)
@@ -85,7 +85,7 @@ class TestsFlextInfraInfraVersioning:
         ids=["invalid-bump-type", "invalid-version"],
     )
     def test_bump_version_invalid(
-        self, version: str, bump_type: str, error: str
+        self, version: str, bump_type: str, error: str,
     ) -> None:
         """Reject unsupported bump kinds and invalid source versions."""
         tm.fail(u.Infra.bump_version(version, bump_type), has=error)
@@ -112,7 +112,7 @@ class TestsFlextInfraInfraVersioning:
         ],
     )
     def test_current_workspace_version(
-        self, tmp_path: Path, content: str | None, expected: str, error: str
+        self, tmp_path: Path, content: str | None, expected: str, error: str,
     ) -> None:
         """Read only the declared project version from a repository root."""
         if content is not None:
@@ -136,7 +136,7 @@ class TestsFlextInfraInfraVersioning:
         ids=["success", "missing-file", "missing-project-table"],
     )
     def test_replace_project_version(
-        self, tmp_path: Path, content: str | None, expected: str, error: str
+        self, tmp_path: Path, content: str | None, expected: str, error: str,
     ) -> None:
         """Atomically replace only a canonical project version declaration."""
         if content is not None:

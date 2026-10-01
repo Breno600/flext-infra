@@ -9,7 +9,7 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import c, m, u
+from flext_infra import c, m
 from flext_infra.validate.runtime_census import FlextInfraRuntimeCensusValidator
 
 from .base_gate import FlextInfraGate
@@ -28,13 +28,13 @@ class FlextInfraRuntimeCensusGate(FlextInfraGate):
 
     @override
     def check(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self, project_dir: Path, ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
         """Run the runtime census scoped to ``project_dir``."""
         _ = ctx
         started = time.monotonic()
         validator_result = FlextInfraRuntimeCensusValidator.for_project(
-            project_dir, census_gate=self.gate_id
+            project_dir, census_gate=self.gate_id,
         )
         if validator_result.failure:
             return self._build_project_error_gate_result(

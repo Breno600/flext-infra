@@ -18,8 +18,8 @@ class TestsFlextInfraCiToolCacheReuse:
     def test_ci_reuses_and_saves_the_declared_tool_caches(self) -> None:
         steps = CodegenTestSupport.Ci.ci_job_steps(
             TestsFlextInfraCiIntegrationBranchTriggers.render_ci(
-                repository_branch="0.12.0-dev"
-            )
+                repository_branch="0.12.0-dev",
+            ),
         )
         named = {}
         for step in steps:
@@ -46,8 +46,8 @@ class TestsFlextInfraCiToolCacheReuse:
         tm.that(set(make.check_gates_ci) & c.Infra.TYPE_CHECKER_GATES, eq=set())
         steps = CodegenTestSupport.Ci.ci_job_steps(
             TestsFlextInfraCiIntegrationBranchTriggers.render_ci(
-                repository_branch="0.12.0-dev"
-            )
+                repository_branch="0.12.0-dev",
+            ),
         )
         mypy_storage = str(make.mypy_cache.external_storage_directory)
         for step in steps:

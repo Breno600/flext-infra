@@ -32,7 +32,7 @@ _PYTEST_POLICY = config.Infra.tooling.tools.pytest
 # per-case budget, so the scenario declares the config-owned slow budget
 # (pytest.mark.slow below) and polls within it.
 _DEADLINE_SECONDS = float(
-    _PYTEST_POLICY.slow_timeout_seconds - _PYTEST_POLICY.termination_grace_seconds
+    _PYTEST_POLICY.slow_timeout_seconds - _PYTEST_POLICY.termination_grace_seconds,
 )
 _POLL_INTERVAL_SECONDS = 0.05
 _PROCESS_STOP_TIMEOUT_SECONDS = float(_PYTEST_POLICY.termination_grace_seconds)
@@ -66,10 +66,10 @@ class TestsFlextInfraIntegrationDocsServeE2e:
     def test_serve_scope_serves_site_over_http(self, tmp_path: Path) -> None:
         (tmp_path / "docs").mkdir()
         (tmp_path / "docs/index.md").write_text(
-            "# Demo\n\nHello from the real dev server.\n", encoding="utf-8"
+            "# Demo\n\nHello from the real dev server.\n", encoding="utf-8",
         )
         (tmp_path / "mkdocs.yml").write_text(
-            "site_name: Flext Demo Docs\n", encoding="utf-8"
+            "site_name: Flext Demo Docs\n", encoding="utf-8",
         )
         port = self._free_local_port()
         dev_addr = f"127.0.0.1:{port}"

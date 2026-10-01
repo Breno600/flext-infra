@@ -121,7 +121,7 @@ class TestsFlextInfraSharedHelperPromotion:
                     rope.rope_project,
                     rope.rope_project.get_pymodule(resource),
                     rope.convention(
-                        root / c.Infra.DIR_TESTS / c.Infra.UTILITIES_PY
+                        root / c.Infra.DIR_TESTS / c.Infra.UTILITIES_PY,
                     ).module_name,
                     helper,
                 )
@@ -171,7 +171,7 @@ class TestsFlextInfraSharedHelperPromotion:
                 # A collision is a planning defect: it escapes loud, before any
                 # effect, instead of being folded into a failed result.
                 with pytest.raises(
-                    ValueError, match="shadowed quoted type destination"
+                    ValueError, match="shadowed quoted type destination",
                 ):
                     u.Infra.plan_semantic_cutover(
                         c.Infra.SemanticCutoverPhase.CLASS_NESTING,
@@ -197,7 +197,7 @@ class TestsFlextInfraSharedHelperPromotion:
                         c.Infra.SemanticCutoverPhase.CLASS_NESTING,
                         rope_workspace=rope,
                         sources=proposed,
-                    )
+                    ),
                 ),
                 empty=True,
             )
@@ -210,8 +210,8 @@ class TestsFlextInfraSharedHelperPromotion:
                 before=(
                     state := tm.ok(
                         u.Cli.atomic_read_binary_file_state(
-                            edit.file_path, required=True
-                        )
+                            edit.file_path, required=True,
+                        ),
                     )
                 ),
                 desired_content=edit.updated_source.encode(),
@@ -222,8 +222,8 @@ class TestsFlextInfraSharedHelperPromotion:
         )
         tm.ok(
             FlextInfraSemanticPublication.publish_semantic_file_plans(
-                plans, repository_root=root
-            )
+                plans, repository_root=root,
+            ),
         )
         tm.ok(u.Tests.materialize_lazy_init(u.Tests.create_lazy_init_service(root)))
         tm.that(self._run(root, probe), eq=before)
@@ -241,7 +241,7 @@ class TestsFlextInfraSharedHelperPromotion:
 
     @pytest.mark.parametrize("test_case", [False, True])
     def test_unused_helpers_and_real_test_cases_keep_their_declared_owner(
-        self, tmp_path: Path, *, test_case: bool
+        self, tmp_path: Path, *, test_case: bool,
     ) -> None:
         root, source, helper = self._workspace(tmp_path, reexport=True)
         if test_case:
@@ -266,7 +266,7 @@ class TestsFlextInfraSharedHelperPromotion:
                         c.Infra.SemanticCutoverPhase.CLASS_NESTING,
                         rope_workspace=rope,
                         sources=sources,
-                    )
+                    ),
                 ),
                 empty=True,
             )
@@ -274,12 +274,12 @@ class TestsFlextInfraSharedHelperPromotion:
             tm.that(path.read_text(encoding="utf-8"), eq=original)
 
     def test_two_declared_utilities_owners_fail_without_changing_consumers(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         root, _, _ = self._workspace(tmp_path, reexport=True)
         tier = root / c.Infra.DIR_TESTS
         u.Tests.write_lazy_init_namespace_module(
-            tier / "other.py", class_name="OtherUtilities", alias="u"
+            tier / "other.py", class_name="OtherUtilities", alias="u",
         )
         sources = {
             path: path.read_text(encoding="utf-8") for path in root.rglob("*.py")

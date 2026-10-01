@@ -23,12 +23,12 @@ from ._layout_plan import FlextInfraCodegenLayoutPlanMixin
 
 
 class FlextInfraCodegenLayout(
-    FlextInfraCodegenLayoutApplyMixin, FlextInfraCodegenLayoutPlanMixin, s[str]
+    FlextInfraCodegenLayoutApplyMixin, FlextInfraCodegenLayoutPlanMixin, s[str],
 ):
     """Check or apply the canonical project layout from the layout SSOT."""
 
     project_name: Annotated[
-        str | None, m.Field(alias="project", description="Single project to conform")
+        str | None, m.Field(alias="project", description="Single project to conform"),
     ] = None
 
     @override
@@ -55,7 +55,7 @@ class FlextInfraCodegenLayout(
                 paths = ", ".join(unresolved)
                 return r[str].fail(
                     f"layout apply did not reach a fixed point in "
-                    f"{project_dir.name}: {paths}"
+                    f"{project_dir.name}: {paths}",
                 )
             reports.append(applied.value)
         output = self._render_output(reports)
@@ -86,7 +86,7 @@ class FlextInfraCodegenLayout(
             ):
                 return r[t.SequenceOf[Path]].ok((self.repository_root,))
             return r[t.SequenceOf[Path]].fail(
-                f"project not found in workspace: {self.project_name}"
+                f"project not found in workspace: {self.project_name}",
             )
         discovered = u.Infra.projects(self.repository_root)
         if discovered.success and discovered.value:
@@ -115,7 +115,7 @@ class FlextInfraCodegenLayout(
         applied = sum(report.applied_count for report in reports)
         lines.append(
             f"{len(reports)} project(s), {actionable} actionable finding(s), "
-            f"{applied} applied"
+            f"{applied} applied",
         )
         return "\n".join(lines)
 

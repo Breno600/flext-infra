@@ -29,7 +29,7 @@ class TestsFlextInfraBuilder:
         return FlextInfraDocBuilder()
 
     def test_build_with_valid_scope_returns_success(
-        self, builder: FlextInfraDocBuilder, tmp_path: Path
+        self, builder: FlextInfraDocBuilder, tmp_path: Path,
     ) -> None:
         """Test build with valid scope returns success."""
         reports: t.SequenceOf[m.Infra.DocsPhaseReport] = tm.ok(builder.build(tmp_path))
@@ -58,7 +58,7 @@ class TestsFlextInfraBuilder:
             match kwargs["output_dir"]:
                 case str() as output_dir:
                     tm.ok(
-                        builder.build(tmp_path, output_dir=str(tmp_path / output_dir))
+                        builder.build(tmp_path, output_dir=str(tmp_path / output_dir)),
                     )
                 case invalid:
                     pytest.fail(f"invalid output_dir test case: {invalid!r}")
@@ -71,7 +71,7 @@ class TestsFlextInfraBuilder:
 
     @pytest.mark.parametrize("status", ["OK", "FAIL", "SKIP"])
     def test_build_report_result_field_values(
-        self, status: str, tmp_path: Path
+        self, status: str, tmp_path: Path,
     ) -> None:
         """Test BuildReport result field accepts valid values."""
         report = m.Infra.DocsPhaseReport(
@@ -95,7 +95,7 @@ class TestsFlextInfraBuilder:
         tm.that(report.site_dir, eq="/path/to/site")
 
     def test_build_with_multiple_projects_returns_list(
-        self, builder: FlextInfraDocBuilder, tmp_path: Path
+        self, builder: FlextInfraDocBuilder, tmp_path: Path,
     ) -> None:
         """Test build with multiple projects returns list of reports."""
         result = builder.build(tmp_path, projects=["proj1", "proj2"])

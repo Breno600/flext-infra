@@ -23,18 +23,18 @@ if TYPE_CHECKING:
 
 class TestsFlextInfraCodegenScaffolder:
     def _create_test_project(
-        self, tmp_path: Path, *, with_all_modules: bool = True
+        self, tmp_path: Path, *, with_all_modules: bool = True,
     ) -> Path:
         project: Path = u.Tests.create_scaffolder_test_project(
-            tmp_path=tmp_path, with_all_modules=with_all_modules
+            tmp_path=tmp_path, with_all_modules=with_all_modules,
         )
         return project
 
     def _project_info(
-        self, project: Path, *, package_name: str = "test_project"
+        self, project: Path, *, package_name: str = "test_project",
     ) -> m.Infra.ProjectInfo:
         project_info: m.Infra.ProjectInfo = u.Tests.create_project_info(
-            project, name=project.name, package_name=package_name
+            project, name=project.name, package_name=package_name,
         )
         return project_info
 

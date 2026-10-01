@@ -16,7 +16,7 @@ class FlextInfraPromotedRegistry:
     def __init__(self) -> None:
         """Initialize an empty command registry."""
         self._commands: t.MutableMappingKV[
-            str, t.MutableMappingKV[str, p.Infra.PromotedCommand]
+            str, t.MutableMappingKV[str, p.Infra.PromotedCommand],
         ] = {}
         self._aliases: t.MutableMappingKV[str, p.Infra.PromotedAliasTarget] = {}
 
@@ -26,17 +26,17 @@ class FlextInfraPromotedRegistry:
         by_what = self._commands.setdefault(command.verb, {})
         if command.what in by_what:
             u.Infra.promoted_fail(
-                message.DUPLICATE_COMMAND, verb=command.verb, what=command.what
+                message.DUPLICATE_COMMAND, verb=command.verb, what=command.what,
             )
         by_what[command.what] = command
         for alias in command.aliases:
             name, separator, what = alias.partition(c.Infra.PromotedSelector.ALIAS)
             target = m.Infra.PromotedAliasTarget(
-                verb=command.verb, what=what.strip() if separator else command.what
+                verb=command.verb, what=what.strip() if separator else command.what,
             )
             if not name.strip() or not target.what:
                 u.Infra.promoted_fail(
-                    message.INVALID_ALIAS, path=command.path, alias=alias
+                    message.INVALID_ALIAS, path=command.path, alias=alias,
                 )
             previous = self._aliases.setdefault(name.strip(), target)
             if previous != target:
@@ -81,7 +81,7 @@ class FlextInfraPromotedRegistry:
             else:
                 continue
             u.Infra.promoted_fail(
-                failure, alias=alias, verb=target.verb, what=target.what
+                failure, alias=alias, verb=target.verb, what=target.what,
             )
 
     def resolve_verb(self, verb: str) -> str:

@@ -22,15 +22,15 @@ from ._fixer_workspace import FlextInfraCodegenFixerWorkspaceMixin
 
 
 class FlextInfraCodegenFixer(
-    FlextInfraProjectSelectionServiceBase[str], FlextInfraCodegenFixerWorkspaceMixin
+    FlextInfraProjectSelectionServiceBase[str], FlextInfraCodegenFixerWorkspaceMixin,
 ):
     """Rope-oriented auto-fixer for namespace violations (Rules 1-5)."""
 
     dry_run: Annotated[
-        bool, m.Field(description="Preview changes without modifying files")
+        bool, m.Field(description="Preview changes without modifying files"),
     ] = False
     rules_only: Annotated[
-        bool, m.Field(description="Only apply rule-based fixes, skip heuristic ones")
+        bool, m.Field(description="Only apply rule-based fixes, skip heuristic ones"),
     ] = False
 
     @override
@@ -53,7 +53,7 @@ class FlextInfraCodegenFixer(
         )
         lines.append(
             f"Auto-fix: {total_fixed} fixed, {total_skipped} skipped"
-            f" across {len(results)} projects"
+            f" across {len(results)} projects",
         )
         return r[str].ok("\n".join(lines))
 

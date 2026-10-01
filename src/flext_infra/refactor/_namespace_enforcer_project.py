@@ -44,7 +44,7 @@ class FlextInfraNamespaceEnforcerProjectMixin:
             project=project_name,
             project_root=str(project_root),
             relocation_findings=self._relocate_rule_findings(
-                project_root=project_root, py_files=py_files, apply=apply, gates=gates
+                project_root=project_root, py_files=py_files, apply=apply, gates=gates,
             ),
             files_scanned=len(py_files),
         )
@@ -53,7 +53,7 @@ class FlextInfraNamespaceEnforcerProjectMixin:
     def _collect_py_files(*, project_root: Path) -> t.SequenceOf[Path]:
         """Collect Python files for scanning."""
         py_files_result = u.Infra.iter_python_files(
-            m.Infra.SourceScanRequest(project_roots=(project_root,))
+            m.Infra.SourceScanRequest(project_roots=(project_root,)),
         )
         if py_files_result.failure:
             msg = py_files_result.error or (
@@ -87,7 +87,7 @@ class FlextInfraNamespaceEnforcerProjectMixin:
         if not (apply and findings):
             return len(findings)
         names: MutableMapping[
-            c.Infra.CodemodRelocation, MutableMapping[Path, set[str]]
+            c.Infra.CodemodRelocation, MutableMapping[Path, set[str]],
         ] = defaultdict(lambda: defaultdict(set))
         spans: MutableMapping[Path, list[t.IntPair]] = defaultdict(list)
         imports: MutableMapping[Path, MutableMapping[t.StrPair, set[str]]] = (
@@ -104,30 +104,30 @@ class FlextInfraNamespaceEnforcerProjectMixin:
                     names[relocation].setdefault(file_path, set())
                 case c.Infra.CodemodRelocation.PACKAGE_ROOT_IMPORT:
                     module = self._captured(
-                        finding, c.Infra.CODEMOD_RULE_MODULE_METAVARIABLE
+                        finding, c.Infra.CODEMOD_RULE_MODULE_METAVARIABLE,
                     )
                     imports[file_path][module, module.split(".", maxsplit=1)[0]].add(
-                        self._captured(finding, c.Infra.CODEMOD_RULE_NAME_METAVARIABLE)
+                        self._captured(finding, c.Infra.CODEMOD_RULE_NAME_METAVARIABLE),
                     )
                 case c.Infra.CodemodRelocation.OWN_PACKAGE_IMPORT:
                     module = self._captured(
-                        finding, c.Infra.CODEMOD_RULE_MODULE_METAVARIABLE
+                        finding, c.Infra.CODEMOD_RULE_MODULE_METAVARIABLE,
                     )
                     imports[file_path][module, own_package].add(
-                        self._captured(finding, c.Infra.CODEMOD_RULE_NAME_METAVARIABLE)
+                        self._captured(finding, c.Infra.CODEMOD_RULE_NAME_METAVARIABLE),
                     )
                 case c.Infra.CodemodRelocation.FACADE_CLASS:
                     classes.append((
                         file_path,
                         self._captured(finding, c.Infra.CODEMOD_RULE_NAME_METAVARIABLE),
                         self._captured(
-                            finding, c.Infra.CODEMOD_RULE_FAMILY_METAVARIABLE
+                            finding, c.Infra.CODEMOD_RULE_FAMILY_METAVARIABLE,
                         ),
                         self._finding_lines(finding)[0],
                     ))
                 case _:
                     names[relocation][file_path].add(
-                        self._captured(finding, c.Infra.CODEMOD_RULE_NAME_METAVARIABLE)
+                        self._captured(finding, c.Infra.CODEMOD_RULE_NAME_METAVARIABLE),
                     )
         for file_path, statement_lines in spans.items():
             u.Infra.hoist_inline_imports(file_path, statement_lines)
@@ -150,13 +150,13 @@ class FlextInfraNamespaceEnforcerProjectMixin:
                     )
                 case c.Infra.CodemodRelocation.FUTURE_ANNOTATIONS:
                     u.Infra.rewrite_missing_future_annotations(
-                        py_files=tuple(names_by_file)
+                        py_files=tuple(names_by_file),
                     )
         self._rope_project.validate(self._rope_project.root)
         return len(self._relocation_findings(project_root, py_files))
 
     def _rebind_imports(
-        self, imports: t.MappingKV[Path, t.MappingKV[t.StrPair, set[str]]]
+        self, imports: t.MappingKV[Path, t.MappingKV[t.StrPair, set[str]]],
     ) -> None:
         """Move each captured name from its source import to its target module."""
         for file_path, moves in imports.items():
@@ -174,7 +174,7 @@ class FlextInfraNamespaceEnforcerProjectMixin:
                 )
 
     def _move_classes(
-        self, project_root: Path, classes: t.SequenceOf[tuple[Path, str, str, int]]
+        self, project_root: Path, classes: t.SequenceOf[tuple[Path, str, str, int]],
     ) -> None:
         """Move each captured class to the module of its facade family."""
         if not classes:
@@ -184,7 +184,7 @@ class FlextInfraNamespaceEnforcerProjectMixin:
             msg = f"facade-class relocation requires a project layout: {project_root}"
             raise ValueError(msg)
         for source_file, class_name, family, line in sorted(
-            classes, key=itemgetter(0, 3), reverse=True
+            classes, key=itemgetter(0, 3), reverse=True,
         ):
             u.Infra.move_class(
                 m.Infra.ClassMoveRequest(
@@ -199,12 +199,12 @@ class FlextInfraNamespaceEnforcerProjectMixin:
                     class_name=class_name,
                     line=line,
                     apply=True,
-                )
+                ),
             )
 
     @staticmethod
     def _relocation_findings(
-        project_root: Path, py_files: t.SequenceOf[Path]
+        project_root: Path, py_files: t.SequenceOf[Path],
     ) -> t.VariadicTuple[t.Pair[c.Infra.CodemodRelocation, m.Infra.ModScanFinding]]:
         """Return the engine's relocation findings inside the enforcer's file scope.
 

@@ -61,7 +61,7 @@ class FlextInfraNamespaceValidator(s[bool]):
                     if passed
                     else f"{len(violations)} namespace violation(s) found"
                 ),
-            )
+            ),
         )
 
     @staticmethod

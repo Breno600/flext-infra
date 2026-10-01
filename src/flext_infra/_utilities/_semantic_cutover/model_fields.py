@@ -28,7 +28,7 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
 
     @classmethod
     def _plan_model_fields(
-        cls, sources: t.MappingKV[Path, str]
+        cls, sources: t.MappingKV[Path, str],
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
         """Inspect all sources, including direct access emitted by older rules."""
         return cls._semantic_edits(cls._editable_sources(sources), cls._rewrite_fields)
@@ -160,7 +160,7 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
         if not isinstance(statement, ast.If) or statement.orelse:
             return False
         expected = ast.parse(
-            f"not isinstance({target}, dict) or not {target}", mode="eval"
+            f"not isinstance({target}, dict) or not {target}", mode="eval",
         ).body
         return (
             ast.dump(statement.test) == ast.dump(expected)

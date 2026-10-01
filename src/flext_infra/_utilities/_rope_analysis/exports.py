@@ -19,7 +19,7 @@ class FlextInfraUtilitiesRopeAnalysisExports:
 
     _EXPORT_NAMES_CACHE: ClassVar[
         MutableMapping[
-            tuple[str, str, int, bool, bool, bool, bool, bool], t.StrSequence
+            tuple[str, str, int, bool, bool, bool, bool, bool], t.StrSequence,
         ]
     ] = {}
 
@@ -39,7 +39,7 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             return ()
         definitions: t.MutableSequenceOf[m.Infra.ScopeDefinition] = []
         FlextInfraUtilitiesRopeAnalysisExports._collect_scope_definitions(
-            scope=root_scope, is_module_level=True, definitions=definitions
+            scope=root_scope, is_module_level=True, definitions=definitions,
         )
         return tuple(definitions)
 
@@ -61,10 +61,10 @@ class FlextInfraUtilitiesRopeAnalysisExports:
                     kind=FlextInfraUtilitiesRopeAnalysisExports._scope_kind(child),
                     line=start if start > 0 else 1,
                     is_module_level=is_module_level,
-                )
+                ),
             )
             FlextInfraUtilitiesRopeAnalysisExports._collect_scope_definitions(
-                scope=child, is_module_level=False, definitions=definitions
+                scope=child, is_module_level=False, definitions=definitions,
             )
 
     @staticmethod
@@ -96,7 +96,7 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         resolved_export_options = export_options or m.Infra.ExportOptions()
         cache_key = (
             *FlextInfraUtilitiesRopeAnalysisAstHelpers.resource_cache_key(
-                rope_project, resource
+                rope_project, resource,
             ),
             resolved_export_options.include_dunder,
             resolved_export_options.allow_main,
@@ -105,14 +105,14 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             resolved_export_options.require_explicit_all,
         )
         cached = FlextInfraUtilitiesRopeAnalysisExports._EXPORT_NAMES_CACHE.get(
-            cache_key
+            cache_key,
         )
         export_names: t.StrSequence
         if cached is not None:
             export_names = cached
         else:
             pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
-                rope_project, resource
+                rope_project, resource,
             )
             export_names = FlextInfraUtilitiesRopeAnalysisExports._module_export_names(
                 export_options=resolved_export_options,
@@ -126,7 +126,7 @@ class FlextInfraUtilitiesRopeAnalysisExports:
 
     @staticmethod
     def module_export_names_source(
-        source: str, *, export_options: m.Infra.ExportOptions | None = None
+        source: str, *, export_options: m.Infra.ExportOptions | None = None,
     ) -> t.StrSequence:
         """Return module-local exports from one parsed source snapshot."""
         resolved_options = export_options or m.Infra.ExportOptions()
@@ -148,7 +148,7 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             nonlocal explicit_all
             for statement in statements:
                 if isinstance(
-                    statement, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
+                    statement, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef),
                 ):
                     definitions.append((
                         statement.name,
@@ -219,15 +219,15 @@ class FlextInfraUtilitiesRopeAnalysisExports:
                     name
                     for name in assignments
                     if name.startswith("__") and name.endswith("__")
-                )
+                ),
             )
         if explicit_all:
             return tuple(
                 dict.fromkeys(
                     FlextInfraUtilitiesRopeAnalysisSourceScan.module_assignment_strings_source(
-                        source, c.Infra.DUNDER_ALL
-                    )
-                )
+                        source, c.Infra.DUNDER_ALL,
+                    ),
+                ),
             )
         if resolved_options.require_explicit_all:
             return ()
@@ -253,10 +253,10 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         attributes = pymodule.get_attributes()
         if export_options.include_dunder:
             return FlextInfraUtilitiesRopeAnalysisExports._dunder_export_names(
-                attributes=attributes, resource=resource
+                attributes=attributes, resource=resource,
             )
         explicit_all = FlextInfraUtilitiesRopeAnalysisExports._explicit_export_names(
-            attributes=attributes, pymodule=pymodule, resource=resource
+            attributes=attributes, pymodule=pymodule, resource=resource,
         )
         if explicit_all is not None:
             return tuple(dict.fromkeys(explicit_all))
@@ -285,9 +285,9 @@ class FlextInfraUtilitiesRopeAnalysisExports:
                 and name.endswith("__")
                 and FlextInfraUtilitiesRopeRuntime.assigned_name(pyname)
                 and FlextInfraUtilitiesRopeAnalysisAstHelpers.local_name(
-                    pyname, resource
+                    pyname, resource,
                 )
-            )
+            ),
         )
 
     @staticmethod
@@ -306,11 +306,11 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             return None
         assigned_all: t.Infra.RopeAssignedName = explicit_all_name
         if not FlextInfraUtilitiesRopeAnalysisAstHelpers.local_name(
-            assigned_all, resource
+            assigned_all, resource,
         ):
             return None
         return FlextInfraUtilitiesRopeAnalysisExports._explicit_all_names(
-            assigned_all, pymodule
+            assigned_all, pymodule,
         )
 
     @staticmethod
@@ -323,14 +323,14 @@ class FlextInfraUtilitiesRopeAnalysisExports:
     ) -> t.StrSequence:
         """Return implicit export names accepted by the export options."""
         guard_spans = FlextInfraUtilitiesRopeAnalysisExports._script_guard_spans(
-            pymodule
+            pymodule,
         )
         names: t.MutableSequenceOf[str] = []
         for name, pyname in attributes.items():
             if name == c.Infra.DUNDER_ALL:
                 continue
             if not FlextInfraUtilitiesRopeAnalysisAstHelpers.local_name(
-                pyname, resource
+                pyname, resource,
             ):
                 continue
             if FlextInfraUtilitiesRopeAnalysisExports._is_export_name(
@@ -410,7 +410,7 @@ class FlextInfraUtilitiesRopeAnalysisExports:
 
     @staticmethod
     def _explicit_all_names(
-        pyname: t.Infra.RopeAssignedName, pymodule: t.Infra.RopePyModule
+        pyname: t.Infra.RopeAssignedName, pymodule: t.Infra.RopePyModule,
     ) -> t.StrSequence | None:
         """Return literal ``__all__`` names from a Rope-cached source slice.
 
@@ -434,7 +434,7 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         """Return the explicit public ABI declared by one module source."""
         return (
             FlextInfraUtilitiesRopeAnalysisSourceScan.module_assignment_strings_source(
-                source, c.Infra.DUNDER_ALL
+                source, c.Infra.DUNDER_ALL,
             )
         )
 
@@ -487,7 +487,7 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             if kind in {"Assign", "AnnAssign", "TypeAlias"}:
                 previous_targets = (
                     FlextInfraUtilitiesRopeAnalysisAstHelpers.statement_target_names(
-                        statement
+                        statement,
                     )
                 )
                 continue

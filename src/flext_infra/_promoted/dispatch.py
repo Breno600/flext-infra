@@ -58,13 +58,13 @@ class FlextInfraPromotedDispatch(FlextInfraPromotedDiscovery):
             return cls.dispatch(registry, args[0], requested_what)
         sys.stdout.write(
             u.Infra.promoted_render_help(registry, requested_what)
-            + c.Infra.PromotedJoin.LINES
+            + c.Infra.PromotedJoin.LINES,
         )
         return c.Infra.ScriptExitCode.PASS
 
     @staticmethod
     def dispatch(
-        registry: p.Infra.PromotedRegistry, requested_verb: str, requested_what: str
+        registry: p.Infra.PromotedRegistry, requested_verb: str, requested_what: str,
     ) -> int:
         """Dispatch one requested verb to help or its selected promoted command.
 
@@ -94,7 +94,7 @@ class FlextInfraPromotedDispatch(FlextInfraPromotedDiscovery):
             selector = c.Infra.PromotedSelector.HELP_PATH.join((requested_verb, what))
         sys.stdout.write(
             u.Infra.promoted_render_help(registry, selector)
-            + c.Infra.PromotedJoin.LINES
+            + c.Infra.PromotedJoin.LINES,
         )
         return c.Infra.ScriptExitCode.PASS
 

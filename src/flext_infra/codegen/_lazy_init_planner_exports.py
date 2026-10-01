@@ -19,17 +19,17 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
         rope_workspace: p.Infra.RopeWorkspaceDsl
         lazy_init: m.Infra.LazyInitConfig
         _module_exports_cache: MutableMapping[
-            tuple[str, bool, bool, bool, bool, bool], t.LazyAliasMap
+            tuple[str, bool, bool, bool, bool, bool], t.LazyAliasMap,
         ]
         _version_module_name: str
         _project_layout_cache: MutableMapping[Path, m.Infra.RopeProjectLayout]
 
         def _package_entry(
-            self, pkg_dir: Path
+            self, pkg_dir: Path,
         ) -> m.Infra.RopePackageIndexEntry | None: ...
 
         def _add(
-            self, index: t.MutableLazyAliasMap, name: str, target: t.StrPair
+            self, index: t.MutableLazyAliasMap, name: str, target: t.StrPair,
         ) -> None: ...
 
         @staticmethod
@@ -48,7 +48,7 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
         return layout
 
     def _package_exports(
-        self, context: m.Infra.LazyInitPackageContext
+        self, context: m.Infra.LazyInitPackageContext,
     ) -> t.MutableLazyAliasMap:
         """Return the lazy export map for a package (excluding child packages)."""
         package_entry = self._package_entry(context.pkg_dir)
@@ -154,7 +154,7 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
                             allow_functions=True,
                             require_explicit_all=True,
                         ),
-                    )
+                    ),
                 )
             )
             if (
@@ -215,8 +215,8 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
                     "require_explicit_all": (
                         resolved_export_options.require_explicit_all
                         and not resolved_export_options.include_dunder
-                    )
-                }
+                    ),
+                },
             ),
         )
         exports = {

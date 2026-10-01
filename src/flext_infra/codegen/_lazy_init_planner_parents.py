@@ -26,7 +26,7 @@ class FlextInfraCodegenLazyInitPlannerParentsMixin:
         def _parent_packages(self, pkg_dir: Path) -> t.StrSequence: ...
 
     def _parents_from_constants_module(
-        self, module_path: Path, current_pkg: str, visited: set[str] | None = None
+        self, module_path: Path, current_pkg: str, visited: set[str] | None = None,
     ) -> t.StrSequence:
         """Follow declared facade bases, including same-package compositions.
 
@@ -41,7 +41,7 @@ class FlextInfraCodegenLazyInitPlannerParentsMixin:
             msg = f"parent declaration source unavailable: {module_path}"
             raise ValueError(msg)
         imports = u.Infra.resolve_declared_module_imports(
-            self.rope_workspace.rope_project, resource
+            self.rope_workspace.rope_project, resource,
         )
         classes = u.Infra.class_info_from_source(resource.read())
         base_targets = tuple(
@@ -67,7 +67,7 @@ class FlextInfraCodegenLazyInitPlannerParentsMixin:
             is not None
             and str(module_file.resolve()) not in seen
             for parent in self._parents_from_constants_module(
-                module_file, current_pkg, seen
+                module_file, current_pkg, seen,
             )
         )
         # Rope state is the sole parent fact source; the old
@@ -104,7 +104,7 @@ class FlextInfraCodegenLazyInitPlannerParentsMixin:
             self._parent_package_cache[cache_key] = ()
             return ()
         imports = u.Infra.resolve_declared_module_imports(
-            self.rope_workspace.rope_project, resource
+            self.rope_workspace.rope_project, resource,
         )
         parents: list[str] = []
         for name in sorted(imports):
@@ -150,7 +150,7 @@ class FlextInfraCodegenLazyInitPlannerParentsMixin:
         return target
 
     def _resolve_inherited_alias_source(
-        self, package_names: t.StrSequence, alias_name: str, *, current_pkg: str
+        self, package_names: t.StrSequence, alias_name: str, *, current_pkg: str,
     ) -> str:
         """Return the nearest facade parent serving an inherited facade letter.
 
@@ -182,7 +182,7 @@ class FlextInfraCodegenLazyInitPlannerParentsMixin:
         return ""
 
     def _serves_facade_letter(
-        self, package_name: str, alias_name: str, *, visited: set[str]
+        self, package_name: str, alias_name: str, *, visited: set[str],
     ) -> bool:
         """Return whether a package declares a letter or re-exports a declarer's.
 
@@ -209,7 +209,7 @@ class FlextInfraCodegenLazyInitPlannerParentsMixin:
         initializer is read, through its absolute ``from X import`` statements.
         """
         indexed_dir = self.rope_workspace.workspace_index.package_dir_by_name.get(
-            package_name
+            package_name,
         )
         if indexed_dir is not None:
             return self._parent_packages(indexed_dir)
@@ -218,7 +218,7 @@ class FlextInfraCodegenLazyInitPlannerParentsMixin:
         if init_path is None or not init_path.is_file():
             return ()
         return u.Infra.absolute_import_sources_source(
-            init_path.read_text(encoding=c.Cli.ENCODING_DEFAULT), name=alias_name
+            init_path.read_text(encoding=c.Cli.ENCODING_DEFAULT), name=alias_name,
         )
 
     def _declared_alias_names_for_package(self, package_name: str) -> frozenset[str]:
@@ -236,7 +236,7 @@ class FlextInfraCodegenLazyInitPlannerParentsMixin:
         # active environment declares (R32), so a standalone plan and a
         # workspace plan elect the same owner.
         indexed_dir = self.rope_workspace.workspace_index.package_dir_by_name.get(
-            package_name
+            package_name,
         )
         package_dir = indexed_dir or u.Infra.declared_package_dir(package_name)
         declared: set[str] = set()
@@ -251,8 +251,8 @@ class FlextInfraCodegenLazyInitPlannerParentsMixin:
                     continue
                 declared.update(
                     u.Infra.facade_letter_names_source(
-                        module_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
-                    )
+                        module_path.read_text(encoding=c.Cli.ENCODING_DEFAULT),
+                    ),
                 )
         names = frozenset(declared)
         self._source_exports_cache[cache_key] = names

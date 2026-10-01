@@ -103,7 +103,7 @@ class FlextInfraConstantsCodegen(
     "Runtime singleton modules for src/: (filename, class_suffix, base_class, docstring)."
     VIOLATION_PATTERN: ClassVar[t.RegexPattern] = re.compile(
         r"\[(?P<rule>NS-(?:[A-Z]+|\d{3}))-\d{3}\]\s+"
-        r"(?P<module>[^:]+):(?P<line>\d+)\s+\u2014\s+(?P<message>.+)"
+        r"(?P<module>[^:]+):(?P<line>\d+)\s+\u2014\s+(?P<message>.+)",
     )
     "Regex to parse violation strings: [NS-RULE-NNN] path:line — message."
     PROTOCOL_MODEL_LINE_BUDGET: ClassVar[int] = 170

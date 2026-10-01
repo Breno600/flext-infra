@@ -72,11 +72,11 @@ class FlextInfraUtilitiesPromotedWorkspace:
             expected = spec.local_python
         if expected == spec.local_python and not spec.local_python.is_file():
             cls.promoted_fail(
-                c.Infra.PromotedMessage.LOCAL_PYTHON_MISSING, python=spec.local_python
+                c.Infra.PromotedMessage.LOCAL_PYTHON_MISSING, python=spec.local_python,
             )
         if active.resolve() != expected.resolve():
             cls.promoted_fail(
-                c.Infra.PromotedMessage.ACTIVE_PYTHON_MISMATCH, python=expected
+                c.Infra.PromotedMessage.ACTIVE_PYTHON_MISMATCH, python=expected,
             )
 
     @staticmethod

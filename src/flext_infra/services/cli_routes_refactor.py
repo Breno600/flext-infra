@@ -58,7 +58,7 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
         cli.display_text(FlextInfraCliModProgress.render_rename(report))
         if report.occurrences:
             return r[t.Cli.ResultValue].fail(
-                f"{report.occurrences} pending source edits"
+                f"{report.occurrences} pending source edits",
             )
         return r[t.Cli.ResultValue].ok(True)
 
@@ -93,7 +93,7 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
             help_text="Scan workspace for namespace governance violations",
             model_cls=m.Infra.RefactorNamespaceEnforceInput,
             handler=FlextInfraCliRouteBase.result_handler(
-                FlextInfraNamespaceEnforcer.execute_command
+                FlextInfraNamespaceEnforcer.execute_command,
             ),
         ),
         m.Cli.ResultCommandRoute(
@@ -101,7 +101,7 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
             help_text="Run a Rope-only workspace census for Python objects",
             model_cls=FlextInfraRefactorCensus,
             handler=FlextInfraCliRouteBase.result_handler(
-                FlextInfraRefactorCensus.execute_command
+                FlextInfraRefactorCensus.execute_command,
             ),
         ),
         m.Cli.ResultCommandRoute(
@@ -109,7 +109,7 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
             help_text="Preview or apply automated get_/set_/is_ migration",
             model_cls=m.Infra.AccessorMigrationInput,
             handler=FlextInfraCliRouteBase.result_handler(
-                FlextInfraAccessorMigrationOrchestrator.execute_payload
+                FlextInfraAccessorMigrationOrchestrator.execute_payload,
             ),
         ),
         m.Cli.ResultCommandRoute(

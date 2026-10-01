@@ -41,7 +41,7 @@ class FlextInfraConstantsDocs:
     # Prettier --write lists every processed file as "<path> <duration>ms";
     # the fmt phase report surfaces exactly that surface per scope.
     DOCS_PRETTIER_WRITE_LINE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?P<file>\S+)\s+\d+(?:\.\d+)?ms$"
+        r"^(?P<file>\S+)\s+\d+(?:\.\d+)?ms$",
     )
     DOCS_INSECURE_WEB_SCHEME: ClassVar[str] = "http"
     DOCS_SECURE_WEB_SCHEME: ClassVar[str] = "https"
@@ -60,7 +60,7 @@ class FlextInfraConstantsDocs:
     standalone Markdown fence. All names, behavior, types, and security
     rules remain active and require correction in the authored source."""
     MACHINE_PATH_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"(?<![\w./-])/(?:home|Users)/(?P<user>[A-Za-z0-9_.-]+)(?=/|\b)"
+        r"(?<![\w./-])/(?:home|Users)/(?P<user>[A-Za-z0-9_.-]+)(?=/|\b)",
     )
     """Regex matching a per-user absolute root (``/home/<user>``, ``/Users/<user>``)."""
     MACHINE_PATH_CONTAINER_USERS: ClassVar[t.StrSequence] = (
@@ -77,7 +77,7 @@ class FlextInfraConstantsDocs:
     (argocd-cmp-plugin / repo-server) referenced in ADR_024 and the release
     convergence plan; it is an image contract, not an operator machine."""
     PYTHON_FENCE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^```python\s*\n(?P<body>.*?)^```\s*$", re.MULTILINE | re.DOTALL
+        r"^```python\s*\n(?P<body>.*?)^```\s*$", re.MULTILINE | re.DOTALL,
     )
     """Regex matching ``python`` fenced blocks; ``body`` group yields contents."""
 
@@ -88,7 +88,7 @@ class FlextInfraConstantsDocs:
     """Regex matching ``python`` fenced blocks for fix-in-place replacement."""
 
     WELDED_FENCE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?P<indent>[ \t]*)(?P<body>.*[^\s`])```[ \t]*$", re.MULTILINE
+        r"^(?P<indent>[ \t]*)(?P<body>.*[^\s`])```[ \t]*$", re.MULTILINE,
     )
     """Match a closing fence welded to the final code line by an older fixer.
 
@@ -99,12 +99,12 @@ class FlextInfraConstantsDocs:
     """
 
     FENCE_NOTEST_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^```(\S+)\s+notest\s*$", re.MULTILINE
+        r"^```(\S+)\s+notest\s*$", re.MULTILINE,
     )
     """Regex matching fenced code blocks with a ``notest`` info qualifier."""
 
     FENCE_NOTEST_ATTR_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^```([A-Za-z0-9_+-]+)\s+notest\s*$", re.MULTILINE
+        r"^```([A-Za-z0-9_+-]+)\s+notest\s*$", re.MULTILINE,
     )
     """Regex matching a bare ``notest`` qualifier for the buildable rewrite.
 
@@ -125,7 +125,7 @@ class FlextInfraConstantsDocs:
         r"(?P<org>[^/]+)/(?P<repo>[^/]+)/"
         r"(?P<kind>blob|tree)/"
         r"(?P<refpath>[^/?#]+/[^?#]*)"
-        r"(?P<suffix>[?#].*)?$"
+        r"(?P<suffix>[?#].*)?$",
     )
     """Match a github.com blob/tree documentation URL by its named parts.
 
@@ -137,22 +137,22 @@ class FlextInfraConstantsDocs:
     DOCS_OWNED_HEADER_LINES: ClassVar[int] = 2
     """Lines an owned member guide carries before its body: marker + source."""
     HEADING_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^#{1,6}\s+(.+?)\s*$", re.MULTILINE
+        r"^#{1,6}\s+(.+?)\s*$", re.MULTILINE,
     )
     """Match any markdown heading (h1-h6), capturing the text."""
     INLINE_CODE_RE: ClassVar[t.RegexPattern] = re.compile(r"`[^`]*`")
     """Match inline code spans for stripping before analysis."""
     DOCS_INLINE_COMMAND_DIRECTIVE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"\b(?:run|execute|invoke|try|use)(?:\s+the\s+command)?\s*$", re.IGNORECASE
+        r"\b(?:run|execute|invoke|try|use)(?:\s+the\s+command)?\s*$", re.IGNORECASE,
     )
     """Recognize an instruction preceding a shell command in inline code."""
     STRING_LITERAL_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"""["']([a-zA-Z0-9_\.]+)["']"""
+        r"""["']([a-zA-Z0-9_\.]+)["']""",
     )
     """Match quoted string literals, capturing the content."""
 
     DOCS_MAKE_COMMAND_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\s*(?:\$\s*)?make\s+(?P<verb>[a-z][a-z0-9_-]*)(?P<args>.*)$", re.IGNORECASE
+        r"^\s*(?:\$\s*)?make\s+(?P<verb>[a-z][a-z0-9_-]*)(?P<args>.*)$", re.IGNORECASE,
     )
     """Match an executable Make command and capture its verb and arguments."""
     DOCS_SHELL_FENCE_LANGUAGES: ClassVar[frozenset[str]] = frozenset({

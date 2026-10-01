@@ -47,7 +47,7 @@ class FlextInfraDocFixer(FlextInfraDocServiceBase):
         )
 
     def _fix_scope(
-        self, scope: m.Infra.DocScope, *, apply: bool
+        self, scope: m.Infra.DocScope, *, apply: bool,
     ) -> m.Infra.DocsPhaseReport:
         """Run TOC, link and python-codeblock fixes on one scope."""
         collected: list[m.Infra.DocsPhaseItemModel] = []
@@ -60,7 +60,7 @@ class FlextInfraDocFixer(FlextInfraDocServiceBase):
                         file=md_file.relative_to(scope.path).as_posix(),
                         links=item.links,
                         toc=item.toc,
-                    )
+                    ),
                 )
         codeblock_changes = u.Infra.docs_fix_python_codeblocks(scope, apply=apply)
         collected.extend(

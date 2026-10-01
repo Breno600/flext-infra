@@ -17,10 +17,10 @@ class FlextInfraModelsGitWorktreeFacts:
 
         total_bytes: Annotated[int, m.Field(ge=0, description="Sum of file sizes")]
         newest_mtime: Annotated[
-            float, m.Field(ge=0, description="Newest file mtime as epoch seconds")
+            float, m.Field(ge=0, description="Newest file mtime as epoch seconds"),
         ]
         exact: Annotated[
-            bool, m.Field(description="Whether the walk completed without skipping")
+            bool, m.Field(description="Whether the walk completed without skipping"),
         ]
 
 

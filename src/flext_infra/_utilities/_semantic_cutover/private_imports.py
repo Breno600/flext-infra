@@ -33,7 +33,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
 
     @staticmethod
     def _runtime_public_aliases(
-        tree: ast.Module, plan: m.Infra.PrivateImportRewritePlan
+        tree: ast.Module, plan: m.Infra.PrivateImportRewritePlan,
     ) -> frozenset[str]:
         """Return facades required outside a ``TYPE_CHECKING`` boundary."""
         parents = {
@@ -66,7 +66,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
                     if reference is not None:
                         aliases.add(reference.split(".", 1)[0])
                 elif imported.name in plan.obsolete_imports.get(
-                    node.module, frozenset()
+                    node.module, frozenset(),
                 ):
                     aliases.add(imported.asname or imported.name)
                 elif (
@@ -93,13 +93,13 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
                 continue
             if (
                 FlextInfraUtilitiesPrivateImportFacades.private_owner(
-                    statement.module or ""
+                    statement.module or "",
                 )
                 is not None
             ):
                 cross_owner_statements.append(finding.text)
         facades: t.MappingKV[
-            str, t.VariadicTuple[t.Quad[ast.Module, str, str, str]]
+            str, t.VariadicTuple[t.Quad[ast.Module, str, str, str]],
         ] = {}
         export_bindings: t.MappingKV[str, set[str]] = {}
         declared_exports: t.MappingKV[str, set[str]] = {}
@@ -108,21 +108,21 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
             discovery_sources = (
                 FlextInfraUtilitiesPrivateImportFacades.reachable_sources(
                     FlextInfraUtilitiesPrivateImportFacades.source_modules(
-                        sources, tuple(cross_owner_statements)
+                        sources, tuple(cross_owner_statements),
                     ),
                     tuple(cross_owner_statements),
                 )
             )
             facades = FlextInfraUtilitiesPrivateImportFacades.discover(
-                discovery_sources
+                discovery_sources,
             )
             export_bindings, declared_exports = (
                 FlextInfraUtilitiesPrivateImportFacades.declared_exports(
-                    discovery_sources
+                    discovery_sources,
                 )
             )
             class_bases = FlextInfraUtilitiesPrivateImportAncestry.class_bases(
-                discovery_sources
+                discovery_sources,
             )
         direct_specs: MutableMapping[Path, MutableMapping[str, t.Pair[str, str]]] = {}
         specs: MutableMapping[Path, list[t.Infra.PrivateImportSpec]] = {}
@@ -132,7 +132,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
                 continue
             private_module = statement.module or ""
             package = FlextInfraUtilitiesPrivateImportFacades.private_owner(
-                private_module
+                private_module,
             )
             if package is None:
                 continue
@@ -145,7 +145,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
                 qualified = f"{private_module}.{imported.name}"
                 declared = (
                     FlextInfraUtilitiesPrivateImportFacades.declared_public_reference(
-                        qualified, export_bindings, declared_exports
+                        qualified, export_bindings, declared_exports,
                     )
                 )
                 if declared is not None:
@@ -153,7 +153,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
                     continue
                 target_reference = (
                     FlextInfraUtilitiesPrivateImportFacades.facade_alias_binding(
-                        owners=facades.get(package, ()), alias=imported.asname
+                        owners=facades.get(package, ()), alias=imported.asname,
                     )
                     or FlextInfraUtilitiesPrivateImportFacades.public_reference(
                         owners=facades.get(package, ()),
@@ -188,12 +188,12 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
         """Plan binding-aware public import rewrites."""
         planned_edits = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
         specs, direct_specs, facades = cls._private_import_references(
-            root, sources, findings
+            root, sources, findings,
         )
         missing = sorted(str(path) for path in specs if path not in sources)
         if missing:
             return planned_edits.fail(
-                f"private import source missing from inventory: {', '.join(missing)}"
+                f"private import source missing from inventory: {', '.join(missing)}",
             )
 
         def rewrite(path: Path, source: str) -> t.Infra.TransformResult:
@@ -240,7 +240,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
             removals.setdefault(private_module, set()).add(symbol)
         for facade_alias, package in public_imports.items():
             public_root_name = FlextInfraUtilitiesPrivateImportFacades.public_root_name(
-                owners=facades.get(package, ()), facade_alias=facade_alias
+                owners=facades.get(package, ()), facade_alias=facade_alias,
             )
             if public_root_name is None:
                 continue
@@ -270,7 +270,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
         }
         for facade_alias, package in public_imports.items():
             FlextInfraUtilitiesPrivateImportFacades.require_unshadowed_alias(
-                tree, package, facade_alias, file_path, all_removals
+                tree, package, facade_alias, file_path, all_removals,
             )
         rewritten = cls._rewrite_private_import_source(
             cls._relocate_declared_exports(source, direct_specs),
@@ -281,7 +281,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
             module, _, name = qualified.rpartition(".")
             all_removals.setdefault(module, set()).add(name)
         FlextInfraUtilitiesPrivateImportValidation.require_zero_private_import_residue(
-            rewritten, file_path=file_path, plan=plan, removals=all_removals
+            rewritten, file_path=file_path, plan=plan, removals=all_removals,
         )
         return rewritten, (
             *(

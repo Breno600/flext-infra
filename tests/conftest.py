@@ -71,7 +71,7 @@ def _guard_tracked_codegen_config_untouched() -> Iterator[None]:
             "test suite modified the tracked repository file "
             f"{_TRACKED_CODEGEN_CONFIG_PATH}; dependency-floor and codegen "
             "writers must target an isolated workspace, never the real "
-            "checkout (flext-eles2)"
+            "checkout (flext-eles2)",
         )
 
 
@@ -96,7 +96,7 @@ def infra_test_workspace(tmp_path: Path) -> Path:
     src_pkg = workspace / "src" / "infra_pkg"
     src_pkg.mkdir(parents=True, exist_ok=True)
     (workspace / "pyproject.toml").write_text(
-        "[project]\nname='infra-pkg'\nversion='0.0.0'\n", encoding="utf-8"
+        "[project]\nname='infra-pkg'\nversion='0.0.0'\n", encoding="utf-8",
     )
     (workspace / "Makefile").write_text("help:\n\t@pwd\n", encoding="utf-8")
     (src_pkg / "__init__.py").write_text("", encoding="utf-8")
@@ -147,11 +147,11 @@ def infra_selection() -> u.Infra:
 
 @pytest.fixture
 def infra_safe_command_output(
-    infra_subprocess: u.Cli, infra_test_workspace: Path
+    infra_subprocess: u.Cli, infra_test_workspace: Path,
 ) -> str:
     """Capture successful public command output inside the test workspace."""
     echo_result = infra_subprocess.capture(
-        ["echo", "infra-ok"], cwd=infra_test_workspace
+        ["echo", "infra-ok"], cwd=infra_test_workspace,
     )
     tm.ok(echo_result)
     pwd_result = infra_subprocess.capture(["pwd"], cwd=infra_test_workspace)
@@ -185,7 +185,7 @@ def infra_git_repo(infra_test_workspace: Path) -> Path:
     u.Tests.git_bootstrap(origin, ("init", "--bare"))
     u.Tests.initialize_git_repo(repo, origin_url=upstream)
     u.Tests.git_bootstrap(
-        repo, ("config", "--local", f"url.{origin}.insteadOf", upstream)
+        repo, ("config", "--local", f"url.{origin}.insteadOf", upstream),
     )
     u.Tests.git_bootstrap(
         repo,

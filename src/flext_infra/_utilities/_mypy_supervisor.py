@@ -80,7 +80,7 @@ class FlextInfraMypyDarwinSupervisor:
         cls._usage(os.getpgrp())
         deadline = time.monotonic() + timeout
         child = u.Cli.process_start(
-            u.Infra.mypy_command(invocation), capture=False, start_new_session=True
+            u.Infra.mypy_command(invocation), capture=False, start_new_session=True,
         ).unwrap()
         received_signal: int = 0
 
@@ -136,5 +136,5 @@ if __name__ == "__main__":
             int(memory),
             int(timeout),
             int(kill_after),
-        )
+        ),
     )

@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(
-    FlextInfraUtilitiesSemanticCutoverEdits, FlextInfraUtilitiesSemanticCutoverBindings
+    FlextInfraUtilitiesSemanticCutoverEdits, FlextInfraUtilitiesSemanticCutoverBindings,
 ):
     """Require resolved OS imports and same-function config provenance."""
 
@@ -68,7 +68,7 @@ class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(
             packages: set[str] = set()
             for name in names:
                 if name.source is QualifiedNameSource.IMPORT and name.name.endswith(
-                    ".config"
+                    ".config",
                 ):
                     packages.add(name.name.removesuffix(".config"))
                 elif (function := self._function(node)) is not None:
@@ -106,12 +106,12 @@ class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(
                 raise ValueError(msg)
             self.packages.add(package)
             return cst.Call(
-                cst.Attribute(cst.Name("settings"), cst.Name(method)), (cst.Arg(key),)
+                cst.Attribute(cst.Name("settings"), cst.Name(method)), (cst.Arg(key),),
             )
 
         @override
         def leave_Call(
-            self, original_node: cst.Call, updated_node: cst.Call
+            self, original_node: cst.Call, updated_node: cst.Call,
         ) -> cst.BaseExpression:
             if not self._qualified(original_node.func, "os.environ.get"):
                 return updated_node
@@ -128,12 +128,12 @@ class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(
 
         @override
         def leave_Subscript(
-            self, original_node: cst.Subscript, updated_node: cst.Subscript
+            self, original_node: cst.Subscript, updated_node: cst.Subscript,
         ) -> cst.BaseExpression:
             if not self._qualified(original_node.value, "os.environ"):
                 return updated_node
             if len(original_node.slice) != 1 or not isinstance(
-                original_node.slice[0].slice, cst.Index
+                original_node.slice[0].slice, cst.Index,
             ):
                 msg = "dynamic environment lookup requires a single key"
                 raise ValueError(msg)

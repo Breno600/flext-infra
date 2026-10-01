@@ -25,7 +25,7 @@ class TestsFlextInfraDocServer:
 
     def _write_mkdocs_yml(self, scope_path: Path) -> None:
         (scope_path / "mkdocs.yml").write_text(
-            "site_name: Demo\ndocs_dir: docs\n", encoding="utf-8"
+            "site_name: Demo\ndocs_dir: docs\n", encoding="utf-8",
         )
 
     # Why: flattened nested TestScopeSelection/TestRequestDefaults/TestServeUtility
@@ -43,10 +43,10 @@ class TestsFlextInfraDocServer:
         tm.that((result.error or ""), has="docs generate")
 
     def test_serve_with_multiple_servable_scopes_requires_project(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         workspace = tu.Tests.create_docs_workspace(
-            tmp_path, project_names=("flext-a", "flext-b")
+            tmp_path, project_names=("flext-a", "flext-b"),
         )
         self._write_mkdocs_yml(workspace)
         self._write_mkdocs_yml(workspace / "flext-a")
@@ -76,15 +76,15 @@ class TestsFlextInfraDocServer:
         tm.that(str(server.output_dir), eq=c.Infra.DEFAULT_DOCS_OUTPUT_DIR)
 
     def test_serve_scope_without_mkdocs_yml_returns_failure(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """u.Infra.docs_serve_mkdocs fails loud without mkdocs.yml."""
         scope = m.Infra.DocScope(
-            name="flext-demo", path=tmp_path, report_dir=tmp_path / ".reports/docs"
+            name="flext-demo", path=tmp_path, report_dir=tmp_path / ".reports/docs",
         )
 
         report = u.Infra.docs_serve_mkdocs(
-            scope, dev_addr="127.0.0.1:18000", livereload=False, strict=True
+            scope, dev_addr="127.0.0.1:18000", livereload=False, strict=True,
         )
 
         tm.that(report.phase, eq="serve")

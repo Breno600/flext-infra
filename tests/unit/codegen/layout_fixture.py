@@ -18,7 +18,7 @@ def build_loose_project(tmp_path: Path, name: str = "flext-demo") -> Path:
     # The project's identity is its declared [project].name, so the fixture
     # declares the name it was asked for — never a directory-derived guess.
     (project / "pyproject.toml").write_text(
-        f"[project]\nname='{name}'\nversion='0.1.0'\n", encoding="utf-8"
+        f"[project]\nname='{name}'\nversion='0.1.0'\n", encoding="utf-8",
     )
     (project / "README.md").write_text("# demo\n", encoding="utf-8")
     guides = project / "guides"
@@ -35,7 +35,7 @@ def build_loose_project(tmp_path: Path, name: str = "flext-demo") -> Path:
 
 
 def layout_engine(
-    repository_root: Path, *, apply_changes: bool = False
+    repository_root: Path, *, apply_changes: bool = False,
 ) -> FlextInfraCodegenLayout:
     """Build the layout service over one fixture repository root.
 
@@ -66,7 +66,7 @@ def layout_engine(
                         u.Tests.initialize_git_repo(member, origin_url=member_url)
                         u.Tests.write_project_beads_config(member, member.name)
     return FlextInfraCodegenLayout(
-        repository_root=repository_root, apply_changes=apply_changes
+        repository_root=repository_root, apply_changes=apply_changes,
     )
 
 

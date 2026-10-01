@@ -48,7 +48,7 @@ class FlextInfraEnsurePyrightConfigPhase:
         return m.Infra.PyrightConfig.ExecutionEnvironment(
             root=root,
             report_private_usage=self._report_private_usage_for_env(
-                env_dir, rules=rules
+                env_dir, rules=rules,
             ),
             extra_paths=[*extra_paths],
         )
@@ -96,7 +96,7 @@ class FlextInfraEnsurePyrightConfigPhase:
         ]
 
     def _diagnostic_override_envs(
-        self, *, project_dir: Path | None, root_prefix: Path | None, source_path: str
+        self, *, project_dir: Path | None, root_prefix: Path | None, source_path: str,
     ) -> t.SequenceOf[m.Infra.PyrightConfig.ExecutionEnvironment]:
         """Resolve configured overrides only when their project path exists."""
         if project_dir is None:
@@ -117,7 +117,7 @@ class FlextInfraEnsurePyrightConfigPhase:
                     report_private_usage=override.report_private_usage,
                     extra_paths=(source_path,),
                     rationale=override.rationale,
-                )
+                ),
             )
         return tuple(environments)
 
@@ -165,7 +165,7 @@ class FlextInfraEnsurePyrightConfigPhase:
                 project_dir=repository_root,
                 root_prefix=None,
                 source_path=root_source_path,
-            )
+            ),
         )
         for env_dir in project_roots:
             if (repository_root / env_dir / c.PYPROJECT_FILENAME).is_file():
@@ -182,12 +182,12 @@ class FlextInfraEnsurePyrightConfigPhase:
                         member_src_paths=member_src_paths,
                     ),
                     rules=rules,
-                )
+                ),
             )
         return expected_envs
 
     def environment_payloads_for_dirs(
-        self, env_dirs: t.StrSequence
+        self, env_dirs: t.StrSequence,
     ) -> t.SequenceOf[t.JsonDict]:
         """Render configured environments for Python roots declared before writes."""
         rules = self._tool_config.tools.pyright.path_rules
@@ -211,14 +211,14 @@ class FlextInfraEnsurePyrightConfigPhase:
         )
 
     def _environment_payload(
-        self, environment: m.Infra.PyrightConfig.ExecutionEnvironment
+        self, environment: m.Infra.PyrightConfig.ExecutionEnvironment,
     ) -> t.JsonDict:
         """Render one execution environment."""
         payload: t.JsonDict = environment.model_dump(mode="json", by_alias=True)
         return payload
 
     def _expected_excludes(
-        self, project_root: Path | None, analysis_exclusions: t.StrSequence | None
+        self, project_root: Path | None, analysis_exclusions: t.StrSequence | None,
     ) -> t.StrSequence:
         """Return the complete config-owned Pyright exclude list."""
         rules = self._tool_config.tools.pyright.path_rules
@@ -227,7 +227,7 @@ class FlextInfraEnsurePyrightConfigPhase:
             workspace_excludes = tuple(
                 path.as_posix()
                 for path in FlextInfraWorkspaceDetector.analysis_exclusion_paths(
-                    project_root
+                    project_root,
                 ).unwrap()
             )
         provided_exclusions = () if analysis_exclusions is None else analysis_exclusions
@@ -238,7 +238,7 @@ class FlextInfraEnsurePyrightConfigPhase:
         })
 
     def _existing_paths(
-        self, base_dir: Path | None, configured_paths: t.StrSequence
+        self, base_dir: Path | None, configured_paths: t.StrSequence,
     ) -> t.StrSequence:
         """Existing paths."""
         if base_dir is None:
@@ -251,7 +251,7 @@ class FlextInfraEnsurePyrightConfigPhase:
         return existing
 
     def _expected_ignores(
-        self, *, is_root: bool, repository_root: Path | None, project_dir: Path | None
+        self, *, is_root: bool, repository_root: Path | None, project_dir: Path | None,
     ) -> t.StrSequence:
         """Ignore typings and stub diagnostics."""
         rules = self._tool_config.tools.pyright.path_rules
@@ -261,7 +261,7 @@ class FlextInfraEnsurePyrightConfigPhase:
             ignores.extend(self._existing_paths(root_dir, rules.root_typings_paths))
         else:
             ignores.extend(
-                self._existing_paths(project_dir, rules.project_typings_paths)
+                self._existing_paths(project_dir, rules.project_typings_paths),
             )
         for pattern in rules.ignored_diagnostic_globs:
             if pattern not in ignores:
@@ -279,7 +279,7 @@ class FlextInfraEnsurePyrightConfigPhase:
             paths_manager.generated_python_roots if paths_manager is not None else ()
         )
         declared = self._declared_environment_dirs(
-            tuple(dict.fromkeys((*context.declared_python_dirs, *generated_roots)))
+            tuple(dict.fromkeys((*context.declared_python_dirs, *generated_roots))),
         )
         repository_root = context.repository_root
         if (
@@ -294,7 +294,7 @@ class FlextInfraEnsurePyrightConfigPhase:
                     paths_manager.analysis_excluded_top_dirs
                     if paths_manager is not None
                     else FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
-                        repository_root
+                        repository_root,
                     ).unwrap()
                 ),
             )
@@ -308,7 +308,7 @@ class FlextInfraEnsurePyrightConfigPhase:
                     paths_manager.analysis_excluded_top_dirs
                     if paths_manager is not None
                     else FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
-                        context.project_dir
+                        context.project_dir,
                     ).unwrap()
                 ),
             )
@@ -329,10 +329,10 @@ class FlextInfraEnsurePyrightConfigPhase:
         project_root = repository_root if is_root else project_dir
         expected_excludes = self._expected_excludes(project_root, analysis_exclusions)
         expected_ignores = self._expected_ignores(
-            is_root=is_root, repository_root=repository_root, project_dir=project_dir
+            is_root=is_root, repository_root=repository_root, project_dir=project_dir,
         )
         expected_roots = self._expected_project_roots(
-            context=context, paths_manager=paths_manager
+            context=context, paths_manager=paths_manager,
         )
         # Include only the Python roots owned by the selected project manifest.
         expected_includes = list(expected_roots)
@@ -371,9 +371,9 @@ class FlextInfraEnsurePyrightConfigPhase:
                 toml.ListOp(
                     key="extraPaths",
                     values=paths_manager.pyright_extra_paths(
-                        project_dir=project_root, is_root=is_root
+                        project_dir=project_root, is_root=is_root,
                     ),
-                )
+                ),
             )
         if expected_stub_path is not None:
             existing = project_root / expected_stub_path if project_root else None
@@ -403,7 +403,7 @@ class FlextInfraEnsurePyrightConfigPhase:
             for key, value in settings.items()
         )
         return toml.PhaseConfig(
-            name="pyright", table_path=(c.Infra.PYRIGHT,), operations=tuple(operations)
+            name="pyright", table_path=(c.Infra.PYRIGHT,), operations=tuple(operations),
         )
 
     def apply_payload(

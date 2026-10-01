@@ -30,7 +30,7 @@ class FlextInfraDocAuditorChecksMixin:
     def placeholder_issues(scope: m.Infra.DocScope) -> t.SequenceOf[m.Infra.AuditIssue]:
         """Return placeholder-text issues for one scope."""
         return u.Infra.docs_placeholder_issues(
-            scope, patterns=u.Infra.docs_audit_policy(scope).placeholder_patterns
+            scope, patterns=u.Infra.docs_audit_policy(scope).placeholder_patterns,
         )
 
     @staticmethod
@@ -46,7 +46,7 @@ class FlextInfraDocAuditorChecksMixin:
         )
 
     def _collect_issues(
-        self, scope: m.Infra.DocScope, checks: t.StrSequence
+        self, scope: m.Infra.DocScope, checks: t.StrSequence,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
         """Collect issues for the requested check set in canonical order."""
         handlers: t.VariadicTuple[

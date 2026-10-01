@@ -34,21 +34,21 @@ class TestsFlextInfraDocsShared:
             m.Infra.DocScope(name="", path=tmp_path, report_dir=report_dir)
 
     def test_build_scopes_returns_root_and_selected_projects(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         workspace = u.Tests.create_docs_workspace(
-            tmp_path, project_names=("flext-a", "flext-b")
+            tmp_path, project_names=("flext-a", "flext-b"),
         )
 
         result = u.Infra.build_scopes(
-            workspace, projects=["flext-a"], output_dir=c.Infra.DEFAULT_DOCS_OUTPUT_DIR
+            workspace, projects=["flext-a"], output_dir=c.Infra.DEFAULT_DOCS_OUTPUT_DIR,
         )
 
         tm.ok(result)
         tm.that([scope.name for scope in result.value], eq=["root", "flext-a"])
 
     def test_build_scopes_without_filter_still_returns_root_scope(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         # Why (X-70): a member-less workspace root that declares its own
         # pyproject.toml is a governed single-project scope named after itself
@@ -57,23 +57,23 @@ class TestsFlextInfraDocsShared:
         workspace = u.Tests.create_docs_workspace(tmp_path)
 
         result = u.Infra.build_scopes(
-            workspace, projects=None, output_dir=c.Infra.DEFAULT_DOCS_OUTPUT_DIR
+            workspace, projects=None, output_dir=c.Infra.DEFAULT_DOCS_OUTPUT_DIR,
         )
 
         tm.ok(result)
         tm.that([scope.name for scope in result.value], eq=["workspace"])
 
     def test_build_scopes_treats_non_flext_project_as_its_own_root(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         project_root = tmp_path / "acme-content"
         project_root.mkdir()
         (project_root / c.PYPROJECT_FILENAME).write_text(
-            "[project]\nname='acme-content'\n", encoding="utf-8"
+            "[project]\nname='acme-content'\n", encoding="utf-8",
         )
 
         result = u.Infra.build_scopes(
-            project_root, projects=None, output_dir=c.Infra.DEFAULT_DOCS_OUTPUT_DIR
+            project_root, projects=None, output_dir=c.Infra.DEFAULT_DOCS_OUTPUT_DIR,
         )
 
         tm.ok(result)
@@ -83,7 +83,7 @@ class TestsFlextInfraDocsShared:
         )
 
     def test_build_scopes_preserves_declared_repository_root_and_projects(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         workspace = u.Tests.create_docs_workspace(tmp_path, project_names=("flext-a",))
         (workspace / c.PYPROJECT_FILENAME).write_text(
@@ -92,7 +92,7 @@ class TestsFlextInfraDocsShared:
         )
 
         result = u.Infra.build_scopes(
-            workspace, projects=["flext-a"], output_dir=c.Infra.DEFAULT_DOCS_OUTPUT_DIR
+            workspace, projects=["flext-a"], output_dir=c.Infra.DEFAULT_DOCS_OUTPUT_DIR,
         )
 
         tm.ok(result)
@@ -102,7 +102,7 @@ class TestsFlextInfraDocsShared:
         )
 
     def test_build_scopes_skips_declared_workspace_without_materialized_projects(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         workspace = tmp_path / "workspace"
         workspace.mkdir()
@@ -117,7 +117,7 @@ class TestsFlextInfraDocsShared:
         )
 
         result = u.Infra.build_scopes(
-            workspace, projects=None, output_dir=c.Infra.DEFAULT_DOCS_OUTPUT_DIR
+            workspace, projects=None, output_dir=c.Infra.DEFAULT_DOCS_OUTPUT_DIR,
         )
 
         tm.ok(result)
@@ -134,7 +134,7 @@ class TestsFlextInfraDocsShared:
             encoding="utf-8",
         )
         result = u.Infra.build_scopes(
-            project_root, projects=None, output_dir=c.Infra.DEFAULT_DOCS_OUTPUT_DIR
+            project_root, projects=None, output_dir=c.Infra.DEFAULT_DOCS_OUTPUT_DIR,
         )
 
         tm.ok(result)
@@ -147,7 +147,7 @@ class TestsFlextInfraDocsShared:
         workspace = u.Tests.create_docs_workspace(tmp_path, project_names=("flext-a",))
 
         result = u.Infra.build_scopes(
-            workspace, projects=["flext-a"], output_dir=".custom-docs"
+            workspace, projects=["flext-a"], output_dir=".custom-docs",
         )
 
         tm.ok(result)
@@ -168,7 +168,7 @@ class TestsFlextInfraDocsShared:
         tm.that([scope.name for scope in result.value], eq=["workspace"])
 
     def test_build_scopes_preserves_discovered_package_name(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         workspace = tmp_path / "workspace"
         project_root = workspace / "flext-demo"
@@ -198,6 +198,6 @@ class TestsFlextInfraDocsShared:
         tm.ok(result)
         tm.that(len(result.value), eq=2)
         tm.that(
-            [scope.name for scope in result.value], eq=[c.Infra.RK_ROOT, "flext-demo"]
+            [scope.name for scope in result.value], eq=[c.Infra.RK_ROOT, "flext-demo"],
         )
         tm.that(result.value[1].package_name, eq="demo_pkg")

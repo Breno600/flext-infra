@@ -17,7 +17,7 @@ class FlextInfraPytestRunnerBase(s[int]):
     """Own immutable inputs shared by all pytest runner phases."""
 
     started_at_monotonic: Annotated[
-        float, m.Field(gt=0, description="Clock captured before FLEXT imports.")
+        float, m.Field(gt=0, description="Clock captured before FLEXT imports."),
     ]
     target: Annotated[Path, m.Field(description="Repository-relative test root.")]
     reports: Annotated[Path, m.Field(description="Repository-relative report root.")]
@@ -32,13 +32,13 @@ class FlextInfraPytestRunnerBase(s[int]):
     profile_enabled: Annotated[
         bool,
         m.Field(
-            description="Profile the real suite child and preserve its native exit"
+            description="Profile the real suite child and preserve its native exit",
         ),
     ] = False
     collection_command_prefix: Annotated[
         t.StrTuple,
         m.Field(
-            description="Explicit profiling child invocation from the outer boundary."
+            description="Explicit profiling child invocation from the outer boundary.",
         ),
     ] = ()
     slow_phase: Annotated[
@@ -47,7 +47,7 @@ class FlextInfraPytestRunnerBase(s[int]):
             description=(
                 "Run only the configured slow marker in its own phase; otherwise "
                 "the budgeted phase runs everything else."
-            )
+            ),
         ),
     ] = False
 
@@ -78,8 +78,8 @@ class FlextInfraPytestRunnerBase(s[int]):
             reports=Path(cls._environment_value(c.Infra.PYTEST_ENV_REPORTS)),
             testmon_db=Path(
                 cls._environment_value(
-                    config.Infra.codegen.make.testmon_cache.database_environment_variable
-                )
+                    config.Infra.codegen.make.testmon_cache.database_environment_variable,
+                ),
             ),
         )
 
@@ -142,20 +142,20 @@ class FlextInfraPytestRunnerBase(s[int]):
         return policy.run_timeout_overrides.get(name, policy.run_timeout_seconds)
 
     def _declared_worker_ceiling(
-        self, policy: PytestPolicy
+        self, policy: PytestPolicy,
     ) -> int | m.Infra.PytestWorkerCeiling:
         """Resolve the declared project's ceiling over the fleet default."""
         if not policy.parallel_worker_overrides:
             return policy.parallel_workers
         pyproject_path = self.root / c.PYPROJECT_FILENAME
         name = u.Infra.project_name_from_payload(
-            pyproject_path, u.Infra.pyproject_payload(pyproject_path)
+            pyproject_path, u.Infra.pyproject_payload(pyproject_path),
         )
         return policy.parallel_worker_overrides.get(name, policy.parallel_workers)
 
     @staticmethod
     def resolve_worker_ceiling(
-        ceiling: int | m.Infra.PytestWorkerCeiling, cpu_count: int
+        ceiling: int | m.Infra.PytestWorkerCeiling, cpu_count: int,
     ) -> int:
         """Resolve a declared ceiling against the process CPU count.
 

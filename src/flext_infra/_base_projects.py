@@ -50,7 +50,7 @@ class FlextInfraProjectSelectionMixin:
             repository_root,
             projects=self.selected_projects if projects is None else projects,
             output_dir=u.Cli.resolve_optional_path(
-                output_dir, default=Path(c.Infra.DEFAULT_DOCS_OUTPUT_DIR)
+                output_dir, default=Path(c.Infra.DEFAULT_DOCS_OUTPUT_DIR),
             ),
             handler=handler,
         )

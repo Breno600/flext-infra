@@ -19,7 +19,7 @@ class FlextInfraMiseArtifactsProcess:
 
     @classmethod
     def prepare_isolation(
-        cls, scratch: Path, contract: m.Infra.MiseBootstrapEnvironmentSpec
+        cls, scratch: Path, contract: m.Infra.MiseBootstrapEnvironmentSpec,
     ) -> p.Result[bool]:
         """Create only invocation-local policy, home, and receipt paths."""
 
@@ -50,7 +50,7 @@ class FlextInfraMiseArtifactsProcess:
             if planned.failure:
                 return r[bool].from_failure(planned)
             created = u.Cli.atomic_create_directory_chain_guarded(
-                planned.value, permission_mode=0o700
+                planned.value, permission_mode=0o700,
             )
             if created.failure:
                 return r[bool].from_failure(created)
@@ -97,7 +97,7 @@ class FlextInfraMiseArtifactsProcess:
 
     @classmethod
     def no_config_environment(
-        cls, environment_values: t.StrMapping
+        cls, environment_values: t.StrMapping,
     ) -> MutableMapping[str, str]:
         """Select Mise's documented config-free mode for runtime-only commands."""
         result = dict(environment_values)
@@ -106,7 +106,7 @@ class FlextInfraMiseArtifactsProcess:
 
     @classmethod
     def run(
-        cls, command: t.StrSequence, *, cwd: Path, env: t.StrMapping, operation: str
+        cls, command: t.StrSequence, *, cwd: Path, env: t.StrMapping, operation: str,
     ) -> p.Result[str]:
         """Run one Mise process and reject nonzero status or any Mise warning."""
         u.Cli.info(f"mise-toolchain: start operation={operation}")
@@ -136,7 +136,7 @@ class FlextInfraMiseArtifactsProcess:
         if before.failure:
             return r[bool].from_failure(before)
         return u.Cli.atomic_write_binary_file_guarded(
-            before.value, content, permission_mode=mode
+            before.value, content, permission_mode=mode,
         )
 
 

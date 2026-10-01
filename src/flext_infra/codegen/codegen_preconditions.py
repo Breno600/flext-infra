@@ -21,7 +21,7 @@ class FlextInfraCodegenPreconditions:
 
     @staticmethod
     def phase_sources(
-        phase: str, plans: t.VariadicTuple[m.Infra.CodegenFilePlan]
+        phase: str, plans: t.VariadicTuple[m.Infra.CodegenFilePlan],
     ) -> p.Result[t.VariadicTuple[t.Pair[str, m.Cli.AtomicFileState]]]:
         """Reject conflicting observations and tag each source with its phase."""
         result_type = r[tuple[tuple[str, m.Cli.AtomicFileState], ...]]
@@ -31,7 +31,7 @@ class FlextInfraCodegenPreconditions:
                 previous = sources.get(source.path)
                 if previous is not None and previous != source:
                     return result_type.fail(
-                        f"{phase} planner observed two states for {source.path}"
+                        f"{phase} planner observed two states for {source.path}",
                     )
                 sources[source.path] = source
         return result_type.ok(tuple((phase, source) for source in sources.values()))
@@ -54,12 +54,12 @@ class FlextInfraCodegenPreconditions:
     ) -> p.Result[bool]:
         """Require unchanged source and destination identities before writing."""
         source_barrier = FlextInfraMiseArtifactsVerification.states_current(
-            FlextInfraCodegenPreconditions.unique_states(sources)
+            FlextInfraCodegenPreconditions.unique_states(sources),
         )
         if source_barrier.failure:
             return source_barrier
         destination_barrier = FlextInfraMiseArtifactsVerification.states_current(
-            destinations
+            destinations,
         )
         if destination_barrier.failure:
             return destination_barrier
@@ -67,7 +67,7 @@ class FlextInfraCodegenPreconditions:
 
     @staticmethod
     def unchanged_journal(
-        session: m.Infra.CodegenTransactionSession, changed_error: str
+        session: m.Infra.CodegenTransactionSession, changed_error: str,
     ) -> p.Result[m.Infra.CodegenTransactionSession]:
         """Require the complete journal receipt; a lease cannot authorize replacement."""
         result_type = r[m.Infra.CodegenTransactionSession]
@@ -82,7 +82,7 @@ class FlextInfraCodegenPreconditions:
             return result_type.fail(
                 observed.error or changed_error,
                 error_data={
-                    "recovery_error": "journal authority no longer matches the session receipt"
+                    "recovery_error": "journal authority no longer matches the session receipt",
                 },
             )
         return result_type.ok(session)

@@ -37,7 +37,7 @@ class TestsFlextInfraCheckReportContract:
         )
         # One fixable lint finding (unused import) that only --apply rewrites.
         (project / "src" / "p1" / "module.py").write_text(
-            '"""Fixture module."""\n\nimport os\n', encoding="utf-8"
+            '"""Fixture module."""\n\nimport os\n', encoding="utf-8",
         )
         return project
 
@@ -85,13 +85,13 @@ class TestsFlextInfraCheckReportContract:
                             message="`os` imported but unused",
                             locations=[
                                 m.Infra.SarifLocation(
-                                    uri="src/p1/module.py", start_line=3, start_column=8
-                                )
+                                    uri="src/p1/module.py", start_line=3, start_column=8,
+                                ),
                             ],
                         ),
                     ),
                 ),
-            )
+            ),
         )
 
         emitted = report.model_dump_json()
@@ -100,7 +100,7 @@ class TestsFlextInfraCheckReportContract:
         tm.that(m.Infra.SarifReport.model_validate_json(emitted), eq=report)
 
     def test_check_without_apply_leaves_sources_and_reports_findings(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         project = self._project(tmp_path)
         reports = tmp_path / "reports"

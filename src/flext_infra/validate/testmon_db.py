@@ -66,7 +66,7 @@ class FlextInfraTestmonDbInspector(s[m.Infra.TestmonCacheState]):
         tables = {
             row[0]
             for row in connection.execute(
-                "SELECT name FROM sqlite_master WHERE type='table'"
+                "SELECT name FROM sqlite_master WHERE type='table'",
             ).fetchall()
         }
         if not tables:
@@ -106,7 +106,7 @@ class FlextInfraTestmonDbInspector(s[m.Infra.TestmonCacheState]):
                 changed=changed,
                 saveable=saveable,
                 reason=reason,
-            )
+            ),
         )
 
     @override

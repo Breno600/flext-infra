@@ -17,32 +17,32 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesGitWorktreeRootsMixin(
-    FlextInfraUtilitiesGitWorktreeFactsMixin
+    FlextInfraUtilitiesGitWorktreeFactsMixin,
 ):
     """Own worktree roots operations."""
 
     @classmethod
     def git_repository_root(
-        cls, request: m.Infra.GitRepoRequest
+        cls, request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitRootReport]:
         """Resolve the superproject root or the repository's own top level."""
         root = cls._git_repository_root_path(request.repo_root)
         if root.failure:
             return r[m.Infra.GitRootReport].from_failure(root)
         return r[m.Infra.GitRootReport].ok(
-            m.Infra.GitRootReport(repository_root=root.value)
+            m.Infra.GitRootReport(repository_root=root.value),
         )
 
     @classmethod
     def git_primary_worktree_root(
-        cls, request: m.Infra.GitRepoRequest
+        cls, request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitPrimaryRootReport]:
         """Resolve the primary worktree from Git's canonical storage topology."""
         primary = cls._git_primary_worktree_root_path(request.repo_root)
         if primary.failure:
             return r[m.Infra.GitPrimaryRootReport].from_failure(primary)
         return r[m.Infra.GitPrimaryRootReport].ok(
-            m.Infra.GitPrimaryRootReport(primary_root=primary.value)
+            m.Infra.GitPrimaryRootReport(primary_root=primary.value),
         )
 
     @classmethod
@@ -56,12 +56,12 @@ class FlextInfraUtilitiesGitWorktreeRootsMixin(
         try:
             repo = cls._repo(repository_path)
             superproject = repo.git.rev_parse(
-                "--show-superproject-working-tree"
+                "--show-superproject-working-tree",
             ).strip()
             root = superproject or repo.git.rev_parse("--show-toplevel").strip()
         except (GitCommandError, OSError, ValueError) as exc:
             return r[Path].fail(
-                f"failed to resolve repository root: {exc}", exception=exc
+                f"failed to resolve repository root: {exc}", exception=exc,
             )
         return r[Path].ok(Path(root).resolve())
 

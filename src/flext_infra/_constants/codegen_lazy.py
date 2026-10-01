@@ -33,7 +33,7 @@ class FlextInfraConstantsCodegenLazy:
     ROOT_EXPORTS_DIR: ClassVar[str] = "_constants"
     "Directory under each package where lazy-init registries must live."
     GENERATED_EXPORT_SIDECAR_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?:_exports(?:_lazy(?:_part_[0-9]+)?)?|_lazy_exports)\.py$"
+        r"^(?:_exports(?:_lazy(?:_part_[0-9]+)?)?|_lazy_exports)\.py$",
     )
     "Regex matching every generated lazy-export sidecar filename "
     "(``_exports.py``, ``_exports_lazy.py``, ``_exports_lazy_part_N.py``, "
@@ -53,7 +53,7 @@ class FlextInfraConstantsCodegenLazy:
     })
     "Names owned by the canonical root initializer template, never public exports."
     TEST_ONLY_SOURCE_MODULE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?:_?test(?:_[A-Za-z0-9_]+)?|[A-Za-z0-9_]+_tests?)\.py$"
+        r"^(?:_?test(?:_[A-Za-z0-9_]+)?|[A-Za-z0-9_]+_tests?)\.py$",
     )
     "Test-module filenames forbidden from installable package export maps."
     # Cleanup is the only owner of retired init artifacts.
@@ -105,7 +105,7 @@ class FlextInfraConstantsCodegenLazy:
     LAZY_BOOTSTRAP_ROOT_PACKAGE: ClassVar[str] = "flext_core"
 
     BARE_IMPORT_FROM_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^from\s+import\s", re.MULTILINE
+        r"^from\s+import\s", re.MULTILINE,
     )
     "Regex: malformed ``from import`` statement (missing module name)."
 

@@ -28,22 +28,22 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         try:
             with TemporaryDirectory(prefix=f"{name}-", dir=log.parent) as temporary:
                 built = self._build_staged(
-                    ctx, policy, target, versions, Path(temporary)
+                    ctx, policy, target, versions, Path(temporary),
                 )
         except OSError as exc:
             built = r[m.Infra.BuildRecord].fail_op(
-                f"manage temporary release build for {name}", exc
+                f"manage temporary release build for {name}", exc,
             )
         if built.success:
             return built
         written = self._write_release_text(
-            log, (built.error or "release build failed") + "\n"
+            log, (built.error or "release build failed") + "\n",
         )
         return written.map(lambda _: self._record(target, log, exit_code=1))
 
     @classmethod
     def mirror_release_inputs(
-        cls, project_path: Path, stage_path: Path
+        cls, project_path: Path, stage_path: Path,
     ) -> p.Result[bool]:
         """Carry the project's prepared release inputs into the staged source.
 
@@ -65,7 +65,7 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
             for entry in sorted(source.iterdir()):
                 if not entry.is_file():
                     return r[bool].fail(
-                        f"project dist must contain only regular files: {entry}"
+                        f"project dist must contain only regular files: {entry}",
                     )
                 shutil.copy2(entry, staged / entry.name)
         except OSError as exc:
@@ -105,7 +105,7 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         hatch = u.Cli.toml_table_child(tool, "hatch") if tool is not None else None
         if hatch is None:
             return r[m.Infra.BuildRecord].fail(
-                "rendered release metadata lost Hatch build targets"
+                "rendered release metadata lost Hatch build targets",
             )
         boundary = self._sdist_boundary(hatch)
         if boundary.failure:
@@ -119,7 +119,7 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
                 return r[m.Infra.BuildRecord].from_failure(written)
         if ctx.dry_run:
             return self._write_release_text(
-                log, f"release metadata staged and validated: {name}\n"
+                log, f"release metadata staged and validated: {name}\n",
             ).map(lambda _: self._record(target, log, exit_code=0, source=staged.value))
         mirrored = self.mirror_release_inputs(path, stage)
         if mirrored.failure:
@@ -156,7 +156,7 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
                     log,
                     exit_code=build.value.outcome.raw_return_code,
                     source=staged.value,
-                )
+                ),
             )
         artifacts = self._persist_artifacts(
             dist,
@@ -171,13 +171,13 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         )
         return artifacts.map(
             lambda built: self._record(
-                target, log, exit_code=0, artifacts=built, source=staged.value
-            )
+                target, log, exit_code=0, artifacts=built, source=staged.value,
+            ),
         )
 
     @classmethod
     def _persist_artifacts(
-        cls, dist: Path, destination: Path, expectation: m.Infra.ArtifactExpectation
+        cls, dist: Path, destination: Path, expectation: m.Infra.ArtifactExpectation,
     ) -> p.Result[t.VariadicTuple[m.Infra.BuildArtifact]]:
         """Validate exactly one wheel and one sdist, then persist the set atomically.
 
@@ -194,12 +194,12 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         unexpected = [entry.name for entry in entries if entry not in sources]
         if unexpected:
             return result_type.fail(
-                f"uv build emitted unexpected output: {', '.join(unexpected)}"
+                f"uv build emitted unexpected output: {', '.join(unexpected)}",
             )
         if len(wheels) != 1 or len(sdists) != 1:
             return result_type.fail(
                 f"expected one wheel and one sdist, found "
-                f"{len(wheels)} wheel(s) and {len(sdists)} sdist(s)"
+                f"{len(wheels)} wheel(s) and {len(sdists)} sdist(s)",
             )
         built: t.MutableSequenceOf[m.Infra.BuildArtifact] = []
         for source in sources:
@@ -209,7 +209,7 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
             kind, digest = validated.value
             persisted = str((destination / source.name).resolve())
             built.append(
-                m.Infra.BuildArtifact(path=persisted, kind=kind, sha256=digest)
+                m.Infra.BuildArtifact(path=persisted, kind=kind, sha256=digest),
             )
         if destination.exists():
             try:
@@ -221,24 +221,24 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
                 )
             except OSError as exc:
                 return result_type.fail_op(
-                    f"compare immutable artifacts {destination}", exc
+                    f"compare immutable artifacts {destination}", exc,
                 )
             if not same:
                 return result_type.fail(
-                    f"immutable artifact collision at {destination}"
+                    f"immutable artifact collision at {destination}",
                 )
             return result_type.ok(tuple(built))
         try:
             destination.parent.mkdir(parents=True, exist_ok=True)
             with TemporaryDirectory(
-                prefix=f".{destination.name}-", dir=destination.parent
+                prefix=f".{destination.name}-", dir=destination.parent,
             ) as staging:
                 for source in sources:
                     shutil.copy2(source, Path(staging) / source.name)
                 Path(staging).replace(destination)
         except OSError as exc:
             return result_type.fail_op(
-                f"persist release artifact set {destination}", exc
+                f"persist release artifact set {destination}", exc,
             )
         return result_type.ok(tuple(built))
 

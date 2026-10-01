@@ -13,7 +13,7 @@ from tests import c, u
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from tests import p, t
+    from tests import t
 
 
 class TestsFlextInfraWorkspaceInit:
@@ -45,13 +45,13 @@ class TestsFlextInfraWorkspaceInit:
         tm.that(u.Infra.resolve_repository_root_or_cwd(None).is_absolute(), eq=True)
 
     def test_run_projects_fails_when_reports_dir_is_not_a_directory(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         reports_file = tmp_path / "reports.txt"
         reports_file.write_text("", encoding="utf-8")
 
         result = FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
-            ["project-a"], [c.Infra.LINT], reports_dir=reports_file
+            ["project-a"], [c.Infra.LINT], reports_dir=reports_file,
         )
 
         tm.fail(result)

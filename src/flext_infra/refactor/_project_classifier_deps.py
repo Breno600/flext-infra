@@ -21,7 +21,7 @@ class FlextInfraProjectClassifierDepsMixin:
     if TYPE_CHECKING:
 
         def _as_mapping(
-            self, raw_value: t.JsonValue | None
+            self, raw_value: t.JsonValue | None,
         ) -> t.MappingKV[str, t.JsonValue]: ...
 
     def _append_project_dependencies(
@@ -39,7 +39,7 @@ class FlextInfraProjectClassifierDepsMixin:
                 continue
             dependency_name = self._extract_dependency_name(raw_dependency)
             self._append_unique_dependency(
-                dependency_name=dependency_name, dependencies=dependencies
+                dependency_name=dependency_name, dependencies=dependencies,
             )
 
     def _append_poetry_dependencies(
@@ -73,11 +73,11 @@ class FlextInfraProjectClassifierDepsMixin:
             if dependency_name == "python":
                 continue
             self._append_unique_dependency(
-                dependency_name=dependency_name, dependencies=dependencies
+                dependency_name=dependency_name, dependencies=dependencies,
             )
 
     def _ordered_mapping_keys(
-        self, raw_mapping: t.MappingKV[str, t.JsonValue]
+        self, raw_mapping: t.MappingKV[str, t.JsonValue],
     ) -> t.StrSequence:
         """Ordered mapping keys."""
         keys = list(raw_mapping.keys())
@@ -86,13 +86,13 @@ class FlextInfraProjectClassifierDepsMixin:
         return sorted(keys)
 
     def _mapping_order_is_trusted(
-        self, raw_mapping: t.MappingKV[str, t.JsonValue]
+        self, raw_mapping: t.MappingKV[str, t.JsonValue],
     ) -> bool:
         """Check whether the mapping order is trusted."""
         return isinstance(raw_mapping, dict)
 
     def _append_unique_dependency(
-        self, *, dependency_name: str, dependencies: t.MutableSequenceOf[str]
+        self, *, dependency_name: str, dependencies: t.MutableSequenceOf[str],
     ) -> None:
         """Append unique dependency."""
         if (not dependency_name) or (dependency_name in dependencies):
@@ -100,7 +100,7 @@ class FlextInfraProjectClassifierDepsMixin:
         dependencies.append(dependency_name)
 
     def _internal_dependencies(
-        self, *, dependencies: t.StrSequence, project_name: str
+        self, *, dependencies: t.StrSequence, project_name: str,
     ) -> t.StrSequence:
         """Return the internal dependencies."""
         return [

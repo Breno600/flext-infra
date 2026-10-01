@@ -17,7 +17,7 @@ pytestmark = [pytest.mark.slow, pytest.mark.remote]
 
 class TestsFlextInfraDepsDetectorMain:
     def test_run_without_typings_skips_typings_detection(
-        self, real_detector_project: Path
+        self, real_detector_project: Path,
     ) -> None:
         root = real_detector_project
         before = (root / "pyproject.toml").read_bytes()
@@ -30,13 +30,13 @@ class TestsFlextInfraDepsDetectorMain:
         tm.that((root / "pyproject.toml").read_bytes(), eq=before)
         report = tm.ok(
             u.Cli.json_read(
-                root / ".reports/dependencies/detect-runtime-dev-latest.json"
-            )
+                root / ".reports/dependencies/detect-runtime-dev-latest.json",
+            ),
         )
         project = u.Cli.json_as_mapping(
             u.Cli.json_as_mapping(u.Cli.json_as_mapping(report).get("projects")).get(
-                root.name
-            )
+                root.name,
+            ),
         )
         tm.that(project, lacks="typings")
 
@@ -58,7 +58,7 @@ class TestsFlextInfraDepsDetectorMain:
         indirect=True,
     )
     def test_apply_typings_follows_governed_policy_and_preserves_source(
-        self, real_detector_project: Path
+        self, real_detector_project: Path,
     ) -> None:
         root = real_detector_project
         followed = config.Infra.tooling.tools.mypy.boolean_settings.get(
@@ -70,14 +70,14 @@ class TestsFlextInfraDepsDetectorMain:
         declared_dev = {
             u.Infra.dep_name(item)
             for item in u.Tests.toml_strings(
-                u.Tests.toml_mapping(before["dependency-groups"])["dev"]
+                u.Tests.toml_mapping(before["dependency-groups"])["dev"],
             )
         }
         tm.that(declared_dev & set(expected.values()), eq=set())
         outcome = tm.ok(
             u.Tests.run_real_detector(
-                root, "--apply-typings", "--apply", "--no-pip-check"
-            )
+                root, "--apply-typings", "--apply", "--no-pip-check",
+            ),
         )
         tm.that(
             u.Cli.process_succeeded(outcome.outcome),
@@ -95,8 +95,8 @@ class TestsFlextInfraDepsDetectorMain:
         added = set() if followed else {expected[item] for item in requirements}
         typing_specs = u.Tests.toml_strings(
             u.Tests.toml_mapping(
-                u.Tests.toml_mapping(after["project"])["optional-dependencies"]
-            ).get("typings", [])
+                u.Tests.toml_mapping(after["project"])["optional-dependencies"],
+            ).get("typings", []),
         )
         tm.that(
             {u.Infra.dep_name(item) for item in typing_specs},
@@ -116,7 +116,7 @@ class TestsFlextInfraDepsDetectorMain:
                 tm.that(updated_project[key], eq=value)
         tm.that(
             u.Tests.toml_mapping(
-                u.Tests.toml_mapping(after["project"])["optional-dependencies"]
+                u.Tests.toml_mapping(after["project"])["optional-dependencies"],
             )["feature"],
             eq=["requests"],
         )
@@ -132,7 +132,7 @@ class TestsFlextInfraDepsDetectorMain:
                     *sorted(added),
                 ],
                 cwd=root,
-            )
+            ),
         )
         tm.that(len(installed.splitlines()), eq=len(added))
         # Why: a stub-only `types-*` package is never itself importable, so
@@ -145,13 +145,13 @@ class TestsFlextInfraDepsDetectorMain:
         with (root / "pyproject.toml").open("a", encoding="utf-8") as stream:
             stream.write(
                 "\n[tool.deptry.per_rule_ignores]\n"
-                f"DEP002 = {installed_names!r}\n".replace("'", '"')
+                f"DEP002 = {installed_names!r}\n".replace("'", '"'),
             )
         snapshot = (root / "pyproject.toml").read_bytes()
         repeated = tm.ok(
             u.Tests.run_real_detector(
-                root, "--apply-typings", "--apply", "--no-pip-check"
-            )
+                root, "--apply-typings", "--apply", "--no-pip-check",
+            ),
         )
         tm.that(
             u.Cli.process_succeeded(repeated.outcome),
@@ -161,13 +161,13 @@ class TestsFlextInfraDepsDetectorMain:
         tm.that((root / "pyproject.toml").read_bytes(), eq=snapshot)
 
     def test_apply_typings_dry_run_preserves_source_and_lock(
-        self, real_detector_project: Path
+        self, real_detector_project: Path,
     ) -> None:
         root = real_detector_project
         paths = (root / "pyproject.toml", root / "uv.lock")
         before = tuple(path.read_bytes() for path in paths)
         outcome = tm.ok(
-            u.Tests.run_real_detector(root, "--apply-typings", "--no-pip-check")
+            u.Tests.run_real_detector(root, "--apply-typings", "--no-pip-check"),
         )
         tm.that(
             u.Cli.process_succeeded(outcome.outcome),
@@ -202,7 +202,7 @@ class TestsFlextInfraDepsDetectorMain:
     # binaries. This rewrites the retired "authoritative parent environment"
     # expectation to the current, intentional contract.
     def test_member_without_own_venv_fails_closed_not_parent_environment(
-        self, real_detector_project: Path
+        self, real_detector_project: Path,
     ) -> None:
         root = real_detector_project
         member = u.Tests.mk_project(
@@ -217,7 +217,7 @@ class TestsFlextInfraDepsDetectorMain:
             ),
         )
         (member / "src/member/__init__.py").write_text(
-            "import yaml\n", encoding="utf-8"
+            "import yaml\n", encoding="utf-8",
         )
         u.Tests.initialize_git_repo(member)
         parent_before = (root / "pyproject.toml").read_bytes()
@@ -229,7 +229,7 @@ class TestsFlextInfraDepsDetectorMain:
                 "--apply",
                 "--no-pip-check",
                 repository_root=member,
-            )
+            ),
         )
         tm.that(u.Cli.process_succeeded(outcome.outcome), eq=False)
         tm.that(outcome.stdout + outcome.stderr, has="Deptry executable not found")

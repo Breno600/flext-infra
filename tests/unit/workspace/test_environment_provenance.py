@@ -50,7 +50,7 @@ class TestsFlextInfraWorkspaceEnvironmentProvenance:
 
     @staticmethod
     def _installed_editable(
-        site_packages: Path, distribution: str, *, direct_root: Path, source_root: Path
+        site_packages: Path, distribution: str, *, direct_root: Path, source_root: Path,
     ) -> None:
         site_packages.mkdir()
         normalized = distribution.replace("-", "_")
@@ -88,7 +88,7 @@ class TestsFlextInfraWorkspaceEnvironmentProvenance:
     def _provenance_failure(workspace: Path, site_packages: Path) -> str:
         """Validate provenance once and return its typed failure message."""
         result = FlextInfraWorkspaceEnvironmentProvenance.validate(
-            workspace, metadata_paths=(str(site_packages),)
+            workspace, metadata_paths=(str(site_packages),),
         )
         return tm.fail(result)
 
@@ -105,7 +105,7 @@ class TestsFlextInfraWorkspaceEnvironmentProvenance:
         )
 
         result = FlextInfraWorkspaceEnvironmentProvenance.validate(
-            workspace, metadata_paths=(str(site_packages),)
+            workspace, metadata_paths=(str(site_packages),),
         )
 
         tm.ok(result, eq=1)

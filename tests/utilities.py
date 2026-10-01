@@ -63,7 +63,7 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
         def json_payload(content: str) -> t.JsonMapping:
             """Parse JSON text through the canonical reader and narrow it."""
             return TestsFlextInfraUtilitiesTomlMixin.toml_mapping(
-                tm.ok(u.Cli.json_loads(content))
+                tm.ok(u.Cli.json_loads(content)),
             )
 
         @staticmethod
@@ -93,18 +93,18 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             """Build the generated Make and activation fixture consumed by real verbs."""
             role = c.Infra.MakeProfile(profile.value)
             repository = u.Tests.repository_ref(
-                "fixture-project", role=role
+                "fixture-project", role=role,
             ).model_copy(
                 update={
                     "editable": True,
                     "package": package,
                     "extra_verbs": extra_verbs,
                     "script_dispatch": script_dispatch,
-                }
+                },
             )
             project_root = tmp_path / profile.value / "fixture-project"
             u.Tests.WorktreeFixture.write_python_project(
-                project_root, repository.distribution
+                project_root, repository.distribution,
             )
             # The generated Makefile consumes the tracked Mise launcher for every
             # verb (setup/check/fix/...), not only at bootstrap: the
@@ -116,7 +116,7 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                     u.Cli.atomic_write_text_file(
                         project_root / config.Infra.codegen.scaffold.project.readme,
                         "# Bootstrap environment contract\n",
-                    )
+                    ),
                 )
             beads = u.Tests.beads_project(repository.distribution)
             u.Tests.write_beads_project(
@@ -128,13 +128,13 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             u.Tests.initialize_git_repo(project_root, origin_url=repository.url)
             u.Tests.provider(repository.provider)
             baseline = tm.ok(
-                u.Cli.capture(["git", "rev-parse", "HEAD"], cwd=project_root)
+                u.Cli.capture(["git", "rev-parse", "HEAD"], cwd=project_root),
             )
             tm.ok(
                 u.Cli.run_checked(
                     ["git", "config", "remote.origin.skipDefaultUpdate", "true"],
                     cwd=project_root,
-                )
+                ),
             )
             tm.ok(
                 u.Cli.run_checked(
@@ -145,11 +145,11 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                         baseline,
                     ],
                     cwd=project_root,
-                )
+                ),
             )
             repository_root = project_root
             workspace = u.Tests.workspace_spec(
-                repository, project=u.Tests.project_spec("fixture-project")
+                repository, project=u.Tests.project_spec("fixture-project"),
             )
             request = u.Tests.conform_request(
                 project_root,
@@ -161,7 +161,7 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                     repository_root=repository_root,
                     request=request,
                     initial_workspace=workspace,
-                ).plan(request)
+                ).plan(request),
             )
             # Materialize the complete activation contract through its guarded
             # publisher, including Beads metadata consumed by the generated .envrc.
@@ -184,8 +184,8 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             tm.that(paths <= {file.path for file in artifacts}, eq=True)
             tm.ok(
                 u.Tests.materialize_codegen_plans(
-                    r[tuple[m.Infra.CodegenFilePlan, ...]].ok(artifacts)
-                )
+                    r[tuple[m.Infra.CodegenFilePlan, ...]].ok(artifacts),
+                ),
             )
             if bootstrap:
                 # Exercise the documented custom-handler/hook boundary with real
@@ -217,22 +217,22 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                         "\t@$(UV_RUN) python -c 'import os, sys; "
                         'print(sys.prefix); print(os.environ["UV_PROJECT_ENVIRONMENT"])'
                         "'\n",
-                    )
+                    ),
                 )
                 (project_root / ".envrc.local").write_text(
-                    'export MAKE_ACTIVATION_PROOF="$PROJECT_ROOT"\n', encoding="utf-8"
+                    'export MAKE_ACTIVATION_PROOF="$PROJECT_ROOT"\n', encoding="utf-8",
                 )
             else:
                 tm.ok(
                     u.Cli.run_checked(
-                        ["direnv", "allow", str(project_root)], cwd=project_root
-                    )
+                        ["direnv", "allow", str(project_root)], cwd=project_root,
+                    ),
                 )
             return project_root, repository_root
 
         @staticmethod
         def resolved_make_checkout(
-            template: Path, parent: Path, profile: c.Infra.MakeProfile
+            template: Path, parent: Path, profile: c.Infra.MakeProfile,
         ) -> Path:
             """Check out a resolved ``make upg`` template as a fresh repository.
 
@@ -248,13 +248,13 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                 ignore=shutil.ignore_patterns(".venv", ".git"),
             )
             u.Tests.initialize_git_repo(
-                root, origin_url=u.Tests.repository_ref(root.name, role=profile).url
+                root, origin_url=u.Tests.repository_ref(root.name, role=profile).url,
             )
             tm.ok(
                 u.Cli.run_checked(
                     ["git", "config", "remote.origin.skipDefaultUpdate", "true"],
                     cwd=root,
-                )
+                ),
             )
             tm.that((root / ".venv").exists(), eq=False)
             return root
@@ -277,7 +277,7 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
         def command_receipt(path: Path) -> m.Cli.CommandOutput:
             """Read one recorded provisioning command outcome."""
             return m.Cli.CommandOutput.model_validate_json(
-                path.read_text(encoding="utf-8")
+                path.read_text(encoding="utf-8"),
             )
 
         @staticmethod
@@ -293,7 +293,7 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                 _ = shutil.copy2(path, destination, follow_symlinks=False)
             tm.that((root / ".venv").exists(), eq=False)
             u.Tests.initialize_git_repo(
-                root, origin_url=u.Tests.repository_ref(config.Infra.name).url
+                root, origin_url=u.Tests.repository_ref(config.Infra.name).url,
             )
             return root
 
@@ -311,12 +311,12 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                     return r[bool].from_failure(directory_plan)
                 if directory_plan.value.directories:
                     created = u.Cli.atomic_create_directory_chain_guarded(
-                        directory_plan.value, permission_mode=0o755
+                        directory_plan.value, permission_mode=0o755,
                     )
                     if created.failure:
                         return r[bool].from_failure(created)
             return TestsFlextInfraUtilities.Tests.materialize_codegen_plans(
-                u.Infra.docs_file_plans(bundle)
+                u.Infra.docs_file_plans(bundle),
             )
 
         @staticmethod

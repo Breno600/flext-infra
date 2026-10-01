@@ -40,13 +40,13 @@ class TestsFlextInfraCodegenConformNoTransactionWorktrees:
         root = u.Tests.WorktreeFixture.conformed_root(tmp_path)
         drifted = root / c.Infra.MAKEFILE_FILENAME
         drifted.write_text(
-            f"{drifted.read_text(encoding='utf-8')}# managed drift\n", encoding="utf-8"
+            f"{drifted.read_text(encoding='utf-8')}# managed drift\n", encoding="utf-8",
         )
         u.Tests.commit_git_changes(root, "Seed committed managed drift")
         return root, drifted
 
     def test_drift_check_error_path_leaves_no_transaction_worktree(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """The read-only drift exit fails loud without spawning any worktree."""
         root, drifted = self._seed_committed_drift(tmp_path)
@@ -58,7 +58,7 @@ class TestsFlextInfraCodegenConformNoTransactionWorktrees:
                 root,
                 scope=c.Infra.CodegenConformScope.SELF,
                 mode=c.Infra.CodegenConformMode.CHECK,
-            )
+            ),
         )
 
         tm.fail(result, has="codegen drift detected")
@@ -66,7 +66,7 @@ class TestsFlextInfraCodegenConformNoTransactionWorktrees:
         tm.that(drifted.read_bytes(), eq=drifted_bytes)
 
     def test_apply_convergence_leaves_no_transaction_worktree(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """The apply path converges in place and never leaks a sibling worktree."""
         root, drifted = self._seed_committed_drift(tmp_path)
@@ -80,7 +80,7 @@ class TestsFlextInfraCodegenConformNoTransactionWorktrees:
                 root,
                 scope=c.Infra.CodegenConformScope.SELF,
                 mode=c.Infra.CodegenConformMode.APPLY,
-            )
+            ),
         )
         tm.that(drifted.read_text(encoding="utf-8"), lacks="# managed drift")
         converged_bytes = drifted.read_bytes()
@@ -89,7 +89,7 @@ class TestsFlextInfraCodegenConformNoTransactionWorktrees:
                 root,
                 scope=c.Infra.CodegenConformScope.SELF,
                 mode=c.Infra.CodegenConformMode.APPLY,
-            )
+            ),
         )
         tm.that(drifted.read_bytes(), eq=converged_bytes)
         tm.that(self._transaction_worktree_siblings(root), eq=before)

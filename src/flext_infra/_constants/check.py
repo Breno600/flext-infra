@@ -119,7 +119,7 @@ class FlextInfraConstantsCheck:
     })
     "Gate id -> kind, derived from the registry declaration."
     TYPE_CHECKER_GATES: ClassVar[frozenset[str]] = frozenset(
-        GATE_TOOLS_BY_KIND[GateKind.TYPE_CHECKER]
+        GATE_TOOLS_BY_KIND[GateKind.TYPE_CHECKER],
     )
     "Native type-checker gates, derived from the registry declaration."
     SARIF_TOOL_INFO: ClassVar[t.MappingKV[str, t.StrPair]] = MappingProxyType({
@@ -129,7 +129,7 @@ class FlextInfraConstantsCheck:
     })
     "Gate id -> (tool name, tool url), derived from the registry declaration."
     TYPE_CHECKER_GATES: ClassVar[frozenset[str]] = frozenset(
-        GATE_TOOLS_BY_KIND[GateKind.TYPE_CHECKER]
+        GATE_TOOLS_BY_KIND[GateKind.TYPE_CHECKER],
     )
     "Native type-checker gates: independent read-only analyzers of one tree."
     ALLOWED_GATES: ClassVar[frozenset[str]] = frozenset(SARIF_TOOL_INFO)
@@ -142,13 +142,13 @@ class FlextInfraConstantsCheck:
     "Gates that rewrite files: owned by `fmt`/`fix`, never a read-only `check` vocabulary."
 
     RUFF_FORMAT_FILE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\s*-->\s*(.+?):\d+:\d+\s*$"
+        r"^\s*-->\s*(.+?):\d+:\d+\s*$",
     )
     MARKDOWN_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?P<file>.*?):(?P<line>\d+):(?P<col>\d+):\s+\[(?P<code>MD\d+)\]\s+(?P<msg>.*)$"
+        r"^(?P<file>.*?):(?P<line>\d+):(?P<col>\d+):\s+\[(?P<code>MD\d+)\]\s+(?P<msg>.*)$",
     )
     MARKDOWN_FORMAT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\[warn\]\s+(?P<file>\S+\.md)\s*$", re.MULTILINE
+        r"^\[warn\]\s+(?P<file>\S+\.md)\s*$", re.MULTILINE,
     )
     "Prettier ``--check`` unformatted-file line (``[warn] <file.md>``); config warns never match."
     MARKDOWN_PY_FENCE_RE: ClassVar[t.RegexPattern] = re.compile(
@@ -161,11 +161,11 @@ class FlextInfraConstantsCheck:
     MARKDOWN_CODE_SKIP_MARKER: ClassVar[str] = "notest"
     "Existing fence marker (pytest-markdown-docs) opting a block out of code validation."
     MARKDOWN_CODE_FORMAT_FILE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?P<file>\S+):\d+:\d+:\s+unformatted:\s+"
+        r"^(?P<file>\S+):\d+:\d+:\s+unformatted:\s+",
     )
     "Ruff format ``--check`` concise verdict line over extracted sources."
     MARKDOWN_CODE_FORMAT_ERROR_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^error: Failed to format (?P<file>\S+):", re.MULTILINE
+        r"^error: Failed to format (?P<file>\S+):", re.MULTILINE,
     )
     "Ruff format hard-failure line over extracted sources (parse errors)."
     VALID_GATE_SEVERITIES: ClassVar[frozenset[str]] = frozenset(GateSeverity)
@@ -325,7 +325,7 @@ class FlextInfraConstantsCheck:
         "--update-all",
     })
     MANUAL_CMD_SEGMENT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"&&|\|\||;|\||\n|`|\$\("
+        r"&&|\|\||;|\||\n|`|\$\(",
     )
 
     # --- Net-LOC-delta validator (§3.5) SSOT ---

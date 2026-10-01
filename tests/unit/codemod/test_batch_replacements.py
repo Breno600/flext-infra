@@ -17,7 +17,7 @@ class TestsBatchReplacements:
 
     @staticmethod
     def _report(
-        path: Path, content: bytes, *, generated: bool = False
+        path: Path, content: bytes, *, generated: bool = False,
     ) -> m.Infra.ModScanReport:
         path.write_bytes(content)
         state = tm.ok(u.Cli.atomic_read_binary_file_state(path, required=True))
@@ -55,7 +55,7 @@ class TestsBatchReplacements:
         tm.that(path.read_bytes(), eq=original.replace(b"before", b"after"))
 
     def test_generator_findings_remain_visible_and_unmodified(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         root = test_u.Tests.git_repository(tmp_path)
         path = root / "generated.py"
@@ -68,10 +68,10 @@ class TestsBatchReplacements:
         tm.that(path.read_bytes(), eq=original)
 
     @pytest.mark.parametrize(
-        "changed", [b'value = "before"\n\n', b'value = "third-party"\n']
+        "changed", [b'value = "before"\n\n', b'value = "third-party"\n'],
     )
     def test_changed_source_is_not_overwritten(
-        self, tmp_path: Path, changed: bytes
+        self, tmp_path: Path, changed: bytes,
     ) -> None:
         root = test_u.Tests.git_repository(tmp_path)
         path = root / "subject.py"
@@ -89,7 +89,7 @@ class TestsBatchReplacements:
         tm.fail(FlextInfraModReplacements.publish(root, invalid))
 
     def test_emptied_statement_publishes_formatter_clean_file(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """An emptied statement fix publishes skeleton-free, format-clean bytes.
 

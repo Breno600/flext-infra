@@ -38,7 +38,7 @@ class FlextInfraConfigModelsRender:
                     "Make/codegen profile; ci-matrix projected only for "
                     "workspace/standalone; standalone excluded "
                     "and orphan copies pruned"
-                )
+                ),
             ),
         ]
         gascity_enabled: Annotated[
@@ -47,14 +47,14 @@ class FlextInfraConfigModelsRender:
                 description=(
                     "Gas City runtime-contract participation; gates the Dolt "
                     "server mode the generated Beads policy script asserts."
-                )
+                ),
             ),
         ] = True
         repository_branch: Annotated[
-            t.NonEmptyStr, m.Field(description="Repository integration branch")
+            t.NonEmptyStr, m.Field(description="Repository integration branch"),
         ]
         python_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Python major.minor line")
+            t.NonEmptyStr, m.Field(description="Python major.minor line"),
         ]
         github_actions: Annotated[
             Mapping[str, FlextInfraConfigModelsProvider.GithubActionPinSpec],
@@ -77,7 +77,7 @@ class FlextInfraConfigModelsRender:
         ci_trigger_branches: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                default=(), description="Ordered, deduplicated blocking CI branches"
+                default=(), description="Ordered, deduplicated blocking CI branches",
             ),
         ] = ()
         has_devcontainer: Annotated[
@@ -92,7 +92,7 @@ class FlextInfraConfigModelsRender:
                     "it, security updates included. Derived from the repository "
                     "on disk rather than declared, because the directory is the "
                     "fact and a second declaration could disagree with it"
-                )
+                ),
             ),
         ] = False
         dependency_cooldown_days: Annotated[
@@ -113,7 +113,7 @@ class FlextInfraConfigModelsRender:
                     "Requirement names the project takes by direct git "
                     "reference (forks and local projects): derived from its "
                     "pyproject, they never enter the cooldown."
-                )
+                ),
             ),
         ] = ()
         checkout_submodules: Annotated[
@@ -197,10 +197,10 @@ class FlextInfraConfigModelsRender:
         """Typed input consumed by generated distro Dockerfiles."""
 
         package_name: Annotated[
-            t.NonEmptyStr, m.Field(description="Python import package name")
+            t.NonEmptyStr, m.Field(description="Python import package name"),
         ]
         python_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Python major.minor line")
+            t.NonEmptyStr, m.Field(description="Python major.minor line"),
         ]
         make: Annotated[
             FlextInfraConfigModelsMake.MakeSpec,
@@ -241,13 +241,13 @@ class FlextInfraConfigModelsRender:
         """
 
         rule_key: Annotated[
-            t.NonEmptyStr, m.Field(description="Sonar rule key, e.g. 'text:S8565'")
+            t.NonEmptyStr, m.Field(description="Sonar rule key, e.g. 'text:S8565'"),
         ]
         resource_key: Annotated[
-            t.NonEmptyStr, m.Field(description="Project-relative resource pattern")
+            t.NonEmptyStr, m.Field(description="Project-relative resource pattern"),
         ]
         reason: Annotated[
-            t.NonEmptyStr, m.Field(description="Operator justification and bead")
+            t.NonEmptyStr, m.Field(description="Operator justification and bead"),
         ]
 
     class SonarcloudSpec(FlextInfraConfigModelsContract.ConfigContract):
@@ -275,7 +275,7 @@ class FlextInfraConfigModelsRender:
             ),
         ]
         api_timeout_seconds: Annotated[
-            t.PositiveInt, m.Field(description="Per-request SonarCloud web API timeout")
+            t.PositiveInt, m.Field(description="Per-request SonarCloud web API timeout"),
         ]
         issue_exclusions: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsRender.SonarcloudIssueExclusionSpec],
@@ -283,7 +283,7 @@ class FlextInfraConfigModelsRender:
                 description=(
                     "Server-side issue exclusions applied through SonarCloud "
                     "project settings; never written as file properties"
-                )
+                ),
             ),
         ] = ()
 
@@ -301,7 +301,7 @@ class FlextInfraConfigModelsRender:
                     "Project-relative tests directory; conform always "
                     "materializes it (managed tests/fixtures/ci/docker "
                     "projections), so sonar.tests always names a real directory"
-                )
+                ),
             ),
         ]
 
@@ -315,7 +315,7 @@ class FlextInfraConfigModelsRender:
         ] = None
 
     class UvScopedDependencyExclusionSpec(
-        FlextInfraConfigModelsContract.ConfigContract
+        FlextInfraConfigModelsContract.ConfigContract,
     ):
         """Project-routed official uv scoped dependency exclusion."""
 

@@ -32,19 +32,19 @@ class FlextInfraUtilitiesPyprojectSession:
             and u.Cli.toml_table_child(tool, c.Infra.POETRY) is not None
         ):
             return r[m.Infra.BindingResolution].fail(
-                "session binding requires PEP 621/735 dependency declarations"
+                "session binding requires PEP 621/735 dependency declarations",
             )
         uv = u.Cli.toml_table_child(tool, c.Infra.UV) if tool is not None else None
         if uv is not None and u.Cli.toml_table_child(uv, "sources") is not None:
             return r[m.Infra.BindingResolution].fail(
-                "session binding requires declared dependency URLs, not tool.uv.sources"
+                "session binding requires declared dependency URLs, not tool.uv.sources",
             )
         active = tuple(
             parsed
             for item in requirements
             if (
                 parsed := FlextInfraUtilitiesDependencies.active_requirement(
-                    item, environment=environment
+                    item, environment=environment,
                 )
             )
             is not None
@@ -59,7 +59,7 @@ class FlextInfraUtilitiesPyprojectSession:
             for item in explicit
             if (
                 parsed := FlextInfraUtilitiesDependencies.active_requirement(
-                    item, environment=environment
+                    item, environment=environment,
                 )
             )
             is not None
@@ -100,14 +100,14 @@ class FlextInfraUtilitiesPyprojectSession:
                 )
                 if (
                     parsed := FlextInfraUtilitiesDependencies.active_requirement(
-                        item, environment=environment
+                        item, environment=environment,
                     )
                 )
                 is not None
-            )
+            ),
         )
         return r[m.Infra.BindingResolution].ok(
-            m.Infra.BindingResolution(overrides=overrides, constraints=constraints)
+            m.Infra.BindingResolution(overrides=overrides, constraints=constraints),
         )
 
 

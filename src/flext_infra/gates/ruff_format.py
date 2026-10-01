@@ -24,7 +24,7 @@ class FlextInfraRuffFormatGate(FlextInfraGate):
 
     @override
     def _build_check_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
+        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence,
     ) -> t.StrSequence:
         """Build the format verdict command from the config-owned flags."""
         _ = project_dir, ctx
@@ -37,7 +37,7 @@ class FlextInfraRuffFormatGate(FlextInfraGate):
 
     @override
     def _get_check_dirs(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self, project_dir: Path, ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
         """Get check dirs."""
         _ = ctx
@@ -45,7 +45,7 @@ class FlextInfraRuffFormatGate(FlextInfraGate):
 
     @override
     def _parse_check_output(
-        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
+        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
         """Parse check output."""
         _ = project_dir, ctx
@@ -71,13 +71,13 @@ class FlextInfraRuffFormatGate(FlextInfraGate):
                             column=0,
                             code=c.Infra.FORMAT,
                             message="Would be reformatted",
-                        )
+                        ),
                     )
         return u.Cli.process_succeeded(result.outcome), issues
 
     @override
     def _build_fix_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, targets: t.StrSequence
+        self, project_dir: Path, ctx: m.Infra.GateContext, targets: t.StrSequence,
     ) -> t.StrSequence:
         """Build fix command."""
         _ = project_dir, ctx
@@ -90,7 +90,7 @@ class FlextInfraRuffFormatGate(FlextInfraGate):
 
     @classmethod
     def format_files(
-        cls, repository_root: Path, paths: t.SequenceOf[Path]
+        cls, repository_root: Path, paths: t.SequenceOf[Path],
     ) -> p.Result[bool]:
         """Format an explicit path list with the config-owned apply flags.
 

@@ -23,15 +23,15 @@ class TestsFlextInfraDepsModernizerUnmanagedSubmodules:
         member.mkdir()
         if managed_has_pyproject:
             (member / c.PYPROJECT_FILENAME).write_text(
-                '[project]\nname = "member"\nversion = "0.1.0"\n', encoding="utf-8"
+                '[project]\nname = "member"\nversion = "0.1.0"\n', encoding="utf-8",
             )
             u.Tests.write_beads_project(
-                member, workspace="workspace", database="member", issue_prefix="member"
+                member, workspace="workspace", database="member", issue_prefix="member",
             )
         vendored = modernizer_workspace / "vendored"
         vendored.mkdir()
         (vendored / "README.md").write_text(
-            "# Not a Python project\n", encoding="utf-8"
+            "# Not a Python project\n", encoding="utf-8",
         )
         (modernizer_workspace / c.Infra.GITMODULES).write_text(
             '[submodule "member"]\n\tpath = member\n'
@@ -58,7 +58,7 @@ class TestsFlextInfraDepsModernizerUnmanagedSubmodules:
         ])
 
     def test_modernize_skips_opted_out_submodule(
-        self, modernizer_workspace: Path
+        self, modernizer_workspace: Path,
     ) -> None:
         """Modernize the governed member and leave the opted-out checkout alone."""
         workspace = self._workspace(modernizer_workspace, managed_has_pyproject=True)
@@ -71,7 +71,7 @@ class TestsFlextInfraDepsModernizerUnmanagedSubmodules:
         tm.that((workspace / "vendored" / c.PYPROJECT_FILENAME).exists(), eq=False)
 
     def test_modernize_fails_for_governed_member_without_pyproject(
-        self, modernizer_workspace: Path
+        self, modernizer_workspace: Path,
     ) -> None:
         """A governed member whose pyproject is missing still fails loud.
 

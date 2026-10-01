@@ -36,7 +36,7 @@ class FlextInfraUtilitiesGitMutationScopeMixin:
                         msg = f"declared Git marker does not own this worktree: {candidate}"
                         raise ValueError(msg)
                     return m.Infra.GitMutationScope(
-                        root=resolved, git_dir=Path(repo.git_dir).resolve()
+                        root=resolved, git_dir=Path(repo.git_dir).resolve(),
                     )
             if is_git_dir(candidate):
                 msg = f"mutation scope belongs to Git storage rather than a worktree: {root}"
@@ -45,7 +45,7 @@ class FlextInfraUtilitiesGitMutationScopeMixin:
 
     @classmethod
     def git_mutation_scope(
-        cls, request: m.Infra.GitRepoRequest
+        cls, request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitMutationScope]:
         """Reject malformed declared Git roots; marker-free roots remain file scopes."""
         try:

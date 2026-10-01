@@ -31,7 +31,7 @@ class FlextInfraCodegenLazyInitProjectionManifest:
 
     @classmethod
     def projection_manifest_plans(
-        cls, *, files: t.VariadicTuple[m.Infra.CodegenFilePlan]
+        cls, *, files: t.VariadicTuple[m.Infra.CodegenFilePlan],
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]:
         """Append one manifest plan per project that owns projected files.
 
@@ -69,7 +69,7 @@ class FlextInfraCodegenLazyInitProjectionManifest:
             serialized = u.Cli.json_dumps(payload, indent=2)
             if serialized.failure:
                 return r[t.VariadicTuple[m.Infra.CodegenFilePlan]].from_failure(
-                    serialized
+                    serialized,
                 )
             content = f"{serialized.value}\n".encode(c.Cli.ENCODING_DEFAULT)
             manifest_path = project / ".agents" / c.Infra.PROJECTIONS_LOCK_FILENAME
@@ -83,7 +83,7 @@ class FlextInfraCodegenLazyInitProjectionManifest:
                     before=state.value,
                     desired_content=content,
                     desired_mode=0o644,
-                )
+                ),
             )
         return r[t.VariadicTuple[m.Infra.CodegenFilePlan]].ok(tuple(plans))
 

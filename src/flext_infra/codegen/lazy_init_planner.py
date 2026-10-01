@@ -36,31 +36,31 @@ class FlextInfraCodegenLazyInitPlanner(
         m.Field(description="Shared Rope workspace DSL reused by the planner"),
     ]
     lazy_init: m.Infra.LazyInitConfig = m.Field(
-        description="Validated lazy-init policy document"
+        description="Validated lazy-init policy document",
     )
     _module_exports_cache: MutableMapping[
-        tuple[str, bool, bool, bool, bool, bool], t.LazyAliasMap
+        tuple[str, bool, bool, bool, bool, bool], t.LazyAliasMap,
     ] = u.PrivateAttr(default_factory=dict)
     _package_exports_cache: MutableMapping[str, frozenset[str]] = u.PrivateAttr(
-        default_factory=dict
+        default_factory=dict,
     )
     _source_exports_cache: MutableMapping[str, frozenset[str]] = u.PrivateAttr(
-        default_factory=dict
+        default_factory=dict,
     )
     _source_plan_cache: MutableMapping[str, m.Infra.LazyInitPlan] = u.PrivateAttr(
-        default_factory=dict
+        default_factory=dict,
     )
     _parent_package_cache: MutableMapping[str, t.StrSequence] = u.PrivateAttr(
-        default_factory=dict
+        default_factory=dict,
     )
     _module_file_by_name: MutableMapping[str, Path] = u.PrivateAttr(
-        default_factory=dict
+        default_factory=dict,
     )
     _project_layout_cache: MutableMapping[Path, m.Infra.RopeProjectLayout] = (
         u.PrivateAttr(default_factory=dict)
     )
     _version_module_name: str = u.PrivateAttr(
-        default_factory=lambda: f"{c.Infra.DUNDER_VERSION}.py"
+        default_factory=lambda: f"{c.Infra.DUNDER_VERSION}.py",
     )
     _collision_count: int = u.PrivateAttr(default_factory=int)
 
@@ -71,7 +71,7 @@ class FlextInfraCodegenLazyInitPlanner(
 
     @override
     def build_plan(
-        self, pkg_dir: Path, *, dir_exports: t.MappingKV[str, t.LazyAliasMap]
+        self, pkg_dir: Path, *, dir_exports: t.MappingKV[str, t.LazyAliasMap],
     ) -> m.Infra.LazyInitPlan:
         """Build the lazy-init render plan for one package directory."""
         context = self.context(pkg_dir)
@@ -95,7 +95,7 @@ class FlextInfraCodegenLazyInitPlanner(
                     type_checking_map={},
                     eager_dunders={},
                     inline_constants={},
-                )
+                ),
             )
         is_test_child_package = (
             context.surface == c.Infra.DIR_TESTS
@@ -144,7 +144,7 @@ class FlextInfraCodegenLazyInitPlanner(
                     type_checking_map={},
                     eager_dunders={},
                     inline_constants={},
-                )
+                ),
             )
         excluded_lazy_names: t.StrSequence = ()
         is_facade_root = self._is_facade_root(context)
@@ -223,7 +223,7 @@ class FlextInfraCodegenLazyInitPlanner(
                 in self.rope_workspace.exports(
                     module_path,
                     export_options=m.Infra.ExportOptions(
-                        allow_assignments=True, require_explicit_all=True
+                        allow_assignments=True, require_explicit_all=True,
                     ),
                 )
             ):

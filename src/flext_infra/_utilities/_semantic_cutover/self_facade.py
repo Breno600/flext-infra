@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesSemanticCutoverSelfFacade(
-    FlextInfraUtilitiesSemanticCutoverEdits
+    FlextInfraUtilitiesSemanticCutoverEdits,
 ):
     """Keep utility-facade composition free of an eager reverse import."""
 
@@ -62,7 +62,7 @@ class FlextInfraUtilitiesSemanticCutoverSelfFacade(
 
         @override
         def leave_FunctionDef(
-            self, original_node: cst.FunctionDef, updated_node: cst.FunctionDef
+            self, original_node: cst.FunctionDef, updated_node: cst.FunctionDef,
         ) -> cst.FunctionDef:
             if original_node not in self.functions:
                 return updated_node
@@ -83,22 +83,22 @@ class FlextInfraUtilitiesSemanticCutoverSelfFacade(
                     offset = 1
             body.insert(offset, imported)
             return updated_node.with_changes(
-                body=updated_node.body.with_changes(body=body)
+                body=updated_node.body.with_changes(body=body),
             )
 
         @override
         def leave_ImportFrom(
-            self, original_node: cst.ImportFrom, updated_node: cst.ImportFrom
+            self, original_node: cst.ImportFrom, updated_node: cst.ImportFrom,
         ) -> cst.BaseSmallStatement | cst.RemovalSentinel:
             parent = self.get_metadata(ParentNodeProvider, original_node)
             if not isinstance(parent, cst.SimpleStatementLine):
                 return updated_node
             if not isinstance(
-                self.get_metadata(ParentNodeProvider, parent), cst.Module
+                self.get_metadata(ParentNodeProvider, parent), cst.Module,
             ):
                 return updated_node
             if FlextInfraUtilitiesQualifiedNames.dotted_name(
-                original_node.module
+                original_node.module,
             ) != self.module or isinstance(updated_node.names, cst.ImportStar):
                 return updated_node
             retained: list[cst.ImportAlias] = []
@@ -118,8 +118,8 @@ class FlextInfraUtilitiesSemanticCutoverSelfFacade(
             if retained:
                 return updated_node.with_changes(
                     names=FlextInfraUtilitiesQualifiedNames.normalized_import_aliases(
-                        retained, parenthesized=updated_node.lpar is not None
-                    )
+                        retained, parenthesized=updated_node.lpar is not None,
+                    ),
                 )
             return cst.RemoveFromParent()
 
@@ -136,7 +136,7 @@ class FlextInfraUtilitiesSemanticCutoverSelfFacade(
                 for candidate in findings
                 if candidate.file == finding.file
                 and isinstance(
-                    declaration := cls._finding_statement(candidate), ast.ImportFrom
+                    declaration := cls._finding_statement(candidate), ast.ImportFrom,
                 )
                 and declaration.module
             }

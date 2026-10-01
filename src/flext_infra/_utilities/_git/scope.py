@@ -118,7 +118,7 @@ class FlextInfraUtilitiesGitScopeMixin(FlextInfraUtilitiesGitSemanticIndexMixin)
     def git_tracked_top_level_dir_names(cls, scope_root: Path) -> frozenset[str] | None:
         """Return tracked top-level directory names under one scope when Git is active."""
         relative_paths = cls._git_tracked_scope_relative_paths(
-            str(scope_root.resolve())
+            str(scope_root.resolve()),
         )
         if relative_paths is None:
             return None
@@ -130,11 +130,11 @@ class FlextInfraUtilitiesGitScopeMixin(FlextInfraUtilitiesGitSemanticIndexMixin)
 
     @classmethod
     def project_descriptor_is_tracked(
-        cls, repository_root: Path, project_root: Path
+        cls, repository_root: Path, project_root: Path,
     ) -> bool:
         """Return whether one candidate project has a tracked descriptor file."""
         relative_paths = cls._git_tracked_scope_relative_paths(
-            str(repository_root.resolve())
+            str(repository_root.resolve()),
         )
         if relative_paths is None:
             return True

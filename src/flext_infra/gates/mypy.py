@@ -54,7 +54,7 @@ class FlextInfraMypyGate(FlextInfraGate):
 
     @override
     def _get_check_dirs(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self, project_dir: Path, ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
         """Check local Python roots directly instead of recursively scanning ``.``."""
         # Empty or explicitly excluded roots are omitted because Mypy aborts
@@ -63,7 +63,7 @@ class FlextInfraMypyGate(FlextInfraGate):
         discovered_dirs = [
             directory
             for directory in self._dirs_with_py(
-                project_dir, config.Infra.source_scan.roots
+                project_dir, config.Infra.source_scan.roots,
             )
             if self._has_real_module(project_dir / directory)
             and (exclude is None or not exclude.match(f"{directory}/"))
@@ -94,7 +94,7 @@ class FlextInfraMypyGate(FlextInfraGate):
 
     @override
     def _build_check_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
+        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence,
     ) -> t.StrSequence:
         """Build check command."""
         cfg = self._resolve_config(project_dir, ctx)
@@ -112,7 +112,7 @@ class FlextInfraMypyGate(FlextInfraGate):
                 report_json=True,
                 verbose=True,
                 profile_output=destination,
-            )
+            ),
         )
 
     @override
@@ -169,13 +169,13 @@ class FlextInfraMypyGate(FlextInfraGate):
 
     @override
     def _check_env(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self, project_dir: Path, ctx: m.Infra.GateContext,
     ) -> t.StrMapping | None:
         """Run Mypy against the project's shared analysis cache."""
         overrides = {
             c.Infra.MypyCacheEnvironment.CACHE_DIR.value: str(
-                u.Infra.mypy_cache_directory(project_dir)
-            )
+                u.Infra.mypy_cache_directory(project_dir),
+            ),
         }
         typings_generated = ctx.repository_root / c.Infra.DIR_TYPINGS / "generated"
         if typings_generated.is_dir():
@@ -187,7 +187,7 @@ class FlextInfraMypyGate(FlextInfraGate):
 
     @override
     def _parse_check_output(
-        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
+        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
         """Parse check output."""
         _ = ctx
@@ -210,7 +210,7 @@ class FlextInfraMypyGate(FlextInfraGate):
             if not raw_line.strip():
                 continue
             validated: p.Result[m.Infra.MypyDiagnostic] = u.validate_value(
-                m.Infra.MypyDiagnostic, raw_line, from_json=True, strict=True
+                m.Infra.MypyDiagnostic, raw_line, from_json=True, strict=True,
             )
             if validated.failure:
                 return False, (
@@ -233,7 +233,7 @@ class FlextInfraMypyGate(FlextInfraGate):
                         else diagnostic.message
                     ),
                     severity=diagnostic.severity,
-                )
+                ),
             )
         issues.extend(self._checker_stderr_issues(result, project_dir))
         if (not issues) and not u.Cli.process_succeeded(result.outcome):
@@ -248,7 +248,7 @@ class FlextInfraMypyGate(FlextInfraGate):
                     code="mypy-exec",
                     message=message,
                     severity=c.Infra.ERROR,
-                )
+                ),
             )
         return (
             u.Cli.process_succeeded(result.outcome)

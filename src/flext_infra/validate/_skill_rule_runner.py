@@ -44,7 +44,7 @@ class FlextInfraSkillRuleRunnerMixin:
                 )
             case "custom":
                 count = self._run_custom_count(
-                    rule_obj, context.skill_dir, context.root, context.mode
+                    rule_obj, context.skill_dir, context.root, context.mode,
                 )
             case _:
                 return
@@ -81,7 +81,7 @@ class FlextInfraSkillRuleRunnerMixin:
             cmd.extend(["--globs", f"!{pat}"])
         cmd.append(str(project_path))
         result_wrapper = u.Cli.run_raw(
-            cmd, cwd=project_path, timeout=c.Infra.TIMEOUT_DEFAULT
+            cmd, cwd=project_path, timeout=c.Infra.TIMEOUT_DEFAULT,
         )
         if result_wrapper.failure:
             msg = result_wrapper.error or "ast-grep execution failed"
@@ -146,7 +146,7 @@ class FlextInfraSkillRuleRunnerMixin:
         if bool(rule.get("pass_mode")):
             cmd.extend(["--mode", mode.value])
         result_wrapper = u.Cli.run_raw(
-            cmd, cwd=project_path, timeout=c.Infra.TIMEOUT_DEFAULT
+            cmd, cwd=project_path, timeout=c.Infra.TIMEOUT_DEFAULT,
         )
         if result_wrapper.failure:
             msg = result_wrapper.error or "custom rule execution failed"

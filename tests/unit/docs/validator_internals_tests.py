@@ -22,7 +22,7 @@ class TestsFlextInfraDocsValidatorInternals:
         tm.that(u.Infra.docs_has_adr_reference(skill), eq=True)
 
     def test_docs_load_required_skills_reads_architecture_config(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         settings = tmp_path / "docs/architecture/architecture_config.json"
         settings.parent.mkdir(parents=True, exist_ok=True)
@@ -37,11 +37,11 @@ class TestsFlextInfraDocsValidatorInternals:
         tm.that(result.value, eq=["rules-docs", "readme-standardization"])
 
     def test_docs_write_todo_writes_only_for_project_scopes(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         workspace = u.Tests.create_docs_workspace(tmp_path, project_names=("flext-a",))
         scopes = u.Infra.build_scopes(
-            workspace, projects=["flext-a"], output_dir=c.Infra.DEFAULT_DOCS_OUTPUT_DIR
+            workspace, projects=["flext-a"], output_dir=c.Infra.DEFAULT_DOCS_OUTPUT_DIR,
         )
 
         tm.ok(scopes)

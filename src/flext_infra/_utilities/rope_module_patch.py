@@ -16,7 +16,7 @@ class FlextInfraUtilitiesRopeModulePatch:
 
     @staticmethod
     def runtime_alias_bindings(
-        source: str, *, alias: str
+        source: str, *, alias: str,
     ) -> t.VariadicTuple[ast.Assign | ast.AnnAssign]:
         """Return only direct module bindings for the declared alias."""
         return tuple(
@@ -53,7 +53,7 @@ class FlextInfraUtilitiesRopeModulePatch:
         }
         letters: set[str] = set()
         for name in FlextInfraUtilitiesRopeAnalysisExports.public_export_names_source(
-            source
+            source,
         ):
             if not name.islower() or name.startswith("_"):
                 continue
@@ -78,7 +78,7 @@ class FlextInfraUtilitiesRopeModulePatch:
                 and node.level == 0
                 and node.module is not None
                 and any((alias.asname or alias.name) == name for alias in node.names)
-            )
+            ),
         )
 
     @classmethod
@@ -90,12 +90,12 @@ class FlextInfraUtilitiesRopeModulePatch:
         runtime binding the module never wrote.
         """
         exports = FlextInfraUtilitiesRopeAnalysisExports.public_export_names_source(
-            source
+            source,
         )
         if alias not in exports:
             return source
         return cls._rewrite_all_declaration(
-            source, names=[name for name in exports if name != alias]
+            source, names=[name for name in exports if name != alias],
         )
 
     @staticmethod

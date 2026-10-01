@@ -17,7 +17,7 @@ class TestsFlextInfraDepsDetectionDeptry:
 
     @staticmethod
     def _environment(
-        tmp_path: Path, report: str | None, *, exit_code: int = 0
+        tmp_path: Path, report: str | None, *, exit_code: int = 0,
     ) -> t.Pair[Path, Path]:
         """Create a project and a ``deptry`` that writes ``report`` as its JSON."""
         venv_bin = tmp_path / "venv" / "bin"
@@ -38,13 +38,13 @@ class TestsFlextInfraDepsDetectionDeptry:
             )
         deptry = venv_bin / c.Infra.DEPTRY
         deptry.write_text(
-            f"#!/bin/sh\n{write}exit {exit_code}\n", encoding=c.Cli.ENCODING_DEFAULT
+            f"#!/bin/sh\n{write}exit {exit_code}\n", encoding=c.Cli.ENCODING_DEFAULT,
         )
         deptry.chmod(0o755)
         return venv_bin, project
 
     def test_issues_and_exit_code_are_reported(
-        self, tmp_path: Path, deptry_report_payload: t.JsonPayload
+        self, tmp_path: Path, deptry_report_payload: t.JsonPayload,
     ) -> None:
         source = tmp_path / "source-report.json"
         tm.ok(u.Cli.json_write(source, deptry_report_payload))
@@ -52,7 +52,7 @@ class TestsFlextInfraDepsDetectionDeptry:
         venv_bin, project = self._environment(tmp_path, report, exit_code=1)
 
         issues, exit_code = tm.ok(
-            FlextInfraDependencyDetectionService().run_deptry(project, venv_bin)
+            FlextInfraDependencyDetectionService().run_deptry(project, venv_bin),
         )
 
         tm.that(exit_code, eq=1)
@@ -79,14 +79,14 @@ class TestsFlextInfraDepsDetectionDeptry:
             venv_bin, project = self._environment(tmp_path / str(index), report)
 
             result = FlextInfraDependencyDetectionService().run_deptry(
-                project, venv_bin
+                project, venv_bin,
             )
 
             tm.that(result.failure, eq=True)
 
     def test_non_mapping_issue_is_a_failure(self, tmp_path: Path) -> None:
         venv_bin, project = self._environment(
-            tmp_path, '["not_a_dict", {"error": {"code": "DEP001"}}]'
+            tmp_path, '["not_a_dict", {"error": {"code": "DEP001"}}]',
         )
 
         result = FlextInfraDependencyDetectionService().run_deptry(project, venv_bin)
@@ -133,7 +133,7 @@ class TestsFlextInfraDepsDetectionDeptry:
         tm.that(governed, eq={u.Infra.dep_name(item) for item in runtime})
         tm.that(governed - unused, empty=True)
         report = service.build_project_report(
-            project.name, tm.ok(service.govern_deptry_issues(project, issues))
+            project.name, tm.ok(service.govern_deptry_issues(project, issues)),
         )
         tm.that(list(report.deptry.unused), eq=["six"])
 
@@ -151,7 +151,7 @@ class TestsFlextInfraDepsDetectionDeptry:
         service = FlextInfraDependencyDetectionService()
         tm.that(tm.ok(service.governed_profile_dependencies(project)), empty=True)
         issues: t.SequenceOf[t.JsonMapping] = [
-            {"error": {"code": c.Infra.DEPTRY_UNUSED_DEPENDENCY_CODE}, "module": "six"}
+            {"error": {"code": c.Infra.DEPTRY_UNUSED_DEPENDENCY_CODE}, "module": "six"},
         ]
         tm.that(tm.ok(service.govern_deptry_issues(project, issues)), eq=tuple(issues))
 
@@ -159,7 +159,7 @@ class TestsFlextInfraDepsDetectionDeptry:
         venv_bin, project = self._environment(tmp_path, "[]")
 
         result = FlextInfraDependencyDetectionService().run_deptry(
-            project, venv_bin, extend_exclude=["tests", "docs"]
+            project, venv_bin, extend_exclude=["tests", "docs"],
         )
 
         tm.that(tm.ok(result), eq=([], 0))

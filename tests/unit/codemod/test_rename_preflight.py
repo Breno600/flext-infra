@@ -16,12 +16,12 @@ class TestsRenamePreflight:
     """Observe real native rename events without replacing publication owners."""
 
     def test_target_override_rejects_the_campaign_before_text_publication(
-        self, mod_workspace: Path
+        self, mod_workspace: Path,
     ) -> None:
         driver = mod_workspace / "renames.csv"
         driver.write_text("old,new\nOld,New\n", encoding="utf-8")
         (mod_workspace / "definer.py").write_text(
-            "class Public:\n    New = 37\n", encoding="utf-8"
+            "class Public:\n    New = 37\n", encoding="utf-8",
         )
         consumer = mod_workspace / "consumer.py"
         original = "from definer import Public\nclass Derived(Public):\n    New = 99\nvalue = Derived.Old\n"
@@ -36,20 +36,20 @@ class TestsRenamePreflight:
                     apply=True,
                     bindings={"": ("definer.Public",)},
                     text_globs=("**/*.md",),
-                )
+                ),
             )
         tm.that(consumer.read_text(), eq=original)
         tm.that(guide.read_text(), eq="Old\n")
 
     def test_invalid_docstring_replacement_has_no_publication(
-        self, mod_workspace: Path
+        self, mod_workspace: Path,
     ) -> None:
         guide = mod_workspace / "guide.md"
         source = mod_workspace / "syntax.py"
         guide.write_text("campaign_token\n", encoding="utf-8")
         source.write_text('"""campaign_token"""\n', encoding="utf-8")
         (mod_workspace / "renames.csv").write_text(
-            'old,new\ncampaign_token,""""\n', encoding="utf-8"
+            'old,new\ncampaign_token,""""\n', encoding="utf-8",
         )
         script = (
             "import sys\nfrom pathlib import Path\nimport pytest\n"

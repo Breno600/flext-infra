@@ -39,12 +39,12 @@ class FlextInfraSonarcloudSettingsSync(s[bool]):
         if token is None or not token.get_secret_value().strip():
             return r[t.SecretStr].fail(
                 "SONAR_TOKEN is required in the process environment and must "
-                "not be empty or whitespace"
+                "not be empty or whitespace",
             )
         raw = token.get_secret_value()
         if raw != raw.strip():
             return r[t.SecretStr].fail(
-                "SONAR_TOKEN carries surrounding whitespace; supply the exact token"
+                "SONAR_TOKEN carries surrounding whitespace; supply the exact token",
             )
         return r[t.SecretStr].ok(token)
 
@@ -52,7 +52,7 @@ class FlextInfraSonarcloudSettingsSync(s[bool]):
     def project_key(repository_root: Path) -> p.Result[str]:
         """Derive ``<organization>_<repository>`` from the checkout's origin."""
         origin = u.Infra.git_remote_url(
-            m.Infra.GitRemoteUrlRequest(repo_root=repository_root)
+            m.Infra.GitRemoteUrlRequest(repo_root=repository_root),
         )
         if origin.failure:
             return r[str].from_failure(origin)
@@ -60,15 +60,15 @@ class FlextInfraSonarcloudSettingsSync(s[bool]):
         organization, _, repository = identity.partition("/")
         if not organization or not repository or "/" in repository:
             return r[str].fail(
-                f"origin does not identify an organization and repository: {identity}"
+                f"origin does not identify an organization and repository: {identity}",
             )
         return r[str].ok(
-            f"{organization}{c.Infra.SONARCLOUD_PROJECT_KEY_SEPARATOR}{repository}"
+            f"{organization}{c.Infra.SONARCLOUD_PROJECT_KEY_SEPARATOR}{repository}",
         )
 
     @staticmethod
     def settings_plan(
-        sonarcloud: m.Infra.SonarcloudSpec, project_key: str
+        sonarcloud: m.Infra.SonarcloudSpec, project_key: str,
     ) -> p.Result[m.Infra.SonarcloudSettingsPlan]:
         """Build the complete server state one project must carry."""
         # model_validate by field name: the constructor signature type checkers
@@ -82,7 +82,7 @@ class FlextInfraSonarcloudSettingsSync(s[bool]):
         )
         if len(frozenset(values)) != len(values):
             return r[m.Infra.SonarcloudSettingsPlan].fail(
-                "codegen.sonarcloud.issue_exclusions repeats a rule/resource pair"
+                "codegen.sonarcloud.issue_exclusions repeats a rule/resource pair",
             )
         return r[m.Infra.SonarcloudSettingsPlan].ok(
             m.Infra.SonarcloudSettingsPlan(
@@ -91,7 +91,7 @@ class FlextInfraSonarcloudSettingsSync(s[bool]):
                 project_key=project_key,
                 setting_key=c.Infra.SONARCLOUD_ISSUE_IGNORE_KEY,
                 field_values=values,
-            )
+            ),
         )
 
     @staticmethod
@@ -118,7 +118,7 @@ class FlextInfraSonarcloudSettingsSync(s[bool]):
 
     @staticmethod
     def current_field_values(
-        plan: m.Infra.SonarcloudSettingsPlan, current: m.Infra.SonarcloudSettingsValues
+        plan: m.Infra.SonarcloudSettingsPlan, current: m.Infra.SonarcloudSettingsValues,
     ) -> t.VariadicTuple[m.Infra.SonarcloudIssueFieldValue]:
         """Read effective entries without excluding values inherited from a parent."""
         return tuple(
@@ -137,7 +137,7 @@ class FlextInfraSonarcloudSettingsSync(s[bool]):
         """Require every SSOT entry exactly once, regardless of server ordering."""
         values = cls.current_field_values(plan, current)
         return len(values) == len(plan.field_values) and frozenset(values) == frozenset(
-            plan.field_values
+            plan.field_values,
         )
 
     @staticmethod
@@ -159,7 +159,7 @@ class FlextInfraSonarcloudSettingsSync(s[bool]):
 
     @classmethod
     def _server_values(
-        cls, plan: m.Infra.SonarcloudSettingsPlan, token: t.SecretStr
+        cls, plan: m.Infra.SonarcloudSettingsPlan, token: t.SecretStr,
     ) -> p.Result[m.Infra.SonarcloudSettingsValues]:
         """Read the project's current value of the plan's setting."""
         body = cls._call(
@@ -172,7 +172,7 @@ class FlextInfraSonarcloudSettingsSync(s[bool]):
         if body.failure:
             return r[m.Infra.SonarcloudSettingsValues].from_failure(body)
         return u.validate_value(
-            m.Infra.SonarcloudSettingsValues, body.value, from_json=True
+            m.Infra.SonarcloudSettingsValues, body.value, from_json=True,
         )
 
     @override
@@ -189,12 +189,12 @@ class FlextInfraSonarcloudSettingsSync(s[bool]):
             return r[bool].from_failure(planned)
         plan = planned.value
         auth_body = self._call(
-            plan, token.value, "GET", c.Infra.SONARCLOUD_API_AUTH_VALIDATE_PATH, ()
+            plan, token.value, "GET", c.Infra.SONARCLOUD_API_AUTH_VALIDATE_PATH, (),
         )
         if auth_body.failure:
             return r[bool].from_failure(auth_body)
         auth = u.validate_value(
-            m.Infra.SonarcloudAuthentication, auth_body.value, from_json=True
+            m.Infra.SonarcloudAuthentication, auth_body.value, from_json=True,
         )
         if auth.failure:
             return r[bool].from_failure(auth)
@@ -220,11 +220,11 @@ class FlextInfraSonarcloudSettingsSync(s[bool]):
             )
             return r[bool].fail(
                 f"sonarcloud-sync: {plan.project_key} readback differs from the "
-                f"SSOT; server holds [{held}]"
+                f"SSOT; server holds [{held}]",
             )
         u.Cli.info(
             f"sonarcloud-sync: {plan.project_key} now holds "
-            f"{len(plan.field_values)} SSOT issue exclusion(s)"
+            f"{len(plan.field_values)} SSOT issue exclusion(s)",
         )
         self.log.info(
             "sonarcloud_settings_synced",

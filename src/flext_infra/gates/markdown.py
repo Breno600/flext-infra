@@ -41,7 +41,7 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
         standard tool behavior.
         """
         patterns = self.read_ignore_patterns(
-            project_dir, c.Infra.MARKDOWNLINT_IGNORE_FILENAME
+            project_dir, c.Infra.MARKDOWNLINT_IGNORE_FILENAME,
         )
         if not patterns:
             return ()
@@ -49,7 +49,7 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
 
     @override
     def _build_check_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
+        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence,
     ) -> t.StrSequence:
         """Build check command."""
         _ = ctx
@@ -69,7 +69,7 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
 
     @override
     def _build_fix_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, targets: t.StrSequence
+        self, project_dir: Path, ctx: m.Infra.GateContext, targets: t.StrSequence,
     ) -> t.StrSequence:
         """Repair fixable findings and return the linter's residual verdict."""
         _ = ctx
@@ -91,7 +91,7 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
 
     @override
     def _parse_check_output(
-        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
+        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
         """Parse rumdl output, discarding lines marking already-applied fixes."""
         _ = ctx
@@ -109,13 +109,13 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
                     column=int(match.group("col") or 1),
                     code=match.group("code"),
                     message=match.group("msg"),
-                )
+                ),
             )
         if not u.Cli.process_succeeded(result.outcome) and not issues:
             issues.append(
                 self._command_error_issue(
-                    result, tool=c.Infra.RUMDL, file=str(project_dir), line=1, column=1
-                )
+                    result, tool=c.Infra.RUMDL, file=str(project_dir), line=1, column=1,
+                ),
             )
         return u.Cli.process_succeeded(result.outcome), issues
 

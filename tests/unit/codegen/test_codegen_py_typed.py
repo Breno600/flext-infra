@@ -65,7 +65,7 @@ class TestsFlextInfraCodegenPyTyped:
 
     @pytest.mark.parametrize("skip_dir", tuple(c.Tests.CODEGEN_SKIPPED_DIRS))
     def test_skips_known_excluded_directories(
-        self, tmp_path: Path, skip_dir: str
+        self, tmp_path: Path, skip_dir: str,
     ) -> None:
         skipped_pkg = tmp_path / "src" / skip_dir / "mypkg"
         skipped_pkg.mkdir(parents=True)

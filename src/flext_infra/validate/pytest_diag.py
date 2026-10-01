@@ -35,23 +35,23 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
 
     junit: Annotated[Path, m.Field(description="JUnit XML path")]
     log_path: Annotated[Path, m.Field(description="Pytest log path")] = m.Field(
-        alias="log"
+        alias="log",
     )
     report_log: Annotated[Path, m.Field(description="Pytest report-log JSONL path")]
     failed: Annotated[
-        Path | None, m.Field(description="Path to write failed cases")
+        Path | None, m.Field(description="Path to write failed cases"),
     ] = None
     errors: Annotated[
-        Path | None, m.Field(description="Path to write error traces")
+        Path | None, m.Field(description="Path to write error traces"),
     ] = None
     warnings: Annotated[Path | None, m.Field(description="Path to write warnings")] = (
         None
     )
     slowest: Annotated[
-        Path | None, m.Field(description="Path to write slowest entries")
+        Path | None, m.Field(description="Path to write slowest entries"),
     ] = None
     skips: Annotated[
-        Path | None, m.Field(description="Path to write skipped cases")
+        Path | None, m.Field(description="Path to write skipped cases"),
     ] = None
 
     @classmethod
@@ -92,7 +92,7 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
 
     @staticmethod
     def _record_case_event(
-        event: m.Infra.PytestReportEvent, diag: m.Infra.DiagResult
+        event: m.Infra.PytestReportEvent, diag: m.Infra.DiagResult,
     ) -> None:
         if event.nodeid is None:
             return
@@ -133,7 +133,7 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
         diag.warning_lines.append(warning)
 
     def extract(
-        self, junit_path: Path, log_path: Path, *, report_log: Path
+        self, junit_path: Path, log_path: Path, *, report_log: Path,
     ) -> p.Result[m.Infra.PytestDiagnostics]:
         """Extract diagnostics from JUnit XML, pytest log and explicit report-log.
 
@@ -150,7 +150,7 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
 
     @classmethod
     def extract_report_log(
-        cls, report_log: Path
+        cls, report_log: Path,
     ) -> p.Result[m.Infra.PytestDiagnostics]:
         """Read collection-only evidence through the same runtime event boundary."""
         diag = m.Infra.DiagResult()
@@ -183,7 +183,7 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
         )
 
     def _extract_diagnostics(
-        self, junit_path: Path, log_path: Path, *, report_log: Path
+        self, junit_path: Path, log_path: Path, *, report_log: Path,
     ) -> p.Result[m.Infra.PytestDiagnostics]:
         """Extract pytest diagnostics after input normalization."""
         self._read_log_text(log_path)
@@ -196,7 +196,7 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
     def execute(self) -> p.Result[bool]:
         """Execute the pytest diagnostics CLI flow."""
         diagnostics = self.extract(
-            self.junit, self.log_path, report_log=self.report_log
+            self.junit, self.log_path, report_log=self.report_log,
         ).unwrap()
         for output_path, attr_name, separator in [
             (self.failed, "failed_cases", "\n\n"),
@@ -209,13 +209,13 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
                 continue
             items = getattr(diagnostics, attr_name)
             u.Cli.atomic_write_text_file(
-                output_path, separator.join(items) + "\n"
+                output_path, separator.join(items) + "\n",
             ).unwrap()
         sys.stdout.write(
             f"failed_count={diagnostics.failed_count}\n"
             f"error_count={diagnostics.error_count}\n"
             f"warning_count={diagnostics.warning_count}\n"
-            f"skipped_count={diagnostics.skipped_count}\n"
+            f"skipped_count={diagnostics.skipped_count}\n",
         )
         return r[bool].ok(True)
 

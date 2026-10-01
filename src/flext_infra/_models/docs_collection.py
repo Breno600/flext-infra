@@ -20,7 +20,7 @@ class FlextInfraModelsDocsCollection:
         """Native YAML timestamp ingress without a JSON-shaped conversion."""
 
         value: t.Infra.PlanSourceTimestamp = m.Field(
-            description="Native YAML date, instant, or explicitly quoted timestamp"
+            description="Native YAML date, instant, or explicitly quoted timestamp",
         )
 
     class PlanCollectionSource(m.ContractModel):
@@ -37,71 +37,71 @@ class FlextInfraModelsDocsCollection:
         root: Annotated[
             Path,
             m.BeforeValidator(
-                lambda value: Path(value) if isinstance(value, str) else value
+                lambda value: Path(value) if isinstance(value, str) else value,
             ),
             m.Field(description="Declared physical source root"),
         ]
         adapter: Literal["files", "private-inventory"] = m.Field(
-            description="Selected deterministic source adapter"
+            description="Selected deterministic source adapter",
         )
         driver: t.NonEmptyStr = m.Field(description="Source driver provenance")
         driver_version: t.NonEmptyStr = m.Field(
-            description="Declared source driver version"
+            description="Declared source driver version",
         )
         plan_globs: Annotated[
             t.VariadicTuple[str],
             m.BeforeValidator(
-                lambda value: tuple(value) if isinstance(value, list) else value
+                lambda value: tuple(value) if isinstance(value, list) else value,
             ),
             m.Field(min_length=1, description="Explicit plan discovery patterns"),
         ]
         exclude_globs: Annotated[
             t.VariadicTuple[str],
             m.BeforeValidator(
-                lambda value: tuple(value) if isinstance(value, list) else value
+                lambda value: tuple(value) if isinstance(value, list) else value,
             ),
             m.Field(description="Explicit source exclusions"),
         ] = ()
         updated_fields: Annotated[
             t.VariadicTuple[str],
             m.BeforeValidator(
-                lambda value: tuple(value) if isinstance(value, list) else value
+                lambda value: tuple(value) if isinstance(value, list) else value,
             ),
             m.Field(
-                description="Source-owned substantive update fields in priority order"
+                description="Source-owned substantive update fields in priority order",
             ),
         ] = ("source_updated_at",)
         companion_directory: bool = m.Field(
-            default=True, description="Collect the same-basename artifact directory"
+            default=True, description="Collect the same-basename artifact directory",
         )
         publication: Literal["plan-artifacts", "private"] = m.Field(
-            description="Authorized publication classification"
+            description="Authorized publication classification",
         )
 
     class PlanCollectionConfig(m.ContractModel):
         """Repository-owned associations; projection is separately authorized."""
 
         enabled: bool = m.Field(
-            description="Explicit authorization for plan source publication"
+            description="Explicit authorization for plan source publication",
         )
         canonical_dir: Annotated[
             Path,
             m.BeforeValidator(
-                lambda value: Path(value) if isinstance(value, str) else value
+                lambda value: Path(value) if isinstance(value, str) else value,
             ),
             m.Field(description="Repository-relative canonical plan destination"),
         ]
         projection_root: Annotated[
             Path | None,
             m.BeforeValidator(
-                lambda value: Path(value) if isinstance(value, str) else value
+                lambda value: Path(value) if isinstance(value, str) else value,
             ),
             m.Field(description="Separately authorized absolute projection owner"),
         ] = None
         sources: Annotated[
             t.VariadicTuple[FlextInfraModelsDocsCollection.PlanCollectionSource],
             m.BeforeValidator(
-                lambda value: tuple(value) if isinstance(value, list) else value
+                lambda value: tuple(value) if isinstance(value, list) else value,
             ),
             m.Field(description="Complete explicitly associated source inventory"),
         ] = ()
@@ -121,38 +121,38 @@ class FlextInfraModelsDocsCollection:
 
         identity: t.NonEmptyStr = m.Field(description="Stable collected plan identity")
         provider: t.NonEmptyStr = m.Field(
-            description="Provider supplying this revision"
+            description="Provider supplying this revision",
         )
         source_id: t.NonEmptyStr = m.Field(
-            description="Source association supplying this revision"
+            description="Source association supplying this revision",
         )
         source_path: Path = m.Field(
-            description="Source-association-relative locator without private root disclosure"
+            description="Source-association-relative locator without private root disclosure",
         )
         driver: t.NonEmptyStr = m.Field(description="Source driver provenance")
         driver_version: t.NonEmptyStr = m.Field(description="Source driver version")
         digest: t.NonEmptyStr = m.Field(
-            description="Content digest including attachments"
+            description="Content digest including attachments",
         )
         canonical_path: Path = m.Field(
-            description="Canonical-owner-relative stable plan destination"
+            description="Canonical-owner-relative stable plan destination",
         )
         source_updated_at: str | None = m.Field(
             default=None,
             description="Source update in UTC or original incomplete precision",
         )
         source_updated_at_original: str | None = m.Field(
-            default=None, description="Declared source timestamp before UTC conversion"
+            default=None, description="Declared source timestamp before UTC conversion",
         )
         source_updated_at_utc: str | None = m.Field(
             default=None,
             description="UTC instant only when the source declares a timezone",
         )
         collected_at: t.NonEmptyStr = m.Field(
-            description="First collection timestamp for this immutable revision"
+            description="First collection timestamp for this immutable revision",
         )
         attachments: t.VariadicTuple[str] = m.Field(
-            default=(), description="Companion-relative attachment identities"
+            default=(), description="Companion-relative attachment identities",
         )
 
     class PlanCollectionSourceInventory(m.ContractModel):
@@ -160,14 +160,14 @@ class FlextInfraModelsDocsCollection:
 
         source_id: t.NonEmptyStr = m.Field(description="Source association identity")
         paths: t.VariadicTuple[Path] = m.Field(
-            description="Exact discovered plan and attachment paths"
+            description="Exact discovered plan and attachment paths",
         )
 
     class PlanCollectionOwnedArtifact(m.ContractModel):
         """Exact generated bytes that authorize ignoring a discovery output."""
 
         relative_path: Path = m.Field(
-            description="Destination-relative generated artifact path"
+            description="Destination-relative generated artifact path",
         )
         digest: t.NonEmptyStr = m.Field(description="Exact generated byte digest")
 
@@ -177,12 +177,12 @@ class FlextInfraModelsDocsCollection:
         revisions: t.VariadicTuple[
             FlextInfraModelsDocsCollection.PlanCollectionRevision
         ] = m.Field(
-            default=(), description="Immutable observed source revision history"
+            default=(), description="Immutable observed source revision history",
         )
         artifacts: t.VariadicTuple[
             FlextInfraModelsDocsCollection.PlanCollectionOwnedArtifact
         ] = m.Field(
-            default=(), description="Digest-attested generated artifact ownership"
+            default=(), description="Digest-attested generated artifact ownership",
         )
 
     class PlanCollectionCoverage(m.ContractModel):
@@ -191,13 +191,13 @@ class FlextInfraModelsDocsCollection:
         source_id: t.NonEmptyStr = m.Field(description="Source association identity")
         provider: t.NonEmptyStr = m.Field(description="Declared provider")
         adapter: Literal["files", "private-inventory"] = m.Field(
-            description="Executed adapter"
+            description="Executed adapter",
         )
         files: t.NonNegativeInt = m.Field(
-            description="Number of discovered source files"
+            description="Number of discovered source files",
         )
         status: Literal["collected", "private-inventory", "empty"] = m.Field(
-            description="Observed collection coverage, not reconciliation status"
+            description="Observed collection coverage, not reconciliation status",
         )
         private_paths: t.VariadicTuple[Path] = m.Field(
             default=(),
@@ -211,13 +211,13 @@ class FlextInfraModelsDocsCollection:
             m.Field(description="Effects for the existing docs transaction")
         )
         source_states: t.VariadicTuple[cli_m.Cli.AtomicFileState] = m.Field(
-            description="Authenticated inputs and ownership reads including absence"
+            description="Authenticated inputs and ownership reads including absence",
         )
         required_directories: t.VariadicTuple[Path] = m.Field(
-            description="Required destination parent chains"
+            description="Required destination parent chains",
         )
         prunable_directories: t.VariadicTuple[Path] = m.Field(
-            default=(), description="Owned empty directories removed after publication"
+            default=(), description="Owned empty directories removed after publication",
         )
         revisions: t.VariadicTuple[
             FlextInfraModelsDocsCollection.PlanCollectionRevision
@@ -229,7 +229,7 @@ class FlextInfraModelsDocsCollection:
             FlextInfraModelsDocsCollection.PlanCollectionSourceInventory
         ] = m.Field(description="Authenticated discovery topology")
         excluded_outputs: t.VariadicTuple[Path] = m.Field(
-            description="Unchanged owned output paths excluded from source discovery"
+            description="Unchanged owned output paths excluded from source discovery",
         )
 
 

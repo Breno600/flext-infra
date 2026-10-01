@@ -27,7 +27,7 @@ class FlextInfraUtilitiesDocsValidate:
     def docs_has_adr_reference(skill_path: Path) -> bool:
         """Return whether a skill file contains an ADR reference."""
         text = skill_path.read_text(
-            encoding=c.Cli.ENCODING_DEFAULT, errors=c.Infra.IGNORE
+            encoding=c.Cli.ENCODING_DEFAULT, errors=c.Infra.IGNORE,
         )
         return "adr" in text.lower()
 
@@ -51,7 +51,7 @@ class FlextInfraUtilitiesDocsValidate:
                 pass
             case _:
                 return r[t.JsonList].fail(
-                    "docs_validation block missing or not a mapping"
+                    "docs_validation block missing or not a mapping",
                 )
         match inner.get("required_skills"):
             case list() as configured:
@@ -86,7 +86,7 @@ class FlextInfraUtilitiesDocsValidate:
         """Validate ``required_skills`` payload against the canonical adapter."""
         try:
             validated: t.StrSequence = t.Infra.STR_SEQ_ADAPTER.validate_python(
-                raw, strict=True
+                raw, strict=True,
             )
         except c.ValidationError as exc:
             return r[t.StrSequence].fail(
@@ -140,11 +140,11 @@ class FlextInfraUtilitiesDocsValidate:
         if not init_path.exists():
             messages.append(
                 "missing public package init: "
-                f"{init_path.relative_to(scope.path).as_posix()}"
+                f"{init_path.relative_to(scope.path).as_posix()}",
             )
             return messages
         contract = FlextInfraUtilitiesDocsApi.public_contract(
-            scope.path, scope.package_name
+            scope.path, scope.package_name,
         )
         if not contract.get("modules") and not contract.get("exports"):
             messages.append("empty public API contract from package exports")
@@ -174,7 +174,7 @@ class FlextInfraUtilitiesDocsValidate:
 
     @staticmethod
     def docs_write_validate_reports(
-        scope: m.Infra.DocScope, report: m.Infra.DocsPhaseReport
+        scope: m.Infra.DocScope, report: m.Infra.DocsPhaseReport,
     ) -> None:
         """Persist the standard validate summary and markdown report."""
         _ = u.Cli.json_write(

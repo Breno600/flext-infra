@@ -76,7 +76,7 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
 
     @staticmethod
     def _project_name_for_module(
-        module: m.Infra.RopeModuleIndexEntry, convention: m.Infra.RopeModuleConvention
+        module: m.Infra.RopeModuleIndexEntry, convention: m.Infra.RopeModuleConvention,
     ) -> str:
         """Project name for a module entry."""
         layout = convention.project_layout
@@ -100,7 +100,7 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
         return bool(parts) and (parts[0] in config.Infra.source_scan.roots)
 
     def _collect_report(
-        self, rope: p.Infra.RopeWorkspaceDsl
+        self, rope: p.Infra.RopeWorkspaceDsl,
     ) -> m.Infra.WorkspaceReport:
         """Inventory the selected modules then assemble the census report."""
         kind_names = self.kind_names
@@ -112,7 +112,7 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
             selected_kinds=frozenset(kind_names) if kind_names else None,
             selected_rules=frozenset(rule_names) if rule_names else None,
             include_object_references=self._should_collect_object_references(
-                rule_names
+                rule_names,
             ),
             include_local_scopes=self.include_local_scopes,
         )

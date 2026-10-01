@@ -33,22 +33,22 @@ class FlextInfraTextPatternScanner(s[bool]):
     include: Annotated[
         t.StrSequence,
         m.Field(
-            default_factory=tuple, description="Glob patterns included in the scan."
+            default_factory=tuple, description="Glob patterns included in the scan.",
         ),
     ] = m.Field(default_factory=tuple)
     exclude: Annotated[
         t.StrSequence,
         m.Field(
-            default_factory=tuple, description="Glob patterns excluded from the scan."
+            default_factory=tuple, description="Glob patterns excluded from the scan.",
         ),
     ] = m.Field(default_factory=tuple)
     match: Annotated[
-        c.Infra.MatchMode, m.Field(description="Violation mode (present or absent)")
+        c.Infra.MatchMode, m.Field(description="Violation mode (present or absent)"),
     ] = c.Infra.MatchMode.PRESENT
 
     @staticmethod
     def _count_matches(
-        files: t.SequenceOf[Path], regex: t.RegexPattern
+        files: t.SequenceOf[Path], regex: t.RegexPattern,
     ) -> p.Result[int]:
         """Count regex matches across files; surface any unreadable file as failure."""
         total = 0
@@ -87,11 +87,11 @@ class FlextInfraTextPatternScanner(s[bool]):
             return r[t.ScalarMapping].fail(error)
         try:
             return self._scan_validated(
-                scan_root, pattern, includes, excludes or (), match_mode
+                scan_root, pattern, includes, excludes or (), match_mode,
             )
         except c.Infra.REGEX_ERROR as exc:
             return r[t.ScalarMapping].fail(
-                f"invalid regex pattern: {exc}", exception=exc
+                f"invalid regex pattern: {exc}", exception=exc,
             )
         except c.EXC_OS_TYPE_VALUE as exc:
             return r[t.ScalarMapping].fail_op("text pattern scan", exc)
@@ -114,7 +114,7 @@ class FlextInfraTextPatternScanner(s[bool]):
         """Scan a validated root with a compiled regex."""
         regex = c.Infra.compile_multiline(pattern)
         files = u.Infra.iter_matching_files(
-            scan_root, includes=includes, excludes=excludes
+            scan_root, includes=includes, excludes=excludes,
         )
         matches_result = self._count_matches(files, regex)
         if matches_result.failure:

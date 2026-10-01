@@ -15,8 +15,6 @@ from tests import u
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p
-
 
 class TestsFlextInfraCodemodGate:
     """Block on every policy finding and on every native scanner failure."""
@@ -34,7 +32,7 @@ class TestsFlextInfraCodemodGate:
             encoding="utf-8",
         )
         config_path.write_text(
-            f"ruleDirs: [{c.Cli.RULES_DIR_NAME}]\n", encoding="utf-8"
+            f"ruleDirs: [{c.Cli.RULES_DIR_NAME}]\n", encoding="utf-8",
         )
         for name in ("first", "second"):
             (rules / f"{name}.yml").write_text(
@@ -46,7 +44,7 @@ class TestsFlextInfraCodemodGate:
 
     @pytest.mark.parametrize("severity", ["error", "warning", "info", "hint"])
     def test_policy_findings_block_at_every_severity(
-        self, tmp_path: Path, severity: str
+        self, tmp_path: Path, severity: str,
     ) -> None:
         project = self._project(tmp_path, severity=severity)
         source = project / "src" / "subject.py"
@@ -89,7 +87,7 @@ class TestsFlextInfraCodemodGate:
         tm.that(execution.raw_output, has="exit=0")
 
     def test_check_files_uses_every_rule_and_only_requested_files(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         project = self._project(tmp_path)
         selected = project / "src" / "selected.py"
@@ -98,7 +96,7 @@ class TestsFlextInfraCodemodGate:
         other.write_text("second(2)\n", encoding="utf-8")
 
         execution = FlextInfraCodemodGate(tmp_path).check_files(
-            (selected,), project, u.Tests.gate_context(tmp_path)
+            (selected,), project, u.Tests.gate_context(tmp_path),
         )
 
         tm.that(execution.result.passed, eq=False)
@@ -119,7 +117,7 @@ class TestsFlextInfraCodemodGate:
 
     @pytest.mark.parametrize("severity", ["error", "warning", "info", "hint"])
     def test_workspace_pipeline_fails_the_project_on_policy_findings(
-        self, tmp_path: Path, severity: str
+        self, tmp_path: Path, severity: str,
     ) -> None:
         """The public check facade fails the project on any rule finding.
 
@@ -132,19 +130,19 @@ class TestsFlextInfraCodemodGate:
 
         results = tm.ok(
             FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
-                [project.name], ["codemod"], reports_dir=reports
-            )
+                [project.name], ["codemod"], reports_dir=reports,
+            ),
         )
 
         result = results[0]
         tm.that(result.passed, eq=False)
         markdown = (reports / c.Infra.CHECK_REPORT_MARKDOWN_FILENAME).read_text(
-            encoding="utf-8"
+            encoding="utf-8",
         )
         tm.that(markdown, has=f"| {project.name} | FAIL |")
         tm.that(markdown, has="contract-second")
         sarif = m.Infra.SarifReport.model_validate_json(
-            (reports / c.Infra.CHECK_REPORT_SARIF_FILENAME).read_text(encoding="utf-8")
+            (reports / c.Infra.CHECK_REPORT_SARIF_FILENAME).read_text(encoding="utf-8"),
         )
         observed = tuple(
             finding
@@ -175,7 +173,7 @@ class TestsFlextInfraCodemodGate:
         tm.that(execution.raw_output, has="second.yml")
 
     def test_native_traversal_error_cannot_be_hidden_by_a_policy_finding(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """A partial walk remains red even when another file has an error match."""
         project = self._project(tmp_path)

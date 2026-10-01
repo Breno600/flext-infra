@@ -53,16 +53,16 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
                 and entry.path.suffix in suffixes
                 and entry.path.name not in excluded_names
                 and (recursive or entry.path.parent == root)
-            )
+            ),
         )
 
     @staticmethod
     def docs_source_paths(
-        repository_root: Path, extra_roots: t.SequenceOf[Path] = ()
+        repository_root: Path, extra_roots: t.SequenceOf[Path] = (),
     ) -> p.Result[t.VariadicTuple[Path]]:
         """Discover every physical source consumed by one docs render."""
         roots = FlextInfraUtilitiesDocsScope.docs_repository_roots(
-            repository_root, extra_roots
+            repository_root, extra_roots,
         )
         if roots.failure:
             return r[t.VariadicTuple[Path]].from_failure(roots)
@@ -74,7 +74,7 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
             # is a failure, so its presence is established first.
             docs_root_present = (
                 FlextInfraUtilitiesDocsGenerateSourcesMixin._source_directory_exists(
-                    root / c.Infra.DIR_DOCS
+                    root / c.Infra.DIR_DOCS,
                 )
             )
             if docs_root_present.failure:
@@ -90,7 +90,7 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
             )
             for fixed_path in fixed_paths:
                 state = cli_u.Cli.atomic_read_binary_file_state(
-                    fixed_path, required=False
+                    fixed_path, required=False,
                 )
                 if state.failure:
                     return r[t.VariadicTuple[Path]].from_failure(state)
@@ -143,7 +143,7 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
     ) -> p.Result[bool]:
         """Require exact source topology and physical states to remain unchanged."""
         discovered = FlextInfraUtilitiesDocsGenerateSourcesMixin.docs_source_paths(
-            repository_root, extra_roots
+            repository_root, extra_roots,
         )
         if discovered.failure:
             return r[bool].from_failure(discovered)
@@ -154,10 +154,10 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
             return r[bool].fail(
                 f"{c.Infra.DOCS_SOURCE_TOPOLOGY_RACE_MARKER}: "
                 f"added={[path.as_posix() for path in added]}, "
-                f"removed={[path.as_posix() for path in removed]}"
+                f"removed={[path.as_posix() for path in removed]}",
             )
         current = FlextInfraUtilitiesCodegenFilePlan.required_file_states(
-            discovered.value
+            discovered.value,
         )
         if current.failure:
             return r[bool].from_failure(current)
@@ -171,7 +171,7 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
                 )
                 return r[bool].fail(
                     f"{c.Infra.DOCS_SOURCE_STATE_RACE_MARKER}: {expected.path}; "
-                    f"differing={list(differing)}"
+                    f"differing={list(differing)}",
                 )
         return r[bool].ok(True)
 

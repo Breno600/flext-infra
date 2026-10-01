@@ -15,7 +15,7 @@ class FlextInfraUtilitiesPromotedRendering:
 
     @staticmethod
     def promoted_renders_verb_help(
-        registry: p.Infra.PromotedRegistry, verb: str, what: str
+        registry: p.Infra.PromotedRegistry, verb: str, what: str,
     ) -> bool:
         """Return whether a selected WHAT renders the verb help.
 
@@ -29,7 +29,7 @@ class FlextInfraUtilitiesPromotedRendering:
 
     @classmethod
     def promoted_render_help(
-        cls, registry: p.Infra.PromotedRegistry, selector: str
+        cls, registry: p.Infra.PromotedRegistry, selector: str,
     ) -> str:
         """Render global help, ``<verb>`` help, or ``<verb>/<WHAT>`` help."""
         help_, join = c.Infra.PromotedHelp, c.Infra.PromotedJoin
@@ -49,7 +49,7 @@ class FlextInfraUtilitiesPromotedRendering:
                         domain=next(iter(commands.values())).domain,
                         summary=summary,
                         suffix=cls._promoted_alias_suffix(registry, verb),
-                    )
+                    ),
                 )
             return join.LINES.join((*lines, *c.Infra.PROMOTED_HELP_GLOBAL_FOOTER))
         verb, separator, what = selector.partition(c.Infra.PromotedSelector.HELP_PATH)
@@ -77,20 +77,20 @@ class FlextInfraUtilitiesPromotedRendering:
                     required=help_.PARAM_REQUIRED if param.required else "",
                     default=f"{join.WORDS}{default}" if default else "",
                     choices=f"{join.WORDS}{choices}" if choices else "",
-                )
+                ),
             )
         command_lines.extend(
-            cls._promoted_section(help_.RULES, help_.RULE_LINE, command.rules)
+            cls._promoted_section(help_.RULES, help_.RULE_LINE, command.rules),
         )
         example = cls._promoted_example(command, verb)
         command_lines.extend(
-            cls._promoted_section(help_.EXAMPLE, help_.EXAMPLE_LINE, (example,))
+            cls._promoted_section(help_.EXAMPLE, help_.EXAMPLE_LINE, (example,)),
         )
         return join.LINES.join(command_lines)
 
     @classmethod
     def _promoted_verb_help(
-        cls, registry: p.Infra.PromotedRegistry, requested_verb: str
+        cls, registry: p.Infra.PromotedRegistry, requested_verb: str,
     ) -> str:
         """Render one verb, its actions, parameters, rules, and examples."""
         help_, join = c.Infra.PromotedHelp, c.Infra.PromotedJoin
@@ -111,7 +111,7 @@ class FlextInfraUtilitiesPromotedRendering:
                     domain=command.domain,
                     summary=command.summary,
                     marker=marker,
-                )
+                ),
             )
             inline: list[str] = []
             for param in command.params:
@@ -121,16 +121,16 @@ class FlextInfraUtilitiesPromotedRendering:
                 details = [item for item in cls._promoted_param_details(param) if item]
                 inline.append(
                     help_.INLINE_DETAIL.format(
-                        rendered=rendered, detail=join.DETAIL.join(details)
+                        rendered=rendered, detail=join.DETAIL.join(details),
                     )
                     if details
-                    else rendered
+                    else rendered,
                 )
             if inline:
                 options.append(
                     help_.VERB_OPTION_LINE.format(
-                        what=what, params=join.LIST.join(inline)
-                    )
+                        what=what, params=join.LIST.join(inline),
+                    ),
                 )
         if options:
             lines.extend(("", help_.VERB_OPTIONS, *options, "", help_.VERB_DETAIL))
@@ -144,7 +144,7 @@ class FlextInfraUtilitiesPromotedRendering:
         }
         lines.extend(cls._promoted_section(help_.RULES, help_.RULE_LINE, sorted(rules)))
         lines.extend(
-            cls._promoted_section(help_.EXAMPLES, help_.EXAMPLE_LINE, sorted(examples))
+            cls._promoted_section(help_.EXAMPLES, help_.EXAMPLE_LINE, sorted(examples)),
         )
         return join.LINES.join(lines)
 
@@ -155,7 +155,7 @@ class FlextInfraUtilitiesPromotedRendering:
         if not aliases:
             return ""
         return c.Infra.PromotedHelp.ALIAS_SUFFIX.format(
-            aliases=c.Infra.PromotedJoin.LIST.join(aliases)
+            aliases=c.Infra.PromotedJoin.LIST.join(aliases),
         )
 
     @staticmethod
@@ -170,7 +170,7 @@ class FlextInfraUtilitiesPromotedRendering:
 
     @staticmethod
     def _promoted_section(
-        title: str, template: str, items: t.StrSequence
+        title: str, template: str, items: t.StrSequence,
     ) -> t.StrSequence:
         """Render one titled help section, empty without items."""
         if not items:

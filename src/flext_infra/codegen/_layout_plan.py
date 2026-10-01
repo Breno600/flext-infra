@@ -34,7 +34,7 @@ class FlextInfraCodegenLayoutPlanMixin:
         """
         pyproject_path = project_dir / c.PYPROJECT_FILENAME
         return u.Infra.project_name_from_payload(
-            pyproject_path, u.Infra.pyproject_payload(pyproject_path)
+            pyproject_path, u.Infra.pyproject_payload(pyproject_path),
         )
 
     def plan_project(self, project_dir: Path) -> m.Infra.LayoutProjectReport:
@@ -57,21 +57,21 @@ class FlextInfraCodegenLayoutPlanMixin:
             if name in allowed or name in override_roots:
                 continue
             findings.append(
-                self._classify_root_entry(spec, override, project_name, entry)
+                self._classify_root_entry(spec, override, project_name, entry),
             )
         if override is not None:
             findings.extend(self._override_move_findings(override, project_dir))
             findings.extend(
-                self._override_empty_dir_findings(spec, override, project_dir)
+                self._override_empty_dir_findings(spec, override, project_dir),
             )
         findings.extend(self._gitignore_findings(spec, override, project_dir))
         return m.Infra.LayoutProjectReport(
-            project=project_name, findings=tuple(findings)
+            project=project_name, findings=tuple(findings),
         )
 
     @staticmethod
     def _resolve_override(
-        spec: m.Infra.LayoutSpec, project_name: str
+        spec: m.Infra.LayoutSpec, project_name: str,
     ) -> m.Infra.LayoutProjectOverrideSpec | None:
         """Resolve override by directory name or logical name without leading dot."""
         override = spec.project_overrides.get(project_name)
@@ -174,12 +174,12 @@ class FlextInfraCodegenLayoutPlanMixin:
             or any(fnmatchcase(name, glob) for glob in spec.archive_globs)
         ):
             return self._finding(
-                "archive", name, f"{spec.archive_root}/{project_name}/{name}"
+                "archive", name, f"{spec.archive_root}/{project_name}/{name}",
             )
         return self._finding("review", name)
 
     def _override_move_findings(
-        self, override: m.Infra.LayoutProjectOverrideSpec, project_dir: Path
+        self, override: m.Infra.LayoutProjectOverrideSpec, project_dir: Path,
     ) -> t.SequenceOf[m.Infra.LayoutFinding]:
         """Explicit per-project moves whose nested source still exists."""
         return tuple(

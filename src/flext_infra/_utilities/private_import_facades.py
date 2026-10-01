@@ -23,7 +23,7 @@ class FlextInfraUtilitiesPrivateImportFacades:
 
     @staticmethod
     def source_modules(
-        sources: t.MappingKV[Path, str], statements: t.SequenceOf[str]
+        sources: t.MappingKV[Path, str], statements: t.SequenceOf[str],
     ) -> MutableMapping[str, t.Pair[str, bool]]:
         """Index editable sources and referenced installed packages without imports.
 
@@ -41,7 +41,7 @@ class FlextInfraUtilitiesPrivateImportFacades:
                 continue
             parts = path.parts[indices[-1] + 1 :]
             module = ".".join(
-                parts[:-1] if path.name == c.Infra.INIT_PY else (*parts[:-1], path.stem)
+                parts[:-1] if path.name == c.Infra.INIT_PY else (*parts[:-1], path.stem),
             )
             if not module:
                 continue
@@ -81,7 +81,7 @@ class FlextInfraUtilitiesPrivateImportFacades:
 
     @staticmethod
     def reachable_sources(
-        sources: t.MappingKV[str, t.Pair[str, bool]], statements: t.SequenceOf[str]
+        sources: t.MappingKV[str, t.Pair[str, bool]], statements: t.SequenceOf[str],
     ) -> t.MappingKV[str, t.Pair[str, bool]]:
         """Keep the importers that can expose a requested private module.
 
@@ -149,7 +149,7 @@ class FlextInfraUtilitiesPrivateImportFacades:
             package = module if is_package else module.rpartition(".")[0]
             tree = ast.parse(source, filename=module)
             public_names = FlextInfraUtilitiesRopeAnalysis.public_export_names_source(
-                source
+                source,
             )
             lazy_exports, lazy_name = (
                 FlextInfraUtilitiesRopeAnalysis.lazy_public_exports_source(source)
@@ -166,7 +166,7 @@ class FlextInfraUtilitiesPrivateImportFacades:
                     if isinstance(node, ast.ImportFrom):
                         imported_module = (
                             resolve_name(
-                                "." * node.level + (node.module or ""), package
+                                "." * node.level + (node.module or ""), package,
                             )
                             if node.level
                             else node.module or ""
@@ -178,7 +178,7 @@ class FlextInfraUtilitiesPrivateImportFacades:
                                     set(),
                                 ).add(f"{imported_module}.{imported.name}")
                     elif isinstance(
-                        node, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef
+                        node, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
                     ):
                         identity = f"{module}.{node.name}"
                         # A runtime declaration replaces an earlier imported name in
@@ -426,7 +426,7 @@ class FlextInfraUtilitiesPrivateImportFacades:
 
     @staticmethod
     def facade_alias_binding(
-        *, owners: t.SequenceOf[t.Quad[ast.Module, str, str, str]], alias: str | None
+        *, owners: t.SequenceOf[t.Quad[ast.Module, str, str, str]], alias: str | None,
     ) -> str | None:
         """Return the alias when the owning package publishes it as a facade.
 
@@ -448,7 +448,7 @@ class FlextInfraUtilitiesPrivateImportFacades:
 
     @staticmethod
     def public_root_name(
-        *, owners: t.SequenceOf[t.Quad[ast.Module, str, str, str]], facade_alias: str
+        *, owners: t.SequenceOf[t.Quad[ast.Module, str, str, str]], facade_alias: str,
     ) -> str | None:
         """Return the public long name assigned to a canonical facade alias."""
         roots = {
@@ -504,7 +504,7 @@ class FlextInfraUtilitiesPrivateImportFacades:
             elif isinstance(node, ast.arg) and node.arg == alias:
                 break
             elif isinstance(
-                node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
+                node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
             ):
                 if node.name == alias:
                     break

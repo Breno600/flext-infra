@@ -31,7 +31,7 @@ class FlextInfraUtilitiesPrivateImportAncestry:
             ) -> None:
                 def reference(node: ast.expr) -> str:
                     expression = ast.unparse(
-                        node.value if isinstance(node, ast.Subscript) else node
+                        node.value if isinstance(node, ast.Subscript) else node,
                     )
                     root, separator, suffix = expression.partition(".")
                     return names.get(root, f"{module}.{root}") + (
@@ -60,7 +60,7 @@ class FlextInfraUtilitiesPrivateImportAncestry:
                             reference(base)
                             for base in node.bases
                             if isinstance(
-                                base, ast.Name | ast.Attribute | ast.Subscript
+                                base, ast.Name | ast.Attribute | ast.Subscript,
                             )
                         )
                         # Bases see the declaration scope; class bodies do not

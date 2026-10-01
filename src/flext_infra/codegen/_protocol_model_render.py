@@ -87,7 +87,7 @@ class FlextInfraCodegenProtocolModelRender:
         ]
         for name, field in model.model_fields.items():
             rendered = cls._render_annotation(
-                name, getattr(field, "annotation", None), target
+                name, getattr(field, "annotation", None), target,
             )
             lines.extend((
                 "    @property",
@@ -147,7 +147,7 @@ class FlextInfraCodegenProtocolModelRender:
             msg = f"owned member {name!r} has no getter on {model.__name__}"
             raise TypeError(msg)
         annotations: t.MappingKV[str, t.TypeHintSpecifier | None] = getattr(
-            getter, "__annotations__", {}
+            getter, "__annotations__", {},
         )
         annotation = annotations.get("return")
         if annotation is None:
@@ -191,7 +191,7 @@ class FlextInfraCodegenProtocolModelRender:
 
     @classmethod
     def _aggregate_path(
-        cls, target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget
+        cls, target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
     ) -> str:
         """Return the generated aggregate module path."""
         return f"src/{target.package_name}/_protocols/generated_models.py"

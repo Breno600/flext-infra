@@ -16,7 +16,7 @@ class TestsFlextInfraModRuleFixtureStaging:
     @pytest.mark.parametrize("with_utils", [False, True])
     @pytest.mark.parametrize("regenerate_snapshots", [False, True])
     def test_staging_copies_declared_trees_without_traversing_checkout(
-        self, tmp_path: Path, *, with_utils: bool, regenerate_snapshots: bool
+        self, tmp_path: Path, *, with_utils: bool, regenerate_snapshots: bool,
     ) -> None:
         owner = tmp_path / "owner"
         owner.mkdir()
@@ -67,7 +67,7 @@ class TestsFlextInfraModRuleFixtureStaging:
 
     @pytest.mark.parametrize("declaration", [".", "../outside", "/outside"])
     def test_staging_rejects_owner_wide_or_escaping_declarations(
-        self, tmp_path: Path, declaration: str
+        self, tmp_path: Path, declaration: str,
     ) -> None:
         owner = tmp_path / "owner"
         owner.mkdir()
@@ -80,14 +80,14 @@ class TestsFlextInfraModRuleFixtureStaging:
 
         with pytest.raises(ValueError, match="escapes or selects its owner"):
             FlextInfraModGateEngine.stage_rule_fixture_root(
-                config_root=owner, temp_root=staged
+                config_root=owner, temp_root=staged,
             )
 
         assert not staged.exists()
 
     @pytest.mark.parametrize("linked_directory", [False, True])
     def test_staging_rejects_declared_symlinks_before_copying(
-        self, tmp_path: Path, *, linked_directory: bool
+        self, tmp_path: Path, *, linked_directory: bool,
     ) -> None:
         owner = tmp_path / "owner"
         owner.mkdir()
@@ -95,7 +95,7 @@ class TestsFlextInfraModRuleFixtureStaging:
         outside.mkdir()
         (owner / "fixtures").mkdir()
         (owner / c.Infra.CODEMOD_CONFIG_FILENAME).write_text(
-            "ruleDirs: [rules]\ntestConfigs: [{testDir: fixtures}]\n", encoding="utf-8"
+            "ruleDirs: [rules]\ntestConfigs: [{testDir: fixtures}]\n", encoding="utf-8",
         )
         if linked_directory:
             (owner / "rules").symlink_to(outside, target_is_directory=True)
@@ -106,7 +106,7 @@ class TestsFlextInfraModRuleFixtureStaging:
 
         with pytest.raises(ValueError, match=r"symlink|regular file or directory"):
             FlextInfraModGateEngine.stage_rule_fixture_root(
-                config_root=owner, temp_root=staged
+                config_root=owner, temp_root=staged,
             )
 
         assert not staged.exists()

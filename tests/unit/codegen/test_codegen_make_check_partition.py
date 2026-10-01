@@ -72,8 +72,8 @@ class TestsFlextInfraCodegenMakeCheckPartition:
         make = config.Infra.codegen.make
         steps = CodegenTestSupport.Ci.ci_job_steps(
             TestsFlextInfraCiIntegrationBranchTriggers.render_ci(
-                repository_branch="0.12.0-dev"
-            )
+                repository_branch="0.12.0-dev",
+            ),
         )
         commands = [str(step.get("run", "")) for step in steps]
         fast = f"{make.ci.variable}={make.ci.value} make {c.Infra.VERB_CHECK}"
@@ -84,11 +84,11 @@ class TestsFlextInfraCodegenMakeCheckPartition:
     @pytest.mark.slow
     @pytest.mark.parametrize("context", ["ci", "local", "all"])
     def test_make_check_keeps_a_missing_runtime_fatal(
-        self, tmp_path: Path, context: str
+        self, tmp_path: Path, context: str,
     ) -> None:
         """A real missing runtime stays fatal in every check context."""
         root, _ = u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
+            tmp_path, c.Infra.MakeProfile.STANDALONE,
         )
         tm.ok(u.Tests.create_python_environment(root))
         policy = config.Infra.codegen.make
@@ -114,12 +114,12 @@ class TestsFlextInfraCodegenMakeCheckPartition:
                     *c.Tests.MAKE_ISOLATION_ENV_KEYS,
                     *((policy.ci.variable,) if context == "all" else ()),
                 ),
-            )
+            ),
         )
 
         tm.that(process.outcome.raw_return_code, ne=0)
         tm.that(
-            process.stdout, has=f"INFO: {label} runs check gates: {' '.join(gates)}\n"
+            process.stdout, has=f"INFO: {label} runs check gates: {' '.join(gates)}\n",
         )
         tm.that(
             process.stderr,

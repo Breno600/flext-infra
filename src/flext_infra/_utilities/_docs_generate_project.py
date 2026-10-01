@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesDocsGenerateProjectMixin(
-    FlextInfraUtilitiesDocsGeneratePlanMixin
+    FlextInfraUtilitiesDocsGeneratePlanMixin,
 ):
     """Render the complete desired artifact inventory for one project scope."""
 
@@ -49,7 +49,7 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
             (
                 api_root / "public-api.md",
                 FlextInfraUtilitiesDocsRender.docs_directive_page(
-                    f"{scope.name} Public API", scope.package_name
+                    f"{scope.name} Public API", scope.package_name,
                 ),
             ),
             (
@@ -59,12 +59,12 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
         ]
         for module_name in module_names:
             relative = module_name.removeprefix(f"{scope.package_name}.").replace(
-                ".", "/"
+                ".", "/",
             )
             rendered.append((
                 api_root / "modules" / f"{relative}.md",
                 FlextInfraUtilitiesDocsRender.docs_directive_page(
-                    module_name, module_name
+                    module_name, module_name,
                 ),
             ))
         return rendered
@@ -78,11 +78,11 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
     ) -> p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]:
         """Render the complete target inventory for one FLEXT project."""
         guides = FlextInfraUtilitiesDocsGuidesMixin.docs_project_guides_artifacts(
-            scope, repository_root=repository_root, source_states=source_states
+            scope, repository_root=repository_root, source_states=source_states,
         )
         if guides.failure:
             return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
-                guides
+                guides,
             )
         guide_paths = {
             state.path
@@ -97,10 +97,10 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
             else:
                 guide_paths.add(path)
         analyzed_contract = FlextInfraUtilitiesDocsApi.public_contract(
-            scope.path, scope.package_name
+            scope.path, scope.package_name,
         )
         contract = FlextInfraUtilitiesDocsContract.docs_current_project_contract(
-            scope.path, analyzed_contract
+            scope.path, analyzed_contract,
         )
         module_names = FlextInfraUtilitiesDocsGenerateProjectMixin._module_names(scope)
         rendered: list[t.Pair[Path, str]] = [
@@ -115,13 +115,13 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
             (
                 scope.path / "docs/guides/README.md",
                 FlextInfraUtilitiesDocsRender.docs_guides_index(
-                    scope, guide_paths=tuple(sorted(guide_paths))
+                    scope, guide_paths=tuple(sorted(guide_paths)),
                 ),
             ),
             (
                 scope.path / "docs/api-reference/README.md",
                 FlextInfraUtilitiesDocsRender.docs_api_readme(
-                    scope, contract, module_names
+                    scope, contract, module_names,
                 ),
             ),
             (
@@ -134,28 +134,28 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
                     FlextInfraUtilitiesDocsRender.docs_root_mkdocs(contract, ("src",))
                     if scope.path == repository_root
                     else FlextInfraUtilitiesDocsRender.docs_project_mkdocs(
-                        scope, contract, module_names
+                        scope, contract, module_names,
                     )
                 ),
             ),
             (
                 scope.path / "docs/api-reference/generated/overview.md",
                 FlextInfraUtilitiesDocsRender.docs_overview_page(
-                    scope, contract, module_names
+                    scope, contract, module_names,
                 ),
             ),
             *FlextInfraUtilitiesDocsGenerateProjectMixin.docs_project_api_artifacts(
-                scope
+                scope,
             ),
         ]
         pruned = (
             FlextInfraUtilitiesDocsGenerateProjectMixin._prune_generated_tree_artifacts(
-                scope.path, scope.path / "docs/api-reference/generated", rendered
+                scope.path, scope.path / "docs/api-reference/generated", rendered,
             )
         )
         if pruned.failure:
             return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
-                pruned
+                pruned,
             )
         return FlextInfraUtilitiesDocsGenerateProjectMixin.docs_normalize_artifacts((
             *((scope.path, path, content) for path, content in rendered),

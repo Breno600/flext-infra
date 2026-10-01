@@ -23,7 +23,7 @@ _LAZY_IMPORTS = MappingProxyType(
         MappingProxyType({".vscode": ("FlextInfraCodegenVscodeMixin",)}),
         alias_groups=MappingProxyType({}),
         sort_keys=False,
-    )
+    ),
 )
 
 install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

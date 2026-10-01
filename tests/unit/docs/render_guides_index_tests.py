@@ -23,7 +23,7 @@ class TestsFlextInfraDocsRenderGuidesIndex:
     def _scope(self, tmp_path: Path) -> m.Infra.DocScope:
         """Return one isolated doc scope rooted at the fixture directory."""
         return m.Infra.DocScope(
-            name="fixture-project", path=tmp_path, report_dir=tmp_path / "reports"
+            name="fixture-project", path=tmp_path, report_dir=tmp_path / "reports",
         )
 
     def test_guides_index_links_only_planned_guides(self, tmp_path: Path) -> None:
@@ -33,7 +33,7 @@ class TestsFlextInfraDocsRenderGuidesIndex:
         (guides_dir / "stale.md").write_text("# stale\n", encoding="utf-8")
 
         rendered = u.Infra.docs_guides_index(
-            self._scope(tmp_path), guide_paths=(guides_dir / "topology-conform.md",)
+            self._scope(tmp_path), guide_paths=(guides_dir / "topology-conform.md",),
         )
 
         tm.that(rendered, has="(topology-conform.md)")
@@ -43,7 +43,7 @@ class TestsFlextInfraDocsRenderGuidesIndex:
         tm.that((guides_dir / "topology-conform.md").exists(), eq=False)
 
     def test_guides_index_omits_links_when_no_guide_exists(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """A project without curated guides renders no unresolvable link."""
         (tmp_path / "docs" / "guides").mkdir(parents=True)

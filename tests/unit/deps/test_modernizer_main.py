@@ -17,20 +17,20 @@ class TestsFlextInfraDepsModernizerMain:
     """Validate only public modernizer behavior."""
 
     def test_initialization_uses_explicit_workspace(
-        self, modernizer_workspace: Path
+        self, modernizer_workspace: Path,
     ) -> None:
         """Verify initialization uses explicit workspace."""
         modernizer = FlextInfraPyprojectModernizer(repository_root=modernizer_workspace)
         tm.that(modernizer.root, eq=modernizer_workspace)
 
     def test_conform_source_rejects_invalid_toml(
-        self, modernizer_workspace: Path
+        self, modernizer_workspace: Path,
     ) -> None:
         """Invalid TOML fails closed with the offending path."""
         pyproject = modernizer_workspace / c.PYPROJECT_FILENAME
         tm.fail(
             FlextInfraPyprojectModernizer(
-                repository_root=modernizer_workspace
+                repository_root=modernizer_workspace,
             ).conform_source(
                 "invalid [[[",
                 path=pyproject,
@@ -55,16 +55,16 @@ class TestsFlextInfraDepsModernizerMain:
         )
 
     def test_run_rejects_unknown_selected_project(
-        self, modernizer_workspace: Path
+        self, modernizer_workspace: Path,
     ) -> None:
         """Verify run rejects unknown selected project."""
         modernizer = FlextInfraPyprojectModernizer(
-            repository_root=modernizer_workspace, selected_projects=["missing-project"]
+            repository_root=modernizer_workspace, selected_projects=["missing-project"],
         )
         tm.that(modernizer.run(), eq=2)
 
     def test_cli_reports_pending_changes_in_audit_mode(
-        self, modernizer_workspace: Path
+        self, modernizer_workspace: Path,
     ) -> None:
         """Verify cli reports pending changes in audit mode."""
         tm.that(

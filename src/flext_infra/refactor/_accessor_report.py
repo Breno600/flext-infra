@@ -32,16 +32,16 @@ class FlextInfraAccessorMigrationReportMixin:
         def lint_tool_names(self) -> t.StrSequence: ...
 
         def _apply_automated_rewrites(
-            self, rope_project: t.Infra.RopeProject, py_file: Path, source: str
+            self, rope_project: t.Infra.RopeProject, py_file: Path, source: str,
         ) -> t.Pair[str, t.SequenceOf[m.Infra.AccessorMigrationChange]]: ...
 
         def _collect_manual_warnings(
-            self, py_file: Path, source: str
+            self, py_file: Path, source: str,
         ) -> t.SequenceOf[m.Infra.AccessorMigrationChange]: ...
 
     @staticmethod
     def _accumulate_lint_totals(
-        totals: MutableMapping[str, int], snapshot: t.Infra.LintSnapshot
+        totals: MutableMapping[str, int], snapshot: t.Infra.LintSnapshot,
     ) -> None:
         """Accumulate lint totals."""
         for tool, lines in snapshot.items():
@@ -57,7 +57,7 @@ class FlextInfraAccessorMigrationReportMixin:
     ) -> m.Infra.AccessorMigrationFile:
         """Rewrite one file, collect its manual warnings and lint evidence."""
         updated_source, automated_changes = self._apply_automated_rewrites(
-            rope_project, py_file, source
+            rope_project, py_file, source,
         )
         warnings = list(self._collect_manual_warnings(py_file, source))
         include_preview = bool(automated_changes or warnings) and preview_available
@@ -77,7 +77,7 @@ class FlextInfraAccessorMigrationReportMixin:
             elif not self.dry_run:
                 before = (
                     u.Infra.lint_snapshot(
-                        py_file, self.repository_root, gates=self.gate_names
+                        py_file, self.repository_root, gates=self.gate_names,
                     )
                     if include_preview
                     else {}
@@ -99,11 +99,11 @@ class FlextInfraAccessorMigrationReportMixin:
                             replacement_name="",
                             automated=False,
                             reason=" ; ".join(report[:3]) or "protected write failed",
-                        )
+                        ),
                     )
                 after = (
                     u.Infra.lint_snapshot(
-                        py_file, self.repository_root, gates=self.gate_names
+                        py_file, self.repository_root, gates=self.gate_names,
                     )
                     if include_preview
                     else {}
@@ -115,7 +115,7 @@ class FlextInfraAccessorMigrationReportMixin:
                 lint_before = self._freeze_lints(before)
                 lint_after = self._freeze_lints(after)
                 new_lint_errors = self._freeze_lints(
-                    u.Infra.lint_new_errors(before, after)
+                    u.Infra.lint_new_errors(before, after),
                 )
         return m.Infra.AccessorMigrationFile(
             file=str(py_file),
@@ -143,7 +143,7 @@ class FlextInfraAccessorMigrationReportMixin:
     def _diff(py_file: Path, before: str, after: str) -> str:
         """Diff."""
         diff_lines = u.Infra.unified_diff_lines(
-            before, after, fromfile=f"a/{py_file}", tofile=f"b/{py_file}", max_lines=80
+            before, after, fromfile=f"a/{py_file}", tofile=f"b/{py_file}", max_lines=80,
         )
         return "".join(diff_lines)
 
@@ -162,13 +162,13 @@ class FlextInfraAccessorMigrationReportMixin:
         ]
         for tool in report.lint_tools:
             lines.append(
-                f"lint-totals:{tool} before={report.lint_before_totals.get(tool, 0)} after={report.lint_after_totals.get(tool, 0)} new={report.new_lint_error_totals.get(tool, 0)}"
+                f"lint-totals:{tool} before={report.lint_before_totals.get(tool, 0)} after={report.lint_after_totals.get(tool, 0)} new={report.new_lint_error_totals.get(tool, 0)}",
             )
         for file_report in report.files:
             lines.append(f"\n{file_report.file}")
             for change in file_report.automated_changes:
                 lines.append(
-                    f"  auto:{change.line} {change.original_name} -> {change.replacement_name}"
+                    f"  auto:{change.line} {change.original_name} -> {change.replacement_name}",
                 )
             for warning in file_report.warnings:
                 target = (

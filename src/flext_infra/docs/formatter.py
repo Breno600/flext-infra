@@ -45,14 +45,14 @@ class FlextInfraDocFormatter(FlextInfraDocServiceBase):
         if gate_factory is None:
             return r[t.SequenceOf[m.Infra.DocsPhaseReport]].fail(
                 "docs formatting requires the facade-bound markdown format gate; "
-                "run it through FlextInfra.docs_format"
+                "run it through FlextInfra.docs_format",
             )
         return self.run_scoped_docs(
             repository_root,
             projects=projects,
             output_dir=output_dir,
             handler=lambda scope: self._format_scope(
-                scope, apply=apply, gate_factory=gate_factory
+                scope, apply=apply, gate_factory=gate_factory,
             ),
         )
 

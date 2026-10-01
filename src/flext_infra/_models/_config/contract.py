@@ -22,7 +22,7 @@ class FlextInfraConfigModelsContract:
         # Rendered file payloads are
         # byte contracts; Pydantic must never trim their final newline.
         model_config = m.ConfigDict(
-            strict=False, frozen=True, extra="forbid", str_strip_whitespace=False
+            strict=False, frozen=True, extra="forbid", str_strip_whitespace=False,
         )
 
     class DocsAuditOverridesSpec(ConfigContract):
@@ -39,7 +39,7 @@ class FlextInfraConfigModelsContract:
         historical_evidence_files: Annotated[
             t.VariadicTuple[Path],
             m.Field(
-                description="Exact dated Markdown records preserving observed paths"
+                description="Exact dated Markdown records preserving observed paths",
             ),
         ] = ()
 
