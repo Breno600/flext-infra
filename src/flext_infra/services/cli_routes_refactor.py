@@ -5,7 +5,7 @@ from __future__ import annotations
 import functools
 from typing import ClassVar
 
-from flext_infra import m, t
+from flext_infra import infra, m, p, t
 from flext_infra.codegen.protocol_models import FlextInfraCodegenProtocolModels
 from flext_infra.codemod.apply_renames import FlextInfraApplyRenames
 from flext_infra.codemod.ast_scan import FlextInfraCodemodAstScan
@@ -34,6 +34,20 @@ from flext_infra.transformers.pydantic_modernizer import (
 
 class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
     """Own the complete refactor command tuple."""
+
+    @staticmethod
+    def execute_mod_text(
+        request: m.Infra.ModTextCommand,
+    ) -> p.Result[t.Cli.ResultValue]:
+        """Replay the declared text rules without entering Rope or AST phases."""
+        return infra.mod_text(request)
+
+    @staticmethod
+    def execute_mod_text_candidate(
+        request: m.Infra.ModTextCommand,
+    ) -> p.Result[t.Cli.ResultValue]:
+        """Replay a manifest-declared candidate with the healthy provider."""
+        return infra.mod_text_candidate(request)
 
     refactor_routes: ClassVar[t.VariadicTuple[m.Cli.ResultCommandRoute]] = (
         m.Cli.ResultCommandRoute(
@@ -124,6 +138,18 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
             ),
             model_cls=FlextInfraCodemodBatchApply,
             handler=FlextInfraCodemodBatchApply.execute_command,
+        ),
+        m.Cli.ResultCommandRoute(
+            name="mod-text",
+            help_text="Replay only authenticated declarative text rules",
+            model_cls=m.Infra.ModTextCommand,
+            handler=execute_mod_text,
+        ),
+        m.Cli.ResultCommandRoute(
+            name="mod-text-candidate",
+            help_text="Replay text rules in the declared candidate worktree",
+            model_cls=m.Infra.ModTextCommand,
+            handler=execute_mod_text_candidate,
         ),
         m.Cli.ResultCommandRoute(
             name="mod-snapshots",

@@ -40,9 +40,7 @@ class FlextInfraApplyRenames:
         root = Path(commonpath(roots))
         plans: t.MutableSequenceOf[m.Infra.SemanticFilePlan] = []
         occurrences = 0
-        with u.Infra.open_project(
-            root, project_roots=roots
-        ) as project:
+        with u.Infra.open_project(root, project_roots=roots) as project:
             symbols = FlextInfraRenameSymbols.plan(
                 project, python, pairs, params.bindings
             )
@@ -59,9 +57,7 @@ class FlextInfraApplyRenames:
                 desired = inventory[path].content
                 if edits:
                     resource = project.get_resource(path.relative_to(root).as_posix())
-                    changed = u.Infra.content_change(
-                        resource, source, edits
-                    )
+                    changed = u.Infra.content_change(resource, source, edits)
                     if path in python:
                         ast.parse(changed.new_contents, filename=str(path))
                     desired = changed.new_contents.encode(c.Cli.ENCODING_DEFAULT)

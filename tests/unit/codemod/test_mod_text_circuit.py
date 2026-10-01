@@ -23,6 +23,27 @@ if TYPE_CHECKING:
 class TestsFlextInfraModTextGateEngine:
     """Exercise the declarative sed-by-list engine through its public scan."""
 
+    def test_invalid_python_replacement_never_publishes_batch(
+        self, mod_workspace: Path
+    ) -> None:
+        """Syntax preflight rejects a broken rule before its transaction starts."""
+        first, second = self._publication_inputs(mod_workspace)
+        u.Cli.atomic_write_text_file(
+            mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
+            (
+                "rules:\n"
+                "  - id: invalid-python-replacement\n"
+                "    find: 'value = \"before\"'\n"
+                "    replace: 'value ='\n"
+            ),
+        ).unwrap()
+        originals = (first.read_bytes(), second.read_bytes())
+
+        with pytest.raises(SyntaxError):
+            FlextInfraModTextGateEngine.scan(mod_workspace, fix=True)
+
+        tm.that((first.read_bytes(), second.read_bytes()), eq=originals)
+
     @staticmethod
     def _publication_inputs(root: Path) -> t.Pair[Path, Path]:
         """Declare two authored inputs and one exact text rewrite catalogue."""
