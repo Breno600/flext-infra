@@ -43,12 +43,14 @@ class FlextInfraModelsCodegenJournalModels:
         @u.model_validator(mode="after")
         def _validate_publication(self) -> Self:
             """Bind a complete staged state to one physical project destination.
-            
+
             Returns:
                 The resulting ``Self``.
-            
+
             Raises:
-            
+                ValueError: If codegen publication destination is outside its project;
+                    or if codegen staged replacement must be present.
+
             """
             if not self.project.is_absolute() or not self.before.path.is_relative_to(
                 self.project,
@@ -132,12 +134,13 @@ class FlextInfraModelsCodegenJournalModels:
         @classmethod
         def _validate_path(cls, value: str) -> str:
             """Keep the durable authority lexical and inside the workspace.
-            
+
             Returns:
                 The resulting ``str``.
-            
+
             Raises:
-            
+                ValueError: If unsafe codegen journal directory.
+
             """
             relative = Path(value)
             if (
@@ -153,12 +156,18 @@ class FlextInfraModelsCodegenJournalModels:
         @u.model_validator(mode="after")
         def _validate_disposition(self) -> Self:
             """Bind lifecycle metadata to one physical leaf path.
-            
+
             Returns:
                 The resulting ``Self``.
-            
+
             Raises:
-            
+                ValueError: If transaction phase and temporary disposition must
+                    coincide; or if codegen directory preflight state must be absent; or
+                    if codegen directory created state must be present; or if codegen
+                    directory states belong to different paths; or if only a created
+                    temporary directory may own a tree manifest; or if temporary-tree
+                    manifest differs from created directory.
+
             """
             if (self.phase == "transaction") != (self.disposition == "temporary"):
                 msg = "transaction phase and temporary disposition must coincide"
@@ -276,12 +285,13 @@ class FlextInfraModelsCodegenJournalModels:
         @classmethod
         def _validate_source_path(cls, value: Path) -> Path:
             """Reject relative or lexically escaping source identities.
-            
+
             Returns:
                 The resulting ``Path``.
-            
+
             Raises:
-            
+                ValueError: If unsafe generation source path.
+
             """
             if not value.is_absolute() or ".." in value.parts:
                 msg = f"unsafe generation source path: {value}"
@@ -291,12 +301,19 @@ class FlextInfraModelsCodegenJournalModels:
         @u.model_validator(mode="after")
         def _validate_source_physical_state(self) -> Self:
             """Reject a persisted source identity that represents a reparse point.
-            
+
             Returns:
                 The resulting ``Self``.
-            
+
             Raises:
-            
+                ValueError: If generation source physical identity is incomplete; or if
+                    generation source parent identity is incomplete; or if absent
+                    generation source cannot carry host metadata; or if generation
+                    source is a reparse point; or if absent source parent requires an
+                    authenticated ancestor witness; or if source absence witness does
+                    not describe its missing parent; or if existing source parent cannot
+                    carry an absence witness.
+
             """
             physical = (
                 self.sha256,
@@ -535,12 +552,23 @@ class FlextInfraModelsCodegenJournalModels:
         @u.model_validator(mode="after")
         def _validate_original_tuple(self) -> Self:
             """Require complete recovery identity exactly when original existed.
-            
+
             Returns:
                 The resulting ``Self``.
-            
+
             Raises:
-            
+                ValueError: If Mise journal original recovery tuple is inconsistent; or
+                    if absent codegen original cannot contain host metadata; or if
+                    codegen journal desired identity is inconsistent; or if codegen
+                    journal desired staging path is inconsistent; or if absent codegen
+                    desired state cannot contain host metadata; or if codegen journal
+                    rollback identity has no presence state; or if codegen journal
+                    rollback parent identity is incomplete; or if codegen journal
+                    rollback identity is incomplete; or if codegen journal rollback
+                    staging path is inconsistent; or if absent codegen rollback cannot
+                    contain file identity; or if absent codegen rollback cannot contain
+                    host metadata; or if codegen journal contains a reparse identity.
+
             """
             original = (
                 self.original_backup,

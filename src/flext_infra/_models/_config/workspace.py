@@ -251,12 +251,17 @@ class FlextInfraConfigModelsWorkspace:
         @u.model_validator(mode="after")
         def _validate_references(self) -> Self:
             """Reject ambiguous paths and policy references in the full document.
-            
+
             Returns:
                 The resulting ``Self``.
-            
+
             Raises:
-            
+                ValueError: If ``invalid_paths``; or if composed project paths must be
+                    unique; or if composed projects cannot also be external
+                    dependencies; or if repository policy overlays must be unique; or if
+                    ``unknown_projects``; or if candidate dependency distributions must
+                    be unique; or if candidate bootstrap targets must be unique.
+
             """
             external_paths = (*self.external_dependency_paths, *self.content_only)
             invalid_paths = tuple(
@@ -391,12 +396,16 @@ class FlextInfraConfigModelsWorkspace:
         @u.model_validator(mode="after")
         def _validate_topology_paths(self) -> Self:
             """Reject duplicate, ambiguous, or escaping topology paths.
-            
+
             Returns:
                 The resulting ``Self``.
-            
+
             Raises:
-            
+                ValueError: If external dependency paths must be workspace-relative; or
+                    if external dependency paths must be unique; or if subproject paths
+                    must be unique; or if external dependencies cannot also be governed
+                    subprojects.
+
             """
             invalid_external_paths = tuple(
                 path

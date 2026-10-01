@@ -90,12 +90,13 @@ def declare_parallel_project(project_root: Path) -> None:
 
 def profile_parent(runner: FlextInfraPytestRunner, output: Path) -> int:
     """Exercise the real -m entry in a fresh process with the Make-owned inputs.
-    
+
     Returns:
         The resulting ``int``.
-    
+
     Raises:
-    
+        RuntimeError: If ``not u.Cli.process_succeeded(outcome)``.
+
     """
     output.parent.mkdir(parents=True, exist_ok=True)
     policy = config.Infra.tooling.tools.pytest

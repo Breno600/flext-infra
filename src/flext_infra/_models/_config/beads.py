@@ -47,12 +47,13 @@ class FlextInfraConfigModelsBeads:
         @u.model_validator(mode="after")
         def _validate_custom_issue_types(self) -> Self:
             """Reject duplicate project extensions before projection.
-            
+
             Returns:
                 The resulting ``Self``.
-            
+
             Raises:
-            
+                ValueError: If beads custom_issue_types must be unique.
+
             """
             if len(set(self.custom_issue_types)) != len(self.custom_issue_types):
                 msg = "beads custom_issue_types must be unique"

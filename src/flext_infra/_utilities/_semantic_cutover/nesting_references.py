@@ -73,17 +73,18 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
             @staticmethod
             def _alias_name(asname: cst.AsName) -> str:
                 """Return the bound alias identifier, rejecting impossible shapes.
-                
+
                 libcst types ``AsName.name`` as ``Name | Tuple | List``, but import
                 aliases parsed from valid Python can only carry a ``Name``
                 (``import x as (a, b)`` is a SyntaxError); Tuple/List belong to
                 ``WithItem``/``ExceptHandler`` clauses only.
-                
+
                 Returns:
                     The bound alias identifier, rejecting impossible shapes.
-                
+
                 Raises:
-                
+                    TypeError: If unsupported import alias target.
+
                 """
                 if not isinstance(asname.name, cst.Name):
                     msg = (
@@ -165,15 +166,16 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
                 ambiguity: str,
             ) -> str | None:
                 """Return the one class-nesting replacement bound to ``original_node``.
-                
+
                 ``None`` when the node carries no nesting binding; two competing
                 bindings are ambiguous and raise with ``ambiguity`` naming the site.
-                
+
                 Returns:
                     The one class-nesting replacement bound to ``original_node``.
-                
+
                 Raises:
-                
+                    ValueError: If ambiguous class-nesting.
+
                 """
                 replacements = {
                     replacement

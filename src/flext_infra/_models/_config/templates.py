@@ -57,12 +57,14 @@ class FlextInfraConfigModelsTemplates:
         @m.model_validator(mode="after")
         def validate_delegate_source(self) -> Self:
             """Require a template only for the delegate that renders one.
-            
+
             Returns:
                 The resulting ``Self``.
-            
+
             Raises:
-            
+                ValueError: If render delegate requires a template source; or if
+                    manifest delegate must not declare a template source.
+
             """
             if (
                 self.delegate

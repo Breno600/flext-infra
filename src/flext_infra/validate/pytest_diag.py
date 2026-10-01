@@ -60,12 +60,14 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
     @classmethod
     def _extract_report_events(cls, report_log: Path, diag: m.Infra.DiagResult) -> None:
         """Read real test attempts and every warning independently of terminal text.
-        
+
         Every reported node must show one setup and one teardown phase, plus a
         call phase whenever setup passed; a missing or repeated phase fails.
-        
+
         Raises:
-        
+            ValueError: If pytest report log contains no events; or if incomplete pytest
+                lifecycle.
+
         """
         lines = report_log.read_text(encoding=c.Cli.ENCODING_DEFAULT).splitlines()
         if not lines:

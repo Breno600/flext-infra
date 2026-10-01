@@ -23,12 +23,13 @@ class TestsFlextInfraCodegenFilePlanState:
     @staticmethod
     def _observed_state(root: Path, *, content: bytes) -> m.Cli.AtomicFileState:
         """Read one real file through the canonical binary state owner.
-        
+
         Returns:
             The resulting ``m.Cli.AtomicFileState``.
-        
+
         Raises:
-        
+            AssertionError: If ``state.failure``.
+
         """
         target = root / "member" / c.PYPROJECT_FILENAME
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -97,9 +98,10 @@ class TestsFlextInfraCodegenFilePlanState:
     @staticmethod
     def test_absent_file_is_not_an_empty_file(tmp_path: Path) -> None:
         """Test absent file is not an empty file.
-        
+
         Raises:
-        
+            AssertionError: If ``state.failure``.
+
         """
         state = u.Cli.atomic_read_binary_file_state(
             tmp_path / c.PYPROJECT_FILENAME,

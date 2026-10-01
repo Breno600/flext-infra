@@ -68,12 +68,17 @@ class FlextInfraRenameSymbols:
         rewrites: t.SequenceOf[m.Infra.SourceRewrite],
     ) -> t.VariadicTuple[t.Triple[int, int, bool]]:
         """Retain effective-member identity after Rope's receiver/MRO match.
-        
+
         Returns:
             The resulting ``t.VariadicTuple[t.Triple[int, int, bool]]``.
-        
+
         Raises:
-        
+            TypeError: If CSV symbol campaign does not own attribute mutation.
+            ValueError: If CSV destination disappeared during planning; or if CSV symbol
+                has no authenticated expression span; or if CSV target overrides the
+                declared destination; or if retired member has an independently owned
+                namespace.
+
         """
         runtime = u.Infra
         module = project.get_pymodule(change.resource)
@@ -148,12 +153,17 @@ class FlextInfraRenameSymbols:
         bindings: t.MappingKV[str, t.StrSequence],
     ) -> t.MappingKV[Path, t.VariadicTuple[m.Infra.SourceRewrite]]:
         """Merge non-overlapping Rope previews against one immutable snapshot.
-        
+
         Returns:
             The resulting ``t.MappingKV[Path, t.VariadicTuple[m.Infra.SourceRewrite]]``.
-        
+
         Raises:
-        
+            TypeError: If CSV Rope campaign produced a non-content effect.
+            ValueError: If Rope input changed after authentication; or if CSV
+                destination has no declared current public owner; or if symbol campaign
+                requires identifier paths; or if CSV Rope campaign escaped authenticated
+                inventory; or if Rope CSV edit has no single authenticated member span.
+
         """
         root = Path(project.root.real_path)
         ordered_paths = tuple(sorted(sources))

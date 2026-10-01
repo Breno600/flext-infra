@@ -53,12 +53,14 @@ class TestsFlextInfraReleaseCheckoutCredentials:
     @staticmethod
     def checkout_credentials(job: t.JsonValue) -> bool:
         """Provide ``checkout_credentials``.
-        
+
         Returns:
             The resulting ``bool``.
-        
+
         Raises:
-        
+            TypeError: If workflow job steps must be a sequence; or if
+                persist-credentials must render as a YAML boolean.
+
         """
         mapping = t.Cli.JSON_MAPPING_ADAPTER.validate_python(job)
         steps = mapping["steps"]

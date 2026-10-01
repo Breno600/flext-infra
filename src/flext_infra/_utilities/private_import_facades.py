@@ -30,15 +30,17 @@ class FlextInfraUtilitiesPrivateImportFacades:
         statements: t.SequenceOf[str],
     ) -> MutableMapping[str, t.Pair[str, bool]]:
         """Index editable sources and referenced installed packages without imports.
-        
+
         Installed files are discovery inputs only. Resolving a top-level spec
         never imports its package initializer or dependency business modules.
-        
+
         Returns:
             The resulting ``MutableMapping[str, t.Pair[str, bool]]``.
-        
+
         Raises:
-        
+            ValueError: If ambiguous source module identity; or if ambiguous installed
+                module identity.
+
         """
         modules: MutableMapping[str, t.Pair[str, bool]] = {}
         for path, source in sorted(sources.items()):
@@ -253,12 +255,15 @@ class FlextInfraUtilitiesPrivateImportFacades:
         exports: t.MappingKV[str, set[str]],
     ) -> t.Pair[str, str] | None:
         """Resolve re-export chains by identity, preferring an explicit root ABI.
-        
+
         Returns:
             The resulting ``t.Pair[str, str] | None``.
-        
+
         Raises:
-        
+            ValueError: If ambiguous private symbol identity for; or if ambiguous
+                declared public exports for; or if cyclic public export identity; or if
+                ambiguous public export identity for.
+
         """
 
         def identities(name: str, visiting: frozenset[str]) -> set[str]:
@@ -399,12 +404,14 @@ class FlextInfraUtilitiesPrivateImportFacades:
         class_bases: t.MappingKV[str, t.VariadicTuple[str]],
     ) -> str | None:
         """Resolve one private class to exactly one inherited facade path.
-        
+
         Returns:
             The resulting ``str | None``.
-        
+
         Raises:
-        
+            ValueError: If ambiguous public facade references for; or if cyclic public
+                facade inheritance; or if ambiguous public facade base identity.
+
         """
         references: set[str] = set()
 
@@ -508,12 +515,13 @@ class FlextInfraUtilitiesPrivateImportFacades:
         facade_alias: str,
     ) -> str | None:
         """Return the public long name assigned to a canonical facade alias.
-        
+
         Returns:
             The public long name assigned to a canonical facade alias.
-        
+
         Raises:
-        
+            ValueError: If ambiguous public facade root for alias.
+
         """
         roots = {
             root_name
@@ -534,9 +542,10 @@ class FlextInfraUtilitiesPrivateImportFacades:
         removals: t.MappingKV[str, AbstractSet[str]],
     ) -> None:
         """Reject any binding that would shadow the inserted public facade.
-        
+
         Raises:
-        
+            ValueError: If public facade alias.
+
         """
         allowed_imports = {
             id(node)

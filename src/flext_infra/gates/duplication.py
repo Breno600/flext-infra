@@ -69,12 +69,13 @@ class FlextInfraDuplicationGate(FlextInfraGate):
 
     def _scan_project(self, project_dir: Path) -> p.Cli.CommandOutput:
         """Create one fresh report; tool, scope, and report failures escape.
-        
+
         Returns:
             The resulting ``p.Cli.CommandOutput``.
-        
+
         Raises:
-        
+            ValueError: If jscpd report target is not a physical file.
+
         """
         binary = shutil.which(c.Infra.JSCPD_BINARY)
         if binary is None:

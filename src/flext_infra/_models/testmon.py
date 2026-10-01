@@ -81,12 +81,15 @@ class FlextInfraModelsTestmon:
         @u.model_validator(mode="after")
         def require_execution_or_verified_deselection(self) -> Self:
             """Zero execution requires positive accounting against a valid cache.
-            
+
             Returns:
                 The resulting ``Self``.
-            
+
             Raises:
-            
+                ValueError: If deselections cannot exceed the complete collection
+                    inventory; or if zero execution requires a restored cache and
+                    complete deselection accounting.
+
             """
             if (
                 self.inventory_count is not None

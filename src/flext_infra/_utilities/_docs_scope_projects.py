@@ -80,12 +80,13 @@ class FlextInfraUtilitiesDocsScopeProjectsMixin(
         repository_root: Path,
     ) -> frozenset[Path]:
         """Return lexical subprojects freshly read from this root's manifest.
-        
+
         Returns:
             Lexical subprojects freshly read from this root's manifest.
-        
+
         Raises:
-        
+            ValueError: If ``declared.failure``.
+
         """
         root = FlextInfraUtilitiesDocsScopeProjectsMixin.absolute_lexical(
             repository_root,

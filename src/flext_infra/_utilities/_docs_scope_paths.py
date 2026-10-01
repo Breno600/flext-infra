@@ -25,12 +25,13 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
     @staticmethod
     def absolute_lexical(path: Path) -> Path:
         """Return an absolute lexical path without dereferencing aliases.
-        
+
         Returns:
             An absolute lexical path without dereferencing aliases.
-        
+
         Raises:
-        
+            ValueError: If docs path cannot contain parent traversal.
+
         """
         if ".." in path.parts:
             msg = f"docs path cannot contain parent traversal: {path}"
@@ -40,12 +41,13 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
     @staticmethod
     def physical_directory_exists(path: Path) -> bool:
         """Return presence only after descriptor-authenticated traversal.
-        
+
         Returns:
             Presence only after descriptor-authenticated traversal.
-        
+
         Raises:
-        
+            ValueError: If ``planned.failure``.
+
         """
         planned = u.Cli.atomic_plan_directory_chain(path)
         if planned.failure:
@@ -55,12 +57,13 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
     @staticmethod
     def _physical_file_exists(path: Path) -> bool:
         """Return file presence only after descriptor-authenticated inspection.
-        
+
         Returns:
             File presence only after descriptor-authenticated inspection.
-        
+
         Raises:
-        
+            ValueError: If ``state.failure``.
+
         """
         state = u.Cli.atomic_read_binary_file_state(path, required=False)
         if state.failure:

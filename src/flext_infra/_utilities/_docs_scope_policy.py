@@ -38,12 +38,14 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
     @staticmethod
     def load_config(repository_root: Path) -> t.JsonMapping:
         """Load the minimal docs policy settings if present.
-        
+
         Returns:
             The resulting ``t.JsonMapping``.
-        
+
         Raises:
-        
+            TypeError: If docs config root must be a mapping.
+            ValueError: If ``state.failure``; or if ``parsed.failure``.
+
         """
         path = FlextInfraUtilitiesDocsScopePolicyMixin.config_path(repository_root)
         # An absent optional config has no parent identity to authenticate. A
@@ -69,14 +71,14 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
     @staticmethod
     def manifest_excluded_roots(repository_root: Path) -> t.Infra.StrSet:
         """Return directory names excluded by the workspace topology manifest.
-        
+
         ``config/workspace.yaml`` is the handwritten topology SSOT and its own
         header instructs the operator to "declare members/exclusions here", but
         discovery used to consult only the docs-scope config, so a declared
         exclusion did nothing and a non-PEP621 subtree (a vendored directory, a
         Poetry-native submodule) made ``make gen`` fail with "missing [project]
         table" and offered no working escape hatch.
-        
+
         The manifest is read with the same primitive its own owner uses
         (``workspace/detector.py``) and is treated as optional and advisory
         here: this helper only narrows discovery, so a repository with no
@@ -84,12 +86,13 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
         extra exclusions" rather than break every docs and deps phase. The
         manifest's authoritative validation stays in its owner, which fails
         loud.
-        
+
         Returns:
             Directory names excluded by the workspace topology manifest.
-        
+
         Raises:
-        
+            ValueError: If ``loaded.failure``.
+
         """
         manifest_path = FlextInfraUtilitiesWorkspaceManifest.workspace_manifest_path(
             repository_root,

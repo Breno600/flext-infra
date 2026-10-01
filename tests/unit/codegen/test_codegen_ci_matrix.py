@@ -296,9 +296,11 @@ class TestsFlextInfraCodegenCiMatrix:
         tmp_path: Path,
     ) -> None:
         """Run the generated post-generation shell check in a dirty repository.
-        
+
         Raises:
-        
+            TypeError: If workflow job steps must be a sequence; or if fixed-point step
+                must have a shell script.
+
         """
         workflow = u.Cli.yaml_load_mapping(
             rendered_project / ".github" / "workflows" / "ci.yml",
@@ -335,9 +337,10 @@ class TestsFlextInfraCodegenCiMatrix:
         rendered_project: Path,
     ) -> None:
         """YAML block indentation must preserve executable Python command bodies.
-        
+
         Raises:
-        
+            TypeError: If workflow job steps must be a sequence.
+
         """
         root = rendered_project
         workflow = root / ".github" / "workflows" / "ci.yml"
@@ -797,9 +800,11 @@ class TestsFlextInfraCodegenCiMatrix:
         rendered_project: Path,
     ) -> None:
         """A generated Docs job fails on audit findings and retains safe reports.
-        
+
         Raises:
-        
+            TypeError: If Docs workflow steps must be a sequence; or if Docs report
+                paths must be text.
+
         """
         workflow = u.Cli.yaml_load_mapping(
             rendered_project / ".github/workflows/docs.yml",

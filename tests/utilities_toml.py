@@ -172,17 +172,18 @@ class TestsFlextInfraUtilitiesTomlMixin:
     @staticmethod
     def toml_doc(text: str) -> t.Cli.TomlDocument:
         """Parse fixture TOML text into a document, failing closed.
-        
+
         ``u.Cli.toml_parse_text`` is fail-soft because production parses
         untrusted files. A fixture literal is authored valid, so a ``None``
         here means the fixture itself is broken and the test must fail with
         that reason instead of propagating an optional into every call.
-        
+
         Returns:
             The resulting ``t.Cli.TomlDocument``.
-        
+
         Raises:
-        
+            TypeError: If fixture TOML failed to parse.
+
         """
         document = u.Cli.toml_parse_text(text)
         tm.that(document, none=False, msg="fixture TOML failed to parse")
@@ -194,12 +195,13 @@ class TestsFlextInfraUtilitiesTomlMixin:
     @staticmethod
     def toml_doc_mapping(doc: t.Cli.TomlDocument) -> t.JsonMapping:
         """Provide the typed test helper `toml_doc_mapping`.
-        
+
         Returns:
             The resulting ``t.JsonMapping``.
-        
+
         Raises:
-        
+            TypeError: If normalized TOML document is not a mapping.
+
         """
         normalized: t.JsonValue = u.normalize_to_json_value(doc.unwrap())
         tm.that(normalized, is_=Mapping)
@@ -212,12 +214,13 @@ class TestsFlextInfraUtilitiesTomlMixin:
     @staticmethod
     def toml_mapping(value: t.JsonPayload | None) -> t.JsonMapping:
         """Provide the typed test helper `toml_mapping`.
-        
+
         Returns:
             The resulting ``t.JsonMapping``.
-        
+
         Raises:
-        
+            TypeError: If normalized TOML value is not a mapping.
+
         """
         normalized: t.JsonValue = u.normalize_to_json_value(value)
         tm.that(normalized, is_=Mapping)
@@ -230,12 +233,13 @@ class TestsFlextInfraUtilitiesTomlMixin:
     @staticmethod
     def toml_list(value: t.JsonPayload | None) -> t.JsonList:
         """Provide the typed test helper `toml_list`.
-        
+
         Returns:
             The resulting ``t.JsonList``.
-        
+
         Raises:
-        
+            TypeError: If normalized TOML value is not a list.
+
         """
         normalized: t.JsonValue = u.normalize_to_json_value(value)
         tm.that(normalized, is_=list)
@@ -249,12 +253,13 @@ class TestsFlextInfraUtilitiesTomlMixin:
     @staticmethod
     def toml_strings(value: t.JsonPayload | None) -> t.StrSequence:
         """Provide the typed test helper `toml_strings`.
-        
+
         Returns:
             The resulting ``t.StrSequence``.
-        
+
         Raises:
-        
+            TypeError: If normalized TOML strings are not a list.
+
         """
         normalized: t.JsonValue = u.normalize_to_json_value(value)
         tm.that(normalized, is_=list)

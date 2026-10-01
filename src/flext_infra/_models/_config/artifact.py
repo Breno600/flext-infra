@@ -380,12 +380,15 @@ class FlextInfraConfigModelsArtifact:
         @u.model_validator(mode="after")
         def _validate_github_artifact_ownership(self) -> Self:
             """Require one full-managed conform owner for every GitHub template.
-            
+
             Returns:
                 The resulting ``Self``.
-            
+
             Raises:
-            
+                ValueError: If GitHub artifacts must have exactly one template and
+                    managed owner; or if GitHub template/managed ownership mismatch; or
+                    if GitHub artifacts must be full-managed.
+
             """
             github_templates = tuple(
                 Path(entry.destination)
@@ -593,12 +596,17 @@ class FlextInfraConfigModelsArtifact:
         @u.model_validator(mode="after")
         def _validate_publication_identity(self) -> Self:
             """Bind one complete desired state to its exact project and target.
-            
+
             Returns:
                 The resulting ``Self``.
-            
+
             Raises:
-            
+                ValueError: If codegen project and path must be absolute; or if codegen
+                    desired bytes and mode must be present or absent together; or if
+                    codegen before state belongs to another path; or if codegen absent
+                    parent plan is inconsistent with its destination; or if codegen path
+                    escapes owning project.
+
             """
             if not self.project.is_absolute() or not self.path.is_absolute():
                 msg = "codegen project and path must be absolute"

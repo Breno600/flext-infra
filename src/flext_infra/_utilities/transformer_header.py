@@ -77,12 +77,14 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
         runtime_required: bool = False,
     ) -> str:
         """Honor the consumer's runtime requirement when introducing an alias.
-        
+
         Returns:
             The resulting ``str``.
-        
+
         Raises:
-        
+            ValueError: If canonical import alias must be non-empty; or if canonical
+                alias.
+
         """
         if not alias:
             msg = "canonical import alias must be non-empty"

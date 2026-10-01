@@ -167,16 +167,17 @@ class FlextInfraPythonVersionEnforcer(s[int]):
 
     def _conform_python_version_file(self, project: Path, required_minor: int) -> bool:
         """Write ``.python-version`` (``3.<minor>``) from the SSOT minor.
-        
+
         In check-only mode a missing/stale file is a validation failure; in
         apply mode the file is created/rewritten so pyenv/asdf/mise select the
         interpreter that matches the workspace SSOT.
-        
+
         Returns:
             The resulting ``bool``.
-        
+
         Raises:
-        
+            RuntimeError: If failed to write.
+
         """
         version_file = project / c.Infra.PYTHON_VERSION_FILENAME
         desired = f"3.{required_minor}\n"
@@ -223,14 +224,15 @@ class FlextInfraPythonVersionEnforcer(s[int]):
 
     def _repository_root_from_file(self, file: str | Path) -> Path:
         """Walk up from ``file`` to the first dir with .git+Makefile+pyproject.
-        
+
         Raises RuntimeError when no such repository root exists (fail-loud).
-        
+
         Returns:
             The resulting ``Path``.
-        
+
         Raises:
-        
+            RuntimeError: If repository root not found from.
+
         """
         current = Path(file).resolve()
         if current.is_file():

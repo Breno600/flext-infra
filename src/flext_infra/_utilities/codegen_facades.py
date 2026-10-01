@@ -27,16 +27,17 @@ class FlextInfraUtilitiesCodegenFacades:
     @staticmethod
     def facade_module_path(pkg_dir: Path, family: str) -> Path | None:
         """Return the package module that declares facade letter ``family``.
-        
+
         The owner of a facade letter is the module that publishes it in its own
         ``__all__`` (generator law p.1); it is derived from the package, never
         from a letter-to-filename table. ``None`` means no module declares it.
-        
+
         Returns:
             The package module that declares facade letter ``family``.
-        
+
         Raises:
-        
+            ValueError: If facade letter.
+
         """
         owners = tuple(
             module
@@ -63,17 +64,18 @@ class FlextInfraUtilitiesCodegenFacades:
         family: Literal["u", "p"] = "u",
     ) -> str | None:
         """Render uniquely discovered utility or protocol owners without a registry.
-        
+
         Real ``u.<Namespace>.<method>()`` consumers select methods. Definitions
         Protocol references ``p.<Namespace>.<Type>`` select nested declarations.
         The corresponding private family selects unique owners. Existing
         facade content remains unchanged except for missing imports and bases.
-        
+
         Returns:
             The resulting ``str | None``.
-        
+
         Raises:
-        
+            ValueError: If utility owners in; or if ambiguous.
+
         """
         facade_path = cls.facade_module_path(pkg_dir, family)
         owners_dir = (

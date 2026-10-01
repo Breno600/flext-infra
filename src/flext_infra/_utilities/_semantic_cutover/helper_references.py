@@ -111,9 +111,10 @@ class FlextInfraUtilitiesSemanticHelperReferences(
         quoted_imports: t.MappingKV[Path, str],
     ) -> None:
         """Move the declaration in a closed snapshot and retain quoted imports.
-        
+
         Raises:
-        
+            ValueError: If moved helper import changed its quoted binding.
+
         """
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         request = move.request
@@ -339,12 +340,13 @@ class FlextInfraUtilitiesSemanticHelperReferences(
         original: p.Infra.RopePyModule,
     ) -> str:
         """Resolve reexports to the original declaration before MoveGlobal cuts it.
-        
+
         Returns:
             The resulting ``str``.
-        
+
         Raises:
-        
+            ValueError: If shared helper consumer has no Rope scope.
+
         """
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         project = move.request.rope_project

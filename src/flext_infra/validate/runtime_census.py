@@ -138,9 +138,10 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
     @staticmethod
     def _raise_package_walk_error(module_name: str) -> None:
         """Propagate the package import exception with its original traceback.
-        
+
         Raises:
-        
+            RuntimeError: If package discovery failed without an exception.
+
         """
         exception = sys.exception()
         if exception is None:

@@ -100,12 +100,14 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         include_dev: bool = True,
     ) -> t.StrSequence:
         """Read CUSTOM typing requirements and the canonical development group.
-        
+
         Returns:
             The resulting ``t.StrSequence``.
-        
+
         Raises:
-        
+            RuntimeError: If failed to read.
+            ValueError: If Dependency requirement must not be blank in.
+
         """
         pyproject = project_path / c.PYPROJECT_FILENAME
         if not pyproject.is_file():
@@ -362,12 +364,13 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         limits_path: Path | None = None,
     ) -> t.MappingKV[str, t.JsonValue]:
         """Load dependency limits configuration from TOML file.
-        
+
         Returns:
             The resulting ``t.MappingKV[str, t.JsonValue]``.
-        
+
         Raises:
-        
+            RuntimeError: If failed to load dependency limits from.
+
         """
         path = (
             limits_path

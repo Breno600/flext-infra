@@ -44,12 +44,13 @@ class FlextInfraUtilitiesRopeHelpers(FlextInfraUtilitiesRopeMethodOrderMixin):
         kind: str,
     ) -> t.IntPair | None:
         """Return the line span of the top-level ``kind`` definition named ``name``.
-        
+
         Returns:
             The line span of the top-level ``kind`` definition named ``name``.
-        
+
         Raises:
-        
+            ValueError: If unsupported definition kind.
+
         """
         if kind == "function":
             node_types: t.VariadicTuple[type[ast.stmt]] = (

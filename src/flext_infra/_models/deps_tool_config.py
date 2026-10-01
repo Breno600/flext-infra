@@ -119,12 +119,14 @@ class FlextInfraModelsDepsToolConfig(
             self,
         ) -> FlextInfraModelsDepsToolConfig.PytestWorkerCeiling:
             """Reject ambiguous (both or neither) ceiling forms.
-            
+
             Returns:
                 The resulting ``FlextInfraModelsDepsToolConfig.PytestWorkerCeiling``.
-            
+
             Raises:
-            
+                ValueError: If PytestWorkerCeiling requires exactly one of workers or
+                    cpu_fraction.
+
             """
             if (self.workers is None) == (self.cpu_fraction is None):
                 msg = "PytestWorkerCeiling requires exactly one of workers or cpu_fraction"
@@ -441,12 +443,23 @@ class FlextInfraModelsDepsToolConfig(
         @u.model_validator(mode="after")
         def _validate_execution_limits(self) -> Self:
             """Keep item and termination budgets inside the hard invocation cap.
-            
+
             Returns:
                 The resulting ``Self``.
-            
+
             Raises:
-            
+                ValueError: If pytest case timeout must be less than run timeout; or if
+                    pytest termination grace must be less than run timeout; or if pytest
+                    slow timeout must exceed the per-case timeout; or if pytest slow
+                    timeout must be less than run timeout; or if pytest run timeout must
+                    exceed the suite stop reserve; or if pytest runtime policy options
+                    are derived from typed fields; or if pytest progress args must
+                    expose verbose item progress; or if pytest ci-excluded-markers must
+                    be declared in standard-markers; or if pytest slow-marker must be
+                    declared in standard-markers; or if pytest external-gate-markers
+                    must be a non-empty subset of standard-markers; undeclared; or if
+                    pytest reporting args must not override runner-owned policy.
+
             """
             if self.case_timeout_seconds >= self.run_timeout_seconds:
                 msg = "pytest case timeout must be less than run timeout"

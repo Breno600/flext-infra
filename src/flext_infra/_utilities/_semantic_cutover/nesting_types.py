@@ -245,12 +245,15 @@ class FlextInfraUtilitiesSemanticNestingTypes(
     @classmethod
     def _checked_type_reference(cls, scope: p.Infra.RopeScope, expression: str) -> str:
         """Reject a destination import captured by an existing lexical binding.
-        
+
         Returns:
             The resulting ``str``.
-        
+
         Raises:
-        
+            TypeError: If quoted type destination is not an identifier chain.
+            ValueError: If quoted type scope has no declaring module; or if shadowed
+                quoted type destination.
+
         """
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         node = ast.parse(expression, mode="eval").body

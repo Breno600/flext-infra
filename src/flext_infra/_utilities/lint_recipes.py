@@ -189,12 +189,13 @@ class FlextInfraUtilitiesLintRecipes:
         path: Path,
     ) -> ast.FunctionDef | ast.AsyncFunctionDef:
         """Return the function whose docstring starts at ``line``.
-        
+
         Returns:
             The function whose docstring starts at ``line``.
-        
+
         Raises:
-        
+            ValueError: Always.
+
         """
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
@@ -211,12 +212,13 @@ class FlextInfraUtilitiesLintRecipes:
         path: Path,
     ) -> ast.FunctionDef | ast.AsyncFunctionDef:
         """Return the innermost function whose body spans ``line``.
-        
+
         Returns:
             The innermost function whose body spans ``line``.
-        
+
         Raises:
-        
+            ValueError: If ``not enclosing``.
+
         """
         enclosing = [
             node
@@ -236,12 +238,13 @@ class FlextInfraUtilitiesLintRecipes:
         path: Path,
     ) -> ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef:
         """Return the class or function defined at ``line``.
-        
+
         Returns:
             The class or function defined at ``line``.
-        
+
         Raises:
-        
+            ValueError: Always; or if ``node.body[0].lineno == node.lineno``.
+
         """
         for node in ast.walk(tree):
             if (
@@ -279,12 +282,13 @@ class FlextInfraUtilitiesLintRecipes:
         path: Path,
     ) -> t.Triple[int, int, str]:
         """Return the span and text of one triple-double-quoted docstring.
-        
+
         Returns:
             The span and text of one triple-double-quoted docstring.
-        
+
         Raises:
-        
+            ValueError: If ``not (body.startswith('"""") and body.endswith(""""') and
+                (len(body) >= 6))``.
         """
         value = docstring.value
         start = cls._offset(lines, value.lineno, value.col_offset)

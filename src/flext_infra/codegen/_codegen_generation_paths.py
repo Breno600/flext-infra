@@ -132,16 +132,17 @@ class FlextInfraCodegenGenerationPathsMixin:
     @staticmethod
     def _absolute_import_module(package: str, mod: str) -> str:
         """Resolve a package-relative module path to its absolute import form.
-        
+
         One leading dot names ``package`` itself, as Python resolves a relative
         import inside that package's initializer. Generated import statements
         are always absolute; only lazy-map data keeps the compact form.
-        
+
         Returns:
             The resulting ``str``.
-        
+
         Raises:
-        
+            ValueError: If relative module.
+
         """
         if not mod.startswith("."):
             return mod
@@ -226,14 +227,15 @@ class FlextInfraCodegenGenerationPathsMixin:
         items: t.StrPairSequence,
     ) -> None:
         """Reject a relative TYPE_CHECKING import with no local package context.
-        
+
         Same-project sibling, ancestor, and cousin owners use the same relative
         path in static declarations and the runtime lazy map. Cross-project
         owners remain absolute. Relative imports require a package context so
         Python can resolve their declared owner.
-        
+
         Raises:
-        
+            ValueError: If relative TYPE_CHECKING import.
+
         """
         if mod.startswith(".") and not local_package_root:
             exports = ", ".join(name for name, _ in items)

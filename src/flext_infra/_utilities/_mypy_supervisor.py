@@ -32,13 +32,16 @@ class FlextInfraMypyDarwinSupervisor:
     @classmethod
     def _signal_group(cls, pid: int, signum: int) -> None:
         """Signal one process group, surfacing absence as a typed domain outcome.
-        
+
         Raises ProcessGroupAbsent when a native accounting proof shows no live
         member (Darwin may retain an unsignalable zombie-only group): the
         absence is raised, never returned as a silent sentinel.
-        
+
         Raises:
-        
+            PermissionError: If ``cls._usage(pid)[1]``.
+            ProcessGroupAbsentError: If a ``ProcessLookupError`` is caught; or if a
+                ``PermissionError`` is caught.
+
         """
         try:
             os.killpg(pid, signum)
@@ -77,12 +80,13 @@ class FlextInfraMypyDarwinSupervisor:
         kill_after: int,
     ) -> int:
         """Run the owned checker with inherited streams and bounded group lifetime.
-        
+
         Returns:
             The resulting ``int``.
-        
+
         Raises:
-        
+            ValueError: If positive memory, timeout and kill-after are required.
+
         """
         from flext_infra import u
 

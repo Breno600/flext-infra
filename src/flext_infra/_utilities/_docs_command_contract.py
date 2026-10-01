@@ -140,15 +140,16 @@ class FlextInfraUtilitiesDocsCommandContractMixin:
         scope: m.Infra.DocScope,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
         """Collect live guide/standard issues through typed scope discovery.
-        
+
         ``iter_scope_markdown_files`` owns every formal scope exclusion; this
         detector carries no path allowlist or bypass.
-        
+
         Returns:
             The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
-        
+
         Raises:
-        
+            ValueError: If ``loaded.failure``.
+
         """
         from flext_infra import u
 

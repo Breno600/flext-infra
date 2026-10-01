@@ -36,16 +36,17 @@ class FlextInfraCodegenLazyInitPlannerParentsMixin:
         visited: set[str] | None = None,
     ) -> t.StrSequence:
         """Follow declared facade bases, including same-package compositions.
-        
+
         Importing a dependency does not make it a facade ancestor. Only bases
         contribute parents; walking every import leaked unrelated APIs such
         as regex helpers into workspace-dependent publication plans.
-        
+
         Returns:
             The resulting ``t.StrSequence``.
-        
+
         Raises:
-        
+            ValueError: If parent declaration source unavailable.
+
         """
         seen = visited if visited is not None else set()
         seen.add(str(module_path.resolve()))
@@ -140,16 +141,17 @@ class FlextInfraCodegenLazyInitPlannerParentsMixin:
 
     def _declared_parent_package(self, target: str) -> str:
         """Return the package a class base declares as facade parent.
-        
+
         A base names a DECLARED parent: it must resolve (indexed source or the
         active environment). Resolving nowhere is a fact to surface, never a
         silently dropped parent.
-        
+
         Returns:
             The package a class base declares as facade parent.
-        
+
         Raises:
-        
+            ValueError: If lazy-init.
+
         """
         package_name = self._package_name_from_target(target)
         if package_name:

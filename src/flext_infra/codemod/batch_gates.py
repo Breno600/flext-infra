@@ -180,12 +180,14 @@ class FlextInfraModGateEngine:
         rules: t.SequenceOf[Path],
     ) -> t.SequenceOf[t.Triple[Path, t.SequenceOf[Path], bool]]:
         """Group rules by fixture owner and mark the owners this root governs.
-        
+
         Returns:
             The resulting ``t.SequenceOf[t.Triple[Path, t.SequenceOf[Path], bool]]``.
-        
+
         Raises:
-        
+            ValueError: If discovered ast-grep rules have no fixture owner; or if rule
+                fixture scratch must be outside its source root.
+
         """
         governed_roots = tuple(
             project.resolve() for project in u.Infra.governed_project_roots(root)
@@ -222,9 +224,10 @@ class FlextInfraModGateEngine:
         regenerate_snapshots: bool = False,
     ) -> None:
         """Copy declared ast-grep inputs only, rejecting links and special files.
-        
+
         Raises:
-        
+            ValueError: If ast-grep fixture must be a regular file or directory.
+
         """
         directories = FlextInfraCodemodSnapshotReconciler.fixture_directories(
             config_root,
@@ -302,9 +305,11 @@ class FlextInfraModGateEngine:
         owner_rules: t.SequenceOf[Path],
     ) -> None:
         """Replace multi-document rule files with single-document temp copies.
-        
+
         Raises:
-        
+            RuntimeError: If ``parsed.failure``; or if ast-grep rule document missing
+                required id.
+
         """
         source_rules = set(owner_rules)
         directories = FlextInfraCodemodSnapshotReconciler.fixture_directories(

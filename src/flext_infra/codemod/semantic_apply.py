@@ -236,12 +236,13 @@ class FlextInfraCodemodSemanticApply:
         working: MutableMapping[Path, str],
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
         """Plan the future-annotations phase; the pipeline applies the edits.
-        
+
         Returns:
             The resulting ``t.VariadicTuple[m.Infra.SemanticMigrationEdit]``.
-        
+
         Raises:
-        
+            ValueError: If authenticated source disappeared during mod preflight.
+
         """
         future_annotations: list[m.Infra.SemanticMigrationEdit] = []
         for file_path in sorted({
@@ -340,12 +341,13 @@ class FlextInfraCodemodSemanticApply:
         preflight: m.Infra.ModScanReport,
     ) -> t.MappingKV[Path, str]:
         """Read governed sources and every Python path reported by preflight.
-        
+
         Returns:
             The resulting ``t.MappingKV[Path, str]``.
-        
+
         Raises:
-        
+            ValueError: If authenticated source disappeared during mod preflight.
+
         """
         project_roots = u.Infra.governed_project_roots(root)
         refactor_config = u.Infra.load_refactor_config(root)
@@ -420,9 +422,10 @@ class FlextInfraCodemodSemanticApply:
         changed: set[Path],
     ) -> None:
         """Compose validated edit plans in memory without partial effects.
-        
+
         Raises:
-        
+            ValueError: If semantic plans disagree for.
+
         """
         for edit in edits:
             current = sources.get(edit.file_path)
@@ -443,12 +446,13 @@ class FlextInfraCodemodSemanticApply:
         validator: Callable[[], p.Result[bool]] | None = None,
     ) -> p.Result[bool]:
         """Normalize and preflight every source before journaled publication.
-        
+
         Returns:
             The resulting ``p.Result[bool]``.
-        
+
         Raises:
-        
+            ValueError: If source changed after semantic preflight.
+
         """
         from ..refactor._census_apply_formatting import (
             FlextInfraRefactorCensusApplyFormattingMixin,

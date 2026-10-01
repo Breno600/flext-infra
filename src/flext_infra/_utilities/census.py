@@ -697,9 +697,10 @@ class FlextInfraUtilitiesRefactorCensus:
         file_paths: t.SequenceOf[Path],
     ) -> None:
         """Run one centralized post-write Rope cleanup for touched files.
-        
+
         Raises:
-        
+            RuntimeError: If ``cleanup_result.failure``.
+
         """
         try:
             rope.rope_project.validate()
@@ -916,16 +917,17 @@ class FlextInfraUtilitiesRefactorCensus:
     @staticmethod
     def clone_project_for_validation(source: Path, destination: Path) -> Path:
         """Copy a project tree into a scratch directory for post-apply validation.
-        
+
         Skips cache and virtual-env directories so the clone is minimal and the
         downstream rope workspace opens on source-only state. Returns the
         resolved destination path.
-        
+
         Returns:
             The resulting ``Path``.
-        
+
         Raises:
-        
+            NotADirectoryError: If clone source is not a directory.
+
         """
         resolved_source = source.resolve()
         resolved_destination = destination.resolve()

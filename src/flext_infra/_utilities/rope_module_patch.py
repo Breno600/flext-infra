@@ -128,12 +128,16 @@ class FlextInfraUtilitiesRopeModulePatch:
     @staticmethod
     def _rewrite_all_declaration(source: str, *, names: list[str]) -> str:
         """Publish exactly ``names`` through the canonical ``__all__`` rewrite.
-        
+
         Returns:
             The resulting ``str``.
-        
+
         Raises:
-        
+            ValueError: If ambiguous __all__ declarations during facade repair; or if
+                facade repair requires an explicit literal __all__ declaration; or if
+                __all__ declaration has no complete source span; or if __all__
+                declaration shares a source line with another statement.
+
         """
         declarations = [
             node

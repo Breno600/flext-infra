@@ -627,12 +627,16 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
 
     def _resource_for(self, file_path: Path) -> t.Infra.RopeResource:
         """Require a resource inside the active Rope workspace.
-        
+
         Returns:
             The resulting ``t.Infra.RopeResource``.
-        
+
         Raises:
-        
+            FileNotFoundError: If
+                ``resolved_path.is_relative_to(self._rope_repository_root.resolve()) and
+                (not resolved_path.exists())``.
+            ValueError: If path is outside the active rope workspace.
+
         """
         resource = self.resource(file_path)
         if resource is not None:

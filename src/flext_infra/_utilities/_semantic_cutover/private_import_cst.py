@@ -102,12 +102,14 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
         runtime_public_imports: frozenset[str],
     ) -> str:
         """Return a binding-proven rewrite with required public imports.
-        
+
         Returns:
             A binding-proven rewrite with required public imports.
-        
+
         Raises:
-        
+            ValueError: If type-only facade migration has no TYPE_CHECKING boundary; or
+                if ambiguous private import binding.
+
         """
         import libcst as cst
         from libcst.codemod import CodemodContext
@@ -131,12 +133,13 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
                 updated_node: cst.Name,
             ) -> cst.BaseExpression:
                 """Replace only names bound to one authenticated private identity.
-                
+
                 Returns:
                     The resulting ``cst.BaseExpression``.
-                
+
                 Raises:
-                
+                    ValueError: If ambiguous private import binding.
+
                 """
                 targets = {
                     replacement
@@ -236,12 +239,13 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
             @override
             def leave_If(self, original_node: cst.If, updated_node: cst.If) -> cst.If:
                 """Populate the first explicit ``TYPE_CHECKING`` block.
-                
+
                 Returns:
                     The resulting ``cst.If``.
-                
+
                 Raises:
-                
+                    TypeError: If TYPE_CHECKING boundary must use an indented block.
+
                 """
                 if (
                     self.inserted

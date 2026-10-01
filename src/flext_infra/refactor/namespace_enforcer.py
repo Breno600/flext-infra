@@ -72,15 +72,16 @@ class FlextInfraNamespaceEnforcer(FlextInfraNamespaceEnforcerProjectMixin):
         project_names: t.StrSequence | None = None,
     ) -> t.SequenceOf[Path]:
         """Resolve the selected namespace-enabled roots through the topology owner.
-        
+
         ``.`` names this repository itself; an unknown name is a caller error
         and escapes loud instead of silently enforcing nothing.
-        
+
         Returns:
             The resulting ``t.SequenceOf[Path]``.
-        
+
         Raises:
-        
+            ValueError: If ``resolved.failure``.
+
         """
         resolved = u.Infra.resolve_projects(self._repository_root, project_names or ())
         if resolved.failure:

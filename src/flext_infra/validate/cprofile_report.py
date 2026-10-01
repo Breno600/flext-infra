@@ -49,12 +49,13 @@ class FlextInfraCProfileReport(s[bool]):
     @u.model_validator(mode="after")
     def _validate_report_paths(self) -> Self:
         """Keep profile input and output inside the workspace report tree.
-        
+
         Returns:
             The resulting ``Self``.
-        
+
         Raises:
-        
+            ValueError: If cProfile path must stay under.
+
         """
         report_root = (self.repository_root / ".reports").resolve()
         for path in (
@@ -71,12 +72,16 @@ class FlextInfraCProfileReport(s[bool]):
 
     def _run_profiles(self) -> t.VariadicTuple[Path]:
         """Validate run identity and artifact digests without consulting latest.
-        
+
         Returns:
             The resulting ``t.VariadicTuple[Path]``.
-        
+
         Raises:
-        
+            ValueError: If profile run receipt has no valid report directory; or if
+                profile run receipt does not match the recorded run context; or if
+                profile selection plan does not match its run directory; or if stale or
+                mismatched profile run receipt.
+
         """
         if self.run_receipt is None:
             return (self.profile,)

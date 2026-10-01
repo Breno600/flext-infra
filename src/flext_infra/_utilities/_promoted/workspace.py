@@ -24,9 +24,10 @@ class FlextInfraUtilitiesPromotedWorkspace:
     @staticmethod
     def promoted_fail(template: str, **fields: t.Scalar | Path) -> NoReturn:
         """Raise the promoted registry error rendered from one message template.
-        
+
         Raises:
-        
+            PromotedRegistryError: Always.
+
         """
         raise c.Infra.PromotedRegistryError(template.format(**fields))
 
@@ -106,12 +107,15 @@ class FlextInfraUtilitiesPromotedWorkspace:
     @staticmethod
     def promoted_main(script_file: str | Path, handler: Callable[[], int]) -> NoReturn:
         """Run a promoted Python command only when the dispatcher launched it.
-        
+
         The guard writes the same canonical line as the shell guard, so consumer
         gates match one contract for ``.sh`` and ``.py`` commands.
-        
+
         Raises:
-        
+            SystemExit: Always; or if ``settings.Infra.flext_command_dispatched !=
+                c.Infra.PromotedSelector.DISPATCHED or settings.Infra.flext_command_path
+                != str(Path(script_file).resolve())``.
+
         """
         from flext_infra import settings
 

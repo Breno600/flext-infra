@@ -75,12 +75,13 @@ class FlextInfraNamespaceValidator(s[bool]):
     @staticmethod
     def _line(entry: m.Infra.ModScanFinding) -> int:
         """Return the 1-based starting line of one finding.
-        
+
         Returns:
             The 1-based starting line of one finding.
-        
+
         Raises:
-        
+            TypeError: If ast-grep finding without a start line.
+
         """
         start = entry.range["start"]
         line = start.get("line") if isinstance(start, Mapping) else None
@@ -92,12 +93,13 @@ class FlextInfraNamespaceValidator(s[bool]):
     @staticmethod
     def _message(entry: m.Infra.ModScanFinding) -> str:
         """Return the rule's message for one finding.
-        
+
         Returns:
             The rule's message for one finding.
-        
+
         Raises:
-        
+            TypeError: If ast-grep finding without a message.
+
         """
         message = entry.payload.get("message")
         if not isinstance(message, str):

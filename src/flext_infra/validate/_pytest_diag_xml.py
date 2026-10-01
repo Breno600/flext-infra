@@ -29,12 +29,13 @@ class FlextInfraPytestDiagXmlMixin:
         value: p.Infra.XmlElementLike | t.JsonValue,
     ) -> p.Infra.XmlElementLike:
         """Require the typed stdlib element API from defusedxml.
-        
+
         Returns:
             The resulting ``p.Infra.XmlElementLike``.
-        
+
         Raises:
-        
+            TypeError: If invalid XML element.
+
         """
         if not isinstance(value, p.Infra.XmlElementLike):
             msg = f"invalid XML element: {type(value).__name__}"
@@ -101,9 +102,10 @@ class FlextInfraPytestDiagXmlMixin:
     @staticmethod
     def _parse_xml(junit_path: Path, diag: m.Infra.DiagResult) -> None:
         """Parse the required JUnit XML and populate diagnostics.
-        
+
         Raises:
-        
+            ValueError: If JUnit XML has no root element.
+
         """
         root_raw = DefusedET.parse(junit_path).getroot()
         if root_raw is None:

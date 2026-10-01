@@ -81,12 +81,13 @@ class FlextInfraModelsMiseToolchain:
         @u.model_validator(mode="after")
         def _validate_required_custom_types(self) -> Self:
             """Reject ambiguous duplicate type declarations at the owner.
-            
+
             Returns:
                 The resulting ``Self``.
-            
+
             Raises:
-            
+                ValueError: If beads required_custom_types must be unique.
+
             """
             if len(set(self.required_custom_types)) != len(self.required_custom_types):
                 msg = "beads required_custom_types must be unique"
@@ -386,19 +387,20 @@ class FlextInfraModelsMiseToolchain:
         @u.model_validator(mode="after")
         def _validate_version_selectors(self) -> Self:
             """Reject build-identity selectors mise/aube cannot resolve.
-            
+
             A value like ``0.45.3~7a027ead`` is an aube lock build-identity
             directory name, not a published package version; aube rejects it
             ("no version ... matches range") and the whole toolchain lifecycle
             (make upg/gen/setup, and therefore CI) breaks. Only real selectors
             (``latest``, a major.minor line, or a released version) may reach
             the lock.
-            
+
             Returns:
                 The resulting ``Self``.
-            
+
             Raises:
-            
+                ValueError: If ``offenders``.
+
             """
             offenders = sorted(
                 field
@@ -515,12 +517,19 @@ class FlextInfraModelsMiseToolchain:
         @u.model_validator(mode="after")
         def _validate_environment_contract(self) -> Self:
             """Reject shell-unsafe, ambiguous, or escaping generated values.
-            
+
             Returns:
                 The resulting ``Self``.
-            
+
             Raises:
-            
+                ValueError: If Mise bootstrap environment variables must be globally
+                    unique; or if Mise pin header lines must be comments; or if invalid
+                    Mise bootstrap environment variable; or if Mise storage variable
+                    must own the persistent root; or if Mise pin header and reader must
+                    be literal-shell safe; or if Mise fixed environment values must be
+                    literal-shell safe; or if relative path must not be absolute or
+                    escape.
+
             """
             groups = (
                 self.fixed_environment,

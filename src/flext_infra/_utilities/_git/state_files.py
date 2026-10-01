@@ -27,16 +27,17 @@ class FlextInfraUtilitiesGitStateFilesMixin(
     @classmethod
     def _state_blob_payload(cls, root: Path, oid: str) -> bytes:
         """Read one blob through a reaped one-shot cat-file process.
-        
+
         The shared odb batch stream races its final end-of-file read against
         subprocess teardown during garbage collection; a one-shot process
         fully reaped by ``communicate`` leaves no lingering handle behind.
-        
+
         Returns:
             The resulting ``bytes``.
-        
+
         Raises:
-        
+            ValueError: If cat-file failed for.
+
         """
         proc = cls._repo(root).git.cat_file("blob", oid, as_process=True)
         payload, stderr = proc.communicate()
@@ -78,9 +79,10 @@ class FlextInfraUtilitiesGitStateFilesMixin(
         allowed: t.SequenceOf[m.Infra.GitWorktreeFileState | None],
     ) -> None:
         """Hash the observed bytes and accept only an allowed captured state.
-        
+
         Raises:
-        
+            ValueError: If owned file changed before guarded effect.
+
         """
         if observed.content is None and None in allowed:
             return

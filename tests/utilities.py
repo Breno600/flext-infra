@@ -57,12 +57,13 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
         @staticmethod
         def number(value: t.JsonValue) -> float:
             """Narrow one parsed payload value to a real number.
-            
+
             Returns:
                 The resulting ``float``.
-            
+
             Raises:
-            
+                TypeError: If payload value is not a number.
+
             """
             tm.that(isinstance(value, (int, float)), eq=True)
             if not isinstance(value, (int, float)):
@@ -85,16 +86,17 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
         @staticmethod
         def toml_payload(content: str) -> t.JsonMapping:
             """Parse TOML text through the canonical reader, never ``tomllib``.
-            
+
             The facade returns an absent mapping for unparseable text; a test
             that asked for a payload has already decided the text is one, so
             the absence is a defect rather than a value to carry forward.
-            
+
             Returns:
                 The resulting ``t.JsonMapping``.
-            
+
             Raises:
-            
+                ValueError: If TOML payload is not parseable.
+
             """
             parsed = u.Cli.toml_mapping_from_text(content)
             if parsed is None:

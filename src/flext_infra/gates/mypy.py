@@ -126,12 +126,14 @@ class FlextInfraMypyGate(FlextInfraGate):
         check_dirs: t.StrSequence,
     ) -> t.StrSequence:
         """Build check command.
-        
+
         Returns:
             The resulting ``t.StrSequence``.
-        
+
         Raises:
-        
+            ValueError: If Mypy profile output requires an absolute path in an existing
+                directory.
+
         """
         cfg = self._resolve_config(project_dir, ctx)
         profile_output = u.Cli.process_env().get(c.Infra.MYPY_PROFILE_OUTPUT_ENV)
@@ -160,9 +162,14 @@ class FlextInfraMypyGate(FlextInfraGate):
         targets: t.StrSequence,
     ) -> None:
         """Account for every submitted target from Mypy's native build trace.
-        
+
         Raises:
-        
+            TypeError: If Mypy native source path is not a string.
+            ValueError: If Mypy native build trace contains no selected sources; or if
+                Mypy native build trace lacks completion evidence; or if Malformed Mypy
+                native source entry; or if Mypy native report did not account for
+                target; or if Mypy native report contains an unsubmitted source.
+
         """
         _ = ctx
         source_lines = (

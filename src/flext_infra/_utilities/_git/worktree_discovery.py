@@ -151,12 +151,13 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
         member_path: str,
     ) -> t.Pair[str, str]:
         """Read URL and branch for one submodule from .gitmodules.
-        
+
         Returns:
             The resulting ``t.Pair[str, str]``.
-        
+
         Raises:
-        
+            ValueError: If Git submodule path must be declared exactly once.
+
         """
         with GitConfigParser(file_or_files=gitmodules, read_only=True) as config:
             matching_sections = tuple(
@@ -185,12 +186,13 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
     @classmethod
     def git_submodule_paths(cls, repository_root: Path) -> p.Result[t.SequenceOf[Path]]:
         """Resolve every initialized recursive submodule path.
-        
+
         Returns:
             The resulting ``p.Result[t.SequenceOf[Path]]``.
-        
+
         Raises:
-        
+            ValueError: If malformed git submodule status line.
+
         """
         try:
             repo = cls._repo(repository_root)

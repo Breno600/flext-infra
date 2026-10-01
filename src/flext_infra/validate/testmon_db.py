@@ -31,12 +31,14 @@ class FlextInfraTestmonDbInspector(s[m.Infra.TestmonCacheState]):
     @u.model_validator(mode="after")
     def _validate_absolute_db(self) -> Self:
         """Reject relative or in-checkout database paths.
-        
+
         Returns:
             The resulting ``Self``.
-        
+
         Raises:
-        
+            ValueError: If testmon db_path must be absolute; or if testmon database must
+                be outside the repository checkout.
+
         """
         if not self.db_path.is_absolute():
             msg = "testmon db_path must be absolute"
@@ -49,12 +51,14 @@ class FlextInfraTestmonDbInspector(s[m.Infra.TestmonCacheState]):
     @staticmethod
     def digest_file(path: Path) -> str | None:
         """Return a stable digest; absence alone denotes an unseeded cache.
-        
+
         Returns:
             A stable digest; absence alone denotes an unseeded cache.
-        
+
         Raises:
-        
+            ValueError: If testmon db must not be a symlink; or if testmon db must be a
+                regular file; or if testmon db must not be empty.
+
         """
         if path.is_symlink():
             msg = f"testmon db must not be a symlink: {path}"
@@ -72,9 +76,11 @@ class FlextInfraTestmonDbInspector(s[m.Infra.TestmonCacheState]):
     @staticmethod
     def _validate_open_db(connection: sqlite3.Connection) -> None:
         """Raise on the first invalid SQLite cache property.
-        
+
         Raises:
-        
+            RuntimeError: If testmon wal_checkpoint busy=; or if testmon
+                integrity_check=; or if testmon schema empty.
+
         """
         checkpoint = connection.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
         if checkpoint is None or int(checkpoint[0]) != 0:
@@ -96,12 +102,15 @@ class FlextInfraTestmonDbInspector(s[m.Infra.TestmonCacheState]):
 
     def _inspect_existing(self) -> p.Result[m.Infra.TestmonCacheState]:
         """Validate one on-disk DB after pytest has closed it.
-        
+
         Returns:
             The resulting ``p.Result[m.Infra.TestmonCacheState]``.
-        
+
         Raises:
-        
+            FileNotFoundError: If ``not path.exists()``.
+            ValueError: If testmon db must not be a symlink; or if testmon db must be a
+                regular file; or if testmon db must not be empty.
+
         """
         path = self.db_path
         if path.is_symlink():

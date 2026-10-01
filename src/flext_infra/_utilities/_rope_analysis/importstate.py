@@ -534,16 +534,18 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         infer_missing: bool,
     ) -> t.StrPair | None:
         """Resolve a published local class's alias from declarations and its MRO.
-        
+
         The spelling of a module or class supplies no ownership information.
         An existing exported alias wins; otherwise the nearest declaring bases
         determine the missing declaration that the repair must publish locally.
-        
+
         Returns:
             The resulting ``t.StrPair | None``.
-        
+
         Raises:
-        
+            ValueError: If module has no declaration scope; or if ambiguous facade
+                declaration in.
+
         """
         module = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
         exports = FlextInfraUtilitiesRopeAnalysisExports.public_export_names_source(
@@ -624,12 +626,13 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         class_name: str,
     ) -> t.StrSequence:
         """Prove nested namespace inheritance by Rope scope and attribute identity.
-        
+
         Returns:
             The resulting ``t.StrSequence``.
-        
+
         Raises:
-        
+            ValueError: If cyclic facade namespace inheritance at.
+
         """
         module = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
         target = module.get_attribute(class_name).get_object()
@@ -671,12 +674,13 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         visited: frozenset[int],
     ) -> frozenset[str]:
         """Follow real base identities, stopping at each nearest declaration.
-        
+
         Returns:
             The resulting ``frozenset[str]``.
-        
+
         Raises:
-        
+            ValueError: If cyclic facade inheritance at.
+
         """
         identity = id(target)
         if identity in visited:

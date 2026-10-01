@@ -197,12 +197,13 @@ class FlextInfraUtilitiesDocsScopeBuildMixin(
     @staticmethod
     def _discover_projects(repository_root: Path) -> t.SequenceOf[m.Infra.ProjectInfo]:
         """Discover workspace projects or raise a typed value error.
-        
+
         Returns:
             The resulting ``t.SequenceOf[m.Infra.ProjectInfo]``.
-        
+
         Raises:
-        
+            ValueError: If ``discovered_result.failure``.
+
         """
         discovered_result = FlextInfraUtilitiesDocsScope.resolve_projects(
             repository_root,

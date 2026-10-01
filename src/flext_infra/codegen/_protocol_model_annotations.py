@@ -88,12 +88,14 @@ class FlextInfraCodegenProtocolModelAnnotations:
         target: ProtocolModelTarget,
     ) -> str:
         """Render one field/property type without exposing a concrete model.
-        
+
         Returns:
             The resulting ``str``.
-        
+
         Raises:
-        
+            TypeError: If unsupported protocol annotation; or if unsupported protocol
+                annotation origin; or if unsupported Callable parameters.
+
         """
         if isinstance(annotation, ForwardRef):
             return cls._render_forward(annotation.__forward_arg__, target)
@@ -224,12 +226,13 @@ class FlextInfraCodegenProtocolModelAnnotations:
     @classmethod
     def _first_annotated_argument(cls, annotation: str) -> str:
         """Extract the first top-level argument from ``Annotated[...]``.
-        
+
         Returns:
             The resulting ``str``.
-        
+
         Raises:
-        
+            ValueError: If malformed Annotated protocol field.
+
         """
         content = annotation[len(cls._ANNOTATED_PREFIX) : -1]
         depth = 0
@@ -246,12 +249,13 @@ class FlextInfraCodegenProtocolModelAnnotations:
     @classmethod
     def _validate(cls, rendered: str) -> str:
         """Reject escape-hatch types from generated public contracts.
-        
+
         Returns:
             The resulting ``str``.
-        
+
         Raises:
-        
+            TypeError: If forbidden generated protocol annotation.
+
         """
         tokens = frozenset(cls._TOKEN_RE.findall(rendered))
         banned = tokens.intersection(cls._BANNED)

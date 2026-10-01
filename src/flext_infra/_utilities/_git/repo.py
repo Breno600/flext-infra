@@ -140,15 +140,16 @@ class FlextInfraUtilitiesGitRepo:
     @classmethod
     def _repo(cls, repo_root: Path) -> Repo:
         """Open a repo and unwrap, raising on failure.
-        
+
         This is the canonical helper for semantic methods that prefer
         try/except → ``r[...].fail()`` over ``Result`` chaining.
-        
+
         Returns:
             The resulting ``Repo``.
-        
+
         Raises:
-        
+            OSError: If ``opened.failure``.
+
         """
         opened = cls._open_repo(repo_root)
         if opened.failure:

@@ -88,12 +88,16 @@ class FlextInfraPytestRunnerExecution(
         verify_inventory: bool = True,
     ) -> m.Infra.PytestSelectionPlan:
         """Return the typed testmon selection and its manifest owner.
-        
+
         Returns:
             The typed testmon selection and its manifest owner.
-        
+
         Raises:
-        
+            RuntimeError: If testmon selection failed (; or if pytest reported no
+                collection with a nonempty manifest; or if complete pytest inventory
+                must contain at least one test; or if testmon selected node IDs outside
+                the complete collection inventory.
+
         """
         artifact = "testmon-inventory" if complete else "testmon-selection"
         selection_log = report_dir / f"{artifact}.log"
@@ -266,9 +270,10 @@ class FlextInfraPytestRunnerExecution(
         outcome: p.Cli.ProcessOutcome,
     ) -> None:
         """Preserve the process owner's causal fields even when JUnit is absent.
-        
+
         Raises:
-        
+            RuntimeError: If pytest.
+
         """
         recorded = m.Cli.ProcessOutcome.model_validate(outcome, from_attributes=True)
         receipt = report_dir / f"{phase}-outcome.json"
@@ -327,12 +332,14 @@ class FlextInfraPytestRunnerExecution(
         cache_hit: bool = False,
     ) -> p.Result[int]:
         """Reject incomplete evidence and publish one bounded summary.
-        
+
         Returns:
             The resulting ``p.Result[int]``.
-        
+
         Raises:
-        
+            RuntimeError: If zero execution is accepted only for a verified incremental
+                cache hit; or if a testmon cache hit cannot contain executed tests.
+
         """
         diagnostics = self._diagnostics(report_dir).unwrap()
         accounting = self._accounting(
@@ -521,12 +528,15 @@ class FlextInfraPytestRunnerExecution(
         execution_mode: c.Infra.PytestExecutionMode,
     ) -> p.Result[int]:
         """Run one testmon phase while holding the database lease.
-        
+
         Returns:
             The resulting ``p.Result[int]``.
-        
+
         Raises:
-        
+            RuntimeError: If empty incremental selection requires an integrity-checked
+                cache; or if testmon cache is unusable; or if testmon preflight rejected
+                cache.
+
         """
         report_dir = self._report_directory()
         self._write_run_context(

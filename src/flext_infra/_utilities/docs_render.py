@@ -26,12 +26,14 @@ class FlextInfraUtilitiesDocsRender:
     @staticmethod
     def docs_markdown_line_length() -> int:
         """Read the same prose width used by the formatter and Markdown gate.
-        
+
         Returns:
             The resulting ``int``.
-        
+
         Raises:
-        
+            TypeError: If MD013 must declare the generated prose line length.
+            ValueError: If MD013 line_length must be a positive integer.
+
         """
         rule = config.Infra.tooling.tools.markdown.rules["MD013"]
         if not isinstance(rule, dict):
@@ -46,12 +48,13 @@ class FlextInfraUtilitiesDocsRender:
     @staticmethod
     def _repository_name(repo_url: str) -> str:
         """Return the ``owner/repository`` identity declared by one URL.
-        
+
         Returns:
             The ``owner/repository`` identity declared by one URL.
-        
+
         Raises:
-        
+            ValueError: If repository URL does not identify owner/repository.
+
         """
         normalized = repo_url.strip().rstrip("/").removesuffix(".git")
         if not normalized:
@@ -197,16 +200,17 @@ class FlextInfraUtilitiesDocsRender:
         is_dir: bool = False,
     ) -> str:
         """Return a resolvable governance link for README or project docs.
-        
+
         READMEs render on GitHub and can use relative paths; generated
         ``docs/index.md`` pages are built by MkDocs with ``docs_dir`` isolation,
         so governance pointers must be absolute GitHub URLs.
-        
+
         Returns:
             A resolvable governance link for README or project docs.
-        
+
         Raises:
-        
+            ValueError: If documentation repository owner must resolve exactly once.
+
         """
         if FlextInfraUtilitiesDocs.docs_is_secure_web_url(prefix):
             kind = "tree" if is_dir else "blob"

@@ -37,12 +37,13 @@ class FlextInfraCodemodGate(FlextInfraGate):
         ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
         """Run ast-grep only on this repository's first-class source roots.
-        
+
         Returns:
             The resulting ``m.Infra.GateExecution``.
-        
+
         Raises:
-        
+            FileNotFoundError: If ``not targets``.
+
         """
         targets = (
             *self._existing_check_dirs(project_dir),
@@ -60,12 +61,13 @@ class FlextInfraCodemodGate(FlextInfraGate):
         ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
         """Scan every requested file against every elected provider ruleset.
-        
+
         Returns:
             The resulting ``m.Infra.GateExecution``.
-        
+
         Raises:
-        
+            FileNotFoundError: If ``not path.is_file()``.
+
         """
         if not files:
             return self.check(project_dir, ctx)
@@ -88,12 +90,13 @@ class FlextInfraCodemodGate(FlextInfraGate):
         started: float,
     ) -> m.Infra.GateExecution:
         """Keep whole-project and file-scoped scans on the same native contract.
-        
+
         Returns:
             The resulting ``m.Infra.GateExecution``.
-        
+
         Raises:
-        
+            RuntimeError: If codemod rule planning failed without a diagnostic.
+
         """
         planned = u.Infra.codemod_rule_plan(project_dir)
         if planned.failure:
@@ -211,12 +214,15 @@ class FlextInfraCodemodGate(FlextInfraGate):
         ruleset: m.Infra.CodemodRuleset,
     ) -> t.Pair[m.Infra.AstGrepReport, str]:
         """Validate findings and derive their exact native terminal diagnostic.
-        
+
         Returns:
             The resulting ``t.Pair[m.Infra.AstGrepReport, str]``.
-        
+
         Raises:
-        
+            ValueError: If ``(scan.outcome.raw_return_code == 1) != bool(error_count)``;
+                or if ``any((finding.rule_id not in ruleset.rule_ids for finding in
+                report.root))``.
+
         """
         report = m.Infra.AstGrepReport.model_validate_json(scan.stdout)
         error_count = sum(finding.severity == "error" for finding in report.root)

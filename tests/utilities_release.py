@@ -46,15 +46,16 @@ class TestsFlextInfraUtilitiesReleaseMixin:
         initialize_project_git: bool = False,
     ) -> Path:
         """Create a release workflow workspace fixture.
-        
+
         ``version`` seeds the root ``pyproject.toml``, the version SSOT the
         release protocol reads and is the only writer of.
-        
+
         Returns:
             The resulting ``Path``.
-        
+
         Raises:
-        
+            RuntimeError: If ``rendered_gitleaks.failure``.
+
         """
         workspace = root / "workspace"
         workspace.mkdir(parents=True, exist_ok=True)

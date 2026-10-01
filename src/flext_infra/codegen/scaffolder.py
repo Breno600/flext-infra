@@ -191,13 +191,14 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
         request: m.Infra.ScaffoldDirRequest,
     ) -> t.Pair[t.MutableSequenceOf[str], t.MutableSequenceOf[str]]:
         """Generate missing modules in a directory and return file lists.
-        
+
         Returns:
             The resulting ``t.Pair[t.MutableSequenceOf[str],
                 t.MutableSequenceOf[str]]``.
-        
+
         Raises:
-        
+            OSError: If writing scaffold.
+
         """
         files_created: t.MutableSequenceOf[str] = []
         files_skipped: t.MutableSequenceOf[str] = []

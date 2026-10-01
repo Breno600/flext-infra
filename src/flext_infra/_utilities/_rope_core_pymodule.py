@@ -63,12 +63,13 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
         resource: t.Infra.RopeResource,
     ) -> t.Infra.RopePyModule:
         """Resolve one concrete rope PyModule through the validated API boundary.
-        
+
         Returns:
             The resulting ``t.Infra.RopePyModule``.
-        
+
         Raises:
-        
+            TypeError: If rope project returned non-PyModule.
+
         """
         pymodule = rope_project.get_pymodule(resource)
         if not FlextInfraUtilitiesRopeRuntime.pymodule(pymodule):
@@ -83,12 +84,13 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
         resource: t.Infra.RopeResource,
     ) -> t.Infra.RopeModuleImports:
         """Resolve the module import table, raising when rope cannot build it.
-        
+
         Returns:
             The resulting ``t.Infra.RopeModuleImports``.
-        
+
         Raises:
-        
+            RuntimeError: If rope module import table unavailable for.
+
         """
         try:
             module_imports = FlextInfraUtilitiesRopeRuntime.module_imports_for_pymodule(

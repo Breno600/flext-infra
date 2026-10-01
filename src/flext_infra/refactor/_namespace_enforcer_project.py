@@ -64,12 +64,13 @@ class FlextInfraNamespaceEnforcerProjectMixin:
     @staticmethod
     def _collect_py_files(*, project_root: Path) -> t.SequenceOf[Path]:
         """Collect Python files for scanning.
-        
+
         Returns:
             The resulting ``t.SequenceOf[Path]``.
-        
+
         Raises:
-        
+            RuntimeError: If ``py_files_result.failure``.
+
         """
         py_files_result = u.Infra.iter_python_files(
             m.Infra.SourceScanRequest(project_roots=(project_root,)),
@@ -187,9 +188,10 @@ class FlextInfraNamespaceEnforcerProjectMixin:
         imports: t.MappingKV[Path, t.MappingKV[t.StrPair, set[str]]],
     ) -> None:
         """Move each captured name from its source import to its target module.
-        
+
         Raises:
-        
+            ValueError: If import relocation target is not a rope resource.
+
         """
         for file_path, moves in imports.items():
             resource = u.Infra.fetch_python_resource(self._rope_project, file_path)
@@ -211,9 +213,10 @@ class FlextInfraNamespaceEnforcerProjectMixin:
         classes: t.SequenceOf[tuple[Path, str, str, int]],
     ) -> None:
         """Move each captured class to the module of its facade family.
-        
+
         Raises:
-        
+            ValueError: If facade-class relocation requires a project layout.
+
         """
         if not classes:
             return
@@ -274,12 +277,14 @@ class FlextInfraNamespaceEnforcerProjectMixin:
     @staticmethod
     def _finding_lines(finding: m.Infra.ModScanFinding) -> t.IntPair:
         """Return the 1-based inclusive line span of one finding.
-        
+
         Returns:
             The 1-based inclusive line span of one finding.
-        
+
         Raises:
-        
+            TypeError: If ast-grep finding without a line range; or if ast-grep finding
+                with a non-integer line.
+
         """
         start = finding.range["start"]
         end = finding.range["end"]
@@ -296,12 +301,13 @@ class FlextInfraNamespaceEnforcerProjectMixin:
     @staticmethod
     def _captured(finding: m.Infra.ModScanFinding, variable: str) -> str:
         """Return one metavariable a relocation rule captured or derived.
-        
+
         Returns:
             One metavariable a relocation rule captured or derived.
-        
+
         Raises:
-        
+            TypeError: If ast-grep finding without metaVariables; or if relocation rule.
+
         """
         metavariables = finding.payload["metaVariables"]
         if not isinstance(metavariables, Mapping):

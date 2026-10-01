@@ -69,12 +69,13 @@ class FlextInfraModelsRelease:
         @u.model_validator(mode="after")
         def validate_kind_filename(self) -> Self:
             """Require the declared artifact kind to match its immutable filename.
-            
+
             Returns:
                 The resulting ``Self``.
-            
+
             Raises:
-            
+                ValueError: If artifact kind does not match filename.
+
             """
             name = Path(self.path).name
             valid = (self.kind == "wheel" and name.endswith(".whl")) or (
@@ -138,12 +139,13 @@ class FlextInfraModelsRelease:
         @u.model_validator(mode="after")
         def validate_provenance(self) -> Self:
             """Require source provenance to be complete whenever it is available.
-            
+
             Returns:
                 The resulting ``Self``.
-            
+
             Raises:
-            
+                ValueError: If build record source provenance must be complete.
+
             """
             values = (
                 self.commit_oid,
@@ -230,12 +232,18 @@ class FlextInfraModelsRelease:
         @u.model_validator(mode="after")
         def validate_manifest(self) -> Self:
             """Require totals, project identity, outcomes, and artifacts to agree.
-            
+
             Returns:
                 The resulting ``Self``.
-            
+
             Raises:
-            
+                ValueError: If build report total does not match record count; or if
+                    build report failures do not match record outcomes; or if build
+                    report contains duplicate projects; or if non-dry build report
+                    contains no projects; or if failed build contains artifacts; or if
+                    dry-run build contains artifacts; or if successful build lacks wheel
+                    and sdist; or if successful build lacks source provenance.
+
             """
             if self.total != len(self.records):
                 msg = "build report total does not match record count"

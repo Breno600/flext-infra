@@ -24,12 +24,13 @@ class FlextInfraEnsureRuffConfigPhase:
     @staticmethod
     def _workspace_project_namespaces(project_dir: Path) -> t.StrSequence:
         """Discover child project packages when generating repository root settings.
-        
+
         Returns:
             The resulting ``t.StrSequence``.
-        
+
         Raises:
-        
+            ValueError: If ``discovered.failure``.
+
         """
         if not (project_dir / c.PYPROJECT_FILENAME).is_file():
             return ()
@@ -55,16 +56,17 @@ class FlextInfraEnsureRuffConfigPhase:
     @staticmethod
     def _workspace_exclusion_globs(project_dir: Path) -> t.StrSequence:
         """Return immutable repository and explicit exclusion path globs.
-        
+
         Content-only repositories are foreign, read-only trees and therefore
         never enter Ruff. Explicit ``exclusions`` extend that same typed scope
         for non-repository paths without duplicating repository declarations.
-        
+
         Returns:
             Immutable repository and explicit exclusion path globs.
-        
+
         Raises:
-        
+            ValueError: If ``paths.failure``.
+
         """
         if not (project_dir / c.PYPROJECT_FILENAME).is_file():
             return ()
@@ -76,7 +78,7 @@ class FlextInfraEnsureRuffConfigPhase:
     @staticmethod
     def _analysis_exclusion_root_set(project_dir: Path) -> frozenset[str]:
         """First segments of the detector's declared analysis exclusions.
-        
+
         Deliberately a DIFFERENT authority from
         ``FlextInfraToolTablesPhase.excluded_roots`` (the manifest
         non-participant set used by the per-file-ignores projection): this
@@ -85,12 +87,13 @@ class FlextInfraEnsureRuffConfigPhase:
         Like the manifest authority it is order-independent: a repository
         declares a retired tree once and every root-scoped projection
         converges.
-        
+
         Returns:
             The resulting ``frozenset[str]``.
-        
+
         Raises:
-        
+            ValueError: If ``paths.failure``.
+
         """
         if not (project_dir / c.PYPROJECT_FILENAME).is_file():
             return frozenset()

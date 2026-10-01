@@ -55,12 +55,18 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
         reported_count: int,
     ) -> p.Result[m.Infra.TestmonRunAccounting]:
         """Parse typed executed/deselected accounting from durable artifacts.
-        
+
         Returns:
             The resulting ``p.Result[m.Infra.TestmonRunAccounting]``.
-        
+
         Raises:
-        
+            FileNotFoundError: If ``not junit.exists()``.
+            RuntimeError: Always; or if non-coverage accounting requires the durable
+                selection plan; or if testmon selected node IDs outside the complete
+                collection inventory.
+            ValueError: If JUnit must be a regular file; or if ``junit.stat().st_size ==
+                0``; or if ``root is None``.
+
         """
         if not junit.exists():
             raise FileNotFoundError(junit)
@@ -164,9 +170,10 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
     @staticmethod
     def _collection_diagnostics(report_log: Path) -> None:
         """Require complete collection evidence before accepting a selection.
-        
+
         Raises:
-        
+            RuntimeError: If pytest collection contains blocking findings.
+
         """
         diagnostics = FlextInfraPytestDiagExtractor.extract_report_log(
             report_log,
@@ -227,12 +234,15 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
 
     def _validate_coverage(self, report_dir: Path) -> p.Result[bool]:
         """Require a non-empty coverage report; the percentage is never a gate.
-        
+
         Returns:
             The resulting ``p.Result[bool]``.
-        
+
         Raises:
-        
+            FileNotFoundError: If ``not coverage.exists()``.
+            ValueError: If coverage artifact must be a regular file; or if
+                ``coverage.stat().st_size == 0``.
+
         """
         coverage = report_dir / "coverage.xml"
         if not coverage.exists():

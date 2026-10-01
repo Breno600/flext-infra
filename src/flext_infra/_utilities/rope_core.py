@@ -97,12 +97,14 @@ class FlextInfraUtilitiesRopeCore(
         project_roots: t.SequenceOf[Path] | None = None,
     ) -> Generator[t.Infra.RopeProject]:
         """Open one Rope project and always close it through the core boundary.
-        
+
         Yields:
             Each ``t.Infra.RopeProject``.
-        
+
         Raises:
-        
+            ValueError: If Rope project roots must be nonempty and remain inside the
+                declared workspace.
+
         """
         resolved = repository_root.resolve()
         roots = (

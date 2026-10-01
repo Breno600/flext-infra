@@ -514,12 +514,13 @@ class FlextInfraUtilitiesDocsApi:
     @staticmethod
     def public_contract(project_root: Path, package_name: str) -> t.JsonMapping:
         """Build the public API contract from pyproject, exports, and Rope validation.
-        
+
         Returns:
             The resulting ``t.JsonMapping``.
-        
+
         Raises:
-        
+            ValueError: If ``metadata_result.failure``.
+
         """
         # Retain flext-core's validated metadata object; no shadow DTO.
         metadata_result = FlextInfraUtilitiesPyproject.read_project_metadata_result(

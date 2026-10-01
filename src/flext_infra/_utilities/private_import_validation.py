@@ -28,12 +28,14 @@ class FlextInfraUtilitiesPrivateImportValidation:
         removals: t.MappingKV[str, set[str]],
     ) -> None:
         """Require old imports/bindings gone and public imports present.
-        
+
         ``removals`` is every import binding that must disappear: the plan's
         private removals, its superseded public roots, and relocated exports.
-        
+
         Raises:
-        
+            ValueError: If private binding residue; or if private import residue from;
+                or if public facade import.
+
         """
         tree = ast.parse(source, filename=str(file_path))
         for module, symbols in removals.items():

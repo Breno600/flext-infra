@@ -101,12 +101,18 @@ class FlextInfraPytestRunnerBase(s[int]):
     @u.model_validator(mode="after")
     def _validate_paths(self) -> Self:
         """Require repository-contained target and report paths.
-        
+
         Returns:
             The resulting ``Self``.
-        
+
         Raises:
-        
+            ValueError: If test target must be an existing directory; or if testmon
+                database path must be absolute; or if testmon database must be outside
+                the checkout; or if ``path.is_absolute() or not path.parts or any((part
+                in {'', '.', '..'} for part in path.parts)) or any((character in raw for
+                character in '\x00\r\n\\'))``; or if ``not
+                resolved.is_relative_to(self.root.resolve())``.
+
         """
         for name, path in (("target", self.target), ("reports", self.reports)):
             raw = str(path)
@@ -137,12 +143,14 @@ class FlextInfraPytestRunnerBase(s[int]):
     @staticmethod
     def _memory_gb() -> int:
         """Read physical memory from the operating-system owner.
-        
+
         Returns:
             The resulting ``int``.
-        
+
         Raises:
-        
+            ValueError: If physical memory capacity is unavailable; or if physical
+                memory is below one GiB.
+
         """
         page_size = os.sysconf("SC_PAGE_SIZE")
         pages = os.sysconf("SC_PHYS_PAGES")
@@ -224,19 +232,21 @@ class FlextInfraPytestRunnerBase(s[int]):
 
     def parallel_worker_budget(self, policy: PytestPolicy) -> int:
         """Bound xdist by configuration, CPU, and physical memory.
-        
+
         The per-project override map (``[project].name`` → absolute workers or
         CPU fraction) is where a consumer whose measured suite cannot fit the
         single-worker process boundary declares its ceiling; the fleet-wide
         default stays one worker so ``max-failures: 1`` remains exact
         everywhere else. CPU capacity is the process-scoped count (the cgroup
         affinity the runner actually gets), not the host-wide count.
-        
+
         Returns:
             The resulting ``int``.
-        
+
         Raises:
-        
+            ValueError: If CPU capacity is unavailable; or if physical memory cannot
+                support one pytest worker.
+
         """
         ceiling = self._declared_worker_ceiling(policy)
         cpu_count = os.process_cpu_count()

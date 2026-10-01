@@ -37,12 +37,13 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
     @classmethod
     def facade_classes(cls, package: str) -> t.StrMapping:
         """Map every letter ``package`` publishes to its declared facade class.
-        
+
         Returns:
             The resulting ``t.StrMapping``.
-        
+
         Raises:
-        
+            ValueError: If facade package is not importable for derivation.
+
         """
         modules = FlextInfraUtilitiesPrivateImportFacades.source_modules(
             {},
@@ -69,12 +70,13 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         letter: str,
     ) -> str:
         """Return the class ``letter`` names, or raise with the missing proof.
-        
+
         Returns:
             The class ``letter`` names, or raise with the missing proof.
-        
+
         Raises:
-        
+            ValueError: If ``owner is None``.
+
         """
         owner = cls._facade_letter_class(modules, module, letter)
         if owner is None:
@@ -93,12 +95,14 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         letter: str,
     ) -> str | None:
         """Return the declared class of a letter that ``module`` publishes.
-        
+
         Returns:
             The declared class of a letter that ``module`` publishes.
-        
+
         Raises:
-        
+            ValueError: If ``cls._facade_declared_class(modules, module, owner,
+                frozenset()) != resolved``.
+
         """
         resolved = cls._facade_declared_class(modules, module, letter, frozenset())
         if resolved is None:
@@ -125,12 +129,13 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         visiting: frozenset[str],
     ) -> t.Pair[str, str] | None:
         """Follow the last module-scope binding of ``name`` to its class.
-        
+
         Returns:
             The resulting ``t.Pair[str, str] | None``.
-        
+
         Raises:
-        
+            ValueError: If cyclic facade binding.
+
         """
         identity = f"{module}.{name}"
         if identity in visiting:

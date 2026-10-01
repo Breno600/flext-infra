@@ -66,16 +66,17 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
     @staticmethod
     def _git_text(output: bytes | str | tuple[int, bytes, str]) -> str:
         """Normalize one GitPython command result to text at its typed boundary.
-        
+
         GitPython types every command result as ``bytes | str |`` the
         extended-output tuple; the tuple shape only exists behind
         ``with_extended_output``, which the checkpoint commands never request.
-        
+
         Returns:
             The resulting ``str``.
-        
+
         Raises:
-        
+            TypeError: If git command returned extended output without its contract.
+
         """
         if isinstance(output, bytes):
             return output.decode(c.Cli.ENCODING_DEFAULT)
@@ -93,12 +94,14 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
         message: str,
     ) -> str:
         """Stage all state and create a synthetic checkpoint commit-tree.
-        
+
         Returns:
             The resulting ``str``.
-        
+
         Raises:
-        
+            OSError: If ``parent_result.failure``; or if checkpoint parent has invalid
+                author identity.
+
         """
         repo = cls._repo(worktree_root)
         if excluded:

@@ -260,9 +260,10 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
         after_apply: m.Infra.ModScanReport,
     ) -> None:
         """Reject unresolved rewrites while preserving valid rule cascades.
-        
+
         Raises:
-        
+            RuntimeError: If fix!=match.
+
         """
         # Check that actionable findings were actually resolved
         before_actionable = {
