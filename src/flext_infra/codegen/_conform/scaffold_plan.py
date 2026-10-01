@@ -78,7 +78,6 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
                 root_modules=project.root_modules,
                 root_packages=project.root_packages,
                 packaged_data_paths=project.packaged_data_paths,
-                packaged_data_excludes=project.packaged_data_excludes,
                 planned_data_files=tuple(
                     destination for _, destination in scaffold_entries
                 ),

@@ -135,8 +135,8 @@ endif
 # === SECTION: verb dispatch (managed) ===
 # Source: config:make.verbs and the canonical gate vocabulary. A verb exists
 # only in the profiles it declares (make.verbs[].profiles).
-PUBLIC_VERBS := help setup upg build check smells test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status verify-clean docs clean bootstrap-candidate release-plan release-version release-tag release-build publication gen initialize mod mod-snapshots waza duplication sonarcloud-sync
-BUILTIN_VERBS := help setup upg build check smells test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status verify-clean docs clean bootstrap-candidate release-plan release-version release-tag release-build publication gen initialize mod mod-snapshots waza duplication sonarcloud-sync
+PUBLIC_VERBS := help setup upg build check test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status docs clean release-plan release-version release-tag release-build publication gen bootstrap-candidate initialize mod mod-snapshots waza duplication sonarcloud-sync
+BUILTIN_VERBS := help setup upg build check test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status docs clean release-plan release-version release-tag release-build publication gen bootstrap-candidate initialize mod mod-snapshots waza duplication sonarcloud-sync
 SCRIPT_VERBS :=
 
 CUSTOM_MAKEFILE := $(MAKEFILE_ROOT)/custom.mk
@@ -813,7 +813,7 @@ REQUIRE_WORKSPACE_ENVIRONMENT = case "$(PROJECT_ROOT)/" in \
 	"$(RUNTIME_ROOT)/"*) ;; \
 	*) printf 'ERROR: runtime workspace does not contain this project: %s\n' "$(RUNTIME_ROOT)" >&2; exit 2 ;; \
 	esac; \
-	for environment_path in "$(RUNTIME_VENV)" "$(RUNTIME_BIN)" "$(PROJECT_ROOT)/.venv" "$(PROJECT_ROOT)/.venv/bin"; do \
+	for environment_path in "$(RUNTIME_VENV)" "$(RUNTIME_BIN)" "$(PROJECT_ROOT)/.venv"; do \
 		if [ -L "$$environment_path" ]; then \
 			printf 'ERROR: workspace environment must be physical, not a symlink: %s\n' "$$environment_path" >&2; exit 2; \
 		fi; \
@@ -877,7 +877,7 @@ define _lock_project
 		mkdir -p "$${stage}/mirror$$relative"; \
 		cp "$$member/pyproject.toml" "$${stage}/mirror$$relative/pyproject.toml"; \
 	done < "$${stage}/.members"; \
-	if [ "$(1)" != "--upgrade --refresh" ] && [ -f "$$workspace/uv.lock" ]; then cp "$$workspace/uv.lock" "$${stage}/mirror/uv.lock"; fi; \
+	if [ -f "$$workspace/uv.lock" ]; then cp "$$workspace/uv.lock" "$${stage}/mirror/uv.lock"; fi; \
 	$(UV) lock --project "$${stage}/mirror" $(1); \
 	$(UV) lock --check --project "$${stage}/mirror"; \
 	if [ -e "$$candidate" ]; then printf 'ERROR: lock staging path already exists: %s\n' "$$candidate" >&2; exit 2; fi; \
@@ -917,17 +917,6 @@ check: _builtin_require_workspace
 _activated-check: _builtin_require_environment
 
 	$(call RUN_PUBLIC,check)
-
-
-
-
-smells: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-smells
-
-.PHONY: _activated-smells
-_activated-smells: _builtin_require_environment
-
-	$(call RUN_PUBLIC,smells)
 
 
 
@@ -1031,17 +1020,6 @@ _activated-status: _builtin_require_environment
 
 
 
-verify-clean: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-verify-clean
-
-.PHONY: _activated-verify-clean
-_activated-verify-clean: _builtin_require_environment
-
-	$(call RUN_PUBLIC,verify-clean)
-
-
-
-
 docs: _builtin_require_workspace
 	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-docs
 
@@ -1056,17 +1034,6 @@ _activated-docs: _builtin_require_environment
 clean:
 
 	$(call RUN_PUBLIC,clean)
-
-
-
-
-bootstrap-candidate: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-bootstrap-candidate
-
-.PHONY: _activated-bootstrap-candidate
-_activated-bootstrap-candidate: _builtin_require_environment
-
-	$(call RUN_PUBLIC,bootstrap-candidate)
 
 
 
@@ -1133,6 +1100,17 @@ gen: _builtin_require_workspace _builtin_require_environment
 .PHONY: _activated-gen
 _activated-gen: _builtin_require_environment
 	$(call RUN_PUBLIC_POST,gen)
+
+
+
+
+bootstrap-candidate: _builtin_require_workspace
+	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-bootstrap-candidate
+
+.PHONY: _activated-bootstrap-candidate
+_activated-bootstrap-candidate: _builtin_require_environment
+
+	$(call RUN_PUBLIC,bootstrap-candidate)
 
 
 
@@ -1251,9 +1229,7 @@ _builtin-help:
 
 	@printf '  %-16s %s\n' 'build' 'Build the project distribution artifacts.';
 
-	@printf '  %-16s %s\n' 'check' 'Run the configured non-test gates except the dedicated smells audit.';
-
-	@printf '  %-16s %s\n' 'smells' 'Run the strict code-smell audit as a dedicated gate.';
+	@printf '  %-16s %s\n' 'check' 'Run every configured non-test gate.';
 
 	@printf '  %-16s %s\n' 'test' 'Run incremental tests through the persistent testmon cache.';
 
@@ -1273,13 +1249,9 @@ _builtin-help:
 
 	@printf '  %-16s %s\n' 'status' 'Report the resolved runtime and repository state.';
 
-	@printf '  %-16s %s\n' 'verify-clean' 'Verify that generated documentation and managed artifacts leave the Git tree clean.';
-
 	@printf '  %-16s %s\n' 'docs' 'Generate, fix, format, and check documentation.';
 
 	@printf '  %-16s %s\n' 'clean' 'Remove every declared disposable artifact.';
-
-	@printf '  %-16s %s\n' 'bootstrap-candidate' 'Bootstrap declared candidate worktrees with this branch-matched generator.';
 
 	@printf '  %-16s %s\n' 'release-plan' 'Resolve the release decision through the public protocol.';
 
@@ -1292,6 +1264,8 @@ _builtin-help:
 	@printf '  %-16s %s\n' 'publication' 'Publish only receipt-attested release artifacts.';
 
 	@printf '  %-16s %s\n' 'gen' 'Regenerate every managed projection atomically.';
+
+	@printf '  %-16s %s\n' 'bootstrap-candidate' 'Conform the sibling candidate worktree declared in this repository manifest.';
 
 	@printf '  %-16s %s\n' 'initialize' 'Materialize the declared package initializer graph.';
 
@@ -1601,16 +1575,15 @@ _builtin_build_artifacts:
 # An absent CI token runs every active default gate.
 _builtin_check_all: _builtin_require_environment
 	@set -eu; \
-printf '%s\n' 'INFO: SUSPENDED check gate namespace; authority=flext-itpd1.3; operator decision 2026-09-27 (keep plan v12 suspension); flext-infra#913; reason=Fleet namespace backlog (141 findings here) is repaired after the fleet is green; the gate returns with its Rope single-cycle owner fix.'; \
-gates="lint,pyrefly,mypy,pyright,silent-failure,deferred-self-reference,security,markdown,loc-cap,boundary,runtime-census,tier-whitelist,index-declarations,codemod,layout,canonical-alias,direnv,duplication"; \
+gates="lint,pyrefly,mypy,pyright,silent-failure,deferred-self-reference,security,markdown,loc-cap,boundary,runtime-census,namespace,tier-whitelist,index-declarations,smells,codemod,layout,canonical-alias,direnv,duplication"; \
 		if [ "$(strip $(CI))" = "Y" ]; then \
-			gates="lint,mypy,pyright,silent-failure,deferred-self-reference,security,markdown,loc-cap,boundary,runtime-census,tier-whitelist,index-declarations,codemod,layout,canonical-alias,direnv,duplication"; \
-			printf 'INFO: CI=Y runs check gates: lint mypy pyright silent-failure deferred-self-reference security markdown loc-cap boundary runtime-census tier-whitelist index-declarations codemod layout canonical-alias direnv duplication\n'; \
+			gates="lint,mypy,pyright,silent-failure,deferred-self-reference,security,markdown,loc-cap,boundary,runtime-census,namespace,tier-whitelist,index-declarations,smells,codemod,layout,canonical-alias,direnv,duplication"; \
+			printf 'INFO: CI=Y runs check gates: lint mypy pyright silent-failure deferred-self-reference security markdown loc-cap boundary runtime-census namespace tier-whitelist index-declarations smells codemod layout canonical-alias direnv duplication\n'; \
 		elif [ "$(strip $(CI))" = "N" ]; then \
 			gates="pyrefly"; \
 			printf 'INFO: CI=N runs check gates: pyrefly\n'; \
 		else \
-			printf 'INFO: default context runs check gates: lint pyrefly mypy pyright silent-failure deferred-self-reference security markdown loc-cap boundary runtime-census tier-whitelist index-declarations codemod layout canonical-alias direnv duplication\n'; \
+			printf 'INFO: default context runs check gates: lint pyrefly mypy pyright silent-failure deferred-self-reference security markdown loc-cap boundary runtime-census namespace tier-whitelist index-declarations smells codemod layout canonical-alias direnv duplication\n'; \
 		fi; \
 		if [ -z "$$gates" ]; then \
 			printf 'ERROR: no active check gates remain in the selected context\n' >&2; \
@@ -1707,14 +1680,27 @@ profile-gen-report: _builtin_require_environment
 		'import pstats, sys; pstats.Stats(sys.argv[1]).sort_stats("cumtime").print_stats(50)' \
 		"$(PROFILE_REPORTS_DIR)/lazy-init.pstats"
 
-# Profile the cold canonical pytest execution through its thin entrypoint
-# for startup diagnosis (flext-itpd1.3.7): the same persistent testmon database
+# Profile the installed refactor CLI against the same repository and rule
+# catalog as mod. The dry run measures planning without publishing changes.
+.PHONY: profile-mod
+profile-mod: _builtin_require_environment
+	@mkdir -p "$(PROFILE_REPORTS_DIR)"
+	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
+		'import atexit, cProfile, sys; from flext_infra.cli import main; profile = cProfile.Profile(); atexit.register(profile.dump_stats, sys.argv[1]); status = profile.runcall(main, sys.argv[2:]); raise SystemExit(status)' \
+		"$(PROFILE_REPORTS_DIR)/mod.pstats" refactor mod \
+		--repository-root "$(PROJECT_ROOT)"
+
+.PHONY: profile-mod-report
+profile-mod-report: _builtin_require_environment
+	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
+		'import pstats, sys; pstats.Stats(sys.argv[1]).sort_stats("cumtime").print_stats(50)' \
+		"$(PROFILE_REPORTS_DIR)/mod.pstats"
+
+# Profile the canonical pytest entry (flext_infra._pytest_entry) under cProfile
+# for cold-run diagnosis (flext-itpd1.3.7): the same persistent testmon database
 # guard and environment as the bounded gate, but deliberately NOT wrapped in
-# PYTEST_BOUNDED. The runner's own deadline still applies. Central collection
-# children also write profiles beside their manifests and print their paths.
-# The stdlib-only adapter starts profiling before runner/model/pytest imports.
-# The parent sidecar binds the exact run;
-# reports never combine a parent profile with the mutable latest.txt pointer.
+# PYTEST_BOUNDED so the diagnostic completes and dumps its profile; the gate's
+# own timeout on `make test` stays untouched.
 .PHONY: profile-test
 profile-test: _builtin_require_environment
 	@mkdir -p "$(PROFILE_REPORTS_DIR)"
@@ -1724,13 +1710,15 @@ case "$$database" in /*) ;; *) printf 'ERROR: persistent testmon database requir
 case "$$database" in "$(PROJECT_ROOT)"/*) printf 'ERROR: persistent testmon database must be outside the checkout: %s\n' "$$database" >&2; exit 2 ;; esac; \
 case "$$database" in "$${TMPDIR:-/tmp}"/*|/tmp/*) printf 'ERROR: persistent testmon database must not live under the temporary directory: %s\n' "$$database" >&2; exit 2 ;; esac; \
 mkdir -p "$$(dirname "$$database")"; \
-	TESTMON_DATAFILE="$$database" $(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -m flext_infra._pytest_entry profile \
+	TESTMON_DATAFILE="$$database" $(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
+		'import cProfile, sys; path = sys.argv[1]; sys.argv = [sys.argv[0]]; from flext_infra._pytest_entry import FlextInfraPytestEntry; profile = cProfile.Profile(); status = profile.runcall(FlextInfraPytestEntry.main); profile.dump_stats(path); raise SystemExit(status)' \
 		"$(PROFILE_REPORTS_DIR)/pytest.pstats"
 
 .PHONY: profile-test-report
 profile-test-report: _builtin_require_environment
-	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -m flext_infra._cprofile_entry \
-		"$(PROFILE_REPORTS_DIR)/pytest.pstats" "$(PROFILE_REPORTS_DIR)/pytest.pstats.json"
+	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
+		'import pstats, sys; pstats.Stats(sys.argv[1]).sort_stats("cumtime").print_stats(50)' \
+		"$(PROFILE_REPORTS_DIR)/pytest.pstats"
 
 _builtin_status_diagnostics: _builtin_require_environment
 	@printf 'profile=%s\nproject=%s\nruntime=%s\n' \
@@ -1861,10 +1849,8 @@ _builtin-mod: _builtin_mod_apply
 _builtin-mod-snapshots: _builtin_mod_snapshots
 _builtin-waza:
 	@cd "$(PROJECT_ROOT)" && $(PROJECT_TOOL_EXEC) waza check --no-update-check
-
-_builtin-smells:
-	@$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "smells"
-
 _builtin-duplication:
 	@$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "duplication"
 _builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all
+
+

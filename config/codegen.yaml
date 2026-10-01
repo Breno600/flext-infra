@@ -361,7 +361,12 @@ Infra:
       # Gates whose mutating side `make fmt` drives (formatters). Their
       # read-only side runs in `make check`; `make fix` never repeats them
       # (single-pass verb law: one operation per tool per verb).
+      # `format` (ruff) is a mutating gate owned by `make fmt` per the gate
+      # registry contract (flext-38p39): check never mutates, fix never
+      # formats — without it the ruff-format surface has no verb home and
+      # drift survives a green check until `make mod` validates.
       fmt_gates: [format, markdown-format]
+      check_gate_suspensions: []
       # One filename and the root-relative runner paths; the runner places the
       # database in platformdirs' external per-worktree cache.
       testmon_cache:
@@ -565,9 +570,7 @@ Infra:
         - name: mod
           description: Apply the declared structural codemods; committed rule-test snapshots are verified, never rewritten.
         - name: mod-text
-          description: Apply only declared Sed text rules with syntax preflight and atomic publication.
-        - name: mod-text-candidate
-          description: Replay Sed rules in the single candidate worktree declared by the workspace manifest.
+          description: Replay only declarative Sed text rules through their authenticated transaction.
         # The explicit snapshot regeneration (flext-itpd1.7): `mod` only verifies
         # snapshots, so a changed rule output lands as a reviewed commit.
         - name: mod-snapshots

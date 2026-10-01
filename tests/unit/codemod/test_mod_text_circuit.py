@@ -9,7 +9,7 @@ import pytest
 from flext_tests import tm
 
 from flext_core import r
-from flext_infra import c, m, p, u
+from flext_infra import c, config, m, p, u
 from flext_infra.codegen import (
     FlextInfraCodegenMiseArtifacts,
     FlextInfraCodegenTransaction,
@@ -23,145 +23,96 @@ if TYPE_CHECKING:
 class TestsFlextInfraModTextGateEngine:
     """Exercise the declarative sed-by-list engine through its public scan."""
 
-    def test_declared_markdown_rule_replays_and_reaches_fixed_point(
+    def test_external_consumer_inherits_provider_and_composes_local_rules(
         self, mod_workspace: Path
     ) -> None:
-        """An authored Markdown guide is an authenticated public text input."""
-        guide = mod_workspace / "docs" / "guide.md"
-        tm.ok(u.Cli.ensure_dir(guide.parent))
-        tm.ok(u.Cli.atomic_write_text_file(guide, "Old guidance.\n"))
+        """A standalone consumer sees the packaged catalogue and its own overlay."""
+        provider_root = config.ssot_config_dir().parent
+        provider = tm.ok(FlextInfraModTextGateEngine.load_rules(provider_root))
+        inherited = tm.ok(FlextInfraModTextGateEngine.load_rules(mod_workspace))
+        tm.that(inherited, eq=provider)
+
+        local_id = "consumer-owned-rewrite"
         tm.ok(
             u.Cli.atomic_write_text_file(
                 mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
-                "rules:\n"
-                "  - id: guide-contract\n"
-                "    include: ['docs/*.md']\n"
-                "    find: 'Old guidance\\.'\n"
-                "    replace: 'Current guidance.'\n",
+                (
+                    "rules:\n"
+                    f"  - id: {local_id}\n"
+                    "    include: ['src/**']\n"
+                    "    find: 'before'\n"
+                    "    replace: 'after'\n"
+                ),
+            )
+        )
+        sample = mod_workspace / "src" / "mod_workspace" / "consumer.py"
+        tm.ok(u.Cli.atomic_write_text_file(sample, 'value = "before"\n'))
+
+        composed = tm.ok(FlextInfraModTextGateEngine.load_rules(mod_workspace))
+        tm.that(composed[:-1], eq=provider)
+        tm.that(composed[-1].rule_id, eq=local_id)
+        applied = tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=True))
+        tm.that(any(entry.rule_id == local_id for entry in applied.entries), eq=True)
+        tm.that(sample.read_text(encoding="utf-8"), eq='value = "after"\n')
+        fixed_point = tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=False))
+        tm.that(fixed_point.actionable, eq=0)
+
+    def test_declared_markdown_include_is_published_and_reaches_fixed_point(
+        self, mod_workspace: Path
+    ) -> None:
+        """An authored documentation path outside Python targets is governed."""
+        page = mod_workspace / "docs" / "guide.md"
+        tm.ok(u.Cli.atomic_write_text_file(page, "Use the old public name.\n"))
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
+                (
+                    "rules:\n"
+                    "  - id: documentation-public-name\n"
+                    "    include: ['docs/guide.md']\n"
+                    "    find: 'old public name'\n"
+                    "    replace: 'new public name'\n"
+                ),
             )
         )
 
+        planned = tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=False))
+        tm.that(planned.actionable, eq=1)
+        tm.that(planned.files, eq=frozenset({Path("docs/guide.md")}))
         tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=True))
-        tm.that(guide.read_text(encoding="utf-8"), eq="Current guidance.\n")
-        tm.that(
-            tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=False)).findings,
-            eq=0,
-        )
+        tm.that(page.read_text(encoding="utf-8"), eq="Use the new public name.\n")
+        fixed_point = tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=False))
+        tm.that(fixed_point.findings, eq=0)
 
-    def test_declared_markdown_symlink_fails_before_publication(
+    def test_external_catalogue_id_collision_fails_before_publication(
         self, mod_workspace: Path
     ) -> None:
-        """A declared guide cannot route publication through a symbolic link."""
-        source = mod_workspace / "guide-source.md"
-        tm.ok(u.Cli.atomic_write_text_file(source, "Old guidance.\n"))
-        guide = mod_workspace / "docs" / "guide.md"
-        tm.ok(u.Cli.ensure_dir(guide.parent))
-        guide.symlink_to(source)
+        """A local rule cannot silently replace the provider's declared rule."""
+        provider = tm.ok(
+            FlextInfraModTextGateEngine.load_rules(config.ssot_config_dir().parent)
+        )
+        collision_id = provider[0].rule_id if provider else "consumer-owned-rewrite"
+        local_collision = (
+            "" if provider else f"  - id: {collision_id}\n    find: 'after'\n"
+        )
+        first, _ = self._publication_inputs(mod_workspace)
+        original = first.read_bytes()
         tm.ok(
             u.Cli.atomic_write_text_file(
                 mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
-                "rules:\n"
-                "  - id: guide-contract\n"
-                "    include: ['docs/guide.md']\n"
-                "    find: 'Old guidance\\.'\n"
-                "    replace: 'Current guidance.'\n",
+                (
+                    "rules:\n"
+                    f"  - id: {collision_id}\n"
+                    "    find: 'before'\n"
+                    "    replace: 'after'\n"
+                    f"{local_collision}"
+                ),
             )
         )
 
-        tm.fail(
-            FlextInfraModTextGateEngine.scan(mod_workspace, fix=True),
-            has="text Markdown source must be physical",
-        )
-        tm.that(source.read_text(encoding="utf-8"), eq="Old guidance.\n")
-
-    def test_capture_guard_rejects_wrong_keyword_before_publication(
-        self, mod_workspace: Path
-    ) -> None:
-        """A broad regex cannot rewrite a different keyword by accident."""
-        source = mod_workspace / "sample.py"
-        tm.ok(u.Cli.atomic_write_text_file(source, "token = 1\n"))
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
-                "rules:\n"
-                "  - id: guarded-keyword\n"
-                "    include: ['sample.py']\n"
-                "    find: '(?P<keyword>[a-z]+) = 1'\n"
-                "    capture_equals: {keyword: secret}\n"
-                "    replace: 'secret = 2'\n",
-            )
-        )
-        before = source.read_bytes()
-
-        with pytest.raises(ValueError, match="capture keyword expected"):
-            FlextInfraModTextGateEngine.scan(mod_workspace, fix=True)
-
-        tm.that(source.read_bytes(), eq=before)
-
-    def test_capture_guard_accepts_declared_keyword_and_fixed_point(
-        self, mod_workspace: Path
-    ) -> None:
-        """A guarded rule rewrites once, then observes no further match."""
-        source = mod_workspace / "sample.py"
-        tm.ok(u.Cli.atomic_write_text_file(source, "secret = 1\n"))
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
-                "rules:\n"
-                "  - id: guarded-keyword\n"
-                "    include: ['sample.py']\n"
-                "    find: '(?P<keyword>[a-z]+) = 1'\n"
-                "    capture_equals: {keyword: secret}\n"
-                "    replace: 'secret = 2'\n",
-            )
-        )
-
-        tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=True))
-        tm.that(source.read_text(encoding="utf-8"), eq="secret = 2\n")
-        tm.that(
-            tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=False)).findings,
-            eq=0,
-        )
-
-    def test_capture_guard_requires_a_declared_named_group(
-        self, mod_workspace: Path
-    ) -> None:
-        """An invalid catalogue fails before scanning any candidate source."""
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
-                "rules:\n"
-                "  - id: missing-capture\n"
-                "    find: '[a-z]+ = 1'\n"
-                "    capture_equals: {keyword: secret}\n",
-            )
-        )
-
-        tm.fail(
-            FlextInfraModTextGateEngine.load_rules(mod_workspace),
-            has="unknown regex captures",
-        )
-
-    def test_invalid_python_replacement_never_publishes_batch(
-        self, mod_workspace: Path
-    ) -> None:
-        """Syntax preflight rejects a broken rule before its transaction starts."""
-        first, second = self._publication_inputs(mod_workspace)
-        u.Cli.atomic_write_text_file(
-            mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
-            (
-                "rules:\n"
-                "  - id: invalid-python-replacement\n"
-                "    find: 'value = \"before\"'\n"
-                "    replace: 'value ='\n"
-            ),
-        ).unwrap()
-        originals = (first.read_bytes(), second.read_bytes())
-
-        with pytest.raises(SyntaxError):
-            FlextInfraModTextGateEngine.scan(mod_workspace, fix=True)
-
-        tm.that((first.read_bytes(), second.read_bytes()), eq=originals)
+        result = FlextInfraModTextGateEngine.scan(mod_workspace, fix=True)
+        tm.fail(result, has="duplicate text rule id")
+        tm.that(first.read_bytes(), eq=original)
 
     @staticmethod
     def _publication_inputs(root: Path) -> t.Pair[Path, Path]:
@@ -207,6 +158,36 @@ class TestsFlextInfraModTextGateEngine:
 
         tm.that(first.read_bytes(), eq=original)
         tm.that(second.read_bytes(), eq=b"\xff")
+
+    def test_invalid_python_replacement_rejects_entire_batch(
+        self, mod_workspace: Path
+    ) -> None:
+        """A malformed multiline rewrite never publishes any source file."""
+        first, second = self._publication_inputs(mod_workspace)
+        original_first, original_second = first.read_bytes(), second.read_bytes()
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
+                (
+                    "rules:\n"
+                    "  - id: valid-first\n"
+                    "    include: ['src/mod_workspace/first.py']\n"
+                    "    find: 'before'\n"
+                    "    replace: 'after'\n"
+                    "  - id: malformed-second\n"
+                    "    include: ['src/mod_workspace/second.py']\n"
+                    "    find: 'value = \"before\"'\n"
+                    "    replace: |2-\n"
+                    "        value = (\n"
+                ),
+            )
+        )
+
+        with pytest.raises(SyntaxError):
+            FlextInfraModTextGateEngine.scan(mod_workspace, fix=True)
+
+        tm.that(first.read_bytes(), eq=original_first)
+        tm.that(second.read_bytes(), eq=original_second)
 
     def test_linked_destination_identity_never_publishes_the_batch(
         self, mod_workspace: Path

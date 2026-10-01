@@ -177,8 +177,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             eq=False,
         )
         tm.that(
-            f"/{FIXTURE_DISTRIBUTION_DATA_DIR}/**"
-            in self._sdist_include(infra_git_repo),
+            FIXTURE_DISTRIBUTION_DATA_DIR in self._sdist_only_include(infra_git_repo),
             eq=False,
         )
 
@@ -266,8 +265,8 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             self._wheel_force_include(infra_git_repo),
             eq={catalog: f"{package_name}/{catalog}"},
         )
-        tm.that(self._sdist_force_include(infra_git_repo), eq={catalog: catalog})
-        tm.that("/config/**" in self._sdist_include(infra_git_repo), eq=False)
+        tm.that(catalog in self._sdist_only_include(infra_git_repo), eq=True)
+        tm.that("config" in self._sdist_only_include(infra_git_repo), eq=False)
 
     @pytest.mark.slow
     @pytest.mark.parametrize(
@@ -301,23 +300,6 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         )
         before = (infra_git_repo / c.PYPROJECT_FILENAME).read_bytes()
         with pytest.raises(FileNotFoundError, match="packaged data"):
-            self._conform_self(infra_git_repo)
-        tm.that((infra_git_repo / c.PYPROJECT_FILENAME).read_bytes(), eq=before)
-
-    @pytest.mark.slow
-    def test_missing_exclusion_fails_before_effects(self, infra_git_repo: Path) -> None:
-        """An exclusion typo cannot leave a private file inside the archive."""
-        self._prepare_project(
-            infra_git_repo,
-            package_config=False,
-            packaged_data_paths=("infra",),
-            packaged_data_excludes=("infra/missing.json",),
-        )
-        tm.ok(
-            u.Cli.atomic_write_text_file(infra_git_repo / "infra" / "site.yml", "---\n")
-        )
-        before = (infra_git_repo / c.PYPROJECT_FILENAME).read_bytes()
-        with pytest.raises(ValueError, match="invalid packaged data exclusion"):
             self._conform_self(infra_git_repo)
         tm.that((infra_git_repo / c.PYPROJECT_FILENAME).read_bytes(), eq=before)
 
@@ -370,6 +352,14 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         """Direct wheel, sdist and rebuilt wheel carry the same selected bytes."""
         catalog = "config/deployment.yaml"
         asset = "infra/ansible/site.yml"
+        self._prepare_project(
+            infra_git_repo, package_config=False, packaged_data_paths=(catalog, "infra")
+        )
+        tm.ok(u.Cli.atomic_write_text_file(infra_git_repo / catalog, "profiles: {}\n"))
+        tm.ok(
+            u.Cli.atomic_write_text_file(infra_git_repo / asset, "---\n- hosts: all\n")
+        )
+        tm.that(self._conform_self(infra_git_repo), eq=0)
         ignored = "infra/state.json"
         self._prepare_project(
             infra_git_repo,
