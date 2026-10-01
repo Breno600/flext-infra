@@ -127,7 +127,7 @@ class FlextInfraCodegenProjectNew(
         ),
     ]
     year: Annotated[int, m.Field(ge=2025, description="Deterministic copyright year.")]
-    conform_ports: t.Port[m.Infra.CodegenConformPorts | None] = m.Field(
+    conform_ports: m.Infra.CodegenConformPorts | None = m.Field(
         default=None,
         exclude=True,
         description=(
