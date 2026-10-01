@@ -145,7 +145,7 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
         if any((
             diagnostics.collection_failed_count,
             diagnostics.collection_skipped_count,
-            diagnostics.blocking_warning_count,
+            diagnostics.warning_count,
         )):
             msg = f"pytest collection contains blocking findings: {receipt}"
             raise RuntimeError(msg)
@@ -218,15 +218,6 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
                     f"{phase}: {line}"
                     for phase, item in phases
                     for line in item.warning_lines
-                ),
-                "\n",
-            ),
-            (
-                "suspended-warnings.txt",
-                tuple(
-                    f"{phase}: {line}"
-                    for phase, item in phases
-                    for line in item.suspended_warning_lines
                 ),
                 "\n",
             ),

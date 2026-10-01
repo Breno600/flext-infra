@@ -131,8 +131,6 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
             f"{identity.message}"
         )
         diag.warning_lines.append(warning)
-        if identity.suspended:
-            diag.suspended_warning_lines.append(warning)
 
     def extract(
         self, junit_path: Path, log_path: Path, *, report_log: Path
@@ -171,10 +169,6 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
             failed_count=len(diag.failed_cases),
             error_count=len(diag.error_cases),
             warning_count=len(diag.warning_lines),
-            blocking_warning_count=(
-                len(diag.warning_lines) - len(diag.suspended_warning_lines)
-            ),
-            suspended_warning_count=len(diag.suspended_warning_lines),
             skipped_count=len(diag.skip_cases),
             collection_failed_count=len(diag.collection_failed_cases),
             collection_skipped_count=len(diag.collection_skip_cases),
@@ -184,7 +178,6 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
             failed_cases=diag.failed_cases,
             error_traces=diag.error_traces,
             warning_lines=diag.warning_lines,
-            suspended_warning_lines=diag.suspended_warning_lines,
             skip_cases=diag.skip_cases,
             slow_entries=diag.slow_entries,
         )
@@ -222,8 +215,6 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
             f"failed_count={diagnostics.failed_count}\n"
             f"error_count={diagnostics.error_count}\n"
             f"warning_count={diagnostics.warning_count}\n"
-            f"blocking_warning_count={diagnostics.blocking_warning_count}\n"
-            f"suspended_warning_count={diagnostics.suspended_warning_count}\n"
             f"skipped_count={diagnostics.skipped_count}\n"
         )
         return r[bool].ok(True)

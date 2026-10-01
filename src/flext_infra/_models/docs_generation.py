@@ -11,33 +11,6 @@ from flext_core import m, u
 from flext_infra import t
 
 
-def _source_state_authenticated(state: cli_m.Cli.AtomicFileState) -> bool:
-    """Authenticate a present source, or an absent optional input.
-
-    ``AtomicFileState`` models absence as every physical field unset (its own
-    validator requires bytes, mode, device, inode and link count together, or
-    none of them). An absent optional input -- such as the collection's own
-    ``collection-manifest.json`` before its first generation -- is therefore a
-    legitimate source state, not an unauthenticated read. A present file must
-    still carry its full physical identity with a single link.
-    """
-    if state.content is None:
-        return (
-            state.mode is None
-            and state.device is None
-            and state.inode is None
-            and state.link_count is None
-            and state.reparse_tag is None
-        )
-    return (
-        state.mode is not None
-        and state.device is not None
-        and state.inode is not None
-        and state.link_count == 1
-        and state.reparse_tag in {None, 0}
-    )
-
-
 class FlextInfraModelsDocsGeneration:
     """Declaration-only documentation generation contracts."""
 
@@ -225,8 +198,30 @@ class FlextInfraModelsDocsGeneration:
             if len(set(source_paths)) != len(source_paths):
                 msg = "docs generation source paths must be unique"
                 raise ValueError(msg)
+            # ``AtomicFileState`` models absence as every physical field unset;
+            # an absent optional input (the collection's own manifest before
+            # its first generation) is a legitimate source state. A present
+            # file must carry its full physical identity with a single link.
             if any(
-                not _source_state_authenticated(state) for state in self.source_states
+                not (
+                    (
+                        state.content is None
+                        and state.mode is None
+                        and state.device is None
+                        and state.inode is None
+                        and state.link_count is None
+                        and state.reparse_tag is None
+                    )
+                    or (
+                        state.content is not None
+                        and state.mode is not None
+                        and state.device is not None
+                        and state.inode is not None
+                        and state.link_count == 1
+                        and state.reparse_tag in {None, 0}
+                    )
+                )
+                for state in self.source_states
             ):
                 msg = "docs generation source state is absent or unauthenticated"
                 raise ValueError(msg)

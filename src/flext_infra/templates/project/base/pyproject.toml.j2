@@ -171,13 +171,20 @@ include = [
 {% for package in root_packages %}
   {{ ("/src/" ~ package ~ "/**") | tojson }},
 {% endfor %}
-{% for module in root_modules %}
-  {{ ("/src/" ~ module ~ ".py") | tojson }},
-{% endfor %}
-{% for data_dir in packaged_data_paths %}
-  {{ ("/" ~ data_dir ~ ("" if data_dir in packaged_data_files else "/**")) | tojson }},
+{% for data_dir in packaged_data_paths if data_dir not in packaged_data_files %}
+  {{ ("/" ~ data_dir ~ "/**") | tojson }},
 {% endfor %}
 ]
+{% if packaged_data_files or root_modules %}
+
+[tool.hatch.build.targets.sdist.force-include]
+{% for data_file in packaged_data_files %}
+{{ data_file | tojson }} = {{ data_file | tojson }}
+{% endfor %}
+{% for module in root_modules %}
+{{ ("src/" ~ module ~ ".py") | tojson }} = {{ ("src/" ~ module ~ ".py") | tojson }}
+{% endfor %}
+{% endif %}
 {% endif %}
 
 [tool.mypy]

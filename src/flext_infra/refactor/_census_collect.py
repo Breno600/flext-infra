@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import m, u
 
@@ -15,20 +15,20 @@ if TYPE_CHECKING:
 
     from flext_infra import p, t
 
-_ROPE_SAFE_EXCEPTIONS: t.VariadicTuple[type[BaseException]] = (
-    *u.Infra.rope_runtime_errors(),
-    *u.Infra.rope_error_types(),
-    RecursionError,
-    SyntaxError,
-    ValueError,
-    RuntimeError,
-)
-
 
 class FlextInfraRefactorCensusCollectMixin(
     FlextInfraRefactorCensusRulesDispatchMixin, FlextInfraRefactorCensusValidateMixin
 ):
     """Scan one module (inventory + rules) and assemble the WorkspaceReport."""
+
+    _rope_safe_exceptions: ClassVar[t.VariadicTuple[type[BaseException]]] = (
+        *u.Infra.rope_runtime_errors(),
+        *u.Infra.rope_error_types(),
+        RecursionError,
+        SyntaxError,
+        ValueError,
+        RuntimeError,
+    )
 
     if TYPE_CHECKING:
 
@@ -95,7 +95,7 @@ class FlextInfraRefactorCensusCollectMixin(
                         include_references=scan_config.include_object_references,
                     )
                 )
-            except _ROPE_SAFE_EXCEPTIONS as exc:
+            except self._rope_safe_exceptions as exc:
                 self._handle_rope_stage_failure(
                     file_path=module.file_path, stage="inventory", exc=exc
                 )
@@ -130,7 +130,7 @@ class FlextInfraRefactorCensusCollectMixin(
                     scan_config=scan_config,
                 )
             )
-        except _ROPE_SAFE_EXCEPTIONS as exc:
+        except self._rope_safe_exceptions as exc:
             self._handle_rope_stage_failure(
                 file_path=module.file_path, stage="rules", exc=exc
             )

@@ -26,6 +26,9 @@ class FlextInfraModelsRefactor(
     - ``ArbitraryTypesModel`` for mutable report/result payloads.
     """
 
+    class ModTextCommand(mm.WriteMixin, m.ContractModel):
+        """Repository-scoped request for authenticated Sed rule replay."""
+
     class RefactorNamespaceEnforceInput(mm.WriteMixin, m.ContractModel):
         """CLI/service request for namespace enforcement."""
 
