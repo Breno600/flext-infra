@@ -67,6 +67,9 @@ class TestsFlextInfraUpgLockAtomicPublication:
                 tm.that(
                     child.poll(), eq=None, msg="upgrade exited before FIFO observation"
                 )
+                # uv opens the wheel on a tokio worker thread, whose thread
+                # name is not "uv": identify the owned uv by its command line
+                # and require that one of its threads waits on the FIFO.
                 observed = tm.ok(
                     u.Cli.run(
                         [

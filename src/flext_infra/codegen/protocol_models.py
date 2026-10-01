@@ -16,8 +16,6 @@ from .. import FlextInfraServiceBase, m, p, t, u
 from ._protocol_model_annotations import FlextInfraCodegenProtocolModelAnnotations
 from ._protocol_model_render import FlextInfraCodegenProtocolModelRender
 
-_Target = FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget
-
 
 class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
     """Assemble the member's generated ``p`` layer from validated models."""
@@ -43,25 +41,31 @@ class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
         return self._settle(self.repository_root, modules, dry=self.effective_dry_run)
 
     @classmethod
-    def _resolve_target(cls, root: Path) -> p.Result[_Target]:
+    def _resolve_target(
+        cls, root: Path
+    ) -> p.Result[FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget]:
         """Derive the member target from its declared pyproject name."""
         manifest = root / "pyproject.toml"
         if not manifest.is_file():
-            return r[_Target].fail(f"no pyproject manifest at {manifest}")
+            return r[
+                FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget
+            ].fail(f"no pyproject manifest at {manifest}")
         declared = u.Cli.toml_read_json(manifest)
         if declared.failure:
-            return r[_Target].from_failure(declared)
+            return r[
+                FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget
+            ].from_failure(declared)
         name = u.Cli.json_pick_str(
             u.Cli.json_deep_mapping(declared.value, "project"), "name"
         )
         if not name:
-            return r[_Target].fail(
-                f"pyproject manifest declares no project name: {manifest}"
-            )
+            return r[
+                FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget
+            ].fail(f"pyproject manifest declares no project name: {manifest}")
         package = name.replace("-", "_")
         container = "".join(part.capitalize() for part in package.split("_"))
-        return r[_Target].ok(
-            _Target(
+        return r[FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget].ok(
+            FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget(
                 package_name=package,
                 facade_container=container,
                 package_module_prefix=f"{package}.",
@@ -78,7 +82,9 @@ class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
 
     @classmethod
     def _resolve_models(
-        cls, root: Path, target: _Target
+        cls,
+        root: Path,
+        target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
     ) -> p.Result[t.SequenceOf[type[m.BaseModel]]]:
         """Resolve every referenced protocol name against the models facade."""
         referenced = cls._referenced_names(root, target)
@@ -127,7 +133,11 @@ class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
         return ()
 
     @classmethod
-    def _referenced_names(cls, root: Path, target: _Target) -> set[str]:
+    def _referenced_names(
+        cls,
+        root: Path,
+        target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
+    ) -> set[str]:
         """Scan member sources for ``<protocols_ref>.<Name>`` references."""
         pattern = re.compile(
             rf"\b{re.escape(target.protocol_ref_prefix)}\.([A-Z]\w*)\b"
@@ -141,7 +151,11 @@ class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
         return found
 
     @classmethod
-    def _manual_protocol_names(cls, root: Path, target: _Target) -> set[str]:
+    def _manual_protocol_names(
+        cls,
+        root: Path,
+        target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
+    ) -> set[str]:
         """Collect protocol class names already hand-declared by the member."""
         pattern = re.compile(r"^class ([A-Z]\w*)\b", re.MULTILINE)
         found: set[str] = set()

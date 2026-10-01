@@ -16,9 +16,6 @@ from ._docs_generate_plan import FlextInfraUtilitiesDocsGeneratePlanMixin
 if TYPE_CHECKING:
     from flext_infra import p
 
-_OWNED_HEADER_LINES = 2
-"Lines an owned member guide carries before its generated body: marker + source."
-
 
 class FlextInfraUtilitiesDocsGuidesMixin:
     """Project guide projections derived from root ``docs/guides`` sources."""
@@ -122,7 +119,7 @@ class FlextInfraUtilitiesDocsGuidesMixin:
                 ),
             }
             if (
-                len(lines) >= _OWNED_HEADER_LINES
+                len(lines) >= c.Infra.DOCS_OWNED_HEADER_LINES
                 and lines[0] == generated
                 and lines[1] in source_headers
             ):

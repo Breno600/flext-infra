@@ -11,7 +11,10 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import FlextInfraPytestRunner, c, config, m, t, u
-from tests.unit.validate.pytest_runner_support import runner_for
+from tests.unit.validate.pytest_runner_support import (
+    declare_parallel_project,
+    runner_for,
+)
 
 
 class TestsFlextInfraPytestRunnerSuiteStop:
@@ -94,19 +97,16 @@ class TestsFlextInfraPytestRunnerSuiteStop:
                 owns_no_tests=False,
             )
 
+        declare_parallel_project(cached_runner_project)
         multi = [f"tests/test_serial_{'x' * index}.py::test_one" for index in range(4)]
         runner = runner_for(cached_runner_project)
         multi_plan = dispatch_plan(multi)
         multi_command = runner.build_command(
-            cached_runner_project / runner.reports,
-            multi_plan.node_ids,
-            m.Infra.PytestInvocation(manifest_path=multi_plan.manifest_path),
+            cached_runner_project / runner.reports, multi_plan
         )
         serial_plan = dispatch_plan(multi[:1])
         serial_command = runner.build_command(
-            cached_runner_project / runner.reports,
-            serial_plan.node_ids,
-            m.Infra.PytestInvocation(manifest_path=serial_plan.manifest_path),
+            cached_runner_project / runner.reports, serial_plan
         )
 
         def stop_value(command: t.StrSequence) -> float:
