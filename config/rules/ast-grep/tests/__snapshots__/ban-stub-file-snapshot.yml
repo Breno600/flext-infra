@@ -1,0 +1,10 @@
+id: ban-stub-file
+snapshots:
+  ? |
+    def load(path: str) -> bytes: ...
+  : labels:
+    - source: |
+        def load(path: str) -> bytes: ...
+      style: primary
+      start: 0
+      end: 34

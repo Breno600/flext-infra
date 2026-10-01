@@ -136,12 +136,35 @@ class FlextInfraModGateEngine:
         return r[t.StrSequence].ok(tuple(changes))
 
     @staticmethod
+    def _governs(governed_root: Path, config_root: Path) -> bool:
+        """Whether the governed repository itself tracks this rule provider.
+
+        Git owns the answer: an installed provider (``site-packages``) or a
+        member checkout lies outside, or untracked by, the governed repository,
+        while the repository's own catalog is tracked wherever it lives.
+        """
+        provider = (config_root / c.Infra.CODEMOD_CONFIG_FILENAME).resolve()
+        if not provider.is_relative_to(governed_root):
+            return False
+        return (
+            u.Infra.git_is_tracked(
+                m.Infra.GitRelativePathRequest(
+                    repo_root=governed_root,
+                    relative_path=provider.relative_to(governed_root).as_posix(),
+                ),
+            )
+            .unwrap()
+            .value
+        )
+
+    @classmethod
     def _fixture_owners(
+        cls,
         root: Path,
         rules: t.SequenceOf[Path],
     ) -> t.SequenceOf[t.Triple[Path, t.SequenceOf[Path], bool]]:
         """Group rules by fixture owner and mark the owners this root governs."""
-        governed_roots = frozenset(
+        governed_roots = tuple(
             project.resolve() for project in u.Infra.governed_project_roots(root)
         )
         rules_by_owner: MutableMapping[Path, list[Path]] = {}
@@ -157,11 +180,13 @@ class FlextInfraModGateEngine:
             if scratch.resolve().is_relative_to(config_root.resolve()):
                 msg = "rule fixture scratch must be outside its source root"
                 raise ValueError(msg)
-            owner_root = u.Infra.project_root(config_root)
             owners.append((
                 config_root,
                 tuple(owner_rules),
-                owner_root is not None and owner_root.resolve() in governed_roots,
+                any(
+                    cls._governs(governed_root, config_root)
+                    for governed_root in governed_roots
+                ),
             ))
         scratch.mkdir(parents=True, exist_ok=True)
         return tuple(owners)
