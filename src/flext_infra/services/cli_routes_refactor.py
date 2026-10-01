@@ -27,9 +27,6 @@ from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
 from flext_infra.transformers.dataclass_modelizer import (
     FlextInfraRefactorDataclassModelizer,
 )
-from flext_infra.transformers.pydantic_modernizer import (
-    FlextInfraRefactorPydanticModernizer,
-)
 
 
 class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
@@ -83,16 +80,6 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
             ),
             model_cls=m.Infra.ModernizeInput,
             handler=FlextInfraRefactorSignaturePropagation.execute_command,
-        ),
-        m.Cli.ResultCommandRoute(
-            name="modernize-pydantic",
-            help_text="Migrate Pydantic v1/legacy patterns to Pydantic v2",
-            model_cls=m.Infra.ModernizeInput,
-            handler=functools.partial(
-                FlextInfraModernizeOrchestrator.execute_command,
-                transformer_factory=FlextInfraRefactorPydanticModernizer,
-                description="pydantic modernizer",
-            ),
         ),
         m.Cli.ResultCommandRoute(
             name="modernize-dataclass",
