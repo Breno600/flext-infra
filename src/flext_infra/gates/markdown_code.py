@@ -222,7 +222,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                 if c.Infra.MARKDOWN_CODE_SKIP_MARKER not in match.group("info")
             ):
                 code = match.group("code")
-                if sources.is_syntax_broken(code, md_path):
+                if sources.syntax_broken(code, md_path):
                     continue
                 staged.append((index, code))
             if not staged:
@@ -235,7 +235,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                     round_trips = False
                     break
                 formatted = source.read_text(c.Cli.ENCODING_DEFAULT)
-                if sources.is_syntax_broken(formatted, md_path):
+                if sources.syntax_broken(formatted, md_path):
                     round_trips = False
                     break
                 blocks.append(formatted)
@@ -252,7 +252,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                 """Splice formatted code; prose fragments stay byte-identical."""
                 keep = c.Infra.MARKDOWN_CODE_SKIP_MARKER in match.group(
                     "info"
-                ) or sources.is_syntax_broken(match.group("code"), origin_path)
+                ) or sources.syntax_broken(match.group("code"), origin_path)
                 if keep:
                     return match.group(0)
                 return match.group(0).replace(match.group("code"), next(replacements))

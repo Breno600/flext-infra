@@ -24,7 +24,7 @@ class FlextInfraMarkdownCodeSources:
     """Extract embedded Python from documentation into one source tree."""
 
     @staticmethod
-    def is_syntax_broken(code: str, origin: Path) -> bool:
+    def syntax_broken(code: str, origin: Path) -> bool:
         """Identify documentation fragments owned by the Markdown syntax validator."""
         try:
             compile(code, str(origin), "exec")
@@ -59,7 +59,7 @@ class FlextInfraMarkdownCodeSources:
                 if c.Infra.MARKDOWN_CODE_SKIP_MARKER not in match.group("info")
             ):
                 source_text = match.group("code")
-                if FlextInfraMarkdownCodeSources.is_syntax_broken(source_text, md_path):
+                if FlextInfraMarkdownCodeSources.syntax_broken(source_text, md_path):
                     continue
                 name = FlextInfraMarkdownCodeSources.source_name(relative_posix, index)
                 (target_dir / name).write_text(source_text, c.Cli.ENCODING_DEFAULT)
