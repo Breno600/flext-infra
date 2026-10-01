@@ -26,6 +26,18 @@ class FlextInfraConstantsDocs:
         "validate",
     })
     DOCS_CONFIG_FILENAME: ClassVar[str] = "docs_config.json"
+    # Structured docs reports: the only report files the audit and validate
+    # phases publish, and the only ones generated CI dumps and uploads.
+    DOCS_AUDIT_SUMMARY_FILENAME: ClassVar[str] = "audit-summary.json"
+    DOCS_AUDIT_REPORT_FILENAME: ClassVar[str] = "audit-report.md"
+    DOCS_VALIDATE_SUMMARY_FILENAME: ClassVar[str] = "validate-summary.json"
+    DOCS_VALIDATE_REPORT_FILENAME: ClassVar[str] = "validate-report.md"
+    DOCS_STRUCTURED_REPORT_FILENAMES: ClassVar[t.VariadicTuple[str]] = (
+        DOCS_AUDIT_SUMMARY_FILENAME,
+        DOCS_AUDIT_REPORT_FILENAME,
+        DOCS_VALIDATE_SUMMARY_FILENAME,
+        DOCS_VALIDATE_REPORT_FILENAME,
+    )
     # Prettier --write lists every processed file as "<path> <duration>ms";
     # the fmt phase report surfaces exactly that surface per scope.
     DOCS_PRETTIER_WRITE_LINE_RE: ClassVar[t.RegexPattern] = re.compile(
@@ -112,6 +124,22 @@ class FlextInfraConstantsDocs:
     # --- Markdown link/heading patterns ---
     MARKDOWN_LINK_RE: ClassVar[t.RegexPattern] = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
     """Match markdown links capturing text (group 1) and URL (group 2)."""
+    DOCS_GITHUB_BLOB_TREE_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"^https://github\.com/"
+        r"(?P<org>[^/]+)/(?P<repo>[^/]+)/"
+        r"(?P<kind>blob|tree)/"
+        r"(?P<refpath>[^/?#]+/[^?#]*)"
+        r"(?P<suffix>[?#].*)?$",
+    )
+    """Match a github.com blob/tree documentation URL by its named parts.
+
+    ``refpath`` is the whole ``<ref>/<path>`` remainder: Git refs may contain
+    ``/``, so the ref/path boundary is only decidable against the governed
+    branch a consumer knows. ``suffix`` keeps a ``?query`` or ``#fragment``
+    (for example ``#L10``) out of the filesystem path.
+    """
+    DOCS_OWNED_HEADER_LINES: ClassVar[int] = 2
+    """Lines an owned member guide carries before its body: marker + source."""
     HEADING_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^#{1,6}\s+(.+?)\s*$",
         re.MULTILINE,

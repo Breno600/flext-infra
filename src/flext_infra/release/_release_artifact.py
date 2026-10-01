@@ -14,8 +14,7 @@ from packaging.version import InvalidVersion, Version
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
-
-from ._release_boundary import FlextInfraReleaseBoundaryMixin
+from flext_infra.release._release_boundary import FlextInfraReleaseBoundaryMixin
 
 
 class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
@@ -88,6 +87,7 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
         path: Path,
         project: str,
         members: t.SequenceOf[t.Triple[str, bool, bool]],
+        allowed_roots: t.StrSequence,
     ) -> str:
         """Return why an archive's members leave the public boundary, or ''."""
         wheel = path.suffix == ".whl"
@@ -116,7 +116,8 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
                 not wheel
                 and regular
                 and not cls._sdist_member_allowed(
-                    PurePosixPath(name).parts, allowed_roots
+                    PurePosixPath(name).parts,
+                    allowed_roots,
                 )
             ):
                 return f"sdist contains unexpected public content: {name}"
@@ -131,7 +132,9 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
 
     @classmethod
     def _validate_artifact(
-        cls, path: Path, expectation: m.Infra.ArtifactExpectation
+        cls,
+        path: Path,
+        expectation: m.Infra.ArtifactExpectation,
     ) -> p.Result[t.Pair[t.Infra.ReleaseArtifactKind, t.Infra.ReleaseArtifactSha256]]:
         """Validate one artifact's boundary, identity and pins; return kind and digest."""
         result_type = r[

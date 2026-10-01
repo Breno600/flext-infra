@@ -6,7 +6,7 @@ from typing import Annotated
 
 from flext_cli import m
 
-from .deps_tool_config_project_artifacts import (
+from flext_infra._models.deps_tool_config_project_artifacts import (
     FlextInfraModelsDepsToolConfigProjectArtifacts,
 )
 
@@ -19,10 +19,6 @@ class FlextInfraModelsDepsToolConfigProject(
     class ProjectManagedArtifactsFragment(m.ArbitraryTypesModel):
         """Optional project-owned sections present in one configuration source."""
 
-        Ruff: Annotated[
-            FlextInfraModelsDepsToolConfigProjectArtifacts.ProjectRuffConfig | None,
-            m.Field(description="Ruff section declared by this source"),
-        ] = None
         Mise: Annotated[
             FlextInfraModelsDepsToolConfigProjectArtifacts.ProjectMiseConfig | None,
             m.Field(description="Mise section declared by this source"),

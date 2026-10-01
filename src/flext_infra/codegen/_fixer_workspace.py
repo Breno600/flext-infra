@@ -6,9 +6,8 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from flext_infra import c, m, u
+from flext_infra.codegen._fixer_passes import FlextInfraCodegenFixerPassesMixin
 from flext_infra.refactor.namespace_enforcer import FlextInfraNamespaceEnforcer
-
-from ._fixer_passes import FlextInfraCodegenFixerPassesMixin
 
 if TYPE_CHECKING:
     from pathlib import Path

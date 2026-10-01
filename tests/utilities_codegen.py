@@ -22,13 +22,8 @@ class TestsFlextInfraUtilitiesCodegenMixin:
 
     @staticmethod
     def family_public_module(family: str) -> str:
-        """Return the public facade module stem the canonical file names give a letter."""
-        (stem,) = (
-            name.removesuffix(c.Infra.EXT_PYTHON)
-            for name, letter in c.Infra.NAMESPACE_FILE_TO_FAMILY.items()
-            if letter == family and not name.startswith("_")
-        )
-        return stem
+        """Return the public facade module stem the core package gives a letter."""
+        return u.Infra.facade_families()[family].module
 
     @staticmethod
     def ruff_per_file_ignores_toml() -> str:
@@ -167,9 +162,9 @@ class TestsFlextInfraUtilitiesCodegenMixin:
                 package_dir
                 / f"{TestsFlextInfraUtilitiesCodegenMixin.family_public_module(family)}.py"
             )
-            if (package_dir / c.Infra.FAMILY_DIRECTORIES[family]).is_dir() and (
-                not facade.is_file()
-            ):
+            if (
+                package_dir / u.Infra.facade_families()[family].directory
+            ).is_dir() and (not facade.is_file()):
                 facade.write_text(
                     f"class FixtureProject{family.capitalize()}Facade:\n    pass\n",
                     encoding="utf-8",
@@ -366,19 +361,9 @@ class TestsFlextInfraUtilitiesCodegenMixin:
 
     @staticmethod
     def extract_lazy_init_exports(source: str) -> t.Pair[bool, t.StrSequence]:
-        """Read the published lazy export contract from generated source."""
-        assignments = dict(u.Infra.extract_module_level_assignments(source))
-        all_value = assignments.get(c.Infra.DUNDER_ALL)
-        if all_value is None:
-            return (False, ())
-        literal_exports = tuple(c.Tests.LAZY_INIT_EXPORT_NAME_RE.findall(all_value))
-        if literal_exports:
-            return (True, literal_exports)
-        public_value = assignments.get("_PUBLIC_EXPORTS", "")
-        return (
-            "_PUBLIC_EXPORTS" in all_value,
-            tuple(c.Tests.LAZY_INIT_EXPORT_NAME_RE.findall(public_value)),
-        )
+        """Read the published lazy export contract through the public source reader."""
+        exports = u.Infra.module_assignment_strings_source(source, c.Infra.DUNDER_ALL)
+        return (bool(exports), exports)
 
     @staticmethod
     def consolidate_codegen(

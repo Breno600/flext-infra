@@ -15,7 +15,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraInfraMaintenanceCli:
     """Behavior contract for test_infra_maintenance_cli."""
 
-    def _run_maintenance(self, argv: t.StrSequence | None = None) -> int:
+    @staticmethod
+    def _run_maintenance(argv: t.StrSequence | None = None) -> int:
         args = ["maintenance"]
         if argv is not None:
             args.extend(argv)

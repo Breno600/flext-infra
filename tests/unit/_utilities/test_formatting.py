@@ -6,7 +6,8 @@ from tests import u
 
 
 class TestsFlextInfraUtilitiesformatting:
-    def test_generate_module_skeleton_is_static_on_public_instance(self) -> None:
+    @staticmethod
+    def test_generate_module_skeleton_is_static_on_public_instance() -> None:
         # flext-i6nq.10: Guard the public instance binding lost during consolidation.
         source = u.Infra().generate_module_skeleton(
             class_name="FlextDemoModels",

@@ -97,12 +97,11 @@ interpreter fails.
 
 A member attached as a submodule uses the environment of its containing Git
 superproject; a standalone checkout or linked worktree has its own. The physical
-directory lives in the sibling directory configured by
-`make.runtime_environment_directory`, keyed by the checkout's absolute path. The
-generated Makefile, the generated `.envrc`, and `runtime_environment_dir` resolve that
-location through the same physical path, so entering the checkout through a symlink does
-not change the selected environment. No environment is borrowed from another checkout
-through a symlink.
+directory is `.venv` at the runtime root (`c.Infra.ENVIRONMENT_DIRECTORY`), never a
+configuration value. The generated Makefile, the generated `.envrc`, and
+`runtime_environment_dir` resolve that location from the same resolved runtime root,
+so entering the checkout through a symlink does not change the selected environment.
+No environment is borrowed from another checkout through a symlink.
 
 ## Mise launchers
 
@@ -180,17 +179,16 @@ affected paths. A published work-in-progress commit preserves work and enables r
 completion requires integration and runtime measured at the integrated SHA.
 
 For namespace automation, investigate catalog, classifier, transformation, publication,
-and consumers in that order. Zero codemod findings do not prove the namespace gate
-green. Preserve mutability, inheritance, imports, and collection; validate the
-transformation through the public interface before widening the batch. Structural
-refactors go through `make mod`.
+and consumers in that order. The namespace laws are codemod catalog rules, so the
+codemod gate is their one verdict. Preserve mutability, inheritance, imports, and
+collection; validate the transformation through the public interface before widening
+the batch. Structural refactors go through `make mod`.
 
 ## Check gate partitions
 
-The current configuration keeps an explicit suspension of the `namespace` gate; the
-typed owner validates its authority and scope. Lint, format, and type-checker gates
-(`pyrefly`, `mypy`, `pyright`) are never suspendable: the model rejects such a
-suspension when it loads the configuration. `make check` fails when the selection
+No check gate is suspendable: every finding of every selected gate blocks. The
+namespace laws are rule data of the codemod catalog and block through the codemod
+gate. `make check` fails when the selection
 contains no projects or when a selected project has no `pyproject.toml`; no project is
 skipped silently.
 
@@ -203,7 +201,10 @@ both partitions without overlap. Validators keep their severity, and active func
 gates still require execution without warnings or residual findings.
 
 `smells` is not part of the `make check` partitions. The selector-free `make smells`
-verb runs the same analysis gate separately and fails when it finds defects.
+verb runs only the qlty smell scan and fails when it finds defects. The
+`runtime-census` gate stays in `make check` and grades every runtime enforcement
+finding, including rules that qlty also classifies as smells. An empty or
+malformed qlty SARIF response is a failed scan, not a zero-finding receipt.
 
 ## Bounded Mypy failure status
 

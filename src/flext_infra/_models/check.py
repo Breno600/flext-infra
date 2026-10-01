@@ -8,8 +8,7 @@ from typing import Annotated, ClassVar
 
 from flext_core import m, u
 from flext_infra import c, t
-
-from .mixins import FlextInfraModelsMixins as mm
+from flext_infra._models.mixins import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsCheck:
@@ -101,11 +100,11 @@ class FlextInfraModelsCheck:
             int,
             m.Field(
                 gt=0,
-                le=c.Infra.MYPY_TIMEOUT_SECONDS_MAX,
+                le=c.Infra.MYPY_TIMEOUT_SECONDS_FLEET_BOUND,
                 description=(
-                    "Positive Mypy wall-time limit in seconds; neither the"
-                    " project budget nor the env override may exceed the"
-                    " fleet bound"
+                    "Positive Mypy wall-time limit in seconds, resolved from"
+                    " tools.mypy.timeout_seconds in tooling.yaml or the env"
+                    " override"
                 ),
             ),
         ]

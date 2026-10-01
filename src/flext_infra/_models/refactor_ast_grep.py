@@ -19,7 +19,8 @@ class FlextInfraModelsRefactorGrep:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         variable: Annotated[
-            t.NonEmptyStr, m.Field(description="Captured single metavariable name")
+            t.NonEmptyStr,
+            m.Field(description="Captured single metavariable name"),
         ]
         predicate: Annotated[
             c.Infra.CodemodContextPredicate,
@@ -36,9 +37,27 @@ class FlextInfraModelsRefactorGrep:
                     "Captured metavariable naming the module the predicate is "
                     "evaluated against; absent for predicates of the project "
                     "or of the finding's own module"
-                )
+                ),
             ),
         ] = None
+        arg: Annotated[
+            t.StrSequence,
+            m.Field(
+                description=(
+                    "Literal operands the rule passes to the predicate (layer "
+                    "names, for the layer predicates); empty when it takes none"
+                ),
+            ),
+        ] = ()
+        as_: Annotated[
+            t.StrSequence,
+            m.Field(
+                description=(
+                    "Layer the predicate assumes for a captured name that is "
+                    "not itself a layer; empty when the rule assumes none"
+                ),
+            ),
+        ] = ()
 
     class CodemodRule(m.ArbitraryTypesModel):
         """One validated ast-grep rule document from a composed provider."""
@@ -78,7 +97,7 @@ class FlextInfraModelsRefactorGrep:
                 description=(
                     "Canonical distribution name whose own plan drops the rule; "
                     "absent when the rule applies to every project"
-                )
+                ),
             ),
         ] = None
         consumers_of: Annotated[
@@ -87,7 +106,7 @@ class FlextInfraModelsRefactorGrep:
                 description=(
                     "Canonical distribution name whose runtime consumers alone "
                     "elect the rule; absent when the rule applies to every project"
-                )
+                ),
             ),
         ] = None
         relocation: Annotated[
@@ -96,7 +115,7 @@ class FlextInfraModelsRefactorGrep:
                 description=(
                     "Rope relocation that repairs the rule's findings over the "
                     "captured $NAME; absent for token-fix and plain detection rules"
-                )
+                ),
             ),
         ] = None
         context: Annotated[
@@ -105,7 +124,7 @@ class FlextInfraModelsRefactorGrep:
                 description=(
                     "Project-context conditions a finding must satisfy; empty "
                     "when the syntactic match alone is the finding"
-                )
+                ),
             ),
         ] = ()
 

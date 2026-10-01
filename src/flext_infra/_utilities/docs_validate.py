@@ -9,10 +9,9 @@ from flext_cli import u
 
 from flext_core import r
 from flext_infra import c, t
-
-from .docs import FlextInfraUtilitiesDocs
-from .docs_api import FlextInfraUtilitiesDocsApi
-from .docs_scope import FlextInfraUtilitiesDocsScope
+from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
+from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
+from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -167,7 +166,7 @@ class FlextInfraUtilitiesDocsValidate:
         content = (
             "# TODOS\n\n"
             "- [ ] Resolve documentation validation findings from "
-            "`.reports/docs/validate-report.md`.\n"
+            f"`{c.Infra.DEFAULT_DOCS_OUTPUT_DIR}/{c.Infra.DOCS_VALIDATE_REPORT_FILENAME}`.\n"
         )
         try:
             _ = path.write_text(content, encoding=c.Cli.ENCODING_DEFAULT)
@@ -182,11 +181,11 @@ class FlextInfraUtilitiesDocsValidate:
     ) -> None:
         """Persist the standard validate summary and markdown report."""
         _ = u.Cli.json_write(
-            scope.report_dir / "validate-summary.json",
+            scope.report_dir / c.Infra.DOCS_VALIDATE_SUMMARY_FILENAME,
             {c.Infra.RK_SUMMARY: report.model_dump(mode="json")},
         )
         _ = FlextInfraUtilitiesDocs.write_markdown(
-            scope.report_dir / "validate-report.md",
+            scope.report_dir / c.Infra.DOCS_VALIDATE_REPORT_FILENAME,
             [
                 "# Docs Validate Report",
                 "",

@@ -16,8 +16,8 @@ pytestmark = [pytest.mark.slow, pytest.mark.remote]
 class TestsFlextInfraCodegenUpgWorkspace:
     """Upgrade a real workspace with an indexed, uninitialized member."""
 
+    @staticmethod
     def test_upg_materializes_member_before_resolving_workspace_lock(
-        self,
         tmp_path: Path,
     ) -> None:
         root, _ = u.Tests.render_make_environment(

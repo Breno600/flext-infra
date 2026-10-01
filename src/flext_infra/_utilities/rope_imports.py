@@ -11,9 +11,11 @@ from flext_cli import u
 
 from flext_core import r
 from flext_infra import c, m, p, t
-
-from . import FlextInfraUtilitiesRopeCore, FlextInfraUtilitiesRopeRuntime
-from .rope_analysis import FlextInfraUtilitiesRopeAnalysis
+from flext_infra._utilities import (
+    FlextInfraUtilitiesRopeCore,
+    FlextInfraUtilitiesRopeRuntime,
+)
+from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
 
 
 class FlextInfraUtilitiesRopeImports:
@@ -719,48 +721,19 @@ class FlextInfraUtilitiesRopeImports:
         )
 
     # ------------------------------------------------------------------
-    # Layer alignment (ADR-014 §3b/ADR-017; rope-native, replaces the
-    # retired libcst draft — cross-layer from-imports take relative form)
+    # Import alignment: every relative from-import takes its absolute form
     # ------------------------------------------------------------------
-
-    @classmethod
-    def layer_of_module(cls, module_name: str, order: t.StrSequence) -> str | None:
-        """Return the canonical layer of a project module path."""
-        for segment in reversed(module_name.split(".")):
-            for layer in order:
-                if segment in {layer, f"_{layer}"}:
-                    return layer
-        return None
 
     @staticmethod
     def _absolute_from_import(source_module: str, module_name: str, level: int) -> str:
-        """Resolve one from-import target to its absolute module name."""
-        if level == 0:
-            return module_name
+        """Resolve one relative from-import target to its absolute module name.
+
+        Python resolves ``level`` dots from the module's own package, so a
+        module ``a.b.c`` with ``level=1`` imports from ``a.b``.
+        """
         parts = source_module.split(".")
         base = parts[: max(len(parts) - level, 0)]
         return ".".join(part for part in (*base, module_name) if part)
-
-    @staticmethod
-    def _relative_from_import(
-        source_module: str,
-        target_module: str,
-    ) -> t.Pair[int, str]:
-        """Return the (level, tail) relative form from one module to another."""
-        src_parts = source_module.split(".")
-        tgt_parts = target_module.split(".")
-        common = 0
-        for source_part, target_part in zip(src_parts[:-1], tgt_parts, strict=False):
-            if source_part != target_part:
-                break
-            common += 1
-        # Dots climb from the source module to the common ancestor: one dot
-        # is the containing package itself, so the level is the full source
-        # depth minus the shared prefix length (flext_a.b.c -> flext_a.t is
-        # two dots; the package __init__ flext_a.b -> flext_a.t is one).
-        level = max(len(src_parts) - common, 1)
-        tail = ".".join(tgt_parts[common:])
-        return (level, tail)
 
     @classmethod
     def align_module_imports(
@@ -769,11 +742,12 @@ class FlextInfraUtilitiesRopeImports:
         rope_project: t.Infra.RopeProject,
         repository_root: Path,
         index: m.Infra.RopeWorkspaceIndex,
-        project_package: str,
-        config: m.Infra.LazyInitConfig,
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]:
-        """Plan relative-form rewrites for cross-layer project from-imports."""
-        order: t.StrSequence = tuple(config.import_layer_order)
+        """Plan absolute-form rewrites for every relative from-import.
+
+        Package initializers are generated and render their own imports, so
+        only authored modules are planned.
+        """
         file_plans: list[m.Infra.CodegenFilePlan] = []
         for entry in sorted(
             index.modules_by_path.values(),
@@ -785,9 +759,6 @@ class FlextInfraUtilitiesRopeImports:
             if not file_path.is_file():
                 continue
             source_module = entry.module_name
-            source_layer = cls.layer_of_module(source_module, order)
-            if source_layer is None:
-                continue
             resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
                 rope_project,
                 file_path,
@@ -803,26 +774,23 @@ class FlextInfraUtilitiesRopeImports:
                 import_info = import_stmt.import_info
                 if not FlextInfraUtilitiesRopeRuntime.from_import_info(import_info):
                     continue
-                module_name = import_info.module_name or ""
+                level = import_info.level or 0
+                if level == 0:
+                    continue
                 absolute = cls._absolute_from_import(
                     source_module,
-                    module_name,
-                    import_info.level or 0,
-                )
-                if not absolute or not (
-                    absolute == project_package
-                    or absolute.startswith(project_package + ".")
-                ):
-                    continue
-                target_layer = cls.layer_of_module(absolute, order)
-                if target_layer is None or target_layer == source_layer:
-                    continue
-                level, tail = cls._relative_from_import(source_module, absolute)
-                if (import_info.level or 0) == level and module_name == tail:
-                    continue
-                import_stmt.import_info = FlextInfraUtilitiesRopeRuntime.from_import(
-                    tail,
+                    import_info.module_name or "",
                     level,
+                )
+                if not absolute:
+                    msg = (
+                        f"relative import level {level} escapes the package of "
+                        f"{source_module}"
+                    )
+                    raise ValueError(msg)
+                import_stmt.import_info = FlextInfraUtilitiesRopeRuntime.from_import(
+                    absolute,
+                    0,
                     list(import_info.names_and_aliases),
                 )
                 changed = True

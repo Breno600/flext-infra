@@ -7,13 +7,23 @@ from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, m, t
-
-from ..rope_runtime_modules import FlextInfraUtilitiesRopeRuntimeModules
-from .edits import FlextInfraUtilitiesSemanticCutoverEdits
-from .family_flatten import FlextInfraUtilitiesSemanticFamilyFlatten
-from .nesting_cst import FlextInfraUtilitiesSemanticCutoverNestingCst
-from .test_helpers import FlextInfraUtilitiesSemanticTestHelpers
+from flext_infra import m, t
+from flext_infra._utilities._semantic_cutover.edits import (
+    FlextInfraUtilitiesSemanticCutoverEdits,
+)
+from flext_infra._utilities._semantic_cutover.family_flatten import (
+    FlextInfraUtilitiesSemanticFamilyFlatten,
+)
+from flext_infra._utilities._semantic_cutover.nesting_cst import (
+    FlextInfraUtilitiesSemanticCutoverNestingCst,
+)
+from flext_infra._utilities._semantic_cutover.test_helpers import (
+    FlextInfraUtilitiesSemanticTestHelpers,
+)
+from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities.rope_runtime_modules import (
+    FlextInfraUtilitiesRopeRuntimeModules,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -75,13 +85,10 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
     ) -> p.Result[t.StrMapping]:
         """Map each loose top-level class to the owner Rope's module policy elects."""
         planned = r[t.StrMapping]
-        family = c.Infra.NAMESPACE_FILE_TO_FAMILY.get(file_path.name) or next(
-            (
-                alias
-                for alias, directory in c.Infra.FAMILY_DIRECTORIES.items()
-                if file_path.parent.name == directory
-            ),
-            None,
+        family = FlextInfraUtilitiesCodegenNamespace.facade_family_of_file(
+            file_path.name,
+        ) or FlextInfraUtilitiesCodegenNamespace.facade_family_of_directory(
+            file_path.parent.name,
         )
         classes = {
             node.name: node

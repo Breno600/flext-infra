@@ -9,8 +9,9 @@ from git import GitCommandError
 
 from flext_core import r
 from flext_infra import m
-
-from .worktree_facts import FlextInfraUtilitiesGitWorktreeFactsMixin
+from flext_infra._utilities._git.worktree_facts import (
+    FlextInfraUtilitiesGitWorktreeFactsMixin,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -49,34 +50,24 @@ class FlextInfraUtilitiesGitWorktreeRootsMixin(
 
     @classmethod
     def _git_repository_root_path(cls, repository_path: Path) -> p.Result[Path]:
-        """Private Path-based workspace/superproject resolver."""
+        """Private Path-based workspace/superproject resolver.
+
+        ``rev-parse --show-superproject-working-tree`` exits 0 and prints
+        nothing when the checkout is not a submodule; that empty answer selects
+        the checkout's own top level. Every Git failure is a failure.
+        """
         try:
             repo = cls._repo(repository_path)
             superproject = repo.git.rev_parse(
                 "--show-superproject-working-tree",
             ).strip()
-        except GitCommandError:
-            # Not inside any superproject — check if we're in a worktree at all.
-            try:
-                fallback_repo = cls._repo(repository_path)
-                inside = fallback_repo.git.rev_parse("--is-inside-work-tree").strip()
-            except GitCommandError:
-                return r[Path].ok(repository_path.expanduser().resolve())
-            if inside != "true":
-                return r[Path].ok(repository_path.expanduser().resolve())
-            return r[Path].fail("failed to resolve Git superproject")
-        except (OSError, ValueError) as exc:
+            root = superproject or repo.git.rev_parse("--show-toplevel").strip()
+        except (GitCommandError, OSError, ValueError) as exc:
             return r[Path].fail(
                 f"failed to resolve repository root: {exc}",
                 exception=exc,
             )
-        if superproject:
-            return r[Path].ok(Path(superproject).resolve())
-        try:
-            top_level = repo.git.rev_parse("--show-toplevel").strip()
-        except GitCommandError as exc:
-            return r[Path].fail(str(exc), exception=exc)
-        return r[Path].ok(Path(top_level).resolve())
+        return r[Path].ok(Path(root).resolve())
 
 
 __all__: list[str] = ["FlextInfraUtilitiesGitWorktreeRootsMixin"]

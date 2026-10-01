@@ -5,10 +5,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 from flext_core import r
-
-from .. import c, m, u
-from ._execution import FlextInfraCodegenExecutionBase
-from .conform import FlextInfraCodegenConform
+from flext_infra import c, m, u
+from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
+from flext_infra.codegen.conform import FlextInfraCodegenConform
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -55,6 +54,9 @@ class FlextInfraCodegenMakeBootstrap(FlextInfraCodegenExecutionBase[bool]):
                 scope=c.Infra.CodegenConformScope.SELF,
                 mode=mode,
             ),
+            # The bootstrap surface publishes one file and never crosses into
+            # the docs or fresh-import families.
+            ports=None,
         )
         if conformed.failure:
             return r[bool].from_failure(conformed)

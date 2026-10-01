@@ -140,7 +140,9 @@ class FlextInfraEnsurePackagingPhase:
             if (
                 not valid_path
                 or not declared_child
-                or (declaration in excluded or source.is_dir() or source.is_symlink())
+                or declaration in excluded
+                or source.is_dir()
+                or source.is_symlink()
             ):
                 msg = f"invalid packaged data exclusion: {declaration}"
                 raise ValueError(msg)
@@ -166,6 +168,11 @@ class FlextInfraEnsurePackagingPhase:
         module_paths = tuple(
             f"{c.Infra.DEFAULT_SRC_DIR}/{module}.py" for module in root_modules
         )
+        selected_directories = (
+            *package_paths,
+            *data.directories,
+            *repository_namespace_packages,
+        )
         toml = m.Infra.DepsToml
         force_include = tuple(
             (data_dir, f"{package_name}/{data_dir}") for data_dir in data.files
@@ -182,18 +189,12 @@ class FlextInfraEnsurePackagingPhase:
                     root_path=(),
                     table_path=("wheel",),
                     operations=(
-                        toml.ListOp(key="packages", values=package_paths),
                         toml.ListOp(
-                            key="include",
-                            values=(
-                                *(f"/{path}/**" for path in package_paths),
-                                *(f"/{path}/**" for path in data.directories),
-                                *(
-                                    f"/{path}/**"
-                                    for path in repository_namespace_packages
-                                ),
-                            ),
+                            key="only-include",
+                            values=selected_directories,
                         ),
+                        toml.RemoveOp(key="packages"),
+                        toml.RemoveOp(key="include"),
                         toml.SetOp(
                             key="sources",
                             value={
@@ -224,17 +225,10 @@ class FlextInfraEnsurePackagingPhase:
                     operations=(
                         toml.ListOp(
                             key="only-include",
-                            values=(
-                                *(f"/{path}/**" for path in package_paths),
-                                *(f"/{path}/**" for path in data.directories),
-                                *(
-                                    f"/{path}/**"
-                                    for path in repository_namespace_packages
-                                ),
-                            ),
+                            values=selected_directories,
                         ),
-                        toml.RemoveOp(key="only-include"),
                         toml.RemoveOp(key="packages"),
+                        toml.RemoveOp(key="include"),
                         (
                             toml.ListOp(
                                 key="exclude",
@@ -376,7 +370,9 @@ class FlextInfraEnsurePackagingPhase:
             topology.planned_data_files,
         )
         data_excludes = self.resolve_data_excludes(
-            project_dir, data_paths, topology.packaged_data_excludes
+            project_dir,
+            data_paths,
+            topology.packaged_data_excludes,
         )
         return u.Infra.apply_toml_phases(
             payload,

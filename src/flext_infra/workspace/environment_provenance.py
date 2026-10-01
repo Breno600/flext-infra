@@ -11,8 +11,7 @@ from urllib.request import url2pathname
 
 from flext_core import r
 from flext_infra import m, u
-
-from .detector import FlextInfraWorkspaceDetector
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
     from flext_infra import p, t

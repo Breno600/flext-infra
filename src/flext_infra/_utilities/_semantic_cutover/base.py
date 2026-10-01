@@ -5,14 +5,27 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, assert_never
 
 from flext_infra import c, m, t
-
-from .aliases import FlextInfraUtilitiesSemanticCutoverAliases
-from .dynamic_environment import FlextInfraUtilitiesSemanticCutoverDynamicEnvironment
-from .facade_bases import FlextInfraUtilitiesSemanticCutoverFacadeBases
-from .model_fields import FlextInfraUtilitiesSemanticCutoverModelFields
-from .nesting import FlextInfraUtilitiesSemanticCutoverNesting
-from .private_imports import FlextInfraUtilitiesSemanticCutoverPrivateImports
-from .self_facade import FlextInfraUtilitiesSemanticCutoverSelfFacade
+from flext_infra._utilities._semantic_cutover.aliases import (
+    FlextInfraUtilitiesSemanticCutoverAliases,
+)
+from flext_infra._utilities._semantic_cutover.dynamic_environment import (
+    FlextInfraUtilitiesSemanticCutoverDynamicEnvironment,
+)
+from flext_infra._utilities._semantic_cutover.facade_bases import (
+    FlextInfraUtilitiesSemanticCutoverFacadeBases,
+)
+from flext_infra._utilities._semantic_cutover.model_fields import (
+    FlextInfraUtilitiesSemanticCutoverModelFields,
+)
+from flext_infra._utilities._semantic_cutover.nesting import (
+    FlextInfraUtilitiesSemanticCutoverNesting,
+)
+from flext_infra._utilities._semantic_cutover.private_imports import (
+    FlextInfraUtilitiesSemanticCutoverPrivateImports,
+)
+from flext_infra._utilities._semantic_cutover.self_facade import (
+    FlextInfraUtilitiesSemanticCutoverSelfFacade,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path

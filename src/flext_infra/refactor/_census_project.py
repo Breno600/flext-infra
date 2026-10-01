@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from collections import Counter
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
-from flext_infra import u, m
+from flext_infra import m
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -17,8 +17,6 @@ class FlextInfraRefactorCensusProjectMixin:
     Composed into FlextInfraRefactorCensus via inheritance; borrows the
     rule-inclusion + object-classification helpers from sibling mixins via FLEXT.
     """
-
-    _census_project_log: ClassVar[p.Logger] = u.fetch_logger(__name__)
 
     if TYPE_CHECKING:
 
@@ -35,7 +33,10 @@ class FlextInfraRefactorCensusProjectMixin:
         def _object_key(item: m.Infra.Object) -> str: ...
         @staticmethod
         def _violation(
-            item: m.Infra.Object, *, kind: str, description: str
+            item: m.Infra.Object,
+            *,
+            kind: str,
+            description: str,
         ) -> m.Infra.Violation: ...
         @classmethod
         def _removal_candidate(

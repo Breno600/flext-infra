@@ -31,8 +31,8 @@ class TestsFlextInfraLazyMapFreshness:
         """Shared validator instance."""
         return FlextInfraValidateLazyMapFreshness()
 
+    @staticmethod
     def test_empty_workspace_yields_passing_report(
-        self,
         tmp_path: Path,
         v: FlextInfraValidateLazyMapFreshness,
     ) -> None:
@@ -41,16 +41,16 @@ class TestsFlextInfraLazyMapFreshness:
         tm.that(report.passed, eq=True)
         tm.that(report.violations, length=0)
 
+    @staticmethod
     def test_passing_summary_mentions_lazy_maps(
-        self,
         tmp_path: Path,
         v: FlextInfraValidateLazyMapFreshness,
     ) -> None:
         report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))
         tm.that(report.summary, has="lazy")
 
+    @staticmethod
     def test_report_is_validation_report(
-        self,
         tmp_path: Path,
         v: FlextInfraValidateLazyMapFreshness,
     ) -> None:

@@ -31,12 +31,11 @@ watch_file "${RUNTIME_ROOT}/{{ mise_bootstrap.lock_file }}"
 runtime_parent="$(cd "${RUNTIME_ROOT}/.." && pwd -P)"
 export GIT_CEILING_DIRECTORIES="${runtime_parent}"
 export MISE_CEILING_PATHS="${runtime_parent}"
-# A member inside a workspace uses the workspace environment; a
-# standalone checkout or linked worktree owns a physical environment beside
-# its checkout. Mirror the absolute runtime path to keep every owner distinct.
+# A linked worktree owns a distinct physical environment on its destination
+# filesystem. Mirror the absolute runtime path to avoid checkout collisions.
 runtime_environment_suffix="${RUNTIME_ROOT#/}"
 runtime_environment_suffix="${runtime_environment_suffix//:/\/}"
-VENV_DIR="${runtime_parent}/{{ runtime_environment_directory }}/${runtime_environment_suffix}"
+VENV_DIR="${runtime_parent}/{{ environment_directory }}/${runtime_environment_suffix}"
 export PROJECT_ROOT
 export PYTHON_KEYRING_BACKEND="keyring.backends.null.Keyring"
 export PYTHONUNBUFFERED=1

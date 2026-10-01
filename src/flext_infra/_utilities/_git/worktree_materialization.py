@@ -11,9 +11,10 @@ from git import GitCommandError
 
 from flext_core import r
 from flext_infra import c, t
-
-from .worktree_discovery import FlextInfraUtilitiesGitWorktreeDiscoveryMixin
-from .worktree_io import FlextInfraUtilitiesGitWorktreeIO
+from flext_infra._utilities._git.worktree_discovery import (
+    FlextInfraUtilitiesGitWorktreeDiscoveryMixin,
+)
+from flext_infra._utilities._git.worktree_io import FlextInfraUtilitiesGitWorktreeIO
 
 if TYPE_CHECKING:
     from flext_infra import p

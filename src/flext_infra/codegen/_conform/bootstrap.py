@@ -6,7 +6,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import Annotated
 
-from ... import c, m, s, t
+from flext_infra import c, m, s, t
 
 
 class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
@@ -31,6 +31,17 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
             default=None,
             exclude=True,
             description="Validated scaffold specification included in the atomic plan",
+        ),
+    ] = None
+    ports: Annotated[
+        m.Infra.CodegenConformPorts | None,
+        m.Field(
+            default=None,
+            exclude=True,
+            description=(
+                "Docs planner and fresh-import probe wired by the facade; the "
+                "complete surface fails before any effect without them"
+            ),
         ),
     ] = None
 
@@ -124,7 +135,9 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
                     Path(c.Infra.DIR_DOCS) / c.Infra.DOCS_CONFIG_FILENAME
                 ).as_posix()
                 return m.Infra.CodegenConformSurfaceContract(
-                    destinations=frozenset({destination}), pyproject=False, custom=False
+                    destinations=frozenset({destination}),
+                    pyproject=False,
+                    custom=False,
                 )
             case c.Infra.CodegenConformSurface.MISE_TRIPLE:
                 return m.Infra.CodegenConformSurfaceContract(

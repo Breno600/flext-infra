@@ -16,8 +16,6 @@ from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p
-
 
 class TestsFlextInfraExtendedProjectRunners:
     """Exercise runner behavior through the public checker API only."""
@@ -28,12 +26,8 @@ class TestsFlextInfraExtendedProjectRunners:
     def test_run_projects_records_requested_gates(
         self,
         real_python_package: Path,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
-        checker = FlextInfraWorkspaceChecker(
-            repository_root=real_python_package.parent,
-            rope=rope_workspace,
-        )
+        checker = FlextInfraWorkspaceChecker(repository_root=real_python_package.parent)
         result = checker.run_projects(
             [real_python_package.name],
             ["lint", "pyrefly"],
@@ -52,12 +46,8 @@ class TestsFlextInfraExtendedProjectRunners:
         self,
         gate_method: str,
         real_python_package: Path,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
-        checker = FlextInfraWorkspaceChecker(
-            repository_root=real_python_package.parent,
-            rope=rope_workspace,
-        )
+        checker = FlextInfraWorkspaceChecker(repository_root=real_python_package.parent)
         result = (
             checker.lint(real_python_package)
             if gate_method == "lint"

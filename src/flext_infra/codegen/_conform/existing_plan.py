@@ -8,13 +8,16 @@ from pathlib import Path
 from typing import Literal
 
 from flext_core import r
-
-from ... import c, m, p, t, u
-from ...deps import FlextInfraPyprojectModernizer
-from ...services.codegen import FlextInfraCodegen
-from ...workspace.environment_contracts import FlextInfraWorkspaceEnvironmentContracts
-from .._mise_artifacts_cold_start import FlextInfraMiseColdStart
-from .artifact_render import FlextInfraCodegenConformArtifactRender
+from flext_infra import c, m, p, t, u
+from flext_infra.codegen._conform.artifact_render import (
+    FlextInfraCodegenConformArtifactRender,
+)
+from flext_infra.codegen._mise_artifacts_cold_start import FlextInfraMiseColdStart
+from flext_infra.deps import FlextInfraPyprojectModernizer
+from flext_infra.services.codegen import FlextInfraCodegen
+from flext_infra.workspace.environment_contracts import (
+    FlextInfraWorkspaceEnvironmentContracts,
+)
 
 
 class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRender):
@@ -55,7 +58,10 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         docs_config = (Path(c.Infra.DIR_DOCS) / c.Infra.DOCS_CONFIG_FILENAME).as_posix()
         if contract.destinations == frozenset({docs_config}):
             return self._plan_existing_docs_config(
-                target, workspace, codegen, docs_config
+                target,
+                workspace,
+                codegen,
+                docs_config,
             )
         managed_artifacts = u.Infra.snapshot_committed_project_managed_artifacts(root)
         if managed_artifacts.failure:
@@ -90,11 +96,6 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 ),
                 packaged_data_paths=(
                     target.project.packaged_data_paths
-                    if target.project is not None
-                    else ()
-                ),
-                packaged_data_excludes=(
-                    target.project.packaged_data_excludes
                     if target.project is not None
                     else ()
                 ),
@@ -215,7 +216,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         )
         if len(entries) != 1 or entries[0].source is None or len(managed) != 1:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
-                f"docs config requires one declared render template and owner: {destination}"
+                f"docs config requires one declared render template and owner: {destination}",
             )
         template = u.Infra.codegen_templates_root(codegen) / entries[0].source
         source = u.Cli.atomic_read_binary_file_state(template, required=True)
@@ -304,9 +305,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                     f"managed destination escapes repository root: {entry.destination}",
                 )
             path = (root / relative).resolve()
-            try:
-                path.relative_to(root.resolve())
-            except ValueError:
+            if not path.is_relative_to(root.resolve()):
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
                     f"managed destination escapes repository root: {entry.destination}",
                 )
@@ -366,7 +365,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 recorded = self.with_planned_pyproject(render_inputs, rendered_content)
                 if recorded.failure:
                     return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
-                        recorded
+                        recorded,
                     )
                 render_inputs = recorded.value
             conflict_marker = u.Infra.first_merge_conflict_marker(rendered_content)

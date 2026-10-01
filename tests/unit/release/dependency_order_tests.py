@@ -23,8 +23,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraReleaseDependencyOrder:
     """Behavior contract for wave computation over declared dependencies."""
 
+    @staticmethod
     def _write_project(
-        self,
         root: Path,
         name: str,
         dependencies: t.VariadicTuple[str],

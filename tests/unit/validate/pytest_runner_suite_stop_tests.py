@@ -53,12 +53,15 @@ class TestsFlextInfraPytestRunnerSuiteStop:
             update={
                 "started_at_monotonic": time.monotonic()
                 - policy.run_timeout_seconds
-                + reserve
-            }
+                + reserve,
+            },
         )
 
     def _published_run(
-        self, project: Path, *, expected_raw_exit: pytest.ExitCode
+        self,
+        project: Path,
+        *,
+        expected_raw_exit: pytest.ExitCode,
     ) -> tuple[Path, t.StrTuple, int]:
         """Return the published run, its selection and its executed count."""
         reports = config.Infra.codegen.make.testmon_cache.reports_directory
@@ -77,8 +80,8 @@ class TestsFlextInfraPytestRunnerSuiteStop:
         ).executed_count
         return bounded, selected, executed
 
+    @staticmethod
     def test_stop_reserve_matches_the_runner_dispatch_decision(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """The typed reserve follows the same serial decision as the workers.
@@ -105,11 +108,13 @@ class TestsFlextInfraPytestRunnerSuiteStop:
         runner = runner_for(cached_runner_project)
         multi_plan = dispatch_plan(multi)
         multi_command = runner.build_command(
-            cached_runner_project / runner.reports, multi_plan
+            cached_runner_project / runner.reports,
+            multi_plan,
         )
         serial_plan = dispatch_plan(multi[:1])
         serial_command = runner.build_command(
-            cached_runner_project / runner.reports, serial_plan
+            cached_runner_project / runner.reports,
+            serial_plan,
         )
 
         def stop_value(command: t.StrSequence) -> float:
@@ -121,11 +126,9 @@ class TestsFlextInfraPytestRunnerSuiteStop:
             return float(raw.partition("=")[2])
 
         workers_index = list(multi_command).index("-n") + 1
-        multi_workers = list(multi_command)[workers_index]
-        expected_workers = min(runner.parallel_worker_budget(policy), len(multi))
-        tm.that(
-            multi_workers, eq="0" if expected_workers <= 1 else str(expected_workers)
-        )
+        budget = runner.parallel_worker_budget(policy)
+        tm.that(budget > 1, eq=True)
+        tm.that(list(multi_command)[workers_index], eq=str(min(budget, len(multi))))
         tm.that(
             stop_value(multi_command),
             eq=runner.started_at_monotonic
@@ -169,7 +172,8 @@ class TestsFlextInfraPytestRunnerSuiteStop:
         tm.that(tm.ok(runner.execute()), eq=pytest.ExitCode.INTERRUPTED.value)
 
         bounded, selected, executed = self._published_run(
-            cached_runner_project, expected_raw_exit=pytest.ExitCode.INTERRUPTED
+            cached_runner_project,
+            expected_raw_exit=pytest.ExitCode.INTERRUPTED,
         )
         tm.that(executed, gt=0)
         tm.that(executed, lt=len(selected))
@@ -216,7 +220,8 @@ class TestsFlextInfraPytestRunnerSuiteStop:
         tm.that(tm.ok(runner.execute()), eq=pytest.ExitCode.OK.value)
 
         bounded, selected, executed = self._published_run(
-            cached_runner_project, expected_raw_exit=pytest.ExitCode.OK
+            cached_runner_project,
+            expected_raw_exit=pytest.ExitCode.OK,
         )
         tm.that(executed, eq=len(selected))
         tm.that(

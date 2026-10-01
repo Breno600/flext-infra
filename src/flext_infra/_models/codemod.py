@@ -86,19 +86,21 @@ class FlextInfraModelsCodemod:
             t.JsonMapping,
             m.Field(
                 validation_alias=m.AliasPath("metaVariables", "single"),
+                default_factory=lambda: MappingProxyType({}),
                 description=(
                     "Captured single metavariables; ast-grep omits the payload "
                     "for a match that captures none"
                 ),
             ),
-        ] = MappingProxyType({})
+        ]
         transformed: Annotated[
             t.JsonMapping,
             m.Field(
                 validation_alias=m.AliasPath("metaVariables", "transformed"),
+                default_factory=lambda: MappingProxyType({}),
                 description="Metavariables the rule derived through transform",
             ),
-        ] = MappingProxyType({})
+        ]
 
     class AstGrepReport(m.RootModel[tuple[AstGrepDiagnostic, ...]]):
         """Complete ``ast-grep scan --json=compact`` array; malformed input raises."""

@@ -23,8 +23,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraExtraPathsArePure:
     """No emitted entry may address another project on the filesystem."""
 
+    @staticmethod
     def test_workspace_project_source_roots_are_not_emitted_at_the_root(
-        self,
         tmp_path: Path,
     ) -> None:
         """A UV workspace project is a distribution, not a search path."""
@@ -35,8 +35,8 @@ class TestsFlextInfraExtraPathsArePure:
 
         tm.that(result, eq=("src", "."))
 
+    @staticmethod
     def test_sibling_source_roots_are_not_emitted_for_a_member(
-        self,
         tmp_path: Path,
     ) -> None:
         """A member never reaches out of its own root to find a dependency."""
@@ -63,7 +63,8 @@ class TestsFlextInfraExtraPathsArePure:
             )
         tm.that(search_paths, eq=("src", "."))
 
-    def test_search_paths_survive_a_project_only_worktree(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_search_paths_survive_a_project_only_worktree(tmp_path: Path) -> None:
         """The same project alone on disk yields the same entries.
 
         A `make work` lane materializes one project without its siblings. Entries

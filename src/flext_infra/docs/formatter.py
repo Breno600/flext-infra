@@ -3,15 +3,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, override
+from typing import override
 
-from flext_infra import c, m, u
-from flext_infra.gates.markdown_format import FlextInfraMarkdownFormatGate
-
-from .base import FlextInfraDocServiceBase
-
-if TYPE_CHECKING:
-    from flext_infra import p, t
+from flext_core import r
+from flext_infra import c, m, p, t, u
+from flext_infra.docs.base import FlextInfraDocServiceBase
 
 
 class FlextInfraDocFormatter(FlextInfraDocServiceBase):
@@ -20,10 +16,20 @@ class FlextInfraDocFormatter(FlextInfraDocServiceBase):
     The service never builds its own prettier invocation: configuration,
     ignore handling, and command construction stay owned by the gate, so
     ``docs fmt`` and ``make fmt`` can never disagree about the formatting
-    contract. The single-pass verb law holds: one operation per scope — the
-    mutating pass with ``--apply``, the read-only ``prettier --check``
-    preview without it.
+    contract. The gate is another service family, so the facade binds it
+    (``FlextInfra.docs_format``) and the formatter only consumes the port. The
+    single-pass verb law holds: one operation per scope — the mutating pass
+    with ``--apply``, the read-only ``prettier --check`` preview without it.
     """
+
+    format_gate: t.Port[p.Infra.MarkdownFormatGateFactory | None] = m.Field(
+        default=None,
+        exclude=True,
+        description=(
+            "Markdown format gate bound by FlextInfra.docs_format; formatting "
+            "fails before any effect without it"
+        ),
+    )
 
     def format(
         self,
@@ -34,11 +40,21 @@ class FlextInfraDocFormatter(FlextInfraDocServiceBase):
         apply: bool = False,
     ) -> p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]:
         """Run markdown formatting across project scopes."""
+        gate_factory = self.format_gate
+        if gate_factory is None:
+            return r[t.SequenceOf[m.Infra.DocsPhaseReport]].fail(
+                "docs formatting requires the facade-bound markdown format gate; "
+                "run it through FlextInfra.docs_format",
+            )
         return self.run_scoped_docs(
             repository_root,
             projects=projects,
             output_dir=output_dir,
-            handler=lambda scope: self._format_scope(scope, apply=apply),
+            handler=lambda scope: self._format_scope(
+                scope,
+                apply=apply,
+                gate_factory=gate_factory,
+            ),
         )
 
     @override
@@ -60,9 +76,10 @@ class FlextInfraDocFormatter(FlextInfraDocServiceBase):
         scope: m.Infra.DocScope,
         *,
         apply: bool,
+        gate_factory: p.Infra.MarkdownFormatGateFactory,
     ) -> m.Infra.DocsPhaseReport:
         """Format one scope through the canonical markdown-format gate."""
-        gate = FlextInfraMarkdownFormatGate(scope.path)
+        gate = gate_factory(scope.path)
         ctx = m.Infra.GateContext(
             repository_root=scope.repository_root,
             reports_dir=scope.report_dir,

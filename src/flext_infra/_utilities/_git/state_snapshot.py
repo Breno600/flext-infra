@@ -10,10 +10,9 @@ from typing import TYPE_CHECKING
 from git import GitCommandError
 
 from flext_core import r
-from flext_infra import m, t
-
-from .repo import FlextInfraUtilitiesGitRepo
-from .worktree_io import FlextInfraUtilitiesGitWorktreeIO
+from flext_infra import c, m, t
+from flext_infra._utilities._git.repo import FlextInfraUtilitiesGitRepo
+from flext_infra._utilities._git.worktree_io import FlextInfraUtilitiesGitWorktreeIO
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -152,9 +151,13 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
         gitlinks = {
             entry.path: entry.oid
             for entry in (*cls._state_head_entries(root, paths), *entries)
-            if entry.mode == "160000"
+            if entry.mode == c.Infra.GIT_GITLINK_MODE_TEXT
         }
-        indexed_gitlinks = {entry.path for entry in entries if entry.mode == "160000"}
+        indexed_gitlinks = {
+            entry.path
+            for entry in entries
+            if entry.mode == c.Infra.GIT_GITLINK_MODE_TEXT
+        }
         for path in (*paths, *candidates):
             for parent in path.parents:
                 if (root / parent).is_symlink() and parent not in candidates:
@@ -171,7 +174,7 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
                 files.append(
                     m.Infra.GitWorktreeFileState(
                         path=path,
-                        mode="160000",
+                        mode=c.Infra.GIT_GITLINK_MODE_TEXT,
                         permissions=0,
                         oid=cls._repo(candidate).head.commit.hexsha
                         if (candidate / ".git").exists()

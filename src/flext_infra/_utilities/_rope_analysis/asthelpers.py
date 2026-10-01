@@ -8,9 +8,8 @@ from pathlib import Path
 from typing import ClassVar, TypeGuard
 
 from flext_infra import m, p, t
-
-from ..rope_core import FlextInfraUtilitiesRopeCore
-from ..rope_runtime import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeAnalysisAstHelpers:

@@ -6,10 +6,14 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from flext_core import r
-
-from ... import c, config, m, p, t, u
-from ...deps import FlextInfraEnsurePackagingPhase, FlextInfraEnsureRuffConfigPhase
-from .pyproject_policy import FlextInfraCodegenConformPyprojectPolicy
+from flext_infra import c, config, m, p, t, u
+from flext_infra.codegen._conform.pyproject_policy import (
+    FlextInfraCodegenConformPyprojectPolicy,
+)
+from flext_infra.deps import (
+    FlextInfraEnsurePackagingPhase,
+    FlextInfraEnsureRuffConfigPhase,
+)
 
 
 class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPolicy):
@@ -359,17 +363,12 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 ),
                 dependency_profile=dependency_profile,
                 tooling=config.Infra.tooling,
-                # Why: the fleet policy alone is not the effective Ruff contract.
-                # A repository may carry an operator-authorized exemption in its
-                # committed ``config/*.yaml`` ManagedArtifacts catalog, and
-                # ensure_ruff composes the two when it edits a pyproject in
-                # place. Composed through the static contract directly (no
-                # phase instance, so the historic constructor-binding defect
-                # cannot resurface); both call sites share this single owner.
+                # The in-place pyproject edit and this render read the same
+                # fleet exemption map, scoped to the project.
                 ruff_per_file_ignores=(
                     FlextInfraEnsureRuffConfigPhase.compose_per_file_ignores(
                         repository_root,
-                        managed_artifacts=catalog_artifacts,
+                        global_ignores=config.Infra.tooling.tools.ruff.lint.per_file_ignores,
                     )
                 ),
                 environment_path_prepends=(codegen.toolchain.environment_path_prepends),
@@ -382,15 +381,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                     *packaged_data_paths.directories,
                 ),
                 packaged_data_files=packaged_data_paths.files,
-                packaged_data_excludes=(
-                    FlextInfraEnsurePackagingPhase.resolve_data_excludes(
-                        repository_root,
-                        packaged_data_paths,
-                        project.packaged_data_excludes,
-                    )
-                    if profile is not c.Infra.MakeProfile.WORKSPACE
-                    else ()
-                ),
+                packaged_data_excludes=project.packaged_data_excludes,
                 namespace_scan_dirs=project.namespace_scan_dirs,
                 workspace_integration=workspace.integration,
                 # Carry only the validated

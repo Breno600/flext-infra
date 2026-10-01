@@ -14,11 +14,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import c, m, t
+from flext_infra._config import config
 
 # Concrete-owner imports: this module resolves during the root's lazy ``u``
 # export, when the root namespace is still initializing — a root from-import
 # would re-enter the partial namespace and fail.
-from .._config import config
 
 if TYPE_CHECKING:
     from flext_infra import FlextInfraConfig
@@ -78,6 +78,19 @@ class FlextInfraUtilitiesDocsGithubLinks:
         return c.Infra.DOCS_GITHUB_BLOB_TREE_RE.match(target.strip())
 
     @staticmethod
+    def docs_github_governed_path(refpath: str, branch: str) -> str | None:
+        """Return the path after ``branch`` when ``refpath`` starts with it.
+
+        Git refs may contain ``/`` (``feature/fix``), so a URL alone cannot say
+        where the ref ends. Only the governed branch is a trusted boundary; any
+        other ref is unresolvable and yields ``None``.
+        """
+        prefix = f"{branch}/"
+        if not refpath.startswith(prefix):
+            return None
+        return refpath[len(prefix) :]
+
+    @staticmethod
     def docs_canonical_github_url(
         organization: str,
         repository: str,
@@ -100,7 +113,12 @@ class FlextInfraUtilitiesDocsGithubLinks:
 
     @staticmethod
     def docs_rewrite_github_url(target: str) -> str | None:
-        """Rewrite stale org placeholders and wrong branches when mapped."""
+        """Rewrite a stale org placeholder when the ref is the governed branch.
+
+        A different ref is never rewritten: refs may contain ``/``, so its
+        extent (and thus the path) is undecidable from the URL alone. Any
+        ``?query``/``#fragment`` suffix is carried over unchanged.
+        """
         match = FlextInfraUtilitiesDocsGithubLinks.docs_parse_github_doc_url(target)
         if match is None:
             stale = FlextInfraUtilitiesDocsGithubLinks.docs_stale_github_organizations()
@@ -112,8 +130,8 @@ class FlextInfraUtilitiesDocsGithubLinks:
             return None
         org = match.group("org")
         repository = match.group("repo")
-        branch = match.group("branch")
-        path = match.group("path")
+        refpath = match.group("refpath")
+        suffix = match.group("suffix") or ""
         kind = match.group("kind")
         stale = FlextInfraUtilitiesDocsGithubLinks.docs_stale_github_organizations()
         lookup_org = org
@@ -129,11 +147,17 @@ class FlextInfraUtilitiesDocsGithubLinks:
         )
         if repo is None:
             return None
-        if org == repo.organization and branch == repo.branch:
+        path = FlextInfraUtilitiesDocsGithubLinks.docs_github_governed_path(
+            refpath,
+            repo.branch,
+        )
+        # A foreign ref has no decidable ref/path boundary: the audit reports it
+        # as a wrong branch, and no rewrite is guessed.
+        if path is None or org == repo.organization:
             return None
         return (
             f"https://github.com/{repo.organization}/{repo.repository}/"
-            f"{kind}/{repo.branch}/{path}"
+            f"{kind}/{repo.branch}/{path}{suffix}"
         )
 
     @staticmethod
@@ -144,7 +168,6 @@ class FlextInfraUtilitiesDocsGithubLinks:
             return None
         org = match.group("org")
         repository = match.group("repo")
-        path = match.group("path")
         if org in FlextInfraUtilitiesDocsGithubLinks.docs_stale_github_organizations():
             return None
         repo = FlextInfraUtilitiesDocsGithubLinks.docs_github_repo_lookup(
@@ -152,6 +175,12 @@ class FlextInfraUtilitiesDocsGithubLinks:
             repository,
         )
         if repo is None:
+            return None
+        path = FlextInfraUtilitiesDocsGithubLinks.docs_github_governed_path(
+            match.group("refpath"),
+            repo.branch,
+        )
+        if path is None:
             return None
         root = FlextInfraUtilitiesDocsGithubLinks.docs_expand_local_checkout(
             repo.local_checkout,
@@ -199,12 +228,18 @@ class FlextInfraUtilitiesDocsGithubLinks:
             )
             return issues
         repository = match.group("repo")
-        branch = match.group("branch")
         repo = FlextInfraUtilitiesDocsGithubLinks.docs_github_repo_lookup(
             org,
             repository,
         )
-        if repo is not None and branch != repo.branch:
+        if (
+            repo is not None
+            and FlextInfraUtilitiesDocsGithubLinks.docs_github_governed_path(
+                match.group("refpath"),
+                repo.branch,
+            )
+            is None
+        ):
             issues.append(
                 m.Infra.AuditIssue(
                     file=file,

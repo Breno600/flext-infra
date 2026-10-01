@@ -9,10 +9,11 @@ from flext_cli import u
 
 from flext_core import r
 from flext_infra import c, m, t
-
-from ._docs_scope_build import FlextInfraUtilitiesDocsScopeBuildMixin
-from .docs_contract import FlextInfraUtilitiesDocsContract
-from .docs_scope import FlextInfraUtilitiesDocsScope
+from flext_infra._utilities._docs_scope_build import (
+    FlextInfraUtilitiesDocsScopeBuildMixin,
+)
+from flext_infra._utilities.docs_contract import FlextInfraUtilitiesDocsContract
+from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -56,8 +57,7 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
         return sorted(
             path
             for path in search_root.rglob("*.md")
-            if ".bak" not in path.name
-            and not any(
+            if not any(
                 part in c.Infra.DOC_EXCLUDED_DIRS or part.startswith(".")
                 for part in path.relative_to(search_root).parts
             )

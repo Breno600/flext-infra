@@ -13,8 +13,7 @@ from typing import Annotated, ClassVar, Self, override
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
-
-from ..base import s
+from flext_infra.base import s
 
 
 class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
@@ -64,9 +63,6 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
     _import_dependents_index: MutableMapping[str, t.VariadicTuple[Path]] | None = (
         u.PrivateAttr(default_factory=lambda: None)
     )
-    _visit_source_seconds: float = u.PrivateAttr(default=0.0)
-    _visit_parse_seconds: float = u.PrivateAttr(default=0.0)
-    _visit_convention_seconds: float = u.PrivateAttr(default=0.0)
 
     @override
     def model_post_init(self, __context: t.ScalarMapping | None, /) -> None:
@@ -233,55 +229,6 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
                     )
                 ),
                 key=attrgetter("file_path"),
-            ),
-        )
-
-    def cycle(
-        self,
-        callbacks: t.SequenceOf[m.Infra.RopeCallbackBinding],
-        *,
-        project_names: t.StrSequence | None = None,
-    ) -> p.Result[m.Infra.RopeCycleReport]:
-        """Run every semantic validation and fix callback in one Rope cycle."""
-        outcomes: t.MutableSequenceOf[m.Infra.RopeCallbackOutcome] = []
-        self._visit_source_seconds = 0.0
-        self._visit_parse_seconds = 0.0
-        self._visit_convention_seconds = 0.0
-        modules_visited = 0
-        callbacks_executed = 0
-        for entry in self.modules(project_names=project_names):
-            if entry.project_root is None:
-                continue
-            resolved_path = entry.file_path.resolve()
-            selected = tuple(
-                binding for binding in callbacks if resolved_path in binding.file_paths
-            )
-            if not selected:
-                continue
-            modules_visited += 1
-            visit = self._module_visit(entry)
-            for binding in selected:
-                callbacks_executed += 1
-                outcome_result = binding.callback(self, visit)
-                if outcome_result.failure:
-                    return r[m.Infra.RopeCycleReport].from_failure(outcome_result)
-                outcome = outcome_result.value
-                outcomes.append(outcome)
-                if not outcome.changed:
-                    continue
-                self._invalidate_module(visit.file_path)
-                visit = self._module_visit(entry)
-        u.Cli.info(
-            "rope: cycle materialization "
-            f"source={self._visit_source_seconds:.2f}s "
-            f"parse={self._visit_parse_seconds:.2f}s "
-            f"convention={self._visit_convention_seconds:.2f}s",
-        )
-        return r[m.Infra.RopeCycleReport].ok(
-            m.Infra.RopeCycleReport(
-                modules_visited=modules_visited,
-                callbacks_executed=callbacks_executed,
-                outcomes=tuple(outcomes),
             ),
         )
 
@@ -579,48 +526,6 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
             raise FileNotFoundError(resolved_path)
         msg = f"path is outside the active rope workspace: {file_path}"
         raise ValueError(msg)
-
-    def _module_visit(
-        self,
-        entry: m.Infra.RopeModuleIndexEntry,
-    ) -> m.Infra.RopeModuleVisit:
-        """Materialize one callback payload from the active Rope session."""
-        if entry.project_root is None:
-            msg = f"indexed module has no project owner: {entry.file_path}"
-            raise ValueError(msg)
-        started = perf_counter()
-        resource = self._resource_for(entry.file_path)
-        source = resource.read()
-        pymodule = u.Infra.resolve_pymodule(self.rope_project, resource)
-        self._visit_source_seconds += perf_counter() - started
-        started = perf_counter()
-        tree = u.Infra.parse_rope_module(source, filename=str(entry.file_path))
-        self._visit_parse_seconds += perf_counter() - started
-        started = perf_counter()
-        convention = self.convention(entry.file_path)
-        self._visit_convention_seconds += perf_counter() - started
-        return m.Infra.RopeModuleVisit(
-            file_path=entry.file_path,
-            project_root=entry.project_root,
-            entry=entry,
-            resource=resource,
-            tree=tree,
-            pymodule=pymodule,
-            source=source,
-            convention=convention,
-        )
-
-    def _invalidate_module(self, file_path: Path) -> None:
-        """Drop derived snapshots after a callback mutates its live resource."""
-        cache_key = str(file_path.resolve())
-        self._module_convention_cache.pop(f"{cache_key}::", None)
-        self._module_object_cache = {
-            key: value
-            for key, value in self._module_object_cache.items()
-            if key[0] != cache_key
-        }
-        self._name_index = None
-        self._import_dependents_index = None
 
 
 __all__: t.StrSequence = ("FlextInfraRopeWorkspace",)

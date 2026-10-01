@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, m
+from flext_infra import c, infra, m
 from flext_infra.codegen import FlextInfraCodegenConform
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 from tests import u
@@ -19,8 +19,8 @@ from tests import u
 class TestsFlextInfraCodegenLinkedWorktreeManifest:
     """Keep topology inputs and writes owned by the repository being conformed."""
 
+    @staticmethod
     def test_linked_lane_reads_its_local_beads_identity_and_only_writes_lane(
-        self,
         tmp_path: Path,
     ) -> None:
         """Use dirty lane-local policy without reading or mutating the primary."""
@@ -127,7 +127,7 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
             beads_path.write_text(beads_content, encoding="utf-8")
         before = u.Tests.WorktreeFixture.repository_snapshot(root)
 
-        result = FlextInfraCodegenConform.execute_request(
+        result = infra.codegen_conform(
             u.Tests.conform_request(
                 root,
                 scope=c.Infra.CodegenConformScope.SELF,
@@ -138,8 +138,8 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
         tm.fail(result, has=expected_error)
         tm.that(u.Tests.WorktreeFixture.repository_snapshot(root), eq=before)
 
+    @staticmethod
     def test_workspace_members_inherit_identity_and_topology_inputs_are_never_rewritten(
-        self,
         tmp_path: Path,
     ) -> None:
         """Members declare the workspace identity; conform never rewrites inputs."""
@@ -182,7 +182,7 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
             tm.that(beads.issue_prefix, eq="root-prefix")
 
         applied = tm.ok(
-            FlextInfraCodegenConform.execute_request(
+            infra.codegen_conform(
                 u.Tests.conform_request(
                     root,
                     scope=c.Infra.CodegenConformScope.DECLARED,
@@ -210,8 +210,8 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
             tm.that(route.is_symlink(), eq=False)
             tm.that((route / "config.yaml").is_file(), eq=True)
 
+    @staticmethod
     def test_declared_subproject_cannot_escape_through_a_linked_path(
-        self,
         tmp_path: Path,
     ) -> None:
         """Reject a declared subproject whose path resolves outside its owner."""
@@ -235,7 +235,7 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
         u.Tests.WorktreeFixture.write_gitmodules(root, ("linked-project",))
         outside_snapshot = u.Tests.WorktreeFixture.repository_snapshot(outside)
 
-        result = FlextInfraCodegenConform.execute_request(
+        result = infra.codegen_conform(
             u.Tests.conform_request(
                 root,
                 what=c.Infra.CodegenConformSurface.MAKEFILE,

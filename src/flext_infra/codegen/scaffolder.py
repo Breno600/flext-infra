@@ -12,10 +12,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 from flext_core import r
-
-from .. import c, m, u
-from ._execution import FlextInfraCodegenExecutionBase
-from ._mise_artifacts_publication import FlextInfraMisePublication
+from flext_infra import c, m, u
+from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
+from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
 
 if TYPE_CHECKING:
     from .. import p, t
@@ -197,7 +196,7 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
             class_name = f"{request.test_prefix}{request.prefix}{suffix}"
             docstring = f"{doc_suffix} for {request.prefix.lower()}."
             if request.test_module:
-                alias = c.Infra.NAMESPACE_LAYER_BY_FILE[filename]
+                alias = u.Infra.facade_family_declared_by(filename).letter
                 content = u.Infra.generate_test_module_skeleton(
                     context=m.Infra.TestModuleSkeletonRenderContext(
                         class_name=class_name,

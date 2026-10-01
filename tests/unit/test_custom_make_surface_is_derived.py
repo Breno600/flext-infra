@@ -25,7 +25,8 @@ from tests import t
 
 
 class TestsFlextInfraCustomMakeSurfaceIsDerived:
-    def _engine_modules(self) -> t.VariadicTuple[Path]:
+    @staticmethod
+    def _engine_modules() -> t.VariadicTuple[Path]:
         """Return every shipped engine module, excluding the template tree."""
         root = Path(flext_infra.__file__).resolve().parent
         templates = root / "templates"
@@ -35,8 +36,8 @@ class TestsFlextInfraCustomMakeSurfaceIsDerived:
             ),
         )
 
+    @staticmethod
     def _string_literals(
-        self,
         module: Path,
         *,
         containing: str,
@@ -62,7 +63,8 @@ class TestsFlextInfraCustomMakeSurfaceIsDerived:
             and node.value not in docstrings
         )
 
-    def test_include_directive_is_derived_from_the_filename_ssot(self) -> None:
+    @staticmethod
+    def test_include_directive_is_derived_from_the_filename_ssot() -> None:
         """The include directive embeds the SSOT filename, not a copy of it."""
         tm.that(
             c.Infra.MAKEFILE_CUSTOM_INCLUDE.endswith(c.Infra.CUSTOM_MAKE_FILENAME),

@@ -8,8 +8,9 @@ from git import GitCommandError, InvalidGitRepositoryError, Repo
 
 from flext_core import r
 from flext_infra import m
-
-from .semantic_publish import FlextInfraUtilitiesGitSemanticPublishMixin
+from flext_infra._utilities._git.semantic_publish import (
+    FlextInfraUtilitiesGitSemanticPublishMixin,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -110,9 +111,7 @@ class FlextInfraUtilitiesGitSemanticPathsMixin(
         try:
             repo = cls._repo(request.repo_root)
             listed = repo.git.ls_files("-z", "--", request.relative_path)
-        except GitCommandError:
-            return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=False))
-        except (OSError, ValueError) as exc:
+        except (GitCommandError, OSError, ValueError) as exc:
             return r[m.Infra.GitBoolReport].fail(
                 f"failed to check tracked status: {exc}",
                 exception=exc,

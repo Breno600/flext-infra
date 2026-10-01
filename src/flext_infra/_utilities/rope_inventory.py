@@ -6,10 +6,10 @@ from operator import itemgetter
 from pathlib import Path
 
 from flext_infra import c, m, p, t
-
-from .rope_core import FlextInfraUtilitiesRopeCore
-from .rope_imports import FlextInfraUtilitiesRopeImports
-from .rope_runtime import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities.rope_imports import FlextInfraUtilitiesRopeImports
+from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeInventory:
@@ -608,8 +608,9 @@ class FlextInfraUtilitiesRopeInventory:
         if expected:
             return expected
         if kind == "constant":
-            # Closed SSOT map: an absent key is a defect, never a fallback.
-            return c.Infra.FAMILY_SUFFIXES["c"]
+            return FlextInfraUtilitiesCodegenNamespace.facade_family_declared_by(
+                c.Infra.CONSTANTS_PY,
+            ).suffix
         return FlextInfraUtilitiesRopeInventory._actual_tier(convention)
 
     @staticmethod

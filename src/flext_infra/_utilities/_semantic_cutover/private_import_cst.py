@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, override
 
-from ..qualified_names import FlextInfraUtilitiesQualifiedNames
+from flext_infra._utilities.qualified_names import FlextInfraUtilitiesQualifiedNames
 
 if TYPE_CHECKING:
     import libcst as cst
@@ -14,7 +14,11 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
-    """Preserve source layout while moving consumers to public facades."""
+    """Preserve source layout while moving consumers to public facades.
+
+    Same-package absolute private imports are legal (imports are always
+    absolute); only cross-owner private imports reach this rewrite.
+    """
 
     @classmethod
     def _relocate_declared_exports(
@@ -156,25 +160,11 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
                 original_node: cst.ImportFrom,
                 updated_node: cst.ImportFrom,
             ) -> cst.BaseSmallStatement | cst.RemovalSentinel:
-                """Relativize same-owner imports or remove cross-owner bindings."""
+                """Remove cross-owner private bindings replaced by public facades."""
                 module = FlextInfraUtilitiesQualifiedNames.dotted_name(
                     original_node.module,
                 )
                 module_name = module or ""
-                relative_module = self.plan.relative_imports.get(module_name)
-                if relative_module is not None:
-                    relative_level = len(relative_module) - len(
-                        relative_module.lstrip("."),
-                    )
-                    relative_name = relative_module[relative_level:]
-                    return updated_node.with_changes(
-                        relative=tuple(cst.Dot() for _ in range(relative_level)),
-                        module=(
-                            cst.parse_expression(relative_name)
-                            if relative_name
-                            else None
-                        ),
-                    )
                 removed = self.plan.removals.get(
                     module_name,
                     frozenset(),

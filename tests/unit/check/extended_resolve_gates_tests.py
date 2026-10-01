@@ -15,15 +15,18 @@ from tests import c
 class TestsFlextInfraWorkspaceCheckerResolveGates:
     """Test FlextInfraWorkspaceChecker.resolve_gates."""
 
-    def test_resolve_gates_type_is_rejected(self) -> None:
+    @staticmethod
+    def test_resolve_gates_type_is_rejected() -> None:
         result = FlextInfraWorkspaceChecker.resolve_gates(["type"])
         tm.fail(result, has="unknown gate")
 
-    def test_resolve_gates_rejects_empty_strings(self) -> None:
+    @staticmethod
+    def test_resolve_gates_rejects_empty_strings() -> None:
         result = FlextInfraWorkspaceChecker.resolve_gates(["lint", "", "format"])
         tm.fail(result, has="invalid gate name")
 
-    def test_resolve_gates_rejects_duplicate_entries(self) -> None:
+    @staticmethod
+    def test_resolve_gates_rejects_duplicate_entries() -> None:
         result = FlextInfraWorkspaceChecker.resolve_gates([
             "lint",
             "lint",
@@ -32,11 +35,13 @@ class TestsFlextInfraWorkspaceCheckerResolveGates:
         ])
         tm.fail(result, has="duplicate gate")
 
-    def test_resolve_gates_invalid_gate_fails(self) -> None:
+    @staticmethod
+    def test_resolve_gates_invalid_gate_fails() -> None:
         result = FlextInfraWorkspaceChecker.resolve_gates(["invalid"])
         tm.fail(result, has="unknown gate")
 
-    def test_resolve_gates_accepts_every_declared_gate(self) -> None:
+    @staticmethod
+    def test_resolve_gates_accepts_every_declared_gate() -> None:
         gates = sorted(c.Infra.ALLOWED_GATES)
         result = FlextInfraWorkspaceChecker.resolve_gates(gates)
         tm.ok(result)

@@ -1,0 +1,44 @@
+id: ban-toml-library-import
+snapshots:
+  from tomlkit import document:
+    labels:
+    - source: from tomlkit import document
+      style: primary
+      start: 0
+      end: 28
+    - source: tomlkit
+      style: secondary
+      start: 5
+      end: 12
+  ? |
+    if TYPE_CHECKING:
+        import tomllib
+  : labels:
+    - source: import tomllib
+      style: primary
+      start: 22
+      end: 36
+    - source: tomllib
+      style: secondary
+      start: 29
+      end: 36
+  import tomlkit.items:
+    labels:
+    - source: import tomlkit.items
+      style: primary
+      start: 0
+      end: 20
+    - source: tomlkit.items
+      style: secondary
+      start: 7
+      end: 20
+  import tomllib:
+    labels:
+    - source: import tomllib
+      style: primary
+      start: 0
+      end: 14
+    - source: tomllib
+      style: secondary
+      start: 7
+      end: 14

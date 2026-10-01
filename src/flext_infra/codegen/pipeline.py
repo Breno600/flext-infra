@@ -7,14 +7,15 @@ from typing import TYPE_CHECKING, override
 from flext_cli import cli
 
 from flext_core import r
-
-from .. import c, m, p, t, u
-from ._execution import FlextInfraCodegenExecutionBase
-from ._lazy_init_generation import FlextInfraCodegenLazyInitGenerationMixin
-from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles
-from ._mise_artifacts_publication import FlextInfraMisePublication
-from ._pipeline_stages import FlextInfraCodegenPipelineStagesMixin
-from .lazy_init_planner import FlextInfraCodegenLazyInitPlanner
+from flext_infra import c, m, p, t, u
+from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
+from flext_infra.codegen._lazy_init_generation import (
+    FlextInfraCodegenLazyInitGenerationMixin,
+)
+from flext_infra.codegen._mise_artifacts_files import FlextInfraMiseArtifactsFiles
+from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
+from flext_infra.codegen._pipeline_stages import FlextInfraCodegenPipelineStagesMixin
+from flext_infra.codegen.lazy_init_planner import FlextInfraCodegenLazyInitPlanner
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -26,9 +27,9 @@ class FlextInfraCodegenPipeline(
 ):
     """Run the full codegen pipeline directly from the validated CLI model."""
 
-    rope: t.Port[p.Infra.RopeWorkspaceDsl] = m.Field(
+    conform_collaborators: m.Infra.CodegenConformPorts = m.Field(
         exclude=True,
-        description="Shared Rope cycle injected by the composition root",
+        description="Docs and fresh-import ports the toolchain conform crosses into",
     )
 
     _state: m.Infra.CodegenPipelineState = u.PrivateAttr(

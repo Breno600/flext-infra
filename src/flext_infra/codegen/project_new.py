@@ -10,10 +10,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
-
-from .. import c, m, u
-from ._execution import FlextInfraCodegenExecutionBase
-from .conform import FlextInfraCodegenConform
+from flext_infra import c, m, u
+from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
+from flext_infra.codegen.conform import FlextInfraCodegenConform
 
 # New file per operator live
 # order (ULW). ctx via u.derive_class_stem (no parallel detection, ADR-005 §9);
@@ -127,6 +126,17 @@ class FlextInfraCodegenProjectNew(
         ),
     ]
     year: Annotated[int, m.Field(ge=2025, description="Deterministic copyright year.")]
+    conform_ports: Annotated[
+        m.Infra.CodegenConformPorts | None,
+        m.Field(
+            default=None,
+            exclude=True,
+            description=(
+                "Docs and fresh-import ports bound by FlextInfra.codegen_new; the "
+                "scaffold conform fails before any effect without them"
+            ),
+        ),
+    ]
 
     @override
     def execute(self) -> p.Result[m.Infra.CodegenResult]:
@@ -238,6 +248,7 @@ class FlextInfraCodegenProjectNew(
         return FlextInfraCodegenConform.execute_request(
             request,
             initial_workspace=workspace,
+            ports=self.conform_collaborators,
         )
 
 

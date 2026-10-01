@@ -9,8 +9,9 @@ from git import GitCommandError
 
 from flext_core import r
 from flext_infra import c, m, t
-
-from .worktree_materialization import FlextInfraUtilitiesGitWorktreeMaterializationMixin
+from flext_infra._utilities._git.worktree_materialization import (
+    FlextInfraUtilitiesGitWorktreeMaterializationMixin,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -161,7 +162,7 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
                 repo.git.update_index(
                     "--add",
                     "--cacheinfo",
-                    c.Infra.GIT_CACHEINFO_GITLINK,
+                    c.Infra.GIT_GITLINK_MODE_TEXT,
                     source_head,
                     path,
                 )

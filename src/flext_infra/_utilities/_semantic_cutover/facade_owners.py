@@ -17,9 +17,10 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 from flext_infra import c
-
-from ..private_import_facades import FlextInfraUtilitiesPrivateImportFacades
-from ..rope_analysis import FlextInfraUtilitiesRopeAnalysis
+from flext_infra._utilities.private_import_facades import (
+    FlextInfraUtilitiesPrivateImportFacades,
+)
+from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -111,9 +112,8 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         package = module if is_package else module.rpartition(".")[0]
         target: t.Pair[str, str] | None = None
         declared = False
-        lazy: MutableMapping[str, str] = dict(
-            cls._facade_lazy_bindings(source, module)
-        )
+        lazy = dict(cls._facade_lazy_bindings(source, module))
+        inline: dict[str, str] = {}
         for node in cls._facade_module_statements(source, module):
             if isinstance(node, ast.AnnAssign) and node.value is None:
                 # An annotation without a value does not rebind an existing name.
@@ -176,13 +176,15 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
                                     element.value,
                                     str,
                                 ):
-                                    lazy.setdefault(element.value, key.value)
+                                    inline.setdefault(element.value, key.value)
         if declared:
             return module, name
-        if target is None and name in lazy:
+        # The cached lazy map is immutable: bindings discovered during this
+        # walk stay in the local inline view, merged read-only below.
+        sub = lazy.get(name) or inline.get(name)
+        if target is None and sub is not None:
             # A lazy entry binds the name through its submodule; resolution
             # continues where the submodule defines it.
-            sub = lazy[name]
             target = (f"{module}{sub}" if sub.startswith(".") else sub, name)
         # A submodule import binds a module, never a facade class.
         if target is None or ".".join(target) in modules:
@@ -223,7 +225,8 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         for (
             node
         ) in FlextInfraUtilitiesSemanticCutoverFacadeOwners._facade_module_statements(
-            source, module
+            source,
+            module,
         ):
             if not (
                 isinstance(node, ast.Assign | ast.AnnAssign)
@@ -249,7 +252,8 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
                         continue
                     for element in value.elts:
                         if isinstance(element, ast.Constant) and isinstance(
-                            element.value, str
+                            element.value,
+                            str,
                         ):
                             bindings.setdefault(element.value, key.value)
         return MappingProxyType(bindings)

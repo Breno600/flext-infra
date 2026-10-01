@@ -19,16 +19,15 @@ from tests import c, m, u
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from tests import p, t
+    from tests import t
 
 
 class TestsFlextInfraGateErrorReporting:
     """Verify real gate issue reporting through the public ``check()`` contract."""
 
+    @staticmethod
     def test_workspace_report_retains_all_executed_failures(
-        self,
         tmp_path: Path,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         project_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
         (project_dir / "src" / "p1" / "value.py").write_text(
@@ -44,10 +43,11 @@ class TestsFlextInfraGateErrorReporting:
         reports_dir = tmp_path / "reports"
 
         projects = tm.ok(
-            FlextInfraWorkspaceChecker(
-                repository_root=tmp_path,
-                rope=rope_workspace,
-            ).run_projects(["p1"], gates, reports_dir=reports_dir),
+            FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
+                ["p1"],
+                gates,
+                reports_dir=reports_dir,
+            ),
         )
 
         project = projects[0]
@@ -63,8 +63,8 @@ class TestsFlextInfraGateErrorReporting:
         for gate in gates:
             tm.that(report, has=f"- {gate}: FAIL")
 
+    @staticmethod
     def test_ruff_format_reports_each_unformatted_file_once(
-        self,
         tmp_path: Path,
     ) -> None:
         proj_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
@@ -88,7 +88,6 @@ class TestsFlextInfraGateErrorReporting:
         self,
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         """A real formatter configuration error remains visible without issues."""
         project_dir = u.Tests.mk_project(
@@ -103,10 +102,11 @@ class TestsFlextInfraGateErrorReporting:
         )
         u.Tests.initialize_git_repo(project_dir)
 
-        result = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path,
-            rope=rope_workspace,
-        ).run_projects(["p1"], [c.Infra.FORMAT], reports_dir=tmp_path / "reports")
+        result = FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
+            ["p1"],
+            [c.Infra.FORMAT],
+            reports_dir=tmp_path / "reports",
+        )
 
         tm.ok(result)
         project = result.value[0]
@@ -126,7 +126,6 @@ class TestsFlextInfraGateErrorReporting:
         self,
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         """Mypy's real plugin loader failure survives structured-output parsing."""
         project_dir = u.Tests.mk_project(
@@ -148,10 +147,11 @@ class TestsFlextInfraGateErrorReporting:
         )
         u.Tests.initialize_git_repo(project_dir)
 
-        result = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path,
-            rope=rope_workspace,
-        ).run_projects(["p1"], [c.Infra.MYPY], reports_dir=tmp_path / "reports")
+        result = FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
+            ["p1"],
+            [c.Infra.MYPY],
+            reports_dir=tmp_path / "reports",
+        )
 
         tm.ok(result)
         project = result.value[0]
@@ -182,7 +182,6 @@ class TestsFlextInfraGateErrorReporting:
         readme: str,
         config_text: str | None,
         expected: t.StrSequence,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         project_dir = u.Tests.mk_project(tmp_path, "p1")
         (project_dir / "README.md").write_text(readme, encoding="utf-8")
@@ -193,10 +192,11 @@ class TestsFlextInfraGateErrorReporting:
             )
         u.Tests.initialize_git_repo(project_dir)
 
-        result = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path,
-            rope=rope_workspace,
-        ).run_projects(["p1"], [c.Infra.MARKDOWN], reports_dir=tmp_path / "reports")
+        result = FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
+            ["p1"],
+            [c.Infra.MARKDOWN],
+            reports_dir=tmp_path / "reports",
+        )
 
         tm.ok(result)
         tm.that(result.value[0].passed, eq=False)

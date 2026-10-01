@@ -10,8 +10,7 @@ from typing import TYPE_CHECKING, cast
 from flext_cli import u
 
 from flext_infra import c, m
-
-from .docs import FlextInfraUtilitiesDocs
+from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -69,7 +68,9 @@ class FlextInfraUtilitiesDocsBuild:
         for settings in configs:
             suffix = "" if settings.suffix == ".yml" else "-product"
             report = FlextInfraUtilitiesDocsBuild._docs_run_one_mkdocs(
-                scope, settings=settings, site_suffix=suffix
+                scope,
+                settings=settings,
+                site_suffix=suffix,
             )
             if primary_report is None:
                 primary_report = report
@@ -133,7 +134,9 @@ class FlextInfraUtilitiesDocsBuild:
         )
         site_dir.parent.mkdir(parents=True, exist_ok=True)
         config_obj = FlextInfraUtilitiesDocsBuild._load_mkdocs_config(
-            load, settings, site_dir
+            load,
+            settings,
+            site_dir,
         )
         config_obj["strict"] = True
         _ = build(config_obj, dirty=False)

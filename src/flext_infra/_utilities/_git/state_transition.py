@@ -8,8 +8,9 @@ from pathlib import Path
 from flext_cli import u
 
 from flext_infra import c, m, t
-
-from .state_files import FlextInfraUtilitiesGitStateFilesMixin
+from flext_infra._utilities._git.state_files import (
+    FlextInfraUtilitiesGitStateFilesMixin,
+)
 
 
 class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFilesMixin):
@@ -22,7 +23,7 @@ class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFile
     ) -> m.Infra.GitWorktreeFileState:
         permissions = (
             0
-            if entry.mode == "160000"
+            if entry.mode == c.Infra.GIT_GITLINK_MODE_TEXT
             else 0o777
             if entry.mode == "120000"
             else int(entry.mode, 8) & 0o777
@@ -145,7 +146,7 @@ class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFile
                     cls._state_require_directory_scope(root, path, tuple(paths))
                 elif target.exists() or target.is_symlink():
                     current = cls._state_file(root, path)
-            if current is not None and current.mode == "160000":
+            if current is not None and current.mode == c.Infra.GIT_GITLINK_MODE_TEXT:
                 required = previous if cleanup else original
                 if current != required:
                     msg = f"nested worktree requires independent reconciliation: {path}"
@@ -192,7 +193,7 @@ class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFile
                 allowed = cls._state_allowed_files(expected.get(path), base.get(path))
                 cls._state_effect_file(root, path, None, allowed)
         for path, entry in sorted(desired.items(), key=lambda pair: len(pair[0].parts)):
-            if entry.mode == "160000":
+            if entry.mode == c.Infra.GIT_GITLINK_MODE_TEXT:
                 continue
             destination = root / path
             allowed = cls._state_allowed_files(expected.get(path), base.get(path))

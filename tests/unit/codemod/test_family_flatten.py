@@ -25,7 +25,7 @@ class TestsFlextInfraFamilyFlatten:
         collision: bool,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
-        directory = c.Infra.FAMILY_DIRECTORIES["m"]
+        directory = u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory
         family = package / directory
         family.mkdir()
         (family / "__init__.py").write_text("", encoding="utf-8")
@@ -107,7 +107,9 @@ class TestsFlextInfraFamilyFlatten:
         entity: str,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
-        family = package / c.Infra.FAMILY_DIRECTORIES["m"]
+        family = (
+            package / u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory
+        )
         family.mkdir()
         (family / "__init__.py").write_text("", encoding="utf-8")
         path = family / "payload.py"
@@ -133,7 +135,7 @@ class TestsFlextInfraFamilyFlatten:
         reference: str,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
-        directory = c.Infra.FAMILY_DIRECTORIES["c"]
+        directory = u.Infra.facade_family_declared_by(c.Infra.CONSTANTS_PY).directory
         family = package / directory
         family.mkdir()
         (family / "__init__.py").write_text("", encoding="utf-8")
@@ -154,12 +156,14 @@ class TestsFlextInfraFamilyFlatten:
         tm.that(planned.value, empty=True)
         tm.that(path.read_text(encoding="utf-8"), eq=source)
 
+    @staticmethod
     def test_flatten_removes_wrapper_docstring_and_promotes_alias_member(
-        self,
         tmp_path: Path,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
-        family = package / c.Infra.FAMILY_DIRECTORIES["m"]
+        family = (
+            package / u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory
+        )
         family.mkdir()
         (family / c.Infra.INIT_PY).write_text("", encoding="utf-8")
         path = family / "payload.py"
@@ -178,7 +182,7 @@ class TestsFlextInfraFamilyFlatten:
         path.write_text(source, encoding="utf-8")
         consumer = package / "consumer.py"
         references = (
-            f"from {package.name}.{c.Infra.FAMILY_DIRECTORIES['m']}.payload import "
+            f"from {package.name}.{u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory}.payload import "
             f"{owner} as Part\n\nmember: Part.Wrapper.Grouped\n"
         )
         consumer.write_text(references, encoding="utf-8")

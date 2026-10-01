@@ -7,9 +7,11 @@ from pathlib import Path
 from flext_cli import u
 
 from flext_infra import c, m, p, t
-
-from ._rope_core_pymodule import FlextInfraUtilitiesRopeCorePyModuleMixin
-from .rope_runtime import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities._rope_core_pymodule import (
+    FlextInfraUtilitiesRopeCorePyModuleMixin,
+)
+from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeClassMove:
@@ -142,7 +144,9 @@ class FlextInfraUtilitiesRopeClassMove:
         """Derive a canonical destination without a project-owned registry."""
         module_stem = cls.class_module_stem(class_name)
         if family:
-            family_dir = c.Infra.FAMILY_DIRECTORIES[family]
+            family_dir = FlextInfraUtilitiesCodegenNamespace.facade_families()[
+                family
+            ].directory
             return package_dir / family_dir / f"{module_stem}.py"
         return source_file.parent / f"_{source_file.stem}_{module_stem}.py"
 

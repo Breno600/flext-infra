@@ -5,9 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_core import r
-
-from ... import c, config, m, p, t, u
-from .context_render import FlextInfraCodegenConformContextRender
+from flext_infra import c, config, m, p, t, u
+from flext_infra.codegen._conform.context_render import (
+    FlextInfraCodegenConformContextRender,
+)
 
 
 class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRender):
@@ -15,7 +16,8 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
 
     @staticmethod
     def with_planned_pyproject(
-        render_inputs: m.Infra.CodegenRenderInputs, composed: str
+        render_inputs: m.Infra.CodegenRenderInputs,
+        composed: str,
     ) -> p.Result[m.Infra.CodegenRenderInputs]:
         """Record the direct-reference requirements of the pyproject just planned.
 
@@ -26,13 +28,13 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         document = u.Cli.toml_parse_text(composed)
         if document is None:
             return r[m.Infra.CodegenRenderInputs].fail(
-                "planned pyproject is not valid TOML"
+                "planned pyproject is not valid TOML",
             )
         names = u.Infra.direct_source_names(document)
         if names.failure:
             return r[m.Infra.CodegenRenderInputs].from_failure(names)
         return r[m.Infra.CodegenRenderInputs].ok(
-            render_inputs.model_copy(update={"planned_direct_sources": names.value})
+            render_inputs.model_copy(update={"planned_direct_sources": names.value}),
         )
 
     @staticmethod
@@ -43,7 +45,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         if render_inputs.planned_direct_sources is not None:
             return r[t.VariadicTuple[str]].ok(render_inputs.planned_direct_sources)
         document = u.Cli.toml_read_document(
-            render_inputs.target.root / c.Infra.PYPROJECT_FILENAME
+            render_inputs.target.root / c.PYPROJECT_FILENAME,
         )
         if document.failure:
             return r[t.VariadicTuple[str]].from_failure(document)
@@ -230,7 +232,6 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             # A repository without one must not render ledger activation.
             return r[p.Model].ok(
                 m.Infra.EnvrcRenderSpec(
-                    runtime_environment_directory=c.Infra.ENVIRONMENT_DIRECTORY,
                     repository_root_rel=self._repository_root_rel(workspace),
                     environment_path_prepends=(
                         codegen.toolchain.environment_path_prepends
@@ -322,6 +323,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                         )),
                     ),
                     python_version=codegen.toolchain.python_version,
+                    docs_report_filenames=c.Infra.DOCS_STRUCTURED_REPORT_FILENAMES,
                     github_actions=codegen.github_actions,
                     make=codegen.make,
                     workspace_repositories=workspace_repositories,
@@ -406,10 +408,12 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             return r[m.Infra.MakefileRenderSpec].from_failure(gitlinks)
         pytest = config.Infra.tooling.tools.pytest
         run_timeout_seconds = pytest.run_timeout_overrides.get(
-            target.canonical_project_name, pytest.run_timeout_seconds
+            target.canonical_project_name,
+            pytest.run_timeout_seconds,
         )
         return r[m.Infra.MakefileRenderSpec].ok(
             m.Infra.MakefileRenderSpec(
+                environment_directory=codegen.make.runtime_environment_directory,
                 pytest=pytest,
                 mise_bootstrap=u.Infra.mise_bootstrap_environment(),
                 dist=target.repository.distribution,

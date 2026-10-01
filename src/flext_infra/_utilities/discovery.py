@@ -9,11 +9,10 @@ from typing import TYPE_CHECKING, ClassVar
 
 from flext_core import r
 from flext_infra import c, t
-
-from .namespace_config import FlextInfraUtilitiesNamespaceConfig
-from .project_discovery import FlextInfraUtilitiesProjectDiscovery
-from .pyproject import FlextInfraUtilitiesPyproject
-from .rope_analysis import FlextInfraUtilitiesRopeAnalysis
+from flext_infra._utilities.namespace_config import FlextInfraUtilitiesNamespaceConfig
+from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
+from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
+from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -207,7 +206,10 @@ class FlextInfraUtilitiesDiscovery(
 
     @classmethod
     def discover_python_targets(
-        cls, project_dir: Path, *, workspace_excluded_top_dirs: frozenset[str]
+        cls,
+        project_dir: Path,
+        *,
+        workspace_excluded_top_dirs: frozenset[str],
     ) -> t.StrSequence:
         """Return every first-party Python target owned by one project root.
 
@@ -225,7 +227,8 @@ class FlextInfraUtilitiesDiscovery(
         ]
         return [
             *cls.discover_python_dirs(
-                project_dir, workspace_excluded_top_dirs=workspace_excluded_top_dirs
+                project_dir,
+                workspace_excluded_top_dirs=workspace_excluded_top_dirs,
             ),
             *root_modules,
         ]
@@ -302,17 +305,6 @@ class FlextInfraUtilitiesDiscovery(
                 and not (project_dir / root / c.PYPROJECT_FILENAME).is_file()
             ),
         )
-
-    @staticmethod
-    def _workspace_excluded_top_dirs(project_dir: Path) -> frozenset[str]:
-        """Return first segments of read-only external topology paths."""
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
-        excluded = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
-        if excluded.failure:
-            msg = excluded.error or "workspace analysis scope is unavailable"
-            raise ValueError(msg)
-        return frozenset(path.parts[0] for path in excluded.value if path.parts)
 
     @classmethod
     def rope_repository_root(cls, repository_root: Path) -> Path:

@@ -6,10 +6,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from tests import c, t
-
-from ... import m, u
-from ._support import CodegenTestSupport
+from tests import c, m, t, u
 
 
 class TestsFlextInfraTemplateFormatterFixedPoint:
@@ -48,17 +45,17 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
         workspace_repositories: t.VariadicTuple[m.Infra.RepositoryRef],
         has_devcontainer: bool,
     ) -> m.Infra.GithubWorkflowRenderSpec:
-        return CodegenTestSupport.Ci.workflow_spec(
+        return u.CodegenTestSupport.Ci.workflow_spec(
             dist="demo",
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch="develop",
-            ci_trigger_branches=CodegenTestSupport.Ci.CI_TRIGGER_BASELINE_BRANCHES,
+            ci_trigger_branches=u.CodegenTestSupport.Ci.ci_trigger_branches("develop"),
             workspace_repositories=workspace_repositories,
             has_devcontainer=has_devcontainer,
         )
 
+    @staticmethod
     def test_standalone_pyproject_does_not_declare_empty_workspace(
-        self,
         tmp_path: Path,
     ) -> None:
         """Keep standalone projects eligible for a real parent uv workspace."""
@@ -110,9 +107,7 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
         for rendered in (without, with_devcontainer):
             tm.that(rendered, has="package-ecosystem: pip")
 
-    def test_lazy_root_renders_one_argument_per_line_with_trailing_commas(
-        self,
-    ) -> None:
+    def test_lazy_root_renders_one_argument_per_line_with_trailing_commas(self) -> None:
         """Render the formatter fixed point under magic trailing commas.
 
         Ruff respects magic trailing commas and COM812 demands one on every

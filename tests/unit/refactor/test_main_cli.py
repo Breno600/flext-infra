@@ -541,7 +541,8 @@ class TestsFlextInfraRefactorMainCli:
         tm.that(service_source, has="def log_entry")
         tm.ok(self._parse_source_ast(service_source))
 
-    def test_refactor_census_strip_module_all_entry_multi_line(self) -> None:
+    @staticmethod
+    def test_refactor_census_strip_module_all_entry_multi_line() -> None:
         source = (
             "from __future__ import annotations\n\n"
             "__all__: list[str] = [\n"

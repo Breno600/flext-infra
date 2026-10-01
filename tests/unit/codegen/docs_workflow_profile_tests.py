@@ -19,7 +19,8 @@ class TestsFlextInfraCodegenDocsWorkflowProfile:
     _DOCS_DESTINATION = ".github/workflows/docs.yml"
     _CI_DESTINATION = ".github/workflows/ci.yml"
 
-    def _artifact(self, destination: str) -> m.Infra.TemplateEntrySpec:
+    @staticmethod
+    def _artifact(destination: str) -> m.Infra.TemplateEntrySpec:
         """Return the declared render artifact for one destination."""
         for entry in config.Infra.codegen.templates.entries:
             if entry.destination == destination:

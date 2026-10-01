@@ -41,7 +41,12 @@ class TestsFlextInfraPytestRunnerZeroTest:
         return project_root
 
     @staticmethod
-    def _runner(project_root: Path, tmp_path: Path) -> FlextInfraPytestRunner:
+    def _runner(
+        project_root: Path,
+        tmp_path: Path,
+        *,
+        slow_phase: bool = False,
+    ) -> FlextInfraPytestRunner:
         """Build the public runner exactly as the make verbs do."""
         cache = config.Infra.codegen.make.testmon_cache
         testmon_db = tmp_path / ".testmon-cache" / cache.database_filename
@@ -53,7 +58,62 @@ class TestsFlextInfraPytestRunnerZeroTest:
             reports=cache.reports_directory,
             testmon_db=testmon_db,
             apply_changes=True,
+            slow_phase=slow_phase,
         )
+
+    def test_held_testmon_database_lease_refuses_a_concurrent_run(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A second run on one shared database fails loud before any effect."""
+        project = self._zero_test_project(tmp_path)
+        runner = self._runner(project, tmp_path)
+
+        with (
+            u.Infra.codegen_transaction_lease(runner.testmon_db),
+            pytest.raises(TimeoutError, match="held elsewhere"),
+        ):
+            runner.execute()
+
+        reports_root = (
+            project / config.Infra.codegen.make.testmon_cache.reports_directory
+        )
+        tm.that(list(reports_root.glob("*/run-context.json")), eq=[])
+
+    @pytest.mark.slow
+    def test_slow_phase_without_slow_items_publishes_receipt(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A project whose suite has no slow-marked item closes its slow phase green.
+
+        The budgeted phase executes the suite; the slow phase then owns no
+        item in its scope and publishes the typed zero-test receipt.
+        """
+        project = self._zero_test_project(tmp_path)
+        cache = config.Infra.codegen.make.testmon_cache
+        (project / cache.target_directory / "test_budgeted.py").write_text(
+            "from zero_sample import VALUE\n\n\n"
+            "def test_value() -> None:\n    assert VALUE\n",
+            encoding="utf-8",
+        )
+        tm.that(
+            tm.ok(self._runner(project, tmp_path).execute()),
+            eq=pytest.ExitCode.OK.value,
+        )
+
+        outcome = tm.ok(self._runner(project, tmp_path, slow_phase=True).execute())
+
+        tm.that(outcome, eq=pytest.ExitCode.OK.value)
+        summary = self._latest_summary(project / cache.reports_directory)
+        plan = m.Infra.PytestSelectionPlan.model_validate_json(
+            self._read(summary.parent / "selection-plan.json"),
+        )
+        tm.that(plan.owns_no_tests, eq=True)
+        accounting = m.Infra.TestmonRunAccounting.model_validate_json(
+            self._read(summary.parent / "run-accounting.json"),
+        )
+        tm.that(accounting.executed_count, eq=0)
 
     @pytest.mark.slow
     def test_incremental_run_publishes_receipt_for_zero_test_project(

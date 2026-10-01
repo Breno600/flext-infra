@@ -12,7 +12,7 @@ from typing import Annotated, ClassVar
 
 from flext_cli import m
 
-from flext_infra import c, t
+from flext_infra import t
 
 
 class FlextInfraModelsBase:
@@ -61,26 +61,6 @@ class FlextInfraModelsBase:
         skipped: int = m.Field(description="Skipped items")
         elapsed: float = m.Field(description="Elapsed time in seconds")
 
-    class SafeExecutionResult(m.ContractModel):
-        """Result of a safe execution pipeline run."""
-
-        mode: Annotated[
-            c.Infra.ExecutionMode,
-            m.Field(description="Execution mode used"),
-        ]
-        files_backed_up: Annotated[
-            t.StrSequence,
-            m.Field(description="Paths of files backed up before transform"),
-        ]
-        gate_results: Annotated[
-            t.StrSequence,
-            m.Field(description="Gate validation outcome summaries"),
-        ]
-        rolled_back: Annotated[
-            bool,
-            m.Field(description="Whether rollback was performed"),
-        ]
-
     class ProtectedSourceWriteRequest(m.ContractModel):
         """Validated options for a single protected source write."""
 
@@ -101,10 +81,6 @@ class FlextInfraModelsBase:
             str,
             m.Field(description="Replacement source content to write"),
         ]
-        keep_backup: Annotated[
-            bool,
-            m.Field(description="Whether to preserve a .bak copy before editing"),
-        ] = False
         gates: Annotated[
             t.StrSequence | None,
             m.Field(description="Optional lint gate selection for validation"),
@@ -126,10 +102,6 @@ class FlextInfraModelsBase:
                 ),
             ),
         ]
-        keep_backup: Annotated[
-            bool,
-            m.Field(description="Whether to preserve .bak copies before editing"),
-        ] = False
         gates: Annotated[
             t.StrSequence | None,
             m.Field(description="Optional lint gate selection for validation"),
@@ -162,10 +134,6 @@ class FlextInfraModelsBase:
             Callable[[], None] | None,
             m.Field(description="Optional callback that restores the original file"),
         ] = None
-        keep_backup: Annotated[
-            bool,
-            m.Field(description="Whether to preserve a .bak copy before editing"),
-        ] = False
         gates: Annotated[
             t.StrSequence | None,
             m.Field(description="Optional lint gate selection for validation"),

@@ -236,7 +236,7 @@ class FlextInfraEnsurePyrightConfigPhase:
             workspace_excludes = tuple(
                 path.as_posix()
                 for path in FlextInfraWorkspaceDetector.analysis_exclusion_paths(
-                    project_root
+                    project_root,
                 ).unwrap()
             )
         provided_exclusions = () if analysis_exclusions is None else analysis_exclusions
@@ -309,7 +309,7 @@ class FlextInfraEnsurePyrightConfigPhase:
                     paths_manager.analysis_excluded_top_dirs
                     if paths_manager is not None
                     else FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
-                        repository_root
+                        repository_root,
                     ).unwrap()
                 ),
             )
@@ -323,7 +323,7 @@ class FlextInfraEnsurePyrightConfigPhase:
                     paths_manager.analysis_excluded_top_dirs
                     if paths_manager is not None
                     else FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
-                        context.project_dir
+                        context.project_dir,
                     ).unwrap()
                 ),
             )

@@ -7,11 +7,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-
-from .. import c, m, u
-from ..workspace import FlextInfraWorkspaceDetector
-from ._mise_artifacts_derivation import FlextInfraMiseArtifactsDerivation
-from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles as files
+from flext_infra import c, m, u
+from flext_infra.codegen._mise_artifacts_derivation import (
+    FlextInfraMiseArtifactsDerivation,
+)
+from flext_infra.codegen._mise_artifacts_files import (
+    FlextInfraMiseArtifactsFiles as files,
+)
+from flext_infra.workspace import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
     from .. import p, t
@@ -282,18 +285,12 @@ class FlextInfraMiseWorkspacePlanner:
                 return r[m.Infra.MiseToolchainWorkspaceLayout].fail(
                     f"invalid Mise configuration plan path: {plan.path}",
                 )
-            try:
-                selector = (
-                    plan.path.parent
-                    .absolute()
-                    .relative_to(scope_root.absolute())
-                    .as_posix()
-                )
-            except ValueError:
+            plan_dir = plan.path.parent.absolute()
+            if not plan_dir.is_relative_to(scope_root.absolute()):
                 return r[m.Infra.MiseToolchainWorkspaceLayout].fail(
                     f"Mise configuration plan escapes scope: {plan.path}",
                 )
-            selectors.append(selector)
+            selectors.append(plan_dir.relative_to(scope_root.absolute()).as_posix())
             expected_paths.append(plan.path)
         layout = self.layout_from_selectors(
             scope_root,

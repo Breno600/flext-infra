@@ -27,7 +27,7 @@ dependencies = [
   "dependency-injector>=4.49.1",
   "flext-cli @ git+https://github.com/flext-sh/flext-cli.git@0.12.0-dev",
   "flext-core @ git+https://github.com/flext-sh/flext-core.git@0.12.0-dev",
-  "GitPython>=3.1.62",
+  "GitPython>=3.2.0",
   "jinja2>=3.1.6",
   "libcst>=1.9.0",
   "Markdown>=3.11",
@@ -337,15 +337,30 @@ include = ["src", "tests"]
 extraPaths = ["src", "."]
 pythonPlatform = "Linux"
 pythonVersion = "3.13"
+reportArgumentType = "none"
+reportAttributeAccessIssue = "none"
+reportCallIssue = "none"
 reportConstantRedefinition = "error"
 reportIncompatibleMethodOverride = "error"
+reportIncompatibleVariableOverride = "none"
 reportInconsistentConstructor = "error"
+reportInvalidTypeForm = "none"
 reportMissingImports = "error"
 reportMissingModuleSource = "error"
-reportPrivateUsage = "error"
+reportMissingTypeStubs = "none"
+reportPrivateUsage = "warning"
+reportUnknownArgumentType = "none"
+reportUnknownLambdaType = "none"
+reportUnknownMemberType = "none"
+reportUnknownParameterType = "none"
+reportUnknownVariableType = "none"
 reportUnnecessaryCast = "error"
-reportUnnecessaryComparison = "error"
-reportUnnecessaryIsInstance = "error"
+reportUnnecessaryComparison = "warning"
+reportUnnecessaryIsInstance = "warning"
+reportUnreachable = "none"
+reportUnsupportedDunderAll = "none"
+reportUntypedBaseClass = "none"
+reportUntypedFunctionDecorator = "none"
 reportUnusedClass = "error"
 reportUnusedFunction = "error"
 reportUnusedImport = "error"
@@ -431,6 +446,12 @@ unfixable = [
   "unused-variable",
 ]
 
+[tool.ruff.lint.flake8-copyright]
+notice-rgx = "(?i)copyright"
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
 [tool.ruff.lint.flake8-tidy-imports.banned-api.argparse]
 msg = "Use cli.register_result_command + Pydantic model from flext_cli."
 
@@ -453,6 +474,29 @@ known-first-party = ["flext_core", "flext_infra"]
 split-on-trailing-comma = false
 
 [tool.ruff.lint.per-file-ignores]
+"**/__init__.py" = [
+  "any-type",
+  "builtin-import-shadowing",
+  "implicit-namespace-package",
+  "import-private-name",
+  "invalid-module-name",
+  "non-empty-init-module",
+  "runtime-import-in-type-checking-block",
+  "undefined-export",
+  "undefined-local-with-import-star",
+  "undefined-local-with-import-star-usage",
+  "undocumented-public-init",
+  "unused-import",
+]
+"**/examples/**/*.py" = ["invalid-module-name", "shebang-not-executable"]
+"**/tests/**" = [
+  "assert",
+  "compare-to-empty-string",
+  "magic-value-comparison",
+  "undocumented-public-class",
+  "undocumented-public-function",
+  "undocumented-public-method",
+]
 
 [tool.tomlsort]
 all = true

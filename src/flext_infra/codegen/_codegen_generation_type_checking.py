@@ -7,8 +7,9 @@ from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from flext_infra import c
-
-from ._codegen_generation_imports import FlextInfraCodegenGenerationImportsMixin
+from flext_infra.codegen._codegen_generation_imports import (
+    FlextInfraCodegenGenerationImportsMixin,
+)
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -147,11 +148,16 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
     @staticmethod
     def _emit_type_checking_module(
         mod: str,
+        rendered_mod: str,
         items: t.StrPairSequence,
         root_name: str,
         lines: t.MutableSequenceOf[str],
     ) -> None:
-        """Emit one TYPE_CHECKING module import group."""
+        """Emit one TYPE_CHECKING module import group.
+
+        ``mod`` is the planned (possibly package-relative) owner that decides
+        module-alias exports; ``rendered_mod`` is its absolute import form.
+        """
         alias_exports: t.MutableSequenceOf[str] = []
         parts: t.MutableSequenceOf[str] = []
         module_basename = mod.rsplit(".", maxsplit=1)[-1]
@@ -190,7 +196,7 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
             lines.extend(
                 FlextInfraCodegenGenerationTypeCheckingMixin._format_type_checking_module_alias_import(
                     "    ",
-                    mod,
+                    rendered_mod,
                     export_name,
                 ),
             )
@@ -199,7 +205,7 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
             lines.extend(
                 FlextInfraCodegenGenerationTypeCheckingMixin._format_import(
                     "    ",
-                    mod,
+                    rendered_mod,
                     deduped_parts,
                 ),
             )
@@ -257,11 +263,20 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
         if flext_types_emitted:
             lines.append("    from flext_core import FlextTypes")
 
+        package = local_package_root or ""
+        rendered_mods = {
+            mod: FlextInfraCodegenGenerationTypeCheckingMixin._absolute_import_module(
+                package,
+                mod,
+            )
+            for mod in merged_groups
+        }
+
         def type_checking_module_key(mod: str) -> t.StrPair:
             owner = (
                 FlextInfraCodegenGenerationTypeCheckingMixin._type_checking_sort_owner(
-                    mod,
-                    merged_groups[mod],
+                    rendered_mods[mod],
+                    () if mod == "." else merged_groups[mod],
                 )
             )
             return FlextInfraCodegenGenerationTypeCheckingMixin._type_checking_sort_key(
@@ -289,6 +304,7 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
                 lines.append("")
             FlextInfraCodegenGenerationTypeCheckingMixin._emit_type_checking_module(
                 mod,
+                rendered_mods[mod],
                 merged_groups[mod],
                 root_name,
                 lines,

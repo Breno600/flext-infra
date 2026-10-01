@@ -14,8 +14,9 @@ from tests import u as test_u
 class TestsFlextInfraGitFacet:
     """Exercise the public Git facade against a real repository worktree."""
 
+    @staticmethod
     def test_tracked_scope_preserves_literal_names_across_index_states(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         repository = test_u.Tests.git_repository(tmp_path)
         scope = repository / "literal names"
@@ -39,8 +40,9 @@ class TestsFlextInfraGitFacet:
 
         tm.that(set(paths), eq={tracked, raw_name, removed, destination, untracked})
 
+    @staticmethod
     def test_tracked_scope_propagates_corrupt_index_failure(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         repository = test_u.Tests.git_repository(tmp_path)
         (repository / ".git" / "index").write_bytes(b"invalid index")
@@ -48,8 +50,8 @@ class TestsFlextInfraGitFacet:
         with pytest.raises(Exception, match="index"):
             u.Infra.git_tracked_scope_paths(repository)
 
+    @staticmethod
     def test_identity_marks_only_a_missing_symbolic_branch_as_unborn(
-        self,
         tmp_path: Path,
     ) -> None:
         repository = tmp_path / "unborn"
@@ -70,7 +72,8 @@ class TestsFlextInfraGitFacet:
         tm.that(corrupted.error_code == c.Infra.GIT_UNBORN_HEAD_ERROR_CODE, eq=False)
         tm.not_none(corrupted.exception)
 
-    def test_identity_index_failure_is_not_unborn(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_identity_index_failure_is_not_unborn(tmp_path: Path) -> None:
         repository = test_u.Tests.git_repository(tmp_path)
         (repository / ".git" / "index").write_bytes(b"invalid index")
 
@@ -80,7 +83,8 @@ class TestsFlextInfraGitFacet:
         tm.that(result.error_code == c.Infra.GIT_UNBORN_HEAD_ERROR_CODE, eq=False)
         tm.not_none(result.exception)
 
-    def _add_submodule(self, repository: Path, source: Path, name: str) -> None:
+    @staticmethod
+    def _add_submodule(repository: Path, source: Path, name: str) -> None:
         """Add and commit ``source`` as a file-protocol submodule named ``name``."""
         _ = test_u.Tests.git_run(
             repository,
@@ -93,14 +97,16 @@ class TestsFlextInfraGitFacet:
         )
         _ = test_u.Tests.git_run(repository, "commit", "-am", name)
 
-    def _add_lane(self, tmp_path: Path, repository: Path, branch: str) -> Path:
+    @staticmethod
+    def _add_lane(tmp_path: Path, repository: Path, branch: str) -> Path:
         """Create one branch and check it out as a worktree lane under ``tmp_path``."""
         lane = tmp_path / branch
         _ = test_u.Tests.git_run(repository, "branch", branch)
         _ = test_u.Tests.git_run(repository, "worktree", "add", str(lane), branch)
         return lane
 
-    def _update_submodules(self, lane: Path) -> None:
+    @staticmethod
+    def _update_submodules(lane: Path) -> None:
         """Initialize every declared submodule inside the lane checkout."""
         _ = test_u.Tests.git_run(
             lane,
@@ -112,8 +118,8 @@ class TestsFlextInfraGitFacet:
             "--recursive",
         )
 
+    @staticmethod
     def test_tracked_scope_refreshes_after_filesystem_mutation(
-        self,
         tmp_path: Path,
     ) -> None:
         """Tracked-scope discovery must not retain a stale dirty-file inventory."""
@@ -127,8 +133,8 @@ class TestsFlextInfraGitFacet:
 
         tm.that(u.Infra.git_tracked_scope_paths(scope), eq=[created])
 
+    @staticmethod
     def test_invalid_nested_git_marker_does_not_borrow_parent_index(
-        self,
         tmp_path: Path,
     ) -> None:
         """An explicit invalid Git boundary falls back to filesystem discovery."""
@@ -145,8 +151,8 @@ class TestsFlextInfraGitFacet:
 
         tm.that(tracked, eq=[created])
 
+    @staticmethod
     def test_tracked_scope_does_not_borrow_an_ignoring_parent_repository(
-        self,
         tmp_path: Path,
     ) -> None:
         """An explicitly selected ignored scope remains excluded by its repository."""
@@ -160,8 +166,8 @@ class TestsFlextInfraGitFacet:
 
         tm.that(tracked, eq=[])
 
+    @staticmethod
     def test_merge_no_edit_requires_a_non_fast_forward_merge(
-        self,
         tmp_path: Path,
     ) -> None:
         repository = test_u.Tests.git_repository(tmp_path)
@@ -192,7 +198,8 @@ class TestsFlextInfraGitFacet:
         ).split()
         assert len(parents) == 3
 
-    def test_repository_head_and_status_and_service(self, real_git_repo: Path) -> None:
+    @staticmethod
+    def test_repository_head_and_status_and_service(real_git_repo: Path) -> None:
         """Head, porcelain status, and FlextInfraGitService share one typed path."""
         head = u.Infra.git_repository_head(
             m.Infra.GitRepoRequest(repo_root=real_git_repo),
@@ -214,7 +221,8 @@ class TestsFlextInfraGitFacet:
         assert report.value.repo_root == real_git_repo.resolve()
         assert report.value.dirty is False
 
-    def test_git_init_bare_on_non_repo_cwd(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_git_init_bare_on_non_repo_cwd(tmp_path: Path) -> None:
         """cwd-bound execute must allow git init --bare outside a worktree."""
         bare_root = tmp_path / "bare"
         bare_root.mkdir()
@@ -225,7 +233,8 @@ class TestsFlextInfraGitFacet:
         assert captured.success
         assert captured.value.strip() in {".", str(bare_root.resolve())}
 
-    def test_service_status_reports_dirty_tree(self, real_git_repo: Path) -> None:
+    @staticmethod
+    def test_service_status_reports_dirty_tree(real_git_repo: Path) -> None:
         """The status-only service flips dirty when the worktree changes."""
         clean = FlextInfraGitService(repository_root=real_git_repo).execute()
         assert clean.success
@@ -236,8 +245,38 @@ class TestsFlextInfraGitFacet:
         assert dirty.value.dirty is True
         assert "dirty.txt" in dirty.value.porcelain
 
-    def test_changed_paths_reports_tracked_and_untracked_files(
+    @pytest.mark.parametrize("change", ["tracked", "staged", "untracked"])
+    def test_verify_clean_cli_rejects_real_worktree_changes(
         self,
+        real_git_repo: Path,
+        capsys: pytest.CaptureFixture[str],
+        change: str,
+    ) -> None:
+        """The public CLI passes a clean checkout and exposes a dirty Git report."""
+        argv = ["workspace", "verify-clean", "--repo-root", str(real_git_repo)]
+        tm.that(infra_main(argv), eq=0)
+        _ = capsys.readouterr()
+
+        if change == "untracked":
+            changed_path = real_git_repo / "dirty.txt"
+            changed_path.write_text("dirty\n", encoding="utf-8")
+        else:
+            changed_path = real_git_repo / "README.md"
+            changed_path.write_text("# Changed Repository\n", encoding="utf-8")
+            if change == "staged":
+                tm.ok(
+                    test_u.Cli.run_checked(
+                        [c.Infra.GIT, "add", changed_path.name],
+                        cwd=real_git_repo,
+                    ),
+                )
+
+        tm.that(infra_main(argv), eq=1)
+        output = capsys.readouterr()
+        tm.that(output.out + output.err, has=changed_path.name)
+
+    @staticmethod
+    def test_changed_paths_reports_tracked_and_untracked_files(
         real_git_repo: Path,
     ) -> None:
         """The public Git facade returns the complete existing worktree delta."""
@@ -252,8 +291,8 @@ class TestsFlextInfraGitFacet:
 
         tm.that(set(changed), eq={readme.resolve(), created.resolve()})
 
+    @staticmethod
     def test_status_classifies_registered_nested_worktrees_as_administrative(
-        self,
         tmp_path: Path,
     ) -> None:
         repository = test_u.Tests.git_repository(tmp_path)
@@ -310,7 +349,8 @@ class TestsFlextInfraGitFacet:
         )
         assert stale.dirty is True
 
-    def test_missing_git_binary_fails_closed(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_missing_git_binary_fails_closed(tmp_path: Path) -> None:
         """Missing git on PATH must Result.fail without raising."""
         empty_path = tmp_path / "empty-path"
         empty_path.mkdir()
@@ -320,7 +360,8 @@ class TestsFlextInfraGitFacet:
         assert result.error is not None
         assert "git executable not found" in result.error
 
-    def test_refresh_binary_reports_the_resolved_executable(self) -> None:
+    @staticmethod
+    def test_refresh_binary_reports_the_resolved_executable() -> None:
         """The public facet refreshes the Git binary it will then use."""
         refreshed = u.Infra.refresh_binary()
         tm.ok(refreshed)
@@ -407,8 +448,8 @@ class TestsFlextInfraGitFacet:
         tm.fail(result, has="locked worktree")
         assert lane.is_dir()
 
+    @staticmethod
     def test_is_ancestor_proves_any_pair_and_defaults_to_head(
-        self,
         tmp_path: Path,
     ) -> None:
         """One owner proves ancestry for a pair and for the HEAD-bound case."""
@@ -462,7 +503,8 @@ class TestsFlextInfraGitFacet:
         tm.that(reverse.value, eq=False)
         tm.that(defaulted.value, eq=True)
 
-    def test_is_ancestor_fails_on_unknown_commitish(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_is_ancestor_fails_on_unknown_commitish(tmp_path: Path) -> None:
         """An unresolvable side is a failure, never a silent negative."""
         repository = test_u.Tests.git_repository(tmp_path)
 
@@ -476,7 +518,8 @@ class TestsFlextInfraGitFacet:
         assert result.failure
         assert result.error is not None
 
-    def test_has_staged_changes_tracks_the_index(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_has_staged_changes_tracks_the_index(tmp_path: Path) -> None:
         """The staged probe distinguishes a staged delta from a clean index."""
         repository = test_u.Tests.git_repository(tmp_path)
         request = m.Infra.GitRepoRequest(repo_root=repository)

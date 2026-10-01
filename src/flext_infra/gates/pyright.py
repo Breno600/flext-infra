@@ -6,8 +6,7 @@ import sys
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, m, u
-
-from .base_gate import FlextInfraGate
+from flext_infra.gates.base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -106,16 +105,6 @@ class FlextInfraPyrightGate(FlextInfraGate):
                 ),
             )
         report = validated.value
-        if report.summary.files_analyzed == 0:
-            # The gate is selected only for projects with Python targets, so an
-            # empty analysis is a lost scan, never a pass.
-            return False, (
-                self._malformed_report_issue(
-                    "pyright analyzed no files for a project with Python targets",
-                    tool=c.Infra.PYRIGHT,
-                    file=str(project_dir),
-                ),
-            )
         issues: t.MutableSequenceOf[m.Infra.Issue] = [
             m.Infra.Issue(
                 file=diag.file,
@@ -127,6 +116,18 @@ class FlextInfraPyrightGate(FlextInfraGate):
             )
             for diag in report.general_diagnostics
         ]
+        if report.summary.files_analyzed == 0:
+            # The gate is selected only for projects with Python targets, so an
+            # empty analysis is a lost scan, never a pass; the report's own
+            # diagnostics travel with it because they carry the cause.
+            return False, (
+                *issues,
+                self._malformed_report_issue(
+                    "pyright analyzed no files for a project with Python targets",
+                    tool=c.Infra.PYRIGHT,
+                    file=str(project_dir),
+                ),
+            )
         issues.extend(self._checker_stderr_issues(result, project_dir))
         if (not issues) and not u.Cli.process_succeeded(result.outcome):
             message = (result.stderr or result.stdout).strip()

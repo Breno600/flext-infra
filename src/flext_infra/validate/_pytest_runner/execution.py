@@ -12,10 +12,9 @@ import pytest
 
 from flext_core import r
 from flext_infra import c, config, m, t, u
+from flext_infra.validate._pytest_runner.command import FlextInfraPytestRunnerCommand
+from flext_infra.validate._pytest_runner.reports import FlextInfraPytestRunnerReports
 from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
-
-from .command import FlextInfraPytestRunnerCommand
-from .reports import FlextInfraPytestRunnerReports
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -144,6 +143,10 @@ class FlextInfraPytestRunnerExecution(
         if complete and not node_ids and not owns_no_tests and not self.slow_phase:
             msg = "complete pytest inventory must contain at least one test"
             raise RuntimeError(msg)
+        # A slow phase whose complete inventory holds no slow-marked item owns
+        # no test in its scope: it publishes the typed zero-test receipt, the
+        # same declared outcome as a project without test modules.
+        owns_no_tests = owns_no_tests or (complete and self.slow_phase and not node_ids)
         u.Cli.atomic_write_text_file(
             report_dir / f"{artifact}.txt",
             "\n".join(node_ids) + "\n",
@@ -154,6 +157,8 @@ class FlextInfraPytestRunnerExecution(
                 complete=True,
                 execution_mode=execution_mode,
             )
+            if inventory.owns_no_tests:
+                return inventory
             if not set(node_ids).issubset(inventory.node_ids):
                 msg = "testmon selected node IDs outside the complete collection inventory"
                 raise RuntimeError(msg)
@@ -425,16 +430,33 @@ class FlextInfraPytestRunnerExecution(
         )
         slow_marker = config.Infra.tooling.tools.pytest.slow_marker
         if self.slow_phase and slow_marker in self.ci_excluded_markers(
-            execution_mode=execution_mode
+            execution_mode=execution_mode,
         ):
             # The CI context deselects the slow marker by declaration, so its
             # phase is typed NOT EXECUTED here, never a selection of nothing.
             sys.stderr.write(
                 f"pytest slow phase NOT EXECUTED: ci-excluded-markers declares "
-                f"{slow_marker!r}\n"
+                f"{slow_marker!r}\n",
             )
             return r.ok(0)
         u.Cli.ensure_dir(self.testmon_db.parent).unwrap()
+        # The digest, the run and the post-run integrity inspection read one
+        # shared database: a concurrent run on it would make the integrity
+        # verdict describe the other run's writes. One native lease serializes
+        # it; a held lease refuses at once instead of spending this deadline.
+        with u.Infra.codegen_transaction_lease(self.testmon_db, wait_seconds=0):
+            return self._execute_testmon_leased(
+                complete=complete,
+                execution_mode=execution_mode,
+            )
+
+    def _execute_testmon_leased(
+        self,
+        *,
+        complete: bool,
+        execution_mode: c.Infra.PytestExecutionMode,
+    ) -> p.Result[int]:
+        """Run one testmon phase while holding the database lease."""
         report_dir = self._report_directory()
         self._write_run_context(
             report_dir,
@@ -457,7 +479,9 @@ class FlextInfraPytestRunnerExecution(
         selection_plan = self._resolve_selection(
             report_dir,
             complete=complete,
-            verify_inventory=pre_digest is not None,
+            # The slow phase always proves its inventory, so a project without
+            # slow-marked items reaches the zero-test receipt even on a cold cache.
+            verify_inventory=pre_digest is not None or self.slow_phase,
             execution_mode=execution_mode,
         )
         u.Cli.atomic_write_text_file(
@@ -472,7 +496,9 @@ class FlextInfraPytestRunnerExecution(
         # enforces that manifest for both cold and warm caches while testmon
         # continues to collect dependencies through its xdist integration.
         command = self.build_command(
-            report_dir, selection_plan, execution_mode=execution_mode
+            report_dir,
+            selection_plan,
+            execution_mode=execution_mode,
         )
         outcome = self._run_suite(command, report_dir, execution_mode=execution_mode)
         cache_hit = (

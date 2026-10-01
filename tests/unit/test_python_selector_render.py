@@ -14,7 +14,8 @@ from flext_infra import c, config, u
 
 
 class TestsFlextInfraPythonSelectorRender:
-    def test_render_is_the_selector_and_nothing_else(self) -> None:
+    @staticmethod
+    def test_render_is_the_selector_and_nothing_else() -> None:
         """The generated consumer artifact equals its typed configuration owner."""
         expected = f"{config.Infra.codegen.toolchain.python_selector}\n"
         rendered = tm.ok(u.Cli.files_read_text(Path(c.Infra.PYTHON_VERSION_FILENAME)))

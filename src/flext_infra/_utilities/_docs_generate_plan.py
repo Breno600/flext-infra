@@ -9,9 +9,10 @@ from flext_cli import u as cli_u
 
 from flext_core import r
 from flext_infra import m, t
-
-from ._docs_generate_sources import FlextInfraUtilitiesDocsGenerateSourcesMixin
-from .docs_contract import FlextInfraUtilitiesDocsContract
+from flext_infra._utilities._docs_generate_sources import (
+    FlextInfraUtilitiesDocsGenerateSourcesMixin,
+)
+from flext_infra._utilities.docs_contract import FlextInfraUtilitiesDocsContract
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -44,9 +45,7 @@ class FlextInfraUtilitiesDocsGeneratePlanMixin(
                 return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].fail(
                     f"docs publication paths must be absolute and lexical: {target}",
                 )
-            try:
-                target.relative_to(project)
-            except ValueError:
+            if not target.is_relative_to(project):
                 return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].fail(
                     f"docs publication target escapes project {project}: {target}",
                 )

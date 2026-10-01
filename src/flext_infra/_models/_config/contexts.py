@@ -8,16 +8,16 @@ from typing import Annotated, ClassVar, Literal
 
 from flext_cli import m
 
-from ... import t
-from ..._constants import (
+from flext_infra import t
+from flext_infra._constants import (
     FlextInfraConstantsCodegenProject,
     FlextInfraConstantsWorkspace,
 )
-from ..deps_tool_config import FlextInfraModelsDepsToolConfig
-from .beads import FlextInfraConfigModelsBeads
-from .contract import FlextInfraConfigModelsContract
-from .make import FlextInfraConfigModelsMake
-from .scaffold import FlextInfraConfigModelsScaffold
+from flext_infra._models._config.beads import FlextInfraConfigModelsBeads
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
+from flext_infra._models._config.make import FlextInfraConfigModelsMake
+from flext_infra._models._config.scaffold import FlextInfraConfigModelsScaffold
+from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
 
 
 class FlextInfraConfigModelsContexts:
@@ -262,6 +262,23 @@ class FlextInfraConfigModelsContexts:
     class ProjectRenderContext(MakeRenderContext):
         """Complete typed input consumed by project scaffold templates."""
 
+        docs_audit: Annotated[
+            FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+            m.Field(
+                default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+                description="Repository-owned documentation audit declarations",
+            ),
+        ]
+        packaged_data_excludes: Annotated[
+            t.StrSequence,
+            m.Field(
+                default=(),
+                description=(
+                    "Repository-relative files omitted from declared data directories"
+                ),
+            ),
+        ]
+
         # This render field is the exact
         # projection of ProjectSpec; templates must not infer or default a hook.
         hatch_build_hook_path: Annotated[
@@ -310,9 +327,7 @@ class FlextInfraConfigModelsContexts:
             return f"{self.dist.upper().replace('-', '_')}_"
 
         @property
-        def _config_base(
-            self,
-        ) -> FlextInfraConfigModelsScaffold.ScaffoldConfigBaseSpec:
+        def _config_base(self) -> FlextInfraConfigModelsScaffold.ScaffoldConfigBaseSpec:
             """ENFORCE-042 config base selected from the declared profile.
 
             The fleet-converged ``_config.py`` composes ``FlextSettings`` FIRST
@@ -400,6 +415,10 @@ class FlextInfraConfigModelsContexts:
             t.StrSequence,
             m.Field(description="Validated individually declared data files"),
         ]
+        packaged_data_excludes: Annotated[
+            t.StrSequence,
+            m.Field(description="Validated files excluded from packaged data roots"),
+        ]
         class_stem: Annotated[
             t.NonEmptyStr,
             m.Field(description="Public facade class stem"),
@@ -450,7 +469,7 @@ class FlextInfraConfigModelsContexts:
         repository_namespace_packages: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                description="Implicit namespace directories shipped from the repository root"
+                description="Implicit namespace directories shipped from the repository root",
             ),
         ] = ()
         root_modules: Annotated[
@@ -496,7 +515,8 @@ class FlextInfraConfigModelsContexts:
         dependency_cooldown_days: Annotated[
             int,
             m.Field(
-                ge=1, description="Supply-chain cooldown rendered as mise release age"
+                ge=1,
+                description="Supply-chain cooldown rendered as mise release age",
             ),
         ]
         kubectl_version: Annotated[
@@ -541,7 +561,7 @@ class FlextInfraConfigModelsContexts:
                 description=(
                     "Taplo release selector; the committed mise.lock pins the "
                     "version generation authenticates"
-                )
+                ),
             ),
         ]
         ast_grep_selector: Annotated[
@@ -712,7 +732,7 @@ class FlextInfraConfigModelsContexts:
         repository_namespace_packages: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                description="Implicit namespace directories shipped from the repository root"
+                description="Implicit namespace directories shipped from the repository root",
             ),
         ] = ()
         root_modules: Annotated[
@@ -924,6 +944,32 @@ class FlextInfraConfigModelsContexts:
                 ),
             ),
         ] = None
+
+    class SubprojectPolicy(FlextInfraConfigModelsContract.ConfigContract):
+        """Workspace policy one governed .gitmodules entry loads under."""
+
+        integration_branch: Annotated[
+            str | None,
+            m.Field(
+                default=None,
+                description="Detected integration line; None follows the superproject",
+            ),
+        ]
+        workspace_beads: Annotated[
+            FlextInfraConfigModelsBeads.BeadsProjectSpec | None,
+            m.Field(default=None, description="Inherited workspace beads spec"),
+        ]
+        declared_member: Annotated[
+            FlextInfraConfigModelsContexts.RepositoryRef | None,
+            m.Field(default=None, description="Catalog-declared member reference"),
+        ]
+        allow_unprovisioned_members: Annotated[
+            bool,
+            m.Field(
+                default=False,
+                description="Accept members without provisioned checkouts",
+            ),
+        ]
 
     class RepositoryConformTarget(FlextInfraConfigModelsContract.ConfigContract):
         """Runtime-derived conformance identity for one repository."""

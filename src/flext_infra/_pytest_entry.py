@@ -47,7 +47,7 @@ class FlextInfraPytestEntry:
             return runner.execute_coverage().unwrap()
         if mode == "full":
             return runner.execute_full().unwrap()
-        if not mode:
+        if mode in {"", "slow"}:
             return runner.execute().unwrap()
         msg = f"unsupported pytest operation: {mode}"
         raise ValueError(msg)

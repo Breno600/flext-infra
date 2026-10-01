@@ -11,8 +11,7 @@ from flext_cli import u
 
 from flext_core import r
 from flext_infra import c, m, p, t
-
-from .git import FlextInfraUtilitiesGit
+from flext_infra._utilities.git import FlextInfraUtilitiesGit
 
 
 class FlextInfraUtilitiesProjectManagedArtifacts:
@@ -118,7 +117,6 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
             sources=(),
             resolution=m.Infra.ProjectManagedArtifactsResolution(
                 artifacts=m.Infra.ProjectManagedArtifactsConfig(
-                    Ruff=m.Infra.ProjectRuffConfig(per_file_ignores={}),
                     Mise=m.Infra.ProjectMiseConfig(tools={}),
                     Gitignore=m.Infra.ProjectGitignoreConfig(patterns=()),
                 ),
@@ -281,7 +279,6 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
             return r[m.Infra.ProjectManagedArtifactsResolution].ok(
                 cls.empty_snapshot().resolution,
             )
-        ruff_ignores: MutableMapping[str, set[str]] = {}
         mise_tools: MutableMapping[str, m.Infra.ProjectMiseTool] = {}
         mise_sources: MutableMapping[str, Path] = {}
         gitignore_patterns: list[str] = []
@@ -304,9 +301,6 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
                 "ManagedArtifacts": managed,
             })
             artifacts = project_config.ManagedArtifacts
-            if artifacts.Ruff is not None:
-                for pattern, rules in artifacts.Ruff.per_file_ignores.items():
-                    ruff_ignores.setdefault(pattern, set()).update(rules)
             if artifacts.Gitignore is not None:
                 for pattern in artifacts.Gitignore.patterns:
                     if pattern not in gitignore_patterns:
@@ -324,12 +318,6 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
                 mise_tools[selector] = tool
                 mise_sources[selector] = source
         artifacts = m.Infra.ProjectManagedArtifactsConfig(
-            Ruff=m.Infra.ProjectRuffConfig(
-                per_file_ignores={
-                    pattern: tuple(sorted(rules))
-                    for pattern, rules in sorted(ruff_ignores.items())
-                },
-            ),
             Mise=m.Infra.ProjectMiseConfig(tools=dict(sorted(mise_tools.items()))),
             Gitignore=m.Infra.ProjectGitignoreConfig(
                 patterns=tuple(gitignore_patterns),

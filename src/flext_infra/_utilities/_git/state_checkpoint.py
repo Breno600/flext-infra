@@ -8,10 +8,11 @@ from typing import TYPE_CHECKING
 from git import GitCommandError
 
 from flext_core import r
-from flext_infra import m
-
-from .state_trees import FlextInfraUtilitiesGitStateTreesMixin
-from .worktree_io import FlextInfraUtilitiesGitWorktreeIO
+from flext_infra import c, m
+from flext_infra._utilities._git.state_trees import (
+    FlextInfraUtilitiesGitStateTreesMixin,
+)
+from flext_infra._utilities._git.worktree_io import FlextInfraUtilitiesGitWorktreeIO
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -72,7 +73,7 @@ class FlextInfraUtilitiesGitStateCheckpointMixin(FlextInfraUtilitiesGitStateTree
             cls._state_validate_checkpoint(checkpoint)
             return checkpoint
         for file in snapshot.files:
-            if file.mode == "160000":
+            if file.mode == c.Infra.GIT_GITLINK_MODE_TEXT:
                 continue
             with FlextInfraUtilitiesGitWorktreeIO.git_stdin(
                 cls._state_file_bytes(snapshot.repo_root / file.path),

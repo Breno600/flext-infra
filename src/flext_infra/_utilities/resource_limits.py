@@ -11,10 +11,9 @@ from typing import TYPE_CHECKING, ClassVar
 from flext_cli import u
 
 from flext_infra import c, config, m, settings, t
-
-from .process import FlextInfraUtilitiesProcess
-from .project_discovery import FlextInfraUtilitiesProjectDiscovery
-from .pyproject import FlextInfraUtilitiesPyproject
+from flext_infra._utilities.process import FlextInfraUtilitiesProcess
+from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
+from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -54,23 +53,16 @@ class FlextInfraUtilitiesResourceLimits:
     def mypy_resource_limit() -> m.Infra.MypyResourceLimit:
         """Validate the external Mypy memory and time settings exactly once.
 
-        The wall-time budget resolves project-first: the ``tooling.yaml``
-        ``tools.mypy.timeout_seconds`` SSOT is the default, the
-        ``MYPY_TIMEOUT_SECONDS`` env overrides it at the ingress boundary.
+        The wall-time budget is ``tools.mypy.timeout_seconds`` in the
+        ``tooling.yaml`` SSOT; no environment variable can change it.
         """
-        process_env = u.Cli.process_env()
-        project_budget = config.Infra.tooling.tools.mypy.timeout_seconds
         return m.Infra.MypyResourceLimit(
             memory_limit_mb=FlextInfraUtilitiesResourceLimits._environment_integer(
-                process_env,
+                u.Cli.process_env(),
                 c.Infra.MYPY_MEMORY_LIMIT_MB_ENV,
                 c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
             ),
-            timeout_seconds=FlextInfraUtilitiesResourceLimits._environment_integer(
-                process_env,
-                c.Infra.MYPY_TIMEOUT_SECONDS_ENV,
-                project_budget,
-            ),
+            timeout_seconds=config.Infra.tooling.tools.mypy.timeout_seconds,
         )
 
     @staticmethod
@@ -210,19 +202,22 @@ class FlextInfraUtilitiesResourceLimits:
     def mypy_runner_timeout_for_project(cls, project_dir: Path) -> int:
         """Runner timeout honoring the project ``config/tooling.yaml`` budget.
 
-        #1113 made the wall-time budget a project SSOT; the standalone check
-        path must resolve that overlay here, with the documented precedence
-        env override > project budget > fleet default. An out-of-bounds or
-        unreadable project budget fails loud through the limit validation.
+        A project budget may only lower the fleet ``tools.mypy.timeout_seconds``
+        bound; a budget above it fails loud.
         """
         limit = cls.mypy_resource_limit()
-        if c.Infra.MYPY_TIMEOUT_SECONDS_ENV not in u.Cli.process_env():
-            budget = cls._project_mypy_budget(project_dir)
-            if budget is not None:
-                limit = m.Infra.MypyResourceLimit(
-                    memory_limit_mb=limit.memory_limit_mb,
-                    timeout_seconds=budget,
+        budget = cls._project_mypy_budget(project_dir)
+        if budget is not None:
+            if budget > limit.timeout_seconds:
+                msg = (
+                    f"project mypy budget {budget}s exceeds the fleet bound "
+                    f"tools.mypy.timeout_seconds={limit.timeout_seconds}s"
                 )
+                raise ValueError(msg)
+            limit = m.Infra.MypyResourceLimit(
+                memory_limit_mb=limit.memory_limit_mb,
+                timeout_seconds=budget,
+            )
         return cls.mypy_runner_timeout(limit)
 
     @staticmethod

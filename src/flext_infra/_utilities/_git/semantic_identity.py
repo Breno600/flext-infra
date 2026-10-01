@@ -15,10 +15,11 @@ from git import (
 
 from flext_core import r
 from flext_infra import c, m
-
-from ..._utilities._git.remote import FlextInfraUtilitiesGitRemote
-from ..._utilities._git.repo import FlextInfraUtilitiesGitRepo
-from ..._utilities._git.semantic_lane import FlextInfraUtilitiesGitSemanticLaneMixin
+from flext_infra._utilities._git.remote import FlextInfraUtilitiesGitRemote
+from flext_infra._utilities._git.repo import FlextInfraUtilitiesGitRepo
+from flext_infra._utilities._git.semantic_lane import (
+    FlextInfraUtilitiesGitSemanticLaneMixin,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -174,10 +175,7 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
         git_dir = Path(repo.git_dir).resolve()
         common_dir = Path(repo.common_dir).resolve()
         porcelain = repo.git.status("--porcelain", "--untracked-files=all")
-        try:
-            branch: str | None = repo.active_branch.name
-        except TypeError:
-            branch = None
+        branch = None if repo.head.is_detached else repo.active_branch.name
         remotes = {remote.name: remote.url for remote in repo.remotes}
         origin = remotes.get("origin")
         upstream = remotes.get("upstream")
@@ -211,7 +209,7 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
         # real submodule superproject was never recognized as one.
         staged_entries = repo.git.ls_files("--stage")
         has_submodules = any(
-            line.startswith(f"{c.Infra.GIT_CACHEINFO_GITLINK} ")
+            line.startswith(f"{c.Infra.GIT_GITLINK_MODE_TEXT} ")
             for line in staged_entries.splitlines()
         )
         # Why: git rev-parse --show-superproject-

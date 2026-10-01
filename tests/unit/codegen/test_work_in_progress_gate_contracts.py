@@ -68,7 +68,8 @@ class TestsWorkInProgressGates:
                 timeout=120,
             )
 
-    def test_template_binds_the_config_owned_predicate(self) -> None:
+    @staticmethod
+    def test_template_binds_the_config_owned_predicate() -> None:
         """The CI template reads make.work_in_progress, never a literal copy."""
         ci = _CI_TEMPLATE.read_text(encoding="utf-8")
         tm.that(

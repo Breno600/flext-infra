@@ -9,25 +9,25 @@ from typing import Annotated, Literal, Self
 
 from flext_cli import m, u
 
-from ... import t
-from ..._constants import (
+from flext_infra import t
+from flext_infra._constants import (
     FlextInfraConstantsCodegenProject,
     FlextInfraConstantsSharedInfra,
 )
-from .. import FlextInfraModelsLayout
-from ..deps_tool_config import FlextInfraModelsDepsToolConfig
-from ..deps_tool_config_project_artifacts import (
+from flext_infra._models import FlextInfraModelsLayout
+from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
+from flext_infra._models._config.make import FlextInfraConfigModelsMake
+from flext_infra._models._config.provider import FlextInfraConfigModelsProvider
+from flext_infra._models._config.release import FlextInfraConfigModelsRelease
+from flext_infra._models._config.render import FlextInfraConfigModelsRender
+from flext_infra._models._config.scaffold import FlextInfraConfigModelsScaffold
+from flext_infra._models._config.templates import FlextInfraConfigModelsTemplates
+from flext_infra._models._config.workspace import FlextInfraConfigModelsWorkspace
+from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
+from flext_infra._models.deps_tool_config_project_artifacts import (
     FlextInfraModelsDepsToolConfigProjectArtifacts,
 )
-from .contexts import FlextInfraConfigModelsContexts
-from .contract import FlextInfraConfigModelsContract
-from .make import FlextInfraConfigModelsMake
-from .provider import FlextInfraConfigModelsProvider
-from .release import FlextInfraConfigModelsRelease
-from .render import FlextInfraConfigModelsRender
-from .scaffold import FlextInfraConfigModelsScaffold
-from .templates import FlextInfraConfigModelsTemplates
-from .workspace import FlextInfraConfigModelsWorkspace
 
 
 class FlextInfraConfigModelsArtifact:
@@ -529,7 +529,7 @@ class FlextInfraConfigModelsArtifact:
                     "Planners compose the pyproject first and record them; "
                     "None means this plan composes no pyproject, so the "
                     "committed one is the source"
-                )
+                ),
             ),
         ] = None
 
@@ -706,6 +706,44 @@ class FlextInfraConfigModelsArtifact:
             ),
         ]
 
+    class SedPatternSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """One declared literal regex substitution for the mod verb's sed phase."""
+
+        pattern: Annotated[
+            str,
+            m.Field(description="Regular expression matched against file sources"),
+        ]
+        replacement: Annotated[
+            str,
+            m.Field(description="Literal replacement applied to every match"),
+        ]
+        file_glob: Annotated[
+            str | None,
+            m.Field(
+                default=None,
+                description="Optional glob restricting the targeted source files",
+            ),
+        ] = None
+        flags: Annotated[
+            t.StrSequence,
+            m.Field(
+                default=(),
+                description="Names of the compiled regex flags applied to pattern",
+            ),
+        ] = ()
+        description: Annotated[
+            str | None,
+            m.Field(default=None, description="Human-readable pattern intent"),
+        ] = None
+
+    class SedPatternsSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """Declared sed-by-list patterns applied by the mod verb's sed phase."""
+
+        patterns: Annotated[
+            t.VariadicTuple[FlextInfraConfigModelsArtifact.SedPatternSpec],
+            m.Field(default=(), description="Ordered substitution patterns"),
+        ] = ()
+
     class RefactorCsvCampaignsSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Declared CSV-driven rename campaigns for the mod verb's rename phase."""
 
@@ -718,9 +756,7 @@ class FlextInfraConfigModelsArtifact:
         """One declared literal regex substitution applied across the mod scope."""
 
         pattern: Annotated[t.NonEmptyStr, m.Field(description="Regex source to match")]
-        replacement: Annotated[
-            str, m.Field(description="Literal replacement text")
-        ]
+        replacement: Annotated[str, m.Field(description="Literal replacement text")]
         file_glob: Annotated[
             t.NonEmptyStr | None,
             m.Field(default=None, description="Optional file glob filter"),
@@ -729,9 +765,7 @@ class FlextInfraConfigModelsArtifact:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 default=(),
-                description=(
-                    "Regex flags by name (IGNORECASE, MULTILINE, DOTALL)"
-                ),
+                description=("Regex flags by name (IGNORECASE, MULTILINE, DOTALL)"),
             ),
         ] = ()
         description: Annotated[
@@ -743,6 +777,6 @@ class FlextInfraConfigModelsArtifact:
         """Declared sed-by-list substitution set with optional per-pattern filters."""
 
         patterns: Annotated[
-            t.VariadicTuple[SedPatternSpec],
+            t.VariadicTuple[FlextInfraConfigModelsArtifact.SedPatternSpec],
             m.Field(default=(), description="Ordered substitution patterns"),
         ] = ()

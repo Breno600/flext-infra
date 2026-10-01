@@ -7,12 +7,12 @@ from typing import Annotated, ClassVar, Literal, Self
 
 from flext_cli import m, u
 
-from ... import p, t
-from .._config.base import FlextInfraConfigModels
-from ..mixins import FlextInfraModelsMixins as mm
-from .fix import FlextInfraModelsCodegenFixModels
-from .lazy_init import FlextInfraModelsCodegenLazyInitModels
-from .scaffold import FlextInfraModelsCodegenScaffoldModels
+from flext_infra import p, t
+from flext_infra._models._codegen.fix import FlextInfraModelsCodegenFixModels
+from flext_infra._models._codegen.lazy_init import FlextInfraModelsCodegenLazyInitModels
+from flext_infra._models._codegen.scaffold import FlextInfraModelsCodegenScaffoldModels
+from flext_infra._models._config.base import FlextInfraConfigModels
+from flext_infra._models.mixins import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsCodegenPipelineModels:
@@ -89,6 +89,29 @@ class FlextInfraModelsCodegenPipelineModels:
                 msg = "codegen phase receipt input paths must be unique"
                 raise ValueError(msg)
             return self
+
+    class CodegenConformPorts(m.ArbitraryTypesModel):
+        """Collaborators the complete conform crosses into, wired by the facade.
+
+        Docs rendering and fresh-import validation are other service families;
+        the composition root binds their implementations once and conform only
+        consumes these ports.
+        """
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
+            frozen=True,
+            extra="forbid",
+            arbitrary_types_allowed=True,
+        )
+
+        docs_planner: Annotated[
+            p.Infra.DocsArtifactPlannerFactory,
+            m.Field(description="Builds the docs planner for one conform scope"),
+        ]
+        fresh_import: Annotated[
+            p.Infra.FreshImportProbeFactory,
+            m.Field(description="Builds the fresh-import probe for one repository"),
+        ]
 
     class CodegenPipelineState(m.ArbitraryTypesModel):
         """Typed inter-stage state for the codegen pipeline — Pydantic v2 model."""

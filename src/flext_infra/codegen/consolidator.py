@@ -7,10 +7,11 @@ from typing import Annotated, override
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
+from flext_infra.base import s
+from flext_infra.codegen._consolidator_steps import (
+    FlextInfraCodegenConsolidatorStepsMixin,
+)
 from flext_infra.workspace.rope import FlextInfraRopeWorkspace
-
-from ..base import s
-from ._consolidator_steps import FlextInfraCodegenConsolidatorStepsMixin
 
 
 class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMixin):
@@ -112,7 +113,9 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
     ) -> p.Result[t.SequenceOf[Path]]:
         """Return indexed Python wrapper files for one consolidation pass."""
         resolved_root = project_root.resolve()
-        constants_directory = c.Infra.FAMILY_DIRECTORIES["c"]
+        constants_directory = u.Infra.facade_family_declared_by(
+            c.Infra.CONSTANTS_PY,
+        ).directory
         indexed_files: t.MutableSequenceOf[Path] = []
         for module in rope_workspace.modules():
             if (

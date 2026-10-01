@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
 from git import (
     BaseIndexEntry,
@@ -14,8 +14,9 @@ from git import (
 
 from flext_core import r
 from flext_infra import c, m, t
-
-from .semantic_paths import FlextInfraUtilitiesGitSemanticPathsMixin
+from flext_infra._utilities._git.semantic_paths import (
+    FlextInfraUtilitiesGitSemanticPathsMixin,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -27,10 +28,6 @@ class FlextInfraUtilitiesGitSemanticIndexMixin(
     FlextInfraUtilitiesGitSemanticPathsMixin,
 ):
     """Own semantic index operations."""
-
-    _GITLINK_MODE: ClassVar[str] = "160000"
-    _STAGED_GITLINK_FIELDS: ClassVar[int] = 2
-    _STAGE_ENTRY_FIELDS: ClassVar[int] = 4
 
     @classmethod
     def git_committed_directory_blobs(
@@ -117,12 +114,13 @@ class FlextInfraUtilitiesGitSemanticIndexMixin(
             "--exclude-standard",
         ).encode(c.Cli.ENCODING_DEFAULT)
         index_z = repo.git.ls_files("--stage", "-z").encode(c.Cli.ENCODING_DEFAULT)
-        try:
-            head = repo.head.commit.hexsha.encode(c.Cli.ENCODING_DEFAULT)
-        except ValueError:
-            # Unborn HEAD: git itself reports no commit, so the fingerprint
-            # input is the literal "UNBORN" marker, matching `git rev-parse HEAD`.
-            head = b"UNBORN"
+        # An unborn HEAD has no commit; its fingerprint input is the typed
+        # unborn marker instead of an oid.
+        head = (
+            repo.head.commit.hexsha
+            if repo.head.is_valid()
+            else c.Infra.GIT_UNBORN_HEAD_MARKER
+        ).encode(c.Cli.ENCODING_DEFAULT)
         return paths_z, index_z, head
 
     @classmethod
@@ -150,47 +148,15 @@ class FlextInfraUtilitiesGitSemanticIndexMixin(
         return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=True))
 
     @classmethod
-    def git_gitlink_spec(
-        cls,
-        request: m.Infra.GitRefRequest,
-    ) -> p.Result[m.Infra.GitOidReport]:
-        """Resolve the indexed gitlink oid for one submodule path.
-
-        The ``ls-files --stage`` entry is validated structurally: mode
-        ``160000``, stage ``0``, and an exact path match.
-        """
-        try:
-            repo = cls._repo(request.repo_root)
-            output = repo.git.ls_files("--stage", "--", request.reference)
-        except GitCommandError as exc:
-            return r[m.Infra.GitOidReport].fail(str(exc), exception=exc)
-        except (OSError, ValueError) as exc:
-            return r[m.Infra.GitOidReport].fail(
-                f"failed to read gitlink spec: {exc}",
-                exception=exc,
-            )
-        if not output.strip():
-            return r[m.Infra.GitOidReport].fail(
-                f"Git gitlink is missing from the index: {request.reference}",
-            )
-        match output.split():
-            case [mode, oid, stage, indexed_path] if (
-                mode == cls._GITLINK_MODE
-                and stage == str(c.Infra.GIT_STAGE_NORMAL)
-                and indexed_path == request.reference
-            ):
-                return r[m.Infra.GitOidReport].ok(m.Infra.GitOidReport(oid=oid))
-            case _:
-                return r[m.Infra.GitOidReport].fail(
-                    f"Git gitlink entry is malformed: {request.reference}",
-                )
-
-    @classmethod
     def git_staged_gitlink_oid(
         cls,
         request: m.Infra.GitRefRequest,
     ) -> p.Result[m.Infra.GitOidReport]:
-        """Return the gitlink OID the index records for one submodule path."""
+        """Return the gitlink OID the index records for one submodule path.
+
+        The ``ls-files --stage`` entry is validated structurally: gitlink
+        mode, normal stage, and an exact path match.
+        """
         try:
             repo = cls._repo(request.repo_root)
             staged = repo.git.ls_files("--stage", "--", request.reference)
@@ -199,16 +165,21 @@ class FlextInfraUtilitiesGitSemanticIndexMixin(
                 f"failed to read the staged gitlink for {request.reference}: {exc}",
                 exception=exc,
             )
-        for line in staged.splitlines():
-            fields = line.split()
-            if (
-                len(fields) >= cls._STAGED_GITLINK_FIELDS
-                and fields[0] == cls._GITLINK_MODE
+        if not staged.strip():
+            return r[m.Infra.GitOidReport].fail(
+                f"governed gitlink is absent from the index: {request.reference}",
+            )
+        match staged.split(maxsplit=c.Infra.GIT_LS_FILES_STAGE_FIELDS - 1):
+            case [mode, oid, stage, indexed_path] if (
+                mode == c.Infra.GIT_GITLINK_MODE_TEXT
+                and stage == str(c.Infra.GIT_STAGE_NORMAL)
+                and indexed_path == request.reference
             ):
-                return r[m.Infra.GitOidReport].ok(m.Infra.GitOidReport(oid=fields[1]))
-        return r[m.Infra.GitOidReport].fail(
-            f"governed gitlink is absent from the index: {request.reference}",
-        )
+                return r[m.Infra.GitOidReport].ok(m.Infra.GitOidReport(oid=oid))
+            case _:
+                return r[m.Infra.GitOidReport].fail(
+                    f"Git gitlink entry is malformed: {request.reference}",
+                )
 
     @classmethod
     def git_index_gitlink_paths(cls, repository_root: Path) -> p.Result[t.StrSequence]:
@@ -233,11 +204,15 @@ class FlextInfraUtilitiesGitSemanticIndexMixin(
                 f"failed to read the Git index: {exc}",
                 exception=exc,
             )
+        fields_per_record = c.Infra.GIT_LS_FILES_STAGE_FIELDS
+        records = tuple(
+            line.split(maxsplit=fields_per_record - 1) for line in staged.splitlines()
+        )
         paths = tuple(
-            line.split(maxsplit=3)[3]
-            for line in staged.splitlines()
-            if line.startswith(cls._GITLINK_MODE)
-            and len(line.split(maxsplit=3)) == cls._STAGE_ENTRY_FIELDS
+            fields[-1]
+            for fields in records
+            if len(fields) == fields_per_record
+            and fields[0] == c.Infra.GIT_GITLINK_MODE_TEXT
         )
         return r[t.StrSequence].ok(paths)
 

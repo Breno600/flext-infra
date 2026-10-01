@@ -8,12 +8,12 @@ from typing import Annotated
 from flext_cli import m
 
 from flext_infra import t
-
-from .deps_tool_config_project_gitignore import (
+from flext_infra._models.deps_tool_config_project_gitignore import (
     FlextInfraModelsDepsToolConfigProjectGitignore,
 )
-from .deps_tool_config_project_mise import FlextInfraModelsDepsToolConfigProjectMise
-from .deps_tool_config_project_ruff import FlextInfraModelsDepsToolConfigProjectRuff
+from flext_infra._models.deps_tool_config_project_mise import (
+    FlextInfraModelsDepsToolConfigProjectMise,
+)
 
 
 class FlextInfraModelsDepsToolConfigProjectArtifacts(
@@ -24,10 +24,6 @@ class FlextInfraModelsDepsToolConfigProjectArtifacts(
     class ProjectManagedArtifactsConfig(m.ArbitraryTypesModel):
         """Project-owned configuration for generated artifacts."""
 
-        Ruff: Annotated[
-            FlextInfraModelsDepsToolConfigProjectRuff.ProjectRuffConfig,
-            m.Field(description="Ruff additions owned by the current project."),
-        ]
         Mise: Annotated[
             FlextInfraModelsDepsToolConfigProjectMise.ProjectMiseConfig,
             m.Field(description="Mise additions owned by the current project."),

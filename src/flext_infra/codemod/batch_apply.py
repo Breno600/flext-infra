@@ -7,30 +7,34 @@ from pathlib import Path
 from typing import override
 
 from flext_core import r
-
-from .. import FlextInfraConfig, FlextInfraServiceBase, config, infra, m, p, t, u
-from . import (
+from flext_infra import FlextInfraServiceBase, m, p, t, u
+from flext_infra.codemod import (
     FlextInfraCodemodSemanticApply,
     FlextInfraModGateEngine,
     FlextInfraModTextGateEngine,
 )
-from .batch_replacements import FlextInfraModReplacements
+from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
 
 
 class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
     """Apply every discovered AST rewrite without destructive rollback."""
 
     rename_runner: t.Port[p.Infra.RenameCampaignRunner] = m.Field(
-        exclude=True, description="Injected CSV campaign execution port"
+        exclude=True,
+        description="Injected CSV campaign execution port",
     )
     progress: t.Port[p.Infra.ModProgress] = m.Field(
-        exclude=True, description="Injected mod progress transport port"
+        exclude=True,
+        description="Injected mod progress transport port",
     )
     rope: t.Port[p.Infra.RopeWorkspaceDsl] = m.Field(
-        exclude=True, description="Injected Rope workspace port"
+        exclude=True,
+        description="Injected Rope workspace port",
     )
     rename_inputs: t.VariadicTuple[m.Infra.ApplyRenamesInput] = m.Field(
-        exclude=True, default=(), description="Typed declared CSV campaigns"
+        exclude=True,
+        default=(),
+        description="Typed declared CSV campaigns",
     )
 
     @override
@@ -53,9 +57,7 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                 validate_receipts=True,
             ).unwrap()
             pending_count += text_pending.findings
-            renames_pending = FlextInfraCodemodBatchApply._pending_renames(
-                self.repository_root,
-            )
+            renames_pending = self._pending_renames()
             if renames_pending.failure:
                 return r[t.Cli.ResultValue].from_failure(renames_pending)
             if pending_count or renames_pending.value:
@@ -76,25 +78,16 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             return r[t.Cli.ResultValue].ok(True)
         return self._execute_apply(rules)
 
-    @staticmethod
-    def _execute_apply(
-        root: Path,
-        rules: t.SequenceOf[Path],
-    ) -> p.Result[t.Cli.ResultValue]:
+    def _execute_apply(self, rules: t.SequenceOf[Path]) -> p.Result[t.Cli.ResultValue]:
         """Converge AST, semantic, and text phases over the same source state."""
-        cli.display_text("mod: validate ast-grep rule fixtures")
-        FlextInfraModGateEngine.validate_rule_fixtures(root, rules).unwrap()
-        with infra.rope_workspace(root) as rope_workspace:
-            return FlextInfraCodemodBatchApply._execute_apply_cycle(
-                root,
-                rope_workspace,
-            )
+        self.progress.emit("mod: validate ast-grep rule fixtures")
+        FlextInfraModGateEngine.validate_rule_fixtures(
+            self.repository_root,
+            rules,
+        ).unwrap()
+        return self._execute_apply_cycle()
 
-    @staticmethod
-    def _execute_apply_cycle(
-        root: Path,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
-    ) -> p.Result[t.Cli.ResultValue]:
+    def _execute_apply_cycle(self) -> p.Result[t.Cli.ResultValue]:
         """Converge every mod phase through one shared Rope workspace."""
         root = self.repository_root
         rope_workspace = self.rope
@@ -167,12 +160,8 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             # Exact optional migration receipts apply once per invocation,
             # not to every internal convergence pass after consuming matches.
             text_precondition_pending = False
-            configured_renames = FlextInfraCodemodBatchApply._rename_inputs(
-                root,
-                apply=True,
-            )
-            for rename_params in configured_renames:
-                renamed = FlextInfraApplyRenames.run(rename_params)
+            for rename_params in self.rename_inputs:
+                renamed = self.rename_runner.run(rename_params)
                 if renamed.failure:
                     return r[t.Cli.ResultValue].from_failure(renamed)
                 self.progress.emit_rename(renamed.value)
@@ -192,7 +181,7 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                     f"{current.actionable} AST and {current_text.actionable} text "
                     "actionable findings; changes retained for mandatory owner repair",
                 )
-            cli.display_text(
+            self.progress.emit(
                 "mod: require canonical formatting and zero Ruff, Pyrefly, and LSP diagnostics",
             )
             validated = FlextInfraModGateEngine.validate(root)
@@ -229,48 +218,7 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             )
             return r[t.Cli.ResultValue].ok(True)
 
-    @staticmethod
-    def _rename_inputs(
-        root: Path,
-        *,
-        apply: bool,
-    ) -> t.SequenceOf[m.Infra.ApplyRenamesInput]:
-        """Resolve configured rename campaigns into engine inputs anchored at root.
-
-        The rename list is resolved against the config directory that declares
-        it, which ships inside the package: every consumer repository applies
-        the same list without carrying a copy. Scan roots stay
-        repository-root-relative because they select the tree being rewritten.
-        """
-        campaigns = config.Infra.refactor_csv_campaigns.campaigns
-        config_dir = FlextInfraConfig.ssot_config_dir()
-        inputs: list[m.Infra.ApplyRenamesInput] = []
-        for campaign in campaigns:
-            csv_declared = Path(campaign.csv)
-            csv = (
-                csv_declared
-                if csv_declared.is_absolute()
-                else config_dir / csv_declared
-            )
-            roots = tuple(
-                str(path if path.is_absolute() else root / path)
-                for path in (Path(value) for value in campaign.roots)
-            )
-            inputs.append(
-                m.Infra.ApplyRenamesInput(
-                    csv=str(csv),
-                    roots=roots or (str(root),),
-                    apply=apply,
-                    bindings=campaign.bindings,
-                    text_globs=campaign.text_globs,
-                    python_documentation=campaign.python_documentation,
-                    exclude_globs=campaign.exclude_globs,
-                ),
-            )
-        return tuple(inputs)
-
-    @staticmethod
-    def _pending_renames(root: Path) -> p.Result[int]:
+    def _pending_renames(self) -> p.Result[int]:
         """Count pending rename occurrences across the configured campaigns."""
         pending = 0
         for params in self.rename_inputs:

@@ -8,8 +8,9 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, p, u
-
-from ._detector_runtime_steps import FlextInfraDependencyDetectorRuntimeSteps
+from flext_infra.deps._detector_runtime_steps import (
+    FlextInfraDependencyDetectorRuntimeSteps,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, MutableMapping
@@ -21,7 +22,9 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
     """Runtime executor for dependency detection pipeline."""
 
     def __init__(
-        self, detector: p.Infra.DetectorRuntime, deps: p.Infra.DepsService
+        self,
+        detector: p.Infra.DetectorRuntime,
+        deps: p.Infra.DepsService,
     ) -> None:
         """Receive the reporting command and the dependency-analysis port."""
         self._detector = detector

@@ -3,11 +3,18 @@
 from __future__ import annotations
 
 from flext_infra import t
-
-from .asthelpers import FlextInfraUtilitiesRopeAnalysisAstHelpers
-from .exports import FlextInfraUtilitiesRopeAnalysisExports
-from .importstate import FlextInfraUtilitiesRopeAnalysisImportState
-from .sourcescan import FlextInfraUtilitiesRopeAnalysisSourceScan
+from flext_infra._utilities._rope_analysis.asthelpers import (
+    FlextInfraUtilitiesRopeAnalysisAstHelpers,
+)
+from flext_infra._utilities._rope_analysis.exports import (
+    FlextInfraUtilitiesRopeAnalysisExports,
+)
+from flext_infra._utilities._rope_analysis.importstate import (
+    FlextInfraUtilitiesRopeAnalysisImportState,
+)
+from flext_infra._utilities._rope_analysis.sourcescan import (
+    FlextInfraUtilitiesRopeAnalysisSourceScan,
+)
 
 
 class FlextInfraUtilitiesRopeAnalysisBase(

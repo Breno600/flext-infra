@@ -19,10 +19,9 @@ from typing import TYPE_CHECKING, override
 
 from flext_core import r
 from flext_core.__version__ import FlextVersion
-
-from .. import c, m, u
-from ._execution import FlextInfraCodegenExecutionBase
-from ._mise_artifacts_publication import FlextInfraMisePublication
+from flext_infra import c, m, u
+from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
+from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
 
 if TYPE_CHECKING:
     from .. import p

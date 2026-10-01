@@ -112,6 +112,13 @@ class FlextInfraModelsMiseToolchain:
                 description="Python major.minor line, e.g. '3.13'",
             ),
         ]
+        python_tool_version: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                pattern=r"^[0-9]+\.[0-9]+\.[0-9]+$",
+                description="Python runtime patch available on every locked platform",
+            ),
+        ]
         dependency_cooldown_days: Annotated[
             int,
             m.Field(
@@ -224,7 +231,7 @@ class FlextInfraModelsMiseToolchain:
                     "MISE_PYTHON_COMPILE. False restricts Python resolution "
                     "and installation to precompiled builds. "
                     "Override toolchain.python_compile."
-                )
+                ),
             ),
         ]
         npm_package_manager: Annotated[
@@ -267,7 +274,7 @@ class FlextInfraModelsMiseToolchain:
                 description=(
                     "Mise selector for prettier. Override toolchain.prettier_selector; "
                     "never the .mise.toml key."
-                )
+                ),
             ),
         ]
         prettier_version: Annotated[
@@ -303,7 +310,7 @@ class FlextInfraModelsMiseToolchain:
                 description=(
                     "Taplo release selector; the committed mise.lock pins the "
                     "version generation authenticates"
-                )
+                ),
             ),
         ]
         ast_grep_selector: Annotated[
@@ -379,10 +386,13 @@ class FlextInfraModelsMiseToolchain:
             A value like ``0.45.3~7a027ead`` is an aube lock build-identity
             directory name, not a published package version; aube rejects it
             ("no version ... matches range") and the whole toolchain lifecycle
-            (make upg/gen/setup, and therefore CI) breaks. Only real selectors
+            (make upg/gen/setup, and therefore CI) breaks.             Only real selectors
             (``latest``, a major.minor line, or a released version) may reach
             the lock.
             """
+            if not self.python_tool_version.startswith(f"{self.python_version}."):
+                msg = "Python runtime patch must match the declared language minor line"
+                raise ValueError(msg)
             offenders = sorted(
                 field
                 for field, value in self

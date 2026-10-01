@@ -8,10 +8,9 @@ from typing import TYPE_CHECKING
 from flext_cli import u
 
 from flext_infra import c, m, t
-
-from ._docs_github_links import FlextInfraUtilitiesDocsGithubLinks
-from .docs import FlextInfraUtilitiesDocs
-from .docs_contract import FlextInfraUtilitiesDocsContract
+from flext_infra._utilities._docs_github_links import FlextInfraUtilitiesDocsGithubLinks
+from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
+from flext_infra._utilities.docs_contract import FlextInfraUtilitiesDocsContract
 
 if TYPE_CHECKING:
     import re
@@ -87,7 +86,7 @@ class FlextInfraUtilitiesDocsFix:
                 if outcome.failure:
                     raise RuntimeError(outcome.error or f"Ruff could not inspect {rel}")
                 if outcome.value.stderr or not u.Cli.process_succeeded(
-                    outcome.value.outcome
+                    outcome.value.outcome,
                 ):
                     msg = (
                         f"Ruff could not fix {rel}: "

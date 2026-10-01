@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import config
+from flext_infra import config, infra
 from flext_infra.codegen import FlextInfraCodegenConform
 from flext_infra.workspace import FlextInfraWorkspaceDetector
 from tests import c, u
@@ -19,8 +19,8 @@ from tests import c, u
 # ceiling, so a real hang still aborts at the declared wall.
 @pytest.mark.slow
 class TestsFlextInfraCodegenManifestlessExisting:
+    @staticmethod
     def test_existing_root_uses_pep621_metadata_for_managed_artifacts(
-        self,
         infra_git_repo: Path,
     ) -> None:
         root = infra_git_repo
@@ -117,7 +117,7 @@ class TestsFlextInfraCodegenManifestlessExisting:
             scope=c.Infra.CodegenConformScope.SELF,
             mode=c.Infra.CodegenConformMode.APPLY,
         )
-        tm.ok(FlextInfraCodegenConform.execute_request(request))
+        tm.ok(infra.codegen_conform(request))
         initial_plan = tm.ok(
             FlextInfraCodegenConform(repository_root=root).plan(request),
         )
@@ -146,7 +146,7 @@ class TestsFlextInfraCodegenManifestlessExisting:
         for required in ("Makefile", ".mise.toml", ".python-version", ".gitignore"):
             tm.that(u.Infra.codegen_file_requires_effect(plans[required]), eq=False)
 
-        tm.ok(FlextInfraCodegenConform.execute_request(request))
+        tm.ok(infra.codegen_conform(request))
         tm.that((root / ".env.example").exists(), eq=False)
         for relative, content in preserved.items():
             tm.that((root / relative).read_text(encoding="utf-8"), eq=content)
@@ -166,8 +166,8 @@ class TestsFlextInfraCodegenManifestlessExisting:
             eq=(),
         )
 
+    @staticmethod
     def test_root_distribution_owns_its_dependency_profile(
-        self,
         tmp_path: Path,
     ) -> None:
         """The tree's root declares no flext runtime dependency and still conforms.

@@ -8,11 +8,14 @@ from pathlib import Path
 from typing import ClassVar
 
 from flext_infra import c, m, t
-
-from ..rope_core import FlextInfraUtilitiesRopeCore
-from ..rope_runtime import FlextInfraUtilitiesRopeRuntime
-from .asthelpers import FlextInfraUtilitiesRopeAnalysisAstHelpers
-from .exports import FlextInfraUtilitiesRopeAnalysisExports
+from flext_infra._utilities._rope_analysis.asthelpers import (
+    FlextInfraUtilitiesRopeAnalysisAstHelpers,
+)
+from flext_infra._utilities._rope_analysis.exports import (
+    FlextInfraUtilitiesRopeAnalysisExports,
+)
+from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeAnalysisImportState:

@@ -63,7 +63,6 @@ class TestsFlextInfraUpgLockAtomicPublication:
         )
         try:
             deadline = time.monotonic() + self.INTERRUPT_AFTER_SECONDS
-            last_observed = ""
             while time.monotonic() < deadline:
                 tm.that(
                     child.poll(),
@@ -75,7 +74,7 @@ class TestsFlextInfraUpgLockAtomicPublication:
                 # and require that one of its threads waits on the FIFO.
                 observed = tm.ok(
                     u.Cli.run(
-                        ["ps", "--sid", str(child.pid), "-L", "-o", "comm=,wchan:64="],
+                        ["ps", "--sid", str(child.pid), "-L", "-o", "wchan:64=,args="],
                         timeout=self.INTERRUPT_AFTER_SECONDS,
                     ),
                 )
@@ -84,25 +83,16 @@ class TestsFlextInfraUpgLockAtomicPublication:
                 # the main ``uv`` thread. The owned uv process is identified by
                 # its main-thread comm (execve names it), and the dependency
                 # observation is any of its threads in wait_for_partner.
-                rows = tuple(
-                    row.split(maxsplit=2) for row in observed.stdout.splitlines()
-                )
-                owned = {
-                    row[0] for row in rows if len(row) > 1 and row[1] == c.Infra.UV
-                }
                 if any(
-                    len(row) > 2
-                    and row[0] in owned
-                    and row[2].split() == ["wait_for_partner"]
-                    for row in rows
+                    len(fields) > 1
+                    and fields[0] == "wait_for_partner"
+                    and Path(fields[1]).name == c.Infra.UV
+                    for fields in (row.split() for row in observed.stdout.splitlines())
                 ):
                     break
                 time.sleep(0.02)
             else:
-                pytest.fail(
-                    "owned uv never opened the dependency for resolution; "
-                    f"last session processes: {last_observed!r}"
-                )
+                pytest.fail("owned uv never opened the dependency for resolution")
         finally:
             primary = sys.exception()
             try:

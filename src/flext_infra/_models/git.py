@@ -8,10 +8,9 @@ from typing import Annotated, ClassVar
 from flext_cli import m
 
 from flext_infra import t
-
-from ._git.identity import FlextInfraModelsGitIdentity
-from ._git.worktree_facts import FlextInfraModelsGitWorktreeFacts
-from ._git.worktree_state import FlextInfraModelsGitWorktreeState
+from flext_infra._models._git.identity import FlextInfraModelsGitIdentity
+from flext_infra._models._git.worktree_facts import FlextInfraModelsGitWorktreeFacts
+from flext_infra._models._git.worktree_state import FlextInfraModelsGitWorktreeState
 
 
 class FlextInfraModelsGit(

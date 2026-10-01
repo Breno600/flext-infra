@@ -14,11 +14,17 @@ from typing import override
 
 from flext_cli import u
 
-from ..constants import c
-from ..models import m
-from ..typings import t
-from . import FlextInfraUtilitiesGit, FlextInfraUtilitiesProjectDiscoveryCandidatesMixin
-from .workspace_manifest import FlextInfraUtilitiesWorkspaceManifest
+from flext_infra import config
+from flext_infra._utilities import (
+    FlextInfraUtilitiesGit,
+    FlextInfraUtilitiesProjectDiscoveryCandidatesMixin,
+)
+from flext_infra._utilities.workspace_manifest import (
+    FlextInfraUtilitiesWorkspaceManifest,
+)
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.typings import t
 
 
 class FlextInfraUtilitiesProjectDiscovery(
@@ -34,7 +40,7 @@ class FlextInfraUtilitiesProjectDiscovery(
             repository_root,
         )
         packaged = m.Infra.RefactorConfigSpec(
-            project_scan_dirs=config.Infra.source_scan.roots
+            project_scan_dirs=config.Infra.source_scan.roots,
         )
         if not manifest_path.is_file():
             return packaged
@@ -263,7 +269,7 @@ class FlextInfraUtilitiesProjectDiscovery(
                         for target in scan_dir.rglob(f"*{suffix}"):
                             if target.is_file():
                                 targets.add(
-                                    target.relative_to(resolved_root).as_posix()
+                                    target.relative_to(resolved_root).as_posix(),
                                 )
         return tuple(sorted(targets))
 
@@ -278,6 +284,20 @@ class FlextInfraUtilitiesProjectDiscovery(
         return (repository_root.resolve(),)
 
     @staticmethod
+    def nearest_project_root(repository_root: Path, path: Path) -> Path | None:
+        """Find the nearest manifest owner inside one governed repository."""
+        boundary = repository_root.resolve()
+        candidate = path.resolve()
+        if not candidate.is_relative_to(boundary):
+            return None
+        for parent in (candidate, *candidate.parents):
+            if (parent / c.PYPROJECT_FILENAME).is_file():
+                return parent
+            if parent == boundary:
+                return None
+        return None
+
+    @staticmethod
     def runtime_environment_dir(
         project_root: Path,
         *,
@@ -289,9 +309,8 @@ class FlextInfraUtilitiesProjectDiscovery(
         owns the environment. Undeclared, the owner derives it: a subproject
         checked out inside a workspace uses the workspace environment; a
         standalone checkout or a linked worktree owns its own, exactly as the
-        generated Makefile resolves ``REPOSITORY_ROOT``. The environment is
-        always ``<runtime root>/.venv``; its location is law, never
-        configuration (operator law 2026-10-01, flext-h2a9h).
+        generated Makefile resolves ``REPOSITORY_ROOT``. The sibling directory
+        comes from the typed codegen contract, shared with the Makefile.
         """
         if runtime_root is None:
             runtime = FlextInfraUtilitiesGit.git_repository_root(

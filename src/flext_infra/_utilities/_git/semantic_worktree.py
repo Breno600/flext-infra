@@ -8,8 +8,9 @@ from git import GitCommandError, Repo
 
 from flext_core import r
 from flext_infra import m
-
-from .semantic_index import FlextInfraUtilitiesGitSemanticIndexMixin
+from flext_infra._utilities._git.semantic_index import (
+    FlextInfraUtilitiesGitSemanticIndexMixin,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -76,28 +77,27 @@ class FlextInfraUtilitiesGitSemanticWorktreeMixin(
 
         A detached checkout carries real work, so it is attached by rewriting the
         ref and the symbolic HEAD rather than by ``checkout``, which would touch
-        the working tree. Upstream tracking is best effort: a branch that has no
-        counterpart on origin yet is still a valid attachment.
+        the working tree. Upstream tracking is set only when origin already
+        carries the branch (a branch new on this side has no counterpart yet);
+        when it does, a failure to set it escapes like any other.
         """
         try:
             repo = cls._repo(request.repo_root)
             repo.git.branch("--quiet", "-f", request.branch, "HEAD")
             repo.git.symbolic_ref("HEAD", f"refs/heads/{request.branch}")
+            remote_ref = f"refs/remotes/origin/{request.branch}"
+            if remote_ref in {ref.path for ref in repo.refs}:
+                repo.git.branch(
+                    "--quiet",
+                    "--set-upstream-to",
+                    f"origin/{request.branch}",
+                    request.branch,
+                )
         except (GitCommandError, OSError, ValueError) as exc:
             return r[m.Infra.GitBoolReport].fail(
                 f"failed to attach {request.branch} at HEAD: {exc}",
                 exception=exc,
             )
-        try:
-            repo.git.branch(
-                "--quiet",
-                "--set-upstream-to",
-                f"origin/{request.branch}",
-                request.branch,
-            )
-        except GitCommandError:
-            # No counterpart on origin yet; the attachment itself still stands.
-            return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=True))
         return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=True))
 
 

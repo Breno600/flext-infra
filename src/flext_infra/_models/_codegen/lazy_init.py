@@ -3,16 +3,46 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, ClassVar
 
 from flext_cli import m
 
-from ... import c, t
-from .. import FlextInfraModelsMixins as mm
+from flext_infra import c, t
+from flext_infra._models import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsCodegenLazyInitModels:
     """Lazy-init planning and quality-gate models."""
+
+    class ProjectionLockEntry(m.ContractModel):
+        """One projected file recorded in the deterministic projection lock."""
+
+        path: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Project-relative projected path"),
+        ]
+        sha256: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Digest of the projected bytes"),
+        ]
+        bytes: Annotated[
+            t.NonNegativeInt,
+            m.Field(description="Byte length of the projected file"),
+        ]
+
+    class ProjectionLockPayload(m.ContractModel):
+        """Deterministic projection-lock document for one project."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(populate_by_name=True)
+
+        api_version: Annotated[
+            t.NonEmptyStr,
+            m.Field(alias="apiVersion", description="Projection-lock schema version"),
+        ]
+        entries: Annotated[
+            t.VariadicTuple[FlextInfraModelsCodegenLazyInitModels.ProjectionLockEntry],
+            m.Field(description="Projected files ordered by path"),
+        ]
 
     class LazyInitPackageContext(m.ArbitraryTypesModel):
         """Declarative package context for one lazy-init directory."""

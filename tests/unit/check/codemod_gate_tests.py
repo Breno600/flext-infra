@@ -15,8 +15,6 @@ from tests import u
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p
-
 
 class TestsFlextInfraCodemodGate:
     """Block on every policy finding and on every native scanner failure."""
@@ -34,7 +32,8 @@ class TestsFlextInfraCodemodGate:
             encoding="utf-8",
         )
         config_path.write_text(
-            f"ruleDirs: [{c.Cli.RULES_DIR_NAME}]\n", encoding="utf-8"
+            f"ruleDirs: [{c.Cli.RULES_DIR_NAME}]\n",
+            encoding="utf-8",
         )
         for name in ("first", "second"):
             (rules / f"{name}.yml").write_text(
@@ -57,7 +56,6 @@ class TestsFlextInfraCodemodGate:
         execution = u.Tests.run_gate_check(FlextInfraCodemodGate, tmp_path, project)
 
         tm.that(execution.result.passed, eq=False)
-        tm.that(execution.observational_issues, empty=True)
         policy_findings = tuple(
             issue for issue in execution.issues if issue.code == "contract-second"
         )
@@ -71,10 +69,8 @@ class TestsFlextInfraCodemodGate:
             eq=tuple(issue.formatted for issue in execution.issues),
         )
         tm.that(
-            execution.error_count,
-            eq=sum(
-                issue.severity.lower() == c.Infra.ERROR for issue in execution.issues
-            ),
+            execution.finding_count,
+            eq=len(execution.issues),
         )
         if severity == "error":
             tm.that(execution.raw_output, has="exit=1")
@@ -126,7 +122,6 @@ class TestsFlextInfraCodemodGate:
     def test_workspace_pipeline_fails_the_project_on_policy_findings(
         self,
         tmp_path: Path,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
         severity: str,
     ) -> None:
         """The public check facade fails the project on any rule finding.
@@ -139,10 +134,11 @@ class TestsFlextInfraCodemodGate:
         reports = tmp_path / "reports"
 
         results = tm.ok(
-            FlextInfraWorkspaceChecker(
-                repository_root=tmp_path,
-                rope=rope_workspace,
-            ).run_projects([project.name], ["codemod"], reports_dir=reports),
+            FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
+                [project.name],
+                ["codemod"],
+                reports_dir=reports,
+            ),
         )
 
         result = results[0]

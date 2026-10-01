@@ -60,7 +60,8 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         tm.that(result.issues[0].code, eq=c.Infra.MARKDOWN_FORMAT)
         tm.that(result.issues[0].file, eq="README.md")
 
-    def test_format_gate_without_markdown_is_red(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_format_gate_without_markdown_is_red(tmp_path: Path) -> None:
         """Zero collected markdown is red, never a neutral pass."""
         project_dir = u.Tests.mk_project(tmp_path, "markdown-format-empty")
 
@@ -120,34 +121,29 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         tm.that(len(result.issues), eq=1)
         tm.that("make setup" in result.issues[0].message, eq=True)
 
-    @pytest.mark.parametrize(
-        ("markdown_text", "passed", "issues_len"),
-        [(FORMATTED, True, 0), (NOTEST_PSEUDO, True, 0)],
-    )
-    def test_code_gate_clean_and_notest_blocks(
-        self,
-        *,
-        tmp_path: Path,
-        markdown_text: str,
-        passed: bool,
-        issues_len: int,
-    ) -> None:
+    def test_code_gate_clean_block_passes(self, tmp_path: Path) -> None:
         project_dir = u.Tests.mk_project(tmp_path, "markdown-code-clean")
         (project_dir / "README.md").write_text(self.FORMATTED, encoding="utf-8")
 
         _ = u.Tests.check_gate_asserting(
-            FlextInfraMarkdownCodeGate, tmp_path, project_dir, passed=True, issues_len=0
+            FlextInfraMarkdownCodeGate,
+            tmp_path,
+            project_dir,
+            passed=True,
+            issues_len=0,
         )
 
     def test_code_gate_notest_only_blocks_do_not_select_the_gate(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A ``notest`` fence is not embedded code to check (#1223 selection)."""
         project_dir = u.Tests.mk_project(tmp_path, "markdown-code-notest")
         (project_dir / "README.md").write_text(self.NOTEST_PSEUDO, encoding="utf-8")
 
         tm.that(
-            FlextInfraMarkdownCodeGate(tmp_path).selected_for(project_dir), eq=False
+            FlextInfraMarkdownCodeGate(tmp_path).selected_for(project_dir),
+            eq=False,
         )
 
     def test_code_gate_fix_splices_formatted_block_back(self, tmp_path: Path) -> None:
@@ -211,8 +207,8 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
             eq=True,
         )
 
+    @staticmethod
     def test_code_gate_reports_unformatted_docstring_example(
-        self,
         tmp_path: Path,
     ) -> None:
         """Parseable docstring examples answer to the format contract."""
@@ -234,8 +230,8 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
 
         tm.that(result.issues[0].file, eq="src/widget.py")
 
+    @staticmethod
     def test_code_gate_is_not_selected_without_embedded_code(
-        self,
         tmp_path: Path,
     ) -> None:
         """Prose-only documentation never selects the embedded-code gate."""

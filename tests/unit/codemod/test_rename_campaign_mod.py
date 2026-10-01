@@ -82,8 +82,8 @@ class TestsRenameCampaignMod:
         )
         tm.that(consumer.stdout, eq="campaign_token\n")
 
+    @staticmethod
     def test_packaged_campaigns_preserve_prose_and_converge(
-        self,
         tmp_path: Path,
     ) -> None:
         mod_workspace, _package = u.Tests.create_lazy_init_workspace(tmp_path)

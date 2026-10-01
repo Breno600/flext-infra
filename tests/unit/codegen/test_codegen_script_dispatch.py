@@ -341,6 +341,54 @@ class TestsFlextInfraScriptDispatchMakefile:
         tm.that(report, has="$(PROFILE_REPORTS_DIR)/pytest.pstats")
         tm.that(report, has="$(PROFILE_REPORTS_DIR)/pytest.pstats.json")
 
+    def test_test_verbs_split_testmon_budget_from_unbounded_full(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Make test is bounded and testmon-backed; make test-full is neither.
+
+        The persistent database is keyed by the declared distribution, so
+        every checkout of a project shares one testmon history.
+        """
+        rendered = self._render_root_makefile(
+            tmp_path,
+            extra_verbs=(),
+            script_dispatch=None,
+        )
+        cache = config.Infra.codegen.make.testmon_cache
+        database_line = next(
+            line
+            for line in rendered.splitlines()
+            if line.startswith("override FLEXT_PYTEST_TESTMON_DATABASE")
+        )
+        tm.that(rendered, has="PROJECT_NAME := demo-root\n")
+        tm.that(
+            database_line,
+            has=(
+                f"/{cache.external_storage_directory}/$(PROJECT_NAME)/"
+                f"{cache.database_filename}"
+            ),
+        )
+        tm.that(database_line, lacks="PROJECT_ROOT")
+        incremental = rendered.split("_builtin_test_all:", 1)[1].split("\n\n", 1)[0]
+        full = rendered.split("_builtin_test_full_all:", 1)[1].split("\n\n", 1)[0]
+        tm.that(
+            incremental,
+            has=[
+                "PYTEST_BOUNDED",
+                f'{cache.database_environment_variable}="$$database"',
+            ],
+        )
+        tm.that(full, has="-m flext_infra._pytest_entry full")
+        tm.that(
+            full,
+            lacks=[
+                "PYTEST_BOUNDED",
+                "FLEXT_PYTEST_TESTMON_DATABASE",
+                cache.database_environment_variable,
+            ],
+        )
+
     # A test asserting a downstream consumer's verbs from this
     # engine's catalog was removed. The engine is consumer-agnostic: a consumer
     # declares extra_verbs/script_dispatch in its own typed repository input. The

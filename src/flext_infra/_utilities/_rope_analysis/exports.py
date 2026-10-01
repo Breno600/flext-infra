@@ -7,11 +7,14 @@ from collections.abc import MutableMapping
 from typing import ClassVar
 
 from flext_infra import c, m, t
-
-from ..rope_core import FlextInfraUtilitiesRopeCore
-from ..rope_runtime import FlextInfraUtilitiesRopeRuntime
-from .asthelpers import FlextInfraUtilitiesRopeAnalysisAstHelpers
-from .sourcescan import FlextInfraUtilitiesRopeAnalysisSourceScan
+from flext_infra._utilities._rope_analysis.asthelpers import (
+    FlextInfraUtilitiesRopeAnalysisAstHelpers,
+)
+from flext_infra._utilities._rope_analysis.sourcescan import (
+    FlextInfraUtilitiesRopeAnalysisSourceScan,
+)
+from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeAnalysisExports:
@@ -74,12 +77,15 @@ class FlextInfraUtilitiesRopeAnalysisExports:
 
     @staticmethod
     def _scope_kind(scope: t.Infra.RopeScope) -> c.Infra.RopeScopeKind:
-        """Map rope's ``get_kind()`` to the typed enum (None -> UNKNOWN)."""
+        """Map rope's ``get_kind()`` to the typed enum.
+
+        Rope documents ``None`` for comprehension scopes, which maps to
+        ``UNKNOWN``; any other undeclared kind raises its ``ValueError``.
+        """
         raw_kind = scope.get_kind()
-        try:
-            return c.Infra.RopeScopeKind(raw_kind)
-        except ValueError:
+        if raw_kind is None:
             return c.Infra.RopeScopeKind.UNKNOWN
+        return c.Infra.RopeScopeKind(raw_kind)
 
     @staticmethod
     def _scope_name(scope: t.Infra.RopeScope) -> str:

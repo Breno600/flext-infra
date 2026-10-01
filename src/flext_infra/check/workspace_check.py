@@ -8,11 +8,12 @@ from typing import ClassVar, override
 
 from flext_core import r
 from flext_infra import c, config, m, p, t, u
-
-from ..base import FlextInfraServiceBase
-from ._workspace_check_reports import FlextInfraWorkspaceCheckReportsMixin
-from .gate_registry import FlextInfraGateRegistry
-from .workspace_check_gates import FlextInfraWorkspaceCheckGatesMixin
+from flext_infra.base import FlextInfraServiceBase
+from flext_infra.check._workspace_check_reports import (
+    FlextInfraWorkspaceCheckReportsMixin,
+)
+from flext_infra.check.gate_registry import FlextInfraGateRegistry
+from flext_infra.check.workspace_check_gates import FlextInfraWorkspaceCheckGatesMixin
 
 
 class FlextInfraWorkspaceChecker(
@@ -25,10 +26,6 @@ class FlextInfraWorkspaceChecker(
     _repository_root: Path
     _registry: FlextInfraGateRegistry
     _default_reports_dir: Path
-    rope: t.Port[p.Infra.RopeWorkspaceDsl] = m.Field(
-        exclude=True,
-        description="Shared Rope cycle injected by api.py",
-    )
     model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
         validate_by_name=True,
         validate_by_alias=True,
@@ -137,22 +134,21 @@ class FlextInfraWorkspaceChecker(
         if requested:
             return r[t.SequenceOf[m.Infra.CheckProjectTarget]].ok(
                 tuple(
-                    m.Infra.CheckProjectTarget(
-                        name=project_name,
-                        path=params.repository_root / project_name,
+                    m.Infra.CheckProjectTarget.from_workspace_name(
+                        params.repository_root,
+                        project_name,
                     )
                     for project_name in requested
                 ),
             )
-        resolved = u.Infra.resolve_projects(params.repository_root, (".",))
-        if resolved.failure:
-            return r[t.SequenceOf[m.Infra.CheckProjectTarget]].from_failure(resolved)
-        return r[t.SequenceOf[m.Infra.CheckProjectTarget]].ok(
-            tuple(
-                m.Infra.CheckProjectTarget(name=project.name, path=project.path)
-                for project in resolved.value
-            ),
+        discovered = u.Infra.resolve_projects(params.repository_root, ())
+        if discovered.failure:
+            return r[t.SequenceOf[m.Infra.CheckProjectTarget]].from_failure(discovered)
+        project_targets = tuple(
+            m.Infra.CheckProjectTarget(name=project.name, path=project.path)
+            for project in discovered.value
         )
+        return r[t.SequenceOf[m.Infra.CheckProjectTarget]].ok(project_targets)
 
     def format(self, project_dir: Path) -> p.Result[m.Infra.GateResult]:
         """Run format checks for one project."""
@@ -218,45 +214,13 @@ class FlextInfraWorkspaceChecker(
             return r[t.SequenceOf[m.Infra.ProjectResult]].fail(
                 "gate context fail_fast disagrees with the requested project policy",
             )
-        rope_outcomes_result = self._run_rope_gate_cycle(targets, resolved_gates)
-        if rope_outcomes_result.failure:
-            return r[t.SequenceOf[m.Infra.ProjectResult]].from_failure(
-                rope_outcomes_result,
-            )
         outcome = self._run_project_loop(
             targets,
             resolved_gates,
             effective_ctx,
-            rope_outcomes=rope_outcomes_result.value,
             fail_fast=fail_fast,
         )
         return self._write_reports_and_summary(resolved_gates, report_base, outcome)
-
-    def _run_rope_gate_cycle(
-        self,
-        targets: t.SequenceOf[m.Infra.CheckProjectTarget],
-        gates: t.StrSequence,
-    ) -> p.Result[t.VariadicTuple[m.Infra.RopeCallbackOutcome]]:
-        """Execute every Rope-backed gate callback in one workspace cycle."""
-        callbacks: t.MutableSequenceOf[m.Infra.RopeCallbackBinding] = []
-        for target in targets:
-            for gate_id in gates:
-                gate = self._registry.create(gate_id, self._repository_root)
-                if isinstance(gate, p.Infra.RopeCheckGate):
-                    callbacks.append(gate.rope_callback_binding(target.path, self.rope))
-        if not callbacks:
-            return r[t.VariadicTuple[m.Infra.RopeCallbackOutcome]].ok(())
-        cycle_result = self.rope.cycle(
-            tuple(callbacks),
-            project_names=tuple(target.path.resolve().name for target in targets),
-        )
-        if cycle_result.failure:
-            return r[t.VariadicTuple[m.Infra.RopeCallbackOutcome]].from_failure(
-                cycle_result,
-            )
-        return r[t.VariadicTuple[m.Infra.RopeCallbackOutcome]].ok(
-            cycle_result.value.outcomes,
-        )
 
     def _project_targets(
         self,

@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .. import c, m, t, u
-from ..deps import FlextInfraRuntimeDevDependencyDetector
-from . import (
+from flext_infra import c, m, t, u
+from flext_infra.codegen import (
     FlextInfraCodegenCensus,
     FlextInfraCodegenConform,
     FlextInfraCodegenFixer,
@@ -14,6 +13,7 @@ from . import (
     FlextInfraCodegenPyTyped,
     FlextInfraCodegenScaffolder,
 )
+from flext_infra.deps import FlextInfraRuntimeDevDependencyDetector
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -32,7 +32,7 @@ class FlextInfraCodegenPipelineStagesMixin:
         # Provided by the composed facade (FlextInfraCodegenPipeline); declared
         # here so the handlers type-resolve against the facade state + harness.
         _state: m.Infra.CodegenPipelineState
-        rope: p.Infra.RopeWorkspaceDsl
+        conform_collaborators: m.Infra.CodegenConformPorts
 
         def _run_stage[V](
             self,
@@ -86,6 +86,7 @@ class FlextInfraCodegenPipelineStagesMixin:
                         else c.Infra.CodegenConformMode.APPLY
                     ),
                 ),
+                ports=self.conform_collaborators,
             )
             if result.failure:
                 msg = result.error or "toolchain conform failed"
@@ -166,10 +167,7 @@ class FlextInfraCodegenPipelineStagesMixin:
             FlextInfraCodegenCensus,
             t.SequenceOf[m.Infra.CensusReport],
         ]:
-            census = FlextInfraCodegenCensus(
-                repository_root=ctx.repository_root,
-                rope=self.rope,
-            )
+            census = FlextInfraCodegenCensus(repository_root=ctx.repository_root)
             projects = self._state.discovered_projects
             reports_result = census.run(projects=projects)
             if reports_result.failure:
@@ -229,7 +227,6 @@ class FlextInfraCodegenPipelineStagesMixin:
             return FlextInfraCodegenFixer(
                 repository_root=ctx.repository_root,
                 dry_run=dry_run,
-                rope=self.rope,
             ).fix_workspace(projects=projects)
 
         def _emit(results: t.SequenceOf[m.Infra.AutoFixResult]) -> t.JsonMapping:
@@ -274,10 +271,7 @@ class FlextInfraCodegenPipelineStagesMixin:
         def _action() -> t.SequenceOf[m.Infra.CensusReport]:
             census = self._state.census_service
             if census is None:
-                census = FlextInfraCodegenCensus(
-                    repository_root=ctx.repository_root,
-                    rope=self.rope,
-                )
+                census = FlextInfraCodegenCensus(repository_root=ctx.repository_root)
             projects = self._state.discovered_projects
             reports_result = census.run(projects=projects)
             if reports_result.failure:

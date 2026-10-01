@@ -18,9 +18,6 @@ class FlextInfraCodegenFixerResultsMixin:
 
     _fixer_log: ClassVar[p.Logger] = u.fetch_logger(__name__)
 
-    if TYPE_CHECKING:
-        rope: p.Infra.RopeWorkspaceDsl
-
     @staticmethod
     def _empty_result(project_name: str) -> m.Infra.AutoFixResult:
         """Empty result."""
@@ -51,10 +48,8 @@ class FlextInfraCodegenFixerResultsMixin:
     ) -> t.SequenceOf[m.Infra.CensusViolation]:
         """Read the initial namespace violations and record skip reason on failure."""
         initial_violations_result = u.Infra.parse_namespace_validation(
-            FlextInfraNamespaceValidator(
-                repository_root=project_path,
-                rope=self.rope,
-            ).build_report(),
+            FlextInfraNamespaceValidator(repository_root=project_path).build_report(),
+            project_path,
         )
         if initial_violations_result.failure:
             self._fixer_log.warning(
@@ -80,10 +75,8 @@ class FlextInfraCodegenFixerResultsMixin:
     ) -> None:
         """Re-run validation and split outstanding violations into fixed vs skipped."""
         remaining_result = u.Infra.parse_namespace_validation(
-            FlextInfraNamespaceValidator(
-                repository_root=project_path,
-                rope=self.rope,
-            ).build_report(),
+            FlextInfraNamespaceValidator(repository_root=project_path).build_report(),
+            project_path,
         )
         if remaining_result.failure:
             ctx.skip(
