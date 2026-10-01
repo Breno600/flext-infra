@@ -243,7 +243,7 @@ class TestsFlextInfraCodegenCiMatrix:
         every outcome after it; the full verb never renders into CI.
         """
         workflow = (rendered_project / ".github" / "workflows" / "ci.yml").read_text(
-            encoding="utf-8"
+            encoding="utf-8",
         )
         make = config.Infra.codegen.make
         cache = make.testmon_cache

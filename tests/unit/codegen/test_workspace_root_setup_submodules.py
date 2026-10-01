@@ -36,7 +36,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
     def _run_setup(workspace: Path, env: dict[str, str]) -> p.Cli.CommandOutput:
         return tm.ok(
             u.Cli.run_raw(
-                ["make", "_builtin_setup_submodules"], cwd=workspace, env=env
+                ["make", "_builtin_setup_submodules"], cwd=workspace, env=env,
             ),
         )
 
@@ -90,7 +90,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
         test_u.Tests.initialize_git_repo(member)
         tm.ok(
             u.Cli.run_checked(
-                [c.Infra.GIT, "checkout", "-b", "0.12.0-dev"], cwd=member
+                [c.Infra.GIT, "checkout", "-b", "0.12.0-dev"], cwd=member,
             ),
         )
         tm.ok(u.Cli.run_checked([c.Infra.GIT, "checkout", "main"], cwd=member))
@@ -142,7 +142,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
         test_u.Tests.commit_git_changes(source, "Declare workspace project")
         tm.ok(
             u.Cli.run_checked(
-                [c.Infra.GIT, "checkout", "-b", "0.12.0-dev"], cwd=source
+                [c.Infra.GIT, "checkout", "-b", "0.12.0-dev"], cwd=source,
             ),
         )
         tm.ok(u.Cli.run_checked([c.Infra.GIT, "checkout", "main"], cwd=source))

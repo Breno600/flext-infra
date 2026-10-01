@@ -308,11 +308,11 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                 return module in cls._runtime_modules(root)
             case c.Infra.CodemodContextPredicate.FACADE_PACKAGE:
                 return module in cls._runtime_modules(root) and bool(
-                    cls._codemod_runtime_aliases(root, module, own)
+                    cls._codemod_runtime_aliases(root, module, own),
                 )
             case c.Infra.CodemodContextPredicate.RUNTIME_ALIAS:
                 return value in cls._codemod_runtime_aliases(
-                    root, own if of is None else cls._top_module(of), own
+                    root, own if of is None else cls._top_module(of), own,
                 )
             case c.Infra.CodemodContextPredicate.LOCAL_ALIAS:
                 layout = FlextInfraUtilitiesCodegenNamespace.layout(root)

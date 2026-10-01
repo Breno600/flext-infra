@@ -146,7 +146,7 @@ class TestsFlextInfraDocsMainCommands:
         tm.ok(second_bundle)
         tm.ok(
             u.Tests.materialize_codegen_plans(
-                generator.plan_files(second_bundle.value)
+                generator.plan_files(second_bundle.value),
             ),
         )
         tm.ok(fixer.execute())

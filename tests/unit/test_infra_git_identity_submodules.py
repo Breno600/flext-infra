@@ -239,7 +239,7 @@ class TestsFlextInfraGitIdentitySubmodules:
         (nested / "module.py").write_text("x = 1\n", encoding="utf-8")
         identity = tm.ok(
             u.Infra.git_identity(
-                m.Infra.GitRepoRequest(repo_root=nested / "module.py")
+                m.Infra.GitRepoRequest(repo_root=nested / "module.py"),
             ),
         )
         tm.that(identity.repo_root, eq=root.resolve())

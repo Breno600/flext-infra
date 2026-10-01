@@ -37,7 +37,7 @@ class TestsFlextInfraGitStateBoundaries:
         )
         checkpoint = tm.ok(
             u.Infra.git_checkpoint_worktree_state(
-                snapshot, "refs/captures/raw-symlink"
+                snapshot, "refs/captures/raw-symlink",
             ),
         )
         candidate = lane / "shape"
@@ -245,7 +245,7 @@ class TestsFlextInfraGitStateBoundaries:
         )
         child_checkpoint = tm.ok(
             u.Infra.git_checkpoint_worktree_state(
-                child_snapshot, "refs/captures/child"
+                child_snapshot, "refs/captures/child",
             ),
         )
         reachable = test_u.Tests.git_capture(

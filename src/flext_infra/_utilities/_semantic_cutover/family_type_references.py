@@ -72,7 +72,7 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         nodes = tuple(
             cls._type_nodes(
-                ast.parse(source, mode="eval").body, flatten.project, scope
+                ast.parse(source, mode="eval").body, flatten.project, scope,
             ),
         )
         edits: list[m.Infra.SourceRewrite] = []

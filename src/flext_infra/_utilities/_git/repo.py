@@ -139,7 +139,7 @@ class FlextInfraUtilitiesGitRepo:
             repo = cls._repo(repository_path)
             common_dir = Path(
                 repo.git.rev_parse(
-                    "--path-format=absolute", "--git-common-dir"
+                    "--path-format=absolute", "--git-common-dir",
                 ).strip(),
             ).resolve()
             configured_output = repo.git.config(

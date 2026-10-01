@@ -95,7 +95,7 @@ class TestsRenameCampaignMod:
         for index, campaign in enumerate(campaigns):
             rows = tm.ok(
                 u.Cli.csv_loads(
-                    (config_dir / campaign.csv).read_text(encoding="utf-8")
+                    (config_dir / campaign.csv).read_text(encoding="utf-8"),
                 ),
             )
             pairs = tuple((row[0], row[1]) for row in rows[1:])

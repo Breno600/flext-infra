@@ -275,7 +275,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
             )
             session = tm.ok(
                 owner.begin_locked(
-                    scope_root, (config_plan,), (config_plan, generated)
+                    scope_root, (config_plan,), (config_plan, generated),
                 ),
             )
             return owner.publish_prepared_locked(session, failing_phase)
