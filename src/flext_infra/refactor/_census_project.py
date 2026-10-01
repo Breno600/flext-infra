@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import Counter
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_infra import m
+from flext_infra import m, u
 
 if TYPE_CHECKING:
     from flext_infra import t

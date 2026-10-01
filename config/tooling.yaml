@@ -414,6 +414,9 @@ Infra:
         # aggregate run-timeout-seconds independently terminates an incomplete
         # full suite.
         case-timeout-seconds: 10
+        # The slow marker owns its own execution phase; items carrying it run
+        # under slow-timeout-seconds instead of the per-case ceiling.
+        slow-marker: slow
         # Slow marks are a narrow integration-harness budget, not permission
         # for an unbounded test. Cases that exceed it require owner repair.
         slow-timeout-seconds: 30

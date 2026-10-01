@@ -28,6 +28,10 @@ Infra:
       # writes the committed uv.lock and mise.lock; setup, gen, and fmt install
       # frozen from those locks.
       python_version: "3.13"
+      # Python resolves and installs from precompiled builds only; the
+      # dependency cooldown below is what keeps a source-only patch out of
+      # the resolved set.
+      python_compile: false
       # Supply-chain cooldown (operator 2026-10-01): ONE value for every
       # resolver — the generated mise `minimum_release_age` (so `make upg`
       # never selects a release younger than this, e.g. a Python patch with
@@ -317,6 +321,11 @@ Infra:
         discovery_scope: none
 
     make:
+      # Physical workspace environments live beside the checkout, one
+      # directory per absolute runtime path (a member inside a workspace
+      # shares the workspace environment; standalone and linked worktrees
+      # own theirs).
+      runtime_environment_directory: ".flext-venvs"
       examples_timeout_seconds: 120
       submodule_timeout_seconds: 120
       # Operator 2026-09-08: ruff is the formatting and autofix rule.
@@ -345,15 +354,6 @@ Infra:
       # formats — without it the ruff-format surface has no verb home and
       # drift survives a green check until `make mod` validates.
       fmt_gates: [format, markdown-format]
-      check_gate_suspensions:
-        - gate: namespace
-          authority: "flext-itpd1.3; operator decision 2026-09-27 (keep plan v12 suspension); flext-infra#913"
-          reason: "Fleet namespace backlog (141 findings here) is repaired after the fleet is green; the gate returns with its Rope single-cycle owner fix."
-          # Census consistency (gc-wisp-d7mnad): the runtime census honors the
-          # SAME suspension for the rule families this gate owns — ENFORCE ids
-          # match a census rule id exactly, tag families by prefix. Unmapped
-          # families (e.g. ENFORCE-079) stay fully blocking.
-          census_rule_families: [ENFORCE-046, ENFORCE-066, ENFORCE-067, ENFORCE-069, class_prefix]
       # One filename and the root-relative runner paths; the runner places the
       # database in platformdirs' external per-worktree cache.
       testmon_cache:
