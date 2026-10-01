@@ -226,11 +226,15 @@ fontes Python (`pyrefly`, `pyright`) só é selecionado para um projeto cujo con
 detectado possui alvos Python. `make check` falha quando a seleção não
 contém projetos ou quando um projeto selecionado não tem `pyproject.toml`; nenhum
 projeto é pulado em silêncio. Local, CI e hooks derivam seus gates do mesmo conjunto
-ativo, preservando a partição de tipagem já declarada: `CI=N make check` executa a
-interseção com `make.ci.local_check_gates`, `CI=Y make check` executa o complemento e
-`make check` sem `CI` executa a união. O pre-push de `check` remove o `CI` herdado para
-executar todos os gates ativos; os demais verbos do hook mantêm o token local. O
-workflow de CI executa as duas partições, sem sobreposição. Os validadores conservam sua
+ativo. A partição não é uma lista declarada: ela deriva do tipo de cada gate, declarado
+uma única vez no registro (`c.Infra.GATE_TOOLS_BY_KIND`). `CI=Y make check` (CI e
+pre-commit) executa apenas os gates ativos do tipo `external`; `CI=N make check`
+executa o complemento estrito — type-checkers (`pyrefly`, `mypy`, `pyright`) e os
+validadores cujas regras pertencem ao flext-infra (`namespace`, `codemod`,
+`runtime-census` e os demais); `make check` sem `CI` executa a união. O pre-push de
+`check` remove o `CI` herdado para executar todos os gates ativos, onde eles bloqueiam;
+os demais verbos do hook mantêm o token local. O workflow de CI executa somente a
+partição rápida. Os validadores conservam sua
 severidade e os gates funcionais ativos continuam exigindo execução sem warnings ou
 findings residuais.
 

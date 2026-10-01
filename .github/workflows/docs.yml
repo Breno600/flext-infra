@@ -60,7 +60,6 @@ jobs:
             .benchmarks
             .hypothesis
             ~/.cache/uv
-            ~/.cache/pyright
             ~/.local/share/mise
           key: ${{ runner.os }}-3.13-tools-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml') }}
           restore-keys: |
@@ -85,7 +84,6 @@ jobs:
             .benchmarks
             .hypothesis
             ~/.cache/uv
-            ~/.cache/pyright
             ~/.local/share/mise
           key: ${{ runner.os }}-3.13-tools-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml') }}
 
@@ -170,7 +168,6 @@ jobs:
             .benchmarks
             .hypothesis
             ~/.cache/uv
-            ~/.cache/pyright
             ~/.local/share/mise
           key: ${{ runner.os }}-3.13-tools-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml') }}
           restore-keys: |
@@ -192,7 +189,6 @@ jobs:
             .benchmarks
             .hypothesis
             ~/.cache/uv
-            ~/.cache/pyright
             ~/.local/share/mise
           key: ${{ runner.os }}-3.13-tools-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml') }}
 

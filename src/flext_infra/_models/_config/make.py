@@ -37,30 +37,6 @@ class FlextInfraConfigModelsMake:
                 )
             ),
         ] = "N"
-        local_check_gates: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                description=(
-                    "Gate ids run by make check under the local CI token: the "
-                    "slow whole-program type checkers. This is the ONLY "
-                    "declared set; the CI token runs its strict complement and "
-                    "an unset token runs every active default gate."
-                )
-            ),
-        ]
-
-        @u.model_validator(mode="after")
-        def _validate_local_check_gates(self) -> Self:
-            """Every locally owned gate must be in the allowed check vocabulary."""
-            allowed = set(FlextInfraConstantsMake.CANONICAL_GATE_IDS)
-            unknown = sorted(set(self.local_check_gates) - allowed)
-            if unknown:
-                msg = (
-                    "make.ci.local_check_gates contains unknown gates: "
-                    f"{', '.join(unknown)}"
-                )
-                raise ValueError(msg)
-            return self
 
     class MakeVerbSpec(FlextInfraConfigModelsContract.ConfigContract):
         """One selector-free public Make operation."""
@@ -564,10 +540,8 @@ class FlextInfraConfigModelsMake:
             FlextInfraConfigModelsMake.MakeWorkInProgressSpec,
             m.Field(description="WIP branch and draft PR gate predicate"),
         ]
-        # Why (operator law 2026-08-24): git-hook stages are OFF by default and
-        # re-enabled case by case via these config gates. The workflow keeps
-        # owning WHICH steps belong to each stage; the booleans only govern
-        # whether the stage is generated and installed at all.
+        # The workflow owns WHICH steps belong to each git-hook stage; these
+        # booleans only govern whether the stage is generated and installed.
         pre_commit: Annotated[
             bool,
             m.Field(
@@ -815,17 +789,25 @@ class FlextInfraConfigModelsMake:
 
         @m.computed_field
         @property
-        def check_gates_local(self) -> t.VariadicTuple[str]:
-            """Intersect the local partition with the same active default universe."""
-            local = frozenset(self.ci.local_check_gates)
-            return tuple(gate for gate in self.check_gates_default if gate in local)
+        def check_gates_ci(self) -> t.VariadicTuple[str]:
+            """Fast partition run by CI and pre-commit, derived from gate kind.
+
+            Only active default gates the registry declares ``EXTERNAL`` run
+            here. Type checkers, validators whose rules this package owns, and
+            project-declared gates are never part of the fast contexts.
+            """
+            kinds = FlextInfraConstantsCheck.GATE_KINDS
+            external = FlextInfraConstantsCheck.GateKind.EXTERNAL
+            return tuple(
+                gate for gate in self.check_gates_default if kinds.get(gate) is external
+            )
 
         @m.computed_field
         @property
-        def check_gates_ci(self) -> t.VariadicTuple[str]:
-            """Preserve the CI partition within the same active default universe."""
-            local = frozenset(self.check_gates_local)
-            return tuple(gate for gate in self.check_gates_default if gate not in local)
+        def check_gates_local(self) -> t.VariadicTuple[str]:
+            """Strict complement of the fast partition within the active universe."""
+            fast = frozenset(self.check_gates_ci)
+            return tuple(gate for gate in self.check_gates_default if gate not in fast)
 
         @m.computed_field
         @property
