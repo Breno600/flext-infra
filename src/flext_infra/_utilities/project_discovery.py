@@ -14,6 +14,8 @@ from typing import override
 
 from flext_cli import u
 
+from flext_infra import config
+
 from ..constants import c
 from ..models import m
 from ..typings import t
@@ -298,13 +300,7 @@ class FlextInfraUtilitiesProjectDiscovery(
                 m.Infra.GitRepoRequest(repo_root=project_root),
             ).unwrap()
             runtime_root = runtime.repository_root
-        physical_root = runtime_root.resolve()
-        relative_identity = physical_root.as_posix().lstrip("/").replace(":", "/")
-        return (
-            physical_root.parent
-            / config.Infra.codegen.make.runtime_environment_directory
-            / relative_identity
-        )
+        return runtime_root.resolve() / c.Infra.ENVIRONMENT_DIRECTORY
 
     @classmethod
     def runtime_python(

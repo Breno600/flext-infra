@@ -37,6 +37,10 @@ class FlextInfraConfigModelsMake:
                 )
             ),
         ] = "N"
+        local_check_gates: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(description="Declared local check partition within active gates"),
+        ]
 
     class MakeVerbSpec(FlextInfraConfigModelsContract.ConfigContract):
         """One selector-free public Make operation."""
@@ -132,6 +136,19 @@ class FlextInfraConfigModelsMake:
             m.Field(description="Trace/profile globs removed anywhere in the tree"),
         ]
 
+    class DocsOverviewPreviewLimitsSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """Maximum list sizes in the generated public API overview."""
+
+        aliases: Annotated[int, m.Field(gt=0, description="Alias preview limit")]
+        public_symbols: Annotated[
+            int, m.Field(gt=0, description="Public symbol preview limit")
+        ]
+        facades: Annotated[int, m.Field(gt=0, description="Facade preview limit")]
+        module_exports: Annotated[
+            int, m.Field(gt=0, description="Module export preview limit")
+        ]
+        keywords: Annotated[int, m.Field(gt=0, description="Keyword preview limit")]
+
     class MakeDocsSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Generated Makefile docs verb lifecycle and audit policy."""
 
@@ -153,7 +170,7 @@ class FlextInfraConfigModelsMake:
             Path, m.Field(description="Repository-relative docs reports directory")
         ]
         overview_preview_limits: Annotated[
-            Mapping[t.NonEmptyStr, t.PositiveInt],
+            FlextInfraConfigModelsMake.DocsOverviewPreviewLimitsSpec,
             m.Field(
                 description=(
                     "Items listed per contract field on the generated API "
@@ -291,6 +308,11 @@ class FlextInfraConfigModelsMake:
 
     class MakeSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Complete generated Makefile public and extension contract."""
+
+        runtime_environment_directory: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Sibling directory for physical workspace environments"),
+        ]
 
         class TestmonCachePolicySpec(FlextInfraConfigModelsContract.ConfigContract):
             """Declarative Actions-cache policy for the shared testmon database.
@@ -777,24 +799,16 @@ class FlextInfraConfigModelsMake:
         @m.computed_field
         @property
         def check_gates_ci(self) -> t.VariadicTuple[str]:
-            """Fast partition run by CI and pre-commit, derived from gate kind.
-
-            Only active default gates the registry declares ``EXTERNAL`` run
-            here. Type checkers, validators whose rules this package owns, and
-            project-declared gates are never part of the fast contexts.
-            """
-            kinds = FlextInfraConstantsCheck.GATE_KINDS
-            external = FlextInfraConstantsCheck.GateKind.EXTERNAL
-            return tuple(
-                gate for gate in self.check_gates_default if kinds.get(gate) is external
-            )
+            """CI runs the active gates outside the declared local partition."""
+            local = frozenset(self.ci.local_check_gates)
+            return tuple(gate for gate in self.check_gates_default if gate not in local)
 
         @m.computed_field
         @property
         def check_gates_local(self) -> t.VariadicTuple[str]:
-            """Strict complement of the fast partition within the active universe."""
-            fast = frozenset(self.check_gates_ci)
-            return tuple(gate for gate in self.check_gates_default if gate not in fast)
+            """Declared local partition intersected with the active gates."""
+            active = frozenset(self.check_gates_default)
+            return tuple(gate for gate in self.ci.local_check_gates if gate in active)
 
         @m.computed_field
         @property

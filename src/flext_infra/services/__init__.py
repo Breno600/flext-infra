@@ -1,5 +1,9 @@
 # AUTO-GENERATED FILE — Regenerate with: make gen
-"""Flext Infra.services package."""
+"""Flext Infra.services package.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,18 +13,22 @@ from typing import TYPE_CHECKING
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from . import _codegen
-    from ._codegen.vscode import FlextInfraCodegenVscodeMixin
-    from .candidate_bootstrap import FlextInfraCandidateBootstrapService
-    from .cli_dispatch import FlextInfraCliDispatchService
-    from .cli_route_base import FlextInfraCliRouteBase
-    from .cli_routes import FlextInfraCliRouteService
-    from .cli_routes_codegen import FlextInfraCodegenRoutes
-    from .cli_routes_refactor import FlextInfraRefactorRoutes
-    from .cli_routes_validate import FlextInfraValidationRoutes
-    from .cli_routes_validate_commands import FlextInfraValidationCommandRoutes
-    from .cli_routes_workspace import FlextInfraWorkspaceRoutes
-    from .codegen import FlextInfraCodegen
+    from flext_infra.services import _codegen
+    from flext_infra.services._codegen.vscode import FlextInfraCodegenVscodeMixin
+    from flext_infra.services.candidate_bootstrap import (
+        FlextInfraCandidateBootstrapService,
+    )
+    from flext_infra.services.cli_dispatch import FlextInfraCliDispatchService
+    from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
+    from flext_infra.services.cli_routes import FlextInfraCliRouteService
+    from flext_infra.services.cli_routes_codegen import FlextInfraCodegenRoutes
+    from flext_infra.services.cli_routes_refactor import FlextInfraRefactorRoutes
+    from flext_infra.services.cli_routes_validate import FlextInfraValidationRoutes
+    from flext_infra.services.cli_routes_validate_commands import (
+        FlextInfraValidationCommandRoutes,
+    )
+    from flext_infra.services.cli_routes_workspace import FlextInfraWorkspaceRoutes
+    from flext_infra.services.codegen import FlextInfraCodegen
 
 
 __all__: tuple[str, ...] = (
