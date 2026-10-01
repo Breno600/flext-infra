@@ -61,11 +61,7 @@ class FlextInfraUtilitiesCodemodRules:
                     f"codemod provider disappeared from resolved graph: {name}"
                 )
             providers.append((name, config))
-        local_packages = cls._local_package_configs(root, root_name)
-        if local_packages.failure:
-            return r[m.Infra.CodemodRulePlan].from_failure(local_packages)
-        providers.extend(local_packages.value)
-        local_config = root / "sgconfig.yml"
+        local_config = root / c.Infra.CODEMOD_CONFIG_RELPATH
         if local_config.is_file():
             providers.append((f"{root_name}:local", local_config))
         return cls._compose(tuple(providers))
@@ -227,31 +223,20 @@ class FlextInfraUtilitiesCodemodRules:
         roots = tuple(Path(path) for path in spec.submodule_search_locations or ())
         if not roots and spec.origin is not None:
             roots = (Path(spec.origin).parent,)
+        # A distribution's rule root is its config directory: the packaged
+        # copy (<pkg>/config) of an installed wheel, or the config directory
+        # beside src/ of an editable checkout (<root>/src/<pkg> -> <root>).
         configs = {
-            root / c.Infra.CODEMOD_CONFIG_RELPATH
+            base / c.Infra.CODEMOD_CONFIG_RELPATH
             for root in roots
-            if (root / c.Infra.CODEMOD_CONFIG_RELPATH).is_file()
+            for base in (root, root.parents[1])
+            if (base / c.Infra.CODEMOD_CONFIG_RELPATH).is_file()
         }
         if len(configs) > 1:
             return r[t.SequenceOf[Path]].fail(
                 f"distribution exports multiple codemod configs: {raw_name}"
             )
         return r[t.SequenceOf[Path]].ok(tuple(sorted(configs)))
-
-    @classmethod
-    def _local_package_configs(
-        cls, root: Path, root_name: str
-    ) -> p.Result[t.SequenceOf[t.Pair[str, Path]]]:
-        configs = tuple(sorted((root / "src").glob("*/codemod/sgconfig.yml")))
-        for config in configs:
-            scope = cls._config_scope(config)
-            if scope.failure:
-                return r[t.SequenceOf[t.Pair[str, Path]]].from_failure(scope)
-        return r[t.SequenceOf[t.Pair[str, Path]]].ok(
-            tuple(
-                (f"{root_name}:{config.parents[1].name}", config) for config in configs
-            )
-        )
 
     @staticmethod
     def _config_scope(config: Path) -> p.Result[str]:

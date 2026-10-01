@@ -68,7 +68,7 @@ class FlextInfraModelsRopeRules:
         ]
 
     class RopeRule(m.ImmutableValueModel):
-        """One declarative Rope rule parsed from ``codemod/rope_rules/**.yml``."""
+        """One declarative Rope rule parsed from ``config/rules/rope/**.yml``."""
 
         group: Annotated[str, u.Field(description="Rule group name for reference")]
         number: Annotated[int, u.Field(description="Reference number within the group")]

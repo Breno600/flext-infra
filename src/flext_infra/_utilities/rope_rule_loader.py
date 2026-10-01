@@ -2,19 +2,20 @@
 
 from __future__ import annotations
 
-from importlib.util import find_spec
-from pathlib import Path
 from typing import TYPE_CHECKING, override
 
 from flext_infra import c, m, p, r, t
 from flext_infra.base import FlextInfraServiceBase
 
+from .._config import FlextInfraConfig
+
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from pathlib import Path
 
 
 class FlextInfraRopeRuleLoaderService(FlextInfraServiceBase[t.Cli.ResultValue]):
-    """Load and validate ``codemod/rope_rules/**.yml`` into typed models."""
+    """Load and validate ``config/rules/rope/**.yml`` into typed models."""
 
     @override
     def execute(self) -> p.Result[t.Cli.ResultValue]:
@@ -42,17 +43,12 @@ class FlextInfraRopeRuleLoaderService(FlextInfraServiceBase[t.Cli.ResultValue]):
 
     @classmethod
     def _rule_files(cls) -> Iterator[Path]:
-        """Yield every ``*.yml`` rule file shipped under ``codemod/rope_rules``."""
-        spec = find_spec("flext_infra")
-        roots = (
-            tuple(Path(path) for path in (spec.submodule_search_locations or ()))
-            if spec is not None
-            else ()
+        """Yield every ``*.yml`` rope shape rule under ``config/rules/rope``."""
+        rules_dir = (
+            FlextInfraConfig.ssot_config_dir().parent
+            / c.Infra.CODEMOD_ROPE_RULES_RELPATH
         )
-        for package_root in roots:
-            rules_dir = package_root / c.Infra.CODEMOD_RESOURCE_DIRNAME / "rope_rules"
-            if rules_dir.is_dir():
-                yield from rules_dir.rglob("*.yml")
+        yield from rules_dir.rglob(f"*{c.Infra.CODEMOD_RULE_SUFFIX}")
 
 
 __all__: list[str] = ["FlextInfraRopeRuleLoaderService"]

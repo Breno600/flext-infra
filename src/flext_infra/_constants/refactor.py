@@ -86,16 +86,20 @@ class FlextInfraConstantsRefactor:
     RK_ORDER: ClassVar[str] = "order"
     RK_ALLOW_ALIASES: ClassVar[str] = "allow_aliases"
     RK_ALLOW_TARGET_SUFFIXES: ClassVar[str] = "allow_target_suffixes"
-    CODEMOD_RESOURCE_DIRNAME: ClassVar[str] = "codemod"
     CODEMOD_RULE_SUFFIX: ClassVar[str] = ".yml"
     CODEMOD_DOCUMENT_SEPARATOR_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^---\s*$", re.MULTILINE
     )
     CODEMOD_CONFIG_FILENAME: ClassVar[str] = "sgconfig.yml"
-    # Why: restored — deleted declaration with consumers left behind in codemod_rules.py
-    CODEMOD_CONFIG_RELPATH: ClassVar[Path] = Path(CODEMOD_RESOURCE_DIRNAME) / (
-        CODEMOD_CONFIG_FILENAME
+    # Static rules are data under the one rule root, config/rules: the
+    # ast-grep corpus (sgconfig, rules, utils, tests with snapshots) and the
+    # rope phase data. The same relative path names a governed checkout's
+    # catalog and the copy a distribution ships as <pkg>/config.
+    CODEMOD_RULES_RELPATH: ClassVar[Path] = Path("config") / "rules"
+    CODEMOD_CONFIG_RELPATH: ClassVar[Path] = (
+        CODEMOD_RULES_RELPATH / "ast-grep" / CODEMOD_CONFIG_FILENAME
     )
+    CODEMOD_ROPE_RULES_RELPATH: ClassVar[Path] = CODEMOD_RULES_RELPATH / "rope"
     CODEMOD_RULE_DIRS_KEY: ClassVar[str] = "ruleDirs"
     CODEMOD_UTIL_DIRS_KEY: ClassVar[str] = "utilDirs"
     CODEMOD_TEST_CONFIGS_KEY: ClassVar[str] = "testConfigs"
@@ -113,7 +117,7 @@ class FlextInfraConstantsRefactor:
     CODEMOD_TEXT_RULES_FILENAME: ClassVar[str] = "sed.yaml"
     # Declarative text-rule path derived from the filename SSOT.
     CODEMOD_TEXT_RULES_RELPATH: ClassVar[Path] = (
-        Path("config") / "rules" / "mod" / CODEMOD_TEXT_RULES_FILENAME
+        CODEMOD_RULES_RELPATH / "mod" / CODEMOD_TEXT_RULES_FILENAME
     )
     CODEMOD_TEXT_RULES_KEY: ClassVar[str] = "rules"
     CODEMOD_TEXT_KEY_ID: ClassVar[str] = "id"
@@ -130,7 +134,7 @@ class FlextInfraConstantsRefactor:
     # The declarative signature-migration catalogue: one owner per governed
     # repository, read by the propagate-signatures verb.
     REFACTOR_SIGNATURE_RULES_RELPATH: ClassVar[Path] = (
-        Path("config") / "rules" / "refactor" / "signature-propagation.yml"
+        CODEMOD_RULES_RELPATH / "refactor" / "signature-propagation.yml"
     )
     REFACTOR_SIGNATURE_RULES_KEY: ClassVar[str] = "migrations"
     CODEMOD_TEXT_FLAG_NAMES: ClassVar[t.MappingKV[str, int]] = MappingProxyType({

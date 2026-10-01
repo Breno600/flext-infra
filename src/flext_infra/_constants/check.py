@@ -350,7 +350,7 @@ class FlextInfraConstantsCheck:
         "**/__init__.py",
         "**/api_cases/**",
         "**/_cases/**",
-        "**/codemod/tests/**",
+        "**/rules/ast-grep/tests/**",
         "**/_cov.py",
         "**/_parts/**",
     )
