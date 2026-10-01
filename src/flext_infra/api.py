@@ -162,13 +162,6 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
                 rename_inputs=tuple(campaigns),
             ).execute()
 
-    def mod_text(self, request: m.Infra.ModCommand) -> p.Result[t.Cli.ResultValue]:
-        """Compose the standalone authenticated text-rule replay."""
-        root = u.Infra.resolve_repository_root_or_cwd(request.repository_root)
-        return FlextInfraModTextGateEngine.run(
-            root, apply=request.apply and not request.check and not request.dry_run_mode
-        )
-
     def validate_namespace(
         self,
         request: m.Infra.NamespaceValidateCommand,

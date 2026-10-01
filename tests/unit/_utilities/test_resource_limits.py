@@ -60,7 +60,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """A project tooling.yaml budget may tighten the runner timeout."""
-        budget = c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT // 2
+        budget = c.Infra.MYPY_TIMEOUT_SECONDS_MAX // 2
         (tmp_path / "config").mkdir()
         (tmp_path / "config" / "tooling.yaml").write_text(
             "tools:\n  mypy:\n    timeout_seconds: 600\n",
@@ -82,7 +82,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         (tmp_path / "config").mkdir()
         (tmp_path / "config" / "tooling.yaml").write_text(
             "tools:\n  mypy:\n    timeout_seconds: "
-            f"{c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT + 1}\n",
+            f"{c.Infra.MYPY_TIMEOUT_SECONDS_MAX + 1}\n",
             encoding="utf-8",
         )
 
@@ -90,7 +90,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
             tm.scope(remove_env_keys=(c.Infra.MYPY_TIMEOUT_SECONDS_ENV,)),
             pytest.raises(
                 ValueError,
-                match=f"less than or equal to {c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT}",
+                match=f"less than or equal to {c.Infra.MYPY_TIMEOUT_SECONDS_MAX}",
             ),
         ):
             u.Infra.mypy_runner_timeout_for_project(tmp_path)
@@ -101,7 +101,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """The documented precedence is env override > project budget."""
-        override = c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT // 3
+        override = c.Infra.MYPY_TIMEOUT_SECONDS_MAX // 3
         (tmp_path / "config").mkdir()
         (tmp_path / "config" / "tooling.yaml").write_text(
             "tools:\n  mypy:\n    timeout_seconds: 600\n",
@@ -399,11 +399,11 @@ class TestsFlextInfraUtilitiesResourceLimits:
         """Reject a wall-time configuration above the canonical ceiling."""
         with pytest.raises(
             ValueError,
-            match=f"less than or equal to {c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT}",
+            match=f"less than or equal to {c.Infra.MYPY_TIMEOUT_SECONDS_MAX}",
         ):
             m.Infra.MypyResourceLimit(
                 memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
-                timeout_seconds=c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT + 1,
+                timeout_seconds=c.Infra.MYPY_TIMEOUT_SECONDS_MAX + 1,
             )
 
     def test_mypy_timeout_has_controlled_exit_and_signal_diagnostic(self) -> None:

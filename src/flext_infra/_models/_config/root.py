@@ -42,12 +42,6 @@ class FlextInfraConfigModelsRoot:
             FlextInfraConfigModelsRelease.ReleasePolicySpec,
             m.Field(description="Release protocol policy"),
         ]
-        sed_patterns: Annotated[
-            FlextInfraConfigModelsArtifact.SedPatternsSpec,
-            m.Field(
-                description="Declared literal replacement patterns for mass refactoring",
-            ),
-        ]
         refactor_csv_campaigns: Annotated[
             FlextInfraConfigModelsArtifact.RefactorCsvCampaignsSpec,
             m.Field(

@@ -118,24 +118,6 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
         m.Cli.ResultCommandRoute(
             name="mod-text",
             help_text="Replay only authenticated declarative text rules",
-            model_cls=m.Infra.ModCommand,
-            handler=execute_mod_text,
-        ),
-        m.Cli.ResultCommandRoute(
-            name="mod-text",
-            help_text="Replay only authenticated declarative text rules",
-            model_cls=m.Infra.ModTextCommand,
-            handler=execute_mod_text,
-        ),
-        m.Cli.ResultCommandRoute(
-            name="mod-text-candidate",
-            help_text="Replay text rules in the declared candidate worktree",
-            model_cls=m.Infra.ModTextCommand,
-            handler=execute_mod_text_candidate,
-        ),
-        m.Cli.ResultCommandRoute(
-            name="mod-text",
-            help_text="Replay only authenticated declarative text rules",
             model_cls=m.Infra.ModTextCommand,
             handler=execute_mod_text,
         ),
