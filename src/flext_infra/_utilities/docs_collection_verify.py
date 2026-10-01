@@ -1,4 +1,8 @@
-"""Phase-specific verification of collection inputs and attested outputs."""
+"""Phase-specific verification of collection inputs and attested outputs.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

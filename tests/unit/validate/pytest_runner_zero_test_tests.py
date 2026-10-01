@@ -1,4 +1,8 @@
-"""Zero-test projects run to a typed green receipt instead of rc=5 (6n6u)."""
+"""Zero-test projects run to a typed green receipt instead of rc=5 (6n6u).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

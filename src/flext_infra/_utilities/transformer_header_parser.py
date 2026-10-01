@@ -1,4 +1,8 @@
-"""Fail-fast structural parsing for Python module headers."""
+"""Fail-fast structural parsing for Python module headers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

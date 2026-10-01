@@ -1,4 +1,8 @@
-"""Shared gate template abstraction for workspace quality checks."""
+"""Shared gate template abstraction for workspace quality checks.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

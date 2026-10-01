@@ -1,4 +1,8 @@
-"""CLI contract tests for the centralized validate CLI group."""
+"""CLI contract tests for the centralized validate CLI group.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -18,6 +22,7 @@ class TestsFlextInfraValidateCli:
 
     @staticmethod
     def test_stub_validate_accepts_all_flag(tmp_path: Path) -> None:
+        """Test stub validate accepts all flag."""
         workspace = tmp_path / "workspace"
         workspace.mkdir(parents=True, exist_ok=True)
 
@@ -34,6 +39,7 @@ class TestsFlextInfraValidateCli:
 
     @staticmethod
     def test_stub_validate_help_returns_zero() -> None:
+        """Test stub validate help returns zero."""
         tm.that(infra_main(["validate", "stub-validate", "--help"]), eq=0)
 
     @staticmethod
@@ -63,6 +69,7 @@ class TestsFlextInfraValidateCli:
         return project
 
     def test_namespace_validate_passes_without_findings(self, tmp_path: Path) -> None:
+        """Test namespace validate passes without findings."""
         project = self._rule_project(tmp_path, "")
 
         exit_code = infra_main([
@@ -78,6 +85,7 @@ class TestsFlextInfraValidateCli:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test namespace validate exits nonzero for rule findings."""
         project = self._rule_project(tmp_path, "first(1)\n")
 
         exit_code = infra_main([

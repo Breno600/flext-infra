@@ -1,4 +1,8 @@
-"""Rope export-name resolution, scopes, and docstring summaries."""
+"""Rope export-name resolution, scopes, and docstring summaries.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,8 @@
-"""Contract tests for the generated documentation workflow projection."""
+"""Contract tests for the generated documentation workflow projection.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,8 @@
-"""Guarded semantic phase for detection-only ``make mod`` findings."""
+"""Guarded semantic phase for detection-only ``make mod`` findings.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

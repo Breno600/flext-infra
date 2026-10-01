@@ -1,4 +1,8 @@
-"""Rope-semantic guard for the strict package-test import DAG."""
+"""Rope-semantic guard for the strict package-test import DAG.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

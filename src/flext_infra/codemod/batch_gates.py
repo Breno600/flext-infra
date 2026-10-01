@@ -1,4 +1,8 @@
-"""Gate measurement and ast-grep batch execution for the mod safety circuit."""
+"""Gate measurement and ast-grep batch execution for the mod safety circuit.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

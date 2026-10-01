@@ -1,4 +1,8 @@
-"""Identity-preserving quoted type edits for class movement and nesting."""
+"""Identity-preserving quoted type edits for class movement and nesting.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,8 @@
-"""Typed immutable inputs for one documentation generation pass."""
+"""Typed immutable inputs for one documentation generation pass.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

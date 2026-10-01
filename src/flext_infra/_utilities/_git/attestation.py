@@ -1,4 +1,8 @@
-"""SSH-signed Git gate attestation owner."""
+"""SSH-signed Git gate attestation owner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

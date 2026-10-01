@@ -1,4 +1,8 @@
-"""Verify every rendered ci.yml secret access is a declared workflow_call input."""
+"""Verify every rendered ci.yml secret access is a declared workflow_call input.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

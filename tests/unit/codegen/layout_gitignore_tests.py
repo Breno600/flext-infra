@@ -1,4 +1,8 @@
-"""Tests for layout gitignore, tracked-file moves, and the canonical render."""
+"""Tests for layout gitignore, tracked-file moves, and the canonical render.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

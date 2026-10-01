@@ -12,6 +12,8 @@ from tests import m, t
 
 
 class TestsFlextInfraModels:
+    """Tests for ``FlextInfraModels``."""
+
     @staticmethod
     def _sample_issues() -> t.Triple[m.Infra.Issue, m.Infra.Issue, m.Infra.Issue]:
         """Build three distinct sample gate issues for summary assertions."""

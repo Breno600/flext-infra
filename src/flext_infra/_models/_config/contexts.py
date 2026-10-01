@@ -1,4 +1,8 @@
-"""Render context and repository reference models."""
+"""Render context and repository reference models.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

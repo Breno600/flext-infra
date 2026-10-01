@@ -1,4 +1,8 @@
-"""Public contract tests for canonical lazy-init artifact rendering."""
+"""Public contract tests for canonical lazy-init artifact rendering.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -123,6 +127,7 @@ class TestsFlextInfraCodegenGeneration:
 
     @staticmethod
     def test_generated_runtime_surfaces_import_without_bootstrap_cycles() -> None:
+        """Test generated runtime surfaces import without bootstrap cycles."""
         tm.that(flext_core.__all__, has="c")
         tm.that(dir(flext_core), has="c")
         tm.that(flext_core.c.__name__, eq="FlextConstants")
@@ -181,6 +186,7 @@ class TestsFlextInfraCodegenGeneration:
         tm.that(content, lacks="__unit__")
 
     def test_nested_package_initializer_is_static(self) -> None:
+        """Test nested package initializer is static."""
         plan = self._plan(
             "flext_core._lazy_parts",
             ("FlextLazy",),
@@ -232,6 +238,7 @@ class TestsFlextInfraCodegenGeneration:
         tm.that(content, lacks="    _ = (")
 
     def test_public_nested_package_preserves_lazy_exports(self) -> None:
+        """Test public nested package preserves lazy exports."""
         plan = self._plan(
             "demo_pkg.services",
             ("Demo", "Nested"),

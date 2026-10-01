@@ -1,4 +1,8 @@
-"""Credential-safe remote retention receipts for worktree checkpoints."""
+"""Credential-safe remote retention receipts for worktree checkpoints.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

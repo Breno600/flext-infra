@@ -1,4 +1,8 @@
-"""Docs-audit per-issue-type detectors (token/scope/ownership/docstring/codeblock)."""
+"""Docs-audit per-issue-type detectors (token/scope/ownership/docstring/codeblock).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

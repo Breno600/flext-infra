@@ -1,4 +1,8 @@
-"""Source-live pytest entrypoint with a pre-import absolute clock."""
+"""Source-live pytest entrypoint with a pre-import absolute clock.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

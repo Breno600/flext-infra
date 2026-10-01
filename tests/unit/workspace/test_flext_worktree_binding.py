@@ -1,5 +1,8 @@
 """The explicit binding CLI rebinds a consumer onto one flext checkout.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 An external project declares flext packages by pinned git URL, so it validates
 PUBLISHED code and never the checkout being worked on. Reviewing a cross-project
 change then required publishing first, which is backwards.

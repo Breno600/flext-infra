@@ -1,4 +1,8 @@
-"""Public service tests for lazy-init execution."""
+"""Public service tests for lazy-init execution.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -147,6 +151,7 @@ class TestsFlextInfraCodegenLazyInitService:
     def test_root_aggregates_declared_module_and_subpackage_publics(
         tmp_path: Path,
     ) -> None:
+        """Test root aggregates declared module and subpackage publics."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         package_root.joinpath("runner.py").write_text(
             'class FlextTestsLibraryRunner:\n    """Root runner."""\n\n'

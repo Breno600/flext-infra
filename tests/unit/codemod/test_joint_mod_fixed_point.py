@@ -1,4 +1,8 @@
-"""Public mod circuit converges across semantic, AST, and text boundaries."""
+"""Public mod circuit converges across semantic, AST, and text boundaries.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -20,6 +20,8 @@ from flext_infra import config
 
 
 class TestsFlextInfraCustomMakeSurfaceIsSingle:
+    """Tests for ``FlextInfraCustomMakeSurfaceIsSingle``."""
+
     @staticmethod
     def test_codegen_declares_only_the_custom_make_surface() -> None:
         """custom.mk is project-owned: scaffolded once, never a managed file.

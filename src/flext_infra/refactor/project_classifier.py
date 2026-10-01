@@ -1,4 +1,8 @@
-"""Project classification and family chain discovery for flext workspace."""
+"""Project classification and family chain discovery for flext workspace.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

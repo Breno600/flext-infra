@@ -1,4 +1,8 @@
-"""Quoted type references resolved in the original Rope lexical scope."""
+"""Quoted type references resolved in the original Rope lexical scope.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

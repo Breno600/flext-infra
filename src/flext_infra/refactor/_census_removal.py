@@ -1,4 +1,8 @@
-"""Census removal of unreferenced objects: dry-run preview and apply."""
+"""Census removal of unreferenced objects: dry-run preview and apply.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

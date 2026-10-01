@@ -1,4 +1,8 @@
-"""Typed post-run integrity and saveability for pytest-testmon SQLite DBs."""
+"""Typed post-run integrity and saveability for pytest-testmon SQLite DBs.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

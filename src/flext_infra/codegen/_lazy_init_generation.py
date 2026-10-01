@@ -1,4 +1,8 @@
-"""Lazy-init per-directory generation service — extracted concern."""
+"""Lazy-init per-directory generation service — extracted concern.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

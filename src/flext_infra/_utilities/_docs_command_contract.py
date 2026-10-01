@@ -1,4 +1,8 @@
-"""Canonical command and test-boundary checks for documentation."""
+"""Canonical command and test-boundary checks for documentation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

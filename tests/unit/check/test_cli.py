@@ -1,4 +1,8 @@
-"""Public CLI tests for workspace quality checks."""
+"""Public CLI tests for workspace quality checks.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -56,6 +60,7 @@ class TestsFlextInfraWorkspaceCheckCli:
 
     @staticmethod
     def test_resolve_gates_rejects_duplicate_explicit_gate() -> None:
+        """Test resolve gates rejects duplicate explicit gate."""
         result = FlextInfraWorkspaceChecker.resolve_gates([
             c.Infra.LINT,
             c.Infra.PYREFLY,
@@ -74,6 +79,7 @@ class TestsFlextInfraWorkspaceCheckCli:
         source: str,
         expected_exit: int,
     ) -> None:
+        """Test run cli lint exit code matches source validity."""
         workspace = self._create_workspace(tmp_path)
         _ = self._write_module(workspace, "flext-core", source)
 
@@ -94,6 +100,7 @@ class TestsFlextInfraWorkspaceCheckCli:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test run cli returns one for report directory error."""
         workspace = self._create_workspace(tmp_path)
         _ = self._write_module(workspace, "flext-core", "value = 1\n")
         blocked = tmp_path / "blocked"
@@ -120,6 +127,7 @@ class TestsFlextInfraWorkspaceCheckCli:
         tmp_path: Path,
         reports_directory: str | None,
     ) -> None:
+        """Test run cli handles multiple projects."""
         workspace = self._create_workspace(tmp_path, project_names=("proj1", "proj2"))
         _ = self._write_module(workspace, "proj1", "value = 1\n")
         _ = self._write_module(workspace, "proj2", "other = 2\n")
@@ -163,6 +171,7 @@ class TestsFlextInfraWorkspaceCheckCli:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test run cli fix contract preserves failure when reporting."""
         workspace = self._create_workspace(tmp_path)
         module_path = self._write_module(workspace, "flext-core", "def broken(:\n")
 
@@ -220,6 +229,7 @@ class TestsFlextInfraWorkspaceCheckCli:
         )
 
     def test_run_cli_check_only_preserves_source(self, tmp_path: Path) -> None:
+        """Test run cli check only preserves source."""
         workspace = self._create_workspace(tmp_path)
         module_path = self._write_module(
             workspace,
@@ -249,6 +259,7 @@ class TestsFlextInfraWorkspaceCheckCli:
         )
 
     def test_run_cli_accepts_shared_dry_run_flag(self, tmp_path: Path) -> None:
+        """Test run cli accepts shared dry run flag."""
         workspace = self._create_workspace(tmp_path)
         _ = self._write_module(workspace, "flext-core", "value = 1\n")
 

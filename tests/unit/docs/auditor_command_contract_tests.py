@@ -1,4 +1,8 @@
-"""Behavior tests for the public documentation command-contract audit."""
+"""Behavior tests for the public documentation command-contract audit.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -70,6 +74,7 @@ class TestsFlextInfraAuditorCommandContract:
 
     @staticmethod
     def test_ignores_prose_that_begins_with_make() -> None:
+        """Test ignores prose that begins with make."""
         content = """# Scope
 
 Make surfaces and documentation are changed at their canonical owner.
@@ -85,6 +90,7 @@ Make surfaces and documentation are changed at their canonical owner.
 
     @staticmethod
     def test_rejects_invented_make_selectors() -> None:
+        """Test rejects invented make selectors."""
         content = """```bash
 make test PROJECT=flext-demo MATCH=unit
 ```
@@ -142,6 +148,7 @@ make test PROJECT=flext-demo MATCH=unit
 
     @staticmethod
     def test_rejects_raw_pytest_execution() -> None:
+        """Test rejects raw pytest execution."""
         content = """```bash
 PYTHONPATH=src python -m pytest tests/unit
 ```
@@ -158,6 +165,7 @@ PYTHONPATH=src python -m pytest tests/unit
 
     @staticmethod
     def test_rejects_direct_tool_execution() -> None:
+        """Test rejects direct tool execution."""
         content = """```bash
 ruff check src
 ```
@@ -193,6 +201,7 @@ ruff check src
     def test_scans_recursive_live_docs_from_typed_scope(
         command_contract_scope: m.Infra.DocScope,
     ) -> None:
+        """Test scans recursive live docs from typed scope."""
         infra_test_workspace = command_contract_scope.path
         docs_root = infra_test_workspace / "docs"
         governed = {
@@ -245,6 +254,7 @@ ruff check src
         declared: bool,
         expected: str,
     ) -> None:
+        """Test audits repository declared verbs."""
         scope = command_contract_scope
         spec = m.Infra.MakeVerbSpec(
             name=verb_name,
@@ -272,6 +282,7 @@ ruff check src
     def test_manifest_changes_update_the_live_contract(
         command_contract_scope: m.Infra.DocScope,
     ) -> None:
+        """Test manifest changes update the live contract."""
         scope = command_contract_scope
         spec = m.Infra.MakeVerbSpec(
             name="publish-preview",
@@ -311,6 +322,7 @@ ruff check src
         *,
         with_guide: bool,
     ) -> None:
+        """Test malformed selected topology blocks with exact cause."""
         scope = command_contract_scope
         if with_guide:
             guide = scope.path / "docs/guides/commands.md"
@@ -332,6 +344,7 @@ ruff check src
     def test_guide_projection_resolves_source_repository_contract(
         command_contract_scope: m.Infra.DocScope,
     ) -> None:
+        """Test guide projection resolves source repository contract."""
         source_scope = command_contract_scope
         spec = m.Infra.MakeVerbSpec(
             name="publish-preview",
@@ -379,6 +392,7 @@ ruff check src
 
     @staticmethod
     def test_rejects_test_double_examples() -> None:
+        """Test rejects test double examples."""
         content = """```python
 from unittest.mock import patch
 

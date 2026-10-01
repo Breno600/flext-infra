@@ -1,4 +1,8 @@
-"""Phase: Ensure standard Ruff configuration inline with known-first-party overlay."""
+"""Phase: Ensure standard Ruff configuration inline with known-first-party overlay.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

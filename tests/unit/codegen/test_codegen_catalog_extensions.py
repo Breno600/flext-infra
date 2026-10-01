@@ -1,4 +1,8 @@
-"""Repository-local codegen extension contracts."""
+"""Repository-local codegen extension contracts.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -321,6 +325,7 @@ class TestsFlextInfraCodegenCatalogExtensions:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test local manifest conforms without global repository rows."""
         root = self._repository(
             "acme-platform",
             path=".",

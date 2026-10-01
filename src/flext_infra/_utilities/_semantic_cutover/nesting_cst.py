@@ -1,4 +1,8 @@
-"""Concrete-syntax ownership moves for automatic class nesting."""
+"""Concrete-syntax ownership moves for automatic class nesting.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

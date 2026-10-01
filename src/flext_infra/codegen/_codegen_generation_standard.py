@@ -1,4 +1,8 @@
-"""Canonical public-root and static-subpackage initializer rendering."""
+"""Canonical public-root and static-subpackage initializer rendering.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

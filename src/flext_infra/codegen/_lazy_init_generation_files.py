@@ -1,4 +1,8 @@
-"""Canonical file-plan composition for generated package initializers."""
+"""Canonical file-plan composition for generated package initializers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

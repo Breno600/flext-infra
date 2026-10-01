@@ -1,4 +1,8 @@
-"""Release orchestration service: one repository, one phase, one typed result."""
+"""Release orchestration service: one repository, one phase, one typed result.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

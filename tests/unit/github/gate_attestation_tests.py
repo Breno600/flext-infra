@@ -1,4 +1,8 @@
-"""Behavior tests for local SSH-signed gate attestations."""
+"""Behavior tests for local SSH-signed gate attestations.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -129,6 +133,7 @@ class TestsFlextInfraGithubGateAttestation:
         tmp_path: Path,
         signed_repository_factory: Callable[[Path], Path],
     ) -> None:
+        """Test signed gate attestation round trip is local."""
         allowed_signers = signed_repository_factory(tmp_path)
         created = u.Infra.git_create_gate_attestation(self._request(tmp_path))
 
@@ -145,6 +150,7 @@ class TestsFlextInfraGithubGateAttestation:
         tmp_path: Path,
         signed_repository_factory: Callable[[Path], Path],
     ) -> None:
+        """Test gate attestation normalizes network remote git suffix."""
         allowed_signers = signed_repository_factory(tmp_path)
         tm.ok(u.Infra.git_create_gate_attestation(self._request(tmp_path)))
         remote = tm.ok(
@@ -171,6 +177,7 @@ class TestsFlextInfraGithubGateAttestation:
         tmp_path: Path,
         signed_repository_factory: Callable[[Path], Path],
     ) -> None:
+        """Test gate attestation verifies selected commit with equal tree."""
         allowed_signers = signed_repository_factory(tmp_path)
         tm.ok(u.Infra.git_create_gate_attestation(self._request(tmp_path)))
         selected_sha = self._head(tmp_path)
@@ -201,6 +208,7 @@ class TestsFlextInfraGithubGateAttestation:
         tmp_path: Path,
         signed_repository_factory: Callable[[Path], Path],
     ) -> None:
+        """Test gate attestation rejects incomplete coverage."""
         allowed_signers = signed_repository_factory(tmp_path)
         tm.ok(u.Infra.git_create_gate_attestation(self._request(tmp_path)))
 
@@ -219,6 +227,7 @@ class TestsFlextInfraGithubGateAttestation:
         tmp_path: Path,
         signed_repository_factory: Callable[[Path], Path],
     ) -> None:
+        """Test gate attestation rejects duplicate gate coverage."""
         _allowed_signers = signed_repository_factory(tmp_path)
         values = self._request(tmp_path).model_dump()
         values["gates"] = ("gen", "check", "test", "test")

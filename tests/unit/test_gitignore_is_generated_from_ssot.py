@@ -22,6 +22,8 @@ from tests import u as test_u
 
 
 class TestsFlextInfraGitignoreIsGeneratedFromSsot:
+    """Tests for ``FlextInfraGitignoreIsGeneratedFromSsot``."""
+
     @staticmethod
     def _repository_root() -> Path:
         """Return the workspace root that owns this checkout."""

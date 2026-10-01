@@ -1,4 +1,8 @@
-"""Accessor migration orchestration for get_/set_/is_ modernization."""
+"""Accessor migration orchestration for get_/set_/is_ modernization.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

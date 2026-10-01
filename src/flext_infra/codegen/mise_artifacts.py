@@ -1,4 +1,8 @@
-"""Offline validation for generated Mise declarations and launchers."""
+"""Offline validation for generated Mise declarations and launchers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

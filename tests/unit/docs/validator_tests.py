@@ -1,4 +1,8 @@
-"""Public validation-workflow tests for docs services."""
+"""Public validation-workflow tests for docs services.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,6 +23,7 @@ class TestsFlextInfraDocsValidator:
 
     @staticmethod
     def test_validate_report_model_fields() -> None:
+        """Test validate report model fields."""
         report = m.Infra.DocsPhaseReport(
             phase="validate",
             scope="root",
@@ -36,6 +41,7 @@ class TestsFlextInfraDocsValidator:
     def test_validate_workspace_fails_before_generated_files_exist(
         tmp_path: Path,
     ) -> None:
+        """Test validate workspace fails before generated files exist."""
         workspace = u.Tests.create_docs_workspace(tmp_path, project_names=("flext-a",))
 
         result = FlextInfraDocValidator().validate_workspace(

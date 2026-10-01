@@ -1,4 +1,8 @@
-"""Wrapper-root namespace refactor command for production script aliases."""
+"""Wrapper-root namespace refactor command for production script aliases.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

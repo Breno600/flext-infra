@@ -1,4 +1,8 @@
-"""Runtime vs dev dependency detector CLI with deptry, pip-check, and typing analysis."""
+"""Runtime vs dev dependency detector CLI with deptry, pip-check, and typing analysis.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

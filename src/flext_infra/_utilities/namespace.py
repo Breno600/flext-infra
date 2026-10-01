@@ -1,4 +1,8 @@
-"""Canonical codegen namespace utilities shared by census and auto-fix."""
+"""Canonical codegen namespace utilities shared by census and auto-fix.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

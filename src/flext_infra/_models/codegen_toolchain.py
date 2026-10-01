@@ -1,4 +1,8 @@
-"""Toolchain layout and observed-state contracts for code generation."""
+"""Toolchain layout and observed-state contracts for code generation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

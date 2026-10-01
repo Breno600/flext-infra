@@ -92,6 +92,7 @@ class TestsFlextInfraIndexDeclarationsGate:
     def test_consistent_repository_passes(
         gate_result: Callable[..., m.Infra.GateResult],
     ) -> None:
+        """Test consistent repository passes."""
         result = gate_result()
         tm.that(result.passed, eq=True)
         tm.that(len(result.errors), eq=0)
@@ -100,6 +101,7 @@ class TestsFlextInfraIndexDeclarationsGate:
     def test_undeclared_gitlink_fails_naming_the_path(
         gate_result: Callable[..., m.Infra.GateResult],
     ) -> None:
+        """Test undeclared gitlink fails naming the path."""
         result = gate_result(orphan_gitlink=True)
         tm.that(result.passed, eq=False)
         tm.that(len(result.errors), eq=1)
@@ -112,6 +114,7 @@ class TestsFlextInfraIndexDeclarationsGate:
     ) -> None:
         # The same gitlink, now declared, is legitimate topology and must not
         # be reported: the gate judges the declaration, never the mode.
+        """Test declared gitlink passes."""
         result = gate_result(orphan_gitlink=True, declare_gitlink=True)
         tm.that(result.passed, eq=True)
         tm.that(len(result.errors), eq=0)

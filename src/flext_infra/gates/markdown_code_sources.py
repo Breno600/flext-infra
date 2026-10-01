@@ -1,5 +1,8 @@
 """Embedded-Python source collection for the ``markdown-code`` gate.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Fenced ``python``` blocks on the governed markdown surface and doctest
 examples inside tracked docstrings are collected once as named sources, each
 mapped back to its documentation origin. The gate writes them into one

@@ -1,4 +1,8 @@
-"""Stable topology and coherent state snapshots for Mise publication."""
+"""Stable topology and coherent state snapshots for Mise publication.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

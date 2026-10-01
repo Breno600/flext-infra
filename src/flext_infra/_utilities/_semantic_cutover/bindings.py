@@ -1,4 +1,8 @@
-"""Shared lexical binding discovery for conservative semantic migrations."""
+"""Shared lexical binding discovery for conservative semantic migrations.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

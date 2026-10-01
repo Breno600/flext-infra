@@ -1,4 +1,8 @@
-"""Gate execution methods for workspace checker."""
+"""Gate execution methods for workspace checker.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

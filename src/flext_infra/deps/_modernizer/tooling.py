@@ -1,4 +1,8 @@
-"""Render one canonical pyproject and resolve its typed template context."""
+"""Render one canonical pyproject and resolve its typed template context.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

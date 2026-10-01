@@ -1,4 +1,8 @@
-"""Fixed-point validation for staged ast-grep rule cascades."""
+"""Fixed-point validation for staged ast-grep rule cascades.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

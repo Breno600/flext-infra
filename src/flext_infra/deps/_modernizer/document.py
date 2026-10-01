@@ -1,4 +1,8 @@
-"""Read, normalize, and render one pyproject document through every phase."""
+"""Read, normalize, and render one pyproject document through every phase.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

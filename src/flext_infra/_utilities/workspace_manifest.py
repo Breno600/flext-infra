@@ -1,5 +1,8 @@
 """Single owner of the workspace manifest: its path, its load, its role.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Every consumer that needs the workspace manifest, or whether a checkout
 declares itself a fleet umbrella, asks here. The workspace detector service
 consumes this owner; no utility reaches back into the service.

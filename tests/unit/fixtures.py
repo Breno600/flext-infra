@@ -56,6 +56,7 @@ def _write_modernizer_codegen_config(workspace: Path) -> None:
 
 @pytest.fixture
 def deptry_report_payload() -> t.JsonPayload:
+    """Provide ``deptry_report_payload``."""
     parsed = u.Cli.json_parse(_read_fixture("deps", "deptry_report.json"))
     parsed = tm.not_none(parsed)
     tm.ok(parsed)
@@ -64,6 +65,7 @@ def deptry_report_payload() -> t.JsonPayload:
 
 @pytest.fixture
 def tool_config_document() -> m.Infra.ToolConfigDocument:
+    """Provide ``tool_config_document``."""
     return u.Tests.tool_config_document()
 
 
@@ -661,6 +663,7 @@ def real_workspace(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def modernizer_workspace(tmp_path: Path) -> Path:
+    """Provide ``modernizer_workspace``."""
     workspace = tmp_path / "workspace"
     workspace.mkdir(parents=True, exist_ok=True)
     # The governed tree above the workspace carries the committed Taplo pin.
@@ -681,6 +684,7 @@ def modernizer_workspace(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def modernizer_workspace_with_projects(modernizer_workspace: Path) -> Path:
+    """Provide ``modernizer_workspace_with_projects``."""
     (modernizer_workspace / c.PYPROJECT_FILENAME).write_text(
         _modernizer_workspace_pyproject("selected", "ignored"),
         encoding="utf-8",

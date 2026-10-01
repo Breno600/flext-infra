@@ -1,4 +1,8 @@
-"""Contract tests for the declared GitHub workflow surface."""
+"""Contract tests for the declared GitHub workflow surface.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

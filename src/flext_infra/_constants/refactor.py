@@ -1,4 +1,8 @@
-"""Constants namespace for flext_infra.refactor."""
+"""Constants namespace for flext_infra.refactor.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

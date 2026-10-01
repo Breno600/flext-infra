@@ -1,4 +1,8 @@
-"""Typed Make and project render context projection."""
+"""Typed Make and project render context projection.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

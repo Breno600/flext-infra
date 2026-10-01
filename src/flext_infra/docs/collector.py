@@ -1,4 +1,8 @@
-"""Fixed-effect plan collection through the shared generation transaction."""
+"""Fixed-effect plan collection through the shared generation transaction.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

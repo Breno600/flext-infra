@@ -1,5 +1,8 @@
 """Documentation dev-server service.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 ``serve`` previews one MkDocs site locally (blocking dev server with
 livereload). It is intentionally single-scope: a dev server binds one
 address, so when several governed scopes carry an ``mkdocs.yml`` the

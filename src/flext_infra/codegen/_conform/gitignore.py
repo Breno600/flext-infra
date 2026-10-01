@@ -1,4 +1,8 @@
-"""Public ``.gitignore`` rendering seam of the conform facade."""
+"""Public ``.gitignore`` rendering seam of the conform facade.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

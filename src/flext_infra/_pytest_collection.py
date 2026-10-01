@@ -1,5 +1,8 @@
 """Enforce the runner's collection manifest through pytest's public hook API.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 The runner resolves selected node IDs once and passes that ordered manifest as
 pytest arguments. Testmon still records dependencies in every worker, but its
 worker-local stable/unstable classification must not define xdist's index order.

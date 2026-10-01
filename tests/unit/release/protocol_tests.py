@@ -1,5 +1,8 @@
 """Release protocol behavior: plan, guard, version, and tag against real Git.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Every case drives the public CLI over a real repository whose merge commits
 carry pull-request titles, exactly as GitHub leaves them when the merge commit
 subject is the pull-request title.

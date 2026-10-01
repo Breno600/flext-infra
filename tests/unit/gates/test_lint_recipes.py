@@ -32,6 +32,7 @@ class TestsFlextInfraLintRecipes:
         )
 
     def test_returns_section_takes_the_summary_object(self) -> None:
+        """Test returns section takes the summary object."""
         source = (
             "def name_of(path: str) -> str:\n"
             '    """Return the module name for a file."""\n'
@@ -54,6 +55,7 @@ class TestsFlextInfraLintRecipes:
         )
 
     def test_raises_section_states_the_message_condition(self) -> None:
+        """Test raises section states the message condition."""
         source = (
             "def load(path: str) -> str:\n"
             '    """Load one source."""\n'
@@ -89,6 +91,7 @@ class TestsFlextInfraLintRecipes:
         )
 
     def test_summary_docstring_derives_from_the_name(self) -> None:
+        """Test summary docstring derives from the name."""
         source = (
             "class TestsSample:\n"
             "    def test_reads_the_lock(self) -> None:\n"
@@ -113,6 +116,7 @@ class TestsFlextInfraLintRecipes:
         )
 
     def test_copyright_notice_follows_the_module_summary(self) -> None:
+        """Test copyright notice follows the module summary."""
         source = '"""Sample module."""\n\nVALUE = 1\n'
 
         repaired = self._apply(source, ("CPY001", 1, "Missing copyright notice"))

@@ -1,4 +1,8 @@
-"""Shared edit plumbing for every semantic ``make mod`` cutover planner."""
+"""Shared edit plumbing for every semantic ``make mod`` cutover planner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

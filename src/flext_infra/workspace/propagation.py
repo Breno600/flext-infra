@@ -1,4 +1,8 @@
-"""Member propagation: this workspace's flext-infra, one pull request per member."""
+"""Member propagation: this workspace's flext-infra, one pull request per member.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

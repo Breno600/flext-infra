@@ -1,4 +1,8 @@
-"""Postconditions for semantic private-import rewrites."""
+"""Postconditions for semantic private-import rewrites.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

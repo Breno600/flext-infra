@@ -1,5 +1,8 @@
 """Regression tests for the generated guides index.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 The guides index is generated, so every relative link it renders must resolve.
 Naming a curated guide the generator never writes produced a broken link
 (MD057) in every project that had no such file.

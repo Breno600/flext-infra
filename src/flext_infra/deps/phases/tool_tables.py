@@ -1,5 +1,8 @@
 """Phase: mirror every config-owned tool table whose shape is pure policy data.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 pytest, mypy, pydantic-mypy, codespell, hatch metadata, tomlsort, yamlfix,
 deptry namespaces, vulture, and coverage share one behavior: each table is a
 direct projection of ``config.Infra.tooling``. One declarative phase set owns

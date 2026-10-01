@@ -1,4 +1,8 @@
-"""Release project build: one committed project to one attested artifact set."""
+"""Release project build: one committed project to one attested artifact set.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

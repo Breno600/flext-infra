@@ -1,4 +1,8 @@
-"""Managed file and template entry specification models."""
+"""Managed file and template entry specification models.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

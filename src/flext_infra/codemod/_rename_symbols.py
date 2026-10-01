@@ -1,4 +1,8 @@
-"""CSV symbol plans delegated to Rope's identity-aware restructuring owner."""
+"""CSV symbol plans delegated to Rope's identity-aware restructuring owner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -36,6 +36,7 @@ class TestsFlextInfraLazyMapFreshness:
         tmp_path: Path,
         v: FlextInfraValidateLazyMapFreshness,
     ) -> None:
+        """Test empty workspace yields passing report."""
         report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))
         tm.that(report, is_=m.Infra.ValidationReport)
         tm.that(report.passed, eq=True)
@@ -46,6 +47,7 @@ class TestsFlextInfraLazyMapFreshness:
         tmp_path: Path,
         v: FlextInfraValidateLazyMapFreshness,
     ) -> None:
+        """Test passing summary mentions lazy maps."""
         report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))
         tm.that(report.summary, has="lazy")
 
@@ -54,6 +56,7 @@ class TestsFlextInfraLazyMapFreshness:
         tmp_path: Path,
         v: FlextInfraValidateLazyMapFreshness,
     ) -> None:
+        """Test report is validation report."""
         report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))
         tm.that(report, is_=m.Infra.ValidationReport)
 

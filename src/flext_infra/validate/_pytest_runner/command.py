@@ -1,4 +1,8 @@
-"""Canonical pytest argv for persistent testmon execution."""
+"""Canonical pytest argv for persistent testmon execution.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

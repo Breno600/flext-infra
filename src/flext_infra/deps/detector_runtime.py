@@ -1,4 +1,8 @@
-"""Runtime execution for dependency detector CLI."""
+"""Runtime execution for dependency detector CLI.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

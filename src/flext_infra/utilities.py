@@ -34,6 +34,7 @@ from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
 from flext_infra._utilities.docs_validate import FlextInfraUtilitiesDocsValidate
 from flext_infra._utilities.git import FlextInfraUtilitiesGit
 from flext_infra._utilities.iteration import FlextInfraUtilitiesIteration
+from flext_infra._utilities.lint_recipes import FlextInfraUtilitiesLintRecipes
 from flext_infra._utilities.log_parser import FlextInfraUtilitiesLogParser
 from flext_infra._utilities.managed_conflicts import FlextInfraUtilitiesManagedConflicts
 from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
@@ -46,7 +47,6 @@ from flext_infra._utilities.namespace_common import (
 from flext_infra._utilities.namespace_moves import (
     FlextInfraUtilitiesRefactorNamespaceMoves,
 )
-from flext_infra._utilities.lint_recipes import FlextInfraUtilitiesLintRecipes
 from flext_infra._utilities.network import FlextInfraUtilitiesNetwork
 from flext_infra._utilities.private_import_ancestry import (
     FlextInfraUtilitiesPrivateImportAncestry,

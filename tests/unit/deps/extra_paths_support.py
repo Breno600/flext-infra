@@ -1,4 +1,8 @@
-"""Shared test helpers for extra-path manager contracts."""
+"""Shared test helpers for extra-path manager contracts.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

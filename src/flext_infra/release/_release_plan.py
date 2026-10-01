@@ -1,4 +1,8 @@
-"""Release plan phase: the next version, derived only from Git and its titles."""
+"""Release plan phase: the next version, derived only from Git and its titles.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

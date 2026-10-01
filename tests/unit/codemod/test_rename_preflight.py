@@ -1,4 +1,8 @@
-"""Syntax acceptance precedes every CSV campaign publication effect."""
+"""Syntax acceptance precedes every CSV campaign publication effect.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,6 +23,7 @@ class TestsRenamePreflight:
     def test_target_override_rejects_the_campaign_before_text_publication(
         mod_workspace: Path,
     ) -> None:
+        """Test target override rejects the campaign before text publication."""
         driver = mod_workspace / "renames.csv"
         driver.write_text("old,new\nOld,New\n", encoding="utf-8")
         (mod_workspace / "definer.py").write_text(
@@ -47,6 +52,7 @@ class TestsRenamePreflight:
     def test_invalid_docstring_replacement_has_no_publication(
         mod_workspace: Path,
     ) -> None:
+        """Test invalid docstring replacement has no publication."""
         guide = mod_workspace / "guide.md"
         source = mod_workspace / "syntax.py"
         guide.write_text("campaign_token\n", encoding="utf-8")

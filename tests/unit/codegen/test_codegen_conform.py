@@ -300,6 +300,7 @@ class TestsFlextInfraCodegenConform:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test declared hatch build hook renders before wheel target."""
         _, _, pyproject = self._planned_hook_pyproject(
             tmp_path / "declared",
             Path("scripts/hatch_build.py"),
@@ -327,6 +328,7 @@ class TestsFlextInfraCodegenConform:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test absent hatch build hook emits no custom hook table."""
         _, _, pyproject = self._planned_hook_pyproject(tmp_path / "absent", None)
 
         tm.that(
@@ -348,6 +350,7 @@ class TestsFlextInfraCodegenConform:
         ],
     )
     def test_hatch_build_hook_rejects_unsafe_paths(self, unsafe_path: str) -> None:
+        """Test hatch build hook rejects unsafe paths."""
         payload = u.Tests.project_spec("unsafe-hook").model_dump()
         payload["hatch_build_hook_path"] = unsafe_path
 
@@ -358,6 +361,7 @@ class TestsFlextInfraCodegenConform:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test hatch build hook conform reaches pyproject fixed point."""
         root = tmp_path / "fixed-point"
         service, request, first = self._planned_hook_pyproject(
             root,
@@ -532,6 +536,7 @@ class TestsFlextInfraCodegenConform:
         # Generation rewrites an internal_flext repository and nothing else, so
         # a scaffold that must come out complete declares that kind; the two
         # rows prove the result does not depend on the distribution name.
+        """Test new project is complete and idempotent."""
         root = tmp_path / name
         # The governed tree above the scaffold carries the committed Taplo pin.
         u.Tests.seed_locked_taplo(tmp_path)
@@ -646,6 +651,7 @@ class TestsFlextInfraCodegenConform:
         self,
         infra_git_repo: Path,
     ) -> None:
+        """Test existing manifest converges to identical tree."""
         existing_root = infra_git_repo
         # The scaffolded manifest is reconciled against Git on every later
         # read, so it declares the identity the fixture clone actually has.
@@ -766,6 +772,7 @@ class TestsFlextInfraCodegenConform:
         self,
         infra_git_repo: Path,
     ) -> None:
+        """Test empty rendered directory is not a python root."""
         root = infra_git_repo
         TestsFlextInfraConformSupport.seed_infra_package_tree(root)
         (root / "scripts").mkdir()
@@ -803,6 +810,7 @@ class TestsFlextInfraCodegenConform:
         self,
         infra_git_repo: Path,
     ) -> None:
+        """Test manifestless existing root plans artifacts without project spec."""
         root = infra_git_repo
         repository = u.Tests.repository_ref(
             config.Infra.name,
@@ -1028,6 +1036,7 @@ class TestsFlextInfraCodegenConform:
         tmp_path: Path,
     ) -> None:
         # A lone consumer tree composes no members, so Git derives standalone.
+        """Test project root inherits declared upstream facets."""
         repository = u.Tests.repository_ref(
             "consumer",
             role=c.Infra.MakeProfile.STANDALONE,

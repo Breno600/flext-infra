@@ -29,6 +29,7 @@ class TestsFlextInfraGateErrorReporting:
     def test_workspace_report_retains_all_executed_failures(
         tmp_path: Path,
     ) -> None:
+        """Test workspace report retains all executed failures."""
         project_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
         (project_dir / "src" / "p1" / "value.py").write_text(
             "value=[1,2,3]\n",
@@ -67,6 +68,7 @@ class TestsFlextInfraGateErrorReporting:
     def test_ruff_format_reports_each_unformatted_file_once(
         tmp_path: Path,
     ) -> None:
+        """Test ruff format reports each unformatted file once."""
         proj_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
         unformatted = "value=[1,2,3]\n\n\n\n\nother=(4,5)\n"
         for name in ("one.py", "two.py"):
@@ -183,6 +185,7 @@ class TestsFlextInfraGateErrorReporting:
         config_text: str | None,
         expected: t.StrSequence,
     ) -> None:
+        """Test workspace checker emits real markdown failure."""
         project_dir = u.Tests.mk_project(tmp_path, "p1")
         (project_dir / "README.md").write_text(readme, encoding="utf-8")
         if config_text is not None:

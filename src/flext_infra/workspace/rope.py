@@ -1,4 +1,8 @@
-"""Public Rope workspace DSL and facade mixin."""
+"""Public Rope workspace DSL and facade mixin.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

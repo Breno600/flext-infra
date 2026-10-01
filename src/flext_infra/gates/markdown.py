@@ -1,4 +1,8 @@
-"""FLEXT markdown quality gate."""
+"""FLEXT markdown quality gate.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

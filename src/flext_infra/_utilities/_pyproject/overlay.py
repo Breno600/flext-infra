@@ -1,4 +1,8 @@
-"""Preserve live CUSTOM project keys and unmanaged tool tables over renders."""
+"""Preserve live CUSTOM project keys and unmanaged tool tables over renders.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

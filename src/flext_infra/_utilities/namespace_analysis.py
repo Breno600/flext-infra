@@ -1,4 +1,8 @@
-"""Shared future-import rewrites for namespace refactors."""
+"""Shared future-import rewrites for namespace refactors.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

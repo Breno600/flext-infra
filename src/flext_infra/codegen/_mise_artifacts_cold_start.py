@@ -1,4 +1,8 @@
-"""Projection of flext-infra's own `make upg` triple into its packaged copy."""
+"""Projection of flext-infra's own `make upg` triple into its packaged copy.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

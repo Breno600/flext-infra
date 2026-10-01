@@ -57,12 +57,15 @@ class TestsFlextInfraInfraMaintenanceMain:
         return _TestEnforcer()
 
     def test_main_with_help_flag(self) -> None:
+        """Test main with help flag."""
         tm.that(self._maintenance_main(["--help"]), eq=0)
 
     def test_main_calls_sys_exit_on_help(self) -> None:
+        """Test main calls sys exit on help."""
         tm.that(self._maintenance_main(["--help"]), eq=0)
 
     def test_enforcer_check_only_success(self, tmp_path: Path) -> None:
+        """Test enforcer check only success."""
         workspace = self._create_workspace(
             tmp_path / "ws",
             python_minor=sys.version_info.minor,
@@ -72,6 +75,7 @@ class TestsFlextInfraInfraMaintenanceMain:
         tm.ok(result, eq=0)
 
     def test_enforcer_enforce_mode(self, tmp_path: Path) -> None:
+        """Test enforcer enforce mode."""
         workspace = self._create_workspace(
             tmp_path / "ws",
             python_minor=sys.version_info.minor,
@@ -81,6 +85,7 @@ class TestsFlextInfraInfraMaintenanceMain:
         tm.ok(result, eq=0)
 
     def test_enforcer_verbose_mode(self, tmp_path: Path) -> None:
+        """Test enforcer verbose mode."""
         workspace = self._create_workspace(
             tmp_path / "ws",
             python_minor=sys.version_info.minor,
@@ -91,6 +96,7 @@ class TestsFlextInfraInfraMaintenanceMain:
         tm.that(enforcer.verbose, eq=True)
 
     def test_enforcer_failure_on_version_mismatch(self, tmp_path: Path) -> None:
+        """Test enforcer failure on version mismatch."""
         mismatched_minor = sys.version_info.minor + 1
         workspace = self._create_workspace(
             tmp_path / "ws",
@@ -101,6 +107,7 @@ class TestsFlextInfraInfraMaintenanceMain:
         tm.fail(result)
 
     def test_enforcer_check_only_flag_stored(self, tmp_path: Path) -> None:
+        """Test enforcer check only flag stored."""
         workspace = self._create_workspace(
             tmp_path / "ws",
             python_minor=sys.version_info.minor,
@@ -110,6 +117,7 @@ class TestsFlextInfraInfraMaintenanceMain:
         tm.that(enforcer.check_only, eq=True)
 
     def test_enforcer_verbose_flag_stored(self, tmp_path: Path) -> None:
+        """Test enforcer verbose flag stored."""
         workspace = self._create_workspace(
             tmp_path / "ws",
             python_minor=sys.version_info.minor,
@@ -119,6 +127,7 @@ class TestsFlextInfraInfraMaintenanceMain:
         tm.that(enforcer.verbose, eq=True)
 
     def test_enforcer_both_flags(self, tmp_path: Path) -> None:
+        """Test enforcer both flags."""
         workspace = self._create_workspace(
             tmp_path / "ws",
             python_minor=sys.version_info.minor,
@@ -130,6 +139,7 @@ class TestsFlextInfraInfraMaintenanceMain:
         tm.that(enforcer.verbose, eq=True)
 
     def test_enforcer_empty_workspace(self, tmp_path: Path) -> None:
+        """Test enforcer empty workspace."""
         workspace = self._create_workspace(
             tmp_path / "ws",
             python_minor=sys.version_info.minor,
@@ -139,6 +149,7 @@ class TestsFlextInfraInfraMaintenanceMain:
         tm.ok(result, eq=0)
 
     def test_enforcer_project_mismatch(self, tmp_path: Path) -> None:
+        """Test enforcer project mismatch."""
         workspace = self._create_workspace(
             tmp_path / "ws",
             python_minor=sys.version_info.minor,
@@ -165,5 +176,6 @@ class TestsFlextInfraInfraMaintenanceMain:
 
     @staticmethod
     def test_enforcer_creates_instance() -> None:
+        """Test enforcer creates instance."""
         enforcer = FlextInfraPythonVersionEnforcer()
         tm.that(type(enforcer).__name__, eq="FlextInfraPythonVersionEnforcer")

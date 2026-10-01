@@ -1,4 +1,8 @@
-"""Route config-owned dynamic environment keys through their settings owner."""
+"""Route config-owned dynamic environment keys through their settings owner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

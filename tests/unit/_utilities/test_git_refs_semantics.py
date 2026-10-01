@@ -1,4 +1,8 @@
-"""Public u.Infra ref/ancestry owner semantics against a real repository."""
+"""Public u.Infra ref/ancestry owner semantics against a real repository.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

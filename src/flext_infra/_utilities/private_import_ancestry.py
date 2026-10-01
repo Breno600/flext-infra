@@ -1,4 +1,8 @@
-"""Static lexical inheritance discovery for public facade cutover."""
+"""Static lexical inheritance discovery for public facade cutover.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -1,5 +1,8 @@
 """Work-in-progress merge law: a WIP head never merges into integration.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 The runtime surface is the generated CI ``merge-guard`` job, owned by
 config/codegen.yaml (``Infra.codegen.make.work_in_progress``). A GitHub Draft
 selects no job at all; a non-draft PR whose head commit subject matches a WIP

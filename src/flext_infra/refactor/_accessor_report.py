@@ -1,4 +1,8 @@
-"""Accessor per-file lint processing + report rendering — extracted concern."""
+"""Accessor per-file lint processing + report rendering — extracted concern.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

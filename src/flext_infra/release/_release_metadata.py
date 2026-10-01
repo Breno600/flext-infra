@@ -1,4 +1,8 @@
-"""Release registry metadata: pinned requirements and the sdist boundary."""
+"""Release registry metadata: pinned requirements and the sdist boundary.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

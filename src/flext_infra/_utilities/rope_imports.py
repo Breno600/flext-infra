@@ -1,4 +1,8 @@
-"""Rope-backed import and rename operations."""
+"""Rope-backed import and rename operations.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

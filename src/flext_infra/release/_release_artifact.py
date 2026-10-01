@@ -1,4 +1,8 @@
-"""Release artifact boundary: archive content, core metadata, and internal pins."""
+"""Release artifact boundary: archive content, core metadata, and internal pins.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

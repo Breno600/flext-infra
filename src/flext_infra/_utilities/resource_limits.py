@@ -1,4 +1,8 @@
-"""Validated process resource-limit command builders."""
+"""Validated process resource-limit command builders.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

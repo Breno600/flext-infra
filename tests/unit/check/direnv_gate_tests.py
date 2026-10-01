@@ -1,4 +1,8 @@
-"""Public direnv gate behavior: static contracts plus activation smoke."""
+"""Public direnv gate behavior: static contracts plus activation smoke.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -21,6 +25,8 @@ if TYPE_CHECKING:
 
 
 class TestsFlextInfraDirenvGate:
+    """Tests for ``FlextInfraDirenvGate``."""
+
     @staticmethod
     def allowed_check(root: Path) -> m.Infra.GateExecution:
         """Check one workspace whose ``.envrc`` the real direnv approved."""

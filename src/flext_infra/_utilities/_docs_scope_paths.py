@@ -1,4 +1,8 @@
-"""Authenticated lexical path and workspace-topology helpers for docs scope."""
+"""Authenticated lexical path and workspace-topology helpers for docs scope.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

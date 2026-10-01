@@ -1,4 +1,8 @@
-"""Strict validation for semantic compatibility-alias cutovers."""
+"""Strict validation for semantic compatibility-alias cutovers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

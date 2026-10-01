@@ -1,5 +1,8 @@
 """FLEXT direnv environment contract gate.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Two fail-closed stages per checked workspace: the static environment-file
 contracts (see ``flext_infra.workspace.environment_contracts``) followed by a
 real ``direnv exec`` activation smoke. A workspace without ``.envrc`` skips.

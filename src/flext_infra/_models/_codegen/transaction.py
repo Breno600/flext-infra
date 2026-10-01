@@ -1,4 +1,8 @@
-"""Transaction and session models for the codegen pipeline."""
+"""Transaction and session models for the codegen pipeline.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

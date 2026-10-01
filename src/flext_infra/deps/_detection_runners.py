@@ -1,4 +1,8 @@
-"""Cohesive external-tool-runner mixin (deptry, mypy stubs, pip-check) for detection."""
+"""Cohesive external-tool-runner mixin (deptry, mypy stubs, pip-check) for detection.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

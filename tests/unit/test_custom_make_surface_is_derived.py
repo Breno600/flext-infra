@@ -25,6 +25,8 @@ from tests import t
 
 
 class TestsFlextInfraCustomMakeSurfaceIsDerived:
+    """Tests for ``FlextInfraCustomMakeSurfaceIsDerived``."""
+
     @staticmethod
     def _engine_modules() -> t.VariadicTuple[Path]:
         """Return every shipped engine module, excluding the template tree."""

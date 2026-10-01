@@ -1,4 +1,8 @@
-"""Narrow untrusted model-class boundaries before required field access."""
+"""Narrow untrusted model-class boundaries before required field access.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

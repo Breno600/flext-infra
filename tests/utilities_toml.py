@@ -1,4 +1,8 @@
-"""TOML, JSON, and typed-mapping test utilities for flext-infra."""
+"""TOML, JSON, and typed-mapping test utilities for flext-infra.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -79,6 +83,7 @@ class TestsFlextInfraUtilitiesTomlMixin:
 
     @staticmethod
     def toml_table_at(content: str, *path: str) -> t.JsonMapping:
+        """Provide ``toml_table_at``."""
         current = TestsFlextInfraUtilitiesTomlMixin.toml_doc_mapping(
             TestsFlextInfraUtilitiesTomlMixin.toml_doc(content),
         )
@@ -88,6 +93,7 @@ class TestsFlextInfraUtilitiesTomlMixin:
 
     @staticmethod
     def toml_strings_at(content: str, *path: str) -> t.StrSequence:
+        """Provide ``toml_strings_at``."""
         if not path:
             return ()
         table = TestsFlextInfraUtilitiesTomlMixin.toml_table_at(content, *path[:-1])
@@ -95,6 +101,7 @@ class TestsFlextInfraUtilitiesTomlMixin:
 
     @staticmethod
     def toml_tables_at(content: str, *path: str) -> t.SequenceOf[t.JsonMapping]:
+        """Provide ``toml_tables_at``."""
         if not path:
             return ()
         table = TestsFlextInfraUtilitiesTomlMixin.toml_table_at(content, *path[:-1])

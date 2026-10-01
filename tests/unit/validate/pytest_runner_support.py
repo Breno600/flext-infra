@@ -1,4 +1,8 @@
-"""Shared runtime helpers for the public pytest runner test modules."""
+"""Shared runtime helpers for the public pytest runner test modules.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

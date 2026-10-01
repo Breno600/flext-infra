@@ -1,4 +1,8 @@
-"""Automatic class-nesting plans derived from the public Rope workspace."""
+"""Automatic class-nesting plans derived from the public Rope workspace.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

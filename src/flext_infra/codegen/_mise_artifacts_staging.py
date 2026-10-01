@@ -1,4 +1,8 @@
-"""Destination-local staging for complete Mise artifact projections."""
+"""Destination-local staging for complete Mise artifact projections.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -1,5 +1,8 @@
 """Warning-free Rope project boundary.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Rope 1.14.0 and its current upstream branch decorate
 ``Project._init_source_folders`` as deprecated while still calling it
 unconditionally from ``Project.__init__``.  A strict warnings-as-errors runtime

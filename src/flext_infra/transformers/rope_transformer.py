@@ -1,4 +1,8 @@
-"""Base class for rope-based transformers with change-tracking."""
+"""Base class for rope-based transformers with change-tracking.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

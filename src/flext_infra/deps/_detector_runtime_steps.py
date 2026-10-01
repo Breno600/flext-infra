@@ -1,4 +1,8 @@
-"""Cohesive environment-setup + per-project execution mixin for the dependency detector runtime."""
+"""Cohesive environment-setup + per-project execution mixin for the dependency detector runtime.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

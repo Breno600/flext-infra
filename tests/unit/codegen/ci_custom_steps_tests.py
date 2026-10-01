@@ -1,5 +1,8 @@
 """A project extends its generated CI through its own custom-steps file.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 The generator injects the declared block verbatim and never interprets it, so a
 project adds a step its pipeline needs — a credential, a service, a probe —
 without the generator carrying that project's concerns. This is the CI

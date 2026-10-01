@@ -1,4 +1,8 @@
-"""Root public-export decisions for the lazy-init planner."""
+"""Root public-export decisions for the lazy-init planner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

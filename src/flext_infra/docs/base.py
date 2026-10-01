@@ -1,5 +1,8 @@
 """Shared base for docs phase services.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Single source of truth for the docs-specific ``output_dir`` default and for
 the canonical phase-outcome propagation pattern. Phase services inherit
 this base and call :meth:`_propagate_phase_outcome` instead of repeating

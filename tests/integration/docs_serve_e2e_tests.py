@@ -1,5 +1,8 @@
 """End-to-end docs serve test — real MkDocs dev server over HTTP.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 No mocks: starts the real ``FlextInfraDocServer`` flow against a synthetic
 single-scope workspace, then polls the bound address until the dev server
 answers an actual HTTP request. The blocking server runs in a managed child
@@ -66,6 +69,7 @@ class TestsFlextInfraIntegrationDocsServeE2e:
 
     @pytest.mark.slow
     def test_serve_scope_serves_site_over_http(self, tmp_path: Path) -> None:
+        """Test serve scope serves site over http."""
         (tmp_path / "docs").mkdir()
         (tmp_path / "docs/index.md").write_text(
             "# Demo\n\nHello from the real dev server.\n",

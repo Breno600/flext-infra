@@ -1,4 +1,8 @@
-"""Census workspace-report text rendering — extracted concern."""
+"""Census workspace-report text rendering — extracted concern.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

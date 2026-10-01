@@ -1,4 +1,8 @@
-"""Tests for rope semantic analysis utilities."""
+"""Tests for rope semantic analysis utilities.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,6 +23,7 @@ class TestsFlextInfraRefactorRopeSemantic:
         semantic_rope_workspace: RopeWorkspace,
         services_resource: t.Infra.RopeResource,
     ) -> None:
+        """Test returns imports."""
         proj, _ = semantic_rope_workspace
         imports = u.Infra.resolve_semantic_module_imports(proj, services_resource)
         tm.that(imports, has="Dog")
@@ -28,6 +33,7 @@ class TestsFlextInfraRefactorRopeSemantic:
         semantic_rope_workspace: RopeWorkspace,
         models_resource: t.Infra.RopeResource,
     ) -> None:
+        """Test no imports returns empty."""
         proj, _ = semantic_rope_workspace
         imports = u.Infra.resolve_semantic_module_imports(proj, models_resource)
         # Expect: Path appears among the imported names
@@ -40,6 +46,7 @@ class TestsFlextInfraRefactorRopeSemantic:
         semantic_rope_workspace: RopeWorkspace,
         models_resource: t.Infra.RopeResource,
     ) -> None:
+        """Test returns defined classes."""
         proj, _ = semantic_rope_workspace
         classes = u.Infra.resolve_module_classes(proj, models_resource)
         tm.that(classes, has="Animal")
@@ -50,6 +57,7 @@ class TestsFlextInfraRefactorRopeSemantic:
         semantic_rope_workspace: RopeWorkspace,
         services_resource: t.Infra.RopeResource,
     ) -> None:
+        """Test excludes imported classes."""
         proj, _ = semantic_rope_workspace
         classes = u.Infra.resolve_module_classes(proj, services_resource)
         # Dog is imported, not defined here
@@ -60,6 +68,7 @@ class TestsFlextInfraRefactorRopeSemantic:
         semantic_rope_workspace: RopeWorkspace,
         models_resource: t.Infra.RopeResource,
     ) -> None:
+        """Test returns base classes."""
         proj, _ = semantic_rope_workspace
         bases = u.Infra.resolve_class_bases(proj, models_resource, "Dog")
         tm.that(bases, has="Animal")
@@ -69,6 +78,7 @@ class TestsFlextInfraRefactorRopeSemantic:
         semantic_rope_workspace: RopeWorkspace,
         models_resource: t.Infra.RopeResource,
     ) -> None:
+        """Test no bases for root class."""
         proj, _ = semantic_rope_workspace
         bases = u.Infra.resolve_class_bases(proj, models_resource, "Animal")
         # object is implicit base, rope may or may not return it
@@ -79,6 +89,7 @@ class TestsFlextInfraRefactorRopeSemantic:
         semantic_rope_workspace: RopeWorkspace,
         models_resource: t.Infra.RopeResource,
     ) -> None:
+        """Test nonexistent class returns empty."""
         proj, _ = semantic_rope_workspace
         bases = u.Infra.resolve_class_bases(proj, models_resource, "DoesNotExist")
         tm.that(not bases, eq=True)
@@ -88,6 +99,7 @@ class TestsFlextInfraRefactorRopeSemantic:
         semantic_rope_workspace: RopeWorkspace,
         models_resource: t.Infra.RopeResource,
     ) -> None:
+        """Test returns public methods."""
         proj, _ = semantic_rope_workspace
         methods = u.Infra.resolve_class_methods(proj, models_resource, "Dog")
         tm.that(methods, has="fetch")
@@ -100,6 +112,7 @@ class TestsFlextInfraRefactorRopeSemantic:
         semantic_rope_workspace: RopeWorkspace,
         models_resource: t.Infra.RopeResource,
     ) -> None:
+        """Test excludes private by default."""
         proj, _ = semantic_rope_workspace
         methods = u.Infra.resolve_class_methods(proj, models_resource, "Dog")
         tm.that(methods, lacks="_wag")
@@ -109,6 +122,7 @@ class TestsFlextInfraRefactorRopeSemantic:
         semantic_rope_workspace: RopeWorkspace,
         models_resource: t.Infra.RopeResource,
     ) -> None:
+        """Test includes private when requested."""
         proj, _ = semantic_rope_workspace
         methods = u.Infra.resolve_class_methods(
             proj,
@@ -124,6 +138,7 @@ class TestsFlextInfraRefactorRopeSemantic:
         semantic_rope_workspace: RopeWorkspace,
         models_resource: t.Infra.RopeResource,
     ) -> None:
+        """Test returns character offset for semantic definition."""
         proj, _ = semantic_rope_workspace
         offset = u.Infra.find_definition_offset(proj, models_resource, "Dog")
         source = models_resource.read()

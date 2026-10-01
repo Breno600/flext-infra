@@ -1,4 +1,8 @@
-"""Transport ast-grep JSON replacements to the existing guarded publisher."""
+"""Transport ast-grep JSON replacements to the existing guarded publisher.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

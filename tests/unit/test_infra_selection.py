@@ -83,6 +83,7 @@ class TestsFlextInfraInfraSelection:
 
     @pytest.fixture
     def workspace_with_nested_members(self, tmp_path: Path) -> Path:
+        """Provide ``workspace_with_nested_members``."""
         (tmp_path / ".git").mkdir()
         (tmp_path / "Makefile").touch()
         (tmp_path / "pyproject.toml").write_text(
@@ -245,6 +246,7 @@ class TestsFlextInfraInfraSelection:
         selector: type[u.Infra],
         workspace_with_nested_members: Path,
     ) -> None:
+        """Test resolve projects includes root and nested members."""
         result = selector.resolve_projects(workspace_with_nested_members, ())
 
         projects: t.SequenceOf[m.Infra.ProjectInfo] = tm.ok(result)
@@ -260,6 +262,7 @@ class TestsFlextInfraInfraSelection:
         workspace_with_nested_members: Path,
         name: str,
     ) -> None:
+        """Test resolve projects accepts root aliases."""
         result = selector.resolve_projects(workspace_with_nested_members, (name,))
 
         projects: t.SequenceOf[m.Infra.ProjectInfo] = tm.ok(result)
@@ -270,6 +273,7 @@ class TestsFlextInfraInfraSelection:
         selector: type[u.Infra],
         workspace_with_nested_members: Path,
     ) -> None:
+        """Test resolve projects accepts nested member path."""
         result = selector.resolve_projects(
             workspace_with_nested_members,
             ("apps/member-one",),

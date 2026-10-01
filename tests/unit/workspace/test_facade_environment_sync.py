@@ -1,4 +1,8 @@
-"""Public ``infra`` facade contract for workspace environment sync."""
+"""Public ``infra`` facade contract for workspace environment sync.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -109,6 +113,7 @@ class TestsFlextInfraFacadeEnvironmentSync:
         tm.that(routed, eq=str(ledger))
 
     def test_sync_creates_envrc_without_creating_mise(self, tmp_path: Path) -> None:
+        """Test sync creates envrc without creating mise."""
         workspace = tmp_path / "workspace"
         self._write_pyproject(workspace)
         result = infra.sync_environment_files(
@@ -121,6 +126,7 @@ class TestsFlextInfraFacadeEnvironmentSync:
         tm.that((workspace / ".mise.toml").exists(), eq=False)
 
     def test_sync_preserves_custom_envrc_without_force(self, tmp_path: Path) -> None:
+        """Test sync preserves custom envrc without force."""
         workspace = tmp_path / "workspace"
         self._write_pyproject(workspace)
         custom = workspace / ".envrc"
@@ -135,6 +141,7 @@ class TestsFlextInfraFacadeEnvironmentSync:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test sync force converts custom envrc to generated."""
         workspace = tmp_path / "workspace"
         self._write_pyproject(workspace)
         custom = workspace / ".envrc"
@@ -157,6 +164,7 @@ class TestsFlextInfraFacadeEnvironmentSync:
         )
 
     def test_sync_never_mutates_codegen_owned_mise(self, tmp_path: Path) -> None:
+        """Test sync never mutates codegen owned mise."""
         workspace = tmp_path / "workspace"
         self._write_pyproject(workspace)
         mise = workspace / ".mise.toml"
@@ -175,6 +183,7 @@ class TestsFlextInfraFacadeEnvironmentSync:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test sync removes generated envrc without pyproject."""
         workspace = tmp_path / "workspace"
         self._write_pyproject(workspace)
         setup = infra.sync_environment_files(

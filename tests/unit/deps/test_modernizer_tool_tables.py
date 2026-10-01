@@ -1,4 +1,8 @@
-"""Config-owned tool table phase tests for the deps modernizer."""
+"""Config-owned tool table phase tests for the deps modernizer.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

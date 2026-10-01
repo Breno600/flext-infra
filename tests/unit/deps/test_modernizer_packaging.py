@@ -1,4 +1,8 @@
-"""Public conformance contract for declared Python distribution roots."""
+"""Public conformance contract for declared Python distribution roots.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,8 @@
-"""FLEXT infrastructure workspace checker."""
+"""FLEXT infrastructure workspace checker.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,8 @@
-"""Workspace check report rendering: markdown + SARIF + summary — extracted concern."""
+"""Workspace check report rendering: markdown + SARIF + summary — extracted concern.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,8 @@
-"""Package/module entry and name-resolution caches for the lazy-init planner."""
+"""Package/module entry and name-resolution caches for the lazy-init planner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

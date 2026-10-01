@@ -1,4 +1,8 @@
-"""Real local installation preserves consumer resolution and isolation."""
+"""Real local installation preserves consumer resolution and isolation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

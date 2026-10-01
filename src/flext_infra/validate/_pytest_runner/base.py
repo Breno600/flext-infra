@@ -1,4 +1,8 @@
-"""Validated environment and filesystem boundary for pytest execution."""
+"""Validated environment and filesystem boundary for pytest execution.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

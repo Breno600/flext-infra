@@ -1,5 +1,8 @@
 """FLEXT embedded-code gate: ruff format over fenced blocks and docstring examples.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 The code inside documentation is still code — parseable embedded sources are
 held to the ruff-format contract. This gate extracts fenced ``python`` blocks
 and doctest examples into one temporary source tree and runs ONE ruff format

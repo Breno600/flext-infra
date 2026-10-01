@@ -1,4 +1,8 @@
-"""Fail-closed jscpd duplicate-code detector (R2 consumer+family scope)."""
+"""Fail-closed jscpd duplicate-code detector (R2 consumer+family scope).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

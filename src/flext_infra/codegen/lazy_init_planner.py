@@ -1,4 +1,8 @@
-"""Lazy-init planning over generic Rope workspace indexes."""
+"""Lazy-init planning over generic Rope workspace indexes.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

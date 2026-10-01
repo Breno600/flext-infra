@@ -1,4 +1,8 @@
-"""Gate template for per-file, Rope-backed scanners."""
+"""Gate template for per-file, Rope-backed scanners.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

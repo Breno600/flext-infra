@@ -1,4 +1,8 @@
-"""Shared fixtures for the declarative project-layout engine tests."""
+"""Shared fixtures for the declarative project-layout engine tests.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

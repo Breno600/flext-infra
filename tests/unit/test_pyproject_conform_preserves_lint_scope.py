@@ -23,6 +23,8 @@ from tests import TestsFlextInfraUtilities as tu, u
 
 
 class TestsFlextInfraPyprojectConformPreservesLintScope:
+    """Tests for ``FlextInfraPyprojectConformPreservesLintScope``."""
+
     @staticmethod
     def _repository_root() -> Path:
         """Return the repository root that owns this checkout."""

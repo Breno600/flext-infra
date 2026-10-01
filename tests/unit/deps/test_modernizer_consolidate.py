@@ -1,4 +1,8 @@
-"""Consolidation phase tests for deps modernizer."""
+"""Consolidation phase tests for deps modernizer.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

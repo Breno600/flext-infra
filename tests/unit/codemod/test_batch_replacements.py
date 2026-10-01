@@ -1,4 +1,8 @@
-"""Public replacement transport preserves generator authority and exact CAS."""
+"""Public replacement transport preserves generator authority and exact CAS.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -51,6 +55,7 @@ class TestsBatchReplacements:
         )
 
     def test_utf8_replacements_use_engine_byte_offsets(self, tmp_path: Path) -> None:
+        """Test utf8 replacements use engine byte offsets."""
         root = test_u.Tests.git_repository(tmp_path)
         path = root / "subject.py"
         original = '# ação\nvalue = "before"\n'.encode()
@@ -62,6 +67,7 @@ class TestsBatchReplacements:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test generator findings remain visible and unmodified."""
         root = test_u.Tests.git_repository(tmp_path)
         path = root / "generated.py"
         original = b'value = "before"\n'
@@ -76,6 +82,7 @@ class TestsBatchReplacements:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test generator evidence never blocks authored rewrites."""
         root = test_u.Tests.git_repository(tmp_path)
         original = b'value = "before"\n'
         authored = self._report(root / "authored.py", original).entries[0]
@@ -106,6 +113,7 @@ class TestsBatchReplacements:
         tmp_path: Path,
         changed: bytes,
     ) -> None:
+        """Test changed source is not overwritten."""
         root = test_u.Tests.git_repository(tmp_path)
         path = root / "subject.py"
         report = self._report(path, b'value = "before"\n')
@@ -114,6 +122,7 @@ class TestsBatchReplacements:
         tm.that(path.read_bytes(), eq=changed)
 
     def test_missing_actionable_snapshot_is_rejected(self, tmp_path: Path) -> None:
+        """Test missing actionable snapshot is rejected."""
         root = test_u.Tests.git_repository(tmp_path)
         path = root / "subject.py"
         report = self._report(path, b'value = "before"\n')

@@ -1,4 +1,8 @@
-"""Public sed-by-list contract for the ``make mod`` text phase."""
+"""Public sed-by-list contract for the ``make mod`` text phase.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

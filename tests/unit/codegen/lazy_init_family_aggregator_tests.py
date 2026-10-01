@@ -1,5 +1,8 @@
 """A re-export aggregator's ``__all__`` never claims single ownership.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Regression coverage: a generated TYPE_CHECKING re-export sidecar (e.g.
 ``tests/_exports_typing_facades.py`` in flext-core) imports many facades and
 relists their class/alias names in its own ``__all__``. ``_resolve_family``

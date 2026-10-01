@@ -1,4 +1,8 @@
-"""Public transaction ownership across real processes and attached repositories."""
+"""Public transaction ownership across real processes and attached repositories.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

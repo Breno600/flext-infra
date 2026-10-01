@@ -1,4 +1,8 @@
-"""Tests for the public constants consolidator command service."""
+"""Tests for the public constants consolidator command service.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -85,6 +89,7 @@ class TestsFlextInfraCodegenConsolidator:
         return self._consolidator_payload(result.value)
 
     def test_execute_scans_real_package_layout(self, tmp_path: Path) -> None:
+        """Test execute scans real package layout."""
         repository_root, _, package_dir = self._consolidator_layout(tmp_path)
         (package_dir / "__init__.py").write_text("", encoding="utf-8")
         (package_dir / "constants.py").write_text(
@@ -144,6 +149,7 @@ class TestsFlextInfraCodegenConsolidator:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test execute apply mode replaces literal with canonical reference."""
         repository_root = self._build_consolidator_workspace(tmp_path)
         consumer_path = (
             repository_root / "flext-demo" / "src" / "flext_demo" / "consumer.py"
@@ -169,6 +175,7 @@ class TestsFlextInfraCodegenConsolidator:
         tmp_path: Path,
         wrapper_segment: str,
     ) -> None:
+        """Test execute apply mode scans wrapper surfaces."""
         repository_root = self._build_consolidator_workspace(tmp_path)
         package_consumer_path = (
             repository_root / "flext-demo" / "src" / "flext_demo" / "consumer.py"
@@ -212,6 +219,7 @@ class TestsFlextInfraCodegenConsolidator:
 
     @pytest.mark.slow
     def test_execute_apply_mode_json_output(self, tmp_path: Path) -> None:
+        """Test execute apply mode json output."""
         repository_root = self._build_consolidator_workspace(tmp_path)
         payload = self._execute_consolidator(repository_root, dry_run=False)
         tm.that(payload.total_found, eq=1)
@@ -221,6 +229,7 @@ class TestsFlextInfraCodegenConsolidator:
         tm.that(payload.files[0].status, eq="applied")
 
     def test_execute_dry_run_json_output(self, tmp_path: Path) -> None:
+        """Test execute dry run json output."""
         repository_root = self._build_consolidator_workspace(tmp_path)
         payload = self._execute_consolidator(repository_root, dry_run=True)
         tm.that(payload.total_found, eq=1)

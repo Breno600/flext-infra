@@ -1,4 +1,8 @@
-"""Canonical Python module header analysis and import injection."""
+"""Canonical Python module header analysis and import injection.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

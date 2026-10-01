@@ -1,4 +1,8 @@
-"""Reachable two-layer checkpoints for operator-authorized WIP capture."""
+"""Reachable two-layer checkpoints for operator-authorized WIP capture.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

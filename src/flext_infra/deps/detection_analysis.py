@@ -1,4 +1,8 @@
-"""Dependency typings analysis + container-value conversion helpers for detection."""
+"""Dependency typings analysis + container-value conversion helpers for detection.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,8 @@
-"""Real gate behavior tests for Ruff and Pyright."""
+"""Real gate behavior tests for Ruff and Pyright.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -23,9 +27,11 @@ class TestsFlextInfraRealGateRunners:
 
     @staticmethod
     def make_ctx(root: Path) -> m.Infra.GateContext:
+        """Provide ``make_ctx``."""
         return m.Infra.GateContext(repository_root=root, reports_dir=root)
 
     def test_ruff_lint_reports_real_issue(self, tmp_path: Path) -> None:
+        """Test ruff lint reports real issue."""
         project_dir = u.Tests.mk_project(tmp_path, "lint-project", with_src=True)
         (project_dir / "src" / "demo.py").write_text("import os\n", encoding="utf-8")
 
@@ -39,6 +45,7 @@ class TestsFlextInfraRealGateRunners:
 
     @staticmethod
     def test_ruff_lint_honors_public_ruff_args(tmp_path: Path) -> None:
+        """Test ruff lint honors public ruff args."""
         project_dir = u.Tests.mk_project(tmp_path, "lint-args", with_src=True)
         (project_dir / "src" / "demo.py").write_text(
             'value = "' + ("x" * 120) + '"\n',
@@ -131,6 +138,7 @@ class TestsFlextInfraRealGateRunners:
         tm.that(check_dirs.issues, empty=True)
 
     def test_ruff_format_reports_real_reformat(self, tmp_path: Path) -> None:
+        """Test ruff format reports real reformat."""
         project_dir = u.Tests.mk_project(tmp_path, "format-project", with_src=True)
         (project_dir / "src" / "demo.py").write_text(
             "value=[1,2,3]\n",
@@ -148,6 +156,7 @@ class TestsFlextInfraRealGateRunners:
     def test_ruff_format_fix_stays_within_owned_source_dirs(
         tmp_path: Path,
     ) -> None:
+        """Test ruff format fix stays within owned source dirs."""
         project_dir = u.Tests.mk_project(tmp_path, "format-scope", with_src=True)
         source = project_dir / "src" / "demo.py"
         source.write_text("value=[1,2,3]\n", encoding="utf-8")
@@ -170,6 +179,7 @@ class TestsFlextInfraRealGateRunners:
         tm.that(source.read_text(encoding="utf-8"), eq="value = [1, 2, 3]\n")
 
     def test_pyright_reports_real_type_error(self, tmp_path: Path) -> None:
+        """Test pyright reports real type error."""
         project_dir = u.Tests.mk_project(
             tmp_path,
             "pyright-project",

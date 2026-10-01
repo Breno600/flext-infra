@@ -1,4 +1,8 @@
-"""Promoted-command discovery across first-wins script roots."""
+"""Promoted-command discovery across first-wins script roots.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

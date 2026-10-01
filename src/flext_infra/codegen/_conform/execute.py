@@ -1,4 +1,8 @@
-"""Transactional execution of conformance plans."""
+"""Transactional execution of conformance plans.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

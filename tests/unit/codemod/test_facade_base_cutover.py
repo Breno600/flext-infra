@@ -1,4 +1,8 @@
-"""Public utility evidence for the facade-base semantic cutover."""
+"""Public utility evidence for the facade-base semantic cutover.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -37,6 +41,7 @@ class TestsFlextInfraFacadeBaseCutover:
         base: str,
         rebind: str,
     ) -> None:
+        """Test rebound letter base extends the declared class."""
         child, sources = self._workspace(
             tmp_path,
             f"{statement}\n\n\nclass ChildModels({base}):\n    pass\n\n\n{rebind}\n",
@@ -53,6 +58,7 @@ class TestsFlextInfraFacadeBaseCutover:
         tm.that(replanned, empty=True)
 
     def test_eager_letter_reads_spell_the_parent_class(self, tmp_path: Path) -> None:
+        """Test eager letter reads spell the parent class."""
         child, sources = self._workspace(
             tmp_path,
             "from parent_pkg import m\n\n\nclass ChildModels(m):\n"
@@ -113,6 +119,7 @@ class TestsFlextInfraFacadeBaseCutover:
         tm.that(replanned, empty=True)
 
     def test_letter_base_without_rebind_is_untouched(self, tmp_path: Path) -> None:
+        """Test letter base without rebind is untouched."""
         child, sources = self._workspace(
             tmp_path,
             "from parent_pkg import m\n\n\nclass ChildService(m):\n    pass\n",
@@ -120,6 +127,7 @@ class TestsFlextInfraFacadeBaseCutover:
         tm.that(self._edits(tmp_path, sources, child), empty=True)
 
     def test_undeclared_letter_owner_fails_the_plan(self, tmp_path: Path) -> None:
+        """Test undeclared letter owner fails the plan."""
         child, sources = self._workspace(
             tmp_path,
             "from parent_pkg import m\n\n\nclass ChildModels(m):\n    pass\n\n\n"
@@ -133,6 +141,7 @@ class TestsFlextInfraFacadeBaseCutover:
         tmp_path: Path,
         installed_dependency_path: Path,
     ) -> None:
+        """Test facade classes derive every published letter."""
         _child, sources = self._workspace(tmp_path, "")
         for path, source in sources.items():
             if "parent_pkg" in path.parts:

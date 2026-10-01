@@ -1,4 +1,8 @@
-"""Graceful suite stop keeps pytest-testmon progress across bounded runs."""
+"""Graceful suite stop keeps pytest-testmon progress across bounded runs.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

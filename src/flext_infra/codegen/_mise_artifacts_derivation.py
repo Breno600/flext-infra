@@ -1,4 +1,8 @@
-"""Offline derivation checks for the `make upg`-written Mise pin and launchers."""
+"""Offline derivation checks for the `make upg`-written Mise pin and launchers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

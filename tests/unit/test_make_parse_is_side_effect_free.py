@@ -31,6 +31,8 @@ class TestsFlextInfraMakeParseIsSideEffectFree:
     # ``$(shell ...)`` call marker. Assignment identity uses
     # c.Infra.MAKE_ASSIGNMENT_RE; immediacy is ``:=`` / ``::=`` (name token
     # ends with ``:`` before ``=``).
+    """Tests for ``FlextInfraMakeParseIsSideEffectFree``."""
+
     _SHELL_CALL = re.compile(r"\$\(shell\b")
     # Executing an interpreter costs hundreds of milliseconds to seconds. Merely
     # *locating* one (`command -v python3`) is a cheap PATH lookup and is allowed:

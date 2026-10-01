@@ -1,4 +1,8 @@
-"""Docs and GitHub workflow workspace fixture utilities for flext-infra."""
+"""Docs and GitHub workflow workspace fixture utilities for flext-infra.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

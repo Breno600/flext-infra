@@ -1,4 +1,8 @@
-"""FLEXT family-chain discovery + project-kind inference — extracted concern."""
+"""FLEXT family-chain discovery + project-kind inference — extracted concern.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

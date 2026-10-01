@@ -1,4 +1,8 @@
-"""Release boundary: what may ship, how internal pins read, where receipts live."""
+"""Release boundary: what may ship, how internal pins read, where receipts live.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

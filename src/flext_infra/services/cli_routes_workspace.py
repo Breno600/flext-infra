@@ -1,4 +1,8 @@
-"""Workspace and release CLI route ownership."""
+"""Workspace and release CLI route ownership.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

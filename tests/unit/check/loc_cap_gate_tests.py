@@ -1,5 +1,8 @@
 """Tests for the module-cap SUPREME LAW (§3.1) gate.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 The gate flags any module whose real scc `Code` line count exceeds the
 config-owned ceiling and accepts modules under it, exercised through the public
 gate runner. Fixtures derive from that config-owned ceiling so a legitimate cap
@@ -22,6 +25,8 @@ if TYPE_CHECKING:
 
 
 class TestsFlextInfraLocCapGate:
+    """Tests for ``FlextInfraLocCapGate``."""
+
     @staticmethod
     def gate_project(tmp_path: Path, *, code_lines: int) -> Path:
         """Create one real project whose sample module carries ``code_lines``."""
@@ -37,6 +42,7 @@ class TestsFlextInfraLocCapGate:
 
     @staticmethod
     def test_gate_identity() -> None:
+        """Test gate identity."""
         tm.that(FlextInfraLocCapGate.gate_id, eq="loc-cap")
         tm.that(FlextInfraLocCapGate.can_fix, eq=False)
 
@@ -51,6 +57,7 @@ class TestsFlextInfraLocCapGate:
         *,
         passed: bool,
     ) -> None:
+        """Test cap is enforced on real scc counts."""
         project = self.gate_project(tmp_path, code_lines=code_lines)
 
         result = u.Tests.run_gate_check(FlextInfraLocCapGate, tmp_path, project)
@@ -61,6 +68,7 @@ class TestsFlextInfraLocCapGate:
         tm.that(all(path.endswith("sample.py") for path in flagged), eq=True)
 
     def test_unavailable_scanner_is_not_silenced(self, tmp_path: Path) -> None:
+        """Test unavailable scanner is not silenced."""
         project = self.gate_project(tmp_path, code_lines=1)
         empty_path = tmp_path / "empty-path"
         empty_path.mkdir()

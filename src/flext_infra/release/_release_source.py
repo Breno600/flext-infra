@@ -1,4 +1,8 @@
-"""Release source staging: committed snapshot, sensitive paths, secret scan."""
+"""Release source staging: committed snapshot, sensitive paths, secret scan.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

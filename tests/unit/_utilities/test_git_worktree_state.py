@@ -1,4 +1,8 @@
-"""Real Git round trips through the public worktree state-copy boundary."""
+"""Real Git round trips through the public worktree state-copy boundary.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

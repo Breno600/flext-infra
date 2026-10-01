@@ -1,4 +1,8 @@
-"""Public pyproject conformer over the requirement and uv-source owners."""
+"""Public pyproject conformer over the requirement and uv-source owners.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,8 @@
-"""Edge-case tests for public modernizer flows."""
+"""Edge-case tests for public modernizer flows.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

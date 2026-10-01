@@ -1,4 +1,8 @@
-"""Source-level rope parsing, literal scanning, and reference extraction."""
+"""Source-level rope parsing, literal scanning, and reference extraction.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

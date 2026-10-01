@@ -1,4 +1,8 @@
-"""Transactional CSV campaigns using existing Rope and publication primitives."""
+"""Transactional CSV campaigns using existing Rope and publication primitives.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

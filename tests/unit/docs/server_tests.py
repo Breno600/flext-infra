@@ -1,5 +1,8 @@
 """Behavior tests for FlextInfraDocServer — single-scope serve selection.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Real workspace fixtures only (no mocks): the serve phase resolves governed
 scopes, keeps the ones carrying an ``mkdocs.yml``, and refuses ambiguous
 multi-scope previews — the blocking dev-server call itself is covered by the
@@ -49,6 +52,7 @@ class TestsFlextInfraDocServer:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test serve with multiple servable scopes requires project."""
         workspace = tu.Tests.create_docs_workspace(
             tmp_path,
             project_names=("flext-a", "flext-b"),
@@ -64,6 +68,7 @@ class TestsFlextInfraDocServer:
 
     @staticmethod
     def test_execute_propagates_selection_failure(tmp_path: Path) -> None:
+        """Test execute propagates selection failure."""
         workspace = tu.Tests.create_docs_workspace(tmp_path)
 
         result = FlextInfraDocServer(repository_root=workspace).execute()
@@ -80,6 +85,7 @@ class TestsFlextInfraDocServer:
 
     @staticmethod
     def test_output_dir_default_matches_docs_pipeline() -> None:
+        """Test output dir default matches docs pipeline."""
         server = FlextInfraDocServer()
         tm.that(str(server.output_dir), eq=c.Infra.DEFAULT_DOCS_OUTPUT_DIR)
 

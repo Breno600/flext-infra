@@ -1,5 +1,8 @@
 """Tests for FlextInfraDiscoveryService.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Tests cover project discovery, pyproject file discovery, and error handling.
 """
 
@@ -18,12 +21,16 @@ if TYPE_CHECKING:
 
 
 class TestsFlextInfraDiscoveryInfraDiscovery:
+    """Tests for ``FlextInfraDiscoveryInfraDiscovery``."""
+
     @pytest.fixture
     def service(self) -> u.Infra:
+        """Provide ``service``."""
         return u.Infra()
 
     @pytest.fixture
     def workspace_with_projects(self, tmp_path: Path) -> Path:
+        """Provide ``workspace_with_projects``."""
         (tmp_path / "pyproject.toml").write_text(
             "[project]\nname='workspace'\n",
             encoding="utf-8",
@@ -67,6 +74,7 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         service: u.Infra,
         workspace_with_projects: Path,
     ) -> None:
+        """Test discover projects happy path."""
         result = service.discover_projects(workspace_with_projects)
         tm.ok(result)
         projects = result.value
@@ -86,6 +94,7 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         service: u.Infra,
         tmp_path: Path,
     ) -> None:
+        """Test discover projects empty workspace."""
         result = service.discover_projects(tmp_path)
         tm.ok(result)
         tm.that(result.value, eq=[])
@@ -95,6 +104,7 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         service: u.Infra,
         tmp_path: Path,
     ) -> None:
+        """Test discover projects nonexistent path."""
         nonexistent = tmp_path / "missing"
         result = service.discover_projects(nonexistent)
         tm.fail(result)
@@ -105,6 +115,7 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         service: u.Infra,
         tmp_path: Path,
     ) -> None:
+        """Test find all pyproject files happy path."""
         (tmp_path / "project1").mkdir()
         (tmp_path / "project1" / "pyproject.toml").touch()
         (tmp_path / "project2").mkdir()
@@ -122,6 +133,7 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         service: u.Infra,
         tmp_path: Path,
     ) -> None:
+        """Test find all pyproject files with skip dirs."""
         (tmp_path / "project1").mkdir()
         (tmp_path / "project1" / "pyproject.toml").touch()
         (tmp_path / "skip_me").mkdir()
@@ -140,6 +152,7 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         service: u.Infra,
         tmp_path: Path,
     ) -> None:
+        """Test find all pyproject files with project paths."""
         proj1 = tmp_path / "project1"
         proj2 = tmp_path / "project2"
         proj1.mkdir()
@@ -157,6 +170,7 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         service: u.Infra,
         workspace_with_projects: Path,
     ) -> None:
+        """Test discover projects result type."""
         result = service.discover_projects(workspace_with_projects)
         tm.ok(result)
         projects: t.SequenceOf[m.Infra.ProjectInfo] = result.value
@@ -168,6 +182,7 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         service: u.Infra,
         tmp_path: Path,
     ) -> None:
+        """Test discover projects empty workspace v2."""
         result = service.discover_projects(tmp_path)
         tm.ok(result)
         tm.that(result.value, eq=[])
@@ -177,6 +192,7 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         service: u.Infra,
         tmp_path: Path,
     ) -> None:
+        """Test discover projects prefers workspace children over root project."""
         (tmp_path / "pyproject.toml").write_text(
             "[project]\nname='workspace'\ndependencies=['flext-core>=0.1.0']\n",
             encoding="utf-8",
@@ -210,6 +226,7 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         service: u.Infra,
         tmp_path: Path,
     ) -> None:
+        """Test discover projects derives package name from hatch packages."""
         project = tmp_path
         package_dir = project / "src" / "custom_pkg"
         package_dir.mkdir(parents=True)
@@ -234,6 +251,7 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         service: u.Infra,
         tmp_path: Path,
     ) -> None:
+        """Test discover projects accepts standalone governed root without core dep."""
         package_dir = tmp_path / "src" / "demo_pkg"
         package_dir.mkdir(parents=True)
         (package_dir / "__init__.py").write_text("", encoding="utf-8")

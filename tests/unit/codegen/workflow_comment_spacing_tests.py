@@ -1,4 +1,8 @@
-"""Rendered GitHub workflows satisfy the YAML inline-comment spacing contract."""
+"""Rendered GitHub workflows satisfy the YAML inline-comment spacing contract.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

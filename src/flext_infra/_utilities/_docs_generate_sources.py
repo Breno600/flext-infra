@@ -1,4 +1,8 @@
-"""Authenticated source discovery and CAS verification for docs generation."""
+"""Authenticated source discovery and CAS verification for docs generation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

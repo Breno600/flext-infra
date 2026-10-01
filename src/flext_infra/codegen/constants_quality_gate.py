@@ -1,4 +1,8 @@
-"""Workspace-wide quality gate for constants refactor outcomes."""
+"""Workspace-wide quality gate for constants refactor outcomes.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,8 @@
-"""Real Make generation repairs activation before consuming its own output."""
+"""Real Make generation repairs activation before consuming its own output.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

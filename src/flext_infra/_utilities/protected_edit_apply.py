@@ -1,4 +1,8 @@
-"""Apply, rollback, and pytest flows for protected edit workflows."""
+"""Apply, rollback, and pytest flows for protected edit workflows.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,8 @@
-"""Fix-forward ast-grep batch application for ``make mod``."""
+"""Fix-forward ast-grep batch application for ``make mod``.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

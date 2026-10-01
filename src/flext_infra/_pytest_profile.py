@@ -1,4 +1,8 @@
-"""Cold-start pytest execution adapter; runtime imports here are stdlib only."""
+"""Cold-start pytest execution adapter; runtime imports here are stdlib only.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,8 @@
-"""The own-package codemod predicate spans the project's internal tiers."""
+"""The own-package codemod predicate spans the project's internal tiers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -45,6 +49,7 @@ class TestsFlextInfraCodemodContextOwnPackage:
         module: str,
         admitted: bool,
     ) -> None:
+        """Test internal tiers are own namespaces."""
         project = test_u.Tests.mk_project(
             tmp_path,
             "demo",

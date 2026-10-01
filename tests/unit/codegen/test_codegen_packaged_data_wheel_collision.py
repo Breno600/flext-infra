@@ -1,4 +1,8 @@
-"""Public render contract: a packaged data dir ships through exactly one route."""
+"""Public render contract: a packaged data dir ships through exactly one route.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

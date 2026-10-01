@@ -1,4 +1,8 @@
-"""Release build phase: attested artifacts built from committed sources."""
+"""Release build phase: attested artifacts built from committed sources.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

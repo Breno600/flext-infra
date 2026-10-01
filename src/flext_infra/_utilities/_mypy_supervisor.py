@@ -1,5 +1,8 @@
 """Darwin Mypy supervisor: sampled process-group RSS and wall-clock deadline.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 This supervisor validates the owned checker request before launching Mypy.
 Darwin's initial VM mappings
 can already exceed the configured memory budget; RLIMIT_AS cannot represent a

@@ -1,5 +1,8 @@
 """Public Git utilities facet for ``u.Infra`` (composed into utilities FLEXT).
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Private GitPython parts live under ``_utilities/_git/``. Consumers use
 ``from flext_infra import u`` only — never import this module or ``_git``.
 """

@@ -1,4 +1,8 @@
-"""Public release receipt validation using real builds and artifact bytes."""
+"""Public release receipt validation using real builds and artifact bytes.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

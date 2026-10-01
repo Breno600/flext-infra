@@ -26,6 +26,8 @@ from tests import t
 
 
 class TestsFlextInfraCustomSurfaceNeverShadowsPublicVerbs:
+    """Tests for ``FlextInfraCustomSurfaceNeverShadowsPublicVerbs``."""
+
     _TARGET_LINE = re.compile(r"^(?P<names>[a-z][a-z0-9 _-]*):(?!=)")
 
     @staticmethod

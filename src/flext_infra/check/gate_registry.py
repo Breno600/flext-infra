@@ -1,4 +1,8 @@
-"""Explicit registry of the workspace check gates."""
+"""Explicit registry of the workspace check gates.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

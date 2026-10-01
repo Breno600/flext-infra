@@ -1,4 +1,8 @@
-"""Public behavior tests for topology-aware pyproject conformance."""
+"""Public behavior tests for topology-aware pyproject conformance.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -13,6 +17,8 @@ from tests import t, u as test_u
 
 
 class TestsFlextInfraCodegenPyprojectConform:
+    """Tests for ``FlextInfraCodegenPyprojectConform``."""
+
     @staticmethod
     def _repository(
         distribution: str,
@@ -322,6 +328,7 @@ constraint-dependencies = ["uv>=0"]
         tm.that("constraint-dependencies" not in uv_config, eq=True)
 
     def test_standalone_rejects_non_https_manifest_provenance(self) -> None:
+        """Test standalone rejects non https manifest provenance."""
         workspace = self._workspace()
         member = workspace.subprojects[0]
         declared = (
@@ -345,6 +352,7 @@ constraint-dependencies = ["uv>=0"]
         tm.fail(result, has="internal dependency manifest provenance must be HTTPS")
 
     def test_full_conformance_is_idempotent_without_uv_version_pin(self) -> None:
+        """Test full conformance is idempotent without uv version pin."""
         workspace = self._workspace()
         toolchain = config.Infra.codegen.toolchain.model_copy(
             update={"uv_link_mode": "copy"},

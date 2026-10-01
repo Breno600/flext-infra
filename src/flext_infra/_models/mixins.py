@@ -1,4 +1,8 @@
-"""Shared model mixins for flext-infra contracts and CLI payloads."""
+"""Shared model mixins for flext-infra contracts and CLI payloads.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

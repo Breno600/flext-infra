@@ -20,6 +20,8 @@ from tests import TestsFlextInfraUtilities as tu, u as test_u
 
 
 class TestsFlextInfraPyprojectConformTopologySources:
+    """Tests for ``FlextInfraPyprojectConformTopologySources``."""
+
     _ROLE = c.Infra.MakeProfile
 
     def _member_ref(self, distribution: str, path: str) -> m.Infra.RepositoryRef:
@@ -294,6 +296,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
         tm.that(not uv_sources, eq=True)
 
     def test_external_consumer_keeps_direct_git_requirement(self) -> None:
+        """Test external consumer keeps direct git requirement."""
         workspace = self._workspace(self._member_ref("flext-core", "flext-core"))
         core = workspace.subprojects[0]
         external = (
@@ -315,6 +318,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
         self._assert_direct_source(rendered, core)
 
     def test_publishable_project_keeps_catalog_git_provenance(self) -> None:
+        """Test publishable project keeps catalog git provenance."""
         workspace = self._workspace(
             self._member_ref("flext-core", "flext-core"),
             self._member_ref("flext-api", "flext-api"),

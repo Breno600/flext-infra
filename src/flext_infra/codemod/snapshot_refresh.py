@@ -1,4 +1,8 @@
-"""Explicit regeneration of the owned ast-grep rule-test snapshots."""
+"""Explicit regeneration of the owned ast-grep rule-test snapshots.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

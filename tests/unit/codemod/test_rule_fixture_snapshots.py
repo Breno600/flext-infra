@@ -1,4 +1,8 @@
-"""Rule-test snapshots change only through their explicit refresh, never in mod."""
+"""Rule-test snapshots change only through their explicit refresh, never in mod.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,8 @@
-"""Behavioral proof for generated setup submodule bootstrapping."""
+"""Behavioral proof for generated setup submodule bootstrapping.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,6 +23,8 @@ pytestmark = [pytest.mark.slow, pytest.mark.remote]
 
 
 class TestsFlextInfraCodegenSetupSubmodules:
+    """Tests for ``FlextInfraCodegenSetupSubmodules``."""
+
     @pytest.fixture
     def generated_project_template(
         self,
@@ -160,6 +166,7 @@ class TestsFlextInfraCodegenSetupSubmodules:
         tmp_path: Path,
         generated_project_template: Path,
     ) -> None:
+        """Test virgin submodule initializes only direct owner before environment."""
         nested = tmp_path / "nested"
         child = tmp_path / "child"
         self._commit_repository(nested, "nested-dev", "nested")
@@ -264,6 +271,7 @@ class TestsFlextInfraCodegenSetupSubmodules:
         tmp_path: Path,
         generated_project_template: Path,
     ) -> None:
+        """Test setup is repeatable without gitmodules."""
         project = tmp_path / "project"
         self._generated_project(project, generated_project_template)
         self._assert_setup(project)
@@ -452,6 +460,7 @@ class TestsFlextInfraCodegenSetupSubmodules:
         tmp_path: Path,
         generated_project_template: Path,
     ) -> None:
+        """Test local changes are preserved on declared branch."""
         source = tmp_path / "source"
         self._commit_repository(source, "declared-dev", "source")
         project = tmp_path / "project"
@@ -469,6 +478,7 @@ class TestsFlextInfraCodegenSetupSubmodules:
         tmp_path: Path,
         generated_project_template: Path,
     ) -> None:
+        """Test declared branch ahead of gitlink is preserved."""
         source = tmp_path / "source"
         self._commit_repository(source, "declared-dev", "source")
         project = tmp_path / "project"
@@ -492,6 +502,7 @@ class TestsFlextInfraCodegenSetupSubmodules:
         tmp_path: Path,
         generated_project_template: Path,
     ) -> None:
+        """Test unmanaged third party submodule is never mutated."""
         source = tmp_path / "third-party-source"
         self._commit_repository(source, "vendor-main", "vendor")
         project = tmp_path / "project"
@@ -520,6 +531,7 @@ class TestsFlextInfraCodegenSetupSubmodules:
         tmp_path: Path,
         generated_project_template: Path,
     ) -> None:
+        """Test same branch declaration initializes recorded gitlink."""
         source = tmp_path / "source"
         self._commit_repository(source, "main", "source")
         project = tmp_path / "project"

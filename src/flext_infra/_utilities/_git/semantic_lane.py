@@ -1,4 +1,8 @@
-"""Canonical publication lane for ``u.Infra``: produced paths to one pull request."""
+"""Canonical publication lane for ``u.Infra``: produced paths to one pull request.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,8 @@
-"""Lint snapshot support for protected edit workflows."""
+"""Lint snapshot support for protected edit workflows.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

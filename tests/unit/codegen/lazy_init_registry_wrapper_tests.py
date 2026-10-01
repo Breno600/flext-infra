@@ -1,4 +1,8 @@
-"""Public cleanup tests for superseded lazy-init sidecars."""
+"""Public cleanup tests for superseded lazy-init sidecars.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,8 @@
-"""Generated public verbs enforce the committed Mise runtime pin."""
+"""Generated public verbs enforce the committed Mise runtime pin.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -22,6 +26,7 @@ class TestsFlextInfraCodegenMakeLockContract:
     def test_conform_publication_preserves_committed_lock_graph(
         tmp_path: Path,
     ) -> None:
+        """Test conform publication preserves committed lock graph."""
         root, _ = u.Tests.render_make_environment(
             tmp_path,
             c.Infra.MakeProfile.STANDALONE,
@@ -258,6 +263,7 @@ class TestsFlextInfraCodegenMakeLockContract:
         verb: str,
         pin_content: str | None,
     ) -> None:
+        """Test frozen verbs reject an unresolved pin before effects."""
         project_root, _ = u.Tests.render_make_environment(
             tmp_path,
             c.Infra.MakeProfile.STANDALONE,
@@ -290,6 +296,7 @@ class TestsFlextInfraCodegenMakeLockContract:
         tmp_path: Path,
         verb: str,
     ) -> None:
+        """Test bootstrap and shell verbs do not require the pin."""
         project_root, _ = u.Tests.render_make_environment(
             tmp_path,
             c.Infra.MakeProfile.STANDALONE,

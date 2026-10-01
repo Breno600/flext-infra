@@ -1,4 +1,8 @@
-"""Owner-merge dispatch for governed .vscode/settings.json artifacts."""
+"""Owner-merge dispatch for governed .vscode/settings.json artifacts.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

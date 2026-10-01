@@ -1,4 +1,8 @@
-"""Tests for refactor namespace-move rewriting."""
+"""Tests for refactor namespace-move rewriting.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -55,6 +59,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test rewrite manual protocol violations uses public runtime api."""
         project_root, package_root = self._build_project(tmp_path)
         protocols_file = package_root / "protocols.py"
         source_file = package_root / "service.py"
@@ -107,6 +112,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test rewrite manual typing alias violations uses public runtime api."""
         project_root, package_root = self._build_project(tmp_path)
         typings_file = package_root / "typings.py"
         source_file = package_root / "service.py"

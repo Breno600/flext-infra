@@ -1,4 +1,8 @@
-"""Codegen pipeline stage handlers — extracted concern of FlextInfraCodegenPipeline."""
+"""Codegen pipeline stage handlers — extracted concern of FlextInfraCodegenPipeline.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

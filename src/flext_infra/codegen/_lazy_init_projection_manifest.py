@@ -1,5 +1,8 @@
 """Deterministic projection lock emitted beside the lazy-init projections.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 ``.agents/projections.lock.json`` (v1) is derived entirely from the composed
 lazy-init file plans: one entry per projected ``.agents``/``.codex`` file with
 its sha256 digest and byte length, ordered by path. Being just another plan

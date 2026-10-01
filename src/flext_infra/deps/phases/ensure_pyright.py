@@ -1,4 +1,8 @@
-"""Phase: Ensure standard Pyright configuration for strict type checking."""
+"""Phase: Ensure standard Pyright configuration for strict type checking.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

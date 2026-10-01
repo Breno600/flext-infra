@@ -1,5 +1,8 @@
 """FLEXT markdown formatting gate: prettier, owned by ``make fmt``.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Prettier is the fleet's markdown FORMATTER and rumdl stays the linter. The
 read-only side (``prettier --check``) validates inside ``make check``; the
 mutating side (``prettier --write``) is reached only through the gate's fix

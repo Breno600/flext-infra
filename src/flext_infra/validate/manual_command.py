@@ -1,5 +1,8 @@
 """Manual-command blocker (AGENTS.md `Build & Test`).
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 ``command_blocked`` — predicate flagging a bare tool invocation (ruff/pytest/git/…)
 that bypasses the ``make`` / ``python -m flext_infra`` monopoly. Deny rules are
 evaluated FIRST, per shell segment, after stripping wrappers and path components

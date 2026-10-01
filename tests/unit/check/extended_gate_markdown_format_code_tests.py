@@ -1,4 +1,8 @@
-"""Public markdown-format (prettier) and markdown-code (embedded ruff) gates."""
+"""Public markdown-format (prettier) and markdown-code (embedded ruff) gates.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -42,6 +46,7 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
     WRAPPED_PROSE_HEAD = "# Test\n\nLorem ipsum dolor sit amet consectetur"
 
     def test_format_gate_reports_unformatted_markdown(self, tmp_path: Path) -> None:
+        """Test format gate reports unformatted markdown."""
         project_dir = u.Tests.mk_project(tmp_path, "markdown-format-project")
         (project_dir / "README.md").write_text(self.LONG_PROSE, encoding="utf-8")
         (project_dir / c.Infra.PRETTIER_CONFIG_FILENAME).write_text(
@@ -122,6 +127,7 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         tm.that("make setup" in result.issues[0].message, eq=True)
 
     def test_code_gate_clean_block_passes(self, tmp_path: Path) -> None:
+        """Test code gate clean block passes."""
         project_dir = u.Tests.mk_project(tmp_path, "markdown-code-clean")
         (project_dir / "README.md").write_text(self.FORMATTED, encoding="utf-8")
 

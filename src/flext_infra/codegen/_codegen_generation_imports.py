@@ -1,4 +1,8 @@
-"""Import rendering helpers for lazy-init generation."""
+"""Import rendering helpers for lazy-init generation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,8 @@
-"""Public API facade for flext-infra."""
+"""Public API facade for flext-infra.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

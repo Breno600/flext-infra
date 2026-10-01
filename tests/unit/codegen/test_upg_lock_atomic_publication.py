@@ -1,5 +1,8 @@
 """``make upg`` publishes uv.lock atomically: an interrupted run leaves it intact.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 uv truncates and rewrites ``uv.lock`` in place, so a run killed while uv
 wrote it left a partial lock behind (flext-idihq). The upgrade lifecycle
 resolves in a scratch mirror and publishes by one rename, so the committed lock

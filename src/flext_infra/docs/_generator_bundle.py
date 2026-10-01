@@ -1,4 +1,8 @@
-"""Immutable source-bundle preparation for the documentation generator."""
+"""Immutable source-bundle preparation for the documentation generator.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,8 @@
-"""Render specification models for generated workflow and env surfaces."""
+"""Render specification models for generated workflow and env surfaces.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

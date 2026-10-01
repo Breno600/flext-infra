@@ -1,4 +1,8 @@
-"""Rope-only object inventory helpers for workspace-wide census."""
+"""Rope-only object inventory helpers for workspace-wide census.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

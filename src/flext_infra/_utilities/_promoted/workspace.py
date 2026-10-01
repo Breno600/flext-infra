@@ -1,4 +1,8 @@
-"""Promoted-command workspace boundary: owner root, interpreter, and guard."""
+"""Promoted-command workspace boundary: owner root, interpreter, and guard.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

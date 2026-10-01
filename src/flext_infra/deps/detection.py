@@ -1,4 +1,8 @@
-"""Dependency detection and analysis service for deptry, pip-check, and typing stubs."""
+"""Dependency detection and analysis service for deptry, pip-check, and typing stubs.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,8 @@
-"""Deterministic plan collection through existing documentation file plans."""
+"""Deterministic plan collection through existing documentation file plans.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

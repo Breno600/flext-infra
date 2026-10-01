@@ -1,4 +1,8 @@
-"""Tests for the declarative project-layout engine (flext-0wuz, epic flext-hzox)."""
+"""Tests for the declarative project-layout engine (flext-0wuz, epic flext-hzox).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

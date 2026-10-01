@@ -1,4 +1,8 @@
-"""Runtime census selection and blocking behavior."""
+"""Runtime census selection and blocking behavior.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -96,6 +100,7 @@ class TestRuntimeCensusSelection:
 
     @staticmethod
     def test_empty_checkout_fails_the_gate(tmp_path: Path) -> None:
+        """Test empty checkout fails the gate."""
         context = m.Infra.GateContext(
             repository_root=tmp_path,
             reports_dir=tmp_path / ".reports",

@@ -1,5 +1,8 @@
 """Detected repository identity and integration-branch resolution utilities.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 flext-infra ships no provider registry: every repository's provider identity
 is detected from that repository's own declarations (its workspace manifest,
 its live Git origin, and its declared dependency sources), and every branch

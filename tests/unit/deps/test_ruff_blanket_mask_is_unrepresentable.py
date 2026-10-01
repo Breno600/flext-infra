@@ -22,6 +22,8 @@ from flext_infra import config, m, t
 
 
 class TestsFlextInfraRuffBlanketMaskIsUnrepresentable:
+    """Tests for ``FlextInfraRuffBlanketMaskIsUnrepresentable``."""
+
     @staticmethod
     def _lint_policy(per_file_ignores: t.JsonDict) -> t.JsonDict:
         """Return the shipped fleet lint policy with one replaced exemption map."""

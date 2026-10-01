@@ -1,4 +1,8 @@
-"""Resolve ast-grep fixture owners and detect snapshot residue."""
+"""Resolve ast-grep fixture owners and detect snapshot residue.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
