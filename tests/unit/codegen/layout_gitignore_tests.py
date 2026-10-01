@@ -74,7 +74,9 @@ class TestsFlextInfraCodegenLayoutGitignore:
         tm.that(rendered.value, has="settings.json")
         tm.that(rendered.value, has=f"{archive_root()}/")
 
-    def test_rendered_gitignore_keeps_backup_named_python_sources(self, tmp_path: Path) -> None:
+    def test_rendered_gitignore_keeps_backup_named_python_sources(
+        self, tmp_path: Path
+    ) -> None:
         """A backup module is source code even when its name contains backup."""
         rendered = FlextInfraCodegenConform.render_project_gitignore(
             config.Infra.codegen,

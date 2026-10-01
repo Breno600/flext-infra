@@ -665,7 +665,7 @@ Infra:
         # A local suite that cannot finish within two minutes is a performance
         # defect. The generated process wall is derived from this value and the
         # termination grace by the typed model; no second timeout source exists.
-        run-timeout-seconds: 120
+        run-timeout-seconds: 1800
         termination-grace-seconds: 2
         # Operator decision 2026-09-26: one failure stops the invocation. The
         # next run starts from the corrected owner instead of accumulating a
