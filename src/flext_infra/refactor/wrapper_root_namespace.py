@@ -59,13 +59,6 @@ class FlextInfraWrapperRootNamespaceRefactor(
         )
         if write_failure is not None:
             return r[t.JsonPayload].fail(write_failure)
-        effective_dry_run: bool = self.effective_dry_run
-        if not effective_dry_run and accumulator.wrapper_candidates:
-            for wrapper in self._WRAPPER_PACKAGES:
-                u.Infra.rewrite_import_violations(
-                    py_files=accumulator.wrapper_candidates,
-                    project_package=wrapper,
-                )
         report_payload = self._build_report_payload(len(py_files), accumulator)
         if self.check_only and accumulator.changed_files:
             return r[t.JsonPayload].fail(

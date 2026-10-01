@@ -39,7 +39,6 @@ from ._utilities.managed_conflicts import FlextInfraUtilitiesManagedConflicts
 from ._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
 from ._utilities.namespace_analysis import FlextInfraUtilitiesRefactorNamespaceFlext
 from ._utilities.namespace_common import FlextInfraUtilitiesRefactorNamespaceCommon
-from ._utilities.namespace_facades import FlextInfraUtilitiesRefactorNamespaceFacades
 from ._utilities.namespace_moves import FlextInfraUtilitiesRefactorNamespaceMoves
 from ._utilities.network import FlextInfraUtilitiesNetwork
 from ._utilities.private_import_ancestry import FlextInfraUtilitiesPrivateImportAncestry
@@ -145,7 +144,6 @@ class FlextInfraUtilities(FlextCliUtilities):
         FlextInfraUtilitiesRefactorCensus,
         FlextInfraUtilitiesRefactorNamespaceFlext,
         FlextInfraUtilitiesRefactorNamespaceCommon,
-        FlextInfraUtilitiesRefactorNamespaceFacades,
         FlextInfraUtilitiesRefactorNamespaceMoves,
         FlextInfraUtilitiesRelease,
         FlextInfraUtilitiesRepository,

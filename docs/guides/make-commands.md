@@ -102,7 +102,6 @@ read-only — no verb repeats another verb's work across the canonical sequence
 | `markdown` — rumdl                | `rumdl check`                      | —                       | `rumdl check --fix`                        |
 | `markdown-format` — prettier      | `prettier --check`                 | `prettier --write`      | —                                          |
 | `markdown-code` — ruff (embedded) | format verdict on parseable blocks | —                       | one format pass, clean round-trips spliced |
-| `canonical-alias`                 | read-only scan                     | —                       | declared import rewrite                    |
 | `smells` — qlty                   | read-only scan                     | —                       | —                                          |
 
 `make fmt` never runs a lint pass and `make fix` never runs the format-only gates: each

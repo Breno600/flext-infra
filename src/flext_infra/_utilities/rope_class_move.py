@@ -126,25 +126,6 @@ class FlextInfraUtilitiesRopeClassMove:
         return target_file, mover
 
     @staticmethod
-    def class_family(class_info: m.Infra.ClassInfo) -> str:
-        """Derive the canonical FLEXT family from one Rope class fact."""
-        terminal_bases = {
-            base_name.rsplit(".", maxsplit=1)[-1] for base_name in class_info.bases
-        }
-        if terminal_bases & c.Infra.PLACEMENT_PYDANTIC_BASE_NAMES:
-            return "m"
-        if terminal_bases & c.Infra.PLACEMENT_PROTOCOL_BASE_NAMES:
-            return "p"
-        if terminal_bases & c.Infra.PLACEMENT_ENUM_BASE_NAMES:
-            return "c"
-        if any(
-            class_info.name.endswith(suffix)
-            for suffix in c.Infra.PLACEMENT_UTILITY_NAME_SUFFIXES
-        ):
-            return "u"
-        return ""
-
-    @staticmethod
     def class_module_stem(class_name: str) -> str:
         """Derive one module stem from the core CamelCase boundary authority."""
         return c.CAMEL_TO_SNAKE_RE.sub(r"\1_\2", class_name).lower()

@@ -171,7 +171,6 @@ if TYPE_CHECKING:
     from .iteration import FlextInfraUtilitiesIteration
     from .iteration_directory import FlextInfraUtilitiesIterationDirectory
     from .iteration_matching import FlextInfraUtilitiesIterationMatching
-    from .iteration_project import FlextInfraUtilitiesIterationProject
     from .iteration_workspace import FlextInfraUtilitiesIterationWorkspace
     from .log_parser import FlextInfraUtilitiesLogParser
     from .managed_conflicts import FlextInfraUtilitiesManagedConflicts
@@ -179,7 +178,6 @@ if TYPE_CHECKING:
     from .namespace_analysis import FlextInfraUtilitiesRefactorNamespaceFlext
     from .namespace_common import FlextInfraUtilitiesRefactorNamespaceCommon
     from .namespace_config import FlextInfraUtilitiesNamespaceConfig
-    from .namespace_facades import FlextInfraUtilitiesRefactorNamespaceFacades
     from .namespace_moves import FlextInfraUtilitiesRefactorNamespaceMoves
     from .network import FlextInfraUtilitiesNetwork
     from .private_import_ancestry import FlextInfraUtilitiesPrivateImportAncestry
@@ -311,7 +309,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesIteration",
     "FlextInfraUtilitiesIterationDirectory",
     "FlextInfraUtilitiesIterationMatching",
-    "FlextInfraUtilitiesIterationProject",
     "FlextInfraUtilitiesIterationWorkspace",
     "FlextInfraUtilitiesLogParser",
     "FlextInfraUtilitiesManagedConflicts",
@@ -351,7 +348,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesRefactorCensus",
     "FlextInfraUtilitiesRefactorDiscovery",
     "FlextInfraUtilitiesRefactorNamespaceCommon",
-    "FlextInfraUtilitiesRefactorNamespaceFacades",
     "FlextInfraUtilitiesRefactorNamespaceFlext",
     "FlextInfraUtilitiesRefactorNamespaceMoves",
     "FlextInfraUtilitiesRelease",
@@ -617,7 +613,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".iteration": ("FlextInfraUtilitiesIteration",),
             ".iteration_directory": ("FlextInfraUtilitiesIterationDirectory",),
             ".iteration_matching": ("FlextInfraUtilitiesIterationMatching",),
-            ".iteration_project": ("FlextInfraUtilitiesIterationProject",),
             ".iteration_workspace": ("FlextInfraUtilitiesIterationWorkspace",),
             ".log_parser": ("FlextInfraUtilitiesLogParser",),
             ".managed_conflicts": ("FlextInfraUtilitiesManagedConflicts",),
@@ -625,7 +620,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".namespace_analysis": ("FlextInfraUtilitiesRefactorNamespaceFlext",),
             ".namespace_common": ("FlextInfraUtilitiesRefactorNamespaceCommon",),
             ".namespace_config": ("FlextInfraUtilitiesNamespaceConfig",),
-            ".namespace_facades": ("FlextInfraUtilitiesRefactorNamespaceFacades",),
             ".namespace_moves": ("FlextInfraUtilitiesRefactorNamespaceMoves",),
             ".network": ("FlextInfraUtilitiesNetwork",),
             ".private_import_ancestry": ("FlextInfraUtilitiesPrivateImportAncestry",),

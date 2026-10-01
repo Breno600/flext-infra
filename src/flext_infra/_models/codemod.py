@@ -92,6 +92,13 @@ class FlextInfraModelsCodemod:
                 ),
             ),
         ] = MappingProxyType({})
+        transformed: Annotated[
+            t.JsonMapping,
+            m.Field(
+                validation_alias=m.AliasPath("metaVariables", "transformed"),
+                description="Metavariables the rule derived through transform",
+            ),
+        ] = MappingProxyType({})
 
     class AstGrepReport(m.RootModel[tuple[AstGrepDiagnostic, ...]]):
         """Complete ``ast-grep scan --json=compact`` array; malformed input raises."""

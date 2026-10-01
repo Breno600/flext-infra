@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING
 
 from flext_cli import cli
 
@@ -10,19 +10,14 @@ from flext_core import r
 from flext_infra import m, u
 
 from ._namespace_enforcer_project import FlextInfraNamespaceEnforcerProjectMixin
-from .namespace_enforcer_phases import FlextInfraNamespaceEnforcerPhasesMixin
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
     from pathlib import Path
 
     from flext_infra import p, t
 
 
-class FlextInfraNamespaceEnforcer(
-    FlextInfraNamespaceEnforcerPhasesMixin,
-    FlextInfraNamespaceEnforcerProjectMixin,
-):
+class FlextInfraNamespaceEnforcer(FlextInfraNamespaceEnforcerProjectMixin):
     """Orchestrate namespace enforcement across a workspace."""
 
     def __init__(self, *, repository_root: Path) -> None:
@@ -33,7 +28,6 @@ class FlextInfraNamespaceEnforcer(
             self._repository_root,
         )
 
-    @override
     def enforce(
         self,
         *,
@@ -64,7 +58,6 @@ class FlextInfraNamespaceEnforcer(
             projects=project_reports,
         )
 
-    @override
     def _resolve_project_roots(
         self,
         *,
@@ -84,31 +77,6 @@ class FlextInfraNamespaceEnforcer(
             if u.Infra.namespace_enabled(project.path)
         ]
 
-    @override
-    def _detect_and_apply[V](
-        self,
-        *,
-        py_files: t.SequenceOf[Path],
-        detect_fn: Callable[[Path], t.SequenceOf[V]],
-        rewrite_fn: Callable[[t.MutableSequenceOf[V]], None] | None,
-        apply: bool,
-    ) -> t.MutableSequenceOf[V]:
-        """Run detect -> optional apply -> re-detect cycle for a violation type.
-
-        Re-detection only runs when apply=True AND a real rewrite_fn is provided.
-        """
-        violations: t.MutableSequenceOf[V] = []
-        for py_file in py_files:
-            violations.extend(detect_fn(py_file))
-        if not (apply and violations and rewrite_fn is not None):
-            return violations
-        rewrite_fn(violations)
-        self._rope_project.validate(self._rope_project.root)
-        post_violations: t.MutableSequenceOf[V] = []
-        for py_file in py_files:
-            post_violations.extend(detect_fn(py_file))
-        return post_violations
-
     @staticmethod
     def render_text(report: m.Infra.WorkspaceEnforcementReport) -> str:
         """Render a workspace enforcement report as plain text."""
@@ -118,19 +86,7 @@ class FlextInfraNamespaceEnforcer(
             f"Workspace: {report.workspace}",
             f"Projects: {len(report.projects)}",
             f"Violations: {'YES' if report.has_violations else 'NO'}",
-            f"Missing facades: {sum(1 for project in projects for facade in project.facade_statuses if not facade.exists)}",
-            f"Loose objects: {sum(len(project.loose_objects) for project in projects)}",
-            f"Import violations: {sum(len(project.import_violations) for project in projects)}",
-            f"Namespace source violations: {sum(len(project.namespace_source_violations) for project in projects)}",
-            f"Internal import violations: {sum(len(project.internal_import_violations) for project in projects)}",
-            f"Private import bypass violations: {sum(len(project.private_import_bypass_violations) for project in projects)}",
-            f"Cyclic imports: {sum(len(project.cyclic_imports) for project in projects)}",
-            f"Runtime alias violations: {sum(len(project.runtime_alias_violations) for project in projects)}",
             f"Relocation findings: {sum(project.relocation_findings for project in projects)}",
-            f"Compatibility alias violations: {sum(len(project.compatibility_alias_violations) for project in projects)}",
-            f"Foreign canonical alias violations: {sum(len(project.foreign_canonical_alias_violations) for project in projects)}",
-            f"Class placement violations: {sum(len(project.class_placement_violations) for project in projects)}",
-            f"Parse failures: {sum(len(project.parse_failures) for project in projects)}",
             f"Files scanned: {sum(project.files_scanned for project in projects)}",
         ]
         return "\n".join(lines)

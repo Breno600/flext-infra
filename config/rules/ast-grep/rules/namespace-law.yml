@@ -1,0 +1,548 @@
+# FLEXT namespace law as rule data (enforcement catalog ENFORCE-001, -002,
+# -003, -007, -011, -014, -080, -099).
+#
+# Each document matches one file's syntax; what the project means by a name
+# is read from its own sources of truth through metadata.context, evaluated
+# by the engine (see the context predicates in the rule plan): the own
+# package (pyproject), the runtime closure (installed distributions), the
+# runtime aliases a package publishes (its generated lazy exports), the
+# aliases the own package binds (its modules' __all__), a module's own
+# __all__, and the facade family a module belongs to (__all__ of the module
+# or of its family package's facade, over the tooling import-layer order).
+# No package, alias or file name is listed here.
+
+# ENFORCE-001: every symbol lives inside the module's facade class. A module
+# body holds that one class, its alias binding, __all__ and imports; a
+# function other than the executable `main` entry point, a value binding that
+# is not an alias of a name, and any further class are loose objects.
+# Typing declarations are ban-manual-typing-alias-outside-typings's.
+id: ban-loose-module-object
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "**/src/**/*.py"
+ignores:
+  - "**/tests/**"
+  - "**/__init__.py"
+  - "**/__main__.py"
+  - "**/__version__.py"
+  - "**/conftest.py"
+  - "**/settings.py"
+  - "**/_settings.py"
+  - "**/typings.py"
+  - "**/_typings.py"
+  - "**/_exports.py"
+rule:
+  any:
+    - all:
+        - kind: function_definition
+        - has:
+            field: name
+            pattern: $NAME
+        - not:
+            has:
+              field: name
+              regex: "^main$"
+        - any:
+            - inside:
+                kind: module
+            - inside:
+                kind: decorated_definition
+                inside:
+                  kind: module
+    - all:
+        - kind: expression_statement
+        - inside:
+            kind: module
+        - has:
+            kind: assignment
+            all:
+              - has:
+                  field: left
+                  kind: identifier
+                  pattern: $NAME
+              - not:
+                  has:
+                    field: left
+                    regex: "^__\\w+__$"
+              - has:
+                  field: right
+                  pattern: $_
+                  not:
+                    kind: identifier
+              - not:
+                  has:
+                    field: type
+                    regex: "^(?:[A-Za-z_][A-Za-z0-9_]*\\.)*TypeAlias$"
+              - not:
+                  has:
+                    field: right
+                    kind: call
+                    has:
+                      field: function
+                      regex: "^(?:[A-Za-z_][A-Za-z0-9_]*\\.)*(?:TypeVar|ParamSpec|TypeVarTuple|NewType)$"
+    - all:
+        - kind: class_definition
+        - has:
+            field: name
+            pattern: $NAME
+        - any:
+            - all:
+                - inside:
+                    kind: module
+                - follows:
+                    stopBy: end
+                    any:
+                      - kind: class_definition
+                      - kind: decorated_definition
+                        has:
+                          field: definition
+                          kind: class_definition
+            - inside:
+                kind: decorated_definition
+                inside:
+                  kind: module
+                follows:
+                  stopBy: end
+                  any:
+                    - kind: class_definition
+                    - kind: decorated_definition
+                      has:
+                        field: definition
+                        kind: class_definition
+message: >-
+  Loose object at module level: nest `$NAME` inside the module's single facade
+  class (only that class, its alias, __all__, imports and a `main` entry
+  point live at module level).
+---
+# ENFORCE-002: a runtime alias is imported from the package root, never from
+# one of its modules (`from pkg.models import m` binds the module's own
+# rebinding, which type checkers resolve as Any). Private module paths are
+# ban-private-import's. The relocation rebinds the name from the root.
+id: ban-noncanonical-alias-import
+language: python
+severity: error
+files:
+  - "**/*.py"
+metadata:
+  relocation: package-root-import
+  context:
+    MODULE:
+      is: facade-package
+    NAME:
+      is: runtime-alias
+      of: MODULE
+rule:
+  kind: dotted_name
+  pattern: $NAME
+  not:
+    inside:
+      kind: import_from_statement
+      field: module_name
+  inside:
+    kind: import_from_statement
+    has:
+      field: module_name
+      kind: dotted_name
+      pattern: $MODULE
+      regex: "\\."
+      not:
+        regex: "\\._"
+message: >-
+  Runtime alias `$NAME` imported from module `$MODULE`: import it from the
+  package root.
+---
+# ENFORCE-003: a module-level import binds an alias the own package defines
+# from another package. The family implementation packages, base and
+# settings modules extend the parent facades and import their aliases by
+# design; the facade modules themselves are matched by file family. The
+# relocation rebinds the name from the own package.
+id: ban-foreign-namespace-source
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/__init__.py"
+  - "**/_constants/**"
+  - "**/_models/**"
+  - "**/_protocols/**"
+  - "**/_typings/**"
+  - "**/_utilities/**"
+  - "**/base.py"
+  - "**/_base.py"
+  - "**/settings.py"
+  - "**/_settings.py"
+metadata:
+  relocation: own-package-import
+  context:
+    MODULE:
+      - not: own-package
+      - is: facade-package
+    NAME:
+      - is: local-alias
+      - not: file-family
+rule:
+  kind: dotted_name
+  pattern: $NAME
+  not:
+    inside:
+      kind: import_from_statement
+      field: module_name
+  inside:
+    kind: import_from_statement
+    inside:
+      kind: module
+    has:
+      field: module_name
+      kind: dotted_name
+      pattern: $MODULE
+      not:
+        regex: "\\."
+message: >-
+  Alias `$NAME` imported from `$MODULE`, a package that does not own this
+  project's `$NAME`: import it from the own package.
+---
+# ENFORCE-080: the same foreign source as ENFORCE-003, bound by an import
+# nested in a function or class body (annotation-only TYPE_CHECKING imports
+# never run).
+id: ban-foreign-canonical-alias-import
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/__init__.py"
+  - "**/_constants/**"
+  - "**/_models/**"
+  - "**/_protocols/**"
+  - "**/_typings/**"
+  - "**/_utilities/**"
+  - "**/base.py"
+  - "**/_base.py"
+  - "**/settings.py"
+  - "**/_settings.py"
+metadata:
+  relocation: own-package-import
+  context:
+    MODULE:
+      - not: own-package
+      - is: facade-package
+    NAME:
+      - is: local-alias
+      - not: file-family
+rule:
+  kind: dotted_name
+  pattern: $NAME
+  not:
+    inside:
+      kind: import_from_statement
+      field: module_name
+  inside:
+    kind: import_from_statement
+    not:
+      inside:
+        kind: module
+    has:
+      field: module_name
+      kind: dotted_name
+      pattern: $MODULE
+      not:
+        regex: "\\."
+  all:
+    - not:
+        matches: inside-type-checking-guard
+message: >-
+  Alias `$NAME` imported from `$MODULE` inside a body: the own package
+  re-exports `$NAME`; import it from there.
+---
+# ENFORCE-099: a consumer imports another facade package through its public
+# root only: a module path below the root is the owner's layout. Runtime
+# aliases are ENFORCE-002's and private paths ban-private-import's; a root
+# import of a name the root does not declare in __all__ is the type
+# checkers' private-import-usage finding.
+id: ban-consumer-submodule-import
+language: python
+severity: error
+files:
+  - "**/*.py"
+metadata:
+  context:
+    MODULE:
+      - not: own-package
+      - is: facade-package
+    NAME:
+      not: runtime-alias
+      of: MODULE
+rule:
+  any:
+    - kind: dotted_name
+      pattern: $NAME
+      not:
+        inside:
+          kind: import_from_statement
+          field: module_name
+      any:
+        - inside:
+            kind: import_from_statement
+            has:
+              field: module_name
+              kind: dotted_name
+              pattern: $MODULE
+              regex: "\\."
+              not:
+                regex: "\\._"
+        - inside:
+            kind: aliased_import
+            field: name
+            inside:
+              kind: import_from_statement
+              has:
+                field: module_name
+                kind: dotted_name
+                pattern: $MODULE
+                regex: "\\."
+                not:
+                  regex: "\\._"
+    - kind: dotted_name
+      pattern: $MODULE
+      regex: "\\."
+      not:
+        regex: "\\._"
+      any:
+        - inside:
+            kind: import_statement
+        - inside:
+            kind: aliased_import
+            field: name
+            inside:
+              kind: import_statement
+      has:
+        nthChild: 1
+        kind: identifier
+        pattern: $NAME
+message: >-
+  `$MODULE` is a module path below a facade package root: import the names the
+  root publishes, from the root.
+---
+# ENFORCE-007: a runtime alias is bound only by the module that declares it
+# in __all__, exactly once, to the facade class that module defines. Each
+# branch captures its own variable, so each carries its own context. A name
+# declared in __all__ and never bound is the type checkers'
+# unsupported-dunder-all finding.
+id: ban-runtime-alias-rebind
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/__init__.py"
+metadata:
+  context:
+    UNDECLARED:
+      - is: runtime-alias
+      - not: module-export
+    REBOUND:
+      is: runtime-alias
+    ALIAS:
+      is: runtime-alias
+rule:
+  any:
+    # Bound by a module that does not declare it.
+    - all:
+        - kind: expression_statement
+        - inside:
+            kind: module
+        - has:
+            kind: assignment
+            has:
+              field: left
+              kind: identifier
+              pattern: $UNDECLARED
+    # Bound twice.
+    - all:
+        - kind: expression_statement
+        - inside:
+            kind: module
+        - has:
+            kind: assignment
+            has:
+              field: left
+              kind: identifier
+              pattern: $REBOUND
+        - follows:
+            stopBy: end
+            kind: expression_statement
+            has:
+              kind: assignment
+              has:
+                field: left
+                pattern: $REBOUND
+    # Bound to a name that is not a class this module defines.
+    - all:
+        - kind: expression_statement
+        - inside:
+            kind: module
+        - has:
+            kind: assignment
+            all:
+              - has:
+                  field: left
+                  kind: identifier
+                  pattern: $ALIAS
+              - has:
+                  field: right
+                  pattern: $TARGET
+        - not:
+            inside:
+              kind: module
+              has:
+                kind: class_definition
+                has:
+                  field: name
+                  pattern: $TARGET
+        - not:
+            inside:
+              kind: module
+              has:
+                kind: decorated_definition
+                has:
+                  field: definition
+                  kind: class_definition
+                  has:
+                    field: name
+                    pattern: $TARGET
+# A runtime alias is a public identifier; dunders are module protocol.
+constraints:
+  UNDECLARED:
+    regex: "^[^_]"
+  REBOUND:
+    regex: "^[^_]"
+  ALIAS:
+    regex: "^[^_]"
+message: >-
+  Runtime alias bound outside its owner: the module that declares it in
+  __all__ binds it once, to the facade class it defines.
+---
+# ENFORCE-011: a class lives in the facade family its kind belongs to: a
+# class extending a model preset in the models family, an enumeration in
+# the constants family, a utilities class in the utilities family. The
+# family letter is derived from the declaration and compared with the
+# family the module belongs to. Protocol classes are
+# ban-manual-protocol-outside-protocols's.
+id: ban-class-wrong-facade-layer
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/__init__.py"
+  - "**/conftest.py"
+  - "**/tests/**"
+metadata:
+  relocation: facade-class
+  context:
+    FAMILY:
+      not: file-family
+rule:
+  kind: class_definition
+  has:
+    field: name
+    pattern: $NAME
+  all:
+    - any:
+        - inside:
+            kind: module
+        - inside:
+            kind: decorated_definition
+            inside:
+              kind: module
+  any:
+    - has:
+        field: superclasses
+        has:
+          pattern: $KIND
+          any:
+            - kind: attribute
+              regex: "^m\\.\\w+$"
+            - kind: identifier
+              regex: "^(?:Str|Int)?Enum$"
+    - has:
+        field: name
+        pattern: $KIND
+        regex: "Utilities$"
+transform:
+  ENUM:
+    replace:
+      source: $KIND
+      replace: "^(?:Str|Int)?Enum$"
+      by: c
+  MODEL:
+    replace:
+      source: $ENUM
+      replace: "^m\\.\\w+$"
+      by: m
+  FAMILY:
+    replace:
+      source: $MODEL
+      replace: "^\\w+Utilities$"
+      by: u
+message: >-
+  Class `$NAME` belongs to the `$FAMILY` facade family; declare it in that
+  family's module or package.
+---
+# ENFORCE-014: a facade package publishes every canonical family through its
+# generated lazy exports.
+id: require-canonical-facade-family
+language: python
+severity: error
+files:
+  - "src/*/__init__.py"
+rule:
+  kind: module
+  has:
+    stopBy: end
+    kind: assignment
+    has:
+      field: left
+      regex: "^_LAZY_IMPORTS$"
+  any:
+    - not:
+        has:
+          stopBy: end
+          kind: pair
+          has:
+            field: key
+            regex: "^[\"']c[\"']$"
+    - not:
+        has:
+          stopBy: end
+          kind: pair
+          has:
+            field: key
+            regex: "^[\"']t[\"']$"
+    - not:
+        has:
+          stopBy: end
+          kind: pair
+          has:
+            field: key
+            regex: "^[\"']p[\"']$"
+    - not:
+        has:
+          stopBy: end
+          kind: pair
+          has:
+            field: key
+            regex: "^[\"']m[\"']$"
+    - not:
+        has:
+          stopBy: end
+          kind: pair
+          has:
+            field: key
+            regex: "^[\"']u[\"']$"
+message: >-
+  The package does not publish every canonical facade family (c, t, p, m, u):
+  add the missing family module and regenerate the package exports.
