@@ -386,6 +386,20 @@ class FlextInfraConfigModelsContexts:
             t.StrSequence,
             m.Field(description="Validated individually declared data files"),
         ]
+        packaged_data_excludes: Annotated[
+            t.StrSequence,
+            m.Field(
+                default=(),
+                description="Validated files omitted from declared data directories",
+            ),
+        ]
+        docs_audit: Annotated[
+            FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+            m.Field(
+                default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+                description="Repository-owned documentation audit declarations",
+            ),
+        ]
         class_stem: Annotated[
             t.NonEmptyStr,
             m.Field(description="Public facade class stem"),

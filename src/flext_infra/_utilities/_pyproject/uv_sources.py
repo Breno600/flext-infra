@@ -93,6 +93,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
         document: t.Cli.TomlDocument,
         *,
         resolution: m.Infra.UvResolutionSpec,
+        candidate_sources: t.StrMapping,
     ) -> p.Result[bool]:
         """Render the conform-owned ``[tool.uv]`` keys and drop workspace sources.
 
@@ -107,7 +108,21 @@ class FlextInfraUtilitiesPyprojectUvSources(
             uv = u.Cli.toml_ensure_table(tool, "uv")
         # uv.lock, written only by `make upg`, owns every resolved revision:
         # no override may pin one beside it.
-        u.Cli.toml_remove_key_if_present(uv, "override-dependencies")
+        # A declared candidate commit replaces every direct and transitive
+        # requirement for that distribution during staging. The candidate
+        # manifest owns this temporary pin; the committed lock owns normal
+        # resolutions when no candidate is declared (flext-oe420).
+        if candidate_sources:
+            u.Cli.toml_sync_string_list(
+                uv,
+                "override-dependencies",
+                [
+                    f"{name} @ {source}"
+                    for name, source in sorted(candidate_sources.items())
+                ],
+            )
+        else:
+            u.Cli.toml_remove_key_if_present(uv, "override-dependencies")
         u.Cli.toml_remove_key_if_present(uv, "required-version")
         # Constraints are SSOT-rendered: the declared config value is the only
         # source, so a removed declaration exterminates the key everywhere and

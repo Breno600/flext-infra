@@ -261,6 +261,10 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             t.StrTuple,
             m.Field(description="Repository-declared relative data paths to ship"),
         ] = ()
+        packaged_data_excludes: Annotated[
+            t.StrTuple,
+            m.Field(description="Repository-declared relative data paths to exclude"),
+        ] = ()
         planned_data_files: Annotated[
             t.StrTuple,
             m.Field(

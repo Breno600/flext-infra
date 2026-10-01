@@ -155,6 +155,12 @@ class FlextInfraConfigModelsMake:
                 ),
             ),
         ]
+        overview_preview_limits: Annotated[
+            Mapping[t.NonEmptyStr, int],
+            m.Field(
+                description="Per-section preview counts for generated API overview pages"
+            ),
+        ]
         mutable_actions: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(min_length=1, description="Docs actions that mutate"),

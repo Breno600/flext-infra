@@ -185,7 +185,7 @@ class FlextInfraEnsureRuffConfigPhase:
             return (path.parent / directory).is_dir() or (directory in generated_roots)
 
         existing_root = tuple(d for d in ruff_cfg.src if _present(d))
-        excluded_roots = self._analysis_exclusion_root_set(inputs.path.parent)
+        excluded_roots = self._analysis_exclusion_root_set(path.parent)
         existing_namespace_packages = tuple(
             d for d in ruff_cfg.namespace_packages if d not in excluded_roots
         )
@@ -300,7 +300,6 @@ class FlextInfraEnsureRuffConfigPhase:
                             toml.RemoveOp(key=pattern)
                             for pattern in facts.stale_patterns
                         ),
-                        *(toml.RemoveOp(key=pattern) for pattern in stale_patterns),
                     ),
                 ),
             ),
@@ -312,6 +311,7 @@ class FlextInfraEnsureRuffConfigPhase:
         *,
         path: Path,
         generated_python_roots: t.StrSequence = (),
+        analysis_exclusions: t.StrSequence | None = None,
     ) -> t.StrSequence:
         """Apply canonical Ruff settings directly to one normalized payload."""
         effective_ignores = self.compose_per_file_ignores(

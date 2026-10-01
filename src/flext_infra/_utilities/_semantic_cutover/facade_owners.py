@@ -111,7 +111,7 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         package = module if is_package else module.rpartition(".")[0]
         target: t.Pair[str, str] | None = None
         declared = False
-        lazy = cls._facade_lazy_bindings(source, module)
+        lazy = dict(cls._facade_lazy_bindings(source, module))
         for node in cls._facade_module_statements(source, module):
             if isinstance(node, ast.AnnAssign) and node.value is None:
                 # An annotation without a value does not rebind an existing name.
