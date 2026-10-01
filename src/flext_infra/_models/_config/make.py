@@ -219,7 +219,16 @@ class FlextInfraConfigModelsMake:
 
         @u.model_validator(mode="after")
         def _validate_api_modules(self) -> Self:
-            """Reject duplicate or non-importable API module declarations."""
+            """Reject duplicate or non-importable API module declarations.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If docs api_modules must not be empty; or if docs
+                    api_modules must be unique; or if docs api module is not importable.
+
+            """
             for distribution, modules in self.api_modules.items():
                 if not modules:
                     msg = f"docs api_modules must not be empty: {distribution}"
