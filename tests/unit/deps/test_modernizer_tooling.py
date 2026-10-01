@@ -120,9 +120,7 @@ class TestsFlextInfraDepsModernizerTooling:
         tm.that(
             frozenset(u.Tests.toml_strings(ruff["src"])),
             eq=frozenset(
-                root
-                for root in ruff_policy.src
-                if (project_dir / root).is_dir()
+                root for root in ruff_policy.src if (project_dir / root).is_dir()
             ),
         )
         tm.that(
