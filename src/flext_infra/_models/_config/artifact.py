@@ -154,10 +154,11 @@ class FlextInfraConfigModelsArtifact:
         dependabot_cooldown_default_days: Annotated[
             int,
             m.Field(
-                ge=0,
+                ge=7,
                 description=(
                     "Dependabot cooldown (default-days) for every distribution "
-                    "absent from dependabot_cooldown_days"
+                    "absent from dependabot_cooldown_days; the supply-chain "
+                    "policy requires a rolling delay of at least seven days"
                 ),
             ),
         ]

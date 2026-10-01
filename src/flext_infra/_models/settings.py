@@ -101,20 +101,20 @@ class FlextInfraSettingsModels:
                 description="Make-dispatch WHAT verb for promoted commands.",
             ),
         ]
-        cosmos_command_dispatched: Annotated[
+        flext_command_dispatched: Annotated[
             str | None,
             m.Field(
                 default=None,
-                validation_alias="COSMOS_COMMAND_DISPATCHED",
-                description="Gas City command-dispatch marker for promoted verbs.",
+                validation_alias="FLEXT_COMMAND_DISPATCHED",
+                description="Dispatcher marker exported to a promoted command.",
             ),
         ]
-        cosmos_command_path: Annotated[
+        flext_command_path: Annotated[
             str | None,
             m.Field(
                 default=None,
-                validation_alias="COSMOS_COMMAND_PATH",
-                description="Gas City command path for promoted verb dispatch.",
+                validation_alias="FLEXT_COMMAND_PATH",
+                description="Resolved path of the promoted command being dispatched.",
             ),
         ]
         system_path: Annotated[

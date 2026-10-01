@@ -163,15 +163,11 @@ Infra:
     checkout_submodules: "false"
     checkout_submodules_overrides: {}
 
-    # Per-distribution dependabot stagger opt-in (default-days). Fleets with
-    # shared-registry rate pressure stagger ecosystem updates instead of
-    # taking every newest release immediately (semgrep remediation
-    # flext-p57t.5/.8/.12, reval260921).
-    dependabot_cooldown_days:
-      flext-core: 7
-      flext-dbt-ldif: 7
-      flext-infra: 7
-    dependabot_cooldown_default_days: 0
+    # Dependabot cooldown (default-days): a rolling delay of at least seven
+    # days before a new release is proposed (supply-chain policy). The map
+    # holds per-distribution overrides only.
+    dependabot_cooldown_days: {}
+    dependabot_cooldown_default_days: 7
 
     # Runner packages a distribution's own tests need (Ubuntu apt names),
     # installed by the generated CI before the gates run. A test that drives

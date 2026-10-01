@@ -1,4 +1,4 @@
-"""Promoted-command header ingress: ``cosmos-command`` TOML into commands."""
+"""Promoted-command header ingress: ``flext-command`` TOML into commands."""
 
 from __future__ import annotations
 

@@ -89,9 +89,9 @@ class FlextInfraUtilitiesPromotedWorkspace:
         from flext_infra import settings
 
         if (
-            settings.Infra.cosmos_command_dispatched
+            settings.Infra.flext_command_dispatched
             != c.Infra.PromotedSelector.DISPATCHED
-            or settings.Infra.cosmos_command_path
+            or settings.Infra.flext_command_path
             != str(Path(script_file).resolve())
         ):
             sys.stderr.write(c.Infra.PromotedMessage.NOT_DISPATCHED)
