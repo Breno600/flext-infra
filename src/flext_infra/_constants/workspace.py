@@ -81,7 +81,7 @@ class FlextInfraConstantsWorkspace:
         "BEADS_DOLT_",
     )
     "Beads activation tokens forbidden in ``.envrc.local`` overrides."
-    ENVIRONMENT_DIRECTORY: ClassVar[str] = ".venv"
+    ENVIRONMENT_DIRECTORY: ClassVar[str] = ".flext-venvs"
     "Python environment directory owned by the runtime checkout (D-VENV)."
     ENVIRONMENT_METADATA: ClassVar[str] = "pyvenv.cfg"
     "Interpreter metadata identifying a provisioned virtual environment."

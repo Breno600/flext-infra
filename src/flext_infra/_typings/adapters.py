@@ -1,27 +1,65 @@
 """Centralized TypeAdapter instances for flext-infra.
 
-Provides SSOT TypeAdapter singletons for common validation patterns.
-All modules should import these via ``t.Infra.<ADAPTER_NAME>`` instead
-of creating local TypeAdapter instances.
-
 Copyright (c) 2025 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
 
-from .._constants.adapters import FlextInfraConstantsAdapters
+from collections.abc import MutableMapping
+from pathlib import Path
+from typing import ClassVar
+
+from flext_cli import t
+
+from flext_core import m
 
 
-class FlextInfraTypesAdapters(FlextInfraConstantsAdapters):
-    """Centralized TypeAdapter instances for infrastructure validation.
+class FlextInfraTypesAdapters:
+    """SSOT TypeAdapter singletons for infrastructure validation."""
 
-    Usage::
+    # This alias removes the constants-to-typings cycle.
+    INFRA_MAPPING_ADAPTER: ClassVar[m.TypeAdapter[t.JsonMapping]] = (
+        t.Cli.JSON_MAPPING_ADAPTER
+    )
+    "Validates t.MappingKV[str, InfraValue] - the most common infra adapter."
 
-        from flext_infra import t
+    MUTABLE_INFRA_MAPPING_ADAPTER: ClassVar[
+        m.TypeAdapter[MutableMapping[str, t.JsonValue]]
+    ] = m.TypeAdapter(MutableMapping[str, t.JsonValue])
+    "Validates MutableMapping[str, InfraValue] for in-place mutation."
 
-        validated = t.Infra.INFRA_MAPPING_ADAPTER.validate_python(raw)
-    """
+    STR_MAPPING_ADAPTER: ClassVar[m.TypeAdapter[t.StrMapping]] = m.TypeAdapter(
+        t.StrMapping,
+    )
+    "Validates t.StrMapping."
+
+    CONTAINER_MAPPING_ADAPTER: ClassVar[
+        m.TypeAdapter[t.MappingKV[str, t.Scalar | Path]]
+    ] = m.TypeAdapter(t.MappingKV[str, t.Scalar | Path])
+    "Validates flat scalar/path mappings (no nested containers)."
+
+    INFRA_SEQ_ADAPTER: ClassVar[m.TypeAdapter[t.JsonList]] = t.Cli.JSON_LIST_ADAPTER
+    "Validates t.SequenceOf[InfraValue]."
+
+    CONTAINER_DICT_SEQ_ADAPTER: ClassVar[m.TypeAdapter[t.SequenceOf[t.JsonMapping]]] = (
+        m.TypeAdapter(t.SequenceOf[t.JsonMapping])
+    )
+    "Validates t.SequenceOf[ContainerDict]."
+
+    STR_SEQ_ADAPTER: ClassVar[m.TypeAdapter[t.StrSequence]] = m.TypeAdapter(
+        t.StrSequence,
+    )
+    "Validates t.StrSequence."
+
+    STR_ADAPTER: ClassVar[m.TypeAdapter[str]] = m.TypeAdapter(str)
+    "Validates one string at boundaries whose upstream stubs expose Any."
+
+    BOOL_ADAPTER: ClassVar[m.TypeAdapter[bool]] = m.TypeAdapter(bool)
+    "Validates one boolean at boundaries whose upstream stubs expose Any."
+
+    PATH_ADAPTER: ClassVar[m.TypeAdapter[Path]] = m.TypeAdapter(Path)
+    "Validates one filesystem path at boundaries whose upstream stubs expose Any."
 
 
 __all__: list[str] = ["FlextInfraTypesAdapters"]
