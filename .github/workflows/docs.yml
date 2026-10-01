@@ -42,7 +42,7 @@ jobs:
           submodules: false
           fetch-depth: 0
 
-      # Why (flext-gd3m1): a cold runner re-downloaded every locked Mise tool
+      # Why: a cold runner re-downloaded every locked Mise tool
       # (go included) on every Docs run, and a network blip failed setup. The
       # cache is content-addressed by the committed locks, so a warm cache is
       # always valid for the same lock and can never hide a finding; it only
@@ -156,7 +156,7 @@ jobs:
           submodules: false
           fetch-depth: 0
 
-      # Why (flext-gd3m1): same cold-download protection as the docs-quality job.
+      # Why: same cold-download protection as the docs-quality job.
       - name: Restore tool caches
         id: tool-cache
         uses: actions/cache/restore@v6

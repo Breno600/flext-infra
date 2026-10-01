@@ -33,16 +33,20 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
         snapshot = u.Cli.atomic_read_binary_file_state(pyproject_path, required=False)
         if snapshot.failure:
             raise ValueError(
-                snapshot.error or f"cannot inspect docs pyproject: {pyproject_path}"
+                snapshot.error or f"cannot inspect docs pyproject: {pyproject_path}",
             )
         return FlextInfraUtilitiesDocsScopeStateMixin._state_from_content(
-            root, pyproject_path, snapshot.value.content
+            root,
+            pyproject_path,
+            snapshot.value.content,
         ).model_copy(deep=True)
 
     @staticmethod
     @lru_cache(maxsize=c.Infra.CONTENT_CACHE_MAXSIZE)
     def _state_from_content(
-        root: Path, pyproject_path: Path, content: bytes | None
+        root: Path,
+        pyproject_path: Path,
+        content: bytes | None,
     ) -> mw.ProjectPyprojectState:
         """Parse once per byte-identical canonical pyproject snapshot."""
         if content is None:
@@ -65,12 +69,12 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
             validated = FlextInfraUtilitiesPyproject.validate_infra_payload(parsed)
             payload = validated
         docs_meta = FlextInfraUtilitiesDocsScopeStateMixin.docs_meta_from_payload(
-            payload
+            payload,
         )
         dependency_names = tuple(
             FlextInfraUtilitiesDependencies.declared_dependency_names_from_payload(
-                payload
-            )
+                payload,
+            ),
         )
         if not payload:
             return mw.ProjectPyprojectState(
@@ -89,12 +93,15 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
             docs_meta=docs_meta,
             project_name=(
                 FlextInfraUtilitiesDocsScopeStateMixin.project_name_from_payload(
-                    root, payload
+                    root,
+                    payload,
                 )
             ),
             package_name=(
                 FlextInfraUtilitiesDocsScopeStateMixin.package_name_from_payload(
-                    root, payload, docs_meta
+                    root,
+                    payload,
+                    docs_meta,
                 )
             ),
             dependency_names=dependency_names,
@@ -114,7 +121,7 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
     def project_payload(project_root: Path) -> t.JsonMapping:
         """Return a project's ``pyproject.toml`` payload as a plain mapping."""
         return FlextInfraUtilitiesDocsScopeStateMixin.project_state(
-            project_root
+            project_root,
         ).payload
 
     @staticmethod
@@ -138,7 +145,9 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
 
     @staticmethod
     def package_name_from_payload(
-        project_root: Path, payload: t.JsonMapping, docs_meta: t.JsonMapping
+        project_root: Path,
+        payload: t.JsonMapping,
+        docs_meta: t.JsonMapping,
     ) -> str:
         """Return the primary package name using pre-loaded payload.
 
@@ -151,14 +160,16 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
         Raises ``ValueError`` only for flext- projects unable to resolve.
         """
         return FlextInfraUtilitiesPyproject.package_name_from_payload(
-            project_root, payload, docs_meta
+            project_root,
+            payload,
+            docs_meta,
         )
 
     @staticmethod
     def project_package_name(project_root: Path) -> str:
         """Return the primary Python package name for a project."""
         return FlextInfraUtilitiesDocsScopeStateMixin.project_state(
-            project_root
+            project_root,
         ).package_name
 
 

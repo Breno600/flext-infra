@@ -19,10 +19,12 @@ class FlextInfraModelsRelease:
         """Immutable committed source identity used by one project build."""
 
         commit_oid: Annotated[
-            t.Infra.ReleaseCommitOid, m.Field(description="Source commit object ID")
+            t.Infra.ReleaseCommitOid,
+            m.Field(description="Source commit object ID"),
         ]
         source_date_epoch: Annotated[
-            t.NonNegativeInt, m.Field(description="Source commit Unix epoch")
+            t.NonNegativeInt,
+            m.Field(description="Source commit Unix epoch"),
         ]
 
     class BuildPolicy(m.StrictBoundaryModel):
@@ -49,10 +51,12 @@ class FlextInfraModelsRelease:
         """Immutable artifact emitted by one release build."""
 
         path: Annotated[
-            t.Infra.ReleaseAbsolutePath, m.Field(description="Artifact absolute path")
+            t.Infra.ReleaseAbsolutePath,
+            m.Field(description="Artifact absolute path"),
         ]
         kind: Annotated[
-            t.Infra.ReleaseArtifactKind, m.Field(description="wheel or sdist")
+            t.Infra.ReleaseArtifactKind,
+            m.Field(description="wheel or sdist"),
         ]
         sha256: Annotated[
             t.Infra.ReleaseArtifactSha256,
@@ -71,18 +75,37 @@ class FlextInfraModelsRelease:
                 raise ValueError(msg)
             return self
 
+    class ArtifactExpectation(m.StrictBoundaryModel):
+        """Committed identity, source license and distribution boundary to prove."""
+
+        project: Annotated[t.NonEmptyStr, m.Field(description="Distribution name")]
+        version: Annotated[t.NonEmptyStr, m.Field(description="Distribution version")]
+        license_sha256: Annotated[
+            t.Infra.ReleaseArtifactSha256,
+            m.Field(description="Committed source LICENSE SHA-256"),
+        ]
+        allowed_roots: Annotated[
+            t.StrTuple,
+            m.Field(description="Validated public source roots in the sdist"),
+        ]
+        versions: Annotated[
+            t.StrMapping, m.Field(description="Resolved internal dependency versions")
+        ]
+
     class BuildRecord(mm.ProjectNameMixin, m.StrictBoundaryModel):
         """Base model for build result data."""
 
         path: Annotated[
-            t.Infra.ReleaseAbsolutePath, m.Field(description="Project absolute path")
+            t.Infra.ReleaseAbsolutePath,
+            m.Field(description="Project absolute path"),
         ]
         exit_code: Annotated[
             t.StrictInt,
             m.Field(description="Artifact build command exit code, including signals"),
         ]
         log: Annotated[
-            t.Infra.ReleaseAbsolutePath, m.Field(description="Build log absolute path")
+            t.Infra.ReleaseAbsolutePath,
+            m.Field(description="Build log absolute path"),
         ]
         artifacts: Annotated[
             t.VariadicTuple[FlextInfraModelsRelease.BuildArtifact],
@@ -120,11 +143,13 @@ class FlextInfraModelsRelease:
         """The protocol's decision for one repository, derived and never typed by hand."""
 
         current: Annotated[
-            t.NonEmptyStr, m.Field(description="Version declared by pyproject.toml")
+            t.NonEmptyStr,
+            m.Field(description="Version declared by pyproject.toml"),
         ]
         next: Annotated[t.NonEmptyStr, m.Field(description="Version to release")]
         bump: Annotated[
-            cr.VersionBump, m.Field(description="Bump derived from merged PRs")
+            cr.VersionBump,
+            m.Field(description="Bump derived from merged PRs"),
         ]
         previous_tag: Annotated[
             t.NonEmptyStr | None,
@@ -163,10 +188,12 @@ class FlextInfraModelsRelease:
 
         version: Annotated[t.NonEmptyStr, m.Field(description="Release version")]
         total: Annotated[
-            t.NonNegativeInt, m.Field(description="Total projects attempted")
+            t.NonNegativeInt,
+            m.Field(description="Total projects attempted"),
         ]
         failures: Annotated[
-            t.NonNegativeInt, m.Field(description="Total projects with non-zero exit")
+            t.NonNegativeInt,
+            m.Field(description="Total projects with non-zero exit"),
         ]
         records: Annotated[
             t.VariadicTuple[FlextInfraModelsRelease.BuildRecord],
@@ -235,10 +262,12 @@ class FlextInfraModelsRelease:
         dry_run: Annotated[bool, m.Field(description="Dry run flag")] = False
         phase: Annotated[cr.ReleasePhase, m.Field(description="Release phase")]
         index: Annotated[
-            bool, m.Field(description="Publish verified artifacts to the package index")
+            bool,
+            m.Field(description="Publish verified artifacts to the package index"),
         ] = False
         pr_title: Annotated[
-            str, m.Field(description="Pull-request title to validate, when known")
+            str,
+            m.Field(description="Pull-request title to validate, when known"),
         ] = ""
 
 

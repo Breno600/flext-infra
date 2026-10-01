@@ -33,28 +33,37 @@ class TestsFlextInfraImportCycles:
 
     @staticmethod
     def _seed_project(
-        workspace: Path, name: str, files: t.MappingKV[str, str], *, pkg: str = "tests"
+        workspace: Path,
+        name: str,
+        files: t.MappingKV[str, str],
+        *,
+        pkg: str = "tests",
     ) -> Path:
         project = workspace / name
         pkg_dir = project / "src" / pkg
         pkg_dir.mkdir(parents=True, exist_ok=True)
         (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
         (project / "pyproject.toml").write_text(
-            f'[project]\nname = "{name}"\nversion = "0.0.1"\n', encoding="utf-8"
+            f'[project]\nname = "{name}"\nversion = "0.0.1"\n',
+            encoding="utf-8",
         )
         for filename, content in files.items():
             (pkg_dir / filename).write_text(content, encoding="utf-8")
         return project
 
     def test_empty_workspace_passes(
-        self, tmp_path: Path, v: FlextInfraValidateImportCycles
+        self,
+        tmp_path: Path,
+        v: FlextInfraValidateImportCycles,
     ) -> None:
         report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))
         tm.that(report, is_=m.Infra.ValidationReport)
         tm.that(report.passed, eq=True)
 
     def test_acyclic_graph_passes(
-        self, tmp_path: Path, v: FlextInfraValidateImportCycles
+        self,
+        tmp_path: Path,
+        v: FlextInfraValidateImportCycles,
     ) -> None:
         pkg = u.Tests.write_package_init(tmp_path / "src" / "pkg", "").parent
         tf(base_dir=pkg).create("X = 1\n", "a.py")
@@ -63,7 +72,9 @@ class TestsFlextInfraImportCycles:
         tm.that(report.passed, eq=True)
 
     def test_two_module_cycle_fails(
-        self, tmp_path: Path, v: FlextInfraValidateImportCycles
+        self,
+        tmp_path: Path,
+        v: FlextInfraValidateImportCycles,
     ) -> None:
         pkg = u.Tests.write_package_init(tmp_path / "src" / "pkg", "").parent
         tf(base_dir=pkg).create("from pkg import b\n", "a.py")
@@ -75,7 +86,9 @@ class TestsFlextInfraImportCycles:
         tm.that(joined, has="pkg.b")
 
     def test_three_module_cycle_fails(
-        self, tmp_path: Path, v: FlextInfraValidateImportCycles
+        self,
+        tmp_path: Path,
+        v: FlextInfraValidateImportCycles,
     ) -> None:
         pkg = u.Tests.write_package_init(tmp_path / "src" / "pkg", "").parent
         tf(base_dir=pkg).create("from pkg import b\n", "a.py")
@@ -89,7 +102,9 @@ class TestsFlextInfraImportCycles:
         tm.that(joined, has="pkg.c")
 
     def test_type_checking_import_is_not_runtime_cycle(
-        self, tmp_path: Path, v: FlextInfraValidateImportCycles
+        self,
+        tmp_path: Path,
+        v: FlextInfraValidateImportCycles,
     ) -> None:
         pkg = u.Tests.write_package_init(tmp_path / "src" / "pkg", "").parent
         tf(base_dir=pkg).create(
@@ -106,7 +121,9 @@ class TestsFlextInfraImportCycles:
         tm.that(report.passed, eq=True)
 
     def test_summary_reports_cycle_count(
-        self, tmp_path: Path, v: FlextInfraValidateImportCycles
+        self,
+        tmp_path: Path,
+        v: FlextInfraValidateImportCycles,
     ) -> None:
         pkg = u.Tests.write_package_init(tmp_path / "src" / "pkg", "").parent
         tf(base_dir=pkg).create("from pkg import b\n", "a.py")
@@ -116,14 +133,18 @@ class TestsFlextInfraImportCycles:
         tm.that(report.summary, has="cycle")
 
     def test_passing_summary_is_human_readable(
-        self, tmp_path: Path, v: FlextInfraValidateImportCycles
+        self,
+        tmp_path: Path,
+        v: FlextInfraValidateImportCycles,
     ) -> None:
         u.Tests.write_package_init(tmp_path / "src" / "pkg", "")
         report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))
         tm.that(report.summary, has="cycle")
 
     def test_same_named_packages_across_projects_do_not_form_cycle(
-        self, tmp_path: Path, v: FlextInfraValidateImportCycles
+        self,
+        tmp_path: Path,
+        v: FlextInfraValidateImportCycles,
     ) -> None:
         """Opposite one-way edges in two projects must not merge into a cycle."""
         self._seed_project(
@@ -144,7 +165,9 @@ class TestsFlextInfraImportCycles:
         tm.that(report.summary, has="scanned 6 modules")
 
     def test_cycle_is_attributed_to_owning_project_only(
-        self, tmp_path: Path, v: FlextInfraValidateImportCycles
+        self,
+        tmp_path: Path,
+        v: FlextInfraValidateImportCycles,
     ) -> None:
         """A real cycle inside one project is reported with that project's label."""
         self._seed_project(
@@ -153,7 +176,9 @@ class TestsFlextInfraImportCycles:
             {"a.py": "from tests import b\n", "b.py": "from tests import a\n"},
         )
         self._seed_project(
-            tmp_path, "beta", {"a.py": "X = 1\n", "b.py": "from tests.a import X\n"}
+            tmp_path,
+            "beta",
+            {"a.py": "X = 1\n", "b.py": "from tests.a import X\n"},
         )
         u.Tests.declare_workspace_projects(tmp_path, ("alpha", "beta"))
         report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))

@@ -22,7 +22,9 @@ class FlextInfraEnsurePackagingPhase:
 
     @staticmethod
     def _validate_data_tree(
-        root: Path, source: Path, ancestors: frozenset[Path]
+        root: Path,
+        source: Path,
+        ancestors: frozenset[Path],
     ) -> None:
         """Follow every link Hatch follows while rejecting cycles and escape."""
         resolved = source.resolve(strict=True)
@@ -35,7 +37,9 @@ class FlextInfraEnsurePackagingPhase:
         if source.is_dir():
             for child in source.iterdir():
                 FlextInfraEnsurePackagingPhase._validate_data_tree(
-                    root, child, ancestors | {resolved}
+                    root,
+                    child,
+                    ancestors | {resolved},
                 )
         elif not source.is_file():
             msg = f"packaged data path is not a file or directory: {source}"
@@ -70,7 +74,9 @@ class FlextInfraEnsurePackagingPhase:
                 raise ValueError(msg)
             if source.exists() or source.is_symlink():
                 FlextInfraEnsurePackagingPhase._validate_data_tree(
-                    root, source, frozenset()
+                    root,
+                    source,
+                    frozenset(),
                 )
             elif not any(
                 Path(planned).is_relative_to(relative) for planned in planned_files
@@ -102,7 +108,8 @@ class FlextInfraEnsurePackagingPhase:
             else:
                 directories.append(declaration)
         return m.Infra.PackagedDataSelection(
-            files=tuple(files), directories=tuple(directories)
+            files=tuple(files),
+            directories=tuple(directories),
         )
 
     def _phase(
@@ -110,6 +117,7 @@ class FlextInfraEnsurePackagingPhase:
         *,
         package_name: str,
         data: m.Infra.PackagedDataSelection,
+        data_excludes: t.StrSequence,
         root_modules: t.StrSequence,
         root_packages: t.StrSequence,
     ) -> m.Infra.DepsToml.PhaseConfig:
@@ -138,15 +146,11 @@ class FlextInfraEnsurePackagingPhase:
                     root_path=(),
                     table_path=("wheel",),
                     operations=(
+                        toml.ListOp(key="packages", values=package_paths),
                         toml.ListOp(
-                            key="include",
-                            values=(
-                                *(f"/{path}/**" for path in package_paths),
-                                *(f"/{path}/**" for path in data.directories),
-                            ),
+                            key="only-include",
+                            values=(*package_paths, *data.directories),
                         ),
-                        toml.RemoveOp(key="packages"),
-                        toml.RemoveOp(key="only-include"),
                         toml.SetOp(
                             key="sources",
                             value={
@@ -155,7 +159,7 @@ class FlextInfraEnsurePackagingPhase:
                                         package_paths,
                                         (package_name, *root_packages),
                                         strict=True,
-                                    )
+                                    ),
                                 ),
                                 **{
                                     directory: f"{package_name}/{directory}"
@@ -172,16 +176,44 @@ class FlextInfraEnsurePackagingPhase:
                     table_path=("sdist",),
                     operations=(
                         toml.ListOp(
-                            key="include",
+                            key="only-include",
                             values=(
-                                *(f"/{path}/**" for path in package_paths),
-                                *(f"/{path}" for path in module_paths),
-                                *(f"/{path}" for path in data.files),
-                                *(f"/{path}/**" for path in data.directories),
+                                *package_paths,
+                                *module_paths,
+                                *data.files,
+                                *data.directories,
                             ),
                         ),
                         toml.RemoveOp(key="only-include"),
+                        toml.RemoveOp(key="packages"),
+                        (
+                            toml.ListOp(
+                                key="exclude",
+                                values=tuple(f"/{item}" for item in data_excludes),
+                            )
+                            if data_excludes
+                            else toml.RemoveOp(key="exclude")
+                        ),
+                        toml.RemoveOp(key="force-include"),
                     ),
+                ),
+                (
+                    toml.PhaseConfig(
+                        name="packaging",
+                        root_path=(),
+                        table_path=("sdist", "force-include"),
+                        operations=tuple(
+                            toml.SetOp(key=source, value=source)
+                            for source, _destination in force_include
+                        ),
+                    )
+                    if force_include
+                    else toml.PhaseConfig(
+                        name="packaging",
+                        root_path=(),
+                        table_path=("sdist",),
+                        operations=(toml.RemoveOp(key="force-include"),),
+                    )
                 ),
                 (
                     toml.PhaseConfig(
@@ -221,7 +253,9 @@ class FlextInfraEnsurePackagingPhase:
         project_dir = path.parent
         docs_meta = u.Infra.docs_meta_from_payload(payload)
         package_name = u.Infra.package_name_from_payload(
-            project_dir, payload, docs_meta
+            project_dir,
+            payload,
+            docs_meta,
         )
         if not package_name:
             if (
@@ -268,11 +302,15 @@ class FlextInfraEnsurePackagingPhase:
             topology.packaged_data_paths,
             topology.planned_data_files,
         )
+        data_excludes = self.resolve_data_excludes(
+            project_dir, data_paths, topology.packaged_data_excludes
+        )
         return u.Infra.apply_toml_phases(
             payload,
             self._phase(
                 package_name=package_name,
                 data=data_paths,
+                data_excludes=data_excludes,
                 root_modules=topology.root_modules,
                 root_packages=topology.root_packages,
             ),

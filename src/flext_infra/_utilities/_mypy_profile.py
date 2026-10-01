@@ -24,7 +24,8 @@ class FlextInfraMypyProfiler:
             raise ValueError(msg)
         profile = cProfile.Profile()
         stdout, stderr, status = profile.runcall(
-            api.run, list(u.Infra.mypy_arguments(invocation))
+            api.run,
+            list(u.Infra.mypy_arguments(invocation)),
         )
         profile.dump_stats(str(destination.resolve()))
         sys.stdout.write(stdout)
@@ -35,5 +36,5 @@ class FlextInfraMypyProfiler:
 if __name__ == "__main__":
     (request,) = sys.argv[1:]
     raise SystemExit(
-        FlextInfraMypyProfiler.run(m.Infra.MypyInvocation.model_validate_json(request))
+        FlextInfraMypyProfiler.run(m.Infra.MypyInvocation.model_validate_json(request)),
     )

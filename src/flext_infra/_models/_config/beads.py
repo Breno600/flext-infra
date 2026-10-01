@@ -22,18 +22,21 @@ class FlextInfraConfigModelsBeads:
             m.Field(description="Beads project configuration schema version"),
         ]
         workspace: Annotated[
-            t.NonEmptyStr, m.Field(description="Stable workspace identity")
+            t.NonEmptyStr,
+            m.Field(description="Stable workspace identity"),
         ]
         database: Annotated[
-            t.NonEmptyStr, m.Field(description="Repository-owned Dolt database")
+            t.NonEmptyStr,
+            m.Field(description="Repository-owned Dolt database"),
         ]
         issue_prefix: Annotated[
-            t.NonEmptyStr, m.Field(description="Repository-owned issue prefix")
+            t.NonEmptyStr,
+            m.Field(description="Repository-owned issue prefix"),
         ]
         custom_issue_types: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                description="Repository-owned custom types beyond the Gas City baseline"
+                description="Repository-owned custom types beyond the Gas City baseline",
             ),
         ] = ()
 
@@ -67,7 +70,7 @@ class FlextInfraConfigModelsBeads:
                     "Gas City runtime-contract participation; False drops the "
                     "gc endpoint keys and makes Beads own a repository-local "
                     "Dolt server (dolt.auto-start: true)."
-                )
+                ),
             ),
         ] = True
         custom_issue_types: Annotated[
@@ -75,16 +78,20 @@ class FlextInfraConfigModelsBeads:
             m.Field(description="Union of project and required custom bead types"),
         ] = ()
         dolt_mode: Annotated[
-            t.NonEmptyStr, m.Field(description="From toolchain.beads.dolt_mode")
+            t.NonEmptyStr,
+            m.Field(description="From toolchain.beads.dolt_mode"),
         ]
         export_auto: Annotated[
-            bool, m.Field(description="From toolchain.beads.export_auto")
+            bool,
+            m.Field(description="From toolchain.beads.export_auto"),
         ]
         backup_enabled: Annotated[
-            bool, m.Field(description="From toolchain.beads.backup_enabled")
+            bool,
+            m.Field(description="From toolchain.beads.backup_enabled"),
         ]
         dolt_disable_event_flush: Annotated[
-            bool, m.Field(description="From toolchain.beads.dolt_disable_event_flush")
+            bool,
+            m.Field(description="From toolchain.beads.dolt_disable_event_flush"),
         ]
 
     class BeadsMetadataRenderSpec(FlextInfraConfigModelsContract.ConfigContract):
@@ -123,13 +130,16 @@ class FlextInfraConfigModelsBeads:
         """CLI-safe request for one Python workspace environment sync."""
 
         repository_root: Annotated[
-            Path, m.Field(description="Repository root receiving the sync")
+            Path,
+            m.Field(description="Repository root receiving the sync"),
         ]
         apply: Annotated[
-            bool, m.Field(description="Write changes instead of reporting them")
+            bool,
+            m.Field(description="Write changes instead of reporting them"),
         ] = True
         force: Annotated[
-            bool, m.Field(description="Replace custom files with generated content")
+            bool,
+            m.Field(description="Replace custom files with generated content"),
         ] = False
         allow_direnv: Annotated[
             bool,
@@ -137,18 +147,21 @@ class FlextInfraConfigModelsBeads:
         ] = True
 
     class WorkspaceEnvironmentSyncRequest(
-        FlextInfraConfigModelsContract.ConfigContract
+        FlextInfraConfigModelsContract.ConfigContract,
     ):
         """Validated internal request for one workspace environment sync."""
 
         repository_root: Annotated[
-            Path, m.Field(description="Repository root receiving the sync")
+            Path,
+            m.Field(description="Repository root receiving the sync"),
         ]
         apply: Annotated[
-            bool, m.Field(description="Write changes instead of reporting them")
+            bool,
+            m.Field(description="Write changes instead of reporting them"),
         ] = True
         force: Annotated[
-            bool, m.Field(description="Replace custom files with generated content")
+            bool,
+            m.Field(description="Replace custom files with generated content"),
         ] = False
         allow_direnv: Annotated[
             bool,
@@ -156,7 +169,7 @@ class FlextInfraConfigModelsBeads:
                 description=(
                     "Run `direnv allow` for the workspace after a successful "
                     "applied sync so managed roots never carry a stale allow"
-                )
+                ),
             ),
         ] = True
 

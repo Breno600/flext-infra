@@ -39,7 +39,8 @@ class TestsFlextInfraInfraMaintenanceMain:
         (root / ".git").mkdir(exist_ok=True)
         (root / "Makefile").touch()
         (root / "pyproject.toml").write_text(
-            f'requires-python = ">=3.{python_minor}"\n', encoding="utf-8"
+            f'requires-python = ">=3.{python_minor}"\n',
+            encoding="utf-8",
         )
         (root / ".python-version").write_text(f"3.{python_minor}\n", encoding="utf-8")
         return root
@@ -61,7 +62,8 @@ class TestsFlextInfraInfraMaintenanceMain:
 
     def test_enforcer_check_only_success(self, tmp_path: Path) -> None:
         workspace = self._create_workspace(
-            tmp_path / "ws", python_minor=sys.version_info.minor
+            tmp_path / "ws",
+            python_minor=sys.version_info.minor,
         )
         enforcer = self._make_enforcer(workspace)
         result = enforcer.execute(check_only=True, verbose=False)
@@ -69,7 +71,8 @@ class TestsFlextInfraInfraMaintenanceMain:
 
     def test_enforcer_enforce_mode(self, tmp_path: Path) -> None:
         workspace = self._create_workspace(
-            tmp_path / "ws", python_minor=sys.version_info.minor
+            tmp_path / "ws",
+            python_minor=sys.version_info.minor,
         )
         enforcer = self._make_enforcer(workspace)
         result = enforcer.execute(check_only=False, verbose=False)
@@ -77,7 +80,8 @@ class TestsFlextInfraInfraMaintenanceMain:
 
     def test_enforcer_verbose_mode(self, tmp_path: Path) -> None:
         workspace = self._create_workspace(
-            tmp_path / "ws", python_minor=sys.version_info.minor
+            tmp_path / "ws",
+            python_minor=sys.version_info.minor,
         )
         enforcer = self._make_enforcer(workspace)
         result = enforcer.execute(check_only=True, verbose=True)
@@ -87,7 +91,8 @@ class TestsFlextInfraInfraMaintenanceMain:
     def test_enforcer_failure_on_version_mismatch(self, tmp_path: Path) -> None:
         mismatched_minor = sys.version_info.minor + 1
         workspace = self._create_workspace(
-            tmp_path / "ws", python_minor=mismatched_minor
+            tmp_path / "ws",
+            python_minor=mismatched_minor,
         )
         enforcer = self._make_enforcer(workspace)
         result = enforcer.execute(check_only=True, verbose=False)
@@ -95,7 +100,8 @@ class TestsFlextInfraInfraMaintenanceMain:
 
     def test_enforcer_check_only_flag_stored(self, tmp_path: Path) -> None:
         workspace = self._create_workspace(
-            tmp_path / "ws", python_minor=sys.version_info.minor
+            tmp_path / "ws",
+            python_minor=sys.version_info.minor,
         )
         enforcer = self._make_enforcer(workspace)
         enforcer.execute(check_only=True, verbose=False)
@@ -103,7 +109,8 @@ class TestsFlextInfraInfraMaintenanceMain:
 
     def test_enforcer_verbose_flag_stored(self, tmp_path: Path) -> None:
         workspace = self._create_workspace(
-            tmp_path / "ws", python_minor=sys.version_info.minor
+            tmp_path / "ws",
+            python_minor=sys.version_info.minor,
         )
         enforcer = self._make_enforcer(workspace)
         enforcer.execute(check_only=False, verbose=True)
@@ -111,7 +118,8 @@ class TestsFlextInfraInfraMaintenanceMain:
 
     def test_enforcer_both_flags(self, tmp_path: Path) -> None:
         workspace = self._create_workspace(
-            tmp_path / "ws", python_minor=sys.version_info.minor
+            tmp_path / "ws",
+            python_minor=sys.version_info.minor,
         )
         enforcer = self._make_enforcer(workspace)
         result = enforcer.execute(check_only=True, verbose=True)
@@ -121,7 +129,8 @@ class TestsFlextInfraInfraMaintenanceMain:
 
     def test_enforcer_empty_workspace(self, tmp_path: Path) -> None:
         workspace = self._create_workspace(
-            tmp_path / "ws", python_minor=sys.version_info.minor
+            tmp_path / "ws",
+            python_minor=sys.version_info.minor,
         )
         enforcer = self._make_enforcer(workspace)
         result = enforcer.execute(check_only=True)
@@ -129,7 +138,8 @@ class TestsFlextInfraInfraMaintenanceMain:
 
     def test_enforcer_project_mismatch(self, tmp_path: Path) -> None:
         workspace = self._create_workspace(
-            tmp_path / "ws", python_minor=sys.version_info.minor
+            tmp_path / "ws",
+            python_minor=sys.version_info.minor,
         )
         project = workspace / "project-a"
         project.mkdir()

@@ -14,7 +14,8 @@ class TestsFlextInfraRule4Annotations:
     """Test suite for namespace validator Rule 4 (annotations)."""
 
     def test_rule4_annotated_field_factory_not_flagged_as_banned(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """D1-precision: Annotated metadata factory values are not annotations.
 
@@ -33,11 +34,13 @@ class TestsFlextInfraRule4Annotations:
             "t.MappingKV[str, str], m.Field(default_factory=dict)] = None\n"
         )
         root = u.Tests.namespace_project(
-            tmp_path, module_source=module_source, module_name="_settings.py"
+            tmp_path,
+            module_source=module_source,
+            module_name="_settings.py",
         )
 
         result = infra.validate_namespace(
-            m.Infra.NamespaceValidateCommand(repository_root=root)
+            m.Infra.NamespaceValidateCommand(repository_root=root),
         )
 
         tm.ok(result)
@@ -56,7 +59,9 @@ class TestsFlextInfraRule4Annotations:
             "        return data\n"
         )
         root = u.Tests.namespace_project(
-            tmp_path, module_source=module_source, module_name="services.py"
+            tmp_path,
+            module_source=module_source,
+            module_name="services.py",
         )
 
         request = m.Infra.NamespaceValidateCommand(repository_root=root)
@@ -66,7 +71,8 @@ class TestsFlextInfraRule4Annotations:
         u.Tests.assert_namespace_violation_contains(request, "banned annotation")
 
     def test_rule4_canonical_singleton_with_trailing_docstring_allowed(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """D1-precision: canonical `api: Class = Class.fetch_global()` allows a trailing docstring.
 
@@ -83,7 +89,9 @@ class TestsFlextInfraRule4Annotations:
             '__all__: list[str] = ["FlextTest", "api"]\n'
         )
         root = u.Tests.namespace_project(
-            tmp_path, module_source=module_source, module_name="api.py"
+            tmp_path,
+            module_source=module_source,
+            module_name="api.py",
         )
 
         request = m.Infra.NamespaceValidateCommand(repository_root=root)
@@ -91,12 +99,14 @@ class TestsFlextInfraRule4Annotations:
 
         tm.ok(result)
         u.Tests.assert_namespace_no_violation_contains(
-            request, "module alias/data declaration"
+            request,
+            "module alias/data declaration",
         )
         u.Tests.assert_namespace_no_violation_contains(request, "nested namespace")
 
     def test_rule4_bare_module_annotation_is_not_import_time_wiring(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A module-level annotation without a value constructs nothing.
 
@@ -113,7 +123,9 @@ class TestsFlextInfraRule4Annotations:
             '"""Documented re-export slot."""\n'
         )
         root = u.Tests.namespace_project(
-            tmp_path, module_source=module_source, module_name="services.py"
+            tmp_path,
+            module_source=module_source,
+            module_name="services.py",
         )
 
         request = m.Infra.NamespaceValidateCommand(repository_root=root)
@@ -123,7 +135,8 @@ class TestsFlextInfraRule4Annotations:
         u.Tests.assert_namespace_no_violation_contains(request, "import-time wiring")
 
     def test_rule4_module_level_construction_still_flagged(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Non-regression: an assigned module-level call stays import-time wiring."""
         module_source = (
@@ -133,7 +146,9 @@ class TestsFlextInfraRule4Annotations:
             "wired: FlextTestServices = FlextTestServices()\n"
         )
         root = u.Tests.namespace_project(
-            tmp_path, module_source=module_source, module_name="services.py"
+            tmp_path,
+            module_source=module_source,
+            module_name="services.py",
         )
 
         request = m.Infra.NamespaceValidateCommand(repository_root=root)

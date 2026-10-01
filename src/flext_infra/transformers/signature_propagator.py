@@ -50,7 +50,9 @@ class FlextInfraRefactorSignaturePropagator(FlextInfraRopeTransformer):
         return result, list(self.changes)
 
     def _apply_migration(
-        self, source: str, migration: m.Infra.SignatureMigration
+        self,
+        source: str,
+        migration: m.Infra.SignatureMigration,
     ) -> str:
         """Apply a single migration to source text."""
         if not (
@@ -60,17 +62,23 @@ class FlextInfraRefactorSignaturePropagator(FlextInfraRopeTransformer):
         ):
             return source
         targets = set(migration.target_simple_names) | set(
-            migration.target_qualified_names
+            migration.target_qualified_names,
         )
         for target in targets:
             simple_name = target.rsplit(".", 1)[-1] if "." in target else target
             source = self._rewrite_calls(
-                source, simple_name=simple_name, migration=migration
+                source,
+                simple_name=simple_name,
+                migration=migration,
             )
         return source
 
     def _rewrite_calls(
-        self, source: str, *, simple_name: str, migration: m.Infra.SignatureMigration
+        self,
+        source: str,
+        *,
+        simple_name: str,
+        migration: m.Infra.SignatureMigration,
     ) -> str:
         """Rewrite keyword arguments in calls to ``simple_name`` via rope-located ranges."""
         pymodule = u.Infra.parse_string_module(source)
@@ -92,7 +100,8 @@ class FlextInfraRefactorSignaturePropagator(FlextInfraRopeTransformer):
             start = self._offset(line_offsets, lineno, col_offset)
             end = self._offset(line_offsets, end_lineno, end_col_offset)
             replacement, changed = self._rewrite_call_text(
-                source[start:end], migration=migration
+                source[start:end],
+                migration=migration,
             )
             if not changed:
                 continue
@@ -105,7 +114,9 @@ class FlextInfraRefactorSignaturePropagator(FlextInfraRopeTransformer):
 
     @staticmethod
     def _rewrite_call_text(
-        call_text: str, *, migration: m.Infra.SignatureMigration
+        call_text: str,
+        *,
+        migration: m.Infra.SignatureMigration,
     ) -> t.Pair[str, bool]:
         """Rewrite keywords inside a single call's source slice (regex per-name)."""
         result = call_text
@@ -119,7 +130,8 @@ class FlextInfraRefactorSignaturePropagator(FlextInfraRopeTransformer):
         for remove_name in migration.remove_keywords:
             pattern = c.Infra.compile_keyword_argument(remove_name)
             stripped, drops = FlextInfraRefactorSignaturePropagator._drop_keyword(
-                result, pattern
+                result,
+                pattern,
             )
             if drops:
                 changed = True
@@ -130,7 +142,7 @@ class FlextInfraRefactorSignaturePropagator(FlextInfraRopeTransformer):
                 existing = {
                     match.group(0).split("=", 1)[0].strip()
                     for match in c.Infra.compile_keyword_argument(r"\w+").finditer(
-                        result
+                        result,
                     )
                 }
                 additions = [

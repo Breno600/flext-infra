@@ -59,7 +59,12 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
 
     @classmethod
     def ensure_alias_import(
-        cls, source: str, module: str, alias: str, *, runtime_required: bool = False
+        cls,
+        source: str,
+        module: str,
+        alias: str,
+        *,
+        runtime_required: bool = False,
     ) -> str:
         """Honor the consumer's runtime requirement when introducing an alias."""
         if not alias:
@@ -117,7 +122,10 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
 
     @classmethod
     def _alias_import_under_type_checking(
-        cls, source: str, module: str, alias: str
+        cls,
+        source: str,
+        module: str,
+        alias: str,
     ) -> str | None:
         """Place an annotation-only facade import inside ``if TYPE_CHECKING:``.
 

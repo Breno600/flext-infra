@@ -147,8 +147,6 @@ class FlextInfraConstantsBase(
     "Pytest markers settings key."
     PLUGINS: ClassVar[str] = "plugins"
     "Mypy plugins settings key."
-    DISABLE_ERROR_CODE: ClassVar[str] = "disable_error_code"
-    "Mypy disable_error_code settings key."
     IGNORE: ClassVar[str] = "ignore"
     "Pyrefly/sub-settings ignore key."
     INCLUDE: ClassVar[str] = "include"
@@ -195,16 +193,6 @@ class FlextInfraConstantsBase(
         TEST,
         TYPINGS,
     )
-
-    # ANSI color codes and terminal symbols (SSOT for output styling).
-
-    RESET: ClassVar[str] = "\x1b[0m"
-    RED: ClassVar[str] = "\x1b[31m"
-    GREEN: ClassVar[str] = "\x1b[32m"
-    YELLOW: ClassVar[str] = "\x1b[33m"
-    BLUE: ClassVar[str] = "\x1b[34m"
-    CYAN: ClassVar[str] = "\x1b[36m"
-    BOLD: ClassVar[str] = "\x1b[1m"
 
     # Unicode/ASCII symbols
     OK: ClassVar[str] = "✓"

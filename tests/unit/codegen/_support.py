@@ -35,7 +35,7 @@ class CodegenTestSupport:
                     *cls.CI_TRIGGER_BASELINE_BRANCHES[:-1],
                     repository_branch,
                     cls.CI_TRIGGER_BASELINE_BRANCHES[-1],
-                ))
+                )),
             )
 
         @staticmethod
@@ -71,6 +71,7 @@ class CodegenTestSupport:
             custom_steps: str = "",
             has_devcontainer: bool = False,
             workspace_repositories: t.VariadicTuple[m.Infra.RepositoryRef] = (),
+            cooldown_excluded_dependencies: t.VariadicTuple[t.NonEmptyStr] = (),
         ) -> m.Infra.GithubWorkflowRenderSpec:
             """Build the common strictly typed workflow rendering contract."""
             codegen = config.Infra.codegen
@@ -91,6 +92,8 @@ class CodegenTestSupport:
                 ),
                 custom_steps=custom_steps,
                 has_devcontainer=has_devcontainer,
+                dependency_cooldown_days=codegen.toolchain.dependency_cooldown_days,
+                cooldown_excluded_dependencies=cooldown_excluded_dependencies,
             )
 
         @staticmethod
@@ -101,7 +104,7 @@ class CodegenTestSupport:
             CI-contract test shares; consumers assert on the returned steps.
             """
             document = t.Cli.JSON_MAPPING_ADAPTER.validate_python(
-                tm.ok(u.Cli.yaml_parse(rendered))
+                tm.ok(u.Cli.yaml_parse(rendered)),
             )
             jobs = t.Cli.JSON_MAPPING_ADAPTER.validate_python(document["jobs"])
             job = t.Cli.JSON_MAPPING_ADAPTER.validate_python(jobs["ci"])

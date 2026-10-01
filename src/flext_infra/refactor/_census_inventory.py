@@ -29,7 +29,8 @@ class FlextInfraRefactorCensusInventoryMixin:
 
     @classmethod
     def _build_parent_inventory(
-        cls, repository_root: Path
+        cls,
+        repository_root: Path,
     ) -> t.MappingKV[str, t.StrSequence]:
         """Inventory governed-package alias top-level facade names.
 
@@ -94,7 +95,10 @@ class FlextInfraRefactorCensusInventoryMixin:
 
     @classmethod
     def parent_alias_collisions(
-        cls, report: m.Infra.WorkspaceReport, *, repository_root: Path
+        cls,
+        report: m.Infra.WorkspaceReport,
+        *,
+        repository_root: Path,
     ) -> t.VariadicTuple[t.Pair[m.Infra.Object, t.StrSequence]]:
         """Cross-reference workspace objects against upstream parent inventory.
 

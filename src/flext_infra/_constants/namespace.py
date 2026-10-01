@@ -40,6 +40,15 @@ class FlextInfraConstantsNamespace:
         "api",
         "cli",
     )
+    NAMESPACE_DECLARATION_FACADES_RUNTIME: ClassVar[frozenset[str]] = frozenset(
+        layer
+        for layer in NAMESPACE_LAYER_ORDER[
+            NAMESPACE_LAYER_ORDER.index("c") + 1 : NAMESPACE_LAYER_ORDER.index("base")
+        ]
+        if layer != "p"
+    )
+    """Declaration facades importable at runtime: the chain between ``c`` and
+    ``base``, minus the TYPE_CHECKING-only protocols facade ``p``."""
     NAMESPACE_OPERATION_FACADES: ClassVar[t.VariadicTuple[str]] = (
         "r",
         "e",
@@ -100,11 +109,6 @@ class FlextInfraConstantsNamespace:
         "_utilities": "u",
         "services": "services",
     })
-    # ADR-0018 stdlib island: the native hook client runs as `python3 -I -S`
-    # and cannot consume the flext typing surface; its annotations stay stdlib.
-    NAMESPACE_STDLIB_ISLAND_PATH_FRAGMENTS: ClassVar[t.StrSequence] = (
-        "/ai_hub/hook_client",
-    )
     NAMESPACE_BANNED_ANNOTATIONS: ClassVar[frozenset[str]] = frozenset({
         "Any",
         "Optional",

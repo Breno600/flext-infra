@@ -85,7 +85,9 @@ class FlextInfraRefactorDeclarativeEnforcement:
 
     @classmethod
     def detect(
-        cls, rule: m.EnforcementRuleSpec, ctx: m.Infra.DetectorContext
+        cls,
+        rule: m.EnforcementRuleSpec,
+        ctx: m.Infra.DetectorContext,
     ) -> t.SequenceOf[p.AttributeProbe]:
         """Return probes for violations of ``rule`` inside ``ctx.file_path``."""
         detector = cls._detectors()[cls._source_key(rule)]
@@ -93,7 +95,10 @@ class FlextInfraRefactorDeclarativeEnforcement:
 
     @classmethod
     def _detect_stub_files(
-        cls, ctx: m.Infra.DetectorContext, *, rule_id: str
+        cls,
+        ctx: m.Infra.DetectorContext,
+        *,
+        rule_id: str,
     ) -> t.SequenceOf[p.AttributeProbe]:
         """Return a probe for ``ctx.file_path`` when it is a prohibited ``.pyi``."""
         file_path = ctx.file_path
@@ -103,7 +108,10 @@ class FlextInfraRefactorDeclarativeEnforcement:
 
     @classmethod
     def _detect_magic_literals(
-        cls, ctx: m.Infra.DetectorContext, *, rule_id: str
+        cls,
+        ctx: m.Infra.DetectorContext,
+        *,
+        rule_id: str,
     ) -> t.SequenceOf[p.AttributeProbe]:
         """Return probes for magic numbers/strings in executable code."""
         res = u.Infra.resolve_resource_from_path(ctx.rope_project, ctx.file_path)
@@ -138,14 +146,20 @@ class FlextInfraRefactorDeclarativeEnforcement:
                 continue
             probes.append(
                 cls._probe(
-                    ctx.file_path, line=line, rule_id=rule_id, literal=repr(value)
-                )
+                    ctx.file_path,
+                    line=line,
+                    rule_id=rule_id,
+                    literal=repr(value),
+                ),
             )
         return tuple(probes)
 
     @classmethod
     def _detect_classvar_constants(
-        cls, ctx: m.Infra.DetectorContext, *, rule_id: str
+        cls,
+        ctx: m.Infra.DetectorContext,
+        *,
+        rule_id: str,
     ) -> t.SequenceOf[p.AttributeProbe]:
         """Delegate ClassVar-outside-_constants detection to the canonical scanner."""
         try:
@@ -170,7 +184,10 @@ class FlextInfraRefactorDeclarativeEnforcement:
 
     @classmethod
     def _detect_consumer_import_violations(
-        cls, ctx: m.Infra.DetectorContext, *, rule_id: str
+        cls,
+        ctx: m.Infra.DetectorContext,
+        *,
+        rule_id: str,
     ) -> t.SequenceOf[p.AttributeProbe]:
         """Delegate consumer import violations detection to the canonical scanner."""
         try:
@@ -196,7 +213,10 @@ class FlextInfraRefactorDeclarativeEnforcement:
 
     @classmethod
     def _detect_loose_test_functions(
-        cls, ctx: m.Infra.DetectorContext, *, rule_id: str
+        cls,
+        ctx: m.Infra.DetectorContext,
+        *,
+        rule_id: str,
     ) -> t.SequenceOf[p.AttributeProbe]:
         """Delegate loose-test-function detection to the canonical scanner."""
         try:
@@ -214,7 +234,10 @@ class FlextInfraRefactorDeclarativeEnforcement:
 
     @classmethod
     def _detect_foreign_canonical_aliases(
-        cls, ctx: m.Infra.DetectorContext, *, rule_id: str
+        cls,
+        ctx: m.Infra.DetectorContext,
+        *,
+        rule_id: str,
     ) -> t.SequenceOf[p.AttributeProbe]:
         """Delegate foreign-canonical-alias detection to the canonical scanner."""
         try:
@@ -228,7 +251,8 @@ class FlextInfraRefactorDeclarativeEnforcement:
         probes: list[p.AttributeProbe] = []
         for violation in violations:
             action = FlextInfraCompatibilityAliasDetector.fix_action_for(
-                violation, current_project=ctx.project_name
+                violation,
+                current_project=ctx.project_name,
             )
             if action != "rewrite_foreign_canonical_alias":
                 continue
@@ -240,7 +264,7 @@ class FlextInfraRefactorDeclarativeEnforcement:
                     object_name=violation.alias_name,
                     target_name=violation.target_name,
                     module_name=violation.module_name,
-                )
+                ),
             )
         return tuple(probes)
 
@@ -278,9 +302,16 @@ class FlextInfraRefactorDeclarativeEnforcement:
 
     @staticmethod
     def _probe(
-        file_path: Path, *, line: int, rule_id: str, **kwargs: t.JsonValue
+        file_path: Path,
+        *,
+        line: int,
+        rule_id: str,
+        **kwargs: t.JsonValue,
     ) -> p.AttributeProbe:
         """Build a probe consumable by fixer adapters."""
         return SimpleNamespace(
-            file_path=str(file_path), line=line, rule_id=rule_id, **kwargs
+            file_path=str(file_path),
+            line=line,
+            rule_id=rule_id,
+            **kwargs,
         )

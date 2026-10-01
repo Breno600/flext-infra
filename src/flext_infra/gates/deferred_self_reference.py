@@ -41,13 +41,18 @@ class FlextInfraDeferredSelfReferenceGate(FlextInfraScannerGateMixin):
 
     @override
     def _detect_file_issues(
-        self, file_path: Path, project_dir: Path, rope_project: t.Infra.RopeProject
+        self,
+        file_path: Path,
+        project_dir: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> t.SequenceOf[m.Infra.Issue]:
         """Detect deferred self-reference violations in a single file."""
         return FlextInfraDeferredSelfReferenceDetector.detect_file(
             m.Infra.DetectorContext(
-                file_path=file_path, project_root=project_dir, rope_project=rope_project
-            )
+                file_path=file_path,
+                project_root=project_dir,
+                rope_project=rope_project,
+            ),
         )
 
 

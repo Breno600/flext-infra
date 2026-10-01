@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, ClassVar, override
 from flext_core import r
 from flext_infra import c, m, u
 from flext_infra.gates.base_gate import FlextInfraGate
+from flext_infra.validate.runtime_census import FlextInfraRuntimeCensusValidator
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -22,12 +23,14 @@ class FlextInfraSmellsGate(FlextInfraGate):
     finding to that project.
     """
 
-    gate_id: ClassVar[str] = "smells"
+    gate_id: ClassVar[str] = c.Infra.SMELLS
     gate_name: ClassVar[str] = "Code Smells"
     scanner_binary: ClassVar[str] = c.Infra.QLTY_BINARY
 
     def _scanned_issues(
-        self, scan: p.Cli.CommandOutput, project_dir: Path
+        self,
+        scan: p.Cli.CommandOutput,
+        project_dir: Path,
     ) -> t.SequenceOf[m.Infra.Issue]:
         """Filter one scan to the blocking issues owned by ``project``.
 
@@ -57,13 +60,18 @@ class FlextInfraSmellsGate(FlextInfraGate):
 
     @override
     def check(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
         """One qlty scan of ``project_dir``'s check directories."""
         _ = ctx
         started = time.monotonic()
         scan = self._scan(project_dir)
-        issues = self._scanned_issues(scan, project_dir)
+        issues = (
+            *self._scanned_issues(scan, project_dir),
+            *self._census_issues(project_dir),
+        )
         return self._build_check_gate_execution(
             project_dir,
             passed=not issues,
@@ -72,9 +80,39 @@ class FlextInfraSmellsGate(FlextInfraGate):
             started=started,
         )
 
+    def _census_issues(self, project_dir: Path) -> t.SequenceOf[m.Infra.Issue]:
+        """Runtime-census findings of the smell families this gate owns.
+
+        Operator ruling 2026-10-01: every smell family, qlty or runtime
+        census, runs through ``make smells`` and never ``make check``. A
+        census that cannot run is a blocking issue, never a clean pass.
+        """
+        report = FlextInfraRuntimeCensusValidator.for_project(
+            project_dir, census_gate=self.gate_id
+        ).build_report()
+        messages = (
+            report.value.violations
+            if report.success
+            else (report.error or "runtime census failed",)
+        )
+        return tuple(
+            m.Infra.Issue(
+                file=str(project_dir),
+                line=1,
+                column=1,
+                code=self.gate_id,
+                message=message,
+                severity=str(c.Infra.GateSeverity.ERROR.value),
+            )
+            for message in messages
+        )
+
     @override
     def _build_check_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        check_dirs: t.StrSequence,
     ) -> t.StrSequence:
         """The project's scan command (check() names its check dirs itself)."""
         _ = ctx, check_dirs
@@ -85,7 +123,10 @@ class FlextInfraSmellsGate(FlextInfraGate):
 
     @override
     def _parse_check_output(
-        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        result: p.Cli.CommandOutput,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
         """Parse SARIF stdout into per-project issues (check_files path)."""
         _ = ctx
@@ -131,7 +172,7 @@ class FlextInfraSmellsGate(FlextInfraGate):
         binary = self._resolve_binary()
         if binary is None:
             return self._unrunnable_scan_output(
-                f"{c.Infra.QLTY_BINARY} binary not found on PATH"
+                f"{c.Infra.QLTY_BINARY} binary not found on PATH",
             )
         config_path = (
             self._repository_root
@@ -140,7 +181,7 @@ class FlextInfraSmellsGate(FlextInfraGate):
         )
         if not config_path.is_file():
             return self._unrunnable_scan_output(
-                f"generated qlty configuration is absent: {config_path}; run make gen"
+                f"generated qlty configuration is absent: {config_path}; run make gen",
             )
         return self._run(
             self._scan_command(binary, project_dir),
@@ -161,7 +202,9 @@ class FlextInfraSmellsGate(FlextInfraGate):
         )
 
     def _drop_generated_projections(
-        self, issues: t.VariadicTuple[m.Infra.Issue], project_dir: Path
+        self,
+        issues: t.VariadicTuple[m.Infra.Issue],
+        project_dir: Path,
     ) -> t.VariadicTuple[m.Infra.Issue]:
         """Drop findings in generated projections; their owner is the generator.
 
@@ -170,25 +213,22 @@ class FlextInfraSmellsGate(FlextInfraGate):
         by construction and the smell gate reports only hand-written source.
         ``Issue.file`` is project-relative while ``qlty`` URIs are
         workspace-relative, so the project directory is joined to the workspace
-        root before reading the header. Unreadable files keep their findings
-        (fail-closed).
+        root before reading the header.
         """
         visible: list[m.Infra.Issue] = []
         for issue in issues:
             path = project_dir / issue.file
-            try:
-                with path.open("r", encoding=c.Cli.ENCODING_DEFAULT) as handle:
-                    first_line = handle.readline()
-            except OSError:
-                visible.append(issue)
-                continue
+            with path.open("r", encoding=c.Cli.ENCODING_DEFAULT) as handle:
+                first_line = handle.readline()
             if c.Infra.AUTOGEN_HEADER not in first_line:
                 visible.append(issue)
         return tuple(visible)
 
     @classmethod
     def _issues_from_sarif(
-        cls, sarif_json: str, prefix: str
+        cls,
+        sarif_json: str,
+        prefix: str,
     ) -> p.Result[t.VariadicTuple[m.Infra.Issue]]:
         """Extract one Issue per smell finding inside ``project_name``.
 
@@ -207,7 +247,7 @@ class FlextInfraSmellsGate(FlextInfraGate):
                 for run in u.Cli.json_deep_mapping_list(data, "runs")
                 for result in u.Cli.json_deep_mapping_list(run, "results")
                 if cls._result_uri(result).startswith(prefix)
-            )
+            ),
         )
 
     @classmethod
@@ -216,10 +256,12 @@ class FlextInfraSmellsGate(FlextInfraGate):
         rule_id = u.Cli.json_pick_str(result, "ruleId")
         code = rule_id.removeprefix(c.Infra.SMELLS_RULE_PREFIX)
         physical = u.Cli.json_deep_mapping(
-            cls._first_location(result), "physicalLocation"
+            cls._first_location(result),
+            "physicalLocation",
         )
         sarif_text = u.Cli.json_pick_str(
-            u.Cli.json_deep_mapping(result, "message"), "text"
+            u.Cli.json_deep_mapping(result, "message"),
+            "text",
         )
         return m.Infra.Issue(
             file=cls._result_uri(result).removeprefix(prefix),
@@ -235,7 +277,9 @@ class FlextInfraSmellsGate(FlextInfraGate):
         """Workspace-relative URI of the finding's first location."""
         uri: str = u.Cli.json_pick_str(
             u.Cli.json_deep_mapping(
-                cls._first_location(result), "physicalLocation", "artifactLocation"
+                cls._first_location(result),
+                "physicalLocation",
+                "artifactLocation",
             ),
             "uri",
         )

@@ -33,11 +33,13 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
 
     @staticmethod
     def resource_cache_key(
-        rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
+        rope_project: t.Infra.RopeProject,
+        resource: t.Infra.RopeResource,
     ) -> t.Triple[str, str, int]:
         """Resource cache key."""
         file_path = FlextInfraUtilitiesRopeCore.resource_file_path(
-            rope_project, resource
+            rope_project,
+            resource,
         )
         mtime_ns = (
             file_path.stat().st_mtime_ns
@@ -130,7 +132,9 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
 
     @staticmethod
     def first_decorator_line(
-        pyfunction: t.Infra.RopePyObject, *, default_line: int
+        pyfunction: t.Infra.RopePyObject,
+        *,
+        default_line: int,
     ) -> int:
         """Return the lowest line number among ``pyfunction``'s decorators."""
         decorators = getattr(pyfunction, "decorators", None) or ()
@@ -246,7 +250,9 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
 
     @staticmethod
     def class_body_nodes(
-        tree: p.AttributeProbe, *, class_name: str
+        tree: p.AttributeProbe,
+        *,
+        class_name: str,
     ) -> t.SequenceOf[t.Infra.RopeAstNode]:
         """Return direct body nodes for a top-level class name."""
         if not FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(tree):
@@ -305,7 +311,9 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
                     names.add(node_name)
                 continue
             names.update(
-                FlextInfraUtilitiesRopeAnalysisAstHelpers._assignment_target_names(node)
+                FlextInfraUtilitiesRopeAnalysisAstHelpers._assignment_target_names(
+                    node,
+                ),
             )
         return tuple(sorted(names))
 
@@ -374,6 +382,6 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
             and FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(subscript_value)
         ):
             return FlextInfraUtilitiesRopeAnalysisAstHelpers._class_base_name(
-                subscript_value
+                subscript_value,
             )
         return ""

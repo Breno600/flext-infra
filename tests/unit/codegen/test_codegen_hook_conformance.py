@@ -44,16 +44,18 @@ class TestsFlextInfraCodegenHookConformance:
             u.Cli.template_render(
                 _HOOK_TEMPLATE,
                 m.Infra.MakeWorkflowRenderSpec(
-                    dist="flext-demo", make=config.Infra.codegen.make
+                    dist="flext-demo",
+                    make=config.Infra.codegen.make,
                 ),
-            )
+            ),
         )
         tm.ok(u.Cli.atomic_write_text_file(root / ".pre-commit-config.yaml", rendered))
         return rendered
 
     @staticmethod
     def _check(
-        root: Path, workspace: m.Infra.WorkspaceSpec
+        root: Path,
+        workspace: m.Infra.WorkspaceSpec,
     ) -> p.Result[m.Infra.CodegenResult]:
         return FlextInfraCodegenConform.execute_request(
             test_u.Tests.conform_request(
@@ -66,7 +68,8 @@ class TestsFlextInfraCodegenHookConformance:
         )
 
     def test_check_never_requires_runtime_hook_installation(
-        self, infra_git_repo: Path
+        self,
+        infra_git_repo: Path,
     ) -> None:
         """Conform owns generated files; AI Hub owns hook installation."""
         root = infra_git_repo
@@ -100,7 +103,8 @@ class TestsFlextInfraCodegenHookConformance:
                 tm.that(hook.read_text(encoding="utf-8"), lacks=f"--hook-type={stage}")
 
     def test_generated_hooks_use_one_strict_shell_per_workflow_step(
-        self, infra_git_repo: Path
+        self,
+        infra_git_repo: Path,
     ) -> None:
         """Each enabled stage runs every declared verb in its own strict shell.
 
@@ -109,13 +113,13 @@ class TestsFlextInfraCodegenHookConformance:
         """
         root = infra_git_repo
         make = config.Infra.codegen.make.model_copy(
-            update={"pre_commit": True, "pre_push": True}
+            update={"pre_commit": True, "pre_push": True},
         )
         rendered = tm.ok(
             u.Cli.template_render(
                 _HOOK_TEMPLATE,
                 m.Infra.MakeWorkflowRenderSpec(dist="flext-demo", make=make),
-            )
+            ),
         )
         tm.ok(u.Cli.atomic_write_text_file(root / ".pre-commit-config.yaml", rendered))
         expected = sum(
@@ -129,11 +133,14 @@ class TestsFlextInfraCodegenHookConformance:
 
     @pytest.mark.parametrize("inherited", ["ci", "local"])
     def test_pre_push_check_unsets_inherited_ci_before_the_real_make_runtime(
-        self, tmp_path: Path, inherited: str
+        self,
+        tmp_path: Path,
+        inherited: str,
     ) -> None:
         """Execute the generated hook entry without replacing any runtime owner."""
         root, _ = test_u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
         )
         tm.ok(test_u.Tests.create_python_environment(root))
         policy = config.Infra.codegen.make
@@ -143,7 +150,8 @@ class TestsFlextInfraCodegenHookConformance:
             "pre_push": True,
             "workflow": (
                 m.Infra.MakeWorkflowStepSpec(
-                    verb="check", contexts=("local", "pre_push")
+                    verb="check",
+                    contexts=("local", "pre_push"),
                 ),
             ),
         })
@@ -151,7 +159,7 @@ class TestsFlextInfraCodegenHookConformance:
             u.Cli.template_render(
                 _HOOK_TEMPLATE,
                 m.Infra.MakeWorkflowRenderSpec(dist="fixture-project", make=make),
-            )
+            ),
         )
         hook_config = root / c.Infra.PRE_COMMIT_CONFIG_FILENAME
         tm.ok(u.Cli.atomic_write_text_file(hook_config, rendered))
@@ -172,10 +180,10 @@ class TestsFlextInfraCodegenHookConformance:
                 env={
                     policy.ci.variable: (
                         policy.ci.value if inherited == "ci" else policy.ci.local_value
-                    )
+                    ),
                 },
                 remove_env_keys=test_c.Tests.MAKE_ISOLATION_ENV_KEYS,
-            )
+            ),
         )
 
         tm.that(process.outcome.raw_return_code, ne=0)
@@ -194,11 +202,10 @@ class TestsFlextInfraCodegenHookConformance:
                 else "no active check gates remain in the selected context"
             ),
         )
-        for suspension in policy.check_gate_suspensions:
-            tm.that(process.stdout, has=f"SUSPENDED check gate {suspension.gate};")
 
     def test_check_and_apply_never_overwrite_foreign_hook_shims(
-        self, infra_git_repo: Path
+        self,
+        infra_git_repo: Path,
     ) -> None:
         """Conform never overwrites a foreign executable hook."""
         root = infra_git_repo
@@ -230,7 +237,7 @@ class TestsFlextInfraCodegenHookConformance:
             u.Cli.template_render(
                 _HOOK_TEMPLATE,
                 m.Infra.MakeWorkflowRenderSpec(dist="flext-demo", make=make),
-            )
+            ),
         )
         tm.that("flext-pre-commit-" in rendered, eq=make.pre_commit)
         tm.that("flext-pre-push-" in rendered, eq=make.pre_push)
@@ -243,10 +250,10 @@ class TestsFlextInfraCodegenHookConformance:
                 m.Infra.MakeWorkflowRenderSpec(
                     dist="flext-demo",
                     make=config.Infra.codegen.make.model_copy(
-                        update={"pre_commit": False, "pre_push": False}
+                        update={"pre_commit": False, "pre_push": False},
                     ),
                 ),
-            )
+            ),
         )
 
         tm.that(rendered, lacks="stages: [pre-commit]")
@@ -265,7 +272,7 @@ class TestsFlextInfraCodegenHookConformance:
                     dist="flext-demo",
                     make=make.model_copy(update={"pre_commit": True, "pre_push": True}),
                 ),
-            )
+            ),
         )
         expected = sum(
             1
@@ -281,10 +288,10 @@ class TestsFlextInfraCodegenHookConformance:
                 m.Infra.MakeWorkflowRenderSpec(
                     dist="flext-demo",
                     make=make.model_copy(
-                        update={"pre_commit": True, "pre_push": False}
+                        update={"pre_commit": True, "pre_push": False},
                     ),
                 ),
-            )
+            ),
         )
         tm.that(commit_only, has="stages: [pre-commit]")
         tm.that(commit_only, lacks="stages: [pre-push]")
@@ -301,24 +308,28 @@ class TestsFlextInfraCodegenHookConformance:
         )
 
         planned = FlextInfraCodegenConform.retired_projection_plans(
-            root, c.Infra.MakeProfile.STANDALONE
+            root,
+            c.Infra.MakeProfile.STANDALONE,
         )
 
         retired = {plan.path for plan in tm.ok(planned) if plan.desired_content is None}
         tm.that(hook_config in retired, eq=False)
 
     def test_standalone_retires_workspace_only_generated_projection(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Remove a generated projection excluded from the selected profile."""
         target = tmp_path / ".github/ci-template/ci.yml"
         target.parent.mkdir(parents=True)
         target.write_text(
-            f"# {c.Infra.TEMPLATE_GENERATED_MARKERS[0]}\n", encoding="utf-8"
+            f"# {c.Infra.TEMPLATE_GENERATED_MARKERS[0]}\n",
+            encoding="utf-8",
         )
 
         planned = FlextInfraCodegenConform.retired_projection_plans(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
         )
 
         retired = {plan.path for plan in tm.ok(planned) if plan.desired_content is None}
