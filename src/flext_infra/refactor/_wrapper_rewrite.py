@@ -50,10 +50,7 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
         runtime_aliases = project_runtime_aliases.get(
             project_name, metadata_runtime_aliases
         )
-        if not any(
-            part in c.Infra.ROOT_WRAPPER_SEGMENTS and part != c.Infra.DEFAULT_SRC_DIR
-            for part in rel.parts
-        ):
+        if not any(part in self._WRAPPER_PACKAGES for part in rel.parts):
             return
         if file_path.name == c.Infra.INIT_PY and (not self.include_init):
             return

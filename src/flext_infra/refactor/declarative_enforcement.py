@@ -25,6 +25,8 @@ from flext_infra.detectors.loose_test_function_detector import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from flext_infra import m, p, t
 
 
@@ -43,61 +45,51 @@ class FlextInfraRefactorDeclarativeEnforcement:
         float,
     })
     _MAGIC_STRING_TYPES: ClassVar[frozenset[type[str]]] = frozenset({str})
-    _INFRA_VIOLATION_FIELDS: ClassVar[frozenset[str]] = frozenset({
-        "magic_literal_violations",
-        "stub_file_violations",
-        "foreign_canonical_alias_violations",
-        "loose_test_function_violations",
-        "consumer_import_violations",
-    })
-    _BEARTYPE_PREDICATES: ClassVar[frozenset[str]] = frozenset({"classvar_constant"})
+
+    @classmethod
+    def _detectors(
+        cls,
+    ) -> t.MappingKV[str, Callable[..., t.SequenceOf[p.AttributeProbe]]]:
+        """Bind each catalog source key this engine evaluates to its detector.
+
+        The key is the source's own discriminant: the ``violation_field`` of a
+        ``flext_infra_detector`` source, the ``predicate_kind`` of a
+        ``beartype`` source. ``supports`` and ``detect`` both read this one
+        binding, so a source is supported exactly when it is detected.
+        """
+        return {
+            "stub_file_violations": cls._detect_stub_files,
+            "magic_literal_violations": cls._detect_magic_literals,
+            "foreign_canonical_alias_violations": (
+                cls._detect_foreign_canonical_aliases
+            ),
+            "loose_test_function_violations": cls._detect_loose_test_functions,
+            "consumer_import_violations": cls._detect_consumer_import_violations,
+            "classvar_constant": cls._detect_classvar_constants,
+        }
+
+    @staticmethod
+    def _source_key(rule: m.EnforcementRuleSpec) -> str:
+        """Return the discriminant of ``rule.source`` that selects a detector."""
+        source = rule.source
+        if source.kind == "flext_infra_detector":
+            return source.violation_field
+        if source.kind == "beartype":
+            return source.predicate_kind.value
+        return ""
 
     @classmethod
     def supports(cls, rule: m.EnforcementRuleSpec) -> bool:
         """Return whether this engine can evaluate ``rule`` from source metadata."""
-        source = rule.source
-        if source.kind == "flext_infra_detector":
-            return source.violation_field in cls._INFRA_VIOLATION_FIELDS
-        if source.kind == "beartype":
-            predicate_kind = source.predicate_kind
-            return (
-                str(getattr(predicate_kind, "value", predicate_kind))
-                in cls._BEARTYPE_PREDICATES
-            )
-        return False
+        return cls._source_key(rule) in cls._detectors()
 
     @classmethod
     def detect(
         cls, rule: m.EnforcementRuleSpec, ctx: m.Infra.DetectorContext
     ) -> t.SequenceOf[p.AttributeProbe]:
         """Return probes for violations of ``rule`` inside ``ctx.file_path``."""
-        rule_id = cls._rule_id_short(rule.id)
-        source = rule.source
-        if source.kind == "flext_infra_detector":
-            violation_field = getattr(source, "violation_field", "")
-            if violation_field == "stub_file_violations":
-                return cls._detect_stub_files(ctx, rule_id=rule_id)
-            if violation_field == "magic_literal_violations":
-                return cls._detect_magic_literals(ctx, rule_id=rule_id)
-            if violation_field == "foreign_canonical_alias_violations":
-                return cls._detect_foreign_canonical_aliases(ctx, rule_id=rule_id)
-            if violation_field == "loose_test_function_violations":
-                return cls._detect_loose_test_functions(ctx, rule_id=rule_id)
-            if violation_field == "consumer_import_violations":
-                return cls._detect_consumer_import_violations(ctx, rule_id=rule_id)
-        elif source.kind == "beartype":
-            predicate_kind = getattr(source, "predicate_kind", None)
-            predicate_value = getattr(predicate_kind, "value", predicate_kind)
-            if predicate_value == "classvar_constant":
-                return cls._detect_classvar_constants(ctx, rule_id=rule_id)
-        violation_field = getattr(source, "violation_field", "")
-        predicate_kind = getattr(source, "predicate_kind", "")
-        msg = (
-            f"unsupported declarative enforcement source for {rule.id}: "
-            f"kind={source.kind!r} violation_field={violation_field!r} "
-            f"predicate_kind={predicate_kind!r}"
-        )
-        raise ValueError(msg)
+        detector = cls._detectors()[cls._source_key(rule)]
+        return detector(ctx, rule_id=cls._rule_id_short(rule.id))
 
     @classmethod
     def _detect_stub_files(
