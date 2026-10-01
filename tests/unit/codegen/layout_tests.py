@@ -152,17 +152,16 @@ class TestsFlextInfraCodegenLayout:
         tm.that(gitignore[0].target, eq=f"{archive_root()}/")
 
     @staticmethod
-    def test_check_execute_passes_while_severity_is_warning(
+    def test_check_execute_fails_on_layout_findings(
         tmp_path: Path,
     ) -> None:
-        """CLI check posture is report-only while the SSOT severity is warning."""
+        """A layout finding blocks the check at every severity."""
         build_loose_project(tmp_path)
         engine = layout_engine(tmp_path)
 
         result = engine.execute()
 
-        tm.ok(result)
-        tm.that(result.value, has="move guides -> docs/guides")
+        tm.fail(result, has="move guides -> docs/guides")
 
     @staticmethod
     def test_apply_moves_archives_and_converges_idempotently(
