@@ -17,7 +17,7 @@ from flext_infra import c, config, m, p, t, u
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 from ._layout_plan import FlextInfraCodegenLayoutPlanMixin
-from ._mise_artifacts_publication import publish_file_plan
+from ._mise_artifacts_publication import FlextInfraMisePublication
 
 
 class FlextInfraCodegenLayoutGitignoreMixin:
@@ -71,7 +71,7 @@ class FlextInfraCodegenLayoutGitignoreMixin:
             owner="codegen",
             policy="full",
         )
-        written = publish_file_plan(planned, phase="layout")
+        written = FlextInfraMisePublication.publish_file_plan(planned, phase="layout")
         if written.failure:
             return r[t.Infra.LayoutStatus].from_failure(written)
         applied_status: t.Infra.LayoutStatus = "applied"
@@ -116,7 +116,7 @@ class FlextInfraCodegenLayoutGitignoreMixin:
             owner="codegen",
             policy="merge",
         )
-        written = publish_file_plan(planned, phase="layout")
+        written = FlextInfraMisePublication.publish_file_plan(planned, phase="layout")
         if written.failure:
             return r[t.Infra.LayoutStatus].from_failure(written)
         applied_status: t.Infra.LayoutStatus = "applied"

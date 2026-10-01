@@ -24,8 +24,7 @@ rewrite. Other dynamic lookups remain findings until their receiver contract is 
 they are never blindly rewritten.
 
 The codemod check gate blocks on every reported policy finding, including warnings. It
-preserves native scanner output and rule severities in normal error reports; findings
-are never converted to successful observational output.
+preserves native scanner output and rule severities in normal error reports.
 
 The same semantic pipeline resolves elected self-facade imports before deferring them
 into function bodies. Module/class execution, decorators, defaults and other eager uses

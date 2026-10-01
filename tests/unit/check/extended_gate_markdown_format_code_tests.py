@@ -205,14 +205,23 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
 
         tm.that(result.issues[0].file, eq="src/widget.py")
 
-    def test_code_gate_skips_neutrally_without_embedded_code(
+    def test_code_gate_is_not_selected_without_embedded_code(
         self, tmp_path: Path
     ) -> None:
+        """Prose-only documentation never selects the embedded-code gate."""
         project_dir = u.Tests.mk_project(tmp_path, "markdown-code-empty")
         (project_dir / "README.md").write_text("# Prose only\n", encoding="utf-8")
+        gate = FlextInfraMarkdownCodeGate(tmp_path)
 
-        result = u.Tests.check_gate_asserting(
-            FlextInfraMarkdownCodeGate, tmp_path, project_dir, passed=True, issues_len=0
+        tm.that(gate.selected_for(project_dir), eq=False)
+        tm.that(
+            gate.check(project_dir, u.Tests.gate_context(tmp_path)).result.passed,
+            eq=False,
         )
 
-        tm.that(result.result.passed, eq=True)
+    def test_code_gate_is_selected_with_embedded_code(self, tmp_path: Path) -> None:
+        """A parseable fenced Python block selects the embedded-code gate."""
+        project_dir = u.Tests.mk_project(tmp_path, "markdown-code-present")
+        (project_dir / "README.md").write_text(self.FORMATTED, encoding="utf-8")
+
+        tm.that(FlextInfraMarkdownCodeGate(tmp_path).selected_for(project_dir), eq=True)

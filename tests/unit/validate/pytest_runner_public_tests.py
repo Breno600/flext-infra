@@ -238,37 +238,25 @@ class TestsFlextInfraPytestRunner:
 
     @pytest.mark.slow
     @pytest.mark.parametrize(
-        ("finding", "strict"),
-        [
-            ("skip", False),
-            ("warning", False),
-            ("suspended-warning", False),
-            ("suspended-warning", True),
-            ("homonymous-warning", False),
-        ],
+        "finding", ["skip", "warning", "mro-warning", "homonymous-warning"]
     )
     def test_runtime_findings_keep_complete_accounting(
-        self, cached_runner_project: Path, finding: str, *, strict: bool
+        self, cached_runner_project: Path, finding: str
     ) -> None:
-        """Real zero-exit pytest runs still reject skips and unsuspended warnings."""
+        """Real zero-exit pytest runs still reject every skip and every warning."""
         cache = config.Infra.codegen.make.testmon_cache
-        suspended = 0
-        if strict:
-            with (cached_runner_project / "pyproject.toml").open("a") as stream:
-                stream.write('\naddopts = ["--flext-enforce-strict"]\n')
         if finding == "skip":
             source = (
                 "import pytest\n\n"
                 "def test_finding():\n    pytest.skip('required runtime evidence')\n"
             )
         else:
-            if finding == "suspended-warning":
+            if finding == "mro-warning":
                 category = "ConsumerNotice"
                 declaration = (
                     "from flext_core import c\n\n"
                     f"class {category}(c.FlextSmellViolation):\n    pass\n"
                 )
-                suspended = 2 * int(not strict)
             else:
                 category = (
                     c.FlextSmellViolation.__name__
@@ -297,19 +285,15 @@ class TestsFlextInfraPytestRunner:
         exit_code = tm.ok(runner_for(cached_runner_project).execute())
 
         warnings_count = 0 if finding == "skip" else 2
-        blocked = warnings_count - suspended
-        expected_exit = int(finding == "skip" or blocked > 0)
-        tm.that(exit_code, eq=expected_exit)
+        tm.that(exit_code, eq=1)
         reports_root = cached_runner_project / cache.reports_directory
         tm.that(
             summary(reports_root),
             has=[
                 "executed=2",
                 f"warnings={warnings_count}",
-                f"blocking_warnings={blocked}",
-                f"suspended_warnings={suspended}",
                 f"skipped={int(finding == 'skip')}",
-                f"exit={expected_exit}",
+                "exit=1",
             ],
         )
         (outcome_path,) = reports_root.glob("*/suite-outcome.json")
@@ -317,10 +301,6 @@ class TestsFlextInfraPytestRunner:
         tm.that(outcome.raw_return_code, eq=0)
         warning_evidence = (outcome_path.parent / "warnings.txt").read_text()
         tm.that(warning_evidence.count("repeated runtime evidence"), eq=warnings_count)
-        suspended_evidence = (
-            outcome_path.parent / "suspended-warnings.txt"
-        ).read_text()
-        tm.that(suspended_evidence.count("repeated runtime evidence"), eq=suspended)
 
     @pytest.mark.slow
     def test_setup_failure_is_accounted_without_a_call_phase(

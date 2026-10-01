@@ -287,8 +287,6 @@ class FlextInfraPytestRunnerExecution(
         phases = self._phase_diagnostics(report_dir, context=context, suite=diagnostics)
         self._write_diagnostics(report_dir, diagnostics, phases=phases)
         warnings = sum(item.warning_count for _, item in phases)
-        blocking_warnings = sum(item.blocking_warning_count for _, item in phases)
-        suspended_warnings = sum(item.suspended_warning_count for _, item in phases)
         accounting_complete = (
             accounting.executed_count == accounting.reported_count
             and (
@@ -300,7 +298,7 @@ class FlextInfraPytestRunnerExecution(
         rejected = any((
             diagnostics.failed_count,
             diagnostics.error_count,
-            blocking_warnings,
+            warnings,
             diagnostics.skipped_count,
             diagnostics.collection_failed_count,
             diagnostics.collection_skipped_count,
@@ -354,10 +352,7 @@ class FlextInfraPytestRunnerExecution(
         )
         ci_excluded = self.ci_excluded_markers(execution_mode=context.execution_mode)
         phase_counts = "".join(
-            f"{phase}_warnings={item.warning_count}\n"
-            f"{phase}_blocking_warnings={item.blocking_warning_count}\n"
-            f"{phase}_suspended_warnings={item.suspended_warning_count}\n"
-            for phase, item in phases
+            f"{phase}_warnings={item.warning_count}\n" for phase, item in phases
         )
         summary = (
             f"outcome={result}\n"
@@ -372,8 +367,6 @@ class FlextInfraPytestRunnerExecution(
             f"cache_restored={cache_restored}\n"
             f"failed={diagnostics.failed_count}\nerrors={diagnostics.error_count}\n"
             f"warnings={warnings}\n"
-            f"blocking_warnings={blocking_warnings}\n"
-            f"suspended_warnings={suspended_warnings}\n"
             f"{phase_counts}"
             f"skipped={diagnostics.skipped_count}\n"
             f"collection_errors={diagnostics.collection_failed_count}\n"

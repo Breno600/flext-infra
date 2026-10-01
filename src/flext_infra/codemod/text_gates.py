@@ -63,7 +63,7 @@ class FlextInfraModTextGateEngine:
     ) -> p.Result[t.VariadicTuple[m.Infra.ModTextRule]]:
         """Compose provider rules before local rules and reject ambiguous ids."""
         rules: list[m.Infra.ModTextRule] = []
-        owners: dict[str, Path] = {}
+        owners: t.MutableMappingKV[str, Path] = {}
         for snapshot in snapshots:
             parsed = cls._rules_from_state(snapshot)
             if parsed.failure:

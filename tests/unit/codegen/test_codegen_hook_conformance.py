@@ -194,8 +194,6 @@ class TestsFlextInfraCodegenHookConformance:
                 else "no active check gates remain in the selected context"
             ),
         )
-        for suspension in policy.check_gate_suspensions:
-            tm.that(process.stdout, has=f"SUSPENDED check gate {suspension.gate};")
 
     def test_check_and_apply_never_overwrite_foreign_hook_shims(
         self, infra_git_repo: Path
