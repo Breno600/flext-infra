@@ -1,11 +1,11 @@
 Infra:
   tooling:
-    # flext-j47u (codex): canonical validated tooling and suppression-policy SSOT.
+    # Canonical validated tooling and suppression-policy SSOT.
     tools:
       codespell:
         check-filenames: true
         ignore-words-list: crate,nd
-      # flext-j47u (codex): non-linter tool sections are config-owned as well.
+      # Non-linter tool sections are config-owned as well.
       deptry:
         known-first-party: [flext_core]
         pep621-dev-dependency-groups: [dev]
@@ -69,8 +69,8 @@ Infra:
           tab-width: 4
           md-tab-width: 2
         exclude:
-          # AGENTS.md is a tool-managed projection (beads integration + codex
-          # setup blocks): gating generated output is a projection defect.
+          # AGENTS.md is a tool-managed projection (tracker and agent setup
+          # blocks): gating generated output is a projection defect.
           # CLAUDE.md is its symlink and would rewrite the projection through
           # the link.
           - AGENTS.md
@@ -104,8 +104,8 @@ Infra:
           # target/ is a fully generated build tree (mise/rust-style outputs):
           # formatting generated output is a projection defect.
           - target/**
-          # Provider-surface projections and runtime state owned by ai-hub:
-          # never a lint/format surface.
+          # Provider-surface projections and tracker runtime state: never a
+          # lint/format surface.
           - .agents/**
           - .gemini/**
           - .beads/**
@@ -118,17 +118,11 @@ Infra:
           # lines (MD013) originate from code-review-graph, not hand-authored docs.
           - docs/architecture/crg-reports/**
           # Generated api-reference and project-catalog projections (make gen /
-          # docs generate): the renderer's output is canonical as emitted —
-          # operator law 2026-09-22 — so prettier never rewrites generated
-          # docs and the codegen fixed point stays stable.
+          # docs generate): the renderer's output is canonical as emitted, so
+          # prettier never rewrites generated docs and the codegen fixed point
+          # stays stable.
           - docs/api-reference/generated/**
           - docs/projects/generated/**
-          # Pandoc-fenced authoring sources (fonte.md): the fenced-div markers
-          # are runtime syntax (class attribution), not prose. Prettier's
-          # rewrap merges `::: {.class}` onto the content line and the motor
-          # loses the declared classes (style-specimen contract); the author
-          # owns the fences and the renderer owns their meaning.
-          - "**/fonte.md"
       ruff:
         # P0 law: lint covers every tracked Python surface. No excludes over
         # legado, examples, tests, or scripts code anywhere in this config.
@@ -619,23 +613,12 @@ Infra:
           project-typings-paths: []
           workspace-include-children: false
           workspace-include-child-env-dirs: []
-          # Why (flext-463 follow-up): scripts/ is a checked env dir, so its
-          # runtime sys.path imports (e.g. `from lib...`) must also resolve at
-          # check time; absent dirs are filtered by the is_dir guard.
-          # Amended 2026-08-31 (cosmos-45hiv): now EMPTY. Two rounds of
-          # evidence emptied it. "." first: scripts/ owns scripts/__init__.py,
-          # so every script module resolves as `scripts.*` with the repo root
-          # as CWD, and "." made the same file reachable a second way
-          # (`legado.lib.argocd` vs `scripts.legado.lib.argocd`), which mypy
-          # reports as source-file-found-twice and dies repo-wide. "scripts"
-          # second: with that entry on the search path, `scripts/` becomes a
-          # search-path ROOT, so `scripts/legado/lib/argocd.py` resolves once
-          # more as `legado.lib.argocd` -- the same duplicate under a different
-          # mechanism. scripts/ is analyzed because `files` names it, not
-          # because the search path does; import resolution there uses the
-          # `scripts.*` package rooted at the CWD. No live consumer of either
-          # bare spelling remains; the only importer was the archived
-          # scripts/legado/dispatch.py.
+          # Empty: scripts/ owns scripts/__init__.py, so every script module
+          # resolves as `scripts.*` with the repo root as CWD. Adding "." or
+          # "scripts" here makes the same file reachable under a second module
+          # name, which mypy reports as source-file-found-twice. scripts/ is
+          # analyzed because `files` names it, not because the search path
+          # does.
           project-shared-search-paths: []
       pytest:
         # Scaffold and modernizer consume one complete pytest model. A case that
@@ -672,10 +655,6 @@ Infra:
         # invocation; in-flight cases may report after the stop, which the
         # declaring consumer accepts by declaring.
         parallel-worker-overrides:
-          ai-hub:
-            workers: 4
-          cosmos-docgen:
-            workers: 4
           # The measured ceiling for this suite; higher ceilings regressed the
           # cold run because per-window dispatch overhead dominates.
           flext-infra:
@@ -687,12 +666,10 @@ Infra:
         parallel-worker-memory-gb: 2
         # Keep scheduling centralized within the measured worker budget.
         parallel-distribution: load
-        # flext-itpd1.3.7: xdist queues the shutdown marker behind each
-        # worker's pre-dispatched chunk, so the declared max-failures stop only
-        # took effect after every worker drained minutes of assigned items at
-        # fleet scale and red cold runs were deadline-killed untyped. One test
-        # per dispatch step makes that stop immediate; per-item dispatch cost
-        # is noise against this suite's measured per-case time.
+        # xdist queues the shutdown marker behind each worker's pre-dispatched
+        # chunk, so a larger chunk delays the declared max-failures stop until
+        # every worker drains its assigned items. One test per dispatch step
+        # makes that stop immediate.
         parallel-schedule-chunk: 1
         profile-sort: cumulative
         profile-limit: 50
@@ -711,8 +688,8 @@ Infra:
         # ('m'/'o' > 'e'); default::/always::/ignore:: get reordered before it and
         # lose. The entry names FlextMroViolation because FlextSmellViolation is
         # its SUBCLASS: a filter on the child leaves the parent fatal, which is
-        # how MRO violations became errors again after a regeneration dropped
-        # the hand-added entry from ade37396c. One entry on the parent keeps
+        # how MRO violations become errors when a regeneration drops the
+        # entry. One entry on the parent keeps
         # both VISIBLE-but-non-fatal, matching the non-strict enforcement policy
         # (flext-tests registers default::{category}); all other warnings stay
         # fatal. See flext-core test_enforcement_warning_visibility.
@@ -734,13 +711,13 @@ Infra:
           - "resilience: resilience tests"
           - "discovery: catalog and stream discovery tests"
           - "singer: Singer protocol contract tests"
-        # gate-budget/engineering-core: external-token gates never run inside
+        # External-token gates never run inside
         # offline verification (`make test`); the runner records their exclusion.
         # `make test-full` first completes that incremental phase, then executes
         # every marker under the same database and deadline. Existing external
         # tests retain their declared environment and authentication requirements.
         external-gate-markers: [remote, docker]
-        # Operator 2026-09-14: CI and pre-commit share make.ci.value;
+        # CI and pre-commit share make.ci.value;
         # local and pre-push execution retain slow tests. The full phase of
         # `make test-full` includes these markers in every context.
         ci-excluded-markers: [slow]
@@ -749,7 +726,7 @@ Infra:
           - --strict-markers
           - --markdown-docs
           - --durations=10
-          # flext-99ae: --timeout/--session-timeout are runner-owned and derived
+          # --timeout/--session-timeout are runner-owned and derived
           # from case-timeout-seconds/run-timeout-seconds; never restate them here.
       tomlsort:
         all: true
@@ -757,8 +734,8 @@ Infra:
         process-timeout-seconds: 60
         sort_first: [project, build-system, tool, dependency-groups]
       vulture:
-        # NOTE (multi-agent, flext-j47u): Vulture 2.16 reports keyword-bearing
-        # Protocol signature parameters as unused variables at 100% confidence,
+        # Vulture reports keyword-bearing Protocol signature parameters as
+        # unused variables at full confidence,
         # even with --ignore-decorators @runtime_checkable. The declaration-only
         # protocol facet is excluded; production models and runtime code remain scanned.
         exclude: ["*/_protocols/*"]
@@ -787,8 +764,8 @@ Infra:
       app:
         pyright: {}
     lazy-init:
-      # flext-lz2 (codex): canonical import layer order for the
-      # lazy-init engine (D3). Lower index = lower layer.
+      # Canonical import layer order for the lazy-init engine. Lower
+      # index = lower layer.
       # Runtime imports target equal-or-lower layers (relative-dot
       # within package); reverse (higher) imports are emitted under
       # ``if TYPE_CHECKING:`` per ``reverse_import_mode``.

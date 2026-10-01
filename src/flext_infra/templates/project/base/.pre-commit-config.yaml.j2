@@ -2,7 +2,7 @@
 repos:
   - repo: local
     hooks:
-    # Why: each make verb is its own pre-commit/pre-push hook so the operator
+    # Why: each make verb is its own pre-commit/pre-push hook so the developer
     # sees per-step status (Passed/Failed) natively via the pre-commit runner.
     # Every step owns its CI context instead of inheriting the caller's token.
     # pre-commit is the fast mutation pass and runs the CI gate set
@@ -17,7 +17,7 @@ repos:
     # reads the member's temporary index and reports governed gitlinks missing.
     # Inherited Make flags are cleared in the same prefix so each hook step
     # executes its independently declared operation.
-    # Stage gates (operator law 2026-08-24): each stage renders only when its
+    # Stage gates: each stage renders only when its
     # config gate (make.pre_commit / make.pre_push) is enabled. Disabled by
     # default; re-enable case by case in config/codegen.yaml.
 {% if make.pre_commit %}
