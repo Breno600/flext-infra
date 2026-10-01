@@ -104,6 +104,45 @@ class TestsFlextInfraModTextGateEngine:
         selected = infra.mod_text(m.Infra.ModTextCommand(repository_root=mod_workspace))
         tm.fail(selected, has="text Markdown include has no source")
 
+    @staticmethod
+    def test_public_mod_text_reselects_rules_after_project_identity_changes(
+        mod_workspace: Path,
+    ) -> None:
+        """The public command must select rules from current project bytes."""
+        document = mod_workspace / c.PYPROJECT_FILENAME
+        distribution = u.Infra.project_name_from_payload(
+            document,
+            u.Infra.pyproject_payload(document),
+        )
+        catalogue = mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                catalogue,
+                (
+                    "rules:\n"
+                    "  - id: identity-dependent-markdown\n"
+                    f"    distributions: [{distribution}]\n"
+                    "    include: [docs/identity-required.md]\n"
+                    "    find: 'before'\n"
+                    "    replace: 'after'\n"
+                ),
+            ),
+        )
+        request = m.Infra.ModTextCommand(repository_root=mod_workspace)
+        tm.fail(infra.mod_text(request), has="text Markdown include has no source")
+
+        original = document.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+        changed = original.replace(
+            f'name = "{distribution}"',
+            f'name = "changed-{distribution}"',
+        )
+        tm.that(changed == original, eq=False)
+        tm.ok(u.Cli.atomic_write_text_file(document, changed))
+        tm.ok(infra.mod_text(request))
+
+        tm.ok(u.Cli.atomic_write_text_file(document, original))
+        tm.fail(infra.mod_text(request), has="text Markdown include has no source")
+
     def test_external_catalogue_id_collision_fails_before_publication(
         self,
         mod_workspace: Path,

@@ -20,10 +20,7 @@ from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
 from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
 
 
-class FlextInfraUtilitiesDocsScopeStateMixin(
-    FlextInfraUtilitiesDocsScopePathsMixin,
-    FlextInfraUtilitiesPyproject,
-):
+class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMixin):
     """Load one authenticated pyproject state for every docs decision."""
 
     @staticmethod
