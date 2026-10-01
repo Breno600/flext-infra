@@ -63,7 +63,7 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
         return FIXTURE_PROVIDER_BRANCH
 
     @staticmethod
-    def flext_source(distribution: str | None = None) -> str:
+    def flext_source(distribution: str | None = None, *, ref: str | None = None) -> str:
         """Declare one internal distribution's direct Git source for a fixture.
 
         Defaults to the infrastructure distribution; every internal flext
@@ -74,7 +74,7 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
             distribution = config.Infra.codegen.infra_repository.distribution
         return (
             f"{distribution} @ git+{fixture.provider().base_url.rstrip('/')}/"
-            f"{distribution}.git@{fixture.provider_branch()}"
+            f"{distribution}.git@{ref or fixture.provider_branch()}"
         )
 
     @staticmethod
@@ -91,6 +91,7 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
         *,
         project: m.Infra.ProjectSpec | None = None,
         subprojects: t.VariadicTuple[m.Infra.RepositoryRef] = (),
+        flext_ref: str | None = None,
     ) -> m.Infra.WorkspaceSpec:
         """Build the workspace one fixture repository declares.
 
@@ -107,7 +108,7 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
             project=project,
             flext_source=m.Infra.CodegenBootstrapSource(
                 url=fixture.repository_ref(config.Infra.name).url,
-                ref=fixture.provider_branch(),
+                ref=flext_ref or fixture.provider_branch(),
             ),
             subprojects=subprojects,
             integration=fixture.integration(),
@@ -161,7 +162,9 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
         )
 
     @staticmethod
-    def project_spec(name: str, *, cli_module: bool = True) -> m.Infra.ProjectSpec:
+    def project_spec(
+        name: str, *, cli_module: bool = True, flext_ref: str | None = None
+    ) -> m.Infra.ProjectSpec:
         """Build deterministic scaffold metadata for one project fixture."""
         package_name = name.replace("-", "_")
         class_stem = u.derive_class_stem(name)
@@ -170,7 +173,9 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
             f"{name}"
         )
         return m.Infra.ProjectSpec(
-            flext_source=TestsFlextInfraUtilitiesProjectFixtureMixin.flext_source(),
+            flext_source=TestsFlextInfraUtilitiesProjectFixtureMixin.flext_source(
+                ref=flext_ref
+            ),
             package_name=package_name,
             class_stem=class_stem,
             namespace=class_stem.removeprefix("Flext") or class_stem,

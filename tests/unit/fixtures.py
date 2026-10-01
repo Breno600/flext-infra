@@ -214,7 +214,12 @@ def _provision_make_template(run_root: Path, profile: c.Infra.MakeProfile) -> No
     into cold CI storage; both receipts are what the consumers assert.
     """
     parent = _run_scoped(run_root, "make-templates", profile.value)
-    root, _ = u.Tests.render_make_environment(parent, profile, bootstrap=True)
+    source_ref = tm.ok(
+        u.Cli.capture([c.Infra.GIT, "rev-parse", "HEAD"], cwd=_PROJECT_ROOT)
+    )
+    root, _ = u.Tests.render_make_environment(
+        parent, profile, bootstrap=True, flext_ref=source_ref
+    )
     hostile_venv = parent / c.Tests.MAKE_TEMPLATE_HOSTILE_VENV
     (hostile_venv / "bin").mkdir(parents=True)
     (hostile_venv / "sentinel").write_text("untouched\n", encoding="utf-8")
