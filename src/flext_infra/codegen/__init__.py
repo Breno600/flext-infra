@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from ._codegen_generation_type_checking import (
         FlextInfraCodegenGenerationTypeCheckingMixin,
     )
-    from ._codegen_staging import stage_file_plans
+    from ._codegen_staging import FlextInfraCodegenStaging
     from ._conform.artifact_render import FlextInfraCodegenConformArtifactRender
     from ._conform.beads_routes import FlextInfraCodegenConformBeadsRoutes
     from ._conform.bootstrap import FlextInfraCodegenConformBootstrap
@@ -55,12 +55,11 @@ if TYPE_CHECKING:
     from ._lazy_init_projection_manifest import (
         FlextInfraCodegenLazyInitProjectionManifest,
     )
-    from ._mise_artifacts_candidates import publication_plan
+    from ._mise_artifacts_candidates import FlextInfraMiseArtifactsCandidates
     from ._mise_artifacts_cold_start import FlextInfraMiseColdStart
     from ._mise_artifacts_derivation import FlextInfraMiseArtifactsDerivation
     from ._mise_artifacts_journal import FlextInfraMiseArtifactsJournal
     from ._mise_artifacts_process import FlextInfraMiseArtifactsProcess
-    from ._mise_artifacts_publication import publish
     from ._mise_artifacts_recovery import FlextInfraMiseRecovery
     from ._mise_artifacts_staging import FlextInfraMiseStaging
     from ._mise_artifacts_state import FlextInfraMiseArtifactsState
@@ -86,7 +85,7 @@ if TYPE_CHECKING:
         FlextInfraCodegenPipeline,
         FlextInfraCodegenPipelineStagesMixin,
         FlextInfraMiseArtifactsFiles,
-        publish_file_plan,
+        FlextInfraMisePublication,
     )
     from .project_new import FlextInfraCodegenProjectNew
     from .protocol_models import FlextInfraCodegenProtocolModels
@@ -149,8 +148,10 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenPyTyped",
     "FlextInfraCodegenQualityGate",
     "FlextInfraCodegenScaffolder",
+    "FlextInfraCodegenStaging",
     "FlextInfraCodegenTransaction",
     "FlextInfraCodegenVersionFile",
+    "FlextInfraMiseArtifactsCandidates",
     "FlextInfraMiseArtifactsDerivation",
     "FlextInfraMiseArtifactsFiles",
     "FlextInfraMiseArtifactsJournal",
@@ -158,14 +159,11 @@ __all__: tuple[str, ...] = (
     "FlextInfraMiseArtifactsState",
     "FlextInfraMiseArtifactsVerification",
     "FlextInfraMiseColdStart",
+    "FlextInfraMisePublication",
     "FlextInfraMiseRecovery",
     "FlextInfraMiseStaging",
     "FlextInfraMiseWorkspacePlanner",
     "_conform",
-    "publication_plan",
-    "publish",
-    "publish_file_plan",
-    "stage_file_plans",
 )
 
 _LAZY_IMPORTS = MappingProxyType(
@@ -188,7 +186,7 @@ _LAZY_IMPORTS = MappingProxyType(
             "._codegen_generation_type_checking": (
                 "FlextInfraCodegenGenerationTypeCheckingMixin",
             ),
-            "._codegen_staging": ("stage_file_plans",),
+            "._codegen_staging": ("FlextInfraCodegenStaging",),
             "._conform": ("_conform",),
             "._conform.artifact_render": ("FlextInfraCodegenConformArtifactRender",),
             "._conform.beads_routes": ("FlextInfraCodegenConformBeadsRoutes",),
@@ -223,12 +221,11 @@ _LAZY_IMPORTS = MappingProxyType(
             "._lazy_init_projection_manifest": (
                 "FlextInfraCodegenLazyInitProjectionManifest",
             ),
-            "._mise_artifacts_candidates": ("publication_plan",),
+            "._mise_artifacts_candidates": ("FlextInfraMiseArtifactsCandidates",),
             "._mise_artifacts_cold_start": ("FlextInfraMiseColdStart",),
             "._mise_artifacts_derivation": ("FlextInfraMiseArtifactsDerivation",),
             "._mise_artifacts_journal": ("FlextInfraMiseArtifactsJournal",),
             "._mise_artifacts_process": ("FlextInfraMiseArtifactsProcess",),
-            "._mise_artifacts_publication": ("publish",),
             "._mise_artifacts_recovery": ("FlextInfraMiseRecovery",),
             "._mise_artifacts_staging": ("FlextInfraMiseStaging",),
             "._mise_artifacts_state": ("FlextInfraMiseArtifactsState",),
@@ -256,7 +253,7 @@ _LAZY_IMPORTS = MappingProxyType(
                 "FlextInfraCodegenPipeline",
                 "FlextInfraCodegenPipelineStagesMixin",
                 "FlextInfraMiseArtifactsFiles",
-                "publish_file_plan",
+                "FlextInfraMisePublication",
             ),
             ".project_new": ("FlextInfraCodegenProjectNew",),
             ".protocol_models": ("FlextInfraCodegenProtocolModels",),
