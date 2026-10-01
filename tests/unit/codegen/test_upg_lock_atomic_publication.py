@@ -62,6 +62,7 @@ class TestsFlextInfraUpgLockAtomicPublication:
         )
         try:
             deadline = time.monotonic() + self.INTERRUPT_AFTER_SECONDS
+            last_observed = ""
             while time.monotonic() < deadline:
                 tm.that(
                     child.poll(), eq=None, msg="upgrade exited before FIFO observation"
@@ -72,6 +73,7 @@ class TestsFlextInfraUpgLockAtomicPublication:
                         timeout=self.INTERRUPT_AFTER_SECONDS,
                     )
                 )
+                last_observed = observed.stdout
                 if any(
                     row.split() == [c.Infra.UV, "wait_for_partner"]
                     for row in observed.stdout.splitlines()
@@ -79,7 +81,10 @@ class TestsFlextInfraUpgLockAtomicPublication:
                     break
                 time.sleep(0.02)
             else:
-                pytest.fail("owned uv never opened the dependency for resolution")
+                pytest.fail(
+                    "owned uv never opened the dependency for resolution; "
+                    f"last session processes: {last_observed!r}"
+                )
         finally:
             primary = sys.exception()
             try:

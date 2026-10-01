@@ -210,7 +210,7 @@ class TestsFlextInfraApplyRenames:
             "result = FlextInfraApplyRenames.run(m.Infra.ApplyRenamesInput(\n"
             "    csv=str(root / 'renames.csv'), roots=(str(root),), apply=True, text_globs=('**/*.md',)))\n"
             "assert changed\nassert result.failure\n"
-            "assert 'driver changed' in result.error\n"
+            "assert 'driver changed' in result.error, result.error\n"
         )
         tm.ok(u.Cli.run_checked((sys.executable, "-c", script, str(mod_workspace))))
         tm.that(target.read_bytes(), eq=original)
