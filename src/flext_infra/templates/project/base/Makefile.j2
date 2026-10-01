@@ -471,7 +471,6 @@ setup: _bootstrap_setup_tools
 # must not require an existing environment.
 upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle
 upg: TOOL_BOOTSTRAP_RESOLVE := 1
-upg: TOOL_BOOTSTRAP_LOCK := 1
 upg: _builtin_require_runtime_root _bootstrap_setup_tools
 
 # Only the runtime root resolves the Mise release. An attached member's pin and
