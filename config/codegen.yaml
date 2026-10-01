@@ -456,6 +456,12 @@ Infra:
         reports_dir: .reports/docs
         api_modules:
           flext-infra: [flext_infra]
+        overview_preview_limits:
+          aliases: 11
+          public_symbols: 10
+          facades: 8
+          module_exports: 8
+          keywords: 8
         cross_project_relative_link_pattern: '^(?:\.\./)+flext-[a-z0-9-]+(?:/|$)'
         stale_github_organizations:
           - organization
