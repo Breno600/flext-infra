@@ -32,16 +32,26 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
 
         Git branch dependencies can change commits while retaining the same
         package version, so their PEP 610 receipts participate in cache identity.
-        Registry distributions legitimately have no direct-URL receipt.
+        Registry distributions legitimately have no direct-URL receipt. An
+        editable install names a checkout path, not a toolchain: testmon already
+        tracks that source by file checksum, so every checkout of one project
+        on the same lock shares one environment record (flext-3l1gk).
         """
-        fingerprint = "\n".join((
-            sys.version,
-            *sorted(
-                f"{distribution.name}={distribution.version}:"
-                f"{distribution.read_text('direct_url.json')!r}"
-                for distribution in distributions()
-            ),
-        ))
+        provenance: t.MutableSequenceOf[str] = []
+        for distribution in distributions():
+            receipt = distribution.read_text("direct_url.json")
+            dir_info = (
+                None
+                if receipt is None
+                else m.Infra.DirectUrlReceipt.model_validate_json(receipt).dir_info
+            )
+            identity = (
+                "editable" if dir_info is not None and dir_info.editable else receipt
+            )
+            provenance.append(
+                f"{distribution.name}={distribution.version}:{identity!r}"
+            )
+        fingerprint = "\n".join((sys.version, *sorted(provenance)))
         digest = hashlib.sha256(fingerprint.encode()).hexdigest()[:12]
         return f"toolchain-{digest}"
 
