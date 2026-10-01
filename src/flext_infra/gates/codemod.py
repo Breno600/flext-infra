@@ -157,20 +157,24 @@ class FlextInfraCodemodGate(FlextInfraGate):
                 for finding in report.root
             )
 
-        # Every elected rule finding blocks the gate, regardless of its native
-        # severity. Preserve the scanner's severity on each reported issue.
-        issues = (*failures, *findings)
+        # Operator order (2026-09-24, reaffirmed 2026-09-29): codemod policy
+        # findings are observational — reported separately with their native
+        # severity and still driven to zero — while native scanner failures
+        # remain blocking.
         return m.Infra.GateExecution(
             result=self._gate_result(
                 project_dir,
-                passed=not issues,
-                errors=[issue.formatted for issue in issues],
+                passed=not failures,
+                errors=[issue.formatted for issue in failures],
                 started=started,
             ),
-            issues=issues,
-            observational_issues=(),
+            issues=tuple(failures),
+            observational_issues=tuple(findings),
             raw_output="\n".join((
-                (f"{len(findings)} policy findings; {len(failures)} native failures"),
+                (
+                    f"{len(findings)} observational findings; "
+                    f"{len(failures)} native failures"
+                ),
                 *raw_output,
             )),
         )
