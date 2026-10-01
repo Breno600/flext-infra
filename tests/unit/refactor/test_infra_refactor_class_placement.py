@@ -225,6 +225,57 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
 
         tm.that(violations, eq=[])
 
+    def test_detects_constants_nested_inside_a_facade_class(
+        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+    ) -> None:
+        """Nested domain-class constants carry a dotted owner and are reported."""
+        source = (
+            "class Facade:\n"
+            "    class Domain:\n"
+            "        DEFAULT_CHARSET: str = 'UTF8'\n"
+            "        MAX_NAME_LENGTH: int = 100\n"
+        )
+        violations = FlextInfraClassPlacementDetector.detect_file(
+            u.Tests.detector_context(tmp_path / "constants.py", source, rope_project)
+        )
+
+        tm.that(
+            sorted((v.base_class, v.name) for v in violations),
+            eq=[
+                ("Facade.Domain", "DEFAULT_CHARSET"),
+                ("Facade.Domain", "MAX_NAME_LENGTH"),
+            ],
+        )
+        tm.that({v.action for v in violations}, eq={"classvar_relocation"})
+
+    def test_autofix_relocates_a_nested_owner_constant(self, tmp_path: Path) -> None:
+        """Autofix can relocate a constant owned by a nested class."""
+        pkg = tmp_path / "src" / "demo"
+        (pkg / "_constants").mkdir(parents=True)
+        (pkg / "__init__.py").write_text("", encoding="utf-8")
+        (pkg / "_constants" / "__init__.py").write_text(
+            '"""Constants."""\n', encoding="utf-8"
+        )
+        (pkg / "facade.py").write_text(
+            "class Facade:\n    class Domain:\n        DEFAULT_CHARSET: str = 'UTF8'\n",
+            encoding="utf-8",
+        )
+
+        result = FlextInfraRefactorClassvarConstantAutofix.apply(
+            tmp_path,
+            "demo.facade.Facade.Domain",
+            "DEFAULT_CHARSET",
+            "demo._constants",
+            dry_run=True,
+        )
+
+        touched_files = " ".join(result.touched_files)
+        tm.that(touched_files, has="demo/facade.py")
+        tm.that(touched_files, has="demo/_constants/__init__.py")
+        tm.that(result.source_text, has="class Domain:")
+        tm.that(result.source_text, lacks="DEFAULT_CHARSET: str = 'UTF8'")
+        tm.that(result.target_text, has="DEFAULT_CHARSET: str = 'UTF8'")
+
     def test_autofix_moves_implicit_constant(self, tmp_path: Path) -> None:
         """Autofix can relocate an implicit UPPER_CASE class constant."""
         pkg = tmp_path / "src" / "demo"

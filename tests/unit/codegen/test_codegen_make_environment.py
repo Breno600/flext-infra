@@ -334,6 +334,12 @@ class TestsFlextInfraCodegenMakeEnvironment:
         receipts = template.parent.parent
         upgraded = u.Tests.command_receipt(receipts / c.Tests.MAKE_TEMPLATE_UPG_RECEIPT)
         tm.that(upgraded.stdout, has="upg-hook-ran")
+        tool_receipts = re.findall(
+            r"uv setup selector=\S+ receipt=(\S+) selected=(\S+)", upgraded.stdout
+        )
+        tm.that(len(tool_receipts), gte=2)
+        for reported, selected in tool_receipts:
+            tm.that(reported, eq=selected)
         for lock in (c.Infra.UV_LOCK_FILENAME, c.Infra.MISE_LOCK_FILENAME):
             tm.that((template / lock).is_file(), eq=True)
         tm.that(
@@ -519,6 +525,27 @@ class TestsFlextInfraCodegenMakeEnvironment:
             makefile,
             has=[database, f'{testmon.database_environment_variable}="$$database"'],
         )
+        # The declarative cache policy (preserved #1001 delta, bead
+        # flext-j0u23) is fleet SSOT: two-phase generations, per-repo byte
+        # budget with an ascending quota ladder, and a save-ref allowlist
+        # that never publishes from PRs.
+        policy = config.Infra.codegen.make.testmon_cache_policy
+        tm.that(policy.mode, eq="stable")
+        tm.that(policy.save_enabled, eq=True)
+        tm.that(policy.max_bootstrap_generations, eq=3)
+        tm.that(policy.max_stable_generations, eq=3)
+        tm.that(policy.per_repo_budget_bytes, eq=52_428_800)
+        tm.that(
+            (
+                policy.warning_threshold_percent,
+                policy.maintenance_threshold_percent,
+                policy.block_threshold_percent,
+            ),
+            eq=(80, 90, 95),
+        )
+        tm.that("0.12.0-dev" in policy.allowed_save_refs, eq=True)
+        tm.that("main" in policy.allowed_save_refs, eq=True)
+        tm.that(policy.key_prefix, eq="flext-testmon")
         for forced in ("PROJECT_STATE_ROOT", "PROJECT_SCRATCH", 'TMPDIR="$$test_tmp"'):
             tm.that(makefile, lacks=forced)
         # Every gate the typed owner schedules by default reaches the runtime
@@ -897,7 +924,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
     ) -> None:
         """Help preserves quotes and expansion syntax without executing them."""
         description = (
-            'Print checkout\'s "$HOME", $(shell touch make-effect), '
+            'Print checkout\'s "${HOME}", $(shell touch make-effect), '
             "and `touch shell-effect`."
         )
         project_root, _repository_root = u.Tests.render_make_environment(

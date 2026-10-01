@@ -229,7 +229,13 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             )
             inputs.append(
                 m.Infra.ApplyRenamesInput(
-                    csv=str(csv), roots=roots or (str(root),), apply=apply
+                    csv=str(csv),
+                    roots=roots or (str(root),),
+                    apply=apply,
+                    bindings=campaign.bindings,
+                    text_globs=campaign.text_globs,
+                    python_documentation=campaign.python_documentation,
+                    exclude_globs=campaign.exclude_globs,
                 )
             )
         return tuple(inputs)

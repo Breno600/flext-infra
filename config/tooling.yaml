@@ -11,7 +11,6 @@ Infra:
         pep621-dev-dependency-groups: [dev]
       hatch:
         allow-direct-references: true
-        packaged-data-dirs: [config, templates]
       markdown:
         rules:
           default: true
@@ -22,21 +21,22 @@ Infra:
           # stay at 200 because no tool can reflow a heading — a shorter limit
           # would only manufacture unfixable findings.
           #
-          # flext-md-converge: wrapping is owned by rumdl (`make fix`), not
-          # prettier. `reflow`/`reflow-mode: normalize` make MD013 fixable
-          # (`[*]`) and give rumdl's own reflow-aware writer (atomic code
-          # spans, GFM task-item post-checkbox column) the authority over
-          # line breaks that prettier's proseWrap could not reach (a
-          # 294-char line inside backtick spans that prettier left
-          # unwrapped). prettier keeps `prose-wrap: preserve` below so it
-          # never re-wraps what rumdl already wrapped.
+          # flext-md-converge: wrapping is hand-owned, not tool-owned.
+          # `reflow`/`reflow-mode: normalize` was tried first (it made MD013
+          # `[*]`-fixable), but measured 2026-09-30: rumdl's normalize pass
+          # JOINS a hand-wrapped paragraph into one line and then cannot
+          # re-split lines containing inline-code spans — producing 183–595
+          # char lines no canonical verb can repair (the probe: a 2-line
+          # paragraph became one 171-char line). With reflow off, prettier
+          # keeps `prose-wrap: preserve` below, nobody rewrites an author's
+          # breaks, and MD013 stays the check-only line contract at 88: a
+          # genuinely long line is a finding the author fixes by wrapping.
           MD013:
             line_length: 88
             heading_line_length: 200
             code_block_line_length: 88
             tables: false
-            reflow: true
-            reflow-mode: normalize
+            reflow: false
           MD022: false
           MD023: false
           MD024: { siblings_only: true }
@@ -242,6 +242,7 @@ Infra:
               "Use flext_cli.cli application, registration, execution, and invocation\
               \ methods."
             rich: "Use cli.print / cli.display_message / cli.render_panel / cli.render_table."
+            tabulate: "Use cli.render_table from flext_cli."
             typer: "Use cli.create_app_with_common_params / cli.register_command from flext_cli."
           ignore:
             - ambiguous-unicode-character-comment
@@ -503,15 +504,13 @@ Infra:
             - "**/site-packages/**"
             - "**/dist-packages"
             - "**/dist-packages/**"
-            - "**/tests/fixtures"
-            - "**/tests/fixtures/**"
           root-typings-paths: []
           project-typings-paths: []
           ignored-diagnostic-globs: []
           diagnostic-path-overrides: []
           source-report-private-usage: error
-          test-like-report-private-usage: "none"
-          other-report-private-usage: "none"
+          test-like-report-private-usage: error
+          other-report-private-usage: error
       coverage:
         source: [src]
         show-missing: true
@@ -702,6 +701,11 @@ Infra:
           # regressed the cold run (16 workers lost one to an early death and
           # executed fewer tests before the fixed deadline than 4), so the
           # declared ceiling stays at the measured incumbent.
+          # Re-measured 2026-09-30 on the 20-CPU host (candidate bootstrap
+          # adoption, flext-hi3le): 12 workers regressed the same way
+          # (24 cases in 40.9s vs 197 in 32.4s at 4) — the 4-case-per-window
+          # dispatch overhead dominates on this suite too; the incumbent 4
+          # stands and the suite-wall defect is filed separately.
           flext-infra:
             workers: 4
           # CPU-fraction ceilings (cpu_fraction: "n/d", e.g. algar-oud-mig: 1/4)

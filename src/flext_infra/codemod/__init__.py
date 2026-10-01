@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
+    from ._rename_sources import FlextInfraRenameSources
+    from ._rename_symbols import FlextInfraRenameSymbols
     from .apply_renames import FlextInfraApplyRenames
     from .ast_scan import FlextInfraCodemodAstScan
     from .batch_apply import FlextInfraCodemodBatchApply
@@ -32,11 +34,15 @@ __all__: tuple[str, ...] = (
     "FlextInfraModGateEngine",
     "FlextInfraModReplacements",
     "FlextInfraModTextGateEngine",
+    "FlextInfraRenameSources",
+    "FlextInfraRenameSymbols",
 )
 
 _LAZY_IMPORTS = MappingProxyType(
     build_lazy_import_map(
         MappingProxyType({
+            "._rename_sources": ("FlextInfraRenameSources",),
+            "._rename_symbols": ("FlextInfraRenameSymbols",),
             ".apply_renames": ("FlextInfraApplyRenames",),
             ".ast_scan": ("FlextInfraCodemodAstScan",),
             ".batch_apply": ("FlextInfraCodemodBatchApply",),

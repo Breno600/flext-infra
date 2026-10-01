@@ -15,4 +15,14 @@
 #     flags: ["MULTILINE"]         # optional names from CODEMOD_TEXT_FLAG_NAMES
 #     expected: 3                  # optional exact finding count receipt
 
-rules: []
+rules:
+  - id: checked-command-output-receipts
+    description: Preserve checked execution while retaining command output in assigned test receipts.
+    include:
+      - tests/unit/codegen/test_upg_lock_atomic_publication.py
+      - tests/unit/codemod/test_apply_renames.py
+      - tests/unit/codemod/test_rename_campaign_mod.py
+      - tests/unit/codemod/test_rename_preflight.py
+    find: '(^[ \t]+(?:observed|output|namespace|consumer)[ \t]*=[ \t]*tm\.ok\(\s*u\.Cli\.)run_checked(?=\()'
+    replace: '\g<1>run'
+    flags: [MULTILINE]

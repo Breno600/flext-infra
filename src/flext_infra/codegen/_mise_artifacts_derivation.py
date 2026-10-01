@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, u
+from flext_infra import c, t, u
 
 if TYPE_CHECKING:
     from flext_infra import m, p
@@ -118,7 +118,7 @@ class FlextInfraMiseArtifactsDerivation:
 
     @staticmethod
     def _sidecar_annotation(
-        selector: str, sidecar: Mapping[str, object]
+        selector: str, sidecar: Mapping[str, t.JsonValue]
     ) -> p.Result[tuple[str, str]]:
         """Return one tool's ``(sidecar path, digest)`` from its aube table."""
         relative = sidecar.get("path")

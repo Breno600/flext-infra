@@ -10,9 +10,14 @@ from flext_infra import m, t, u
 from .base import s
 from .check.workspace_check import FlextInfraWorkspaceChecker
 from .codegen.census import FlextInfraCodegenCensus
+from .codegen.codegen_transaction import FlextInfraCodegenTransaction
+from .codegen.conform import FlextInfraCodegenConform
 from .codegen.fixer import FlextInfraCodegenFixer
+from .codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
 from .codegen.pipeline import FlextInfraCodegenPipeline
+from .services.candidate_bootstrap import FlextInfraCandidateBootstrapService
 from .validate.namespace_validator import FlextInfraNamespaceValidator
+from .workspace.detector import FlextInfraWorkspaceDetector
 from .workspace.environment import FlextInfraWorkspaceEnvironmentMixin
 from .workspace.rope import FlextInfraRopeWorkspace
 
@@ -26,6 +31,31 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
     """Thin public FLEXT facade over infra services."""
 
     app_name: ClassVar[str] = "flext-infra"
+
+    def bootstrap_candidate(
+        self, request: m.Infra.CandidateBootstrapCommand
+    ) -> p.Result[bool]:
+        """Compose typed declarations, conform planner and one atomic publisher."""
+        identity = u.Infra.exact_worktree_root(
+            request.repository_root.expanduser().absolute()
+        )
+        if identity.failure:
+            return r[bool].from_failure(identity)
+        source_root = identity.value.repo_root
+        manifest = u.Cli.atomic_read_binary_file_state(
+            u.Infra.workspace_manifest_path(source_root), required=True
+        )
+        if manifest.failure:
+            return r[bool].from_failure(manifest)
+        workspace = FlextInfraWorkspaceDetector.load_workspace_spec(source_root)
+        if workspace.failure:
+            return r[bool].from_failure(workspace)
+        return FlextInfraCandidateBootstrapService(
+            planner=FlextInfraCodegenConform(repository_root=source_root),
+            transaction=FlextInfraCodegenTransaction(
+                FlextInfraCodegenMiseArtifacts(repository_root=source_root)
+            ),
+        ).execute(source_root, workspace.value, request, manifest.value)
 
     def rope_workspace(
         self, repository_root: Path | None = None

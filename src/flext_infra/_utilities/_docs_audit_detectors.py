@@ -27,15 +27,36 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
     """
 
     @staticmethod
+    def _policy_text_files(
+        scope: m.Infra.DocScope, exempt_paths: t.StrSequence
+    ) -> t.SequenceOf[t.Pair[str, Path]]:
+        """Return ``(relative_posix, path)`` for policy checks, skipping exempt prefixes."""
+        exempt = tuple(exempt_paths)
+        files: t.MutableSequenceOf[t.Pair[str, Path]] = []
+        for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
+            rel = md_file.relative_to(scope.path).as_posix()
+            if rel.startswith(exempt):
+                continue
+            files.append((rel, md_file))
+        return files
+
+    @staticmethod
     def docs_text_token_issues(
-        scope: m.Infra.DocScope, *, tokens: t.StrSequence, issue_type: str
+        scope: m.Infra.DocScope,
+        *,
+        tokens: t.StrSequence,
+        issue_type: str,
+        exempt_paths: t.StrSequence = (),
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Collect simple token-presence issues from markdown files."""
+        """Collect token-presence issues, skipping exempt frozen-evidence prefixes."""
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         if not tokens:
             return issues
-        for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
-            rel = md_file.relative_to(scope.path).as_posix()
+        for rel, md_file in (
+            FlextInfraUtilitiesDocsAuditDetectorsMixin._policy_text_files(
+                scope, exempt_paths
+            )
+        ):
             text = md_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
             for token in tokens:
                 if token in text:
@@ -62,11 +83,11 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
         policy; they are skipped whole.
         """
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
-        exempt = tuple(exempt_paths)
-        for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
-            rel = md_file.relative_to(scope.path).as_posix()
-            if rel.startswith(exempt):
-                continue
+        for rel, md_file in (
+            FlextInfraUtilitiesDocsAuditDetectorsMixin._policy_text_files(
+                scope, exempt_paths
+            )
+        ):
             text = md_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
             for line_number, line in enumerate(text.splitlines(), start=1):
                 for match in c.Infra.MACHINE_PATH_RE.finditer(line):
