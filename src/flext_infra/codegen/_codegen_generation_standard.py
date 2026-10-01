@@ -402,12 +402,29 @@ class FlextInfraCodegenGenerationStandardMixin(
             ),
         )
         runtime_import_lines = cls._runtime_import_lines(plan)
+        # The bootstrap owner's packages import the helpers from the module
+        # that defines them; every other distribution imports them from the
+        # bootstrap root, which therefore publishes them in its __all__.
+        bootstrap_owner = (
+            current_pkg.split(".", maxsplit=1)[0] == c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
+        )
+        published_helpers = (
+            c.Infra.LAZY_BOOTSTRAP_HELPERS
+            if current_pkg == c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
+            else ()
+        )
         return m.Infra.LazyInitRootRender(
             autogen_header=c.Infra.AUTOGEN_HEADER,
             docstring=cls._format_root_package_docstring(
                 current_pkg,
                 u.Infra.copyright_notice(plan.context.pkg_dir),
             ),
+            lazy_helpers_module=(
+                c.Infra.LAZY_BOOTSTRAP_MODULE
+                if bootstrap_owner
+                else c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
+            ),
+            lazy_helpers=c.Infra.LAZY_BOOTSTRAP_HELPERS,
             runtime_import_lines=runtime_import_lines,
             blank_lines_before_exports=(
                 "\n" if not (runtime_import_lines or type_checking_lines) else "\n\n"
@@ -415,10 +432,13 @@ class FlextInfraCodegenGenerationStandardMixin(
             type_checking_lines=type_checking_lines,
             exports_tuple=cls._format_exports_tuple(
                 cls._build_published_exports(
-                    tuple(
-                        name
-                        for name in plan.exports
-                        if name in lazy_map or name in plan.eager_dunders
+                    (
+                        *published_helpers,
+                        *(
+                            name
+                            for name in plan.exports
+                            if name in lazy_map or name in plan.eager_dunders
+                        ),
                     ),
                     lazy_map,
                 ),
