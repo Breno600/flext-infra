@@ -68,13 +68,33 @@ class TestsFlextInfraUpgLockAtomicPublication:
                 )
                 observed = tm.ok(
                     u.Cli.run(
-                        ["ps", "--sid", str(child.pid), "-L", "-o", "comm=,wchan:64="],
+                        [
+                            "ps",
+                            "--sid",
+                            str(child.pid),
+                            "-L",
+                            "-o",
+                            "pid=,comm=,wchan:64=",
+                        ],
                         timeout=self.INTERRUPT_AFTER_SECONDS,
                     )
                 )
+                # uv resolves on a tokio worker pool: the blocking wheel open
+                # parks a thread whose comm is a runtime-internal name, never
+                # the main ``uv`` thread. The owned uv process is identified by
+                # its main-thread comm (execve names it), and the dependency
+                # observation is any of its threads in wait_for_partner.
+                rows = tuple(
+                    row.split(maxsplit=2) for row in observed.stdout.splitlines()
+                )
+                owned = {
+                    row[0] for row in rows if len(row) > 1 and row[1] == c.Infra.UV
+                }
                 if any(
-                    row.split() == [c.Infra.UV, "wait_for_partner"]
-                    for row in observed.stdout.splitlines()
+                    len(row) > 2
+                    and row[0] in owned
+                    and row[2].split() == ["wait_for_partner"]
+                    for row in rows
                 ):
                     break
                 time.sleep(0.02)

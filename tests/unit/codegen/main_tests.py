@@ -54,17 +54,31 @@ class TestsFlextInfraCodegenMain:
         The public CLI conform pipeline needs an importable ``src/flext_infra``
         package (for namespace/ruff discovery) and the real ``config/`` +
         tracked Mise seeds (``codegen conform`` validates the tracked,
-        checksum-verified launchers rather than minting them). It does not need
-        the full real package tree copied byte-for-byte: the minimal seed used by
+        checksum-verified launchers rather than minting them). The copied
+        config declares the governed project, whose ``cli_module`` fact renders
+        the default console script, and conform loads every declared entry
+        point in its fresh-import stage, so the seed also carries the minimal
+        ``cli`` module that declaration names. It does not need the full real
+        package tree copied byte-for-byte: the minimal seed used by
         ``tests/unit/codegen/test_codegen_conform.py::_seed_infra_package_tree``
         already satisfies the same public conform contract at a fraction of the
         scan cost, so this fixture reuses that pattern instead of copying
         hundreds of real modules per test run.
         """
         project_root = Path(__file__).resolve().parents[3]
-        package_init = root / "src" / "flext_infra" / "__init__.py"
+        package_dir = root / "src" / "flext_infra"
+        package_init = package_dir / "__init__.py"
         package_init.parent.mkdir(parents=True, exist_ok=True)
         tm.ok(u.Cli.atomic_write_text_file(package_init, ""))
+        cli_module = package_dir / "cli.py"
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                cli_module,
+                "def main(args: list[str] | None = None) -> int:\n"
+                '    """Resolve the declared console script entry point."""\n'
+                "    return 0\n",
+            )
+        )
         tests_init = root / "tests" / "__init__.py"
         tests_init.parent.mkdir(parents=True, exist_ok=True)
         tm.ok(u.Cli.atomic_write_text_file(tests_init, ""))

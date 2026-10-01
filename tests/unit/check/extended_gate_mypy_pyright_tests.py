@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, m
+from flext_infra import c, config, m
 from flext_infra.gates.mypy import FlextInfraMypyGate
 from flext_infra.gates.pyrefly import FlextInfraPyreflyGate
 from flext_infra.gates.pyright import FlextInfraPyrightGate
@@ -20,6 +20,58 @@ if TYPE_CHECKING:
 
 class TestsFlextInfraTypeGates:
     """The selected project's actual findings determine acceptance."""
+
+    @pytest.mark.slow
+    def test_mypy_cache_is_project_keyed_across_checkouts_and_relocks(
+        self, tmp_path: Path
+    ) -> None:
+        """Real gate runs populate one external cache per declared project name."""
+        spec = config.Infra.codegen.make.mypy_cache
+        cache_home = tmp_path / "cache"
+        shared_root = cache_home / spec.external_storage_directory
+        with tm.scope(env={str(spec.data_home_environment_variable): str(cache_home)}):
+            for checkout, project in (
+                ("lane", "fixture-alpha"),
+                ("primary", "fixture-alpha"),
+                ("other", "fixture-beta"),
+            ):
+                root = tmp_path / checkout
+                root.mkdir()
+                (root / c.PYPROJECT_FILENAME).write_text(
+                    f"[project]\nname = '{project}'\nversion = '0.0.0'\n"
+                    "[tool.mypy]\n",
+                    encoding="utf-8",
+                )
+                (root / "sample.py").write_text("value: int = 1\n", encoding="utf-8")
+                lock = root / c.Infra.UV_LOCK_FILENAME
+                context = m.Infra.GateContext(
+                    repository_root=root, reports_dir=root / ".reports"
+                )
+                gate = FlextInfraMypyGate(root)
+                cache = shared_root / project
+                for revision in (1, 2):
+                    lock.write_text(
+                        f"version = 1\nrevision = {revision}\n", encoding="utf-8"
+                    )
+                    execution = gate.check(root, context)
+                    tm.that(execution.result.passed, eq=True)
+                    tm.that(
+                        [
+                            line.partition("Cache Dir:")[2].strip()
+                            for line in execution.raw_output.splitlines()
+                            if line.startswith("LOG:") and "Cache Dir:" in line
+                        ],
+                        eq=[str(cache)],
+                    )
+                    tm.that(cache.is_dir(), eq=True)
+                    tm.that(
+                        any(path.is_file() for path in cache.rglob("*")), eq=True
+                    )
+                tm.that((root / ".mypy_cache").exists(), eq=False)
+            tm.that(
+                {path.name for path in shared_root.iterdir()},
+                eq={"fixture-alpha", "fixture-beta"},
+            )
 
     @pytest.fixture
     def checker_context(self, real_python_package: Path) -> m.Infra.GateContext:
