@@ -37,7 +37,11 @@ class TestsFlextInfraCodegenPackagedDataWheel:
 
     @staticmethod
     def _prepare_project(
-        root: Path, *, package_config: bool, packaged_data_paths: tuple[str, ...] = ()
+        root: Path,
+        *,
+        package_config: bool,
+        packaged_data_paths: tuple[str, ...] = (),
+        packaged_data_excludes: tuple[str, ...] = (),
     ) -> None:
         """Materialize one governed project, optionally shipping in-package data."""
         _ = u.Tests.standalone_workspace(root, FIXTURE_DISTRIBUTION)
@@ -73,6 +77,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             FIXTURE_DISTRIBUTION,
             cli_module=False,
             packaged_data_paths=packaged_data_paths,
+            packaged_data_excludes=packaged_data_excludes,
         )
         u.Tests.git_bootstrap(
             root,
@@ -348,15 +353,18 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         """Direct wheel, sdist and rebuilt wheel carry the same selected bytes."""
         catalog = "config/deployment.yaml"
         asset = "infra/ansible/site.yml"
+        ignored = "infra/state.json"
         self._prepare_project(
-            infra_git_repo, package_config=False, packaged_data_paths=(catalog, "infra")
+            infra_git_repo,
+            package_config=False,
+            packaged_data_paths=(catalog, "infra"),
+            packaged_data_excludes=(ignored,),
         )
         tm.ok(u.Cli.atomic_write_text_file(infra_git_repo / catalog, "profiles: {}\n"))
         tm.ok(
             u.Cli.atomic_write_text_file(infra_git_repo / asset, "---\n- hosts: all\n")
         )
         tm.that(self._conform_self(infra_git_repo), eq=0)
-        ignored = "infra/state.json"
         tm.ok(u.Cli.atomic_write_text_file(infra_git_repo / ignored, "private state\n"))
         with (infra_git_repo / ".gitignore").open("a", encoding="utf-8") as stream:
             stream.write(f"\n/{ignored}\n/{catalog}\n")

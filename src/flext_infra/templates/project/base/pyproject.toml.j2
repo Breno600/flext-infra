@@ -136,6 +136,13 @@ path = {{ hatch_build_hook_path | tojson }}
 {% endif %}
 
 [tool.hatch.build.targets.wheel]
+{% if packaged_data_excludes %}
+exclude = [
+{% for data_path in packaged_data_excludes %}
+  {{ ("/" ~ data_path) | tojson }},
+{% endfor %}
+]
+{% endif %}
 include = [
   "/src/{{ package_name }}/**",
 {% for package in root_packages %}
@@ -166,6 +173,13 @@ include = [
 {% endif %}
 
 [tool.hatch.build.targets.sdist]
+{% if packaged_data_excludes %}
+exclude = [
+{% for data_path in packaged_data_excludes %}
+  {{ ("/" ~ data_path) | tojson }},
+{% endfor %}
+]
+{% endif %}
 include = [
   "/src/{{ package_name }}/**",
 {% for package in root_packages %}
