@@ -121,8 +121,8 @@ class FlextInfraCodegenConsolidatorStepsMixin:
     ) -> t.Infra.EditResultWithDescs:
         """Apply and validate."""
         resource = scanned.resource
-        backup = scanned.source
-        src_lines = backup.splitlines(keepends=True)
+        original_source = scanned.source
+        src_lines = original_source.splitlines(keepends=True)
         rel = py_file.relative_to(workspace)
         edits: t.MutableSequenceOf[t.Triple[int, int, str]] = []
         descs: t.MutableSequenceOf[str] = []
@@ -148,7 +148,7 @@ class FlextInfraCodegenConsolidatorStepsMixin:
             py_file,
             request=m.Infra.ProtectedFileEditRequest(
                 workspace=workspace,
-                before_source=backup,
+                before_source=original_source,
                 edit_fn=lambda: (
                     u.Infra.rewrite_source_at_offsets(
                         rope_project,
@@ -165,8 +165,7 @@ class FlextInfraCodegenConsolidatorStepsMixin:
                     ),
                     None,
                 )[-1],
-                restore_fn=lambda: resource.write(backup),
-                keep_backup=True,
+                restore_fn=lambda: resource.write(original_source),
                 gates=cls._ALL_LINT_GATES,
             ),
         )

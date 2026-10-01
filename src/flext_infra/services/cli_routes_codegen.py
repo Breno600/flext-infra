@@ -6,7 +6,6 @@ from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import c, m
-from flext_infra.codegen.conform import FlextInfraCodegenConform
 from flext_infra.codegen.consolidator import FlextInfraCodegenConsolidator
 from flext_infra.codegen.constants_quality_gate import FlextInfraCodegenQualityGate
 from flext_infra.codegen.layout import FlextInfraCodegenLayout
@@ -66,7 +65,7 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                 name="conform",
                 help_text="Conform generated project and workspace files",
                 model_cls=m.Infra.CodegenConformRequest,
-                handler=FlextInfraCodegenConform.execute_request,
+                handler=infra.codegen_conform,
                 success_message="project conformance complete",
             ),
             *(
@@ -82,9 +81,7 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                         "new",
                         "Create a new FLEXT project from the canonical templates",
                         FlextInfraCodegenProjectNew,
-                        FlextInfraCliRouteBase.result_handler(
-                            FlextInfraCodegenProjectNew.execute,
-                        ),
+                        FlextInfraCliRouteBase.result_handler(infra.codegen_new),
                         "project created",
                     ),
                     (

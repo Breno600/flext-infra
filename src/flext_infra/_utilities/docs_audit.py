@@ -70,12 +70,8 @@ class FlextInfraUtilitiesDocsAudit(
         return targets
 
     @staticmethod
-    def docs_policy_list(
-        scope: m.Infra.DocScope,
-        section: str,
-        key: str,
-    ) -> t.StrSequence:
-        """Read one list of policy tokens from the minimal root docs settings."""
+    def docs_audit_policy(scope: m.Infra.DocScope) -> m.Infra.DocsAuditPolicySpec:
+        """Parse the scope's authenticated audit declaration once into its contract."""
         # Why: the scope's own declared `repository_root` (not a `.parent`
         # heuristic) owns docs policy resolution — a workspace-root project
         # scope IS its own repository root, and only a genuine member-project
@@ -181,18 +177,9 @@ class FlextInfraUtilitiesDocsAudit(
         scope: m.Infra.DocScope,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
         """Collect stale-symbol issues outside the explicit migration docs."""
-        tokens = FlextInfraUtilitiesDocsAudit.docs_policy_list(
-            scope,
-            section="audit",
-            key="stale_symbols",
-        )
-        exempt_paths = set(
-            FlextInfraUtilitiesDocsAudit.docs_policy_list(
-                scope,
-                section="audit",
-                key="stale_symbol_exempt_paths",
-            ),
-        )
+        policy = FlextInfraUtilitiesDocsAudit.docs_audit_policy(scope)
+        tokens = policy.stale_symbols
+        exempt_paths = set(policy.stale_symbol_exempt_paths)
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         if not tokens:
             return issues

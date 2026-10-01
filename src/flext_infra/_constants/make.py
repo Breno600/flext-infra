@@ -73,8 +73,6 @@ class FlextInfraConstantsMake:
 
     MYPY_MEMORY_LIMIT_MB_ENV: ClassVar[str] = "MYPY_MEMORY_LIMIT_MB"
     MYPY_MEMORY_LIMIT_MB_DEFAULT: ClassVar[int] = 6144
-    MYPY_TIMEOUT_SECONDS_ENV: ClassVar[str] = "MYPY_TIMEOUT_SECONDS"
-    MYPY_TIMEOUT_SECONDS_DEFAULT: ClassVar[int] = 600
     MYPY_PROFILE_OUTPUT_ENV: ClassVar[str] = "FLEXT_MYPY_PROFILE_OUTPUT"
     # The import-time model bound: neither a project budget nor the env
     # override may exceed the fleet ceiling. The configured budget value

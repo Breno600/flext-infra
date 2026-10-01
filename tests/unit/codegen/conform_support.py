@@ -11,7 +11,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import config
+from flext_infra import config, infra
 from flext_infra.codegen import FlextInfraCodegenConform
 from tests import c, m, t, u
 
@@ -49,15 +49,13 @@ class TestsFlextInfraConformSupport:
     ) -> None:
         """Materialize one exact public conform surface for a focused test."""
         tm.ok(
-            FlextInfraCodegenConform.execute_request(
-                u.Tests.conform_request(
-                    root,
-                    what=surface,
-                    scope=c.Infra.CodegenConformScope.SELF,
-                    mode=c.Infra.CodegenConformMode.APPLY,
-                ),
-                initial_workspace=workspace,
+            infra.codegen_conform(u.Tests.conform_request(
+                root,
+                what=surface,
+                scope=c.Infra.CodegenConformScope.SELF,
+                mode=c.Infra.CodegenConformMode.APPLY,
             ),
+            initial_workspace=workspace,),
         )
 
     @staticmethod

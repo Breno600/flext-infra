@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
 from flext_infra import m, u
 
@@ -17,8 +17,6 @@ class FlextInfraRefactorCensusProjectMixin:
     Composed into FlextInfraRefactorCensus via inheritance; borrows the
     rule-inclusion + object-classification helpers from sibling mixins via FLEXT.
     """
-
-    _census_project_log: ClassVar[p.Logger] = u.fetch_logger(__name__)
 
     if TYPE_CHECKING:
 

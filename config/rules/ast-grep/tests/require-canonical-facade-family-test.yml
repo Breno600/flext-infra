@@ -1,11 +1,10 @@
+# Shape only: the engine admits the finding when the package does not provide
+# every layer the rule names.
 id: require-canonical-facade-family
 valid:
   - |
-    _LAZY_IMPORTS = {"c": ".constants", "t": ".typings", "p": ".protocols", "m": ".models", "u": ".utilities"}
-  - |
-    __all__ = ["main"]
+    def build():
+        __all__ = ["x"]
 invalid:
   - |
-    _LAZY_IMPORTS = {"c": ".constants", "t": ".typings", "p": ".protocols", "m": ".models"}
-  - |
-    _LAZY_IMPORTS = {"r": ".result"}
+    __all__ = ["c", "m"]

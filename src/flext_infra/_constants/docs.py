@@ -26,6 +26,18 @@ class FlextInfraConstantsDocs:
         "validate",
     })
     DOCS_CONFIG_FILENAME: ClassVar[str] = "docs_config.json"
+    # Structured docs reports: the only report files the audit and validate
+    # phases publish, and the only ones generated CI dumps and uploads.
+    DOCS_AUDIT_SUMMARY_FILENAME: ClassVar[str] = "audit-summary.json"
+    DOCS_AUDIT_REPORT_FILENAME: ClassVar[str] = "audit-report.md"
+    DOCS_VALIDATE_SUMMARY_FILENAME: ClassVar[str] = "validate-summary.json"
+    DOCS_VALIDATE_REPORT_FILENAME: ClassVar[str] = "validate-report.md"
+    DOCS_STRUCTURED_REPORT_FILENAMES: ClassVar[t.VariadicTuple[str]] = (
+        DOCS_AUDIT_SUMMARY_FILENAME,
+        DOCS_AUDIT_REPORT_FILENAME,
+        DOCS_VALIDATE_SUMMARY_FILENAME,
+        DOCS_VALIDATE_REPORT_FILENAME,
+    )
     # Prettier --write lists every processed file as "<path> <duration>ms";
     # the fmt phase report surfaces exactly that surface per scope.
     DOCS_PRETTIER_WRITE_LINE_RE: ClassVar[t.RegexPattern] = re.compile(

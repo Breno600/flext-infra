@@ -8,7 +8,7 @@ from pathlib import Path
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
-from flext_infra.transformers import publish_semantic_file_plans
+from flext_infra.transformers import FlextInfraSemanticPublication
 
 from ._rename_sources import FlextInfraRenameSources
 from ._rename_symbols import FlextInfraRenameSymbols
@@ -152,30 +152,6 @@ class FlextInfraApplyRenames:
             applied=params.apply,
         )
         return r[m.Infra.ApplyRenamesReport].ok(report)
-
-    @staticmethod
-    def render_text(report: m.Infra.ApplyRenamesReport) -> str:
-        """Report native published paths and actual pending source edit spans."""
-        return (
-            f"{report.label}: {report.files_changed} published file(s), "
-            f"{report.occurrences} pending source edit(s), "
-            f"{report.files_scanned} scanned file(s)"
-        )
-
-    @classmethod
-    def execute_command(
-        cls,
-        params: m.Infra.ApplyRenamesInput,
-    ) -> p.Result[t.Cli.ResultValue]:
-        """Fail the public command whenever the observed scan retains work."""
-        result = cls.run(params)
-        if result.failure:
-            return r[t.Cli.ResultValue].from_failure(result)
-        if result.value.occurrences:
-            return r[t.Cli.ResultValue].fail(
-                f"{result.value.occurrences} pending source edits",
-            )
-        return r[t.Cli.ResultValue].ok(True)
 
 
 __all__: list[str] = ["FlextInfraApplyRenames"]

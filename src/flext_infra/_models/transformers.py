@@ -111,14 +111,6 @@ class FlextInfraModelsTransformers:
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
-        relative_imports: Annotated[
-            t.StrMapping,
-            m.Field(description="Same-owner absolute modules and their relative form"),
-        ]
-        relative_symbols: Annotated[
-            t.MappingKV[str, frozenset[str]],
-            m.Field(description="Symbols each relativized module must still import"),
-        ]
         removals: Annotated[
             t.MappingKV[str, frozenset[str]],
             m.Field(description="Private symbols removed per source module"),
