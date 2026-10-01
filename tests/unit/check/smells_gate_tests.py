@@ -183,4 +183,8 @@ class TestsFlextInfraSmellsGate:
             for tag in c.ENFORCEMENT_SMELL_TAGS
             if issue.message.endswith(f"[{tag}]")
         }
-        tm.that("smell_function_parameters" in census_tags, eq=True)
+        tm.that(
+            "smell_function_parameters" in census_tags,
+            eq=True,
+            msg="\n".join(issue.message for issue in execution.issues),
+        )

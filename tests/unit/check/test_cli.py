@@ -211,7 +211,7 @@ class TestsFlextInfraWorkspaceCheckCli:
             "lint",
             "--apply",
             "--ruff-args",
-            "--select no-such-rule",
+            "--line-length not-a-number",
             "--projects",
             "flext-core",
         ])
