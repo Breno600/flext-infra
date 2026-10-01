@@ -99,10 +99,10 @@ class FlextInfraModelsMiseToolchain:
     class ToolchainSpec(_ConfigContract):
         """Language-runtime and native-tool versions shared by generated projects.
 
-        Language runtimes and native tools are declared as moving ``latest``
-        selectors or a major.minor line. Only ``make upg`` resolves them and
-        writes the committed mise.lock; setup installs frozen from it. Python linters/type-checkers remain owned
-        by pyproject manifests.
+        Native tools use moving ``latest`` selectors; Python retains its
+        required major.minor runtime line. Only ``make upg`` resolves the
+        selectors and writes mise.lock; setup installs frozen from that lock.
+        Python linters and type checkers remain owned by pyproject manifests.
         """
 
         # Selector families rejected while their capabilities are suspended.
@@ -244,6 +244,25 @@ class FlextInfraModelsMiseToolchain:
         npm_package_manager: Annotated[
             Literal["aube"],
             m.Field(description="Mise npm installer with a locked dependency graph"),
+        ]
+        mise_selector: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Selector `make upg` resolves for the Mise release itself. "
+                    "Override toolchain.mise_selector."
+                ),
+            ),
+        ]
+        mise_version: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Mise release `make upg` writes to mise.version and the "
+                    "launchers: 'latest', or a held release while upstream's "
+                    "newest one is broken"
+                ),
+            ),
         ]
         qlty_selector: Annotated[
             t.NonEmptyStr,

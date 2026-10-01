@@ -114,6 +114,35 @@ class TestsJointModFixedPoint:
         tm.that(self._run(mod_workspace), eq=0)
         tm.that(sample.read_text(encoding="utf-8"), eq=first)
 
+    def test_notice_relocation_closes_the_module_docstring(
+        self,
+        mod_workspace: Path,
+    ) -> None:
+        """A notice ahead of other docstring text moves to the docstring end."""
+        notice = u.Infra.copyright_notice(Path(__file__).parent)
+        sample = mod_workspace / "sample.py"
+        u.Cli.atomic_write_text_file(
+            sample,
+            f'"""Notice order source.\n\n{notice}\n\nBody paragraph.\n"""\n\n'
+            "from __future__ import annotations\n\n"
+            "VALUE = 1\n",
+        ).unwrap()
+        before = FlextInfraModGateEngine.scan(mod_workspace, fix=False).unwrap()
+        tm.that(
+            any(item.rule_id == "require-notice-last" for item in before.entries),
+            eq=True,
+        )
+
+        tm.that(self._run(mod_workspace), eq=0)
+
+        first = sample.read_text(encoding="utf-8")
+        tm.that(
+            first,
+            has=f'"""Notice order source.\n\nBody paragraph.\n\n{notice}\n"""\n',
+        )
+        tm.that(self._run(mod_workspace), eq=0)
+        tm.that(sample.read_text(encoding="utf-8"), eq=first)
+
     def test_text_exposes_ast_work_and_both_converge_idempotently(
         self,
         mod_workspace: Path,

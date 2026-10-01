@@ -66,7 +66,11 @@ class FlextInfraUtilitiesCodegen(
             version_pin_file=c.Infra.MISE_VERSION_PIN_FILENAME,
             version_pin_header=c.Infra.MISE_VERSION_PIN_HEADER,
             version_pin_reader=c.Infra.MISE_VERSION_PIN_READER,
-            release_selector=c.Infra.MISE_RELEASE_SELECTOR,
+            release_selector=(
+                toolchain.mise_selector
+                if toolchain.mise_version == c.Infra.MISE_MOVING_SELECTOR
+                else f"{toolchain.mise_selector}@{toolchain.mise_version}"
+            ),
             artifact_specs=c.Infra.ARTIFACT_SPECS,
             lock_file=c.Infra.MISE_LOCK_FILENAME,
             runtime_install_relative_template=c.Infra.MISE_RUNTIME_INSTALL_RELATIVE_TEMPLATE,

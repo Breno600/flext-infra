@@ -131,8 +131,6 @@ class FlextInfraConstantsCodegen(
     MISE_COLD_START_DIRECTORY: ClassVar[str] = "templates/bootstrap"
     "Package-local byte copy of flext-infra's own upg-written triple (cold start)."
 
-    MISE_RELEASE_SELECTOR: ClassVar[str] = "github:jdx/mise"
-    "Tool selector `make upg` resolves through the pinned mise (`mise latest`)."
     MISE_LATEST_RESOLUTION_MARKER: ClassVar[str] = "releases/latest"
     "Live-resolution endpoint a pinned, offline launcher must never contain."
     MISE_LAUNCHER_BAKED_RELEASE_PATTERNS: ClassVar[t.StrMapping] = MappingProxyType({
@@ -144,7 +142,8 @@ class FlextInfraConstantsCodegen(
         "# @flext-generated: upg",
         (
             "# @flext-owner: flext-infra/src/flext_infra/templates/project/base/"
-            f"tool_bootstrap_recipe.j2 (mise latest {MISE_RELEASE_SELECTOR})"
+            "tool_bootstrap_recipe.j2 (toolchain.mise_selector and"
+            " toolchain.mise_version in flext-infra/config/codegen.yaml)"
         ),
         (
             "# @flext-adjust: never hand-edit; bin/mise and bin/mise.cmd are"

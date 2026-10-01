@@ -153,7 +153,8 @@ class TestsFlextInfraTypeGates:
 
         tm.that(result.result.passed, eq=False)
         tm.that(
-            tuple(issue.code for issue in result.issues), has=c.Infra.ToolOutcome.ERROR,
+            tuple(issue.code for issue in result.issues),
+            has=c.Infra.ToolOutcome.ERROR,
         )
         tm.that(
             "\n".join(issue.message for issue in result.issues),
