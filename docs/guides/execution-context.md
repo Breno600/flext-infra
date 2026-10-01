@@ -133,6 +133,13 @@ checkout fixtures. Frozen setup requires the graph and a valid digest, per the
 Caches, installations, and local lock graphs stay out of Git. Never format or edit the
 native payload: a byte change requires a new resolution through `make upg`.
 
+During `make upg`, Mise resolves and installs in a sibling directory on the checkout's
+filesystem. The generated `bin/mise-lock-transaction.py` verifies the staged native
+graphs, publishes them before replacing `mise.lock`, and records a durable journal.
+If publication stops after a graph moves, the next upgrade restores the committed
+graph before starting its own publication. The lock rename is the commit point; a
+failed upgrade leaves the previous lock usable without a live `.bak` copy.
+
 The platforms declared by `toolchain.mise_lockfile_platforms` compose the lock together
 with the platform of the machine running the upgrade, which Mise always includes.
 Because `MISE_SAFE` ignores local settings, bootstrap forwards `MISE_LOCKFILE`,

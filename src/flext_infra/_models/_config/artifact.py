@@ -7,7 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from collections.abc import Mapping
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from types import MappingProxyType
 from typing import Annotated, Literal, Self
 
@@ -112,6 +112,15 @@ class FlextInfraConfigModelsArtifact:
         fresh_import_workers: Annotated[
             int,
             m.Field(ge=1, le=16, description="Concurrent fresh-import subprocesses"),
+        ]
+        root_template_public_exports: Annotated[
+            Mapping[str, t.VariadicTuple[t.NonEmptyStr]],
+            m.Field(
+                description=(
+                    "Public eager initializer bindings by package root; every name "
+                    "must already be imported by the shared root template"
+                ),
+            ),
         ]
         loc_cap: Annotated[
             FlextInfraConfigModelsArtifact.CodegenLocCapSpec,
@@ -731,6 +740,61 @@ class FlextInfraConfigModelsArtifact:
                 description="Generated projections excluded from campaign targets",
             ),
         ]
+
+        @u.model_validator(mode="after")
+        def _validate_source_paths(self) -> Self:
+            """Keep campaign drivers and scan roots inside their declared owners."""
+            for value in (self.csv, *self.roots):
+                path = Path(value)
+                if (
+                    path.is_absolute()
+                    or PureWindowsPath(value).root
+                    or not path.parts
+                    or ".." in path.parts
+                    or "\\" in value
+                    or PureWindowsPath(value).drive
+                ):
+                    msg = f"CSV campaign path must be relative and non-escaping: {value}"
+                    raise ValueError(msg)
+            return self
+
+    class SedPatternSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """One declared literal regex substitution for the mod verb's sed phase."""
+
+        pattern: Annotated[
+            str,
+            m.Field(description="Regular expression matched against file sources"),
+        ]
+        replacement: Annotated[
+            str,
+            m.Field(description="Literal replacement applied to every match"),
+        ]
+        file_glob: Annotated[
+            str | None,
+            m.Field(
+                default=None,
+                description="Optional glob restricting the targeted source files",
+            ),
+        ] = None
+        flags: Annotated[
+            t.StrSequence,
+            m.Field(
+                default=(),
+                description="Names of the compiled regex flags applied to pattern",
+            ),
+        ] = ()
+        description: Annotated[
+            str | None,
+            m.Field(default=None, description="Human-readable pattern intent"),
+        ] = None
+
+    class SedPatternsSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """Declared sed-by-list patterns applied by the mod verb's sed phase."""
+
+        patterns: Annotated[
+            t.VariadicTuple[FlextInfraConfigModelsArtifact.SedPatternSpec],
+            m.Field(default=(), description="Ordered substitution patterns"),
+        ] = ()
 
     class RefactorCsvCampaignsSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Declared CSV-driven rename campaigns for the mod verb's rename phase."""
