@@ -24,8 +24,7 @@ class FlextInfraPyprojectModernizerTooling:
         @property
         def root(self) -> Path: ...
 
-        @property
-        def repository_root(self) -> Path: ...
+        repository_root: Path
 
         def _project_kind(
             self,

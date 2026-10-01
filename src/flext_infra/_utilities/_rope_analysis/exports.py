@@ -162,6 +162,7 @@ class FlextInfraUtilitiesRopeAnalysisExports:
                         isinstance(statement, ast.ClassDef),
                     ))
                     continue
+                names: t.StrSequence
                 if isinstance(statement, ast.Assign):
                     names = tuple(
                         name

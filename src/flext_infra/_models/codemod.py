@@ -135,27 +135,5 @@ class FlextInfraModelsCodemod:
             m.Field(description="Rule IDs owning an automatic rewrite"),
         ]
 
-    class ModGateSnapshot(m.ArbitraryTypesModel):
-        """Exact Ruff and Pyrefly measurement with raw diagnostics."""
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
-
-        ruff_errors: Annotated[
-            t.NonNegativeInt,
-            m.Field(description="Ruff error count"),
-        ]
-        pyrefly_errors: Annotated[
-            t.NonNegativeInt,
-            m.Field(description="Pyrefly error count"),
-        ]
-        ruff_output: Annotated[
-            str,
-            m.Field(description="Complete Ruff machine output"),
-        ] = ""
-        pyrefly_output: Annotated[
-            str,
-            m.Field(description="Complete Pyrefly machine output"),
-        ] = ""
-
 
 __all__: list[str] = ["FlextInfraModelsCodemod"]

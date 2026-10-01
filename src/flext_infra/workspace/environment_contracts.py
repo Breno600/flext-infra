@@ -98,10 +98,10 @@ class FlextInfraWorkspaceEnvironmentContracts:
         """
         violations: list[m.Infra.EnvironmentContractViolation] = []
         for match in cls._UNGUARDED_DIRENV_DIR.finditer(content):
-            line = content.count("\n", 0, match.start()) + 1
+            match_line = content.count("\n", 0, match.start()) + 1
             violations.append(
                 m.Infra.EnvironmentContractViolation(
-                    line=line,
+                    line=match_line,
                     message=(
                         "DIRENV_DIR read without a `:-` guard "
                         f"(strict_env does not export it): {match.group(0)!r}"

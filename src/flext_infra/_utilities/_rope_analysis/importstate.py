@@ -172,7 +172,7 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
                 continue
             location = pyname.get_definition_location()
             line = location[1] if location and location[1] else 1
-            bases = tuple(
+            bases: t.StrSequence = tuple(
                 base_name
                 for superclass in obj.get_superclasses()
                 if (

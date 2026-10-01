@@ -67,7 +67,7 @@ class FlextInfraManualCommandValidator(s[bool]):
     @classmethod
     def _strip_wrappers(cls, tokens: t.StrSequence) -> t.MutableSequenceOf[str]:
         """Drop leading wrapper commands and ``env VAR=val`` assignments."""
-        out = list(tokens)
+        out: t.MutableSequenceOf[str] = list(tokens)
         while out:
             name = Path(out[0]).name
             if name == "env":

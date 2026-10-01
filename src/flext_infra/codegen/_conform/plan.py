@@ -234,6 +234,7 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
     ) -> p.Result[t.VariadicTuple[m.Infra.RepositoryRef]]:
         """Resolve self/subprojects/all from the local read-only topology."""
         scope = c.Infra.CodegenConformScope(request.scope)
+        selected: t.VariadicTuple[m.Infra.RepositoryRef]
         if scope is c.Infra.CodegenConformScope.SELF:
             selected = (current_repository,)
         elif scope is c.Infra.CodegenConformScope.DECLARED:

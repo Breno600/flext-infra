@@ -744,7 +744,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         mise = FlextInfraCodegenMiseArtifacts(repository_root=request.root)
         plan = session.plan
         if isinstance(plan, m.Infra.MiseToolchainWorkspacePlan):
-            project_layouts = (p.layout for p in plan.projects)
+            project_layouts = tuple(project.layout for project in plan.projects)
         else:
             project_layouts = plan.layout.projects
         for project_layout in project_layouts:

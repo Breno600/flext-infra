@@ -128,6 +128,7 @@ class FlextInfraUtilitiesSemanticNestingTypes(
             for module_name, name, owner, expected in bindings:
                 if not runtime.same_name(expected, actual):
                     continue
+                expression: str | None
                 if isinstance(actual, p.Infra.RopeImportedName):
                     module = scope.pyobject.get_module()
                     if module is None:

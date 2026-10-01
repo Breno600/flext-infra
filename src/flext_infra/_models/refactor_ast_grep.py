@@ -105,28 +105,6 @@ class FlextInfraModelsRefactorGrep:
             m.Field(description="Executable provider configs in precedence order"),
         ]
 
-    class ModGateSnapshot(m.ArbitraryTypesModel):
-        """Complete Ruff and Pyrefly evidence for one mod-circuit measurement."""
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
-
-        ruff_errors: Annotated[
-            t.NonNegativeInt,
-            m.Field(description="Ruff error count"),
-        ]
-        pyrefly_errors: Annotated[
-            t.NonNegativeInt,
-            m.Field(description="Pyrefly error count"),
-        ]
-        ruff_files: Annotated[
-            frozenset[Path],
-            m.Field(description="Files carrying Ruff findings in this measurement"),
-        ] = frozenset()
-        diagnostics: Annotated[
-            t.StrSequence,
-            m.Field(description="Unsuppressed diagnostics from every red gate"),
-        ]
-
     class MethodOrderRule(m.ContractModel):
         """A declarative method ordering rule for class reconstruction.
 

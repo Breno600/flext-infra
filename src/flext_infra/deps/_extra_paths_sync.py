@@ -20,7 +20,9 @@ class FlextInfraExtraPathsSyncMixin:
     if TYPE_CHECKING:
         # Provided by the concrete FlextInfraExtraPathsManager / its base; declared
         # for static resolution only so they don't shadow the runtime implementations.
-        root: Path
+        @property
+        def root(self) -> Path: ...
+
         _workspace_project_names: t.Infra.StrSet
         pyright_extra_paths: Callable[..., t.StrSequence]
         pyrefly_search_paths: Callable[..., t.StrSequence]

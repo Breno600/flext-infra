@@ -213,8 +213,8 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
                 ),
             ),
         )
-        for consumer, changes in candidate_rewrites.items():
-            rewrites.setdefault(consumer, []).extend(changes)
+        for consumer, consumer_rewrites in candidate_rewrites.items():
+            rewrites.setdefault(consumer, []).extend(consumer_rewrites)
         return 1
 
 

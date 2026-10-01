@@ -493,7 +493,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             if expected_target_source is not None
             else f"{c.Infra.FUTURE_ANNOTATIONS}\n"
         )
-        target_lines = target_source.splitlines()
+        target_lines: t.StrSequence = target_source.splitlines()
         target_lines = FlextInfraUtilitiesRefactorNamespaceCommon.insert_import_lines(
             lines=target_lines,
             imports=required_imports,
@@ -724,7 +724,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             target_source=target_source,
             blocks=moved_lines,
         )
-        target_lines = target_source.splitlines()
+        target_lines: t.StrSequence = target_source.splitlines()
         # Three collectors contribute imports and they can name the same alias
         # from different modules -- `m` is both flext_core's and flext_infra's
         # facade. Emitting both redefines the name (ruff F811), so the list is

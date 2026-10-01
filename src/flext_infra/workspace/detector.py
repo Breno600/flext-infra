@@ -49,7 +49,7 @@ class FlextInfraWorkspaceDetector(
         subproject_root: Path,
         workspace_beads: m.Infra.BeadsProjectSpec,
     ) -> str | None:
-        member_identity = (
+        member_identity_path = (
             subproject_root / c.CONFIG_DIR_NAME / c.Infra.BEADS_CONFIG_FILENAME
         )
         # Detection observes the topology; it does not enforce the ledger-route
@@ -58,8 +58,11 @@ class FlextInfraWorkspaceDetector(
         # impossible to perform — nothing can plan the fix for a repository it
         # cannot describe. `codegen conform` owns the prohibition and rejects
         # the link there, per repository and within the requested scope.
-        if not member_identity.is_file():
-            return f"missing required member Beads routing identity: {member_identity}"
+        if not member_identity_path.is_file():
+            return (
+                "missing required member Beads routing identity: "
+                f"{member_identity_path}"
+            )
         member_identity_result = cls.load_beads_spec(subproject_root)
         if member_identity_result.failure:
             return member_identity_result.error

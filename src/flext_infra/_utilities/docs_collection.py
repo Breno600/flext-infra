@@ -270,7 +270,7 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
                 msg = f"collection target changed after source read: {path}"
                 raise ValueError(msg)
             plans.append(planned)
-        directories = tuple(
+        required_directories = tuple(
             sorted(
                 {path.parent for path in desired},
                 key=lambda path: (len(path.parts), path.as_posix()),
@@ -279,7 +279,7 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
         return m.Infra.PlanCollectionBundle(
             files=tuple(plans),
             source_states=inputs,
-            required_directories=directories,
+            required_directories=required_directories,
             revisions=tuple(revisions),
             coverage=tuple(coverage),
             inventories=tuple(inventories),
