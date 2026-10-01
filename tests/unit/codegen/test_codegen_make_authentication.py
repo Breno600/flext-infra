@@ -92,11 +92,10 @@ class TestsFlextInfraCodegenMakeAuthentication:
             )
         )
         if verb in {"setup", "upg"}:
-            tm.that(process.stdout + process.stderr, lacks="GitHub credential is absent")
             tm.that(
-                process.stdout + process.stderr,
-                has="mise setup receipt=",
+                process.stdout + process.stderr, lacks="GitHub credential is absent"
             )
+            tm.that(process.stdout + process.stderr, has="mise setup receipt=")
         else:
             tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
         if verb not in {"setup", "upg"}:

@@ -9,7 +9,7 @@ import pytest
 from flext_tests import tm
 
 from flext_core import r
-from flext_infra import c, m, p, u
+from flext_infra import c, config, m, p, u
 from flext_infra.codegen import (
     FlextInfraCodegenMiseArtifacts,
     FlextInfraCodegenTransaction,
@@ -22,6 +22,97 @@ if TYPE_CHECKING:
 
 class TestsFlextInfraModTextGateEngine:
     """Exercise the declarative sed-by-list engine through its public scan."""
+
+    def test_external_consumer_inherits_provider_and_composes_local_rules(
+        self, mod_workspace: Path
+    ) -> None:
+        """A standalone consumer sees the packaged catalogue and its own overlay."""
+        provider_root = config.ssot_config_dir().parent
+        provider = tm.ok(FlextInfraModTextGateEngine.load_rules(provider_root))
+        inherited = tm.ok(FlextInfraModTextGateEngine.load_rules(mod_workspace))
+        tm.that(inherited, eq=provider)
+
+        local_id = "consumer-owned-rewrite"
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
+                (
+                    "rules:\n"
+                    f"  - id: {local_id}\n"
+                    "    include: ['src/**']\n"
+                    "    find: 'before'\n"
+                    "    replace: 'after'\n"
+                ),
+            )
+        )
+        sample = mod_workspace / "src" / "mod_workspace" / "consumer.py"
+        tm.ok(u.Cli.atomic_write_text_file(sample, 'value = "before"\n'))
+
+        composed = tm.ok(FlextInfraModTextGateEngine.load_rules(mod_workspace))
+        tm.that(composed[:-1], eq=provider)
+        tm.that(composed[-1].rule_id, eq=local_id)
+        applied = tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=True))
+        tm.that(any(entry.rule_id == local_id for entry in applied.entries), eq=True)
+        tm.that(sample.read_text(encoding="utf-8"), eq='value = "after"\n')
+        fixed_point = tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=False))
+        tm.that(fixed_point.actionable, eq=0)
+
+    def test_declared_markdown_include_is_published_and_reaches_fixed_point(
+        self, mod_workspace: Path
+    ) -> None:
+        """An authored documentation path outside Python targets is governed."""
+        page = mod_workspace / "docs" / "guide.md"
+        tm.ok(u.Cli.atomic_write_text_file(page, "Use the old public name.\n"))
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
+                (
+                    "rules:\n"
+                    "  - id: documentation-public-name\n"
+                    "    include: ['docs/guide.md']\n"
+                    "    find: 'old public name'\n"
+                    "    replace: 'new public name'\n"
+                ),
+            )
+        )
+
+        planned = tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=False))
+        tm.that(planned.actionable, eq=1)
+        tm.that(planned.files, eq=frozenset({Path("docs/guide.md")}))
+        tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=True))
+        tm.that(page.read_text(encoding="utf-8"), eq="Use the new public name.\n")
+        fixed_point = tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=False))
+        tm.that(fixed_point.findings, eq=0)
+
+    def test_external_catalogue_id_collision_fails_before_publication(
+        self, mod_workspace: Path
+    ) -> None:
+        """A local rule cannot silently replace the provider's declared rule."""
+        provider = tm.ok(
+            FlextInfraModTextGateEngine.load_rules(config.ssot_config_dir().parent)
+        )
+        collision_id = provider[0].rule_id if provider else "consumer-owned-rewrite"
+        local_collision = (
+            "" if provider else f"  - id: {collision_id}\n    find: 'after'\n"
+        )
+        first, _ = self._publication_inputs(mod_workspace)
+        original = first.read_bytes()
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
+                (
+                    "rules:\n"
+                    f"  - id: {collision_id}\n"
+                    "    find: 'before'\n"
+                    "    replace: 'after'\n"
+                    f"{local_collision}"
+                ),
+            )
+        )
+
+        result = FlextInfraModTextGateEngine.scan(mod_workspace, fix=True)
+        tm.fail(result, has="duplicate text rule id")
+        tm.that(first.read_bytes(), eq=original)
 
     @staticmethod
     def _publication_inputs(root: Path) -> t.Pair[Path, Path]:
@@ -67,6 +158,36 @@ class TestsFlextInfraModTextGateEngine:
 
         tm.that(first.read_bytes(), eq=original)
         tm.that(second.read_bytes(), eq=b"\xff")
+
+    def test_invalid_python_replacement_rejects_entire_batch(
+        self, mod_workspace: Path
+    ) -> None:
+        """A malformed multiline rewrite never publishes any source file."""
+        first, second = self._publication_inputs(mod_workspace)
+        original_first, original_second = first.read_bytes(), second.read_bytes()
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
+                (
+                    "rules:\n"
+                    "  - id: valid-first\n"
+                    "    include: ['src/mod_workspace/first.py']\n"
+                    "    find: 'before'\n"
+                    "    replace: 'after'\n"
+                    "  - id: malformed-second\n"
+                    "    include: ['src/mod_workspace/second.py']\n"
+                    "    find: 'value = \"before\"'\n"
+                    "    replace: |2-\n"
+                    "        value = (\n"
+                ),
+            )
+        )
+
+        with pytest.raises(SyntaxError):
+            FlextInfraModTextGateEngine.scan(mod_workspace, fix=True)
+
+        tm.that(first.read_bytes(), eq=original_first)
+        tm.that(second.read_bytes(), eq=original_second)
 
     def test_linked_destination_identity_never_publishes_the_batch(
         self, mod_workspace: Path

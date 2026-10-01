@@ -49,6 +49,7 @@ class TestsFlextInfraGitFacet:
 
         with pytest.raises(GitCommandError, match="index"):
             u.Infra.git_tracked_scope_paths(repository)
+
     def test_identity_marks_only_a_missing_symbolic_branch_as_unborn(
         self, tmp_path: Path
     ) -> None:

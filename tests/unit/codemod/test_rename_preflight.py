@@ -66,9 +66,7 @@ class TestsRenamePreflight:
             "        text_globs=('**/*.md',), python_documentation=True))\n"
             "print(len(effects))\n"
         )
-        output = tm.ok(
-            u.Cli.run_checked((sys.executable, "-c", script, str(mod_workspace)))
-        )
+        output = tm.ok(u.Cli.run((sys.executable, "-c", script, str(mod_workspace))))
         tm.that(output.stdout, eq="0\n")
         tm.that(guide.read_text(), eq="campaign_token\n")
         tm.that(source.read_text(), eq='"""campaign_token"""\n')

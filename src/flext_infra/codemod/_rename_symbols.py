@@ -6,12 +6,26 @@ import ast
 from difflib import SequenceMatcher
 from pathlib import Path
 
-from flext_infra import m, p, t
-from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
+from flext_infra import m, p, t, u
 
 
 class FlextInfraRenameSymbols:
     """Translate declared CSV prefixes into current-owner Rope constraints."""
+
+    @staticmethod
+    def _member_paths(source: str, path: Path) -> frozenset[tuple[str, ...]]:
+        """Index AST attribute paths that can match a declared Rope pattern."""
+        paths: set[tuple[str, ...]] = set()
+        for node in ast.walk(ast.parse(source, filename=str(path))):
+            if not isinstance(node, ast.Attribute):
+                continue
+            parts: list[str] = []
+            cursor: ast.expr = node
+            while isinstance(cursor, ast.Attribute):
+                parts.append(cursor.attr)
+                paths.add(tuple(reversed(parts)))
+                cursor = cursor.value
+        return frozenset(paths)
 
     @staticmethod
     def resolve_member(
@@ -38,7 +52,7 @@ class FlextInfraRenameSymbols:
         rewrites: t.SequenceOf[m.Infra.SourceRewrite],
     ) -> t.VariadicTuple[t.Triple[int, int, bool]]:
         """Retain effective-member identity after Rope's receiver/MRO match."""
-        runtime = FlextInfraUtilitiesRopeRuntime
+        runtime = u.Infra
         module = project.get_pymodule(change.resource)
         owner, old, new = symbols
         expected = cls.resolve_member(project, owner, old)
@@ -109,12 +123,15 @@ class FlextInfraRenameSymbols:
     ) -> t.MappingKV[Path, t.VariadicTuple[m.Infra.SourceRewrite]]:
         """Merge non-overlapping Rope previews against one immutable snapshot."""
         root = Path(project.root.real_path)
-        resources = tuple(
-            project.get_resource(path.relative_to(root).as_posix())
-            for path in sorted(sources)
-        )
-        for resource in resources:
-            path = Path(resource.real_path)
+        ordered_paths = tuple(sorted(sources))
+        members = {
+            path: cls._member_paths(source, path) for path, source in sources.items()
+        }
+        resources = {
+            path: project.get_resource(path.relative_to(root).as_posix())
+            for path in ordered_paths
+        }
+        for path, resource in resources.items():
             if resource.read() != sources[path]:
                 msg = f"Rope input changed after authentication: {path}"
                 raise ValueError(msg)
@@ -137,16 +154,24 @@ class FlextInfraRenameSymbols:
                 ):
                     msg = f"symbol campaign requires identifier paths: {old}, {new}"
                     raise ValueError(msg)
+                member_path = tuple(old_suffix.split("."))
+                elected = tuple(
+                    resources[path]
+                    for path in ordered_paths
+                    if member_path in members[path]
+                )
                 for owner in owners:
                     if cls.resolve_member(project, owner, new_suffix) is None:
                         continue
                     accepted = True
-                    changes = FlextInfraUtilitiesRopeRuntime.restructure_changes(
+                    if not elected:
+                        continue
+                    changes = u.Infra.restructure_changes(
                         project,
                         f"${{owner}}.{old_suffix}",
                         f"${{owner}}.{new_suffix}",
                         arguments={"owner": "instance=" + owner},
-                        resources=resources,
+                        resources=elected,
                     )
                     for change in changes.changes:
                         if not isinstance(change, p.Infra.RopeChangeContents):

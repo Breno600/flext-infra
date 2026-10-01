@@ -1,9 +1,13 @@
 # Declarative sed-by-list rules for the make mod text phase.
 #
 # Each entry is one list-driven regex rewrite applied across the governed
-# scan surface (the same ast_grep_scan_targets scope as the ast-grep
-# cascade). The engine proves an exact expected-count receipt per rule and
+# scan surface (Python targets plus explicitly included source paths). The
+# engine proves an exact expected-count receipt per rule and
 # reaches a rewrite fixed point before the canonical validate gate runs.
+# This packaged catalogue is applied in every consumer of flext-infra. A
+# consumer may add config/rules/mod/sed.yaml; its entries follow these rules
+# in declaration order, and an id collision across catalogues fails the phase.
+# Both catalogue states are authenticated with the source files before publish.
 #
 # rules:
 #   - id: example-rule-id          # unique text-rule identifier

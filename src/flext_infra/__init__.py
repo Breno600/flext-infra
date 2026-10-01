@@ -80,7 +80,6 @@ if TYPE_CHECKING:
     from .codemod.batch_apply import FlextInfraCodemodBatchApply
     from .codemod.batch_gates import FlextInfraModGateEngine
     from .codemod.batch_replacements import FlextInfraModReplacements
-    from .codemod.sed_apply import FlextInfraCodemodSedApply
     from .codemod.semantic_apply import FlextInfraCodemodSemanticApply
     from .codemod.snapshot_reconciler import FlextInfraCodemodSnapshotReconciler
     from .codemod.snapshot_refresh import FlextInfraCodemodSnapshotRefresh
@@ -312,7 +311,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenVersionFile",
     "FlextInfraCodemodAstScan",
     "FlextInfraCodemodBatchApply",
-    "FlextInfraCodemodSedApply",
     "FlextInfraCodemodSemanticApply",
     "FlextInfraCodemodSnapshotReconciler",
     "FlextInfraCodemodSnapshotRefresh",
@@ -561,7 +559,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".codemod.batch_apply": ("FlextInfraCodemodBatchApply",),
             ".codemod.batch_gates": ("FlextInfraModGateEngine",),
             ".codemod.batch_replacements": ("FlextInfraModReplacements",),
-            ".codemod.sed_apply": ("FlextInfraCodemodSedApply",),
             ".codemod.semantic_apply": ("FlextInfraCodemodSemanticApply",),
             ".codemod.snapshot_reconciler": ("FlextInfraCodemodSnapshotReconciler",),
             ".codemod.snapshot_refresh": ("FlextInfraCodemodSnapshotRefresh",),

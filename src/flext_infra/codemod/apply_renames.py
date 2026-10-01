@@ -6,14 +6,8 @@ import ast
 from os.path import commonpath
 from pathlib import Path
 
-from flext_cli import cli
-
 from flext_core import r
 from flext_infra import c, m, p, t, u
-from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
-from flext_infra._utilities.rope_runtime_refactors import (
-    FlextInfraUtilitiesRopeRuntimeRefactors,
-)
 from flext_infra.transformers import publish_semantic_file_plans
 
 from ._rename_sources import FlextInfraRenameSources
@@ -44,9 +38,7 @@ class FlextInfraApplyRenames:
         root = Path(commonpath(roots))
         plans: t.MutableSequenceOf[m.Infra.SemanticFilePlan] = []
         occurrences = 0
-        with FlextInfraUtilitiesRopeCore.open_project(
-            root, project_roots=roots
-        ) as project:
+        with u.Infra.open_project(root, project_roots=roots) as project:
             symbols = FlextInfraRenameSymbols.plan(
                 project, python, pairs, params.bindings
             )
@@ -63,9 +55,7 @@ class FlextInfraApplyRenames:
                 desired = inventory[path].content
                 if edits:
                     resource = project.get_resource(path.relative_to(root).as_posix())
-                    changed = FlextInfraUtilitiesRopeRuntimeRefactors.content_change(
-                        resource, source, edits
-                    )
+                    changed = u.Infra.content_change(resource, source, edits)
                     if path in python:
                         ast.parse(changed.new_contents, filename=str(path))
                     desired = changed.new_contents.encode(c.Cli.ENCODING_DEFAULT)
@@ -156,31 +146,7 @@ class FlextInfraApplyRenames:
             files_changed=len(changed),
             applied=params.apply,
         )
-        cli.display_text(cls.render_text(report))
         return r[m.Infra.ApplyRenamesReport].ok(report)
-
-    @staticmethod
-    def render_text(report: m.Infra.ApplyRenamesReport) -> str:
-        """Report native published paths and actual pending source edit spans."""
-        return (
-            f"{report.label}: {report.files_changed} published file(s), "
-            f"{report.occurrences} pending source edit(s), "
-            f"{report.files_scanned} scanned file(s)"
-        )
-
-    @classmethod
-    def execute_command(
-        cls, params: m.Infra.ApplyRenamesInput
-    ) -> p.Result[t.Cli.ResultValue]:
-        """Fail the public command whenever the observed scan retains work."""
-        result = cls.run(params)
-        if result.failure:
-            return r[t.Cli.ResultValue].from_failure(result)
-        if result.value.occurrences:
-            return r[t.Cli.ResultValue].fail(
-                f"{result.value.occurrences} pending source edits"
-            )
-        return r[t.Cli.ResultValue].ok(True)
 
 
 __all__: list[str] = ["FlextInfraApplyRenames"]
