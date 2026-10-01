@@ -76,7 +76,6 @@ class FlextInfraWorkspaceEnvironmentMixin:
             / f"{destination}.j2"
         )
         render_context = m.Infra.EnvrcRenderSpec(
-            runtime_environment_directory=config.Infra.codegen.make.runtime_environment_directory,
             repository_root_rel=".",
             environment_path_prepends=(
                 config.Infra.codegen.toolchain.environment_path_prepends

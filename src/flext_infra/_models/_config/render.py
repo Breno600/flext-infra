@@ -53,6 +53,10 @@ class FlextInfraConfigModelsRender:
             t.NonEmptyStr,
             m.Field(description="Python major.minor line"),
         ]
+        docs_report_filenames: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(description="Structured documentation report allowlist"),
+        ]
         github_actions: Annotated[
             Mapping[str, FlextInfraConfigModelsProvider.GithubActionPinSpec],
             m.Field(description="Immutable GitHub Action catalog"),
