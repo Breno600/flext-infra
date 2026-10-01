@@ -836,6 +836,19 @@ class FlextInfraWorkspaceDetector(
             cls.workspace_analysis_exclusion_paths(workspace.value)
         )
 
+    @classmethod
+    def analysis_excluded_top_dirs(
+        cls, repository_root: Path
+    ) -> p.Result[frozenset[str]]:
+        """Return the first segments of the read-only external topology paths.
+
+        This is the analysis scope that discovery utilities receive from their
+        callers: the topology owner computes it, the utilities only apply it.
+        """
+        return cls.analysis_exclusion_paths(repository_root).map(
+            lambda paths: frozenset(path.parts[0] for path in paths if path.parts)
+        )
+
     def detect(self, project_root: Path) -> p.Result[c.Infra.MakeProfile]:
         """Classify from governed members, not mere vendored Git topology."""
         try:

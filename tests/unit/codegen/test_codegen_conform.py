@@ -666,7 +666,18 @@ class TestsFlextInfraCodegenConform:
         module = root / extra_root / "maintenance.py"
         module.parent.mkdir(parents=True, exist_ok=True)
         tm.ok(u.Cli.atomic_write_text_file(module, "VALUE = 1\n"))
-        tm.that(extra_root in u.Infra.discover_python_dirs(root), eq=True)
+        tm.that(
+            extra_root
+            in u.Infra.discover_python_dirs(
+                root,
+                workspace_excluded_top_dirs=(
+                    FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
+                        root
+                    ).unwrap()
+                ),
+            ),
+            eq=True,
+        )
         tm.that(
             extra_root in config.Infra.tooling.tools.pyright.path_rules.env_dirs,
             eq=False,

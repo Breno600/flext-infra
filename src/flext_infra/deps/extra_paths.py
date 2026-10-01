@@ -19,6 +19,7 @@ from typing import Annotated, override
 from flext_core import r
 from flext_infra import c, config, m, p, t, u
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 from ._extra_paths_sync import FlextInfraExtraPathsSyncMixin
 
@@ -236,7 +237,14 @@ class FlextInfraExtraPathsManager(
         for child in sorted(project_dir.iterdir()):
             if not child.is_dir() or not (child / c.PYPROJECT_FILENAME).exists():
                 continue
-            child_dirs = u.Infra.discover_python_dirs(child)
+            child_dirs = u.Infra.discover_python_dirs(
+                child,
+                workspace_excluded_top_dirs=(
+                    FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
+                        child
+                    ).unwrap()
+                ),
+            )
             includes.update(
                 f"{child.name}/{directory}/**/*.py*" for directory in child_dirs
             )
