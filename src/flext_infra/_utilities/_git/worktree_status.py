@@ -8,11 +8,9 @@ from typing import TYPE_CHECKING
 from git import GitCommandError, Repo
 
 from flext_core import r
-from flext_infra import m, t
+from flext_infra import c, m, t
 
 from .repo import FlextInfraUtilitiesGitRepo
-
-_PORCELAIN_PATH_OFFSET = 3
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -37,8 +35,8 @@ class FlextInfraUtilitiesGitWorktreeStatusMixin(FlextInfraUtilitiesGitRepo):
         retained: list[str] = []
         for line in porcelain.splitlines():
             candidate = (
-                line[_PORCELAIN_PATH_OFFSET:].rstrip("/")
-                if len(line) > _PORCELAIN_PATH_OFFSET
+                line[c.Infra.GIT_PORCELAIN_PATH_OFFSET :].rstrip("/")
+                if len(line) > c.Infra.GIT_PORCELAIN_PATH_OFFSET
                 else ""
             )
             if line.startswith("?? ") and candidate in administrative:

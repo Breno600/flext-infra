@@ -62,24 +62,20 @@ class FlextInfraUtilitiesGitStateFilesMixin(
                 raise ValueError(msg)
 
     @classmethod
+    def _state_blob_oid(cls, root: Path, content: bytes) -> str:
+        """Hash raw bytes through a reaped one-shot hash-object process."""
+        with FlextInfraUtilitiesGitWorktreeIO.git_stdin(content) as stream:
+            return cls._repo(root).git.hash_object("--stdin", istream=stream)
+
+    @staticmethod
     def _state_require_payload(
-        cls,
-        root: Path,
         path: Path,
-        observed: m.Infra.GitWorktreeObservedFile,
+        observed: m.Infra.GitWorktreeFileState | None,
         allowed: t.SequenceOf[m.Infra.GitWorktreeFileState | None],
     ) -> None:
-        """Hash the observed bytes and accept only an allowed captured state."""
-        if observed.content is None and None in allowed:
+        """Accept only an allowed captured working state."""
+        if observed in allowed:
             return
-        if observed.content is not None:
-            with FlextInfraUtilitiesGitWorktreeIO.git_stdin(observed.content) as stream:
-                oid = cls._repo(root).git.hash_object("--stdin", istream=stream)
-            captured = m.Infra.GitWorktreeFileState(
-                path=path, mode=observed.mode, permissions=observed.permissions, oid=oid
-            )
-            if captured in allowed:
-                return
         msg = f"owned file changed before guarded effect: {path}"
         raise ValueError(msg)
 
@@ -87,7 +83,11 @@ class FlextInfraUtilitiesGitStateFilesMixin(
     def _state_write_symlink(destination: Path, target: str) -> None:
         """Atomically point ``destination`` at the raw ``target`` text."""
         staged = destination.parent / f".{destination.name}.symlink-{os.getpid()}"
-        FlextInfraUtilitiesGitStateFilesMixin._state_remove_symlink_target(staged)
+        # The staged path is this process's own scratch name (pid-scoped),
+        # never a real tree: unlink covers both fresh and stale states,
+        # including a broken symlink left by a killed predecessor.
+        if staged.is_symlink() or staged.exists():
+            staged.unlink()
         staged.symlink_to(target)
         staged.replace(destination)
 
@@ -108,12 +108,12 @@ class FlextInfraUtilitiesGitStateFilesMixin(
                 msg = f"symlink disappeared before guarded effect: {path}"
                 raise ValueError(msg) from exc
             cls._state_require_payload(
-                root,
                 path,
-                m.Infra.GitWorktreeObservedFile(
-                    content=os.fsencode(raw_target),
+                m.Infra.GitWorktreeFileState(
+                    path=path,
                     mode="120000",
                     permissions=link_mode,
+                    oid=cls._state_blob_oid(root, os.fsencode(raw_target)),
                 ),
                 allowed,
             )
@@ -121,22 +121,24 @@ class FlextInfraUtilitiesGitStateFilesMixin(
                 payload = cls._state_blob_payload(root, desired.oid)
                 cls._state_write_symlink(destination, os.fsdecode(payload))
                 return
-            cls._state_remove_symlink_target(destination)
+            # This branch only reaches a 120000-mode destination: a governed
+            # symlink, so plain unlink is the entire removal (no tree cases).
+            if destination.is_symlink() or destination.exists():
+                destination.unlink()
         else:
             before_file = u.Cli.atomic_read_binary_file_state(
                 destination, required=False
             ).unwrap()
             permissions = before_file.mode if before_file.mode is not None else 0
-            cls._state_require_payload(
-                root,
-                path,
-                m.Infra.GitWorktreeObservedFile(
-                    content=before_file.content,
+            observed: m.Infra.GitWorktreeFileState | None = None
+            if before_file.content is not None:
+                observed = m.Infra.GitWorktreeFileState(
+                    path=path,
                     mode="100755" if permissions & stat.S_IXUSR else "100644",
                     permissions=permissions,
-                ),
-                allowed,
-            )
+                    oid=cls._state_blob_oid(root, before_file.content),
+                )
+            cls._state_require_payload(path, observed, allowed)
             if desired is not None and desired.mode != "120000":
                 payload = cls._state_blob_payload(root, desired.oid)
                 u.Cli.atomic_write_binary_file_guarded(

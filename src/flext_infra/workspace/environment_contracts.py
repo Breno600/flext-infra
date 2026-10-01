@@ -13,17 +13,17 @@ from typing import Final
 
 from flext_infra import c, m, t, u
 
-_UNGUARDED_DIRENV_DIR: Final[re.Pattern[str]] = re.compile(
-    r"\$\{?DIRENV_DIR(?![\s]*[:\-])"
-)
-_QUOTED_ENV_TARGET: Final[re.Pattern[str]] = re.compile(
-    r'^(?:source_env|watch_file)\s+"([^"]+)"\s*$'
-)
-_HOME_PREFIX: Final[re.Pattern[str]] = re.compile(r"^\$\{?HOME\}?(.*)$")
-
 
 class FlextInfraWorkspaceEnvironmentContracts:
     """Static contract lint for one managed direnv environment file."""
+
+    _UNGUARDED_DIRENV_DIR: Final[re.Pattern[str]] = re.compile(
+        r"\$\{?DIRENV_DIR(?![\s]*[:\-])"
+    )
+    _QUOTED_ENV_TARGET: Final[re.Pattern[str]] = re.compile(
+        r'^(?:source_env|watch_file)\s+"([^"]+)"\s*$'
+    )
+    _HOME_PREFIX: Final[re.Pattern[str]] = re.compile(r"^\$\{?HOME\}?(.*)$")
 
     _MANAGED_SECTION_START: Final[re.Pattern[str]] = re.compile(
         r"^# === SECTION: .* \(managed\) ===$"
@@ -51,11 +51,11 @@ class FlextInfraWorkspaceEnvironmentContracts:
         substituted for the prefix — stripping the prefix without substituting
         would probe a bogus absolute path (``/.config/...``) that never exists.
         """
-        home_match = _HOME_PREFIX.match(raw)
+        home_match = cls._HOME_PREFIX.match(raw)
         candidate = home_match.group(1) if home_match is not None else raw
         if candidate.startswith("~"):
             candidate = f"${{HOME}}{candidate[1:]}"
-            home_match = _HOME_PREFIX.match(candidate)
+            home_match = cls._HOME_PREFIX.match(candidate)
             candidate = home_match.group(1) if home_match is not None else candidate
         if "$" in candidate:
             return None
@@ -89,7 +89,7 @@ class FlextInfraWorkspaceEnvironmentContracts:
           skipped because they describe machine state, not repository state.
         """
         violations: list[m.Infra.EnvironmentContractViolation] = []
-        for match in _UNGUARDED_DIRENV_DIR.finditer(content):
+        for match in cls._UNGUARDED_DIRENV_DIR.finditer(content):
             line = content.count("\n", 0, match.start()) + 1
             violations.append(
                 m.Infra.EnvironmentContractViolation(
@@ -102,7 +102,7 @@ class FlextInfraWorkspaceEnvironmentContracts:
                 )
             )
         for line_number, line in enumerate(content.splitlines(), start=1):
-            target_match = _QUOTED_ENV_TARGET.match(line.strip())
+            target_match = cls._QUOTED_ENV_TARGET.match(line.strip())
             if target_match is None:
                 continue
             resolved = cls._resolve_env_target(

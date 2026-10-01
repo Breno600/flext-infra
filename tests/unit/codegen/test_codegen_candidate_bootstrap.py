@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+import pytest
 from flext_tests import tm
 
 from flext_infra import c, infra, m, u
@@ -12,7 +13,7 @@ from tests import u as tests_u
 
 
 class TestsFlextInfraCodegenCandidateBootstrap:
-    """A declared campaign publishes all Makefiles or none."""
+    """A declared campaign publishes all recovery projections or none."""
 
     @staticmethod
     def _campaign(tmp_path: Path) -> tuple[Path, Path, Path]:
@@ -59,6 +60,10 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         tm.that(result.failure, eq=True)
         tm.that(result.error, has="candidate bootstrap targets are not declared")
 
+    # Real conform transactions over a fixture repository (several full plans
+    # per case): integration-scale, so it runs in the slow phase under its
+    # per-item bound (rules/workflow/gate-budget.md), never a raised limit.
+    @pytest.mark.slow
     def test_invalid_second_target_preserves_first_and_allows_retry(
         self, tmp_path: Path
     ) -> None:
@@ -88,6 +93,7 @@ class TestsFlextInfraCodegenCandidateBootstrap:
             )
         )
 
+    @pytest.mark.slow
     def test_two_targets_reach_one_repeatable_fixed_point(self, tmp_path: Path) -> None:
         """A successful campaign publishes both and repeats without drift."""
         source, first, second = self._campaign(tmp_path)
@@ -121,6 +127,7 @@ class TestsFlextInfraCodegenCandidateBootstrap:
             eq=True,
         )
 
+    @pytest.mark.slow
     def test_check_only_reports_drift_without_publication(self, tmp_path: Path) -> None:
         """A check does not enter the recoverable writer or change a target."""
         source, first, _ = self._campaign(tmp_path)
@@ -138,4 +145,38 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         tm.that(
             tm.ok(u.Cli.atomic_read_binary_file_state(first_makefile, required=True)),
             eq=before,
+        )
+
+    @pytest.mark.slow
+    def test_docs_config_conflict_recovers_from_declared_template(
+        self, tmp_path: Path
+    ) -> None:
+        """A conflicted docs projection is repaired before normal generation parses it."""
+        source, _ = tests_u.Tests.render_make_environment(
+            tmp_path / "source", c.Infra.MakeProfile.STANDALONE
+        )
+        candidate, _ = tests_u.Tests.render_make_environment(
+            tmp_path / "candidate", c.Infra.MakeProfile.STANDALONE
+        )
+        manifest = tests_u.Tests.write_workspace_manifest(source, source.name)
+        tests_u.Tests.write_workspace_manifest(candidate, candidate.name)
+        manifest.write_text(
+            manifest.read_text(encoding="utf-8")
+            + "\ncandidate_bootstrap_targets:\n"
+            + f"  - path: {Path(os.path.relpath(candidate, source)).as_posix()}\n"
+            + "    what: docs-config\n",
+            encoding="utf-8",
+        )
+        projection = candidate / c.Infra.DIR_DOCS / c.Infra.DOCS_CONFIG_FILENAME
+        tm.ok(u.Cli.ensure_dir(projection.parent))
+        tm.ok(u.Cli.atomic_write_text_file(projection, "<<<<<<< HEAD\n"))
+        command = m.Infra.CandidateBootstrapCommand(repository_root=source)
+
+        tm.ok(infra.bootstrap_candidate(command))
+        first = tm.ok(u.Cli.atomic_read_binary_file_state(projection, required=True))
+        tm.ok(u.Cli.json_loads(first.content or b""))
+        tm.ok(infra.bootstrap_candidate(command))
+        tm.that(
+            tm.ok(u.Cli.atomic_read_binary_file_state(projection, required=True)),
+            eq=first,
         )

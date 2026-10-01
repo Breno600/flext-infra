@@ -124,6 +124,7 @@ class FlextInfraConstantsRefactor:
     CODEMOD_TEXT_KEY_REPLACE: ClassVar[str] = "replace"
     CODEMOD_TEXT_KEY_FLAGS: ClassVar[str] = "flags"
     CODEMOD_TEXT_KEY_EXPECTED: ClassVar[str] = "expected"
+    CODEMOD_TEXT_KEY_CAPTURE_EQUALS: ClassVar[str] = "capture_equals"
     # ast-grep rejects unknown top-level keys, so an ast-grep rule declares
     # its finding-count receipt under the `metadata` mapping it does accept.
     CODEMOD_RULE_METADATA_KEY: ClassVar[str] = "metadata"
@@ -228,6 +229,12 @@ class FlextInfraConstantsRefactor:
     "Class-name suffix used to identify constants facades."
     CONSTANT_PATTERN: ClassVar[t.RegexPattern] = re.compile(r"^_*[A-Z][A-Z0-9_]*$")
     "Compiled naming pattern for module-level constant candidates."
+    CLASSVAR_DECLARATION_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"^([A-Z][A-Z0-9_]*:\s*)ClassVar\[(.*)\](\s*=)", re.DOTALL
+    )
+    "One ``NAME: ClassVar[T] =`` declaration head, capturing name, type and ``=``."
+    DOCSTRING_DELIMITER_COUNT: ClassVar[int] = 2
+    "Opening plus closing quote delimiters of a one-line docstring."
     FAMILY_SUFFIXES: ClassVar[t.StrMapping] = MappingProxyType({
         "c": "Constants",
         "t": "Types",

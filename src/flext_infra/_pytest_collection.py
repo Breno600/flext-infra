@@ -49,10 +49,7 @@ class FlextInfraPytestCollection:
         report_log = config.getoption("report_log")
         if report_log and not hasattr(config, "workerinput"):
             config.pluginmanager.register(
-                FlextInfraPytestCollection.WarningAccounting(
-                    Path(report_log),
-                    enforcement_strict=config.getoption("--flext-enforce-strict"),
-                )
+                FlextInfraPytestCollection.WarningAccounting(Path(report_log))
             )
         stop_at = config.getoption(FlextInfraConstantsCheck.PYTEST_SUITE_STOP_OPTION)
         if stop_at is not None and not hasattr(config, "workerinput"):
@@ -167,20 +164,19 @@ class FlextInfraPytestCollection:
                 session.shouldstop = reason
 
     class WarningAccounting:
-        """Preserve real class identity and the existing enforcement strict mode."""
+        """Preserve the real class identity of every recorded warning."""
 
-        def __init__(self, report_log: Path, *, enforcement_strict: bool) -> None:
+        def __init__(self, report_log: Path) -> None:
             from flext_infra import c
 
             self.report = report_log.with_suffix(c.Infra.PYTEST_WARNING_EVENTS_SUFFIX)
-            self.enforcement_strict = enforcement_strict
             self.report.parent.mkdir(parents=True, exist_ok=True)
             self.report.write_text("", encoding="utf-8")
 
         @pytest.hookimpl(tryfirst=True)
         def pytest_warning_recorded(self, warning_message: WarningMessage) -> None:
             """Record the real warning once before report-log serializes it."""
-            from flext_infra import c, m
+            from flext_infra import m
 
             category = warning_message.category
             event = m.Infra.PytestWarningEvent(
@@ -190,11 +186,6 @@ class FlextInfraPytestCollection:
                 filename=warning_message.filename,
                 lineno=warning_message.lineno,
                 message=str(warning_message.message),
-                enforcement_strict=self.enforcement_strict,
-                suspended=(
-                    not self.enforcement_strict
-                    and issubclass(category, c.FlextMroViolation)
-                ),
             )
             with self.report.open("a", encoding="utf-8") as stream:
                 stream.write(event.model_dump_json() + "\n")

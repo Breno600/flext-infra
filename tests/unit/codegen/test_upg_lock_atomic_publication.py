@@ -67,6 +67,9 @@ class TestsFlextInfraUpgLockAtomicPublication:
                 tm.that(
                     child.poll(), eq=None, msg="upgrade exited before FIFO observation"
                 )
+                # uv opens the wheel on a tokio worker thread, whose thread
+                # name is not "uv": identify the owned uv by its command line
+                # and require that one of its threads waits on the FIFO.
                 observed = tm.ok(
                     u.Cli.run(
                         [
@@ -80,14 +83,22 @@ class TestsFlextInfraUpgLockAtomicPublication:
                         timeout=self.INTERRUPT_AFTER_SECONDS,
                     )
                 )
-                last_observed = observed.stdout
-                process_rows = tuple(
-                    row.split() for row in observed.stdout.splitlines() if row.split()
+                # uv resolves on a tokio worker pool: the blocking wheel open
+                # parks a thread whose comm is a runtime-internal name, never
+                # the main ``uv`` thread. The owned uv process is identified by
+                # its main-thread comm (execve names it), and the dependency
+                # observation is any of its threads in wait_for_partner.
+                rows = tuple(
+                    row.split(maxsplit=2) for row in observed.stdout.splitlines()
                 )
-                uv_processes = {row[0] for row in process_rows if row[1] == c.Infra.UV}
+                owned = {
+                    row[0] for row in rows if len(row) > 1 and row[1] == c.Infra.UV
+                }
                 if any(
-                    row[0] in uv_processes and row[-1] == "wait_for_partner"
-                    for row in process_rows
+                    len(row) > 2
+                    and row[0] in owned
+                    and row[2].split() == ["wait_for_partner"]
+                    for row in rows
                 ):
                     break
                 time.sleep(0.02)

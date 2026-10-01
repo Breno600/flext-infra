@@ -29,7 +29,11 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
             workspace_result = FlextInfraWorkspaceDetector.load_workspace_spec(
                 repository_root,
                 allow_unprovisioned_members=(
-                    request.what == c.Infra.CodegenConformSurface.MAKEFILE
+                    request.what
+                    in {
+                        c.Infra.CodegenConformSurface.MAKEFILE,
+                        c.Infra.CodegenConformSurface.DOCS_CONFIG,
+                    }
                 ),
             )
             if workspace_result.failure:
