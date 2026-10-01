@@ -113,15 +113,6 @@ class FlextInfraConfigModelsArtifact:
             int,
             m.Field(ge=1, le=16, description="Concurrent fresh-import subprocesses"),
         ]
-        root_template_public_exports: Annotated[
-            Mapping[str, t.VariadicTuple[t.NonEmptyStr]],
-            m.Field(
-                description=(
-                    "Public eager initializer bindings by package root; every name "
-                    "must already be imported by the shared root template"
-                ),
-            ),
-        ]
         loc_cap: Annotated[
             FlextInfraConfigModelsArtifact.CodegenLocCapSpec,
             m.Field(description="Per-module code-LOC ceiling policy"),

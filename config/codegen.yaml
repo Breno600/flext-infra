@@ -13,12 +13,6 @@ Infra:
     # Fresh import probes are independent subprocesses within one validation.
     fresh_import_workers: 3
 
-    # The bootstrap root owns these names in its generated initializer's
-    # existing eager import. They are public on that root only; other roots
-    # keep the same template bindings private.
-    root_template_public_exports:
-      flext_core: [build_lazy_import_map, install_lazy_exports]
-
     # Per-module scc code-LOC ceiling, enforced by the loc-cap gate. This key
     # is its only declaration; guidance references the key, never its value.
     loc_cap:
@@ -108,10 +102,7 @@ Infra:
       # Prettier is the markdown formatter (markdown-format gate): provisioned
       # through npm so the fleet binary version is owned by this SSOT alone.
       prettier_selector: npm:prettier
-      # Pinned to 3.5.x: prettier 3.7+ changed markdown formatting (list-continuation
-      # printer, proseWrap) which the markdown-format gate has not been revalidated
-      # against. Only float through `make upg` once the docs gate is verified.
-      prettier_version: 3.5.3
+      prettier_version: latest
       waza_selector: github:microsoft/waza
       waza_version: latest
       # microsoft/waza also publishes azd-extension tags, and GitHub marks

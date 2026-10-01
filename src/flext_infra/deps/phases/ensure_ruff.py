@@ -104,20 +104,8 @@ class FlextInfraEnsureRuffConfigPhase:
             )
         return frozenset(p.parts[0] for p in paths.value if Path(p).parts)
 
-    @staticmethod
-    def _workspace_exclusion_roots(project_dir: Path) -> t.StrSequence:
-        """Return the workspace-declared analysis exclusion paths (SSOT-driven)."""
-        if not (project_dir / c.PYPROJECT_FILENAME).is_file():
-            return ()
-        paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
-        if paths.failure:
-            raise ValueError(
-                paths.error or "workspace analysis exclusions are unavailable"
-            )
-        return tuple(path.as_posix() for path in paths.value)
-
     @classmethod
-    def compose_per_file_ignores(
+    def project_per_file_ignores(
         cls,
         project_dir: Path,
         global_ignores: t.MappingKV[str, t.StrSequence],
