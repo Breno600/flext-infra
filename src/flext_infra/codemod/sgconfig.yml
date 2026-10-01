@@ -1,9 +1,8 @@
 # ast-grep configuration for skill rule testing
 # Reference: https://ast-grep.github.io/guide/test-rule.html
 #
-# Canonical engineering authority: AGENTS.md plus universal ~/.agents/skills/.
-# These package-owned rule fixtures do not depend on retired project skill links.
-# .claude/skills/** is non-canonical and MUST NOT be referenced here.
+# Rule guidance lives in the repository AGENTS.md. These package-owned rule
+# fixtures depend on no skill links.
 
 # Every FLEXT project inherits universal rules. Domain/adapter packages use
 # `runtime`, so this config is selected only through a consumer's runtime graph.

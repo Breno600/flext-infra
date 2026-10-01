@@ -46,6 +46,7 @@ class FlextInfraUtilitiesCodegen(
                     "MISE_LOCKFILE_PLATFORMS",
                     ",".join(toolchain.mise_lockfile_platforms),
                 ),
+                ("MISE_PYTHON_COMPILE", str(toolchain.python_compile).lower()),
             ),
             transient_environment=tuple(c.Infra.MISE_BOOTSTRAP_TRANSIENT_ENVIRONMENT),
             persistent_environment=tuple(c.Infra.MISE_BOOTSTRAP_PERSISTENT_ENVIRONMENT),
