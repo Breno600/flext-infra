@@ -16,16 +16,10 @@ from pathlib import Path
 from flext_core import r
 from flext_infra import c, m, p, settings, t, u
 from flext_infra.codemod import FlextInfraCodemodSnapshotReconciler
-from flext_infra.detectors import FlextInfraLspDiagnosticsDetector
-from flext_infra.gates import (
-    FlextInfraPyreflyGate,
-    FlextInfraRuffFormatGate,
-    FlextInfraRuffLintGate,
-)
 
 
 class FlextInfraModGateEngine:
-    """Execute ast-grep rewrites and strict static/LSP validation."""
+    """Execute ast-grep rewrites and measure the catalog findings they leave."""
 
     @classmethod
     def validate_rule_fixtures(
@@ -739,42 +733,6 @@ class FlextInfraModGateEngine:
             f"mod: findings report={receipt.path} sha256={receipt.sha256}\n",
         )
         sys.stderr.flush()
-
-    @classmethod
-    def validate(cls, root: Path) -> p.Result[bool]:
-        """Require full-scope canonical formatting, Ruff, Pyrefly, and LSP health.
-
-        Returns:
-            The resulting ``p.Result[bool]``.
-
-        """
-        resolved_root = root.resolve()
-        project_roots = u.Infra.governed_project_roots(resolved_root)
-        for index, owner in enumerate(project_roots, start=1):
-            sys.stderr.write(
-                f"mod: validate project {index}/{len(project_roots)} {owner}\n",
-            )
-            sys.stderr.flush()
-            context = m.Infra.GateContext(
-                repository_root=owner,
-                reports_dir=owner / c.Infra.REPORTS_DIR_NAME,
-                check_only=True,
-            )
-            for gate_type in (
-                FlextInfraRuffFormatGate,
-                FlextInfraRuffLintGate,
-                FlextInfraPyreflyGate,
-            ):
-                execution = gate_type(owner).check(owner, context)
-                if not execution.result.passed:
-                    return r[bool].fail(
-                        "\n".join((execution.raw_output, *execution.result.errors)),
-                    )
-            files = u.Infra.iter_python_files(
-                m.Infra.SourceScanRequest(project_roots=(owner,)),
-            ).unwrap()
-            FlextInfraLspDiagnosticsDetector.validate(owner, files).unwrap()
-        return r[bool].ok(True)
 
     @classmethod
     def scan(cls, root: Path, *, fix: bool) -> p.Result[m.Infra.ModScanReport]:

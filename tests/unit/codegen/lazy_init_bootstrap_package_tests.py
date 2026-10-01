@@ -17,8 +17,6 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import ast
-import importlib.util
-import sys
 from typing import TYPE_CHECKING
 
 from flext_tests import tm
@@ -27,8 +25,6 @@ from tests import c, u
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    import pytest
 
 
 class TestsFlextInfraLazyInitBootstrapPackage:
@@ -136,8 +132,8 @@ class TestsFlextInfraLazyInitBootstrapPackage:
         tm.that(init_content, lacks=f"from {c.Infra.LAZY_BOOTSTRAP_MODULE} import")
         tm.that(init_content, contains="FlextModelsPart")
 
+    @staticmethod
     def test_bootstrap_root_publishes_the_helpers_it_owns(
-        self,
         tmp_path: Path,
     ) -> None:
         """The bootstrap root imports its helpers directly and publishes them."""

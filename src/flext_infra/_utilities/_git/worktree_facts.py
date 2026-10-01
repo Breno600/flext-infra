@@ -1,13 +1,13 @@
 """Canonical Git responsibility mixin for ``u.Infra``.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 Filesystem-only worktree facts: registered worktrees come straight from
 ``.git/worktrees/<entry>/gitdir`` with no Git subprocess, staleness is the
 bounded newest mtime, and the layout/dependency vocabulary arrives as typed
 policy. Retirement is never executed here: a stale worktree only yields
 ``contents-remove`` plans for its rebuildable dependency directories.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

@@ -1,13 +1,13 @@
 """Public behavior tests for the SonarCloud server-side settings sync.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 The sync writes an external web API; these tests exercise everything that
 decides what is written and when, without opening a network socket: the
 project key derived from a real Git origin, the request plan derived from the
 codegen SSOT, the no-op decision against the measured response shape, and the
 token preflight that fails before any effect through the public CLI.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

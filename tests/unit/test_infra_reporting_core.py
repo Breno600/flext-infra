@@ -1,9 +1,9 @@
 """Tests for FlextInfraReportingService — report dir/path operations.
 
+Tests cover report path generation.
+
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
-
-Tests cover report path generation.
 """
 
 from __future__ import annotations

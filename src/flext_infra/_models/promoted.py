@@ -1,13 +1,13 @@
 """Promoted-command domain models for flext-infra.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 ``PromotedParam``/``PromotedCommand``/``PromotedAliasTarget`` mirror the frozen
 promoted-command contract; ``PromotedWorkspaceSpec`` is the typed
 projection of repository facts the framework consumes. Construction is
 keyword-only; leaf code annotates with the ``p.Infra.Promoted*`` protocols
 (a model is never a type).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

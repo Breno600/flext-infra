@@ -1,8 +1,5 @@
 """The explicit binding CLI rebinds a consumer onto one flext checkout.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 An external project declares flext packages by pinned git URL, so it validates
 PUBLISHED code and never the checkout being worked on. Reviewing a cross-project
 change then required publishing first, which is backwards.
@@ -11,6 +8,9 @@ The binding is a SESSION override, not a declaration: the consumer's
 ``pyproject.toml`` keeps its pins untouched, so nothing local is ever committed
 and canonical setup restores the pinned resolution. Which distributions get
 rebound is derived from the worktree's own manifest, never a hardcoded list.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

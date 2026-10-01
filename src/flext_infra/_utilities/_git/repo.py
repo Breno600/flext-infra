@@ -1,12 +1,12 @@
 """GitPython repository helpers for the private git facet.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 Only ``FlextInfraUtilitiesGitRepo`` lives here. Semantic operations use
 GitPython's object-oriented API (``Repo``, ``IndexFile``, ``Remote``,
 ``BaseIndexEntry``) or the ``repo.git.<cmd>(args)`` proxy directly;
 ``Git(path).execute(tuple)`` with manual cast/protocol is eliminated.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

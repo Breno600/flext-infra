@@ -1,11 +1,11 @@
 """Canonical Git responsibility mixin for ``u.Infra``.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 Bounded, symlink-free directory measurement used by the worktree facts
 primitive. A bound being hit or one unreadable subtree degrades ``exact`` to
 False; the walk never follows a symlink out of the tree.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

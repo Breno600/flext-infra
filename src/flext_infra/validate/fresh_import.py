@@ -1,11 +1,11 @@
 """Verify published exports and real entrypoints in fresh child processes.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 The conformance transaction runs this guard before committing its journal.
 Each entrypoint loads before any package smoke so cached imports cannot hide
 consumer-order defects. Imported workspace modules must belong to this checkout.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
