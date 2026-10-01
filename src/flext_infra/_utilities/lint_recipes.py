@@ -24,7 +24,6 @@ from flext_infra import c, config, m, t
 from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
 
 
-
 class FlextInfraUtilitiesLintRecipes:
     """Apply the declared recipe of each lint finding to one module source."""
 
@@ -42,6 +41,7 @@ class FlextInfraUtilitiesLintRecipes:
         Raises:
             ValueError: If the path is outside any project manifest or the
                 manifest declares no author name.
+
         """
         for candidate in (pkg_dir, *pkg_dir.parents):
             if not (candidate / c.PYPROJECT_FILENAME).is_file():
@@ -70,10 +70,14 @@ class FlextInfraUtilitiesLintRecipes:
         source: str,
         issues: t.SequenceOf[m.Infra.Issue],
         *,
+        path: Path,
         recipes: t.MappingKV[str, c.Infra.LintFixRecipe],
         notice: str,
     ) -> str:
         """Return ``source`` with the declared recipe of every issue applied.
+
+        ``path`` names the module in every refusal; a module without a
+        docstring receives one, summarized from its name, to carry the notice.
 
         Returns:
             The repaired module source.
@@ -81,48 +85,52 @@ class FlextInfraUtilitiesLintRecipes:
         Raises:
             ValueError: If an issue's code has no recipe or its recipe cannot
                 be placed in the module.
+
         """
         tree = ast.parse(source)
         lines = source.splitlines(keepends=True)
-        sections: MutableMapping[ast.FunctionDef | ast.AsyncFunctionDef, MutableMapping[str, list[str]]] = {}
-        summaries: MutableMapping[ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef, str] = {}
-        notice_target: ast.Expr | None = None
+        sections: MutableMapping[
+            ast.FunctionDef | ast.AsyncFunctionDef,
+            MutableMapping[str, list[str]],
+        ] = {}
+        summaries: MutableMapping[
+            ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+            str,
+        ] = {}
+        wants_notice = False
         for issue in issues:
             recipe = recipes.get(issue.code)
             if recipe is None:
-                msg = f"lint finding {issue.code} has no declared fix recipe"
+                msg = f"{path}: lint finding {issue.code} has no declared fix recipe"
                 raise ValueError(msg)
             match recipe:
                 case c.Infra.LintFixRecipe.RETURNS_SECTION:
-                    function = cls._documented_at(tree, issue.line)
+                    function = cls._documented_at(tree, issue.line, path)
                     sections.setdefault(function, {}).setdefault("Returns", []).append(
                         cls._returns_entry(function),
                     )
                 case c.Infra.LintFixRecipe.YIELDS_SECTION:
-                    function = cls._documented_at(tree, issue.line)
+                    function = cls._documented_at(tree, issue.line, path)
                     sections.setdefault(function, {}).setdefault("Yields", []).append(
                         cls._yields_entry(function),
                     )
                 case c.Infra.LintFixRecipe.RAISES_SECTION:
-                    function = cls._enclosing_function(tree, issue.line)
+                    function = cls._enclosing_function(tree, issue.line, path)
                     sections.setdefault(function, {}).setdefault("Raises", []).append(
-                        cls._raises_entry(function, issue),
+                        cls._raises_entry(function, issue, path),
                     )
                 case c.Infra.LintFixRecipe.SUMMARY_DOCSTRING:
-                    definition = cls._defined_at(tree, issue.line)
+                    definition = cls._defined_at(tree, issue.line, path)
                     summaries[definition] = cls._summary_for(definition)
                 case c.Infra.LintFixRecipe.COPYRIGHT_NOTICE:
-                    notice_target = cls._docstring_expr(tree)
-                    if notice_target is None:
-                        msg = "the copyright notice needs a module docstring"
-                        raise ValueError(msg)
+                    wants_notice = True
         edits: list[t.Triple[int, int, str]] = []
         for function, wanted in sections.items():
             docstring = cls._docstring_expr(function)
             if docstring is None:
-                msg = f"function at line {function.lineno} has no docstring"
+                msg = f"{path}: function at line {function.lineno} has no docstring"
                 raise ValueError(msg)
-            start, end, raw = cls._literal(lines, docstring)
+            start, end, raw = cls._literal(lines, docstring, path)
             edits.append((
                 start,
                 end,
@@ -141,9 +149,16 @@ class FlextInfraUtilitiesLintRecipes:
             first_line = min((first.lineno, *(item.lineno for item in decorators)))
             offset = cls._offset(lines, first_line, 0)
             edits.append((offset, offset, f'{" " * first.col_offset}"""{text}"""\n'))
-        if notice_target is not None:
-            start, end, raw = cls._literal(lines, notice_target)
-            edits.append((start, end, cls._with_notice(raw, notice)))
+        if wants_notice:
+            module_docstring = cls._docstring_expr(tree)
+            if module_docstring is None:
+                offset = len(lines[0]) if lines and lines[0].startswith("#!") else 0
+                stem = path.parent.name if path.stem == "__init__" else path.stem
+                summary = stem.strip("_").replace("_", " ").capitalize()
+                edits.append((offset, offset, f'"""{summary} module.\n\n{notice}\n"""\n\n'))
+            else:
+                start, end, raw = cls._literal(lines, module_docstring, path)
+                edits.append((start, end, cls._with_notice(raw, notice)))
         rewritten = source
         for start, end, text in sorted(edits, key=lambda edit: edit[0], reverse=True):
             rewritten = f"{rewritten[:start]}{text}{rewritten[end:]}"
@@ -162,18 +177,27 @@ class FlextInfraUtilitiesLintRecipes:
         return None
 
     @classmethod
-    def _documented_at(cls, tree: ast.Module, line: int) -> ast.FunctionDef | ast.AsyncFunctionDef:
+    def _documented_at(
+        cls,
+        tree: ast.Module,
+        line: int,
+        path: Path,
+    ) -> ast.FunctionDef | ast.AsyncFunctionDef:
         """Return the function whose docstring starts at ``line``."""
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
                 docstring = cls._docstring_expr(node)
                 if docstring is not None and docstring.lineno == line:
                     return node
-        msg = f"no function docstring starts at line {line}"
+        msg = f"{path}: no function docstring starts at line {line}"
         raise ValueError(msg)
 
     @staticmethod
-    def _enclosing_function(tree: ast.Module, line: int) -> ast.FunctionDef | ast.AsyncFunctionDef:
+    def _enclosing_function(
+        tree: ast.Module,
+        line: int,
+        path: Path,
+    ) -> ast.FunctionDef | ast.AsyncFunctionDef:
         """Return the innermost function whose body spans ``line``."""
         enclosing = [
             node
@@ -182,12 +206,16 @@ class FlextInfraUtilitiesLintRecipes:
             and node.lineno <= line <= (node.end_lineno or node.lineno)
         ]
         if not enclosing:
-            msg = f"no function encloses line {line}"
+            msg = f"{path}: no function encloses line {line}"
             raise ValueError(msg)
         return max(enclosing, key=lambda node: node.lineno)
 
     @staticmethod
-    def _defined_at(tree: ast.Module, line: int) -> ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef:
+    def _defined_at(
+        tree: ast.Module,
+        line: int,
+        path: Path,
+    ) -> ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef:
         """Return the class or function defined at ``line``."""
         for node in ast.walk(tree):
             if (
@@ -195,10 +223,10 @@ class FlextInfraUtilitiesLintRecipes:
                 and node.lineno == line
             ):
                 if node.body[0].lineno == node.lineno:
-                    msg = f"definition at line {line} has its body on the same line"
+                    msg = f"{path}: definition at line {line} has its body inline"
                     raise ValueError(msg)
                 return node
-        msg = f"no class or function is defined at line {line}"
+        msg = f"{path}: no class or function is defined at line {line}"
         raise ValueError(msg)
 
     @staticmethod
@@ -217,6 +245,7 @@ class FlextInfraUtilitiesLintRecipes:
         cls,
         lines: t.StrSequence,
         docstring: ast.Expr,
+        path: Path,
     ) -> t.Triple[int, int, str]:
         """Return the span and text of one triple-double-quoted docstring."""
         value = docstring.value
@@ -228,7 +257,7 @@ class FlextInfraUtilitiesLintRecipes:
         )
         raw = "".join(lines)[start:end]
         if not (raw.startswith('"""') and raw.endswith('"""') and len(raw) >= 6):
-            msg = f'docstring at line {value.lineno} is not a plain """ literal'
+            msg = f'{path}: docstring at line {value.lineno} is not a plain """ literal'
             raise ValueError(msg)
         return start, end, raw
 
@@ -255,11 +284,16 @@ class FlextInfraUtilitiesLintRecipes:
         return "Each yielded value."
 
     @classmethod
-    def _raises_entry(cls, function: ast.FunctionDef | ast.AsyncFunctionDef, issue: m.Infra.Issue) -> str:
+    def _raises_entry(
+        cls,
+        function: ast.FunctionDef | ast.AsyncFunctionDef,
+        issue: m.Infra.Issue,
+        path: Path,
+    ) -> str:
         """Name the raised exception and the condition its message states."""
         named = re.search(r"`(?P<name>[^`]+)`", issue.message)
         if named is None:
-            msg = f"raise finding names no exception: {issue.message}"
+            msg = f"{path}: raise finding names no exception: {issue.message}"
             raise ValueError(msg)
         name = named.group("name")
         condition = cls._raise_condition(function, issue.line)

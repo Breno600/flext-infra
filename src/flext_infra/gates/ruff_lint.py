@@ -73,6 +73,7 @@ class FlextInfraRuffLintGate(FlextInfraGate):
 
         Raises:
             ValueError: If a recipe-owned finding survives every recipe phase.
+
         """
         execution = super().fix(project_dir, ctx)
         recipes = config.Infra.tooling.tools.ruff.lint.fix_recipes
@@ -94,21 +95,26 @@ class FlextInfraRuffLintGate(FlextInfraGate):
             if not by_file:
                 continue
             with self._mutation_lease(project_dir):
+                # Every repair is computed before the first write: a module
+                # the recipes cannot place stops the phase with nothing written.
+                planned: t.MutableSequenceOf[t.Pair[m.Cli.AtomicFileState, str]] = []
                 for path, issues in sorted(by_file.items()):
                     before = u.Cli.atomic_read_binary_file_state(
                         path,
                         required=True,
                     ).unwrap()
-                    source = (before.content or b"").decode(c.Cli.ENCODING_DEFAULT)
-                    u.Cli.atomic_write_text_file_guarded(
+                    planned.append((
                         before,
                         u.Infra.apply_lint_recipes(
-                            source,
+                            (before.content or b"").decode(c.Cli.ENCODING_DEFAULT),
                             issues,
+                            path=path,
                             recipes=recipes,
                             notice=u.Infra.copyright_notice(path.parent),
                         ),
-                    ).unwrap()
+                    ))
+                for before, repaired in planned:
+                    u.Cli.atomic_write_text_file_guarded(before, repaired).unwrap()
             execution = super().fix(project_dir, ctx)
         left = sorted(
             f"{issue.file}:{issue.line}:{issue.code}"
