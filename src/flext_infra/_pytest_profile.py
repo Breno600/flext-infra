@@ -67,7 +67,22 @@ class FlextInfraPytestProfile:
         runner = FlextInfraPytestRunner.from_environment(
             started_at_monotonic=started_at_monotonic, collection_command_prefix=prefix
         )
-        return runner.execute(run_context_receiver=self._record_context).unwrap()
+        exit_code = runner.execute().unwrap()
+        # The runner publishes its run context itself; the parent binds the
+        # profile artifacts to the receipt that invocation just wrote.
+        from flext_infra import m
+
+        reports_root = runner.root / runner.reports
+        latest = max(
+            reports_root.glob("*/run-context.json"),
+            key=lambda receipt: receipt.stat().st_mtime,
+        )
+        self._record_context(
+            m.Infra.PytestRunContext.model_validate_json(
+                latest.read_text(encoding="utf-8")
+            )
+        )
+        return exit_code
 
     def _run_collection(self, receipt_path: Path) -> int:
         from flext_infra import m

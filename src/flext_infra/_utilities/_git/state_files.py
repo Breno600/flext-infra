@@ -80,7 +80,7 @@ class FlextInfraUtilitiesGitStateFilesMixin(
             )
             if captured in allowed:
                 return
-        msg = f"owned file changed before guarded effect: {observed.path}"
+        msg = f"owned file changed before guarded effect: {path}"
         raise ValueError(msg)
 
     @staticmethod
