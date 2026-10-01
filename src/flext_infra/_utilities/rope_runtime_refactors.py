@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import io
+import itertools
+import tokenize
 from typing import ClassVar
 
 from rope.base import codeanalyze, simplify
@@ -15,6 +18,35 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
     """Load Rope refactor helpers behind protocols."""
 
     _WORD_RANGE_SIZE: ClassVar[int] = 2
+    _DOCSTRING_LAYOUT_TOKENS: ClassVar[frozenset[int]] = frozenset({
+        tokenize.NEWLINE,
+        tokenize.NL,
+        tokenize.COMMENT,
+        tokenize.INDENT,
+        tokenize.DEDENT,
+        tokenize.ENDMARKER,
+    })
+    _DOCSTRING_PREFIXES: ClassVar[frozenset[str]] = frozenset({"", "r", "u"})
+
+    @classmethod
+    def _is_docstring_statement(cls, text: str) -> bool:
+        """Whether a statement is exactly one docstring-capable string literal.
+
+        A leading quote is not enough: ``"x".join(...)`` starts with one and is
+        live code, while an ``r``-prefixed triple-quoted literal starts with a
+        letter and is still a docstring. Only a lone STRING token with an
+        empty, ``r`` or ``u`` prefix (never ``b``/``f``) is the wrapper
+        docstring.
+        """
+        tokens = [
+            token
+            for token in tokenize.generate_tokens(io.StringIO(text).readline)
+            if token.type not in cls._DOCSTRING_LAYOUT_TOKENS
+        ]
+        if len(tokens) != 1 or tokens[0].type != tokenize.STRING:
+            return False
+        prefix = "".join(itertools.takewhile(str.isalpha, tokens[0].string))
+        return prefix.lower() in cls._DOCSTRING_PREFIXES
 
     @staticmethod
     def unwrap_class_rewrites(
@@ -33,10 +65,9 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
         indentation = body[0].indent - header.indent
         docstring_span = (
             (body[0].line, body[0].end_line)
-            if lines
-            .get_line(body[0].line)
-            .lstrip()
-            .startswith(('"""', "'''", '"', "'"))
+            if FlextInfraUtilitiesRopeRuntimeRefactors._is_docstring_statement(
+                body[0].text
+            )
             else None
         )
         regions = tuple(simplify.ignored_regions(source))

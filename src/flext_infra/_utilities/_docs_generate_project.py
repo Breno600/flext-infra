@@ -109,7 +109,9 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
             ),
             (
                 scope.path / "docs/api-reference/README.md",
-                FlextInfraUtilitiesDocsRender.docs_api_readme(scope, contract),
+                FlextInfraUtilitiesDocsRender.docs_api_readme(
+                    scope, contract, module_names
+                ),
             ),
             (
                 scope.path / "mkdocs.yml",
@@ -127,7 +129,9 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
             ),
             (
                 scope.path / "docs/api-reference/generated/overview.md",
-                FlextInfraUtilitiesDocsRender.docs_overview_page(scope, contract),
+                FlextInfraUtilitiesDocsRender.docs_overview_page(
+                    scope, contract, module_names
+                ),
             ),
             *FlextInfraUtilitiesDocsGenerateProjectMixin.docs_project_api_artifacts(
                 scope

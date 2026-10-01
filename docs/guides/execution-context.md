@@ -108,8 +108,9 @@ ou do `upg` e regenere pelo `make gen`; instalações manuais não substituem o 
 
 O código de um checkout executa no ambiente do seu `RUNTIME_ROOT`. O Makefile gerado
 exporta esse `RUNTIME_ROOT` e o `flext-infra` o lê como declaração tipada: a validação
-`fresh-import` roda as sondas com `<RUNTIME_ROOT>/.venv/bin/python`, nunca com o
-interpretador que hospeda a ferramenta. Sem declaração, o dono deriva a raiz Git do
+`fresh-import` roda as sondas com o interpretador dentro de `<RUNTIME_ROOT>/.venv`
+resolvido por `runtime_python()` (`bin/python`; `Scripts\python.exe` no Windows), nunca
+com o interpretador que hospeda a ferramenta. Sem declaração, o dono deriva a raiz Git do
 checkout; uma declaração sem interpretador falha.
 
 O `.venv` pertence ao `RUNTIME_ROOT` (D-VENV, `flext-x8gn6`). Um membro anexado como

@@ -72,6 +72,9 @@ def declare_parallel_project(project_root: Path) -> None:
         + pyproject.read_text(encoding="utf-8"),
         encoding="utf-8",
     )
+    # The declaration only matters through the runner's derived budget: prove
+    # the runtime admits xdist workers instead of assuming the override does.
+    tm.that(runner_for(project_root).parallel_worker_budget(policy) > 1, eq=True)
 
 
 def profile_parent(runner: FlextInfraPytestRunner, output: Path) -> int:

@@ -967,6 +967,23 @@ class TestsFlextInfraCodegenConform:
         tm.that(package_root, has='"flext_cli": (')
         tm.that(package_root, has='"r"')
 
+    def test_docs_config_apply_materializes_an_absent_docs_parent(
+        self, infra_git_repo: Path
+    ) -> None:
+        """Bootstrapping docs-config on a checkout without ``docs/`` publishes it."""
+        root = infra_git_repo
+        workspace = TestsFlextInfraConformSupport.standalone_workspace(root)
+        docs_dir = root / c.Infra.DIR_DOCS
+        if docs_dir.exists():
+            shutil.rmtree(docs_dir)
+
+        TestsFlextInfraConformSupport.apply_conform_surface(
+            root, workspace, c.Infra.CodegenConformSurface.DOCS_CONFIG
+        )
+
+        projection = docs_dir / c.Infra.DOCS_CONFIG_FILENAME
+        tm.ok(u.Cli.json_loads(projection.read_bytes()))
+
     @pytest.mark.parametrize("mode", tuple(c.Infra.CodegenConformMode))
     def test_public_cli_routes_check_and_apply_to_one_handler(
         self, infra_git_repo: Path, mode: c.Infra.CodegenConformMode

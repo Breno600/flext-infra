@@ -40,6 +40,12 @@ class TestsFlextInfraPytestRunner:
         def marker_expression(command: t.StrSequence) -> str:
             return command[command.index("-m", 3) + 1]
 
+        def deselected(expression: str) -> frozenset[str]:
+            tm.that(
+                expression.startswith("not (") and expression.endswith(")"), eq=True
+            )
+            return frozenset(expression.removeprefix("not (")[:-1].split(" or "))
+
         budgeted = {
             marker_expression(command)
             for command in (
@@ -58,12 +64,17 @@ class TestsFlextInfraPytestRunner:
         tm.that(budgeted, length=1)
         budgeted_expression = next(iter(budgeted))
         coverage_expression = marker_expression(runner.build_coverage_command(report))
-        tm.that(budgeted_expression, has=pytest_policy.slow_marker)
-        for marker in pytest_policy.ci_excluded_markers:
-            tm.that(marker in coverage_expression, eq=ci_context)
-        for marker in pytest_policy.external_gate_markers:
-            tm.that(budgeted_expression, has=marker)
-            tm.that(coverage_expression, has=marker)
+        # Coverage carries slow items and deselects external gates plus, in CI,
+        # the CI-excluded markers; the budgeted phase also negates slow.
+        coverage_expected = frozenset((
+            *pytest_policy.external_gate_markers,
+            *(pytest_policy.ci_excluded_markers if ci_context else ()),
+        ))
+        tm.that(deselected(coverage_expression), eq=coverage_expected)
+        tm.that(
+            deselected(budgeted_expression),
+            eq=coverage_expected | {pytest_policy.slow_marker},
+        )
 
     def test_testmon_commands_name_the_toolchain_environment(
         self, cached_runner_project: Path

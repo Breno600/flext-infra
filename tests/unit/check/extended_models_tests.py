@@ -86,10 +86,11 @@ class TestsFlextInfraModels:
         tm.that(project.total_findings, eq=3)
 
     def test_warning_findings_count_like_every_finding(self) -> None:
-        """A warning that fails the gate is counted like any other finding."""
-        gate = m.Infra.GateResult(
-            gate="pyright", project="p", passed=True, errors=[], duration=0.0
-        )
+        """A warning that fails the gate is counted like any other finding.
+
+        Every finding blocks, so the gate result carrying a warning is failed
+        and lists it in its errors exactly as a real gate execution does.
+        """
         warning = m.Infra.Issue(
             file="a.py",
             line=1,
@@ -98,11 +99,19 @@ class TestsFlextInfraModels:
             message="warning",
             severity="warning",
         )
+        gate = m.Infra.GateResult(
+            gate="pyright",
+            project="p",
+            passed=False,
+            errors=[warning.formatted],
+            duration=0.0,
+        )
         execution = m.Infra.GateExecution(result=gate, issues=(warning,), raw_output="")
         project = m.Infra.ProjectResult(project="p", gates={"pyright": execution})
 
         tm.that(execution.finding_count, eq=1)
         tm.that(project.total_findings, eq=1)
+        tm.that(project.passed, eq=False)
 
     def test_passed_all_gates_pass(self) -> None:
         """Test _ProjectResult.passed when all gates pass."""

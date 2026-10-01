@@ -32,7 +32,7 @@
   `FlextInfraClassPlacementDetector`, `FlextInfraCleanService` (+188 more)
 - Exported module shortcuts: `check`, `codegen`, `codemod`, `deps`, `detectors`, `docs`,
   `fixers`, `gates` (+7 more)
-- Generated module pages: `202`
+- Generated module pages: `11`
 
 ## Next Pages
 

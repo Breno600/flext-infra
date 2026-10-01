@@ -405,17 +405,24 @@ class FlextInfraModelsDepsToolConfig(
             if self.termination_grace_seconds >= self.run_timeout_seconds:
                 msg = "pytest termination grace must be less than run timeout"
                 raise ValueError(msg)
-            if (
-                self.case_timeout_seconds + self.termination_grace_seconds
-                > self.run_timeout_seconds
-            ):
-                msg = "pytest run timeout must include item and termination budgets"
-                raise ValueError(msg)
             if self.slow_timeout_seconds <= self.case_timeout_seconds:
                 msg = "pytest slow timeout must exceed the per-case timeout"
                 raise ValueError(msg)
             if self.slow_timeout_seconds >= self.run_timeout_seconds:
                 msg = "pytest slow timeout must be less than run timeout"
+                raise ValueError(msg)
+            # Every reserve includes one item bound plus the grace, so this
+            # also keeps a single item and the termination inside the run; a
+            # reserve at or past the run would place the stop before the suite.
+            # The single-bound checks above report first: they name the field.
+            if (
+                max(
+                    self.suite_stop_reserve_seconds,
+                    self.slow_suite_stop_reserve_seconds,
+                )
+                >= self.run_timeout_seconds
+            ):
+                msg = "pytest run timeout must exceed the suite stop reserve"
                 raise ValueError(msg)
             derived_options = ("--timeout", "--session-timeout")
             if any(

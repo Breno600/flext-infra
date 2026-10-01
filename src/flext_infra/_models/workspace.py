@@ -102,11 +102,15 @@ class FlextInfraModelsWorkspace:
         ]
 
     class DirectUrlDirectoryInfo(m.ContractModel):
-        """PEP 610 directory metadata for one installed distribution."""
+        """PEP 610 directory metadata for one installed distribution.
+
+        PEP 610 makes ``editable`` optional with a ``false`` default, so a
+        local directory install that omits it is a plain directory install.
+        """
 
         editable: Annotated[
             bool, m.Field(description="Distribution is installed as editable")
-        ]
+        ] = False
 
     class DirectUrlReceipt(m.ContractModel):
         """Any installed distribution's PEP 610 receipt, read for its kind only.

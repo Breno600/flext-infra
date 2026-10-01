@@ -230,7 +230,7 @@ class FlextInfraConstantsRefactor:
     CONSTANT_PATTERN: ClassVar[t.RegexPattern] = re.compile(r"^_*[A-Z][A-Z0-9_]*$")
     "Compiled naming pattern for module-level constant candidates."
     CLASSVAR_DECLARATION_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^([A-Z][A-Z0-9_]*:\s*)ClassVar\[(.*)\](\s*=)", re.DOTALL
+        r"^([A-Z][A-Z0-9_]*:\s*)ClassVar\[(.*?)\](\s*=)", re.DOTALL
     )
     "One ``NAME: ClassVar[T] =`` declaration head, capturing name, type and ``=``."
     DOCSTRING_DELIMITER_COUNT: ClassVar[int] = 2
