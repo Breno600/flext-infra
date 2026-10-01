@@ -267,6 +267,9 @@ class FlextInfraConfigModelsContexts:
             m.Field(description="Repository documentation audit declarations"),
         ]
         packaged_data_excludes: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(description="Validated packaged data exclusions"),
+        ] = ()
             t.StrTuple,
             m.Field(description="Validated packaged data exclusions"),
         ] = ()
