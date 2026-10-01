@@ -1,5 +1,8 @@
 """Phase: mirror every config-owned tool table whose shape is pure policy data.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 pytest, mypy, pydantic-mypy, codespell, hatch metadata, tomlsort, yamlfix,
 deptry namespaces, vulture, and coverage share one behavior: each table is a
 direct projection of ``config.Infra.tooling``. One declarative phase set owns
@@ -22,18 +25,33 @@ class FlextInfraToolTablesPhase:
 
     @staticmethod
     def first_party_namespaces(
-        payload: t.MutableJsonMapping, *, path: Path
+        payload: t.MutableJsonMapping,
+        *,
+        path: Path,
     ) -> t.StrSequence:
-        """Return base, discovered, declared-FLEXT, and own first-party namespaces."""
+        """Prefer live package names over a distribution-derived fallback.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
+        discovered = u.Infra.discover_first_party_namespaces(path.parent)
+        own = discovered or [
+            u.Infra.project_name_from_payload(path, payload).replace("-", "_"),
+        ]
         return sorted({
             *config.Infra.tooling.tools.deptry.known_first_party,
-            *u.Infra.discover_first_party_namespaces(path.parent),
+            *own,
             *u.Infra.flext_dependency_namespaces_from_payload(payload),
-            u.Infra.project_name_from_payload(path, payload).replace("-", "_"),
         })
 
     def _mypy_phase(self) -> m.Infra.DepsToml.PhaseConfig:
-        """Declare the mypy table from toolchain and config-owned policy."""
+        """Declare the mypy table from toolchain and config-owned policy.
+
+        Returns:
+            The resulting ``m.Infra.DepsToml.PhaseConfig``.
+
+        """
         mypy = self._tool_config.tools.mypy
         toml = m.Infra.DepsToml
         replace = c.Infra.TomlMergeMode.REPLACE
@@ -46,29 +64,18 @@ class FlextInfraToolTablesPhase:
                 value=config.Infra.codegen.toolchain.python_version,
             ),
             toml.ListOp(key=c.Infra.PLUGINS, values=mypy.plugins, strategy=replace),
-            toml.ListOp(
-                key=c.Infra.DISABLE_ERROR_CODE,
-                values=sorted(mypy.disabled_error_codes),
-                strategy=replace,
-            ),
         ]
-        operations.append(
-            toml.SetOp(key=c.Infra.EXCLUDE, value=mypy.exclude)
-            if mypy.exclude
-            else toml.RemoveOp(key=c.Infra.EXCLUDE)
-        )
         operations.append(
             toml.SetOp(
                 key="overrides",
                 value=u.normalize_to_json_value([
                     {
                         "module": list(entry.modules),
-                        "disable_error_code": list(entry.disable_error_codes),
                         "follow_untyped_imports": entry.follow_untyped_imports,
                     }
                     for entry in mypy.overrides
                 ]),
-            )
+            ),
         )
         settings: t.MappingKV[str, t.JsonValue] = {
             **mypy.boolean_settings,
@@ -78,7 +85,9 @@ class FlextInfraToolTablesPhase:
             toml.SetOp(key=key, value=setting) for key, setting in settings.items()
         )
         return toml.PhaseConfig(
-            name="mypy", table_path=(c.Infra.MYPY,), operations=tuple(operations)
+            name="mypy",
+            table_path=(c.Infra.MYPY,),
+            operations=tuple(operations),
         )
 
     @staticmethod
@@ -91,6 +100,10 @@ class FlextInfraToolTablesPhase:
         packages/per-file-ignores) filters on this declared set instead of
         probing the disk, which oscillates between the deps pass and the
         root-materializing gen pass. An invalid manifest fails loud.
+
+        Returns:
+            The resulting ``frozenset[str]``.
+
         """
         return frozenset(
             Path(path).parts[0]
@@ -98,9 +111,17 @@ class FlextInfraToolTablesPhase:
         )
 
     def _phases(
-        self, *, first_party: t.StrSequence, path: Path
+        self,
+        *,
+        first_party: t.StrSequence,
+        path: Path,
     ) -> t.SequenceOf[m.Infra.DepsToml.PhaseConfig]:
-        """Build every policy table; coverage is measured, never floor-gated."""
+        """Build every policy table; coverage is measured, never floor-gated.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.DepsToml.PhaseConfig]``.
+
+        """
         tools = self._tool_config.tools
         toml = m.Infra.DepsToml
         merge, replace = c.Infra.TomlMergeMode.MERGE, c.Infra.TomlMergeMode.REPLACE
@@ -115,8 +136,9 @@ class FlextInfraToolTablesPhase:
         if tools.codespell.ignore_words_list:
             codespell_operations.append(
                 toml.SetOp(
-                    key="ignore-words-list", value=tools.codespell.ignore_words_list
-                )
+                    key="ignore-words-list",
+                    value=tools.codespell.ignore_words_list,
+                ),
             )
         return (
             toml.PhaseConfig(
@@ -143,7 +165,9 @@ class FlextInfraToolTablesPhase:
                         strategy=merge,
                     ),
                     toml.ListOp(
-                        key="testpaths", values=pytest.test_paths, strategy=replace
+                        key="testpaths",
+                        values=pytest.test_paths,
+                        strategy=replace,
                     ),
                     toml.ListOp(
                         key=c.Infra.ADDOPTS,
@@ -212,14 +236,17 @@ class FlextInfraToolTablesPhase:
                 operations=(
                     toml.SetOp(key="line_length", value=tools.yamlfix.line_length),
                     toml.SetOp(
-                        key="preserve_quotes", value=tools.yamlfix.preserve_quotes
+                        key="preserve_quotes",
+                        value=tools.yamlfix.preserve_quotes,
                     ),
                     toml.SetOp(key="whitelines", value=tools.yamlfix.whitelines),
                     toml.SetOp(
-                        key="section_whitelines", value=tools.yamlfix.section_whitelines
+                        key="section_whitelines",
+                        value=tools.yamlfix.section_whitelines,
                     ),
                     toml.SetOp(
-                        key="explicit_start", value=tools.yamlfix.explicit_start
+                        key="explicit_start",
+                        value=tools.yamlfix.explicit_start,
                     ),
                 ),
             ),
@@ -228,7 +255,8 @@ class FlextInfraToolTablesPhase:
                 table_path=(c.Infra.DEPTRY,),
                 operations=(
                     toml.ListOp(
-                        key=c.Infra.KNOWN_FIRST_PARTY_UNDERSCORE, values=first_party
+                        key=c.Infra.KNOWN_FIRST_PARTY_UNDERSCORE,
+                        values=first_party,
                     ),
                 ),
             ),
@@ -239,7 +267,8 @@ class FlextInfraToolTablesPhase:
                     toml.RemoveOp(key="min-confidence"),
                     toml.ListOp(key="exclude", values=tools.vulture.exclude),
                     toml.SetOp(
-                        key="min_confidence", value=tools.vulture.min_confidence
+                        key="min_confidence",
+                        value=tools.vulture.min_confidence,
                     ),
                     # Production roots are config-declared; a workspace that
                     # retired a tree (analysis exclusion in its SSOT) must not
@@ -264,7 +293,8 @@ class FlextInfraToolTablesPhase:
                     toml.SetOp(key="skip_covered", value=coverage.skip_covered),
                     toml.SetOp(key="precision", value=coverage.precision),
                     toml.ListOp(
-                        key="exclude_also", values=sorted(set(coverage.exclude_also))
+                        key="exclude_also",
+                        values=sorted(set(coverage.exclude_also)),
                     ),
                 ),
             ),
@@ -279,9 +309,17 @@ class FlextInfraToolTablesPhase:
         )
 
     def apply_payload(
-        self, payload: t.MutableJsonMapping, *, path: Path
+        self,
+        payload: t.MutableJsonMapping,
+        *,
+        path: Path,
     ) -> t.StrSequence:
-        """Apply every policy table to one normalized payload."""
+        """Apply every policy table to one normalized payload.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         return u.Infra.apply_toml_phases(
             payload,
             *self._phases(

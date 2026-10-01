@@ -1,4 +1,8 @@
-"""Static lexical inheritance discovery for public facade cutover."""
+"""Static lexical inheritance discovery for public facade cutover.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -15,7 +19,12 @@ class FlextInfraUtilitiesPrivateImportAncestry:
     def class_bases(
         sources: t.MappingKV[str, t.Pair[str, bool]],
     ) -> t.MappingKV[str, t.VariadicTuple[str]]:
-        """Index static class ancestry, including private intermediate owners."""
+        """Index static class ancestry, including private intermediate owners.
+
+        Returns:
+            The resulting ``t.MappingKV[str, t.VariadicTuple[str]]``.
+
+        """
         bases: t.MutableMappingKV[str, t.VariadicTuple[str]] = {}
         for module, (source, is_package) in sources.items():
             tree = ast.parse(source, filename=module)
@@ -31,7 +40,7 @@ class FlextInfraUtilitiesPrivateImportAncestry:
             ) -> None:
                 def reference(node: ast.expr) -> str:
                     expression = ast.unparse(
-                        node.value if isinstance(node, ast.Subscript) else node
+                        node.value if isinstance(node, ast.Subscript) else node,
                     )
                     root, separator, suffix = expression.partition(".")
                     return names.get(root, f"{module}.{root}") + (
@@ -60,7 +69,8 @@ class FlextInfraUtilitiesPrivateImportAncestry:
                             reference(base)
                             for base in node.bases
                             if isinstance(
-                                base, ast.Name | ast.Attribute | ast.Subscript
+                                base,
+                                ast.Name | ast.Attribute | ast.Subscript,
                             )
                         )
                         # Bases see the declaration scope; class bodies do not

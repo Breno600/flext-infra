@@ -1,4 +1,8 @@
-"""Execute migrated public model-validation boundaries with real Pydantic types."""
+"""Execute migrated public model-validation boundaries with real Pydantic types.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -28,8 +32,11 @@ class TestsModelFieldsCutover:
         ],
     )
     def test_public_boundary_rejects_non_models_without_attribute_access(
-        self, tmp_path: Path, access: str
+        self,
+        tmp_path: Path,
+        access: str,
     ) -> None:
+        """Test public boundary rejects non models without attribute access."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "validation.py"
         source = (
@@ -62,7 +69,7 @@ class TestsModelFieldsCutover:
                     c.Infra.SemanticCutoverPhase.MODEL_FIELDS,
                     rope_workspace=rope,
                     sources={path: source},
-                )
+                ),
             )
             tm.that(len(edits), eq=1)
             remaining = tm.ok(
@@ -70,7 +77,7 @@ class TestsModelFieldsCutover:
                     c.Infra.SemanticCutoverPhase.MODEL_FIELDS,
                     rope_workspace=rope,
                     sources={path: edits[0].updated_source},
-                )
+                ),
             )
         tm.that(remaining, empty=True)
         path.write_text(edits[0].updated_source, encoding="utf-8")
@@ -78,9 +85,11 @@ class TestsModelFieldsCutover:
         tm.that(outcome.exit_code, eq=0)
         tm.that(outcome.stderr, eq="")
 
+    @staticmethod
     def test_ambiguous_rejection_keeps_the_source_untouched(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
+        """Test ambiguous rejection keeps the source untouched."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "validation.py"
         source = (
@@ -98,7 +107,9 @@ class TestsModelFieldsCutover:
         tm.fail(result, has="lacks a rejecting guard")
         tm.that(path.read_text(encoding="utf-8"), eq=source)
 
-    def test_conflicting_guard_binding_is_not_overwritten(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_conflicting_guard_binding_is_not_overwritten(tmp_path: Path) -> None:
+        """Test conflicting guard binding is not overwritten."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "validation.py"
         source = (
@@ -128,8 +139,11 @@ class TestsModelFieldsCutover:
         ],
     )
     def test_shadowed_contract_is_rejected(
-        self, tmp_path: Path, declaration: str
+        self,
+        tmp_path: Path,
+        declaration: str,
     ) -> None:
+        """Test shadowed contract is rejected."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "validation.py"
         source = declaration + (
@@ -162,8 +176,11 @@ class TestsModelFieldsCutover:
         ],
     )
     def test_unsafe_statement_layout_or_receiver_rebinding_fails(
-        self, tmp_path: Path, body: str
+        self,
+        tmp_path: Path,
+        body: str,
     ) -> None:
+        """Test unsafe statement layout or receiver rebinding fails."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "validation.py"
         source = "def validate(candidate: object) -> None:\n" + body

@@ -1,5 +1,8 @@
 """uv.lock, written only by ``make upg``, owns every internal dependency pin.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Each ``flext-*`` requirement renders on its integration line. ``make upg``
 re-resolves that line (``uv lock --upgrade --refresh``) to the branch tip and
 records the commit in uv.lock; generation re-renders any commit left in the
@@ -31,9 +34,18 @@ class TestsFlextInfraUpgOwnedDependencyPin:
 
     @classmethod
     def _consumer(
-        cls, root: Path, core_ref: str, infra_ref: str = LINE, flext_source: str = ""
+        cls,
+        root: Path,
+        core_ref: str,
+        infra_ref: str = LINE,
+        flext_source: str = "",
     ) -> str:
-        """Write one standalone consumer declaring the family on the given refs."""
+        """Write one standalone consumer declaring the family on the given refs.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         (root / "config").mkdir(parents=True)
         repository: t.JsonDict = {
             "name": "consumer",
@@ -88,7 +100,8 @@ class TestsFlextInfraUpgOwnedDependencyPin:
         )
 
     def test_generation_keeps_the_line_and_drops_override_pins(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Every internal requirement stays on its line; no override survives."""
         source = self._consumer(tmp_path, self.LINE)
@@ -105,13 +118,15 @@ class TestsFlextInfraUpgOwnedDependencyPin:
         tm.that(tm.ok(self._conform(rendered)), eq=rendered)
         line = tm.ok(
             u.Infra.flext_integration_line(
-                codegen=config.Infra.codegen, repository_root=tmp_path
-            )
+                codegen=config.Infra.codegen,
+                repository_root=tmp_path,
+            ),
         )
         tm.that((line.base_url, line.branch), eq=(self.PROVIDER, self.LINE))
 
     def test_commit_residue_is_re_rendered_on_the_detected_line(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A retired pin left in the projection never survives generation."""
         source = self._consumer(tmp_path, self.COMMIT, self.COMMIT)
@@ -122,14 +137,16 @@ class TestsFlextInfraUpgOwnedDependencyPin:
         tm.fail(self._conform(source), has="only `make upg` moves it")
 
     def test_a_fully_pinned_projection_takes_the_line_from_the_manifest(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Commit residue declares no line: the hand-authored source does."""
         pinned = tmp_path / "pinned"
         self._consumer(pinned, self.COMMIT, self.COMMIT)
         tm.fail(
             u.Infra.flext_integration_line(
-                codegen=config.Infra.codegen, repository_root=pinned
+                codegen=config.Infra.codegen,
+                repository_root=pinned,
             ),
             has="no manifest flext_source",
         )
@@ -142,8 +159,9 @@ class TestsFlextInfraUpgOwnedDependencyPin:
         )
         line = tm.ok(
             u.Infra.flext_integration_line(
-                codegen=config.Infra.codegen, repository_root=declared
-            )
+                codegen=config.Infra.codegen,
+                repository_root=declared,
+            ),
         )
         tm.that((line.base_url, line.branch), eq=(self.PROVIDER, self.LINE))
 
@@ -157,7 +175,8 @@ class TestsFlextInfraUpgOwnedDependencyPin:
         )
         tm.fail(
             u.Infra.flext_integration_line(
-                codegen=config.Infra.codegen, repository_root=tmp_path
+                codegen=config.Infra.codegen,
+                repository_root=tmp_path,
             ),
             has="never a commit",
         )
@@ -171,7 +190,8 @@ class TestsFlextInfraUpgOwnedDependencyPin:
         )
         tm.fail(
             u.Infra.flext_integration_line(
-                codegen=config.Infra.codegen, repository_root=tmp_path
+                codegen=config.Infra.codegen,
+                repository_root=tmp_path,
             ),
             has="conflicting flext-* line sources",
         )

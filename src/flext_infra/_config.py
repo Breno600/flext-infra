@@ -11,20 +11,25 @@ from typing import override
 
 from flext_cli.config import FlextCliConfig
 
-from ._constants.codegen_project import FlextInfraConstantsCodegenProject
-from ._models._config.base import FlextInfraConfigModels
+from flext_infra._constants.codegen_project import FlextInfraConstantsCodegenProject
+from flext_infra._models._config.base import FlextInfraConfigModels
 
 
 class FlextInfraConfig(FlextCliConfig):
     """Declarative flext-infra config loaded and validated once."""
 
-    # NOTE (multi-agent, flext-wkii.9 + flext-wkii.17 / agent: codex): direct
-    # config.Infra is the only codegen information surface; no accessor method.
+    # Direct config.Infra is the only codegen information surface; no accessor
+    # method.
     Infra: FlextInfraConfigModels.Infra
 
     @classmethod
     def ssot_config_dir(cls) -> Path:
-        """Public resolution of the packaged/workspace ``config/`` directory."""
+        """Public resolution of the packaged/workspace ``config/`` directory.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         return cls._config_dir()
 
     @classmethod
@@ -39,6 +44,10 @@ class FlextInfraConfig(FlextCliConfig):
         precedence of any file source. The governed repository's tracked org
         layer is appended after it, so a checkout root always speaks with the
         last word on its own org data.
+
+        Returns:
+            The resulting ``list[Path]``.
+
         """
         files = [
             item

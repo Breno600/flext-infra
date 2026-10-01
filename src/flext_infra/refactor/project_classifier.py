@@ -1,4 +1,8 @@
-"""Project classification and family chain discovery for flext workspace."""
+"""Project classification and family chain discovery for flext workspace.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,21 +10,28 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING, override
 
 from flext_infra import c, m, t, u
-
-from ._project_classifier_deps import FlextInfraProjectClassifierDepsMixin
-from ._project_classifier_family import FlextInfraProjectClassifierFamilyMixin
+from flext_infra.refactor._project_classifier_deps import (
+    FlextInfraProjectClassifierDepsMixin,
+)
+from flext_infra.refactor._project_classifier_family import (
+    FlextInfraProjectClassifierFamilyMixin,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
 class FlextInfraProjectClassifier(
-    FlextInfraProjectClassifierDepsMixin, FlextInfraProjectClassifierFamilyMixin
+    FlextInfraProjectClassifierDepsMixin,
+    FlextInfraProjectClassifierFamilyMixin,
 ):
     """Classify a project by kind and discover FLEXT family chains."""
 
     def __init__(
-        self, project_root: Path, *, pyproject_payload: t.JsonMapping | None = None
+        self,
+        project_root: Path,
+        *,
+        pyproject_payload: t.JsonMapping | None = None,
     ) -> None:
         """Initialize classifier for the given project root."""
         self._project_root = project_root.resolve()
@@ -29,25 +40,38 @@ class FlextInfraProjectClassifier(
         self._src_path = self._project_root / c.Infra.DEFAULT_SRC_DIR
 
     def classify(self) -> m.Infra.ProjectClassification:
-        """Return classification and family chains for this project."""
+        """Return classification and family chains for this project.
+
+        Returns:
+            Classification and family chains for this project.
+
+        """
         project_name, dependencies = self._read_project_metadata()
         internal_dependencies = self._internal_dependencies(
-            dependencies=dependencies, project_name=project_name
+            dependencies=dependencies,
+            project_name=project_name,
         )
         family_bases, local_facade_classes = self._discover_facade_inheritance()
         family_chains = self._build_confirmed_family_chains(
-            internal_dependencies=internal_dependencies, family_bases=family_bases
+            internal_dependencies=internal_dependencies,
+            family_bases=family_bases,
         )
         project_kind = self._infer_project_kind(
             internal_dependencies=internal_dependencies,
             local_facade_classes=local_facade_classes,
         )
         return m.Infra.ProjectClassification(
-            project_kind=project_kind, family_chains={**family_chains}
+            project_kind=project_kind,
+            family_chains={**family_chains},
         )
 
     def _read_project_metadata(self) -> t.Infra.TransformResult:
-        """Read project metadata."""
+        """Read project metadata.
+
+        Returns:
+            The resulting ``t.Infra.TransformResult``.
+
+        """
         if self._pyproject_payload is not None:
             return self._project_metadata_from_payload(self._pyproject_payload)
         empty_dependencies: list[str] = []
@@ -57,33 +81,47 @@ class FlextInfraProjectClassifier(
         if data_result.failure:
             return ("", empty_dependencies)
         return self._project_metadata_from_payload(
-            t.Infra.INFRA_MAPPING_ADAPTER.validate_python(data_result.value)
+            t.Infra.INFRA_MAPPING_ADAPTER.validate_python(data_result.value),
         )
 
     def _project_metadata_from_payload(
-        self, parsed: t.JsonMapping
+        self,
+        parsed: t.JsonMapping,
     ) -> t.Infra.TransformResult:
-        """Project metadata from payload."""
+        """Project metadata from payload.
+
+        Returns:
+            The resulting ``t.Infra.TransformResult``.
+
+        """
         raw_project = self._as_mapping(parsed.get(c.Infra.PROJECT))
         project_name = self._normalized_name_from_mapping(raw_project)
         dependencies: t.MutableSequenceOf[str] = []
         self._append_project_dependencies(
-            raw_project=raw_project, dependencies=dependencies
+            raw_project=raw_project,
+            dependencies=dependencies,
         )
         raw_tool = self._as_mapping(parsed.get(c.Infra.TOOL))
         raw_poetry = self._as_mapping(raw_tool.get(c.Infra.POETRY))
         if not project_name:
             project_name = self._normalized_name_from_mapping(raw_poetry)
         self._append_poetry_dependencies(
-            raw_poetry=raw_poetry, dependencies=dependencies
+            raw_poetry=raw_poetry,
+            dependencies=dependencies,
         )
         return (project_name, dependencies)
 
     @override
     def _as_mapping(
-        self, raw_value: t.JsonValue | None
+        self,
+        raw_value: t.JsonValue | None,
     ) -> t.MappingKV[str, t.JsonValue]:
-        """As mapping."""
+        """As mapping.
+
+        Returns:
+            The resulting ``t.MappingKV[str, t.JsonValue]``.
+
+        """
         if isinstance(raw_value, Mapping):
             validated: t.MappingKV[str, t.JsonValue] = (
                 t.Infra.INFRA_MAPPING_ADAPTER.validate_python(raw_value)
@@ -92,9 +130,15 @@ class FlextInfraProjectClassifier(
         return {}
 
     def _normalized_name_from_mapping(
-        self, raw_mapping: t.MappingKV[str, t.JsonValue]
+        self,
+        raw_mapping: t.MappingKV[str, t.JsonValue],
     ) -> str:
-        """Return the normalized name from a mapping."""
+        """Return the normalized name from a mapping.
+
+        Returns:
+            The normalized name from a mapping.
+
+        """
         raw_name = raw_mapping.get(c.Infra.NAME)
         if isinstance(raw_name, str):
             return self._normalize_dependency_name(raw_name)

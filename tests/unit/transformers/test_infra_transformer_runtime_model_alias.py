@@ -4,7 +4,7 @@ The canonical-alias injector deferred ``t`` under ``if TYPE_CHECKING:``
 whenever every use sat inside an annotation. A pydantic model resolves its
 class-body annotations while the class is built, so that deferral left
 ``t.VariadicTuple`` unresolvable and ``_SmellData.model_validate_json`` raised
-``PydanticUserError`` during package import (flext-dk13k). Class-body
+``PydanticUserError`` during package import. Class-body
 annotations on a runtime model therefore keep a module-level import, while a
 purely type-checking use keeps the deferred import that avoids an
 initialisation cycle.
@@ -79,12 +79,15 @@ class Version:
 class TestsFlextInfraRuntimeModelAlias:
     """Keep a runtime model's alias import at runtime, not under TYPE_CHECKING."""
 
+    @staticmethod
     def test_model_class_body_alias_gets_a_module_level_import(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """A pydantic model resolves its field annotations at import time."""
         updated = u.Infra.ensure_alias_import(
-            _MODEL_USES_ALIAS, c.Infra.PKG_CORE_UNDERSCORE, "t"
+            _MODEL_USES_ALIAS,
+            c.Infra.PKG_CORE_UNDERSCORE,
+            "t",
         )
         tm.that(_MODULE_IMPORT in updated, eq=True)
         tm.that(f"    {_MODULE_IMPORT}" in updated, eq=False)
@@ -97,25 +100,34 @@ class TestsFlextInfraRuntimeModelAlias:
         outcome = tm.ok(u.Cli.run([sys.executable, "-c", probe], cwd=tmp_path))
         tm.that(outcome.stdout.strip(), eq="skill row")
 
-    def test_type_checking_only_alias_keeps_the_deferred_import(self) -> None:
+    @staticmethod
+    def test_type_checking_only_alias_keeps_the_deferred_import() -> None:
         """A signature-only use stays inside the type-checking block."""
         updated = u.Infra.ensure_alias_import(
-            _TYPE_CHECKING_USES_ALIAS, c.Infra.PKG_CORE_UNDERSCORE, "t"
+            _TYPE_CHECKING_USES_ALIAS,
+            c.Infra.PKG_CORE_UNDERSCORE,
+            "t",
         )
         tm.that(f"    {_MODULE_IMPORT}" in updated, eq=True)
         tm.that(f"\n{_MODULE_IMPORT}" in updated, eq=False)
 
-    def test_plain_class_body_alias_keeps_the_deferred_import(self) -> None:
+    @staticmethod
+    def test_plain_class_body_alias_keeps_the_deferred_import() -> None:
         """A non-model class body does not force a runtime import."""
         updated = u.Infra.ensure_alias_import(
-            _PLAIN_CLASS_USES_ALIAS, c.Infra.PKG_CORE_UNDERSCORE, "t"
+            _PLAIN_CLASS_USES_ALIAS,
+            c.Infra.PKG_CORE_UNDERSCORE,
+            "t",
         )
         tm.that(f"    {_MODULE_IMPORT}" in updated, eq=True)
 
-    def test_missing_block_is_created_instead_of_a_runtime_import(self) -> None:
+    @staticmethod
+    def test_missing_block_is_created_instead_of_a_runtime_import() -> None:
         """An initialisation-cycle module must not import its own package at runtime."""
         updated = u.Infra.ensure_alias_import(
-            _NO_TYPE_CHECKING_BLOCK, c.Infra.PKG_CORE_UNDERSCORE, "t"
+            _NO_TYPE_CHECKING_BLOCK,
+            c.Infra.PKG_CORE_UNDERSCORE,
+            "t",
         )
         tm.that("if TYPE_CHECKING:" in updated, eq=True)
         tm.that(f"    {_MODULE_IMPORT}" in updated, eq=True)

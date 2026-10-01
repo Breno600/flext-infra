@@ -1,4 +1,4 @@
-{# NOTE (codex, flext-j47u): precompute exact compact/multiline source with zero render whitespace. -#}
+{# NOTE:precompute exact compact/multiline source with zero render whitespace. -#}
 {%- set constants_config_line = "from " ~ package_name ~ "._constants.config import " ~ class_stem ~ "ConstantsConfig" -%}
 {%- set constants_config_import = constants_config_line if constants_config_line | length <= tooling.tools.ruff.line_length else "from " ~ package_name ~ "._constants.config import (\n    " ~ class_stem ~ "ConstantsConfig,\n)" -%}
 {%- set constants_settings_line = "from " ~ package_name ~ "._constants.settings import " ~ class_stem ~ "ConstantsSettings" -%}
@@ -12,10 +12,10 @@ Copyright (c) {{ year }} {{ author_name }}. All rights reserved.
 SPDX-License-Identifier: MIT
 """
 
-{# NOTE (multi-agent, flext-wkii.19.1): config/settings foundation parts compose the single constants namespace. -#}
+{# NOTE:config/settings foundation parts compose the single constants namespace. -#}
 from __future__ import annotations
 
-{# NOTE (flext-dv1ga): extend the class the upstream declares for `c` in its own __all__; the letter is rebound below as a plain alias. -#}
+{# NOTE:extend the class the upstream declares for `c` in its own __all__; the letter is rebound below as a plain alias. -#}
 from {{ upstream }} import {{ upstream_facades["c"] }}
 
 {{ constants_imports }}

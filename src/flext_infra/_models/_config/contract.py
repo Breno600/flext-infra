@@ -1,4 +1,8 @@
-"""Shared contract base and root aliases for config models."""
+"""Shared contract base and root aliases for config models.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,9 +12,9 @@ from typing import Annotated, Self
 
 from flext_cli import m, u
 
-from ... import t
-from ..._constants.validate import FlextInfraConstantsSharedInfra
-from ..mise_toolchain import FlextInfraModelsMiseToolchain
+from flext_infra import t
+from flext_infra._constants.validate import FlextInfraConstantsSharedInfra
+from flext_infra._models.mise_toolchain import FlextInfraModelsMiseToolchain
 
 
 class FlextInfraConfigModelsContract:
@@ -22,7 +26,10 @@ class FlextInfraConfigModelsContract:
         # Rendered file payloads are
         # byte contracts; Pydantic must never trim their final newline.
         model_config = m.ConfigDict(
-            strict=False, frozen=True, extra="forbid", str_strip_whitespace=False
+            strict=False,
+            frozen=True,
+            extra="forbid",
+            str_strip_whitespace=False,
         )
 
     class DocsAuditOverridesSpec(ConfigContract):
@@ -39,7 +46,7 @@ class FlextInfraConfigModelsContract:
         historical_evidence_files: Annotated[
             t.VariadicTuple[Path],
             m.Field(
-                description="Exact dated Markdown records preserving observed paths"
+                description="Exact dated Markdown records preserving observed paths",
             ),
         ] = ()
 

@@ -1,4 +1,8 @@
-"""Release publish phase: upload exactly what the build receipt attests."""
+"""Release publish phase: upload exactly what the build receipt attests.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,8 +10,7 @@ from pathlib import Path
 
 from flext_core import r
 from flext_infra import c, config, m, p, u
-
-from ._release_build import FlextInfraReleaseBuildMixin
+from flext_infra.release._release_build import FlextInfraReleaseBuildMixin
 
 
 class FlextInfraReleasePublishMixin(FlextInfraReleaseBuildMixin):
@@ -18,7 +21,12 @@ class FlextInfraReleasePublishMixin(FlextInfraReleaseBuildMixin):
     """
 
     def phase_publish(self, ctx: m.Infra.ReleasePhaseDispatchConfig) -> p.Result[bool]:
-        """Publish the receipt's artifacts as a GitHub release and, on request, to the index."""
+        """Publish the receipt's artifacts as a GitHub release and, on request, to the index.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         receipt = self._verified_receipt(ctx)
         if receipt.failure:
             return r[bool].from_failure(receipt)
@@ -31,14 +39,23 @@ class FlextInfraReleasePublishMixin(FlextInfraReleaseBuildMixin):
                 if uploaded.failure:
                     return uploaded
         self.logger.info(
-            "release_phase_publish", tag=ctx.tag, dry_run=ctx.dry_run, index=ctx.index
+            "release_phase_publish",
+            tag=ctx.tag,
+            dry_run=ctx.dry_run,
+            index=ctx.index,
         )
         return r[bool].ok(True)
 
     def _verified_receipt(
-        self, ctx: m.Infra.ReleasePhaseDispatchConfig
+        self,
+        ctx: m.Infra.ReleasePhaseDispatchConfig,
     ) -> p.Result[m.Infra.BuildReport]:
-        """Load the receipt and prove every artifact still matches its digest."""
+        """Load the receipt and prove every artifact still matches its digest.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.BuildReport]``.
+
+        """
         path = (
             self._release_dir(ctx.repository_root, ctx.tag)
             / c.Infra.RELEASE_REPORT_FILENAME
@@ -47,11 +64,14 @@ class FlextInfraReleasePublishMixin(FlextInfraReleaseBuildMixin):
         if content.failure:
             return r[m.Infra.BuildReport].from_failure(content)
         report: p.Result[m.Infra.BuildReport] = u.validate_value(
-            m.Infra.BuildReport, content.value, from_json=True
+            m.Infra.BuildReport,
+            content.value,
+            from_json=True,
         )
         if report.failure:
             return r[m.Infra.BuildReport].fail_op(
-                "validate release receipt", report.error
+                "validate release receipt",
+                report.error,
             )
         if (
             report.value.dry_run
@@ -59,7 +79,7 @@ class FlextInfraReleasePublishMixin(FlextInfraReleaseBuildMixin):
             or report.value.version != ctx.version
         ):
             return r[m.Infra.BuildReport].fail(
-                f"release receipt is not publishable for {ctx.version}: {path}"
+                f"release receipt is not publishable for {ctx.version}: {path}",
             )
         for artifact in (
             a for record in report.value.records for a in record.artifacts
@@ -68,23 +88,31 @@ class FlextInfraReleasePublishMixin(FlextInfraReleaseBuildMixin):
                 digest = u.Cli.sha256_file(Path(artifact.path))
             except OSError as exc:
                 return r[m.Infra.BuildReport].fail_op(
-                    f"read artifact {artifact.path}", exc
+                    f"read artifact {artifact.path}",
+                    exc,
                 )
             if digest != artifact.sha256:
                 return r[m.Infra.BuildReport].fail(
-                    f"artifact digest differs from receipt: {artifact.path}"
+                    f"artifact digest differs from receipt: {artifact.path}",
                 )
         return report
 
     @staticmethod
     def _github_release(
-        ctx: m.Infra.ReleasePhaseDispatchConfig, report: m.Infra.BuildReport
+        ctx: m.Infra.ReleasePhaseDispatchConfig,
+        report: m.Infra.BuildReport,
     ) -> p.Result[bool]:
-        """Create or refresh the GitHub release with the receipt's artifacts."""
+        """Create or refresh the GitHub release with the receipt's artifacts.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         root = ctx.repository_root
         assets = [a.path for record in report.records for a in record.artifacts]
         exists = u.Cli.capture(
-            [c.Infra.GH, "release", "view", ctx.tag, "--json", "tagName"], cwd=root
+            [c.Infra.GH, "release", "view", ctx.tag, "--json", "tagName"],
+            cwd=root,
         )
         if exists.success:
             return u.Cli.run_checked(
@@ -108,19 +136,25 @@ class FlextInfraReleasePublishMixin(FlextInfraReleaseBuildMixin):
         )
 
     def _index_upload(
-        self, ctx: m.Infra.ReleasePhaseDispatchConfig, report: m.Infra.BuildReport
+        self,
+        ctx: m.Infra.ReleasePhaseDispatchConfig,
+        report: m.Infra.BuildReport,
     ) -> p.Result[bool]:
         """Upload verified artifacts wave by wave through trusted publishing.
 
         ``--check-url`` skips files already on the index, so a rerun after a
         partial failure resumes instead of failing on the first duplicate.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         artifacts = {
             record.project: tuple(a.path for a in record.artifacts)
             for record in report.records
         }
         waves = u.Infra.release_publish_waves(
-            tuple((record.project, Path(record.path)) for record in report.records)
+            tuple((record.project, Path(record.path)) for record in report.records),
         )
         if waves.failure:
             return r[bool].from_failure(waves)

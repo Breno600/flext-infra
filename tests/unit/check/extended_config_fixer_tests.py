@@ -20,6 +20,8 @@ if TYPE_CHECKING:
 
 
 class TestsFlextInfraExtendedConfigFixer:
+    """Tests for ``FlextInfraExtendedConfigFixer``."""
+
     @staticmethod
     def _extra_paths_manager(repository_root: Path) -> FlextInfraExtraPathsManager:
         return FlextInfraExtraPathsManager(repository_root=repository_root)
@@ -27,19 +29,22 @@ class TestsFlextInfraExtendedConfigFixer:
     class TestConfigFixerProcessFile:
         """Test FlextInfraConfigFixer.process_file."""
 
-        def test_process_file_missing_file(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_process_file_missing_file(tmp_path: Path) -> None:
             """Return a typed failure when the pyproject is missing."""
             fixer = FlextInfraConfigFixer(repository_root=tmp_path)
             tm.fail(fixer.process_file(tmp_path / "missing.toml"), has="not found")
 
-        def test_process_file_invalid_toml(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_process_file_invalid_toml(tmp_path: Path) -> None:
             """Return a typed failure for invalid TOML input."""
             fixer = FlextInfraConfigFixer(repository_root=tmp_path)
             pyproject = tmp_path / "pyproject.toml"
             pyproject.write_text("invalid [[[")
             tm.fail(fixer.process_file(pyproject), has="TOML parse failed")
 
-        def test_process_file_no_pyrefly_section(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_process_file_no_pyrefly_section(tmp_path: Path) -> None:
             """Leave documents without a Pyrefly table unchanged."""
             fixer = FlextInfraConfigFixer(repository_root=tmp_path)
             pyproject = tmp_path / "pyproject.toml"
@@ -48,7 +53,8 @@ class TestsFlextInfraExtendedConfigFixer:
             tm.ok(result)
             tm.that(result.value, empty=True)
 
-        def test_process_file_dry_run_no_write(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_process_file_dry_run_no_write(tmp_path: Path) -> None:
             """Keep the source file unchanged during dry-run."""
             fixer = FlextInfraConfigFixer(repository_root=tmp_path)
             pyproject = tmp_path / "pyproject.toml"
@@ -58,8 +64,9 @@ class TestsFlextInfraExtendedConfigFixer:
             tm.ok(result)
             tm.that(pyproject.read_text(), eq=original)
 
+        @staticmethod
         def test_process_file_syncs_search_path_from_public_manager(
-            self, tmp_path: Path
+            tmp_path: Path,
         ) -> None:
             """Synchronize search paths through the public manager."""
             (tmp_path / "typings" / "generated").mkdir(parents=True)
@@ -67,33 +74,38 @@ class TestsFlextInfraExtendedConfigFixer:
             pyproject.write_text("[tool.pyrefly]\nsearch-path = []\n", encoding="utf-8")
 
             result = FlextInfraConfigFixer(repository_root=tmp_path).process_file(
-                pyproject
+                pyproject,
             )
 
             tm.ok(result)
             tm.that(result.value, has="synchronized search-path from YAML rules")
             pyrefly = u.Tests.toml_table_at(
-                pyproject.read_text(encoding="utf-8"), "tool", "pyrefly"
+                pyproject.read_text(encoding="utf-8"),
+                "tool",
+                "pyrefly",
             )
             tm.that(
                 pyrefly["search-path"],
                 eq=TestsFlextInfraExtendedConfigFixer._extra_paths_manager(
-                    tmp_path
+                    tmp_path,
                 ).pyrefly_search_paths(project_dir=tmp_path, is_root=True),
             )
 
+        @staticmethod
         def test_process_file_keeps_all_existing_tracked_project_includes(
-            self, tmp_path: Path
+            tmp_path: Path,
         ) -> None:
             """Keep every existing tracked Python root in project includes."""
             u.Tests.write_project_beads_config(tmp_path, "tmp")
             (tmp_path / "src").mkdir()
             (tmp_path / "src" / "package.py").write_text(
-                "VALUE = 1\n", encoding="utf-8"
+                "VALUE = 1\n",
+                encoding="utf-8",
             )
             (tmp_path / "tests").mkdir()
             (tmp_path / "tests" / "test_package.py").write_text(
-                "def test_package() -> None:\n    pass\n", encoding="utf-8"
+                "def test_package() -> None:\n    pass\n",
+                encoding="utf-8",
             )
             pyproject = tmp_path / "pyproject.toml"
             pyproject.write_text(
@@ -108,18 +120,21 @@ class TestsFlextInfraExtendedConfigFixer:
             )
 
             result = FlextInfraConfigFixer(repository_root=tmp_path).process_file(
-                pyproject
+                pyproject,
             )
 
             tm.ok(result)
             tm.that(result.value, lacks="synchronized project-includes from YAML rules")
             pyrefly = u.Tests.toml_table_at(
-                pyproject.read_text(encoding="utf-8"), "tool", "pyrefly"
+                pyproject.read_text(encoding="utf-8"),
+                "tool",
+                "pyrefly",
             )
             tm.that(pyrefly["project-includes"], eq=["src/**/*.py*", "tests/**/*.py*"])
 
+        @staticmethod
         def test_process_file_preserves_unrelated_toml_comments_and_formatting(
-            self, tmp_path: Path
+            tmp_path: Path,
         ) -> None:
             """Preserve unrelated TOML trivia while changing Pyrefly keys."""
             pyproject = tmp_path / "pyproject.toml"
@@ -147,7 +162,7 @@ class TestsFlextInfraExtendedConfigFixer:
             )
 
             result = FlextInfraConfigFixer(repository_root=tmp_path).process_file(
-                pyproject
+                pyproject,
             )
 
             tm.ok(result)
@@ -158,8 +173,9 @@ class TestsFlextInfraExtendedConfigFixer:
             tm.that(updated, contains="# [MANAGED] pyright")
             tm.that(result.value, has="synchronized search-path from YAML rules")
 
+        @staticmethod
         def test_process_file_removes_ignored_sub_configs_via_public_api(
-            self, tmp_path: Path
+            tmp_path: Path,
         ) -> None:
             """Remove ignored Pyrefly sub-configurations through the public API."""
             pyproject = tmp_path / "pyproject.toml"
@@ -176,19 +192,22 @@ class TestsFlextInfraExtendedConfigFixer:
             )
 
             result = FlextInfraConfigFixer(repository_root=tmp_path).process_file(
-                pyproject
+                pyproject,
             )
 
             tm.ok(result)
             tm.that(result.value, has="removed ignore=true sub-settings for '*.py'")
             pyrefly = u.Tests.toml_table_at(
-                pyproject.read_text(encoding="utf-8"), "tool", "pyrefly"
+                pyproject.read_text(encoding="utf-8"),
+                "tool",
+                "pyrefly",
             )
             expected_sub_settings: t.JsonList = [{"matches": "*.pyi", "ignore": False}]
             tm.that(pyrefly["sub-settings"], eq=expected_sub_settings)
 
+        @staticmethod
         def test_process_file_syncs_root_project_excludes_via_public_api(
-            self, tmp_path: Path
+            tmp_path: Path,
         ) -> None:
             """Synchronize root exclusions from the validated config singleton."""
             pyproject = tmp_path / "pyproject.toml"
@@ -203,35 +222,41 @@ class TestsFlextInfraExtendedConfigFixer:
             tm.ok(result)
             tm.that(result.value, has="synchronized project-excludes from YAML rules")
             pyrefly = u.Tests.toml_table_at(
-                pyproject.read_text(encoding="utf-8"), "tool", "pyrefly"
+                pyproject.read_text(encoding="utf-8"),
+                "tool",
+                "pyrefly",
             )
             tm.that(
                 pyrefly["project-excludes"],
                 eq=sorted(
-                    set(config.Infra.tooling.tools.pyrefly.project_exclude_globs)
+                    set(config.Infra.tooling.tools.pyrefly.project_exclude_globs),
                 ),
             )
 
     class TestConfigFixerRun:
         """Test FlextInfraConfigFixer.run."""
 
-        def test_run_with_empty_projects(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_run_with_empty_projects(tmp_path: Path) -> None:
             """Accept an empty project selection."""
             fixer = FlextInfraConfigFixer(repository_root=tmp_path)
             result = fixer.run([])
             tm.ok(result)
             tm.that(len(result.value), gte=0)
 
-        def test_run_with_nonexistent_projects(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_run_with_nonexistent_projects(tmp_path: Path) -> None:
             """Fail closed when an explicit project selection is inaccessible."""
             u.Tests.reject_inaccessible_config_project(tmp_path)
 
-        def test_run_with_dry_run_flag(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_run_with_dry_run_flag(tmp_path: Path) -> None:
             """Execute the workspace runner in dry-run mode."""
             fixer = FlextInfraConfigFixer(repository_root=tmp_path)
             tm.ok(fixer.run([], dry_run=True))
 
-        def test_run_with_verbose_flag(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_run_with_verbose_flag(tmp_path: Path) -> None:
             """Execute the workspace runner with verbose reporting."""
             fixer = FlextInfraConfigFixer(repository_root=tmp_path)
             tm.ok(fixer.run([], verbose=True))
@@ -239,7 +264,8 @@ class TestsFlextInfraExtendedConfigFixer:
     class TestConfigFixerExecute:
         """Test FlextInfraConfigFixer.execute method."""
 
-        def test_execute_returns_failure(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_execute_returns_failure(tmp_path: Path) -> None:
             """Require the typed command entry point for execution."""
             fixer = FlextInfraConfigFixer(repository_root=tmp_path)
             tm.fail(fixer.execute(), has="Use execute_command() directly")
@@ -247,7 +273,8 @@ class TestsFlextInfraExtendedConfigFixer:
     class TestConfigFixerToArray:
         """Test u.Cli.toml_array."""
 
-        def test_to_array_creates_array(self) -> None:
+        @staticmethod
+        def test_to_array_creates_array() -> None:
             """Create a TOML array from typed string items."""
             items = ["a", "b", "c"]
             arr = u.Cli.toml_array(items)

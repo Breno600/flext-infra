@@ -1,5 +1,8 @@
 """The fleet-umbrella question has exactly one owner and one signal.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Why this exists: the workspace-manifest path was re-derived in five places, and
 a sixth copy asked the wrong file. It tested the Beads override, which every
 project carries, so every standalone project was classified as a fleet umbrella.
@@ -30,7 +33,8 @@ _PROBE = "flext-probe"
 class TestsFlextInfraWorkspaceManifest:
     """Classification of a checkout as a fleet umbrella."""
 
-    def test_invalid_manifest_cannot_expand_discovery(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_invalid_manifest_cannot_expand_discovery(tmp_path: Path) -> None:
         """Invalid declarations fail before exclusions or refactor policy are used."""
         manifest = u.Infra.workspace_manifest_path(tmp_path)
         manifest.parent.mkdir(parents=True)
@@ -42,13 +46,19 @@ class TestsFlextInfraWorkspaceManifest:
 
     @staticmethod
     def _config_dir(root: Path) -> Path:
-        """Create and return the checkout's config directory."""
+        """Create and return the checkout's config directory.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         config = root / c.CONFIG_DIR_NAME
         config.mkdir(parents=True, exist_ok=True)
         return config
 
+    @staticmethod
     def test_manifest_path_is_derived_from_the_declared_names(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """The path is built from the configured directory and filename."""
         resolved = u.Infra.workspace_manifest_path(tmp_path)
@@ -57,14 +67,16 @@ class TestsFlextInfraWorkspaceManifest:
         tm.that(resolved.parent.name, eq=c.CONFIG_DIR_NAME)
         tm.that(resolved.parent.parent, eq=tmp_path)
 
+    @staticmethod
     def test_a_checkout_without_the_manifest_is_not_an_umbrella(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Absence of the manifest is the ordinary case for a project."""
         tm.that(u.Infra.fleet_umbrella(tmp_path), eq=False)
 
+    @staticmethod
     def test_a_standalone_manifest_does_not_make_an_umbrella(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """A governed standalone project keeps its project documentation shape."""
         written = u.Tests.write_standalone_workspace_manifest(tmp_path, _PROBE)
@@ -72,16 +84,20 @@ class TestsFlextInfraWorkspaceManifest:
         tm.that(written, eq=u.Infra.workspace_manifest_path(tmp_path))
         tm.that(u.Infra.fleet_umbrella(tmp_path), eq=False)
 
-    def test_workspace_role_declares_a_fleet_umbrella(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_workspace_role_declares_a_fleet_umbrella(tmp_path: Path) -> None:
         """Only the typed workspace role selects aggregate documentation."""
         u.Tests.write_standalone_workspace_manifest(
-            tmp_path, _PROBE, role=c.Infra.MakeProfile.WORKSPACE
+            tmp_path,
+            _PROBE,
+            role=c.Infra.MakeProfile.WORKSPACE,
         )
 
         tm.that(u.Infra.fleet_umbrella(tmp_path), eq=True)
 
+    @staticmethod
     def test_a_beads_override_never_makes_a_checkout_an_umbrella(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """The exact regression: every project carries the Beads override.
 
@@ -93,8 +109,9 @@ class TestsFlextInfraWorkspaceManifest:
         tm.that(written.is_file(), eq=True)
         tm.that(u.Infra.fleet_umbrella(tmp_path), eq=False)
 
+    @staticmethod
     def test_invalid_manifest_cannot_erase_participant_exclusions(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """An invalid declared scope fails before discovery can widen it."""
         manifest = u.Tests.write_standalone_workspace_manifest(tmp_path, _PROBE)
@@ -103,8 +120,9 @@ class TestsFlextInfraWorkspaceManifest:
         with pytest.raises(c.ValidationError):
             u.Infra.manifest_nonparticipant_paths(tmp_path)
 
+    @staticmethod
     def test_invalid_manifest_cannot_supply_default_refactor_settings(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """A present invalid manifest is never treated as undeclared settings."""
         manifest = u.Tests.write_standalone_workspace_manifest(tmp_path, _PROBE)

@@ -1,4 +1,8 @@
-"""Domain models for the deps subpackage."""
+"""Domain models for the deps subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,10 +12,9 @@ from typing import Annotated, ClassVar
 from flext_cli import m
 
 from flext_infra import t
-
-from .deps_toml import FlextInfraModelsDepsToml
-from .deps_tool_config import FlextInfraModelsDepsToolConfig
-from .mixins import FlextInfraModelsMixins as mm
+from flext_infra._models.deps_toml import FlextInfraModelsDepsToml
+from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
+from flext_infra._models.mixins import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsToml):
@@ -23,37 +26,47 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
         prefix: Annotated[
             Path,
             m.Field(
-                exclude=True, description="Consumer interpreter environment prefix"
+                exclude=True,
+                description="Consumer interpreter environment prefix",
             ),
         ]
         implementation_name: Annotated[
-            str, m.Field(description="PEP 508 implementation name")
+            str,
+            m.Field(description="PEP 508 implementation name"),
         ]
         implementation_version: Annotated[
-            str, m.Field(description="PEP 508 implementation version")
+            str,
+            m.Field(description="PEP 508 implementation version"),
         ]
         os_name: Annotated[str, m.Field(description="PEP 508 operating system name")]
         platform_machine: Annotated[
-            str, m.Field(description="PEP 508 machine architecture")
+            str,
+            m.Field(description="PEP 508 machine architecture"),
         ]
         platform_release: Annotated[
-            str, m.Field(description="PEP 508 platform release")
+            str,
+            m.Field(description="PEP 508 platform release"),
         ]
         platform_system: Annotated[str, m.Field(description="PEP 508 platform system")]
         platform_version: Annotated[
-            str, m.Field(description="PEP 508 platform version")
+            str,
+            m.Field(description="PEP 508 platform version"),
         ]
         platform_python_implementation: Annotated[
-            str, m.Field(description="PEP 508 Python implementation")
+            str,
+            m.Field(description="PEP 508 Python implementation"),
         ]
         python_full_version: Annotated[
-            str, m.Field(description="PEP 508 complete Python version")
+            str,
+            m.Field(description="PEP 508 complete Python version"),
         ]
         python_version: Annotated[
-            str, m.Field(description="PEP 508 Python major and minor version")
+            str,
+            m.Field(description="PEP 508 Python major and minor version"),
         ]
         sys_platform: Annotated[
-            str, m.Field(description="PEP 508 interpreter platform")
+            str,
+            m.Field(description="PEP 508 interpreter platform"),
         ]
 
     class BindingResolution(m.Value):
@@ -80,7 +93,8 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             m.Field(alias="format", description="Output format for dependency report"),
         ] = "text"
         output: Annotated[
-            str | None, m.Field(None, description="Optional output report path")
+            str | None,
+            m.Field(None, description="Optional output report path"),
         ] = None
         quiet: Annotated[bool, m.Field(False, description="Reduce command output")] = (
             False
@@ -93,7 +107,8 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             ),
         ] = False
         typings: Annotated[
-            bool, m.Field(False, description="Detect required typing packages")
+            bool,
+            m.Field(False, description="Detect required typing packages"),
         ] = False
         apply_typings: Annotated[
             bool,
@@ -106,10 +121,12 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             ),
         ] = False
         no_pip_check: Annotated[
-            bool, m.Field(alias="no-pip-check", description="Skip workspace pip check")
+            bool,
+            m.Field(alias="no-pip-check", description="Skip workspace pip check"),
         ] = False
         limits: Annotated[
-            str | None, m.Field(None, description="Path to dependency limits TOML")
+            str | None,
+            m.Field(None, description="Path to dependency limits TOML"),
         ] = None
 
         @property
@@ -134,7 +151,8 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
 
         check: Annotated[bool, m.Field(False, description="Run in check mode")] = False
         audit: Annotated[
-            bool, m.Field(description="Audit pyproject changes without writing")
+            bool,
+            m.Field(description="Audit pyproject changes without writing"),
         ] = False
         skip_check: Annotated[
             bool,
@@ -155,7 +173,7 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             ),
         ] = False
 
-    # NOTE (multi-agent, flext-wkii.17.9): codegen consumes the pure pyproject
+    # Codegen consumes the pure pyproject
     # renderer directly, so no deps CLI payload remains for path/workspace modes.
 
     class PyprojectDocumentState(m.ArbitraryTypesModel):
@@ -169,20 +187,24 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
 
         pyproject_path: Annotated[Path, m.Field(description="Resolved pyproject path")]
         original_rendered: Annotated[
-            str, m.Field(description="Original TOML source text")
+            str,
+            m.Field(description="Original TOML source text"),
         ] = ""
         rendered: Annotated[
-            str, m.Field(description="Canonical rendered TOML source text")
+            str,
+            m.Field(description="Canonical rendered TOML source text"),
         ] = ""
         payload: Annotated[
-            t.MutableJsonMapping, m.Field(description="Validated plain TOML payload")
+            t.MutableJsonMapping,
+            m.Field(description="Validated plain TOML payload"),
         ] = m.Field(default_factory=dict)
 
     class PackagedDataSelection(m.ContractModel):
         """Validated data inputs separated by Hatch selection semantics."""
 
         files: Annotated[
-            t.StrTuple, m.Field(description="Explicit data files included individually")
+            t.StrTuple,
+            m.Field(description="Explicit data files included individually"),
         ] = ()
         directories: Annotated[
             t.StrTuple,
@@ -194,7 +216,8 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
         first_party: Annotated[
-            t.StrSequence, m.Field(description="Detected first-party namespaces")
+            t.StrSequence,
+            m.Field(description="Detected first-party namespaces"),
         ]
         stale_patterns: Annotated[
             t.StrSequence,
@@ -212,7 +235,8 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             ),
         ]
         generated_python_roots: Annotated[
-            t.StrSequence, m.Field(description="Generated python roots to exclude")
+            t.StrSequence,
+            m.Field(description="Generated python roots to exclude"),
         ]
 
     class PyprojectDeclaredTopology(m.ContractModel):
@@ -230,25 +254,38 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             t.StrTuple,
             m.Field(description="Top-level packages shipped beyond the primary one"),
         ] = ()
+        repository_namespace_packages: Annotated[
+            t.StrTuple,
+            m.Field(
+                description="Implicit namespace directories shipped from the repository root",
+            ),
+        ] = ()
         packaged_data_paths: Annotated[
             t.StrTuple,
             m.Field(description="Repository-declared relative data paths to ship"),
         ] = ()
+        packaged_data_excludes: Annotated[
+            t.StrTuple,
+            m.Field(
+                description="Repository-relative files omitted from declared data directories",
+            ),
+        ] = ()
         planned_data_files: Annotated[
             t.StrTuple,
             m.Field(
-                description="Exact scaffold file destinations planned before publication"
+                description="Exact scaffold file destinations planned before publication",
             ),
         ] = ()
         declared_python_dirs: Annotated[
-            t.StrTuple, m.Field(description="Python roots declared for the project")
+            t.StrTuple,
+            m.Field(description="Python roots declared for the project"),
         ] = ()
         declared_python_dirs_are_complete: Annotated[
             bool,
             m.Field(
                 description=(
                     "Declared roots are the full set; discovery must not widen it"
-                )
+                ),
             ),
         ] = False
         project_kind: Annotated[
@@ -261,7 +298,7 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
                 description=(
                     "Workspace-relative paths excluded from analysis; absent "
                     "derives them from the workspace"
-                )
+                ),
             ),
         ] = None
 
@@ -273,23 +310,27 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
         """
 
         is_root: Annotated[
-            bool, m.Field(description="Whether the pyproject is the repository root")
+            bool,
+            m.Field(description="Whether the pyproject is the repository root"),
         ]
         repository_root: Annotated[
-            Path | None, m.Field(description="Repository root on disk")
+            Path | None,
+            m.Field(description="Repository root on disk"),
         ] = None
         project_dir: Annotated[
-            Path | None, m.Field(description="Project directory on disk")
+            Path | None,
+            m.Field(description="Project directory on disk"),
         ] = None
         declared_python_dirs: Annotated[
-            t.StrTuple, m.Field(description="Python roots declared for the project")
+            t.StrTuple,
+            m.Field(description="Python roots declared for the project"),
         ] = ()
         declared_python_dirs_are_complete: Annotated[
             bool,
             m.Field(
                 description=(
                     "Declared roots are the full set; discovery must not widen it"
-                )
+                ),
             ),
         ] = False
 
@@ -297,7 +338,8 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
         """Dependency limits configuration metadata."""
 
         python_version: Annotated[
-            str | None, m.Field(None, description="Python version")
+            str | None,
+            m.Field(None, description="Python version"),
         ] = None
         limits_path: Annotated[str, m.Field("", description="Path to limits file")] = ""
 
@@ -308,7 +350,8 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             True
         )
         lines: Annotated[
-            t.StrSequence, m.Field(description="Pip check output lines")
+            t.StrSequence,
+            m.Field(description="Pip check output lines"),
         ] = m.Field(default_factory=tuple)
 
     class DeptryIssueGroups(m.ArbitraryTypesModel):
@@ -335,19 +378,23 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
         """Deptry analysis report with categorized issue modules."""
 
         missing: Annotated[
-            t.StrSequence, m.Field(description="Missing dependencies")
+            t.StrSequence,
+            m.Field(description="Missing dependencies"),
         ] = m.Field(default_factory=tuple)
         unused: Annotated[t.StrSequence, m.Field(description="Unused dependencies")] = (
             m.Field(default_factory=tuple)
         )
         transitive: Annotated[
-            t.StrSequence, m.Field(description="Transitive dependencies")
+            t.StrSequence,
+            m.Field(description="Transitive dependencies"),
         ] = m.Field(default_factory=tuple)
         dev_in_runtime: Annotated[
-            t.StrSequence, m.Field(description="Dev dependencies in runtime")
+            t.StrSequence,
+            m.Field(description="Dev dependencies in runtime"),
         ] = m.Field(default_factory=tuple)
         raw_count: Annotated[
-            t.NonNegativeInt, m.Field(0, description="Raw issue count")
+            t.NonNegativeInt,
+            m.Field(0, description="Raw issue count"),
         ] = 0
 
     class ProjectDependencyReport(mm.ProjectNameMixin, m.ArbitraryTypesModel):
@@ -359,13 +406,15 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
         """Typing stubs analysis report with required/current/delta packages."""
 
         required_packages: Annotated[
-            t.StrSequence, m.Field(description="Required packages")
+            t.StrSequence,
+            m.Field(description="Required packages"),
         ] = m.Field(default_factory=tuple)
         hinted: Annotated[t.StrSequence, m.Field(description="Hinted packages")] = (
             m.Field(default_factory=tuple)
         )
         missing_modules: Annotated[
-            t.StrSequence, m.Field(description="Missing modules")
+            t.StrSequence,
+            m.Field(description="Missing modules"),
         ] = m.Field(default_factory=tuple)
         current: Annotated[t.StrSequence, m.Field(description="Current typings")] = (
             m.Field(default_factory=tuple)
@@ -374,13 +423,16 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             m.Field(default_factory=tuple)
         )
         to_remove: Annotated[
-            t.StrSequence, m.Field(description="Typings to remove")
+            t.StrSequence,
+            m.Field(description="Typings to remove"),
         ] = m.Field(default_factory=tuple)
         limits_applied: Annotated[
-            bool, m.Field(False, description="Whether limits were applied")
+            bool,
+            m.Field(False, description="Whether limits were applied"),
         ] = False
         python_version: Annotated[
-            str | None, m.Field(None, description="Python version")
+            str | None,
+            m.Field(None, description="Python version"),
         ] = None
         untyped_imports_followed: Annotated[
             bool,
@@ -388,7 +440,7 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
                 description=(
                     "Governed mypy follow_untyped_imports policy; when true, "
                     "missing stubs are not findings"
-                )
+                ),
             ),
         ]
 
@@ -397,7 +449,9 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
 
         deptry: FlextInfraModelsDeps.DeptryReport = m.Field(description="Deptry report")
         typings: FlextInfraModelsDeps.TypingsReport | None = m.Field(
-            None, description="Typings report", validate_default=True
+            None,
+            description="Typings report",
+            validate_default=True,
         )
 
     class WorkspaceDependencyReport(m.ArbitraryTypesModel):
@@ -409,13 +463,17 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
 
         workspace: Annotated[str, m.Field(description="Workspace name")]
         projects: t.MappingKV[str, FlextInfraModelsDeps.ProjectRuntimeReport] = m.Field(
-            description="Per-project reports"
+            description="Per-project reports",
         )
         pip_check: FlextInfraModelsDeps.PipCheckReport | None = m.Field(
-            None, description="Pip check report", validate_default=True
+            None,
+            description="Pip check report",
+            validate_default=True,
         )
         dependency_limits: FlextInfraModelsDeps.DependencyLimitsInfo | None = m.Field(
-            None, description="Dependency limits", validate_default=True
+            None,
+            description="Dependency limits",
+            validate_default=True,
         )
 
 

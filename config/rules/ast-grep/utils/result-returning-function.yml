@@ -1,0 +1,17 @@
+# A function annotated to return a FLEXT result (`r[T]`, `Result[T]` or
+# `<facade>.Result[T]`).
+id: result-returning-function
+language: python
+rule:
+  kind: function_definition
+  has:
+    field: return_type
+    pattern: $_
+    has:
+      any:
+        - all:
+            - kind: generic_type
+            - has:
+                kind: identifier
+                regex: "^(?:r|Result)$"
+        - pattern: $FACADE.Result[$INNER]

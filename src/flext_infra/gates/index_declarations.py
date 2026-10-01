@@ -32,8 +32,7 @@ from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_core import r
 from flext_infra import m, t, u
-
-from .base_gate import FlextInfraGate
+from flext_infra.gates.base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -48,9 +47,16 @@ class FlextInfraIndexDeclarationsGate(FlextInfraGate):
 
     @override
     def check(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
-        """Report every index entry the repository's declarations contradict."""
+        """Report every index entry the repository's declarations contradict.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
+        """
         _ = ctx
         started = time.monotonic()
         errors = self._collect(project_dir)
@@ -63,12 +69,20 @@ class FlextInfraIndexDeclarationsGate(FlextInfraGate):
             )
         defects = errors.unwrap()
         return self._build_project_error_gate_result(
-            project_dir, passed=not defects, errors=list(defects), started=started
+            project_dir,
+            passed=not defects,
+            errors=list(defects),
+            started=started,
         )
 
     @staticmethod
     def _collect(project_dir: Path) -> p.Result[t.StrSequence]:
-        """Compare every indexed gitlink against the `.gitmodules` declarations."""
+        """Compare every indexed gitlink against the `.gitmodules` declarations.
+
+        Returns:
+            The resulting ``p.Result[t.StrSequence]``.
+
+        """
         gitlinks = u.Infra.git_index_gitlink_paths(project_dir)
         if gitlinks.failure:
             return r[t.StrSequence].from_failure(gitlinks)

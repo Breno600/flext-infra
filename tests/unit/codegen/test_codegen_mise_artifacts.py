@@ -1,4 +1,8 @@
-"""Offline contracts for generated Mise declarations and launchers."""
+"""Offline contracts for generated Mise declarations and launchers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -29,7 +33,10 @@ class TestsFlextInfraCodegenMiseArtifacts:
         ],
     )
     def test_launcher_derivation_guards(
-        self, tmp_path: Path, invalid: str, reported: str
+        self,
+        tmp_path: Path,
+        invalid: str,
+        reported: str,
     ) -> None:
         """Every launcher must be the generator's output for the pinned release."""
         root = self._project(tmp_path / "project")
@@ -72,7 +79,8 @@ class TestsFlextInfraCodegenMiseArtifacts:
         )
 
     def test_runtime_root_seed_falls_back_to_the_packaged_triple(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A scope root still carrying the bootstrap seed starts from the packaged triple."""
         from flext_infra.codegen.mise_artifacts_workspace import (
@@ -99,14 +107,18 @@ class TestsFlextInfraCodegenMiseArtifacts:
         packaged = files("flext_infra").joinpath(c.Infra.MISE_COLD_START_DIRECTORY)
         tm.ok(result)
         for state, (relative, _mode) in zip(
-            result.value.states, c.Infra.ARTIFACT_SPECS, strict=True
+            result.value.states,
+            c.Infra.ARTIFACT_SPECS,
+            strict=True,
         ):
             expected = packaged.joinpath(Path(relative).name).read_bytes()
             tm.that(state.content, eq=expected)
 
     @pytest.mark.parametrize("shape", ["absolute", "tilde"])
     def test_packaged_launcher_runs_its_baked_release_offline(
-        self, tmp_path: Path, shape: str
+        self,
+        tmp_path: Path,
+        shape: str,
     ) -> None:
         """The packaged cold-start launcher runs its pinned release, offline.
 
@@ -120,9 +132,9 @@ class TestsFlextInfraCodegenMiseArtifacts:
         release = tm.ok(
             u.Infra.mise_pinned_release(
                 packaged.joinpath(c.Infra.MISE_VERSION_PIN_FILENAME).read_text(
-                    encoding="utf-8"
-                )
-            )
+                    encoding="utf-8",
+                ),
+            ),
         )
         home = tmp_path / "home"
         data_dir = home / "mise-data"
@@ -147,12 +159,13 @@ class TestsFlextInfraCodegenMiseArtifacts:
                 # every child, so this probe must not inherit them.
                 remove_env_keys=("MISE_INSTALL_PATH", "MISE_VERSION"),
                 timeout=10,
-            )
+            ),
         )
 
         tm.that(executed.stdout.strip(), eq="planted-mise version")
 
-    def test_resource_read_accepts_installer_hard_links(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_resource_read_accepts_installer_hard_links(tmp_path: Path) -> None:
         """A hard-linked package file (uv cache + venv) is readable as a resource."""
         owner = tmp_path / "seed"
         owner.write_bytes(b"#!/bin/sh\n")
@@ -163,7 +176,11 @@ class TestsFlextInfraCodegenMiseArtifacts:
 
     @classmethod
     def _write_triple(
-        cls, root: Path, *, release: str | None = None, pin: str | None = None
+        cls,
+        root: Path,
+        *,
+        release: str | None = None,
+        pin: str | None = None,
     ) -> None:
         """Write the `make upg` triple in the shapes the upstream generator bakes.
 
@@ -190,7 +207,10 @@ class TestsFlextInfraCodegenMiseArtifacts:
 
     @staticmethod
     def _write_config(
-        root: Path, *, selector: str = "github:example/tool", version: str = "latest"
+        root: Path,
+        *,
+        selector: str = "github:example/tool",
+        version: str = "latest",
     ) -> None:
         (root / ".mise.toml").write_text(
             "\n".join((
@@ -225,8 +245,10 @@ class TestsFlextInfraCodegenMiseArtifacts:
         return root
 
     def test_complete_artifacts_validate_without_running_mise(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test complete artifacts validate without running mise."""
         root = self._project(tmp_path / "project")
 
         service = FlextInfraCodegenMiseArtifacts.model_validate({
@@ -238,17 +260,9 @@ class TestsFlextInfraCodegenMiseArtifacts:
 
         tm.ok(result, eq=True)
 
-    # Root cause: `config.Infra.codegen.toolchain.suspended_mise_selector_patterns`
-    # is currently an empty tuple in config/codegen.yaml (no toolchain is
-    # suspended today), and it is a fixed-config field with no declared public
-    # input to override in a test. The prior fixture asserted "beads" was
-    # suspended, which is no longer true and cannot be injected through the
-    # public surface, so the retired scenario is dropped rather than faked.
-    # `_validate_suspended_selectors` itself remains covered structurally by
-    # every other `.execute()` call in this file, which passes through it.
-
     def test_config_only_validation_skips_launcher_contract(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Config-only mode validates the declaration without tool-owned effects."""
         root = tmp_path / "project"
@@ -264,6 +278,7 @@ class TestsFlextInfraCodegenMiseArtifacts:
         tm.that((root / "bin").exists(), eq=False)
 
     def test_full_validation_requires_committed_launchers(self, tmp_path: Path) -> None:
+        """Test full validation requires committed launchers."""
         root = tmp_path / "project"
         root.mkdir()
         test_u.Tests.initialize_git_repo(root)
@@ -278,7 +293,9 @@ class TestsFlextInfraCodegenMiseArtifacts:
         # them names that verb as its single repair.
         tm.fail(result, has="run make upg")
 
-    def test_tools_section_is_mandatory(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_tools_section_is_mandatory(tmp_path: Path) -> None:
+        """Test tools section is mandatory."""
         root = tmp_path / "project"
         root.mkdir()
         (root / ".mise.toml").write_text("[settings]\n", encoding="utf-8")
@@ -290,7 +307,8 @@ class TestsFlextInfraCodegenMiseArtifacts:
 
         tm.fail(result, has="[tools]")
 
-    def test_lock_annotation_in_a_selector_is_rejected(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_lock_annotation_in_a_selector_is_rejected(tmp_path: Path) -> None:
         """A ``<version>~<hash>`` lock cache key never becomes a selector."""
         root = tmp_path / "project"
         root.mkdir()
@@ -328,22 +346,25 @@ class TestsFlextInfraCodegenMiseArtifacts:
 
         tm.ok(result, eq=True)
 
-    def test_shipped_jscpd_plan_uses_only_configured_route(self) -> None:
+    @staticmethod
+    def test_shipped_jscpd_plan_uses_only_configured_route() -> None:
         """The generated plan must contain only the typed jscpd route."""
         toolchain = config.Infra.codegen.toolchain
         plan = test_u.Tests.toml_payload(
-            (Path(__file__).parents[3] / ".mise.toml").read_text(encoding="utf-8")
+            (Path(__file__).parents[3] / ".mise.toml").read_text(encoding="utf-8"),
         )
         tools = test_u.Tests.toml_mapping(plan["tools"])
 
         # jscpd declares a host-invariant version so mise writes one lock
         # entry per tool; the per-platform asset patterns were removed.
         tm.that(
-            tools.get(toolchain.jscpd_selector), eq={"version": toolchain.jscpd_version}
+            tools.get(toolchain.jscpd_selector),
+            eq={"version": toolchain.jscpd_version},
         )
         tm.that("npm:jscpd" in tools, eq=False)
 
-    def test_project_filter_is_internal_to_make_propagation(self) -> None:
+    @staticmethod
+    def test_project_filter_is_internal_to_make_propagation() -> None:
         """Keep project selection on the Make propagation boundary."""
         field = FlextInfraCodegenMiseArtifacts.model_fields["project_filter"]
 

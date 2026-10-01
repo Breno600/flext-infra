@@ -1,4 +1,8 @@
-"""Project dependency-list parsing (PEP 621 + poetry) — extracted concern."""
+"""Project dependency-list parsing (PEP 621 + poetry) — extracted concern.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -21,7 +25,8 @@ class FlextInfraProjectClassifierDepsMixin:
     if TYPE_CHECKING:
 
         def _as_mapping(
-            self, raw_value: t.JsonValue | None
+            self,
+            raw_value: t.JsonValue | None,
         ) -> t.MappingKV[str, t.JsonValue]: ...
 
     def _append_project_dependencies(
@@ -39,7 +44,8 @@ class FlextInfraProjectClassifierDepsMixin:
                 continue
             dependency_name = self._extract_dependency_name(raw_dependency)
             self._append_unique_dependency(
-                dependency_name=dependency_name, dependencies=dependencies
+                dependency_name=dependency_name,
+                dependencies=dependencies,
             )
 
     def _append_poetry_dependencies(
@@ -73,26 +79,42 @@ class FlextInfraProjectClassifierDepsMixin:
             if dependency_name == "python":
                 continue
             self._append_unique_dependency(
-                dependency_name=dependency_name, dependencies=dependencies
+                dependency_name=dependency_name,
+                dependencies=dependencies,
             )
 
     def _ordered_mapping_keys(
-        self, raw_mapping: t.MappingKV[str, t.JsonValue]
+        self,
+        raw_mapping: t.MappingKV[str, t.JsonValue],
     ) -> t.StrSequence:
-        """Ordered mapping keys."""
+        """Ordered mapping keys.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         keys = list(raw_mapping.keys())
         if self._mapping_order_is_trusted(raw_mapping):
             return keys
         return sorted(keys)
 
     def _mapping_order_is_trusted(
-        self, raw_mapping: t.MappingKV[str, t.JsonValue]
+        self,
+        raw_mapping: t.MappingKV[str, t.JsonValue],
     ) -> bool:
-        """Check whether the mapping order is trusted."""
+        """Check whether the mapping order is trusted.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         return isinstance(raw_mapping, dict)
 
     def _append_unique_dependency(
-        self, *, dependency_name: str, dependencies: t.MutableSequenceOf[str]
+        self,
+        *,
+        dependency_name: str,
+        dependencies: t.MutableSequenceOf[str],
     ) -> None:
         """Append unique dependency."""
         if (not dependency_name) or (dependency_name in dependencies):
@@ -100,9 +122,17 @@ class FlextInfraProjectClassifierDepsMixin:
         dependencies.append(dependency_name)
 
     def _internal_dependencies(
-        self, *, dependencies: t.StrSequence, project_name: str
+        self,
+        *,
+        dependencies: t.StrSequence,
+        project_name: str,
     ) -> t.StrSequence:
-        """Return the internal dependencies."""
+        """Return the internal dependencies.
+
+        Returns:
+            The internal dependencies.
+
+        """
         return [
             dependency
             for dependency in dependencies
@@ -111,7 +141,12 @@ class FlextInfraProjectClassifierDepsMixin:
         ]
 
     def _extract_dependency_name(self, raw_dependency: str) -> str:
-        """Extract dependency name."""
+        """Extract dependency name.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         cleaned = raw_dependency.strip().split(";", maxsplit=1)[0].strip()
         if not cleaned:
             return ""
@@ -125,7 +160,12 @@ class FlextInfraProjectClassifierDepsMixin:
         return self._normalize_dependency_name(base_token)
 
     def _normalize_dependency_name(self, raw_name: str) -> str:
-        """Normalize dependency name."""
+        """Normalize dependency name.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         normalized: str = u.norm_str(raw_name, case="lower").replace("_", "-")
         return normalized.strip("./")
 

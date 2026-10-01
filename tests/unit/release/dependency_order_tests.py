@@ -1,5 +1,8 @@
 """Topological publish ordering behavior for the release orchestrator.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Publishing to an index is immutable, so a dependent uploaded before its
 dependency leaves the index in a state no rollback can repair. The order is
 derived from each project's declared dependencies -- never from a hand-written
@@ -23,8 +26,11 @@ if TYPE_CHECKING:
 class TestsFlextInfraReleaseDependencyOrder:
     """Behavior contract for wave computation over declared dependencies."""
 
+    @staticmethod
     def _write_project(
-        self, root: Path, name: str, dependencies: t.VariadicTuple[str]
+        root: Path,
+        name: str,
+        dependencies: t.VariadicTuple[str],
     ) -> None:
         """Materialize one project whose pyproject declares the given dependencies."""
         project = root / name
@@ -46,7 +52,7 @@ class TestsFlextInfraReleaseDependencyOrder:
                 ("flext-core", tmp_path / "flext-core"),
                 ("flext-cli", tmp_path / "flext-cli"),
                 ("flext-ldap", tmp_path / "flext-ldap"),
-            ))
+            )),
         )
 
         flattened = [name for wave in waves for name in wave]
@@ -54,7 +60,8 @@ class TestsFlextInfraReleaseDependencyOrder:
         tm.that(flattened.index("flext-cli") < flattened.index("flext-ldap"), eq=True)
 
     def test_project_without_internal_dependency_lands_in_first_wave(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Schedule a project with no internal dependency in the first wave."""
         self._write_project(tmp_path, "flext-core", ())
@@ -66,7 +73,7 @@ class TestsFlextInfraReleaseDependencyOrder:
                 ("flext-core", tmp_path / "flext-core"),
                 ("flext-meltano", tmp_path / "flext-meltano"),
                 ("flext-cli", tmp_path / "flext-cli"),
-            ))
+            )),
         )
 
         tm.that("flext-meltano" in waves[0], eq=True)
@@ -83,7 +90,7 @@ class TestsFlextInfraReleaseDependencyOrder:
                 ("flext-core", tmp_path / "flext-core"),
                 ("flext-cli", tmp_path / "flext-cli"),
                 ("flext-web", tmp_path / "flext-web"),
-            ))
+            )),
         )
 
         flattened = [name for wave in waves for name in wave]
@@ -105,7 +112,8 @@ class TestsFlextInfraReleaseDependencyOrder:
         tm.that(result.error or "", has="flext-beta")
 
     def test_dependency_outside_the_selection_is_not_an_edge(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Ignore an internal dependency that the release does not publish.
 
@@ -116,7 +124,7 @@ class TestsFlextInfraReleaseDependencyOrder:
         self._write_project(tmp_path, "flext-web", ("flext-absent>=0.1.0",))
 
         waves = tm.ok(
-            u.Infra.release_publish_waves((("flext-web", tmp_path / "flext-web"),))
+            u.Infra.release_publish_waves((("flext-web", tmp_path / "flext-web"),)),
         )
 
         tm.that(waves[0], eq=("flext-web",))
