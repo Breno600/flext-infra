@@ -1,5 +1,9 @@
 # Copyright 2026 FLEXT
-"""The projected Mise publisher restores a usable lock after interrupted work."""
+"""The projected Mise publisher restores a usable lock after interrupted work.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

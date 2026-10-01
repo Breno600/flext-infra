@@ -278,7 +278,7 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
             csv = config_dir / declared.csv
             if not csv.resolve().is_relative_to(config_root):
                 return r[t.Cli.ResultValue].fail(
-                    f"CSV campaign driver escapes config directory: {csv}"
+                    f"CSV campaign driver escapes config directory: {csv}",
                 )
             campaign_roots = (
                 tuple((root / value).resolve() for value in declared.roots) or (root,)
@@ -286,7 +286,7 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
             for path in campaign_roots:
                 if not path.resolve().is_relative_to(repository_root):
                     return r[t.Cli.ResultValue].fail(
-                        f"CSV campaign scan root escapes repository: {path}"
+                        f"CSV campaign scan root escapes repository: {path}",
                     )
             campaigns.append(
                 m.Infra.ApplyRenamesInput(

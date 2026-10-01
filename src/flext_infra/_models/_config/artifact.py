@@ -734,7 +734,15 @@ class FlextInfraConfigModelsArtifact:
 
         @u.model_validator(mode="after")
         def _validate_source_paths(self) -> Self:
-            """Keep campaign drivers and scan roots inside their declared owners."""
+            """Keep campaign drivers and scan roots inside their declared owners.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If CSV campaign path must be relative and non-escaping.
+
+            """
             for value in (self.csv, *self.roots):
                 path = Path(value)
                 if (
