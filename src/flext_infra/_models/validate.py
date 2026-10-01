@@ -404,10 +404,12 @@ class FlextInfraModelsCore:
         Read-only namespace rule scan (NS-000..003) for one repository root.
         """
 
-        repository_root: Path = m.Field(
-            default_factory=Path.cwd,
-            description="Repository root whose namespace contract is validated",
-        )
+        repository_root: Annotated[
+            Path,
+            m.Field(
+                description="Repository root whose namespace contract is validated"
+            ),
+        ]
 
 
 __all__: list[str] = ["FlextInfraModelsCore"]

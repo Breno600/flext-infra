@@ -590,14 +590,6 @@ class FlextInfraProtocolsBase(Protocol):
             ...
 
     @runtime_checkable
-    class TomlReader(Protocol):
-        """Contract for TOML file readers used by dependency services."""
-
-        def read_plain(self, path: Path) -> p.Result[t.JsonMapping]:
-            """Read and parse a TOML file as a plain dict with r error handling."""
-            ...
-
-    @runtime_checkable
     class SafetyRunner(Protocol):
         """Protocol for command execution backends used by the safety manager."""
 
@@ -684,10 +676,6 @@ class FlextInfraProtocolsBase(Protocol):
             """Build project report from deptry issues."""
             ...
 
-    @runtime_checkable
-    class TypingsDepsService(Protocol):
-        """Service for typing-related dependency detection."""
-
         def load_dependency_limits(
             self, limits_path: Path | None = None
         ) -> t.MappingKV[str, t.JsonValue]:
@@ -700,10 +688,6 @@ class FlextInfraProtocolsBase(Protocol):
             """Get required typing libraries for a project."""
             ...
 
-    @runtime_checkable
-    class PipCheckDepsService(Protocol):
-        """Service for pip-based dependency checking."""
-
         def run_pip_check(
             self, repository_root: Path, venv_bin: Path
         ) -> p.Result[t.Pair[t.StrSequence, int]]:
@@ -711,25 +695,8 @@ class FlextInfraProtocolsBase(Protocol):
             ...
 
     @runtime_checkable
-    class RunnerService(Protocol):
-        """Service for running arbitrary commands."""
-
-        def run_raw(
-            self,
-            cmd: t.StrSequence,
-            cwd: Path | None = None,
-            timeout: int | None = None,
-            env: t.StrMapping | None = None,
-        ) -> p.Result[p.Cli.CommandOutput]:
-            """Run command and return raw output."""
-            ...
-
-    @runtime_checkable
     class DetectorRuntime(Protocol):
-        """Protocol for detector runtime service dependencies."""
-
-        deps: FlextInfraProtocolsBase.DepsService
-        runner: FlextInfraProtocolsBase.RunnerService
+        """Protocol for the detector command the runtime reports through."""
 
         @property
         def log(self) -> p.Logger: ...

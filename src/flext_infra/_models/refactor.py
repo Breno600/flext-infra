@@ -8,7 +8,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Annotated, ClassVar
 
-from flext_cli import m, u
+from flext_cli import m
 
 from .. import t
 from .mixins import FlextInfraModelsMixins as mm
@@ -105,20 +105,6 @@ class FlextInfraModelsRefactor(
         decorators: Annotated[
             t.StrSequence, m.Field(description="Decorator names applied to this method")
         ] = m.Field(default_factory=tuple)
-
-    class Checkpoint(mm.CheckpointRefMixin, m.ArbitraryTypesModel):
-        """Serialisable checkpoint state for refactor safety recovery."""
-
-        repository_root: Annotated[
-            t.NonEmptyStr, m.Field(description="Repository root path")
-        ]
-        status: Annotated[str, m.Field(description="Checkpoint status")] = "running"
-        processed_targets: Annotated[
-            t.StrSequence, m.Field(description="Already-processed file targets")
-        ] = m.Field(default_factory=tuple)
-        updated_at: Annotated[
-            str, m.Field(description="ISO 8601 timestamp of last update")
-        ] = m.Field(default_factory=lambda: u.now().isoformat())
 
     class ProjectClassification(m.ArbitraryTypesModel):
         """Result of classifying a project by kind and family chains."""

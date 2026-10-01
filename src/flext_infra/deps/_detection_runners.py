@@ -24,25 +24,6 @@ class FlextInfraDependencyDetectionRunnersMixin:
             self, payload: t.MappingKV[str, t.JsonValue]
         ) -> t.JsonMapping: ...
 
-    def _read_plain(self, path: Path) -> p.Result[t.JsonMapping]:
-        """Read plain; concrete analyzer supplies the real reader."""
-        _ = path
-        msg = "_read_plain must be implemented by the concrete analyzer"
-        raise NotImplementedError(msg)
-
-    def _run_raw(
-        self,
-        cmd: t.StrSequence,
-        *,
-        cwd: Path | None = None,
-        timeout: int | None = None,
-        env: t.StrMapping | None = None,
-    ) -> p.Result[p.Cli.CommandOutput]:
-        """Run raw command; concrete analyzer supplies the real runner."""
-        _ = cmd, cwd, timeout, env
-        msg = "_run_raw must be implemented by the concrete analyzer"
-        raise NotImplementedError(msg)
-
     def run_deptry(
         self,
         project_path: Path,
@@ -69,7 +50,7 @@ class FlextInfraDependencyDetectionRunnersMixin:
         if extend_exclude:
             for excluded in extend_exclude:
                 cmd.extend(["--extend-exclude", excluded])
-        result = self._run_raw(cmd, cwd=project_path, timeout=c.Infra.TIMEOUT_MEDIUM)
+        result = u.Cli.run_raw(cmd, cwd=project_path, timeout=c.Infra.TIMEOUT_MEDIUM)
         if result.failure:
             return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].from_failure(result)
         issues: t.SequenceOf[t.JsonMapping] = []
@@ -130,7 +111,7 @@ class FlextInfraDependencyDetectionRunnersMixin:
                 config_file=project_path / c.PYPROJECT_FILENAME,
             )
         )
-        result = self._run_raw(
+        result = u.Cli.run_raw(
             cmd, cwd=project_path, timeout=u.Infra.mypy_runner_timeout()
         )
         if result.failure:
@@ -166,7 +147,7 @@ class FlextInfraDependencyDetectionRunnersMixin:
         if not pip.exists():
             return r[t.Pair[t.StrSequence, int]].ok(([], 0))
         env = {"VIRTUAL_ENV": str(venv_bin.parent)}
-        result = self._run_raw(
+        result = u.Cli.run_raw(
             [str(pip), c.Infra.VERB_CHECK],
             cwd=repository_root,
             timeout=c.Infra.TIMEOUT_SHORT,

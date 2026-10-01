@@ -230,13 +230,6 @@ class FlextInfraModelsMixins:
 
         repository_root: Annotated[Path, m.Field(description="Repository root path")]
 
-    class CheckpointRefMixin:
-        """Shared safety checkpoint reference field."""
-
-        checkpoint_ref: Annotated[
-            str, m.Field(description="Safety checkpoint reference")
-        ] = ""
-
     class ProjectNamesOptionalMixin:
         """Shared optional project-name collection."""
 
