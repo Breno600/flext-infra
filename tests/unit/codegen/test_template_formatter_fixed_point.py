@@ -40,10 +40,6 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
             exports_tuple="()",
             lazy_module_mapping="        MappingProxyType({}),",
             lazy_alias_mapping="        alias_groups=MappingProxyType({}),",
-            lazy_call_arguments=(
-                "MappingProxyType({}), alias_groups=MappingProxyType({}), "
-                "sort_keys=False"
-            ),
         )
 
     @staticmethod
@@ -62,11 +58,13 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
         )
 
     def test_standalone_pyproject_does_not_declare_empty_workspace(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Keep standalone projects eligible for a real parent uv workspace."""
         rendered = u.Tests.scaffold_text(
-            tmp_path / "fixture-project", c.PYPROJECT_FILENAME
+            tmp_path / "fixture-project",
+            c.PYPROJECT_FILENAME,
         )
 
         tm.that(rendered, has="[project]")
@@ -77,16 +75,17 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
             u.Cli.template_render(
                 self._TEMPLATES / ".github/dependabot.yml.j2",
                 self._workflow_spec(workspace_repositories=(), has_devcontainer=False),
-            )
+            ),
         )
         repository = u.Tests.repository_ref("member", path=Path("member"))
         populated = tm.ok(
             u.Cli.template_render(
                 self._TEMPLATES / ".github/dependabot.yml.j2",
                 self._workflow_spec(
-                    workspace_repositories=(repository,), has_devcontainer=False
+                    workspace_repositories=(repository,),
+                    has_devcontainer=False,
                 ),
-            )
+            ),
         )
 
         for rendered in (empty, populated):
@@ -97,13 +96,13 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
             u.Cli.template_render(
                 self._TEMPLATES / ".github/dependabot.yml.j2",
                 self._workflow_spec(workspace_repositories=(), has_devcontainer=False),
-            )
+            ),
         )
         with_devcontainer = tm.ok(
             u.Cli.template_render(
                 self._TEMPLATES / ".github/dependabot.yml.j2",
                 self._workflow_spec(workspace_repositories=(), has_devcontainer=True),
-            )
+            ),
         )
 
         tm.that(without, lacks="devcontainers")
@@ -111,32 +110,17 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
         for rendered in (without, with_devcontainer):
             tm.that(rendered, has="package-ecosystem: pip")
 
-    def test_empty_lazy_root_renders_joined_call_arguments(self) -> None:
-        """Keep empty-map roots a fixed point of ``make gen`` and ``make fix``.
+    def test_lazy_root_renders_one_argument_per_line_with_trailing_commas(
+        self,
+    ) -> None:
+        """Render the formatter fixed point under magic trailing commas.
 
-        The fixer joins call arguments that fit on one continuation line; a
-        template that always explodes them oscillates between the two verbs
-        and leaves every member checkout dirty after generation.
+        Ruff respects magic trailing commas and COM812 demands one on every
+        exploded call, so the projection is the one-argument-per-line form
+        with a trailing comma after each argument and after the inner call.
         """
         rendered = tm.ok(
-            u.Cli.template_render(self._ROOT_TEMPLATE, self._empty_root_render())
+            u.Cli.template_render(self._ROOT_TEMPLATE, self._empty_root_render()),
         )
 
-        tm.that(
-            rendered,
-            has="    build_lazy_import_map(\n"
-            "        MappingProxyType({}), alias_groups=MappingProxyType({}), "
-            "sort_keys=False\n    )",
-        )
-        tm.that(rendered, lacks="sort_keys=False,")
-
-    def test_lazy_root_keeps_exploded_call_without_joined_arguments(self) -> None:
-        """Populated roots still render one argument per line."""
-        context = self._empty_root_render().model_copy(
-            update={"lazy_call_arguments": ""}
-        )
-
-        rendered = tm.ok(u.Cli.template_render(self._ROOT_TEMPLATE, context))
-
-        tm.that(rendered, has="        sort_keys=False,\n    )")
-        tm.that(rendered, lacks="sort_keys=False\n")
+        tm.that(rendered, has="        sort_keys=False,\n    ),\n)")

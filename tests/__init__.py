@@ -9,9 +9,9 @@ from typing import TYPE_CHECKING
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from flext_tests import api, d, e, h, r, td, tf, tk, tm, x
+    from flext_tests import api, d, e, h, r, td, tf, tk, tm, tv, x
 
-    from . import fixtures, integration, refactor, unit
+    from . import integration, refactor, unit
     from .base import TestsFlextInfraServiceBase, TestsFlextInfraServiceBase as s
     from .constants import TestsFlextInfraConstants, TestsFlextInfraConstants as c
     from .constants_scan import TestsFlextInfraConstantsScanMixin
@@ -59,7 +59,6 @@ __all__: tuple[str, ...] = (
     "c",
     "d",
     "e",
-    "fixtures",
     "h",
     "integration",
     "m",
@@ -72,6 +71,7 @@ __all__: tuple[str, ...] = (
     "tf",
     "tk",
     "tm",
+    "tv",
     "u",
     "unit",
     "x",
@@ -83,7 +83,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".base": ("TestsFlextInfraServiceBase", "s"),
             ".constants": ("TestsFlextInfraConstants", "c"),
             ".constants_scan": ("TestsFlextInfraConstantsScanMixin",),
-            ".fixtures": ("fixtures",),
             ".integration": ("integration",),
             ".models": ("TestsFlextInfraModels", "m"),
             ".protocols": ("TestsFlextInfraProtocols", "p"),
@@ -109,11 +108,23 @@ _LAZY_IMPORTS = MappingProxyType(
             ".utilities_release": ("TestsFlextInfraUtilitiesReleaseMixin",),
             ".utilities_toml": ("TestsFlextInfraUtilitiesTomlMixin",),
             ".utilities_workspace_env": ("TestsFlextInfraUtilitiesWorkspaceEnvMixin",),
-            "flext_tests": ("api", "d", "e", "h", "r", "td", "tf", "tk", "tm", "x"),
+            "flext_tests": (
+                "api",
+                "d",
+                "e",
+                "h",
+                "r",
+                "td",
+                "tf",
+                "tk",
+                "tm",
+                "tv",
+                "x",
+            ),
         }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,
-    )
+    ),
 )
 
 install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

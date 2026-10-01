@@ -90,7 +90,7 @@ def profile_parent(runner: FlextInfraPytestRunner, output: Path) -> int:
                     c.Infra.PYTEST_ENV_TARGET: str(runner.target),
                     c.Infra.PYTEST_ENV_REPORTS: str(runner.reports),
                     cache.database_environment_variable: str(runner.testmon_db),
-                }
+                },
             ),
             deadline=m.Cli.ProcessDeadline(
                 expires_at_monotonic=(
@@ -98,7 +98,7 @@ def profile_parent(runner: FlextInfraPytestRunner, output: Path) -> int:
                 ),
                 termination_grace_seconds=policy.termination_grace_seconds,
             ),
-        )
+        ),
     )
     if not u.Cli.process_succeeded(outcome):
         raise RuntimeError(log.read_text(encoding="utf-8"))
@@ -106,7 +106,9 @@ def profile_parent(runner: FlextInfraPytestRunner, output: Path) -> int:
 
 
 def profile_collection(
-    output: Path, receipt: Path, arguments: t.StrTuple
+    output: Path,
+    receipt: Path,
+    arguments: t.StrTuple,
 ) -> p.Cli.CommandOutput:
     """Use the real child transport invoked by the canonical profiling runner."""
     return tm.ok(
@@ -122,7 +124,7 @@ def profile_collection(
             ),
             cwd=receipt.parent,
             timeout=config.Infra.tooling.tools.pytest.run_timeout_seconds,
-        )
+        ),
     )
 
 

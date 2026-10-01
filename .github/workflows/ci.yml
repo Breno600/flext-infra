@@ -131,10 +131,10 @@ jobs:
       - name: Normalize checkout modes
         run: chmod -R go-w .
 
-      # Why (flext-7jnr0): every fresh runner paid a cold Ruff analysis. The
-      # caches below are content-addressed by the committed dependency locks,
-      # so a warm cache is always valid for the same lock and can never hide a
-      # finding; it only removes the cold recompute.
+      # Why (flext-7jnr0): every fresh runner paid a cold full-dependency Mypy,
+      # Pyrefly and Ruff analysis. The caches below are content-addressed by the
+      # committed dependency locks, so a warm cache is always valid for the same
+      # lock and can never hide a finding; it only removes the cold recompute.
       # Why (flext-gd3m1): the same pair keeps the locked Mise tool storage, so
       # a cold runner never re-downloads the pinned tarballs, where a network
       # blip failed setup.
@@ -151,10 +151,24 @@ jobs:
             .benchmarks
             .hypothesis
             ~/.cache/uv
+            ~/.cache/pyright
             ~/.local/share/mise
           key: ${{ runner.os }}-3.13-tools-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-3.13-tools-
+
+      # Why: Mypy's project-keyed analysis cache (make.mypy_cache) lives outside
+      # the checkout. A runner without it re-analyses the whole dependency
+      # closure, and a bounded run can die before it writes anything. Restore
+      # the newest cache of any earlier run: Mypy revalidates every entry by
+      # source hash, so a warm cache removes recompute and never hides a finding.
+      - name: Restore Mypy cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.cache/flext/infra/mypy
+          key: ${{ runner.os }}-3.13-mypy-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ${{ runner.os }}-3.13-mypy-
 
       # make setup is the frozen installer. It bootstraps the committed Mise
       # release and installs the fleet toolchain from the committed
@@ -183,10 +197,13 @@ jobs:
       - name: check (blocking)
         # Why (flext-v4p5): explicit CI=Y on every make invocation (job env is not enough for matrix/docker parity).
         run: CI=Y make check
-        # Fast partition only, derived from the gate registry kind:
-        # lint security markdown duplication.
-        # Type checkers and flext-infra validators block locally and at
-        # pre-push (CI=N runs pyrefly mypy pyright silent-failure deferred-self-reference loc-cap boundary runtime-census namespace tier-whitelist index-declarations codemod layout canonical-alias direnv).
+
+      # Both blocking steps derive from the same active default universe.
+      # CI=Y runs lint mypy pyright deferred-self-reference security markdown loc-cap runtime-census index-declarations codemod layout direnv duplication.
+      # CI=N runs pyrefly.
+      # The partitions are disjoint and together execute every active gate.
+      - name: check complement (blocking)
+        run: CI=N make check
 
       # Mutating gates and tests must validate the committed candidate.
       # Repairs left in the runner checkout require a new commit and CI run.
@@ -210,8 +227,18 @@ jobs:
             .benchmarks
             .hypothesis
             ~/.cache/uv
+            ~/.cache/pyright
             ~/.local/share/mise
           key: ${{ runner.os }}-3.13-tools-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml') }}
+
+      # Why: save on every outcome, a failing or killed Mypy included, under a
+      # key unique to this run, so every run hands its analysis to the next.
+      - name: Save Mypy cache
+        if: ${{ always() }}
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.cache/flext/infra/mypy
+          key: ${{ runner.os }}-3.13-mypy-${{ github.run_id }}-${{ github.run_attempt }}
 
   # End SECTION: ci job
 

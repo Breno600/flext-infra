@@ -35,7 +35,8 @@ class FlextInfraLooseTestFunctionDetector:
 
     @classmethod
     def detect_file(
-        cls, ctx: m.Infra.DetectorContext
+        cls,
+        ctx: m.Infra.DetectorContext,
     ) -> t.SequenceOf[m.Infra.LooseTestFunctionViolation]:
         """Return one violation per loose ``test_*`` function in a test module."""
         if not cls._is_test_file(ctx):
@@ -67,7 +68,7 @@ class FlextInfraLooseTestFunctionDetector:
                     suggestion=(
                         f"Nest {definition.name} inside the module's single test class."
                     ),
-                )
+                ),
             )
         return violations
 

@@ -44,7 +44,8 @@ class TestsFlextInfraTierWhitelistGateReporting:
             for source, filename in modules:
                 files.create(source, filename)
             context = m.Infra.GateContext(
-                repository_root=tmp_path, reports_dir=tmp_path / ".reports"
+                repository_root=tmp_path,
+                reports_dir=tmp_path / ".reports",
             )
             gate = FlextInfraTierWhitelistGate(repository_root=tmp_path)
             return gate.check(tmp_path, context).result
@@ -52,14 +53,16 @@ class TestsFlextInfraTierWhitelistGateReporting:
         return run
 
     def test_clean_project_passes_without_errors(
-        self, gate_result: Callable[..., m.Infra.GateResult]
+        self,
+        gate_result: Callable[..., m.Infra.GateResult],
     ) -> None:
         result = gate_result(("from flext_core import m\nX = m.BaseModel\n", "ok.py"))
         tm.that(result.passed, eq=True)
         tm.that(len(result.errors), eq=0)
 
     def test_every_violation_is_reported_individually(
-        self, gate_result: Callable[..., m.Infra.GateResult]
+        self,
+        gate_result: Callable[..., m.Infra.GateResult],
     ) -> None:
         # Three offending modules must yield three errors, never one aggregate
         # count: the operator needs the offending file on every entry.
@@ -75,13 +78,15 @@ class TestsFlextInfraTierWhitelistGateReporting:
             tm.that(joined, has=offender)
 
     def test_error_text_is_not_the_summary_count(
-        self, gate_result: Callable[..., m.Infra.GateResult]
+        self,
+        gate_result: Callable[..., m.Infra.GateResult],
     ) -> None:
         # Guards the regression this gate carried: execute() returns a bool and
         # the summary "N violation(s)", so the gate emitted a single error that
         # named no file at all.
         result = gate_result(
-            ("from pydantic import BaseModel\n", "a.py"), ("import structlog\n", "b.py")
+            ("from pydantic import BaseModel\n", "a.py"),
+            ("import structlog\n", "b.py"),
         )
         tm.that(len(result.errors), eq=2)
         tm.that(" | ".join(result.errors), lacks="violation(s)")

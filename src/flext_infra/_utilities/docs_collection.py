@@ -18,7 +18,9 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
 
     @classmethod
     def docs_collect_plan_files(
-        cls, repository_root: Path, configuration: m.Infra.PlanCollectionConfig
+        cls,
+        repository_root: Path,
+        configuration: m.Infra.PlanCollectionConfig,
     ) -> m.Infra.PlanCollectionBundle:
         """Capture sources before any canonical or home projection writes."""
         root = repository_root.absolute()
@@ -45,7 +47,9 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
             raise ValueError(msg)
         states: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {}
         manifest, excluded_outputs = cls.collection_manifest(
-            canonical, projection, states
+            canonical,
+            projection,
+            states,
         )
         if not configuration.enabled:
             owned_outputs = {
@@ -82,7 +86,7 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
                         directories,
                         key=lambda path: (len(path.parts), path.as_posix()),
                         reverse=True,
-                    )
+                    ),
                 ),
                 revisions=(),
                 coverage=(),
@@ -127,12 +131,13 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
                         files=len(paths),
                         status="private-inventory" if paths else "empty",
                         private_paths=paths,
-                    )
+                    ),
                 )
                 inventories.append(
                     m.Infra.PlanCollectionSourceInventory(
-                        source_id=source.id, paths=paths
-                    )
+                        source_id=source.id,
+                        paths=paths,
+                    ),
                 )
                 continue
             if source.publication != "plan-artifacts":
@@ -168,7 +173,11 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
                     ),
                 )
                 revision = cls._docs_collect_revision(
-                    canonical, incoming_revision, artifacts, desired, states=states
+                    canonical,
+                    incoming_revision,
+                    artifacts,
+                    desired,
+                    states=states,
                 )
                 key = (revision.identity, revision.digest)
                 if key not in observed:
@@ -177,8 +186,9 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
                     revisions_by_identity[revision.identity] = revision
             inventories.append(
                 m.Infra.PlanCollectionSourceInventory(
-                    source_id=source.id, paths=tuple(sorted(source_paths))
-                )
+                    source_id=source.id,
+                    paths=tuple(sorted(source_paths)),
+                ),
             )
             coverage.append(
                 m.Infra.PlanCollectionCoverage(
@@ -187,7 +197,7 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
                     adapter=source.adapter,
                     files=len(paths),
                     status="collected" if paths else "empty",
-                )
+                ),
             )
         revisions = sorted(
             revisions_by_identity.values(),
@@ -214,7 +224,7 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
             for revision in revisions
         )
         index, _changed = FlextInfraUtilitiesDocsContract.docs_contract_update_toc(
-            "\n".join(lines) + "\n"
+            "\n".join(lines) + "\n",
         )
         desired[canonical / "collection-index.md"] = index.encode()
         for path, digest in invalid_owned.items():
@@ -249,23 +259,27 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
                 msg = f"undeclared collection destination: {path}"
                 raise ValueError(msg)
             planned = FlextInfraUtilitiesDocsContract.docs_file_plan(
-                owner, path, content, desired_mode=0o644, source_states=inputs
+                owner,
+                path,
+                content,
+                desired_mode=0o644,
+                source_states=inputs,
             ).unwrap()
             expected = states.get(path)
             if expected is not None and planned.before != expected:
                 msg = f"collection target changed after source read: {path}"
                 raise ValueError(msg)
             plans.append(planned)
-        directories = tuple(
+        required_directories = tuple(
             sorted(
                 {path.parent for path in desired},
                 key=lambda path: (len(path.parts), path.as_posix()),
-            )
+            ),
         )
         return m.Infra.PlanCollectionBundle(
             files=tuple(plans),
             source_states=inputs,
-            required_directories=directories,
+            required_directories=required_directories,
             revisions=tuple(revisions),
             coverage=tuple(coverage),
             inventories=tuple(inventories),
@@ -293,7 +307,7 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
             previous.identity
             if previous is not None
             else sha256(
-                f"{source.id}:{path.relative_to(source_root).as_posix()}".encode()
+                f"{source.id}:{path.relative_to(source_root).as_posix()}".encode(),
             ).hexdigest()
         )
         digest = sha256()
@@ -311,7 +325,8 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
             msg = f"plan content absent: {path}"
             raise ValueError(msg)
         original, normalized = cls.collection_source_updated(
-            plan, source.updated_fields
+            plan,
+            source.updated_fields,
         )
         target = canonical / (
             previous.canonical_path
@@ -358,7 +373,9 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
         desired[target] = existing.content if existing.content is not None else plan
         desired[incoming / "plan.md"] = plan
         for name, attachment in zip(
-            incoming_revision.attachments, artifacts[1:], strict=True
+            incoming_revision.attachments,
+            artifacts[1:],
+            strict=True,
         ):
             if attachment.content is None:
                 msg = f"attachment content absent: {artifacts[0].path}"
@@ -369,7 +386,7 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
         receipt = cls.collection_capture(receipt_path, states)
         if receipt.content is not None:
             recorded = m.Infra.PlanCollectionRevision.model_validate_json(
-                receipt.content
+                receipt.content,
             )
             if (recorded.identity, recorded.digest) != (
                 revision.identity,

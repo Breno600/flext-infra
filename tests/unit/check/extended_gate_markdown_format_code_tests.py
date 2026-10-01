@@ -45,7 +45,8 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         project_dir = u.Tests.mk_project(tmp_path, "markdown-format-project")
         (project_dir / "README.md").write_text(self.LONG_PROSE, encoding="utf-8")
         (project_dir / c.Infra.PRETTIER_CONFIG_FILENAME).write_text(
-            self.PROSE_CONFIG, encoding="utf-8"
+            self.PROSE_CONFIG,
+            encoding="utf-8",
         )
 
         result = u.Tests.check_gate_asserting(
@@ -64,7 +65,8 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         project_dir = u.Tests.mk_project(tmp_path, "markdown-format-empty")
 
         result = FlextInfraMarkdownFormatGate(tmp_path).check(
-            project_dir, u.Tests.gate_context(tmp_path)
+            project_dir,
+            u.Tests.gate_context(tmp_path),
         )
 
         tm.that(result.result.passed, eq=False)
@@ -75,11 +77,14 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         readme = project_dir / "README.md"
         readme.write_text(self.LONG_PROSE, encoding="utf-8")
         (project_dir / c.Infra.PRETTIER_CONFIG_FILENAME).write_text(
-            self.PROSE_CONFIG, encoding="utf-8"
+            self.PROSE_CONFIG,
+            encoding="utf-8",
         )
         u.Tests.initialize_git_repo(project_dir)
         context = m.Infra.GateContext(
-            repository_root=tmp_path, reports_dir=tmp_path, apply_fixes=True
+            repository_root=tmp_path,
+            reports_dir=tmp_path,
+            apply_fixes=True,
         )
 
         result = FlextInfraMarkdownFormatGate(tmp_path).fix(project_dir, context)
@@ -95,7 +100,8 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         )
 
     def test_format_gate_fails_closed_without_provisioned_binary(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A missing mise-provisioned binary is a tool error, never a clean pass."""
         project_dir = u.Tests.mk_project(tmp_path, "markdown-format-no-binary")
@@ -105,14 +111,27 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
 
         with tm.scope(env={"PATH": str(empty_path)}):
             result = u.Tests.run_gate_check(
-                FlextInfraMarkdownFormatGate, tmp_path, project_dir
+                FlextInfraMarkdownFormatGate,
+                tmp_path,
+                project_dir,
             )
 
         tm.that(result.result.passed, eq=False)
         tm.that(len(result.issues), eq=1)
         tm.that("make setup" in result.issues[0].message, eq=True)
 
-    def test_code_gate_clean_block_passes(self, tmp_path: Path) -> None:
+    @pytest.mark.parametrize(
+        ("markdown_text", "passed", "issues_len"),
+        [(FORMATTED, True, 0), (NOTEST_PSEUDO, True, 0)],
+    )
+    def test_code_gate_clean_and_notest_blocks(
+        self,
+        *,
+        tmp_path: Path,
+        markdown_text: str,
+        passed: bool,
+        issues_len: int,
+    ) -> None:
         project_dir = u.Tests.mk_project(tmp_path, "markdown-code-clean")
         (project_dir / "README.md").write_text(self.FORMATTED, encoding="utf-8")
 
@@ -138,7 +157,9 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         readme.write_text(self.UNFORMATTED, encoding="utf-8")
         u.Tests.initialize_git_repo(project_dir)
         context = m.Infra.GateContext(
-            repository_root=tmp_path, reports_dir=tmp_path, apply_fixes=True
+            repository_root=tmp_path,
+            reports_dir=tmp_path,
+            apply_fixes=True,
         )
 
         result = FlextInfraMarkdownCodeGate(tmp_path).fix(project_dir, context)
@@ -157,7 +178,9 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         readme.write_text(self.FRAGMENT_THEN_UNFORMATTED, encoding="utf-8")
         u.Tests.initialize_git_repo(project_dir)
         context = m.Infra.GateContext(
-            repository_root=tmp_path, reports_dir=tmp_path, apply_fixes=True
+            repository_root=tmp_path,
+            reports_dir=tmp_path,
+            apply_fixes=True,
         )
 
         result = FlextInfraMarkdownCodeGate(tmp_path).fix(project_dir, context)
@@ -166,14 +189,17 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         tm.that(readme.read_text(encoding="utf-8"), eq=self.FRAGMENT_THEN_FORMATTED)
 
     def test_code_gate_fix_preserves_fragment_for_syntax_owner(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Formatting preserves an invalid fence for the markdown validator."""
         project_dir = u.Tests.mk_project(tmp_path, "markdown-code-no-splice")
         readme = project_dir / "README.md"
         readme.write_text(self.SYNTAX_BROKEN, encoding="utf-8")
         context = m.Infra.GateContext(
-            repository_root=tmp_path, reports_dir=tmp_path, apply_fixes=True
+            repository_root=tmp_path,
+            reports_dir=tmp_path,
+            apply_fixes=True,
         )
 
         FlextInfraMarkdownCodeGate(tmp_path).fix(project_dir, context)
@@ -181,18 +207,21 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         syntax_report = tv.markdown(project_dir).unwrap()
         tm.that(syntax_report.passed, eq=False)
         tm.that(
-            any(item.rule_id == "MD-001" for item in syntax_report.violations), eq=True
+            any(item.rule_id == "MD-001" for item in syntax_report.violations),
+            eq=True,
         )
 
     def test_code_gate_reports_unformatted_docstring_example(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Parseable docstring examples answer to the format contract."""
         project_dir = u.Tests.mk_project(tmp_path, "markdown-code-docstring")
         source_dir = project_dir / c.Infra.DEFAULT_SRC_DIR
         source_dir.mkdir()
         (source_dir / "widget.py").write_text(
-            '"""Widget.\n\n>>> x=1\n\n"""', encoding="utf-8"
+            '"""Widget.\n\n>>> x=1\n\n"""',
+            encoding="utf-8",
         )
 
         result = u.Tests.check_gate_asserting(
@@ -206,7 +235,8 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         tm.that(result.issues[0].file, eq="src/widget.py")
 
     def test_code_gate_is_not_selected_without_embedded_code(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Prose-only documentation never selects the embedded-code gate."""
         project_dir = u.Tests.mk_project(tmp_path, "markdown-code-empty")

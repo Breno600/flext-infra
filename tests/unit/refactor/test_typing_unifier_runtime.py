@@ -19,7 +19,8 @@ class TestsTypingUnifierRuntime:
     """Validate transformed consumers through imports and get_type_hints."""
 
     def test_unknown_uses_keep_contract_and_iteration_keeps_mutable_elements(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         source = f"""from {c.Infra.PKG_CORE_UNDERSCORE} import t
 
@@ -48,7 +49,7 @@ def count_nested(values: dict[str, list[int]]) -> int:
     return len(values)
 """
         transformer = FlextInfraRefactorTypingUnifier(
-            canonical_map=c.Infra.TYPING_INLINE_UNION_CANONICAL_MAP
+            canonical_map=c.Infra.TYPING_INLINE_UNION_CANONICAL_MAP,
         )
         updated, _changes = transformer.apply_to_source(source)
         (tmp_path / "contract_consumer.py").write_text(updated, encoding="utf-8")
@@ -89,7 +90,8 @@ print(count_nested(MappingProxyType({{"items": [1]}})))
         tm.that(repeat_changes, eq=[])
 
     def test_mutation_tracks_lexical_bindings_closures_and_aliases(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         source = f"""from {c.Infra.PKG_CORE_UNDERSCORE} import t
 
@@ -119,7 +121,7 @@ def aliases(first: dict[str, int], second: dict[str, int]) -> int:
     return first["count"] + second["count"]
 """
         transformer = FlextInfraRefactorTypingUnifier(
-            canonical_map=c.Infra.TYPING_INLINE_UNION_CANONICAL_MAP
+            canonical_map=c.Infra.TYPING_INLINE_UNION_CANONICAL_MAP,
         )
         updated, changes = transformer.apply_to_source(source)
         tm.that(bool(changes), eq=True)
@@ -161,7 +163,8 @@ print(aliases(first, second), first["count"], second["count"])
         tm.that(repeat_changes, eq=[])
 
     def test_aliased_typing_preserves_metadata_and_broad_types(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Brackets, commas and Unicode in metadata remain data at runtime."""
         source = f"""from {c.Infra.PKG_CORE_UNDERSCORE} import t
@@ -177,7 +180,7 @@ def quoted(value: 'A[list[object], "] object, café ☃"]') -> typing_module.Any
     return value
 """
         transformer = FlextInfraRefactorTypingUnifier(
-            canonical_map=c.Infra.TYPING_INLINE_UNION_CANONICAL_MAP
+            canonical_map=c.Infra.TYPING_INLINE_UNION_CANONICAL_MAP,
         )
         updated, changes = transformer.apply_to_source(source)
         tm.that(bool(changes), eq=True)
@@ -223,7 +226,7 @@ def consume(value: list[object], payload: Any) -> object:
     return payload
 """
         transformer = FlextInfraRefactorTypingUnifier(
-            canonical_map=c.Infra.TYPING_INLINE_UNION_CANONICAL_MAP
+            canonical_map=c.Infra.TYPING_INLINE_UNION_CANONICAL_MAP,
         )
         updated, changes = transformer.apply_to_source(source)
         tm.that(updated, eq=source)
@@ -258,7 +261,11 @@ print(get_origin(hints["value"]) is list, hints["payload"] is Any, hints["return
         ],
     )
     def test_deferred_import_cannot_replace_a_runtime_union(
-        self, tmp_path: Path, declaration: str, probe: str, expected: str
+        self,
+        tmp_path: Path,
+        declaration: str,
+        probe: str,
+        expected: str,
     ) -> None:
         """PEP 695 and Pydantic consumers keep their valid contract on refusal."""
         source = (
@@ -269,7 +276,7 @@ print(get_origin(hints["value"]) is list, hints["payload"] is Any, hints["return
         path = tmp_path / "deferred_consumer.py"
         path.write_text(source, encoding="utf-8")
         transformer = FlextInfraRefactorTypingUnifier(
-            canonical_map=c.Infra.TYPING_INLINE_UNION_CANONICAL_MAP
+            canonical_map=c.Infra.TYPING_INLINE_UNION_CANONICAL_MAP,
         )
         with infra.rope_workspace(tmp_path) as rope:
             resource = rope.resource(path)
@@ -282,7 +289,8 @@ print(get_origin(hints["value"]) is list, hints["payload"] is Any, hints["return
         tm.that(outcome.stdout.strip(), eq=expected)
 
     def test_late_alias_import_does_not_prove_runtime_availability(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A class may execute before a later module import becomes available."""
         source = f"""from __future__ import annotations
@@ -294,7 +302,7 @@ from {c.Infra.PKG_CORE_UNDERSCORE} import t
         path = tmp_path / "late_consumer.py"
         path.write_text(source, encoding="utf-8")
         transformer = FlextInfraRefactorTypingUnifier(
-            canonical_map=c.Infra.TYPING_INLINE_UNION_CANONICAL_MAP
+            canonical_map=c.Infra.TYPING_INLINE_UNION_CANONICAL_MAP,
         )
         with infra.rope_workspace(tmp_path) as rope:
             resource = rope.resource(path)
@@ -308,7 +316,8 @@ from {c.Infra.PKG_CORE_UNDERSCORE} import t
         tm.that(outcome.stdout.strip(), eq="1.25")
 
     def test_owning_package_import_is_not_injected_during_initialization(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Package initialization keeps the valid pre-facade consumer executable."""
         package = tmp_path / "src" / "initialization_demo"
@@ -322,7 +331,8 @@ from {c.Infra.PKG_CORE_UNDERSCORE} import t
         path = package / "__version__.py"
         path.write_text(source, encoding="utf-8")
         transformer = FlextInfraRefactorTypingUnifier(
-            canonical_map=c.Infra.TYPING_INLINE_UNION_CANONICAL_MAP, file_path=path
+            canonical_map=c.Infra.TYPING_INLINE_UNION_CANONICAL_MAP,
+            file_path=path,
         )
         with infra.rope_workspace(tmp_path) as rope:
             resource = rope.resource(path)
@@ -336,12 +346,13 @@ from {c.Infra.PKG_CORE_UNDERSCORE} import t
         tm.that(outcome.stdout.strip(), eq="1.25 True")
 
     def test_new_external_alias_keeps_get_type_hints_available(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """An unassociated consumer may import its declared external type owner."""
         source = "from __future__ import annotations\ndef consume(value: int | float) -> None:\n    pass\n"
         transformer = FlextInfraRefactorTypingUnifier(
-            canonical_map=c.Infra.TYPING_INLINE_UNION_CANONICAL_MAP
+            canonical_map=c.Infra.TYPING_INLINE_UNION_CANONICAL_MAP,
         )
         updated, _changes = transformer.apply_to_source(source)
         (tmp_path / "external_consumer.py").write_text(updated, encoding="utf-8")

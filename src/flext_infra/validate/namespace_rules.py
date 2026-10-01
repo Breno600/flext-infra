@@ -23,7 +23,9 @@ class FlextInfraNamespaceRules(
 
     @classmethod
     def check_module(
-        cls, visit: m.Infra.RopeModuleVisit, filepath: Path
+        cls,
+        visit: m.Infra.RopeModuleVisit,
+        filepath: Path,
     ) -> t.StrSequence:
         """Evaluate one shared Rope visit against its declared convention."""
         layout = visit.convention.project_layout
@@ -36,7 +38,9 @@ class FlextInfraNamespaceRules(
                 source=visit.source,
             ),
             *cls.check_imports(
-                visit.tree, filepath, package_name=visit.convention.package_name
+                visit.tree,
+                filepath,
+                package_name=visit.convention.package_name,
             ),
             *cls.check_contracts(visit, filepath),
         )

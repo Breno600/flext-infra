@@ -17,7 +17,7 @@ from .deps_tool_config_project_ruff import FlextInfraModelsDepsToolConfigProject
 
 
 class FlextInfraModelsDepsToolConfigProjectArtifacts(
-    FlextInfraModelsDepsToolConfigProjectGitignore
+    FlextInfraModelsDepsToolConfigProjectGitignore,
 ):
     """Managed-artifact models composed from project-owned slices."""
 

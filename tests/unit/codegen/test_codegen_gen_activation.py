@@ -26,7 +26,7 @@ class TestsFlextInfraCodegenGenActivation:
         envrc.write_text(broken_activation, encoding="utf-8")
 
         process = tm.ok(
-            u.Tests.run_isolated_make(["--no-print-directory", "gen"], cwd=root)
+            u.Tests.run_isolated_make(["--no-print-directory", "gen"], cwd=root),
         )
 
         tm.that(u.Cli.process_succeeded(process.outcome), eq=False)
@@ -36,7 +36,8 @@ class TestsFlextInfraCodegenGenActivation:
         tm.that(envrc.read_text(encoding="utf-8"), eq=broken_activation)
 
     def test_gen_recovers_activation_and_orders_hooks(
-        self, provisioned_infra_checkout: t.Pair[str, Path]
+        self,
+        provisioned_infra_checkout: t.Pair[str, Path],
     ) -> None:
         """Native failures stop post hooks; a valid producer activates only once."""
         scenario, root = provisioned_infra_checkout
@@ -95,7 +96,7 @@ class TestsFlextInfraCodegenGenActivation:
                 ["--no-print-directory", "gen"],
                 cwd=root,
                 env={"MAKE_GEN_ACTIVATION_PROOF": ""},
-            )
+            ),
         )
 
         tm.that({path: path.read_bytes() for path in locks}, eq=before)

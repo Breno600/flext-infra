@@ -39,7 +39,6 @@ from ._utilities.managed_conflicts import FlextInfraUtilitiesManagedConflicts
 from ._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
 from ._utilities.namespace_analysis import FlextInfraUtilitiesRefactorNamespaceFlext
 from ._utilities.namespace_common import FlextInfraUtilitiesRefactorNamespaceCommon
-from ._utilities.namespace_facades import FlextInfraUtilitiesRefactorNamespaceFacades
 from ._utilities.namespace_moves import FlextInfraUtilitiesRefactorNamespaceMoves
 from ._utilities.network import FlextInfraUtilitiesNetwork
 from ._utilities.private_import_ancestry import FlextInfraUtilitiesPrivateImportAncestry
@@ -73,8 +72,6 @@ from ._utilities.rope_source import FlextInfraUtilitiesRopeSource
 from ._utilities.rope_structure import FlextInfraUtilitiesRopeStructure
 from ._utilities.safety import FlextInfraUtilitiesSafety
 from ._utilities.semantic_cutover import FlextInfraUtilitiesSemanticCutover
-from ._utilities.signature_rules import FlextInfraUtilitiesSignatureRules
-from ._utilities.silent_failure_ast import FlextInfraUtilitiesSilentFailureAst
 from ._utilities.transformer_header import FlextInfraUtilitiesTransformerHeader
 from ._utilities.versioning import FlextInfraUtilitiesVersioning
 from ._utilities.workspace_fingerprint import FlextInfraUtilitiesWorkspaceFingerprint
@@ -147,18 +144,15 @@ class FlextInfraUtilities(FlextCliUtilities):
         FlextInfraUtilitiesRefactorCensus,
         FlextInfraUtilitiesRefactorNamespaceFlext,
         FlextInfraUtilitiesRefactorNamespaceCommon,
-        FlextInfraUtilitiesRefactorNamespaceFacades,
         FlextInfraUtilitiesRefactorNamespaceMoves,
         FlextInfraUtilitiesRelease,
         FlextInfraUtilitiesRepository,
         FlextInfraUtilitiesSafety,
-        FlextInfraUtilitiesSilentFailureAst,
         FlextInfraUtilitiesVersioning,
         FlextInfraWorktreeLifecycle,
         FlextInfraWorktreeProvisioning,
         FlextInfraUtilitiesWorkspaceFingerprint,
         FlextInfraUtilitiesCodemodRules,
-        FlextInfraUtilitiesSignatureRules,
         FlextInfraUtilitiesPrivateImportAncestry,
         FlextInfraUtilitiesPrivateImportFacades,
     ):

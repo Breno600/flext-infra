@@ -27,7 +27,9 @@ class FlextInfraEnforcementSourceCollectors(
         self._repository_root = repository_root
 
     def collect_project(
-        self, project_dir: Path, rules: t.SequenceOf[m.EnforcementRuleSpec]
+        self,
+        project_dir: Path,
+        rules: t.SequenceOf[m.EnforcementRuleSpec],
     ) -> m.Infra.EnforcementEvaluation:
         """Collect rule probes for one project using one shared dispatcher.
 
@@ -55,7 +57,7 @@ class FlextInfraEnforcementSourceCollectors(
                         project_dir,
                         rule,
                         f"unsupported enforcement source kind {source.kind!r}",
-                    )
+                    ),
                 )
                 continue
             violations.extend(collected)
@@ -65,17 +67,21 @@ class FlextInfraEnforcementSourceCollectors(
             violations.extend(collected)
             failures.extend(errors)
         return m.Infra.EnforcementEvaluation(
-            violations=tuple(violations), failures=tuple(failures)
+            violations=tuple(violations),
+            failures=tuple(failures),
         )
 
     def collect_python_file_probes(
-        self, project_dir: Path, rule: m.EnforcementRuleSpec
+        self,
+        project_dir: Path,
+        rule: m.EnforcementRuleSpec,
     ) -> t.Pair[
-        list[t.Pair[m.EnforcementRuleSpec, p.AttributeProbe]], list[m.Infra.FailedFix]
+        list[t.Pair[m.EnforcementRuleSpec, p.AttributeProbe]],
+        list[m.Infra.FailedFix],
     ]:
         """Return one structural probe per Python file for file-wide transformers."""
         files_result = u.Infra.iter_python_files(
-            m.Infra.SourceScanRequest(project_roots=(project_dir,))
+            m.Infra.SourceScanRequest(project_roots=(project_dir,)),
         )
         if files_result.failure:
             return self._empty_failure(
@@ -86,9 +92,12 @@ class FlextInfraEnforcementSourceCollectors(
         return ([(rule, self.probe_for_path(path)) for path in files_result.value], [])
 
     def collect_declarative(
-        self, project_dir: Path, rules: t.SequenceOf[m.EnforcementRuleSpec]
+        self,
+        project_dir: Path,
+        rules: t.SequenceOf[m.EnforcementRuleSpec],
     ) -> t.Pair[
-        list[t.Pair[m.EnforcementRuleSpec, p.AttributeProbe]], list[m.Infra.FailedFix]
+        list[t.Pair[m.EnforcementRuleSpec, p.AttributeProbe]],
+        list[m.Infra.FailedFix],
     ]:
         """Run catalog-driven declarative rules across one project."""
         files, errors = self.collect_python_file_probes(project_dir, rules[0])
@@ -104,8 +113,10 @@ class FlextInfraEnforcementSourceCollectors(
             if not isinstance(path_value, str) or not path_value:
                 return [], [
                     self.collection_failure(
-                        project_dir, rules[0], "probe payload missing file_path"
-                    )
+                        project_dir,
+                        rules[0],
+                        "probe payload missing file_path",
+                    ),
                 ]
             file_paths.append(Path(path_value))
         if any(self.rule_requires_stub_file(rule) for rule in rules):
@@ -126,8 +137,10 @@ class FlextInfraEnforcementSourceCollectors(
                     except c.EXC_BROAD_RUNTIME as exc:
                         failures.append(
                             self.collection_failure(
-                                project_dir, rule, f"declarative engine failed: {exc}"
-                            )
+                                project_dir,
+                                rule,
+                                f"declarative engine failed: {exc}",
+                            ),
                         )
                         continue
                     probes.extend((rule, probe) for probe in detected)

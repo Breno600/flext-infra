@@ -77,7 +77,8 @@ class FlextInfraUtilitiesVersioning:
 
     @staticmethod
     def bump_version(
-        version: str, bump_type: str | c.Infra.VersionBump
+        version: str,
+        bump_type: str | c.Infra.VersionBump,
     ) -> p.Result[str]:
         """Return the next release version for one bump kind.
 
@@ -135,7 +136,7 @@ class FlextInfraUtilitiesVersioning:
         except OSError as exc:
             return r[str].fail_op("read", exc)
         version = FlextInfraUtilitiesVersioning._extract_project_version_from_text(
-            content
+            content,
         )
         if version is None or not version.strip():
             return r[str].fail("version not found in pyproject.toml")
@@ -192,7 +193,7 @@ class FlextInfraUtilitiesVersioning:
         refname collates later. The release protocol then read the newest
         release as a release candidate, decided the released version still
         "awaits its tag", and never bumped again in any repository that had
-        ever cut an rc (flext-1wjg1.16.34). Order by the same PEP 440 owner
+        ever cut an rc. Order by the same PEP 440 owner
         ``version_is_newer`` already uses, and fail loud on a ``v*`` tag that
         is not a version rather than silently ranking it.
         """
@@ -221,7 +222,8 @@ class FlextInfraUtilitiesVersioning:
         if not FlextInfraUtilitiesVersioning._has_project_table(content):
             return r[str].fail("missing [project] table")
         updated = FlextInfraUtilitiesVersioning._replace_project_version_in_text(
-            content, version
+            content,
+            version,
         )
         if updated is None:
             return r[str].fail("missing [project] version")
@@ -245,7 +247,8 @@ class FlextInfraUtilitiesVersioning:
         except OSError as exc:
             return r[bool].fail_op("read", exc)
         rendered = FlextInfraUtilitiesVersioning.render_project_version(
-            content, version
+            content,
+            version,
         )
         if rendered.failure:
             return r[bool].from_failure(rendered)

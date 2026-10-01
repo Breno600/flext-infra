@@ -14,7 +14,8 @@ class TestsFlextInfraAttachedRepositoryWorktree(u.Tests.WorktreeFixture):
     """Exercise Git's primary registry for an attached repository."""
 
     def test_attached_submodule_uses_one_primary_local_container(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         child_source = tmp_path / "child-source"
         child_source.mkdir()
@@ -46,19 +47,20 @@ class TestsFlextInfraAttachedRepositoryWorktree(u.Tests.WorktreeFixture):
                     "attached",
                 ],
                 cwd=superproject,
-            )
+            ),
         )
         attached = superproject / "attached"
         tm.ok(
             u.Cli.run_checked(
-                [c.Infra.GIT, "config", "--unset", "core.worktree"], cwd=attached
-            )
+                [c.Infra.GIT, "config", "--unset", "core.worktree"],
+                cwd=attached,
+            ),
         )
         tm.that(
             tm.ok(
                 u.Infra.git_primary_worktree_root(
-                    m.Infra.GitRepoRequest(repo_root=attached)
-                )
+                    m.Infra.GitRepoRequest(repo_root=attached),
+                ),
             ).primary_root,
             eq=attached.resolve(),
         )
@@ -67,26 +69,27 @@ class TestsFlextInfraAttachedRepositoryWorktree(u.Tests.WorktreeFixture):
             u.Cli.run_checked(
                 [c.Infra.GIT, "worktree", "add", "--detach", str(linked), "HEAD"],
                 cwd=attached,
-            )
+            ),
         )
         tm.that(
             tm.ok(
                 u.Infra.git_primary_worktree_root(
-                    m.Infra.GitRepoRequest(repo_root=linked)
-                )
+                    m.Infra.GitRepoRequest(repo_root=linked),
+                ),
             ).primary_root,
             eq=linked.resolve(),
         )
         tm.ok(
             u.Cli.run_checked(
-                [c.Infra.GIT, "worktree", "remove", "--force", str(linked)], cwd=linked
-            )
+                [c.Infra.GIT, "worktree", "remove", "--force", str(linked)],
+                cwd=linked,
+            ),
         )
         branch = "feature/attached"
         primary = tm.ok(
             u.Infra.git_primary_worktree_root(
-                m.Infra.GitRepoRequest(repo_root=attached)
-            )
+                m.Infra.GitRepoRequest(repo_root=attached),
+            ),
         ).primary_root
         expected_lane = self._lane(primary, superproject, branch)
 
@@ -104,7 +107,7 @@ class TestsFlextInfraAttachedRepositoryWorktree(u.Tests.WorktreeFixture):
                     operation=c.Infra.WorktreeOperation.REMOVE,
                     branch=branch,
                     apply_changes=True,
-                ).execute()
+                ).execute(),
             ),
             eq=str(expected_lane),
         )
