@@ -113,6 +113,7 @@ class FlextInfraEnsurePackagingPhase:
             directories=tuple(directories),
         )
 
+    @staticmethod
     def resolve_data_excludes(
         project_dir: Path,
         data: m.Infra.PackagedDataSelection,
