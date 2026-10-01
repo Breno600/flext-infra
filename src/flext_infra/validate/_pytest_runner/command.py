@@ -283,7 +283,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             "-n",
             workers,
             "--dist",
-            pytest.parallel_distribution if workers != "0" else "no",
+            pytest.parallel_distribution,
             # Why: xdist queues the shutdown marker behind each worker's
             # pre-dispatched chunk, so the declared max-failures stop only took
             # effect after every worker drained its assigned items at fleet

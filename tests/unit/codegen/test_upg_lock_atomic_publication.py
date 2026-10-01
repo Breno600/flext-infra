@@ -69,7 +69,14 @@ class TestsFlextInfraUpgLockAtomicPublication:
                 )
                 observed = tm.ok(
                     u.Cli.run(
-                        ["ps", "--sid", str(child.pid), "-L", "-o", "comm=,wchan:64="],
+                        [
+                            "ps",
+                            "--sid",
+                            str(child.pid),
+                            "-L",
+                            "-o",
+                            "pid=,comm=,wchan:64=",
+                        ],
                         timeout=self.INTERRUPT_AFTER_SECONDS,
                     )
                 )
@@ -77,8 +84,10 @@ class TestsFlextInfraUpgLockAtomicPublication:
                 process_rows = tuple(
                     row.split() for row in observed.stdout.splitlines() if row.split()
                 )
-                if any(row[0] == c.Infra.UV for row in process_rows) and any(
-                    row[-1] == "wait_for_partner" for row in process_rows
+                uv_processes = {row[0] for row in process_rows if row[1] == c.Infra.UV}
+                if any(
+                    row[0] in uv_processes and row[-1] == "wait_for_partner"
+                    for row in process_rows
                 ):
                     break
                 time.sleep(0.02)

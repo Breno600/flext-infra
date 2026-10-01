@@ -159,10 +159,11 @@ class TestsFlextInfraPytestRunner:
         worker_action = (
             "    items.pop()\n"
             if omit_case
-            else "    items.sort(key=lambda item: item.nodeid, reverse=True)\n"
+            else "    items.sort(key=lambda item: item.nodeid,\n"
+            "               reverse=get_xdist_worker_id(session) == 'gw0')\n"
         )
         (cached_runner_project / "conftest.py").write_text(
-            "import pytest\n\n"
+            "import pytest\nfrom xdist import get_xdist_worker_id\n\n"
             "@pytest.hookimpl(trylast=True)\n"
             "def pytest_collection_modifyitems(session, items):\n"
             f"{worker_action}",
@@ -222,6 +223,10 @@ class TestsFlextInfraPytestRunner:
         tm.that(report, lacks=["second failure evidence", 'name="test_runtime"'])
         outcome = m.Cli.ProcessOutcome.model_validate_json(
             tm.ok(u.Cli.files_read_text(report_path.parent / "suite-outcome.json"))
+        )
+        tm.that(
+            (pytest.ExitCode.TESTS_FAILED.value, pytest.ExitCode.INTERRUPTED.value),
+            has=outcome.raw_return_code,
         )
         tm.that(outcome.raw_return_code, eq=exit_code)
         tm.that(outcome.timed_out, eq=False)
