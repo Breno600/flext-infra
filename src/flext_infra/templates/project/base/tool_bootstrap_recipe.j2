@@ -14,10 +14,13 @@
 {% for name in bootstrap.passthrough_environment if name != "PATH" -%}
 	caller_{{ name | lower }}="{{ '$${' ~ name ~ ':-}' }}"; \
 {% endfor -%}
-	if [ -z "$$caller_github_token$$caller_gh_token$$caller_mise_github_credential_command" ] \
+	if [ -z "$$caller_github_token" ] && [ -n "$$caller_gh_token" ]; then \
+		caller_github_token="$$caller_gh_token"; \
+	fi; \
+	if [ -z "$$caller_github_token$$caller_mise_github_credential_command" ] \
 		&& command -v gh >/dev/null 2>&1 \
 		&& gh auth status --hostname github.com >/dev/null 2>&1; then \
-		caller_gh_token="$$(gh auth token --hostname github.com)"; \
+		caller_github_token="$$(gh auth token --hostname github.com)"; \
 	fi; \
 	mise_pin_file="$(MISE_VERSION_PIN)"; \
 	mise_pin=; \
