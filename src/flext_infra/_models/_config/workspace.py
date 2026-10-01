@@ -281,42 +281,6 @@ class FlextInfraConfigModelsWorkspace:
         url: Annotated[t.NonEmptyStr, m.Field(description="Infrastructure Git URL")]
         ref: Annotated[t.NonEmptyStr, m.Field(description="Infrastructure Git ref")]
 
-    class SubprojectGovernance(FlextInfraConfigModelsContract.ConfigContract):
-        """Declared governance applied when a detector loads one subproject.
-
-        The workspace's integration line, Beads identity, manifest-declared
-        member record, and unprovisioned-member policy travel together: every
-        detector entry point resolves the same contract before classifying a
-        submodule as governed or external.
-        """
-
-        integration_branch: Annotated[
-            str | None,
-            m.Field(
-                description=(
-                    "Workspace-declared integration line the subproject must "
-                    "integrate on; None falls back to provider conventions"
-                )
-            ),
-        ] = None
-        workspace_beads: Annotated[
-            FlextInfraConfigModelsBeads.BeadsProjectSpec | None,
-            m.Field(description="Workspace Beads identity the member composes with"),
-        ] = None
-        declared_member: Annotated[
-            FlextInfraConfigModelsContexts.RepositoryRef | None,
-            m.Field(description="Manifest record declared for this member path"),
-        ] = None
-        allow_unprovisioned_members: Annotated[
-            bool,
-            m.Field(
-                description=(
-                    "Whether members whose checkout is absent stay loadable "
-                    "instead of failing workspace detection"
-                )
-            ),
-        ] = False
-
     class WorkspaceSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Local identity plus topology read from this repository's Git inputs."""
 

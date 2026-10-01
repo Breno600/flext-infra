@@ -8,12 +8,13 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import FlextInfraEnsureRuffConfigPhase, m as infra_m
-from tests import m, t, u
+from flext_infra import FlextInfraEnsureRuffConfigPhase
+from tests import t, u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from tests import m
 
 class TestsFlextInfraDepsModernizerTooling:
     """Declarative tests for the Ruff phase and analyzer surface policy."""
@@ -45,15 +46,8 @@ class TestsFlextInfraDepsModernizerTooling:
         )
         phase = FlextInfraEnsureRuffConfigPhase(tool_config_document)
         path = project_dir / "pyproject.toml"
-        _ = phase.apply_payload(
-            payload, path=path, topology=infra_m.Infra.PyprojectDeclaredTopology()
-        )
-        tm.that(
-            phase.apply_payload(
-                payload, path=path, topology=infra_m.Infra.PyprojectDeclaredTopology()
-            ),
-            empty=True,
-        )
+        _ = phase.apply_payload(payload, path=path)
+        tm.that(phase.apply_payload(payload, path=path), empty=True)
         return payload, u.Tests.toml_mapping(
             u.Tests.toml_mapping(payload["tool"])["ruff"]
         )
