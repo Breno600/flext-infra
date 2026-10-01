@@ -371,8 +371,14 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                     *packaged_data_paths.directories,
                 ),
                 packaged_data_files=packaged_data_paths.files,
-                packaged_data_excludes=FlextInfraEnsurePackagingPhase.resolve_data_excludes(
-                    repository_root, packaged_data_paths, project.packaged_data_excludes
+                packaged_data_excludes=(
+                    FlextInfraEnsurePackagingPhase.resolve_data_excludes(
+                        repository_root,
+                        packaged_data_paths,
+                        project.packaged_data_excludes,
+                    )
+                    if profile is not c.Infra.MakeProfile.WORKSPACE
+                    else ()
                 ),
                 namespace_scan_dirs=project.namespace_scan_dirs,
                 workspace_integration=workspace.integration,
