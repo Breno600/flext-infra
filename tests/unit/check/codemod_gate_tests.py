@@ -19,12 +19,7 @@ if TYPE_CHECKING:
 
 
 class TestsFlextInfraCodemodGate:
-    """Separate native scanner failures from observable policy diagnostics.
-
-    Premise: the operator order of 2026-09-24 (reaffirmed 2026-09-29) keeps
-    codemod policy findings observational — visible, countable, reported as
-    observations — while native scanner failures stay blocking.
-    """
+    """Preserve native scanner diagnostics and block every policy violation."""
 
     @staticmethod
     def _project(tmp_path: Path, *, severity: str = "error") -> Path:
@@ -48,7 +43,7 @@ class TestsFlextInfraCodemodGate:
         return project
 
     @pytest.mark.parametrize("severity", ["error", "warning", "info", "hint"])
-    def test_native_findings_remain_visible_and_observational(
+    def test_native_findings_remain_visible_and_blocking(
         self, tmp_path: Path, severity: str
     ) -> None:
         project = self._project(tmp_path, severity=severity)
@@ -57,20 +52,26 @@ class TestsFlextInfraCodemodGate:
 
         execution = u.Tests.run_gate_check(FlextInfraCodemodGate, tmp_path, project)
 
-        tm.that(execution.result.passed, eq=True)
+        tm.that(execution.result.passed, eq=False)
         findings = tuple(
-            issue
-            for issue in execution.observational_issues
-            if issue.code == "contract-second"
+            issue for issue in execution.issues if issue.code == "contract-second"
         )
         tm.that(len(findings), eq=1)
         finding = findings[0]
         tm.that(finding.file.endswith("src/subject.py"), eq=True)
         tm.that((finding.line, finding.column), eq=(2, 1))
         tm.that(finding.severity, eq=severity)
-        tm.that(execution.issues, empty=True)
-        tm.that(execution.result.errors, empty=True)
-        tm.that(execution.error_count, eq=0)
+        tm.that(
+            tuple(execution.result.errors),
+            eq=tuple(issue.formatted for issue in execution.issues),
+        )
+        tm.that(
+            execution.error_count,
+            eq=sum(
+                issue.severity.lower() == c.Infra.ERROR for issue in execution.issues
+            ),
+        )
+        tm.that(execution.observational_issues, empty=True)
         if severity == "error":
             tm.that(execution.raw_output, has="exit=1")
             tm.that(execution.raw_output, has="error(s) found in code")
@@ -99,11 +100,9 @@ class TestsFlextInfraCodemodGate:
             (selected,), project, u.Tests.gate_context(tmp_path)
         )
 
-        tm.that(execution.result.passed, eq=True)
+        tm.that(execution.result.passed, eq=False)
         findings = tuple(
-            issue
-            for issue in execution.observational_issues
-            if issue.code == "contract-second"
+            issue for issue in execution.issues if issue.code == "contract-second"
         )
         tm.that(len(findings), eq=1)
         tm.that(findings[0].file.endswith("src/selected.py"), eq=True)
@@ -117,7 +116,7 @@ class TestsFlextInfraCodemodGate:
         with pytest.raises(FileNotFoundError):
             gate.check_files((missing,), project, context)
 
-    def test_workspace_pipeline_reports_observations_without_functional_errors(
+    def test_workspace_pipeline_preserves_blocking_policy_errors(
         self, tmp_path: Path, rope_workspace: p.Infra.RopeWorkspaceDsl
     ) -> None:
         project = self._project(tmp_path)
@@ -131,14 +130,14 @@ class TestsFlextInfraCodemodGate:
         )
 
         result = results[0]
-        tm.that(result.passed, eq=True)
-        tm.that(result.total_errors, eq=0)
-        tm.that(result.total_observations > 0, eq=True)
+        tm.that(result.passed, eq=False)
+        tm.that(result.total_errors > 0, eq=True)
+        tm.that(result.total_observations, eq=0)
         markdown = (reports / c.Infra.CHECK_REPORT_MARKDOWN_FILENAME).read_text(
             encoding="utf-8"
         )
-        tm.that(markdown, has=f"| {project.name} | PASS | 0 |")
-        tm.that(markdown, has="Observational [error]")
+        tm.that(markdown, has=f"| {project.name} | FAIL |")
+        tm.that(markdown, has="contract-second")
         sarif = m.Infra.SarifReport.model_validate_json(
             (reports / c.Infra.CHECK_REPORT_SARIF_FILENAME).read_text(encoding="utf-8")
         )
@@ -149,8 +148,8 @@ class TestsFlextInfraCodemodGate:
             if finding.rule_id == "contract-second"
         )
         tm.that(len(observed), eq=1)
-        tm.that(observed[0].level, eq="note")
-        tm.that(observed[0].message, has="Observational [error]")
+        tm.that(observed[0].level, eq="error")
+        tm.that(observed[0].message, has="Observed second")
 
     def test_invalid_rule_is_a_native_failure(self, tmp_path: Path) -> None:
         project = self._project(tmp_path)
