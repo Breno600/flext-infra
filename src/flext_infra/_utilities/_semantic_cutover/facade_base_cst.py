@@ -50,7 +50,9 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBaseCst:
 
             @override
             def leave_ClassDef(
-                self, original_node: cst.ClassDef, updated_node: cst.ClassDef
+                self,
+                original_node: cst.ClassDef,
+                updated_node: cst.ClassDef,
             ) -> cst.ClassDef:
                 self.depth -= 1
                 if self.depth or original_node.name.value != self.facade:
@@ -62,7 +64,7 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBaseCst:
                         and base.value.value == self.local
                         else base
                         for base in updated_node.bases
-                    ]
+                    ],
                 )
 
             @override
@@ -72,14 +74,18 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBaseCst:
 
             @override
             def leave_FunctionDef(
-                self, original_node: cst.FunctionDef, updated_node: cst.FunctionDef
+                self,
+                original_node: cst.FunctionDef,
+                updated_node: cst.FunctionDef,
             ) -> cst.FunctionDef:
                 self.depth -= 1
                 return updated_node
 
             @override
             def leave_Name(
-                self, original_node: cst.Name, updated_node: cst.Name
+                self,
+                original_node: cst.Name,
+                updated_node: cst.Name,
             ) -> cst.Name:
                 # A private import alias is never rebound, so every read of it is
                 # the parent class; the letter itself keeps its deferred reads.
@@ -89,7 +95,9 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBaseCst:
 
             @override
             def leave_ImportFrom(
-                self, original_node: cst.ImportFrom, updated_node: cst.ImportFrom
+                self,
+                original_node: cst.ImportFrom,
+                updated_node: cst.ImportFrom,
             ) -> cst.ImportFrom | cst.RemovalSentinel:
                 if (
                     self.depth
@@ -97,19 +105,21 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBaseCst:
                     or isinstance(original_node.names, cst.ImportStar)
                     or isinstance(updated_node.names, cst.ImportStar)
                     or FlextInfraUtilitiesQualifiedNames.dotted_name(
-                        original_node.module
+                        original_node.module,
                     )
                     != self.module
                 ):
                     return updated_node
                 retained: list[cst.ImportAlias] = []
                 for original, updated in zip(
-                    original_node.names, updated_node.names, strict=True
+                    original_node.names,
+                    updated_node.names,
+                    strict=True,
                 ):
                     name = FlextInfraUtilitiesQualifiedNames.dotted_name(original.name)
                     bound = (
                         FlextInfraUtilitiesQualifiedNames.dotted_name(
-                            original.asname.name
+                            original.asname.name,
                         )
                         if original.asname is not None
                         and isinstance(original.asname.name, cst.Name)
@@ -119,7 +129,10 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBaseCst:
                         retained.append(updated)
                     elif not self.owner_bound:
                         retained.append(
-                            updated.with_changes(name=cst.Name(self.owner), asname=None)
+                            updated.with_changes(
+                                name=cst.Name(self.owner),
+                                asname=None,
+                            ),
                         )
                 if not retained:
                     return cst.RemoveFromParent()
@@ -127,12 +140,14 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBaseCst:
                     names=[
                         *retained[:-1],
                         retained[-1].with_changes(comma=cst.MaybeSentinel.DEFAULT),
-                    ]
+                    ],
                 )
 
             @override
             def leave_AnnAssign(
-                self, original_node: cst.AnnAssign, updated_node: cst.AnnAssign
+                self,
+                original_node: cst.AnnAssign,
+                updated_node: cst.AnnAssign,
             ) -> cst.AnnAssign | cst.Assign:
                 # An annotated rebind declares a variable; the letter must stay the
                 # implicit alias of its facade class for annotations to resolve.
@@ -154,8 +169,10 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBaseCst:
             .parse_module(source)
             .visit(
                 _FacadeBaseTransformer(
-                    shape=shape, owner=owner, owner_bound=owner_bound
-                )
+                    shape=shape,
+                    owner=owner,
+                    owner_bound=owner_bound,
+                ),
             )
             .code
         )

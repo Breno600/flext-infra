@@ -65,7 +65,9 @@ class FlextInfraMarkdownGateBase(FlextInfraGate):
 
     @override
     def _get_check_dirs(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
         """Return the governed Markdown paths relative to their repository."""
         _ = ctx

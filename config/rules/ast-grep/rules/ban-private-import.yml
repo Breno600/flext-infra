@@ -1,0 +1,42 @@
+# Enforce one public import boundary between FLEXT packages.
+#
+# An absolute import of another package's private implementation module
+# couples a consumer to that owner's layout; the consumer uses the public
+# facade discovered from the owner's live assignment and inheritance graph.
+# Inside one package every import is absolute (relative imports are banned),
+# so the imported module's root is captured as $MOD and the engine admits the
+# finding only when it is not the scanned project's own package (context
+# own-package, read from the project's declared package name).
+#
+# Both static spellings are the same coupling: `from pkg._mod import X` and
+# `import pkg._mod`. The semantic private-import cutover rewrites only the
+# `from` form; the plain `import` form stays a detection-only finding for the
+# owner to repair.
+
+id: ban-private-import
+language: Python
+severity: error
+metadata:
+  context:
+    MOD:
+      not: own-package
+rule:
+  any:
+    - all:
+        - kind: import_from_statement
+        - regex: '^from\s+\w[\w.]*\._[A-Za-z]\w*(\.[\w.]+)*\s+import\b'
+        - has:
+            field: module_name
+            pattern: $MOD
+    - all:
+        - kind: import_statement
+        - has:
+            stopBy: end
+            kind: dotted_name
+            regex: '^\w[\w.]*\._[A-Za-z]\w*(\.[\w.]+)*$'
+            pattern: $MOD
+message: >-
+  Absolute import of another package's private implementation module is
+  forbidden. Consume the owner's public facade discovered from source.
+files:
+  - "**/*.py"

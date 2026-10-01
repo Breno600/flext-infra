@@ -1,0 +1,19 @@
+id: rewire-type-adapter-construction-missing-u-import
+valid:
+  - |
+    from flext_core import m, u
+
+    ADAPTER = m.TypeAdapter(int)
+  - |
+    from project.adapters import TypeAdapter
+
+    ADAPTER = TypeAdapter(int)
+invalid:
+  - |
+    from flext_core import m
+
+    ADAPTER = m.TypeAdapter(int)
+  - |
+    from pydantic import TypeAdapter
+
+    ADAPTER = TypeAdapter(int)

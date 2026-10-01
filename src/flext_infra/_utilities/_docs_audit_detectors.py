@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import re
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_cli import u
@@ -14,8 +16,6 @@ from .docs_api import FlextInfraUtilitiesDocsApi
 from .docs_scope import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from flext_infra import t
 
 
@@ -27,37 +27,15 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
     """
 
     @staticmethod
-    def _policy_text_files(
-        scope: m.Infra.DocScope, exempt_paths: t.StrSequence
-    ) -> t.SequenceOf[t.Pair[str, Path]]:
-        """Return ``(relative_posix, path)`` for policy checks, skipping exempt prefixes."""
-        exempt = tuple(exempt_paths)
-        files: t.MutableSequenceOf[t.Pair[str, Path]] = []
-        for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
-            rel = md_file.relative_to(scope.path).as_posix()
-            if rel.startswith(exempt):
-                continue
-            files.append((rel, md_file))
-        return files
-
-    @staticmethod
     def docs_text_token_issues(
-        scope: m.Infra.DocScope,
-        *,
-        tokens: t.StrSequence,
-        issue_type: str,
-        exempt_paths: t.StrSequence = (),
+        scope: m.Infra.DocScope, *, tokens: t.StrSequence, issue_type: str
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Collect token-presence issues, skipping exempt frozen-evidence prefixes."""
+        """Collect token-presence issues in the complete Markdown scope."""
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         if not tokens:
             return issues
-        for (
-            rel,
-            md_file,
-        ) in FlextInfraUtilitiesDocsAuditDetectorsMixin._policy_text_files(
-            scope, exempt_paths
-        ):
+        for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
+            rel = md_file.relative_to(scope.path).as_posix()
             text = md_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
             for token in tokens:
                 if token in text:
@@ -67,29 +45,51 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                             issue_type=issue_type,
                             severity="medium",
                             message=f"contains `{token}`",
+                        ),
+                    )
+        return issues
+
+    @staticmethod
+    def docs_placeholder_issues(
+        scope: m.Infra.DocScope, *, patterns: t.StrSequence
+    ) -> t.SequenceOf[m.Infra.AuditIssue]:
+        """Find unfinished markers using declared lexical patterns."""
+        issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
+        compiled = tuple(re.compile(pattern) for pattern in patterns)
+        for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
+            rel = md_file.relative_to(scope.path).as_posix()
+            content = md_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+            for pattern in compiled:
+                if pattern.search(content):
+                    issues.append(
+                        m.Infra.AuditIssue(
+                            file=rel,
+                            issue_type="placeholder",
+                            severity="medium",
+                            message=f"matches placeholder pattern `{pattern.pattern}`",
                         )
                     )
         return issues
 
     @staticmethod
     def docs_machine_path_issues(
-        scope: m.Infra.DocScope, *, exempt_paths: t.StrSequence
+        scope: m.Infra.DocScope,
+        *,
+        historical_evidence_files: t.VariadicTuple[Path],
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
         """Collect per-user absolute paths (``/home/<user>``) frozen into markdown.
 
         A path rooted at one operator's home binds the document to one machine;
         container and CI identities declared in ``c.Infra.MACHINE_PATH_CONTAINER_USERS``
-        are image contracts and pass. ``exempt_paths`` are scope-relative prefixes
-        (frozen evidence such as dated plans) declared by the repository's docs
-        policy; they are skipped whole.
+        are image contracts and pass. Only exact declared dated evidence files
+        retain the observed machine path.
         """
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
-        for (
-            rel,
-            md_file,
-        ) in FlextInfraUtilitiesDocsAuditDetectorsMixin._policy_text_files(
-            scope, exempt_paths
-        ):
+        evidence = set(historical_evidence_files)
+        for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
+            rel = md_file.relative_to(scope.path).as_posix()
+            if Path(rel) in evidence:
+                continue
             text = md_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
             for line_number, line in enumerate(text.splitlines(), start=1):
                 for match in c.Infra.MACHINE_PATH_RE.finditer(line):
@@ -104,7 +104,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                                 f"line {line_number} embeds machine-local path "
                                 f"`{match.group(0)}`"
                             ),
-                        )
+                        ),
                     )
         return issues
 
@@ -132,7 +132,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                             issue_type="scope_boundary",
                             severity="high",
                             message=f"root docs mention out-of-scope project `{token}`",
-                        )
+                        ),
                     )
         return issues
 
@@ -152,12 +152,13 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
             rel = path.relative_to(scope.path).as_posix()
             if path.is_relative_to(scope.path / c.Infra.DIR_DOCS) and (
                 FlextInfraUtilitiesDocsScope.excluded_doc_path(
-                    scope.path, path.relative_to(scope.path / c.Infra.DIR_DOCS)
+                    scope.path,
+                    path.relative_to(scope.path / c.Infra.DIR_DOCS),
                 )
             ):
                 continue
             if rel == "docs/api-reference/README.md" or rel.startswith(
-                "docs/api-reference/generated/"
+                "docs/api-reference/generated/",
             ):
                 continue
             issues.append(
@@ -166,7 +167,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                     issue_type="generated_ownership",
                     severity="medium",
                     message="manual API page duplicates generated API ownership",
-                )
+                ),
             )
         return issues
 
@@ -178,7 +179,8 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
         if scope.name == c.Infra.RK_ROOT or not scope.package_name:
             return []
         contract = FlextInfraUtilitiesDocsApi.public_contract(
-            scope.path, scope.package_name
+            scope.path,
+            scope.package_name,
         )
         return FlextInfraUtilitiesDocsApi.docstring_issues(scope.path, contract)
 
@@ -190,7 +192,8 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
         if scope.name == c.Infra.RK_ROOT or not scope.package_name:
             return None
         contract = FlextInfraUtilitiesDocsApi.public_contract(
-            scope.path, scope.package_name
+            scope.path,
+            scope.package_name,
         )
         return FlextInfraUtilitiesDocsApi.docstring_coverage(scope.path, contract)
 
@@ -210,7 +213,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
             rel = md_file.relative_to(scope.path).as_posix()
             content = md_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
             for index, match in enumerate(c.Infra.PYTHON_FENCE_RE.finditer(content)):
-                # flext-o6h5 (agent: kimi) — ruff via running interpreter (venv SSOT);
+                # Ruff via running interpreter (venv SSOT);
                 # bare "ruff" breaks when .venv/bin is not on PATH (CI docs audit).
                 outcome = u.Cli.run_raw(
                     [
@@ -229,10 +232,13 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                 )
                 if outcome.failure:
                     detail = outcome.error
-                elif u.Cli.process_succeeded(outcome.value.outcome):
+                elif (
+                    u.Cli.process_succeeded(outcome.value.outcome)
+                    and not outcome.value.stderr
+                ):
                     continue
                 else:
-                    # flext-o6h5 (agent: kimi) — ruff reports parse errors on stderr
+                    # Ruff reports parse errors on stderr
                     # only; indexing an empty stdout crashes with IndexError.
                     detail = (
                         f"{outcome.value.stdout}\n{outcome.value.stderr}".strip()
@@ -244,7 +250,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                         issue_type="python_codeblock",
                         severity="medium",
                         message=f"block #{index}: {detail}",
-                    )
+                    ),
                 )
         return issues
 

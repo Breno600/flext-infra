@@ -20,13 +20,14 @@ from .worktree_measure import FlextInfraUtilitiesGitWorktreeMeasureMixin
 
 
 class FlextInfraUtilitiesGitWorktreeFactsMixin(
-    FlextInfraUtilitiesGitWorktreeMeasureMixin
+    FlextInfraUtilitiesGitWorktreeMeasureMixin,
 ):
     """Own FS-only worktree facts discovery and stale-deps planning."""
 
     @classmethod
     def git_registered_worktrees_fs(
-        cls, repository_root: Path
+        cls,
+        repository_root: Path,
     ) -> t.VariadicTuple[t.Pair[Path, str]]:
         """Resolve registered worktrees from ``.git/worktrees`` without Git.
 
@@ -56,9 +57,11 @@ class FlextInfraUtilitiesGitWorktreeFactsMixin(
 
     @classmethod
     def collect_worktree_facts(
-        cls, query: m.Infra.WorktreeFactsQuery
+        cls,
+        query: m.Infra.WorktreeFactsQuery,
     ) -> t.Pair[
-        t.VariadicTuple[m.Infra.WorktreeFact], t.VariadicTuple[m.Infra.PruneAction]
+        t.VariadicTuple[m.Infra.WorktreeFact],
+        t.VariadicTuple[m.Infra.PruneAction],
     ]:
         """Measure every registered worktree and plan stale-deps pruning.
 
@@ -78,11 +81,13 @@ class FlextInfraUtilitiesGitWorktreeFactsMixin(
                 facts.append(
                     cls._worktree_fact(
                         m.Infra.WorktreeCandidate(
-                            path=worktree_root, repo=repo_root, branch=branch
+                            path=worktree_root,
+                            repo=repo_root,
+                            branch=branch,
                         ),
                         query,
                         actions,
-                    )
+                    ),
                 )
         return tuple(facts), tuple(actions)
 
@@ -148,34 +153,34 @@ class FlextInfraUtilitiesGitWorktreeFactsMixin(
                         ),
                         owner="worktrees",
                         reclaim_bytes=size,
-                    )
+                    ),
                 )
         return correlated
 
     @staticmethod
     def _worktree_gitdir_pointer(entry: Path) -> Path | None:
-        """Read one registry ``gitdir`` pointer, or ``None`` when unreadable."""
-        text = ""
-        try:
-            text = (entry / "gitdir").read_text(encoding=c.Cli.ENCODING_DEFAULT).strip()
-        except (OSError, ValueError):
-            text = ""
+        """Read one registry ``gitdir`` pointer.
+
+        ``None`` means the registry entry carries no pointer file, which Git
+        itself treats as a prunable entry; any read error escapes.
+        """
+        pointer = entry / "gitdir"
+        if not pointer.is_file():
+            return None
+        text = pointer.read_text(encoding=c.Cli.ENCODING_DEFAULT).strip()
         return Path(text) if text else None
 
     @staticmethod
     def _worktree_registry_branch(entry: Path) -> str:
-        """Read the checked-out branch from a registry HEAD, else empty text."""
-        head = ""
-        try:
-            head = (entry / "HEAD").read_text(encoding=c.Cli.ENCODING_DEFAULT).strip()
-        except OSError:
-            head = ""
+        """Read the checked-out branch from a registry HEAD (empty when detached)."""
+        head = (entry / "HEAD").read_text(encoding=c.Cli.ENCODING_DEFAULT).strip()
         prefix = f"ref: {c.Infra.GIT_REFS_HEADS}"
         return head.removeprefix(prefix) if head.startswith(prefix) else ""
 
     @staticmethod
     def _worktree_kind(
-        worktree_root: Path, policy: m.Infra.WorktreeFactsPolicy
+        worktree_root: Path,
+        policy: m.Infra.WorktreeFactsPolicy,
     ) -> Literal["sibling", "tool_internal"]:
         """Classify a worktree as tool-internal or sibling from policy patterns."""
         text = f"{worktree_root}/"
@@ -187,7 +192,8 @@ class FlextInfraUtilitiesGitWorktreeFactsMixin(
 
     @classmethod
     def _worktree_bead_index(
-        cls, rows: t.VariadicTuple[t.JsonMapping]
+        cls,
+        rows: t.VariadicTuple[t.JsonMapping],
     ) -> t.MappingKV[str, t.MappingKV[str, t.JsonMapping]]:
         """Index optional bead rows by work dir and branch for correlation."""
         by_dir: MutableMapping[str, t.JsonMapping] = {}
@@ -197,7 +203,7 @@ class FlextInfraUtilitiesGitWorktreeFactsMixin(
             if not isinstance(metadata, Mapping):
                 continue
             work_dir = str(
-                metadata.get("gc.work_dir") or metadata.get("work_dir") or ""
+                metadata.get("gc.work_dir") or metadata.get("work_dir") or "",
             )
             if work_dir:
                 by_dir.setdefault(work_dir, row)
@@ -233,7 +239,7 @@ class FlextInfraUtilitiesGitWorktreeFactsMixin(
                 "pr_number": pr if isinstance(pr, int) else None,
                 "actor": evidence[0],
                 "session_id": evidence[1],
-            }
+            },
         )
 
 

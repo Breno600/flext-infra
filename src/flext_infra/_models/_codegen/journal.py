@@ -40,7 +40,7 @@ class FlextInfraModelsCodegenJournalModels:
         def _validate_publication(self) -> Self:
             """Bind a complete staged state to one physical project destination."""
             if not self.project.is_absolute() or not self.before.path.is_relative_to(
-                self.project
+                self.project,
             ):
                 msg = "codegen publication destination is outside its project"
                 raise ValueError(msg)
@@ -58,13 +58,16 @@ class FlextInfraModelsCodegenJournalModels:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True, extra="forbid")
 
         selector: Annotated[
-            t.NonEmptyStr, m.Field(description="Workspace-relative project selector")
+            t.NonEmptyStr,
+            m.Field(description="Workspace-relative project selector"),
         ]
         device: Annotated[
-            int, m.Field(ge=0, strict=True, description="Project directory device")
+            int,
+            m.Field(ge=0, strict=True, description="Project directory device"),
         ]
         inode: Annotated[
-            int, m.Field(gt=0, strict=True, description="Project directory inode")
+            int,
+            m.Field(gt=0, strict=True, description="Project directory inode"),
         ]
 
         @u.field_validator("selector")
@@ -185,14 +188,17 @@ class FlextInfraModelsCodegenJournalModels:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True, extra="forbid")
 
         phase: Annotated[
-            t.NonEmptyStr, m.Field(description="Generation phase that consumed source")
+            t.NonEmptyStr,
+            m.Field(description="Generation phase that consumed source"),
         ]
         path: Annotated[Path, m.Field(description="Absolute authenticated source path")]
         parent_device: Annotated[
-            int | None, m.Field(ge=0, strict=True, description="Source parent device")
+            int | None,
+            m.Field(ge=0, strict=True, description="Source parent device"),
         ]
         parent_inode: Annotated[
-            int | None, m.Field(gt=0, strict=True, description="Source parent inode")
+            int | None,
+            m.Field(gt=0, strict=True, description="Source parent inode"),
         ]
         sha256: Annotated[
             str | None,
@@ -204,32 +210,41 @@ class FlextInfraModelsCodegenJournalModels:
         mode: Annotated[
             int | None,
             m.Field(
-                ge=0, le=0o7777, strict=True, description="Exact source permission bits"
+                ge=0,
+                le=0o7777,
+                strict=True,
+                description="Exact source permission bits",
             ),
         ]
         device: Annotated[
-            int | None, m.Field(ge=0, strict=True, description="Source device identity")
+            int | None,
+            m.Field(ge=0, strict=True, description="Source device identity"),
         ]
         inode: Annotated[
-            int | None, m.Field(gt=0, strict=True, description="Source inode identity")
+            int | None,
+            m.Field(gt=0, strict=True, description="Source inode identity"),
         ]
         link_count: Annotated[
             int | None,
             m.Field(
-                ge=1, strict=True, description="Observed physical source link count"
+                ge=1,
+                strict=True,
+                description="Observed physical source link count",
             ),
         ]
         absent_parent: Annotated[
             m.Cli.AtomicDirectoryChainPlan | None,
             m.Field(
-                description="Physical ancestor witness when the source parent is absent"
+                description="Physical ancestor witness when the source parent is absent",
             ),
         ] = None
         file_attributes: Annotated[
-            int | None, m.Field(ge=0, strict=True, description="Host file attributes")
+            int | None,
+            m.Field(ge=0, strict=True, description="Host file attributes"),
         ] = None
         reparse_tag: Annotated[
-            int | None, m.Field(ge=0, strict=True, description="Host reparse tag")
+            int | None,
+            m.Field(ge=0, strict=True, description="Host reparse tag"),
         ] = None
 
         @u.field_validator("path")
@@ -291,7 +306,8 @@ class FlextInfraModelsCodegenJournalModels:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True, extra="forbid")
 
         phase: Annotated[
-            t.NonEmptyStr, m.Field(description="Generation phase owning this entry")
+            t.NonEmptyStr,
+            m.Field(description="Generation phase owning this entry"),
         ]
         project: Annotated[
             t.NonEmptyStr,
@@ -308,14 +324,17 @@ class FlextInfraModelsCodegenJournalModels:
         original_exists: Annotated[
             bool,
             m.Field(
-                strict=True, description="Whether the destination existed at preflight"
+                strict=True,
+                description="Whether the destination existed at preflight",
             ),
         ]
         original_parent_device: Annotated[
-            int, m.Field(ge=0, strict=True, description="Original parent device")
+            int,
+            m.Field(ge=0, strict=True, description="Original parent device"),
         ]
         original_parent_inode: Annotated[
-            int, m.Field(gt=0, strict=True, description="Original parent inode")
+            int,
+            m.Field(gt=0, strict=True, description="Original parent inode"),
         ]
         original_backup: Annotated[
             t.NonEmptyStr | None,
@@ -354,16 +373,20 @@ class FlextInfraModelsCodegenJournalModels:
             m.Field(ge=0, strict=True, description="Original host attributes"),
         ] = None
         original_reparse_tag: Annotated[
-            int | None, m.Field(ge=0, strict=True, description="Original reparse tag")
+            int | None,
+            m.Field(ge=0, strict=True, description="Original reparse tag"),
         ] = None
         desired_exists: Annotated[
-            bool, m.Field(strict=True, description="Whether publication leaves a file")
+            bool,
+            m.Field(strict=True, description="Whether publication leaves a file"),
         ]
         desired_parent_device: Annotated[
-            int, m.Field(ge=0, strict=True, description="Desired live parent device")
+            int,
+            m.Field(ge=0, strict=True, description="Desired live parent device"),
         ]
         desired_parent_inode: Annotated[
-            int, m.Field(gt=0, strict=True, description="Desired live parent inode")
+            int,
+            m.Field(gt=0, strict=True, description="Desired live parent inode"),
         ]
         desired_sha256: Annotated[
             str | None,
@@ -375,7 +398,10 @@ class FlextInfraModelsCodegenJournalModels:
         desired_mode: Annotated[
             int | None,
             m.Field(
-                ge=0, le=0o7777, strict=True, description="Desired permission bits"
+                ge=0,
+                le=0o7777,
+                strict=True,
+                description="Desired permission bits",
             ),
         ] = None
         desired_device: Annotated[
@@ -391,10 +417,12 @@ class FlextInfraModelsCodegenJournalModels:
             m.Field(description="Staged replacement unique link count"),
         ] = None
         desired_file_attributes: Annotated[
-            int | None, m.Field(ge=0, strict=True, description="Staged host attributes")
+            int | None,
+            m.Field(ge=0, strict=True, description="Staged host attributes"),
         ] = None
         desired_reparse_tag: Annotated[
-            int | None, m.Field(ge=0, strict=True, description="Staged reparse tag")
+            int | None,
+            m.Field(ge=0, strict=True, description="Staged reparse tag"),
         ] = None
         rollback_exists: Annotated[
             bool | None,
@@ -420,20 +448,24 @@ class FlextInfraModelsCodegenJournalModels:
             m.Field(ge=0, le=0o7777, strict=True, description="Rollback mode"),
         ] = None
         rollback_device: Annotated[
-            int | None, m.Field(ge=0, strict=True, description="Rollback staged device")
+            int | None,
+            m.Field(ge=0, strict=True, description="Rollback staged device"),
         ] = None
         rollback_inode: Annotated[
-            int | None, m.Field(gt=0, strict=True, description="Rollback staged inode")
+            int | None,
+            m.Field(gt=0, strict=True, description="Rollback staged inode"),
         ] = None
         rollback_link_count: Annotated[
-            Literal[1] | None, m.Field(description="Rollback staged unique link count")
+            Literal[1] | None,
+            m.Field(description="Rollback staged unique link count"),
         ] = None
         rollback_file_attributes: Annotated[
             int | None,
             m.Field(ge=0, strict=True, description="Rollback host attributes"),
         ] = None
         rollback_reparse_tag: Annotated[
-            int | None, m.Field(ge=0, strict=True, description="Rollback reparse tag")
+            int | None,
+            m.Field(ge=0, strict=True, description="Rollback reparse tag"),
         ] = None
         rollback_staging: Annotated[
             t.NonEmptyStr | None,
@@ -441,7 +473,10 @@ class FlextInfraModelsCodegenJournalModels:
         ] = None
 
         @u.field_validator(
-            "path", "original_backup", "desired_staging", "rollback_staging"
+            "path",
+            "original_backup",
+            "desired_staging",
+            "rollback_staging",
         )
         @classmethod
         def _validate_relative_file_path(cls, value: str | None) -> str | None:

@@ -26,7 +26,9 @@ class FlextInfraRuffLintGate(FlextInfraGate):
 
     @override
     def _get_check_dirs(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
         """Ruff always runs — never skip."""
         _ = ctx
@@ -34,24 +36,35 @@ class FlextInfraRuffLintGate(FlextInfraGate):
 
     @override
     def _build_check_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        check_dirs: t.StrSequence,
     ) -> t.StrSequence:
         """Build check command."""
         _ = project_dir
         return self._lint_command(
-            ctx, check_dirs, config.Infra.codegen.make.ruff.lint_check
+            ctx,
+            check_dirs,
+            config.Infra.codegen.make.ruff.lint_check,
         )
 
     @override
     def _build_fix_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, targets: t.StrSequence
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        targets: t.StrSequence,
     ) -> t.StrSequence:
         """Build the explicit Ruff fix command."""
         _ = project_dir
         return self._lint_command(ctx, targets, config.Infra.codegen.make.ruff.lint_fix)
 
     def _lint_command(
-        self, ctx: m.Infra.GateContext, targets: t.StrSequence, mode_args: t.StrSequence
+        self,
+        ctx: m.Infra.GateContext,
+        targets: t.StrSequence,
+        mode_args: t.StrSequence,
     ) -> t.StrSequence:
         """Keep check and fix on the same Ruff lint invocation contract."""
         return self._python_module_command(
@@ -67,7 +80,10 @@ class FlextInfraRuffLintGate(FlextInfraGate):
 
     @override
     def _parse_check_output(
-        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        result: p.Cli.CommandOutput,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
         """Parse check output."""
         _ = project_dir, ctx
@@ -84,11 +100,13 @@ class FlextInfraRuffLintGate(FlextInfraGate):
                                 file=u.Cli.json_pick_str(entry, "filename", "?"),
                                 line=u.Cli.json_nested_int(entry, "location", "row"),
                                 column=u.Cli.json_nested_int(
-                                    entry, "location", "column"
+                                    entry,
+                                    "location",
+                                    "column",
                                 ),
                                 code=u.Cli.json_pick_str(entry, "code"),
                                 message=u.Cli.json_pick_str(entry, "message"),
-                            )
+                            ),
                         )
         except c.EXC_VALIDATION_TYPE as err:
             issues.append(
@@ -99,7 +117,7 @@ class FlextInfraRuffLintGate(FlextInfraGate):
                     code="PARSE_ERROR",
                     message=f"Tool output parsing failed: {type(err).__name__}",
                     severity="ERROR",
-                )
+                ),
             )
             return False, issues
         return self._finalize_parse_result(result, project_dir, issues, c.Infra.RUFF)

@@ -36,7 +36,7 @@ class TestsFlextInfraCiDeclaredSecretsContract:
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch="conformance/declared-secrets",
             ci_trigger_branches=CodegenTestSupport.Ci.ci_trigger_branches(
-                "conformance/declared-secrets"
+                "conformance/declared-secrets",
             ),
         )
         workflow_path = tmp_path / "ci.yml"
@@ -49,7 +49,7 @@ class TestsFlextInfraCiDeclaredSecretsContract:
         document = u.Cli.yaml_load_mapping(workflow_path)
         triggers = t.Cli.JSON_MAPPING_ADAPTER.validate_python(document["on"])
         workflow_call = t.Cli.JSON_MAPPING_ADAPTER.validate_python(
-            triggers["workflow_call"]
+            triggers["workflow_call"],
         )
         return t.Cli.JSON_MAPPING_ADAPTER.validate_python(workflow_call["secrets"])
 
@@ -77,7 +77,8 @@ class TestsFlextInfraCiDeclaredSecretsContract:
         return referenced
 
     def test_secret_accesses_are_declared_optional_workflow_call_inputs(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Every referenced secret resolves to an optional workflow_call input."""
         workflow_path = self.render_ci(tmp_path)

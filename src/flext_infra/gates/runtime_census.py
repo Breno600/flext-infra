@@ -24,16 +24,20 @@ class FlextInfraRuntimeCensusGate(FlextInfraGate):
     gate_id: ClassVar[str] = c.Infra.RUNTIME_CENSUS
     gate_name: ClassVar[str] = "Runtime Enforcement Census"
     can_fix: ClassVar[bool] = False
+    requires_python_targets: ClassVar[bool] = True
 
     @override
     def check(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
         """Run the runtime census scoped to ``project_dir``."""
         _ = ctx
         started = time.monotonic()
         validator = FlextInfraRuntimeCensusValidator.for_project(
-            project_dir, census_gate=self.gate_id
+            project_dir,
+            census_gate=self.gate_id,
         )
         # ``build_report`` (not ``execute``) keeps violations structured so the
         # gate can grade a broken invocation separately from found violations.

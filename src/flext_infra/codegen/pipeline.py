@@ -21,16 +21,18 @@ if TYPE_CHECKING:
 
 
 class FlextInfraCodegenPipeline(
-    FlextInfraCodegenPipelineStagesMixin, FlextInfraCodegenExecutionBase[str]
+    FlextInfraCodegenPipelineStagesMixin,
+    FlextInfraCodegenExecutionBase[str],
 ):
     """Run the full codegen pipeline directly from the validated CLI model."""
 
-    rope: t.Port[p.Infra.RopeWorkspaceDsl] = m.Field(
-        exclude=True, description="Shared Rope cycle injected by the composition root"
+    conform_ports: m.Infra.CodegenConformPorts = m.Field(
+        exclude=True,
+        description="Docs and fresh-import ports the toolchain conform crosses into",
     )
 
     _state: m.Infra.CodegenPipelineState = u.PrivateAttr(
-        default_factory=m.Infra.CodegenPipelineState
+        default_factory=m.Infra.CodegenPipelineState,
     )
 
     @override
@@ -44,7 +46,8 @@ class FlextInfraCodegenPipeline(
             context=m.Cli.PipelineStageContext(
                 repository_root=self.repository_root,
                 settings={
-                    c.Infra.PIPELINE_KEY_DRY_RUN: self.dry_run or not self.apply_changes
+                    c.Infra.PIPELINE_KEY_DRY_RUN: self.dry_run
+                    or not self.apply_changes,
                 },
             ),
             logger=self.logger,
@@ -79,7 +82,10 @@ class FlextInfraCodegenPipeline(
 
     @override
     def _run_stage[V](
-        self, stage_id: str, action: Callable[[], V], emit: Callable[[V], t.JsonMapping]
+        self,
+        stage_id: str,
+        action: Callable[[], V],
+        emit: Callable[[V], t.JsonMapping],
     ) -> p.Result[m.Cli.PipelineStageResult]:
         """Run one pipeline stage and preserve the first exception.
 
@@ -91,7 +97,7 @@ class FlextInfraCodegenPipeline(
                 stage_id=stage_id,
                 status=c.Cli.PipelineStageStatus.OK,
                 output=emit(action()),
-            )
+            ),
         )
 
     # ------------------------------------------------------------------
@@ -138,7 +144,7 @@ class FlextInfraCodegenPipeline(
                 f"Auto-fix: {fixed} violations fixed",
                 f"Census after: {after_violations} violations",
                 f"Improvement: {before_violations - after_violations} violations resolved",
-            ])
+            ]),
         )
 
 

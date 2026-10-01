@@ -25,19 +25,16 @@ class FlextInfraRefactorCensusObjectsMixin:
         """Return the selected families."""
         if not family_names:
             return frozenset()
+        families = u.Infra.facade_families()
         resolved = {
-            c.Infra.FAMILY_SUFFIXES.get(name, name).lower() for name in family_names
+            (families[name].suffix if name in families else name).lower()
+            for name in family_names
         }
         return frozenset(resolved)
 
     @staticmethod
     def _violation(
-        item: m.Infra.Object,
-        *,
-        kind: str,
-        description: str,
-        fixable: bool = False,
-        fix_action: str = "",
+        item: m.Infra.Object, *, kind: str, description: str
     ) -> m.Infra.Violation:
         """Violation."""
         return m.Infra.Violation(
@@ -48,8 +45,6 @@ class FlextInfraRefactorCensusObjectsMixin:
             file_path=item.file_path,
             line=item.line,
             description=description,
-            fixable=fixable,
-            fix_action=fix_action,
         )
 
     @staticmethod
@@ -104,7 +99,10 @@ class FlextInfraRefactorCensusObjectsMixin:
 
     @classmethod
     def _removal_candidate(
-        cls, item: m.Infra.Object, *, include_unused: bool
+        cls,
+        item: m.Infra.Object,
+        *,
+        include_unused: bool,
     ) -> m.Infra.RemovalCandidate | None:
         """Build a removal candidate for an object."""
         if include_unused and cls._is_unused(item):
@@ -129,15 +127,10 @@ class FlextInfraRefactorCensusObjectsMixin:
         """Object key."""
         return f"{item.file_path}:{item.line}:{item.scope_path}:{item.kind}"
 
-    @staticmethod
-    def _fix_key(file_path: Path, object_name: str, action: str = "") -> str:
-        """Fix key."""
-        suffix = f"::{action}" if action else ""
-        return f"{file_path.resolve()}::{object_name}{suffix}"
-
     @classmethod
     def _impact_map_results(
-        cls, report: m.Infra.WorkspaceReport
+        cls,
+        report: m.Infra.WorkspaceReport,
     ) -> t.VariadicTuple[m.Infra.Result]:
         """Impact map results."""
         changes_by_file: MutableMapping[Path, list[str]] = defaultdict(list)

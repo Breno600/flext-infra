@@ -23,8 +23,10 @@ the temporary mapping, and conflicting guard bindings fail without publishing a 
 rewrite. Other dynamic lookups remain findings until their receiver contract is proven;
 they are never blindly rewritten.
 
-The codemod check gate blocks on every reported policy finding, including warnings. It
-preserves native scanner output and rule severities in normal error reports.
+The codemod check gate blocks on every reported policy finding, whatever its rule
+severity, and reports each finding with its native severity. Failed rule discovery,
+incomplete scans, invalid diagnostics, and other native scanner failures also block,
+with their own failure diagnostics.
 
 The same semantic pipeline resolves elected self-facade imports before deferring them
 into function bodies. Module/class execution, decorators, defaults and other eager uses

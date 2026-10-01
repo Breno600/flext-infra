@@ -64,21 +64,22 @@ class TestsFlextInfraPytestRunnerSuiteStop:
         reports = config.Infra.codegen.make.testmon_cache.reports_directory
         (bounded,) = (path.parent for path in (project / reports).glob("*/summary.txt"))
         outcome = m.Cli.ProcessOutcome.model_validate_json(
-            self._read(bounded / "suite-outcome.json")
+            self._read(bounded / "suite-outcome.json"),
         )
         tm.that(outcome.raw_return_code, eq=expected_raw_exit.value)
         tm.that(outcome.timed_out, eq=False)
         tm.that(outcome.forwarded_signal, none=True)
         selected = m.Infra.PytestCollectionManifest.model_validate_json(
-            self._read(bounded / "testmon-selection.json")
+            self._read(bounded / "testmon-selection.json"),
         ).node_ids
         executed = m.Infra.TestmonRunAccounting.model_validate_json(
-            self._read(bounded / "run-accounting.json")
+            self._read(bounded / "run-accounting.json"),
         ).executed_count
         return bounded, selected, executed
 
     def test_stop_reserve_matches_the_runner_dispatch_decision(
-        self, cached_runner_project: Path
+        self,
+        cached_runner_project: Path,
     ) -> None:
         """The typed reserve follows the same serial decision as the workers.
 
@@ -89,6 +90,8 @@ class TestsFlextInfraPytestRunnerSuiteStop:
 
         def dispatch_plan(node_ids: t.StrSequence) -> m.Infra.PytestSelectionPlan:
             """Synthetic selection whose manifest path matches the real argv."""
+            # The plan is a strict value: it takes typed fields, never the
+            # JSON-shaped str/list a lax validation would coerce.
             return m.Infra.PytestSelectionPlan(
                 manifest_path=Path("m.json"),
                 node_ids=tuple(node_ids),
@@ -118,11 +121,9 @@ class TestsFlextInfraPytestRunnerSuiteStop:
             return float(raw.partition("=")[2])
 
         workers_index = list(multi_command).index("-n") + 1
-        multi_workers = list(multi_command)[workers_index]
-        expected_workers = min(runner.parallel_worker_budget(policy), len(multi))
-        tm.that(
-            multi_workers, eq="0" if expected_workers <= 1 else str(expected_workers)
-        )
+        budget = runner.parallel_worker_budget(policy)
+        tm.that(budget > 1, eq=True)
+        tm.that(list(multi_command)[workers_index], eq=str(min(budget, len(multi))))
         tm.that(
             stop_value(multi_command),
             eq=runner.started_at_monotonic
@@ -144,7 +145,8 @@ class TestsFlextInfraPytestRunnerSuiteStop:
 
     @pytest.mark.slow
     def test_suite_stop_instant_persists_the_executed_prefix(
-        self, cached_runner_project: Path
+        self,
+        cached_runner_project: Path,
     ) -> None:
         """A run reaching its stop instant ends itself and testmon keeps progress.
 
@@ -183,13 +185,13 @@ class TestsFlextInfraPytestRunnerSuiteStop:
         # pytest-testmon's durable record is what the next selection excludes:
         # collected-but-unexecuted tests keep a row without a measured duration.
         with closing(
-            sqlite3.connect(f"file:{runner.testmon_db}?mode=ro", uri=True)
+            sqlite3.connect(f"file:{runner.testmon_db}?mode=ro", uri=True),
         ) as connection:
             persisted = {
                 name
                 for (name,) in connection.execute(
                     "SELECT test_name FROM test_execution"
-                    " WHERE failed = 0 AND duration IS NOT NULL"
+                    " WHERE failed = 0 AND duration IS NOT NULL",
                 )
             }
         tm.that(len(persisted), eq=executed)
@@ -197,13 +199,15 @@ class TestsFlextInfraPytestRunnerSuiteStop:
 
     @pytest.mark.slow
     def test_stop_instant_after_the_last_selected_test_completes_the_run(
-        self, cached_runner_project: Path
+        self,
+        cached_runner_project: Path,
     ) -> None:
         """A stop requested on the last selected test's teardown ends nothing.
 
         The fixture project owns one test, so the serial dispatch applies and
         the stop request lands after the whole selection executed and passed:
-        the accounting is complete and the run is green.
+        the accounting is complete and the run is green although pytest still
+        reports its interrupt.
         """
         runner = self._spent_runner(cached_runner_project, serial=True)
 

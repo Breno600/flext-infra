@@ -35,11 +35,13 @@ class TestsFlextInfraDocsMain:
         )
         tm.that((workspace / ".reports/docs/validate-report.md").exists(), eq=True)
         tm.that(
-            (workspace / "flext-a/.reports/docs/validate-report.md").exists(), eq=True
+            (workspace / "flext-a/.reports/docs/validate-report.md").exists(),
+            eq=True,
         )
 
     def test_docs_cli_generate_apply_rejects_a_second_publication_owner(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         workspace = u.Tests.create_docs_workspace(tmp_path, project_names=("flext-a",))
 

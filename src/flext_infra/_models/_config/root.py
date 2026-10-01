@@ -42,14 +42,10 @@ class FlextInfraConfigModelsRoot:
             FlextInfraConfigModelsRelease.ReleasePolicySpec,
             m.Field(description="Release protocol policy"),
         ]
-        enforcement: Annotated[
-            FlextInfraConfigModelsStatic.StaticEnforcementSpec,
-            m.Field(description="Rope-only static enforcement policy"),
-        ]
         refactor_csv_campaigns: Annotated[
             FlextInfraConfigModelsArtifact.RefactorCsvCampaignsSpec,
             m.Field(
-                description="Declared CSV-driven rename campaigns for the mod verb"
+                description="Declared CSV-driven rename campaigns for the mod verb",
             ),
         ]
 
