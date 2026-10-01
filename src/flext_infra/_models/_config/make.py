@@ -204,8 +204,11 @@ class FlextInfraConfigModelsMake:
         ]
         stale_github_organizations: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
-            m.Field(description="Placeholder GitHub orgs that must be rewritten"),
-        ]
+            m.Field(
+                default=("organization",),
+                description="Placeholder GitHub orgs that must be rewritten",
+            ),
+        ] = ("organization",)
         github_repos: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsMake.DocsGithubRepoSpec],
             m.Field(
@@ -213,6 +216,38 @@ class FlextInfraConfigModelsMake:
                 description="Governed org/repo/branch map for cross-repo doc URLs",
             ),
         ] = ()
+
+        @u.model_validator(mode="after")
+        def _validate_api_modules(self) -> Self:
+            """Reject duplicate or non-importable API module declarations.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If docs api_modules must not be empty; or if docs
+                    api_modules must be unique; or if docs api module is not importable.
+
+            """
+            for distribution, modules in self.api_modules.items():
+                if not modules:
+                    msg = f"docs api_modules must not be empty: {distribution}"
+                    raise ValueError(msg)
+                if len(set(modules)) != len(modules):
+                    msg = f"docs api_modules must be unique: {distribution}"
+                    raise ValueError(msg)
+                invalid = next(
+                    (
+                        module
+                        for module in modules
+                        if not all(part.isidentifier() for part in module.split("."))
+                    ),
+                    None,
+                )
+                if invalid is not None:
+                    msg = f"docs api module is not importable: {invalid}"
+                    raise ValueError(msg)
+            return self
 
         @u.model_validator(mode="after")
         def _validate_actions(self) -> Self:
@@ -594,12 +629,6 @@ class FlextInfraConfigModelsMake:
                         raise ValueError(msg)
                 return self
 
-        runtime_environment_directory: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description="Sibling directory for physical workspace environments",
-            ),
-        ]
         examples_timeout_seconds: Annotated[
             int,
             m.Field(gt=0, le=120, description="Workspace examples process deadline"),
@@ -615,6 +644,7 @@ class FlextInfraConfigModelsMake:
         fmt_gates: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
+                default=("markdown-format",),
                 description=(
                     "Gates whose mutating side `make fmt` drives (formatters). "
                     "The read-only side runs in `make check`; `make fix` never "
