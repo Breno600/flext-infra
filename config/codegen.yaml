@@ -513,8 +513,6 @@ Infra:
         actions: [generate, fix, fmt, validate, audit]
         mutable_actions: [fix, fmt]
         reports_dir: .reports/docs
-        api_modules:
-          flext-infra: [flext_infra]
         overview_preview_limits:
           aliases: 11
           public_symbols: 10
