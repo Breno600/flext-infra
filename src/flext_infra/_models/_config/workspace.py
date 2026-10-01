@@ -7,12 +7,12 @@ from typing import Annotated, Literal, Self
 
 from flext_cli import m, u
 
-from ... import t
-from ..._constants import FlextInfraConstantsCodegenProject
-from ..._constants.deps import FlextInfraConstantsDeps
-from .beads import FlextInfraConfigModelsBeads
-from .contexts import FlextInfraConfigModelsContexts
-from .contract import FlextInfraConfigModelsContract
+from flext_infra import t
+from flext_infra._constants import FlextInfraConstantsCodegenProject
+from flext_infra._constants.deps import FlextInfraConstantsDeps
+from flext_infra._models._config.beads import FlextInfraConfigModelsBeads
+from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
 
 
 class FlextInfraConfigModelsWorkspace:

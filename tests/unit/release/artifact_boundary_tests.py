@@ -14,20 +14,23 @@ from tests import u
 class TestsFlextInfraReleaseArchiveBoundary:
     """Behavior contract for the public release archive materializer."""
 
-    def _write_directory(self, archive: tarfile.TarFile, name: str) -> None:
+    @staticmethod
+    def _write_directory(archive: tarfile.TarFile, name: str) -> None:
         """Add one directory entry to a test tar archive."""
         info = tarfile.TarInfo(name)
         info.type = tarfile.DIRTYPE
         info.mode = 0o755
         archive.addfile(info)
 
-    def _write_file(self, archive: tarfile.TarFile, name: str, content: bytes) -> None:
+    @staticmethod
+    def _write_file(archive: tarfile.TarFile, name: str, content: bytes) -> None:
         """Add one file entry to a test tar archive."""
         info = tarfile.TarInfo(name)
         info.size = len(content)
         archive.addfile(info, io.BytesIO(content))
 
-    def _write_symlink(self, archive: tarfile.TarFile, name: str, target: str) -> None:
+    @staticmethod
+    def _write_symlink(archive: tarfile.TarFile, name: str, target: str) -> None:
         """Add one symbolic link entry to a test tar archive."""
         info = tarfile.TarInfo(name)
         info.type = tarfile.SYMTYPE

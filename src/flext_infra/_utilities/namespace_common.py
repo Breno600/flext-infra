@@ -6,8 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import c
-
-from .rope_source import FlextInfraUtilitiesRopeSource
+from flext_infra._utilities.rope_source import FlextInfraUtilitiesRopeSource
 
 if TYPE_CHECKING:
     from flext_infra import t

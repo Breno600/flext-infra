@@ -9,18 +9,25 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import m, t, u
+from flext_infra.codegen._codegen_staging import FlextInfraCodegenStaging
+from flext_infra.codegen._mise_artifacts_files import (
+    FlextInfraMiseArtifactsFiles as files,
+)
+from flext_infra.codegen._mise_artifacts_journal import (
+    FlextInfraMiseArtifactsJournal as journal_io,
+)
+from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
+from flext_infra.codegen._mise_artifacts_recovery import FlextInfraMiseRecovery
+from flext_infra.codegen._mise_artifacts_staging import FlextInfraMiseStaging
+from flext_infra.codegen._mise_artifacts_state import (
+    FlextInfraMiseArtifactsState as state,
+)
+from flext_infra.codegen._mise_artifacts_verification import (
+    FlextInfraMiseArtifactsVerification as verify,
+)
+from flext_infra.codegen.codegen_preconditions import FlextInfraCodegenPreconditions
+from flext_infra.codegen.file_leases import FlextInfraCodegenFileLeases
 from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
-
-from ._codegen_staging import FlextInfraCodegenStaging
-from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles as files
-from ._mise_artifacts_journal import FlextInfraMiseArtifactsJournal as journal_io
-from ._mise_artifacts_publication import FlextInfraMisePublication
-from ._mise_artifacts_recovery import FlextInfraMiseRecovery
-from ._mise_artifacts_staging import FlextInfraMiseStaging
-from ._mise_artifacts_state import FlextInfraMiseArtifactsState as state
-from ._mise_artifacts_verification import FlextInfraMiseArtifactsVerification as verify
-from .codegen_preconditions import FlextInfraCodegenPreconditions
-from .file_leases import FlextInfraCodegenFileLeases
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -1004,7 +1011,7 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         residue = state.transaction_residue(layout.value)
         if residue:
             return r[bool].fail(
-                f"generation staging has no journal authority: {residue[0]}"
+                f"generation staging has no journal authority: {residue[0]}",
             )
         return r[bool].ok(True)
 

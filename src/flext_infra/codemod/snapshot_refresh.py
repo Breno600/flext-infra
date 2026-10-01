@@ -7,9 +7,8 @@ from typing import override
 from flext_cli import cli
 
 from flext_core import r
-
-from .. import FlextInfraServiceBase, p, t, u
-from . import FlextInfraModGateEngine
+from flext_infra import FlextInfraServiceBase, p, t, u
+from flext_infra.codemod import FlextInfraModGateEngine
 
 
 class FlextInfraCodemodSnapshotRefresh(FlextInfraServiceBase[t.Cli.ResultValue]):

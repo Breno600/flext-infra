@@ -16,8 +16,8 @@ from tests import u as test_u
 class TestsFlextInfraUtilitiesResourceLimits:
     """Behavior tests for the canonical Mypy resource-limit command."""
 
+    @staticmethod
     def test_mypy_command_checks_source_with_memory_and_time_limits(
-        self,
         tmp_path: Path,
     ) -> None:
         """Check a real typed source through both validated resource ceilings."""
@@ -34,7 +34,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
         tm.ok(result)
         tm.that(u.Cli.process_succeeded(result.value.outcome), eq=True)
 
-    def test_mypy_profile_records_the_real_checker(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_mypy_profile_records_the_real_checker(tmp_path: Path) -> None:
         """Keep the public profiling contract while removing executable selection."""
         project = test_u.Tests.mypy_workload(tmp_path)
         profile = tmp_path / "checker.pstats"
@@ -54,8 +55,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
             eq=True,
         )
 
+    @staticmethod
     def test_mypy_budget_resolves_the_project_tooling_overlay(
-        self,
         tmp_path: Path,
     ) -> None:
         """A project tooling.yaml budget drives the runner timeout."""
@@ -75,8 +76,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
             eq=u.Infra.mypy_runner_timeout(expected_limit),
         )
 
+    @staticmethod
     def test_mypy_budget_overlay_above_the_fleet_bound_fails_loud(
-        self,
         tmp_path: Path,
     ) -> None:
         """A project budget can only lower the fleet tooling bound."""
@@ -90,8 +91,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
         with pytest.raises(ValueError, match="exceeds the fleet bound"):
             u.Infra.mypy_runner_timeout_for_project(tmp_path)
 
+    @staticmethod
     def test_mypy_budget_without_overlay_uses_the_fleet_default(
-        self,
         tmp_path: Path,
     ) -> None:
         """No project overlay falls back to the fleet tooling SSOT."""
@@ -100,8 +101,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
             eq=u.Infra.mypy_runner_timeout(),
         )
 
+    @staticmethod
     def test_workspace_checker_requires_its_own_environment(
-        self,
         tmp_path: Path,
     ) -> None:
         """An unprovisioned target never borrows the orchestrator's interpreter."""
@@ -118,8 +119,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
         with pytest.raises(FileNotFoundError, match="managed workspace checker"):
             u.Infra.mypy_command(invocation)
 
+    @staticmethod
     def test_supervisor_rejects_executable_selection_before_launch(
-        self,
         tmp_path: Path,
     ) -> None:
         """A hostile request cannot turn the supervisor into an arbitrary executor."""
@@ -260,7 +261,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
         elif expected == 124:
             tm.that(not state, eq=True)
 
-    def test_resource_limit_stops_workload_on_termination(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_resource_limit_stops_workload_on_termination(tmp_path: Path) -> None:
         """Preserve external termination and reap the running workload."""
         limit = m.Infra.MypyResourceLimit(
             memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
@@ -290,12 +292,14 @@ class TestsFlextInfraUtilitiesResourceLimits:
                 tm.ok(child.kill())
                 tm.ok(child.wait(timeout=5))
 
-    def test_mypy_resource_contract_rejects_non_positive_limits(self) -> None:
+    @staticmethod
+    def test_mypy_resource_contract_rejects_non_positive_limits() -> None:
         """Reject invalid external configuration before spawning a process."""
         with pytest.raises(ValueError, match="greater than 0"):
             m.Infra.MypyResourceLimit(memory_limit_mb=0, timeout_seconds=0)
 
-    def test_mypy_resource_limit_parses_environment_at_boundary(self) -> None:
+    @staticmethod
+    def test_mypy_resource_limit_parses_environment_at_boundary() -> None:
         """Convert valid process text once; the time bound stays the SSOT value."""
         memory_limit = c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT // 2
         with tm.scope(env={c.Infra.MYPY_MEMORY_LIMIT_MB_ENV: str(memory_limit)}):
@@ -344,7 +348,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
         tm.that(u.Cli.process_succeeded(result.value.outcome), eq=False)
         tm.that(result.value.stderr, has=f"{c.Infra.MYPY_MEMORY_LIMIT_MB_ENV} must be")
 
-    def test_mypy_resource_contract_rejects_memory_above_ceiling(self) -> None:
+    @staticmethod
+    def test_mypy_resource_contract_rejects_memory_above_ceiling() -> None:
         """Reject a configured limit above the canonical hard ceiling."""
         with pytest.raises(
             ValueError,
@@ -355,7 +360,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
                 timeout_seconds=config.Infra.tooling.tools.mypy.timeout_seconds,
             )
 
-    def test_mypy_timeout_has_controlled_exit_and_signal_diagnostic(self) -> None:
+    @staticmethod
+    def test_mypy_timeout_has_controlled_exit_and_signal_diagnostic() -> None:
         """Expose the configured ceilings and process status on timeout."""
         limit = m.Infra.MypyResourceLimit(
             memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
@@ -384,7 +390,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
             ],
         )
 
-    def test_mypy_signal_diagnostic_preserves_both_output_streams(self) -> None:
+    @staticmethod
+    def test_mypy_signal_diagnostic_preserves_both_output_streams() -> None:
         """Expose traceback output when Mypy also writes an error banner."""
         limit = m.Infra.MypyResourceLimit(
             memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
@@ -405,8 +412,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
 
         tm.that(diagnostic, has=["Traceback: checker frame", "INTERNAL ERROR"])
 
+    @staticmethod
     def test_mypy_cache_directory_is_project_keyed_and_survives_relocks(
-        self,
         tmp_path: Path,
     ) -> None:
         """One shared Mypy cache per project, reused by every checkout and relock."""

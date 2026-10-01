@@ -9,9 +9,10 @@ from pathlib import Path
 from flext_cli import u
 
 from flext_infra import m, t
-
-from .state_publication import FlextInfraUtilitiesGitStatePublicationMixin
-from .worktree_io import FlextInfraUtilitiesGitWorktreeIO
+from flext_infra._utilities._git.state_publication import (
+    FlextInfraUtilitiesGitStatePublicationMixin,
+)
+from flext_infra._utilities._git.worktree_io import FlextInfraUtilitiesGitWorktreeIO
 
 
 class FlextInfraUtilitiesGitStateFilesMixin(

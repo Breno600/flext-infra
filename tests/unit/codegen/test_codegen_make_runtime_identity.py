@@ -15,8 +15,8 @@ pytestmark = pytest.mark.slow
 class TestsFlextInfraCodegenMakeRuntimeIdentity:
     """Host Mise configuration cannot replace a project's resolved executable."""
 
+    @staticmethod
     def test_status_uses_locked_uv_without_loading_host_configuration(
-        self,
         tmp_path: Path,
     ) -> None:
         root, _ = u.Tests.render_make_environment(

@@ -17,8 +17,7 @@ from typing import Annotated, override
 from flext_core import r
 from flext_infra import c, m, p, t
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
-
-from ._fixer_workspace import FlextInfraCodegenFixerWorkspaceMixin
+from flext_infra.codegen._fixer_workspace import FlextInfraCodegenFixerWorkspaceMixin
 
 
 class FlextInfraCodegenFixer(

@@ -109,8 +109,8 @@ class TestsFlextInfraInfraSelection:
             (package / "__init__.py").touch()
         return tmp_path
 
+    @staticmethod
     def test_resolve_projects_all_projects(
-        self,
         selector: type[u.Infra],
         workspace_with_projects: Path,
     ) -> None:
@@ -120,8 +120,8 @@ class TestsFlextInfraInfraSelection:
         tm.that(projects, length=3)
         tm.that([p.name for p in projects], eq=["alpha", "beta", "gamma"])
 
+    @staticmethod
     def test_resolve_projects_specific_names(
-        self,
         selector: type[u.Infra],
         workspace_with_projects: Path,
     ) -> None:
@@ -131,8 +131,8 @@ class TestsFlextInfraInfraSelection:
         tm.that(projects, length=2)
         tm.that([p.name for p in projects], eq=["alpha", "beta"])
 
+    @staticmethod
     def test_resolve_projects_single_project(
-        self,
         selector: type[u.Infra],
         workspace_with_projects: Path,
     ) -> None:
@@ -142,8 +142,8 @@ class TestsFlextInfraInfraSelection:
         tm.that(projects, length=1)
         tm.that(projects[0].name, eq="gamma")
 
+    @staticmethod
     def test_resolve_projects_unknown_project(
-        self,
         selector: type[u.Infra],
         workspace_with_projects: Path,
     ) -> None:
@@ -151,8 +151,8 @@ class TestsFlextInfraInfraSelection:
         result = selector.resolve_projects(workspace_with_projects, ["unknown"])
         tm.fail(result, has="unknown projects")
 
+    @staticmethod
     def test_resolve_projects_mixed_known_unknown(
-        self,
         selector: type[u.Infra],
         workspace_with_projects: Path,
     ) -> None:
@@ -163,13 +163,14 @@ class TestsFlextInfraInfraSelection:
         )
         tm.fail(result, has="unknown projects")
 
-    def test_resolve_projects_discovery_failure(self, selector: type[u.Infra]) -> None:
+    @staticmethod
+    def test_resolve_projects_discovery_failure(selector: type[u.Infra]) -> None:
         """Test handling discovery failure with non-existent path."""
         result = selector.resolve_projects(Path("/nonexistent/path"), ["alpha"])
         tm.fail(result)
 
+    @staticmethod
     def test_resolve_projects_sorted_output(
-        self,
         selector: type[u.Infra],
         workspace_with_projects: Path,
     ) -> None:
@@ -181,8 +182,8 @@ class TestsFlextInfraInfraSelection:
         projects: t.SequenceOf[m.Infra.ProjectInfo] = tm.ok(result)
         tm.that([p.name for p in projects], eq=["alpha", "beta", "gamma"])
 
+    @staticmethod
     def test_resolve_projects_result_type(
-        self,
         selector: type[u.Infra],
         workspace_with_projects: Path,
     ) -> None:
@@ -193,8 +194,8 @@ class TestsFlextInfraInfraSelection:
         tm.that(len(projects), eq=3)
         tm.that([p.name for p in projects], eq=["alpha", "beta", "gamma"])
 
+    @staticmethod
     def test_resolve_projects_accepts_directory_aliases(
-        self,
         selector: type[u.Infra],
         workspace_with_declared_names: Path,
     ) -> None:
@@ -206,8 +207,8 @@ class TestsFlextInfraInfraSelection:
         projects: t.SequenceOf[m.Infra.ProjectInfo] = tm.ok(result)
         tm.that([p.name for p in projects], eq=["flext-cli", "flext-core"])
 
+    @staticmethod
     def test_resolve_projects_accepts_declared_names(
-        self,
         selector: type[u.Infra],
         workspace_with_declared_names: Path,
     ) -> None:
@@ -219,8 +220,8 @@ class TestsFlextInfraInfraSelection:
         projects: t.SequenceOf[m.Infra.ProjectInfo] = tm.ok(result)
         tm.that([p.path.name for p in projects], eq=["cli-alias", "core-alias"])
 
+    @staticmethod
     def test_selector_with_default_discovery(
-        self,
         selector: type[u.Infra],
         workspace_with_projects: Path,
     ) -> None:
@@ -229,8 +230,8 @@ class TestsFlextInfraInfraSelection:
         projects: t.SequenceOf[m.Infra.ProjectInfo] = tm.ok(result)
         tm.that(projects, length=3)
 
+    @staticmethod
     def test_selector_resolve_projects_empty_list(
-        self,
         selector: type[u.Infra],
         tmp_path: Path,
     ) -> None:
@@ -239,8 +240,8 @@ class TestsFlextInfraInfraSelection:
         projects: t.SequenceOf[m.Infra.ProjectInfo] = tm.ok(result)
         tm.that(projects, empty=True)
 
+    @staticmethod
     def test_resolve_projects_includes_root_and_nested_members(
-        self,
         selector: type[u.Infra],
         workspace_with_nested_members: Path,
     ) -> None:
@@ -264,8 +265,8 @@ class TestsFlextInfraInfraSelection:
         projects: t.SequenceOf[m.Infra.ProjectInfo] = tm.ok(result)
         tm.that([project.name for project in projects], eq=["workspace"])
 
+    @staticmethod
     def test_resolve_projects_accepts_nested_member_path(
-        self,
         selector: type[u.Infra],
         workspace_with_nested_members: Path,
     ) -> None:

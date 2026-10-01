@@ -20,17 +20,20 @@ if TYPE_CHECKING:
 class TestsFlextInfraConfigFixer:
     """Test suite for FlextInfraConfigFixer."""
 
-    def test_init_creates_instance(self) -> None:
+    @staticmethod
+    def test_init_creates_instance() -> None:
         """Test that fixer initializes with default repository root."""
         fixer = FlextInfraConfigFixer()
         tm.that(fixer, none=False)
 
-    def test_init_with_custom_repository_root(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_init_with_custom_repository_root(tmp_path: Path) -> None:
         """Test that fixer accepts custom repository root."""
         fixer = FlextInfraConfigFixer(repository_root=tmp_path)
         tm.that(fixer, none=False)
 
-    def test_execute_returns_failure(self) -> None:
+    @staticmethod
+    def test_execute_returns_failure() -> None:
         """Test that execute() returns failure with helpful message."""
         fixer = FlextInfraConfigFixer()
         result = fixer.execute()
@@ -39,30 +42,35 @@ class TestsFlextInfraConfigFixer:
         tm.that(result.error, is_=str)
         tm.that(result.error, has="Use execute_command() directly")
 
-    def test_run_with_empty_projects(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_run_with_empty_projects(tmp_path: Path) -> None:
         """Test that run() handles empty project list."""
         fixer = FlextInfraConfigFixer(repository_root=tmp_path)
         result = fixer.run([])
         tm.ok(result)
         tm.that(result.value, is_=list)
 
-    def test_run_with_nonexistent_projects(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_run_with_nonexistent_projects(tmp_path: Path) -> None:
         """Test that run() fails closed for an inaccessible explicit project."""
         u.Tests.reject_inaccessible_config_project(tmp_path)
 
-    def test_run_with_dry_run_flag(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_run_with_dry_run_flag(tmp_path: Path) -> None:
         """Test that run() respects dry_run flag."""
         fixer = FlextInfraConfigFixer(repository_root=tmp_path)
         result = fixer.run([], dry_run=True)
         tm.ok(result)
 
-    def test_run_with_verbose_flag(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_run_with_verbose_flag(tmp_path: Path) -> None:
         """Test that run() respects verbose flag."""
         fixer = FlextInfraConfigFixer(repository_root=tmp_path)
         result = fixer.run([], verbose=True)
         tm.ok(result)
 
-    def test_process_file_with_missing_file(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_process_file_with_missing_file(tmp_path: Path) -> None:
         """Test that process_file handles missing files gracefully."""
         fixer = FlextInfraConfigFixer(repository_root=tmp_path)
         missing_file = tmp_path / "nonexistent.toml"
@@ -71,7 +79,8 @@ class TestsFlextInfraConfigFixer:
         tm.that(result.error, is_=str)
         tm.that(result.error, has="not found")
 
-    def test_process_file_with_valid_toml(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_process_file_with_valid_toml(tmp_path: Path) -> None:
         """Test that process_file handles valid TOML without pyrefly section."""
         fixer = FlextInfraConfigFixer(repository_root=tmp_path)
         pyproject = tmp_path / "pyproject.toml"
@@ -80,7 +89,8 @@ class TestsFlextInfraConfigFixer:
         tm.ok(result)
         tm.that(result.value, eq=[])
 
-    def test_process_file_with_invalid_toml(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_process_file_with_invalid_toml(tmp_path: Path) -> None:
         """Test that process_file handles invalid TOML gracefully."""
         fixer = FlextInfraConfigFixer(repository_root=tmp_path)
         pyproject = tmp_path / "pyproject.toml"
@@ -90,7 +100,8 @@ class TestsFlextInfraConfigFixer:
         tm.that(result.error, is_=str)
         tm.that(result.error, has="TOML parse failed")
 
-    def test_process_file_with_dry_run(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_process_file_with_dry_run(tmp_path: Path) -> None:
         """Test that process_file with dry_run doesn't modify file."""
         fixer = FlextInfraConfigFixer(repository_root=tmp_path)
         pyproject = tmp_path / "pyproject.toml"

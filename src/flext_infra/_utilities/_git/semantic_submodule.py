@@ -11,8 +11,9 @@ from git import GitCommandError, GitConfigParser
 
 from flext_core import r
 from flext_infra import c, m, t
-
-from .semantic_identity import FlextInfraUtilitiesGitSemanticIdentityMixin
+from flext_infra._utilities._git.semantic_identity import (
+    FlextInfraUtilitiesGitSemanticIdentityMixin,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p

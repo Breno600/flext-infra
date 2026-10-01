@@ -17,8 +17,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
     """Behavior contract for test_infra_refactor_namespace_enforcer."""
 
+    @staticmethod
     def test_namespace_enforcer_apply_moves_manual_protocol_to_protocols_file(
-        self,
         tmp_path: Path,
     ) -> None:
         """Move a manual protocol into the canonical protocols module."""
@@ -79,8 +79,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             lacks="class ServiceContract(Protocol):",
         )
 
+    @staticmethod
     def test_namespace_enforcer_respects_tool_flext_namespace_scan_dirs(
-        self,
         tmp_path: Path,
     ) -> None:
         """Respect configured namespace scan directories."""
@@ -107,8 +107,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         tm.that(report.projects, empty=False)
         tm.that(alias_file.read_text(encoding="utf-8"), eq=alias_source)
 
+    @staticmethod
     def test_namespace_enforcer_skips_dynamic_dirs_by_default(
-        self,
         tmp_path: Path,
     ) -> None:
         """Skip dynamic directories when no scan override is declared."""
@@ -126,8 +126,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
 
         tm.that(report.projects[0].relocation_findings, eq=0)
 
+    @staticmethod
     def test_namespace_enforcer_apply_keeps_script_shebang_when_adding_future(
-        self,
         tmp_path: Path,
     ) -> None:
         """Preserve a script shebang while adding the future import."""
@@ -147,8 +147,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         tm.that(rewritten_lines[1], eq="# -*- coding: utf-8 -*-")
         tm.that(rewritten_lines, has="from __future__ import annotations")
 
+    @staticmethod
     def test_namespace_enforcer_apply_inserts_future_after_single_line_module_docstring(
-        self,
         tmp_path: Path,
     ) -> None:
         """Insert the future import after a one-line module docstring."""
@@ -175,8 +175,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         tm.that(future_index > 0, eq=True)
         tm.that(future_index < import_index, eq=True)
 
+    @staticmethod
     def test_namespace_enforcer_does_not_rewrite_indented_import_aliases(
-        self,
         tmp_path: Path,
     ) -> None:
         """Leave indented import aliases unchanged."""
@@ -195,8 +195,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         service_source = service_file.read_text(encoding="utf-8")
         tm.that(service_source, has="    from flext_core import System")
 
+    @staticmethod
     def test_namespace_enforcer_does_not_rewrite_multiline_import_alias_blocks(
-        self,
         tmp_path: Path,
     ) -> None:
         """Leave multiline import alias blocks unchanged."""
@@ -224,8 +224,9 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         tm.that(module_source, has="CORE = FlextInfraConstantsCore")
         tm.that(module_source, has="SHARED = FlextInfraConstantsSharedInfra")
 
+    @staticmethod
     def test_namespace_enforcer_apply_hoists_function_local_stdlib_import(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Hoist a function-local standard-library import to the module block."""
         workspace, _project, pkg = u.Tests.namespace_workspace(tmp_path)

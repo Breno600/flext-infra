@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ... import m, t
-from .gitignore import FlextInfraCodegenConformGitignore
+from flext_infra import m, t
+from flext_infra.codegen._conform.gitignore import FlextInfraCodegenConformGitignore
 
 
 class FlextInfraCodegenConformDocsOwnership(FlextInfraCodegenConformGitignore):

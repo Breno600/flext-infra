@@ -14,7 +14,8 @@ class TestsFlextInfraDocsSharedWrite:
 
     _MIN_MARKDOWN_NEWLINES = 3
 
-    def test_json_write_round_trips_dict_payload(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_json_write_round_trips_dict_payload(tmp_path: Path) -> None:
         json_file = tmp_path / "nested/data.json"
 
         result = u.Cli.json_write(json_file, {"key": "value", "number": 42})
@@ -25,7 +26,8 @@ class TestsFlextInfraDocsSharedWrite:
         expected: t.JsonMapping = {"key": "value", "number": 42}
         tm.that(read_result.unwrap(), eq=expected)
 
-    def test_json_write_accepts_pydantic_model(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_json_write_accepts_pydantic_model(tmp_path: Path) -> None:
         json_file = tmp_path / "report.json"
         report = m.Infra.DocsPhaseReport(
             phase="audit",
@@ -41,7 +43,8 @@ class TestsFlextInfraDocsSharedWrite:
         tm.ok(result)
         tm.that(json_file.exists(), eq=True)
 
-    def test_write_markdown_writes_exact_content(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_write_markdown_writes_exact_content(tmp_path: Path) -> None:
         md_file = tmp_path / "exact.md"
         lines = ["Line 1", "Line 2", "Line 3"]
 
@@ -58,7 +61,8 @@ class TestsFlextInfraDocsSharedWrite:
         tm.ok(result)
         tm.that(md_file.read_text().count("\n") >= self._MIN_MARKDOWN_NEWLINES, eq=True)
 
-    def test_write_markdown_fails_for_non_directory_parent(self) -> None:
+    @staticmethod
+    def test_write_markdown_fails_for_non_directory_parent() -> None:
         result = u.Infra.write_markdown(Path("/dev/null/test.md"), ["test"])
 
         tm.fail(result)

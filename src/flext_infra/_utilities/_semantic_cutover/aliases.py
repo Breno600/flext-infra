@@ -9,12 +9,15 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, t
-
-from ..compatibility_alias_validation import (
+from flext_infra._utilities._semantic_cutover.alias_cst import (
+    FlextInfraUtilitiesSemanticCutoverAliasCst,
+)
+from flext_infra._utilities._semantic_cutover.edits import (
+    FlextInfraUtilitiesSemanticCutoverEdits,
+)
+from flext_infra._utilities.compatibility_alias_validation import (
     FlextInfraUtilitiesCompatibilityAliasValidation,
 )
-from .alias_cst import FlextInfraUtilitiesSemanticCutoverAliasCst
-from .edits import FlextInfraUtilitiesSemanticCutoverEdits
 
 if TYPE_CHECKING:
     from flext_infra import p

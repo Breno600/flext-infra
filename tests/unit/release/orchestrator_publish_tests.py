@@ -12,7 +12,8 @@ from tests import TestsFlextInfraUtilities as u, c, m, t
 class TestsFlextInfraReleasePublish:
     """Behavior contract for the public release publish phase."""
 
-    def _built_workspace(self, tmp_path: Path) -> t.Pair[Path, m.Infra.BuildReport]:
+    @staticmethod
+    def _built_workspace(tmp_path: Path) -> t.Pair[Path, m.Infra.BuildReport]:
         """Build one member and return the workspace with its verified receipt."""
         project_name = "flext-a"
         workspace = u.Tests.create_release_workspace(
@@ -66,7 +67,8 @@ class TestsFlextInfraReleasePublish:
             ne=0,
         )
 
-    def test_missing_receipt_is_refused(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_missing_receipt_is_refused(tmp_path: Path) -> None:
         """Publishing without a build receipt has nothing attested to upload."""
         workspace = u.Tests.create_release_workspace(tmp_path)
 

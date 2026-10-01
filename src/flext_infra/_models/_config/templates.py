@@ -7,10 +7,10 @@ from typing import Annotated, Literal, Self
 
 from flext_cli import m
 
-from ... import t
-from ..._constants import FlextInfraConstantsCodegenProject
-from .contract import FlextInfraConfigModelsContract
-from .scaffold import FlextInfraConfigModelsScaffold
+from flext_infra import t
+from flext_infra._constants import FlextInfraConstantsCodegenProject
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
+from flext_infra._models._config.scaffold import FlextInfraConfigModelsScaffold
 
 
 class FlextInfraConfigModelsTemplates:

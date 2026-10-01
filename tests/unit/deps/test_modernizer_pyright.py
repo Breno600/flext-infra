@@ -73,8 +73,8 @@ class TestsFlextInfraDepsModernizerPyright:
         u.Tests.declare_workspace_projects(tmp_path, members)
         u.Tests.write_project_beads_config(tmp_path, "workspace")
 
+    @staticmethod
     def test_python_discovery_ignores_member_only_container(
-        self,
         tmp_path: Path,
     ) -> None:
         """A directory containing only nested projects is not a root source tree."""
@@ -100,15 +100,15 @@ class TestsFlextInfraDepsModernizerPyright:
                 tmp_path,
                 workspace_excluded_top_dirs=(
                     FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
-                        tmp_path
+                        tmp_path,
                     ).unwrap()
                 ),
             ),
             eq=["src"],
         )
 
+    @staticmethod
     def test_python_discovery_uses_caller_resolved_exclusions(
-        self,
         tmp_path: Path,
     ) -> None:
         """Honor the command-scoped topology projection without rediscovery."""
@@ -417,12 +417,13 @@ class TestsFlextInfraDepsModernizerPyright:
         )
         u.Tests.write_project_beads_config(tmp_path, "workspace")
         excluded_top_dirs = FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
-            tmp_path
+            tmp_path,
         ).unwrap()
         discovered = frozenset(
             infra_u.Infra.discover_python_dirs(
-                tmp_path, workspace_excluded_top_dirs=excluded_top_dirs
-            )
+                tmp_path,
+                workspace_excluded_top_dirs=excluded_top_dirs,
+            ),
         )
         declared = tuple(d for d in rules.env_dirs if d in discovered)
 
@@ -438,7 +439,9 @@ class TestsFlextInfraDepsModernizerPyright:
             ),
             eq=sorted(
                 infra_u.Infra.analyzer_python_roots(
-                    tmp_path, declared, workspace_excluded_top_dirs=excluded_top_dirs
-                )
+                    tmp_path,
+                    declared,
+                    workspace_excluded_top_dirs=excluded_top_dirs,
+                ),
             ),
         )

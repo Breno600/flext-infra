@@ -12,9 +12,10 @@ from git import GitCommandError
 
 from flext_core import r
 from flext_infra import c, m, t
-
-from ..codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
-from .state_transition import FlextInfraUtilitiesGitStateTransitionMixin
+from flext_infra._utilities._git.state_transition import (
+    FlextInfraUtilitiesGitStateTransitionMixin,
+)
+from flext_infra._utilities.codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
 
 if TYPE_CHECKING:
     from flext_infra import p

@@ -31,7 +31,8 @@ class TestsFlextInfraRuffBlanketMaskIsUnrepresentable:
         )
         return {**policy, "per-file-ignores": per_file_ignores}
 
-    def test_fleet_policy_declares_no_blanket_mask(self) -> None:
+    @staticmethod
+    def test_fleet_policy_declares_no_blanket_mask() -> None:
         """No glob in the shipped fleet policy suppresses every rule."""
         per_file_ignores = config.Infra.tooling.tools.ruff.lint.per_file_ignores
 

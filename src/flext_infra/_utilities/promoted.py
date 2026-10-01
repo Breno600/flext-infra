@@ -6,9 +6,15 @@ use ``from flext_infra import u`` only.
 
 from __future__ import annotations
 
-from ._promoted.commands import FlextInfraUtilitiesPromotedCommands
-from ._promoted.execution import FlextInfraUtilitiesPromotedExecution
-from ._promoted.rendering import FlextInfraUtilitiesPromotedRendering
+from flext_infra._utilities._promoted.commands import (
+    FlextInfraUtilitiesPromotedCommands,
+)
+from flext_infra._utilities._promoted.execution import (
+    FlextInfraUtilitiesPromotedExecution,
+)
+from flext_infra._utilities._promoted.rendering import (
+    FlextInfraUtilitiesPromotedRendering,
+)
 
 
 class FlextInfraUtilitiesPromoted(

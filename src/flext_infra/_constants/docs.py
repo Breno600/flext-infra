@@ -129,7 +129,7 @@ class FlextInfraConstantsDocs:
         r"(?P<org>[^/]+)/(?P<repo>[^/]+)/"
         r"(?P<kind>blob|tree)/"
         r"(?P<refpath>[^/?#]+/[^?#]*)"
-        r"(?P<suffix>[?#].*)?$"
+        r"(?P<suffix>[?#].*)?$",
     )
     """Match a github.com blob/tree documentation URL by its named parts.
 

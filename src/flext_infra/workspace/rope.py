@@ -13,8 +13,7 @@ from typing import Annotated, ClassVar, Self, override
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
-
-from ..base import s
+from flext_infra.base import s
 
 
 class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
@@ -527,7 +526,6 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
             raise FileNotFoundError(resolved_path)
         msg = f"path is outside the active rope workspace: {file_path}"
         raise ValueError(msg)
-
 
 
 __all__: t.StrSequence = ("FlextInfraRopeWorkspace",)

@@ -45,7 +45,8 @@ class TestsFlextInfraDirenvGate:
     class TestsDirenvContractLint:
         """Pure-lint contracts for managed environment files."""
 
-        def test_unguarded_direnv_dir_reads_fail(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_unguarded_direnv_dir_reads_fail(tmp_path: Path) -> None:
             """strict_env does not export DIRENV_DIR; unguarded reads violate."""
             violations = (
                 FlextInfraWorkspaceEnvironmentContracts.envrc_contract_violations(
@@ -57,7 +58,8 @@ class TestsFlextInfraDirenvGate:
             )
             tm.that(len(violations), eq=3)
 
-        def test_guarded_direnv_dir_reads_pass(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_guarded_direnv_dir_reads_pass(tmp_path: Path) -> None:
             """Guarded reads keep working under strict_env."""
             violations = (
                 FlextInfraWorkspaceEnvironmentContracts.envrc_contract_violations(
@@ -67,7 +69,8 @@ class TestsFlextInfraDirenvGate:
             )
             tm.that(violations, eq=())
 
-        def test_missing_literal_target_fails(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_missing_literal_target_fails(tmp_path: Path) -> None:
             """Literal source_env and watch_file targets must exist."""
             (tmp_path / "present.envrc").write_text("export OK=1\n", encoding="utf-8")
             violations = (
@@ -79,7 +82,8 @@ class TestsFlextInfraDirenvGate:
             tm.that(len(violations), eq=1)
             tm.that("absent.envrc" in violations[0].message, eq=True)
 
-        def test_dynamic_targets_are_skipped(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_dynamic_targets_are_skipped(tmp_path: Path) -> None:
             """Runtime-derived targets cannot be validated statically."""
             violations = (
                 FlextInfraWorkspaceEnvironmentContracts.envrc_contract_violations(
@@ -152,7 +156,8 @@ class TestsFlextInfraDirenvGate:
             )
             tm.that(normalized, eq="")
 
-        def test_normalizer_removes_unterminated_section(self) -> None:
+        @staticmethod
+        def test_normalizer_removes_unterminated_section() -> None:
             """A truncated managed section never leaks its body."""
             normalized = FlextInfraWorkspaceEnvironmentContracts.envrc_local_normalized(
                 "# === SECTION: Gas City Beads activation (managed) ===\n"
@@ -161,7 +166,8 @@ class TestsFlextInfraDirenvGate:
             )
             tm.that(normalized, eq="")
 
-        def test_normalizer_keeps_clean_content_verbatim(self) -> None:
+        @staticmethod
+        def test_normalizer_keeps_clean_content_verbatim() -> None:
             """Already-clean overrides round-trip unchanged."""
             normalized = FlextInfraWorkspaceEnvironmentContracts.envrc_local_normalized(
                 "export CUSTOM_OVERRIDE=1\nPATH_add bin\n",
@@ -185,7 +191,8 @@ class TestsFlextInfraDirenvGate:
                 eq=True,
             )
 
-        def test_clean_local_content_passes(self) -> None:
+        @staticmethod
+        def test_clean_local_content_passes() -> None:
             """Custom overrides carry no violations."""
             violations = (
                 FlextInfraWorkspaceEnvironmentContracts.envrc_local_contract_violations(
@@ -214,7 +221,8 @@ class TestsFlextInfraDirenvGate:
                 eq={"DIRENV_CONTRACT"},
             )
 
-        def test_gate_passes_clean_local_overrides(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_gate_passes_clean_local_overrides(tmp_path: Path) -> None:
             """Clean local overrides keep the gate green."""
             _ = (tmp_path / c.Infra.ENVRC_FILENAME).write_text(
                 "export OK=1\n",
@@ -230,7 +238,8 @@ class TestsFlextInfraDirenvGate:
     class TestsDirenvGate:
         """Fail-closed gate behavior over the two enforcement stages."""
 
-        def test_workspace_without_envrc_cannot_pass(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_workspace_without_envrc_cannot_pass(tmp_path: Path) -> None:
             """A selected gate with no inputs cannot establish acceptance."""
             execution = FlextInfraDirenvGate(tmp_path).check(
                 tmp_path,
@@ -242,7 +251,8 @@ class TestsFlextInfraDirenvGate:
                 eq=["direnv: no check targets were collected"],
             )
 
-        def test_contract_violation_fails_before_smoke(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_contract_violation_fails_before_smoke(tmp_path: Path) -> None:
             """The static lint fails the gate before the unapproved smoke runs."""
             _ = (tmp_path / c.Infra.ENVRC_FILENAME).write_text(
                 'checkout_root="${DIRENV_DIR#-}"\n',
@@ -258,7 +268,8 @@ class TestsFlextInfraDirenvGate:
                 eq=["DIRENV_CONTRACT"],
             )
 
-        def test_activation_smoke_passes(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_activation_smoke_passes(tmp_path: Path) -> None:
             """An approved clean envrc passes through a real direnv exec."""
             _ = (tmp_path / c.Infra.ENVRC_FILENAME).write_text(
                 "export OK=1\n",
@@ -268,7 +279,8 @@ class TestsFlextInfraDirenvGate:
             tm.that(execution.result.passed, eq=True)
             tm.that(execution.issues, eq=())
 
-        def test_activation_smoke_fails_loud(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_activation_smoke_fails_loud(tmp_path: Path) -> None:
             """An unapproved envrc fails real activation with direnv's own error."""
             _ = (tmp_path / c.Infra.ENVRC_FILENAME).write_text(
                 "export OK=1\n",

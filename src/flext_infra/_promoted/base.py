@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .dispatch import FlextInfraPromotedDispatch
+from flext_infra._promoted.dispatch import FlextInfraPromotedDispatch
 
 
 class FlextInfraPromotedBase(FlextInfraPromotedDispatch):

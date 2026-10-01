@@ -19,8 +19,8 @@ from tests import c, u
 # ceiling, so a real hang still aborts at the declared wall.
 @pytest.mark.slow
 class TestsFlextInfraCodegenManifestlessExisting:
+    @staticmethod
     def test_existing_root_uses_pep621_metadata_for_managed_artifacts(
-        self,
         infra_git_repo: Path,
     ) -> None:
         root = infra_git_repo
@@ -166,8 +166,8 @@ class TestsFlextInfraCodegenManifestlessExisting:
             eq=(),
         )
 
+    @staticmethod
     def test_root_distribution_owns_its_dependency_profile(
-        self,
         tmp_path: Path,
     ) -> None:
         """The tree's root declares no flext runtime dependency and still conforms.

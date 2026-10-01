@@ -38,7 +38,8 @@ class TestsFlextInfraPlanCollection:
             ),
         )
 
-    def test_yaml_shaped_configuration_parses_at_the_typed_boundary(self) -> None:
+    @staticmethod
+    def test_yaml_shaped_configuration_parses_at_the_typed_boundary() -> None:
         config = m.Infra.PlanCollectionConfig.model_validate({
             "enabled": True,
             "canonical_dir": "docs/plans",
@@ -75,7 +76,8 @@ class TestsFlextInfraPlanCollection:
         with pytest.raises(ValueError, match="requires at least one source"):
             m.Infra.PlanCollectionConfig(enabled=True, canonical_dir=Path("docs/plans"))
 
-    def test_yaml_sequence_fields_reject_scalar_strings(self) -> None:
+    @staticmethod
+    def test_yaml_sequence_fields_reject_scalar_strings() -> None:
         with pytest.raises(ValueError, match="valid tuple"):
             m.Infra.PlanCollectionConfig.model_validate({
                 "enabled": True,

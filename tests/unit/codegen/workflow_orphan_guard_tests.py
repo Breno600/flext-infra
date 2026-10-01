@@ -54,7 +54,8 @@ class TestsFlextInfraWorkflowOrphanGuard:
         """
         tm.that("codeql.yml" in self._declared_workflows(), eq=False)
 
-    def test_ci_matrix_uses_only_canonical_profiles(self) -> None:
+    @staticmethod
+    def test_ci_matrix_uses_only_canonical_profiles() -> None:
         """ci-matrix is projected for workspace and standalone repositories."""
         entries = tuple(
             entry

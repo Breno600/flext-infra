@@ -7,8 +7,9 @@ from contextlib import ExitStack, contextmanager
 from pathlib import Path
 
 from flext_infra import c, m, t, u
-
-from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles as files
+from flext_infra.codegen._mise_artifacts_files import (
+    FlextInfraMiseArtifactsFiles as files,
+)
 
 
 class FlextInfraCodegenFileLeases:

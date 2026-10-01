@@ -370,7 +370,9 @@ class FlextInfraEnsurePackagingPhase:
             topology.planned_data_files,
         )
         data_excludes = self.resolve_data_excludes(
-            project_dir, data_paths, topology.packaged_data_excludes
+            project_dir,
+            data_paths,
+            topology.packaged_data_excludes,
         )
         return u.Infra.apply_toml_phases(
             payload,

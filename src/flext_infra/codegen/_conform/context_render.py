@@ -6,10 +6,14 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from flext_core import r
-
-from ... import c, config, m, p, t, u
-from ...deps import FlextInfraEnsurePackagingPhase, FlextInfraEnsureRuffConfigPhase
-from .pyproject_policy import FlextInfraCodegenConformPyprojectPolicy
+from flext_infra import c, config, m, p, t, u
+from flext_infra.codegen._conform.pyproject_policy import (
+    FlextInfraCodegenConformPyprojectPolicy,
+)
+from flext_infra.deps import (
+    FlextInfraEnsurePackagingPhase,
+    FlextInfraEnsureRuffConfigPhase,
+)
 
 
 class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPolicy):
@@ -362,9 +366,9 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 # The in-place pyproject edit and this render read the same
                 # fleet exemption map, scoped to the project.
                 ruff_per_file_ignores=(
-                    FlextInfraEnsureRuffConfigPhase.project_per_file_ignores(
+                    FlextInfraEnsureRuffConfigPhase.compose_per_file_ignores(
                         repository_root,
-                        config.Infra.tooling.tools.ruff.lint.per_file_ignores,
+                        global_ignores=config.Infra.tooling.tools.ruff.lint.per_file_ignores,
                     )
                 ),
                 environment_path_prepends=(codegen.toolchain.environment_path_prepends),
@@ -377,6 +381,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                     *packaged_data_paths.directories,
                 ),
                 packaged_data_files=packaged_data_paths.files,
+                packaged_data_excludes=project.packaged_data_excludes,
                 namespace_scan_dirs=project.namespace_scan_dirs,
                 workspace_integration=workspace.integration,
                 # Carry only the validated

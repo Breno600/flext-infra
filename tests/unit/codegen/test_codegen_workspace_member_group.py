@@ -17,8 +17,8 @@ from tests import u
 
 
 class TestsFlextInfraCodegenWorkspaceMemberGroup:
+    @staticmethod
     def test_workspace_root_group_survives_conform_at_a_fixed_point(
-        self,
         tmp_path: Path,
     ) -> None:
         """Real root conform declares every attached member and converges."""

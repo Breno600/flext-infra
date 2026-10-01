@@ -13,7 +13,8 @@ from tests import u
 class TestsFlextInfraWorktreeAddIsUnprovisioned:
     """ADD materializes a checkout only; it never runs the lane's own setup."""
 
-    def test_worktree_add_does_not_run_setup(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_worktree_add_does_not_run_setup(tmp_path: Path) -> None:
         repository = tmp_path / "repository"
         repository.mkdir()
         (repository / "pyproject.toml").write_text(

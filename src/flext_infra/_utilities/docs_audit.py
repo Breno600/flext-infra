@@ -6,13 +6,16 @@ import re
 from typing import TYPE_CHECKING
 
 from flext_infra import c, config, m
-
-from ._docs_audit_detectors import FlextInfraUtilitiesDocsAuditDetectorsMixin
-from ._docs_command_contract import FlextInfraUtilitiesDocsCommandContractMixin
-from ._docs_github_links import FlextInfraUtilitiesDocsGithubLinks
-from .docs import FlextInfraUtilitiesDocs
-from .docs_api import FlextInfraUtilitiesDocsApi
-from .docs_scope import FlextInfraUtilitiesDocsScope
+from flext_infra._utilities._docs_audit_detectors import (
+    FlextInfraUtilitiesDocsAuditDetectorsMixin,
+)
+from flext_infra._utilities._docs_command_contract import (
+    FlextInfraUtilitiesDocsCommandContractMixin,
+)
+from flext_infra._utilities._docs_github_links import FlextInfraUtilitiesDocsGithubLinks
+from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
+from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
+from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -83,7 +86,7 @@ class FlextInfraUtilitiesDocsAudit(
     def docs_generated_api_reference_path(relative_docs_path: str) -> bool:
         """Return whether a docs path is owned by generated API reference."""
         return relative_docs_path.startswith(
-            "api-reference/generated/"
+            "api-reference/generated/",
         ) and relative_docs_path.endswith(".md")
 
     @staticmethod
@@ -92,7 +95,8 @@ class FlextInfraUtilitiesDocsAudit(
         if not scope.package_name:
             return set()
         contract = FlextInfraUtilitiesDocsApi.public_contract(
-            scope.path, scope.package_name
+            scope.path,
+            scope.package_name,
         )
         names: set[str] = set()
         for key in ("exports", "public_symbols"):
@@ -111,7 +115,8 @@ class FlextInfraUtilitiesDocsAudit(
         for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
             rel = md_file.relative_to(scope.path).as_posix()
             content = md_file.read_text(
-                encoding=c.Cli.ENCODING_DEFAULT, errors=c.Infra.IGNORE
+                encoding=c.Cli.ENCODING_DEFAULT,
+                errors=c.Infra.IGNORE,
             )
             in_fenced_code = False
             for number, line in enumerate(content.splitlines(), start=1):
@@ -123,7 +128,7 @@ class FlextInfraUtilitiesDocsAudit(
                     continue
                 clean_line = FlextInfraUtilitiesDocsAudit.docs_strip_inline_code(line)
                 for raw in FlextInfraUtilitiesDocsAudit.docs_markdown_link_targets(
-                    clean_line
+                    clean_line,
                 ):
                     target = FlextInfraUtilitiesDocsAudit.docs_normalize_link(raw)
                     if re.match(
@@ -139,7 +144,7 @@ class FlextInfraUtilitiesDocsAudit(
                                     f"line {number}: cross-project links require an "
                                     f"absolute repository URL -> {raw}"
                                 ),
-                            )
+                            ),
                         )
                         continue
                     if not target or target.startswith("#"):
@@ -147,12 +152,16 @@ class FlextInfraUtilitiesDocsAudit(
                     if FlextInfraUtilitiesDocs.docs_is_external(target):
                         issues.extend(
                             FlextInfraUtilitiesDocsGithubLinks.docs_github_link_issues(
-                                file=rel, line_number=number, raw=raw, target=target
-                            )
+                                file=rel,
+                                line_number=number,
+                                raw=raw,
+                                target=target,
+                            ),
                         )
                         continue
                     if FlextInfraUtilitiesDocsAudit.docs_should_skip_target(
-                        raw, target
+                        raw,
+                        target,
                     ):
                         continue
                     if not (md_file.parent / target).resolve().exists():
@@ -162,7 +171,7 @@ class FlextInfraUtilitiesDocsAudit(
                                 issue_type="broken_link",
                                 severity="high",
                                 message=f"line {number}: target not found -> {raw}",
-                            )
+                            ),
                         )
         return issues
 
@@ -188,7 +197,8 @@ class FlextInfraUtilitiesDocsAudit(
                 FlextInfraUtilitiesDocsAudit.docs_generated_api_reference_path(rel)
             )
             text = md_file.read_text(
-                encoding=c.Cli.ENCODING_DEFAULT, errors=c.Infra.IGNORE
+                encoding=c.Cli.ENCODING_DEFAULT,
+                errors=c.Infra.IGNORE,
             )
             for token in tokens:
                 if token not in text:
@@ -201,7 +211,7 @@ class FlextInfraUtilitiesDocsAudit(
                         issue_type="stale_symbol",
                         severity="medium",
                         message=f"contains `{token}`",
-                    )
+                    ),
                 )
         return issues
 
@@ -217,7 +227,7 @@ class FlextInfraUtilitiesDocsAudit(
             metric_lines.append(
                 "Docstring coverage: "
                 f"{docstring_coverage.percent}% "
-                f"({docstring_coverage.documented}/{docstring_coverage.checked})"
+                f"({docstring_coverage.documented}/{docstring_coverage.checked})",
             )
         return [
             "# Docs Audit Report",

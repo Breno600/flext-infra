@@ -28,10 +28,12 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
     return tuple(sorted(normalized))
 """
 
-    def _ctx(self, root: Path) -> m.Infra.GateContext:
+    @staticmethod
+    def _ctx(root: Path) -> m.Infra.GateContext:
         return m.Infra.GateContext(repository_root=root, reports_dir=root / "reports")
 
-    def test_registry_exposes_the_canonical_gate(self) -> None:
+    @staticmethod
+    def test_registry_exposes_the_canonical_gate() -> None:
         gate = FlextInfraGateRegistry.default().create("duplication", Path.cwd())
         tm.that(isinstance(gate, FlextInfraDuplicationGate), eq=True)
 

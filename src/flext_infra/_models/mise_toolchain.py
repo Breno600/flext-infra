@@ -231,7 +231,7 @@ class FlextInfraModelsMiseToolchain:
                     "MISE_PYTHON_COMPILE. False restricts Python resolution "
                     "and installation to precompiled builds. "
                     "Override toolchain.python_compile."
-                )
+                ),
             ),
         ]
         npm_package_manager: Annotated[
@@ -274,7 +274,7 @@ class FlextInfraModelsMiseToolchain:
                 description=(
                     "Mise selector for prettier. Override toolchain.prettier_selector; "
                     "never the .mise.toml key."
-                )
+                ),
             ),
         ]
         prettier_version: Annotated[
@@ -310,7 +310,7 @@ class FlextInfraModelsMiseToolchain:
                 description=(
                     "Taplo release selector; the committed mise.lock pins the "
                     "version generation authenticates"
-                )
+                ),
             ),
         ]
         ast_grep_selector: Annotated[

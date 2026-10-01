@@ -17,14 +17,16 @@ from flext_infra import u
 class TestsFlextInfraInfraVersionCore:
     """Validate public package metadata against canonical public utilities."""
 
-    def test_package_version_matches_project_metadata(self) -> None:
+    @staticmethod
+    def test_package_version_matches_project_metadata() -> None:
         metadata = tm.ok(
             u.Infra.read_project_metadata_result(Path(__file__).resolve().parents[2]),
         )
 
         tm.that(infra_pkg.__version__, eq=metadata.project.version)
 
-    def test_package_version_info_matches_current_workspace_semver_prefix(self) -> None:
+    @staticmethod
+    def test_package_version_info_matches_current_workspace_semver_prefix() -> None:
         version_result = u.Infra.current_workspace_version(
             Path(__file__).resolve().parents[2],
         )
@@ -34,6 +36,7 @@ class TestsFlextInfraInfraVersionCore:
         tm.ok(parse_result)
         tm.that(infra_pkg.__version_info__[:3], eq=parse_result.value)
 
-    def test_package_version_fields_have_public_runtime_types(self) -> None:
+    @staticmethod
+    def test_package_version_fields_have_public_runtime_types() -> None:
         tm.that(infra_pkg.__version__, is_=str)
         tm.that(infra_pkg.__version_info__, is_=tuple)

@@ -8,9 +8,10 @@ from typing import TYPE_CHECKING
 from flext_cli import r, u
 
 from flext_infra import c, m, t
-
-from ..dependencies import FlextInfraUtilitiesDependencies
-from .uv_sources import FlextInfraUtilitiesPyprojectUvSources
+from flext_infra._utilities._pyproject.uv_sources import (
+    FlextInfraUtilitiesPyprojectUvSources,
+)
+from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -119,7 +120,9 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         if namespace_scope.failure:
             return r[str].from_failure(namespace_scope)
         sources_result = cls._sync_uv_sources(
-            source, resolution=uv_resolution
+            source,
+            resolution=uv_resolution,
+            candidate_sources=candidate_sources,
         )
         if sources_result.failure:
             return r[str].from_failure(sources_result)

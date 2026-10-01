@@ -7,8 +7,7 @@ from typing import TYPE_CHECKING, override
 from flext_core import r
 from flext_infra import c, config, m, p, s, u
 from flext_infra.codegen.conform import FlextInfraCodegenConform
-
-from .detector import FlextInfraWorkspaceDetector
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
     from pathlib import Path

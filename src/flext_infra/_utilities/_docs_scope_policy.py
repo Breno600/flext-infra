@@ -8,9 +8,12 @@ from pathlib import Path
 from flext_cli import u
 
 from flext_infra import c, t
-
-from ._docs_scope_state import FlextInfraUtilitiesDocsScopeStateMixin
-from .workspace_manifest import FlextInfraUtilitiesWorkspaceManifest
+from flext_infra._utilities._docs_scope_state import (
+    FlextInfraUtilitiesDocsScopeStateMixin,
+)
+from flext_infra._utilities.workspace_manifest import (
+    FlextInfraUtilitiesWorkspaceManifest,
+)
 
 
 class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateMixin):

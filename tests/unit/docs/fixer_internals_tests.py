@@ -17,8 +17,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraFixerInternals:
     """Public utility tests used by docs fixing flows."""
 
+    @staticmethod
     def test_docs_maybe_fix_link_adds_md_suffix_when_target_exists(
-        self,
         tmp_path: Path,
     ) -> None:
         docs_dir = tmp_path / "docs"
@@ -31,13 +31,15 @@ class TestsFlextInfraFixerInternals:
 
         tm.that(fixed, eq="guide.md")
 
-    def test_docs_maybe_fix_link_rejects_http(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_docs_maybe_fix_link_rejects_http(tmp_path: Path) -> None:
         target = f"{c.Infra.DOCS_INSECURE_WEB_SCHEME}://example.invalid"
 
         with pytest.raises(ValueError, match="use HTTPS"):
             u.Infra.docs_maybe_fix_link(tmp_path / "README.md", target)
 
-    def test_anchorize_and_build_toc_are_public_helpers(self) -> None:
+    @staticmethod
+    def test_anchorize_and_build_toc_are_public_helpers() -> None:
         tm.that(u.Infra.anchorize("Hello World"), eq="hello-world")
         tm.that(
             u.Infra.build_toc("# Main\n\nNo sections here.\n"),
@@ -72,8 +74,8 @@ class TestsFlextInfraFixerInternals:
         tm.that(fixed, has=f"\n```{separator}## After The Block")
         tm.that(fixed, has="## After The Block")
 
+    @staticmethod
     def test_fix_updates_docs_readme_when_apply_is_enabled(
-        self,
         tmp_path: Path,
     ) -> None:
         workspace = u.Tests.create_docs_workspace(tmp_path, include_fixable_link=True)

@@ -28,6 +28,9 @@ Infra:
       # writes the committed uv.lock and mise.lock; setup, gen, and fmt install
       # frozen from those locks.
       python_version: "3.13"
+      # The runtime tool is pinned to the newest Python patch whose lock
+      # resolves on every declared platform; the language floor above stays a
+      # minor line.
       python_tool_version: "3.13.15"
       # Supply-chain cooldown (operator 2026-10-01): ONE value for every
       # resolver — the generated mise `minimum_release_age` (so `make upg`
@@ -354,9 +357,8 @@ Infra:
       # formats — without it the ruff-format surface has no verb home and
       # drift survives a green check until `make mod` validates.
       fmt_gates: [format, markdown-format]
-      # One filename and the root-relative runner paths; the generated Makefile
-      # places the database in the external cache under the declared project
-      # name, so every checkout and worktree of a project shares one history.
+      # One filename and the root-relative runner paths; the runner places the
+      # database in platformdirs' external per-worktree cache.
       testmon_cache:
         database_filename: .testmondata
         database_environment_variable: TESTMON_DATAFILE
@@ -423,7 +425,6 @@ Infra:
         # the project-owned timeout budget (tools.mypy.timeout_seconds) makes
         # it runnable on the runner.
         # pyrefly stays local-only (fast; pyright already covers CI).
-        local_check_gates: [pyrefly]
       # Git-hook stages are disabled by default;
       # the workflow below still declares stage membership so re-enabling is a
       # one-key change, case by case. CI owns read-only setup, generation drift,
@@ -439,12 +440,9 @@ Infra:
         - {verb: fmt, contexts: [local, pre_commit]}
         - {verb: fix, contexts: [local, pre_commit]}
         - {verb: check, contexts: [local, ci, pre_push, pre_commit]}
-      # make test runs locally, on pre-push and in CI, always through the
-      # persistent testmon database (tracker key
-      # operator-ruling-2026-10-01-testmon-make-test-only). The CI test-only
-      # steps (testmon cache, test reports) render only while a test row
-      # declares the ci context. Pre-commit runs no tests, and test-full is a
-      # local-only verb with no workflow row.
+      # CI also runs the incremental suite with the persistent testmon cache.
+      # The full suite remains a separate local verb that first runs this
+      # incremental phase and then exercises the complete inventory.
         - {verb: test, contexts: [local, ci, pre_push]}
       # Artifacts `make clean` removes. Read by Makefile.j2 for the cache
       # sweep and the root-level directory/file lists.
@@ -532,7 +530,7 @@ Infra:
         - name: test
           description: Run incremental tests through the persistent testmon cache.
         - name: test-full
-          description: Run every test locally, including external and CI-excluded markers, without testmon and without any time limit.
+          description: Run incremental then all tests, including external and CI-excluded markers, through the same persistent testmon cache.
         - name: fmt
           description: Apply ruff format --preview and every declared formatter gate. Ruff is the rule; change code, never ruff.
         - name: fix
@@ -570,6 +568,10 @@ Infra:
           description: Materialize the declared package initializer graph.
         - name: mod
           description: Apply the declared structural codemods; committed rule-test snapshots are verified, never rewritten.
+        - name: mod-text
+          description: Apply the declared Sed text rules with exact receipts and guarded publication.
+        - name: mod-text-candidate
+          description: Apply declared Sed text rules to the configured candidate workspace.
         # The explicit snapshot regeneration: `mod` only verifies
         # snapshots, so a changed rule output lands as a reviewed commit.
         - name: mod-snapshots

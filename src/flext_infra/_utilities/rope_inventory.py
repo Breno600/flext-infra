@@ -6,11 +6,10 @@ from operator import itemgetter
 from pathlib import Path
 
 from flext_infra import c, m, p, t
-
-from .namespace import FlextInfraUtilitiesCodegenNamespace
-from .rope_core import FlextInfraUtilitiesRopeCore
-from .rope_imports import FlextInfraUtilitiesRopeImports
-from .rope_runtime import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities.rope_imports import FlextInfraUtilitiesRopeImports
+from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeInventory:

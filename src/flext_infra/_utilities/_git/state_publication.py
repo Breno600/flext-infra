@@ -9,9 +9,10 @@ from git import GitCommandError
 
 from flext_core import r
 from flext_infra import c, m
-
-from .remote import FlextInfraUtilitiesGitRemote
-from .state_checkpoint import FlextInfraUtilitiesGitStateCheckpointMixin
+from flext_infra._utilities._git.remote import FlextInfraUtilitiesGitRemote
+from flext_infra._utilities._git.state_checkpoint import (
+    FlextInfraUtilitiesGitStateCheckpointMixin,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p

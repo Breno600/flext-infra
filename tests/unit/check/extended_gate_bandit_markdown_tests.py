@@ -34,7 +34,8 @@ class TestsFlextInfraBanditAndMarkdownGates:
         dict(config.Infra.tooling.tools.markdown.rules),
     ).unwrap()
 
-    def test_bandit_reports_real_finding(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_bandit_reports_real_finding(tmp_path: Path) -> None:
         project_dir = u.Tests.mk_project(tmp_path, "bandit-project")
         (project_dir / c.Infra.DEFAULT_SRC_DIR).mkdir()
         (project_dir / c.Infra.DEFAULT_SRC_DIR / "main.py").write_text(
@@ -52,8 +53,8 @@ class TestsFlextInfraBanditAndMarkdownGates:
 
         tm.that(result.issues[0].code, eq="B101")
 
+    @staticmethod
     def test_bandit_without_source_tree_has_no_audit_surface(
-        self,
         tmp_path: Path,
     ) -> None:
         """A project without ``src`` does not select bandit at all.
@@ -69,7 +70,8 @@ class TestsFlextInfraBanditAndMarkdownGates:
         tm.that(result.result.passed, eq=False)
         tm.that(" | ".join(result.result.errors), has="no check targets were collected")
 
-    def test_bandit_scans_large_tree_with_sanitized_path(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_bandit_scans_large_tree_with_sanitized_path(tmp_path: Path) -> None:
         """The workspace interpreter runs Bandit without any PATH-provided tool."""
         project_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
         for index in range(51):
@@ -147,8 +149,8 @@ class TestsFlextInfraBanditAndMarkdownGates:
                 eq=[str(c.Infra.GateSeverity.ERROR.value)] * len(codes),
             )
 
+    @staticmethod
     def test_markdown_gate_is_not_selected_without_markdown(
-        self,
         tmp_path: Path,
     ) -> None:
         """A project without governed Markdown never selects the gate."""
@@ -161,7 +163,8 @@ class TestsFlextInfraBanditAndMarkdownGates:
             eq=False,
         )
 
-    def test_bandit_is_not_selected_without_a_src_tree(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_bandit_is_not_selected_without_a_src_tree(tmp_path: Path) -> None:
         """A project without a ``src`` package surface never selects bandit."""
         bare = u.Tests.mk_project(tmp_path, "bandit-bare")
         packaged = u.Tests.mk_project(tmp_path, "bandit-packaged", with_src=True)
@@ -248,8 +251,8 @@ class TestsFlextInfraBanditAndMarkdownGates:
 
         tm.that(result.issues[0].file, eq=".github/prompts/project.md")
 
+    @staticmethod
     def test_markdown_uses_uv_managed_tool_with_sanitized_path(
-        self,
         tmp_path: Path,
     ) -> None:
         """Prove the real gate cannot bind a host or mise-provided executable."""
@@ -268,8 +271,8 @@ class TestsFlextInfraBanditAndMarkdownGates:
         tm.that(result.result.passed, eq=True)
         tm.that(result.issues, eq=())
 
+    @staticmethod
     def test_markdown_accepts_existing_nested_relative_link(
-        self,
         tmp_path: Path,
     ) -> None:
         """Exercise the real linter's path resolution at the project boundary."""
@@ -291,8 +294,8 @@ class TestsFlextInfraBanditAndMarkdownGates:
         tm.that(result.result.passed, eq=True)
         tm.that(result.issues, eq=())
 
+    @staticmethod
     def test_markdown_resolves_same_link_per_source_directory(
-        self,
         tmp_path: Path,
     ) -> None:
         """Do not let one missing target poison an equal valid relative link."""
@@ -318,8 +321,8 @@ class TestsFlextInfraBanditAndMarkdownGates:
         tm.that(len(result.issues), eq=1)
         tm.that(result.issues[0].file, eq="invalid/README.md")
 
+    @staticmethod
     def test_markdown_rechecks_link_target_state_without_cache(
-        self,
         tmp_path: Path,
     ) -> None:
         """A cached source hash must not hide a removed relative-link target."""
@@ -340,7 +343,8 @@ class TestsFlextInfraBanditAndMarkdownGates:
         tm.that(second.result.passed, eq=False)
         tm.that(second.issues[0].code, eq="MD057")
 
-    def test_markdown_fix_applies_the_auto_fixable_rules(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_markdown_fix_applies_the_auto_fixable_rules(tmp_path: Path) -> None:
         """`make fix` repairs the markdown findings that check blocks on.
 
         The markdown gate reports MD009/MD012 with the linter's own

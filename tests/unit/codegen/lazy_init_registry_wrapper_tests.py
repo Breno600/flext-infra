@@ -63,7 +63,8 @@ class TestsFlextInfraLazyInitCleanup:
             eq=True,
         )
 
-    def test_apply_removes_closed_obsolete_root_support(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_apply_removes_closed_obsolete_root_support(tmp_path: Path) -> None:
         """Apply removes every retired root support file."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         u.Tests.write_lazy_init_namespace_module(
@@ -85,8 +86,8 @@ class TestsFlextInfraLazyInitCleanup:
         tm.that(obsolete_part.exists(), eq=False)
         tm.that(tuple(obsolete_package.iterdir()), eq=())
 
+    @staticmethod
     def test_check_reports_obsolete_root_support_without_removing(
-        self,
         tmp_path: Path,
     ) -> None:
         """Check-only records retired files and preserves their bytes."""
@@ -106,7 +107,8 @@ class TestsFlextInfraLazyInitCleanup:
         tm.that(obsolete_module.is_file(), eq=True)
         tm.that(str(obsolete_module) in service.modified_files, eq=True)
 
-    def test_obsolete_root_support_cleanup_fails_closed(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_obsolete_root_support_cleanup_fails_closed(tmp_path: Path) -> None:
         """Reject unexpected content before deleting any retired registry."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         u.Tests.write_lazy_init_namespace_module(

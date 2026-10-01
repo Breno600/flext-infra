@@ -22,8 +22,8 @@ if TYPE_CHECKING:
 
 
 class TestsFlextInfraCodegenScaffolder:
+    @staticmethod
     def _create_test_project(
-        self,
         tmp_path: Path,
         *,
         with_all_modules: bool = True,
@@ -34,8 +34,8 @@ class TestsFlextInfraCodegenScaffolder:
         )
         return project
 
+    @staticmethod
     def _project_info(
-        self,
         project: Path,
         *,
         package_name: str = "test_project",

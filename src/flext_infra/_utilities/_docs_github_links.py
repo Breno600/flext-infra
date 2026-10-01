@@ -14,11 +14,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import c, m, t
+from flext_infra._config import config
 
 # Concrete-owner imports: this module resolves during the root's lazy ``u``
 # export, when the root namespace is still initializing — a root from-import
 # would re-enter the partial namespace and fail.
-from .._config import config
 
 if TYPE_CHECKING:
     from flext_infra import FlextInfraConfig
@@ -148,7 +148,8 @@ class FlextInfraUtilitiesDocsGithubLinks:
         if repo is None:
             return None
         path = FlextInfraUtilitiesDocsGithubLinks.docs_github_governed_path(
-            refpath, repo.branch
+            refpath,
+            repo.branch,
         )
         # A foreign ref has no decidable ref/path boundary: the audit reports it
         # as a wrong branch, and no rewrite is guessed.
@@ -176,7 +177,8 @@ class FlextInfraUtilitiesDocsGithubLinks:
         if repo is None:
             return None
         path = FlextInfraUtilitiesDocsGithubLinks.docs_github_governed_path(
-            match.group("refpath"), repo.branch
+            match.group("refpath"),
+            repo.branch,
         )
         if path is None:
             return None
@@ -233,7 +235,8 @@ class FlextInfraUtilitiesDocsGithubLinks:
         if (
             repo is not None
             and FlextInfraUtilitiesDocsGithubLinks.docs_github_governed_path(
-                match.group("refpath"), repo.branch
+                match.group("refpath"),
+                repo.branch,
             )
             is None
         ):

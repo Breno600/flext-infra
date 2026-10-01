@@ -15,7 +15,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraDepsDetectionClassify:
     """Test flext infra deps detection classify behavior."""
 
-    def test_classify_dep001(self) -> None:
+    @staticmethod
+    def test_classify_dep001() -> None:
         """Verify classify dep001."""
         service = FlextInfraDependencyDetectionService()
         issues: t.SequenceOf[t.JsonMapping] = [
@@ -23,7 +24,8 @@ class TestsFlextInfraDepsDetectionClassify:
         ]
         tm.that(len(service.classify_issues(issues).dep001), eq=1)
 
-    def test_classify_dep002(self) -> None:
+    @staticmethod
+    def test_classify_dep002() -> None:
         """Verify classify dep002."""
         service = FlextInfraDependencyDetectionService()
         issues: t.SequenceOf[t.JsonMapping] = [
@@ -31,7 +33,8 @@ class TestsFlextInfraDepsDetectionClassify:
         ]
         tm.that(len(service.classify_issues(issues).dep002), eq=1)
 
-    def test_classify_dep003(self) -> None:
+    @staticmethod
+    def test_classify_dep003() -> None:
         """Verify classify dep003."""
         service = FlextInfraDependencyDetectionService()
         issues: t.SequenceOf[t.JsonMapping] = [
@@ -39,7 +42,8 @@ class TestsFlextInfraDepsDetectionClassify:
         ]
         tm.that(len(service.classify_issues(issues).dep003), eq=1)
 
-    def test_classify_dep004(self) -> None:
+    @staticmethod
+    def test_classify_dep004() -> None:
         """Verify classify dep004."""
         service = FlextInfraDependencyDetectionService()
         issues: t.SequenceOf[t.JsonMapping] = [
@@ -47,13 +51,15 @@ class TestsFlextInfraDepsDetectionClassify:
         ]
         tm.that(len(service.classify_issues(issues).dep004), eq=1)
 
-    def test_non_dict_error_skipped(self) -> None:
+    @staticmethod
+    def test_non_dict_error_skipped() -> None:
         """Verify non dict error skipped."""
         service = FlextInfraDependencyDetectionService()
         issues: t.SequenceOf[t.JsonMapping] = [{"error": "not-a-dict", "module": "foo"}]
         tm.that(len(service.classify_issues(issues).dep001), eq=0)
 
-    def test_missing_code_skipped(self) -> None:
+    @staticmethod
+    def test_missing_code_skipped() -> None:
         """Verify missing code skipped."""
         service = FlextInfraDependencyDetectionService()
         issues: t.SequenceOf[t.JsonMapping] = [
@@ -61,7 +67,8 @@ class TestsFlextInfraDepsDetectionClassify:
         ]
         tm.that(len(service.classify_issues(issues).dep001), eq=0)
 
-    def test_unknown_code_skipped(self) -> None:
+    @staticmethod
+    def test_unknown_code_skipped() -> None:
         """Verify unknown code skipped."""
         service = FlextInfraDependencyDetectionService()
         issues: t.SequenceOf[t.JsonMapping] = [
@@ -73,7 +80,8 @@ class TestsFlextInfraDepsDetectionClassify:
         tm.that(groups.dep003, eq=[])
         tm.that(groups.dep004, eq=[])
 
-    def test_multiple_issues(self) -> None:
+    @staticmethod
+    def test_multiple_issues() -> None:
         """Verify multiple issues."""
         service = FlextInfraDependencyDetectionService()
         issues: t.SequenceOf[t.JsonMapping] = [
@@ -85,13 +93,15 @@ class TestsFlextInfraDepsDetectionClassify:
         tm.that(len(groups.dep001), eq=2)
         tm.that(len(groups.dep002), eq=1)
 
-    def test_classify_issues_with_missing_error_field(self) -> None:
+    @staticmethod
+    def test_classify_issues_with_missing_error_field() -> None:
         """Verify classify issues with missing error field."""
         service = FlextInfraDependencyDetectionService()
         issues: t.SequenceOf[t.JsonMapping] = [{"module": "foo"}]
         tm.that(len(service.classify_issues(issues).dep001), eq=0)
 
-    def test_builds_report(self) -> None:
+    @staticmethod
+    def test_builds_report() -> None:
         """Verify builds report."""
         service = FlextInfraDependencyDetectionService()
         issues: t.SequenceOf[t.JsonMapping] = [
@@ -102,7 +112,8 @@ class TestsFlextInfraDepsDetectionClassify:
         tm.that(report.project, eq="test-project")
         tm.that(report.deptry.raw_count, eq=2)
 
-    def test_module_to_types_package_with_custom_limits(self) -> None:
+    @staticmethod
+    def test_module_to_types_package_with_custom_limits() -> None:
         """Verify module to types package with custom limits."""
         service = FlextInfraDependencyDetectionService()
         inner = FlextInfraDependencyDetectionService.to_infra_value({

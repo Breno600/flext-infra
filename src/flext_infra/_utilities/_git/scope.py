@@ -10,9 +10,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import c, m
-
-from .semantic_identity import FlextInfraUtilitiesGitSemanticIdentityMixin
-from .semantic_index import FlextInfraUtilitiesGitSemanticIndexMixin
+from flext_infra._utilities._git.semantic_identity import (
+    FlextInfraUtilitiesGitSemanticIdentityMixin,
+)
+from flext_infra._utilities._git.semantic_index import (
+    FlextInfraUtilitiesGitSemanticIndexMixin,
+)
 
 if TYPE_CHECKING:
     from flext_infra import t

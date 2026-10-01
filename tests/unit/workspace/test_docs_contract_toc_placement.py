@@ -10,7 +10,8 @@ from tests import u
 class TestsFlextInfraDocsContractTocPlacement:
     """Contract for managed TOC insertion relative to the document H1."""
 
-    def test_toc_is_inserted_after_h1_preceded_by_html_comment(self) -> None:
+    @staticmethod
+    def test_toc_is_inserted_after_h1_preceded_by_html_comment() -> None:
         """Keep the H1 first when an HTML comment banner precedes it.
 
         Generated API reference pages start with an ``AUTO-GENERATED`` banner
@@ -36,7 +37,8 @@ class TestsFlextInfraDocsContractTocPlacement:
         )
         tm.that(changed, eq=1)
 
-    def test_toc_without_h1_injects_documentation_heading(self) -> None:
+    @staticmethod
+    def test_toc_without_h1_injects_documentation_heading() -> None:
         """MD041: invent an H1 before TOC when the body has no level-1 heading."""
         content = "<!-- AUTO-GENERATED -->\n\n## Usage\n"
 
