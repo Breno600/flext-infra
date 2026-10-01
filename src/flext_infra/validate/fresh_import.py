@@ -194,7 +194,7 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
             self.repository_root, runtime_root=self.runtime_root
         )
         if not interpreter.is_file():
-            # A physical runtime environment beside the worktree (D-VENV) is
+            # A physical runtime environment beside the worktree is
             # the declared owner; a fresh CI checkout may not have it yet,
             # while its own ``.venv`` is provisioned by setup from the same
             # committed lock - the identical dependency set, so the probes

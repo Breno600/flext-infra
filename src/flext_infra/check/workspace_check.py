@@ -124,7 +124,7 @@ class FlextInfraWorkspaceChecker(
     ) -> p.Result[t.SequenceOf[m.Infra.CheckProjectTarget]]:
         """Resolve the selected projects; an omitted selection is this repository.
 
-        Every repository evaluates only itself (operator ruling 2026-09-29): an
+        Every repository evaluates only itself: an
         omitted ``--projects`` never widens to the declared members, and a root
         that is not a project fails loud through the topology owner.
         """

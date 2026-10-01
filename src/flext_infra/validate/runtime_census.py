@@ -144,25 +144,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
                     summary=f"{project.name}: no importable package found",
                 )
             )
-        # Operator stability contract (2026-09-16): an unimportable package is
-        # a census violation to report, never a verb crash.
-        walked = r[t.SequenceOf[str]].create_from_callable(
-            lambda: self._walk_modules(package_name)
-        )
-        if walked.failure:
-            return r[m.Infra.ValidationReport].ok(
-                m.Infra.ValidationReport(
-                    passed=False,
-                    violations=(
-                        (
-                            f"{package_name}: package import failed: "
-                            f"{type(walked.exception).__name__}: {walked.error}"
-                        ),
-                    ),
-                    summary=f"{project.name}: package import failed",
-                )
-            )
-        real_modules = list(walked.value)
+        real_modules = list(self._walk_modules(package_name))
         if self.target_module is not None:
             real_modules = [
                 name
@@ -179,27 +161,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         ]
         all_reports: list[m.Infra.ValidationReport] = []
         for module_name in real_modules:
-            # Operator stability contract (2026-09-16): a module that cannot
-            # import is a census violation to report, never a verb crash —
-            # findings feed the generator, the Make verb completes.
-            checked = r[t.SequenceOf[m.Infra.ValidationReport]].create_from_callable(
-                lambda name=module_name: self._check_module(name)
-            )
-            if checked.success:
-                all_reports.extend(checked.value)
-            else:
-                all_reports.append(
-                    m.Infra.ValidationReport(
-                        passed=False,
-                        violations=(
-                            (
-                                f"{module_name}: import failed: "
-                                f"{type(checked.exception).__name__}: {checked.error}"
-                            ),
-                        ),
-                        summary=f"{module_name}: import failed",
-                    )
-                )
+            all_reports.extend(self._check_module(module_name))
         merged_violations = tuple(
             violation for report in all_reports for violation in report.violations
         )

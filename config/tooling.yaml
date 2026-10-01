@@ -307,35 +307,6 @@ Infra:
             # Examples are executable documentation loaded by path, not
             # importable modules, so module-name and shebang rules do not apply.
             "**/examples/**/*.py": [invalid-module-name, shebang-not-executable]
-            # Test suites: pytest idioms that are correct-by-design
-            # are exempted GLOBALLY at the codegen SSOT (operator P0, per-rule
-            # justified per UNIVERSAL_CORE r19 — never a blanket mask):
-            #  - assert: bare assertions are pytest's executable assertion
-            #    mechanism. Projects may adopt flext-tests matchers, but codegen
-            #    must remain valid for every generated and external consumer.
-            #  - undocumented-public-method/-function/-class: test methods,
-            #    helper functions, and TestsXxx container classes are structural,
-            #    not public API, so docstrings add no value.
-            #  - magic-value-comparison (PLR2004): tests compare literal
-            #    expected values; extracting every literal to a
-            #    named constant harms readability and is not real code debt.
-            #  - compare-to-empty-string (PLC1901): matcher calls can validate
-            #    an exact empty-string result directly.
-            # NOT exempted, and deliberately so: suspicious-subprocess-import
-            # (S404). u.Cli.run / run_raw / run_checked / run_live is the only
-            # canonical process boundary in FLEXT; importing subprocess directly
-            # — including in tests, to fake a runner — is a violation, not an
-            # idiom. A test fakes the CANONICAL runner, never subprocess itself.
-            # NOT exempted (real defects, fixed in test code): import-private-name
-            # (PLC2701) and private-member-access (SLF001) — tests must exercise the
-            # PUBLIC facade only (flext test public-only law).
-            "**/tests/**":
-              - assert
-              - compare-to-empty-string
-              - magic-value-comparison
-              - undocumented-public-class
-              - undocumented-public-function
-              - undocumented-public-method
             # Generated PEP 562 lazy facade roots intentionally re-export and
             # synthesize package members; only rules incompatible with that
             # canonical facade contract are excluded here.
