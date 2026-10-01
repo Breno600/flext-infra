@@ -28,7 +28,6 @@ if TYPE_CHECKING:
     from flext_infra import p, t
 
 
-
 class FlextInfraPythonVersionEnforcer(s[int]):
     """Service for enforcing Python version constraints across workspace.
 

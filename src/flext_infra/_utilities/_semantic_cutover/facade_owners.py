@@ -15,6 +15,8 @@ from functools import lru_cache
 from importlib.util import resolve_name
 from typing import TYPE_CHECKING
 
+from flext_infra import c
+
 from ..private_import_facades import FlextInfraUtilitiesPrivateImportFacades
 from ..rope_analysis import FlextInfraUtilitiesRopeAnalysis
 
@@ -22,10 +24,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from flext_infra import t
-
-#: The generated lazy publication binding, owned by the flext-core lazy engine
-#: (``install_lazy_exports`` writes it; ``_resolve`` reads it back).
-_LAZY_IMPORTS_TARGET = "_LAZY_IMPORTS"
 
 
 class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
@@ -139,7 +137,8 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
                 isinstance(node, ast.Assign | ast.AnnAssign)
                 and node.value is not None
                 and any(
-                    isinstance(bound, ast.Name) and bound.id == _LAZY_IMPORTS_TARGET
+                    isinstance(bound, ast.Name)
+                    and bound.id == c.Infra.LAZY_IMPORTS_BINDING
                     for bound in (
                         node.targets if isinstance(node, ast.Assign) else (node.target,)
                     )

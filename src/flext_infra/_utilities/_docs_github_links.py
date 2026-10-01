@@ -13,7 +13,7 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra import m, t
+from flext_infra import c, m, t
 
 # Concrete-owner imports: this module resolves during the root's lazy ``u``
 # export, when the root namespace is still initializing — a root from-import
@@ -22,14 +22,6 @@ from .._config import config
 
 if TYPE_CHECKING:
     from flext_infra import FlextInfraConfig
-
-_GITHUB_BLOB_TREE_RE = re.compile(
-    r"^https://github\.com/"
-    r"(?P<org>[^/]+)/(?P<repo>[^/]+)/"
-    r"(?P<kind>blob|tree)/"
-    r"(?P<branch>[^/]+)/"
-    r"(?P<path>.*)$"
-)
 
 
 class FlextInfraUtilitiesDocsGithubLinks:
@@ -82,7 +74,7 @@ class FlextInfraUtilitiesDocsGithubLinks:
     @staticmethod
     def docs_parse_github_doc_url(target: str) -> re.Match[str] | None:
         """Parse a github.com blob/tree documentation URL."""
-        return _GITHUB_BLOB_TREE_RE.match(target.strip())
+        return c.Infra.DOCS_GITHUB_BLOB_TREE_RE.match(target.strip())
 
     @staticmethod
     def docs_canonical_github_url(

@@ -22,7 +22,6 @@ if TYPE_CHECKING:
     from flext_infra import p, t
 
 
-
 class FlextInfraCleanService(s[int]):
     """Report or remove broken links below the managed workspace container."""
 

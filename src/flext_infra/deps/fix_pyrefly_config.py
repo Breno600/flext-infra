@@ -17,7 +17,6 @@ from ..base import FlextInfraServiceBase
 from ._pyrefly_fix_steps import FlextInfraConfigFixerSteps
 
 
-
 class FlextInfraConfigFixer(FlextInfraConfigFixerSteps, FlextInfraServiceBase[bool]):
     """Fix pyrefly configuration across workspace projects."""
 
