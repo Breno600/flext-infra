@@ -31,7 +31,8 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
 
     @staticmethod
     def _inheritance_bound_to_owner(
-        classes: t.MappingKV[str, ast.ClassDef], owner_name: str
+        classes: t.MappingKV[str, ast.ClassDef],
+        owner_name: str,
     ) -> frozenset[str]:
         """Return top-level classes an owner cannot contain.
 
@@ -67,7 +68,10 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
 
     @classmethod
     def _class_nesting_definitions(
-        cls, rope_workspace: p.Infra.RopeWorkspaceDsl, file_path: Path, source: str
+        cls,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
+        file_path: Path,
+        source: str,
     ) -> p.Result[t.StrMapping]:
         """Map each loose top-level class to the owner Rope's module policy elects."""
         planned = r[t.StrMapping]
@@ -91,7 +95,7 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         if owner is None or owner not in classes:
             return planned.fail(
                 "class-nesting requires exactly one declared module owner "
-                f"for {convention.module_name}; discovered: {', '.join(classes)}"
+                f"for {convention.module_name}; discovered: {', '.join(classes)}",
             )
         bound = cls._inheritance_bound_to_owner(classes, owner)
         return planned.ok({
@@ -100,7 +104,9 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
 
     @classmethod
     def _plan_class_nesting(
-        cls, rope_workspace: p.Infra.RopeWorkspaceDsl, sources: t.MappingKV[Path, str]
+        cls,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
+        sources: t.MappingKV[Path, str],
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
         """Compose helper promotion, family flattening, and orphan nesting."""
         planned = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
@@ -110,7 +116,7 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         # utilities facade, unshadowed destination, unchanged bindings), so it
         # propagates instead of demoting to a Result the caller would retry.
         promotion = planned.create_from_callable(
-            lambda: cls._test_helper_edits(rope_workspace, sources)
+            lambda: cls._test_helper_edits(rope_workspace, sources),
         )
         if promotion.failure:
             error = promotion.exception
@@ -144,7 +150,9 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
 
     @classmethod
     def _plan_orphan_nesting(
-        cls, rope_workspace: p.Infra.RopeWorkspaceDsl, sources: t.MappingKV[Path, str]
+        cls,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
+        sources: t.MappingKV[Path, str],
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
         """Plan all structural nesting and consumer rewrites without effects."""
         planned_edits = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
@@ -173,7 +181,7 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
                 if bindings.setdefault(name, owner) != owner:
                     return planned_edits.fail(
                         f"ambiguous class-nesting owner for {module_name}.{name}: "
-                        f"{bindings[name]}, {owner}"
+                        f"{bindings[name]}, {owner}",
                     )
         nested_names = frozenset(
             name for bindings in bindings_by_module.values() for name in bindings
@@ -181,11 +189,14 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         if not nested_names:
             return planned_edits.ok(())
         project = FlextInfraUtilitiesRopeRuntimeModules.snapshot_project(
-            rope_workspace.rope_project, sources
+            rope_workspace.rope_project,
+            sources,
         )
         try:
             quoted = cls._nesting_quoted_sources(
-                project, dict(editable), definitions_by_file
+                project,
+                dict(editable),
+                definitions_by_file,
             )
         finally:
             project.close()

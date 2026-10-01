@@ -16,7 +16,11 @@ class TestsFlextInfraModulePathRules:
     @pytest.mark.parametrize("family", ["c", "t", "p", "m", "u"])
     @pytest.mark.parametrize("valid_alias", [True, False])
     def test_test_facade_namespace_and_alias(
-        self, tmp_path: Path, family: str, *, valid_alias: bool
+        self,
+        tmp_path: Path,
+        family: str,
+        *,
+        valid_alias: bool,
     ) -> None:
         """Test facades own Tests and their exact family alias, never loose aliases."""
         module = u.Tests.family_public_module(family)
@@ -41,7 +45,7 @@ class TestsFlextInfraModulePathRules:
             ),
         )
         report = u.Tests.validate_namespace_project(
-            m.Infra.NamespaceValidateCommand(repository_root=root)
+            m.Infra.NamespaceValidateCommand(repository_root=root),
         )
         tm.that(report.passed, eq=valid_alias, msg=str(report.violations))
 
@@ -222,16 +226,19 @@ class TestsFlextInfraModulePathRules:
     ) -> None:
         """Namespace rules key on the module path a project actually declares."""
         root, target = u.Tests.namespace_project_path(
-            tmp_path, module_source=module_source, module_path=module_path
+            tmp_path,
+            module_source=module_source,
+            module_path=module_path,
         )
         u.Tests.assert_namespace_file_in_inventory(root, target)
 
         report = u.Tests.validate_namespace_project(
-            m.Infra.NamespaceValidateCommand(repository_root=root)
+            m.Infra.NamespaceValidateCommand(repository_root=root),
         )
 
         if expect_passed is not None:
             tm.that(report.passed, eq=expect_passed, msg=str(report.violations))
         tm.that(
-            any(violation_substr in v for v in report.violations), eq=expect_violation
+            any(violation_substr in v for v in report.violations),
+            eq=expect_violation,
         )

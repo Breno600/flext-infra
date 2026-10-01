@@ -31,10 +31,12 @@ class FlextInfraEnsurePyreflyConfigPhase:
         declared_python_dirs = context.declared_python_dirs
         if project_dir is not None and paths_manager is not None:
             expected_search: t.StrSequence = paths_manager.pyrefly_search_paths(
-                project_dir=project_dir, is_root=context.is_root
+                project_dir=project_dir,
+                is_root=context.is_root,
             )
             expected_includes: t.StrSequence = paths_manager.pyrefly_project_includes(
-                project_dir=project_dir, is_root=context.is_root
+                project_dir=project_dir,
+                is_root=context.is_root,
             )
         else:
             expected_search = [c.Infra.DEFAULT_SRC_DIR]
@@ -85,14 +87,17 @@ class FlextInfraEnsurePyreflyConfigPhase:
                 toml.RemoveOp(key="ignore-errors-in-generated-code"),
                 # Search-path order is semantic; never sort this operation.
                 toml.ListOp(
-                    key=c.Infra.SEARCH_PATH, values=expected_search, sort=False
+                    key=c.Infra.SEARCH_PATH,
+                    values=expected_search,
+                    sort=False,
                 ),
                 (
                     toml.SetOp(key=c.Infra.PROJECT_INCLUDES, value=[])
                     if context.declared_python_dirs_are_complete
                     and not expected_includes
                     else toml.ListOp(
-                        key=c.Infra.PROJECT_INCLUDES, values=expected_includes
+                        key=c.Infra.PROJECT_INCLUDES,
+                        values=expected_includes,
                     )
                 ),
                 toml.SetOp(
@@ -100,7 +105,8 @@ class FlextInfraEnsurePyreflyConfigPhase:
                     value=pyrefly_rules.disable_project_excludes_heuristics,
                 ),
                 toml.SetOp(
-                    key="use-ignore-files", value=pyrefly_rules.use_ignore_files
+                    key="use-ignore-files",
+                    value=pyrefly_rules.use_ignore_files,
                 ),
                 toml.ListOp(
                     key=c.Infra.PROJECT_EXCLUDES,
@@ -136,7 +142,8 @@ class FlextInfraEnsurePyreflyConfigPhase:
         """Apply canonical pyrefly settings to one normalized payload."""
         configured_error_keys = frozenset(self._tool_config.tools.pyrefly.strict_errors)
         errors_table = u.Cli.toml_mapping_path(
-            payload, (c.Infra.TOOL, c.Infra.PYREFLY, "errors")
+            payload,
+            (c.Infra.TOOL, c.Infra.PYREFLY, "errors"),
         )
         return u.Infra.apply_toml_phases(
             payload,

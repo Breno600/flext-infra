@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
 from flext_infra.deps.fix_pyrefly_config import FlextInfraConfigFixer
-from flext_infra.fixers.rope_fixer import FlextInfraRopeFixerAdapter
 from flext_infra.refactor.census import FlextInfraRefactorCensus
 from tests import m, t
 from tests.utilities_fixture_tooling import TestsFlextInfraUtilitiesToolingFixtureMixin
@@ -20,24 +18,6 @@ if TYPE_CHECKING:
 
 class TestsFlextInfraUtilitiesGatesMixin:
     """Typed quality-gate execution and enforcement fixture helpers."""
-
-    @staticmethod
-    def run_rope_fixer(
-        tmp_path: Path,
-        project_dir: Path,
-        rule: m.EnforcementRuleSpec,
-        file_path: Path,
-        *,
-        apply: bool,
-    ) -> m.Infra.ProjectFixResult:
-        """Run one rope fixer adapter pass over a single reported file."""
-        adapter = FlextInfraRopeFixerAdapter(tmp_path)
-        ctx = m.Infra.FixEnforcementCommand(
-            repository_root=tmp_path, projects=("demo",), apply=apply
-        )
-        return adapter.fix_project(
-            project_dir, ((rule, SimpleNamespace(file_path=str(file_path))),), ctx
-        )
 
     @staticmethod
     def detector_context(
@@ -56,7 +36,9 @@ class TestsFlextInfraUtilitiesGatesMixin:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(source, encoding="utf-8")
         return m.Infra.DetectorContext(
-            file_path=target, rope_project=rope_project, project_name=project_name
+            file_path=target,
+            rope_project=rope_project,
+            project_name=project_name,
         )
 
     @staticmethod
@@ -85,7 +67,8 @@ class TestsFlextInfraUtilitiesGatesMixin:
         """Check one gate once, asserting its pass state and issue count."""
         gate = gate_class(tmp_path)
         result = gate.check(
-            project_dir, TestsFlextInfraUtilitiesGatesMixin.gate_context(tmp_path)
+            project_dir,
+            TestsFlextInfraUtilitiesGatesMixin.gate_context(tmp_path),
         )
         tm.that(result.result.passed, eq=passed)
         tm.that(len(result.issues), eq=issues_len)
@@ -102,7 +85,11 @@ class TestsFlextInfraUtilitiesGatesMixin:
         """Create a typed quality-gate execution fixture."""
         return m.Infra.GateExecution(
             result=m.Infra.GateResult(
-                gate=gate, project=project, passed=passed, errors=(), duration=0.0
+                gate=gate,
+                project=project,
+                passed=passed,
+                errors=(),
+                duration=0.0,
             ),
             issues=tuple(issues or ()),
             raw_output="",
@@ -129,7 +116,8 @@ class TestsFlextInfraUtilitiesGatesMixin:
 
     @staticmethod
     def make_project(
-        name: str = "p", gates: t.MappingKV[str, m.Infra.GateExecution] | None = None
+        name: str = "p",
+        gates: t.MappingKV[str, m.Infra.GateExecution] | None = None,
     ) -> m.Infra.ProjectResult:
         """Create a typed project-result fixture."""
         resolved_gates: t.MappingKV[str, m.Infra.GateExecution] = (
@@ -145,11 +133,14 @@ class TestsFlextInfraUtilitiesGatesMixin:
 
     @staticmethod
     def create_gate_context(
-        repository_root: Path, *, reports_dir: Path | None = None
+        repository_root: Path,
+        *,
+        reports_dir: Path | None = None,
     ) -> m.Infra.GateContext:
         """Provide the typed test helper `create_gate_context`."""
         return m.Infra.GateContext(
-            repository_root=repository_root, reports_dir=reports_dir or repository_root
+            repository_root=repository_root,
+            reports_dir=reports_dir or repository_root,
         )
 
     @staticmethod
@@ -167,7 +158,8 @@ class TestsFlextInfraUtilitiesGatesMixin:
             project_dir,
             ctx
             or TestsFlextInfraUtilitiesGatesMixin.create_gate_context(
-                repository_root, reports_dir=reports_dir
+                repository_root,
+                reports_dir=reports_dir,
             ),
         )
 

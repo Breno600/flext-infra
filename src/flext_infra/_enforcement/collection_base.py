@@ -17,7 +17,8 @@ class FlextInfraEnforcementCollectionBase:
 
     @staticmethod
     def collect_project_probe(
-        project_dir: Path, rule: m.EnforcementRuleSpec
+        project_dir: Path,
+        rule: m.EnforcementRuleSpec,
     ) -> list[t.Pair[m.EnforcementRuleSpec, p.AttributeProbe]]:
         """Return one project-level probe for gate-backed rules."""
         return [(rule, FlextInfraEnforcementCollectionBase.probe_for_path(project_dir))]
@@ -42,17 +43,25 @@ class FlextInfraEnforcementCollectionBase:
 
     @staticmethod
     def collection_failure(
-        project_dir: Path, rule: m.EnforcementRuleSpec, message: str
+        project_dir: Path,
+        rule: m.EnforcementRuleSpec,
+        message: str,
     ) -> m.Infra.FailedFix:
         """Build a failed-fix record for collection/routing errors."""
         return m.Infra.FailedFix(
-            rule_id=rule.id, file_path=str(project_dir), error=message
+            rule_id=rule.id,
+            file_path=str(project_dir),
+            error=message,
         )
 
     def _empty_failure(
-        self, project_dir: Path, rule: m.EnforcementRuleSpec, message: str
+        self,
+        project_dir: Path,
+        rule: m.EnforcementRuleSpec,
+        message: str,
     ) -> t.Pair[
-        list[t.Pair[m.EnforcementRuleSpec, p.AttributeProbe]], list[m.Infra.FailedFix]
+        list[t.Pair[m.EnforcementRuleSpec, p.AttributeProbe]],
+        list[m.Infra.FailedFix],
     ]:
         """Return a typed empty collection plus one structured failure."""
         return [], [self.collection_failure(project_dir, rule, message)]

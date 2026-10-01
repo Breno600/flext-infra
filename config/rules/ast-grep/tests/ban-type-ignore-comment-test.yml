@@ -1,0 +1,7 @@
+id: ban-type-ignore-comment
+valid:
+  - "value = 1  # a plain comment"
+  - "text = '# type: ignore'"
+invalid:
+  - "value = call()  # type: ignore"
+  - "value = call()  # type: ignore[attr-defined]"

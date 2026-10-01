@@ -32,7 +32,9 @@ class FlextInfraTierWhitelistGate(FlextInfraGate):
 
     @override
     def check(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
         """Run the tier-whitelist scan scoped to ``project_dir``."""
         _ = ctx

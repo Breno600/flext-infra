@@ -36,11 +36,14 @@ class FlextInfraRefactorMroRemover(FlextInfraRopeTransformer):
 
         @override
         def leave_ClassDef(
-            self, original_node: cst.ClassDef, updated_node: cst.ClassDef
+            self,
+            original_node: cst.ClassDef,
+            updated_node: cst.ClassDef,
         ) -> cst.BaseStatement | cst.RemovalSentinel:
             self._enclosing.pop()
             if not self._enclosing or not self._is_redundant(
-                updated_node, self._enclosing[-1]
+                updated_node,
+                self._enclosing[-1],
             ):
                 return updated_node
             self.removed.append(f"{self._enclosing[-1]}.{updated_node.name.value}")
@@ -48,13 +51,15 @@ class FlextInfraRefactorMroRemover(FlextInfraRopeTransformer):
 
         @override
         def leave_IndentedBlock(
-            self, original_node: cst.IndentedBlock, updated_node: cst.IndentedBlock
+            self,
+            original_node: cst.IndentedBlock,
+            updated_node: cst.IndentedBlock,
         ) -> cst.BaseSuite:
             # A body emptied by the removal above must stay valid Python.
             if updated_node.body:
                 return updated_node
             return updated_node.with_changes(
-                body=[cst.SimpleStatementLine(body=[cst.Pass()])]
+                body=[cst.SimpleStatementLine(body=[cst.Pass()])],
             )
 
         @staticmethod
@@ -72,7 +77,8 @@ class FlextInfraRefactorMroRemover(FlextInfraRopeTransformer):
             small: list[cst.BaseSmallStatement] = []
             for statement in statements:
                 if not isinstance(
-                    statement, cst.SimpleStatementLine | cst.SimpleStatementSuite
+                    statement,
+                    cst.SimpleStatementLine | cst.SimpleStatementSuite,
                 ):
                     return False
                 small.extend(statement.body)

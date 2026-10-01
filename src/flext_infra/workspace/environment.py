@@ -51,7 +51,8 @@ class FlextInfraWorkspaceEnvironmentMixin:
 
     @classmethod
     def _sync_envrc(
-        cls, request: m.Infra.WorkspaceEnvironmentSyncRequest
+        cls,
+        request: m.Infra.WorkspaceEnvironmentSyncRequest,
     ) -> p.Result[bool]:
         """Write the Python workspace ``.envrc`` without storage routing."""
         rendered = cls._render_environment_template(c.Infra.ENVRC_FILENAME)
@@ -76,7 +77,6 @@ class FlextInfraWorkspaceEnvironmentMixin:
         )
         render_context = m.Infra.EnvrcRenderSpec(
             repository_root_rel=".",
-            runtime_environment_directory=config.Infra.codegen.make.runtime_environment_directory,
             environment_path_prepends=(
                 config.Infra.codegen.toolchain.environment_path_prepends
             ),
@@ -107,25 +107,27 @@ class FlextInfraWorkspaceEnvironmentMixin:
         if not u.Cli.process_succeeded(output.outcome):
             return r[bool].fail(
                 f"direnv allow failed for {request.repository_root}: "
-                f"{output.stderr.strip() or output.stdout.strip()}"
+                f"{output.stderr.strip() or output.stdout.strip()}",
             )
         return r[bool].ok(True)
 
     @classmethod
     def execute_request(
-        cls, request: m.Infra.WorkspaceEnvironmentSyncRequest
+        cls,
+        request: m.Infra.WorkspaceEnvironmentSyncRequest,
     ) -> p.Result[t.Cli.ResultValue]:
         """Run one sync request through the public workspace owner."""
         result = cls.sync_environment_files(request)
         if result.failure:
             return r[t.Cli.ResultValue].from_failure(result)
         return r[t.Cli.ResultValue].ok(
-            tuple(str(path) for path in result.value.changed_files)
+            tuple(str(path) for path in result.value.changed_files),
         )
 
     @classmethod
     def _remove_generated_environment_files(
-        cls, request: m.Infra.WorkspaceEnvironmentSyncRequest
+        cls,
+        request: m.Infra.WorkspaceEnvironmentSyncRequest,
     ) -> p.Result[m.Infra.WorkspaceEnvironmentSyncResult]:
         """Remove generated environment files from non-Python workspaces."""
         result_type = m.Infra.WorkspaceEnvironmentSyncResult
@@ -133,7 +135,8 @@ class FlextInfraWorkspaceEnvironmentMixin:
         for filename in c.Infra.WORKSPACE_ENV_FILES:
             target_path = request.repository_root / filename
             result = cls._remove_generated_environment_file(
-                target_path, apply=request.apply
+                target_path,
+                apply=request.apply,
             )
             if result.failure:
                 return r[result_type].from_failure(result)
@@ -143,7 +146,10 @@ class FlextInfraWorkspaceEnvironmentMixin:
 
     @classmethod
     def _remove_generated_environment_file(
-        cls, target_path: Path, *, apply: bool
+        cls,
+        target_path: Path,
+        *,
+        apply: bool,
     ) -> p.Result[bool]:
         """Remove one generated environment file without touching custom files."""
         if not target_path.exists():
@@ -162,7 +168,12 @@ class FlextInfraWorkspaceEnvironmentMixin:
 
     @classmethod
     def _write_generated_text(
-        cls, target_path: Path, content: str, *, apply: bool, force: bool
+        cls,
+        target_path: Path,
+        content: str,
+        *,
+        apply: bool,
+        force: bool,
     ) -> p.Result[bool]:
         """Write generated content without clobbering custom files."""
         if target_path.exists():
@@ -178,7 +189,10 @@ class FlextInfraWorkspaceEnvironmentMixin:
 
     @staticmethod
     def _write_text_if_different(
-        target_path: Path, content: str, *, apply: bool
+        target_path: Path,
+        content: str,
+        *,
+        apply: bool,
     ) -> p.Result[bool]:
         """Write text when content differs."""
         if target_path.is_file():

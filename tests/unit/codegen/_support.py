@@ -35,7 +35,7 @@ class CodegenTestSupport:
                     *cls.CI_TRIGGER_BASELINE_BRANCHES[:-1],
                     repository_branch,
                     cls.CI_TRIGGER_BASELINE_BRANCHES[-1],
-                ))
+                )),
             )
 
         @staticmethod
@@ -101,7 +101,7 @@ class CodegenTestSupport:
             CI-contract test shares; consumers assert on the returned steps.
             """
             document = t.Cli.JSON_MAPPING_ADAPTER.validate_python(
-                tm.ok(u.Cli.yaml_parse(rendered))
+                tm.ok(u.Cli.yaml_parse(rendered)),
             )
             jobs = t.Cli.JSON_MAPPING_ADAPTER.validate_python(document["jobs"])
             job = t.Cli.JSON_MAPPING_ADAPTER.validate_python(jobs["ci"])

@@ -17,7 +17,8 @@ class FlextInfraPytestRunnerBase(s[int]):
     """Own immutable inputs shared by all pytest runner phases."""
 
     started_at_monotonic: Annotated[
-        float, m.Field(gt=0, description="Clock captured before FLEXT imports.")
+        float,
+        m.Field(gt=0, description="Clock captured before FLEXT imports."),
     ]
     target: Annotated[Path, m.Field(description="Repository-relative test root.")]
     reports: Annotated[Path, m.Field(description="Repository-relative report root.")]
@@ -32,7 +33,7 @@ class FlextInfraPytestRunnerBase(s[int]):
     collection_command_prefix: Annotated[
         t.StrTuple,
         m.Field(
-            description="Explicit profiling child invocation from the outer boundary."
+            description="Explicit profiling child invocation from the outer boundary.",
         ),
     ] = ()
 
@@ -43,7 +44,10 @@ class FlextInfraPytestRunnerBase(s[int]):
 
     @classmethod
     def from_environment(
-        cls, *, started_at_monotonic: float, collection_command_prefix: t.StrTuple = ()
+        cls,
+        *,
+        started_at_monotonic: float,
+        collection_command_prefix: t.StrTuple = (),
     ) -> Self:
         """Create the runner exclusively from generated Make inputs."""
         ci = config.Infra.codegen.make.ci
@@ -56,8 +60,8 @@ class FlextInfraPytestRunnerBase(s[int]):
             reports=Path(cls._environment_value(c.Infra.PYTEST_ENV_REPORTS)),
             testmon_db=Path(
                 cls._environment_value(
-                    config.Infra.codegen.make.testmon_cache.database_environment_variable
-                )
+                    config.Infra.codegen.make.testmon_cache.database_environment_variable,
+                ),
             ),
         )
 
@@ -104,28 +108,39 @@ class FlextInfraPytestRunnerBase(s[int]):
             raise ValueError(msg)
         return memory_gb
 
-    def _declared_worker_ceiling(
-        self, policy: PytestPolicy
-    ) -> int | m.Infra.PytestWorkerCeiling:
-        """Resolve the declared project's ceiling over the fleet default.
+    def _declared_project_name(self) -> str | None:
+        """Read the declared project identity shared by runtime policies."""
+        pyproject_path = self.root / c.PYPROJECT_FILENAME
+        payload = u.Infra.pyproject_payload(pyproject_path)
+        if "project" not in payload:
+            return None
+        return u.Infra.project_name_from_payload(pyproject_path, payload)
 
-        A tree without a declared ``[project].name`` (fixture projects, raw
-        workbenches) is an expected state and takes the fleet-wide default.
-        """
+    def run_timeout_seconds(self, policy: PytestPolicy) -> int:
+        """Resolve the declared project's measured wall over the fleet default."""
+        name = self._declared_project_name()
+        if name is None:
+            return policy.run_timeout_seconds
+        return policy.run_timeout_overrides.get(name, policy.run_timeout_seconds)
+
+    def _declared_worker_ceiling(
+        self,
+        policy: PytestPolicy,
+    ) -> int | m.Infra.PytestWorkerCeiling:
+        """Resolve the declared project's ceiling over the fleet default."""
         if not policy.parallel_worker_overrides:
             return policy.parallel_workers
         pyproject_path = self.root / c.PYPROJECT_FILENAME
-        try:
-            name = u.Infra.project_name_from_payload(
-                pyproject_path, u.Infra.pyproject_payload(pyproject_path)
-            )
-        except (TypeError, ValueError):
-            return policy.parallel_workers
+        name = u.Infra.project_name_from_payload(
+            pyproject_path,
+            u.Infra.pyproject_payload(pyproject_path),
+        )
         return policy.parallel_worker_overrides.get(name, policy.parallel_workers)
 
     @staticmethod
     def resolve_worker_ceiling(
-        ceiling: int | m.Infra.PytestWorkerCeiling, cpu_count: int
+        ceiling: int | m.Infra.PytestWorkerCeiling,
+        cpu_count: int,
     ) -> int:
         """Resolve a declared ceiling against the process CPU count.
 

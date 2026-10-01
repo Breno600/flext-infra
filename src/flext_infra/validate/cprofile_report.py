@@ -39,7 +39,7 @@ class FlextInfraCProfileReport(s[bool]):
     run_receipt: Annotated[
         Path | None,
         m.Field(
-            description="Explicit parent profile receipt for a collection profiling run"
+            description="Explicit parent profile receipt for a collection profiling run",
         ),
     ] = None
 
@@ -64,16 +64,16 @@ class FlextInfraCProfileReport(s[bool]):
         if self.run_receipt is None:
             return (self.profile,)
         parent = m.Infra.PytestRunContext.model_validate_json(
-            self.run_receipt.read_text(encoding="utf-8")
+            self.run_receipt.read_text(encoding="utf-8"),
         )
         directory = parent.report_directory
         if directory is None or not directory.resolve().is_relative_to(
-            (self.repository_root / ".reports").resolve()
+            (self.repository_root / ".reports").resolve(),
         ):
             msg = "profile run receipt has no valid report directory"
             raise ValueError(msg)
         context = m.Infra.PytestRunContext.model_validate_json(
-            (directory / "run-context.json").read_text(encoding="utf-8")
+            (directory / "run-context.json").read_text(encoding="utf-8"),
         )
         if (
             context.report_directory != directory
@@ -83,7 +83,7 @@ class FlextInfraCProfileReport(s[bool]):
             msg = "profile run receipt does not match the recorded run context"
             raise ValueError(msg)
         plan = m.Infra.PytestSelectionPlan.model_validate_json(
-            (directory / "selection-plan.json").read_text(encoding="utf-8")
+            (directory / "selection-plan.json").read_text(encoding="utf-8"),
         )
         if plan.manifest_path.parent.resolve() != directory.resolve():
             msg = "profile selection plan does not match its run directory"
@@ -102,13 +102,13 @@ class FlextInfraCProfileReport(s[bool]):
                 parent
                 if profile == self.profile
                 else m.Infra.PytestRunContext.model_validate_json(
-                    profile.with_suffix(".pstats.json").read_text(encoding="utf-8")
+                    profile.with_suffix(".pstats.json").read_text(encoding="utf-8"),
                 )
             )
             if receipt.model_copy(
-                update={"profile_sha256": None}
+                update={"profile_sha256": None},
             ) != context or receipt.profile_sha256 != u.Cli.sha256_bytes(
-                profile.read_bytes()
+                profile.read_bytes(),
             ):
                 msg = f"stale or mismatched profile run receipt: {profile}"
                 raise ValueError(msg)

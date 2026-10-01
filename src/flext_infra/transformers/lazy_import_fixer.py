@@ -30,7 +30,8 @@ class FlextInfraRefactorLazyImportFixer(FlextInfraRopeTransformer):
         return new_source, list(self.changes)
 
     def scan_lines_for_hoist(
-        self, lines: t.SequenceOf[str]
+        self,
+        lines: t.SequenceOf[str],
     ) -> t.Pair[list[str], list[str]]:
         """Scan source lines, hoist body-local imports, and keep remaining lines."""
         existing_imports: set[str] = set()
@@ -70,7 +71,9 @@ class FlextInfraRefactorLazyImportFixer(FlextInfraRopeTransformer):
         """Process one line inside a body and return (consumed, still_in_body)."""
         existing_imports, hoisted = scan_state
         cur_indent = self.body_line_indent(
-            line=line, stripped_line=stripped_line, body_indent=body_indent
+            line=line,
+            stripped_line=stripped_line,
+            body_indent=body_indent,
         )
         if self.ends_body_scope(
             stripped_line=stripped_line,
@@ -95,7 +98,7 @@ class FlextInfraRefactorLazyImportFixer(FlextInfraRopeTransformer):
     def starts_body_scope(cls, *, in_body: bool, stripped_line: str) -> bool:
         """Return whether the current line starts a def/class body scope."""
         return (not in_body) and c.Infra.DEF_ASYNC_CLASS_RE.match(
-            stripped_line
+            stripped_line,
         ) is not None
 
     @staticmethod
@@ -105,14 +108,21 @@ class FlextInfraRefactorLazyImportFixer(FlextInfraRopeTransformer):
 
     @classmethod
     def body_line_indent(
-        cls, *, line: str, stripped_line: str, body_indent: int
+        cls,
+        *,
+        line: str,
+        stripped_line: str,
+        body_indent: int,
     ) -> int:
         """Compute effective indentation for one line while scanning a body."""
         return cls.indent_of(line) if stripped_line else body_indent + 4
 
     @staticmethod
     def ends_body_scope(
-        *, stripped_line: str, current_indent: int, body_indent: int
+        *,
+        stripped_line: str,
+        current_indent: int,
+        body_indent: int,
     ) -> bool:
         """Return whether scanner should leave the current def/class body."""
         return bool(stripped_line) and current_indent <= body_indent

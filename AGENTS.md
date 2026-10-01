@@ -1,8 +1,8 @@
 # AGENTS.md — flext-infra
 
 > **Parent workspace law** lives in [`../AGENTS.md`](../AGENTS.md) — read it first.
-> Universal engineering core: `~/.agents/UNIVERSAL_CORE.md`. Composition: global
-> skills + parent/root `AGENTS.md` + this scope delta. Do not re-embed universal law.
+> Composition: global skills + parent/root `AGENTS.md` + this scope delta. Do not
+> re-embed universal law.
 >
 > **Standalone / independent mode:** when `../AGENTS.md` does not resolve, pin the
 > parent raw `AGENTS.md` URL to the same branch/release as this package (never

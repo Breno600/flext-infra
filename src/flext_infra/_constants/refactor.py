@@ -52,6 +52,45 @@ class FlextInfraConstantsRefactor:
         NON_ACTIONABLE_WITH_FIX = "non_actionable_with_fix"
 
     @unique
+    class CodemodRelocation(StrEnum):
+        """Rope relocation a detection-only rule names in its metadata.
+
+        The engine's own capability set: a rule declares which relocation
+        repairs its findings, and the namespace phase runs that relocation
+        over the names the rule captured as ``$NAME``.
+        """
+
+        PROTOCOL = "protocol"
+        TYPING_ALIAS = "typing-alias"
+        FUTURE_ANNOTATIONS = "future-annotations"
+        MODULE_IMPORT = "module-import"
+
+    @unique
+    class CodemodContextPredicate(StrEnum):
+        """Project-context predicate a rule applies to one captured metavariable.
+
+        ast-grep matches one file's syntax; what a match means can depend on
+        the project and file it is in. A rule names the predicate under
+        ``metadata.context`` for a captured ``$VAR`` and the engine admits the
+        finding only when the predicate holds (``is``) or fails (``not``). Each
+        predicate is derived from an existing source of truth:
+
+        - ``stdlib-module``: the captured module's top-level name is in the
+          interpreter's ``sys.stdlib_module_names``;
+        - ``own-package``: it is the project's own import package (the
+          package of its ``pyproject.toml`` project);
+        - ``runtime-package``: it is the import package of a distribution in
+          the project's runtime dependency closure;
+        - ``file-family``: the captured facade letter is the family the
+          finding's file declares by its name under the import-layer order.
+        """
+
+        STDLIB_MODULE = "stdlib-module"
+        OWN_PACKAGE = "own-package"
+        RUNTIME_PACKAGE = "runtime-package"
+        FILE_FAMILY = "file-family"
+
+    @unique
     class SemanticCutoverPhase(StrEnum):
         """Semantic ``make mod`` cutovers planned by ``u.Infra.plan_semantic_cutover``."""
 
@@ -83,16 +122,21 @@ class FlextInfraConstantsRefactor:
     RK_ORDER: ClassVar[str] = "order"
     RK_ALLOW_ALIASES: ClassVar[str] = "allow_aliases"
     RK_ALLOW_TARGET_SUFFIXES: ClassVar[str] = "allow_target_suffixes"
-    CODEMOD_RESOURCE_DIRNAME: ClassVar[str] = "codemod"
     CODEMOD_RULE_SUFFIX: ClassVar[str] = ".yml"
     CODEMOD_DOCUMENT_SEPARATOR_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^---\s*$", re.MULTILINE
+        r"^---\s*$",
+        re.MULTILINE,
     )
     CODEMOD_CONFIG_FILENAME: ClassVar[str] = "sgconfig.yml"
-    # Why: restored — deleted declaration with consumers left behind in codemod_rules.py
-    CODEMOD_CONFIG_RELPATH: ClassVar[Path] = Path(CODEMOD_RESOURCE_DIRNAME) / (
-        CODEMOD_CONFIG_FILENAME
+    # Static rules are data under the one rule root, config/rules: the
+    # ast-grep corpus (sgconfig, rules, utils, tests with snapshots) and the
+    # rope phase data. The same relative path names a governed checkout's
+    # catalog and the copy a distribution ships as <pkg>/config.
+    CODEMOD_RULES_RELPATH: ClassVar[Path] = Path("config") / "rules"
+    CODEMOD_CONFIG_RELPATH: ClassVar[Path] = (
+        CODEMOD_RULES_RELPATH / "ast-grep" / CODEMOD_CONFIG_FILENAME
     )
+    CODEMOD_ROPE_RULES_RELPATH: ClassVar[Path] = CODEMOD_RULES_RELPATH / "rope"
     CODEMOD_RULE_DIRS_KEY: ClassVar[str] = "ruleDirs"
     CODEMOD_UTIL_DIRS_KEY: ClassVar[str] = "utilDirs"
     CODEMOD_TEST_CONFIGS_KEY: ClassVar[str] = "testConfigs"
@@ -110,7 +154,7 @@ class FlextInfraConstantsRefactor:
     CODEMOD_TEXT_RULES_FILENAME: ClassVar[str] = "sed.yaml"
     # Declarative text-rule path derived from the filename SSOT.
     CODEMOD_TEXT_RULES_RELPATH: ClassVar[Path] = (
-        Path("config") / "rules" / "mod" / CODEMOD_TEXT_RULES_FILENAME
+        CODEMOD_RULES_RELPATH / "mod" / CODEMOD_TEXT_RULES_FILENAME
     )
     CODEMOD_TEXT_RULES_KEY: ClassVar[str] = "rules"
     CODEMOD_TEXT_KEY_ID: ClassVar[str] = "id"
@@ -121,15 +165,27 @@ class FlextInfraConstantsRefactor:
     CODEMOD_TEXT_KEY_REPLACE: ClassVar[str] = "replace"
     CODEMOD_TEXT_KEY_FLAGS: ClassVar[str] = "flags"
     CODEMOD_TEXT_KEY_EXPECTED: ClassVar[str] = "expected"
+    CODEMOD_TEXT_KEY_CAPTURE_EQUALS: ClassVar[str] = "capture_equals"
     # ast-grep rejects unknown top-level keys, so an ast-grep rule declares
     # its finding-count receipt under the `metadata` mapping it does accept.
     CODEMOD_RULE_METADATA_KEY: ClassVar[str] = "metadata"
-    # The declarative signature-migration catalogue: one owner per governed
-    # repository, read by the propagate-signatures verb.
-    REFACTOR_SIGNATURE_RULES_RELPATH: ClassVar[Path] = (
-        Path("config") / "rules" / "refactor" / "signature-propagation.yml"
-    )
-    REFACTOR_SIGNATURE_RULES_KEY: ClassVar[str] = "migrations"
+    # A rule scoped to everything but its owning project names that project's
+    # distribution under `metadata.owner`; the plan of the owner drops it.
+    CODEMOD_RULE_OWNER_KEY: ClassVar[str] = "owner"
+    # A rule that binds only the consumers of a facade distribution names it
+    # under `metadata.consumers_of`; a plan whose runtime closure lacks that
+    # distribution (the owner itself and its own dependencies) drops it.
+    CODEMOD_RULE_CONSUMERS_OF_KEY: ClassVar[str] = "consumers_of"
+    # A detection-only rule names the rope relocation that repairs it under
+    # `metadata.relocation` and captures the relocated symbol as `$NAME`.
+    CODEMOD_RULE_RELOCATION_KEY: ClassVar[str] = "relocation"
+    # A rule whose meaning depends on the project names, per captured
+    # metavariable, the context predicate the engine checks on each finding
+    # (`metadata.context: {VAR: {is|not: predicate}}`).
+    CODEMOD_RULE_CONTEXT_KEY: ClassVar[str] = "context"
+    CODEMOD_CONTEXT_HOLDS_KEY: ClassVar[str] = "is"
+    CODEMOD_CONTEXT_FAILS_KEY: ClassVar[str] = "not"
+    CODEMOD_RULE_NAME_METAVARIABLE: ClassVar[str] = "NAME"
     CODEMOD_TEXT_FLAG_NAMES: ClassVar[t.MappingKV[str, int]] = MappingProxyType({
         "IGNORECASE": re.IGNORECASE,
         "MULTILINE": re.MULTILINE,
@@ -217,8 +273,6 @@ class FlextInfraConstantsRefactor:
     "Canonical utilities package directory name."
     CONSTANTS_CLASS_SUFFIX: ClassVar[str] = "Constants"
     "Class-name suffix used to identify constants facades."
-    CONSTANT_PATTERN: ClassVar[t.RegexPattern] = re.compile(r"^_*[A-Z][A-Z0-9_]*$")
-    "Compiled naming pattern for module-level constant candidates."
     FAMILY_SUFFIXES: ClassVar[t.StrMapping] = MappingProxyType({
         "c": "Constants",
         "t": "Types",
@@ -248,7 +302,7 @@ class FlextInfraConstantsRefactor:
         | dict.fromkeys(FLEXT_TYPINGS_FILE_NAMES, "t")
         | dict.fromkeys(FLEXT_PROTOCOLS_FILE_NAMES, "p")
         | dict.fromkeys(FLEXT_MODELS_FILE_NAMES, "m")
-        | dict.fromkeys(FLEXT_UTILITIES_FILE_NAMES, "u")
+        | dict.fromkeys(FLEXT_UTILITIES_FILE_NAMES, "u"),
     )
     "Canonical facade file name → family alias mapping."
     FLEXT_FAMILIES: ClassVar[frozenset[str]] = frozenset({"c", "t", "p", "m", "u"})
@@ -311,7 +365,7 @@ class FlextInfraConstantsRefactor:
     MIN_PATH_DEPTH: int = 2
     "Minimum relative path depth for module prefix detection."
     NAMESPACE_CONSTANT_PATTERN: ClassVar[t.RegexPattern] = re.compile(
-        r"^_?[A-Z][A-Z0-9_]+$"
+        r"^_?[A-Z][A-Z0-9_]+$",
     )
     "Regex: namespace constant candidate names."
     CLASSVAR_EXEMPT_NAMES: ClassVar[frozenset[str]] = (
@@ -333,37 +387,24 @@ class FlextInfraConstantsRefactor:
     "Canonical factory calls allowed as ClassVar default values."
     NAMESPACE_MIN_ALIAS_LENGTH: ClassVar[int] = 2
     FACADE_ALIAS_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(\w)\b[^=]*=\s*(\w+)", re.MULTILINE
+        r"^(\w)\b[^=]*=\s*(\w+)",
+        re.MULTILINE,
     )
     "Matches ``m = FlextFooModels`` alias assignments in facade files."
 
     # --- Detector regex constants ---
-    ASSIGN_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^([A-Z_]\w*)\s*[:=]", re.MULTILINE
-    )
-    "Matches top-level UPPER_CASE assignments for loose constant detection."
     LOGGER_ASSIGN_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^([A-Za-z_]\w*)\s*[:=]\s*(?:(?:\w+\.)*)?"
         r"(?:fetch_logger|create_module_logger|get_logger|logging\.getLogger)\s*\(",
         re.IGNORECASE | re.MULTILINE,
     )
     "Matches top-level logger assignments created outside namespace classes."
-    PEP695_RE: ClassVar[t.RegexPattern] = re.compile(r"^type\s+(\w+)\s*=", re.MULTILINE)
-    "Matches PEP 695 type alias definitions."
-    TYPEALIAS_ANNOT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(\w+)\s*:\s*(?:\w+\.)*TypeAlias\s*=", re.MULTILINE
-    )
-    "Matches TypeAlias annotation syntax for typing alias detection."
     TYPING_FACTORY_ASSIGN_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^(\w+)\s*=\s*(?:(?:\w+\.)*)?"
         r"(?:TypeVar|ParamSpec|TypeVarTuple|NewType)\s*\(",
         re.MULTILINE,
     )
     "Matches TypeVar/ParamSpec/TypeVarTuple/NewType assignments."
-    COMPAT_ALIAS_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^([A-Z]\w+)\s*=\s*([A-Z]\w+)\s*$", re.MULTILINE
-    )
-    "Matches compatibility alias assignments (CapitalName = CapitalName)."
     COMPAT_SKIP_NAMES: ClassVar[frozenset[str]] = frozenset({
         "__all__",
         "__version__",
@@ -381,14 +422,7 @@ class FlextInfraConstantsRefactor:
     # Consume core enforcement data through its exact canonical alias.
     ENFORCEMENT_LIBRARY_OWNERS: ClassVar[t.StrMapping] = c.ENFORCEMENT_LIBRARY_OWNERS
     "External library → project that owns its abstraction facade (SSOT: flext-core)."
-    FUTURE_ANNOTATIONS_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^from\s+__future__\s+import\s+annotations\b", re.MULTILINE
-    )
     "Matches 'from __future__ import annotations' import statement."
-    ONLY_DOCSTRING_RE: ClassVar[t.RegexPattern] = re.compile(
-        r'^("""[\s\S]*?"""|\'\'\'[\s\S]*?\'\'\')\s*$'
-    )
-    "Matches files that contain only a module docstring."
     MIN_METHODS_FOR_REORDER: ClassVar[int] = 2
     "Minimum method count before class method reordering is attempted."
 
@@ -438,30 +472,6 @@ class FlextInfraConstantsRefactor:
     # --- Symbol/identifier patterns ---
     IDENTIFIER_PATTERN: ClassVar[t.RegexPattern] = re.compile(r"\b[A-Za-z_]\w*\b")
     "Regex: Python identifier word boundary match."
-
-    # --- Import bypass pattern (for transformer matching) ---
-    IMPORT_BYPASS_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^try:\n"
-        r"(    from .+\n)"
-        r"except ImportError:\n"
-        r"    from .+\n",
-        re.MULTILINE,
-    )
-    "Regex: try/except ImportError import bypass block (strict form)."
-
-    # --- Deprecated class pattern ---
-    CLASS_BLOCK_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(class\s+(\w+)\b[^\n]*:\n(?:(?:[ \t]+[^\n]*|[ \t]*)\n)*)", re.MULTILINE
-    )
-    "Regex: full class block including body lines."
-    DEPRECATION_WARN_RE: ClassVar[t.RegexPattern] = re.compile(r"\.warn\s*\(")
-    "Regex: deprecation warning call site (.warn())."
-
-    # --- Lazy import fixer ---
-    DEF_ASYNC_CLASS_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?:def |async def |class )", re.MULTILINE
-    )
-    "Regex: top-level def/async def/class keyword (for lazy import detection)."
 
 
 __all__: list[str] = ["FlextInfraConstantsRefactor"]

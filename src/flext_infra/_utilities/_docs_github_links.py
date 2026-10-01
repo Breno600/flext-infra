@@ -13,7 +13,7 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra import m, t
+from flext_infra import c, m, t
 
 # Concrete-owner imports: this module resolves during the root's lazy ``u``
 # export, when the root namespace is still initializing — a root from-import
@@ -22,14 +22,6 @@ from .._config import config
 
 if TYPE_CHECKING:
     from flext_infra import FlextInfraConfig
-
-_GITHUB_BLOB_TREE_RE = re.compile(
-    r"^https://github\.com/"
-    r"(?P<org>[^/]+)/(?P<repo>[^/]+)/"
-    r"(?P<kind>blob|tree)/"
-    r"(?P<branch>[^/]+)/"
-    r"(?P<path>.*)$"
-)
 
 
 class FlextInfraUtilitiesDocsGithubLinks:
@@ -48,12 +40,13 @@ class FlextInfraUtilitiesDocsGithubLinks:
     def docs_stale_github_organizations() -> frozenset[str]:
         """Placeholder organizations that must not appear in doc URLs."""
         return frozenset(
-            FlextInfraUtilitiesDocsGithubLinks._config().Infra.codegen.make.docs.stale_github_organizations
+            FlextInfraUtilitiesDocsGithubLinks._config().Infra.codegen.make.docs.stale_github_organizations,
         )
 
     @staticmethod
     def docs_github_repo_lookup(
-        organization: str, repository: str
+        organization: str,
+        repository: str,
     ) -> m.Infra.DocsGithubRepoSpec | None:
         """Find one governed repo by organization and repository name."""
         for repo in FlextInfraUtilitiesDocsGithubLinks.docs_github_repos():
@@ -82,15 +75,20 @@ class FlextInfraUtilitiesDocsGithubLinks:
     @staticmethod
     def docs_parse_github_doc_url(target: str) -> re.Match[str] | None:
         """Parse a github.com blob/tree documentation URL."""
-        return _GITHUB_BLOB_TREE_RE.match(target.strip())
+        return c.Infra.DOCS_GITHUB_BLOB_TREE_RE.match(target.strip())
 
     @staticmethod
     def docs_canonical_github_url(
-        organization: str, repository: str, path: str, *, is_dir: bool = False
+        organization: str,
+        repository: str,
+        path: str,
+        *,
+        is_dir: bool = False,
     ) -> str | None:
         """Build a canonical GitHub URL for a governed repository path."""
         repo = FlextInfraUtilitiesDocsGithubLinks.docs_github_repo_lookup(
-            organization, repository
+            organization,
+            repository,
         )
         if repo is None:
             return None
@@ -126,7 +124,8 @@ class FlextInfraUtilitiesDocsGithubLinks:
             else:
                 return None
         repo = FlextInfraUtilitiesDocsGithubLinks.docs_github_repo_lookup(
-            lookup_org, repository
+            lookup_org,
+            repository,
         )
         if repo is None:
             return None
@@ -149,12 +148,13 @@ class FlextInfraUtilitiesDocsGithubLinks:
         if org in FlextInfraUtilitiesDocsGithubLinks.docs_stale_github_organizations():
             return None
         repo = FlextInfraUtilitiesDocsGithubLinks.docs_github_repo_lookup(
-            org, repository
+            org,
+            repository,
         )
         if repo is None:
             return None
         root = FlextInfraUtilitiesDocsGithubLinks.docs_expand_local_checkout(
-            repo.local_checkout
+            repo.local_checkout,
         )
         if root is None:
             return None
@@ -173,7 +173,11 @@ class FlextInfraUtilitiesDocsGithubLinks:
 
     @staticmethod
     def docs_github_link_issues(
-        *, file: str, line_number: int, raw: str, target: str
+        *,
+        file: str,
+        line_number: int,
+        raw: str,
+        target: str,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
         """Emit audit issues for stale or locally-missing GitHub doc URLs."""
         issues: list[m.Infra.AuditIssue] = []
@@ -191,13 +195,14 @@ class FlextInfraUtilitiesDocsGithubLinks:
                         f"line {line_number}: placeholder GitHub organization "
                         f"must be rewritten -> {raw}"
                     ),
-                )
+                ),
             )
             return issues
         repository = match.group("repo")
         branch = match.group("branch")
         repo = FlextInfraUtilitiesDocsGithubLinks.docs_github_repo_lookup(
-            org, repository
+            org,
+            repository,
         )
         if repo is not None and branch != repo.branch:
             issues.append(
@@ -209,7 +214,7 @@ class FlextInfraUtilitiesDocsGithubLinks:
                         f"line {line_number}: GitHub branch must be "
                         f"{repo.branch} -> {raw}"
                     ),
-                )
+                ),
             )
         local = FlextInfraUtilitiesDocsGithubLinks.docs_github_local_path(target)
         if local is not None and not local.exists():
@@ -222,7 +227,7 @@ class FlextInfraUtilitiesDocsGithubLinks:
                         f"line {line_number}: governed GitHub path missing locally "
                         f"({local}) -> {raw}"
                     ),
-                )
+                ),
             )
         return issues
 

@@ -62,12 +62,13 @@ class FlextInfraRefactorCompatibilityAlias(FlextInfraRopeTransformer):
 
         updated = "".join(kept_lines)
         rewritten: str = u.Infra.apply_token_replacements(
-            source=updated, alias_map=alias_map
+            source=updated,
+            alias_map=alias_map,
         )
         updated = rewritten
         for alias_name in sorted(removed):
             self._record_change(
-                f"Removed compatibility alias: {alias_name} = {alias_map[alias_name]}"
+                f"Removed compatibility alias: {alias_name} = {alias_map[alias_name]}",
             )
         return updated
 
@@ -107,7 +108,7 @@ class FlextInfraRefactorCompatibilityAlias(FlextInfraRopeTransformer):
         updated = self._deduplicate_import_names(updated)
         for long_name in sorted(alias_map):
             self._record_change(
-                f"Rewrote compatibility import: {long_name} -> {alias_map[long_name]}"
+                f"Rewrote compatibility import: {long_name} -> {alias_map[long_name]}",
             )
         return updated
 
@@ -119,7 +120,8 @@ class FlextInfraRefactorCompatibilityAlias(FlextInfraRopeTransformer):
             if isinstance(node, ast.Name):
                 names.add(node.id)
             elif isinstance(
-                node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
+                node,
+                ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
             ):
                 names.add(node.name)
         return names

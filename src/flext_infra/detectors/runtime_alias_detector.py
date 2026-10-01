@@ -19,7 +19,9 @@ class FlextInfraRuntimeAliasDetector:
 
     @staticmethod
     def detect_file(
-        ctx: m.Infra.DetectorContext, *, policy: m.Infra.NamespaceModulePolicy
+        ctx: m.Infra.DetectorContext,
+        *,
+        policy: m.Infra.NamespaceModulePolicy,
     ) -> t.SequenceOf[m.Infra.RuntimeAliasViolation]:
         """Detect missing/duplicate runtime alias assignments in a facade file."""
         file_path = ctx.file_path
@@ -43,7 +45,7 @@ class FlextInfraRuntimeAliasDetector:
                     kind="unbound",
                     alias=family,
                     detail=(f"__all__ publishes {family!r} without a runtime binding"),
-                )
+                ),
             ]
         if not matches or family not in exports:
             return [
@@ -52,7 +54,7 @@ class FlextInfraRuntimeAliasDetector:
                     kind="missing",
                     alias=family,
                     detail=f"Facade {family!r} must be bound and published in __all__",
-                )
+                ),
             ]
         if len(matches) > 1:
             return [
@@ -61,7 +63,7 @@ class FlextInfraRuntimeAliasDetector:
                     kind="duplicate",
                     alias=family,
                     detail=f"Found {len(matches)} '{family} = ...' assignments",
-                )
+                ),
             ]
         module = u.Infra.resolve_pymodule(ctx.rope_project, resource)
         attributes = module.get_attributes()
@@ -78,7 +80,7 @@ class FlextInfraRuntimeAliasDetector:
                     kind="missing",
                     alias=family,
                     detail=f"Facade {family!r} must reference {policy.expected_family!r}",
-                )
+                ),
             ]
         return []
 

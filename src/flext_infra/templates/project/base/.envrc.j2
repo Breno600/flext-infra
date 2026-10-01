@@ -19,7 +19,7 @@ PROJECT_ROOT="${PROJECT_ROOT%/*}"
 PROJECT_ROOT="$(cd "${PROJECT_ROOT}" && pwd -P)"
 # A nested standalone checkout never inherits an enclosing repository's tools.
 # A member checked out as a submodule shares its Git superproject runtime, the
-# same root its Makefile resolves (flext-x8gn6).
+# same root its Makefile resolves.
 RUNTIME_ROOT="$(git -C "${PROJECT_ROOT}" rev-parse --show-superproject-working-tree)"
 RUNTIME_ROOT="${RUNTIME_ROOT:-${PROJECT_ROOT}}"
 RUNTIME_ROOT="$(cd "${RUNTIME_ROOT}" && pwd -P)"
@@ -31,7 +31,7 @@ watch_file "${RUNTIME_ROOT}/{{ mise_bootstrap.lock_file }}"
 runtime_parent="$(cd "${RUNTIME_ROOT}/.." && pwd -P)"
 export GIT_CEILING_DIRECTORIES="${runtime_parent}"
 export MISE_CEILING_PATHS="${runtime_parent}"
-# D-VENV: a member inside a workspace uses the workspace environment; a
+# A member inside a workspace uses the workspace environment; a
 # standalone checkout or linked worktree owns a physical environment beside
 # its checkout. Mirror the absolute runtime path to keep every owner distinct.
 runtime_environment_suffix="${RUNTIME_ROOT#/}"

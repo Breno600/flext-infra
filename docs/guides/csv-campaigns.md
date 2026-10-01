@@ -6,11 +6,39 @@
 
 <!-- TOC END -->
 
+For a recovery that only needs declarative Sed text rules, run `make mod-text`
+at the affected repository root. This public verb validates exact rule receipts,
+checks Python syntax before publication, applies the authenticated text batch,
+and verifies that no findings remain. It does not enter the Rope or ast-grep
+phases of `make mod`. Repair a malformed rule in its authored YAML catalogue,
+then replay through this verb; do not edit a generated projection.
+When a candidate's Python package cannot import, the healthy Infra provider
+can run `make mod-text-candidate` after its workspace manifest declares exactly
+one `candidate_bootstrap_targets` entry. The same target declaration also
+supports `make bootstrap-candidate` to project the declared recovery surface.
+For regexes that may match several identifiers, declare a named group and
+`capture_equals: {keyword: expected_name}` in the rule. The engine validates
+that the group exists and rejects a different captured value before publishing
+any rewrite in the batch.
+
 The public `make mod` circuit reads `Infra.refactor_csv_campaigns` from the packaged
 configuration. Each campaign keeps one `old,new` CSV as its rename source. Consumer
 repositories, including repositories outside the FLEXT superproject, consume that same
 declared campaign through their own root verb. There is no per-campaign executable and
 no direct ast-grep write pass.
+
+`make mod-text` replays only the declared Sed text rules through the same authenticated
+publisher used by `make mod`. It exists for recovery when a text rule has left an
+authored Python file unparsable and the Rope phases cannot start. Every future Python
+replacement is parsed before the atomic batch publishes, so a malformed block-scalar
+replacement leaves all source files unchanged. After recovery, rerun `make mod`,
+`make gen`, and the native checks; `mod-text` is not a substitute for the full circuit.
+
+The public `infra.mod` operation resolves the typed campaign declarations and composes
+the real CSV runner and Rope workspace through `p.Infra` ports. The mod service receives
+those dependencies and the validated campaign inputs by constructor. `infra.apply_renames`
+offers the same real runner for an explicit `m.Infra.ApplyRenamesInput`. The CLI route
+renders progress and rename reports; the runner itself only returns typed results.
 
 `bindings` maps CSV expression prefixes to current public Rope identities. An empty
 prefix describes member names relative to an owner; a nonempty prefix describes

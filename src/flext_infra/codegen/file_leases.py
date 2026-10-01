@@ -19,7 +19,7 @@ class FlextInfraCodegenFileLeases:
     def mutation_lease(root: Path) -> Generator[None]:
         """Serialize one nontransactional writer with its canonical scope owner."""
         scope = u.Infra.git_mutation_scope(
-            m.Infra.GitRepoRequest(repo_root=root)
+            m.Infra.GitRepoRequest(repo_root=root),
         ).unwrap()
         physical = files.physical_directory_identity(scope.root).unwrap()
         lease_directory = (
@@ -31,7 +31,8 @@ class FlextInfraCodegenFileLeases:
             files.physical_directory_identity(lease_directory).unwrap()
         journal = lease_directory / c.Infra.JOURNAL_NAME
         u.Cli.atomic_read_binary_file_state(
-            journal.with_name(f"{journal.name}.lock"), required=False
+            journal.with_name(f"{journal.name}.lock"),
+            required=False,
         ).unwrap()
         with u.Infra.codegen_transaction_lease(journal):
             files.physical_directory_identity(lease_directory).unwrap()
@@ -40,7 +41,7 @@ class FlextInfraCodegenFileLeases:
                 raise ValueError(msg)
             if (
                 u.Infra.git_mutation_scope(
-                    m.Infra.GitRepoRequest(repo_root=scope.root)
+                    m.Infra.GitRepoRequest(repo_root=scope.root),
                 ).unwrap()
                 != scope
             ):
@@ -69,7 +70,8 @@ class FlextInfraCodegenFileLeases:
         try:
             with ExitStack() as stack:
                 for participant in sorted(
-                    participants, key=lambda item: str(item.root)
+                    participants,
+                    key=lambda item: str(item.root),
                 ):
                     if participant.root in self._file_leases:
                         continue
@@ -84,14 +86,15 @@ class FlextInfraCodegenFileLeases:
                         files.physical_directory_identity(lease_directory).unwrap()
                     lease_path = lease_directory / c.Infra.JOURNAL_NAME
                     u.Cli.atomic_read_binary_file_state(
-                        lease_path.with_name(f"{lease_path.name}.lock"), required=False
+                        lease_path.with_name(f"{lease_path.name}.lock"),
+                        required=False,
                     ).unwrap()
                     stack.enter_context(u.Infra.codegen_transaction_lease(lease_path))
                     files.physical_directory_identity(lease_directory).unwrap()
                     acquired.add(participant.root)
                     self._file_leases[participant.root] = participant
                     physical = files.physical_directory_identity(
-                        participant.root
+                        participant.root,
                     ).unwrap()
                     if physical != (participant.device, participant.inode):
                         msg = f"file publication root changed during lease: {participant.root}"

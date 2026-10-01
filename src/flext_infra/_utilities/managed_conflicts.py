@@ -28,7 +28,7 @@ class FlextInfraUtilitiesManagedConflicts:
             if item.path.as_posix() == c.PYPROJECT_FILENAME:
                 return r[m.Infra.ManagedFileSpec].ok(item)
         return r[m.Infra.ManagedFileSpec].fail(
-            f"codegen.yaml templates.managed_files must declare {c.PYPROJECT_FILENAME}"
+            f"codegen.yaml templates.managed_files must declare {c.PYPROJECT_FILENAME}",
         )
 
     @classmethod
@@ -60,7 +60,8 @@ class FlextInfraUtilitiesManagedConflicts:
         if owned is not None:
             return r[t.StrSequence].ok((f"# [MANAGED] {owned}",))
         if inner.startswith("tool.") and not cls.toml_section_is_owned(
-            inner, spec.conflict_sections
+            inner,
+            spec.conflict_sections,
         ):
             tool_table = ".".join(inner.split(".")[:2])
             return r[t.StrSequence].ok((f"# [CUSTOM] {tool_table}",))
@@ -68,7 +69,9 @@ class FlextInfraUtilitiesManagedConflicts:
 
     @staticmethod
     def recover_managed_toml(
-        content: str, *, conflict_sections: t.StrSequence
+        content: str,
+        *,
+        conflict_sections: t.StrSequence,
     ) -> p.Result[str]:
         """Choose current TOML bytes only inside explicitly owned sections."""
         if FlextInfraUtilitiesBase.first_merge_conflict_marker(content) is None:
@@ -82,7 +85,7 @@ class FlextInfraUtilitiesManagedConflicts:
             control = FlextInfraUtilitiesBase.merge_conflict_control(line)
             if control is None:
                 section_match = c.Infra.TOML_SECTION_HEADER_RE.fullmatch(
-                    line.rstrip("\r\n")
+                    line.rstrip("\r\n"),
                 )
                 if section_match is not None:
                     section = section_match.group(1)
@@ -92,11 +95,12 @@ class FlextInfraUtilitiesManagedConflicts:
             if control != "current":
                 return r[str].fail("orphan TOML merge-control marker")
             if not FlextInfraUtilitiesManagedConflicts.toml_section_is_owned(
-                section, conflict_sections
+                section,
+                conflict_sections,
             ):
                 return r[str].fail(
                     "merge conflict is outside owner-declared TOML sections: "
-                    f"{section or '<document-root>'}"
+                    f"{section or '<document-root>'}",
                 )
             index += 1
             current: list[str] = []
@@ -114,7 +118,7 @@ class FlextInfraUtilitiesManagedConflicts:
                 index += 1
                 while index < len(lines):
                     control = FlextInfraUtilitiesBase.merge_conflict_control(
-                        lines[index]
+                        lines[index],
                     )
                     if control == "separator":
                         break
@@ -135,7 +139,7 @@ class FlextInfraUtilitiesManagedConflicts:
                 return r[str].fail("TOML merge conflict has no closing marker")
             for current_line in current:
                 section_match = c.Infra.TOML_SECTION_HEADER_RE.fullmatch(
-                    current_line.rstrip("\r\n")
+                    current_line.rstrip("\r\n"),
                 )
                 if section_match is not None:
                     section = section_match.group(1)
