@@ -41,10 +41,12 @@ class FlextInfraRefactorCensus(
     """
 
     json_output: Annotated[
-        str | None, m.Field(description="Path to write JSON report")
+        str | None,
+        m.Field(description="Path to write JSON report"),
     ] = None
     impact_map_output: Annotated[
-        str | None, m.Field(description="Path to write dry-run impact map JSON")
+        str | None,
+        m.Field(description="Path to write dry-run impact map JSON"),
     ] = None
     kinds: Annotated[
         t.StrSequence | None,
@@ -57,11 +59,12 @@ class FlextInfraRefactorCensus(
     families: Annotated[
         t.StrSequence | None,
         m.Field(
-            description="Optional namespace-family filters; repeat --families NAME"
+            description="Optional namespace-family filters; repeat --families NAME",
         ),
     ] = None
     include_local_scopes: Annotated[
-        bool, m.Field(description="Include locals, parameters, and nested scopes")
+        bool,
+        m.Field(description="Include locals, parameters, and nested scopes"),
     ] = True
 
     @property

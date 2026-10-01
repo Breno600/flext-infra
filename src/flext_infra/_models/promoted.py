@@ -21,7 +21,7 @@ from .base import FlextInfraModelsBase
 class FlextInfraModelsPromoted(FlextInfraModelsBase):
     """Promoted-command models mixed into ``m.Infra``."""
 
-    """cosmos-command registry models (promoted script headers)."""
+    """flext-command registry models (promoted script headers)."""
 
     class PromotedParam(m.BaseModel):
         """One promoted command parameter declared in the script header."""
@@ -35,7 +35,7 @@ class FlextInfraModelsPromoted(FlextInfraModelsBase):
         choices: t.VariadicTuple[str] = ()
 
     class PromotedCommand(m.BaseModel):
-        """One promoted command discovered from a cosmos-command header."""
+        """One promoted command discovered from a flext-command header."""
 
         model_config = m.ConfigDict(extra="forbid", frozen=True)
 

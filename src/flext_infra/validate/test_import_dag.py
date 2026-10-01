@@ -36,8 +36,10 @@ class FlextInfraValidateTestImportDag(FlextInfraProjectSelectionServiceBase[bool
         )
         return r[m.Infra.ValidationReport].ok(
             m.Infra.ValidationReport(
-                passed=not violations, violations=violations, summary=summary
-            )
+                passed=not violations,
+                violations=violations,
+                summary=summary,
+            ),
         )
 
     def _project_violations(self, project_root: Path) -> t.StrSequence:
@@ -135,7 +137,7 @@ class FlextInfraValidateTestImportDag(FlextInfraProjectSelectionServiceBase[bool
                 if alias in c.Infra.FLEXT_FAMILIES
             )
             if imported_facet is not None and facade_order.index(
-                imported_facet
+                imported_facet,
             ) < facade_order.index(source_facet):
                 return "reverse canonical test-facet edge"
         if (

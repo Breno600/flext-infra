@@ -24,7 +24,8 @@ class FlextInfraUtilitiesIterationWorkspace(FlextInfraUtilitiesIterationDirector
 
     @classmethod
     def iter_python_files(
-        cls, request: p.Infra.SourceScanRequest
+        cls,
+        request: p.Infra.SourceScanRequest,
     ) -> p.Result[t.SequenceOf[Path]]:
         """Return Python files from the exact production roots in ``request``.
 
@@ -37,11 +38,12 @@ class FlextInfraUtilitiesIterationWorkspace(FlextInfraUtilitiesIterationDirector
 
         """
         invalid_root = next(
-            (root for root in request.project_roots if not root.is_dir()), None
+            (root for root in request.project_roots if not root.is_dir()),
+            None,
         )
         if invalid_root is not None:
             return r[t.SequenceOf[Path]].fail(
-                f"python file iteration failed: project root is not a directory: {invalid_root}"
+                f"python file iteration failed: project root is not a directory: {invalid_root}",
             )
         try:
             files = {
@@ -62,14 +64,14 @@ class FlextInfraUtilitiesIterationWorkspace(FlextInfraUtilitiesIterationDirector
             if (path := (project_root / directory_name).resolve()).is_dir()
         )
         tracked_files = FlextInfraUtilitiesGitScopeMixin.git_tracked_scope_paths(
-            project_root
+            project_root,
         )
         if tracked_files is None:
             return tuple(
                 file_path
                 for source_root in source_roots
                 for file_path in FlextInfraUtilitiesIterationDirectory.iter_directory_python_files(
-                    source_root
+                    source_root,
                 )
             )
         ignored = frozenset(config.Infra.codegen.source_scan_ignored)

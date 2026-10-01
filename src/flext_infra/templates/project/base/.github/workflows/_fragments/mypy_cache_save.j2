@@ -1,9 +1,0 @@
-
-      # Why: save on every outcome, a failing or killed Mypy included, under a
-      # key unique to this run, so every run hands its analysis to the next.
-      - name: Save Mypy cache
-        if: {% raw %}${{ always() }}{% endraw %}
-        uses: {{ github_actions["cache"].repository }}/save@{{ github_actions["cache"].version }}
-        with:
-          path: ~/{{ make.mypy_cache.home_cache_directory }}/{{ make.mypy_cache.external_storage_directory }}
-          key: {% raw %}${{ runner.os }}-{% endraw %}{{ python_version }}{% raw %}-mypy-${{ github.run_id }}-${{ github.run_attempt }}{% endraw %}

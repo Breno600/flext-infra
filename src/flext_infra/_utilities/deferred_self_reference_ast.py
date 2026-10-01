@@ -13,7 +13,7 @@ from .._utilities.deferred_self_reference_rewrite import (
 
 
 class FlextInfraUtilitiesDeferredSelfReference(
-    FlextInfraUtilitiesDeferredSelfReferenceRewrite
+    FlextInfraUtilitiesDeferredSelfReferenceRewrite,
 ):
     """Own deferred-self-reference AST analysis and rewrites."""
 
@@ -72,12 +72,16 @@ class FlextInfraUtilitiesDeferredSelfReference(
     @classmethod
     def _factory_keyword(cls, call: ast.Call) -> ast.keyword | None:
         return next(
-            (item for item in call.keywords if item.arg == cls._FACTORY_KEYWORD), None
+            (item for item in call.keywords if item.arg == cls._FACTORY_KEYWORD),
+            None,
         )
 
     @classmethod
     def _append_deferred(
-        cls, findings: list[Finding], enclosing: frozenset[str], factory: ast.Lambda
+        cls,
+        findings: list[Finding],
+        enclosing: frozenset[str],
+        factory: ast.Lambda,
     ) -> None:
         hit = enclosing & cls._referenced_roots(factory.body)
         if not hit:
@@ -91,12 +95,15 @@ class FlextInfraUtilitiesDeferredSelfReference(
                 f"default_factory defers resolution of {name!r} through a lambda; "
                 "hoist the model into a FLEXT namespace facet, inherit it, and "
                 "pass the model as the factory",
-            )
+            ),
         )
 
     @classmethod
     def _append_recursive(
-        cls, findings: list[Finding], owner: str, node: ast.AnnAssign
+        cls,
+        findings: list[Finding],
+        owner: str,
+        node: ast.AnnAssign,
     ) -> None:
         wrappers = cls._annotation_wrappers(node.annotation)
         if owner not in cls._referenced_roots(node.annotation) or (
@@ -110,12 +117,15 @@ class FlextInfraUtilitiesDeferredSelfReference(
                 cls._RECURSIVE_KIND,
                 f"model {owner!r} annotates a field with itself; split the "
                 "recursive leg into a FLEXT namespace facet",
-            )
+            ),
         )
 
     @classmethod
     def _visit(
-        cls, node: ast.AST, stack: list[ast.ClassDef], findings: list[Finding]
+        cls,
+        node: ast.AST,
+        stack: list[ast.ClassDef],
+        findings: list[Finding],
     ) -> None:
         if isinstance(node, ast.ClassDef):
             stack.append(node)
@@ -137,7 +147,8 @@ class FlextInfraUtilitiesDeferredSelfReference(
 
     @classmethod
     def collect_deferred_self_reference_findings(
-        cls, tree: ast.Module
+        cls,
+        tree: ast.Module,
     ) -> t.VariadicTuple[Finding]:
         """Collect deferred factories and recursive fields in one module."""
         findings: list[FlextInfraUtilitiesDeferredSelfReference.Finding] = []

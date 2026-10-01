@@ -40,7 +40,8 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
         project.mkdir()
 
         execution = FlextInfraDuplicationGate(tmp_path).check(
-            project, self._ctx(tmp_path)
+            project,
+            self._ctx(tmp_path),
         )
 
         tm.that(execution.result.passed, eq=False)
@@ -62,7 +63,8 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
         package = root / "src" / "fixture_duplication"
         package.mkdir(parents=True, exist_ok=True)
         (root / "src" / "fixture_duplication" / "unique.py").write_text(
-            "UNIQUE_MODULE_MARKER = 'canonical-scope-only'\n", encoding="utf-8"
+            "UNIQUE_MODULE_MARKER = 'canonical-scope-only'\n",
+            encoding="utf-8",
         )
         (root / "charts").mkdir()
         # The clone must clear BOTH typed gate floors (lines and tokens); a
@@ -102,7 +104,8 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
         return root
 
     def test_declared_trees_enter_the_scan_and_fail_on_clones(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A declared project tree joins the scan and its clones are findings."""
         root = self._governed_with_declared_trees(tmp_path, declare_trees=True)
@@ -111,7 +114,8 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
 
         tm.that(execution.result.passed, eq=False)
         tm.that(
-            tuple(issue.file for issue in execution.issues), has="charts/values.yaml"
+            tuple(issue.file for issue in execution.issues),
+            has="charts/values.yaml",
         )
 
     def test_undeclared_trees_stay_outside_the_scan(self, tmp_path: Path) -> None:
@@ -151,13 +155,16 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
             package.mkdir(parents=True, exist_ok=True)
             (package / "duplicated.py").write_text(module, encoding="utf-8")
         u.Tests.write_workspace_manifest(
-            root, "sibling-workspace", role=c.Infra.MakeProfile.WORKSPACE
+            root,
+            "sibling-workspace",
+            role=c.Infra.MakeProfile.WORKSPACE,
         )
         u.Tests.declare_workspace_projects(root, ("fixture-dup", "fixture-dup-extra"))
         return root
 
     def test_project_scan_never_reaches_a_prefix_named_sibling(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A project evaluates only itself, locally exactly as in CI.
 

@@ -25,6 +25,8 @@ class FlextInfraRefactorCensusRemovalMixin(
     rule can see.
     """
 
+    _census_validate_log: ClassVar[p.Logger] = u.fetch_logger(__name__)
+
     if TYPE_CHECKING:
         dry_run: bool
 
@@ -82,7 +84,7 @@ class FlextInfraRefactorCensusRemovalMixin(
                             file_path=candidate.file_path,
                             line=candidate.line,
                             description=msg,
-                        )
+                        ),
                     )
                     continue
                 if preview_result.unwrap():

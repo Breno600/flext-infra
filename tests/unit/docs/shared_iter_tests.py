@@ -43,7 +43,8 @@ class TestsFlextInfraDocsSharedIter:
         tm.that(not any(".hidden" in str(f) for f in files), eq=True)
 
     def test_hidden_workspace_ancestor_does_not_exclude_docs(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Exclude hidden descendants without rejecting a worktree ancestor."""
         workspace = tmp_path / ".worktrees" / "project"

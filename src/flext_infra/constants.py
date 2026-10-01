@@ -9,6 +9,7 @@ from __future__ import annotations
 from flext_cli import FlextCliConstants
 
 from ._constants.base import FlextInfraConstantsBase
+from ._constants.census import FlextInfraConstantsCensus
 from ._constants.check import FlextInfraConstantsCheck
 from ._constants.cli import FlextInfraConstantsCli
 from ._constants.codegen import FlextInfraConstantsCodegen
@@ -31,6 +32,7 @@ class FlextInfraConstants(FlextCliConstants):
 
     class Infra(
         FlextInfraConstantsBase,
+        FlextInfraConstantsCensus,
         FlextInfraConstantsCheck,
         FlextInfraConstantsCli,
         FlextInfraConstantsCodegen,

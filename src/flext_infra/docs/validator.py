@@ -18,7 +18,8 @@ class FlextInfraDocValidator(FlextInfraDocServiceBase):
     """Validate the governed docs contract for root and FLEXT projects."""
 
     def validate_workspace(
-        self, request: m.Infra.DocsGenerateRequest
+        self,
+        request: m.Infra.DocsGenerateRequest,
     ) -> p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]:
         """Validate documentation across the repository root and governed projects."""
         return self.run_scoped_docs(
@@ -36,7 +37,7 @@ class FlextInfraDocValidator(FlextInfraDocServiceBase):
                 repository_root=self.repository_root,
                 projects=self.selected_projects,
                 output_dir=self.output_dir,
-            )
+            ),
         )
         return self._propagate_phase_outcome(
             "validate",
@@ -46,13 +47,7 @@ class FlextInfraDocValidator(FlextInfraDocServiceBase):
 
     def _run_adr_skill_check(self, repository_root: Path) -> t.Pair[int, t.StrSequence]:
         """Run the ADR skill validation check for the root docs scope."""
-        required_result = u.Infra.docs_load_required_skills(repository_root)
-        if required_result.failure:
-            self.logger.warning(
-                "adr_skill_check_failed", error=required_result.error or ""
-            )
-            return (1, [])
-        required_skills = required_result.value or ["flext-development"]
+        required_skills = u.Infra.docs_load_required_skills(repository_root).unwrap()
         skills_root = repository_root / ".agents/skills"
         missing: list[str] = []
         for skill_name in required_skills:
@@ -64,7 +59,10 @@ class FlextInfraDocValidator(FlextInfraDocServiceBase):
         return (0 if not missing else 1, missing)
 
     def _validate_scope(
-        self, scope: m.Infra.DocScope, *, apply_mode: bool
+        self,
+        scope: m.Infra.DocScope,
+        *,
+        apply_mode: bool,
     ) -> m.Infra.DocsPhaseReport:
         """Validate one docs scope and persist the standard reports."""
         status = c.Infra.ResultStatus.OK
@@ -79,7 +77,7 @@ class FlextInfraDocValidator(FlextInfraDocServiceBase):
             if code != 0:
                 status = c.Infra.ResultStatus.FAIL
                 messages.append(
-                    f"missing adr references in skills: {', '.join(missing)}"
+                    f"missing adr references in skills: {', '.join(missing)}",
                 )
         missing_paths = u.Infra.docs_missing_required_paths(scope)
         if missing_paths:

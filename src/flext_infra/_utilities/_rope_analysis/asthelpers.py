@@ -33,11 +33,13 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
 
     @staticmethod
     def resource_cache_key(
-        rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
+        rope_project: t.Infra.RopeProject,
+        resource: t.Infra.RopeResource,
     ) -> t.Triple[str, str, int]:
         """Resource cache key."""
         file_path = FlextInfraUtilitiesRopeCore.resource_file_path(
-            rope_project, resource
+            rope_project,
+            resource,
         )
         mtime_ns = (
             file_path.stat().st_mtime_ns
@@ -52,7 +54,7 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
         """Return whether one Rope name is defined in ``resource``."""
         if isinstance(pyname, (p.Infra.RopeImportedName, p.Infra.RopeImportedModule)):
             return False
-        # NOTE (multi-agent, flext-f8vk / kimi): p.Infra declares
+        # p.Infra declares
         # get_definition_location() as tuple-always (every other caller
         # unpacks directly); the old None guard was dead code.
         module, line = pyname.get_definition_location()
@@ -98,7 +100,7 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
         """Return a process-wide rope project usable for string parsing."""
         cached = FlextInfraUtilitiesRopeAnalysisAstHelpers._parse_project
         if cached is None:
-            # flext-o6h5 (agent: kimi) — root-cause fix: the anchor was a hardcoded
+            # Root-cause fix: the anchor was a hardcoded
             # operator path that crashed CI (FileNotFoundError) and silently bound
             # the parse project to the wrong tree locally. Anchor on the validated
             # settings SSOT, with cwd as last resort — both exist where CLI runs.
@@ -130,7 +132,9 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
 
     @staticmethod
     def first_decorator_line(
-        pyfunction: t.Infra.RopePyObject, *, default_line: int
+        pyfunction: t.Infra.RopePyObject,
+        *,
+        default_line: int,
     ) -> int:
         """Return the lowest line number among ``pyfunction``'s decorators."""
         decorators = getattr(pyfunction, "decorators", None) or ()
@@ -327,6 +331,6 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
             and FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(subscript_value)
         ):
             return FlextInfraUtilitiesRopeAnalysisAstHelpers._class_base_name(
-                subscript_value
+                subscript_value,
             )
         return ""

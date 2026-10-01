@@ -61,10 +61,10 @@ class FlextInfraConstantsSharedInfra:
     CPROFILE_RECEIPT_ARGUMENT_COUNT: ClassVar[int] = 3
     "``argv`` length when an explicit run receipt accompanies the profile path."
     PYTHON_IMPORT_NAME_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$"
+        r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$",
     )
     MISSING_IMPORT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"Cannot find module `([^`]+)` \[missing-import\]"
+        r"Cannot find module `([^`]+)` \[missing-import\]",
     )
     MYPY_HINT_RE: ClassVar[t.RegexPattern] = re.compile(
         r'note:\s+(?:hint|note):\s+(?:["`].*?\bpip\s+install\s+|install\s+stub\s+package\s+["`]?)'
@@ -72,7 +72,7 @@ class FlextInfraConstantsSharedInfra:
         re.IGNORECASE,
     )
     MYPY_STUB_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"Library stubs not installed for ['\"](\S+?)['\"]"
+        r"Library stubs not installed for ['\"](\S+?)['\"]",
     )
     INTERNAL_PREFIXES: ClassVar[t.VariadicTuple[str]] = ("flext_", "flext-")
 
@@ -177,6 +177,24 @@ class FlextInfraConstantsSharedInfra:
     DIR_TESTS: ClassVar[str] = "tests"
     DIR_EXAMPLES: ClassVar[str] = "examples"
     DIR_SCRIPTS: ClassVar[str] = "scripts"
+    # Runtime-exempt surfaces, matched on path parts RELATIVE to the scanned
+    # repository root (X-75): an ancestor directory name never grants an
+    # exemption. Scope exclusions (state/cache dirs) belong to the source-scan
+    # ignore list, not here.
+    TIER_WHITELIST_NON_RUNTIME_DIR_PARTS: ClassVar[frozenset[str]] = frozenset({
+        DIR_TESTS,
+        DIR_EXAMPLES,
+        DIR_SCRIPTS,
+        "evaluate",
+    })
+    TIER_WHITELIST_SETTINGS_MODULE_LIBRARIES: ClassVar[frozenset[str]] = frozenset({
+        "pydantic_settings"
+    })
+    TIER_WHITELIST_LEAF_CONFIG_FILES: ClassVar[frozenset[str]] = frozenset({
+        "_config.py"
+    })
+    "Leaf config modules (e.g. a consumer's _config.py) that own their external-library"
+    "imports directly as the bottom of the c/t/p/m/u chain."
     DIR_TYPINGS: ClassVar[str] = "typings"
     DIR_DOCS: ClassVar[str] = "docs"
     DIR_BUILD: ClassVar[str] = "build"

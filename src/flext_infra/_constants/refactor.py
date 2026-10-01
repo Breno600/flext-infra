@@ -145,9 +145,6 @@ class FlextInfraConstantsRefactor:
     })
     "ast-grep rule whose findings select each finding-driven semantic cutover."
 
-    RK_REFACTOR: ClassVar[str] = "refactor"
-    RK_PROJECT_SCAN_DIRS: ClassVar[str] = "project_scan_dirs"
-    RK_FILE_EXTENSIONS: ClassVar[str] = "file_extensions"
     RK_FORBIDDEN_IMPORTS: ClassVar[str] = "forbidden_imports"
     RK_REDUNDANT_TYPE_TARGETS: ClassVar[str] = "redundant_type_targets"
     RK_TARGET_MODULES: ClassVar[str] = "target_modules"
@@ -160,7 +157,8 @@ class FlextInfraConstantsRefactor:
     RK_ALLOW_TARGET_SUFFIXES: ClassVar[str] = "allow_target_suffixes"
     CODEMOD_RULE_SUFFIX: ClassVar[str] = ".yml"
     CODEMOD_DOCUMENT_SEPARATOR_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^---\s*$", re.MULTILINE
+        r"^---\s*$",
+        re.MULTILINE,
     )
     CODEMOD_CONFIG_FILENAME: ClassVar[str] = "sgconfig.yml"
     # Static rules are data under the one rule root, config/rules: the
@@ -200,6 +198,7 @@ class FlextInfraConstantsRefactor:
     CODEMOD_TEXT_KEY_REPLACE: ClassVar[str] = "replace"
     CODEMOD_TEXT_KEY_FLAGS: ClassVar[str] = "flags"
     CODEMOD_TEXT_KEY_EXPECTED: ClassVar[str] = "expected"
+    CODEMOD_TEXT_KEY_CAPTURE_EQUALS: ClassVar[str] = "capture_equals"
     # ast-grep rejects unknown top-level keys, so an ast-grep rule declares
     # its finding-count receipt under the `metadata` mapping it does accept.
     CODEMOD_RULE_METADATA_KEY: ClassVar[str] = "metadata"
@@ -242,12 +241,6 @@ class FlextInfraConstantsRefactor:
         "`make mod-snapshots`, review the snapshot diff and commit it"
     )
     CODEMOD_EPHEMERAL_DIRNAME: ClassVar[str] = "__pycache__"
-    REFACTOR_CONFIG_KEYS: ClassVar[t.StrSequence] = (
-        RK_PROJECT_SCAN_DIRS,
-        RK_FILE_EXTENSIONS,
-    )
-    """Allowed keys under the ``refactor`` config scope."""
-
     TYPING_DEFINITION_FILES: ClassVar[frozenset[str]] = frozenset({
         "constants.py",
         "_constants",
@@ -338,20 +331,12 @@ class FlextInfraConstantsRefactor:
         "u": "*utilities.py",
     })
     "Facade family letter → file glob mapping."
-    FAMILY_PUBLIC_MODULES: ClassVar[t.StrMapping] = MappingProxyType({
-        "c": "constants",
-        "m": "models",
-        "p": "protocols",
-        "t": "typings",
-        "u": "utilities",
-    })
-    "Facade family letter → public facade module suffix mapping."
     NAMESPACE_FILE_TO_FAMILY: ClassVar[t.StrMapping] = MappingProxyType(
         dict.fromkeys(FLEXT_CONSTANTS_FILE_NAMES, "c")
         | dict.fromkeys(FLEXT_TYPINGS_FILE_NAMES, "t")
         | dict.fromkeys(FLEXT_PROTOCOLS_FILE_NAMES, "p")
         | dict.fromkeys(FLEXT_MODELS_FILE_NAMES, "m")
-        | dict.fromkeys(FLEXT_UTILITIES_FILE_NAMES, "u")
+        | dict.fromkeys(FLEXT_UTILITIES_FILE_NAMES, "u"),
     )
     "Canonical facade file name → family alias mapping."
     FLEXT_FAMILIES: ClassVar[frozenset[str]] = frozenset({"c", "t", "p", "m", "u"})
@@ -424,7 +409,7 @@ class FlextInfraConstantsRefactor:
         c.ENFORCEMENT_CANONICAL_ALIASES
     )
     "Canonical short aliases exposed by FLEXT facades (SSOT: flext-core)."
-    # flext-j47u: consume core enforcement data through its exact canonical alias.
+    # Consume core enforcement data through its exact canonical alias.
     ENFORCEMENT_LIBRARY_OWNERS: ClassVar[t.StrMapping] = c.ENFORCEMENT_LIBRARY_OWNERS
     "External library → project that owns its abstraction facade (SSOT: flext-core)."
     "Matches 'from __future__ import annotations' import statement."

@@ -257,7 +257,11 @@ class TestsFlextInfraRefactorMainCli:
 
     @classmethod
     def _apply_census(
-        cls, workspace: Path, *, rules: str, kinds: str | None = None
+        cls,
+        workspace: Path,
+        *,
+        rules: str,
+        kinds: str | None = None,
     ) -> None:
         """Run one applying census through the CLI, asserting a clean exit."""
         u.Tests.provision_checkout(workspace)
@@ -286,18 +290,23 @@ class TestsFlextInfraRefactorMainCli:
     def _assert_no_unused_functions(workspace: Path) -> None:
         """Assert the workspace reports no unused function after a cutover."""
         report = u.Tests.census_report(
-            workspace, kinds=("function",), rules=("unused",)
+            workspace,
+            kinds=("function",),
+            rules=("unused",),
         )
         tm.that(report.unused_count, eq=0)
         tm.that(report.removal_candidate_count, eq=0)
 
     @staticmethod
     def _build_module_workspace(
-        tmp_path: Path, module_source: str
+        tmp_path: Path,
+        module_source: str,
     ) -> t.Pair[Path, Path]:
         """Build a lazy-init demo package holding one authored ``models.py``."""
         workspace, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo"
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         module_path = package_root / "models.py"
         module_path.write_text(module_source, encoding="utf-8")
@@ -336,7 +345,8 @@ class TestsFlextInfraRefactorMainCli:
 
     @classmethod
     def _build_test_only_workspace_with_source_import(
-        cls, tmp_path: Path
+        cls,
+        tmp_path: Path,
     ) -> t.Pair[Path, Path]:
         return cls._build_service_workspace(
             tmp_path,
@@ -362,10 +372,12 @@ class TestsFlextInfraRefactorMainCli:
 
     @classmethod
     def _build_unused_top_level_workspace_with_source_import(
-        cls, tmp_path: Path
+        cls,
+        tmp_path: Path,
     ) -> t.Pair[Path, Path]:
         return cls._build_service_workspace(
-            tmp_path, service_source=cls._UNUSED_TOP_LEVEL_SERVICE
+            tmp_path,
+            service_source=cls._UNUSED_TOP_LEVEL_SERVICE,
         )
 
     @classmethod
@@ -378,7 +390,8 @@ class TestsFlextInfraRefactorMainCli:
 
     @classmethod
     def _build_lazy_init_cascade_workspace(
-        cls, tmp_path: Path
+        cls,
+        tmp_path: Path,
     ) -> t.Triple[Path, Path, Path]:
         workspace = tmp_path / "workspace"
         cls._write_workspace_pyproject(workspace)
@@ -390,7 +403,8 @@ class TestsFlextInfraRefactorMainCli:
         return workspace, service_file, init_path
 
     def test_refactor_census_accepts_the_repository_root_option(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """The root is a subcommand option, not a group flag ahead of the verb."""
         workspace = tmp_path / "workspace"
@@ -399,11 +413,14 @@ class TestsFlextInfraRefactorMainCli:
         tm.that(result, eq=0)
 
     def test_refactor_census_flags_unused_when_only_tests_reference_source(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         workspace = self._build_test_only_workspace(tmp_path)
         report = u.Tests.census_report(
-            workspace, kinds=("function",), rules=("unused",)
+            workspace,
+            kinds=("function",),
+            rules=("unused",),
         )
         violations = u.Tests.census_violations(report)
 
@@ -424,12 +441,15 @@ class TestsFlextInfraRefactorMainCli:
         tm.that(rendered, has="Candidate preview:")
 
     def test_refactor_census_keeps_facade_members_out_of_removal_candidates(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         workspace, _module_path = self._build_facade_member_workspace(tmp_path)
 
         report = u.Tests.census_report(
-            workspace, kinds=("class", "assignment"), rules=("unused",)
+            workspace,
+            kinds=("class", "assignment"),
+            rules=("unused",),
         )
 
         tm.that(report.unused_count, eq=0)
@@ -437,7 +457,8 @@ class TestsFlextInfraRefactorMainCli:
         tm.that(report.removal_candidates, eq=())
 
     def test_refactor_census_apply_removes_unused_source_without_touching_tests(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         workspace = self._build_test_only_workspace(tmp_path)
         service_file = workspace / "src" / "sample_pkg" / "service.py"
@@ -455,10 +476,11 @@ class TestsFlextInfraRefactorMainCli:
         self._assert_no_unused_functions(workspace)
 
     def test_refactor_census_preserves_published_lazy_exports(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         workspace, helpers_file, init_path = self._build_lazy_init_cascade_workspace(
-            tmp_path
+            tmp_path,
         )
         test_file = workspace / "tests" / "test_operations.py"
 
@@ -497,12 +519,13 @@ class TestsFlextInfraRefactorMainCli:
                     ),
                 ],
                 cwd=workspace / "src",
-            )
+            ),
         )
         tm.that(probe.stdout.splitlines(), eq=["2", "4"])
 
     def test_refactor_census_apply_removes_decorated_unused_function(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         workspace, service_file = self._build_service_workspace(
             tmp_path,
@@ -533,13 +556,15 @@ class TestsFlextInfraRefactorMainCli:
         tm.that(stripped, has='"gamma"')
 
     def test_refactor_census_apply_against_cloned_flext_layout(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         origin, origin_helpers, origin_init = self._build_lazy_init_cascade_workspace(
-            tmp_path
+            tmp_path,
         )
         clone = u.Infra.clone_project_for_validation(
-            origin, tmp_path / "clone_root" / "workspace"
+            origin,
+            tmp_path / "clone_root" / "workspace",
         )
         clone_helpers = clone / origin_helpers.relative_to(origin)
         clone_init = clone / origin_init.relative_to(origin)
@@ -564,7 +589,8 @@ class TestsFlextInfraRefactorMainCli:
         tm.that(report.unused_count, eq=0)
 
     def test_refactor_census_apply_removes_unused_top_level_and_cleans_imports(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         workspace, service_file = (
             self._build_unused_top_level_workspace_with_source_import(tmp_path)
@@ -580,15 +606,18 @@ class TestsFlextInfraRefactorMainCli:
         self._assert_no_unused_functions(workspace)
 
     def test_refactor_census_dry_run_validates_candidate_after_import_cleanup(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         workspace, service_file = self._build_test_only_workspace_with_source_import(
-            tmp_path
+            tmp_path,
         )
         u.Tests.provision_checkout(workspace)
 
         report = u.Tests.census_report(
-            workspace, kinds=("function",), rules=("unused",)
+            workspace,
+            kinds=("function",),
+            rules=("unused",),
         )
 
         tm.that(report.unused_count, eq=1)
@@ -599,7 +628,8 @@ class TestsFlextInfraRefactorMainCli:
         tm.that(service_source, has="def only_for_tests")
 
     def test_refactor_census_apply_dry_run_does_not_mutate_files(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         workspace = self._build_test_only_workspace(tmp_path)
         service_file = workspace / "src" / "sample_pkg" / "service.py"
@@ -651,7 +681,8 @@ class TestsFlextInfraRefactorMainCli:
         tm.that(len(self._impact_map_entries(impact_map_path)), eq=0)
 
     def test_refactor_census_dry_run_excludes_unsupported_method_candidate(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         self._assert_dry_run_one_violation_no_candidate(
             self._build_test_only_method_workspace(tmp_path),
@@ -663,7 +694,8 @@ class TestsFlextInfraRefactorMainCli:
         )
 
     def test_refactor_census_dry_run_excludes_unsupported_nested_unused_function(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         self._assert_dry_run_one_violation_no_candidate(
             self._build_unused_nested_function_workspace(tmp_path),
@@ -675,7 +707,8 @@ class TestsFlextInfraRefactorMainCli:
         )
 
     def test_refactor_census_dry_run_validates_unused_candidate_after_import_cleanup(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         workspace, service_file = (
             self._build_unused_top_level_workspace_with_source_import(tmp_path)
@@ -711,7 +744,8 @@ class TestsFlextInfraRefactorMainCli:
         )
 
     def test_refactor_census_dry_run_excludes_unsupported_local_unused_object(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         self._assert_dry_run_one_violation_no_candidate(
             self._build_unused_local_workspace(tmp_path),
@@ -723,7 +757,8 @@ class TestsFlextInfraRefactorMainCli:
         )
 
     def test_refactor_census_writes_impact_map_for_removal_candidates(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         workspace = self._build_test_only_workspace(tmp_path)
         impact_map_path = tmp_path / "impact-map.json"
@@ -748,7 +783,8 @@ class TestsFlextInfraRefactorMainCli:
         )
 
     def test_refactor_census_cli_writes_impact_map_for_removal_candidates(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         workspace = self._build_test_only_workspace(tmp_path)
         u.Tests.provision_checkout(workspace)
@@ -770,7 +806,8 @@ class TestsFlextInfraRefactorMainCli:
         tm.that(len(self._impact_map_entries(impact_map_path)), eq=1)
 
     def test_refactor_census_apply_preserves_impact_map_plan(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         workspace = self._build_test_only_workspace(tmp_path)
         impact_map_path = tmp_path / "apply-impact-map.json"

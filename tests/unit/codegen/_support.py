@@ -35,7 +35,7 @@ class CodegenTestSupport:
                     *cls.CI_TRIGGER_BASELINE_BRANCHES[:-1],
                     repository_branch,
                     cls.CI_TRIGGER_BASELINE_BRANCHES[-1],
-                ))
+                )),
             )
 
         @staticmethod
@@ -86,6 +86,9 @@ class CodegenTestSupport:
                 make=codegen.make,
                 workspace_repositories=workspace_repositories,
                 checkout_submodules=codegen.checkout_submodules,
+                dependabot_cooldown_days=codegen.dependabot_cooldown_days.get(
+                    dist, codegen.dependabot_cooldown_default_days
+                ),
                 custom_steps=custom_steps,
                 has_devcontainer=has_devcontainer,
             )
@@ -98,7 +101,7 @@ class CodegenTestSupport:
             CI-contract test shares; consumers assert on the returned steps.
             """
             document = t.Cli.JSON_MAPPING_ADAPTER.validate_python(
-                tm.ok(u.Cli.yaml_parse(rendered))
+                tm.ok(u.Cli.yaml_parse(rendered)),
             )
             jobs = t.Cli.JSON_MAPPING_ADAPTER.validate_python(document["jobs"])
             job = t.Cli.JSON_MAPPING_ADAPTER.validate_python(jobs["ci"])

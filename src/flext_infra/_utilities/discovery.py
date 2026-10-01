@@ -105,14 +105,14 @@ class FlextInfraUtilitiesDiscovery(
             return False
         file_name = file_path.name
         return file_name.startswith(
-            c.Infra.NAMESPACE_PYTEST_MODULE_PREFIX
+            c.Infra.NAMESPACE_PYTEST_MODULE_PREFIX,
         ) or file_name.endswith(tuple(c.Infra.NAMESPACE_PYTEST_MODULE_SUFFIXES))
 
     @staticmethod
     def project_root(file_path: Path) -> Path | None:
         """Discover the enclosing project root for one file or directory path."""
         project_root = FlextInfraUtilitiesDiscovery._discover_project_root_from_path(
-            str(file_path)
+            str(file_path),
         )
         return Path(project_root) if project_root else None
 
@@ -123,7 +123,8 @@ class FlextInfraUtilitiesDiscovery(
         project_root_value = cls._discover_project_root_from_path(file_path)
         project_root = Path(project_root_value) if project_root_value else None
         normalized_parts = cls._normalized_python_parts(
-            resolved, cls._relative_path_parts(resolved, project_root)
+            resolved,
+            cls._relative_path_parts(resolved, project_root),
         )
         package_name = cls._package_name_from_wrapper_parts(normalized_parts)
         if package_name:
@@ -177,19 +178,19 @@ class FlextInfraUtilitiesDiscovery(
         cls,
         project_dir: Path,
         *,
+        workspace_excluded_top_dirs: frozenset[str],
         skip_dirs: frozenset[str] | None = None,
-        workspace_excluded_top_dirs: frozenset[str] | None = None,
     ) -> t.StrSequence:
-        """Return top-level directories that contain at least one Python file."""
+        """Return top-level directories that contain at least one Python file.
+
+        ``workspace_excluded_top_dirs`` is the caller's validated analysis
+        scope: the service that owns the workspace topology computes it and
+        passes it in, so discovery never reaches back into that service.
+        """
         if not project_dir.is_dir():
             return list[str]()
         effective_skip = (
             skip_dirs if skip_dirs is not None else c.Infra.PYTHON_DISCOVERY_SKIP_DIRS
-        )
-        workspace_excluded = (
-            workspace_excluded_top_dirs
-            if workspace_excluded_top_dirs is not None
-            else cls._workspace_excluded_top_dirs(project_dir)
         )
         return [
             subdir.name
@@ -197,7 +198,7 @@ class FlextInfraUtilitiesDiscovery(
             if subdir.is_dir()
             and not subdir.name.startswith(".")
             and subdir.name not in effective_skip
-            and subdir.name not in workspace_excluded
+            and subdir.name not in workspace_excluded_top_dirs
             and any(
                 cls._python_file_belongs_to_project(project_dir, source)
                 for source in cls._walk_python_files(subdir, effective_skip)
@@ -205,7 +206,9 @@ class FlextInfraUtilitiesDiscovery(
         ]
 
     @classmethod
-    def discover_python_targets(cls, project_dir: Path) -> t.StrSequence:
+    def discover_python_targets(
+        cls, project_dir: Path, *, workspace_excluded_top_dirs: frozenset[str]
+    ) -> t.StrSequence:
         """Return every first-party Python target owned by one project root.
 
         Directory discovery alone omits standalone modules stored directly at
@@ -220,11 +223,17 @@ class FlextInfraUtilitiesDiscovery(
             for path in sorted(project_dir.iterdir())
             if path.is_file() and path.suffix in {".py", ".pyi"}
         ]
-        return [*cls.discover_python_dirs(project_dir), *root_modules]
+        return [
+            *cls.discover_python_dirs(
+                project_dir, workspace_excluded_top_dirs=workspace_excluded_top_dirs
+            ),
+            *root_modules,
+        ]
 
     @staticmethod
     def _walk_python_files(
-        directory: Path, skip_dirs: frozenset[str]
+        directory: Path,
+        skip_dirs: frozenset[str],
     ) -> Iterator[Path]:
         """Yield Python files under ``directory``, pruning skipped directories.
 
@@ -262,7 +271,7 @@ class FlextInfraUtilitiesDiscovery(
         project_dir: Path,
         declared: t.StrSequence,
         *,
-        workspace_excluded_top_dirs: frozenset[str] | None = None,
+        workspace_excluded_top_dirs: frozenset[str],
     ) -> t.StrSequence:
         """Return the Python roots every analyzer surface must agree on.
 
@@ -281,7 +290,8 @@ class FlextInfraUtilitiesDiscovery(
         too, and each is analyzed under its own local configuration.
         """
         discovered = cls.discover_python_dirs(
-            project_dir, workspace_excluded_top_dirs=workspace_excluded_top_dirs
+            project_dir,
+            workspace_excluded_top_dirs=workspace_excluded_top_dirs,
         )
         return (
             *declared,
@@ -359,13 +369,13 @@ class FlextInfraUtilitiesDiscovery(
             if scan_root.is_file():
                 if scan_root.name != c.PYPROJECT_FILENAME:
                     return r[t.SequenceOf[Path]].fail(
-                        f"explicit project file must be {c.PYPROJECT_FILENAME}: {scan_root}"
+                        f"explicit project file must be {c.PYPROJECT_FILENAME}: {scan_root}",
                     )
                 all_files.append(scan_root)
                 continue
             if not scan_root.is_dir():
                 return r[t.SequenceOf[Path]].fail(
-                    f"explicit project path is not accessible: {scan_root}"
+                    f"explicit project path is not accessible: {scan_root}",
                 )
             try:
                 all_files.extend(
@@ -376,7 +386,7 @@ class FlextInfraUtilitiesDiscovery(
                             part.startswith(".") or part in effective_skip
                             for part in path.relative_to(scan_root).parts[:-1]
                         )
-                    )
+                    ),
                 )
             except OSError as exc:
                 return r[t.SequenceOf[Path]].fail_op("pyproject file scan", exc)

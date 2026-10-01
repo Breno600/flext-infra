@@ -3,7 +3,7 @@ Infra:
   # Seeded into a new project's pyproject by `codegen new`; every later change
   # goes through `make release` (the protocol is the only version writer).
   initial_project_version: "0.1.0"
-  # Release protocol policy (declared data, aihub-ioijy.9). This workspace
+  # Release protocol policy (declared data). This workspace
   # publishes the flext-* member distributions; a consumer repository leaves the
   # tuple empty and every resolved project becomes a candidate. `bump_types` and
   # `publish_url` keep their Conventional Commits / PyPI typed defaults.
@@ -15,8 +15,8 @@ Infra:
     # config/codegen-overrides.local.yaml (gitignored, merges after the
     # tracked configs).
     # Hash-pinned build backend for the isolated release build
-    # (`uv build --build-constraints … --require-hashes`); projected into every
-    # repository as config/build-constraints.txt (flext-to3n7).
+    # (`uv build --build-constraints … --require-hashes`), rendered at build
+    # time by the release policy phase.
     build_constraints:
       - name: hatchling
         version: 1.32.4
@@ -38,9 +38,8 @@ Infra:
         hashes:
           - 7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3
           - e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746
-      # hatchling 1.32.0 added tomlkit to its own requirements; under
-      # `--require-hashes` every resolved build dependency must be pinned here
-      # or the isolated build fails to resolve.
+      # Under `--require-hashes` every resolved build dependency of the
+      # backend is listed here or the isolated build fails to resolve.
       - name: tomlkit
         version: 0.15.1
         hashes:
@@ -52,11 +51,9 @@ Infra:
           - 0a9ebc8d4e2f3e8a22848c5258033035bec17a3012ac3fea16dbaa764489eb71
           - 8b1ff4f9c191b1040b71c37f1e445ab99732911e3cd91de52838453a854d7a17
   source_scan:
-    # tests/ and examples/ are first-class code under the same gates as src/
-    # (operator law 19). Leaving them out of the scan made every flext-infra
-    # analyzer blind to them: an import rule could not see the consumer it was
-    # supposed to rewrite, and the namespace, boundary, silent-failure and
-    # runtime-census checks graded only half the repository.
+    # tests/ and examples/ are first-class code under the same gates as src/;
+    # leaving them out of the scan blinds every analyzer to half the
+    # repository.
     roots:
       - src
       - scripts
@@ -89,8 +86,8 @@ Infra:
     campaigns:
       - csv: rules/mod/renames/infra-dedup.csv
         bindings:
-          t: [flext_infra.t]
-          c: [flext_infra.c]
+          t: [flext_infra.t, flext_core.t]
+          c: [flext_infra.c, flext_core.c]
         python_documentation: true
         text_globs:
           - "**/*.md"

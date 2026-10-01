@@ -48,7 +48,8 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
             rel = file_path
         project_name = rel.parts[0] if rel.parts else "."
         runtime_aliases = project_runtime_aliases.get(
-            project_name, metadata_runtime_aliases
+            project_name,
+            metadata_runtime_aliases,
         )
         if not any(part in self._WRAPPER_PACKAGES for part in rel.parts):
             return
@@ -59,7 +60,9 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
         module_ast = u.Infra.ensure_ast_node(pymodule.get_ast())
         line_offsets = self._build_line_offsets(source)
         core_rewrites = self._collect_core_test_rewrites(
-            module_ast, line_offsets=line_offsets, runtime_aliases=runtime_aliases
+            module_ast,
+            line_offsets=line_offsets,
+            runtime_aliases=runtime_aliases,
         )
         has_import_candidate = self._has_wrapper_import_candidate(
             module_ast,
@@ -157,12 +160,15 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
 
     @staticmethod
     def _apply_byte_rewrites(
-        source: str, rewrites: t.SequenceOf[t.Triple[int, int, str]]
+        source: str,
+        rewrites: t.SequenceOf[t.Triple[int, int, str]],
     ) -> str:
         """Apply ``(start, end, replacement)`` triples to ``source`` (right-to-left)."""
         updated = source
         for start, end, replacement in sorted(
-            rewrites, key=itemgetter(0), reverse=True
+            rewrites,
+            key=itemgetter(0),
+            reverse=True,
         ):
             updated = updated[:start] + replacement + updated[end:]
         return updated

@@ -19,7 +19,11 @@ class FlextInfraNamespaceRulesImports(FlextInfraNamespaceRulesBase):
 
     @classmethod
     def check_imports(
-        cls, tree: p.AttributeProbe, filepath: Path, *, package_name: str
+        cls,
+        tree: p.AttributeProbe,
+        filepath: Path,
+        *,
+        package_name: str,
     ) -> t.StrSequence:
         """Return import-boundary violations for one module."""
         owner = cls.layer_of_path(filepath)
@@ -33,7 +37,7 @@ class FlextInfraNamespaceRulesImports(FlextInfraNamespaceRulesBase):
                         package_name=package_name,
                         owner=owner,
                         type_only=type_only,
-                    )
+                    ),
                 )
                 continue
             messages.extend(
@@ -43,7 +47,7 @@ class FlextInfraNamespaceRulesImports(FlextInfraNamespaceRulesBase):
                     package_name=package_name,
                     owner=owner,
                     type_only=type_only,
-                )
+                ),
             )
         return cls.violations("NS-IMPORT", messages)
 
@@ -65,7 +69,7 @@ class FlextInfraNamespaceRulesImports(FlextInfraNamespaceRulesBase):
                 continue
             if getattr(alias, "asname", None):
                 messages.append(
-                    f"{filepath}:{cls.line(node)} — local import aliases are forbidden"
+                    f"{filepath}:{cls.line(node)} — local import aliases are forbidden",
                 )
             imported = cls.layer_of_module(module, package_name)
             violation = cls._reverse_import(owner, imported, type_only=type_only)
@@ -74,7 +78,7 @@ class FlextInfraNamespaceRulesImports(FlextInfraNamespaceRulesBase):
             if cls._private_bypass(module, filepath):
                 messages.append(
                     f"{filepath}:{cls.line(node)} — import through the public facade, "
-                    f"not {module!r}"
+                    f"not {module!r}",
                 )
         return tuple(messages)
 
@@ -113,11 +117,13 @@ class FlextInfraNamespaceRulesImports(FlextInfraNamespaceRulesBase):
             }
             for imported_name in ranks:
                 violation = cls._reverse_import(
-                    owner, imported_name, type_only=type_only
+                    owner,
+                    imported_name,
+                    type_only=type_only,
                 )
                 if violation:
                     messages.append(
-                        f"{filepath}:{cls.line(node)} — {violation}: {imported_name}"
+                        f"{filepath}:{cls.line(node)} — {violation}: {imported_name}",
                     )
         else:
             violation = cls._reverse_import(owner, imported, type_only=type_only)
@@ -126,7 +132,7 @@ class FlextInfraNamespaceRulesImports(FlextInfraNamespaceRulesBase):
         if cls._private_bypass(module, filepath):
             messages.append(
                 f"{filepath}:{cls.line(node)} — import through the public facade, "
-                f"not {module!r}"
+                f"not {module!r}",
             )
         return tuple(messages)
 
@@ -149,7 +155,10 @@ class FlextInfraNamespaceRulesImports(FlextInfraNamespaceRulesBase):
 
     @staticmethod
     def _reverse_import(
-        owner: str | None, imported: str | None, *, type_only: bool
+        owner: str | None,
+        imported: str | None,
+        *,
+        type_only: bool,
     ) -> str | None:
         """Describe a backward runtime edge, allowing it only for type checking.
 
@@ -167,7 +176,7 @@ class FlextInfraNamespaceRulesImports(FlextInfraNamespaceRulesBase):
         if owner is None or imported is None or type_only:
             return None
         if owner in c.Infra.NAMESPACE_SETTINGS_IMPORT_ALLOWED_OWNERS and (
-            imported in _DECLARATION_FACADES_RUNTIME or imported == "c"
+            imported in c.Infra.NAMESPACE_DECLARATION_FACADES_RUNTIME or imported == "c"
         ):
             return None
         order = c.Infra.NAMESPACE_LAYER_ORDER

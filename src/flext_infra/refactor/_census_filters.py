@@ -53,7 +53,7 @@ class FlextInfraRefactorCensusFiltersMixin:
                     canonical=canonical.project,
                     value_identical=len({item.fingerprint for item in definitions})
                     == 1,
-                )
+                ),
             )
         return tuple(duplicates)
 

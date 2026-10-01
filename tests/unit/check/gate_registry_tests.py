@@ -34,7 +34,7 @@ class TestsFlextInfraGateRegistry:
     def test_every_allowed_gate_resolves_in_the_registry(self) -> None:
         """Every gate the Make surface accepts must be instantiable.
 
-        flext-38p39: `format` once sat in the canonical check-gate vocabulary
+        `format` once sat in the canonical check-gate vocabulary
         and FlextInfraRuffFormatGate declared gate_id="format" with
         can_fix=True, but the class was never listed in the registry. The
         generated check command could therefore name a gate that silently
@@ -52,7 +52,7 @@ class TestsFlextInfraGateRegistry:
     def test_fixable_gate_vocabulary_matches_the_registry(self) -> None:
         """The Make fixable-gate vocabulary equals the gates that declare can_fix.
 
-        flext-38p39: `make fix` routes through `check run --fix`. Without a
+        `make fix` routes through `check run --fix`. Without a
         gate selector that run executes EVERY gate, including pyright and
         mypy, which cannot fix anything and cost ~37s -- the verb timed out
         (exit 124).
@@ -66,13 +66,14 @@ class TestsFlextInfraGateRegistry:
         registry = FlextInfraGateRegistry.default()
         mutating = {
             gate_id
-            for gate_id in c.Infra.CANONICAL_GATE_IDS
+            for gate_id in c.Infra.ALLOWED_GATES
             if (gate_cls := registry.get(gate_id)) is not None and gate_cls.can_fix
         }
         # `make fix` owns every mutating check-gate EXCEPT the fmt-owned
         # formatters (single-pass verb law: one operation per tool per verb).
         fmt_owned = set(config.Infra.codegen.make.fmt_gates)
         tm.that(set(c.Infra.CANONICAL_FIXABLE_GATE_IDS), eq=mutating - fmt_owned)
+        tm.that(fmt_owned & set(c.Infra.CANONICAL_GATE_IDS) <= mutating, eq=True)
         registered_mutating = {
             gate_id
             for gate_id in c.Infra.ALLOWED_GATES

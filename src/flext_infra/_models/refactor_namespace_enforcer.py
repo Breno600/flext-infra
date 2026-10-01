@@ -34,7 +34,8 @@ class FlextInfraModelsNamespaceEnforcer:
             ),
         ] = 0
         files_scanned: Annotated[
-            t.NonNegativeInt, m.Field(description="Files scanned")
+            t.NonNegativeInt,
+            m.Field(description="Files scanned"),
         ] = 0
 
         @m.computed_field
