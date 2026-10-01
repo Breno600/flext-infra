@@ -1,4 +1,8 @@
-"""Tests for the refactor main CLI entry point."""
+"""Tests for the refactor main CLI entry point.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -279,7 +283,12 @@ class TestsFlextInfraRefactorMainCli:
 
     @staticmethod
     def _impact_map_entries(impact_map_path: Path) -> list[t.JsonMapping]:
-        """Read the written impact map and return its typed file entries."""
+        """Read the written impact map and return its typed file entries.
+
+        Returns:
+            The resulting ``list[t.JsonMapping]``.
+
+        """
         payload_result = u.Cli.json_read(impact_map_path)
         tm.ok(payload_result)
         payload = u.Tests.toml_mapping(payload_result.unwrap())
@@ -302,7 +311,12 @@ class TestsFlextInfraRefactorMainCli:
         tmp_path: Path,
         module_source: str,
     ) -> t.Pair[Path, Path]:
-        """Build a lazy-init demo package holding one authored ``models.py``."""
+        """Build a lazy-init demo package holding one authored ``models.py``.
+
+        Returns:
+            The resulting ``t.Pair[Path, Path]``.
+
+        """
         workspace, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
             project_name="flext-demo",
@@ -321,7 +335,12 @@ class TestsFlextInfraRefactorMainCli:
         test_source: str | None = None,
         init_source: str = _FUTURE_INIT,
     ) -> t.Pair[Path, Path]:
-        """Build the ``sample_pkg`` workspace around one service module."""
+        """Build the ``sample_pkg`` workspace around one service module.
+
+        Returns:
+            The resulting ``t.Pair[Path, Path]``.
+
+        """
         workspace = tmp_path / "workspace"
         cls._write_workspace_pyproject(workspace)
         cls._write(workspace / "src" / "sample_pkg" / "__init__.py", init_source)
@@ -416,6 +435,7 @@ class TestsFlextInfraRefactorMainCli:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test refactor census flags unused when only tests reference source."""
         workspace = self._build_test_only_workspace(tmp_path)
         report = u.Tests.census_report(
             workspace,
@@ -444,6 +464,7 @@ class TestsFlextInfraRefactorMainCli:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test refactor census keeps facade members out of removal candidates."""
         workspace, _module_path = self._build_facade_member_workspace(tmp_path)
 
         report = u.Tests.census_report(
@@ -460,6 +481,7 @@ class TestsFlextInfraRefactorMainCli:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test refactor census apply removes unused source without touching tests."""
         workspace = self._build_test_only_workspace(tmp_path)
         service_file = workspace / "src" / "sample_pkg" / "service.py"
         test_file = workspace / "tests" / "test_service.py"
@@ -479,6 +501,7 @@ class TestsFlextInfraRefactorMainCli:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test refactor census preserves published lazy exports."""
         workspace, helpers_file, init_path = self._build_lazy_init_cascade_workspace(
             tmp_path,
         )
@@ -527,6 +550,7 @@ class TestsFlextInfraRefactorMainCli:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test refactor census apply removes decorated unused function."""
         workspace, service_file = self._build_service_workspace(
             tmp_path,
             service_source=self._DECORATED_UNUSED_SERVICE,
@@ -543,6 +567,7 @@ class TestsFlextInfraRefactorMainCli:
 
     @staticmethod
     def test_refactor_census_strip_module_all_entry_multi_line() -> None:
+        """Test refactor census strip module all entry multi line."""
         source = (
             "from __future__ import annotations\n\n"
             "__all__: list[str] = [\n"
@@ -560,6 +585,7 @@ class TestsFlextInfraRefactorMainCli:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test refactor census apply against cloned flext layout."""
         origin, origin_helpers, origin_init = self._build_lazy_init_cascade_workspace(
             tmp_path,
         )
@@ -593,6 +619,7 @@ class TestsFlextInfraRefactorMainCli:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test refactor census apply removes unused top level and cleans imports."""
         workspace, service_file = (
             self._build_unused_top_level_workspace_with_source_import(tmp_path)
         )
@@ -610,6 +637,7 @@ class TestsFlextInfraRefactorMainCli:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test refactor census dry run validates candidate after import cleanup."""
         workspace, service_file = self._build_test_only_workspace_with_source_import(
             tmp_path,
         )
@@ -632,6 +660,7 @@ class TestsFlextInfraRefactorMainCli:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test refactor census apply dry run does not mutate files."""
         workspace = self._build_test_only_workspace(tmp_path)
         service_file = workspace / "src" / "sample_pkg" / "service.py"
         test_file = workspace / "tests" / "test_service.py"
@@ -685,6 +714,7 @@ class TestsFlextInfraRefactorMainCli:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test refactor census dry run excludes unsupported method candidate."""
         self._assert_dry_run_one_violation_no_candidate(
             self._build_test_only_method_workspace(tmp_path),
             impact_map_path=tmp_path / "method-impact-map.json",
@@ -698,6 +728,7 @@ class TestsFlextInfraRefactorMainCli:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test refactor census dry run excludes unsupported nested unused function."""
         self._assert_dry_run_one_violation_no_candidate(
             self._build_unused_nested_function_workspace(tmp_path),
             impact_map_path=tmp_path / "nested-unused-impact-map.json",
@@ -711,6 +742,7 @@ class TestsFlextInfraRefactorMainCli:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test refactor census dry run validates unused candidate after import cleanup."""
         workspace, service_file = (
             self._build_unused_top_level_workspace_with_source_import(tmp_path)
         )
@@ -748,6 +780,7 @@ class TestsFlextInfraRefactorMainCli:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test refactor census dry run excludes unsupported local unused object."""
         self._assert_dry_run_one_violation_no_candidate(
             self._build_unused_local_workspace(tmp_path),
             impact_map_path=tmp_path / "local-unused-impact-map.json",
@@ -761,6 +794,7 @@ class TestsFlextInfraRefactorMainCli:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test refactor census writes impact map for removal candidates."""
         workspace = self._build_test_only_workspace(tmp_path)
         impact_map_path = tmp_path / "impact-map.json"
 
@@ -787,6 +821,7 @@ class TestsFlextInfraRefactorMainCli:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test refactor census cli writes impact map for removal candidates."""
         workspace = self._build_test_only_workspace(tmp_path)
         u.Tests.provision_checkout(workspace)
         impact_map_path = tmp_path / "cli-impact-map.json"
@@ -810,6 +845,7 @@ class TestsFlextInfraRefactorMainCli:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test refactor census apply preserves impact map plan."""
         workspace = self._build_test_only_workspace(tmp_path)
         impact_map_path = tmp_path / "apply-impact-map.json"
 

@@ -1,4 +1,8 @@
-"""Codegen, check, and dependency CLI route ownership."""
+"""Codegen, check, and dependency CLI route ownership.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

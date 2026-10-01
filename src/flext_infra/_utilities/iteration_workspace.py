@@ -58,7 +58,12 @@ class FlextInfraUtilitiesIterationWorkspace(FlextInfraUtilitiesIterationDirector
 
     @classmethod
     def _project_python_files(cls, project_root: Path) -> t.SequenceOf[Path]:
-        """Return configured Python sources with one Git inventory per project."""
+        """Return configured Python sources with one Git inventory per project.
+
+        Returns:
+            Configured Python sources with one Git inventory per project.
+
+        """
         source_roots = tuple(
             path
             for directory_name in config.Infra.source_scan.roots

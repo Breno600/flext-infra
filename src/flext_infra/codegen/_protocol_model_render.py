@@ -27,7 +27,12 @@ class FlextInfraCodegenProtocolModelRender:
         models: t.SequenceOf[type[m.BaseModel]],
         target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
     ) -> t.MappingKV[str, str]:
-        """Render every generated module (path -> content) for a member."""
+        """Render every generated module (path -> content) for a member.
+
+        Returns:
+            The resulting ``t.MappingKV[str, str]``.
+
+        """
         grouped: MutableMapping[str, list[type[m.BaseModel]]] = {}
         for model in sorted(models, key=cls._model_sort_key):
             grouped.setdefault(cls._owner_name(model), []).append(model)
@@ -55,6 +60,10 @@ class FlextInfraCodegenProtocolModelRender:
 
         The budget is ``loc_cap.max_lines`` minus the module header and the
         part class line, so every generated part module stays under the cap.
+
+        Returns:
+            The resulting ``t.SequenceOf[str]``.
+
         """
         budget = (
             config.Infra.codegen.loc_cap.max_lines
@@ -79,7 +88,12 @@ class FlextInfraCodegenProtocolModelRender:
         model: type[m.BaseModel],
         target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
     ) -> str:
-        """Render one runtime-checkable structural protocol for ``model``."""
+        """Render one runtime-checkable structural protocol for ``model``.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         lines = [
             "@runtime_checkable",
             f"class {model.__name__}(Protocol):",
@@ -119,7 +133,15 @@ class FlextInfraCodegenProtocolModelRender:
         annotation: t.TypeHintSpecifier | None,
         target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
     ) -> str:
-        """Render one pydantic field annotation through the facade mapper."""
+        """Render one pydantic field annotation through the facade mapper.
+
+        Returns:
+            The resulting ``str``.
+
+        Raises:
+            TypeError: If field.
+
+        """
         if annotation is None:
             msg = f"field {name!r} has no annotation; close it at the model owner"
             raise TypeError(msg)
@@ -127,7 +149,12 @@ class FlextInfraCodegenProtocolModelRender:
 
     @classmethod
     def _owned_public_properties(cls, model: type[m.BaseModel]) -> list[str]:
-        """Return property/function names owned by the model itself."""
+        """Return property/function names owned by the model itself.
+
+        Returns:
+            Property/function names owned by the model itself.
+
+        """
         names: list[str] = []
         for name, value in vars(model).items():
             if name.startswith(("_", "model_")):
@@ -143,7 +170,15 @@ class FlextInfraCodegenProtocolModelRender:
         model: type[m.BaseModel],
         target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
     ) -> str:
-        """Render one owned property return annotation, failing when missing."""
+        """Render one owned property return annotation, failing when missing.
+
+        Returns:
+            The resulting ``str``.
+
+        Raises:
+            TypeError: If owned member; or if property.
+
+        """
         descriptor = getattr_static(model, name)
         getter = descriptor.fget if isinstance(descriptor, property) else descriptor
         if getter is None:
@@ -166,7 +201,12 @@ class FlextInfraCodegenProtocolModelRender:
         part_names: t.SequenceOf[str],
         target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
     ) -> str:
-        """Render the aggregate owner composing every generated part."""
+        """Render the aggregate owner composing every generated part.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         container = f"{target.facade_container}ProtocolsGeneratedModels"
         lines = [cls._module_header(target), f"class {container}:", ""]
         lines.extend(f"    {name}" for name in sorted(part_names))
@@ -175,7 +215,12 @@ class FlextInfraCodegenProtocolModelRender:
 
     @classmethod
     def _part_name(cls, owner: str, index: int) -> str:
-        """Return the PascalCase owner-part class name."""
+        """Return the PascalCase owner-part class name.
+
+        Returns:
+            The PascalCase owner-part class name.
+
+        """
         camel = "".join(
             part.capitalize() for part in owner.replace("-", "_").split("_")
         )
@@ -188,7 +233,12 @@ class FlextInfraCodegenProtocolModelRender:
         owner: str,
         index: int,
     ) -> str:
-        """Return the generated part module path for an owner chunk."""
+        """Return the generated part module path for an owner chunk.
+
+        Returns:
+            The generated part module path for an owner chunk.
+
+        """
         return (
             f"src/{target.package_name}/_protocols/"
             f"generated_models_{owner}_{index:02d}.py"
@@ -199,22 +249,42 @@ class FlextInfraCodegenProtocolModelRender:
         cls,
         target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
     ) -> str:
-        """Return the generated aggregate module path."""
+        """Return the generated aggregate module path.
+
+        Returns:
+            The generated aggregate module path.
+
+        """
         return f"src/{target.package_name}/_protocols/generated_models.py"
 
     @classmethod
     def _owner_name(cls, model: type[m.BaseModel]) -> str:
-        """Return the owning module's short name for grouping."""
+        """Return the owning module's short name for grouping.
+
+        Returns:
+            The owning module's short name for grouping.
+
+        """
         return model.__module__.rsplit(".", 1)[-1]
 
     @classmethod
     def _model_sort_key(cls, model: type[m.BaseModel]) -> str:
-        """Sort models by owner then declared name for stable output."""
+        """Sort models by owner then declared name for stable output.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return f"{model.__module__}.{model.__name__}"
 
     @classmethod
     def _indent(cls, body: str) -> str:
-        """Indent rendered protocol bodies into their owner class."""
+        """Indent rendered protocol bodies into their owner class.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return (
             "\n".join(f"    {line}" if line else line for line in body.splitlines())
             + "\n"
@@ -224,7 +294,12 @@ class FlextInfraCodegenProtocolModelRender:
     def _module_header(
         target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
     ) -> str:
-        """Return the generated-file header with regeneration instruction."""
+        """Return the generated-file header with regeneration instruction.
+
+        Returns:
+            The generated-file header with regeneration instruction.
+
+        """
         return (
             "# AUTO-GENERATED FILE — Regenerate with: make gen\n"
             "# Structural protocols assembled from the member's validated models.\n"

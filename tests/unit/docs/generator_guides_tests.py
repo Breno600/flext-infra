@@ -1,4 +1,8 @@
-"""Root-owned guide projections through the public immutable docs planner."""
+"""Root-owned guide projections through the public immutable docs planner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -159,6 +163,7 @@ class TestsFlextInfraDocsGeneratorGuides:
     def test_previous_generated_guide_header_is_adopted_by_current_owner(
         tmp_path: Path,
     ) -> None:
+        """Test previous generated guide header is adopted by current owner."""
         workspace, generator = u.Tests.docs_workspace_generator(
             tmp_path,
             project_names=("flext-a",),

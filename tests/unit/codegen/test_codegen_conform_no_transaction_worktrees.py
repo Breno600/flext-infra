@@ -1,4 +1,8 @@
-"""Conform never leaks orphan ``-transaction-<hex>`` sibling worktrees (flext-f73ii)."""
+"""Conform never leaks orphan ``-transaction-<hex>`` sibling worktrees (flext-f73ii).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -25,7 +29,12 @@ class TestsFlextInfraCodegenConformNoTransactionWorktrees:
 
     @staticmethod
     def _transaction_worktree_siblings(root: Path) -> t.VariadicTuple[str]:
-        """Name sibling directories that look like detached transaction worktrees."""
+        """Name sibling directories that look like detached transaction worktrees.
+
+        Returns:
+            The resulting ``t.VariadicTuple[str]``.
+
+        """
         return tuple(
             entry.name
             for entry in root.parent.iterdir()
@@ -38,6 +47,10 @@ class TestsFlextInfraCodegenConformNoTransactionWorktrees:
 
         Returns the conformed repository root and the drifted file: the shared
         builder owns where the repository lives below ``tmp_path``.
+
+        Returns:
+            The resulting ``t.Pair[Path, Path]``.
+
         """
         root = u.Tests.WorktreeFixture.conformed_root(tmp_path)
         drifted = root / c.Infra.MAKEFILE_FILENAME

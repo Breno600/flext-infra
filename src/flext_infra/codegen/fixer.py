@@ -37,7 +37,12 @@ class FlextInfraCodegenFixer(
 
     @override
     def execute(self) -> p.Result[str]:
-        """Execute auto-fix directly from the validated CLI service model."""
+        """Execute auto-fix directly from the validated CLI service model.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         dry_run = self.dry_run or not self.apply_changes
         try:
             results = self.fix_workspace()

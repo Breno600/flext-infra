@@ -25,7 +25,12 @@ class TestsFlextInfraBuilder:
 
     @pytest.fixture
     def builder(self) -> FlextInfraDocBuilder:
-        """Provide the public documentation builder service."""
+        """Provide the public documentation builder service.
+
+        Returns:
+            The resulting ``FlextInfraDocBuilder``.
+
+        """
         return FlextInfraDocBuilder()
 
     @staticmethod

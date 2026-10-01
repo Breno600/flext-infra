@@ -1,4 +1,8 @@
-"""Public CLI routing tests for docs commands."""
+"""Public CLI routing tests for docs commands.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

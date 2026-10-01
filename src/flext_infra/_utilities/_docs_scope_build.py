@@ -1,4 +1,8 @@
-"""Docs scope construction helpers."""
+"""Docs scope construction helpers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -32,7 +36,12 @@ class FlextInfraUtilitiesDocsScopeBuildMixin(
         repository_root: Path,
         projects: t.StrSequence | None,
     ) -> list[str]:
-        """Return normalized project filters for docs-scoped operations."""
+        """Return normalized project filters for docs-scoped operations.
+
+        Returns:
+            Normalized project filters for docs-scoped operations.
+
+        """
         _ = repository_root
         return list(FlextInfraUtilitiesBase.normalize_sequence_values(projects) or ())
 
@@ -50,6 +59,10 @@ class FlextInfraUtilitiesDocsScopeBuildMixin(
         rendered as a docs OUTPUT scope; root guides/pyproject remain readable
         SOURCES for member projects regardless (see ``docs_source_paths``,
         which always discovers them from the physical repository root).
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.DocScope]]``.
+
         """
         try:
             scopes = FlextInfraUtilitiesDocsScopeBuildMixin._build_scopes_unchecked(
@@ -70,7 +83,12 @@ class FlextInfraUtilitiesDocsScopeBuildMixin(
         *,
         include_root: bool,
     ) -> t.SequenceOf[m.Infra.DocScope]:
-        """Build docs scopes without exception wrapping."""
+        """Build docs scopes without exception wrapping.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.DocScope]``.
+
+        """
         resolved_root = repository_root.resolve()
         project_state = FlextInfraUtilitiesDocsScope.project_state(resolved_root)
         is_enabled = FlextInfraUtilitiesDocsScope.docs_scope_enabled(
@@ -134,6 +152,10 @@ class FlextInfraUtilitiesDocsScopeBuildMixin(
         true; excluding it never affects source discovery (root guides,
         pyproject, config) which is derived independently from the physical
         repository root.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.DocScope]``.
+
         """
         scopes: list[m.Infra.DocScope] = (
             [
@@ -174,7 +196,15 @@ class FlextInfraUtilitiesDocsScopeBuildMixin(
 
     @staticmethod
     def _discover_projects(repository_root: Path) -> t.SequenceOf[m.Infra.ProjectInfo]:
-        """Discover workspace projects or raise a typed value error."""
+        """Discover workspace projects or raise a typed value error.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.ProjectInfo]``.
+
+        Raises:
+            ValueError: If ``discovered_result.failure``.
+
+        """
         discovered_result = FlextInfraUtilitiesDocsScope.resolve_projects(
             repository_root,
             (),

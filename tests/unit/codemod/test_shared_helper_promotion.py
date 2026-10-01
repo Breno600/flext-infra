@@ -1,4 +1,8 @@
-"""Public runtime contracts for promotion of shared test behavior."""
+"""Public runtime contracts for promotion of shared test behavior.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -109,6 +113,7 @@ class TestsFlextInfraSharedHelperPromotion:
         quoted_only: bool,
         lexical_collision: bool,
     ) -> None:
+        """Test original identity moves without effects until publication."""
         root, source, helper = self._workspace(tmp_path, reexport=reexport)
         if quoted_only:
             (root / c.Infra.DIR_TESTS / "unit" / "consumer.py").unlink()
@@ -249,6 +254,7 @@ class TestsFlextInfraSharedHelperPromotion:
         *,
         test_case: bool,
     ) -> None:
+        """Test unused helpers and real test cases keep their declared owner."""
         root, source, helper = self._workspace(tmp_path, reexport=True)
         if test_case:
             source.write_text(
@@ -283,6 +289,7 @@ class TestsFlextInfraSharedHelperPromotion:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test private support with nested behavior moves to utilities."""
         root, source, helper = self._workspace(tmp_path, reexport=False)
         destination = source.parent.parent / "_support.py"
         source.unlink()
@@ -352,6 +359,7 @@ class TestsFlextInfraSharedHelperPromotion:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test two declared utilities owners fail without changing consumers."""
         root, _, _ = self._workspace(tmp_path, reexport=True)
         tier = root / c.Infra.DIR_TESTS
         u.Tests.write_lazy_init_namespace_module(

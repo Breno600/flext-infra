@@ -35,7 +35,12 @@ class FlextInfraUtilitiesProjectDiscovery(
     @classmethod
     @lru_cache(maxsize=1)
     def load_refactor_config(cls, repository_root: Path) -> m.Infra.RefactorConfigSpec:
-        """Load declared refactor configuration, propagating invalid manifests."""
+        """Load declared refactor configuration, propagating invalid manifests.
+
+        Returns:
+            The resulting ``m.Infra.RefactorConfigSpec``.
+
+        """
         manifest_path = FlextInfraUtilitiesWorkspaceManifest.workspace_manifest_path(
             repository_root,
         )
@@ -73,6 +78,10 @@ class FlextInfraUtilitiesProjectDiscovery(
 
         An absent manifest declares no exclusions. An unreadable or invalid
         manifest fails before discovery can expand the declared scope.
+
+        Returns:
+            Every manifest-relative path that is not a generation participant.
+
         """
         manifest_path = FlextInfraUtilitiesWorkspaceManifest.workspace_manifest_path(
             repository_root,
@@ -99,7 +108,12 @@ class FlextInfraUtilitiesProjectDiscovery(
         repository_root: Path,
         nonparticipants: frozenset[str],
     ) -> bool:
-        """Return whether one candidate lies at or under a declared non-participant."""
+        """Return whether one candidate lies at or under a declared non-participant.
+
+        Returns:
+            Whether one candidate lies at or under a declared non-participant.
+
+        """
         # "Is this candidate inside the root?" is a question, not a failure, so
         # it is asked instead of caught. relative_to raised ValueError for the
         # ordinary outside-the-root case, which made an except branch produce a
@@ -133,6 +147,10 @@ class FlextInfraUtilitiesProjectDiscovery(
         ignored by the next: discovery skipped an excluded submodule while
         lazy-init still planned files inside it and failed with "lazy-init file
         has no transaction participant".
+
+        Returns:
+            The resulting ``t.SequenceOf[Path]``.
+
         """
         candidates = super().discover_project_candidates(
             repository_root,
@@ -168,6 +186,9 @@ class FlextInfraUtilitiesProjectDiscovery(
 
         Returns:
             Project roots sorted by their ``.gitmodules`` declaration order.
+
+        Raises:
+            ValueError: If ``declared_paths.failure``.
 
         """
         declared_paths = FlextInfraUtilitiesGit.git_declared_submodule_paths(
@@ -213,6 +234,13 @@ class FlextInfraUtilitiesProjectDiscovery(
         manifest had just excluded, and lazy-init planned files for a directory
         the transaction has no participant for -- which aborts staging after the
         phase root already exists on disk.
+
+        Returns:
+            Every Python project this repository's Rope workspace owns.
+
+        Raises:
+            ValueError: If ``declared_paths.failure``.
+
         """
         resolved_root = repository_root.resolve()
         declared_paths = FlextInfraUtilitiesGit.git_declared_submodule_paths(
@@ -250,6 +278,10 @@ class FlextInfraUtilitiesProjectDiscovery(
         another generator. The refactor config is the single scope owner for
         source trees; root Python modules cover public entry points such as
         ``conftest.py`` without opening hidden directories.
+
+        Returns:
+            Only governed handwritten Python surfaces as scan targets.
+
         """
         resolved_root = repository_root.resolve()
         refactor_config = cls.load_refactor_config(resolved_root)
@@ -280,12 +312,21 @@ class FlextInfraUtilitiesProjectDiscovery(
         Every repository evaluates and rewrites only itself: a workspace root consumes its declared members as
         installed libraries and never scans, checks, or rewrites them; each
         member runs its own verbs in its own repository.
+
+        Returns:
+            The repositories a verb run at ``repository_root`` governs.
+
         """
         return (repository_root.resolve(),)
 
     @staticmethod
     def nearest_project_root(repository_root: Path, path: Path) -> Path | None:
-        """Find the nearest manifest owner inside one governed repository."""
+        """Find the nearest manifest owner inside one governed repository.
+
+        Returns:
+            The resulting ``Path | None``.
+
+        """
         boundary = repository_root.resolve()
         candidate = path.resolve()
         if not candidate.is_relative_to(boundary):
@@ -309,21 +350,20 @@ class FlextInfraUtilitiesProjectDiscovery(
         owns the environment. Undeclared, the owner derives it: a subproject
         checked out inside a workspace uses the workspace environment; a
         standalone checkout or a linked worktree owns its own, exactly as the
-        generated Makefile resolves ``REPOSITORY_ROOT``. The sibling directory
-        comes from the typed codegen contract, shared with the Makefile.
+        generated Makefile resolves ``REPOSITORY_ROOT``. The environment is
+        always ``<runtime root>/.venv``; its location is law, never
+        configuration (operator law 2026-10-01, flext-h2a9h).
+
+        Returns:
+            The resulting ``Path``.
+
         """
         if runtime_root is None:
             runtime = FlextInfraUtilitiesGit.git_repository_root(
                 m.Infra.GitRepoRequest(repo_root=project_root),
             ).unwrap()
             runtime_root = runtime.repository_root
-        physical_root = runtime_root.resolve()
-        relative_identity = physical_root.as_posix().lstrip("/").replace(":", "/")
-        return (
-            physical_root.parent
-            / config.Infra.codegen.make.runtime_environment_directory
-            / relative_identity
-        )
+        return runtime_root.resolve() / c.Infra.ENVIRONMENT_DIRECTORY
 
     @classmethod
     def runtime_python(
@@ -336,6 +376,10 @@ class FlextInfraUtilitiesProjectDiscovery(
 
         ``runtime_root`` mirrors ``runtime_environment_dir``: a declared runtime
         root (the generated Makefile's ``RUNTIME_ROOT``) owns the environment.
+
+        Returns:
+            The resulting ``Path``.
+
         """
         return (
             cls.runtime_environment_dir(project_root, runtime_root=runtime_root)

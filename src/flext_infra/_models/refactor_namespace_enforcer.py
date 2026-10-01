@@ -1,4 +1,8 @@
-"""Domain models for the namespace enforcer's relocation reports."""
+"""Domain models for the namespace enforcer's relocation reports.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

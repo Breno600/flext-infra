@@ -1,4 +1,8 @@
-"""Fail-closed validation of workspace editable installation provenance."""
+"""Fail-closed validation of workspace editable installation provenance.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -25,7 +29,12 @@ class FlextInfraWorkspaceEnvironmentProvenance:
         cls,
         request: p.Infra.WorkspaceEnvironmentRequest,
     ) -> p.Result[int]:
-        """Validate one CLI request without mutating the environment."""
+        """Validate one CLI request without mutating the environment.
+
+        Returns:
+            The resulting ``p.Result[int]``.
+
+        """
         return cls.validate(request.repository_root)
 
     @classmethod
@@ -35,7 +44,12 @@ class FlextInfraWorkspaceEnvironmentProvenance:
         *,
         metadata_paths: t.StrSequence | None = None,
     ) -> p.Result[int]:
-        """Validate PEP 610 and editable path metadata for active members."""
+        """Validate PEP 610 and editable path metadata for active members.
+
+        Returns:
+            The resulting ``p.Result[int]``.
+
+        """
         resolved_root = repository_root.resolve()
         workspace_result = FlextInfraWorkspaceDetector.load_workspace_spec(
             resolved_root,
@@ -108,7 +122,12 @@ class FlextInfraWorkspaceEnvironmentProvenance:
         raw_payload: str | None,
         expected_root: Path,
     ) -> p.Result[int]:
-        """Validate one PEP 610 payload against the declared member root."""
+        """Validate one PEP 610 payload against the declared member root.
+
+        Returns:
+            The resulting ``p.Result[int]``.
+
+        """
         if raw_payload is None:
             return r[int].fail(
                 "editable provenance missing direct_url.json: "
@@ -146,7 +165,12 @@ class FlextInfraWorkspaceEnvironmentProvenance:
         pth_file: Path,
         expected_root: Path,
     ) -> p.Result[int]:
-        """Validate the distribution-owned editable path file."""
+        """Validate the distribution-owned editable path file.
+
+        Returns:
+            The resulting ``p.Result[int]``.
+
+        """
         read_result = u.Cli.files_read_text(pth_file)
         if read_result.failure:
             return r[int].from_failure(read_result)

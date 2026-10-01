@@ -1,4 +1,8 @@
-"""Wave 0 stub tests confirming rope is importable."""
+"""Wave 0 stub tests confirming rope is importable.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,8 @@
-"""Per-package and per-module export resolution for the lazy-init planner."""
+"""Per-package and per-module export resolution for the lazy-init planner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -41,7 +45,12 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
         def _publish(name: str, *, allow_main: bool) -> bool: ...
 
     def _project_layout_for(self, pkg_dir: Path) -> m.Infra.RopeProjectLayout | None:
-        """Reuse the project's canonical layout during one planning snapshot."""
+        """Reuse the project's canonical layout during one planning snapshot.
+
+        Returns:
+            The resulting ``m.Infra.RopeProjectLayout | None``.
+
+        """
         project_root = u.Infra.project_root(pkg_dir)
         if project_root is None:
             return None
@@ -56,7 +65,15 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
         self,
         context: m.Infra.LazyInitPackageContext,
     ) -> t.MutableLazyAliasMap:
-        """Return the lazy export map for a package (excluding child packages)."""
+        """Return the lazy export map for a package (excluding child packages).
+
+        Returns:
+            The lazy export map for a package (excluding child packages).
+
+        Raises:
+            ValueError: If unindexed publication source.
+
+        """
         package_entry = self._package_entry(context.pkg_dir)
         # Operator init law (2026-09-16): every package with public children —
         # underscore internals included — carries a light lazy-init export
@@ -199,7 +216,12 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
         *,
         export_options: m.Infra.ExportOptions | None = None,
     ) -> t.MutableLazyAliasMap:
-        """Return the lazy export map for one Python module (cache-backed)."""
+        """Return the lazy export map for one Python module (cache-backed).
+
+        Returns:
+            The lazy export map for one Python module (cache-backed).
+
+        """
         resolved_export_options = export_options or m.Infra.ExportOptions()
         cache_key = (
             str(py_file.resolve()),

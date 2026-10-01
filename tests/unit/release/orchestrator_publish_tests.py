@@ -1,4 +1,8 @@
-"""Public release receipt validation using real builds and artifact bytes."""
+"""Public release receipt validation using real builds and artifact bytes.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -14,7 +18,12 @@ class TestsFlextInfraReleasePublish:
 
     @staticmethod
     def _built_workspace(tmp_path: Path) -> t.Pair[Path, m.Infra.BuildReport]:
-        """Build one member and return the workspace with its verified receipt."""
+        """Build one member and return the workspace with its verified receipt.
+
+        Returns:
+            The resulting ``t.Pair[Path, m.Infra.BuildReport]``.
+
+        """
         project_name = "flext-a"
         workspace = u.Tests.create_release_workspace(
             tmp_path,

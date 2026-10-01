@@ -1,4 +1,8 @@
-"""Graceful suite stop keeps pytest-testmon progress across bounded runs."""
+"""Graceful suite stop keeps pytest-testmon progress across bounded runs.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -22,7 +26,12 @@ class TestsFlextInfraPytestRunnerSuiteStop:
 
     @staticmethod
     def _read(path: Path) -> str:
-        """Read one published receipt through the files facade."""
+        """Read one published receipt through the files facade.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return tm.ok(u.Cli.files_read_text(path))
 
     @staticmethod
@@ -32,6 +41,10 @@ class TestsFlextInfraPytestRunnerSuiteStop:
         The entrypoint clock is placed so pytest stops dispatch at a durable
         testmon batch checkpoint, never through the deadline SIGTERM. The
         reserve matches the runner's own serial decision for the selection.
+
+        Returns:
+            The resulting ``FlextInfraPytestRunner``.
+
         """
         cache = config.Infra.codegen.make.testmon_cache
         policy = config.Infra.tooling.tools.pytest
@@ -63,7 +76,12 @@ class TestsFlextInfraPytestRunnerSuiteStop:
         *,
         expected_raw_exit: pytest.ExitCode,
     ) -> tuple[Path, t.StrTuple, int]:
-        """Return the published run, its selection and its executed count."""
+        """Return the published run, its selection and its executed count.
+
+        Returns:
+            The published run, its selection and its executed count.
+
+        """
         reports = config.Infra.codegen.make.testmon_cache.reports_directory
         (bounded,) = (path.parent for path in (project / reports).glob("*/summary.txt"))
         outcome = m.Cli.ProcessOutcome.model_validate_json(
@@ -92,7 +110,12 @@ class TestsFlextInfraPytestRunnerSuiteStop:
         policy = config.Infra.tooling.tools.pytest
 
         def dispatch_plan(node_ids: t.StrSequence) -> m.Infra.PytestSelectionPlan:
-            """Synthetic selection whose manifest path matches the real argv."""
+            """Synthetic selection whose manifest path matches the real argv.
+
+            Returns:
+                The resulting ``m.Infra.PytestSelectionPlan``.
+
+            """
             # The plan is a strict value: it takes typed fields, never the
             # JSON-shaped str/list a lax validation would coerce.
             return m.Infra.PytestSelectionPlan(
@@ -133,11 +156,7 @@ class TestsFlextInfraPytestRunnerSuiteStop:
             stop_value(multi_command),
             eq=runner.started_at_monotonic
             + policy.run_timeout_seconds
-            - (
-                policy.serial_suite_stop_reserve_seconds
-                if multi_workers == "0"
-                else policy.suite_stop_reserve_seconds
-            ),
+            - policy.suite_stop_reserve_seconds,
         )
         serial_workers_index = list(serial_command).index("-n") + 1
         tm.that(list(serial_command)[serial_workers_index], eq="0")

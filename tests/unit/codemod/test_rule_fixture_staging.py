@@ -1,4 +1,8 @@
-"""Fixture staging follows sgconfig declarations, never the owning checkout."""
+"""Fixture staging follows sgconfig declarations, never the owning checkout.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -22,6 +26,7 @@ class TestsFlextInfraModRuleFixtureStaging:
         with_utils: bool,
         regenerate_snapshots: bool,
     ) -> None:
+        """Test staging copies declared trees without traversing checkout."""
         owner = tmp_path / "owner"
         owner.mkdir()
         config = "ruleDirs: [rules]\ntestConfigs:\n  - testDir: fixtures\n"
@@ -75,6 +80,7 @@ class TestsFlextInfraModRuleFixtureStaging:
         tmp_path: Path,
         declaration: str,
     ) -> None:
+        """Test staging rejects owner wide or escaping declarations."""
         owner = tmp_path / "owner"
         owner.mkdir()
         (owner / "fixtures").mkdir()
@@ -99,6 +105,7 @@ class TestsFlextInfraModRuleFixtureStaging:
         *,
         linked_directory: bool,
     ) -> None:
+        """Test staging rejects declared symlinks before copying."""
         owner = tmp_path / "owner"
         owner.mkdir()
         outside = tmp_path / "outside"

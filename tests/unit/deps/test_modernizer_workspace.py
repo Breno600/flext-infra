@@ -1,4 +1,8 @@
-"""Workspace/parser helper tests for deps modernizer."""
+"""Workspace/parser helper tests for deps modernizer.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -41,6 +45,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
 
     @staticmethod
     def test_taplo_formats_toml_through_public_utility(tmp_path: Path) -> None:
+        """Test taplo formats toml through public utility."""
         u.Tests.write_mise_lock(
             tmp_path,
             "taplo",
@@ -83,6 +88,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
     def test_taplo_uses_nearest_existing_root_for_scaffold_path(
         tmp_path: Path,
     ) -> None:
+        """Test taplo uses nearest existing root for scaffold path."""
         u.Tests.write_mise_lock(
             tmp_path,
             "taplo",

@@ -41,7 +41,12 @@ class FlextInfraCodegenVersionFile(FlextInfraCodegenExecutionBase[bool]):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Generate __version__.py for each discovered project."""
+        """Generate __version__.py for each discovered project.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         # The exact
         # source metadata model crosses the sole CLI rendering boundary.
         template_path = (

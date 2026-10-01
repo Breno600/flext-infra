@@ -1,4 +1,8 @@
-"""Public generation-workflow tests for docs services."""
+"""Public generation-workflow tests for docs services.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -383,6 +387,7 @@ class TestsFlextInfraDocsGenerator:
     def test_generated_markdown_starts_with_level_one_heading(
         tmp_path: Path,
     ) -> None:
+        """Test generated markdown starts with level one heading."""
         workspace, generator = u.Tests.docs_workspace_generator(
             tmp_path,
             project_names=("flext-a",),
@@ -406,6 +411,7 @@ class TestsFlextInfraDocsGenerator:
 
     @staticmethod
     def test_docs_policy_declares_cross_project_relative_link_pattern() -> None:
+        """Test docs policy declares cross project relative link pattern."""
         tm.that(
             config.Infra.codegen.make.docs.cross_project_relative_link_pattern,
             empty=False,
@@ -635,6 +641,7 @@ class TestsFlextInfraDocsGenerator:
 
     @staticmethod
     def test_docs_url_scheme_rejects_http() -> None:
+        """Test docs url scheme rejects http."""
         target = f"{c.Infra.DOCS_INSECURE_WEB_SCHEME}://example.invalid"
 
         with pytest.raises(ValueError, match="use HTTPS"):

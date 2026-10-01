@@ -1,4 +1,8 @@
-"""Tests for the declarative project-layout engine (flext-0wuz, epic flext-hzox)."""
+"""Tests for the declarative project-layout engine (flext-0wuz, epic flext-hzox).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -23,7 +27,12 @@ class TestsFlextInfraCodegenLayout:
 
     @staticmethod
     def _fresh_layout_report(project: Path) -> m.Infra.LayoutProjectReport:
-        """Load consumer-owned configuration in a new public-service process."""
+        """Load consumer-owned configuration in a new public-service process.
+
+        Returns:
+            The resulting ``m.Infra.LayoutProjectReport``.
+
+        """
         process = tm.ok(
             u.Cli.run_raw(
                 [
@@ -143,17 +152,16 @@ class TestsFlextInfraCodegenLayout:
         tm.that(gitignore[0].target, eq=f"{archive_root()}/")
 
     @staticmethod
-    def test_check_execute_passes_while_severity_is_warning(
+    def test_check_execute_fails_on_layout_findings(
         tmp_path: Path,
     ) -> None:
-        """CLI check posture is report-only while the SSOT severity is warning."""
+        """A layout finding blocks the check at every severity."""
         build_loose_project(tmp_path)
         engine = layout_engine(tmp_path)
 
         result = engine.execute()
 
-        tm.ok(result)
-        tm.that(result.value, has="move guides -> docs/guides")
+        tm.fail(result, has="move guides -> docs/guides")
 
     @staticmethod
     def test_apply_moves_archives_and_converges_idempotently(

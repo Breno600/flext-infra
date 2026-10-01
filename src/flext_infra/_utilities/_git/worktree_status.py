@@ -1,4 +1,8 @@
-"""Canonical Git responsibility mixin for ``u.Infra``."""
+"""Canonical Git responsibility mixin for ``u.Infra``.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -53,6 +57,10 @@ class FlextInfraUtilitiesGitWorktreeStatusMixin(FlextInfraUtilitiesGitRepo):
         The report carries the lifecycle porcelain (registered nested worktrees
         excluded) so ``dirty`` and every consumer reading ``porcelain`` grade
         the same lines; administrative worktrees are never repository change.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitStatusReport]``.
+
         """
         repo_path = request.repo_root.expanduser().resolve()
         try:
@@ -82,7 +90,12 @@ class FlextInfraUtilitiesGitWorktreeStatusMixin(FlextInfraUtilitiesGitRepo):
         cls,
         request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitOidReport]:
-        """Capture the current repository HEAD as a typed oid report."""
+        """Capture the current repository HEAD as a typed oid report.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitOidReport]``.
+
+        """
         oid = cls._git_head_oid(request.repo_root)
         if oid.failure:
             return r[m.Infra.GitOidReport].from_failure(oid)
@@ -93,7 +106,12 @@ class FlextInfraUtilitiesGitWorktreeStatusMixin(FlextInfraUtilitiesGitRepo):
         cls,
         request: m.Infra.GitRepoRequest,
     ) -> p.Result[t.SequenceOf[Path]]:
-        """Return every existing staged, unstaged, or untracked path in one repo."""
+        """Return every existing staged, unstaged, or untracked path in one repo.
+
+        Returns:
+            Every existing staged, unstaged, or untracked path in one repo.
+
+        """
         repo_path = request.repo_root.expanduser().resolve()
         try:
             repo = cls._repo(repo_path)
@@ -120,7 +138,12 @@ class FlextInfraUtilitiesGitWorktreeStatusMixin(FlextInfraUtilitiesGitRepo):
 
     @classmethod
     def _git_head_oid(cls, repo_root: Path) -> p.Result[str]:
-        """Private Path-based HEAD oid resolver for facet-internal callers."""
+        """Private Path-based HEAD oid resolver for facet-internal callers.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         opened = cls._open_repo(repo_root)
         if opened.failure:
             return r[str].from_failure(opened)
@@ -140,6 +163,10 @@ class FlextInfraUtilitiesGitWorktreeStatusMixin(FlextInfraUtilitiesGitRepo):
         staged delta; every other exit is the failure it is. Callers that must
         choose between committing and a NOOP consume this instead of probing
         the raw command themselves.
+
+        Returns:
+            Whether the index carries changes staged for the next commit.
+
         """
         repo_path = request.repo_root.expanduser().resolve()
         try:

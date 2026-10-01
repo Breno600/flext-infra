@@ -1,4 +1,8 @@
-"""Shared future-import rewrites for namespace refactors."""
+"""Shared future-import rewrites for namespace refactors.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -24,7 +28,13 @@ class FlextInfraUtilitiesRefactorNamespaceFlext(
 
     @staticmethod
     def rewrite_missing_future_annotations(*, py_files: t.SequenceOf[Path]) -> None:
-        """Rewrite missing future annotations."""
+        """Rewrite missing future annotations.
+
+        Raises:
+            RuntimeError: If ``write_result.failure``.
+            ValueError: If refusing future-annotations rewrite outside project.
+
+        """
         for file_path in py_files:
             project_root = FlextInfraUtilitiesDiscovery.project_root(file_path)
             resolved_file = file_path.resolve()

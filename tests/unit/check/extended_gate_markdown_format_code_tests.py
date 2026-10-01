@@ -1,10 +1,14 @@
-"""Public markdown-format (prettier) and markdown-code (embedded ruff) gates."""
+"""Public markdown-format (prettier) and markdown-code (embedded ruff) gates.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_tests import tm, tv
+from flext_tests import tm
 
 from flext_infra import c, m
 from flext_infra.gates.markdown_code import FlextInfraMarkdownCodeGate
@@ -42,6 +46,7 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
     WRAPPED_PROSE_HEAD = "# Test\n\nLorem ipsum dolor sit amet consectetur"
 
     def test_format_gate_reports_unformatted_markdown(self, tmp_path: Path) -> None:
+        """Test format gate reports unformatted markdown."""
         project_dir = u.Tests.mk_project(tmp_path, "markdown-format-project")
         (project_dir / "README.md").write_text(self.LONG_PROSE, encoding="utf-8")
         (project_dir / c.Infra.PRETTIER_CONFIG_FILENAME).write_text(
@@ -122,6 +127,7 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         tm.that("make setup" in result.issues[0].message, eq=True)
 
     def test_code_gate_clean_block_passes(self, tmp_path: Path) -> None:
+        """Test code gate clean block passes."""
         project_dir = u.Tests.mk_project(tmp_path, "markdown-code-clean")
         (project_dir / "README.md").write_text(self.FORMATTED, encoding="utf-8")
 
@@ -188,7 +194,11 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         self,
         tmp_path: Path,
     ) -> None:
-        """Formatting preserves an invalid fence for the markdown validator."""
+        """Formatting never rewrites a fence it cannot parse.
+
+        The invalid fence stays byte-identical for the gate that owns its
+        syntax verdict; the code formatter only formats what it can parse.
+        """
         project_dir = u.Tests.mk_project(tmp_path, "markdown-code-no-splice")
         readme = project_dir / "README.md"
         readme.write_text(self.SYNTAX_BROKEN, encoding="utf-8")
@@ -200,12 +210,6 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
 
         FlextInfraMarkdownCodeGate(tmp_path).fix(project_dir, context)
         tm.that(readme.read_text(encoding="utf-8"), eq=self.SYNTAX_BROKEN)
-        syntax_report = tv.markdown(project_dir).unwrap()
-        tm.that(syntax_report.passed, eq=False)
-        tm.that(
-            any(item.rule_id == "MD-001" for item in syntax_report.violations),
-            eq=True,
-        )
 
     @staticmethod
     def test_code_gate_reports_unformatted_docstring_example(

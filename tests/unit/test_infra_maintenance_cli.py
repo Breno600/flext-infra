@@ -1,4 +1,8 @@
-"""CLI contract tests for maintenance entry point."""
+"""CLI contract tests for maintenance entry point.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -23,4 +27,5 @@ class TestsFlextInfraInfraMaintenanceCli:
         return infra_main(args)
 
     def test_maintenance_rejects_apply_flag(self) -> None:
+        """Test maintenance rejects apply flag."""
         tm.that(self._run_maintenance(["--apply"]), eq=2)

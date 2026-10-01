@@ -20,6 +20,8 @@ from flext_infra import c, config
 
 
 class TestsFlextInfraRootMakefileSingleOwner:
+    """Tests for ``FlextInfraRootMakefileSingleOwner``."""
+
     @staticmethod
     def test_single_makefile_entry_owns_every_profile() -> None:
         """One render entry owns the Makefile for both effective profiles."""

@@ -26,7 +26,12 @@ class FlextInfraUtilitiesPyrefly:
         project_dir: Path,
         discovered_dirs: t.StrSequence,
     ) -> t.StrSequence:
-        """Preserve explicit files; use configured includes for discovered roots."""
+        """Preserve explicit files; use configured includes for discovered roots.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         if any((project_dir / target).is_file() for target in discovered_dirs):
             return discovered_dirs
         document = u.Cli.toml_read(project_dir / c.PYPROJECT_FILENAME)

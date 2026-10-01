@@ -1,4 +1,8 @@
-"""Concrete-syntax rewrites for compatibility-alias cutovers."""
+"""Concrete-syntax rewrites for compatibility-alias cutovers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -21,7 +25,12 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
         source: str,
         plan: m.Infra.CompatibilityAliasRewritePlan,
     ) -> str:
-        """Return the structurally rewritten source without changing its layout."""
+        """Return the structurally rewritten source without changing its layout.
+
+        Returns:
+            The structurally rewritten source without changing its layout.
+
+        """
         import libcst as cst
         from libcst.metadata import (
             MetadataWrapper,

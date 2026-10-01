@@ -1,4 +1,8 @@
-"""Defer elected self-facade imports to their resolved function-body uses."""
+"""Defer elected self-facade imports to their resolved function-body uses.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

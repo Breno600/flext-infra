@@ -1,5 +1,8 @@
 """Promoted-command utilities facet for ``u.Infra``.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Private responsibility classes live under ``_utilities/_promoted/``; consumers
 use ``from flext_infra import u`` only.
 """

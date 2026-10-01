@@ -1,4 +1,8 @@
-"""FLEXT mypy quality gate."""
+"""FLEXT mypy quality gate.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -28,7 +32,12 @@ class FlextInfraMypyGate(FlextInfraGate):
 
     @staticmethod
     def _config_exclude(config_path: Path) -> re.Pattern[str] | None:
-        """Return the compiled [tool.mypy].exclude regex, if configured."""
+        """Return the compiled [tool.mypy].exclude regex, if configured.
+
+        Returns:
+            The compiled [tool.mypy].exclude regex, if configured.
+
+        """
         doc = u.Cli.toml_read(config_path)
         if doc is None:
             return None
@@ -45,7 +54,12 @@ class FlextInfraMypyGate(FlextInfraGate):
 
     @staticmethod
     def _has_real_module(directory: Path) -> bool:
-        """True when the dir holds a Python module other than __init__.py."""
+        """True when the dir holds a Python module other than __init__.py.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         for py_file in directory.rglob(c.Infra.EXT_PYTHON_GLOB):
             if py_file.name != c.Infra.INIT_PY:
                 return True
@@ -57,7 +71,12 @@ class FlextInfraMypyGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
-        """Check local Python roots directly instead of recursively scanning ``.``."""
+        """Check local Python roots directly instead of recursively scanning ``.``.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         # Empty or explicitly excluded roots are omitted because Mypy aborts
         # when they are passed positionally.
         exclude = self._config_exclude(self._resolve_config(project_dir, ctx))
@@ -80,7 +99,12 @@ class FlextInfraMypyGate(FlextInfraGate):
         return []
 
     def _resolve_config(self, project_dir: Path, ctx: m.Infra.GateContext) -> Path:
-        """Resolve Mypy settings from the project, then the workspace."""
+        """Resolve Mypy settings from the project, then the workspace.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         pyproject_name: str = c.PYPROJECT_FILENAME
         proj_py = project_dir / pyproject_name
         doc = u.Cli.toml_read(proj_py)
@@ -101,7 +125,16 @@ class FlextInfraMypyGate(FlextInfraGate):
         ctx: m.Infra.GateContext,
         check_dirs: t.StrSequence,
     ) -> t.StrSequence:
-        """Build check command."""
+        """Build check command.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            ValueError: If Mypy profile output requires an absolute path in an existing
+                directory.
+
+        """
         cfg = self._resolve_config(project_dir, ctx)
         profile_output = u.Cli.process_env().get(c.Infra.MYPY_PROFILE_OUTPUT_ENV)
         destination = None
@@ -128,7 +161,16 @@ class FlextInfraMypyGate(FlextInfraGate):
         ctx: m.Infra.GateContext,
         targets: t.StrSequence,
     ) -> None:
-        """Account for every submitted target from Mypy's native build trace."""
+        """Account for every submitted target from Mypy's native build trace.
+
+        Raises:
+            TypeError: If Mypy native source path is not a string.
+            ValueError: If Mypy native build trace contains no selected sources; or if
+                Mypy native build trace lacks completion evidence; or if Malformed Mypy
+                native source entry; or if Mypy native report did not account for
+                target; or if Mypy native report contains an unsubmitted source.
+
+        """
         _ = ctx
         source_lines = (
             line for line in result.stderr.splitlines() if "Found source:" in line
@@ -168,7 +210,12 @@ class FlextInfraMypyGate(FlextInfraGate):
 
     @override
     def _check_timeout(self, project_dir: Path, ctx: m.Infra.GateContext) -> int:
-        """Keep the outer runner alive through the controlled Mypy deadline."""
+        """Keep the outer runner alive through the controlled Mypy deadline.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         _ = ctx
         return u.Infra.mypy_runner_timeout_for_project(project_dir)
 
@@ -178,7 +225,12 @@ class FlextInfraMypyGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.StrMapping | None:
-        """Run Mypy against the project's shared analysis cache."""
+        """Run Mypy against the project's shared analysis cache.
+
+        Returns:
+            The resulting ``t.StrMapping | None``.
+
+        """
         overrides = {
             c.Infra.MypyCacheEnvironment.CACHE_DIR.value: str(
                 u.Infra.mypy_cache_directory(project_dir),
@@ -199,7 +251,12 @@ class FlextInfraMypyGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Parse check output."""
+        """Parse check output.
+
+        Returns:
+            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
+
+        """
         _ = ctx
         issues: t.MutableSequenceOf[m.Infra.Issue] = []
         if resource_diagnostic := u.Infra.mypy_failure_diagnostic(result):

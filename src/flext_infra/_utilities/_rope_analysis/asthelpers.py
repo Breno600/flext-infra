@@ -1,4 +1,8 @@
-"""Shared rope parsing and AST traversal primitives."""
+"""Shared rope parsing and AST traversal primitives.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,12 +23,25 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
 
     @staticmethod
     def ast_node(obj: p.AttributeProbe) -> TypeGuard[t.Infra.RopeAstNode]:
-        """Narrow a rope-provided object to an AST node."""
+        """Narrow a rope-provided object to an AST node.
+
+        Returns:
+            The resulting ``TypeGuard[t.Infra.RopeAstNode]``.
+
+        """
         return isinstance(obj, ast.AST)
 
     @staticmethod
     def ensure_ast_node(obj: p.AttributeProbe) -> t.Infra.RopeAstNode:
-        """Ensure an object is an AST node, narrowing the type."""
+        """Ensure an object is an AST node, narrowing the type.
+
+        Returns:
+            The resulting ``t.Infra.RopeAstNode``.
+
+        Raises:
+            TypeError: If Expected AST node, got.
+
+        """
         if not FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(obj):
             msg = f"Expected AST node, got {type(obj).__name__}"
             raise TypeError(msg)
@@ -35,7 +52,12 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
         rope_project: t.Infra.RopeProject,
         resource: t.Infra.RopeResource,
     ) -> t.Triple[str, str, int]:
-        """Resource cache key."""
+        """Resource cache key.
+
+        Returns:
+            The resulting ``t.Triple[str, str, int]``.
+
+        """
         file_path = FlextInfraUtilitiesRopeCore.resource_file_path(
             rope_project,
             resource,
@@ -50,7 +72,12 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
 
     @staticmethod
     def local_name(pyname: t.Infra.RopePyName, resource: t.Infra.RopeResource) -> bool:
-        """Return whether one Rope name is defined in ``resource``."""
+        """Return whether one Rope name is defined in ``resource``.
+
+        Returns:
+            Whether one Rope name is defined in ``resource``.
+
+        """
         if isinstance(pyname, (p.Infra.RopeImportedName, p.Infra.RopeImportedModule)):
             return False
         # p.Infra declares
@@ -62,7 +89,12 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
 
     @staticmethod
     def statement_target_names(statement: t.Infra.RopeAstNode) -> list[str]:
-        """Extract target names from an Assign/AnnAssign/PEP-695 TypeAlias."""
+        """Extract target names from an Assign/AnnAssign/PEP-695 TypeAlias.
+
+        Returns:
+            The resulting ``list[str]``.
+
+        """
         kind = FlextInfraUtilitiesRopeAnalysisAstHelpers.node_kind(statement)
         if kind == "AnnAssign":
             target = getattr(statement, "target", None)
@@ -87,6 +119,10 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
         Uses rope's ``libutils.get_string_module`` so callers don't need to
         manage temporary files. Parse failures raise; rope contract failures
         escape — the function never returns ``None``.
+
+        Returns:
+            The resulting ``t.Infra.RopePyModule``.
+
         """
         rope_project = FlextInfraUtilitiesRopeAnalysisAstHelpers._shared_parse_project()
         result: t.Infra.RopePyModule = (
@@ -96,7 +132,12 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
 
     @staticmethod
     def _shared_parse_project() -> t.Infra.RopeProject:
-        """Return a process-wide rope project usable for string parsing."""
+        """Return a process-wide rope project usable for string parsing.
+
+        Returns:
+            A process-wide rope project usable for string parsing.
+
+        """
         cached = FlextInfraUtilitiesRopeAnalysisAstHelpers._parse_project
         if cached is None:
             # Root-cause fix: the anchor was a hardcoded
@@ -115,7 +156,12 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
 
     @staticmethod
     def decorator_names(pyfunction: t.Infra.RopePyObject) -> t.StrSequence:
-        """Extract decorator names from a rope ``PyFunction`` (no ast import)."""
+        """Extract decorator names from a rope ``PyFunction`` (no ast import).
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         decorators = getattr(pyfunction, "decorators", None) or ()
         names: list[str] = []
         for decorator in decorators:
@@ -135,7 +181,12 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
         *,
         default_line: int,
     ) -> int:
-        """Return the lowest line number among ``pyfunction``'s decorators."""
+        """Return the lowest line number among ``pyfunction``'s decorators.
+
+        Returns:
+            The lowest line number among ``pyfunction``'s decorators.
+
+        """
         decorators = getattr(pyfunction, "decorators", None) or ()
         candidate_lines = [
             decorator.lineno
@@ -146,12 +197,22 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
 
     @staticmethod
     def node_kind(node: p.AttributeProbe) -> str:
-        """Return an AST node's class name (e.g. ``"AnnAssign"``) without importing ast."""
+        """Return an AST node's class name (e.g. ``"AnnAssign"``) without importing ast.
+
+        Returns:
+            An AST node's class name (e.g. ``"AnnAssign"``) without importing ast.
+
+        """
         return type(node).__name__
 
     @staticmethod
     def walk_ast_nodes(root: t.Infra.RopeAstNode) -> t.SequenceOf[t.Infra.RopeAstNode]:
-        """Return every AST node reachable from ``root``, ``root`` included."""
+        """Return every AST node reachable from ``root``, ``root`` included.
+
+        Returns:
+            Every AST node reachable from ``root``, ``root`` included.
+
+        """
         if not isinstance(root, ast.AST):
             return []
         return [
@@ -166,6 +227,10 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
         """Return a child-id -> parent map for the full AST reachable from ``root``.
 
         The shared SSOT for parent lookups across every rope detector.
+
+        Returns:
+            A child-id -> parent map for the full AST reachable from ``root``.
+
         """
         parent_map: MutableMapping[int, t.Infra.RopeAstNode] = {}
         if not isinstance(root, ast.AST):
@@ -186,6 +251,10 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
 
         Walks the parent chain; a node nested inside any ClassDef/FunctionDef is
         NOT module-level. Shared SSOT for placement detectors.
+
+        Returns:
+            True when ``node`` is a direct child of the module body.
+
         """
         current = node
         while True:
@@ -203,7 +272,12 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
 
     @staticmethod
     def name_of(node: p.AttributeProbe) -> str:
-        """Return ``node.id`` (Name) or ``node.attr`` (Attribute) or ``""``."""
+        """Return ``node.id`` (Name) or ``node.attr`` (Attribute) or ``""``.
+
+        Returns:
+            ``node.id`` (Name) or ``node.attr`` (Attribute) or ``""``.
+
+        """
         if not FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(node):
             return ""
         identifier = getattr(node, "id", None)
@@ -216,7 +290,12 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
 
     @staticmethod
     def line_col_range(node: p.AttributeProbe) -> t.Quad[int, int, int, int] | None:
-        """Return ``(lineno, col_offset, end_lineno, end_col_offset)`` for an AST node."""
+        """Return ``(lineno, col_offset, end_lineno, end_col_offset)`` for an AST node.
+
+        Returns:
+            ``(lineno, col_offset, end_lineno, end_col_offset)`` for an AST node.
+
+        """
         if not FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(node):
             return None
         lineno = getattr(node, "lineno", None)
@@ -234,12 +313,22 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
 
     @staticmethod
     def assignment_target_names(node: p.AttributeProbe) -> t.StrSequence:
-        """Return direct assignment target names represented by one AST node."""
+        """Return direct assignment target names represented by one AST node.
+
+        Returns:
+            Direct assignment target names represented by one AST node.
+
+        """
         return FlextInfraUtilitiesRopeAnalysisAstHelpers._assignment_target_names(node)
 
     @staticmethod
     def _assignment_target_names(node: p.AttributeProbe) -> t.StrSequence:
-        """Return direct assignment target names represented by one AST node."""
+        """Return direct assignment target names represented by one AST node.
+
+        Returns:
+            Direct assignment target names represented by one AST node.
+
+        """
         if not FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(node):
             return ()
         node_kind = FlextInfraUtilitiesRopeAnalysisAstHelpers.node_kind(node)
@@ -267,7 +356,12 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
 
     @staticmethod
     def class_info_from_source(source: str) -> t.SequenceOf[m.Infra.ClassInfo]:
-        """Return class info from the current source text without Rope resource cache."""
+        """Return class info from the current source text without Rope resource cache.
+
+        Returns:
+            Class info from the current source text without Rope resource cache.
+
+        """
         pymodule = FlextInfraUtilitiesRopeAnalysisAstHelpers.parse_string_module(source)
         body = getattr(pymodule.get_ast(), "body", ())
         if not isinstance(body, (list, tuple)):
@@ -285,7 +379,12 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
 
     @staticmethod
     def _class_info_from_ast(node: p.AttributeProbe) -> m.Infra.ClassInfo | None:
-        """Return ClassInfo for one top-level ClassDef AST node."""
+        """Return ClassInfo for one top-level ClassDef AST node.
+
+        Returns:
+            ClassInfo for one top-level ClassDef AST node.
+
+        """
         if not FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(node):
             return None
         if FlextInfraUtilitiesRopeAnalysisAstHelpers.node_kind(node) != "ClassDef":
@@ -312,12 +411,22 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
 
     @staticmethod
     def class_base_name(node: p.AttributeProbe) -> str:
-        """Return terminal base name from an AST base expression."""
+        """Return terminal base name from an AST base expression.
+
+        Returns:
+            Terminal base name from an AST base expression.
+
+        """
         return FlextInfraUtilitiesRopeAnalysisAstHelpers._class_base_name(node)
 
     @staticmethod
     def _class_base_name(node: p.AttributeProbe) -> str:
-        """Return terminal base name from an AST base expression."""
+        """Return terminal base name from an AST base expression.
+
+        Returns:
+            Terminal base name from an AST base expression.
+
+        """
         if not FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(node):
             return ""
         for attr_name in ("id", "attr", "name"):

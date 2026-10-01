@@ -1,4 +1,8 @@
-"""Canonical Git responsibility mixin for ``u.Infra``."""
+"""Canonical Git responsibility mixin for ``u.Infra``.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -26,7 +30,12 @@ class FlextInfraUtilitiesGitSemanticPublishMixin(
         cls,
         request: m.Infra.GitCommitishRequest,
     ) -> p.Result[m.Infra.GitTextReport]:
-        """Merge ``commitish`` into HEAD with an explicit merge commit."""
+        """Merge ``commitish`` into HEAD with an explicit merge commit.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitTextReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             text = repo.git.merge("--no-ff", "--no-edit", request.commitish)
@@ -44,7 +53,12 @@ class FlextInfraUtilitiesGitSemanticPublishMixin(
         cls,
         request: m.Infra.GitDeleteRefRequest,
     ) -> p.Result[m.Infra.GitBoolReport]:
-        """CAS-delete a ref when it still points at ``expected_oid``."""
+        """CAS-delete a ref when it still points at ``expected_oid``.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitBoolReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             repo.git.update_ref("-d", request.reference, request.expected_oid)
@@ -62,7 +76,12 @@ class FlextInfraUtilitiesGitSemanticPublishMixin(
         cls,
         request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitBoolReport]:
-        """Fetch from origin."""
+        """Fetch from origin.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitBoolReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             repo.remotes[c.Infra.GIT_DEFAULT_REMOTE].fetch()
@@ -80,7 +99,12 @@ class FlextInfraUtilitiesGitSemanticPublishMixin(
         cls,
         request: m.Infra.GitPushRequest,
     ) -> p.Result[m.Infra.GitTextReport]:
-        """Push HEAD to ``remote`` as ``refs/heads/<branch>`` with ``-u``."""
+        """Push HEAD to ``remote`` as ``refs/heads/<branch>`` with ``-u``.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitTextReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             text = repo.git.push(
@@ -102,7 +126,12 @@ class FlextInfraUtilitiesGitSemanticPublishMixin(
         cls,
         request: m.Infra.GitRemoteUrlRequest,
     ) -> p.Result[m.Infra.GitTextReport]:
-        """Resolve ``remote get-url <remote>`` as a text report."""
+        """Resolve ``remote get-url <remote>`` as a text report.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitTextReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             url = repo.remotes[request.remote].url

@@ -1,4 +1,8 @@
-"""Workspace and release CLI route ownership."""
+"""Workspace and release CLI route ownership.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -26,7 +30,12 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
     def _apply_flext_binding(
         params: m.Infra.FlextBindingRequest,
     ) -> p.Result[t.Cli.ResultValue]:
-        """Apply the typed binding request through its service owner."""
+        """Apply the typed binding request through its service owner.
+
+        Returns:
+            The resulting ``p.Result[t.Cli.ResultValue]``.
+
+        """
         return FlextInfraFlextBindingService.apply(
             consumer_root=params.repository_root,
             flext_root=params.flext_root,
@@ -37,7 +46,12 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
     def _sync_environment(
         params: m.Infra.WorkspaceEnvironmentCliRequest,
     ) -> p.Result[t.Cli.ResultValue]:
-        """Keep the internal beads render context off the public CLI surface."""
+        """Keep the internal beads render context off the public CLI surface.
+
+        Returns:
+            The resulting ``p.Result[t.Cli.ResultValue]``.
+
+        """
         request = m.Infra.WorkspaceEnvironmentSyncRequest.model_validate(
             params.model_dump(),
         )

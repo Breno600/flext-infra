@@ -1,4 +1,8 @@
-"""Phase-specific verification of collection inputs and attested outputs."""
+"""Phase-specific verification of collection inputs and attested outputs.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -47,7 +51,13 @@ class FlextInfraUtilitiesDocsCollectionVerify(FlextInfraUtilitiesDocsCollectionS
         configuration: m.Infra.PlanCollectionConfig,
         bundle: m.Infra.PlanCollectionBundle,
     ) -> None:
-        """Require original inputs and discovery topology before effects."""
+        """Require original inputs and discovery topology before effects.
+
+        Raises:
+            ValueError: If plan collection source topology changed during publication;
+                or if plan collection source changed.
+
+        """
         if (
             cls._collection_topology(root, configuration, bundle.excluded_outputs)
             != bundle.inventories
@@ -70,7 +80,14 @@ class FlextInfraUtilitiesDocsCollectionVerify(FlextInfraUtilitiesDocsCollectionS
         configuration: m.Infra.PlanCollectionConfig,
         bundle: m.Infra.PlanCollectionBundle,
     ) -> None:
-        """Verify exact effects while preserving every unrelated source snapshot."""
+        """Verify exact effects while preserving every unrelated source snapshot.
+
+        Raises:
+            ValueError: If plan collection source topology changed after publication; or
+                if collection publication differs from its plan; or if unmodified
+                collection input changed.
+
+        """
         outputs = {plan.path: plan for plan in bundle.files}
         original_paths = {path for item in bundle.inventories for path in item.paths}
         exclusions = tuple(

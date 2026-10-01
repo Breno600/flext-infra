@@ -1,4 +1,8 @@
-"""Structural contracts for dependency-analysis collaborators."""
+"""Structural contracts for dependency-analysis collaborators.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

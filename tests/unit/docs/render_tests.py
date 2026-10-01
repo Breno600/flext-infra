@@ -1,4 +1,8 @@
-"""Behavior tests for managed mkdocs.yml rendering (exclude_docs / nav404)."""
+"""Behavior tests for managed mkdocs.yml rendering (exclude_docs / nav404).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

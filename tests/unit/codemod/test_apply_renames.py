@@ -1,4 +1,8 @@
-"""Real transactional CSV campaigns and identity-bound external consumers."""
+"""Real transactional CSV campaigns and identity-bound external consumers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -42,6 +46,7 @@ class TestsFlextInfraApplyRenames:
         self,
         mod_workspace: Path,
     ) -> None:
+        """Test check and apply preserve drivers and reach fixed point."""
         target = self._seed(mod_workspace)
         driver = mod_workspace / "renames.csv"
         other = mod_workspace / "another.csv"
@@ -92,6 +97,7 @@ class TestsFlextInfraApplyRenames:
         rows: str,
         error: str,
     ) -> None:
+        """Test invalid campaign never publishes."""
         target = self._seed(mod_workspace)
         original = target.read_bytes()
         (mod_workspace / "renames.csv").write_text(rows, encoding="utf-8")
@@ -103,6 +109,7 @@ class TestsFlextInfraApplyRenames:
         self,
         mod_workspace: Path,
     ) -> None:
+        """Test documentation changes without mutating executable strings."""
         self._seed(mod_workspace)
         consumer = mod_workspace / "consumer.py"
         consumer.write_text(
@@ -138,6 +145,7 @@ class TestsFlextInfraApplyRenames:
     def test_rope_uses_current_owner_and_preserves_alias_homonyms(
         mod_workspace: Path,
     ) -> None:
+        """Test rope uses current owner and preserves alias homonyms."""
         (mod_workspace / "renames.csv").write_text(
             "old,new\nOld,New\n",
             encoding="utf-8",
@@ -174,6 +182,7 @@ class TestsFlextInfraApplyRenames:
         self,
         mod_workspace: Path,
     ) -> None:
+        """Test missing public destination prevents text publication."""
         target = self._seed(mod_workspace)
         (mod_workspace / "definer.py").write_text(
             "class Public:\n    Present = 1\n",
@@ -191,6 +200,7 @@ class TestsFlextInfraApplyRenames:
         self,
         mod_workspace: Path,
     ) -> None:
+        """Test untracked unusual filename and projection exclusions."""
         self._seed(mod_workspace)
         tm.ok(u.Infra.git_init(m.Infra.GitRepoRequest(repo_root=mod_workspace)))
         authored = mod_workspace / 'untracked "space"\nname.md'
@@ -209,6 +219,7 @@ class TestsFlextInfraApplyRenames:
         self,
         mod_workspace: Path,
     ) -> None:
+        """Test driver drift during publication rolls back consumer."""
         target = self._seed(mod_workspace)
         original = target.read_bytes()
         script = (
@@ -235,6 +246,7 @@ class TestsFlextInfraApplyRenames:
     def test_sibling_repositories_resolve_installed_provider_and_local_mro(
         mod_workspace: Path,
     ) -> None:
+        """Test sibling repositories resolve installed provider and local mro."""
         roots = (mod_workspace / "first", mod_workspace / "second")
         for directory in roots:
             package = directory / "src" / directory.name

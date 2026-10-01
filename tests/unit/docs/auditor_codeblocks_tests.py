@@ -1,4 +1,8 @@
-"""Regression tests for docs codeblock and exported-docstring auditing."""
+"""Regression tests for docs codeblock and exported-docstring auditing.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -20,6 +24,7 @@ class TestsFlextInfraAuditorCodeblocks:
     def test_docs_python_codeblock_issues_ignore_snippet_only_rules(
         tmp_path: Path,
     ) -> None:
+        """Test docs python codeblock issues ignore snippet only rules."""
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir(parents=True, exist_ok=True)
         (docs_dir / "snippet.md").write_text(
@@ -61,6 +66,7 @@ class TestsFlextInfraAuditorCodeblocks:
     def test_docs_python_codeblock_issues_report_invalid_python(
         tmp_path: Path,
     ) -> None:
+        """Test docs python codeblock issues report invalid python."""
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir(parents=True, exist_ok=True)
         (docs_dir / "broken.md").write_text(
@@ -115,6 +121,7 @@ class TestsFlextInfraAuditorCodeblocks:
     def test_docstring_issues_accept_assignment_docstrings(
         tmp_path: Path,
     ) -> None:
+        """Test docstring issues accept assignment docstrings."""
         package_root = tmp_path / "src" / "demo_pkg"
         package_root.mkdir(parents=True, exist_ok=True)
         (package_root / "__init__.py").write_text(

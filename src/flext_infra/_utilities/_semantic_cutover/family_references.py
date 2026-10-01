@@ -1,4 +1,8 @@
-"""Identity-bound consumer edits for one pure namespace wrapper."""
+"""Identity-bound consumer edits for one pure namespace wrapper.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

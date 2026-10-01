@@ -1,4 +1,8 @@
-"""Typed runtime boundary facade for Rope, which lacks typing metadata."""
+"""Typed runtime boundary facade for Rope, which lacks typing metadata.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

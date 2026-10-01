@@ -1,4 +1,8 @@
-"""Centralized constants for the workspace subpackage."""
+"""Centralized constants for the workspace subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -81,7 +85,7 @@ class FlextInfraConstantsWorkspace:
         "BEADS_DOLT_",
     )
     "Beads activation tokens forbidden in ``.envrc.local`` overrides."
-    ENVIRONMENT_DIRECTORY: ClassVar[str] = ".flext-venvs"
+    ENVIRONMENT_DIRECTORY: ClassVar[str] = ".venv"
     "Python environment directory owned by the runtime checkout (D-VENV)."
     ENVIRONMENT_METADATA: ClassVar[str] = "pyvenv.cfg"
     "Interpreter metadata identifying a provisioned virtual environment."

@@ -1,5 +1,8 @@
 """Phase: Ensure bounded Hatch wheel and source-distribution targets.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Every project's wheel gets an explicit ``[tool.hatch.build.targets.wheel]``
 with the primary ``src/<pkg>`` plus every project-declared additional package.
 Project-declared standalone modules under ``src/<module>.py`` and root data
@@ -27,7 +30,13 @@ class FlextInfraEnsurePackagingPhase:
         source: Path,
         ancestors: frozenset[Path],
     ) -> None:
-        """Follow every link Hatch follows while rejecting cycles and escape."""
+        """Follow every link Hatch follows while rejecting cycles and escape.
+
+        Raises:
+            ValueError: If packaged data path escapes repository; or if packaged data
+                directory cycle; or if packaged data path is not a file or directory.
+
+        """
         resolved = source.resolve(strict=True)
         if not resolved.is_relative_to(root):
             msg = f"packaged data path escapes repository: {source}"
@@ -53,7 +62,18 @@ class FlextInfraEnsurePackagingPhase:
         declarations: t.StrSequence,
         planned_files: t.StrSequence = (),
     ) -> m.Infra.PackagedDataSelection:
-        """Validate existing inputs or exact future scaffold destinations."""
+        """Validate existing inputs or exact future scaffold destinations.
+
+        Returns:
+            The resulting ``m.Infra.PackagedDataSelection``.
+
+        Raises:
+            FileNotFoundError: If declared packaged data path is missing.
+            ValueError: If packaged data path must be repository-relative; or if
+                packaged data path escapes repository; or if packaged data path collides
+                with package source; or if packaged data declarations overlap.
+
+        """
         root = project_dir.resolve()
         package_root = root / c.Infra.DEFAULT_SRC_DIR / package_name
         paths: list[Path] = []
@@ -119,7 +139,15 @@ class FlextInfraEnsurePackagingPhase:
         data: m.Infra.PackagedDataSelection,
         declarations: t.StrSequence,
     ) -> t.StrSequence:
-        """Validate exact files omitted within declared distribution directories."""
+        """Validate exact files omitted within declared distribution directories.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            ValueError: If invalid packaged data exclusion.
+
+        """
         root = project_dir.resolve()
         directories = tuple(Path(item) for item in data.directories)
         excluded: list[str] = []
@@ -159,7 +187,12 @@ class FlextInfraEnsurePackagingPhase:
         root_packages: t.StrSequence,
         repository_namespace_packages: t.StrSequence,
     ) -> m.Infra.DepsToml.PhaseConfig:
-        """Build bounded distribution targets for one resolved package name."""
+        """Build bounded distribution targets for one resolved package name.
+
+        Returns:
+            The resulting ``m.Infra.DepsToml.PhaseConfig``.
+
+        """
         package_path = f"{c.Infra.DEFAULT_SRC_DIR}/{package_name}"
         package_paths = (
             package_path,
@@ -292,6 +325,19 @@ class FlextInfraEnsurePackagingPhase:
         ongoing modernization converge. Only declared module/package roots and
         data paths enter those targets after existence, containment and collision
         validation, keeping both distribution formats consistent.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            FileNotFoundError: If declared project root module source is missing; or if
+                declared project root package source is missing a package initializer;
+                or if repository namespace directory is missing.
+            ValueError: If project package name is required when additional distribution
+                roots are declared; or if repository namespace must be one Python
+                identifier; or if repository namespace must be implicit; or if
+                repository namespace overlaps packaged data.
+
         """
         project_dir = path.parent
         docs_meta = u.Infra.docs_meta_from_payload(payload)
