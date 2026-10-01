@@ -179,7 +179,8 @@ class TestsRenameCampaignMod:
         )
         tm.that(u.Cli.process_succeeded(result.outcome), eq=False)
         tm.that(
-            result.stderr, has="CSV campaign path must be relative and non-escaping"
+            result.stderr,
+            has="CSV campaign path must be relative and non-escaping",
         )
         tm.that(guide.read_text(encoding="utf-8"), eq="A campaign_token paragraph.\n")
 
