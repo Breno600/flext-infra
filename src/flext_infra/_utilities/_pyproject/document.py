@@ -117,7 +117,9 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         )
         if namespace_scope.failure:
             return r[str].from_failure(namespace_scope)
-        sources_result = cls._sync_uv_sources(source, resolution=uv_resolution)
+        sources_result = cls._sync_uv_sources(
+            source, resolution=uv_resolution, candidate_sources=candidate_sources
+        )
         if sources_result.failure:
             return r[str].from_failure(sources_result)
         provenance_result = cls._validate_dependency_provenance(
