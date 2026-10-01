@@ -130,8 +130,7 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBaseCst:
                     elif not self.owner_bound:
                         retained.append(
                             updated.with_changes(
-                                name=cst.Name(self.owner),
-                                asname=None,
+                                name=cst.Name(self.owner), asname=None
                             ),
                         )
                 if not retained:

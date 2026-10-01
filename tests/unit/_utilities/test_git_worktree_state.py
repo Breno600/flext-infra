@@ -100,9 +100,7 @@ class TestsFlextInfraGitWorktreeState:
 
         tm.ok(
             u.Infra.git_copy_worktree_state(
-                source,
-                lane,
-                excluded=(Path("[private]"),),
+                source, lane, excluded=(Path("[private]"),)
             ),
         )
 

@@ -33,7 +33,8 @@ class TestsJointModFixedPoint:
         rules = config_path.parent / c.Cli.RULES_DIR_NAME
         u.Cli.ensure_dir(rules).unwrap()
         u.Cli.atomic_write_text_file(
-            config_path, f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\ntestConfigs: []\n"
+            config_path,
+            f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\ntestConfigs: []\n",
         ).unwrap()
         u.Cli.atomic_write_text_file(
             rules / "joint.yml",

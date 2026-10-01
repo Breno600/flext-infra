@@ -47,10 +47,7 @@ class FlextInfraUtilitiesCodegen(
                     "MISE_LOCKFILE_PLATFORMS",
                     ",".join(toolchain.mise_lockfile_platforms),
                 ),
-                (
-                    "MISE_MINIMUM_RELEASE_AGE",
-                    f"{toolchain.dependency_cooldown_days}d",
-                ),
+                ("MISE_MINIMUM_RELEASE_AGE", f"{toolchain.dependency_cooldown_days}d"),
             ),
             transient_environment=tuple(c.Infra.MISE_BOOTSTRAP_TRANSIENT_ENVIRONMENT),
             persistent_environment=tuple(c.Infra.MISE_BOOTSTRAP_PERSISTENT_ENVIRONMENT),

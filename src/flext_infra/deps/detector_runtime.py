@@ -21,7 +21,9 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
     """Runtime executor for dependency detection pipeline."""
 
     def __init__(
-        self, detector: p.Infra.DetectorRuntime, deps: p.Infra.DepsService
+        self,
+        detector: p.Infra.DetectorRuntime,
+        deps: p.Infra.DepsService,
     ) -> None:
         """Receive the reporting command and the dependency-analysis port."""
         self._detector = detector

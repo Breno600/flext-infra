@@ -36,7 +36,7 @@ class FlextInfraUtilitiesProjectDiscovery(
             repository_root,
         )
         packaged = m.Infra.RefactorConfigSpec(
-            project_scan_dirs=config.Infra.source_scan.roots
+            project_scan_dirs=config.Infra.source_scan.roots,
         )
         if not manifest_path.is_file():
             return packaged
@@ -265,7 +265,7 @@ class FlextInfraUtilitiesProjectDiscovery(
                         for target in scan_dir.rglob(f"*{suffix}"):
                             if target.is_file():
                                 targets.add(
-                                    target.relative_to(resolved_root).as_posix()
+                                    target.relative_to(resolved_root).as_posix(),
                                 )
         return tuple(sorted(targets))
 
@@ -278,6 +278,20 @@ class FlextInfraUtilitiesProjectDiscovery(
         member runs its own verbs in its own repository.
         """
         return (repository_root.resolve(),)
+
+    @staticmethod
+    def nearest_project_root(repository_root: Path, path: Path) -> Path | None:
+        """Find the nearest manifest owner inside one governed repository."""
+        boundary = repository_root.resolve()
+        candidate = path.resolve()
+        if not candidate.is_relative_to(boundary):
+            return None
+        for parent in (candidate, *candidate.parents):
+            if (parent / c.PYPROJECT_FILENAME).is_file():
+                return parent
+            if parent == boundary:
+                return None
+        return None
 
     @staticmethod
     def runtime_environment_dir(

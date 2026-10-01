@@ -116,7 +116,7 @@ class FlextInfraConfigModelsRender:
                     "Requirement names the project takes by direct git "
                     "reference (forks and local projects): derived from its "
                     "pyproject, they never enter the cooldown."
-                )
+                ),
             ),
         ] = ()
         checkout_submodules: Annotated[

@@ -65,7 +65,8 @@ class FlextInfraUtilitiesPyprojectUvSources(
 
     @classmethod
     def direct_source_names(
-        cls, document: t.Cli.TomlDocument
+        cls,
+        document: t.Cli.TomlDocument,
     ) -> p.Result[t.VariadicTuple[str]]:
         """Name every requirement taken by direct ``@ source`` reference.
 
@@ -83,8 +84,8 @@ class FlextInfraUtilitiesPyprojectUvSources(
                     if cls._declares_direct_source(item)
                     and (name := FlextInfraUtilitiesDependencies.dep_name(item))
                     is not None
-                })
-            )
+                }),
+            ),
         )
 
     @classmethod

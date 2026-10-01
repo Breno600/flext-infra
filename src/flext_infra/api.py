@@ -178,13 +178,16 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         ).execute()
 
     def apply_renames(
-        self, request: m.Infra.ApplyRenamesInput
+        self,
+        request: m.Infra.ApplyRenamesInput,
     ) -> p.Result[m.Infra.ApplyRenamesReport]:
         """Compose and run one explicitly supplied CSV rename campaign."""
         return FlextInfraApplyRenames().run(request)
 
     def mod(
-        self, request: m.Infra.ModCommand, progress: p.Infra.ModProgress
+        self,
+        request: m.Infra.ModCommand,
+        progress: p.Infra.ModProgress,
     ) -> p.Result[t.Cli.ResultValue]:
         """Compose the codemod use case from typed config and real adapters."""
         root = u.Infra.resolve_repository_root_or_cwd(request.repository_root)
@@ -208,7 +211,7 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
                     text_globs=declared.text_globs,
                     python_documentation=declared.python_documentation,
                     exclude_globs=declared.exclude_globs,
-                )
+                ),
             )
         with self.rope_workspace(root) as rope:
             return FlextInfraCodemodBatchApply(
@@ -237,7 +240,8 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         return FlextInfraModTextGateEngine.run(root, apply=request.apply)
 
     def mod_text_candidate(
-        self, request: m.Infra.ModTextCommand
+        self,
+        request: m.Infra.ModTextCommand,
     ) -> p.Result[t.Cli.ResultValue]:
         """Replay one manifest-declared candidate using this healthy provider."""
         source_root = u.Infra.resolve_repository_root_or_cwd(request.repository_root)
@@ -247,17 +251,18 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         targets = workspace.value.candidate_bootstrap_targets
         if len(targets) != 1:
             return r[t.Cli.ResultValue].fail(
-                "mod-text-candidate requires exactly one candidate_bootstrap_target"
+                "mod-text-candidate requires exactly one candidate_bootstrap_target",
             )
         # Non-strict: a missing declared worktree is graded by the exact-root
         # owner's typed failure instead of escaping as FileNotFoundError.
         identity = u.Infra.exact_worktree_root(
-            (source_root / targets[0].path).resolve()
+            (source_root / targets[0].path).resolve(),
         )
         if identity.failure:
             return r[t.Cli.ResultValue].from_failure(identity)
         return FlextInfraModTextGateEngine.run(
-            identity.value.repo_root, apply=request.apply
+            identity.value.repo_root,
+            apply=request.apply,
         )
 
     @staticmethod

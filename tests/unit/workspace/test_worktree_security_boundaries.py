@@ -79,7 +79,7 @@ class TestsFlextInfraWorktreeSecurityBoundaries:
             "feature/missing-base"
             not in tm.ok(
                 u.Infra.git_list_worktrees(
-                    m.Infra.GitRepoRequest(repo_root=repository),
+                    m.Infra.GitRepoRequest(repo_root=repository)
                 ),
             ).porcelain
         )

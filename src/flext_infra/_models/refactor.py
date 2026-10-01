@@ -179,7 +179,8 @@ class FlextInfraModelsRefactor(
 
         check: Annotated[bool, m.Field(description="Validate without writing")] = False
         dry_run_mode: Annotated[
-            bool, m.Field(alias="dry-run", description="Inspect without writing")
+            bool,
+            m.Field(alias="dry-run", description="Inspect without writing"),
         ] = False
 
     class ApplyRenamesInput(mm.WriteMixin, m.ContractModel):

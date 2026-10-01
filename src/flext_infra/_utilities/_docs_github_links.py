@@ -148,7 +148,8 @@ class FlextInfraUtilitiesDocsGithubLinks:
         if repo is None:
             return None
         path = FlextInfraUtilitiesDocsGithubLinks.docs_github_governed_path(
-            refpath, repo.branch
+            refpath,
+            repo.branch,
         )
         # A foreign ref has no decidable ref/path boundary: the audit reports it
         # as a wrong branch, and no rewrite is guessed.
@@ -176,7 +177,8 @@ class FlextInfraUtilitiesDocsGithubLinks:
         if repo is None:
             return None
         path = FlextInfraUtilitiesDocsGithubLinks.docs_github_governed_path(
-            match.group("refpath"), repo.branch
+            match.group("refpath"),
+            repo.branch,
         )
         if path is None:
             return None
@@ -233,7 +235,8 @@ class FlextInfraUtilitiesDocsGithubLinks:
         if (
             repo is not None
             and FlextInfraUtilitiesDocsGithubLinks.docs_github_governed_path(
-                match.group("refpath"), repo.branch
+                match.group("refpath"),
+                repo.branch,
             )
             is None
         ):

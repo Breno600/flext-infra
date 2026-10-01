@@ -107,7 +107,9 @@ class TestsFlextInfraFamilyFlatten:
         entity: str,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
-        family = package / u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory
+        family = (
+            package / u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory
+        )
         family.mkdir()
         (family / "__init__.py").write_text("", encoding="utf-8")
         path = family / "payload.py"
@@ -159,7 +161,9 @@ class TestsFlextInfraFamilyFlatten:
         tmp_path: Path,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
-        family = package / u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory
+        family = (
+            package / u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory
+        )
         family.mkdir()
         (family / c.Infra.INIT_PY).write_text("", encoding="utf-8")
         path = family / "payload.py"

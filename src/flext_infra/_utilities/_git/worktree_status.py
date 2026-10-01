@@ -59,7 +59,9 @@ class FlextInfraUtilitiesGitWorktreeStatusMixin(FlextInfraUtilitiesGitRepo):
         try:
             repo = cls._repo(repo_path)
             lifecycle = cls._lifecycle_porcelain(
-                repo, repo_path, repo.git.status("--porcelain", "--untracked-files=all")
+                repo,
+                repo_path,
+                repo.git.status("--porcelain", "--untracked-files=all"),
             )
         except GitCommandError as exc:
             return r[m.Infra.GitStatusReport].fail(str(exc), exception=exc)

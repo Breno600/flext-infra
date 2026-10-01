@@ -199,8 +199,7 @@ class TestsFlextInfraCodegenCiMatrix:
         )
         for run_line in ci_step_runs:
             tm.that(workflow, has=run_line)
-        # A verb whose workflow row omits the ci context never renders into CI
-        # (operator ruling 2026-09-23: make test runs locally and on pre-push).
+        # A verb whose workflow row omits the ci context never renders into CI.
         for step in config.Infra.codegen.make.workflow:
             if "ci" not in step.contexts:
                 tm.that(workflow, lacks=f"run: CI=Y make {step.verb}\n")
@@ -233,6 +232,36 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(jobs, has="merge-guard:")
         tm.that(jobs, has="Block WIP heads from protected integration branches")
 
+    def test_ci_runs_make_test_through_the_persistent_testmon_database(
+        self, rendered_project: Path
+    ) -> None:
+        """CI selects through testmon and hands its database to the next run.
+
+        The database directory is restored before ``make test`` and saved on
+        every outcome after it; the full verb never renders into CI.
+        """
+        workflow = (rendered_project / ".github" / "workflows" / "ci.yml").read_text(
+            encoding="utf-8"
+        )
+        make = config.Infra.codegen.make
+        cache = make.testmon_cache
+        test_run = f"run: {make.ci.variable}={make.ci.value} make test\n"
+        tm.that(workflow, has=test_run)
+        tm.that(workflow, lacks="make test-full")
+        path = (
+            f"path: ~/{cache.home_cache_directory}/{cache.external_storage_directory}"
+        )
+        restore = workflow.index("- name: Restore testmon database")
+        save = workflow.index("- name: Save testmon database")
+        tm.that(restore < workflow.index(test_run) < save, eq=True)
+        for step_start in (restore, save):
+            step = workflow[step_start:].split("\n      - name:", maxsplit=1)[0]
+            tm.that(step, has=[path, make.testmon_cache_policy.key_prefix])
+        tm.that(
+            workflow[save:].split("\n      - name:", maxsplit=1)[0],
+            has="if: ${{ always() }}",
+        )
+
     def test_blocking_ci_does_not_configure_github_cli_auth(
         self,
         rendered_project: Path,
@@ -251,11 +280,13 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(steps_index < setup_index, eq=True)
 
     def test_gen_fixed_point_rejects_dirty_git_tree(
-        self, rendered_project: Path, tmp_path: Path
+        self,
+        rendered_project: Path,
+        tmp_path: Path,
     ) -> None:
         """Run the generated post-generation shell check in a dirty repository."""
         workflow = u.Cli.yaml_load_mapping(
-            rendered_project / ".github" / "workflows" / "ci.yml"
+            rendered_project / ".github" / "workflows" / "ci.yml",
         )
         jobs = t.Cli.JSON_MAPPING_ADAPTER.validate_python(workflow["jobs"])
         runs: list[str] = []
@@ -280,7 +311,7 @@ class TestsFlextInfraCodegenCiMatrix:
         u.Tests.initialize_git_repo(repository)
         (repository / "untracked.txt").write_text("dirty\n", encoding="utf-8")
         outcome = tm.ok(
-            u.Cli.run_raw(["sh", "-eu", "-c", post_generation], cwd=repository)
+            u.Cli.run_raw(["sh", "-eu", "-c", post_generation], cwd=repository),
         )
         tm.that(u.Cli.process_succeeded(outcome.outcome), eq=False)
 
@@ -437,7 +468,8 @@ class TestsFlextInfraCodegenCiMatrix:
                 tm.that(version, eq=action.version)
 
     def test_dependabot_applies_the_fleet_cooldown_everywhere(
-        self, rendered_project: Path
+        self,
+        rendered_project: Path,
     ) -> None:
         """Every ecosystem entry carries the one configured cooldown."""
         root = rendered_project
@@ -456,7 +488,8 @@ class TestsFlextInfraCodegenCiMatrix:
             tm.that(cooldown["default-days"], eq=days)
 
     def test_cooldown_exclusion_is_the_direct_git_requirement_set(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Only requirements taken by direct reference are excluded."""
         pyproject = tmp_path / c.Infra.PYPROJECT_FILENAME
@@ -737,11 +770,12 @@ class TestsFlextInfraCodegenCiMatrix:
             tm.that(content, has=f"      - {branch}")
 
     def test_docs_failure_upload_keeps_audit_failure_and_scopes_hidden_reports(
-        self, rendered_project: Path
+        self,
+        rendered_project: Path,
     ) -> None:
         """A generated Docs job fails on audit findings and retains safe reports."""
         workflow = u.Cli.yaml_load_mapping(
-            rendered_project / ".github/workflows/docs.yml"
+            rendered_project / ".github/workflows/docs.yml",
         )
         jobs = t.Cli.JSON_MAPPING_ADAPTER.validate_python(workflow["jobs"])
         docs_job = t.Cli.JSON_MAPPING_ADAPTER.validate_python(jobs["docs-quality"])

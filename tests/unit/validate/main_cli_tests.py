@@ -48,7 +48,8 @@ class TestsFlextInfraValidateCli:
             encoding="utf-8",
         )
         config_path.write_text(
-            f"ruleDirs: [{c.Cli.RULES_DIR_NAME}]\n", encoding="utf-8"
+            f"ruleDirs: [{c.Cli.RULES_DIR_NAME}]\n",
+            encoding="utf-8",
         )
         (rules / "contract.yml").write_text(
             "id: namespace-contract\nlanguage: Python\nseverity: error\n"

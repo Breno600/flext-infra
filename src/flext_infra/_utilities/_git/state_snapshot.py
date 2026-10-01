@@ -154,7 +154,11 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
             for entry in (*cls._state_head_entries(root, paths), *entries)
             if entry.mode == c.Infra.GIT_GITLINK_MODE_TEXT
         }
-        indexed_gitlinks = {entry.path for entry in entries if entry.mode == c.Infra.GIT_GITLINK_MODE_TEXT}
+        indexed_gitlinks = {
+            entry.path
+            for entry in entries
+            if entry.mode == c.Infra.GIT_GITLINK_MODE_TEXT
+        }
         for path in (*paths, *candidates):
             for parent in path.parents:
                 if (root / parent).is_symlink() and parent not in candidates:

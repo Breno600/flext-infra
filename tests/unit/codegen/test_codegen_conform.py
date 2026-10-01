@@ -438,12 +438,14 @@ class TestsFlextInfraCodegenConform:
             config.Infra.name,
             extra_verbs=(m.Infra.MakeVerbSpec(name=verb, description=help_text),),
         )
-        return infra.codegen_conform(u.Tests.conform_request(
-            root,
-            what=c.Infra.CodegenConformSurface.MAKEFILE,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.APPLY,
-        ),)
+        return infra.codegen_conform(
+            u.Tests.conform_request(
+                root,
+                what=c.Infra.CodegenConformSurface.MAKEFILE,
+                scope=c.Infra.CodegenConformScope.SELF,
+                mode=c.Infra.CodegenConformMode.APPLY,
+            ),
+        )
 
     @pytest.mark.slow
     def test_setext_underline_is_accepted_as_ordinary_content(
@@ -499,11 +501,13 @@ class TestsFlextInfraCodegenConform:
         package_init.parent.mkdir(parents=True, exist_ok=True)
         package_init.write_text("", encoding="utf-8")
 
-        applied = infra.codegen_conform(u.Tests.conform_request(
-            root,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.APPLY,
-        ),)
+        applied = infra.codegen_conform(
+            u.Tests.conform_request(
+                root,
+                scope=c.Infra.CodegenConformScope.SELF,
+                mode=c.Infra.CodegenConformMode.APPLY,
+            ),
+        )
 
         tm.ok(applied)
         rendered = (root / "pyproject.toml").read_text(encoding="utf-8")
@@ -649,21 +653,21 @@ class TestsFlextInfraCodegenConform:
         repository = u.Tests.repository_ref(config.Infra.name)
         created = infra.codegen_new(
             FlextInfraCodegenProjectNew(
-            flext_source=u.Tests.flext_source(),
-            name=repository.name,
-            kind=c.Infra.ProjectKind.INTERNAL_FLEXT,
-            output_root=existing_root,
-            repository_url=repository.url,
-            repository_branch=u.Tests.provider_branch(),
-            flext_repository_url=repository.url,
-            flext_repository_ref=u.Tests.provider_branch(),
-            provider=repository.provider,
-            license="MIT",
-            author_name="FLEXT Team",
-            author_email="team@flext.dev",
-            upstream="flext_cli",
-            year=2026,
-            apply_changes=True,
+                flext_source=u.Tests.flext_source(),
+                name=repository.name,
+                kind=c.Infra.ProjectKind.INTERNAL_FLEXT,
+                output_root=existing_root,
+                repository_url=repository.url,
+                repository_branch=u.Tests.provider_branch(),
+                flext_repository_url=repository.url,
+                flext_repository_ref=u.Tests.provider_branch(),
+                provider=repository.provider,
+                license="MIT",
+                author_name="FLEXT Team",
+                author_email="team@flext.dev",
+                upstream="flext_cli",
+                year=2026,
+                apply_changes=True,
             ),
         )
         tm.ok(created)
@@ -681,11 +685,13 @@ class TestsFlextInfraCodegenConform:
             ),
         )
         u.Tests.commit_git_changes(existing_root, "Seed committed drift")
-        migrated = infra.codegen_conform(u.Tests.conform_request(
-            existing_root,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.APPLY,
-        ),)
+        migrated = infra.codegen_conform(
+            u.Tests.conform_request(
+                existing_root,
+                scope=c.Infra.CodegenConformScope.SELF,
+                mode=c.Infra.CodegenConformMode.APPLY,
+            ),
+        )
         tm.ok(migrated)
         actual_tree = TestsFlextInfraConformSupport.project_tree(existing_root)
         assert actual_tree == expected_tree, (
@@ -719,7 +725,7 @@ class TestsFlextInfraCodegenConform:
                 root,
                 workspace_excluded_top_dirs=(
                     FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
-                        root
+                        root,
                     ).unwrap()
                 ),
             ),
@@ -737,18 +743,22 @@ class TestsFlextInfraCodegenConform:
             ),
         )
 
-        applied = infra.codegen_conform(u.Tests.conform_request(
-            root,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.APPLY,
-        ),)
+        applied = infra.codegen_conform(
+            u.Tests.conform_request(
+                root,
+                scope=c.Infra.CodegenConformScope.SELF,
+                mode=c.Infra.CodegenConformMode.APPLY,
+            ),
+        )
         tm.ok(applied)
 
-        fixed_point = infra.codegen_conform(u.Tests.conform_request(
-            root,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.CHECK,
-        ),)
+        fixed_point = infra.codegen_conform(
+            u.Tests.conform_request(
+                root,
+                scope=c.Infra.CodegenConformScope.SELF,
+                mode=c.Infra.CodegenConformMode.CHECK,
+            ),
+        )
         tm.ok(fixed_point)
         tm.that(fixed_point.value.written_files, eq=())
 
@@ -761,11 +771,13 @@ class TestsFlextInfraCodegenConform:
         TestsFlextInfraConformSupport.seed_infra_package_tree(root)
         (root / "scripts").mkdir()
 
-        result = infra.codegen_conform(u.Tests.conform_request(
-            root,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.APPLY,
-        ),)
+        result = infra.codegen_conform(
+            u.Tests.conform_request(
+                root,
+                scope=c.Infra.CodegenConformScope.SELF,
+                mode=c.Infra.CodegenConformMode.APPLY,
+            ),
+        )
 
         tm.ok(result)
         tm.that(
@@ -844,11 +856,13 @@ class TestsFlextInfraCodegenConform:
             ),
         )
 
-        fixed_point = infra.codegen_conform(u.Tests.conform_request(
-            root,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.CHECK,
-        ),)
+        fixed_point = infra.codegen_conform(
+            u.Tests.conform_request(
+                root,
+                scope=c.Infra.CodegenConformScope.SELF,
+                mode=c.Infra.CodegenConformMode.CHECK,
+            ),
+        )
         tm.ok(fixed_point)
         tm.that(fixed_point.value.written_files, eq=())
 
@@ -885,11 +899,13 @@ class TestsFlextInfraCodegenConform:
         u.Tests.commit_git_changes(root, "Seed pre-bake Mise projection")
 
         tm.ok(
-            infra.codegen_conform(u.Tests.conform_request(
-                root,
-                scope=c.Infra.CodegenConformScope.SELF,
-                mode=c.Infra.CodegenConformMode.APPLY,
-            ),),
+            infra.codegen_conform(
+                u.Tests.conform_request(
+                    root,
+                    scope=c.Infra.CodegenConformScope.SELF,
+                    mode=c.Infra.CodegenConformMode.APPLY,
+                ),
+            ),
         )
 
         packaged = files("flext_infra").joinpath(c.Infra.MISE_COLD_START_DIRECTORY)
@@ -900,11 +916,13 @@ class TestsFlextInfraCodegenConform:
             )
             tm.that((root / relative).stat().st_mode & 0o777, eq=mode)
         tm.ok(FlextInfraCodegenMiseArtifacts(repository_root=root).execute(), eq=True)
-        fixed_point = infra.codegen_conform(u.Tests.conform_request(
-            root,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.CHECK,
-        ),)
+        fixed_point = infra.codegen_conform(
+            u.Tests.conform_request(
+                root,
+                scope=c.Infra.CodegenConformScope.SELF,
+                mode=c.Infra.CodegenConformMode.CHECK,
+            ),
+        )
         tm.ok(fixed_point)
         tm.that(fixed_point.value.written_files, eq=())
 
@@ -1022,19 +1040,22 @@ class TestsFlextInfraCodegenConform:
         root = tmp_path / "consumer"
         u.Tests.seed_locked_taplo(tmp_path)
         tm.ok(
-            infra.codegen_conform(u.Tests.conform_request(
-                root,
-                scope=c.Infra.CodegenConformScope.SELF,
-                mode=c.Infra.CodegenConformMode.APPLY,
+            infra.codegen_conform(
+                u.Tests.conform_request(
+                    root,
+                    scope=c.Infra.CodegenConformScope.SELF,
+                    mode=c.Infra.CodegenConformMode.APPLY,
+                ),
+                initial_workspace=workspace,
             ),
-            initial_workspace=workspace,),
         )
         package_root = (root / "src/consumer/__init__.py").read_text(encoding="utf-8")
         tm.that(package_root, has='"flext_cli": (')
         tm.that(package_root, has='"r"')
 
     def test_docs_config_apply_materializes_an_absent_docs_parent(
-        self, infra_git_repo: Path
+        self,
+        infra_git_repo: Path,
     ) -> None:
         """Bootstrapping docs-config on a checkout without ``docs/`` publishes it."""
         root = infra_git_repo
@@ -1044,7 +1065,9 @@ class TestsFlextInfraCodegenConform:
             shutil.rmtree(docs_dir)
 
         TestsFlextInfraConformSupport.apply_conform_surface(
-            root, workspace, c.Infra.CodegenConformSurface.DOCS_CONFIG
+            root,
+            workspace,
+            c.Infra.CodegenConformSurface.DOCS_CONFIG,
         )
 
         projection = docs_dir / c.Infra.DOCS_CONFIG_FILENAME

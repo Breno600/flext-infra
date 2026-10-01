@@ -529,5 +529,4 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
         raise ValueError(msg)
 
 
-
 __all__: t.StrSequence = ("FlextInfraRopeWorkspace",)

@@ -52,8 +52,9 @@ class TestsFlextInfraCodegenProjectNewValidation:
         tmp_path: Path,
     ) -> None:
         """A whitespace-only FLEXT ref fails before any directory exists."""
-        result = infra.codegen_new(self._service(tmp_path / "project",
-        flext_repository_ref="   ",))
+        result = infra.codegen_new(
+            self._service(tmp_path / "project", flext_repository_ref="   "),
+        )
         tm.fail(result, has="flext repository ref is required")
         tm.that(not (tmp_path / "project").exists())
 
@@ -62,8 +63,12 @@ class TestsFlextInfraCodegenProjectNewValidation:
         tmp_path: Path,
     ) -> None:
         """A URL without a host fails before any directory exists."""
-        result = infra.codegen_new(self._service(tmp_path / "project",
-        flext_repository_url="https:///flext-demo.git",))
+        result = infra.codegen_new(
+            self._service(
+                tmp_path / "project",
+                flext_repository_url="https:///flext-demo.git",
+            ),
+        )
         tm.fail(result, has="must name a host and repository path")
         tm.that(not (tmp_path / "project").exists())
 
@@ -72,8 +77,9 @@ class TestsFlextInfraCodegenProjectNewValidation:
         tmp_path: Path,
     ) -> None:
         """A project origin that is not a Git URL fails before any effect."""
-        result = infra.codegen_new(self._service(tmp_path / "project",
-        repository_url="not-a-url",))
+        result = infra.codegen_new(
+            self._service(tmp_path / "project", repository_url="not-a-url"),
+        )
         tm.fail(result, has="not canonicalizable to HTTPS")
         tm.that(not (tmp_path / "project").exists())
 

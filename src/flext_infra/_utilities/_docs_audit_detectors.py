@@ -28,7 +28,10 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
 
     @staticmethod
     def docs_text_token_issues(
-        scope: m.Infra.DocScope, *, tokens: t.StrSequence, issue_type: str
+        scope: m.Infra.DocScope,
+        *,
+        tokens: t.StrSequence,
+        issue_type: str,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
         """Collect token-presence issues in the complete Markdown scope."""
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
@@ -51,7 +54,9 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
 
     @staticmethod
     def docs_placeholder_issues(
-        scope: m.Infra.DocScope, *, patterns: t.StrSequence
+        scope: m.Infra.DocScope,
+        *,
+        patterns: t.StrSequence,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
         """Find unfinished markers using declared lexical patterns."""
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
@@ -67,7 +72,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                             issue_type="placeholder",
                             severity="medium",
                             message=f"matches placeholder pattern `{pattern.pattern}`",
-                        )
+                        ),
                     )
         return issues
 

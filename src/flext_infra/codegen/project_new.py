@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
 
-from .. import c, m, t, u
+from .. import c, m, u
 from ._execution import FlextInfraCodegenExecutionBase
 from .conform import FlextInfraCodegenConform
 

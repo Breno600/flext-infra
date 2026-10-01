@@ -22,16 +22,6 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
         ignored = frozenset[str](config.Infra.codegen.source_scan_ignored)
         return frozenset[str]((*c.Infra.ITERATION_EXCLUDED_PARTS, *ignored))
 
-    @staticmethod
-    def _project_root_for_file(repository_root: Path, file_path: Path) -> Path | None:
-        """Project root for file."""
-        for parent in file_path.parents:
-            if (parent / "pyproject.toml").is_file():
-                return parent.resolve()
-            if parent == repository_root:
-                return repository_root
-        return None
-
     @classmethod
     def package_name_for_dir(cls, package_dir: Path, *, project_root: Path) -> str:
         """Return the import package a directory declares inside a project.
@@ -257,7 +247,10 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
                 c.Infra.INIT_PY,
                 c.Infra.INIT_PYI,
             }
-            project_root = cls._project_root_for_file(resolved_root, resolved_file_path)
+            project_root = FlextInfraUtilitiesProjectDiscovery.nearest_project_root(
+                resolved_root,
+                resolved_file_path,
+            )
             module_name = (
                 cls._module_name_for_file(resolved_file_path, project_root=project_root)
                 if project_root is not None

@@ -97,9 +97,7 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
                 f"composed project Beads route is not a directory: {route}",
             )
         unexpected = sorted(
-            entry.name
-            for entry in route.iterdir()
-            if entry.name not in allowed_entries
+            entry.name for entry in route.iterdir() if entry.name not in allowed_entries
         )
         if unexpected:
             return r[bool].fail(

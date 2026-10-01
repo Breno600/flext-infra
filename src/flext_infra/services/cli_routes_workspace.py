@@ -74,7 +74,7 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
                 help_text="Fail if a Git worktree has staged, unstaged, or untracked changes",
                 model_cls=m.Infra.GitStatusRequest,
                 handler=FlextInfraCliRouteBase.result_handler(
-                    FlextInfraGitService.verify_clean
+                    FlextInfraGitService.verify_clean,
                 ),
                 success_message="workspace Git worktree is clean",
             ),

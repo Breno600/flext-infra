@@ -90,8 +90,9 @@ files:
 metadata:
   context:
     NAME:
-      not: package-layers
-      arg: settings config c t p m u cli
+      - is: package-root-init
+      - not: package-layers
+        arg: settings config c t p m u cli
 rule:
   kind: identifier
   pattern: $NAME

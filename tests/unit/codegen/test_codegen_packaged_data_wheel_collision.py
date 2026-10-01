@@ -145,7 +145,12 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         """Read declared source files retained unchanged by the sdist."""
         manifest = (root / c.PYPROJECT_FILENAME).read_text(encoding="utf-8")
         sdist = u.Tests.toml_table_at(
-            manifest, c.Infra.TOOL, "hatch", "build", "targets", "sdist"
+            manifest,
+            c.Infra.TOOL,
+            "hatch",
+            "build",
+            "targets",
+            "sdist",
         )
         return (
             u.Tests.toml_mapping(sdist["force-include"])
@@ -218,7 +223,8 @@ class TestsFlextInfraCodegenPackagedDataWheel:
 
     @pytest.mark.slow
     def test_repository_namespace_retains_its_import_path(
-        self, infra_git_repo: Path
+        self,
+        infra_git_repo: Path,
     ) -> None:
         """A declared root namespace ships at the same import path in both formats."""
         self._prepare_project(
@@ -242,19 +248,20 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             u.Cli.run_checked(
                 ["uv", "build", "--wheel", "--out-dir", str(wheel_dir)],
                 cwd=infra_git_repo,
-            )
+            ),
         )
         tm.ok(
             u.Cli.run_checked(
                 ["uv", "build", "--sdist", "--out-dir", str(sdist_dir)],
                 cwd=infra_git_repo,
-            )
+            ),
         )
         with zipfile.ZipFile(next(wheel_dir.glob("*.whl"))) as archive:
             tm.that(archive.read("infra/pulumi/__main__.py"), eq=source.read_bytes())
         with tarfile.open(next(sdist_dir.glob("*.tar.gz"))) as archive:
             member = next(
-                item for item in archive.getmembers()
+                item
+                for item in archive.getmembers()
                 if item.name.endswith("/infra/pulumi/__main__.py")
             )
             stream = archive.extractfile(member)
@@ -447,7 +454,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         )
         tm.ok(u.Cli.atomic_write_text_file(infra_git_repo / catalog, "profiles: {}\n"))
         tm.ok(
-            u.Cli.atomic_write_text_file(infra_git_repo / asset, "---\n- hosts: all\n")
+            u.Cli.atomic_write_text_file(infra_git_repo / asset, "---\n- hosts: all\n"),
         )
         tm.ok(u.Cli.atomic_write_text_file(infra_git_repo / ignored, "private state\n"))
         tm.that(self._conform_self(infra_git_repo), eq=0)

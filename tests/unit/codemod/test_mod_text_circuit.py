@@ -24,7 +24,8 @@ class TestsFlextInfraModTextGateEngine:
     """Exercise the declarative sed-by-list engine through its public scan."""
 
     def test_external_consumer_inherits_provider_and_composes_local_rules(
-        self, mod_workspace: Path
+        self,
+        mod_workspace: Path,
     ) -> None:
         """A standalone consumer sees the packaged catalogue and its own overlay."""
         provider_root = config.ssot_config_dir().parent
@@ -43,7 +44,7 @@ class TestsFlextInfraModTextGateEngine:
                     "    find: 'before'\n"
                     "    replace: 'after'\n"
                 ),
-            )
+            ),
         )
         sample = mod_workspace / "src" / "mod_workspace" / "consumer.py"
         tm.ok(u.Cli.atomic_write_text_file(sample, 'value = "before"\n'))
@@ -58,11 +59,12 @@ class TestsFlextInfraModTextGateEngine:
         tm.that(fixed_point.actionable, eq=0)
 
     def test_external_catalogue_id_collision_fails_before_publication(
-        self, mod_workspace: Path
+        self,
+        mod_workspace: Path,
     ) -> None:
         """A local rule cannot silently replace the provider's declared rule."""
         provider = tm.ok(
-            FlextInfraModTextGateEngine.load_rules(config.ssot_config_dir().parent)
+            FlextInfraModTextGateEngine.load_rules(config.ssot_config_dir().parent),
         )
         collision_id = provider[0].rule_id if provider else "consumer-owned-rewrite"
         local_collision = (
@@ -80,7 +82,7 @@ class TestsFlextInfraModTextGateEngine:
                     "    replace: 'after'\n"
                     f"{local_collision}"
                 ),
-            )
+            ),
         )
 
         result = FlextInfraModTextGateEngine.scan(mod_workspace, fix=True)
@@ -88,7 +90,8 @@ class TestsFlextInfraModTextGateEngine:
         tm.that(first.read_bytes(), eq=original)
 
     def test_declared_markdown_rule_replays_and_reaches_fixed_point(
-        self, mod_workspace: Path
+        self,
+        mod_workspace: Path,
     ) -> None:
         """An authored Markdown guide is an authenticated public text input."""
         guide = mod_workspace / "docs" / "guide.md"
@@ -102,7 +105,7 @@ class TestsFlextInfraModTextGateEngine:
                 "    include: ['docs/*.md']\n"
                 "    find: 'Old guidance\\.'\n"
                 "    replace: 'Current guidance.'\n",
-            )
+            ),
         )
 
         tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=True))
@@ -113,7 +116,8 @@ class TestsFlextInfraModTextGateEngine:
         )
 
     def test_declared_markdown_symlink_fails_before_publication(
-        self, mod_workspace: Path
+        self,
+        mod_workspace: Path,
     ) -> None:
         """A declared guide cannot route publication through a symbolic link."""
         source = mod_workspace / "guide-source.md"
@@ -129,7 +133,7 @@ class TestsFlextInfraModTextGateEngine:
                 "    include: ['docs/guide.md']\n"
                 "    find: 'Old guidance\\.'\n"
                 "    replace: 'Current guidance.'\n",
-            )
+            ),
         )
 
         tm.fail(
@@ -139,7 +143,8 @@ class TestsFlextInfraModTextGateEngine:
         tm.that(source.read_text(encoding="utf-8"), eq="Old guidance.\n")
 
     def test_capture_guard_rejects_wrong_keyword_before_publication(
-        self, mod_workspace: Path
+        self,
+        mod_workspace: Path,
     ) -> None:
         """A broad regex cannot rewrite a different keyword by accident."""
         source = mod_workspace / "sample.py"
@@ -153,7 +158,7 @@ class TestsFlextInfraModTextGateEngine:
                 "    find: '(?P<keyword>[a-z]+) = 1'\n"
                 "    capture_equals: {keyword: secret}\n"
                 "    replace: 'secret = 2'\n",
-            )
+            ),
         )
         before = source.read_bytes()
 
@@ -163,7 +168,8 @@ class TestsFlextInfraModTextGateEngine:
         tm.that(source.read_bytes(), eq=before)
 
     def test_capture_guard_accepts_declared_keyword_and_fixed_point(
-        self, mod_workspace: Path
+        self,
+        mod_workspace: Path,
     ) -> None:
         """A guarded rule rewrites once, then observes no further match."""
         source = mod_workspace / "sample.py"
@@ -177,7 +183,7 @@ class TestsFlextInfraModTextGateEngine:
                 "    find: '(?P<keyword>[a-z]+) = 1'\n"
                 "    capture_equals: {keyword: secret}\n"
                 "    replace: 'secret = 2'\n",
-            )
+            ),
         )
 
         tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=True))
@@ -188,7 +194,8 @@ class TestsFlextInfraModTextGateEngine:
         )
 
     def test_capture_guard_requires_a_declared_named_group(
-        self, mod_workspace: Path
+        self,
+        mod_workspace: Path,
     ) -> None:
         """An invalid catalogue fails before scanning any candidate source."""
         tm.ok(
@@ -198,7 +205,7 @@ class TestsFlextInfraModTextGateEngine:
                 "  - id: missing-capture\n"
                 "    find: '[a-z]+ = 1'\n"
                 "    capture_equals: {keyword: secret}\n",
-            )
+            ),
         )
 
         tm.fail(
@@ -207,7 +214,8 @@ class TestsFlextInfraModTextGateEngine:
         )
 
     def test_invalid_python_replacement_never_publishes_batch(
-        self, mod_workspace: Path
+        self,
+        mod_workspace: Path,
     ) -> None:
         """Syntax preflight rejects a broken rule before its transaction starts."""
         first, second = self._publication_inputs(mod_workspace)
@@ -275,7 +283,8 @@ class TestsFlextInfraModTextGateEngine:
         tm.that(second.read_bytes(), eq=b"\xff")
 
     def test_invalid_python_replacement_rejects_entire_batch(
-        self, mod_workspace: Path
+        self,
+        mod_workspace: Path,
     ) -> None:
         """A malformed multiline rewrite never publishes any source file."""
         first, second = self._publication_inputs(mod_workspace)
@@ -295,7 +304,7 @@ class TestsFlextInfraModTextGateEngine:
                     "    replace: |2-\n"
                     "        value = (\n"
                 ),
-            )
+            ),
         )
 
         with pytest.raises(SyntaxError):

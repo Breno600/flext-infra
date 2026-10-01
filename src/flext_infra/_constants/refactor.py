@@ -149,6 +149,7 @@ class FlextInfraConstantsRefactor:
         COMPOSES_FAMILY = "composes-family"
         CLASS_STEM = "class-stem"
         PACKAGE_LAYERS = "package-layers"
+        PACKAGE_ROOT_INIT = "package-root-init"
         FAMILY_BASE = "family-base"
 
     @unique

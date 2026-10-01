@@ -131,7 +131,8 @@ class FlextInfraRefactorCensus(
         """Return the final report and the pre-apply report the impact map reads."""
         started = time.monotonic()
         with FlextInfraRopeWorkspace.open_workspace(
-            self.root, rope_repository_root=self._rope_root_for_selection()
+            self.root,
+            rope_repository_root=self._rope_root_for_selection(),
         ) as rope:
             impact_report = self._collect_report(rope)
             report = impact_report
@@ -142,7 +143,7 @@ class FlextInfraRefactorCensus(
             ):
                 report = self._collect_report(rope)
         finalized = report.model_copy(
-            update={"scan_duration_seconds": time.monotonic() - started}
+            update={"scan_duration_seconds": time.monotonic() - started},
         )
         return finalized, impact_report
 
@@ -161,7 +162,8 @@ class FlextInfraRefactorCensus(
             u.Cli.info(f"JSON report exported to: {self.json_output_path}")
         if self.impact_map_output_path is not None:
             impact_result = u.Infra.write_impact_map(
-                self._impact_map_results(impact_report), self.impact_map_output_path
+                self._impact_map_results(impact_report),
+                self.impact_map_output_path,
             )
             if impact_result.failure:
                 return r[m.Infra.WorkspaceReport].from_failure(impact_result)

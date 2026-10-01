@@ -285,10 +285,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         """Return one keyword argument value of a call."""
         if call is None:
             return None
-        return next(
-            (item.value for item in call.keywords if item.arg == keyword),
-            None,
-        )
+        return next((item.value for item in call.keywords if item.arg == keyword), None)
 
     @staticmethod
     def lazy_public_exports_source(source: str) -> t.Pair[t.StrSequence, str]:

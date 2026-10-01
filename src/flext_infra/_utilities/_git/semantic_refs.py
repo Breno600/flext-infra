@@ -59,7 +59,8 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
             if exc.status == c.Infra.GIT_EXIT_NEGATIVE:
                 return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=False))
             return r[m.Infra.GitBoolReport].fail(
-                f"failed to validate branch name: {exc}", exception=exc
+                f"failed to validate branch name: {exc}",
+                exception=exc,
             )
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitBoolReport].fail(
@@ -83,7 +84,8 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
             if exc.status == c.Infra.GIT_EXIT_NEGATIVE:
                 return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=False))
             return r[m.Infra.GitBoolReport].fail(
-                f"failed to inspect Git ref: {exc}", exception=exc
+                f"failed to inspect Git ref: {exc}",
+                exception=exc,
             )
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitBoolReport].fail(

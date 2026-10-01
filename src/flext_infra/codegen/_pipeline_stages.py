@@ -167,9 +167,7 @@ class FlextInfraCodegenPipelineStagesMixin:
             FlextInfraCodegenCensus,
             t.SequenceOf[m.Infra.CensusReport],
         ]:
-            census = FlextInfraCodegenCensus(
-                repository_root=ctx.repository_root,
-            )
+            census = FlextInfraCodegenCensus(repository_root=ctx.repository_root)
             projects = self._state.discovered_projects
             reports_result = census.run(projects=projects)
             if reports_result.failure:
@@ -273,9 +271,7 @@ class FlextInfraCodegenPipelineStagesMixin:
         def _action() -> t.SequenceOf[m.Infra.CensusReport]:
             census = self._state.census_service
             if census is None:
-                census = FlextInfraCodegenCensus(
-                    repository_root=ctx.repository_root,
-                )
+                census = FlextInfraCodegenCensus(repository_root=ctx.repository_root)
             projects = self._state.discovered_projects
             reports_result = census.run(projects=projects)
             if reports_result.failure:

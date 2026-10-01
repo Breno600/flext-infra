@@ -209,7 +209,8 @@ class TestsFlextInfraReleaseDag:
         @staticmethod
         @pytest.mark.parametrize("target", ["build", "wheel", "sdist"])
         def test_hatch_exclusion_cannot_cancel_declared_source(
-            tmp_path: Path, target: str
+            tmp_path: Path,
+            target: str,
         ) -> None:
             """Reject an archive target that excludes its declared package."""
             project_name = "flext-a"
@@ -235,7 +236,8 @@ class TestsFlextInfraReleaseDag:
 
             tm.that(result, eq=1)
             tm.that(
-                u.Tests.release_build_log_text(workspace, project_name), has=expected
+                u.Tests.release_build_log_text(workspace, project_name),
+                has=expected,
             )
 
         @staticmethod
@@ -256,7 +258,8 @@ class TestsFlextInfraReleaseDag:
                 '"/src/host.py" = "/src/host.py"\n\n'
             )
             pyproject.write_text(
-                content.replace(header, forced + header), encoding="utf-8"
+                content.replace(header, forced + header),
+                encoding="utf-8",
             )
             u.Tests.commit_git_changes(project, "add absolute Hatch source")
 

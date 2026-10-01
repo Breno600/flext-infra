@@ -78,7 +78,9 @@ class FlextInfraSmellsGate(FlextInfraGate):
         )
 
     def _owned_issues(
-        self, scan: p.Cli.CommandOutput, project_dir: Path
+        self,
+        scan: p.Cli.CommandOutput,
+        project_dir: Path,
     ) -> t.VariadicTuple[m.Infra.Issue]:
         """Every smell this gate owns: the qlty scan and the census families.
 
@@ -98,7 +100,8 @@ class FlextInfraSmellsGate(FlextInfraGate):
         is a blocking issue, never a clean pass.
         """
         validator = FlextInfraRuntimeCensusValidator.for_project(
-            project_dir, census_gate=self.gate_id
+            project_dir,
+            census_gate=self.gate_id,
         )
         if validator.failure:
             messages: t.StrSequence = (

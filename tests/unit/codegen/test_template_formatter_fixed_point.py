@@ -110,9 +110,7 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
         for rendered in (without, with_devcontainer):
             tm.that(rendered, has="package-ecosystem: pip")
 
-    def test_lazy_root_renders_one_argument_per_line_with_trailing_commas(
-        self,
-    ) -> None:
+    def test_lazy_root_renders_one_argument_per_line_with_trailing_commas(self) -> None:
         """Render the formatter fixed point under magic trailing commas.
 
         Ruff respects magic trailing commas and COM812 demands one on every

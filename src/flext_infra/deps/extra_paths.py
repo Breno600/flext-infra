@@ -257,7 +257,7 @@ class FlextInfraExtraPathsManager(
                 child,
                 workspace_excluded_top_dirs=(
                     FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
-                        child
+                        child,
                     ).unwrap()
                 ),
             )

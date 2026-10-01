@@ -33,7 +33,7 @@ class FlextInfraPytestRunnerBase(s[int]):
     profile_enabled: Annotated[
         bool,
         m.Field(
-            description="Profile the real suite child and preserve its native exit"
+            description="Profile the real suite child and preserve its native exit",
         ),
     ] = False
     collection_command_prefix: Annotated[

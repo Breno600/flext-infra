@@ -1004,7 +1004,7 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         residue = state.transaction_residue(layout.value)
         if residue:
             return r[bool].fail(
-                f"generation staging has no journal authority: {residue[0]}"
+                f"generation staging has no journal authority: {residue[0]}",
             )
         return r[bool].ok(True)
 

@@ -61,7 +61,7 @@ class TestsFlextInfraCodegenMain:
                 project_root / "src" / "flext_infra",
                 root / "src" / "flext_infra",
                 dirs_exist_ok=True,
-            )
+            ),
         )
         tests_init = root / "tests" / "__init__.py"
         tests_init.parent.mkdir(parents=True, exist_ok=True)

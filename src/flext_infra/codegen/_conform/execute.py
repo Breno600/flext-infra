@@ -244,7 +244,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         destinations = self.surface_contract(surface).destinations
         if destinations is None or len(destinations) != 1:
             return r[m.Infra.CodegenResult].fail(
-                f"bootstrap requires one destination for {surface}"
+                f"bootstrap requires one destination for {surface}",
             )
         destination = Path(next(iter(destinations)))
         expected_path = request.root.expanduser().resolve() / destination
@@ -272,7 +272,8 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 if chain.failure:
                     return r[m.Infra.CodegenResult].from_failure(chain)
                 materialized = u.Cli.atomic_create_directory_chain_guarded(
-                    chain.value, permission_mode=0o755
+                    chain.value,
+                    permission_mode=0o755,
                 )
                 if materialized.failure:
                     return r[m.Infra.CodegenResult].from_failure(materialized)
@@ -286,7 +287,8 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 return self._bootstrap_rollback(created, before)
             if file.desired_content is None or file.desired_mode is None:
                 return self._bootstrap_rollback(
-                    created, r[bool].fail(f"bootstrap cannot delete {destination}")
+                    created,
+                    r[bool].fail(f"bootstrap cannot delete {destination}"),
                 )
             published = u.Cli.atomic_write_binary_file_guarded(
                 before.value,
@@ -708,7 +710,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         if rollback.failure:
             return r[m.Infra.CodegenResult].fail(
                 f"{failure.error}; bootstrap directory rollback failed: "
-                f"{rollback.error}"
+                f"{rollback.error}",
             )
         return r[m.Infra.CodegenResult].from_failure(failure)
 
@@ -822,9 +824,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             if validated.failure:
                 return r[bool].from_failure(validated)
         u.Cli.info("stage=verify-fresh-imports")
-        imported = ports.fresh_import(
-            repository_root=request.root,
-        ).build_report(
+        imported = ports.fresh_import(repository_root=request.root).build_report(
             publications=lazy_analysis.publications,
             repository_roots=self.fresh_import_repository_roots(
                 request.root,

@@ -313,9 +313,7 @@ class FlextInfraConfigModelsContexts:
             return f"{self.dist.upper().replace('-', '_')}_"
 
         @property
-        def _config_base(
-            self,
-        ) -> FlextInfraConfigModelsScaffold.ScaffoldConfigBaseSpec:
+        def _config_base(self) -> FlextInfraConfigModelsScaffold.ScaffoldConfigBaseSpec:
             """ENFORCE-042 config base selected from the declared profile.
 
             The fleet-converged ``_config.py`` composes ``FlextSettings`` FIRST
@@ -453,7 +451,7 @@ class FlextInfraConfigModelsContexts:
         repository_namespace_packages: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                description="Implicit namespace directories shipped from the repository root"
+                description="Implicit namespace directories shipped from the repository root",
             ),
         ] = ()
         root_modules: Annotated[
@@ -499,7 +497,8 @@ class FlextInfraConfigModelsContexts:
         dependency_cooldown_days: Annotated[
             int,
             m.Field(
-                ge=1, description="Supply-chain cooldown rendered as mise release age"
+                ge=1,
+                description="Supply-chain cooldown rendered as mise release age",
             ),
         ]
         kubectl_version: Annotated[
@@ -544,7 +543,7 @@ class FlextInfraConfigModelsContexts:
                 description=(
                     "Taplo release selector; the committed mise.lock pins the "
                     "version generation authenticates"
-                )
+                ),
             ),
         ]
         ast_grep_selector: Annotated[
@@ -715,7 +714,7 @@ class FlextInfraConfigModelsContexts:
         repository_namespace_packages: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                description="Implicit namespace directories shipped from the repository root"
+                description="Implicit namespace directories shipped from the repository root",
             ),
         ] = ()
         root_modules: Annotated[

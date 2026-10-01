@@ -22,7 +22,7 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         if plain_result.failure:
             return r[t.JsonMapping].from_failure(plain_result)
         return r[t.JsonMapping].ok(
-            t.Infra.INFRA_MAPPING_ADAPTER.validate_python(plain_result.value)
+            t.Infra.INFRA_MAPPING_ADAPTER.validate_python(plain_result.value),
         )
 
     @override

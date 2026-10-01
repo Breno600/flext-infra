@@ -125,18 +125,24 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         (project_dir / "README.md").write_text(self.FORMATTED, encoding="utf-8")
 
         _ = u.Tests.check_gate_asserting(
-            FlextInfraMarkdownCodeGate, tmp_path, project_dir, passed=True, issues_len=0
+            FlextInfraMarkdownCodeGate,
+            tmp_path,
+            project_dir,
+            passed=True,
+            issues_len=0,
         )
 
     def test_code_gate_notest_only_blocks_do_not_select_the_gate(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A ``notest`` fence is not embedded code to check (#1223 selection)."""
         project_dir = u.Tests.mk_project(tmp_path, "markdown-code-notest")
         (project_dir / "README.md").write_text(self.NOTEST_PSEUDO, encoding="utf-8")
 
         tm.that(
-            FlextInfraMarkdownCodeGate(tmp_path).selected_for(project_dir), eq=False
+            FlextInfraMarkdownCodeGate(tmp_path).selected_for(project_dir),
+            eq=False,
         )
 
     def test_code_gate_fix_splices_formatted_block_back(self, tmp_path: Path) -> None:

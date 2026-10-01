@@ -19,7 +19,7 @@ from tests import c, m, u
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from tests import p, t
+    from tests import t
 
 
 class TestsFlextInfraGateErrorReporting:
@@ -43,9 +43,11 @@ class TestsFlextInfraGateErrorReporting:
         reports_dir = tmp_path / "reports"
 
         projects = tm.ok(
-            FlextInfraWorkspaceChecker(
-                repository_root=tmp_path,
-            ).run_projects(["p1"], gates, reports_dir=reports_dir),
+            FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
+                ["p1"],
+                gates,
+                reports_dir=reports_dir,
+            ),
         )
 
         project = projects[0]
@@ -100,9 +102,11 @@ class TestsFlextInfraGateErrorReporting:
         )
         u.Tests.initialize_git_repo(project_dir)
 
-        result = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path,
-        ).run_projects(["p1"], [c.Infra.FORMAT], reports_dir=tmp_path / "reports")
+        result = FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
+            ["p1"],
+            [c.Infra.FORMAT],
+            reports_dir=tmp_path / "reports",
+        )
 
         tm.ok(result)
         project = result.value[0]
@@ -143,9 +147,11 @@ class TestsFlextInfraGateErrorReporting:
         )
         u.Tests.initialize_git_repo(project_dir)
 
-        result = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path,
-        ).run_projects(["p1"], [c.Infra.MYPY], reports_dir=tmp_path / "reports")
+        result = FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
+            ["p1"],
+            [c.Infra.MYPY],
+            reports_dir=tmp_path / "reports",
+        )
 
         tm.ok(result)
         project = result.value[0]
@@ -186,9 +192,11 @@ class TestsFlextInfraGateErrorReporting:
             )
         u.Tests.initialize_git_repo(project_dir)
 
-        result = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path,
-        ).run_projects(["p1"], [c.Infra.MARKDOWN], reports_dir=tmp_path / "reports")
+        result = FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
+            ["p1"],
+            [c.Infra.MARKDOWN],
+            reports_dir=tmp_path / "reports",
+        )
 
         tm.ok(result)
         tm.that(result.value[0].passed, eq=False)

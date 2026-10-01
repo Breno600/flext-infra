@@ -75,7 +75,9 @@ class FlextInfraUtilitiesCodemodRules:
         return "^(?:" + "|".join(re.escape(rule_id) for rule_id in rule_ids) + ")$"
 
     @staticmethod
-    def codemod_project_requirements(root: Path) -> p.Result[t.Pair[str, t.StrSequence]]:
+    def codemod_project_requirements(
+        root: Path,
+    ) -> p.Result[t.Pair[str, t.StrSequence]]:
         pyproject = root / c.PYPROJECT_FILENAME
         document = u.Cli.toml_read_document(pyproject)
         if document.failure:
@@ -410,11 +412,11 @@ class FlextInfraUtilitiesCodemodRules:
                         metadata if isinstance(metadata, Mapping) else {}
                     )
                     context = cls._declared_context(
-                        declared_metadata.get(c.Infra.CODEMOD_RULE_CONTEXT_KEY)
+                        declared_metadata.get(c.Infra.CODEMOD_RULE_CONTEXT_KEY),
                     )
                     if context.failure:
                         return r[t.SequenceOf[m.Infra.CodemodRule]].fail(
-                            f"{context.error}: {resource}"
+                            f"{context.error}: {resource}",
                         )
                     body = u.Cli.json_dumps({
                         key: value
@@ -432,7 +434,7 @@ class FlextInfraUtilitiesCodemodRules:
                     if unbound:
                         return r[t.SequenceOf[m.Infra.CodemodRule]].fail(
                             f"ast-grep rule {rule_id} context names variables "
-                            f"its rule never captures {unbound}: {resource}"
+                            f"its rule never captures {unbound}: {resource}",
                         )
                     rules.append(
                         m.Infra.CodemodRule.model_validate({
@@ -443,22 +445,23 @@ class FlextInfraUtilitiesCodemodRules:
                             "fixable": "fix" in parsed_rule.value,
                             "expected": declared.value[0] if declared.value else None,
                             "owner": declared_metadata.get(
-                                c.Infra.CODEMOD_RULE_OWNER_KEY
+                                c.Infra.CODEMOD_RULE_OWNER_KEY,
                             ),
                             "consumers_of": declared_metadata.get(
-                                c.Infra.CODEMOD_RULE_CONSUMERS_OF_KEY
+                                c.Infra.CODEMOD_RULE_CONSUMERS_OF_KEY,
                             ),
                             "relocation": declared_metadata.get(
-                                c.Infra.CODEMOD_RULE_RELOCATION_KEY
+                                c.Infra.CODEMOD_RULE_RELOCATION_KEY,
                             ),
                             "context": context.value,
-                        })
+                        }),
                     )
         return r[t.SequenceOf[m.Infra.CodemodRule]].ok(tuple(rules))
 
     @classmethod
     def _declared_context(
-        cls, raw: t.JsonValue | None
+        cls,
+        raw: t.JsonValue | None,
     ) -> p.Result[t.VariadicTuple[m.Infra.CodemodContextCondition]]:
         """Read ``metadata.context``: ``{VAR: {is|not: predicate[, of: VAR]}}``.
 
@@ -473,7 +476,7 @@ class FlextInfraUtilitiesCodemodRules:
             return conditions.ok(())
         if not isinstance(raw, Mapping) or not raw:
             return conditions.fail(
-                "ast-grep rule metadata.context must be a non-empty mapping"
+                "ast-grep rule metadata.context must be a non-empty mapping",
             )
         verdicts = {
             c.Infra.CODEMOD_CONTEXT_HOLDS_KEY,
@@ -490,7 +493,7 @@ class FlextInfraUtilitiesCodemodRules:
                 if not isinstance(condition, Mapping):
                     return conditions.fail(
                         f"ast-grep rule context ${variable} must be a mapping "
-                        "or a sequence of mappings"
+                        "or a sequence of mappings",
                     )
                 verdict = cls._context_verdict(variable, condition, verdicts)
                 if verdict.failure:
@@ -502,18 +505,20 @@ class FlextInfraUtilitiesCodemodRules:
                         "holds": verdict.value == c.Infra.CODEMOD_CONTEXT_HOLDS_KEY,
                         "of": condition.get(c.Infra.CODEMOD_CONTEXT_OF_KEY),
                         "arg": str(
-                            condition.get(c.Infra.CODEMOD_CONTEXT_ARG_KEY, "")
+                            condition.get(c.Infra.CODEMOD_CONTEXT_ARG_KEY, ""),
                         ).split(),
                         "as_": str(
-                            condition.get(c.Infra.CODEMOD_CONTEXT_AS_KEY, "")
+                            condition.get(c.Infra.CODEMOD_CONTEXT_AS_KEY, ""),
                         ).split(),
-                    })
+                    }),
                 )
         return conditions.ok(tuple(parsed))
 
     @staticmethod
     def _context_verdict(
-        variable: str, condition: t.JsonMapping, verdicts: t.StrSequence | set[str]
+        variable: str,
+        condition: t.JsonMapping,
+        verdicts: t.StrSequence | set[str],
     ) -> p.Result[str]:
         """Return the one verdict key (``is``/``not``) of a context condition."""
         keys = set(condition)
@@ -526,7 +531,7 @@ class FlextInfraUtilitiesCodemodRules:
         if len(verdict) != 1 or keys - set(verdicts) - operands:
             return r[str].fail(
                 f"ast-grep rule context ${variable} must hold exactly one of "
-                f"{sorted(verdicts)} and at most {sorted(operands)}"
+                f"{sorted(verdicts)} and at most {sorted(operands)}",
             )
         return r[str].ok(verdict.pop())
 

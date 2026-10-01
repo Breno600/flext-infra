@@ -296,7 +296,7 @@ class FlextInfraUtilitiesRepository:
         hand-authored, a commit ref there is a pin beside uv.lock and fails.
         """
         loaded = FlextInfraUtilitiesWorkspaceManifest.load_workspace_manifest(
-            repository_root
+            repository_root,
         )
         if loaded.failure:
             return r[t.Pair[str, str]].from_failure(loaded)
@@ -439,7 +439,7 @@ class FlextInfraUtilitiesRepository:
     ) -> p.Result[str]:
         """Return the workspace manifest's declared URL for one distribution."""
         loaded = FlextInfraUtilitiesWorkspaceManifest.load_workspace_manifest(
-            repository_root
+            repository_root,
         )
         if loaded.failure:
             return r[str].from_failure(loaded)
@@ -528,7 +528,7 @@ class FlextInfraUtilitiesRepository:
         invented.
         """
         manifest = FlextInfraUtilitiesWorkspaceManifest.load_workspace_manifest(
-            repository_root
+            repository_root,
         )
         if manifest.success and manifest.value:
             integration = manifest.value[0].integration

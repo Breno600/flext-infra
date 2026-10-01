@@ -13,7 +13,7 @@ from tests import c, u
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from tests import p, t
+    from tests import t
 
 
 class TestsFlextInfraWorkspaceInit:
@@ -26,13 +26,8 @@ class TestsFlextInfraWorkspaceInit:
     def test_parse_tool_args(self, raw: str | None, expected: t.StrSequence) -> None:
         tm.that(FlextInfraWorkspaceChecker.parse_tool_args(raw), eq=list(expected))
 
-    def test_execute_returns_failure(
-        self,
-        tmp_path: Path,
-    ) -> None:
-        result = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path,
-        ).execute()
+    def test_execute_returns_failure(self, tmp_path: Path) -> None:
+        result = FlextInfraWorkspaceChecker(repository_root=tmp_path).execute()
         tm.fail(result, has="Use execute_command() directly")
 
     def test_resolve_gates_rejects_duplicate_explicit_gates(self) -> None:
@@ -56,8 +51,10 @@ class TestsFlextInfraWorkspaceInit:
         reports_file = tmp_path / "reports.txt"
         reports_file.write_text("", encoding="utf-8")
 
-        result = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path,
-        ).run_projects(["project-a"], [c.Infra.LINT], reports_dir=reports_file)
+        result = FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
+            ["project-a"],
+            [c.Infra.LINT],
+            reports_dir=reports_file,
+        )
 
         tm.fail(result)

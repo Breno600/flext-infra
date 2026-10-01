@@ -72,8 +72,7 @@ class TestsFlextInfraUtilitiesGitMixin:
         tm.ok(run([c.Infra.GIT, "switch", current], cwd=repo_root))
         tm.ok(
             run(
-                [c.Infra.GIT, "merge", "--no-ff", "-m", subject, branch],
-                cwd=repo_root,
+                [c.Infra.GIT, "merge", "--no-ff", "-m", subject, branch], cwd=repo_root
             ),
         )
 

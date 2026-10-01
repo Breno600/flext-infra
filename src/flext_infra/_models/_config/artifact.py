@@ -529,7 +529,7 @@ class FlextInfraConfigModelsArtifact:
                     "Planners compose the pyproject first and record them; "
                     "None means this plan composes no pyproject, so the "
                     "committed one is the source"
-                )
+                ),
             ),
         ] = None
 
@@ -718,9 +718,7 @@ class FlextInfraConfigModelsArtifact:
         """One declared literal regex substitution applied across the mod scope."""
 
         pattern: Annotated[t.NonEmptyStr, m.Field(description="Regex source to match")]
-        replacement: Annotated[
-            str, m.Field(description="Literal replacement text")
-        ]
+        replacement: Annotated[str, m.Field(description="Literal replacement text")]
         file_glob: Annotated[
             t.NonEmptyStr | None,
             m.Field(default=None, description="Optional file glob filter"),
@@ -729,9 +727,7 @@ class FlextInfraConfigModelsArtifact:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 default=(),
-                description=(
-                    "Regex flags by name (IGNORECASE, MULTILINE, DOTALL)"
-                ),
+                description=("Regex flags by name (IGNORECASE, MULTILINE, DOTALL)"),
             ),
         ] = ()
         description: Annotated[

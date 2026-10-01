@@ -87,7 +87,7 @@ class FlextInfraUtilitiesDocsFix:
                 if outcome.failure:
                     raise RuntimeError(outcome.error or f"Ruff could not inspect {rel}")
                 if outcome.value.stderr or not u.Cli.process_succeeded(
-                    outcome.value.outcome
+                    outcome.value.outcome,
                 ):
                     msg = (
                         f"Ruff could not fix {rel}: "

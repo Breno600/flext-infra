@@ -58,7 +58,7 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
         cli.display_text(FlextInfraCliModProgress.render_rename(report))
         if report.occurrences:
             return r[t.Cli.ResultValue].fail(
-                f"{report.occurrences} pending source edits"
+                f"{report.occurrences} pending source edits",
             )
         return r[t.Cli.ResultValue].ok(True)
 

@@ -35,7 +35,7 @@ class FlextInfraUtilitiesCodegenFacades:
             if module.name != c.Infra.INIT_PY
             and family
             in FlextInfraUtilitiesRopeModulePatch.facade_letter_names_source(
-                module.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+                module.read_text(encoding=c.Cli.ENCODING_DEFAULT),
             )
         )
         if len(owners) > 1:
@@ -313,8 +313,7 @@ class FlextInfraUtilitiesCodegenFacades:
             family
         ].directory
         rendered = [
-            f"from {package}.{directory}.{module} import (\n"
-            f"    {class_name},\n)\n"
+            f"from {package}.{directory}.{module} import (\n    {class_name},\n)\n"
             for module, class_name in additions
         ]
         lines[facade.lineno - 1 : facade.lineno - 1] = [*rendered, "\n"]

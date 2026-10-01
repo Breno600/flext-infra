@@ -35,8 +35,7 @@ class TestsFlextInfraDocsGenerator:
         _ = u.Tests.plan_docs_bundle(generator)
         result = generator.generate(
             m.Infra.DocsGenerateRequest(
-                repository_root=workspace,
-                projects=["flext-a"],
+                repository_root=workspace, projects=["flext-a"]
             ),
         )
 
@@ -340,7 +339,8 @@ class TestsFlextInfraDocsGenerator:
         tm.that((project / "README.md").read_text(encoding="utf-8"), eq=first_readme)
 
     def test_public_top_level_modules_own_generated_module_pages(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Every public top-level module gets a page; private modules never do."""
         project_name = "flext-a"
@@ -353,7 +353,8 @@ class TestsFlextInfraDocsGenerator:
         public = ("api", "models")
         for module in (*public, "_internal"):
             (package / f"{module}.py").write_text(
-                f'"""Fixture module {module}."""\n', encoding="utf-8"
+                f'"""Fixture module {module}."""\n',
+                encoding="utf-8",
             )
 
         generator = FlextInfraDocGenerator(

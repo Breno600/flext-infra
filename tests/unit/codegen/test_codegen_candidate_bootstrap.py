@@ -158,14 +158,17 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         )
 
     def test_docs_config_conflict_recovers_from_declared_template(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A conflicted docs projection is repaired before normal generation parses it."""
         source, _ = tests_u.Tests.render_make_environment(
-            tmp_path / "source", c.Infra.MakeProfile.STANDALONE
+            tmp_path / "source",
+            c.Infra.MakeProfile.STANDALONE,
         )
         candidate, _ = tests_u.Tests.render_make_environment(
-            tmp_path / "candidate", c.Infra.MakeProfile.STANDALONE
+            tmp_path / "candidate",
+            c.Infra.MakeProfile.STANDALONE,
         )
         manifest = tests_u.Tests.write_workspace_manifest(source, source.name)
         tests_u.Tests.write_workspace_manifest(candidate, candidate.name)
@@ -191,14 +194,17 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         )
 
     def test_pyproject_bootstrap_uses_declared_candidate_surface(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A healthy provider restores a candidate before its own Make can import."""
         source, _ = tests_u.Tests.render_make_environment(
-            tmp_path / "source", c.Infra.MakeProfile.STANDALONE
+            tmp_path / "source",
+            c.Infra.MakeProfile.STANDALONE,
         )
         candidate, _ = tests_u.Tests.render_make_environment(
-            tmp_path / "candidate", c.Infra.MakeProfile.STANDALONE
+            tmp_path / "candidate",
+            c.Infra.MakeProfile.STANDALONE,
         )
         manifest = tests_u.Tests.write_workspace_manifest(source, source.name)
         tests_u.Tests.write_workspace_manifest(candidate, candidate.name)
@@ -214,7 +220,7 @@ class TestsFlextInfraCodegenCandidateBootstrap:
             u.Cli.atomic_write_text_file(
                 projection,
                 projection.read_text(encoding="utf-8") + "\n# stale projection\n",
-            )
+            ),
         )
         command = m.Infra.CandidateBootstrapCommand(repository_root=source)
 
@@ -233,14 +239,17 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         )
 
     def test_mise_triple_recovery_is_complete_and_idempotent(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """One declared recovery publishes all upg-owned launch artifacts."""
         source, _ = tests_u.Tests.render_make_environment(
-            tmp_path / "source", c.Infra.MakeProfile.STANDALONE
+            tmp_path / "source",
+            c.Infra.MakeProfile.STANDALONE,
         )
         candidate, _ = tests_u.Tests.render_make_environment(
-            tmp_path / "candidate", c.Infra.MakeProfile.STANDALONE
+            tmp_path / "candidate",
+            c.Infra.MakeProfile.STANDALONE,
         )
         manifest = tests_u.Tests.write_workspace_manifest(source, source.name)
         tests_u.Tests.write_workspace_manifest(candidate, candidate.name)
@@ -271,10 +280,12 @@ class TestsFlextInfraCodegenCandidateBootstrap:
     def test_mise_triple_fails_before_partial_publication(self, tmp_path: Path) -> None:
         """An invalid destination prevents any member of the triple from writing."""
         source, _ = tests_u.Tests.render_make_environment(
-            tmp_path / "source", c.Infra.MakeProfile.STANDALONE
+            tmp_path / "source",
+            c.Infra.MakeProfile.STANDALONE,
         )
         candidate, _ = tests_u.Tests.render_make_environment(
-            tmp_path / "candidate", c.Infra.MakeProfile.STANDALONE
+            tmp_path / "candidate",
+            c.Infra.MakeProfile.STANDALONE,
         )
         manifest = tests_u.Tests.write_workspace_manifest(source, source.name)
         tests_u.Tests.write_workspace_manifest(candidate, candidate.name)
@@ -292,7 +303,7 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         last.mkdir()
 
         result = infra.bootstrap_candidate(
-            m.Infra.CandidateBootstrapCommand(repository_root=source)
+            m.Infra.CandidateBootstrapCommand(repository_root=source),
         )
 
         tm.that(result.failure, eq=True)
