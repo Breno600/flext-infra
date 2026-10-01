@@ -212,6 +212,11 @@ Infra:
         timeout_seconds: 120
         plugins: [pydantic.mypy]
         boolean-settings:
+          # The canonical facade form imports the parent letter, subclasses
+          # it and rebinds the letter (`from flext_core import u`,
+          # `class FlextCliUtilities(u)`, `u = FlextCliUtilities`); Mypy
+          # accepts that same-name rebind only with this setting.
+          allow_redefinition: true
           namespace_packages: true
           explicit_package_bases: true
           check_untyped_defs: true
