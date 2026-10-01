@@ -181,16 +181,6 @@ include = [
 {% endif %}
 
 [tool.mypy]
-# FLEXT mypy suppression rationale (validated at the composition boundary):
-{% for code, rationale in tooling.tools.mypy.disabled_error_codes | dictsort %}
-# FLEXT mypy[{{ code }}]: {{ rationale }}
-{% endfor %}
-disable_error_code = [
-{% for code, rationale in tooling.tools.mypy.disabled_error_codes | dictsort %}
-  {{ code | tojson }},
-{% endfor %}
-]
-exclude = {{ tooling.tools.mypy.exclude | tojson }}
 mypy_path = [
 {% for item in tooling_runtime.mypy_path %}
   {{ item | tojson }},
@@ -213,11 +203,6 @@ python_version = {{ python_version | tojson }}
 [[tool.mypy.overrides]]
 module = [
 {% for item in override.modules %}
-  {{ item | tojson }},
-{% endfor %}
-]
-disable_error_code = [
-{% for item in override.disable_error_codes %}
   {{ item | tojson }},
 {% endfor %}
 ]
@@ -251,10 +236,6 @@ use-ignore-files = {{ tooling.tools.pyrefly.use_ignore_files | lower }}
 {% endfor %}
 
 [tool.pyright]
-# FLEXT Pyright suppression rationale (validated at the composition boundary):
-{% for code, rationale in tooling.tools.pyright.global_suppression_rationales | dictsort %}
-# FLEXT pyright[{{ code }}]: {{ rationale }}
-{% endfor %}
 exclude = [
 {% for item in tooling_runtime.pyright_exclude %}
   {{ item | tojson }},
@@ -374,17 +355,8 @@ quote-style = {{ tooling.tools.ruff.format.quote_style | tojson }}
 skip-magic-trailing-comma = {{ tooling.tools.ruff.format.skip_magic_trailing_comma | lower }}
 
 [tool.ruff.lint]
-# FLEXT Ruff suppression rationale (validated against semantic facet order):
-{% for code, rationale in tooling.tools.ruff.lint.ignored_rule_rationales | dictsort %}
-# FLEXT ruff[{{ code }}]: {{ rationale }}
-{% endfor %}
 extend-safe-fixes = [
 {% for item in tooling.tools.ruff.lint.extend_safe_fixes | sort %}
-  {{ item | tojson }},
-{% endfor %}
-]
-ignore = [
-{% for item in tooling_runtime.ruff_ignore | sort %}
   {{ item | tojson }},
 {% endfor %}
 ]

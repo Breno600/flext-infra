@@ -375,7 +375,6 @@ class FlextInfraModelsCore:
         errors: Annotated[int, m.Field(description="Error count")] = 0
         gate_scripts: Annotated[int, m.Field(description="Gate script count")] = 0
         ok: Annotated[int, m.Field(description="Passing gate script count")] = 0
-        warnings: Annotated[int, m.Field(description="Warning count")] = 0
 
     class GateContractRunResult(m.Value):
         """CLI outcome for one gate-contract validation run."""

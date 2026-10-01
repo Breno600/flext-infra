@@ -643,33 +643,6 @@ class FlextInfraModelsDepsToolConfig(
             description="Coverage configuration with per-project-type thresholds."
         )
 
-    class ProjectTypeOverrideConfig(m.ArbitraryTypesModel):
-        """Per-project-type override settings."""
-
-        pyright: Annotated[
-            t.StrMapping,
-            m.Field(description="Pyright override settings for this project type."),
-        ]
-
-    class ProjectTypeOverridesConfig(m.ArbitraryTypesModel):
-        """Project-type-specific override matrix from ``config/tooling.yaml``."""
-
-        core: FlextInfraModelsDepsToolConfig.ProjectTypeOverrideConfig = m.Field(
-            description="Core overrides"
-        )
-        domain: FlextInfraModelsDepsToolConfig.ProjectTypeOverrideConfig = m.Field(
-            description="Domain overrides"
-        )
-        platform: FlextInfraModelsDepsToolConfig.ProjectTypeOverrideConfig = m.Field(
-            description="Platform overrides"
-        )
-        integration: FlextInfraModelsDepsToolConfig.ProjectTypeOverrideConfig = m.Field(
-            description="Integration overrides"
-        )
-        app: FlextInfraModelsDepsToolConfig.ProjectTypeOverrideConfig = m.Field(
-            description="App overrides"
-        )
-
     class LazyInitConfig(m.ArbitraryTypesModel):
         """Declarative policy for ``__init__.py`` lazy export generation."""
 
@@ -732,10 +705,6 @@ class FlextInfraModelsDepsToolConfig(
 
         tools: FlextInfraModelsDepsToolConfig.ToolConfigTools = m.Field(
             description="Tools"
-        )
-        project_type_overrides: FlextInfraModelsDepsToolConfig.ProjectTypeOverridesConfig = m.Field(
-            alias="project-type-overrides",
-            description="Per-project-type configuration overrides.",
         )
         lazy_init: FlextInfraModelsDepsToolConfig.LazyInitConfig = m.Field(
             alias="lazy-init", description="Declarative lazy-init generation policy."
@@ -813,13 +782,6 @@ class FlextInfraModelsDepsToolConfig(
                 description="Conformed Ruff exclusions",
             ),
         ] = ()
-        ruff_ignore: Annotated[
-            t.StrTuple,
-            m.Field(
-                validation_alias=m.AliasPath("ruff", "lint", "ignore"),
-                description="Conformed Ruff ignores",
-            ),
-        ] = ()
 
     # flext-j47u (codex): explicit runtime-only values keep the Jinja structure full.
     class ToolingRuntimeContext(m.ArbitraryTypesModel):
@@ -865,10 +827,6 @@ class FlextInfraModelsDepsToolConfig(
         ]
         ruff_exclude: Annotated[
             t.StrTuple, m.Field(description="Resolved Ruff exclusions")
-        ]
-        ruff_ignore: Annotated[
-            t.StrTuple,
-            m.Field(description="Resolved ordinary and justified Ruff ignores"),
         ]
 
 

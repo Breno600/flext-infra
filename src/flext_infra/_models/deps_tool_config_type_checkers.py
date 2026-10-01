@@ -165,34 +165,6 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
                 description="Pyright extended settings options.",
             ),
         ]
-        lazy_import_suppressions: Annotated[
-            t.StrMapping,
-            m.Field(
-                alias="lazy-import-suppressions",
-                description="Pyright rules suppressed in ALL envs due to lazy import pattern.",
-            ),
-        ]
-        global_suppression_rationales: Annotated[
-            t.StrMapping,
-            m.Field(
-                alias="global-suppression-rationales",
-                description="Global Pyright exclusions mapped to verified facade-FLEXT rationales.",
-            ),
-        ]
-        source_env_suppressions: Annotated[
-            t.StrMapping,
-            m.Field(
-                alias="source-env-suppressions",
-                description="Additional pyright rules suppressed in source env only.",
-            ),
-        ]
-        test_like_env_suppressions: Annotated[
-            t.StrMapping,
-            m.Field(
-                alias="test-like-env-suppressions",
-                description="Additional pyright rules suppressed in test-like envs.",
-            ),
-        ]
         path_rules: Annotated[
             FlextInfraModelsDepsToolConfigTypeCheckers.PyrightConfig.PathRulesConfig,
             m.Field(

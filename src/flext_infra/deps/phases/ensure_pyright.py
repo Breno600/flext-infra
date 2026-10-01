@@ -213,41 +213,9 @@ class FlextInfraEnsurePyrightConfigPhase:
     def _environment_payload(
         self, environment: m.Infra.PyrightConfig.ExecutionEnvironment
     ) -> t.JsonDict:
-        """Render one environment with its closed, scope-specific diagnostics."""
-        rules = self._tool_config.tools.pyright.path_rules
-        env_dir = Path(environment.root).name
-        diagnostics: t.MutableStrMapping = {
-            **self._tool_config.tools.pyright.lazy_import_suppressions
-        }
-        if env_dir == rules.source_dir:
-            diagnostics.update(self._tool_config.tools.pyright.source_env_suppressions)
-        elif env_dir in rules.test_like_dirs:
-            diagnostics.update(
-                self._tool_config.tools.pyright.test_like_env_suppressions
-            )
+        """Render one execution environment."""
         payload: t.JsonDict = environment.model_dump(mode="json", by_alias=True)
-        payload.update(diagnostics)
         return payload
-
-    def _override_for_kind(
-        self, project_kind: str
-    ) -> m.Infra.ProjectTypeOverrideConfig | None:
-        """Return the project-type override settings for the given kind."""
-        overrides = self._tool_config.project_type_overrides
-        kind_map: t.MappingKV[str, m.Infra.ProjectTypeOverrideConfig] = {
-            "core": overrides.core,
-            "domain": overrides.domain,
-            "platform": overrides.platform,
-            "integration": overrides.integration,
-            "app": overrides.app,
-        }
-        raw = kind_map.get(project_kind)
-        if raw is None:
-            return None
-        validated: m.Infra.ProjectTypeOverrideConfig = (
-            m.Infra.ProjectTypeOverrideConfig.model_validate(raw)
-        )
-        return validated
 
     def _expected_excludes(
         self, project_root: Path | None, analysis_exclusions: t.StrSequence | None
@@ -347,7 +315,6 @@ class FlextInfraEnsurePyrightConfigPhase:
         self,
         *,
         context: m.Infra.PyprojectAnalyzerContext,
-        project_kind: str,
         paths_manager: FlextInfraExtraPathsManager | None,
         analysis_exclusions: t.StrSequence | None,
     ) -> m.Infra.DepsToml.PhaseConfig:
@@ -422,30 +389,14 @@ class FlextInfraEnsurePyrightConfigPhase:
                 ],
             ),
         ))
-        if is_root:
-            operations.extend(
-                toml.SetOp(key=key, value=value)
-                for settings in (
-                    self._tool_config.tools.pyright.strict_settings,
-                    self._tool_config.tools.pyright.extended_settings,
-                )
-                for key, value in settings.items()
+        operations.extend(
+            toml.SetOp(key=key, value=value)
+            for settings in (
+                self._tool_config.tools.pyright.strict_settings,
+                self._tool_config.tools.pyright.extended_settings,
             )
-        else:
-            operations.extend(
-                toml.SetOp(key=key, value=value)
-                for key, value in self._tool_config.tools.pyright.strict_settings.items()
-            )
-            merged_settings: t.MutableStrMapping = {
-                **self._tool_config.tools.pyright.extended_settings
-            }
-            override = self._override_for_kind(project_kind)
-            if override is not None:
-                merged_settings.update(override.pyright)
-            operations.extend(
-                toml.SetOp(key=key, value=value)
-                for key, value in merged_settings.items()
-            )
+            for key, value in settings.items()
+        )
         return toml.PhaseConfig(
             name="pyright", table_path=(c.Infra.PYRIGHT,), operations=tuple(operations)
         )
@@ -455,7 +406,6 @@ class FlextInfraEnsurePyrightConfigPhase:
         payload: t.MutableJsonMapping,
         *,
         context: m.Infra.PyprojectAnalyzerContext,
-        project_kind: str = "core",
         paths_manager: FlextInfraExtraPathsManager | None = None,
         analysis_exclusions: t.StrSequence | None = None,
     ) -> t.StrSequence:
@@ -464,7 +414,6 @@ class FlextInfraEnsurePyrightConfigPhase:
             payload,
             self._phase(
                 context=context,
-                project_kind=project_kind,
                 paths_manager=paths_manager,
                 analysis_exclusions=analysis_exclusions,
             ),

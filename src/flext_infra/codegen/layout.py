@@ -37,7 +37,6 @@ class FlextInfraCodegenLayout(
         selected = self._project_dirs()
         if selected.failure:
             return r[str].from_failure(selected)
-        spec = self._layout_spec
         reports: list[m.Infra.LayoutProjectReport] = []
         for project_dir in selected.value:
             planned = self.plan_project(project_dir)
@@ -60,7 +59,7 @@ class FlextInfraCodegenLayout(
                 )
             reports.append(applied.value)
         output = self._render_output(reports)
-        if self.effective_dry_run and spec.severity == "error":
+        if self.effective_dry_run:
             blocking: list[str] = []
             for report in reports:
                 report_actionable: t.VariadicTuple[m.Infra.LayoutFinding] = (

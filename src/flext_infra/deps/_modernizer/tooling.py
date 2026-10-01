@@ -270,7 +270,6 @@ class FlextInfraPyprojectModernizerTooling:
                 "pyright_execution_environments": environments,
                 "ruff_src": tools.ruff_src,
                 "ruff_exclude": tools.ruff_exclude,
-                "ruff_ignore": tools.ruff_ignore,
             },
         )
         if validated.failure:

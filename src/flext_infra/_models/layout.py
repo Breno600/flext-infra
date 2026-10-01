@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from types import MappingProxyType
-from typing import Annotated, Literal
+from typing import Annotated
 
 from flext_cli import m
 
@@ -83,10 +83,6 @@ class FlextInfraModelsLayout:
         """Fully modeled content of the ``layout`` section of ``codegen.yaml``."""
 
         version: Annotated[int, m.Field(ge=1, description="Config schema version")]
-        severity: Annotated[
-            Literal["warning", "error"],
-            m.Field(description="Gate posture: warning reports, error fails"),
-        ]
         archive_root: Annotated[
             t.NonEmptyStr, m.Field(description="Archive-not-delete root directory")
         ]

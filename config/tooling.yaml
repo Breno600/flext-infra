@@ -199,7 +199,6 @@ Infra:
             rich: "Use cli.print / cli.display_message / cli.render_panel / cli.render_table."
             tabulate: "Use cli.render_table from flext_cli."
             typer: "Use cli.create_app_with_common_params / cli.register_command from flext_cli."
-          ignored-rule-rationales: {}
           isort:
             combine-as-imports: true
             force-single-line: false
@@ -237,12 +236,10 @@ Infra:
           warn_return_any: true
           warn_unreachable: true
           warn_unused_ignores: true
-        disabled-error-codes: {}
         string-settings:
           follow_imports: normal
         overrides:
           - modules: [rope.*]
-            disable-error-codes: []
             follow-untyped-imports: true
             justification: >-
               Analyze Rope's installed source without suppressing import-untyped;
@@ -270,10 +267,6 @@ Infra:
           reportUnusedFunction: error
           reportUnusedImport: error
           reportUnusedVariable: error
-        lazy-import-suppressions: {}
-        global-suppression-rationales: {}
-        source-env-suppressions: {}
-        test-like-env-suppressions: {}
         path-rules:
           # flext-wkii.17 (codex): source and tracked consumer surfaces are all
           # first-class environments so no analyzer can hide their diagnostics.
@@ -598,17 +591,6 @@ Infra:
         section_whitelines: 1
         explicit_start: false
 
-    project-type-overrides:
-      core:
-        pyright: {}
-      domain:
-        pyright: {}
-      platform:
-        pyright: {}
-      integration:
-        pyright: {}
-      app:
-        pyright: {}
     lazy-init:
       # flext-lz2 (codex): canonical import layer order for the
       # lazy-init engine (D3). Lower index = lower layer.

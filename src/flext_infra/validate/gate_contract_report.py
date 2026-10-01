@@ -89,7 +89,7 @@ class FlextInfraGateContractReportMixin:
         errors = sum(len(script.violations) for script in scripts)
         ok = sum(1 for script in gate_scripts if not script.violations)
         return m.Infra.GateContractSummary(
-            errors=errors, gate_scripts=len(gate_scripts), ok=ok, warnings=0
+            errors=errors, gate_scripts=len(gate_scripts), ok=ok
         )
 
     def _write_report(

@@ -207,7 +207,6 @@ class FlextInfraPyprojectModernizerDocument:
             if exists
             else None
         )
-        resolved_kind = self._project_kind(path, payload, topology.project_kind)
         analyzer_context = m.Infra.PyprojectAnalyzerContext(
             is_root=is_root,
             repository_root=self.root if exists else None,
@@ -227,7 +226,6 @@ class FlextInfraPyprojectModernizerDocument:
             *FlextInfraEnsurePyrightConfigPhase(tooling).apply_payload(
                 payload,
                 context=analyzer_context,
-                project_kind=resolved_kind,
                 paths_manager=paths_manager,
                 analysis_exclusions=topology.analysis_exclusions,
             ),

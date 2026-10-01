@@ -102,9 +102,6 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         select: Annotated[
             t.StrSequence, m.Field(description="Ruff lint rule selectors.")
         ] = m.Field(default_factory=tuple)
-        ignore: Annotated[
-            t.StrSequence, m.Field(description="Ruff lint rule ignore list.")
-        ] = m.Field(default_factory=tuple)
         unfixable: Annotated[
             t.StrSequence,
             m.Field(
@@ -122,13 +119,6 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                     "Rules whose unsafe Ruff fixes are proven to preserve code, "
                     "comments and diagnostics."
                 ),
-            ),
-        ]
-        ignored_rule_rationales: Annotated[
-            t.StrMapping,
-            m.Field(
-                alias="ignored-rule-rationales",
-                description="Global Ruff exclusions mapped to verified architecture rationales.",
             ),
         ]
         banned_api: Annotated[
@@ -204,13 +194,6 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         modules: Annotated[
             t.StrSequence, m.Field(description="Module patterns for this override.")
         ]
-        disable_error_codes: Annotated[
-            t.StrSequence,
-            m.Field(
-                alias="disable-error-codes",
-                description="Error codes disabled for these modules.",
-            ),
-        ]
         follow_untyped_imports: Annotated[
             bool,
             m.Field(
@@ -249,21 +232,6 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         plugins: Annotated[t.StrSequence, m.Field(description="Mypy plugins list.")] = (
             m.Field(default_factory=tuple)
         )
-        exclude: Annotated[
-            str,
-            m.Field(
-                description="Regex used to exclude generated or fixture-like paths from mypy."
-            ),
-        ] = ""
-        disabled_error_codes: Annotated[
-            t.StrMapping,
-            m.Field(
-                alias="disabled-error-codes",
-                description=(
-                    "Mypy error codes mapped to their tested facade-FLEXT rationale."
-                ),
-            ),
-        ]
         boolean_settings: Annotated[
             t.BoolMapping,
             m.Field(

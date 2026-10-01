@@ -152,12 +152,6 @@ class FlextInfraEnsureRuffConfigPhase:
             if facts.analysis_exclusions is None
             else facts.analysis_exclusions
         )
-        # Models stay declaration-only; the
-        # Ruff phase owns the derived union consumed by emitted tool config.
-        effective_ignore = sorted({
-            *ruff_cfg.lint.ignore,
-            *ruff_cfg.lint.ignored_rule_rationales,
-        })
         isort_values: t.MutableSequenceOf[t.Pair[str, t.JsonValue]] = [
             ("combine-as-imports", ruff_cfg.lint.isort.combine_as_imports),
             ("force-single-line", ruff_cfg.lint.isort.force_single_line),
@@ -245,10 +239,6 @@ class FlextInfraEnsureRuffConfigPhase:
                             value=u.normalize_to_json_value(
                                 sorted(ruff_cfg.lint.select)
                             ),
-                        ),
-                        toml.SetOp(
-                            key=c.Infra.IGNORE,
-                            value=u.normalize_to_json_value(effective_ignore),
                         ),
                         # make fix never deletes information: the fix-safety
                         # policy comes from the same SSOT the template renders.

@@ -49,24 +49,13 @@ class FlextInfraToolTablesPhase:
                 value=config.Infra.codegen.toolchain.python_version,
             ),
             toml.ListOp(key=c.Infra.PLUGINS, values=mypy.plugins, strategy=replace),
-            toml.ListOp(
-                key=c.Infra.DISABLE_ERROR_CODE,
-                values=sorted(mypy.disabled_error_codes),
-                strategy=replace,
-            ),
         ]
-        operations.append(
-            toml.SetOp(key=c.Infra.EXCLUDE, value=mypy.exclude)
-            if mypy.exclude
-            else toml.RemoveOp(key=c.Infra.EXCLUDE)
-        )
         operations.append(
             toml.SetOp(
                 key="overrides",
                 value=u.normalize_to_json_value([
                     {
                         "module": list(entry.modules),
-                        "disable_error_code": list(entry.disable_error_codes),
                         "follow_untyped_imports": entry.follow_untyped_imports,
                     }
                     for entry in mypy.overrides

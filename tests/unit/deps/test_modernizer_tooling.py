@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING
 
 import pytest
@@ -72,15 +71,6 @@ class TestsFlextInfraDepsModernizerTooling:
             eq=frozenset({"examples", "scripts", "tests"}),
         )
         tm.that(tracked_surfaces.isdisjoint(tools.ruff.exclude), eq=True)
-        # mypy's exclude is config-owned (tooling.yaml) and may legitimately
-        # hide non-tracked trees (e.g. legacy sources); the contract is that
-        # no exclude pattern ever matches a tracked surface.
-        for pattern in tools.mypy.exclude.split(","):
-            if pattern:
-                tm.that(
-                    any(re.match(pattern, surface) for surface in tracked_surfaces),
-                    eq=False,
-                )
         tm.that(frozenset(tools.pyright.path_rules.env_dirs), eq=tracked_surfaces)
         tm.that(
             hidden_globs.isdisjoint(tools.pyright.path_rules.default_excludes), eq=True
@@ -128,13 +118,6 @@ class TestsFlextInfraDepsModernizerTooling:
             eq=ruff_policy.format.docstring_code_format,
         )
         lint = u.Tests.toml_mapping(ruff["lint"])
-        tm.that(
-            frozenset(u.Tests.toml_strings(lint["ignore"])),
-            eq=frozenset({
-                *ruff_policy.lint.ignore,
-                *ruff_policy.lint.ignored_rule_rationales,
-            }),
-        )
         tm.that(
             list(u.Tests.toml_strings(lint["unfixable"])),
             eq=sorted(ruff_policy.lint.unfixable),

@@ -147,8 +147,6 @@ class TestsFlextInfraDepsModernizerPyright:
             pyright["executionEnvironments"],
             eq=[
                 {
-                    **pyright_rules.lazy_import_suppressions,
-                    **pyright_rules.source_env_suppressions,
                     "root": rules.source_dir,
                     "reportPrivateUsage": rules.source_report_private_usage,
                     "extraPaths": [rules.source_dir, "flext-core/src", "flext-api/src"],
@@ -227,16 +225,6 @@ class TestsFlextInfraDepsModernizerPyright:
             pyright["executionEnvironments"],
             eq=[
                 {
-                    **pyright_rules.lazy_import_suppressions,
-                    **(
-                        pyright_rules.source_env_suppressions
-                        if env_dir == rules.source_dir
-                        else (
-                            pyright_rules.test_like_env_suppressions
-                            if env_dir in rules.test_like_dirs
-                            else {}
-                        )
-                    ),
                     "root": env_dir,
                     "reportPrivateUsage": (
                         rules.source_report_private_usage

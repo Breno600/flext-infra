@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from flext_infra import c, config, t, u
+from flext_infra import c, t, u
 
 
 class FlextInfraInjectCommentsPhase:
@@ -13,50 +13,7 @@ class FlextInfraInjectCommentsPhase:
         "# [CUSTOM]",
         "# [AUTO]",
         "# Sections with [",
-        "# FLEXT mypy[",
-        "# FLEXT ruff[",
-        "# FLEXT pyright[",
     )
-
-    @staticmethod
-    def _rationale_blocks() -> t.MappingKV[str, t.Pair[str, t.StrSequence]]:
-        """Render each managed section's evidence-backed suppression comments."""
-        tools = config.Infra.tooling.tools
-        return {
-            f"[tool.{section}]": (
-                label,
-                (
-                    f"# FLEXT {label} suppression rationale (validated {boundary}):",
-                    *(
-                        f"# FLEXT {tag}[{code}]: {rationale}"
-                        for code, rationale in sorted(items.items())
-                    ),
-                ),
-            )
-            for section, tag, label, boundary, items in (
-                (
-                    "mypy",
-                    "mypy",
-                    "mypy",
-                    "at the facade-FLEXT boundary",
-                    tools.mypy.disabled_error_codes,
-                ),
-                (
-                    "ruff.lint",
-                    "ruff",
-                    "Ruff",
-                    "against semantic facet order",
-                    tools.ruff.lint.ignored_rule_rationales,
-                ),
-                (
-                    "pyright",
-                    "pyright",
-                    "Pyright",
-                    "at the facade-FLEXT boundary",
-                    tools.pyright.global_suppression_rationales,
-                ),
-            )
-        }
 
     @staticmethod
     def _is_section_header(line: str) -> bool:
@@ -64,13 +21,11 @@ class FlextInfraInjectCommentsPhase:
         stripped = line.strip()
         return stripped.startswith("[") and stripped.endswith("]")
 
-    @classmethod
-    def _managed_marker_lines(cls) -> t.Infra.StrSet:
-        """Return banner and rationale lines to strip."""
+    @staticmethod
+    def _managed_marker_lines() -> t.Infra.StrSet:
+        """Return banner lines to strip."""
         markers = {c.Infra.LEGACY_AUTO_BANNER_LINE}
         markers.update(c.Infra.BANNER.splitlines())
-        for _, block in cls._rationale_blocks().values():
-            markers.update(block)
         return markers
 
     @classmethod
@@ -132,7 +87,6 @@ class FlextInfraInjectCommentsPhase:
         if lines[: len(banner_lines)] != banner_lines:
             changes.append("managed banner injected")
         emitted_markers: set[str] = set()
-        rationale_blocks = self._rationale_blocks()
         for line in content_lines:
             stripped = line.strip()
             markers_result = u.Infra.pyproject_section_markers(stripped)
@@ -146,10 +100,6 @@ class FlextInfraInjectCommentsPhase:
                     changes.append(f"marker injected for {stripped}")
                     emitted_markers.add(marker)
             out.append(line)
-            if stripped in rationale_blocks:
-                label, rationale = rationale_blocks[stripped]
-                out.extend(rationale)
-                changes.append(f"{label.capitalize()} suppression rationales injected")
         updated = "\n".join(self._collapse_blank_lines(out)).rstrip() + "\n"
         original = rendered.rstrip() + "\n"
         if updated == original:

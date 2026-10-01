@@ -41,14 +41,14 @@ class TestsFlextInfraDepsModernizerToolTables:
         return table
 
     def test_mypy_table_mirrors_policy(self, tmp_path: Path) -> None:
-        """Render toolchain Python plus config-owned plugins, codes, and overrides."""
+        """Render toolchain Python plus config-owned plugins and overrides."""
         mypy_policy = config.Infra.tooling.tools.mypy
         payload, _ = self._applied(
             tmp_path,
             "[tool.mypy]\n"
             'plugins = ["custom.plugin"]\n'
             "strict_concatenate = true\n"
-            'overrides = [{ module = ["legacy.*"], disable_error_code = ["misc"] }]\n',
+            'overrides = [{ module = ["stale.*"] }]\n',
         )
         mypy = self._table(payload, "mypy")
         tm.that(
@@ -59,15 +59,10 @@ class TestsFlextInfraDepsModernizerToolTables:
             list(u.Tests.toml_strings(mypy["plugins"])), eq=list(mypy_policy.plugins)
         )
         tm.that(
-            list(u.Tests.toml_strings(mypy["disable_error_code"])),
-            eq=sorted(mypy_policy.disabled_error_codes),
-        )
-        tm.that(
             list(u.Tests.toml_list(mypy["overrides"])),
             eq=[
                 {
                     "module": list(entry.modules),
-                    "disable_error_code": list(entry.disable_error_codes),
                     "follow_untyped_imports": entry.follow_untyped_imports,
                 }
                 for entry in mypy_policy.overrides
@@ -115,7 +110,6 @@ class TestsFlextInfraDepsModernizerToolTables:
         tooling = config.Infra.tooling
         entry = m.Infra.MypyOverrideConfig.model_validate({
             "modules": ("arbitrary_dependency.*",),
-            "disable-error-codes": (),
             "follow-untyped-imports": follow_untyped,
             "justification": (
                 "https://mypy.readthedocs.io/en/stable/"
@@ -141,7 +135,6 @@ class TestsFlextInfraDepsModernizerToolTables:
             eq=[
                 {
                     "module": list(entry.modules),
-                    "disable_error_code": list(entry.disable_error_codes),
                     "follow_untyped_imports": follow_untyped,
                 }
             ],
