@@ -460,6 +460,37 @@ class FlextInfraWorkspaceDetector(
         })
 
     @classmethod
+    def _superproject_governance(
+        cls,
+        repository_root: Path,
+        *,
+        beads: m.Infra.BeadsProjectSpec | None,
+        allow_unprovisioned_members: bool = False,
+    ) -> p.Result[m.Infra.SuperprojectGovernance]:
+        """Resolve once the superproject facts every member load validates."""
+        members = cls._declared_members(repository_root)
+        if members.failure:
+            return r[m.Infra.SuperprojectGovernance].from_failure(members)
+        # The workspace-declared preference owns the baseline order: a fleet
+        # integrating on a versioned release line (0.12.0-dev) is not covered
+        # by the provider's conventional fallback names alone.
+        baseline = u.Infra.repository_baseline_branch(
+            repository_root,
+            preference=(
+                config.Infra.codegen.branch_policy.integration_branch_preference
+            ),
+        )
+        return r[m.Infra.SuperprojectGovernance].ok(
+            m.Infra.SuperprojectGovernance(
+                root=repository_root,
+                integration_branch=baseline.value if baseline.success else None,
+                beads=beads,
+                members=members.value,
+                allow_unprovisioned_members=allow_unprovisioned_members,
+            )
+        )
+
+    @classmethod
     def _load_subproject(
         cls,
         repository_root: Path,
