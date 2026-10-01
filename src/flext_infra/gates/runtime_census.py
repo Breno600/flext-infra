@@ -24,6 +24,7 @@ class FlextInfraRuntimeCensusGate(FlextInfraGate):
     gate_id: ClassVar[str] = "runtime-census"
     gate_name: ClassVar[str] = "Runtime Enforcement Census"
     can_fix: ClassVar[bool] = False
+    requires_python_targets: ClassVar[bool] = True
 
     @override
     def check(
@@ -36,11 +37,12 @@ class FlextInfraRuntimeCensusGate(FlextInfraGate):
         # name: a worktree or renamed checkout keeps its manifest identity, and
         # the census discovery keys projects by exactly that pyproject name.
         metadata = u.Infra.read_project_metadata_result(project_dir)
+        if metadata.failure:
+            return self._build_project_error_gate_result(
+                project_dir, passed=False, errors=[str(metadata.error)], started=started
+            )
         validator = FlextInfraRuntimeCensusValidator(
-            repository_root=project_dir,
-            project_filter=(
-                metadata.value.project.name if metadata.success else project_dir.name
-            ),
+            repository_root=project_dir, project_filter=metadata.value.project.name
         )
         # ``build_report`` (not ``execute``) keeps violations structured so the
         # gate can grade a broken invocation separately from found violations.

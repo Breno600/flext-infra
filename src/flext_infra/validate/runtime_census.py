@@ -35,21 +35,6 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         str | None, m.Field(description="Project filter (comma-separated)")
     ] = None
 
-    @staticmethod
-    def _package_name_for_project(project: p.Infra.ProjectInfo) -> str | None:
-        """Resolve the importable package name for a project root."""
-        layout = u.Infra.layout(project.path, project=project)
-        if layout is not None:
-            package_name: str = layout.package_name
-            return package_name
-        src_dir = project.path / c.Infra.DEFAULT_SRC_DIR
-        if not src_dir.is_dir():
-            return None
-        for child in sorted(src_dir.iterdir()):
-            if child.is_dir() and (child / c.Infra.INIT_PY).is_file():
-                child_name: str = child.name
-                return child_name
-        return None
 
     @staticmethod
     def _is_local_class(klass: type, module_name: str) -> bool:
@@ -108,17 +93,17 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
     def _project_report(
         self, project: p.Infra.ProjectInfo
     ) -> p.Result[m.Infra.ValidationReport]:
-        """Run the runtime census for one project and return a merged report."""
-        package_name = self._package_name_for_project(project)
-        if package_name is None:
-            return r[m.Infra.ValidationReport].ok(
-                m.Infra.ValidationReport(
-                    passed=True,
-                    violations=(),
-                    summary=f"{project.name}: no importable package found",
-                )
+        """Run the runtime census for one project and return a merged report.
+
+        A project without an importable package establishes no census: it
+        fails, never passes on empty input.
+        """
+        layout = u.Infra.layout(project.path, project=project)
+        if layout is None:
+            return r[m.Infra.ValidationReport].fail(
+                f"runtime census: {project.name} has no importable package"
             )
-        real_modules = list(self._walk_modules(package_name))
+        real_modules = list(self._walk_modules(layout.package_name))
         if self.target_module is not None:
             real_modules = [
                 name
