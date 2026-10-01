@@ -127,6 +127,11 @@ class FlextInfraModTextGateEngine:
         for path, required in ((provider, True), (consumer, False)):
             if snapshots and path == snapshots[0].path:
                 continue
+            # The consumer overlay is optional: a repository without the
+            # overlay's directory declares no overlay, the same typed absence
+            # as a missing file (the atomic read rejects an absent parent).
+            if not required and not path.parent.is_dir():
+                continue
             snapshot = u.Cli.atomic_read_binary_file_state(path, required=required)
             if snapshot.failure:
                 return r[t.VariadicTuple[m.Cli.AtomicFileState]].from_failure(snapshot)
