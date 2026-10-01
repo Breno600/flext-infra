@@ -21,21 +21,8 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
         source: str,
         layout: m.Infra.ClassBlockLayout,
     ) -> t.VariadicTuple[m.Infra.SourceRewrite]:
-        """Remove one Rope-resolved header without changing literal payloads.
-
-        The body statements own the dedent width and the wrapper docstring, so
-        both derive from the logical facts instead of being passed alongside.
-        """
+        """Remove one Rope-resolved header without changing literal payloads."""
         lines = codeanalyze.SourceLinesAdapter(source)
-        indentation = body[0].indent - header.indent
-        docstring_span = (
-            (body[0].line, body[0].end_line)
-            if lines
-            .get_line(body[0].line)
-            .lstrip()
-            .startswith(('"""', "'''", '"', "'"))
-            else None
-        )
         regions = tuple(simplify.ignored_regions(source))
         start = lines.get_line_start(layout.header_start)
         end = min(lines.get_line_end(layout.header_end) + 1, len(source))

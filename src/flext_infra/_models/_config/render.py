@@ -214,12 +214,6 @@ class FlextInfraConfigModelsRender:
     class EnvrcRenderSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Typed input consumed only by the generated project ``.envrc``."""
 
-        runtime_environment_directory: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description="Sibling directory for physical workspace environments",
-            ),
-        ]
         repository_root_rel: Annotated[
             t.NonEmptyStr,
             m.Field(description="Project-relative owner of the runtime environment"),

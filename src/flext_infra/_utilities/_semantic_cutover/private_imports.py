@@ -263,8 +263,10 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
         """Plan owner-aware relative and binding-aware public import rewrites."""
         planned_edits = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
-        references = r[t.Infra.PrivateImportReferences].create_from_callable(
-            partial(cls._private_import_references, root, sources, findings),
+        specs, direct_specs, facades = cls._private_import_references(
+            root,
+            sources,
+            findings,
         )
         missing = sorted(str(path) for path in specs if path not in sources)
         if missing:

@@ -6,7 +6,7 @@ from typing import Annotated
 
 from flext_cli import m
 
-from flext_infra import c, t
+from flext_infra import t
 
 from .deps_tool_config_project import FlextInfraModelsDepsToolConfigProject
 
@@ -221,11 +221,9 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
             int,
             m.Field(
                 gt=0,
-                le=c.Infra.MYPY_TIMEOUT_SECONDS_MAX,
                 description=(
-                    "Project Mypy wall-time budget in seconds (SSOT; the env"
-                    " MYPY_TIMEOUT_SECONDS overrides it at the ingress"
-                    " boundary)."
+                    "Mypy wall-time budget in seconds (SSOT); a project"
+                    " overlay may only lower it."
                 ),
             ),
         ]
