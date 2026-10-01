@@ -32,15 +32,9 @@ Infra:
       uv_environments: ["sys_platform == 'linux'", "sys_platform == 'darwin'"]
       # Global compatibility exceptions become [tool.uv] constraint-dependencies
       # in every project, including projects using the dependency transitively.
-      # Keep reasons here; an empty list removes constraints from all projections.
-      # flext-y3qpq.4: meltano 4.2.2 (latest) still declares structlog<26,>=25.5.0
-      # upstream (revalidated on PyPI 2026-09-09) and the fleet member
-      # flext-meltano resolves meltano in the shared fleet lock, so the fleet
-      # floor for structlog stays capped at <26: one fleet lock cannot carry
-      # both structlog<26 and >=26.1.0 for the same dependency. Do not lift
-      # this cap unless meltano upstream drops its own cap; floors derive
-      # from deps against this same contract (operator 2026-09-09).
-      uv_constraint_dependencies: ["structlog<26"]
+      # Declarations stay latest: an upstream's own bound is resolved by uv from
+      # that upstream's metadata, never restated here as a fleet cap.
+      uv_constraint_dependencies: []
       # Moving selectors consumed by generated .mise.toml and CI. Only
       # `make upg` resolves them to the newest release and writes mise.lock;
       # setup installs exactly what the committed lock pins.
@@ -54,7 +48,7 @@ Infra:
       # The npm CLI publishes a native musl binary; the GitHub CLI release does
       # not. One selector therefore covers the declared Linux libc variants.
       ast_grep_selector: npm:@ast-grep/cli
-      ast_grep_version: "0.45.3"
+      ast_grep_version: latest
       # ast-grep's native binary is selected by its npm lifecycle script.
       # The embedded aube installer preserves the locked dependency graph;
       # the approved package lifecycle is declared in the mise projection.
@@ -83,24 +77,14 @@ Infra:
         - windows-x64
       # Projection: .mise.toml [tools] keys. Override the selector here.
       qlty_selector: github:qltysh/qlty
-      # Pinned to 0.642.0. The earlier claim that 0.644.0 shipped without
-      # github attestations is FALSE: a by-digest check on 2026-09-22 shows
-      # v0.644.0 carries one attestation bundle per asset for all seven
-      # binaries, same as 0.642.0. The 2026-09-18 fleet-wide setup fire was a
-      # probe false positive (mise treats an unavailable probe as missing).
-      # Bump to 0.644.0 only through an explicit `make upg` reactivation
-      # (bead flext-38odd), never by editing this pin in isolation.
-      qlty_version: 0.642.0
+      qlty_version: latest
       node_version: latest
       jscpd_selector: github:kucherenko/jscpd
       jscpd_version: latest
       # Prettier is the markdown formatter (markdown-format gate): provisioned
       # through npm so the fleet binary version is owned by this SSOT alone.
-      # Pinned to 3.5.x: prettier 3.7+ silently dropped markdown prose
-      # reflow (proseWrap becomes a no-op), which breaks the MD013/88
-      # line-length contract.
       prettier_selector: npm:prettier
-      prettier_version: 3.5.3
+      prettier_version: latest
       waza_selector: github:microsoft/waza
       waza_version: latest
       # microsoft/waza also publishes azd-extension tags, and GitHub marks
@@ -1247,9 +1231,9 @@ Infra:
               - dependency-injector>=4.49.1
               - packaging>=26.3
               - pydantic>=2.13.5
-              - pydantic-settings>=2.15.0,<2.16
+              - pydantic-settings>=2.15.0
               - pyyaml>=6.0.3
-              - structlog>=25.5.0,<27
+              - structlog>=25.5.0
               - typing-extensions>=4.16.0
             codegen: [flext-infra]
           - upstream: flext_cli
@@ -1257,7 +1241,7 @@ Infra:
               - flext-cli
               - flext-core
               - pydantic>=2.13.5
-              - pydantic-settings>=2.15.0,<2.16
+              - pydantic-settings>=2.15.0
             codegen: [flext-infra]
         # Project-scoped requirements extend the shared profile without
         # leaking API/Web dependencies into core consumers. Unbounded entries
@@ -1270,12 +1254,10 @@ Infra:
             runtime: [flext-api, bcrypt>=5.0.0, PyJWT>=2.15.1]
           - upstream: flext_core
             project: flext-cli
-          # click floor mirrors the shared fleet lock (8.3.3); meltano upstream
-          # already caps click<8.4 for the workspace resolver.
-            runtime: ["click>=8.3.3,<8.4", typer>=0.27.2, jinja2>=3.1.6, jsonschema>=4.26.0, tomlkit>=0.15.1, ruamel.yaml>=0.19.1, defusedxml>=0.7.1, openpyxl>=3.1.5, python-docx>=1.2.0, python-pptx>=1.0.2]
+            runtime: [click>=8.3.3, typer>=0.27.2, jinja2>=3.1.6, jsonschema>=4.26.0, tomlkit>=0.15.1, ruamel.yaml>=0.19.1, defusedxml>=0.7.1, openpyxl>=3.1.5, python-docx>=1.2.0, python-pptx>=1.0.2]
           - upstream: flext_cli
             project: flext-infra
-            runtime: [flext-cli, defusedxml>=0.7.1, GitPython>=3.2.0, jinja2>=3.1.6, libcst>=1.9.0, Markdown>=3.11, "rope @ git+https://github.com/marlon-costa-dc/rope.git@1.14.0+dc.3", pytest>=9.1.1, mkdocs>=1.6.1]
+            runtime: [flext-cli, defusedxml>=0.7.1, GitPython>=3.2.0, jinja2>=3.1.6, libcst>=1.9.0, Markdown>=3.11, "rope @ git+https://github.com/marlon-costa-dc/rope.git@datacosmos", pytest>=9.1.1, mkdocs>=1.6.1]
           - upstream: flext_cli
             project: flext-tests
             runtime: [flext-cli, flext-infra, pytest>=9.1.1, pytest-timeout>=2.4.0, docker>=7.2.0, python-on-whales>=0.81.0]
