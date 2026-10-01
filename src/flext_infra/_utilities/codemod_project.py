@@ -21,7 +21,7 @@ from pathlib import Path
 from flext_cli import u
 from packaging.utils import canonicalize_name
 
-from flext_infra import c, config, m, t
+from flext_infra import c, config, m, p, r, t
 
 from ._rope_analysis.asthelpers import FlextInfraUtilitiesRopeAnalysisAstHelpers
 from ._rope_analysis.exports import FlextInfraUtilitiesRopeAnalysisExports
@@ -495,6 +495,44 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         target = base.joinpath(*parts)
         module = target.with_suffix(c.Infra.EXT_PYTHON)
         return module if module.is_file() else target
+
+    @classmethod
+    def parse_namespace_validation(
+        cls,
+        validation: p.Result[m.Infra.ValidationReport],
+        root: Path,
+    ) -> p.Result[t.VariadicTuple[m.Infra.CensusViolation]]:
+        """Convert the engine-backed namespace report into census violations.
+
+        A violation is fixable when its rule declares a token fix or a rope
+        relocation in the project's rule plan.
+        """
+        if validation.failure:
+            return r[t.VariadicTuple[m.Infra.CensusViolation]].from_failure(validation)
+        planned = cls.codemod_rule_plan(root)
+        if planned.failure:
+            return r[t.VariadicTuple[m.Infra.CensusViolation]].from_failure(planned)
+        repairable = frozenset(
+            rule.id
+            for rule in planned.value.rules
+            if rule.fixable or rule.relocation is not None
+        )
+        parsed: list[m.Infra.CensusViolation] = []
+        for violation in validation.value.violations:
+            match = c.Infra.VIOLATION_PATTERN.match(violation)
+            if match is None:
+                msg = f"namespace violation does not follow the report format: {violation}"
+                raise ValueError(msg)
+            parsed.append(
+                m.Infra.CensusViolation(
+                    module=match.group("module"),
+                    rule=match.group("rule"),
+                    line=int(match.group("line")),
+                    message=match.group("message"),
+                    fixable=match.group("rule") in repairable,
+                ),
+            )
+        return r[t.VariadicTuple[m.Infra.CensusViolation]].ok(tuple(parsed))
 
     @staticmethod
     def _known_prefix(module: str, known: frozenset[str]) -> str | None:

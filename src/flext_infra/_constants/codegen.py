@@ -102,10 +102,10 @@ class FlextInfraConstantsCodegen(
     )
     "Runtime singleton modules for src/: (filename, class_suffix, base_class, docstring)."
     VIOLATION_PATTERN: ClassVar[t.RegexPattern] = re.compile(
-        r"\[(?P<rule>NS-(?:[A-Z]+|\d{3}))-\d{3}\]\s+"
+        r"\[(?P<rule>[a-z0-9][a-z0-9-]*)\]\s+"
         r"(?P<module>[^:]+):(?P<line>\d+)\s+\u2014\s+(?P<message>.+)",
     )
-    "Regex to parse violation strings: [NS-RULE-NNN] path:line — message."
+    "Regex to parse violation strings: [rule-id] path:line — message."
     PROTOCOL_MODEL_MINIMAL_BODY_LINES: ClassVar[int] = 3
     "Header lines of a generated protocol class; at or below it the body is empty."
     LAZY_IMPORTS_BINDING: ClassVar[str] = "_LAZY_IMPORTS"

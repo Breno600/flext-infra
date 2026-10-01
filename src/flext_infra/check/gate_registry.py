@@ -18,7 +18,6 @@ from flext_infra.gates.markdown import FlextInfraMarkdownGate
 from flext_infra.gates.markdown_code import FlextInfraMarkdownCodeGate
 from flext_infra.gates.markdown_format import FlextInfraMarkdownFormatGate
 from flext_infra.gates.mypy import FlextInfraMypyGate
-from flext_infra.gates.namespace import FlextInfraNamespaceGate
 from flext_infra.gates.pyrefly import FlextInfraPyreflyGate
 from flext_infra.gates.pyright import FlextInfraPyrightGate
 from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
@@ -76,7 +75,6 @@ class FlextInfraGateRegistry:
             FlextInfraMarkdownCodeGate,
             FlextInfraLocCapGate,
             FlextInfraRuntimeCensusGate,
-            FlextInfraNamespaceGate,
             FlextInfraLayoutGate,
             FlextInfraIndexDeclarationsGate,
             FlextInfraSmellsGate,

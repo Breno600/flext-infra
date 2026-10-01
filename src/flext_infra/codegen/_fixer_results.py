@@ -19,7 +19,6 @@ class FlextInfraCodegenFixerResultsMixin:
     _fixer_log: ClassVar[p.Logger] = u.fetch_logger(__name__)
 
     if TYPE_CHECKING:
-        rope: p.Infra.RopeWorkspaceDsl
 
     @staticmethod
     def _empty_result(project_name: str) -> m.Infra.AutoFixResult:
@@ -53,8 +52,8 @@ class FlextInfraCodegenFixerResultsMixin:
         initial_violations_result = u.Infra.parse_namespace_validation(
             FlextInfraNamespaceValidator(
                 repository_root=project_path,
-                rope=self.rope,
             ).build_report(),
+            project_path,
         )
         if initial_violations_result.failure:
             self._fixer_log.warning(
@@ -82,8 +81,8 @@ class FlextInfraCodegenFixerResultsMixin:
         remaining_result = u.Infra.parse_namespace_validation(
             FlextInfraNamespaceValidator(
                 repository_root=project_path,
-                rope=self.rope,
             ).build_report(),
+            project_path,
         )
         if remaining_result.failure:
             ctx.skip(

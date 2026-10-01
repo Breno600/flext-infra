@@ -29,26 +29,6 @@ class FlextInfraUtilitiesCodegenNamespace:
         MutableMapping[str, t.Pair[int, t.StrSequence]]
     ] = {}
 
-    @staticmethod
-    def _is_rule_fixable(rule_id: str, module: str) -> bool:
-        """Derive fix support from the implemented namespace-rule contract."""
-        match rule_id:
-            case "NS-000":
-                return False
-            case "NS-001" | "NS-003":
-                return True
-            case "NS-002":
-                typings_filename: str = c.Infra.TYPINGS_PY
-                return Path(module).name != typings_filename
-            # Validator-reported families with no auto-fix keyed to their
-            # codes: reported as violations, never claimed as fixed.
-            case "NS-STRUCT" | "NS-IMPORT" | "NS-CONTRACT" | "NS-PARSE" | "NS-LAYOUT":
-                return False
-
-            case _:
-                msg = f"unsupported namespace rule: {rule_id}"
-                raise ValueError(msg)
-
     @classmethod
     def matches_root_namespace_file(cls, file_name: str) -> bool:
         """Return whether *file_name* is a governed root-namespace facade file."""
@@ -595,33 +575,6 @@ class FlextInfraUtilitiesCodegenNamespace:
             if (project.path / c.PYPROJECT_FILENAME).exists()
         )
         return r[t.SequenceOf[m.Infra.ProjectInfo]].ok(selected)
-
-    @classmethod
-    def parse_namespace_validation(
-        cls,
-        validation: p.Result[m.Infra.ValidationReport],
-    ) -> p.Result[t.VariadicTuple[m.Infra.CensusViolation]]:
-        """Convert validator output into typed census violations."""
-        if validation.failure:
-            return r[tuple[m.Infra.CensusViolation, ...]].from_failure(validation)
-        report = validation.unwrap()
-        parsed: list[m.Infra.CensusViolation] = []
-        for violation in report.violations:
-            match = c.Infra.VIOLATION_PATTERN.match(violation)
-            if match is None:
-                continue
-            rule = match.group("rule")
-            module = match.group("module")
-            parsed.append(
-                m.Infra.CensusViolation(
-                    module=module,
-                    rule=rule,
-                    line=int(match.group("line")),
-                    message=match.group("message"),
-                    fixable=cls._is_rule_fixable(rule, module),
-                ),
-            )
-        return r[tuple[m.Infra.CensusViolation, ...]].ok(tuple(parsed))
 
     @classmethod
     def normalize_canonical_facades(

@@ -89,10 +89,6 @@ class FlextInfraConstantsCheck:
                 "Flext Runtime Enforcement Census",
                 "internal://flext-infra/runtime-census",
             ),
-            "namespace": (
-                "Flext Namespace Rule Gate",
-                "internal://flext-infra/namespace",
-            ),
             "index-declarations": (
                 "Flext Index Declarations Gate",
                 "internal://flext-infra/index-declarations",
