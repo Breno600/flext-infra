@@ -142,39 +142,6 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
                             else node.module or ""
                         )
                         target, declared = (source_module, imported.name), False
-            elif (
-                isinstance(node, ast.Assign | ast.AnnAssign)
-                and node.value is not None
-                and any(
-                    isinstance(bound, ast.Name)
-                    and bound.id == c.Infra.LAZY_IMPORTS_BINDING
-                    for bound in (
-                        node.targets if isinstance(node, ast.Assign) else (node.target,)
-                    )
-                )
-            ):
-                # The generated lazy publication IS a binding statement: every
-                # name it lists resolves through its submodule entry, exactly
-                # as install_lazy_exports resolves it at runtime.
-                for dict_node in (
-                    d for d in ast.walk(node.value) if isinstance(d, ast.Dict)
-                ):
-                    for key, value in zip(
-                        dict_node.keys,
-                        dict_node.values,
-                        strict=False,
-                    ):
-                        if (
-                            isinstance(key, ast.Constant)
-                            and isinstance(key.value, str)
-                            and isinstance(value, ast.Tuple | ast.List)
-                        ):
-                            for element in value.elts:
-                                if isinstance(element, ast.Constant) and isinstance(
-                                    element.value,
-                                    str,
-                                ):
-                                    lazy.setdefault(element.value, key.value)
         if declared:
             return module, name
         if target is None and name in lazy:

@@ -197,7 +197,6 @@ if TYPE_CHECKING:
     from .pyrefly import FlextInfraUtilitiesPyrefly
     from .qualified_names import FlextInfraUtilitiesQualifiedNames
     from .refactor import FlextInfraUtilitiesRefactor
-    from .refactor_discovery import FlextInfraUtilitiesRefactorDiscovery
     from .release import FlextInfraUtilitiesRelease
     from .repository import FlextInfraUtilitiesRepository
     from .resource_limits import FlextInfraUtilitiesResourceLimits
@@ -221,6 +220,8 @@ if TYPE_CHECKING:
     from .rope_structure import FlextInfraUtilitiesRopeStructure
     from .safety import FlextInfraUtilitiesSafety
     from .semantic_cutover import FlextInfraUtilitiesSemanticCutover
+    from .signature_rules import FlextInfraUtilitiesSignatureRules
+    from .silent_failure_ast import FlextInfraUtilitiesSilentFailureAst
     from .transformer_header import FlextInfraUtilitiesTransformerHeader
     from .transformer_header_parser import FlextInfraUtilitiesTransformerHeaderParser
     from .versioning import FlextInfraUtilitiesVersioning
@@ -346,7 +347,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesQualifiedNames",
     "FlextInfraUtilitiesRefactor",
     "FlextInfraUtilitiesRefactorCensus",
-    "FlextInfraUtilitiesRefactorDiscovery",
     "FlextInfraUtilitiesRefactorNamespaceCommon",
     "FlextInfraUtilitiesRefactorNamespaceFlext",
     "FlextInfraUtilitiesRefactorNamespaceMoves",
@@ -402,6 +402,8 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesSemanticFamilyTypeReferences",
     "FlextInfraUtilitiesSemanticHelperReferences",
     "FlextInfraUtilitiesSemanticNestingTypes",
+    "FlextInfraUtilitiesSignatureRules",
+    "FlextInfraUtilitiesSilentFailureAst",
     "FlextInfraUtilitiesTransformerHeader",
     "FlextInfraUtilitiesTransformerHeaderParser",
     "FlextInfraUtilitiesVersioning",
@@ -643,7 +645,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".pyrefly": ("FlextInfraUtilitiesPyrefly",),
             ".qualified_names": ("FlextInfraUtilitiesQualifiedNames",),
             ".refactor": ("FlextInfraUtilitiesRefactor",),
-            ".refactor_discovery": ("FlextInfraUtilitiesRefactorDiscovery",),
             ".release": ("FlextInfraUtilitiesRelease",),
             ".repository": ("FlextInfraUtilitiesRepository",),
             ".resource_limits": ("FlextInfraUtilitiesResourceLimits",),
@@ -667,6 +668,8 @@ _LAZY_IMPORTS = MappingProxyType(
             ".rope_structure": ("FlextInfraUtilitiesRopeStructure",),
             ".safety": ("FlextInfraUtilitiesSafety",),
             ".semantic_cutover": ("FlextInfraUtilitiesSemanticCutover",),
+            ".signature_rules": ("FlextInfraUtilitiesSignatureRules",),
+            ".silent_failure_ast": ("FlextInfraUtilitiesSilentFailureAst",),
             ".transformer_header": ("FlextInfraUtilitiesTransformerHeader",),
             ".transformer_header_parser": (
                 "FlextInfraUtilitiesTransformerHeaderParser",
@@ -679,7 +682,7 @@ _LAZY_IMPORTS = MappingProxyType(
         }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,
-    )
+    ),
 )
 
 install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)
