@@ -109,7 +109,14 @@ class FlextInfraUtilitiesCodemodRules:
             return r[t.Pair[str, t.StrSequence]].fail(
                 f"missing project.name: {pyproject}",
             )
-        raw_dependencies = project.get(c.Infra.DEPENDENCIES)
+        # PEP 621: an absent ``dependencies`` key that is not ``dynamic``
+        # declares a project with no dependencies.
+        dynamic = project.get(c.Infra.DYNAMIC, ())
+        if isinstance(dynamic, Sequence) and c.Infra.DEPENDENCIES in dynamic:
+            return r[t.Pair[str, t.StrSequence]].fail(
+                f"dynamic project.dependencies cannot be resolved: {pyproject}",
+            )
+        raw_dependencies = project.get(c.Infra.DEPENDENCIES, ())
         if not isinstance(raw_dependencies, Sequence) or isinstance(
             raw_dependencies,
             str,
