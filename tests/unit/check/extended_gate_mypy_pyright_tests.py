@@ -8,6 +8,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import c, config, m
+from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
 from flext_infra.gates.mypy import FlextInfraMypyGate
 from flext_infra.gates.pyrefly import FlextInfraPyreflyGate
 from flext_infra.gates.pyright import FlextInfraPyrightGate
@@ -39,8 +40,7 @@ class TestsFlextInfraTypeGates:
                 root = tmp_path / checkout
                 root.mkdir()
                 (root / c.PYPROJECT_FILENAME).write_text(
-                    f"[project]\nname = '{project}'\nversion = '0.0.0'\n"
-                    "[tool.mypy]\n",
+                    f"[project]\nname = '{project}'\nversion = '0.0.0'\n[tool.mypy]\n",
                     encoding="utf-8",
                 )
                 (root / "sample.py").write_text("value: int = 1\n", encoding="utf-8")
@@ -65,9 +65,7 @@ class TestsFlextInfraTypeGates:
                         eq=[str(cache)],
                     )
                     tm.that(cache.is_dir(), eq=True)
-                    tm.that(
-                        any(path.is_file() for path in cache.rglob("*")), eq=True
-                    )
+                    tm.that(any(path.is_file() for path in cache.rglob("*")), eq=True)
                 tm.that((root / ".mypy_cache").exists(), eq=False)
             tm.that(
                 {path.name for path in shared_root.iterdir()},

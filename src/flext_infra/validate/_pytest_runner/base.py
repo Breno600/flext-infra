@@ -63,6 +63,7 @@ class FlextInfraPytestRunnerBase(s[int]):
         started_at_monotonic: float,
         collection_command_prefix: t.StrTuple = (),
         profile_enabled: bool = False,
+        slow_phase: bool = False,
     ) -> Self:
         """Create the runner exclusively from generated Make inputs."""
         ci = config.Infra.codegen.make.ci
@@ -71,6 +72,7 @@ class FlextInfraPytestRunnerBase(s[int]):
             started_at_monotonic=started_at_monotonic,
             collection_command_prefix=collection_command_prefix,
             profile_enabled=profile_enabled,
+            slow_phase=slow_phase,
             ci_context=(u.Infra.env_lookup(ci.variable) or "").strip() == ci.value,
             target=Path(cls._environment_value(c.Infra.PYTEST_ENV_TARGET)),
             reports=Path(cls._environment_value(c.Infra.PYTEST_ENV_REPORTS)),
