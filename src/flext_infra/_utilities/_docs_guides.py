@@ -146,14 +146,18 @@ class FlextInfraUtilitiesDocsGuidesMixin:
                 owned.add(path)
         artifacts: list[t.Infra.DocsRenderedArtifactTuple] = []
         expected_paths = {destination_root / path.name for path in sources}
-        loaded = u.Infra.workspace_spec_load(repository_root)
+        loaded = u.Infra.load_workspace_manifest(repository_root)
         if loaded.failure:
             return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
                 loaded
             )
         effective_verbs = (
             *config.Infra.codegen.make.verbs,
-            *loaded.value.repository.extra_verbs,
+            *(
+                verb
+                for manifest in loaded.value
+                for verb in manifest.repository.extra_verbs
+            ),
         )
         for source_path, source in sorted(sources.items()):
             destination = destination_root / source_path.name

@@ -593,29 +593,5 @@ class FlextInfraUtilitiesRepository:
             f"({', '.join(candidates)}): {repository_root}"
         )
 
-    @staticmethod
-    def workspace_spec_load(repository_root: Path) -> p.Result[m.Infra.WorkspaceSpec]:
-        """Load governed topology and derive observed external Git dependencies."""
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
-        return FlextInfraWorkspaceDetector.load_workspace_spec(repository_root)
-
-    @staticmethod
-    def repository_conform_target(
-        repository_root: Path, workspace: m.Infra.WorkspaceSpec | None = None
-    ) -> p.Result[m.Infra.RepositoryConformTarget]:
-        """Return typed effective policy inferred from live repository topology."""
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
-        resolved_workspace = workspace
-        if resolved_workspace is None:
-            loaded = FlextInfraWorkspaceDetector.load_workspace_spec(repository_root)
-            if loaded.failure:
-                return r[m.Infra.RepositoryConformTarget].from_failure(loaded)
-            resolved_workspace = loaded.value
-        return FlextInfraWorkspaceDetector.conform_target(
-            repository_root, resolved_workspace
-        )
-
 
 __all__: t.VariadicTuple[str] = ("FlextInfraUtilitiesRepository",)

@@ -307,7 +307,7 @@ ruff check src
             u.write_file(guide, f"```bash\nmake {spec.name}\n```\n")
         manifest = u.Tests.write_standalone_workspace_manifest(scope.path, scope.name)
         u.write_file(manifest, "version: [\n")
-        loaded = u.Infra.workspace_spec_load(scope.path)
+        loaded = u.Infra.load_workspace_manifest(scope.path)
         tm.fail(loaded)
         tm.that(loaded.error, has=str(manifest))
 
@@ -348,7 +348,7 @@ ruff check src
         tm.that(projected.value[0][2], has=f"make {spec.name}")
 
         u.write_file(manifest, "version: [\n")
-        loaded = u.Infra.workspace_spec_load(source_scope.path)
+        loaded = u.Infra.load_workspace_manifest(source_scope.path)
         tm.fail(loaded)
         blocked = u.Infra.docs_project_guides_artifacts(
             scope, repository_root=source_scope.path, source_states=(state.value,)

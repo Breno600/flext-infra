@@ -127,12 +127,16 @@ class FlextInfraUtilitiesDocsCommandContractMixin:
         """
         from flext_infra import u
 
-        loaded = u.Infra.workspace_spec_load(scope.path)
+        loaded = u.Infra.load_workspace_manifest(scope.path)
         if loaded.failure:
             raise ValueError(loaded.error)
         effective_verbs = (
             *config.Infra.codegen.make.verbs,
-            *loaded.value.repository.extra_verbs,
+            *(
+                verb
+                for manifest in loaded.value
+                for verb in manifest.repository.extra_verbs
+            ),
         )
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         docs_root = scope.path / c.Infra.DIR_DOCS
