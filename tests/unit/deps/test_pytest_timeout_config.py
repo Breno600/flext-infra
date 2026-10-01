@@ -136,12 +136,10 @@ class TestsFlextInfraPytestTimeoutConfig:
         tm.that(policy.process_timeout_seconds, eq=expected)
         tm.that("process-timeout-seconds" in policy.model_dump(by_alias=True), eq=False)
 
-    def test_project_run_budget_exceeds_the_derived_suite_stop_reserve(self) -> None:
+    def test_run_budget_exceeds_the_derived_suite_stop_reserve(self) -> None:
         policy = config.Infra.tooling.tools.pytest
         payload = policy.model_dump(by_alias=True, exclude_computed_fields=True)
-        payload["run-timeout-overrides"] = {
-            config.Infra.name: policy.suite_stop_reserve_seconds
-        }
+        payload["run-timeout-seconds"] = policy.suite_stop_reserve_seconds
 
         with pytest.raises(
             c.ValidationError, match="pytest run timeout must exceed the suite stop reserve"
