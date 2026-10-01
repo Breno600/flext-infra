@@ -204,10 +204,7 @@ class FlextInfraEnsurePackagingPhase:
         payload: t.MutableJsonMapping,
         *,
         path: Path,
-        root_modules: t.StrSequence = (),
-        root_packages: t.StrSequence = (),
-        packaged_data_paths: t.StrSequence = (),
-        planned_data_files: t.StrSequence = (),
+        topology: m.Infra.PyprojectDeclaredTopology,
     ) -> t.StrSequence:
         """Emit bounded build targets for a distributable project.
 
@@ -222,7 +219,11 @@ class FlextInfraEnsurePackagingPhase:
             project_dir, payload, docs_meta
         )
         if not package_name:
-            if root_modules or root_packages or packaged_data_paths:
+            if (
+                topology.root_modules
+                or topology.root_packages
+                or topology.packaged_data_paths
+            ):
                 msg = (
                     "project package name is required when additional distribution "
                     "roots are declared"
@@ -233,7 +234,7 @@ class FlextInfraEnsurePackagingPhase:
         missing_module = next(
             (
                 source_root / f"{module}.py"
-                for module in root_modules
+                for module in topology.root_modules
                 if not (source_root / f"{module}.py").is_file()
             ),
             None,
@@ -244,7 +245,7 @@ class FlextInfraEnsurePackagingPhase:
         missing_package = next(
             (
                 source_root / package
-                for package in root_packages
+                for package in topology.root_packages
                 if not (source_root / package).is_dir()
                 or not (source_root / package / c.Infra.INIT_PY).is_file()
             ),
@@ -257,15 +258,18 @@ class FlextInfraEnsurePackagingPhase:
             )
             raise FileNotFoundError(msg)
         data_paths = self.resolve_data_paths(
-            project_dir, package_name, packaged_data_paths, planned_data_files
+            project_dir,
+            package_name,
+            topology.packaged_data_paths,
+            topology.planned_data_files,
         )
         return u.Infra.apply_toml_phases(
             payload,
             self._phase(
                 package_name=package_name,
                 data=data_paths,
-                root_modules=root_modules,
-                root_packages=root_packages,
+                root_modules=topology.root_modules,
+                root_packages=topology.root_packages,
             ),
         )
 

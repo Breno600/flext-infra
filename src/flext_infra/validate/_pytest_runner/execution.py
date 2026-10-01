@@ -446,9 +446,11 @@ class FlextInfraPytestRunnerExecution(
         command = self.build_command(
             report_dir,
             selection,
-            manifest_path=selection_plan.manifest_path,
-            whole_target=selection_plan.whole_target,
-            execution_mode=execution_mode,
+            invocation=m.Infra.PytestInvocation(
+                manifest_path=selection_plan.manifest_path,
+                whole_target=selection_plan.whole_target,
+                execution_mode=execution_mode,
+            ),
         )
         outcome = self._run_suite(command, report_dir, execution_mode=execution_mode)
         cache_hit = (
