@@ -232,6 +232,22 @@ class TestsFlextInfraDepsModernizerToolTables:
             },
         )
 
+    def test_first_party_uses_live_package_when_distribution_name_differs(
+        self, tmp_path: Path
+    ) -> None:
+        """A distribution name must not invent an importable package."""
+        project_dir = tmp_path / "project"
+        package_dir = project_dir / "src" / "dc_backup"
+        package_dir.mkdir(parents=True)
+        (package_dir / "__init__.py").write_text('"""Package."""\n', encoding="utf-8")
+        payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
+            u.Tests.toml_payload('[project]\nname = "datacosmos-backup"\n')
+        )
+        namespaces = FlextInfraToolTablesPhase.first_party_namespaces(
+            payload, path=project_dir / "pyproject.toml"
+        )
+        tm.that(namespaces, has="dc_backup", lacks="datacosmos_backup")
+
     def test_tables_are_idempotent(self, tmp_path: Path) -> None:
         """A second application over the converged payload changes nothing."""
         payload, first = self._applied(tmp_path)
@@ -296,17 +312,44 @@ class TestsFlextInfraDepsModernizerToolTables:
         """Build a governed workspace root whose manifest excludes one tree.
 
         The canonical standalone fixture provides the repository identity and
-        its manifest declares the one retired tree.
+        its manifest declares the retired tree under the analyzer-exclusion
+        contract the detector owns (external dependency paths are the
+        read-only trees the src and namespace-packages projections drop).
         """
         project_dir = tmp_path / "flext-sample"
         workspace = u.Tests.standalone_workspace(project_dir, project_dir.name)
+        # The analysis-exclusion SSOT only governs a materialized checkout: a
+        # project without its pyproject on disk declares no manifest scope,
+        # and the detector's governance gates require the checkout's own
+        # .gitmodules plus .git (flext-gajwa) to read the manifest at all.
+        (project_dir / c.PYPROJECT_FILENAME).write_text(
+            f'[project]\nname = "{project_dir.name}"\nversion = "0.1.0"\n'
+            'requires-python = ">=3.13"\n',
+            encoding="utf-8",
+        )
+        (project_dir / c.Infra.GIT_DIR).mkdir(exist_ok=True)
+        # External analysis exclusions are declared exclusively by this
+        # checkout's own .gitmodules: a submodule that opts out of flext
+        # management classifies as a read-only external dependency and the
+        # src / namespace-packages projections drop it.
+        (project_dir / c.Infra.GITMODULES).write_text(
+            f'[submodule "{excluded}"]\n'
+            f"\tpath = {excluded}\n"
+            "\turl = https://example.invalid/retired.git\n"
+            "\tbranch = main\n"
+            "\tflext-managed = false\n",
+            encoding="utf-8",
+        )
         manifest = m.Infra.WorkspaceManifestSpec(
             version=c.Infra.WORKSPACE_MANIFEST_VERSION,
             name=workspace.repository.name,
-            repository=workspace.repository,
+            repository=workspace.repository.model_copy(
+                update={"role": c.Infra.MakeProfile.WORKSPACE}
+            ),
             exclusions=(
                 m.Infra.WorkspaceExclusionSpec(path=Path(excluded), reason="retired"),
             ),
+            external_dependency_paths=(Path(excluded),),
         )
         tm.ok(
             u.Cli.yaml_dump(

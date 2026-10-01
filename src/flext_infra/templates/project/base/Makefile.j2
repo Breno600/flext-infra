@@ -11,9 +11,6 @@
 {%- macro check_run(gates, extra="") -%}$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "{{ gates }}"{{ extra }}{%- endmacro -%}
 {%- macro local_check_body() -%}
 {{ "\t" }}@set -eu; \
-{% for suspension in make.check_gate_suspensions -%}
-		printf '%s\n' '{{ ("INFO: SUSPENDED check gate " ~ suspension.gate ~ "; authority=" ~ suspension.authority ~ "; reason=" ~ suspension.reason) | replace("\n", " ") | replace("$", "$$") | replace("'", "'\"'\"'") }}'; \
-{% endfor -%}
 		gates="{{ gates_csv(make.check_gates_default) }}"; \
 		if [ "$(strip $({{ make.ci.variable }}))" = "{{ make.ci.value }}" ]; then \
 			gates="{{ gates_csv(make.check_gates_ci) }}"; \
@@ -44,9 +41,14 @@ case "$$database" in "$(PROJECT_ROOT)"/*) printf 'ERROR: persistent testmon data
 case "$$database" in "$${TMPDIR:-/tmp}"/*|/tmp/*) printf 'ERROR: persistent testmon database must not live under the temporary directory: %s\n' "$$database" >&2; exit 2 ;; esac; \
 mkdir -p "$$(dirname "$$database")"; \
 {%- endmacro -%}
-{%- macro pytest_test_runner(operation="") -%}
+{#- Each phase is its own bounded runner process with its own entrypoint clock:
+    the budgeted phase never carries slow-marked items, which run afterwards in
+    their own phase, each within the per-item slow bound (gate-budget rule). -#}
+{%- macro pytest_test_runner(operations=("",)) -%}
 {{ pytest_testmon_guard() }}
-{{ make.testmon_cache.database_environment_variable }}="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry{% if operation %} {{ operation }}{% endif %}
+{%- for operation in operations %}
+{{ make.testmon_cache.database_environment_variable }}="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry{% if operation %} {{ operation }}{% endif %}{% if not loop.last %}; \{% endif %}
+{%- endfor %}
 {%- endmacro -%}
 # @flext-generated: continuous
 # @flext-owner: flext-infra/config/codegen.yaml + flext-infra/src/flext_infra/templates/project/base/Makefile.j2
@@ -235,7 +237,7 @@ endif
 endif
 # End SECTION: profile routing
 
-override RUNTIME_VENV := $(abspath $(RUNTIME_ROOT)/../{{ make.runtime_environment_directory }}/$(subst :,/,$(patsubst /%,%,$(RUNTIME_ROOT))))
+override RUNTIME_VENV := $(RUNTIME_ROOT)/{{ environment_directory }}
 ifeq ($(OS),Windows_NT)
 override RUNTIME_BIN := $(RUNTIME_VENV)/Scripts
 override RUNTIME_PYTHON := $(RUNTIME_BIN)/python.exe
@@ -298,7 +300,6 @@ TOOL_BOOTSTRAP_LOCK :=
 SETUP_ENVIRONMENT_RECIPE = set -eu; \
 	$(REQUIRE_WORKSPACE_ENVIRONMENT); \
 	desired_python="$${SETUP_PYTHON:?missing Mise-resolved Python executable}"; \
-	mkdir -p "$(dir $(RUNTIME_VENV))"; \
 	if [ ! -x "$(RUNTIME_PYTHON)" ]; then \
 		$(UV) venv --python "$$desired_python" "$(RUNTIME_VENV)"; \
 	else \
@@ -324,7 +325,7 @@ REQUIRE_WORKSPACE_ENVIRONMENT = case "$(PROJECT_ROOT)/" in \
 	"$(RUNTIME_ROOT)/"*) ;; \
 	*) printf 'ERROR: runtime workspace does not contain this project: %s\n' "$(RUNTIME_ROOT)" >&2; exit 2 ;; \
 	esac; \
-	for environment_path in "$(RUNTIME_VENV)" "$(RUNTIME_BIN)" "$(PROJECT_ROOT)/.venv"; do \
+	for environment_path in "$(RUNTIME_VENV)" "$(RUNTIME_BIN)" "$(PROJECT_ROOT)/{{ environment_directory }}" "$(PROJECT_ROOT)/{{ environment_directory }}/bin"; do \
 		if [ -L "$$environment_path" ]; then \
 			printf 'ERROR: workspace environment must be physical, not a symlink: %s\n' "$$environment_path" >&2; exit 2; \
 		fi; \
@@ -404,6 +405,8 @@ endef
 # interrupted run never touches the committed lock. A full upgrade resolves
 # from declared manifests without prior lock preferences, including during
 # conflict repair; the final non-upgrade relock retains the resolved lock.
+# The second argument seeds the mirror with the committed lock: only that
+# retaining relock passes it, so a full upgrade never parses a prior lock.
 define _lock_project
 	@set -eu; \
 	workspace=$$($(UV) workspace dir --project "$(PROJECT_ROOT)"); \
@@ -416,7 +419,7 @@ define _lock_project
 		mkdir -p "$${stage}/mirror$$relative"; \
 		cp "$$member/pyproject.toml" "$${stage}/mirror$$relative/pyproject.toml"; \
 	done < "$${stage}/.members"; \
-	if [ -f "$$workspace/uv.lock" ]; then cp "$$workspace/uv.lock" "$${stage}/mirror/uv.lock"; fi; \
+	if [ "$(1)" != "--upgrade --refresh" ] && [ -f "$$workspace/uv.lock" ]; then cp "$$workspace/uv.lock" "$${stage}/mirror/uv.lock"; fi; \
 	$(UV) lock --project "$${stage}/mirror" $(1); \
 	$(UV) lock --check --project "$${stage}/mirror"; \
 	if [ -e "$$candidate" ]; then printf 'ERROR: lock staging path already exists: %s\n' "$$candidate" >&2; exit 2; fi; \
@@ -612,7 +615,7 @@ _upg_relock: _bootstrap_setup_tools
 # red tests or red CI.
 .PHONY: _upg_converge
 _upg_converge:
-	$(call _lock_project,)
+	$(call _lock_project,,retain)
 	@$(SELF_MAKE) _builtin_setup_environment
 	@$(UV) lock --check --project "$(PROJECT_ROOT)"
 	@set -eu; \
@@ -636,8 +639,110 @@ _upg_activated:
 	esac
 
 
-# Gate, fix and build verbs act on this repository only, with one body per verb
-# in every profile: a workspace root evaluates itself exactly as CI does.
+# _builtin-self-* targets serve the workspace root itself (project selector
+# `.` from the orchestrator). They apply the same member-style gate recipes to
+# PROJECT_ROOT without recursing into submodules, so the root distribution
+# runs its own evidence in the global cycles. Where the standalone profile's
+# `_builtin-*_all` twin owns the identical body, the self target delegates to
+# that twin so the gate-selection shell block is emitted exactly once; the
+# workspace profile emits the root-local body because its `_all` twin
+# recurses into members instead.
+{% if make_profile == "workspace" %}
+_builtin-self-test: _builtin_require_environment
+{{ test_report_recipe(
+    runner=pytest_test_runner(),
+) }}
+
+_builtin-self-check: _builtin_require_environment
+{{ local_check_body() }}
+
+_builtin-self-test-full: _builtin_require_environment
+{{ test_report_recipe(
+    runner=pytest_test_runner("full"),
+) }}
+
+_builtin-self-fmt: _builtin_require_environment
+{{ fmt_body() }}
+
+_builtin-self-fix: _builtin_require_environment
+{{ fix_body() }}
+
+# Catalog-driven enforcement fixes: every ENFORCE rule whose fix action is
+# declared safe, applied through its registered adapter.
+_builtin-self-fix-enforcement: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) check fix-enforcement --repository-root "$(PROJECT_ROOT)" --safe-only --apply
+
+_builtin-self-build:
+{% if package %}
+	@$(UV) build --project "$(PROJECT_ROOT)"
+{% else %}
+	@printf '%s\n' 'INFO: build: repository declares package=false (content-only root); no distribution to build'
+{% endif %}
+{% else %}
+# Standalone: the `_all` twins own the one emitted body (SSOT); each carries
+# its own `_builtin_require_environment` edge.
+_builtin-self-test: _builtin_test_all
+
+_builtin-self-check: _builtin_check_all
+
+_builtin-self-test-full: _builtin_test_full_all
+
+_builtin-self-fmt: _builtin_fmt_all
+
+_builtin-self-fix: _builtin_fix_all
+
+_builtin-self-fix-enforcement: _builtin_fix_enforcement
+
+_builtin-self-build: _builtin_build_artifacts
+{% endif %}
+
+_builtin-self-clean: _builtin_clean_generated
+
+_builtin-self-docs: _builtin_docs_all
+
+# SonarCloud server-side issue exclusions (SSOT: codegen.sonarcloud). The verb
+# writes an external service with SONAR_TOKEN from the environment; it belongs
+# to no setup/gen/check/test workflow row and never runs implicitly.
+_builtin_sonarcloud_sync_project: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) maintenance sonarcloud-sync --repository-root "$(PROJECT_ROOT)"
+
+_builtin-self-sonarcloud-sync: _builtin_sonarcloud_sync_project
+
+{% if make_profile == "workspace" %}
+_builtin_build_artifacts:
+	@$(WORKSPACE_ORCHESTRATE) --verb build $(WORKSPACE_PROJECT_ARGS)
+
+# Check is read-only: it validates and reports, never rewrites the tree (fix
+# and fmt own mutation). The workspace delegates the same operation to each
+# member; each generated member selects the same active local partition,
+# its CI complement, or all active gates when the CI token is absent.
+_builtin_check_all: _builtin_require_environment
+	@$(WORKSPACE_ORCHESTRATE) --verb check $(WORKSPACE_PROJECT_ARGS)
+
+_builtin_test_all: _builtin_require_environment
+	@$(WORKSPACE_ORCHESTRATE) --verb test $(WORKSPACE_PROJECT_ARGS)
+
+_builtin_test_full_all: _builtin_require_environment
+	@$(WORKSPACE_ORCHESTRATE) --verb test-full $(WORKSPACE_PROJECT_ARGS)
+
+_builtin_fmt_all: _builtin_require_environment
+	@$(WORKSPACE_ORCHESTRATE) --verb fmt $(WORKSPACE_PROJECT_ARGS)
+
+_builtin_fix_all: _builtin_require_environment
+	@$(WORKSPACE_ORCHESTRATE) --verb fix $(WORKSPACE_PROJECT_ARGS)
+
+_builtin_fix_enforcement: _builtin_require_environment
+	@$(WORKSPACE_ORCHESTRATE) --verb fix-enforcement $(WORKSPACE_PROJECT_ARGS)
+
+_builtin_sonarcloud_sync_all: _builtin_require_environment
+	@$(WORKSPACE_ORCHESTRATE) --verb sonarcloud-sync $(WORKSPACE_PROJECT_ARGS)
+
+# Member propagation exists only where members exist: this workspace's
+# flext-infra conforms and relocks each declared member and publishes one
+# pull-request lane per member that changed. It never merges.
+_builtin-propagate: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) {{ workspace_cli_group }} propagate --repository-root "$(PROJECT_ROOT)"
+{% else %}
 _builtin_build_artifacts:
 {% if package %}
 	@$(UV) build --project "$(PROJECT_ROOT)"
@@ -647,20 +752,21 @@ _builtin_build_artifacts:
 
 # Check is read-only: it runs the gates without --apply, so the tree is left
 # unchanged; fix applies the declared repairs of the fixable gates.
-# CI={{ make.ci.value }} keeps make.check_gates_ci, the strict complement of
-# make.check_gates_local; CI={{ make.ci.local_value }} runs that local partition.
+# CI={{ make.ci.value }} runs make.check_gates_ci, the external gates of the
+# registry; CI={{ make.ci.local_value }} runs make.check_gates_local, its strict
+# complement (type checkers and flext-infra validators).
 # An absent CI token runs every active default gate.
 _builtin_check_all: _builtin_require_environment
 {{ local_check_body() }}
 
 _builtin_test_all: _builtin_require_environment
 {{ test_report_recipe(
-    runner=pytest_test_runner(),
+    runner=pytest_test_runner(("", "slow")),
 ) }}
 
 _builtin_test_full_all: _builtin_require_environment
 {{ test_report_recipe(
-    runner=pytest_test_runner("full"),
+    runner=pytest_test_runner(("full",)),
 ) }}
 
 # fmt is format-only (single-pass verb law): ruff formats Python, the
@@ -842,8 +948,9 @@ _builtin_gen_all:
 _builtin-bootstrap-candidate: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) codegen candidate-bootstrap --repository-root "$(PROJECT_ROOT)"
 
-# Structural rewrites have one selector-free public Make surface. The current
-# directory defines scope; callers never address ast-grep, Rope, or LSP directly.
+# Structural rewrites use mod; mod-text replays the same declared text phase
+# independently when malformed Python prevents the Rope phases from loading.
+# The current directory defines scope; callers never address tools directly.
 _builtin_mod_apply: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) refactor mod --apply
 
@@ -907,7 +1014,6 @@ _builtin-{{ verb }}:
 _builtin-duplication:
 	@{{ check_run("duplication") }}
 _builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all
-
 {% if script_dispatch %}
 # Repository-owned script verbs route through the promoted command framework:
 # custom.mk handlers override via RUN_PUBLIC; otherwise the dispatcher resolves
@@ -916,4 +1022,4 @@ _builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all
 _builtin-{{ verb.name }}: _builtin_require_environment
 	$(call _dispatch,{{ verb.name }})
 {% endfor %}
-{% endif %}
+{% endif -%}

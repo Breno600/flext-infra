@@ -100,8 +100,6 @@ class TestsFlextInfraCodegenConstantsQualityGate:
             },
         )
         u.Tests.provision_checkout(project)
-        # A repository scans its own sources; installed siblings are dependencies.
-        # Empty exports avoid an unrelated lazy-init reexport ambiguity.
         tm.that(u.Tests.run_lazy_init(project), eq=0)
         gate = FlextInfraCodegenQualityGate(repository_root=project)
         report_result = gate.build_report()

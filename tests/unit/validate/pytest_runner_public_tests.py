@@ -26,27 +26,35 @@ class TestsFlextInfraPytestRunner:
             cached_runner_project
             / config.Infra.codegen.make.testmon_cache.reports_directory
         )
-        expressions = []
-        for command in (
-            runner.build_selection_command(
-                report_log=report / "selection.jsonl",
-                manifest_path=report / "selection.json",
-            ),
-            runner.build_selection_command(
-                report_log=report / "inventory.jsonl",
-                manifest_path=report / "inventory.json",
-                complete=True,
-            ),
-            runner.build_command(report),
-            runner.build_coverage_command(report),
-        ):
-            marker_index = command.index("-m", 3)
-            expressions.append(command[marker_index + 1])
-        assert len(set(expressions)) == 1
-        for marker in config.Infra.tooling.tools.pytest.ci_excluded_markers:
-            assert (marker in expressions[0]) == ci_context
-        for marker in config.Infra.tooling.tools.pytest.external_gate_markers:
-            assert marker in expressions[0]
+        pytest_policy = config.Infra.tooling.tools.pytest
+
+        def marker_expression(command: t.StrSequence) -> str:
+            return command[command.index("-m", 3) + 1]
+
+        budgeted = {
+            marker_expression(command)
+            for command in (
+                runner.build_selection_command(
+                    report_log=report / "selection.jsonl",
+                    manifest_path=report / "selection.json",
+                ),
+                runner.build_selection_command(
+                    report_log=report / "inventory.jsonl",
+                    manifest_path=report / "inventory.json",
+                    complete=True,
+                ),
+                runner.build_command(report),
+            )
+        }
+        tm.that(budgeted, length=1)
+        budgeted_expression = next(iter(budgeted))
+        coverage_expression = marker_expression(runner.build_coverage_command(report))
+        tm.that(budgeted_expression, has=pytest_policy.slow_marker)
+        for marker in pytest_policy.ci_excluded_markers:
+            tm.that(marker in coverage_expression, eq=ci_context)
+        for marker in pytest_policy.external_gate_markers:
+            tm.that(budgeted_expression, has=marker)
+            tm.that(coverage_expression, has=marker)
 
     def test_testmon_commands_name_the_toolchain_environment(
         self, cached_runner_project: Path
@@ -142,10 +150,10 @@ class TestsFlextInfraPytestRunner:
 
     @pytest.mark.slow
     @pytest.mark.parametrize("omit_case", [False, True], ids=["order", "membership"])
-    def test_warm_workers_follow_the_central_selection_order(
+    def test_warm_dispatch_follows_the_central_selection_order(
         self, cached_runner_project: Path, *, omit_case: bool
     ) -> None:
-        """Real workers must agree even when a consumer hook reorders per worker."""
+        """Real dispatch detects membership drift and restores ordering."""
         cache = config.Infra.codegen.make.testmon_cache
         sample = cached_runner_project / cache.target_directory / "test_runtime.py"
         sample.write_text(
@@ -157,7 +165,7 @@ class TestsFlextInfraPytestRunner:
         )
         assert tm.ok(runner_for(cached_runner_project).execute()) == 0
         worker_action = (
-            "    if get_xdist_worker_id(session) == 'gw0':\n        items.pop()\n"
+            "    items.pop()\n"
             if omit_case
             else "    items.sort(key=lambda item: item.nodeid,\n"
             "               reverse=get_xdist_worker_id(session) == 'gw0')\n"
@@ -193,6 +201,7 @@ class TestsFlextInfraPytestRunner:
         self, cached_runner_project: Path
     ) -> None:
         """Expose the first failure and do not execute later failing cases."""
+        declare_parallel_project(cached_runner_project)
         cache = config.Infra.codegen.make.testmon_cache
         (
             cached_runner_project / cache.target_directory / "test_failures.py"
@@ -224,11 +233,13 @@ class TestsFlextInfraPytestRunner:
         outcome = m.Cli.ProcessOutcome.model_validate_json(
             tm.ok(u.Cli.files_read_text(report_path.parent / "suite-outcome.json"))
         )
+        tm.that(
+            (pytest.ExitCode.TESTS_FAILED.value, pytest.ExitCode.INTERRUPTED.value),
+            has=outcome.raw_return_code,
+        )
         tm.that(outcome.raw_return_code, eq=exit_code)
         tm.that(outcome.timed_out, eq=False)
         tm.that(outcome.forwarded_signal, none=True)
-        # The declared max-failures stop interrupts the xdist session, which
-        # pytest reports as INTERRUPTED; the summary carries that raw code.
         tm.that(
             summary(reports_root),
             has=["failed=1", f"exit={pytest.ExitCode.INTERRUPTED.value}"],
@@ -238,37 +249,25 @@ class TestsFlextInfraPytestRunner:
 
     @pytest.mark.slow
     @pytest.mark.parametrize(
-        ("finding", "strict"),
-        [
-            ("skip", False),
-            ("warning", False),
-            ("suspended-warning", False),
-            ("suspended-warning", True),
-            ("homonymous-warning", False),
-        ],
+        "finding", ["skip", "warning", "mro-warning", "homonymous-warning"]
     )
     def test_runtime_findings_keep_complete_accounting(
-        self, cached_runner_project: Path, finding: str, *, strict: bool
+        self, cached_runner_project: Path, finding: str
     ) -> None:
-        """Real zero-exit pytest runs still reject skips and unsuspended warnings."""
+        """Real zero-exit pytest runs still reject every skip and every warning."""
         cache = config.Infra.codegen.make.testmon_cache
-        suspended = 0
-        if strict:
-            with (cached_runner_project / "pyproject.toml").open("a") as stream:
-                stream.write('\naddopts = ["--flext-enforce-strict"]\n')
         if finding == "skip":
             source = (
                 "import pytest\n\n"
                 "def test_finding():\n    pytest.skip('required runtime evidence')\n"
             )
         else:
-            if finding == "suspended-warning":
+            if finding == "mro-warning":
                 category = "ConsumerNotice"
                 declaration = (
                     "from flext_core import c\n\n"
                     f"class {category}(c.FlextSmellViolation):\n    pass\n"
                 )
-                suspended = 2 * int(not strict)
             else:
                 category = (
                     c.FlextSmellViolation.__name__
@@ -297,19 +296,15 @@ class TestsFlextInfraPytestRunner:
         exit_code = tm.ok(runner_for(cached_runner_project).execute())
 
         warnings_count = 0 if finding == "skip" else 2
-        blocked = warnings_count - suspended
-        expected_exit = int(finding == "skip" or blocked > 0)
-        tm.that(exit_code, eq=expected_exit)
+        tm.that(exit_code, eq=1)
         reports_root = cached_runner_project / cache.reports_directory
         tm.that(
             summary(reports_root),
             has=[
                 "executed=2",
                 f"warnings={warnings_count}",
-                f"blocking_warnings={blocked}",
-                f"suspended_warnings={suspended}",
                 f"skipped={int(finding == 'skip')}",
-                f"exit={expected_exit}",
+                "exit=1",
             ],
         )
         (outcome_path,) = reports_root.glob("*/suite-outcome.json")
@@ -317,10 +312,6 @@ class TestsFlextInfraPytestRunner:
         tm.that(outcome.raw_return_code, eq=0)
         warning_evidence = (outcome_path.parent / "warnings.txt").read_text()
         tm.that(warning_evidence.count("repeated runtime evidence"), eq=warnings_count)
-        suspended_evidence = (
-            outcome_path.parent / "suspended-warnings.txt"
-        ).read_text()
-        tm.that(suspended_evidence.count("repeated runtime evidence"), eq=suspended)
 
     @pytest.mark.slow
     def test_setup_failure_is_accounted_without_a_call_phase(
@@ -457,12 +448,7 @@ class TestsFlextInfraPytestRunner:
                 complete=True,
                 execution_mode=c.Infra.PytestExecutionMode.FULL,
             ),
-            runner.build_command(
-                full,
-                invocation=m.Infra.PytestInvocation(
-                    execution_mode=c.Infra.PytestExecutionMode.FULL
-                ),
-            ),
+            runner.build_command(full, execution_mode=c.Infra.PytestExecutionMode.FULL),
         ):
             tm.that("-m" in command[3:], eq=False)
 

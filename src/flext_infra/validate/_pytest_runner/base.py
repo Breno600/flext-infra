@@ -104,6 +104,20 @@ class FlextInfraPytestRunnerBase(s[int]):
             raise ValueError(msg)
         return memory_gb
 
+    def _declared_project_name(self) -> str | None:
+        """Read the declared project identity shared by runtime policies.
+
+        Absence is structural (no pyproject, no ``[project]`` table); a
+        malformed declaration raises instead of collapsing into the default.
+        """
+        pyproject_path = self.root / c.PYPROJECT_FILENAME
+        if not pyproject_path.is_file():
+            return None
+        payload = u.Infra.pyproject_payload(pyproject_path)
+        if "project" not in payload:
+            return None
+        return u.Infra.project_name_from_payload(pyproject_path, payload)
+
     def _declared_worker_ceiling(
         self, policy: PytestPolicy
     ) -> int | m.Infra.PytestWorkerCeiling:
@@ -114,12 +128,8 @@ class FlextInfraPytestRunnerBase(s[int]):
         """
         if not policy.parallel_worker_overrides:
             return policy.parallel_workers
-        pyproject_path = self.root / c.PYPROJECT_FILENAME
-        try:
-            name = u.Infra.project_name_from_payload(
-                pyproject_path, u.Infra.pyproject_payload(pyproject_path)
-            )
-        except (TypeError, ValueError):
+        name = self._declared_project_name()
+        if name is None:
             return policy.parallel_workers
         return policy.parallel_worker_overrides.get(name, policy.parallel_workers)
 

@@ -23,8 +23,6 @@ from ..._utilities._git.semantic_lane import FlextInfraUtilitiesGitSemanticLaneM
 if TYPE_CHECKING:
     from flext_infra import p
 
-_GITLINK_MODE = "160000"
-
 
 class FlextInfraUtilitiesGitSemanticIdentityMixin(
     FlextInfraUtilitiesGitSemanticLaneMixin
@@ -199,7 +197,8 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
         # real submodule superproject was never recognized as one.
         staged_entries = repo.git.ls_files("--stage")
         has_submodules = any(
-            line.startswith(f"{_GITLINK_MODE} ") for line in staged_entries.splitlines()
+            line.startswith(f"{c.Infra.GIT_CACHEINFO_GITLINK} ")
+            for line in staged_entries.splitlines()
         )
         # Why (flext-2cafk / ai-hub-n1nh.5): git rev-parse --show-superproject-
         # working-tree already means "this working tree is a submodule".

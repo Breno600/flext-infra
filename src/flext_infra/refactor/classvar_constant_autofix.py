@@ -7,22 +7,15 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import ast
-import re
 import textwrap
 from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra import m, u
+from flext_infra import c, m, u
 
 if TYPE_CHECKING:
     from flext_infra import t
-
-
-_DOCSTRING_DELIMITER_COUNT = 2
-_CLASSVAR_DECLARATION_PATTERN = re.compile(
-    r"^([A-Z][A-Z0-9_]*:\s*)ClassVar\[(.*)\](\s*=)", re.DOTALL
-)
 
 
 class FlextInfraRefactorClassvarConstantAutofix:
@@ -514,7 +507,7 @@ class FlextInfraRefactorClassvarConstantAutofix:
     @classmethod
     def _module_level_declaration_source(cls, declaration_line: str) -> str:
         """Return a declaration valid at module level."""
-        return _CLASSVAR_DECLARATION_PATTERN.sub(r"\1\2\3", declaration_line, count=1)
+        return c.Infra.CLASSVAR_DECLARATION_RE.sub(r"\1\2\3", declaration_line, count=1)
 
     @classmethod
     def _ensure_declaration_imports(
@@ -677,7 +670,7 @@ class FlextInfraRefactorClassvarConstantAutofix:
             if stripped.startswith(('"""', "'''")):
                 quote = stripped[:3]
                 insert_after = idx
-                if stripped.count(quote) < _DOCSTRING_DELIMITER_COUNT:
+                if stripped.count(quote) < c.Infra.DOCSTRING_DELIMITER_COUNT:
                     idx += 1
                     while idx < len(lines):
                         insert_after = idx

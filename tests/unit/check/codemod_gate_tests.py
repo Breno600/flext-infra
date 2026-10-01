@@ -86,7 +86,6 @@ class TestsFlextInfraCodemodGate:
 
         tm.that(execution.result.passed, eq=True)
         tm.that(execution.issues, empty=True)
-        tm.that(execution.observational_issues, empty=True)
         tm.that(execution.raw_output, has="exit=0")
 
     def test_check_files_uses_every_rule_and_only_requested_files(
@@ -123,7 +122,12 @@ class TestsFlextInfraCodemodGate:
     def test_workspace_pipeline_preserves_observational_policy_findings(
         self, tmp_path: Path, rope_workspace: p.Infra.RopeWorkspaceDsl
     ) -> None:
-        project = self._project(tmp_path)
+        """The public check facade fails the project on any rule finding.
+
+        The gate line, the report row and the summary count the same findings
+        that fail the gate, whatever their native severity.
+        """
+        project = self._project(tmp_path, severity=severity)
         (project / "src" / "subject.py").write_text("second(1)\n", encoding="utf-8")
         reports = tmp_path / "reports"
 

@@ -147,45 +147,6 @@ class FlextInfraConfigModelsWorkspace:
             ),
         ]
 
-    class TestInputsSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Non-Python behavior inputs that supplement Testmon coverage."""
-
-        templates: Annotated[
-            t.VariadicTuple[Path],
-            m.Field(description="Repository-relative template directories"),
-        ] = ()
-        resources: Annotated[
-            t.VariadicTuple[Path],
-            m.Field(description="Repository-relative resource directories"),
-        ] = ()
-        environment: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                description="Environment names whose values affect test behavior; only digests are retained"
-            ),
-        ] = ()
-
-        @u.model_validator(mode="after")
-        def _validate_inputs(self) -> Self:
-            """Keep declared inputs inside their repository and names unambiguous."""
-            paths = (*self.templates, *self.resources)
-            if any(
-                path.is_absolute() or not path.parts or ".." in path.parts
-                for path in paths
-            ):
-                msg = "test input directories must be normalized repository-relative paths"
-                raise ValueError(msg)
-            if len(set(paths)) != len(paths):
-                msg = "test input directories must be unique"
-                raise ValueError(msg)
-            if any(not name.isidentifier() for name in self.environment):
-                msg = "test input environment names must be identifiers"
-                raise ValueError(msg)
-            if len(set(self.environment)) != len(self.environment):
-                msg = "test input environment names must be unique"
-                raise ValueError(msg)
-            return self
-
     class WorkspaceManifestSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Complete versioned input contract for ``config/workspace.yaml``."""
 

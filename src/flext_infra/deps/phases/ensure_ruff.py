@@ -305,6 +305,7 @@ class FlextInfraEnsureRuffConfigPhase:
                             toml.RemoveOp(key=pattern)
                             for pattern in facts.stale_patterns
                         ),
+                        *(toml.RemoveOp(key=pattern) for pattern in stale_patterns),
                     ),
                 ),
             ),
@@ -315,7 +316,6 @@ class FlextInfraEnsureRuffConfigPhase:
         payload: t.MutableJsonMapping,
         *,
         path: Path,
-        analysis_exclusions: t.StrSequence | None = None,
         generated_python_roots: t.StrSequence = (),
     ) -> t.StrSequence:
         """Apply canonical Ruff settings directly to one normalized payload."""
@@ -333,18 +333,8 @@ class FlextInfraEnsureRuffConfigPhase:
                 payload,
                 self._phase(
                     path=path,
-                    facts=m.Infra.RuffProjectFacts(
-                        first_party=FlextInfraToolTablesPhase.first_party_namespaces(
-                            payload, path=path
-                        ),
-                        stale_patterns=[
-                            pattern
-                            for pattern in current_ignores or ()
-                            if pattern not in effective_ignores
-                        ],
-                        per_file_ignores=effective_ignores,
-                        analysis_exclusions=analysis_exclusions,
-                        generated_python_roots=generated_python_roots,
+                    first_party=FlextInfraToolTablesPhase.first_party_namespaces(
+                        payload, path=path
                     ),
                 ),
             )

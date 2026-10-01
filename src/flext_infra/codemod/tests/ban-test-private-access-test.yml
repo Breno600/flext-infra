@@ -23,6 +23,9 @@ valid:
   - module = import_module("flext_core.result")
   - module = importlib.import_module(name)
   - module = import_module("flext_core.__main__")
+invalid:
+  - lazy_parts = import_module("flext_core._lazy_parts")
+  - typings = importlib.import_module("flext_core._typings.base")
   - state = service._cache
   - Service._build()
   - |
@@ -34,6 +37,3 @@ valid:
   - token = settings_model._token
   - helper = flext_core._utilities.helper
   - tm.that(runner._invocations, eq=1)
-invalid:
-  - lazy_parts = import_module("flext_core._lazy_parts")
-  - typings = importlib.import_module("flext_core._typings.base")

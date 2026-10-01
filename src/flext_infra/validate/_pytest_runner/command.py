@@ -32,16 +32,26 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
 
         Git branch dependencies can change commits while retaining the same
         package version, so their PEP 610 receipts participate in cache identity.
-        Registry distributions legitimately have no direct-URL receipt.
+        Registry distributions legitimately have no direct-URL receipt. An
+        editable install names a checkout path, not a toolchain: testmon already
+        tracks that source by file checksum, so every checkout of one project
+        on the same lock shares one environment record (flext-3l1gk).
         """
-        fingerprint = "\n".join((
-            sys.version,
-            *sorted(
-                f"{distribution.name}={distribution.version}:"
-                f"{distribution.read_text('direct_url.json')!r}"
-                for distribution in distributions()
-            ),
-        ))
+        provenance: t.MutableSequenceOf[str] = []
+        for distribution in distributions():
+            receipt = distribution.read_text("direct_url.json")
+            dir_info = (
+                None
+                if receipt is None
+                else m.Infra.DirectUrlReceipt.model_validate_json(receipt).dir_info
+            )
+            identity = (
+                "editable" if dir_info is not None and dir_info.editable else receipt
+            )
+            provenance.append(
+                f"{distribution.name}={distribution.version}:{identity!r}"
+            )
+        fingerprint = "\n".join((sys.version, *sorted(provenance)))
         digest = hashlib.sha256(fingerprint.encode()).hexdigest()[:12]
         return f"toolchain-{digest}"
 
@@ -75,16 +85,40 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
     def _plugin_policy_args(
         self, *, execution_mode: c.Infra.PytestExecutionMode
     ) -> t.VariadicTuple[str]:
-        """Apply the same configured plugin contract to collection and execution."""
+        """Apply the same configured plugin contract to collection and execution.
+
+        The phase split is a native pytest marker expression: the budgeted
+        phase deselects the slow marker, the slow phase selects only it.
+        """
         pytest = config.Infra.tooling.tools.pytest
-        excluded = (
-            (
-                *pytest.external_gate_markers,
-                *self.ci_excluded_markers(execution_mode=execution_mode),
-            )
-            if execution_mode != c.Infra.PytestExecutionMode.FULL
-            else ()
+        excluded = tuple(
+            dict.fromkeys((
+                *(
+                    (
+                        *pytest.external_gate_markers,
+                        *self.ci_excluded_markers(execution_mode=execution_mode),
+                    )
+                    if execution_mode != c.Infra.PytestExecutionMode.FULL
+                    else ()
+                ),
+                *(
+                    ()
+                    if self.slow_phase
+                    or execution_mode == c.Infra.PytestExecutionMode.COVERAGE
+                    else (pytest.slow_marker,)
+                ),
+            ))
         )
+        if self.slow_phase:
+            expression = (
+                f"{pytest.slow_marker} and not ({' or '.join(excluded)})"
+                if excluded
+                else pytest.slow_marker
+            )
+        elif excluded:
+            expression = f"not ({' or '.join(excluded)})"
+        else:
+            expression = ""
         return (
             "-p",
             pytest.enforcement_plugin,
@@ -92,7 +126,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             "no:metadata",
             "-o",
             f"{c.Infra.ASYNCIO_DEFAULT_FIXTURE_LOOP_SCOPE}={pytest.asyncio_default_fixture_loop_scope}",
-            *(("-m", f"not ({' or '.join(excluded)})") if excluded else ()),
+            *(("-m", expression) if expression else ()),
         )
 
     def build_selection_command(
@@ -127,10 +161,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                 f"'{self._toolchain_testmon_environment()}'",
             )
         )
-        return (
-            sys.executable,
-            "-m",
-            "pytest",
+        pytest_arguments = (
             str(self.target),
             *testmon,
             "--collect-only",
@@ -149,28 +180,30 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             "0",
             "--no-cov",
         )
+        if self.collection_command_prefix:
+            return (
+                *self.collection_command_prefix,
+                str(manifest_path.with_suffix(".pstats")),
+                str(manifest_path.parent / "run-context.json"),
+                *pytest_arguments,
+            )
+        return (sys.executable, "-m", "pytest", *pytest_arguments)
 
     def build_command(
         self,
         report_dir: Path,
-        selected_node_ids: t.StrSequence | None = None,
-        invocation: m.Infra.PytestInvocation | None = None,
+        selection_plan: m.Infra.PytestSelectionPlan | None = None,
+        *,
+        serialize: bool = False,
+        execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
     ) -> t.VariadicTuple[str]:
         """Build the testmon suite argv (never the cov plugin).
 
-        A nonempty selection is enforced from its manifest, so it requires
-        ``manifest_path``.
+        A resolved plan carries the selected IDs and their manifest together.
         """
         pytest = config.Infra.tooling.tools.pytest
-        invocation = invocation or m.Infra.PytestInvocation()
-        manifest_path = invocation.manifest_path
-        serialize = invocation.serialize
-        whole_target = invocation.whole_target
-        execution_mode = invocation.execution_mode
+        selected_node_ids = selection_plan.node_ids if selection_plan else None
         selection = selected_node_ids or None
-        if selection and manifest_path is None:
-            msg = "a runner selection requires its collection manifest path"
-            raise ValueError(msg)
         # An empty selection needs no workers, and a selection smaller than the
         # worker budget never needs more workers than items: every extra worker
         # only pays startup cost for an empty queue. Explicit serial execution
@@ -193,7 +226,11 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             serial=serial,
             targets=(
                 (str(self.target),)
-                if whole_target or selection is None
+                if (
+                    selection_plan is None
+                    or selection_plan.whole_target
+                    or selection is None
+                )
                 else tuple(selection)
             ),
             workers=workers,
@@ -203,9 +240,9 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                     (
                         "-p",
                         FlextInfraPytestCollection.__module__,
-                        f"{c.Infra.PYTEST_SELECTED_COLLECTION_OPTION}={manifest_path}",
+                        f"{c.Infra.PYTEST_SELECTED_COLLECTION_OPTION}={selection_plan.manifest_path}",
                     )
-                    if selection
+                    if selection_plan is not None and selection
                     else ()
                 ),
                 "--testmon",
@@ -256,7 +293,16 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         return (
             sys.executable,
             "-m",
-            "pytest",
+            "flext_infra._pytest_entry" if self.profile_enabled else "pytest",
+            *(
+                (
+                    "profile-collection",
+                    str(report_dir / pytest.profile_suite_filename),
+                    str(report_dir / "run-context.json"),
+                )
+                if self.profile_enabled
+                else ()
+            ),
             *targets,
             *pytest.progress_args,
             *pytest.report_args,

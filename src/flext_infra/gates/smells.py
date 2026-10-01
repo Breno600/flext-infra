@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, ClassVar, override
 from flext_core import r
 from flext_infra import c, m, u
 from flext_infra.gates.base_gate import FlextInfraGate
+from flext_infra.validate.runtime_census import FlextInfraRuntimeCensusValidator
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -22,7 +23,7 @@ class FlextInfraSmellsGate(FlextInfraGate):
     finding to that project.
     """
 
-    gate_id: ClassVar[str] = "smells"
+    gate_id: ClassVar[str] = c.Infra.SMELLS
     gate_name: ClassVar[str] = "Code Smells"
     scanner_binary: ClassVar[str] = c.Infra.QLTY_BINARY
 
@@ -63,13 +64,43 @@ class FlextInfraSmellsGate(FlextInfraGate):
         _ = ctx
         started = time.monotonic()
         scan = self._scan(project_dir)
-        issues = self._scanned_issues(scan, project_dir)
+        issues = (
+            *self._scanned_issues(scan, project_dir),
+            *self._census_issues(project_dir),
+        )
         return self._build_check_gate_execution(
             project_dir,
             passed=not issues,
             issues=issues,
             raw_output=self._raw_output(scan),
             started=started,
+        )
+
+    def _census_issues(self, project_dir: Path) -> t.SequenceOf[m.Infra.Issue]:
+        """Runtime-census findings of the smell families this gate owns.
+
+        Operator ruling 2026-10-01: every smell family, qlty or runtime
+        census, runs through ``make smells`` and never ``make check``. A
+        census that cannot run is a blocking issue, never a clean pass.
+        """
+        report = FlextInfraRuntimeCensusValidator.for_project(
+            project_dir, census_gate=self.gate_id
+        ).build_report()
+        messages = (
+            report.value.violations
+            if report.success
+            else (report.error or "runtime census failed",)
+        )
+        return tuple(
+            m.Infra.Issue(
+                file=str(project_dir),
+                line=1,
+                column=1,
+                code=self.gate_id,
+                message=message,
+                severity=str(c.Infra.GateSeverity.ERROR.value),
+            )
+            for message in messages
         )
 
     @override

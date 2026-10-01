@@ -329,7 +329,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         ``plan``, never a scope-excluded root or a third-party checkout.
         """
         files: list[m.Infra.CodegenFilePlan] = []
-        inputs: dict[Path, m.Cli.AtomicFileState] = {}
+        inputs: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {}
         publications: list[m.Infra.LazyInitPlan] = []
         for repository in plan.repositories:
             if repository.kind is not c.Infra.ProjectKind.INTERNAL_FLEXT:
