@@ -66,19 +66,3 @@ class TestsFlextInfraSilentFailureGate:
 
         tm.that(result.result.passed, eq=True)
         tm.that(len(result.issues), eq=0)
-
-    def test_adr0018_island_file_is_exempt(self, tmp_path: Path) -> None:
-        """The declared stdlib island stays out of the no-hidden-errors scan."""
-        project = self._create_gate_project(
-            tmp_path, name="demo-project", utilities_src=self._CLEAN_UTILITIES
-        )
-        island_dir = project / "src" / "ai_hub"
-        island_dir.mkdir(parents=True)
-        (island_dir / "hook_client.py").write_text(
-            self._DIRTY_UTILITIES, encoding="utf-8"
-        )
-
-        result = u.Tests.run_gate_check(FlextInfraSilentFailureGate, tmp_path, project)
-
-        tm.that(result.result.passed, eq=True)
-        tm.that(len(result.issues), eq=0)

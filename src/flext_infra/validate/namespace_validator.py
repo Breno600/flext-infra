@@ -184,7 +184,7 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
     def _in_declared_scan_scope(self, filepath: Path, project_root: Path) -> bool:
         """Return whether ``filepath`` lies inside the declared namespace scope.
 
-        Why (cosmos-3flk9, decision A): ``[tool.flext.namespace].scan_dirs``
+        Why: ``[tool.flext.namespace].scan_dirs``
         scopes enforcement to production sources when a project declares it —
         ``tests/`` host pytest conventions and ``scripts/`` are thin command
         adapters, so governing them as facades contradicts their contract.

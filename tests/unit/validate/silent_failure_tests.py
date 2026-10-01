@@ -120,7 +120,7 @@ class TestsFlextInfraSilentFailure:
         )
 
     def test_relaxations_for_collectors_predicates_and_test_teardown(self) -> None:
-        """Only production failure paths are flagged, per cosmos-3flk9 relaxations."""
+        """Only production failure paths are flagged."""
         source = (
             "import contextlib\n"
             "\n"

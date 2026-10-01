@@ -168,7 +168,7 @@ Infra:
         lint:
           select:
             - ALL
-          # make fix never deletes information (flext-itpd1.5). The lint
+          # make fix never deletes information. The lint
           # repair applies safe fixes only (make.ruff.lint_fix rejects
           # --unsafe-fixes), and these rules are never auto-fixed at all,
           # because their fixes delete a diagnostic print, an assignment, a
@@ -190,7 +190,7 @@ Infra:
           # a rule enters here with evidence that its fix preserves code,
           # comments and diagnostics. None does today.
           extend-safe-fixes: []
-          # flext-j47u (codex): banned API messages are policy data, never template literals.
+          # Banned API messages are policy data, never template literals.
           banned-api:
             argparse: "Use cli.register_result_command + Pydantic model from flext_cli."
             click:
@@ -210,12 +210,6 @@ Infra:
         # MYPY_TIMEOUT_SECONDS env overrides at the ingress boundary). The
         # infra's own whole-program cold run fits the default.
         timeout_seconds: 120
-        # The returns plugin types p.Result: without it every Result.value /
-        # .map boundary resolves to Any and consumers flood with
-        # no-any-return (proven by assert_type on 2026-09-23); its removal
-        # alongside five disable rows and ignore_missing_imports was the
-        # root cause of that flood, restored here from the canonical
-        # pre-regression section (commit 7691100a4).
         plugins: [pydantic.mypy]
         boolean-settings:
           namespace_packages: true
@@ -268,7 +262,7 @@ Infra:
           reportUnusedImport: error
           reportUnusedVariable: error
         path-rules:
-          # flext-wkii.17 (codex): source and tracked consumer surfaces are all
+          # Source and tracked consumer surfaces are all
           # first-class environments so no analyzer can hide their diagnostics.
           source-dir: src
           project-root: .

@@ -1,4 +1,4 @@
-"""Project-layout quality gate (flext-0wuz, epic flext-hzox).
+"""Project-layout quality gate.
 
 Reports layout-SSOT violations per project; every finding is an error.
 

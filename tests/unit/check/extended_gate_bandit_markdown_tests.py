@@ -300,7 +300,7 @@ class TestsFlextInfraBanditAndMarkdownGates:
     def test_markdown_fix_applies_the_auto_fixable_rules(self, tmp_path: Path) -> None:
         """`make fix` repairs the markdown findings that check blocks on.
 
-        flext-38p39: the markdown gate reports MD009/MD012 with the linter's own
+        The markdown gate reports MD009/MD012 with the linter's own
         `[*]` auto-fixable marker, but declared can_fix=False. So `make check`
         blocked on findings while `make fmt` and `make fix` both exited 0
         without repairing any of them. The gate uses the tool's formatter so a

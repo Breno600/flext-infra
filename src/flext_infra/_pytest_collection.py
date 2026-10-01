@@ -120,7 +120,7 @@ class FlextInfraPytestCollection:
 
         When every collected item has already completed, nothing is left to
         stop and the stop request would only recolor a finished green suite
-        red (flext-xqw3w), so the request is suppressed at that boundary.
+        red, so the request is suppressed at that boundary.
         """
 
         def __init__(self, *, stop_at_monotonic: float) -> None:
@@ -137,7 +137,7 @@ class FlextInfraPytestCollection:
 
             The request is suppressed when this item was the last one still
             pending: a suite that already finished must end green instead of
-            being interrupted after its own final result (flext-xqw3w).
+            being interrupted after its own final result.
             """
             session = self.session
             if (

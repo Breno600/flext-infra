@@ -64,8 +64,8 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
             "output_dir": output_dir,
             "selected_projects": selected_projects,
             "all_projects": all_projects,
-            # NOTE (multi-agent): flext-i6nq.12 — FlextMixins bootstrap inputs are now
-            # native Pydantic fields validated with the rest of model_data.
+            # FlextMixins bootstrap inputs are native Pydantic fields validated
+            # with the rest of model_data.
             "settings_type": settings_type,
             "runtime_settings": runtime_settings,
             "settings_overrides": settings_overrides,
