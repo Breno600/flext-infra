@@ -426,17 +426,6 @@ Infra:
         # aggregate run-timeout-seconds independently terminates an incomplete
         # full suite.
         case-timeout-seconds: 10
-<<<<<<< HEAD
-        # Slow marks cover nested public runner executions, including a cold
-        # cache seed and a warm replay under parallel suite load.
-        slow-marker: slow
-        slow-timeout-seconds: 180
-        # The complete inventory exceeds 3300 cases. A 189-case incremental
-        # execution took 127 seconds, projecting over 2200 seconds for the
-        # inventory before the slowest integration cases. Keep a bounded wall
-        # that permits complete accounting instead of truncating the suite.
-        run-timeout-seconds: 3600
-=======
         # Slow marks are a narrow integration-harness budget, not permission
         # for an unbounded test. Cases that exceed it require owner repair.
         slow-timeout-seconds: 30
@@ -453,7 +442,6 @@ Infra:
           # This measurement ceiling permits a complete cold profile before
           # tightening the limit to the observed full-suite runtime.
           flext-infra: 1200
->>>>>>> origin/0.12.0-dev
         termination-grace-seconds: 2
         # One failure stops the invocation. The next run starts from the
         # corrected owner instead of accumulating a backlog of unrelated

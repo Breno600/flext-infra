@@ -706,55 +706,6 @@ class FlextInfraConfigModelsArtifact:
             ),
         ]
 
-<<<<<<< HEAD
-    class SedPatternSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """One declared literal regex substitution for the mod verb's sed phase."""
-
-        pattern: Annotated[
-            str,
-            m.Field(description="Regular expression matched against file sources"),
-        ]
-        replacement: Annotated[
-            str,
-            m.Field(description="Literal replacement applied to every match"),
-        ]
-        file_glob: Annotated[
-            str | None,
-            m.Field(
-                default=None,
-                description="Optional glob restricting the targeted source files",
-            ),
-        ] = None
-        flags: Annotated[
-            t.StrSequence,
-            m.Field(
-                default=(),
-                description="Names of the compiled regex flags applied to pattern",
-            ),
-        ] = ()
-        description: Annotated[
-            str | None,
-            m.Field(default=None, description="Human-readable pattern intent"),
-        ] = None
-
-    class SedPatternsSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Declared sed-by-list patterns applied by the mod verb's sed phase."""
-
-        patterns: Annotated[
-            t.VariadicTuple[FlextInfraConfigModelsArtifact.SedPatternSpec],
-            m.Field(default=(), description="Ordered substitution patterns"),
-        ] = ()
-
-    class RefactorCsvCampaignsSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Declared CSV-driven rename campaigns for the mod verb's rename phase."""
-
-        campaigns: Annotated[
-            t.VariadicTuple[FlextInfraConfigModelsArtifact.RenameCampaignSpec],
-            m.Field(default=(), description="Ordered rename campaigns"),
-        ] = ()
-
-=======
->>>>>>> origin/0.12.0-dev
     class SedPatternSpec(FlextInfraConfigModelsContract.ConfigContract):
         """One declared literal regex substitution applied across the mod scope."""
 

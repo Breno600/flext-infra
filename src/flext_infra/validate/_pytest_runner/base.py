@@ -63,16 +63,8 @@ class FlextInfraPytestRunnerBase(s[int]):
         *,
         started_at_monotonic: float,
         collection_command_prefix: t.StrTuple = (),
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
         profile_enabled: bool = False,
         slow_phase: bool = False,
->>>>>>> origin/fix/infra-tip-green-convergence-20261001
-=======
-        profile_enabled: bool = False,
-        slow_phase: bool = False,
->>>>>>> origin/0.12.0-dev
     ) -> Self:
         """Create the runner exclusively from generated Make inputs."""
         ci = config.Infra.codegen.make.ci
@@ -80,16 +72,8 @@ class FlextInfraPytestRunnerBase(s[int]):
             repository_root=Path.cwd(),
             started_at_monotonic=started_at_monotonic,
             collection_command_prefix=collection_command_prefix,
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
             profile_enabled=profile_enabled,
             slow_phase=slow_phase,
->>>>>>> origin/fix/infra-tip-green-convergence-20261001
-=======
-            profile_enabled=profile_enabled,
-            slow_phase=slow_phase,
->>>>>>> origin/0.12.0-dev
             ci_context=(u.Infra.env_lookup(ci.variable) or "").strip() == ci.value,
             target=Path(cls._environment_value(c.Infra.PYTEST_ENV_TARGET)),
             reports=Path(cls._environment_value(c.Infra.PYTEST_ENV_REPORTS)),

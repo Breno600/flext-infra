@@ -283,10 +283,6 @@ class FlextInfraEnsureRuffConfigPhase:
                             toml.RemoveOp(key=pattern)
                             for pattern in facts.stale_patterns
                         ),
-<<<<<<< HEAD
-                        *(toml.RemoveOp(key=pattern) for pattern in facts.stale_patterns),
-=======
->>>>>>> origin/0.12.0-dev
                     ),
                 ),
             ),
@@ -329,10 +325,7 @@ class FlextInfraEnsureRuffConfigPhase:
                             if pattern not in effective_ignores
                         ],
                         per_file_ignores=effective_ignores,
-<<<<<<< HEAD
-=======
                         analysis_exclusions=None,
->>>>>>> origin/0.12.0-dev
                         generated_python_roots=generated_python_roots,
                     ),
                 ),

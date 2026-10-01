@@ -23,16 +23,6 @@ class FlextInfraModelsWorkspace:
     - ``ContractModel`` reserved for immutable workspace settings contracts.
     """
 
-<<<<<<< HEAD
-    class SuperprojectGovernance(m.ArbitraryTypesModel):
-        """Superproject facts every member load validates against."""
-
-        root: Path
-        integration_branch: str | None
-        beads: FlextInfraConfigModelsBeads.BeadsProjectSpec | None
-        members: t.MappingKV[Path, FlextInfraConfigModelsContexts.RepositoryRef]
-        allow_unprovisioned_members: bool
-=======
     class SuperprojectGovernance(m.ContractModel):
         """Facts of one superproject that govern every composed subproject.
 
@@ -54,7 +44,6 @@ class FlextInfraModelsWorkspace:
         allow_unprovisioned_members: Annotated[
             bool, m.Field(description="Accept manifest identity before checkout setup")
         ] = False
->>>>>>> origin/0.12.0-dev
 
     class WorkspaceEnvironmentRequest(m.ContractModel):
         """Read-only request for validating the active workspace environment."""

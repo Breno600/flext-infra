@@ -325,12 +325,9 @@ Infra:
         discovery_scope: none
 
     make:
-<<<<<<< HEAD
-=======
       # Physical workspace environments live beside the checkout so a linked
       # worktree shares one project-keyed environment instead of an in-tree
       # duplicate (runtime_environment_dir derives the same path).
->>>>>>> origin/0.12.0-dev
       examples_timeout_seconds: 120
       submodule_timeout_seconds: 120
       # Operator 2026-09-08: ruff is the formatting and autofix rule.
@@ -401,8 +398,6 @@ Infra:
         # Other pre-push verbs use this token to preserve local test behavior;
         # pre-push check unsets CI so it runs every active check gate.
         local_value: N
-<<<<<<< HEAD
-=======
         # Rules, not a skip-list: local_check_gates is the ONLY
         # declared set. CI=Y runs its strict complement, derived in
         # MakeSpec.check_gates_ci over the active default universe, so every
@@ -427,7 +422,6 @@ Infra:
         # the project-owned timeout budget (tools.mypy.timeout_seconds) makes
         # it runnable on the runner.
         # pyrefly stays local-only (fast; pyright already covers CI).
->>>>>>> origin/0.12.0-dev
       # Git-hook stages are disabled by default;
       # the workflow below still declares stage membership so re-enabling is a
       # one-key change, case by case. CI owns read-only setup, generation drift,
@@ -485,14 +479,28 @@ Infra:
         # check); it never runs the workspace-wide codegen conform as a
         # prerequisite. `validate` is the structural check (blocking when the
         # .md set is incomplete).
-        api_modules:
-          flext-infra: ["flext_infra.api"]
-        # Rejects Markdown links that traverse out of the project into a
-        # sibling flext repository by relative path.
-        cross_project_relative_link_pattern: '^(?:\.\./)+flext-[a-z0-9-]+(?:/|$)'
         actions: [generate, fix, fmt, validate, audit]
         mutable_actions: [fix, fmt]
         reports_dir: .reports/docs
+        overview_preview_limits:
+          aliases: 11
+          public_symbols: 10
+          facades: 8
+          module_exports: 8
+          keywords: 8
+        cross_project_relative_link_pattern: '^(?:\.\./)+flext-[a-z0-9-]+(?:/|$)'
+        stale_github_organizations:
+          - organization
+        github_repos:
+          - organization: flext-sh
+            repository: flext
+            branch: 0.12.0-dev
+          - organization: flext-sh
+            repository: flext-core
+            branch: 0.12.0-dev
+          - organization: flext-sh
+            repository: flext-infra
+            branch: 0.12.0-dev
       # Private cross-repo doc-link entries (checkouts outside this public
       # registry) belong in config/codegen-overrides.local.yaml; the
       # lookup appends local entries and resolves first match.
