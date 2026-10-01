@@ -59,11 +59,17 @@ class FlextInfraConstantsRefactor:
         COMPAT_ALIAS = "compat-alias"
         PRIVATE_IMPORT = "private-import"
         FACADE_BASE = "facade-base"
+        MODEL_FIELDS = "model-fields"
+        SELF_FACADE_IMPORT = "self-facade-import"
+        DYNAMIC_ENVIRONMENT = "dynamic-environment"
 
     SEMANTIC_CUTOVER_RULE_IDS: ClassVar[t.MappingKV[str, str]] = MappingProxyType({
         SemanticCutoverPhase.COMPAT_ALIAS: "ban-compat-alias",
         SemanticCutoverPhase.PRIVATE_IMPORT: "ban-private-import",
         SemanticCutoverPhase.FACADE_BASE: "facade-base-by-class-name",
+        SemanticCutoverPhase.MODEL_FIELDS: "rewire-getattr-model-fields-to-direct-access",
+        SemanticCutoverPhase.SELF_FACADE_IMPORT: "ban-infra-utility-module-self-facade-import",
+        SemanticCutoverPhase.DYNAMIC_ENVIRONMENT: "ban-ambient-environ-read",
     })
     "ast-grep rule whose findings select each finding-driven semantic cutover."
 

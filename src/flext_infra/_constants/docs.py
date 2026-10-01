@@ -71,6 +71,9 @@ class FlextInfraConstantsDocs:
         "E402",
         "PLW0127",
         "PLC0414",
+        "pytest-useless-yield-fixture",
+        "unused-variable",
+        "unused-static-method-argument",
     )
     """Rules ignored for executable docs snippets that are not full modules/tests.
 

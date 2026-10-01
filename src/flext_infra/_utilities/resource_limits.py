@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import platform
 import shutil
 import sys
@@ -11,7 +10,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from flext_cli import u
 
-from flext_infra import c, config, m, t
+from flext_infra import c, config, m, settings, t
 
 from .process import FlextInfraUtilitiesProcess
 from .project_discovery import FlextInfraUtilitiesProjectDiscovery
@@ -138,8 +137,8 @@ class FlextInfraUtilitiesResourceLimits:
         directories because their ``tests`` packages share one module name.
         """
         spec = config.Infra.codegen.make.mypy_cache
-        home = os.environ.get(str(spec.data_home_environment_variable)) or str(
-            Path(os.environ[str(spec.user_home_environment_variable)])
+        home = settings.env_lookup(str(spec.data_home_environment_variable)) or str(
+            Path(settings.env_required(str(spec.user_home_environment_variable)))
             / spec.home_cache_directory
         )
         metadata = FlextInfraUtilitiesPyproject.read_project_metadata_result(
