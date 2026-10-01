@@ -13,6 +13,12 @@ Infra:
     # Fresh import probes are independent subprocesses within one validation.
     fresh_import_workers: 3
 
+    # The bootstrap root owns these names in its generated initializer's
+    # existing eager import. They are public on that root only; other roots
+    # keep the same template bindings private.
+    root_template_public_exports:
+      flext_core: [build_lazy_import_map, install_lazy_exports]
+
     # Per-module scc code-LOC ceiling, enforced by the loc-cap gate. This key
     # is its only declaration; guidance references the key, never its value.
     loc_cap:

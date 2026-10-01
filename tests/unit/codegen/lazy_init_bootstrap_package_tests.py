@@ -14,6 +14,8 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import importlib.util
+import sys
 from typing import TYPE_CHECKING
 
 from flext_tests import tm
@@ -22,6 +24,8 @@ from tests import c, u
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    import pytest
 
 
 class TestsFlextInfraLazyInitBootstrapPackage:
@@ -121,3 +125,31 @@ class TestsFlextInfraLazyInitBootstrapPackage:
         tm.that(result, eq=0)
         tm.that(init_content, contains="from flext_core.lazy import")
         tm.that(init_content, contains="FlextModelsPart")
+
+    @staticmethod
+    def test_bootstrap_root_publishes_its_existing_eager_helpers(
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A generated core root exposes its bound helpers to a real importer."""
+        repository_root, package_root = u.Tests.create_lazy_init_workspace(
+            tmp_path,
+            project_name=c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE.replace("_", "-"),
+            package_name=c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE,
+        )
+        tm.that(u.Tests.run_lazy_init(repository_root), eq=0)
+
+        spec = importlib.util.spec_from_file_location(
+            "generated_core_root",
+            package_root / c.Infra.INIT_PY,
+        )
+        assert spec is not None
+        assert spec.loader is not None
+        generated = importlib.util.module_from_spec(spec)
+        monkeypatch.setitem(sys.modules, spec.name, generated)
+        spec.loader.exec_module(generated)
+
+        tm.that(generated.__all__, has="build_lazy_import_map")
+        tm.that(generated.__all__, has="install_lazy_exports")
+        tm.that(callable(generated.build_lazy_import_map), eq=True)
+        tm.that(callable(generated.install_lazy_exports), eq=True)
