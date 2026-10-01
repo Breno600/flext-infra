@@ -130,6 +130,7 @@ rules:
     replace: '\g<1>run'
     flags: [MULTILINE]
   - id: docgen-dependency-sequence-prose-wrap
+    distributions: [cosmos-docgen]
     description: Wrap the authored consumer dependency sequence without changing its meaning.
     include:
       - docs/superpowers/specs/2026-07-09-config-tipado-template-so-formatacao-design.md
