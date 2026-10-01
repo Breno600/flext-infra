@@ -1,11 +1,11 @@
 """Static contracts enforced on every managed direnv environment file.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 The lint is pure (no subprocess): gates run it before the runtime smoke so
 contract defects fail with precise messages, and the workspace sync runs it
 after every generated write so a regression can never land silently.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

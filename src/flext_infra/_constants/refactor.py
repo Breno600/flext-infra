@@ -230,6 +230,7 @@ class FlextInfraConstantsRefactor:
     CODEMOD_TEXT_KEY_DESCRIPTION: ClassVar[str] = "description"
     CODEMOD_TEXT_KEY_INCLUDE: ClassVar[str] = "include"
     CODEMOD_TEXT_KEY_EXCLUDE: ClassVar[str] = "exclude"
+    CODEMOD_TEXT_KEY_DISTRIBUTIONS: ClassVar[str] = "distributions"
     CODEMOD_TEXT_KEY_FIND: ClassVar[str] = "find"
     CODEMOD_TEXT_KEY_REPLACE: ClassVar[str] = "replace"
     CODEMOD_TEXT_KEY_FLAGS: ClassVar[str] = "flags"

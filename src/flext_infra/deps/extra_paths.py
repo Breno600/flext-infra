@@ -1,8 +1,5 @@
 """Synchronize pyright, mypy, and pyrefly paths from workspace dependencies.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 Handlers are called by the canonical CLI via FlextInfraCliDeps.register_deps.
 
 Every emitted entry is relative to the project that owns the file it is written
@@ -12,6 +9,9 @@ filesystem hop out of the project root: a generated surface that encodes
 ``../<sibling>/src`` describes one host layout, so it is wrong in any checkout
 whose siblings sit elsewhere and it makes one generator emit different content
 per clone.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

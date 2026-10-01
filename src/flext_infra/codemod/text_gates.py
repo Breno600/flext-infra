@@ -73,6 +73,21 @@ class FlextInfraModTextGateEngine:
         return cls._rules_from_states(snapshots.value)
 
     @staticmethod
+    def _selected_rules(
+        root: Path,
+        rules: t.VariadicTuple[m.Infra.ModTextRule],
+    ) -> t.VariadicTuple[m.Infra.ModTextRule]:
+        """Select declared rules using the consumer's typed project identity."""
+        document = root / c.PYPROJECT_FILENAME
+        payload = u.Infra.pyproject_payload(document)
+        distribution = u.Infra.project_name_from_payload(document, payload)
+        return tuple(
+            rule
+            for rule in rules
+            if not rule.distributions or distribution in rule.distributions
+        )
+
+    @staticmethod
     def _catalogue_states(
         root: Path,
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
@@ -191,6 +206,7 @@ class FlextInfraModTextGateEngine:
             c.Infra.CODEMOD_TEXT_KEY_FLAGS,
             c.Infra.CODEMOD_TEXT_KEY_EXPECTED,
             c.Infra.CODEMOD_TEXT_KEY_CAPTURE_EQUALS,
+            c.Infra.CODEMOD_TEXT_KEY_DISTRIBUTIONS,
         ))
         if unknown:
             return r[m.Infra.ModTextRule].fail(
@@ -217,6 +233,14 @@ class FlextInfraModTextGateEngine:
                 f"text rule expected receipt must be a non-negative integer in {source}",
             )
         capture_equals = raw.get(c.Infra.CODEMOD_TEXT_KEY_CAPTURE_EQUALS, {})
+        distributions = raw.get(c.Infra.CODEMOD_TEXT_KEY_DISTRIBUTIONS, ())
+        if not isinstance(distributions, (list, tuple)) or any(
+            not isinstance(name, str) or not name.strip() or name != name.strip()
+            for name in distributions
+        ) or len(set(distributions)) != len(distributions):
+            return r[m.Infra.ModTextRule].fail(
+                f"text rule distributions must be unique non-empty names in {source}",
+            )
         if not isinstance(capture_equals, dict) or any(
             not isinstance(name, str) or not isinstance(value, str)
             for name, value in capture_equals.items()
@@ -244,6 +268,7 @@ class FlextInfraModTextGateEngine:
             exclude=tuple(
                 str(glob) for glob in raw.get(c.Infra.CODEMOD_TEXT_KEY_EXCLUDE, ())
             ),
+            distributions=tuple(distributions),
             find=find,
             replace=str(raw.get(c.Infra.CODEMOD_TEXT_KEY_REPLACE, "")),
             flags=flag_names,
@@ -322,7 +347,7 @@ class FlextInfraModTextGateEngine:
         loaded = cls._rules_from_states(catalogues.value)
         if loaded.failure:
             return r[m.Infra.ModTextReport].from_failure(loaded)
-        rules = loaded.value
+        rules = cls._selected_rules(root, loaded.value)
         sources = cls._source_paths(root, rules)
         if sources.failure:
             return r[m.Infra.ModTextReport].from_failure(sources)

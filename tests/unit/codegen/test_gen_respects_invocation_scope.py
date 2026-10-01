@@ -1,8 +1,5 @@
 """Every command in one verb recipe writes to the same root.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 Scope is the invocation point's own repository: every repository, the
 workspace root included, works on itself alone (operator ruling 2026-09-29).
 
@@ -22,6 +19,9 @@ one rule, applied consistently.
 
 Every contract is asserted on the Makefile the public conform owner renders
 for a workspace fixture composing one member.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

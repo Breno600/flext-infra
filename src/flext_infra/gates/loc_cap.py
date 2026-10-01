@@ -1,11 +1,11 @@
 """FLEXT module-cap SUPREME LAW (§3.1) quality gate.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 Enforces the per-module logical-LOC ceiling using scc's code-line count.
 Per-class / per-method / per-function caps require AST and are out of scope
 for this tool-driven gate (scc reports at file granularity only).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
