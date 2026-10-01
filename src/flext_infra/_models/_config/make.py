@@ -145,22 +145,21 @@ class FlextInfraConfigModelsMake:
                 ),
             ),
         ]
-        api_modules: Annotated[
-            Mapping[t.NonEmptyStr, t.VariadicTuple[t.NonEmptyStr]],
-            m.Field(
-                min_length=1,
-                description=(
-                    "Public API modules generated per distribution; absent "
-                    "distributions own no module pages"
-                ),
-            ),
-        ]
         mutable_actions: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(min_length=1, description="Docs actions that mutate"),
         ]
         reports_dir: Annotated[
             Path, m.Field(description="Repository-relative docs reports directory")
+        ]
+        overview_preview_limits: Annotated[
+            Mapping[t.NonEmptyStr, t.PositiveInt],
+            m.Field(
+                description=(
+                    "Items listed per contract field on the generated API "
+                    "overview page before the preview is truncated"
+                )
+            ),
         ]
         cross_project_relative_link_pattern: Annotated[
             t.NonEmptyStr,
@@ -182,29 +181,6 @@ class FlextInfraConfigModelsMake:
                 description="Governed org/repo/branch map for cross-repo doc URLs",
             ),
         ] = ()
-
-        @u.model_validator(mode="after")
-        def _validate_api_modules(self) -> Self:
-            """Reject duplicate or non-importable API module declarations."""
-            for distribution, modules in self.api_modules.items():
-                if not modules:
-                    msg = f"docs api_modules must not be empty: {distribution}"
-                    raise ValueError(msg)
-                if len(set(modules)) != len(modules):
-                    msg = f"docs api_modules must be unique: {distribution}"
-                    raise ValueError(msg)
-                invalid = next(
-                    (
-                        module
-                        for module in modules
-                        if not all(part.isidentifier() for part in module.split("."))
-                    ),
-                    None,
-                )
-                if invalid is not None:
-                    msg = f"docs api module is not importable: {invalid}"
-                    raise ValueError(msg)
-            return self
 
         @u.model_validator(mode="after")
         def _validate_actions(self) -> Self:
@@ -519,6 +495,12 @@ class FlextInfraConfigModelsMake:
                         raise ValueError(msg)
                 return self
 
+        runtime_environment_directory: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description="Sibling directory for physical workspace environments",
+            ),
+        ]
         examples_timeout_seconds: Annotated[
             int,
             m.Field(gt=0, le=120, description="Workspace examples process deadline"),
