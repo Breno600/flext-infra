@@ -1,0 +1,110 @@
+id: fix-except-sentinel-return
+snapshots:
+  ? |
+    def load() -> r[list[str]]:
+        try:
+            return read()
+        except (OSError, KeyError) as error:
+            return []
+  : fixed: |
+      def load() -> r[list[str]]:
+          try:
+              return read()
+          except (OSError, KeyError) as error:
+              return r[list[str]].fail(str(error), exception=error)
+    labels:
+    - source: return []
+      style: primary
+      start: 108
+      end: 117
+    - source: error
+      style: secondary
+      start: 93
+      end: 98
+    - source: (OSError, KeyError) as error
+      style: secondary
+      start: 70
+      end: 98
+    - source: |-
+        except (OSError, KeyError) as error:
+                return []
+      style: secondary
+      start: 63
+      end: 117
+    - source: r
+      style: secondary
+      start: 14
+      end: 15
+    - source: list[str]
+      style: secondary
+      start: 16
+      end: 25
+    - source: '[list[str]]'
+      style: secondary
+      start: 15
+      end: 26
+    - source: r[list[str]]
+      style: secondary
+      start: 14
+      end: 26
+    - source: r[list[str]]
+      style: secondary
+      start: 14
+      end: 26
+    - source: |-
+        def load() -> r[list[str]]:
+            try:
+                return read()
+            except (OSError, KeyError) as error:
+                return []
+      style: secondary
+      start: 0
+      end: 117
+  ? |
+    def run_except() -> p.Result[bool]:
+        try:
+            raise ValueError('boom')
+        except ValueError as exc:
+            return None
+  : fixed: |
+      def run_except() -> p.Result[bool]:
+          try:
+              raise ValueError('boom')
+          except ValueError as exc:
+              return r[bool].fail(str(exc), exception=exc)
+    labels:
+    - source: return None
+      style: primary
+      start: 116
+      end: 127
+    - source: exc
+      style: secondary
+      start: 103
+      end: 106
+    - source: ValueError as exc
+      style: secondary
+      start: 89
+      end: 106
+    - source: |-
+        except ValueError as exc:
+                return None
+      style: secondary
+      start: 82
+      end: 127
+    - source: p.Result[bool]
+      style: secondary
+      start: 20
+      end: 34
+    - source: p.Result[bool]
+      style: secondary
+      start: 20
+      end: 34
+    - source: |-
+        def run_except() -> p.Result[bool]:
+            try:
+                raise ValueError('boom')
+            except ValueError as exc:
+                return None
+      style: secondary
+      start: 0
+      end: 127

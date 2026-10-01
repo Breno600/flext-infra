@@ -1,4 +1,8 @@
-"""Public behavior tests for disposable-artifact cleanup."""
+"""Public behavior tests for disposable-artifact cleanup.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -15,7 +19,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraCleanService:
     """Validate cleanup through its public service contract."""
 
-    def test_apply_removes_broken_managed_worktree_links(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_apply_removes_broken_managed_worktree_links(tmp_path: Path) -> None:
         """A failed test lane cannot leave a dangling workspace entry."""
         worktrees = tmp_path / c.Infra.WORKTREES_DIRNAME
         worktrees.mkdir()
@@ -23,7 +28,8 @@ class TestsFlextInfraCleanService:
         broken.symlink_to(tmp_path / "missing-lane", target_is_directory=True)
 
         result = FlextInfraCleanService(
-            repository_root=tmp_path, apply_changes=True
+            repository_root=tmp_path,
+            apply_changes=True,
         ).execute()
 
         tm.that(result.success, eq=True)

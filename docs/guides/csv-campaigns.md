@@ -30,6 +30,23 @@ configuration. Each campaign keeps one `old,new` CSV as its rename source. Consu
 repositories, including repositories outside the FLEXT superproject, consume that same
 declared campaign through their own root verb. There is no per-campaign executable and
 no direct ast-grep write pass.
+The CSV path is relative to the declaring config directory; any declared scan roots
+are relative to the consumer repository. Absolute and parent-traversing declarations
+fail during typed config validation; resolved paths that leave either owner through a
+symbolic link fail during public composition before source publication.
+
+`make mod-text` replays only the declared Sed text rules through the same authenticated
+publisher used by `make mod`. It exists for recovery when a text rule has left an
+authored Python file unparsable and the Rope phases cannot start. Every future Python
+replacement is parsed before the atomic batch publishes, so a malformed block-scalar
+replacement leaves all source files unchanged. After recovery, rerun `make mod`,
+`make gen`, and the native checks; `mod-text` is not a substitute for the full circuit.
+
+The public `infra.mod` operation resolves the typed campaign declarations and composes
+the real CSV runner and Rope workspace through `p.Infra` ports. The mod service receives
+those dependencies and the validated campaign inputs by constructor. `infra.apply_renames`
+offers the same real runner for an explicit `m.Infra.ApplyRenamesInput`. The CLI route
+renders progress and rename reports; the runner itself only returns typed results.
 
 `bindings` maps CSV expression prefixes to current public Rope identities. An empty
 prefix describes member names relative to an owner; a nonempty prefix describes

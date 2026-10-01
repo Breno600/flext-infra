@@ -4,6 +4,9 @@ The gate flags any module whose real scc `Code` line count exceeds the
 config-owned ceiling and accepts modules under it, exercised through the public
 gate runner. Fixtures derive from that config-owned ceiling so a legitimate cap
 change never silently inverts these assertions (UNIVERSAL_CORE P0).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -22,9 +25,16 @@ if TYPE_CHECKING:
 
 
 class TestsFlextInfraLocCapGate:
+    """Tests for ``FlextInfraLocCapGate``."""
+
     @staticmethod
     def gate_project(tmp_path: Path, *, code_lines: int) -> Path:
-        """Create one real project whose sample module carries ``code_lines``."""
+        """Create one real project whose sample module carries ``code_lines``.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         module = "from __future__ import annotations\n\n" + "".join(
             f"x{index} = {index}\n" for index in range(code_lines)
         )
@@ -35,7 +45,9 @@ class TestsFlextInfraLocCapGate:
             files={"sample.py": module},
         )
 
-    def test_gate_identity(self) -> None:
+    @staticmethod
+    def test_gate_identity() -> None:
+        """Test gate identity."""
         tm.that(FlextInfraLocCapGate.gate_id, eq="loc-cap")
         tm.that(FlextInfraLocCapGate.can_fix, eq=False)
 
@@ -44,8 +56,13 @@ class TestsFlextInfraLocCapGate:
         [(config.Infra.codegen.loc_cap.max_lines + 50, False), (1, True)],
     )
     def test_cap_is_enforced_on_real_scc_counts(
-        self, tmp_path: Path, code_lines: int, *, passed: bool
+        self,
+        tmp_path: Path,
+        code_lines: int,
+        *,
+        passed: bool,
     ) -> None:
+        """Test cap is enforced on real scc counts."""
         project = self.gate_project(tmp_path, code_lines=code_lines)
 
         result = u.Tests.run_gate_check(FlextInfraLocCapGate, tmp_path, project)
@@ -56,6 +73,7 @@ class TestsFlextInfraLocCapGate:
         tm.that(all(path.endswith("sample.py") for path in flagged), eq=True)
 
     def test_unavailable_scanner_is_not_silenced(self, tmp_path: Path) -> None:
+        """Test unavailable scanner is not silenced."""
         project = self.gate_project(tmp_path, code_lines=1)
         empty_path = tmp_path / "empty-path"
         empty_path.mkdir()
@@ -87,7 +105,8 @@ class TestsFlextInfraLocCapGate:
         ],
     )
     def test_scc_boundary_rejects_incomplete_or_malformed_output(
-        self, payload: str
+        self,
+        payload: str,
     ) -> None:
         """Invalid native reports cannot become an empty successful scan."""
         with pytest.raises(c.ValidationError):
@@ -101,16 +120,19 @@ class TestsFlextInfraLocCapGate:
         tm.that(tuple(file for group in report.root for file in group.files), eq=())
 
     def test_generated_header_is_read_relative_to_scanned_project(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A real SCC relative path resolves under the project, not the caller."""
         project = self.gate_project(
-            tmp_path, code_lines=config.Infra.codegen.loc_cap.max_lines + 1
+            tmp_path,
+            code_lines=config.Infra.codegen.loc_cap.max_lines + 1,
         )
         module = project / "src" / "demo_project" / "sample.py"
         source = module.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         module.write_text(
-            f"{c.Infra.AUTOGEN_HEADER}\n{source}", encoding=c.Cli.ENCODING_DEFAULT
+            f"{c.Infra.AUTOGEN_HEADER}\n{source}",
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
         gate = FlextInfraLocCapGate(tmp_path)
 
@@ -127,11 +149,13 @@ class TestsFlextInfraLocCapGate:
         tm.that(scanned_paths, has=module)
 
     def test_invalid_source_encoding_is_not_a_generated_header_fallback(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """SCC counts bytes; reading an invalid Python UTF-8 header must fail."""
         project = self.gate_project(
-            tmp_path, code_lines=config.Infra.codegen.loc_cap.max_lines + 1
+            tmp_path,
+            code_lines=config.Infra.codegen.loc_cap.max_lines + 1,
         )
         module = project / "src" / "demo_project" / "sample.py"
         module.write_bytes(b"# \xff\n" + module.read_bytes())

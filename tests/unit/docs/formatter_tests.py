@@ -1,4 +1,8 @@
-"""Public format-workflow tests for docs services."""
+"""Public format-workflow tests for docs services.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,7 +10,9 @@ from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
-from flext_infra.docs import FlextInfraDocFixer, FlextInfraDocFormatter
+from flext_infra import infra
+from flext_infra.docs.fixer import FlextInfraDocFixer
+from flext_infra.docs.formatter import FlextInfraDocFormatter
 from tests import c, u
 
 if TYPE_CHECKING:
@@ -17,10 +23,21 @@ class TestsFlextInfraDocsFormatter:
     """Public format-workflow tests for docs services."""
 
     @staticmethod
+    def _formatter() -> FlextInfraDocFormatter:
+        """Bind the formatter to the facade's markdown format gate.
+
+        Returns:
+            The resulting ``FlextInfraDocFormatter``.
+
+        """
+        return FlextInfraDocFormatter(format_gate=infra.markdown_format_gate)
+
+    @staticmethod
     def _write_prettier_policy(workspace: Path) -> None:
         """Provide the generated prettier settings owner the gate requires."""
         (workspace / c.Infra.PRETTIER_CONFIG_FILENAME).write_text(
-            "{}\n", encoding="utf-8"
+            "{}\n",
+            encoding="utf-8",
         )
 
     def test_fmt_returns_report_for_root_scope(self, tmp_path: Path) -> None:
@@ -28,7 +45,7 @@ class TestsFlextInfraDocsFormatter:
         workspace = u.Tests.create_docs_workspace(tmp_path)
         self._write_prettier_policy(workspace)
 
-        result = FlextInfraDocFormatter().format(workspace, apply=True)
+        result = self._formatter().format(workspace, apply=True)
 
         tm.ok(result)
         tm.that([report.scope for report in result.value], eq=["workspace"])
@@ -39,9 +56,10 @@ class TestsFlextInfraDocsFormatter:
         workspace = u.Tests.create_docs_workspace(tmp_path)
         self._write_prettier_policy(workspace)
         (workspace / "docs/README.md").write_text(
-            "#   Docs\n\n##   Overview\ntrailing spaces   \n", encoding="utf-8"
+            "#   Docs\n\n##   Overview\ntrailing spaces   \n",
+            encoding="utf-8",
         )
-        formatter = FlextInfraDocFormatter()
+        formatter = self._formatter()
 
         check = formatter.format(workspace, apply=False)
         tm.ok(check)
@@ -55,7 +73,8 @@ class TestsFlextInfraDocsFormatter:
         tm.that(applied.value[0].result, eq=c.Infra.ResultStatus.OK)
         tm.that(applied.value[0].passed, eq=True)
         tm.that(
-            (workspace / "docs/README.md").read_text(encoding="utf-8"), has="# Docs\n"
+            (workspace / "docs/README.md").read_text(encoding="utf-8"),
+            has="# Docs\n",
         )
 
         fixed_point = formatter.format(workspace, apply=False)
@@ -79,7 +98,7 @@ class TestsFlextInfraDocsFormatter:
             encoding="utf-8",
         )
         fixer = FlextInfraDocFixer()
-        formatter = FlextInfraDocFormatter()
+        formatter = self._formatter()
 
         first_fix = fixer.fix(workspace, apply=True)
         tm.ok(first_fix)
@@ -103,18 +122,19 @@ class TestsFlextInfraDocsFormatter:
         drift = "#   Docs\n\n##   Overview\n"
         (workspace / "docs/README.md").write_text(drift, encoding="utf-8")
 
-        result = FlextInfraDocFormatter().format(workspace, apply=False)
+        result = self._formatter().format(workspace, apply=False)
 
         tm.ok(result)
         tm.that((workspace / "docs/README.md").read_text(encoding="utf-8"), eq=drift)
 
     def test_fmt_fails_closed_without_generated_prettier_config(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A missing generated .prettierrc is a generation gap, never a pass."""
         workspace = u.Tests.create_docs_workspace(tmp_path)
 
-        result = FlextInfraDocFormatter().format(workspace, apply=False)
+        result = self._formatter().format(workspace, apply=False)
 
         tm.ok(result)
         tm.that(result.value[0].passed, eq=False)

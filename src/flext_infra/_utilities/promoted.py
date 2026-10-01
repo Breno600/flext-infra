@@ -1,14 +1,23 @@
 """Promoted-command utilities facet for ``u.Infra``.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Private responsibility classes live under ``_utilities/_promoted/``; consumers
 use ``from flext_infra import u`` only.
 """
 
 from __future__ import annotations
 
-from ._promoted.commands import FlextInfraUtilitiesPromotedCommands
-from ._promoted.execution import FlextInfraUtilitiesPromotedExecution
-from ._promoted.rendering import FlextInfraUtilitiesPromotedRendering
+from flext_infra._utilities._promoted.commands import (
+    FlextInfraUtilitiesPromotedCommands,
+)
+from flext_infra._utilities._promoted.execution import (
+    FlextInfraUtilitiesPromotedExecution,
+)
+from flext_infra._utilities._promoted.rendering import (
+    FlextInfraUtilitiesPromotedRendering,
+)
 
 
 class FlextInfraUtilitiesPromoted(

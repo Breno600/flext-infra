@@ -1,10 +1,16 @@
-"""Concrete-syntax ownership moves for automatic class nesting."""
+"""Concrete-syntax ownership moves for automatic class nesting.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .nesting_references import FlextInfraUtilitiesSemanticCutoverNestingReferences
+from flext_infra._utilities._semantic_cutover.nesting_references import (
+    FlextInfraUtilitiesSemanticCutoverNestingReferences,
+)
 
 if TYPE_CHECKING:
     import libcst as cst
@@ -13,7 +19,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesSemanticCutoverNestingCst(
-    FlextInfraUtilitiesSemanticCutoverNestingReferences
+    FlextInfraUtilitiesSemanticCutoverNestingReferences,
 ):
     """Move proven top-level class nodes under one existing owner class."""
 
@@ -27,7 +33,12 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
         bindings_by_module: t.MappingKV[str, t.StrMapping],
         definitions: t.StrMapping,
     ) -> str:
-        """Return a binding-proven structural rewrite without filesystem effects."""
+        """Return a binding-proven structural rewrite without filesystem effects.
+
+        Returns:
+            A binding-proven structural rewrite without filesystem effects.
+
+        """
         rewritten = cls._rewrite_class_nesting_references(
             source,
             module_name=module_name,
@@ -61,7 +72,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
         }
         if not owner_nodes:
             owner = cst.parse_statement(
-                f'class {owner_name}:\n    """Canonical namespace owner."""\n'
+                f'class {owner_name}:\n    """Canonical namespace owner."""\n',
             )
             if not isinstance(owner, cst.ClassDef):
                 msg_0 = f"class-nesting could not create owner {owner_name}"
@@ -72,7 +83,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
                 if isinstance(node, cst.ClassDef) and node.name.value in definitions
             )
             module = module.with_changes(
-                body=(*module.body[:index], owner, *module.body[index:])
+                body=(*module.body[:index], owner, *module.body[index:]),
             )
             owner_nodes = (owner,)
         if len(owner_nodes) != 1 or set(extras) != set(definitions):
@@ -136,12 +147,17 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
                 if not (
                     isinstance(node, cst.ClassDef) and node.name.value in definitions
                 )
-            )
+            ),
         ).code
 
     @staticmethod
     def _declares_exports(node: cst.BaseStatement) -> bool:
-        """Whether one module-level statement declares ``__all__``."""
+        """Whether one module-level statement declares ``__all__``.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         import libcst as cst
 
         return isinstance(node, cst.SimpleStatementLine) and any(
@@ -153,7 +169,8 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
 
     @staticmethod
     def _rewritten_exports(
-        node: cst.BaseStatement, owner_name: str
+        node: cst.BaseStatement,
+        owner_name: str,
     ) -> cst.BaseStatement:
         """Rewrite the export list to the owner, keeping the node's own shape.
 
@@ -162,12 +179,17 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
         separating it from the preceding block (E305 on every moved module),
         and its declared annotation, so a module using a tuple annotation was
         silently rewritten to a list. Only the value changes here.
+
+        Returns:
+            The resulting ``cst.BaseStatement``.
+
         """
         import libcst as cst
 
         rewritten = cst.parse_statement(f'__all__ = ["{owner_name}"]\n')
         if not isinstance(node, cst.SimpleStatementLine) or not isinstance(
-            rewritten, cst.SimpleStatementLine
+            rewritten,
+            cst.SimpleStatementLine,
         ):
             return rewritten
         source = rewritten.body[0]
@@ -187,7 +209,13 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
     def _split_docstring(
         body: t.SequenceOf[cst.BaseStatement],
     ) -> t.Pair[t.VariadicTuple[cst.BaseStatement], t.VariadicTuple[cst.BaseStatement]]:
-        """Split one class body into its leading docstring and the remainder."""
+        """Split one class body into its leading docstring and the remainder.
+
+        Returns:
+            The resulting ``t.Pair[t.VariadicTuple[cst.BaseStatement],
+                t.VariadicTuple[cst.BaseStatement]]``.
+
+        """
         import libcst as cst
 
         if not body:
@@ -198,7 +226,8 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
             and len(head.body) == 1
             and isinstance(head.body[0], cst.Expr)
             and isinstance(
-                head.body[0].value, cst.SimpleString | cst.ConcatenatedString
+                head.body[0].value,
+                cst.SimpleString | cst.ConcatenatedString,
             )
         ):
             return ((head,), tuple(body[1:]))

@@ -1,15 +1,17 @@
-"""Dependency detection and analysis service for deptry, pip-check, and typing stubs."""
+"""Dependency detection and analysis service for deptry, pip-check, and typing stubs.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from collections.abc import Mapping, MutableMapping
 from pathlib import Path
-from typing import override
 
 from flext_core import c as core_c, r
 from flext_infra import c, m, p, t, u
-
-from .detection_analysis import FlextInfraDependencyDetectionAnalysis
+from flext_infra.deps.detection_analysis import FlextInfraDependencyDetectionAnalysis
 
 
 class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis):
@@ -17,43 +19,16 @@ class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis
 
     _log = u.fetch_logger(__name__)
 
-    def __init__(self) -> None:
-        """Initialize the dependency detection service with selector, toml, and runner."""
-        self.selector: p.Infra.ProjectSelector | None = None
-        self.toml: p.Infra.TomlReader | None = None
-        self.runner: p.Cli.CommandRunner | None = None
-
-    @override
-    def _read_plain(self, path: Path) -> p.Result[t.JsonMapping]:
-        """Read plain."""
-        if self.toml is not None:
-            return self.toml.read_plain(path)
-        plain_result = u.Cli.toml_read_json(path)
-        if plain_result.failure:
-            return r[t.JsonMapping].from_failure(plain_result)
-        return r[t.JsonMapping].ok(
-            t.Infra.INFRA_MAPPING_ADAPTER.validate_python(plain_result.value)
-        )
-
-    @override
-    def _run_raw(
-        self,
-        cmd: t.StrSequence,
-        *,
-        cwd: Path | None = None,
-        timeout: int | None = None,
-        env: t.StrMapping | None = None,
-    ) -> p.Result[p.Cli.CommandOutput]:
-        """Run raw."""
-        if self.runner is not None:
-            return self.runner.run_raw(cmd, cwd=cwd, timeout=timeout, env=env)
-        return u.Cli.run_raw(cmd, cwd=cwd, timeout=timeout, env=env)
-
     @staticmethod
     def classify_issues(
         issues: t.SequenceOf[t.JsonMapping],
     ) -> m.Infra.DeptryIssueGroups:
-        """Classify deptry issues by error code (DEP001-DEP004)."""
+        """Classify deptry issues by error code (DEP001-DEP004).
+
+        Returns:
+            The resulting ``m.Infra.DeptryIssueGroups``.
+
+        """
         groups = m.Infra.DeptryIssueGroups(dep001=[], dep002=[], dep003=[], dep004=[])
         for item in issues:
             normalized_item: MutableMapping[str, t.Primitives | None] = {}
@@ -81,15 +56,27 @@ class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis
         return groups
 
     def build_project_report(
-        self, project_name: str, deptry_issues: t.SequenceOf[t.JsonMapping]
+        self,
+        project_name: str,
+        deptry_issues: t.SequenceOf[t.JsonMapping],
     ) -> m.Infra.ProjectDependencyReport:
-        """Build a project dependency report from classified deptry issues."""
+        """Build a project dependency report from classified deptry issues.
+
+        Returns:
+            The resulting ``m.Infra.ProjectDependencyReport``.
+
+        """
         classified = self.classify_issues(deptry_issues)
 
         def _module_names(
             items: t.SequenceOf[t.MappingKV[str, t.JsonValue | None]],
         ) -> t.MutableSequenceOf[str]:
-            """Extract module names from classified issue items."""
+            """Extract module names from classified issue items.
+
+            Returns:
+                The resulting ``t.MutableSequenceOf[str]``.
+
+            """
             return [
                 str(val)
                 for item in items
@@ -108,19 +95,21 @@ class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis
         )
 
     def discover_project_paths(
-        self, repository_root: Path, projects_filter: t.StrSequence | None = None
+        self,
+        repository_root: Path,
+        projects_filter: t.StrSequence | None = None,
     ) -> p.Result[t.SequenceOf[Path]]:
         """Discover project paths with pyproject.toml in workspace.
 
         Returns only the Path objects, filtered to those with pyproject.toml.
         For full ProjectInfo metadata, use u.Infra.discover_projects().
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[Path]]``.
+
         """
         names = projects_filter or []
-        result = (
-            self.selector.resolve_projects(repository_root, names)
-            if self.selector is not None
-            else u.Infra.resolve_projects(repository_root, names)
-        )
+        result = u.Infra.resolve_projects(repository_root, names)
         if result.failure:
             return r[t.SequenceOf[Path]].from_failure(result)
         projects_info: t.SequenceOf[m.Infra.ProjectInfo] = result.value

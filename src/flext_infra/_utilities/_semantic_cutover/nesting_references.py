@@ -1,11 +1,15 @@
-"""Binding-aware reference rewrites for automatic class nesting."""
+"""Binding-aware reference rewrites for automatic class nesting.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, override
 
-from ..qualified_names import FlextInfraUtilitiesQualifiedNames
+from flext_infra._utilities.qualified_names import FlextInfraUtilitiesQualifiedNames
 
 if TYPE_CHECKING:
     import libcst as cst
@@ -26,7 +30,12 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
         bindings_by_module: t.MappingKV[str, t.StrMapping],
         definitions: t.StrMapping,
     ) -> str:
-        """Return binding-proven import and usage rewrites without effects."""
+        """Return binding-proven import and usage rewrites without effects.
+
+        Returns:
+            Binding-proven import and usage rewrites without effects.
+
+        """
         import libcst as cst
         from libcst.metadata import (
             MetadataWrapper,
@@ -69,6 +78,13 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
                 aliases parsed from valid Python can only carry a ``Name``
                 (``import x as (a, b)`` is a SyntaxError); Tuple/List belong to
                 ``WithItem``/``ExceptHandler`` clauses only.
+
+                Returns:
+                    The bound alias identifier, rejecting impossible shapes.
+
+                Raises:
+                    TypeError: If unsupported import alias target.
+
                 """
                 if not isinstance(asname.name, cst.Name):
                     msg = (
@@ -122,9 +138,15 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
                 Walking outward, a function boundary therefore means qualify, and a
                 class that is the owner or is itself being moved under the owner
                 means the reference will land in that shared class scope.
+
+                Returns:
+                    The resulting ``bool``.
+
                 """
                 current: cst.CSTNode | None = self.get_metadata(
-                    ParentNodeProvider, node, None
+                    ParentNodeProvider,
+                    node,
+                    None,
                 )
                 while current is not None:
                     if isinstance(current, cst.FunctionDef):
@@ -132,23 +154,35 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
                     if isinstance(current, cst.ClassDef):
                         name = current.name.value
                         return name in self.definitions or name in set(
-                            self.definitions.values()
+                            self.definitions.values(),
                         )
                     current = self.get_metadata(ParentNodeProvider, current, None)
                 return False
 
             def _single_binding(
-                self, original_node: cst.CSTNode, *, ambiguity: str
+                self,
+                original_node: cst.CSTNode,
+                *,
+                ambiguity: str,
             ) -> str | None:
                 """Return the one class-nesting replacement bound to ``original_node``.
 
                 ``None`` when the node carries no nesting binding; two competing
                 bindings are ambiguous and raise with ``ambiguity`` naming the site.
+
+                Returns:
+                    The one class-nesting replacement bound to ``original_node``.
+
+                Raises:
+                    ValueError: If ambiguous class-nesting.
+
                 """
                 replacements = {
                     replacement
                     for qualified_name in self.get_metadata(
-                        QualifiedNameProvider, original_node, ()
+                        QualifiedNameProvider,
+                        original_node,
+                        (),
                     )
                     if (replacement := self.qualified.get(qualified_name.name))
                     is not None
@@ -162,14 +196,17 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
 
             @override
             def leave_Name(
-                self, original_node: cst.Name, updated_node: cst.Name
+                self,
+                original_node: cst.Name,
+                updated_node: cst.Name,
             ) -> cst.BaseExpression:
                 bound = self._single_binding(original_node, ambiguity="binding")
                 if bound is None:
                     return updated_node
                 parent = self.get_metadata(ParentNodeProvider, original_node)
                 if FlextInfraUtilitiesQualifiedNames.rebinds_name_in_place(
-                    parent, original_node
+                    parent,
+                    original_node,
                 ):
                     return updated_node
                 if isinstance(parent, cst.ClassDef) and parent.name is original_node:
@@ -185,7 +222,9 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
 
             @override
             def leave_Attribute(
-                self, original_node: cst.Attribute, updated_node: cst.Attribute
+                self,
+                original_node: cst.Attribute,
+                updated_node: cst.Attribute,
             ) -> cst.BaseExpression:
                 bound = self._single_binding(original_node, ambiguity="attribute")
                 if bound is None:
@@ -198,10 +237,13 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
 
             @override
             def leave_ImportFrom(
-                self, original_node: cst.ImportFrom, updated_node: cst.ImportFrom
+                self,
+                original_node: cst.ImportFrom,
+                updated_node: cst.ImportFrom,
             ) -> cst.BaseSmallStatement | cst.RemovalSentinel:
                 bindings = self.bindings_by_module.get(
-                    self._import_module(original_node), {}
+                    self._import_module(original_node),
+                    {},
                 )
                 if not bindings or isinstance(updated_node.names, cst.ImportStar):
                     return updated_node
@@ -230,24 +272,31 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
                     return cst.RemoveFromParent()
                 return updated_node.with_changes(
                     names=FlextInfraUtilitiesQualifiedNames.normalized_import_aliases(
-                        aliases, parenthesized=bool(updated_node.lpar)
-                    )
+                        aliases,
+                        parenthesized=bool(updated_node.lpar),
+                    ),
                 )
 
             @override
             def leave_Assign(
-                self, original_node: cst.Assign, updated_node: cst.Assign
+                self,
+                original_node: cst.Assign,
+                updated_node: cst.Assign,
             ) -> cst.BaseSmallStatement:
                 return FlextInfraUtilitiesQualifiedNames.filter_exports(
-                    updated_node, self.definitions
+                    updated_node,
+                    self.definitions,
                 )
 
             @override
             def leave_AnnAssign(
-                self, original_node: cst.AnnAssign, updated_node: cst.AnnAssign
+                self,
+                original_node: cst.AnnAssign,
+                updated_node: cst.AnnAssign,
             ) -> cst.BaseSmallStatement:
                 return FlextInfraUtilitiesQualifiedNames.filter_exports(
-                    updated_node, self.definitions
+                    updated_node,
+                    self.definitions,
                 )
 
         return (
@@ -258,7 +307,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
                     is_package_init=is_package_init,
                     bindings_by_module=bindings_by_module,
                     definitions=definitions,
-                )
+                ),
             )
             .code
         )

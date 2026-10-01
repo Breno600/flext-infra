@@ -1,12 +1,15 @@
-"""Documentation builder service."""
+"""Documentation builder service.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
 from flext_infra import c, u
-
-from .base import FlextInfraDocServiceBase
+from flext_infra.docs.base import FlextInfraDocServiceBase
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -17,8 +20,6 @@ if TYPE_CHECKING:
 class FlextInfraDocBuilder(FlextInfraDocServiceBase):
     """Build MkDocs sites for governed FLEXT scopes."""
 
-    _runner: p.Cli.CommandRunner = u.PrivateAttr(default_factory=u.Cli)
-
     def build(
         self,
         repository_root: Path,
@@ -26,7 +27,12 @@ class FlextInfraDocBuilder(FlextInfraDocServiceBase):
         projects: t.StrSequence | None = None,
         output_dir: Path | str | None = None,
     ) -> p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]:
-        """Build MkDocs sites across project scopes."""
+        """Build MkDocs sites across project scopes.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]``.
+
+        """
         return self.run_scoped_docs(
             repository_root,
             projects=projects,
@@ -36,7 +42,12 @@ class FlextInfraDocBuilder(FlextInfraDocServiceBase):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute the configured docs build flow."""
+        """Execute the configured docs build flow.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         return self._propagate_phase_outcome(
             "build",
             self.build(
@@ -48,10 +59,13 @@ class FlextInfraDocBuilder(FlextInfraDocServiceBase):
         )
 
     def _build_scope(self, scope: m.Infra.DocScope) -> m.Infra.DocsPhaseReport:
-        """Build one scope via the docs build utilities and persist its reports."""
-        report: m.Infra.DocsPhaseReport = u.Infra.docs_run_mkdocs(
-            scope, runner=self._runner
-        )
+        """Build one scope via the docs build utilities and persist its reports.
+
+        Returns:
+            The resulting ``m.Infra.DocsPhaseReport``.
+
+        """
+        report: m.Infra.DocsPhaseReport = u.Infra.docs_run_mkdocs(scope)
         u.Infra.docs_write_build_reports(scope, report)
         self.logger.info(
             "docs_build_scope_completed",

@@ -1,4 +1,8 @@
-"""CLI contract tests for the centralized validate CLI group."""
+"""CLI contract tests for the centralized validate CLI group.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,7 +11,7 @@ from typing import TYPE_CHECKING
 from flext_tests import tm
 
 from flext_infra import main as infra_main
-from tests import u
+from tests import c
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -16,7 +20,9 @@ if TYPE_CHECKING:
 class TestsFlextInfraValidateCli:
     """Exercise the public validate CLI entrypoints."""
 
-    def test_stub_validate_accepts_all_flag(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_stub_validate_accepts_all_flag(tmp_path: Path) -> None:
+        """Test stub validate accepts all flag."""
         workspace = tmp_path / "workspace"
         workspace.mkdir(parents=True, exist_ok=True)
 
@@ -31,17 +37,45 @@ class TestsFlextInfraValidateCli:
             eq=0,
         )
 
-    def test_stub_validate_help_returns_zero(self) -> None:
+    @staticmethod
+    def test_stub_validate_help_returns_zero() -> None:
+        """Test stub validate help returns zero."""
         tm.that(infra_main(["validate", "stub-validate", "--help"]), eq=0)
 
-    def test_namespace_validate_runs_with_facade_composed_rope(
-        self, tmp_path: Path
-    ) -> None:
-        project = u.Tests.namespace_project(
-            tmp_path,
-            module_source=u.Tests.namespace_fixture("rule0_valid.py"),
-            module_name="models.py",
+    @staticmethod
+    def _rule_project(tmp_path: Path, source: str) -> Path:
+        """Create a project whose own catalog declares one rule.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
+        project = tmp_path / "namespace-contract"
+        config_path = project / c.Infra.CODEMOD_CONFIG_RELPATH
+        rules = config_path.parent / c.Cli.RULES_DIR_NAME
+        rules.mkdir(parents=True)
+        (project / "src").mkdir()
+        (project / c.PYPROJECT_FILENAME).write_text(
+            '[project]\nname = "namespace-contract"\nversion = "1.0.0"\n'
+            "dependencies = []\n",
+            encoding="utf-8",
         )
+        config_path.write_text(
+            f"ruleDirs: [{c.Cli.RULES_DIR_NAME}]\n",
+            encoding="utf-8",
+        )
+        (rules / "contract.yml").write_text(
+            "id: namespace-contract\nlanguage: Python\nseverity: error\n"
+            "message: Observed contract\nrule:\n  pattern: first($VALUE)\n",
+            encoding="utf-8",
+        )
+        if source:
+            (project / "src" / "subject.py").write_text(source, encoding="utf-8")
+        return project
+
+    def test_namespace_validate_passes_without_findings(self, tmp_path: Path) -> None:
+        """Test namespace validate passes without findings."""
+        project = self._rule_project(tmp_path, "")
 
         exit_code = infra_main([
             "validate",
@@ -52,14 +86,12 @@ class TestsFlextInfraValidateCli:
 
         tm.that(exit_code, eq=0)
 
-    def test_namespace_validate_exits_nonzero_for_real_violations(
-        self, tmp_path: Path
+    def test_namespace_validate_exits_nonzero_for_rule_findings(
+        self,
+        tmp_path: Path,
     ) -> None:
-        project = u.Tests.namespace_project(
-            tmp_path,
-            module_source=u.Tests.namespace_fixture("rule0_no_class.py"),
-            module_name="models.py",
-        )
+        """Test namespace validate exits nonzero for rule findings."""
+        project = self._rule_project(tmp_path, "first(1)\n")
 
         exit_code = infra_main([
             "validate",

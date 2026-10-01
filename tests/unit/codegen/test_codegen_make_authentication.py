@@ -1,4 +1,8 @@
-"""Generated Make authentication through explicit environment credentials."""
+"""Generated Make authentication through explicit environment credentials.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -13,22 +17,23 @@ pytestmark = pytest.mark.slow
 
 
 class TestsFlextInfraCodegenMakeAuthentication:
-    """Prove explicit credentials reach tools and local operations need none."""
+    """Prove the one credential reaches tools and local operations need none."""
 
-    @pytest.mark.parametrize("credential_source", ["GH_TOKEN", "GITHUB_TOKEN"])
-    def test_make_exports_explicit_credential_to_real_mise(
-        self, tmp_path: Path, credential_source: str
+    @staticmethod
+    def test_make_exports_the_one_credential_to_real_mise(
+        tmp_path: Path,
     ) -> None:
-        """A generated public verb passes only the selected process credential."""
+        """A generated public verb passes GITHUB_TOKEN and never an alias of it."""
         project_root, _ = u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
         )
         tm.ok(u.Tests.create_python_environment(project_root))
         (project_root / "auth_probe.py").write_text(
             "import os, sys\n"
-            "assert all(os.environ[name] == sys.argv[1] for name in "
-            "('GITHUB_TOKEN', 'GH_TOKEN'))\n"
-            "assert 'MISE_GITHUB_TOKEN' not in os.environ\n"
+            "assert os.environ['GITHUB_TOKEN'] == sys.argv[1]\n"
+            "assert not {'GH_TOKEN', 'MISE_GITHUB_TOKEN', 'GITHUB_API_TOKEN'}"
+            " & set(os.environ)\n"
             "print('environment-authenticated')\n",
             encoding="utf-8",
         )
@@ -39,24 +44,19 @@ class TestsFlextInfraCodegenMakeAuthentication:
             '"$(EXPECTED_CREDENTIAL)"\n',
             encoding="utf-8",
         )
-        selected = (
-            "fixture-gh-token"
-            if credential_source == "GH_TOKEN"
-            else "fixture-github-token"
-        )
+        selected = "fixture-github-token"
         process = tm.ok(
             u.Tests.run_isolated_make(
                 ["--no-print-directory", "status"],
                 cwd=project_root,
                 env={
-                    "GH_TOKEN": selected if credential_source == "GH_TOKEN" else "",
-                    "GITHUB_TOKEN": "invalid-lower-precedence-token"
-                    if credential_source == "GH_TOKEN"
-                    else selected,
+                    "GITHUB_TOKEN": selected,
                     "EXPECTED_CREDENTIAL": selected,
-                    "MISE_GITHUB_TOKEN": "stale-token-must-not-reach-mise",
+                    "GH_TOKEN": "alias-must-not-reach-tools",
+                    "MISE_GITHUB_TOKEN": "alias-must-not-reach-tools",
+                    "GITHUB_API_TOKEN": "alias-must-not-reach-tools",
                 },
-            )
+            ),
         )
         tm.that(
             u.Cli.process_succeeded(process.outcome),
@@ -70,7 +70,8 @@ class TestsFlextInfraCodegenMakeAuthentication:
     def test_local_verbs_need_no_credential(self, tmp_path: Path, verb: str) -> None:
         """Local public verbs complete without a GitHub credential."""
         project_root, _ = u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
         )
         if verb == "status":
             tm.ok(u.Tests.create_python_environment(project_root))
@@ -82,16 +83,13 @@ class TestsFlextInfraCodegenMakeAuthentication:
             u.Tests.run_isolated_make(
                 ["--no-print-directory", verb],
                 cwd=project_root,
-                env={
-                    "GH_TOKEN": "",
-                    "GITHUB_TOKEN": "",
-                    "MISE_GITHUB_TOKEN": "must-not-be-a-fallback",
-                },
-            )
+                env={"MISE_GITHUB_TOKEN": "alias-must-not-reach-tools"},
+            ),
         )
         tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
         tm.that(
-            u.Infra.runtime_environment_dir(project_root).exists(), eq=verb == "status"
+            u.Infra.runtime_environment_dir(project_root).exists(),
+            eq=verb == "status",
         )
 
     @pytest.mark.remote
@@ -100,21 +98,23 @@ class TestsFlextInfraCodegenMakeAuthentication:
         tmp_path: Path,
         resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
     ) -> None:
-        """A locked checkout provisions its own environment without authentication."""
+        """A locked checkout provisions its own environment without authentication.
+
+        No GITHUB_TOKEN is set and the isolated harness leaves gh without a
+        stored credential, so the bootstrap runs with no credential at all.
+        """
         profile = c.Infra.MakeProfile.STANDALONE
         project_root = u.Tests.resolved_make_checkout(
-            resolved_make_templates[profile], tmp_path, profile
+            resolved_make_templates[profile],
+            tmp_path,
+            profile,
         )
         process = tm.ok(
             u.Tests.run_isolated_make(
                 ["--no-print-directory", "setup"],
                 cwd=project_root,
-                env={
-                    "GH_TOKEN": "",
-                    "GITHUB_TOKEN": "",
-                    "MISE_GITHUB_TOKEN": "must-not-be-a-fallback",
-                },
-            )
+                env={"MISE_GITHUB_TOKEN": "alias-must-not-reach-tools"},
+            ),
         )
         tm.that(
             u.Cli.process_succeeded(process.outcome),
@@ -125,11 +125,13 @@ class TestsFlextInfraCodegenMakeAuthentication:
 
     @pytest.mark.remote
     def test_invalid_explicit_token_fails_at_the_native_mise_backend(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A selected invalid credential fails at the backend without a retry."""
         project_root, _ = u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
         )
         # The credential proves itself only where mise actually consults it:
         # the GitHub artifact-attestation verification of a cold install. A
@@ -141,13 +143,12 @@ class TestsFlextInfraCodegenMakeAuthentication:
                 ["--no-print-directory", "upg"],
                 cwd=project_root,
                 env={
-                    "GH_TOKEN": "invalid-test-credential",
-                    "GITHUB_TOKEN": "",
+                    "GITHUB_TOKEN": "invalid-test-credential",
                     u.Infra.mise_bootstrap_environment().storage_root_variable: str(
-                        u.Tests.isolated_mise_bootstrap_storage(project_root)
+                        u.Tests.isolated_mise_bootstrap_storage(project_root),
                     ),
                 },
-            )
+            ),
         )
 
         tm.that(process.outcome.raw_return_code, ne=0)

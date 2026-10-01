@@ -1,5 +1,8 @@
 """Every command in one verb recipe writes to the same root.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Scope is the invocation point's own repository: every repository, the
 workspace root included, works on itself alone (operator ruling 2026-09-29).
 
@@ -42,14 +45,26 @@ class TestsFlextInfraGenRespectsInvocationScope:
 
     @pytest.fixture
     def rendered_makefile(self, tmp_path: Path) -> str:
-        """Render the workspace Makefile through the conform owner."""
+        """Render the workspace Makefile through the conform owner.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return u.Tests.scaffold_text(
-            tmp_path / "fixture-project", c.Infra.MAKEFILE_FILENAME, members=(_MEMBER,)
+            tmp_path / "fixture-project",
+            c.Infra.MAKEFILE_FILENAME,
+            members=(_MEMBER,),
         )
 
     @staticmethod
     def _recipe_bodies(text: str) -> t.MutableMappingKV[str, list[str]]:
-        """Return each rendered ``_builtin_*`` target mapped to its recipe lines."""
+        """Return each rendered ``_builtin_*`` target mapped to its recipe lines.
+
+        Returns:
+            Each rendered ``_builtin_*`` target mapped to its recipe lines.
+
+        """
         bodies: t.MutableMappingKV[str, list[str]] = {}
         current: str | None = None
         for line in text.splitlines():
@@ -67,7 +82,8 @@ class TestsFlextInfraGenRespectsInvocationScope:
         return bodies
 
     def test_no_recipe_mixes_project_and_repository_roots(
-        self, rendered_makefile: str
+        self,
+        rendered_makefile: str,
     ) -> None:
         """One rendered recipe never writes to two different roots.
 
@@ -109,7 +125,8 @@ class TestsFlextInfraGenRespectsInvocationScope:
         tm.that(any("deps extra-paths" in line for line in body), eq=False)
 
     def test_gen_init_uses_the_provisioned_owner_route(
-        self, rendered_makefile: str
+        self,
+        rendered_makefile: str,
     ) -> None:
         """Initialize uses its declared interpreter and one initializer owner."""
         init_lines = self._recipe_bodies(rendered_makefile)["_builtin_gen_init"]
@@ -124,7 +141,9 @@ class TestsFlextInfraGenRespectsInvocationScope:
         )
         tm.that(any("codegen conform" in line for line in init_lines), eq=False)
         for verb in config.Infra.codegen.make.verbs:
-            if verb.name in {"setup", "upg", "help", "clean"}:
+            if verb.name in {"setup", "upg", "help", "clean"} or (
+                verb.profiles and c.Infra.MakeProfile.WORKSPACE not in verb.profiles
+            ):
                 continue
             tm.that(
                 rendered_makefile,
@@ -144,8 +163,9 @@ class TestsFlextInfraGenRespectsInvocationScope:
         tm.that(rendered_makefile, has="REPOSITORY_ROOT := $(MAKEFILE_ROOT)")
         tm.that(rendered_makefile, lacks="INIT_FLEXT_INFRA")
 
+    @staticmethod
     def test_project_selector_resolves_members_from_repository_root(
-        self, rendered_makefile: str
+        rendered_makefile: str,
     ) -> None:
         """Workspace members are projected as declared gitlinks, not a WORKSPACE var.
 

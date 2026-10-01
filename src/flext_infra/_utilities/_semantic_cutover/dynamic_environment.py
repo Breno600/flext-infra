@@ -1,4 +1,8 @@
-"""Route config-owned dynamic environment keys through their settings owner."""
+"""Route config-owned dynamic environment keys through their settings owner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -17,9 +21,12 @@ from libcst.metadata import (
 )
 
 from flext_infra import m, t
-
-from .bindings import FlextInfraUtilitiesSemanticCutoverBindings
-from .edits import FlextInfraUtilitiesSemanticCutoverEdits
+from flext_infra._utilities._semantic_cutover.bindings import (
+    FlextInfraUtilitiesSemanticCutoverBindings,
+)
+from flext_infra._utilities._semantic_cutover.edits import (
+    FlextInfraUtilitiesSemanticCutoverEdits,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -28,7 +35,8 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(
-    FlextInfraUtilitiesSemanticCutoverEdits, FlextInfraUtilitiesSemanticCutoverBindings
+    FlextInfraUtilitiesSemanticCutoverEdits,
+    FlextInfraUtilitiesSemanticCutoverBindings,
 ):
     """Require resolved OS imports and same-function config provenance."""
 
@@ -36,7 +44,7 @@ class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(
         METADATA_DEPENDENCIES = (ParentNodeProvider, QualifiedNameProvider)
 
         def __init__(self, bindings: t.MappingKV[str, int]) -> None:
-            self.aliases: dict[tuple[str, cst.FunctionDef], str] = {}
+            self.aliases: t.MutableMappingKV[t.Pair[str, cst.FunctionDef], str] = {}
             self.packages: set[str] = set()
             self.bindings = bindings
 
@@ -68,7 +76,7 @@ class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(
             packages: set[str] = set()
             for name in names:
                 if name.source is QualifiedNameSource.IMPORT and name.name.endswith(
-                    ".config"
+                    ".config",
                 ):
                     packages.add(name.name.removesuffix(".config"))
                 elif (function := self._function(node)) is not None:
@@ -106,12 +114,15 @@ class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(
                 raise ValueError(msg)
             self.packages.add(package)
             return cst.Call(
-                cst.Attribute(cst.Name("settings"), cst.Name(method)), (cst.Arg(key),)
+                cst.Attribute(cst.Name("settings"), cst.Name(method)),
+                (cst.Arg(key),),
             )
 
         @override
         def leave_Call(
-            self, original_node: cst.Call, updated_node: cst.Call
+            self,
+            original_node: cst.Call,
+            updated_node: cst.Call,
         ) -> cst.BaseExpression:
             if not self._qualified(original_node.func, "os.environ.get"):
                 return updated_node
@@ -128,12 +139,15 @@ class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(
 
         @override
         def leave_Subscript(
-            self, original_node: cst.Subscript, updated_node: cst.Subscript
+            self,
+            original_node: cst.Subscript,
+            updated_node: cst.Subscript,
         ) -> cst.BaseExpression:
             if not self._qualified(original_node.value, "os.environ"):
                 return updated_node
             if len(original_node.slice) != 1 or not isinstance(
-                original_node.slice[0].slice, cst.Index
+                original_node.slice[0].slice,
+                cst.Index,
             ):
                 msg = "dynamic environment lookup requires a single key"
                 raise ValueError(msg)
@@ -201,7 +215,14 @@ class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(
 
     @staticmethod
     def _require_settings_owner(package: str, sources: t.MappingKV[Path, str]) -> None:
-        """Require the destination settings API to exist in the source inventory."""
+        """Require the destination settings API to exist in the source inventory.
+
+        Raises:
+            ValueError: If dynamic environment migration requires one declared settings
+                owner; or if settings owner lacks optional/required dynamic environment
+                reads.
+
+        """
         owners = [
             source
             for path, source in sources.items()

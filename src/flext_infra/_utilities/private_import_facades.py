@@ -1,4 +1,8 @@
-"""Public-facade discovery for semantic private-import rewrites."""
+"""Public-facade discovery for semantic private-import rewrites.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,8 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import c
-
-from .rope_analysis import FlextInfraUtilitiesRopeAnalysis
+from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
 
 if TYPE_CHECKING:
     from collections.abc import Set as AbstractSet
@@ -23,12 +26,21 @@ class FlextInfraUtilitiesPrivateImportFacades:
 
     @staticmethod
     def source_modules(
-        sources: t.MappingKV[Path, str], statements: t.SequenceOf[str]
+        sources: t.MappingKV[Path, str],
+        statements: t.SequenceOf[str],
     ) -> MutableMapping[str, t.Pair[str, bool]]:
         """Index editable sources and referenced installed packages without imports.
 
         Installed files are discovery inputs only. Resolving a top-level spec
         never imports its package initializer or dependency business modules.
+
+        Returns:
+            The resulting ``MutableMapping[str, t.Pair[str, bool]]``.
+
+        Raises:
+            ValueError: If ambiguous source module identity; or if ambiguous installed
+                module identity.
+
         """
         modules: MutableMapping[str, t.Pair[str, bool]] = {}
         for path, source in sorted(sources.items()):
@@ -41,7 +53,9 @@ class FlextInfraUtilitiesPrivateImportFacades:
                 continue
             parts = path.parts[indices[-1] + 1 :]
             module = ".".join(
-                parts[:-1] if path.name == c.Infra.INIT_PY else (*parts[:-1], path.stem)
+                parts[:-1]
+                if path.name == c.Infra.INIT_PY
+                else (*parts[:-1], path.stem),
             )
             if not module:
                 continue
@@ -81,13 +95,18 @@ class FlextInfraUtilitiesPrivateImportFacades:
 
     @staticmethod
     def reachable_sources(
-        sources: t.MappingKV[str, t.Pair[str, bool]], statements: t.SequenceOf[str]
+        sources: t.MappingKV[str, t.Pair[str, bool]],
+        statements: t.SequenceOf[str],
     ) -> t.MappingKV[str, t.Pair[str, bool]]:
         """Keep the importers that can expose a requested private module.
 
         An installed distribution can contain unrelated modules with invalid
         imports. Their declarations have no bearing on a cutover whose target
         is reachable through a different public facade.
+
+        Returns:
+            The resulting ``t.MappingKV[str, t.Pair[str, bool]]``.
+
         """
         reverse: MutableMapping[str, set[str]] = {}
         for module, (source, is_package) in sources.items():
@@ -114,6 +133,14 @@ class FlextInfraUtilitiesPrivateImportFacades:
                     )
                 for imported in imported_modules:
                     reverse.setdefault(imported, set()).add(module)
+                    # Importing a package's child can expose a name exported
+                    # by the parent package. Keep that importer reachable when
+                    # the requested private import names the package itself.
+                    parent = imported.rpartition(".")[0]
+                    while parent:
+                        if parent in sources and sources[parent][1]:
+                            reverse.setdefault(parent, set()).add(module)
+                        parent = parent.rpartition(".")[0]
         reachable = {
             node.module
             for statement in statements
@@ -134,14 +161,20 @@ class FlextInfraUtilitiesPrivateImportFacades:
     def declared_exports(
         sources: t.MappingKV[str, t.Pair[str, bool]],
     ) -> t.Pair[MutableMapping[str, set[str]], MutableMapping[str, set[str]]]:
-        """Index declared public exports and module-scope import identities."""
+        """Index declared public exports and module-scope import identities.
+
+        Returns:
+            The resulting ``t.Pair[MutableMapping[str, set[str]], MutableMapping[str,
+                set[str]]]``.
+
+        """
         bindings: MutableMapping[str, set[str]] = {}
         exports: MutableMapping[str, set[str]] = {}
         for module, (source, is_package) in sorted(sources.items()):
             package = module if is_package else module.rpartition(".")[0]
             tree = ast.parse(source, filename=module)
             public_names = FlextInfraUtilitiesRopeAnalysis.public_export_names_source(
-                source
+                source,
             )
             lazy_exports, lazy_name = (
                 FlextInfraUtilitiesRopeAnalysis.lazy_public_exports_source(source)
@@ -158,7 +191,8 @@ class FlextInfraUtilitiesPrivateImportFacades:
                     if isinstance(node, ast.ImportFrom):
                         imported_module = (
                             resolve_name(
-                                "." * node.level + (node.module or ""), package
+                                "." * node.level + (node.module or ""),
+                                package,
                             )
                             if node.level
                             else node.module or ""
@@ -170,7 +204,8 @@ class FlextInfraUtilitiesPrivateImportFacades:
                                     set(),
                                 ).add(f"{imported_module}.{imported.name}")
                     elif isinstance(
-                        node, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef
+                        node,
+                        ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
                     ):
                         identity = f"{module}.{node.name}"
                         # A runtime declaration replaces an earlier imported name in
@@ -219,7 +254,17 @@ class FlextInfraUtilitiesPrivateImportFacades:
         bindings: t.MappingKV[str, set[str]],
         exports: t.MappingKV[str, set[str]],
     ) -> t.Pair[str, str] | None:
-        """Resolve re-export chains by identity, preferring an explicit root ABI."""
+        """Resolve re-export chains by identity, preferring an explicit root ABI.
+
+        Returns:
+            The resulting ``t.Pair[str, str] | None``.
+
+        Raises:
+            ValueError: If ambiguous private symbol identity for; or if ambiguous
+                declared public exports for; or if cyclic public export identity; or if
+                ambiguous public export identity for.
+
+        """
 
         def identities(name: str, visiting: frozenset[str]) -> set[str]:
             if name in visiting:
@@ -278,6 +323,10 @@ class FlextInfraUtilitiesPrivateImportFacades:
         (``pkg.servers._oid.x``) belong to the same distribution root — the
         importer is a same-project sibling and must rewire relatively, never
         hunt a facade cross-owner.
+
+        Returns:
+            The distribution root owning ``module``.
+
         """
         parts = module.split(".")
         root = parts[0] if parts else ""
@@ -289,7 +338,13 @@ class FlextInfraUtilitiesPrivateImportFacades:
     def discover(
         sources: t.MappingKV[str, t.Pair[str, bool]],
     ) -> t.MappingKV[str, t.VariadicTuple[t.Quad[ast.Module, str, str, str]]]:
-        """Discover facade aliases and roots from live source assignments."""
+        """Discover facade aliases and roots from live source assignments.
+
+        Returns:
+            The resulting ``t.MappingKV[str, t.VariadicTuple[t.Quad[ast.Module, str,
+                str, str]]]``.
+
+        """
         discovered: MutableMapping[str, list[t.Quad[ast.Module, str, str, str]]] = {}
         for module, (source, is_package) in sorted(sources.items()):
             if is_package:
@@ -348,7 +403,16 @@ class FlextInfraUtilitiesPrivateImportFacades:
         bindings: t.MappingKV[str, set[str]],
         class_bases: t.MappingKV[str, t.VariadicTuple[str]],
     ) -> str | None:
-        """Resolve one private class to exactly one inherited facade path."""
+        """Resolve one private class to exactly one inherited facade path.
+
+        Returns:
+            The resulting ``str | None``.
+
+        Raises:
+            ValueError: If ambiguous public facade references for; or if cyclic public
+                facade inheritance; or if ambiguous public facade base identity.
+
+        """
         references: set[str] = set()
 
         def inherits(identity: str, visiting: frozenset[str]) -> bool:
@@ -418,7 +482,9 @@ class FlextInfraUtilitiesPrivateImportFacades:
 
     @staticmethod
     def facade_alias_binding(
-        *, owners: t.SequenceOf[t.Quad[ast.Module, str, str, str]], alias: str | None
+        *,
+        owners: t.SequenceOf[t.Quad[ast.Module, str, str, str]],
+        alias: str | None,
     ) -> str | None:
         """Return the alias when the owning package publishes it as a facade.
 
@@ -426,6 +492,10 @@ class FlextInfraUtilitiesPrivateImportFacades:
         facade binding, not a class reference: the consumer writes ``m.X``
         against the facade, so the cutover swaps the import statement and every
         usage stays exactly as written.
+
+        Returns:
+            The alias when the owning package publishes it as a facade.
+
         """
         if alias is None:
             return None
@@ -440,9 +510,19 @@ class FlextInfraUtilitiesPrivateImportFacades:
 
     @staticmethod
     def public_root_name(
-        *, owners: t.SequenceOf[t.Quad[ast.Module, str, str, str]], facade_alias: str
+        *,
+        owners: t.SequenceOf[t.Quad[ast.Module, str, str, str]],
+        facade_alias: str,
     ) -> str | None:
-        """Return the public long name assigned to a canonical facade alias."""
+        """Return the public long name assigned to a canonical facade alias.
+
+        Returns:
+            The public long name assigned to a canonical facade alias.
+
+        Raises:
+            ValueError: If ambiguous public facade root for alias.
+
+        """
         roots = {
             root_name
             for _tree, alias, root_name, _facade_file in owners
@@ -461,7 +541,12 @@ class FlextInfraUtilitiesPrivateImportFacades:
         file_path: Path,
         removals: t.MappingKV[str, AbstractSet[str]],
     ) -> None:
-        """Reject any binding that would shadow the inserted public facade."""
+        """Reject any binding that would shadow the inserted public facade.
+
+        Raises:
+            ValueError: If public facade alias.
+
+        """
         allowed_imports = {
             id(node)
             for node in ast.walk(tree)
@@ -496,7 +581,8 @@ class FlextInfraUtilitiesPrivateImportFacades:
             elif isinstance(node, ast.arg) and node.arg == alias:
                 break
             elif isinstance(
-                node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
+                node,
+                ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
             ):
                 if node.name == alias:
                     break

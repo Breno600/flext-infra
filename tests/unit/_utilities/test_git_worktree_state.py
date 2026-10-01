@@ -1,4 +1,8 @@
-"""Real Git round trips through the public worktree state-copy boundary."""
+"""Real Git round trips through the public worktree state-copy boundary.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -13,12 +17,14 @@ from tests import u as test_u
 class TestsFlextInfraGitWorktreeState:
     """Preserve both Git layers and reject destructive destination states."""
 
-    def _lane(self, parent: Path, source: Path) -> Path:
+    @staticmethod
+    def _lane(parent: Path, source: Path) -> Path:
         lane = parent / "lane"
         test_u.Tests.git_run(source, "worktree", "add", "--detach", str(lane))
         return lane
 
-    def _assert_layers_match(self, source: Path, lane: Path) -> None:
+    @staticmethod
+    def _assert_layers_match(source: Path, lane: Path) -> None:
         for args in (
             ("status", "--porcelain=v1", "--untracked-files=all"),
             ("diff", "--binary", "HEAD"),
@@ -31,7 +37,8 @@ class TestsFlextInfraGitWorktreeState:
             )
 
     def test_partial_staging_binary_modes_deletions_and_untracked(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         source = test_u.Tests.git_repository(tmp_path)
         partial = source / "partial.txt"
@@ -43,7 +50,12 @@ class TestsFlextInfraGitWorktreeState:
         recreated = source / "recreated.txt"
         recreated.write_text("base\n", encoding="utf-8")
         test_u.Tests.git_run(
-            source, "add", "partial.txt", "binary.dat", "deleted.txt", "recreated.txt"
+            source,
+            "add",
+            "partial.txt",
+            "binary.dat",
+            "deleted.txt",
+            "recreated.txt",
         )
         test_u.Tests.git_run(source, "commit", "-m", "tracked fixtures")
         lane = self._lane(tmp_path, source)
@@ -93,7 +105,11 @@ class TestsFlextInfraGitWorktreeState:
         (source / "public.txt").write_text("public\n", encoding="utf-8")
 
         tm.ok(
-            u.Infra.git_copy_worktree_state(source, lane, excluded=(Path("[private]"),))
+            u.Infra.git_copy_worktree_state(
+                source,
+                lane,
+                excluded=(Path("[private]"),),
+            ),
         )
 
         tm.that((lane / "[private]/tracked.txt").read_text(), eq="base\n")
@@ -101,7 +117,8 @@ class TestsFlextInfraGitWorktreeState:
         tm.that((lane / "public.txt").read_text(), eq="public\n")
 
     def test_dirty_destination_is_rejected_before_any_effect(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         source = test_u.Tests.git_repository(tmp_path)
         lane = self._lane(tmp_path, source)
@@ -116,7 +133,8 @@ class TestsFlextInfraGitWorktreeState:
         tm.that((lane / "owned.txt").read_text(), eq="destination\n")
         tm.that((lane / "new.txt").exists(), eq=False)
 
-    def test_other_repository_is_rejected(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_other_repository_is_rejected(tmp_path: Path) -> None:
         source = test_u.Tests.git_repository(tmp_path)
         destination = test_u.Tests.git_repository(tmp_path, "other")
         (source / "new.txt").write_text("source\n", encoding="utf-8")

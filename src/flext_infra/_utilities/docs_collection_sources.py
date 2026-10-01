@@ -1,4 +1,8 @@
-"""Authenticated provider file discovery for plan collection."""
+"""Authenticated provider file discovery for plan collection.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -16,9 +20,18 @@ class FlextInfraUtilitiesDocsCollectionSources:
 
     @staticmethod
     def collection_source_root(
-        root: Path, source: m.Infra.PlanCollectionSource
+        root: Path,
+        source: m.Infra.PlanCollectionSource,
     ) -> Path:
-        """Resolve a declared source without allowing lexical parent traversal."""
+        """Resolve a declared source without allowing lexical parent traversal.
+
+        Returns:
+            The resulting ``Path``.
+
+        Raises:
+            ValueError: If collection source escapes its association.
+
+        """
         selected = source.root.expanduser()
         if ".." in selected.parts:
             msg = f"collection source escapes its association: {selected}"
@@ -32,7 +45,17 @@ class FlextInfraUtilitiesDocsCollectionSources:
         source: m.Infra.PlanCollectionSource,
         excluded_outputs: t.VariadicTuple[Path] = (),
     ) -> t.VariadicTuple[Path]:
-        """Inventory physical regular files, rejecting inaccessible sources."""
+        """Inventory physical regular files, rejecting inaccessible sources.
+
+        Returns:
+            The resulting ``t.VariadicTuple[Path]``.
+
+        Raises:
+            FileNotFoundError: If ``chain.directories``.
+            ValueError: If unsafe collection pattern; or if selected plan source is a
+                symlink.
+
+        """
         selected = cls.collection_source_root(root, source)
         chain = cli_u.Cli.atomic_plan_directory_chain(selected).unwrap()
         if chain.directories:
@@ -63,7 +86,7 @@ class FlextInfraUtilitiesDocsCollectionSources:
                     entry.path.relative_to(selected).full_match(pattern)
                     for pattern in source.exclude_globs
                 )
-            )
+            ),
         )
         if not source.companion_directory or source.adapter != "files":
             return candidates
@@ -78,7 +101,15 @@ class FlextInfraUtilitiesDocsCollectionSources:
 
     @staticmethod
     def collection_read(path: Path) -> m.Cli.AtomicFileState:
-        """Capture one required regular source through the shared CAS owner."""
+        """Capture one required regular source through the shared CAS owner.
+
+        Returns:
+            The resulting ``m.Cli.AtomicFileState``.
+
+        Raises:
+            ValueError: If collection source disappeared.
+
+        """
         state = cli_u.Cli.atomic_read_binary_file_state(path, required=True).unwrap()
         if state.content is None:
             msg = f"collection source disappeared: {path}"
@@ -87,9 +118,18 @@ class FlextInfraUtilitiesDocsCollectionSources:
 
     @staticmethod
     def collection_capture(
-        path: Path, states: t.MutableMappingKV[Path, m.Cli.AtomicFileState]
+        path: Path,
+        states: t.MutableMappingKV[Path, m.Cli.AtomicFileState],
     ) -> m.Cli.AtomicFileState:
-        """Bind every influential read, including absence, to its first state."""
+        """Bind every influential read, including absence, to its first state.
+
+        Returns:
+            The resulting ``m.Cli.AtomicFileState``.
+
+        Raises:
+            ValueError: If collection input changed between reads.
+
+        """
         state = cli_u.Cli.atomic_read_binary_file_state(path, required=False).unwrap()
         previous = states.get(path)
         if previous is not None and previous != state:
@@ -105,7 +145,15 @@ class FlextInfraUtilitiesDocsCollectionSources:
         source: m.Infra.PlanCollectionSource,
         excluded_outputs: t.VariadicTuple[Path] = (),
     ) -> t.VariadicTuple[m.Cli.AtomicFileState]:
-        """Read the plan and its same-basename companion directory."""
+        """Read the plan and its same-basename companion directory.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Cli.AtomicFileState]``.
+
+        Raises:
+            ValueError: If plan companion is a symlink.
+
+        """
         states = [cls.collection_read(path)]
         if source.companion_directory:
             companion = path.with_suffix("")
@@ -125,14 +173,24 @@ class FlextInfraUtilitiesDocsCollectionSources:
 
     @staticmethod
     def collection_source_updated(
-        content: bytes, fields: t.VariadicTuple[str]
+        content: bytes,
+        fields: t.VariadicTuple[str],
     ) -> t.Pair[str | None, str | None]:
-        """Retain explicit source precision; never promote filesystem time."""
+        """Retain explicit source precision; never promote filesystem time.
+
+        Returns:
+            The resulting ``t.Pair[str | None, str | None]``.
+
+        Raises:
+            ValueError: If plan frontmatter has no closing delimiter.
+
+        """
         lines = content.decode("utf-8-sig", errors="strict").splitlines()
         if not lines or lines[0] != "---":
             return None, None
         closing = next(
-            (index for index, line in enumerate(lines[1:], 1) if line == "---"), None
+            (index for index, line in enumerate(lines[1:], 1) if line == "---"),
+            None,
         )
         if closing is None:
             msg = "plan frontmatter has no closing delimiter"
@@ -166,7 +224,19 @@ class FlextInfraUtilitiesDocsCollectionSources:
         projection: Path | None,
         states: t.MutableMappingKV[Path, m.Cli.AtomicFileState],
     ) -> t.Pair[m.Infra.PlanCollectionManifest, t.VariadicTuple[Path]]:
-        """Exclude only outputs attested by the canonical generated manifest."""
+        """Exclude only outputs attested by the canonical generated manifest.
+
+        Returns:
+            The resulting ``t.Pair[m.Infra.PlanCollectionManifest,
+                t.VariadicTuple[Path]]``.
+
+        Raises:
+            ValueError: If collection manifest has unsafe owned path; or if collection
+                receipt has unsafe relative locator; or if projected collection manifest
+                was modified; or if projected collection metadata was modified; or if
+                owned projection artifact disappeared.
+
+        """
         manifest_path = canonical / "collection-manifest.json"
         before = cls.collection_capture(manifest_path, states)
         if before.content is None:

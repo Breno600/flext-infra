@@ -27,11 +27,17 @@ class TestsFlextInfraFreshImport:
 
     @pytest.fixture
     def v(self) -> FlextInfraValidateFreshImport:
-        """Shared validator instance."""
+        """Shared validator instance.
+
+        Returns:
+            The resulting ``FlextInfraValidateFreshImport``.
+
+        """
         return FlextInfraValidateFreshImport()
 
+    @staticmethod
     def test_probes_run_in_the_declared_target_environment(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """The declared target interpreter runs the probes, not the tool's.
 
@@ -42,81 +48,101 @@ class TestsFlextInfraFreshImport:
         u.Tests.initialize_git_repo(tmp_path)
         u.Tests.provision_runtime_environment(tmp_path)
         validator = FlextInfraValidateFreshImport(
-            repository_root=tmp_path, runtime_root=tmp_path
+            repository_root=tmp_path,
+            runtime_root=tmp_path,
         )
         report = tm.ok(validator.build_report(packages=("flext_core",)))
         tm.that(report.passed, eq=False)
         tm.that(report.violations[0], has="No module named 'flext_core'")
 
+    @staticmethod
     def test_declared_target_without_interpreter_fails_loudly(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """A declared target lacking its interpreter fails, never falls back."""
         validator = FlextInfraValidateFreshImport(
-            repository_root=tmp_path, runtime_root=tmp_path
+            repository_root=tmp_path,
+            runtime_root=tmp_path,
         )
         result = validator.build_report(packages=("sys",))
         tm.fail(result, has="fresh-import target interpreter is missing")
 
-    def test_empty_package_list_passes(self, v: FlextInfraValidateFreshImport) -> None:
+    @staticmethod
+    def test_empty_package_list_passes(v: FlextInfraValidateFreshImport) -> None:
+        """Test empty package list passes."""
         report: m.Infra.ValidationReport = tm.ok(v.build_report(packages=()))
         tm.that(report, is_=m.Infra.ValidationReport)
         tm.that(report.passed, eq=True)
         tm.that(report.violations, length=0)
 
-    def test_stdlib_package_passes(self, v: FlextInfraValidateFreshImport) -> None:
+    @staticmethod
+    def test_stdlib_package_passes(v: FlextInfraValidateFreshImport) -> None:
+        """Test stdlib package passes."""
         report: m.Infra.ValidationReport = tm.ok(v.build_report(packages=("sys",)))
         tm.that(report.passed, eq=True)
         tm.that(report.violations, length=0)
 
-    def test_nonexistent_package_fails(self, v: FlextInfraValidateFreshImport) -> None:
+    @staticmethod
+    def test_nonexistent_package_fails(v: FlextInfraValidateFreshImport) -> None:
+        """Test nonexistent package fails."""
         report: m.Infra.ValidationReport = tm.ok(
-            v.build_report(packages=("nonexistent_pkg_xyz_abc_123",))
+            v.build_report(packages=("nonexistent_pkg_xyz_abc_123",)),
         )
         tm.that(report.passed, eq=False)
         tm.that(report.violations, length=1)
         tm.that(report.violations[0], has="nonexistent_pkg_xyz_abc_123")
 
+    @staticmethod
     def test_mixed_good_and_bad_reports_only_bad(
-        self, v: FlextInfraValidateFreshImport
+        v: FlextInfraValidateFreshImport,
     ) -> None:
+        """Test mixed good and bad reports only bad."""
         report: m.Infra.ValidationReport = tm.ok(
-            v.build_report(packages=("sys", "nonexistent_xyz_qqq", "os"))
+            v.build_report(packages=("sys", "nonexistent_xyz_qqq", "os")),
         )
         tm.that(report.passed, eq=False)
         tm.that(report.violations, length=1)
         tm.that(report.violations[0], has="nonexistent_xyz_qqq")
 
+    @staticmethod
     def test_stops_at_first_causal_failure(
-        self, v: FlextInfraValidateFreshImport
+        v: FlextInfraValidateFreshImport,
     ) -> None:
+        """Test stops at first causal failure."""
         report: m.Infra.ValidationReport = tm.ok(
-            v.build_report(packages=("nonexistent_a_qqq", "nonexistent_b_qqq"))
+            v.build_report(packages=("nonexistent_a_qqq", "nonexistent_b_qqq")),
         )
         tm.that(report.violations, length=1)
         tm.that(report.violations[0], has="nonexistent_a_qqq")
         tm.that(report.violations[0], lacks="nonexistent_b_qqq")
         tm.that(report.summary, has="failed")
 
+    @staticmethod
     def test_passing_summary_is_human_readable(
-        self, v: FlextInfraValidateFreshImport
+        v: FlextInfraValidateFreshImport,
     ) -> None:
+        """Test passing summary is human readable."""
         report: m.Infra.ValidationReport = tm.ok(v.build_report(packages=("sys", "os")))
         tm.that(report.summary, has="import")
 
-    def test_workspace_src_package_passes(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_workspace_src_package_passes(tmp_path: Path) -> None:
+        """Test workspace src package passes."""
         package_root = tmp_path / "src" / "demo_external"
         package_root.mkdir(parents=True)
         package_root.joinpath("__init__.py").write_text("VALUE = 1\n", encoding="utf-8")
         validator = FlextInfraValidateFreshImport(repository_root=tmp_path)
         report: m.Infra.ValidationReport = tm.ok(
-            validator.build_report(packages=("demo_external",))
+            validator.build_report(packages=("demo_external",)),
         )
         tm.that(report.passed, eq=True, msg=str(report.violations))
 
     @pytest.mark.parametrize("missing_export", [False, True])
     def test_preserved_initializer_uses_real_publication_contract(
-        self, tmp_path: Path, *, missing_export: bool
+        self,
+        tmp_path: Path,
+        *,
+        missing_export: bool,
     ) -> None:
         """A preserved package is imported and its live exports must resolve."""
         repository_root, package = u.Tests.create_lazy_init_workspace(tmp_path)
@@ -131,8 +157,9 @@ class TestsFlextInfraFreshImport:
 
         report = tm.ok(
             FlextInfraValidateFreshImport(repository_root=repository_root).build_report(
-                publications=analysis.publications, repository_roots=(repository_root,)
-            )
+                publications=analysis.publications,
+                repository_roots=(repository_root,),
+            ),
         )
 
         tm.that(report.passed, eq=not missing_export, msg=str(report.violations))
@@ -143,14 +170,16 @@ class TestsFlextInfraFreshImport:
         else:
             tm.that(report.violations, length=0)
 
+    @staticmethod
     def test_removed_initializer_is_not_a_publication_contract(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """A planned removal cannot certify the package's public exports."""
         repository_root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         initializer = package / c.Infra.INIT_PY
         initializer.write_text(
-            f"{c.Infra.AUTOGEN_HEADER}\n", encoding=c.Cli.ENCODING_DEFAULT
+            f"{c.Infra.AUTOGEN_HEADER}\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
         analysis = tm.ok(u.Tests.plan_lazy_init(repository_root))
         publication = next(
@@ -159,15 +188,17 @@ class TestsFlextInfraFreshImport:
         tm.that(publication.action, eq=c.Infra.LazyInitAction.REMOVE)
 
         result = FlextInfraValidateFreshImport(
-            repository_root=repository_root
+            repository_root=repository_root,
         ).build_report(
-            publications=analysis.publications, repository_roots=(repository_root,)
+            publications=analysis.publications,
+            repository_roots=(repository_root,),
         )
 
         tm.fail(result, has=f"missing public export contract for {package.name}")
 
+    @staticmethod
     def test_layout_without_a_plan_verifies_its_on_disk_contract(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """A layout no publication claims is verified from its live exports.
 
@@ -178,30 +209,35 @@ class TestsFlextInfraFreshImport:
         """
         repository_root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         (package / c.Infra.INIT_PY).write_text(
-            "value = 17\n__all__ = ('value',)\n", encoding=c.Cli.ENCODING_DEFAULT
+            "value = 17\n__all__ = ('value',)\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
 
         report = tm.ok(
             FlextInfraValidateFreshImport(repository_root=repository_root).build_report(
-                publications=(), repository_roots=(repository_root,)
-            )
+                publications=(),
+                repository_roots=(repository_root,),
+            ),
         )
 
         tm.that(report.passed, eq=True, msg=str(report.violations))
 
+    @staticmethod
     def test_layout_without_a_plan_still_fails_on_a_broken_disk_contract(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """A live package whose declared export cannot resolve still fails."""
         repository_root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         (package / c.Infra.INIT_PY).write_text(
-            "__all__ = ('missing_export',)\n", encoding=c.Cli.ENCODING_DEFAULT
+            "__all__ = ('missing_export',)\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
 
         report = tm.ok(
             FlextInfraValidateFreshImport(repository_root=repository_root).build_report(
-                publications=(), repository_roots=(repository_root,)
-            )
+                publications=(),
+                repository_roots=(repository_root,),
+            ),
         )
 
         tm.that(report.passed, eq=False)
@@ -211,7 +247,11 @@ class TestsFlextInfraFreshImport:
     @pytest.mark.parametrize("script_group", ["scripts", "gui-scripts"])
     @pytest.mark.parametrize("target_exists", [False, True])
     def test_declared_script_failure_blocks_publication(
-        self, tmp_path: Path, script_group: str, *, target_exists: bool
+        self,
+        tmp_path: Path,
+        script_group: str,
+        *,
+        target_exists: bool,
     ) -> None:
         """A missing declared module or callable fails with its original traceback."""
         package = tmp_path / c.Infra.DEFAULT_SRC_DIR / "flext_probe_script"
@@ -220,7 +260,8 @@ class TestsFlextInfraFreshImport:
         initializer.write_text("__all__ = ()\n", encoding=c.Cli.ENCODING_DEFAULT)
         if target_exists:
             (package / "cli.py").write_text(
-                "VALUE = 1\n", encoding=c.Cli.ENCODING_DEFAULT
+                "VALUE = 1\n",
+                encoding=c.Cli.ENCODING_DEFAULT,
             )
         (tmp_path / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "flext-probe-script"\nversion = "1.0"\n\n'
@@ -238,14 +279,14 @@ class TestsFlextInfraFreshImport:
             ),
             action=c.Infra.LazyInitAction.WRITE,
             lazy_map={},
-            type_checking_map={},
             eager_dunders={},
             inline_constants={},
         )
         report = tm.ok(
             FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
-                publications=(publication,), repository_roots=(tmp_path,)
-            )
+                publications=(publication,),
+                repository_roots=(tmp_path,),
+            ),
         )
         tm.that(report.passed, eq=False)
         tm.that(report.violations, length=1)
@@ -256,8 +297,9 @@ class TestsFlextInfraFreshImport:
             has="has no attribute 'main'" if target_exists else "ModuleNotFoundError",
         )
 
+    @staticmethod
     def test_declared_script_contract_violation_stays_blocking(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """A missing export surfacing through a loadable script fails the report."""
         package = tmp_path / c.Infra.DEFAULT_SRC_DIR / "flext_probe_script"
@@ -265,7 +307,8 @@ class TestsFlextInfraFreshImport:
         initializer = package / c.Infra.INIT_PY
         initializer.write_text("__all__ = ()\n", encoding=c.Cli.ENCODING_DEFAULT)
         (package / "cli.py").write_text(
-            "from flext_probe_script import gone\n", encoding=c.Cli.ENCODING_DEFAULT
+            "from flext_probe_script import gone\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
         (tmp_path / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "flext-probe-script"\nversion = "1.0"\n\n'
@@ -283,28 +326,31 @@ class TestsFlextInfraFreshImport:
             ),
             action=c.Infra.LazyInitAction.WRITE,
             lazy_map={},
-            type_checking_map={},
             eager_dunders={},
             inline_constants={},
         )
         report = tm.ok(
             FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
-                publications=(publication,), repository_roots=(tmp_path,)
-            )
+                publications=(publication,),
+                repository_roots=(tmp_path,),
+            ),
         )
         tm.that(report.passed, eq=False)
         tm.that(report.violations[0], has="ImportError")
 
-    def test_advertised_lazy_export_must_resolve(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_advertised_lazy_export_must_resolve(tmp_path: Path) -> None:
+        """Test advertised lazy export must resolve."""
         package = tmp_path / c.Infra.DEFAULT_SRC_DIR / "flext_import_probe"
         package.mkdir(parents=True)
         (package / c.Infra.INIT_PY).write_text(
-            "__all__ = ('missing_export',)\n", encoding=c.Cli.ENCODING_DEFAULT
+            "__all__ = ('missing_export',)\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
         report = tm.ok(
             FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
-                packages=(package.name,)
-            )
+                packages=(package.name,),
+            ),
         )
         tm.that(report.passed, eq=False)
         tm.that(report.violations[0], has="missing_export")
@@ -312,8 +358,12 @@ class TestsFlextInfraFreshImport:
 
     @pytest.mark.parametrize("dependency_present", [False, True])
     def test_declared_consumer_catches_exports_omitted_from_plan(
-        self, tmp_path: Path, *, dependency_present: bool
+        self,
+        tmp_path: Path,
+        *,
+        dependency_present: bool,
     ) -> None:
+        """Test declared consumer catches exports omitted from plan."""
         package = tmp_path / c.Infra.DEFAULT_SRC_DIR / "flext_import_probe"
         package.mkdir(parents=True)
         initializer = package / c.Infra.INIT_PY
@@ -342,14 +392,14 @@ class TestsFlextInfraFreshImport:
             ),
             action=c.Infra.LazyInitAction.WRITE,
             lazy_map={},
-            type_checking_map={},
             eager_dunders={},
             inline_constants={},
         )
         report = tm.ok(
             FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
-                publications=(publication,), repository_roots=(tmp_path,)
-            )
+                publications=(publication,),
+                repository_roots=(tmp_path,),
+            ),
         )
         tm.that(report.passed, eq=dependency_present, msg=str(report.violations))
         if not dependency_present:
@@ -357,9 +407,11 @@ class TestsFlextInfraFreshImport:
             tm.that(report.violations[0], has="consumer.py")
             tm.that(report.violations[0], has="Traceback")
 
+    @staticmethod
     def test_probe_larger_than_one_process_argument_still_runs(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
+        """Test probe larger than one process argument still runs."""
         package = tmp_path / c.Infra.DEFAULT_SRC_DIR / "flext_import_probe"
         package.mkdir(parents=True)
         exports = tuple(f"export_{index:05d}_published_name" for index in range(6000))
@@ -385,26 +437,29 @@ class TestsFlextInfraFreshImport:
             action=c.Infra.LazyInitAction.WRITE,
             exports=exports,
             lazy_map={},
-            type_checking_map={},
             eager_dunders={},
             inline_constants={},
         )
         report = tm.ok(
             FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
-                publications=(publication,), repository_roots=(tmp_path,)
-            )
+                publications=(publication,),
+                repository_roots=(tmp_path,),
+            ),
         )
         tm.that(report.passed, eq=True, msg=str(report.violations))
 
+    @staticmethod
     def test_rejects_owned_module_imported_from_another_directory(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
+        """Test rejects owned module imported from another directory."""
         package = tmp_path / c.Infra.DEFAULT_SRC_DIR / "flext_import_probe"
         package.mkdir(parents=True)
         foreign = tmp_path / "foreign"
         foreign.mkdir()
         (foreign / "dependency.py").write_text(
-            "value = 17\n", encoding=c.Cli.ENCODING_DEFAULT
+            "value = 17\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
         initializer = package / c.Infra.INIT_PY
         initializer.write_text(
@@ -428,21 +483,22 @@ class TestsFlextInfraFreshImport:
             action=c.Infra.LazyInitAction.WRITE,
             exports=("value",),
             lazy_map={},
-            type_checking_map={},
             eager_dunders={},
             inline_constants={},
         )
         report = tm.ok(
             FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
-                publications=(publication,), repository_roots=(tmp_path,)
-            )
+                publications=(publication,),
+                repository_roots=(tmp_path,),
+            ),
         )
         tm.that(report.passed, eq=False)
         tm.that(report.violations[0], has="is outside")
         tm.that(report.violations[0], has=str(foreign))
 
+    @staticmethod
     def test_foreign_origin_is_reported_before_phantom_export(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """A module loaded from outside this checkout names the origin first.
 
@@ -455,7 +511,8 @@ class TestsFlextInfraFreshImport:
         foreign = tmp_path / "foreign"
         foreign.mkdir()
         (foreign / "dependency.py").write_text(
-            "value = 17\n", encoding=c.Cli.ENCODING_DEFAULT
+            "value = 17\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
         initializer = package / c.Infra.INIT_PY
         initializer.write_text(
@@ -480,7 +537,6 @@ class TestsFlextInfraFreshImport:
             action=c.Infra.LazyInitAction.WRITE,
             exports=("value",),
             lazy_map={},
-            type_checking_map={},
             eager_dunders={},
             inline_constants={},
         )
@@ -489,15 +545,16 @@ class TestsFlextInfraFreshImport:
                 packages=(package.name,),
                 publications=(publication,),
                 repository_roots=(tmp_path,),
-            )
+            ),
         )
         tm.that(report.passed, eq=False)
         tm.that(report.violations[0], has="is outside")
         tm.that(report.violations[0], has=str(foreign))
         tm.that(report.violations[0], lacks="has no attribute")
 
+    @staticmethod
     def test_origin_gate_keeps_the_probed_module_for_export_resolution(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Exports resolve against the published package, not the last loaded module.
 
@@ -510,10 +567,12 @@ class TestsFlextInfraFreshImport:
         subpackage = package / "sub"
         subpackage.mkdir(parents=True)
         (package / c.Infra.INIT_PY).write_text(
-            "value = 17\n__all__ = ('value',)\n", encoding=c.Cli.ENCODING_DEFAULT
+            "value = 17\n__all__ = ('value',)\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
         (subpackage / c.Infra.INIT_PY).write_text(
-            "leaf = 1\n__all__ = ('leaf',)\n", encoding=c.Cli.ENCODING_DEFAULT
+            "leaf = 1\n__all__ = ('leaf',)\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
         (tmp_path / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "flext-import-probe"\nversion = "1.0"\n',
@@ -532,7 +591,6 @@ class TestsFlextInfraFreshImport:
                 action=c.Infra.LazyInitAction.WRITE,
                 exports=exports,
                 lazy_map={},
-                type_checking_map={},
                 eager_dunders={},
                 inline_constants={},
             )
@@ -543,21 +601,26 @@ class TestsFlextInfraFreshImport:
         )
         report = tm.ok(
             FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
-                publications=publications, repository_roots=(tmp_path,)
-            )
+                publications=publications,
+                repository_roots=(tmp_path,),
+            ),
         )
         tm.that(report.passed, eq=True, msg=str(report.violations))
 
-    def test_flext_core_imports_cleanly(self, v: FlextInfraValidateFreshImport) -> None:
+    @staticmethod
+    def test_flext_core_imports_cleanly(v: FlextInfraValidateFreshImport) -> None:
+        """Test flext core imports cleanly."""
         report: m.Infra.ValidationReport = tm.ok(
-            v.build_report(packages=("flext_core",))
+            v.build_report(packages=("flext_core",)),
         )
         tm.that(report.passed, eq=True, msg=report.summary)
 
+    @staticmethod
     def test_flext_infra_imports_cleanly(
-        self, v: FlextInfraValidateFreshImport
+        v: FlextInfraValidateFreshImport,
     ) -> None:
+        """Test flext infra imports cleanly."""
         report: m.Infra.ValidationReport = tm.ok(
-            v.build_report(packages=("flext_infra",))
+            v.build_report(packages=("flext_infra",)),
         )
         tm.that(report.passed, eq=True, msg=report.summary)

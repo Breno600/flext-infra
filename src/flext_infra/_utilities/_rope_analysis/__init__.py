@@ -1,19 +1,33 @@
 # AUTO-GENERATED FILE — Regenerate with: make gen
-"""Flext Infra. Utilities. Rope Analysis package."""
+"""Flext Infra. Utilities. Rope Analysis package.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core.lazy import build_lazy_import_map, install_lazy_exports
+from flext_core import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from .asthelpers import FlextInfraUtilitiesRopeAnalysisAstHelpers
-    from .base import FlextInfraUtilitiesRopeAnalysisBase
-    from .exports import FlextInfraUtilitiesRopeAnalysisExports
-    from .importstate import FlextInfraUtilitiesRopeAnalysisImportState
-    from .sourcescan import FlextInfraUtilitiesRopeAnalysisSourceScan
+    from flext_infra._utilities._rope_analysis.asthelpers import (
+        FlextInfraUtilitiesRopeAnalysisAstHelpers,
+    )
+    from flext_infra._utilities._rope_analysis.base import (
+        FlextInfraUtilitiesRopeAnalysisBase,
+    )
+    from flext_infra._utilities._rope_analysis.exports import (
+        FlextInfraUtilitiesRopeAnalysisExports,
+    )
+    from flext_infra._utilities._rope_analysis.importstate import (
+        FlextInfraUtilitiesRopeAnalysisImportState,
+    )
+    from flext_infra._utilities._rope_analysis.sourcescan import (
+        FlextInfraUtilitiesRopeAnalysisSourceScan,
+    )
 
 
 __all__: tuple[str, ...] = (
@@ -35,7 +49,7 @@ _LAZY_IMPORTS = MappingProxyType(
         }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,
-    )
+    ),
 )
 
 install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)
