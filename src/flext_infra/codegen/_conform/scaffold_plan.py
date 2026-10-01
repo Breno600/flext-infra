@@ -78,7 +78,9 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
                 root_modules=project.root_modules,
                 root_packages=project.root_packages,
                 packaged_data_paths=project.packaged_data_paths,
-                planned_data_files=tuple(destination for _, destination in scaffold_entries),
+                planned_data_files=tuple(
+                    destination for _, destination in scaffold_entries
+                ),
                 declared_python_dirs=tuple(
                     self._scaffold_python_dirs(codegen.templates.entries, profile)
                 ),
@@ -97,7 +99,12 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
             tooling_runtime=tooling_result.value,
             managed_artifacts=managed_artifacts,
         )
-        context_result = self._project_render_context(render_inputs, planned_data_files=tuple(destination for _, destination in scaffold_entries))
+        context_result = self._project_render_context(
+            render_inputs,
+            planned_data_files=tuple(
+                destination for _, destination in scaffold_entries
+            ),
+        )
         if context_result.failure:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(context_result)
         context = context_result.value
