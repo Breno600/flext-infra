@@ -388,6 +388,9 @@ class FlextInfraModelsDepsToolConfig(
             if self.slow_timeout_seconds >= self.run_timeout_seconds:
                 msg = "pytest slow timeout must be less than run timeout"
                 raise ValueError(msg)
+            if self.run_timeout_seconds <= self.suite_stop_reserve_seconds:
+                msg = "pytest run timeout must exceed the suite stop reserve"
+                raise ValueError(msg)
             derived_options = ("--timeout", "--session-timeout")
             if any(
                 option in {"-o", "--override-ini"}

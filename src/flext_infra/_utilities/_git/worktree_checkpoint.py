@@ -90,19 +90,24 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
             case _:
                 detail = "checkpoint parent has invalid author identity"
                 raise OSError(detail)
-        commit_sha = repo.git.execute([
-            c.Infra.GIT,
-            "-c",
-            f"user.name={author_name}",
-            "-c",
-            f"user.email={author_email}",
-            "commit-tree",
-            tree,
-            "-p",
-            parent,
-            "-m",
-            message,
-        ]).strip()
+        commit_sha = repo.git.execute(
+            [
+                c.Infra.GIT,
+                "-c",
+                f"user.name={author_name}",
+                "-c",
+                f"user.email={author_email}",
+                "commit-tree",
+                tree,
+                "-p",
+                parent,
+                "-m",
+                message,
+            ],
+            with_extended_output=False,
+            as_process=False,
+            stdout_as_string=True,
+        ).strip()
         repo.git.update_ref(c.Infra.GIT_HEAD, commit_sha)
         return commit_sha
 

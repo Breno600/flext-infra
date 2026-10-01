@@ -79,19 +79,16 @@ class TestsFlextInfraBanditAndMarkdownGates:
             ("", None, False, []),
             (HEADING_SKIP, None, True, ["MD001"]),
             ("# Test\n", '{"broken": [', True, ["TOOL_ERROR"]),
-            # MD013 reflow hints are reported by the linter and counted in its
-            # exit code, but its own formatter rejoins the paragraph instead of
-            # normalizing it, so no canonical verb can clear them. The gate drops
-            # the hint and must not convert the resulting non-zero exit into a
-            # tool error (flext-4n2hk; root flext#305/#306 were blocked on it).
+            # MD013 findings retain the native blocking verdict even when the
+            # formatter cannot make the paragraph satisfy this local policy.
             (
                 REFLOW_HINT,
                 (
                     '{"MD013": {"line_length": 88, "reflow": true,'
                     ' "reflow-mode": "normalize"}}'
                 ),
-                False,
-                [],
+                True,
+                ["MD013"],
             ),
         ],
     )
