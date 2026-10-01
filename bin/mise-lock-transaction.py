@@ -1,3 +1,4 @@
+# Copyright 2026 FLEXT
 """Publish a Mise lock with its native sidecars from one physical stage.
 
 This bootstrap runs with the Python selected by the staged Mise lock, before
@@ -115,6 +116,24 @@ class MiseLockTransaction:
             os.fsync(descriptor)
         finally:
             os.close(descriptor)
+
+    @classmethod
+    def _sync_tree(cls, root: Path) -> None:
+        """Persist staged payload bytes before publishing the journal."""
+        cls._physical_directory(root)
+        for path in sorted(root.rglob("*"), reverse=True):
+            observed = path.lstat()
+            if stat.S_ISDIR(observed.st_mode):
+                cls._sync_directory(path)
+            elif stat.S_ISREG(observed.st_mode) and observed.st_nlink == 1:
+                descriptor = os.open(path, os.O_RDONLY)
+                try:
+                    os.fsync(descriptor)
+                finally:
+                    os.close(descriptor)
+            else:
+                raise ValueError(f"nonphysical Mise stage entry: {path}")
+        cls._sync_directory(root)
 
     @classmethod
     def _write_journal(cls, stage: Path, journal: dict[str, str]) -> None:
@@ -235,6 +254,7 @@ class MiseLockTransaction:
             raise ValueError(f"staged mise.lock is absent: {stage}")
         old_refs = cls._sidecars(old, project)
         new_refs = cls._sidecars(new, stage)
+        cls._sync_tree(stage)
         for relative, expected in new_refs.items():
             destination = project / relative
             if destination.exists():

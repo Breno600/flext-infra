@@ -1,14 +1,18 @@
+# Copyright 2026 FLEXT
 """The projected Mise publisher restores a usable lock after interrupted work."""
 
 from __future__ import annotations
 
 import hashlib
 import sys
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
 from tests import c, u
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class TestsMiseLockTransaction:
@@ -38,8 +42,13 @@ class TestsMiseLockTransaction:
     def _publish(root: Path, stage: Path) -> tuple[bool, str]:
         outcome = tm.ok(
             u.Cli.run_raw(
-                [sys.executable, str(root / "bin/mise-lock-transaction.py"),
-                 "publish", str(root), str(stage)],
+                [
+                    sys.executable,
+                    str(root / "bin/mise-lock-transaction.py"),
+                    "publish",
+                    str(root),
+                    str(stage),
+                ],
                 cwd=root,
             ),
         )
