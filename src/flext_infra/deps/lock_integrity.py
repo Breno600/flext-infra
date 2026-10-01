@@ -28,13 +28,13 @@ class FlextInfraLockIntegrityVerifier(FlextInfraServiceBase[bool]):
     """
 
     _TABLE_HEADER: ClassVar[re.Pattern[str]] = re.compile(
-        r"(?m)^[ \t]*(?:\[([^\][]+)\]|\[\[([^\][]+)\]\])[ \t]*(?:#.*)?$"
+        r"(?m)^[ \t]*(?:\[([^\][]+)\]|\[\[([^\][]+)\]\])[ \t]*(?:#.*)?$",
     )
 
     @classmethod
     def _duplicated_sections(cls, text: str) -> t.StrSequence:
         """Enumerate table headers declared more than once in a corrupt lock."""
-        counts: dict[str, int] = {}
+        counts: t.MutableMappingKV[str, int] = {}
         for match in cls._TABLE_HEADER.finditer(text):
             key = (match.group(1) or match.group(2) or "").strip()
             counts[key] = counts.get(key, 0) + 1

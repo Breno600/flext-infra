@@ -19,7 +19,7 @@ class FlextInfraPytestEntry:
         ``full`` runs incremental then complete testmon execution. ``coverage``
         selects coverage alone; the default is the incremental operation. The
         ``slow`` and ``full-slow`` operations run the same phases over the slow
-        marker only, as their own bounded process.
+        marker only, as their own bounded process outside the budgeted clock.
         """
         mode = sys.argv[1] if len(sys.argv) > 1 else ""
         if mode in {"profile", "profile-collection"}:
@@ -42,7 +42,8 @@ class FlextInfraPytestEntry:
 
         slow_phase = mode in {"slow", "full-slow"}
         runner = FlextInfraPytestRunner.from_environment(
-            started_at_monotonic=cls._STARTED_AT_MONOTONIC, slow_phase=slow_phase
+            started_at_monotonic=cls._STARTED_AT_MONOTONIC,
+            slow_phase=slow_phase,
         )
         if mode == "coverage":
             return runner.execute_coverage().unwrap()

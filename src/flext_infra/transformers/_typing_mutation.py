@@ -13,6 +13,8 @@ from libcst.metadata import (
     ScopeProvider,
 )
 
+from flext_infra import c
+
 
 class FlextInfraTypingMutation(cst.CSTVisitor):
     """Prove reads through indexing, iteration, membership, truth and builtin len.
@@ -21,11 +23,7 @@ class FlextInfraTypingMutation(cst.CSTVisitor):
     concrete parameter contract, including method calls and escaped references.
     """
 
-    METADATA_DEPENDENCIES = (
-        ScopeProvider,
-        ParentNodeProvider,
-        ExpressionContextProvider,
-    )
+    METADATA_DEPENDENCIES = c.Infra.TYPING_MUTATION_METADATA_DEPENDENCIES
 
     def __init__(self) -> None:
         self.mutated: set[str] = set()
@@ -46,7 +44,9 @@ class FlextInfraTypingMutation(cst.CSTVisitor):
         )
 
     def _assignment(
-        self, target: cst.BaseAssignTargetExpression, value: cst.BaseExpression | None
+        self,
+        target: cst.BaseAssignTargetExpression,
+        value: cst.BaseExpression | None,
     ) -> None:
         if isinstance(target, cst.Subscript):
             self.mutated.update(self._names(target))
@@ -105,7 +105,8 @@ class FlextInfraTypingMutation(cst.CSTVisitor):
             proven = parent.iter is node
         elif isinstance(parent, cst.ComparisonTarget):
             proven = parent.comparator is node and isinstance(
-                parent.operator, (cst.In, cst.NotIn)
+                parent.operator,
+                (cst.In, cst.NotIn),
             )
         elif isinstance(parent, cst.UnaryOperation):
             proven = isinstance(parent.operator, cst.Not)

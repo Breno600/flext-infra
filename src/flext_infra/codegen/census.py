@@ -25,7 +25,8 @@ class FlextInfraCodegenCensus(s[str]):
     """Read-only census service for namespace violation counting."""
 
     rope: t.Port[p.Infra.RopeWorkspaceDsl] = m.Field(
-        exclude=True, description="Shared Rope cycle injected by the composition root"
+        exclude=True,
+        description="Shared Rope cycle injected by the composition root",
     )
 
     @override
@@ -33,7 +34,7 @@ class FlextInfraCodegenCensus(s[str]):
         """Execute the census directly from the validated CLI service model."""
         if self.apply_changes:
             return r[str].fail(
-                "census is read-only; use flext-infra codegen auto-fix --apply"
+                "census is read-only; use flext-infra codegen auto-fix --apply",
             )
         reports_result = self.run()
         if reports_result.failure:
@@ -58,7 +59,7 @@ class FlextInfraCodegenCensus(s[str]):
         ]
         lines.append(
             f"Total: {total_violations} violations ({total_fixable} fixable)"
-            f" across {len(reports)} projects"
+            f" across {len(reports)} projects",
         )
         return r[str].ok("\n".join(lines))
 
@@ -97,12 +98,13 @@ class FlextInfraCodegenCensus(s[str]):
             projects_result = u.Infra.projects(workspace)
             if projects_result.failure:
                 return r[t.VariadicTuple[m.Infra.CensusReport]].from_failure(
-                    projects_result
+                    projects_result,
                 )
             selected_projects = tuple(projects_result.value)
         bindings = tuple(
             FlextInfraNamespaceValidator(
-                repository_root=project.path, rope=self.rope
+                repository_root=project.path,
+                rope=self.rope,
             ).callback_binding()
             for project in selected_projects
         )
@@ -130,7 +132,7 @@ class FlextInfraCodegenCensus(s[str]):
                     passed=not raw_violations,
                     violations=raw_violations,
                     summary=f"{len(raw_violations)} namespace violation(s)",
-                )
+                ),
             )
             parsed = u.Infra.parse_namespace_validation(validation)
             if parsed.failure:
@@ -142,7 +144,7 @@ class FlextInfraCodegenCensus(s[str]):
                     violations=violations,
                     total=len(violations),
                     fixable=u.count(violations, lambda violation: violation.fixable),
-                )
+                ),
             )
         return r[t.VariadicTuple[m.Infra.CensusReport]].ok(tuple(reports))
 

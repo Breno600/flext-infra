@@ -31,7 +31,11 @@ class TestsFlextInfraFacadeBaseCutover:
         ],
     )
     def test_rebound_letter_base_extends_the_declared_class(
-        self, tmp_path: Path, statement: str, base: str, rebind: str
+        self,
+        tmp_path: Path,
+        statement: str,
+        base: str,
+        rebind: str,
     ) -> None:
         child, sources = self._workspace(
             tmp_path,
@@ -61,7 +65,8 @@ class TestsFlextInfraFacadeBaseCutover:
         tm.that(updated, has="        return m.BaseModel\n")
 
     def test_every_letter_base_of_a_composed_facade_extends_its_own_parent(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A facade composing two parents by letter rewires each to its class."""
         child, sources = self._workspace(
@@ -89,7 +94,8 @@ class TestsFlextInfraFacadeBaseCutover:
         tm.that(updated, has=f"from other_pkg import {self.OTHER_CLASS}\n")
         tm.that(updated, has=f"from parent_pkg import {self.PARENT_CLASS}\n")
         tm.that(
-            updated, has=f"class ChildModels({self.PARENT_CLASS}, {self.OTHER_CLASS}):"
+            updated,
+            has=f"class ChildModels({self.PARENT_CLASS}, {self.OTHER_CLASS}):",
         )
         tm.that(updated, has=f"    base = {self.PARENT_CLASS}.BaseModel\n")
         tm.that(updated, has=f"    other = {self.OTHER_CLASS}.BaseModel\n")
@@ -108,7 +114,8 @@ class TestsFlextInfraFacadeBaseCutover:
 
     def test_letter_base_without_rebind_is_untouched(self, tmp_path: Path) -> None:
         child, sources = self._workspace(
-            tmp_path, "from parent_pkg import m\n\n\nclass ChildService(m):\n    pass\n"
+            tmp_path,
+            "from parent_pkg import m\n\n\nclass ChildService(m):\n    pass\n",
         )
         tm.that(self._edits(tmp_path, sources, child), empty=True)
 
@@ -122,7 +129,9 @@ class TestsFlextInfraFacadeBaseCutover:
         tm.fail(self._plan(tmp_path, sources, child), has="is not declared")
 
     def test_facade_classes_derive_every_published_letter(
-        self, tmp_path: Path, installed_dependency_path: Path
+        self,
+        tmp_path: Path,
+        installed_dependency_path: Path,
     ) -> None:
         _child, sources = self._workspace(tmp_path, "")
         for path, source in sources.items():
@@ -183,7 +192,9 @@ class TestsFlextInfraFacadeBaseCutover:
 
     @pytest.mark.parametrize("annotation", ["", "_LAZY_IMPORTS: Mapping\n"])
     def test_lazy_published_letter_resolves_the_declared_class(
-        self, tmp_path: Path, annotation: str
+        self,
+        tmp_path: Path,
+        annotation: str,
     ) -> None:
         """A letter published only through the lazy map still resolves."""
         parent = tmp_path / "parent/src/parent_pkg"
@@ -222,7 +233,8 @@ class TestsFlextInfraFacadeBaseCutover:
         tm.that(updated, has=f"class ChildModels({self.PARENT_CLASS}):")
 
     def test_annotation_without_value_preserves_the_bound_facade(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A later annotation leaves an existing Python name binding intact."""
         child, sources = self._workspace(
@@ -238,7 +250,11 @@ class TestsFlextInfraFacadeBaseCutover:
         tm.that(updated, has=f"class ChildModels({self.PARENT_CLASS}):")
 
     def _workspace(
-        self, tmp_path: Path, child_source: str, *, parent_exports: t.StrSequence = ()
+        self,
+        tmp_path: Path,
+        child_source: str,
+        *,
+        parent_exports: t.StrSequence = (),
     ) -> t.Pair[Path, t.MutableMappingKV[Path, str]]:
         """Declare a parent whose class name no package naming could infer."""
         exports = parent_exports or (self.PARENT_CLASS, "m")
@@ -277,7 +293,10 @@ class TestsFlextInfraFacadeBaseCutover:
 
     @classmethod
     def _plan(
-        cls, tmp_path: Path, sources: t.MappingKV[Path, str], child: Path
+        cls,
+        tmp_path: Path,
+        sources: t.MappingKV[Path, str],
+        child: Path,
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
         """Plan the facade-base phase for the detector finding in ``child``."""
         with infra.rope_workspace(tmp_path) as rope:
@@ -290,7 +309,10 @@ class TestsFlextInfraFacadeBaseCutover:
 
     @classmethod
     def _edits(
-        cls, tmp_path: Path, sources: t.MappingKV[Path, str], child: Path
+        cls,
+        tmp_path: Path,
+        sources: t.MappingKV[Path, str],
+        child: Path,
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
         """Return the successful plan's edits."""
         planned = cls._plan(tmp_path, sources, child)

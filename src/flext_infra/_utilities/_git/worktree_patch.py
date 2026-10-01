@@ -18,13 +18,17 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesGitWorktreePatchMixin(
-    FlextInfraUtilitiesGitWorktreeCheckpointMixin
+    FlextInfraUtilitiesGitWorktreeCheckpointMixin,
 ):
     """Own worktree patch operations."""
 
     @classmethod
     def _git_check_patch_at(
-        cls, repository_root: Path, patch: bytes, *, reverse: bool
+        cls,
+        repository_root: Path,
+        patch: bytes,
+        *,
+        reverse: bool,
     ) -> p.Result[bool]:
         """Check one patch direction against an explicit repository root."""
         if not patch:
@@ -108,7 +112,8 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
 
     @classmethod
     def _git_apply_with_ignored_additions(
-        cls, delta: m.Infra.RepositoryDelta
+        cls,
+        delta: m.Infra.RepositoryDelta,
     ) -> p.Result[bool]:
         """Apply additions over existing ignored projections with rollback."""
         collisions = tuple(

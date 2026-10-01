@@ -19,14 +19,14 @@ class TestsFlextInfraInfraVersionCore:
 
     def test_package_version_matches_project_metadata(self) -> None:
         metadata = tm.ok(
-            u.Infra.read_project_metadata_result(Path(__file__).resolve().parents[2])
+            u.Infra.read_project_metadata_result(Path(__file__).resolve().parents[2]),
         )
 
         tm.that(infra_pkg.__version__, eq=metadata.project.version)
 
     def test_package_version_info_matches_current_workspace_semver_prefix(self) -> None:
         version_result = u.Infra.current_workspace_version(
-            Path(__file__).resolve().parents[2]
+            Path(__file__).resolve().parents[2],
         )
 
         tm.ok(version_result)

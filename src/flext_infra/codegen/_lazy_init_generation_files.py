@@ -23,12 +23,14 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
     if TYPE_CHECKING:
 
         def _cleanup_generated_support_file_states(
-            self, plan: m.Infra.LazyInitPlan
+            self,
+            plan: m.Infra.LazyInitPlan,
         ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]: ...
 
     @staticmethod
     def _snapshot_paths(
-        required_paths: AbstractSet[Path], optional_paths: AbstractSet[Path]
+        required_paths: AbstractSet[Path],
+        optional_paths: AbstractSet[Path],
     ) -> p.Result[MutableMapping[Path, m.Cli.AtomicFileState]]:
         """Capture one descriptor-authenticated state for every planner input."""
         snapshots: MutableMapping[Path, m.Cli.AtomicFileState] = {}
@@ -38,18 +40,21 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
             if index == 1 or index == len(paths) or index % progress_interval == 0:
                 u.Cli.info(f"lazy-init: snapshot inputs {index}/{len(paths)} — {path}")
             snapshot = u.Cli.atomic_read_binary_file_state(
-                path, required=path in required_paths
+                path,
+                required=path in required_paths,
             )
             if snapshot.failure:
                 return r[MutableMapping[Path, m.Cli.AtomicFileState]].from_failure(
-                    snapshot
+                    snapshot,
                 )
             snapshots[path] = snapshot.value
         return r[MutableMapping[Path, m.Cli.AtomicFileState]].ok(snapshots)
 
     @classmethod
     def _snapshot_planner_inputs(
-        cls, index: m.Infra.RopeWorkspaceIndex, package_dirs: t.SequenceOf[Path]
+        cls,
+        index: m.Infra.RopeWorkspaceIndex,
+        package_dirs: t.SequenceOf[Path],
     ) -> p.Result[MutableMapping[Path, m.Cli.AtomicFileState]]:
         """Snapshot Python, project, target, and template inputs before planning."""
         selected_dirs = frozenset(package_dirs)
@@ -70,7 +75,8 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
             if entry.package_dir in selected_dirs
         }
         return cls._snapshot_paths(
-            module_paths | template_paths, init_paths | project_metadata_paths
+            module_paths | template_paths,
+            init_paths | project_metadata_paths,
         )
 
     @staticmethod
@@ -82,7 +88,10 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
 
     @staticmethod
     def _file_plan(
-        *, project: Path, before: m.Cli.AtomicFileState, desired_content: bytes | None
+        *,
+        project: Path,
+        before: m.Cli.AtomicFileState,
+        desired_content: bytes | None,
     ) -> m.Infra.CodegenFilePlan:
         """Bind one exact target state to its desired initializer state."""
         return m.Infra.CodegenFilePlan(
@@ -100,7 +109,7 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
             tuple(
                 header.encode(c.Cli.ENCODING_DEFAULT)
                 for header in c.Infra.AUTOGEN_HEADERS
-            )
+            ),
         )
 
     def _artifact_file_plans(
@@ -122,14 +131,18 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
             # permit residue removal; this extension is bounded to the
             # no-exports cutover and documented in the codegen plan.
             init_plan = self._file_plan(
-                project=project, before=init_before, desired_content=None
+                project=project,
+                before=init_before,
+                desired_content=None,
             )
         else:
             rendered = FlextInfraCodegenGeneration.render_init(plan).encode(
-                c.Cli.ENCODING_DEFAULT
+                c.Cli.ENCODING_DEFAULT,
             )
             init_plan = self._file_plan(
-                project=project, before=init_before, desired_content=rendered
+                project=project,
+                before=init_before,
+                desired_content=rendered,
             )
         support_states = self._cleanup_generated_support_file_states(plan)
         if support_states.failure:
@@ -156,13 +169,13 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
             package_entry = index.packages_by_dir.get(package_key)
             if package_entry is None or package_entry.project_root is None:
                 return r[tuple[m.Infra.CodegenFilePlan, ...]].fail(
-                    f"lazy-init package has no physical project owner: {package_key}"
+                    f"lazy-init package has no physical project owner: {package_key}",
                 )
             init_path = plan.context.init_path.resolve()
             init_before = snapshots.get(init_path)
             if init_before is None:
                 return r[tuple[m.Infra.CodegenFilePlan, ...]].fail(
-                    f"lazy-init target was not snapshotted: {init_path}"
+                    f"lazy-init target was not snapshotted: {init_path}",
                 )
             artifact_plans = self._artifact_file_plans(
                 plan,
@@ -171,13 +184,13 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
             )
             if artifact_plans.failure:
                 return r[tuple[m.Infra.CodegenFilePlan, ...]].from_failure(
-                    artifact_plans
+                    artifact_plans,
                 )
             for artifact_plan in artifact_plans.value:
                 existing = by_path.get(artifact_plan.path)
                 if existing is not None and existing != artifact_plan:
                     return r[tuple[m.Infra.CodegenFilePlan, ...]].fail(
-                        f"conflicting lazy-init plans for {artifact_plan.path}"
+                        f"conflicting lazy-init plans for {artifact_plan.path}",
                     )
                 by_path[artifact_plan.path] = artifact_plan
         target_paths = frozenset(by_path)

@@ -15,7 +15,8 @@ class TestsFlextInfraCoreValidationBehavior:
     """Test suite for core validation behavior."""
 
     def test_public_project_layout_uses_flext_for_core_exception(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         project_root = tmp_path / "flext-core"
         package_dir = project_root / "src" / "flext_core"
@@ -33,19 +34,22 @@ class TestsFlextInfraCoreValidationBehavior:
         u.Tests.write_canonical_package_layout(package_dir)
         tracked_module = package_dir / "models.py"
         tracked_module.write_text(
-            u.Tests.namespace_fixture("rule0_valid.py"), encoding="utf-8"
+            u.Tests.namespace_fixture("rule0_valid.py"),
+            encoding="utf-8",
         )
 
         init_result = u.Cli.run_raw(["git", "init"], cwd=project_root)
         tm.ok(init_result)
         tm.that(u.Cli.process_succeeded(init_result.value.outcome), eq=True)
         email_result = u.Cli.run_raw(
-            ["git", "config", "user.email", "test@example.com"], cwd=project_root
+            ["git", "config", "user.email", "test@example.com"],
+            cwd=project_root,
         )
         tm.ok(email_result)
         tm.that(u.Cli.process_succeeded(email_result.value.outcome), eq=True)
         name_result = u.Cli.run_raw(
-            ["git", "config", "user.name", "Test User"], cwd=project_root
+            ["git", "config", "user.name", "Test User"],
+            cwd=project_root,
         )
         tm.ok(name_result)
         tm.that(u.Cli.process_succeeded(name_result.value.outcome), eq=True)
@@ -57,7 +61,7 @@ class TestsFlextInfraCoreValidationBehavior:
         tm.that(u.Cli.process_succeeded(add_result.value.outcome), eq=True)
 
         result = infra.validate_namespace(
-            m.Infra.NamespaceValidateCommand(repository_root=project_root)
+            m.Infra.NamespaceValidateCommand(repository_root=project_root),
         )
 
         tm.ok(result)
@@ -76,20 +80,24 @@ class TestsFlextInfraCoreValidationBehavior:
             f"        attr_{index} = {index}" for index in range(cap + 1)
         )
         module_source = u.Tests.namespace_fixture("rule0_valid.py").replace(
-            "        pass\n", f"        pass\n{assignments}\n"
+            "        pass\n",
+            f"        pass\n{assignments}\n",
         )
         root = u.Tests.namespace_project(
-            tmp_path, module_source=module_source, module_name="models.py"
+            tmp_path,
+            module_source=module_source,
+            module_name="models.py",
         )
 
         result = infra.validate_namespace(
-            m.Infra.NamespaceValidateCommand(repository_root=root)
+            m.Infra.NamespaceValidateCommand(repository_root=root),
         )
 
         tm.ok(result)
         locator = f"exceed the {cap} limit"
         tm.that(
-            any(locator in violation for violation in result.value.violations), eq=True
+            any(locator in violation for violation in result.value.violations),
+            eq=True,
         )
 
     def test_initializer_and_version_roles_are_scanned(self, tmp_path: Path) -> None:
@@ -98,22 +106,24 @@ class TestsFlextInfraCoreValidationBehavior:
         package_dir = project_root / "src" / "flext_test"
         package_dir.mkdir(parents=True)
         _ = (package_dir / "__init__.py").write_text(
-            u.Tests.namespace_fixture("rule0_no_class.py"), encoding="utf-8"
+            u.Tests.namespace_fixture("rule0_no_class.py"),
+            encoding="utf-8",
         )
         _ = (package_dir / "__version__.py").write_text(
-            u.Tests.namespace_fixture("rule0_no_class.py"), encoding="utf-8"
+            u.Tests.namespace_fixture("rule0_no_class.py"),
+            encoding="utf-8",
         )
         u.Tests.write_canonical_package_layout(package_dir)
         u.Tests.initialize_git_repo(project_root)
         files = tm.ok(
             u.Infra.iter_python_files(
-                m.Infra.SourceScanRequest(project_roots=(project_root,))
-            )
+                m.Infra.SourceScanRequest(project_roots=(project_root,)),
+            ),
         )
         tm.that(files, has=package_dir / "__init__.py")
         tm.that(files, has=package_dir / "__version__.py")
         result = infra.validate_namespace(
-            m.Infra.NamespaceValidateCommand(repository_root=project_root)
+            m.Infra.NamespaceValidateCommand(repository_root=project_root),
         )
         tm.that(result.success, eq=True)
         tm.that(result.value.passed, eq=True)
@@ -127,7 +137,7 @@ class TestsFlextInfraCoreValidationBehavior:
             module_name="constants.py",
         )
         result = infra.validate_namespace(
-            m.Infra.NamespaceValidateCommand(repository_root=root)
+            m.Infra.NamespaceValidateCommand(repository_root=root),
         )
         tm.that(result.success, eq=True)
         tm.that(result.value, is_=m.Infra.ValidationReport)
@@ -140,7 +150,7 @@ class TestsFlextInfraCoreValidationBehavior:
             module_name="models.py",
         )
         result = infra.validate_namespace(
-            m.Infra.NamespaceValidateCommand(repository_root=root)
+            m.Infra.NamespaceValidateCommand(repository_root=root),
         )
         tm.that(result.success, eq=True)
         tm.that(len(result.value.violations), gt=0)

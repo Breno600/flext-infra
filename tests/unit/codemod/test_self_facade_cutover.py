@@ -42,7 +42,7 @@ class TestsSelfFacadeCutover:
                     rope_workspace=rope,
                     sources={path: source},
                     findings=(finding,),
-                )
+                ),
             )
             tm.that(len(edits), eq=1)
             remaining = tm.ok(
@@ -51,7 +51,7 @@ class TestsSelfFacadeCutover:
                     rope_workspace=rope,
                     sources={path: edits[0].updated_source},
                     findings=(finding,),
-                )
+                ),
             )
         tm.that(remaining, empty=True)
         path.write_text(edits[0].updated_source, encoding="utf-8")
@@ -69,7 +69,9 @@ class TestsSelfFacadeCutover:
         ],
     )
     def test_eager_reference_is_rejected_before_publication(
-        self, tmp_path: Path, consumer: str
+        self,
+        tmp_path: Path,
+        consumer: str,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "consumer.py"
@@ -93,7 +95,9 @@ class TestsSelfFacadeCutover:
         ],
     )
     def test_multiple_aliases_and_duplicate_imports_preserve_each_use(
-        self, tmp_path: Path, declaration: str
+        self,
+        tmp_path: Path,
+        declaration: str,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "consumer.py"
@@ -110,7 +114,7 @@ class TestsSelfFacadeCutover:
                     rope_workspace=rope,
                     sources={path: source},
                     findings=(finding,),
-                )
+                ),
             )
             tm.that(len(edits), eq=1)
             remaining = tm.ok(
@@ -119,7 +123,7 @@ class TestsSelfFacadeCutover:
                     rope_workspace=rope,
                     sources={path: edits[0].updated_source},
                     findings=(finding,),
-                )
+                ),
             )
         tm.that(remaining, empty=True)
         path.write_text(edits[0].updated_source, encoding="utf-8")

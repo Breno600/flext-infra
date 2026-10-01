@@ -35,7 +35,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         Registry distributions legitimately have no direct-URL receipt. An
         editable install names a checkout path, not a toolchain: testmon already
         tracks that source by file checksum, so every checkout of one project
-        on the same lock shares one environment record (flext-3l1gk).
+        on the same lock shares one environment record.
         """
         provenance: t.MutableSequenceOf[str] = []
         for distribution in distributions():
@@ -77,7 +77,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                 if serial
                 else pytest.suite_stop_reserve_seconds
             )
-        return self.started_at_monotonic + pytest.run_timeout_seconds - reserve
+        return self.started_at_monotonic + self.run_timeout_seconds(pytest) - reserve
 
     def ci_excluded_markers(
         self,
@@ -90,7 +90,9 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         return ()
 
     def _plugin_policy_args(
-        self, *, execution_mode: c.Infra.PytestExecutionMode
+        self,
+        *,
+        execution_mode: c.Infra.PytestExecutionMode,
     ) -> t.VariadicTuple[str]:
         """Apply the same configured plugin contract to collection and execution.
 
@@ -168,16 +170,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                 f"'{self._toolchain_testmon_environment()}'",
             )
         )
-        return (
-            *(
-                (
-                    *self.collection_command_prefix,
-                    str(manifest_path.with_suffix(".pstats")),
-                    str(manifest_path.parent / "run-context.json"),
-                )
-                if self.collection_command_prefix
-                else (sys.executable, "-m", "pytest")
-            ),
+        pytest_arguments = (
             str(self.target),
             *testmon,
             "--collect-only",
@@ -196,6 +189,14 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             "0",
             "--no-cov",
         )
+        if self.collection_command_prefix:
+            return (
+                *self.collection_command_prefix,
+                str(manifest_path.with_suffix(".pstats")),
+                str(manifest_path.parent / "run-context.json"),
+                *pytest_arguments,
+            )
+        return (sys.executable, "-m", "pytest", *pytest_arguments)
 
     def build_command(
         self,
@@ -262,7 +263,10 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         )
 
     def build_coverage_command(
-        self, report_dir: Path, *, serialize: bool = False
+        self,
+        report_dir: Path,
+        *,
+        serialize: bool = False,
     ) -> t.VariadicTuple[str]:
         """Build the whole-suite coverage argv (never the testmon plugin).
 
@@ -279,7 +283,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             workers=workers,
             trailing=(
                 *self._plugin_policy_args(
-                    execution_mode=c.Infra.PytestExecutionMode.COVERAGE
+                    execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
                 ),
                 f"--cov={self.root / c.Infra.DEFAULT_SRC_DIR}",
                 f"--cov-report=xml:{report_dir / 'coverage.xml'}",
@@ -301,7 +305,16 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         return (
             sys.executable,
             "-m",
-            "pytest",
+            "flext_infra._pytest_entry" if self.profile_enabled else "pytest",
+            *(
+                (
+                    "profile-collection",
+                    str(report_dir / pytest.profile_suite_filename),
+                    str(report_dir / "run-context.json"),
+                )
+                if self.profile_enabled
+                else ()
+            ),
             *targets,
             *pytest.progress_args,
             *pytest.report_args,

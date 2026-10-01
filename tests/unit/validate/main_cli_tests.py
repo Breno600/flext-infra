@@ -35,7 +35,8 @@ class TestsFlextInfraValidateCli:
         tm.that(infra_main(["validate", "stub-validate", "--help"]), eq=0)
 
     def test_namespace_validate_runs_with_facade_composed_rope(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         project = u.Tests.namespace_project(
             tmp_path,
@@ -53,7 +54,8 @@ class TestsFlextInfraValidateCli:
         tm.that(exit_code, eq=0)
 
     def test_namespace_validate_exits_nonzero_for_real_violations(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         project = u.Tests.namespace_project(
             tmp_path,

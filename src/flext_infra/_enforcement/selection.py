@@ -64,7 +64,9 @@ class FlextInfraEnforcementSelection:
         )
         if wanted_ids:
             cls._validate_requested_rules(
-                candidates, wanted_ids=wanted_ids, safe_only=safe_only
+                candidates,
+                wanted_ids=wanted_ids,
+                safe_only=safe_only,
             )
         return tuple(
             rule
@@ -96,7 +98,7 @@ class FlextInfraEnforcementSelection:
         source = rule.source
         required: bool = t.Infra.BOOL_ADAPTER.validate_python(
             source.kind == "flext_infra_detector"
-            and source.violation_field == cls._STUB_VIOLATION_FIELD
+            and source.violation_field == cls._STUB_VIOLATION_FIELD,
         )
         return required
 

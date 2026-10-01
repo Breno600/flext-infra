@@ -23,7 +23,9 @@ class FlextInfraFutureAnnotationsDetector:
     ) -> t.SequenceOf[m.Infra.FutureAnnotationsViolation]:
         """Detect missing future annotations in a single file."""
         resource = u.Infra.fetch_python_resource(
-            ctx.rope_project, ctx.file_path, skip_protected=True
+            ctx.rope_project,
+            ctx.file_path,
+            skip_protected=True,
         )
         if resource is None:
             return []
@@ -34,7 +36,7 @@ class FlextInfraFutureAnnotationsDetector:
         try:
             pymodule = u.Infra.resolve_pymodule(ctx.rope_project, resource)
             is_docstring_only = bool(pymodule.get_doc()) and not bool(
-                pymodule.get_attributes()
+                pymodule.get_attributes(),
             )
         except (
             *u.Infra.rope_runtime_errors(),
@@ -54,7 +56,7 @@ class FlextInfraFutureAnnotationsDetector:
                     stage="future-annotations",
                     error_type=type(exc).__name__,
                     detail=str(exc),
-                )
+                ),
             )
             return []
         if is_docstring_only:

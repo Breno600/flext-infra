@@ -31,15 +31,17 @@ class FlextInfraEnsurePyreflyConfigPhase:
         declared_python_dirs = context.declared_python_dirs
         if project_dir is not None and paths_manager is not None:
             expected_search: t.StrSequence = paths_manager.pyrefly_search_paths(
-                project_dir=project_dir, is_root=context.is_root
+                project_dir=project_dir,
+                is_root=context.is_root,
             )
             expected_includes: t.StrSequence = paths_manager.pyrefly_project_includes(
-                project_dir=project_dir, is_root=context.is_root
+                project_dir=project_dir,
+                is_root=context.is_root,
             )
         else:
             expected_search = [c.Infra.DEFAULT_SRC_DIR]
             expected_includes = [f"{c.Infra.DEFAULT_SRC_DIR}/**/*.py*"]
-        # flext-j47u (codex): keep pre-write Pyrefly scope identical to the first
+        # Keep pre-write Pyrefly scope identical to the first
         # post-write discovery without fabricating directories on disk.
         if context.declared_python_dirs_are_complete:
             declared_import_roots = (
@@ -47,9 +49,9 @@ class FlextInfraEnsurePyreflyConfigPhase:
                 if path_rules.source_dir in declared_python_dirs
                 else ()
             )
-            # Why (ai-hub-qwoc, fleet-wide fix): sorted({...}) places "."
+            # Why (fleet-wide fix): sorted({...}) places "."
             # before "src" (ASCII '.' < 's'), so pyrefly resolves every
-            # module twice (ai_hub.X via src AND src.ai_hub.X via "."),
+            # module twice (pkg.X via src AND src.pkg.X via "."),
             # producing phantom bad-argument-type errors. The declared
             # source import root must stay first; everything else (typically
             # ".", for tests.* resolution) sorts after it.
@@ -62,7 +64,7 @@ class FlextInfraEnsurePyreflyConfigPhase:
                 merged_search.discard(path_rules.source_dir)
             merged_search.difference_update(declared_import_roots)
             expected_search = [*declared_import_roots, *sorted(merged_search)]
-            # NOTE (multi-agent, flext-wkii.17.9.2.1): analysis roots belong in
+            # Analysis roots belong in
             # project-includes; only import roots belong in search-path.
             expected_includes = tuple(
                 f"{directory}/**/*.py*" for directory in declared_python_dirs
@@ -85,14 +87,17 @@ class FlextInfraEnsurePyreflyConfigPhase:
                 toml.RemoveOp(key="ignore-errors-in-generated-code"),
                 # Search-path order is semantic; never sort this operation.
                 toml.ListOp(
-                    key=c.Infra.SEARCH_PATH, values=expected_search, sort=False
+                    key=c.Infra.SEARCH_PATH,
+                    values=expected_search,
+                    sort=False,
                 ),
                 (
                     toml.SetOp(key=c.Infra.PROJECT_INCLUDES, value=[])
                     if context.declared_python_dirs_are_complete
                     and not expected_includes
                     else toml.ListOp(
-                        key=c.Infra.PROJECT_INCLUDES, values=expected_includes
+                        key=c.Infra.PROJECT_INCLUDES,
+                        values=expected_includes,
                     )
                 ),
                 toml.SetOp(
@@ -100,7 +105,8 @@ class FlextInfraEnsurePyreflyConfigPhase:
                     value=pyrefly_rules.disable_project_excludes_heuristics,
                 ),
                 toml.SetOp(
-                    key="use-ignore-files", value=pyrefly_rules.use_ignore_files
+                    key="use-ignore-files",
+                    value=pyrefly_rules.use_ignore_files,
                 ),
                 toml.ListOp(
                     key=c.Infra.PROJECT_EXCLUDES,
@@ -136,7 +142,8 @@ class FlextInfraEnsurePyreflyConfigPhase:
         """Apply canonical pyrefly settings to one normalized payload."""
         configured_error_keys = frozenset(self._tool_config.tools.pyrefly.strict_errors)
         errors_table = u.Cli.toml_mapping_path(
-            payload, (c.Infra.TOOL, c.Infra.PYREFLY, "errors")
+            payload,
+            (c.Infra.TOOL, c.Infra.PYREFLY, "errors"),
         )
         return u.Infra.apply_toml_phases(
             payload,
