@@ -12,8 +12,8 @@ from tests import u
 class TestsFlextInfraDiscoveryInfraDiscoveryEdgeCases:
     """Edge-case tests for project discovery."""
 
+    @staticmethod
     def test_standalone_never_discovers_undeclared_child_projects(
-        self,
         tmp_path: Path,
     ) -> None:
         service = u.Infra()
@@ -28,15 +28,16 @@ class TestsFlextInfraDiscoveryInfraDiscoveryEdgeCases:
         tm.ok(result)
         tm.that(result.value, empty=True)
 
-    def test_find_all_pyproject_files_with_nonexistent_path(self) -> None:
+    @staticmethod
+    def test_find_all_pyproject_files_with_nonexistent_path() -> None:
         service = u.Infra()
         nonexistent = Path("/nonexistent/path/to/workspace")
         result = service.find_all_pyproject_files(nonexistent)
         tm.ok(result)
         tm.that(result.value, eq=[])
 
+    @staticmethod
     def test_standalone_pyproject_scan_never_reads_parent_or_sibling(
-        self,
         tmp_path: Path,
     ) -> None:
         service = u.Infra()
@@ -54,8 +55,8 @@ class TestsFlextInfraDiscoveryInfraDiscoveryEdgeCases:
         tm.ok(result)
         tm.that(tuple(result.value), eq=(own_pyproject,))
 
+    @staticmethod
     def test_find_all_pyproject_files_with_permission_error(
-        self,
         tmp_path: Path,
     ) -> None:
         service = u.Infra()
@@ -64,8 +65,8 @@ class TestsFlextInfraDiscoveryInfraDiscoveryEdgeCases:
         tm.ok(result)
         tm.that(len(result.value) >= 1, eq=True)
 
+    @staticmethod
     def test_discover_projects_skips_no_pyproject_no_gomod(
-        self,
         tmp_path: Path,
     ) -> None:
         service = u.Infra()
@@ -80,8 +81,8 @@ class TestsFlextInfraDiscoveryInfraDiscoveryEdgeCases:
         tm.ok(result)
         tm.that(not result.value, eq=True)
 
+    @staticmethod
     def test_find_all_pyproject_files_skips_unreadable_subdir(
-        self,
         tmp_path: Path,
     ) -> None:
         service = u.Infra()

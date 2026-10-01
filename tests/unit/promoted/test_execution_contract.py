@@ -13,8 +13,8 @@ from tests import c, u
 class TestsFlextInfraPromotedExecutionContract:
     """Promoted contracts always execute without an effect selector."""
 
+    @staticmethod
     def test_workspace_configuration_and_promoted_facts_preserve_their_domains(
-        self,
         tmp_path: Path,
     ) -> None:
         """Facade composition exposes both schemas without a name collision."""
@@ -29,8 +29,8 @@ class TestsFlextInfraPromotedExecutionContract:
     class TestsFlextInfraPromotedAlwaysExecutes:
         """Validate commands with and without declared domain parameters."""
 
+        @staticmethod
         def test_command_contract_accepts_mutating_command_without_parameters(
-            self,
             tmp_path: Path,
         ) -> None:
             """A mutating command can declare an operation without parameters."""
@@ -39,8 +39,8 @@ class TestsFlextInfraPromotedExecutionContract:
             )
             u.Infra.promoted_validate_command_contract(command)
 
+        @staticmethod
         def test_command_contract_accepts_declared_domain_parameter(
-            self,
             tmp_path: Path,
         ) -> None:
             """A domain parameter remains part of the command's input contract."""

@@ -13,8 +13,7 @@ from typing import ClassVar, override
 
 from flext_core import r
 from flext_infra import c, p, t
-
-from ..base import FlextInfraServiceBase
+from flext_infra.base import FlextInfraServiceBase
 
 
 class FlextInfraLockIntegrityVerifier(FlextInfraServiceBase[bool]):

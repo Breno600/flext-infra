@@ -12,27 +12,30 @@ from flext_infra import u
 class TestsFlextInfraInfraPaths:
     """Verify workspace path resolution through the public utility."""
 
-    def test_resolve_repository_root_with_current_directory(self) -> None:
+    @staticmethod
+    def test_resolve_repository_root_with_current_directory() -> None:
         result = u.Infra.resolve_repository_root_or_cwd(None)
         tm.that(result.is_absolute(), eq=True)
 
-    def test_resolve_repository_root_with_absolute_path(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_resolve_repository_root_with_absolute_path(tmp_path: Path) -> None:
         result = u.Infra.resolve_repository_root_or_cwd(tmp_path)
         tm.that(result.is_absolute(), eq=True)
 
+    @staticmethod
     def test_resolve_repository_root_returns_resolved_path(
-        self,
         tmp_path: Path,
     ) -> None:
         result = u.Infra.resolve_repository_root_or_cwd(tmp_path)
         tm.that(result, eq=tmp_path.resolve())
 
-    def test_resolve_repository_root_with_none_uses_cwd(self) -> None:
+    @staticmethod
+    def test_resolve_repository_root_with_none_uses_cwd() -> None:
         result = u.Infra.resolve_repository_root_or_cwd(None)
         tm.that(result, eq=Path.cwd().resolve())
 
+    @staticmethod
     def test_resolve_repository_root_with_file_returns_parent(
-        self,
         tmp_path: Path,
     ) -> None:
         file_path = tmp_path / "some_file.txt"
@@ -40,8 +43,8 @@ class TestsFlextInfraInfraPaths:
         result = u.Infra.resolve_repository_root_or_cwd(file_path)
         tm.that(result, eq=tmp_path.resolve())
 
+    @staticmethod
     def test_member_checkout_never_escalates_to_its_superproject(
-        self,
         tmp_path: Path,
     ) -> None:
         """Invoking inside a member scopes the run to that member only.

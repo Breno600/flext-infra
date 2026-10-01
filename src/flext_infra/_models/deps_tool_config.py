@@ -8,9 +8,12 @@ from typing import Annotated, Literal, Self
 from flext_cli import m, u
 
 from flext_infra import t
-
-from .deps_tool_config_linters import FlextInfraModelsDepsToolConfigLinters
-from .deps_tool_config_type_checkers import FlextInfraModelsDepsToolConfigTypeCheckers
+from flext_infra._models.deps_tool_config_linters import (
+    FlextInfraModelsDepsToolConfigLinters,
+)
+from flext_infra._models.deps_tool_config_type_checkers import (
+    FlextInfraModelsDepsToolConfigTypeCheckers,
+)
 
 
 class FlextInfraModelsDepsToolConfig(
@@ -440,7 +443,8 @@ class FlextInfraModelsDepsToolConfig(
             # suite. The single-bound checks above report first: they name the
             # field. Both phases' reserves bind every declared run budget.
             reserve = max(
-                self.suite_stop_reserve_seconds, self.slow_suite_stop_reserve_seconds
+                self.suite_stop_reserve_seconds,
+                self.slow_suite_stop_reserve_seconds,
             )
             if any(
                 timeout <= reserve
@@ -572,7 +576,8 @@ class FlextInfraModelsDepsToolConfig(
             ),
         ]
         precision: Annotated[
-            int, m.Field(description="Decimal precision for coverage percentages.")
+            int,
+            m.Field(description="Decimal precision for coverage percentages."),
         ]
         exclude_also: Annotated[
             t.StrSequence,

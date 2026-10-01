@@ -7,8 +7,8 @@ from typing import Annotated, ClassVar, Literal, Self
 
 from flext_cli import m, u
 
-from .. import c, t
-from . import FlextInfraModelsMixins as mm
+from flext_infra import c, t
+from flext_infra._models import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsCore:
@@ -181,14 +181,11 @@ class FlextInfraModelsCore:
             description="Canonical test operation for this report directory",
         )
         testmon_db: Path | None = m.Field(
-            description="External pytest-testmon database; absent for full and coverage"
+            description="External pytest-testmon database; absent for coverage",
         )
-        deadline_monotonic: float | None = m.Field(
+        deadline_monotonic: float = m.Field(
             gt=0,
-            description=(
-                "Shared absolute deadline across all execution phases; absent "
-                "for the unbounded full verb"
-            ),
+            description="Shared absolute deadline across all execution phases",
         )
         report_directory: Path | None = m.Field(
             default=None,
@@ -401,7 +398,7 @@ class FlextInfraModelsCore:
         repository_root: Annotated[
             Path,
             m.Field(
-                description="Repository root whose namespace contract is validated"
+                description="Repository root whose namespace contract is validated",
             ),
         ]
 

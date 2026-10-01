@@ -308,7 +308,8 @@ class TestsFlextInfraCodegenBeadsProjection:
 
         tm.that(identity.read_bytes(), eq=before)
 
-    def test_beads_gate_lock_is_tolerated_runtime_state(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_beads_gate_lock_is_tolerated_runtime_state(tmp_path: Path) -> None:
         """The bd gate serialization marker never fails composed verification.
 
         The bd client writes ``dolt.gate.lock`` beside the ledger on every gate

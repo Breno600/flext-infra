@@ -9,8 +9,9 @@ from git import GitCommandError
 
 from flext_core import r
 from flext_infra import m
-
-from .worktree_facts import FlextInfraUtilitiesGitWorktreeFactsMixin
+from flext_infra._utilities._git.worktree_facts import (
+    FlextInfraUtilitiesGitWorktreeFactsMixin,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p

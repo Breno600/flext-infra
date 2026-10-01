@@ -35,7 +35,8 @@ class TestsFlextInfraLocCapGate:
             files={"sample.py": module},
         )
 
-    def test_gate_identity(self) -> None:
+    @staticmethod
+    def test_gate_identity() -> None:
         tm.that(FlextInfraLocCapGate.gate_id, eq="loc-cap")
         tm.that(FlextInfraLocCapGate.can_fix, eq=False)
 

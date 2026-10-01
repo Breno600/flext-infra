@@ -18,14 +18,17 @@ from tests import c
 class TestsFlextInfraInfraConstantsCore:
     """Tests for Paths namespace constants."""
 
-    def test_paths_constants_are_strings(self) -> None:
+    @staticmethod
+    def test_paths_constants_are_strings() -> None:
         tm.that(c.Infra.DEFAULT_SRC_DIR, is_=str)
 
-    def test_files_constants_are_strings(self) -> None:
+    @staticmethod
+    def test_files_constants_are_strings() -> None:
         tm.that(c.PYPROJECT_FILENAME, is_=str)
         tm.that(c.Infra.MAKEFILE_FILENAME, is_=str)
 
-    def test_gate_constants_resolve_config_check_gates(self) -> None:
+    @staticmethod
+    def test_gate_constants_resolve_config_check_gates() -> None:
         """Every config-declared default check gate resolves to a live gate.
 
         The gate vocabulary is config-owned (P0): instead of pinning the
@@ -36,17 +39,20 @@ class TestsFlextInfraInfraConstantsCore:
         for gate_id in config.Infra.codegen.make.check_gates_default:
             tm.that(registry.get(gate_id), none=False)
 
-    def test_status_constants_are_result_status_members(self) -> None:
+    @staticmethod
+    def test_status_constants_are_result_status_members() -> None:
         tm.that(c.Infra.ResultStatus.PASSED, is_=c.Infra.ResultStatus)
         tm.that(c.Infra.ResultStatus.FAIL, is_=c.Infra.ResultStatus)
         tm.that(c.Infra.ResultStatus.OK, is_=c.Infra.ResultStatus)
         tm.that(c.Infra.ResultStatus.WARN, is_=c.Infra.ResultStatus)
 
-    def test_common_excluded_dirs_is_string(self) -> None:
+    @staticmethod
+    def test_common_excluded_dirs_is_string() -> None:
         excluded = c.Infra.COMMON_EXCLUDED_DIRS
         tm.that(excluded, is_=frozenset)
 
-    def test_common_excluded_dirs_contains_standard_dirs(self) -> None:
+    @staticmethod
+    def test_common_excluded_dirs_contains_standard_dirs() -> None:
         excluded = c.Infra.COMMON_EXCLUDED_DIRS
         tm.that(excluded, has=".git")
         tm.that(excluded, has=".venv")
@@ -55,35 +61,42 @@ class TestsFlextInfraInfraConstantsCore:
         tm.that(excluded, has="build")
         tm.that(excluded, has="venv")
 
-    def test_doc_excluded_dirs_includes_common(self) -> None:
+    @staticmethod
+    def test_doc_excluded_dirs_includes_common() -> None:
         doc_excluded = c.Infra.DOC_EXCLUDED_DIRS
         common = c.Infra.COMMON_EXCLUDED_DIRS
         tm.that(doc_excluded.issuperset(common), eq=True)
 
-    def test_doc_excluded_dirs_includes_site(self) -> None:
+    @staticmethod
+    def test_doc_excluded_dirs_includes_site() -> None:
         tm.that(c.Infra.DOC_EXCLUDED_DIRS, has="site")
 
-    def test_pyproject_skip_dirs_includes_common(self) -> None:
+    @staticmethod
+    def test_pyproject_skip_dirs_includes_common() -> None:
         skip_dirs = c.Infra.PYPROJECT_SKIP_DIRS
         common = c.Infra.COMMON_EXCLUDED_DIRS
         tm.that(skip_dirs.issuperset(common), eq=True)
 
-    def test_pyproject_skip_dirs_includes_flext_dirs(self) -> None:
+    @staticmethod
+    def test_pyproject_skip_dirs_includes_flext_dirs() -> None:
         skip_dirs = c.Infra.PYPROJECT_SKIP_DIRS
         tm.that(skip_dirs, has=".claude.disabled")
         tm.that(skip_dirs, has="context_test")
         tm.that(skip_dirs, has="rope_ws")
         tm.that(skip_dirs, has="tmp_flow_test")
 
-    def test_check_excluded_dirs_includes_common(self) -> None:
+    @staticmethod
+    def test_check_excluded_dirs_includes_common() -> None:
         check_excluded = c.Infra.CHECK_EXCLUDED_DIRS
         common = c.Infra.COMMON_EXCLUDED_DIRS
         tm.that(check_excluded.issuperset(common), eq=True)
 
-    def test_check_excluded_dirs_omit_operational_storage(self) -> None:
+    @staticmethod
+    def test_check_excluded_dirs_omit_operational_storage() -> None:
         tm.that(c.Infra.CHECK_EXCLUDED_DIRS, has=".beads")
 
-    def test_excluded_dirs_are_strings(self) -> None:
+    @staticmethod
+    def test_excluded_dirs_are_strings() -> None:
         tm.that(c.Infra.DOC_EXCLUDED_DIRS, is_=frozenset)
         tm.that(c.Infra.PYPROJECT_SKIP_DIRS, is_=frozenset)
         tm.that(c.Infra.CHECK_EXCLUDED_DIRS, is_=frozenset)

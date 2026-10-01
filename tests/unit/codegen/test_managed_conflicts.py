@@ -10,7 +10,8 @@ from flext_infra import c, u
 class TestsFlextInfraManagedConflictRecovery:
     """Prove conflict recovery remains bounded by the document SSOT."""
 
-    def test_every_table_the_conform_pipeline_writes_is_recoverable(self) -> None:
+    @staticmethod
+    def test_every_table_the_conform_pipeline_writes_is_recoverable() -> None:
         """Whatever the owner writes, the owner must be able to recover.
 
         The table is named by the same constant the conform pipeline writes
@@ -29,7 +30,8 @@ class TestsFlextInfraManagedConflictRecovery:
             eq=True,
         )
 
-    def test_every_generated_pyproject_section_declares_recovery(self) -> None:
+    @staticmethod
+    def test_every_generated_pyproject_section_declares_recovery() -> None:
         """A section the owner renders must be recoverable, or a merge dead-ends.
 
         `per-file-ignores` is rendered from `tooling.yaml` exactly like the
@@ -49,7 +51,8 @@ class TestsFlextInfraManagedConflictRecovery:
             eq=True,
         )
 
-    def test_recovers_the_lint_policy_section(self) -> None:
+    @staticmethod
+    def test_recovers_the_lint_policy_section() -> None:
         """Keep the owner's current lint projection over an absorbed base."""
         content = (
             "[tool.ruff.lint.per-file-ignores]\n"
@@ -75,7 +78,8 @@ class TestsFlextInfraManagedConflictRecovery:
             ),
         )
 
-    def test_recovers_only_configured_toml_section(self) -> None:
+    @staticmethod
+    def test_recovers_only_configured_toml_section() -> None:
         """Keep the current projection for a configured owner section."""
         content = (
             "[project]\n"
@@ -111,7 +115,8 @@ class TestsFlextInfraManagedConflictRecovery:
             ),
         )
 
-    def test_rejects_conflict_outside_configured_toml_section(self) -> None:
+    @staticmethod
+    def test_rejects_conflict_outside_configured_toml_section() -> None:
         """Fail closed when the canonical owner did not declare the section."""
         content = (
             "[project]\n"
@@ -126,7 +131,8 @@ class TestsFlextInfraManagedConflictRecovery:
 
         tm.fail(result, has="outside owner-declared TOML sections: project")
 
-    def test_preserves_clean_document_bytes(self) -> None:
+    @staticmethod
+    def test_preserves_clean_document_bytes() -> None:
         """Leave documents without conflict markers byte-identical."""
         content = '[tool.uv]\nlink-mode = "copy"\n'
 

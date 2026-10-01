@@ -65,7 +65,8 @@ class FlextInfraReleaseBoundaryMixin(FlextInfraProjectSelectionServiceBase[bool]
 
     @staticmethod
     def _sdist_member_allowed(
-        parts: t.StrSequence, allowed_roots: t.StrSequence
+        parts: t.StrSequence,
+        allowed_roots: t.StrSequence,
     ) -> bool:
         """Return whether one regular sdist member is inside the public boundary."""
         relative = tuple(part.casefold() for part in parts[1:])

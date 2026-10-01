@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_infra import m, u
+from flext_infra import m
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -111,7 +111,7 @@ class FlextInfraRefactorCensusCollectMixin:
                 scan_config=scan_config,
             )
             for project in sorted(
-                findings.report_projects | set(findings.project_objects)
+                findings.report_projects | set(findings.project_objects),
             )
         )
         if self.effective_dry_run:

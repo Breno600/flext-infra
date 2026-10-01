@@ -6,10 +6,9 @@ from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from flext_infra import c, m, t
-
-from .pyproject import FlextInfraUtilitiesPyproject
-from .rope_analysis import FlextInfraUtilitiesRopeAnalysis
-from .rope_core import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
+from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
+from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
 
 if TYPE_CHECKING:
     from pathlib import Path

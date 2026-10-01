@@ -16,13 +16,14 @@ if TYPE_CHECKING:
 class TestsFlextInfraRuffProjectExemptions:
     """A project inherits exactly the declared fleet exemptions."""
 
-    def test_project_map_is_the_fleet_map(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_project_map_is_the_fleet_map(tmp_path: Path) -> None:
         """A project without retired roots receives every fleet entry unchanged."""
         fleet = config.Infra.tooling.tools.ruff.lint.per_file_ignores
 
-        scoped = FlextInfraEnsureRuffConfigPhase.project_per_file_ignores(
+        scoped = FlextInfraEnsureRuffConfigPhase.compose_per_file_ignores(
             tmp_path,
-            fleet,
+            global_ignores=fleet,
         )
 
         tm.that(

@@ -11,9 +11,10 @@ from git import GitCommandError, GitConfigParser
 
 from flext_core import r
 from flext_infra import c, m, t
-
-from ..base import FlextInfraUtilitiesBase
-from .worktree_roots import FlextInfraUtilitiesGitWorktreeRootsMixin
+from flext_infra._utilities._git.worktree_roots import (
+    FlextInfraUtilitiesGitWorktreeRootsMixin,
+)
+from flext_infra._utilities.base import FlextInfraUtilitiesBase
 
 if TYPE_CHECKING:
     from flext_infra import p

@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import ast
 
-from .bindings import FlextInfraUtilitiesSemanticCutoverBindings
+from flext_infra._utilities._semantic_cutover.bindings import (
+    FlextInfraUtilitiesSemanticCutoverBindings,
+)
 
 
 class FlextInfraUtilitiesSemanticCutoverModelFieldsBindings(

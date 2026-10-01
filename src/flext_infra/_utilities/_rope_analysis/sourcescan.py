@@ -7,8 +7,9 @@ from collections.abc import MutableMapping
 from typing import ClassVar
 
 from flext_infra import t
-
-from .asthelpers import FlextInfraUtilitiesRopeAnalysisAstHelpers
+from flext_infra._utilities._rope_analysis.asthelpers import (
+    FlextInfraUtilitiesRopeAnalysisAstHelpers,
+)
 
 
 class FlextInfraUtilitiesRopeAnalysisSourceScan:
@@ -285,10 +286,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         """Return one keyword argument value of a call."""
         if call is None:
             return None
-        return next(
-            (item.value for item in call.keywords if item.arg == keyword),
-            None,
-        )
+        return next((item.value for item in call.keywords if item.arg == keyword), None)
 
     @staticmethod
     def lazy_public_exports_source(source: str) -> t.Pair[t.StrSequence, str]:

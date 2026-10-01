@@ -30,8 +30,8 @@ class TestsFlextInfraRopeStructure:
         "from package.private import (  # inline explanation\n    ExportedName,\n)\n"
     )
 
+    @staticmethod
     def test_first_party_namespaces_require_live_python_sources(
-        self,
         tmp_path: Path,
     ) -> None:
         src = tmp_path / c.Infra.DEFAULT_SRC_DIR
@@ -70,7 +70,8 @@ class TestsFlextInfraRopeStructure:
 
         tm.that(by_line[5].category, eq=c.Infra.StatementCategory.TYPE_ALIAS)
 
-    def test_categorizes_parenthesized_docstring_as_inert(self) -> None:
+    @staticmethod
+    def test_categorizes_parenthesized_docstring_as_inert() -> None:
         source = (
             "class Wrapper:\n"
             '    """Facade (with parentheses) in the prose."""\n'
@@ -109,7 +110,8 @@ class TestsFlextInfraRopeStructure:
 
         tm.that(by_line[2].enclosing_kind, eq=c.Infra.RopeScopeKind.MODULE)
 
-    def test_empty_source_returns_no_statements(self) -> None:
+    @staticmethod
+    def test_empty_source_returns_no_statements() -> None:
         tm.that(u.Infra.logical_statements(""), eq=())
 
     def test_preserves_newlines_in_multiline_statement(self) -> None:

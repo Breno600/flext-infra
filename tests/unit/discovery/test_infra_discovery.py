@@ -62,8 +62,8 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         )
         return tmp_path
 
+    @staticmethod
     def test_discover_projects_happy_path(
-        self,
         service: u.Infra,
         workspace_with_projects: Path,
     ) -> None:
@@ -81,8 +81,8 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         tm.that(projects[0].declared_subproject, eq=True)
         tm.that(projects[1].declared_subproject, eq=True)
 
+    @staticmethod
     def test_discover_projects_empty_workspace(
-        self,
         service: u.Infra,
         tmp_path: Path,
     ) -> None:
@@ -90,8 +90,8 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         tm.ok(result)
         tm.that(result.value, eq=[])
 
+    @staticmethod
     def test_discover_projects_nonexistent_path(
-        self,
         service: u.Infra,
         tmp_path: Path,
     ) -> None:
@@ -100,8 +100,8 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         tm.fail(result)
         tm.that(result.error or "", has=str(nonexistent))
 
+    @staticmethod
     def test_find_all_pyproject_files_happy_path(
-        self,
         service: u.Infra,
         tmp_path: Path,
     ) -> None:
@@ -117,8 +117,8 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         tm.that(len(files), eq=3)
         tm.that(all(f.name == "pyproject.toml" for f in files), eq=True)
 
+    @staticmethod
     def test_find_all_pyproject_files_with_skip_dirs(
-        self,
         service: u.Infra,
         tmp_path: Path,
     ) -> None:
@@ -135,8 +135,8 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         tm.that(len(files), eq=1)
         tm.that(str(files[0]), lacks="skip_me")
 
+    @staticmethod
     def test_find_all_pyproject_files_with_project_paths(
-        self,
         service: u.Infra,
         tmp_path: Path,
     ) -> None:
@@ -152,8 +152,8 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         tm.that(len(files), eq=1)
         tm.that(files[0].parent, eq=proj1)
 
+    @staticmethod
     def test_discover_projects_result_type(
-        self,
         service: u.Infra,
         workspace_with_projects: Path,
     ) -> None:
@@ -163,8 +163,8 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         for item in projects:
             tm.that(item, is_=m.Infra.ProjectInfo)
 
+    @staticmethod
     def test_discover_projects_empty_workspace_v2(
-        self,
         service: u.Infra,
         tmp_path: Path,
     ) -> None:
@@ -172,8 +172,8 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         tm.ok(result)
         tm.that(result.value, eq=[])
 
+    @staticmethod
     def test_discover_projects_prefers_workspace_children_over_root_project(
-        self,
         service: u.Infra,
         tmp_path: Path,
     ) -> None:
@@ -205,8 +205,8 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         tm.ok(result)
         tm.that([project.name for project in result.value], eq=["project1", "project2"])
 
+    @staticmethod
     def test_discover_projects_derives_package_name_from_hatch_packages(
-        self,
         service: u.Infra,
         tmp_path: Path,
     ) -> None:
@@ -229,8 +229,8 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         tm.that(len(result.value), eq=1)
         tm.that(result.value[0].package_name, eq="custom_pkg")
 
+    @staticmethod
     def test_discover_projects_accepts_standalone_governed_root_without_core_dep(
-        self,
         service: u.Infra,
         tmp_path: Path,
     ) -> None:

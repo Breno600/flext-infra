@@ -15,11 +15,18 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import m, t
-
-from ..private_import_facades import FlextInfraUtilitiesPrivateImportFacades
-from .edits import FlextInfraUtilitiesSemanticCutoverEdits
-from .facade_base_cst import FlextInfraUtilitiesSemanticCutoverFacadeBaseCst
-from .facade_owners import FlextInfraUtilitiesSemanticCutoverFacadeOwners
+from flext_infra._utilities._semantic_cutover.edits import (
+    FlextInfraUtilitiesSemanticCutoverEdits,
+)
+from flext_infra._utilities._semantic_cutover.facade_base_cst import (
+    FlextInfraUtilitiesSemanticCutoverFacadeBaseCst,
+)
+from flext_infra._utilities._semantic_cutover.facade_owners import (
+    FlextInfraUtilitiesSemanticCutoverFacadeOwners,
+)
+from flext_infra._utilities.private_import_facades import (
+    FlextInfraUtilitiesPrivateImportFacades,
+)
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping

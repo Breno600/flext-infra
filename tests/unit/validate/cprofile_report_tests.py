@@ -18,7 +18,8 @@ from flext_infra.validate.cprofile_report import FlextInfraCProfileReport
 class TestsFlextInfraCProfileReport:
     """Prove real pstats artifacts render through the typed owner."""
 
-    def test_real_profile_renders_bounded_text(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_real_profile_renders_bounded_text(tmp_path: Path) -> None:
         policy = config.Infra.tooling.tools.pytest
         report_dir = tmp_path / ".reports" / "tests" / "profile"
         report_dir.mkdir(parents=True)
@@ -50,7 +51,8 @@ class TestsFlextInfraCProfileReport:
         tm.ok(result)
         tm.that(output_path.read_text(encoding="utf-8"), has="function calls")
 
-    def test_validate_route_uses_typed_profile_owner(self) -> None:
+    @staticmethod
+    def test_validate_route_uses_typed_profile_owner() -> None:
         routes = {
             route.name: route.model_cls
             for route in FlextInfraValidationCommandRoutes.validate_command_routes
@@ -58,8 +60,8 @@ class TestsFlextInfraCProfileReport:
 
         tm.that(routes["cprofile-report"], eq=FlextInfraCProfileReport)
 
+    @staticmethod
     def test_profile_artifacts_cannot_escape_workspace_reports(
-        self,
         tmp_path: Path,
     ) -> None:
         policy = config.Infra.tooling.tools.pytest

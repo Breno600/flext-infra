@@ -5,10 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_core import r
-
-from ... import c, m, p
-from ...workspace import FlextInfraWorkspaceDetector
-from .docs_ownership import FlextInfraCodegenConformDocsOwnership
+from flext_infra import c, m, p
+from flext_infra.codegen._conform.docs_ownership import (
+    FlextInfraCodegenConformDocsOwnership,
+)
+from flext_infra.workspace import FlextInfraWorkspaceDetector
 
 
 class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership):
@@ -97,9 +98,7 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
                 f"composed project Beads route is not a directory: {route}",
             )
         unexpected = sorted(
-            entry.name
-            for entry in route.iterdir()
-            if entry.name not in allowed_entries
+            entry.name for entry in route.iterdir() if entry.name not in allowed_entries
         )
         if unexpected:
             return r[bool].fail(

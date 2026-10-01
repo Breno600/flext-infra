@@ -17,7 +17,8 @@ from flext_infra import config
 class TestsFlextInfraToolchainMake:
     """The Make provider is a managed Mise tool, never a host shim."""
 
-    def test_make_version_tracks_latest(self) -> None:
+    @staticmethod
+    def test_make_version_tracks_latest() -> None:
         """Keep Make policy explicit while Mise resolves its newest release."""
         toolchain = config.Infra.codegen.toolchain
 

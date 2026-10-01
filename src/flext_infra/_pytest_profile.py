@@ -96,8 +96,8 @@ class FlextInfraPytestProfile:
             if owned:
                 self._record_context(
                     m.Infra.PytestRunContext.model_validate_json(
-                        owned[0].read_text(encoding="utf-8")
-                    )
+                        owned[0].read_text(encoding="utf-8"),
+                    ),
                 )
 
         try:
@@ -132,11 +132,8 @@ class FlextInfraPytestProfile:
         ):
             msg = "collection profile run receipt does not match its report directory"
             raise ValueError(msg)
-        if (
-            context.deadline_monotonic is None
-            or time.monotonic() >= context.deadline_monotonic
-        ):
-            msg = "collection profile run receipt has no live deadline"
+        if time.monotonic() >= context.deadline_monotonic:
+            msg = "collection profile run receipt has an expired deadline"
             raise ValueError(msg)
         self.context = context
         runpy.run_module("pytest", run_name="__main__", alter_sys=True)
@@ -152,7 +149,7 @@ class FlextInfraPytestProfile:
             process_dir = self.output.parent / policy.profile_process_directory
             process_dir.mkdir(parents=True, exist_ok=True)
             (process_dir / f"{os.getpid()}{self.output.suffix}").hardlink_to(
-                self.output
+                self.output,
             )
         if self.context is not None:
             from flext_infra import u

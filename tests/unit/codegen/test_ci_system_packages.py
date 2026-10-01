@@ -7,9 +7,7 @@ from pathlib import Path
 from flext_tests import tm
 
 from flext_infra import c, u
-from tests import t
-
-from ._support import CodegenTestSupport
+from tests import t, u
 
 
 class TestsFlextInfraCiSystemPackages:
@@ -23,7 +21,7 @@ class TestsFlextInfraCiSystemPackages:
 
     @classmethod
     def _render_ci(cls, *, system_packages: t.VariadicTuple[str]) -> str:
-        spec = CodegenTestSupport.Ci.workflow_spec(
+        spec = u.CodegenTestSupport.Ci.workflow_spec(
             dist="fixture-engine",
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch="develop",

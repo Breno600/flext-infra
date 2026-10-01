@@ -8,10 +8,15 @@ from pathlib import Path
 from typing import override
 
 from flext_infra import m, p, t
-
-from ..rope_runtime_modules import FlextInfraUtilitiesRopeRuntimeModules
-from ..rope_runtime_refactors import FlextInfraUtilitiesRopeRuntimeRefactors
-from .family_type_references import FlextInfraUtilitiesSemanticFamilyTypeReferences
+from flext_infra._utilities._semantic_cutover.family_type_references import (
+    FlextInfraUtilitiesSemanticFamilyTypeReferences,
+)
+from flext_infra._utilities.rope_runtime_modules import (
+    FlextInfraUtilitiesRopeRuntimeModules,
+)
+from flext_infra._utilities.rope_runtime_refactors import (
+    FlextInfraUtilitiesRopeRuntimeRefactors,
+)
 
 
 class FlextInfraUtilitiesSemanticNestingTypes(

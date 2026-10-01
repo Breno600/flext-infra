@@ -16,16 +16,16 @@ if TYPE_CHECKING:
 class TestsFlextInfraDepsModernizerMain:
     """Validate only public modernizer behavior."""
 
+    @staticmethod
     def test_initialization_uses_explicit_workspace(
-        self,
         modernizer_workspace: Path,
     ) -> None:
         """Verify initialization uses explicit workspace."""
         modernizer = FlextInfraPyprojectModernizer(repository_root=modernizer_workspace)
         tm.that(modernizer.root, eq=modernizer_workspace)
 
+    @staticmethod
     def test_conform_source_rejects_invalid_toml(
-        self,
         modernizer_workspace: Path,
     ) -> None:
         """Invalid TOML fails closed with the offending path."""
@@ -41,7 +41,8 @@ class TestsFlextInfraDepsModernizerMain:
             has="invalid TOML",
         )
 
-    def test_run_apply_updates_root_pyproject(self, modernizer_workspace: Path) -> None:
+    @staticmethod
+    def test_run_apply_updates_root_pyproject(modernizer_workspace: Path) -> None:
         """Verify run apply updates root pyproject."""
         modernizer = FlextInfraPyprojectModernizer(
             repository_root=modernizer_workspace,
@@ -56,8 +57,8 @@ class TestsFlextInfraDepsModernizerMain:
             has='build-backend = "hatchling.build"',
         )
 
+    @staticmethod
     def test_run_rejects_unknown_selected_project(
-        self,
         modernizer_workspace: Path,
     ) -> None:
         """Verify run rejects unknown selected project."""
@@ -67,8 +68,8 @@ class TestsFlextInfraDepsModernizerMain:
         )
         tm.that(modernizer.run(), eq=2)
 
+    @staticmethod
     def test_cli_reports_pending_changes_in_audit_mode(
-        self,
         modernizer_workspace: Path,
     ) -> None:
         """Verify cli reports pending changes in audit mode."""

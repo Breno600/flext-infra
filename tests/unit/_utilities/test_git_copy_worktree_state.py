@@ -15,7 +15,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraGitCopyWorktreeState:
     """The copy keeps the source's index/worktree distinction, never collapsing."""
 
-    def test_copy_preserves_staged_and_unstaged_state(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_copy_preserves_staged_and_unstaged_state(tmp_path: Path) -> None:
         source = git_ui.git_repository(tmp_path, "source")
         (source / "staged.txt").write_text("base\n", encoding="utf-8")
         (source / "unstaged.txt").write_text("base\n", encoding="utf-8")

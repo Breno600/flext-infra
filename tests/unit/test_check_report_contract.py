@@ -66,7 +66,8 @@ class TestsFlextInfraCheckReportContract:
             *mode,
         ])
 
-    def test_sarif_report_validates_its_own_emitted_json(self) -> None:
+    @staticmethod
+    def test_sarif_report_validates_its_own_emitted_json() -> None:
         report = m.Infra.SarifReport(
             runs=(
                 m.Infra.SarifRun(

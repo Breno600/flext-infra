@@ -8,7 +8,7 @@ from typing import Annotated, ClassVar, Literal, Self
 
 from flext_cli import m, u
 
-from ... import t
+from flext_infra import t
 
 
 class FlextInfraModelsCodegenJournalModels:

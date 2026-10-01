@@ -1,0 +1,14 @@
+id: ban-type-ignore-comment
+snapshots:
+  'value = call()  # type: ignore':
+    labels:
+    - source: '# type: ignore'
+      style: primary
+      start: 16
+      end: 30
+  'value = call()  # type: ignore[attr-defined]':
+    labels:
+    - source: '# type: ignore[attr-defined]'
+      style: primary
+      start: 16
+      end: 44

@@ -15,8 +15,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraDocsScopeWorktree:
     """Contract for docs scope classification inside a linked-worktree lane."""
 
+    @staticmethod
     def test_project_scope_uses_declared_name_inside_worktree_lane(
-        self,
         tmp_path: Path,
     ) -> None:
         """Classify a project from metadata, not the worktree directory basename."""

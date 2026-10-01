@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
-from .artifact import FlextInfraConfigModelsArtifact
-from .beads import FlextInfraConfigModelsBeads
-from .contexts import FlextInfraConfigModelsContexts
-from .contract import FlextInfraConfigModelsContract
-from .make import FlextInfraConfigModelsMake
-from .provider import FlextInfraConfigModelsProvider
-from .release import FlextInfraConfigModelsRelease
-from .render import FlextInfraConfigModelsRender
-from .root import FlextInfraConfigModelsRoot
-from .scaffold import FlextInfraConfigModelsScaffold
-from .static import FlextInfraConfigModelsStatic
-from .templates import FlextInfraConfigModelsTemplates
-from .workspace import FlextInfraConfigModelsWorkspace
+from flext_infra._models._config.artifact import FlextInfraConfigModelsArtifact
+from flext_infra._models._config.beads import FlextInfraConfigModelsBeads
+from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
+from flext_infra._models._config.make import FlextInfraConfigModelsMake
+from flext_infra._models._config.provider import FlextInfraConfigModelsProvider
+from flext_infra._models._config.release import FlextInfraConfigModelsRelease
+from flext_infra._models._config.render import FlextInfraConfigModelsRender
+from flext_infra._models._config.root import FlextInfraConfigModelsRoot
+from flext_infra._models._config.scaffold import FlextInfraConfigModelsScaffold
+from flext_infra._models._config.static import FlextInfraConfigModelsStatic
+from flext_infra._models._config.templates import FlextInfraConfigModelsTemplates
+from flext_infra._models._config.workspace import FlextInfraConfigModelsWorkspace
 
 
 class FlextInfraConfigModels(

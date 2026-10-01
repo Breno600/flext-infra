@@ -6,7 +6,7 @@ import ast
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from .qualified_names import FlextInfraUtilitiesQualifiedNames
+from flext_infra._utilities.qualified_names import FlextInfraUtilitiesQualifiedNames
 
 if TYPE_CHECKING:
     from flext_infra import m, t

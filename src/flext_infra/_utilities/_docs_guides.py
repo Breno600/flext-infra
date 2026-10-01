@@ -9,9 +9,12 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, config, m, t
-
-from ._docs_command_contract import FlextInfraUtilitiesDocsCommandContractMixin
-from ._docs_generate_plan import FlextInfraUtilitiesDocsGeneratePlanMixin
+from flext_infra._utilities._docs_command_contract import (
+    FlextInfraUtilitiesDocsCommandContractMixin,
+)
+from flext_infra._utilities._docs_generate_plan import (
+    FlextInfraUtilitiesDocsGeneratePlanMixin,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p

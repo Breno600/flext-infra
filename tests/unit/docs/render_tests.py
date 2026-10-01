@@ -26,8 +26,8 @@ class TestsFlextInfraDocsRender:
     site nav; the rooted ``/README.md`` excludes only the docs-dir root README.
     """
 
+    @staticmethod
     def test_project_navigation_discovers_maintained_pages(
-        self,
         tmp_path: Path,
     ) -> None:
         """The real MkDocs navigation includes manual guides beyond generated indexes."""
@@ -53,7 +53,8 @@ class TestsFlextInfraDocsRender:
             eq={"index.md", "security/triage.md", "decisions/ADR-001.md"},
         )
 
-    def test_project_mkdocs_excludes_root_readme_only(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_project_mkdocs_excludes_root_readme_only(tmp_path: Path) -> None:
         """Keep nested README pages while excluding only the docs root README."""
         scope = m.Infra.DocScope(
             name="flext-demo",
@@ -77,7 +78,8 @@ class TestsFlextInfraDocsRender:
         tm.that(patterns, has="/README.md")
         tm.that(patterns, lacks="README.md")
 
-    def test_root_navigation_discovers_maintained_pages(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_root_navigation_discovers_maintained_pages(tmp_path: Path) -> None:
         """The root portal exposes maintained sections without a fixed nav list."""
         for relative in (
             "index.md",
@@ -107,8 +109,8 @@ class TestsFlextInfraDocsRender:
             },
         )
 
+    @staticmethod
     def test_mkdocs_repository_name_comes_from_project_metadata(
-        self,
         tmp_path: Path,
     ) -> None:
         """Render the repository label from the same URL owner as the link."""
@@ -128,8 +130,8 @@ class TestsFlextInfraDocsRender:
         tm.that(project, has="repo_name: example/consumer")
         tm.that(root, has="repo_name: example/consumer")
 
+    @staticmethod
     def test_project_mkdocs_excludes_generated_api_from_revision_dates(
-        self,
         tmp_path: Path,
     ) -> None:
         """Do not derive Git revision dates for generated API pages."""

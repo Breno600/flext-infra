@@ -14,9 +14,8 @@ from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
 from flext_infra import c, m, t, u
-
-from ..base import s
-from ._skill_rule_runner import FlextInfraSkillRuleRunnerMixin
+from flext_infra.base import s
+from flext_infra.validate._skill_rule_runner import FlextInfraSkillRuleRunnerMixin
 
 if TYPE_CHECKING:
     from flext_infra import p

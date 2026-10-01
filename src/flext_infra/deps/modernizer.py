@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ._modernizer.base import FlextInfraPyprojectModernizerBase
+from flext_infra.deps._modernizer.base import FlextInfraPyprojectModernizerBase
 
 
 class FlextInfraPyprojectModernizer(FlextInfraPyprojectModernizerBase):

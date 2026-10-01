@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 
 
 class TestsFlextInfraPytestDiag:
+    @staticmethod
     def _extractor(
-        self,
         junit: Path,
         log: Path,
         *,

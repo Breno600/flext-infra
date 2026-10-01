@@ -9,11 +9,10 @@ from typing import TYPE_CHECKING, ClassVar
 
 from flext_core import r
 from flext_infra import c, t
-
-from .namespace_config import FlextInfraUtilitiesNamespaceConfig
-from .project_discovery import FlextInfraUtilitiesProjectDiscovery
-from .pyproject import FlextInfraUtilitiesPyproject
-from .rope_analysis import FlextInfraUtilitiesRopeAnalysis
+from flext_infra._utilities.namespace_config import FlextInfraUtilitiesNamespaceConfig
+from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
+from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
+from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -207,7 +206,10 @@ class FlextInfraUtilitiesDiscovery(
 
     @classmethod
     def discover_python_targets(
-        cls, project_dir: Path, *, workspace_excluded_top_dirs: frozenset[str]
+        cls,
+        project_dir: Path,
+        *,
+        workspace_excluded_top_dirs: frozenset[str],
     ) -> t.StrSequence:
         """Return every first-party Python target owned by one project root.
 
@@ -225,7 +227,8 @@ class FlextInfraUtilitiesDiscovery(
         ]
         return [
             *cls.discover_python_dirs(
-                project_dir, workspace_excluded_top_dirs=workspace_excluded_top_dirs
+                project_dir,
+                workspace_excluded_top_dirs=workspace_excluded_top_dirs,
             ),
             *root_modules,
         ]

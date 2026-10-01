@@ -8,8 +8,7 @@ from operator import itemgetter
 from pathlib import Path
 
 from flext_infra import c, t
-
-from .discovery import FlextInfraUtilitiesDiscovery
+from flext_infra._utilities.discovery import FlextInfraUtilitiesDiscovery
 
 
 class FlextInfraUtilitiesRopeSource:
@@ -106,7 +105,9 @@ class FlextInfraUtilitiesRopeSource:
 
     @classmethod
     def hoist_inline_imports(
-        cls, file_path: Path, statement_lines: t.SequenceOf[t.IntPair]
+        cls,
+        file_path: Path,
+        statement_lines: t.SequenceOf[t.IntPair],
     ) -> bool:
         """Move function-local import statements to the module import block.
 

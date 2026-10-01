@@ -55,8 +55,8 @@ class TestsFlextInfraModernizerPyrefly:
         pyrefly = u.Tests.toml_mapping(u.Tests.toml_mapping(payload["tool"])["pyrefly"])
         return payload, pyrefly, changes
 
+    @staticmethod
     def test_modernizer_omits_checkout_specific_analyzer_virtualenvs(
-        self,
         tmp_path: Path,
     ) -> None:
         """Keep shared analyzer config invariant across checkout topologies."""
@@ -235,8 +235,8 @@ class TestsFlextInfraModernizerPyrefly:
 
         tm.that(list(u.Tests.strings(pyrefly[c.Infra.PROJECT_INCLUDES])), eq=[])
 
+    @staticmethod
     def test_render_context_includes_live_roots_the_scaffold_never_creates(
-        self,
         tmp_path: Path,
     ) -> None:
         """A real env dir reaches project-includes even if no template creates it."""
@@ -298,8 +298,8 @@ class TestsFlextInfraModernizerPyrefly:
             eq=["src/**/*.py*"],
         )
 
+    @staticmethod
     def test_pyright_include_globs_derive_existing_python_roots(
-        self,
         tmp_path: Path,
     ) -> None:
         """Derive canonical recursive selectors from existing Python roots."""
@@ -325,8 +325,8 @@ class TestsFlextInfraModernizerPyrefly:
 
         tm.that(includes, eq=["scripts/**/*.py*", "src/**/*.py*", "tests/**/*.py*"])
 
+    @staticmethod
     def test_root_context_keeps_workspace_dependencies_out_of_search_path(
-        self,
         tmp_path: Path,
     ) -> None:
         """Root context keeps workspace dependencies out of search-path."""

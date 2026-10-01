@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
-from .document import FlextInfraUtilitiesPyprojectDocument
-from .overlay import FlextInfraUtilitiesPyprojectOverlay
-from .toml_phases import FlextInfraUtilitiesPyprojectTomlPhases
+from flext_infra._utilities._pyproject.document import (
+    FlextInfraUtilitiesPyprojectDocument,
+)
+from flext_infra._utilities._pyproject.overlay import (
+    FlextInfraUtilitiesPyprojectOverlay,
+)
+from flext_infra._utilities._pyproject.toml_phases import (
+    FlextInfraUtilitiesPyprojectTomlPhases,
+)
 
 
 class FlextInfraUtilitiesPyprojectConformBase(

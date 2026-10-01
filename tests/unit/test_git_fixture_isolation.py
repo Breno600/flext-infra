@@ -11,8 +11,8 @@ from tests import c, u as test_u
 
 
 class TestsFlextInfraGitFixtureIsolation:
+    @staticmethod
     def test_initialize_git_repo_ignores_inherited_git_local_environment(
-        self,
         tmp_path: Path,
     ) -> None:
         poison = tmp_path / "poison"

@@ -11,9 +11,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import c, config, m, u
-
-from ..codegen.file_leases import FlextInfraCodegenFileLeases
-from ..workspace.detector import FlextInfraWorkspaceDetector
+from flext_infra.codegen.file_leases import FlextInfraCodegenFileLeases
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -47,11 +46,9 @@ class FlextInfraGate:
         return not self.requires_python_targets or bool(
             u.Infra.discover_python_targets(
                 project_dir,
-                workspace_excluded_top_dirs=(
-                    FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
-                        project_dir
-                    ).unwrap()
-                ),
+                workspace_excluded_top_dirs=FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
+                    project_dir,
+                ).unwrap(),
             ),
         )
 

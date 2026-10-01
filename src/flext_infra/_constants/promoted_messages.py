@@ -32,7 +32,9 @@ class FlextInfraConstantsPromotedMessages:
         INVALID_ALIAS = "{path}: invalid alias {alias!r}; use alias or alias=WHAT"
         STRING_LIST_TYPE = "{path}: {key} must be a list of strings"
         STRING_LIST_ITEM = "{path}: invalid {key}"
-        MISSING_PARAM = "{verb} WHAT={what}: missing required parameter: {name}; example: {example}"
+        MISSING_PARAM = (
+            "{verb} WHAT={what}: missing required parameter: {name}; example: {example}"
+        )
         INVALID_CHOICE = "{verb} WHAT={what}: invalid {name}={value!r}; valid: {valid}"
         ALL_CHOICES_DIVERGE = "{path}: WHAT choices differ from the promoted commands of {verb}: declared={declared} actual={actual}"
         PARAM_MUST_BE_REQUIRED = "{path}: parameter {name} must be required"
@@ -43,9 +45,7 @@ class FlextInfraConstantsPromotedMessages:
         ALIAS_OUTSIDE_ALL = "{path}: aliases may be declared only in WHAT=all"
         ALIAS_COLLIDES_VERB = "alias '{alias}' collides with a promoted verb"
         ALIAS_UNKNOWN_VERB = "alias '{alias}' points to unknown verb {verb}"
-        ALIAS_UNKNOWN_WHAT = (
-            "alias '{alias}' points to {verb} WHAT={what}, but the action does not exist"
-        )
+        ALIAS_UNKNOWN_WHAT = "alias '{alias}' points to {verb} WHAT={what}, but the action does not exist"
         UNKNOWN_VERB = "unknown verb '{verb}'"
         INVALID_WHAT = "invalid WHAT='{what}' for {verb}. Valid: {valid}"
         NO_SCRIPTS_DIR = "no scripts directory found"
@@ -65,9 +65,7 @@ class FlextInfraConstantsPromotedMessages:
         LOCAL_PYTHON_MISSING = (
             "Local Python is missing: {python}; create or sync .venv before using make"
         )
-        ACTIVE_PYTHON_MISMATCH = (
-            "Active Python is not the expected one: {python}; run make with the .venv PATH"
-        )
+        ACTIVE_PYTHON_MISMATCH = "Active Python is not the expected one: {python}; run make with the .venv PATH"
         NOT_DISPATCHED = (
             "ERROR: public commands must run through make <verb> WHAT=<action>\n"
         )

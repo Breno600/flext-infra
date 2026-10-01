@@ -8,7 +8,7 @@ from typing import Annotated, ClassVar, Literal
 
 from flext_cli import m
 
-from .. import t
+from flext_infra import t
 
 
 class FlextInfraModelsWorktree:

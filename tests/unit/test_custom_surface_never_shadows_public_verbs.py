@@ -28,7 +28,8 @@ from tests import t
 class TestsFlextInfraCustomSurfaceNeverShadowsPublicVerbs:
     _TARGET_LINE = re.compile(r"^(?P<names>[a-z][a-z0-9 _-]*):(?!=)")
 
-    def _repository_root(self) -> Path:
+    @staticmethod
+    def _repository_root() -> Path:
         """Return the repository root that owns this checkout."""
         return Path(__file__).resolve().parents[2]
 
@@ -57,7 +58,8 @@ class TestsFlextInfraCustomSurfaceNeverShadowsPublicVerbs:
             )
         return tuple(sorted(set(found)))
 
-    def test_policy_forbids_public_targets_on_the_custom_surface(self) -> None:
+    @staticmethod
+    def test_policy_forbids_public_targets_on_the_custom_surface() -> None:
         """The codegen catalog declares the custom surface private-only."""
         policy = config.Infra.codegen.make.custom_handler_policy
 

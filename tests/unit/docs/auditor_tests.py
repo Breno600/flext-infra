@@ -90,12 +90,8 @@ class TestsFlextInfraAuditor:
         check: str,
         output_dir: str,
     ) -> None:
-        # The command-contract check loads the governed workspace spec, whose
-        # repository-local Beads configuration every real repository carries.
-        u.Tests.write_project_beads_config(tmp_path, "audit-fixture")
-        output_dir_value = (
-            str(tmp_path / output_dir) if output_dir == "custom_output" else output_dir
-        # repository-local Beads configuration every real repository carries,
+        # The command-contract check loads the governed workspace spec,
+        # its repository-local Beads configuration,
         # and it resolves a Git identity from the audited root. A selected
         # ``projects`` entry only matches a scope the workspace actually
         # declares, so the fixture is built by the canonical docs workspace

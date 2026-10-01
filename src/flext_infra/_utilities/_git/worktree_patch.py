@@ -9,9 +9,10 @@ from git import GitCommandError
 
 from flext_core import r
 from flext_infra import c, m
-
-from .worktree_checkpoint import FlextInfraUtilitiesGitWorktreeCheckpointMixin
-from .worktree_io import FlextInfraUtilitiesGitWorktreeIO
+from flext_infra._utilities._git.worktree_checkpoint import (
+    FlextInfraUtilitiesGitWorktreeCheckpointMixin,
+)
+from flext_infra._utilities._git.worktree_io import FlextInfraUtilitiesGitWorktreeIO
 
 if TYPE_CHECKING:
     from flext_infra import p, t

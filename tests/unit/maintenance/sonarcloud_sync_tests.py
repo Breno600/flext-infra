@@ -77,8 +77,8 @@ class TestsFlextInfraSonarcloudSettingsSync:
             for exclusion in spec.issue_exclusions
         )
 
+    @staticmethod
     def _cli(
-        self,
         repository_root: Path,
         env: t.StrMapping | None = None,
     ) -> t.Pair[int, str]:

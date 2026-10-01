@@ -11,8 +11,7 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, config, t, u
-
-from .extra_paths import FlextInfraExtraPathsManager
+from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
 
 if TYPE_CHECKING:
     from pathlib import Path

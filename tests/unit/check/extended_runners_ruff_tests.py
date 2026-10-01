@@ -37,7 +37,8 @@ class TestsFlextInfraRealGateRunners:
         tm.that(not result.result.passed, eq=True)
         tm.that(len(result.issues), gte=1)
 
-    def test_ruff_lint_honors_public_ruff_args(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_ruff_lint_honors_public_ruff_args(tmp_path: Path) -> None:
         project_dir = u.Tests.mk_project(tmp_path, "lint-args", with_src=True)
         (project_dir / "src" / "demo.py").write_text(
             'value = "' + ("x" * 120) + '"\n',
@@ -143,8 +144,8 @@ class TestsFlextInfraRealGateRunners:
 
         tm.that(not result.result.passed, eq=True)
 
+    @staticmethod
     def test_ruff_format_fix_stays_within_owned_source_dirs(
-        self,
         tmp_path: Path,
     ) -> None:
         project_dir = u.Tests.mk_project(tmp_path, "format-scope", with_src=True)

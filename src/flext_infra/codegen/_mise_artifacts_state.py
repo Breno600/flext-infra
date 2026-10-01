@@ -10,9 +10,12 @@ from typing import TYPE_CHECKING, Literal
 
 from flext_core import r
 from flext_infra import c, m, u
-
-from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles as files
-from ._mise_artifacts_verification import FlextInfraMiseArtifactsVerification as verify
+from flext_infra.codegen._mise_artifacts_files import (
+    FlextInfraMiseArtifactsFiles as files,
+)
+from flext_infra.codegen._mise_artifacts_verification import (
+    FlextInfraMiseArtifactsVerification as verify,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p, t

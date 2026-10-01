@@ -7,28 +7,27 @@ from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_core import r
 from flext_infra import FlextInfraConfig, m, t, u
-
-from .base import s
-from .check.workspace_check import FlextInfraWorkspaceChecker
-from .codegen.census import FlextInfraCodegenCensus
-from .codegen.codegen_transaction import FlextInfraCodegenTransaction
-from .codegen.conform import FlextInfraCodegenConform
-from .codegen.fixer import FlextInfraCodegenFixer
-from .codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
-from .codegen.pipeline import FlextInfraCodegenPipeline
-from .codegen.project_new import FlextInfraCodegenProjectNew
-from .codemod.apply_renames import FlextInfraApplyRenames
-from .codemod.batch_apply import FlextInfraCodemodBatchApply
-from .codemod.text_gates import FlextInfraModTextGateEngine
-from .docs.formatter import FlextInfraDocFormatter
-from .docs.generator import FlextInfraDocGenerator
-from .gates.markdown_format import FlextInfraMarkdownFormatGate
-from .services.candidate_bootstrap import FlextInfraCandidateBootstrapService
-from .validate.fresh_import import FlextInfraValidateFreshImport
-from .validate.namespace_validator import FlextInfraNamespaceValidator
-from .workspace.detector import FlextInfraWorkspaceDetector
-from .workspace.environment import FlextInfraWorkspaceEnvironmentMixin
-from .workspace.rope import FlextInfraRopeWorkspace
+from flext_infra.base import s
+from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
+from flext_infra.codegen.census import FlextInfraCodegenCensus
+from flext_infra.codegen.codegen_transaction import FlextInfraCodegenTransaction
+from flext_infra.codegen.conform import FlextInfraCodegenConform
+from flext_infra.codegen.fixer import FlextInfraCodegenFixer
+from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+from flext_infra.codegen.pipeline import FlextInfraCodegenPipeline
+from flext_infra.codegen.project_new import FlextInfraCodegenProjectNew
+from flext_infra.codemod.apply_renames import FlextInfraApplyRenames
+from flext_infra.codemod.batch_apply import FlextInfraCodemodBatchApply
+from flext_infra.codemod.text_gates import FlextInfraModTextGateEngine
+from flext_infra.docs.formatter import FlextInfraDocFormatter
+from flext_infra.docs.generator import FlextInfraDocGenerator
+from flext_infra.gates.markdown_format import FlextInfraMarkdownFormatGate
+from flext_infra.services.candidate_bootstrap import FlextInfraCandidateBootstrapService
+from flext_infra.validate.fresh_import import FlextInfraValidateFreshImport
+from flext_infra.validate.namespace_validator import FlextInfraNamespaceValidator
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+from flext_infra.workspace.environment import FlextInfraWorkspaceEnvironmentMixin
+from flext_infra.workspace.rope import FlextInfraRopeWorkspace
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -178,13 +177,16 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         ).execute()
 
     def apply_renames(
-        self, request: m.Infra.ApplyRenamesInput
+        self,
+        request: m.Infra.ApplyRenamesInput,
     ) -> p.Result[m.Infra.ApplyRenamesReport]:
         """Compose and run one explicitly supplied CSV rename campaign."""
         return FlextInfraApplyRenames().run(request)
 
     def mod(
-        self, request: m.Infra.ModCommand, progress: p.Infra.ModProgress
+        self,
+        request: m.Infra.ModCommand,
+        progress: p.Infra.ModProgress,
     ) -> p.Result[t.Cli.ResultValue]:
         """Compose the codemod use case from typed config and real adapters."""
         root = u.Infra.resolve_repository_root_or_cwd(request.repository_root)
@@ -208,7 +210,7 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
                     text_globs=declared.text_globs,
                     python_documentation=declared.python_documentation,
                     exclude_globs=declared.exclude_globs,
-                )
+                ),
             )
         with self.rope_workspace(root) as rope:
             return FlextInfraCodemodBatchApply(
@@ -237,7 +239,8 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         return FlextInfraModTextGateEngine.run(root, apply=request.apply)
 
     def mod_text_candidate(
-        self, request: m.Infra.ModTextCommand
+        self,
+        request: m.Infra.ModTextCommand,
     ) -> p.Result[t.Cli.ResultValue]:
         """Replay one manifest-declared candidate using this healthy provider."""
         source_root = u.Infra.resolve_repository_root_or_cwd(request.repository_root)
@@ -247,17 +250,18 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         targets = workspace.value.candidate_bootstrap_targets
         if len(targets) != 1:
             return r[t.Cli.ResultValue].fail(
-                "mod-text-candidate requires exactly one candidate_bootstrap_target"
+                "mod-text-candidate requires exactly one candidate_bootstrap_target",
             )
         # Non-strict: a missing declared worktree is graded by the exact-root
         # owner's typed failure instead of escaping as FileNotFoundError.
         identity = u.Infra.exact_worktree_root(
-            (source_root / targets[0].path).resolve()
+            (source_root / targets[0].path).resolve(),
         )
         if identity.failure:
             return r[t.Cli.ResultValue].from_failure(identity)
         return FlextInfraModTextGateEngine.run(
-            identity.value.repo_root, apply=request.apply
+            identity.value.repo_root,
+            apply=request.apply,
         )
 
     @staticmethod

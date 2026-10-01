@@ -6,11 +6,16 @@ from collections.abc import MutableMapping
 from pathlib import Path
 
 from flext_infra import c, config, m, p, t
-
-from ..rope_runtime_modules import FlextInfraUtilitiesRopeRuntimeModules
-from ..rope_runtime_refactors import FlextInfraUtilitiesRopeRuntimeRefactors
-from ..rope_structure import FlextInfraUtilitiesRopeStructure
-from .family_references import FlextInfraUtilitiesSemanticFamilyReferences
+from flext_infra._utilities._semantic_cutover.family_references import (
+    FlextInfraUtilitiesSemanticFamilyReferences,
+)
+from flext_infra._utilities.rope_runtime_modules import (
+    FlextInfraUtilitiesRopeRuntimeModules,
+)
+from flext_infra._utilities.rope_runtime_refactors import (
+    FlextInfraUtilitiesRopeRuntimeRefactors,
+)
+from flext_infra._utilities.rope_structure import FlextInfraUtilitiesRopeStructure
 
 
 class FlextInfraUtilitiesSemanticFamilyFlatten(
@@ -38,8 +43,8 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
             u.Cli.yaml_safe_load(
                 type(config).ssot_config_dir().parent
                 / c.Infra.CODEMOD_ROPE_RULES_RELPATH
-                / "flatten-family-namespace-wrapper.yaml"
-            ).unwrap()
+                / "flatten-family-namespace-wrapper.yaml",
+            ).unwrap(),
         )
         project = FlextInfraUtilitiesRopeRuntimeModules.snapshot_project(
             workspace.rope_project,

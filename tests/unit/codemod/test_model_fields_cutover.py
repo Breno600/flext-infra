@@ -80,8 +80,8 @@ class TestsModelFieldsCutover:
         tm.that(outcome.exit_code, eq=0)
         tm.that(outcome.stderr, eq="")
 
+    @staticmethod
     def test_ambiguous_rejection_keeps_the_source_untouched(
-        self,
         tmp_path: Path,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
@@ -101,7 +101,8 @@ class TestsModelFieldsCutover:
         tm.fail(result, has="lacks a rejecting guard")
         tm.that(path.read_text(encoding="utf-8"), eq=source)
 
-    def test_conflicting_guard_binding_is_not_overwritten(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_conflicting_guard_binding_is_not_overwritten(tmp_path: Path) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "validation.py"
         source = (

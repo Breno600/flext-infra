@@ -7,8 +7,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from flext_infra import c, p, t
-
-from .rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
+from flext_infra._utilities.rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
 
 
 class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):

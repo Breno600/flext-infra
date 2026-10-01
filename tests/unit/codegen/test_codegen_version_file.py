@@ -33,8 +33,8 @@ version = "{project_version}"
 
 
 class TestsFlextInfraCodegenVersionFile:
+    @staticmethod
     def _create_workspace(
-        self,
         tmp_path: Path,
         project_name: str,
     ) -> t.Triple[Path, Path, Path]:
@@ -127,8 +127,8 @@ class TestsFlextInfraCodegenVersionFile:
 
         tm.that(first_content, eq=second_content)
 
+    @staticmethod
     def test_project_filter_only_generates_for_matching_project(
-        self,
         tmp_path: Path,
     ) -> None:
         # Create workspace with two projects
@@ -190,7 +190,8 @@ class TestsFlextInfraCodegenVersionFile:
             eq=True,
         )
 
-    def test_skips_project_without_src_pkg_dir(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_skips_project_without_src_pkg_dir(tmp_path: Path) -> None:
         ws = tmp_path / "workspace"
         ws.mkdir()
         (ws / "pyproject.toml").write_text(
