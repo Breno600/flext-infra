@@ -80,12 +80,6 @@ class TestsFlextInfraUpgLockAtomicPublication:
                 # the main ``uv`` thread. The owned uv process is identified by
                 # its main-thread comm (execve names it), and the dependency
                 # observation is any of its threads in wait_for_partner.
-                rows = tuple(
-                    row.split(maxsplit=2) for row in observed.stdout.splitlines()
-                )
-                owned = {
-                    row[0] for row in rows if len(row) > 1 and row[1] == c.Infra.UV
-                }
                 if any(
                     len(fields) > 1
                     and fields[0] == "wait_for_partner"
