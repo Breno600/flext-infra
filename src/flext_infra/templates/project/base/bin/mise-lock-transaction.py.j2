@@ -89,7 +89,7 @@ class MiseLockTransaction:
                     source = cls._bytes(sidecar / filename)
                     if source is None:
                         raise ValueError(f"mise.lock sidecar is absent: {sidecar / filename}")
-                    actual = hashlib.sha256(source).hexdigest()
+                    actual = hashlib.sha256(source.replace(b"\r\n", b"\n")).hexdigest()
                     if actual != digest.removeprefix("sha256:"):
                         raise ValueError(f"mise.lock sidecar digest differs: {sidecar / filename}")
                     result[relative] = cls._tree_digest(sidecar)

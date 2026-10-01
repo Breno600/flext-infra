@@ -161,7 +161,7 @@ class FlextInfraMiseArtifactsDerivation:
         """Verify one sidecar's ``aube-lock.yaml`` digest against the lock."""
         if not lockfile.is_file():
             return r[bool].fail(f"{lockfile} is absent")
-        actual = sha256(lockfile.read_bytes()).hexdigest()
+        actual = sha256(lockfile.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
         if actual != digest:
             return r[bool].fail(
                 f"{lockfile} digest {actual} differs from the locked {digest}",

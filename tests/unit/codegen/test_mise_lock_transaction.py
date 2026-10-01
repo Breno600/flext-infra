@@ -19,7 +19,7 @@ class TestsMiseLockTransaction:
     """Exercise the consumer script through its generated CLI boundary."""
 
     @staticmethod
-    def _stage(root: Path, suffix: str) -> Path:
+    def _stage(root: Path, suffix: str, *, crlf: bool = False) -> Path:
         stage = root.parent / f".{root.name}.mise-lock-stage.{suffix}"
         stage.mkdir()
         annotations: list[str] = []
@@ -28,7 +28,7 @@ class TestsMiseLockTransaction:
             sidecar = stage / relative / "aube-lock.yaml"
             sidecar.parent.mkdir(parents=True)
             content = f"name: {package}\n".encode()
-            sidecar.write_bytes(content)
+            sidecar.write_bytes(content.replace(b"\n", b"\r\n") if crlf else content)
             digest = hashlib.sha256(content).hexdigest()
             annotations.append(
                 f'[[tools."npm:{package}"]]\n'
@@ -92,4 +92,21 @@ class TestsMiseLockTransaction:
             tm.that(
                 (root / f".mise/locks/npm-{package}/1.0/aube-lock.yaml").is_file(),
                 eq=True,
+            )
+
+    def test_native_sidecar_digest_accepts_crlf_checkout(self, tmp_path: Path) -> None:
+        """Mise records a normalized graph digest across checkout line endings."""
+        root, _ = u.Tests.render_make_environment(
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
+        )
+        stage = self._stage(root, "crlf", crlf=True)
+
+        passed, error = self._publish(root, stage)
+
+        tm.that(passed, eq=True, msg=error)
+        for package in ("alpha", "beta"):
+            tm.that(
+                (root / f".mise/locks/npm-{package}/1.0/aube-lock.yaml").read_bytes(),
+                eq=f"name: {package}\r\n".encode(),
             )
