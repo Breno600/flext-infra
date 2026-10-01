@@ -40,7 +40,10 @@ class TestsFlextInfraRuffBlanketMaskIsUnrepresentable:
     def test_fleet_policy_rejects_a_blanket_mask_for_any_glob(self) -> None:
         """The typed boundary refuses ALL, not just for ``**/__init__.py``."""
         payload: t.JsonDict = {
+            "unfixable": [],
+            "extend-safe-fixes": [],
             "banned-api": {},
+            "ban-relative-imports": "all",
             "isort": {
                 "combine-as-imports": True,
                 "force-single-line": False,

@@ -180,21 +180,14 @@ class FlextInfraCodemodSemanticApply:
         working: t.MappingKV[Path, str],
         rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
-        """Plan rope-native cross-layer import alignment when tooling enables it."""
+        """Plan rope-native absolute import alignment when tooling enables it."""
         planned_edits = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
         if not config.Infra.tooling.mod.phases.import_alignment:
-            return planned_edits.ok(())
-        project_package = rope_workspace.workspace_index.project_package_by_root.get(
-            str(root.resolve()),
-        )
-        if project_package is None:
             return planned_edits.ok(())
         planned = u.Infra.align_module_imports(
             rope_project=rope_workspace.rope_project,
             repository_root=root.resolve(),
             index=rope_workspace.workspace_index,
-            project_package=project_package,
-            config=config.Infra.tooling.lazy_init,
         )
         if planned.failure:
             return planned_edits.fail(

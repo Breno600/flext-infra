@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from flext_cli import m
 
@@ -127,6 +127,13 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
             m.Field(
                 alias="banned-api",
                 description="Forbidden direct APIs and their canonical alternatives.",
+            ),
+        ]
+        ban_relative_imports: Annotated[
+            Literal["all"],
+            m.Field(
+                alias="ban-relative-imports",
+                description="Relative imports are banned; every import is absolute.",
             ),
         ]
         isort: FlextInfraModelsDepsToolConfigLinters.RuffIsortConfig = m.Field(

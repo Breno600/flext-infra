@@ -733,16 +733,16 @@ class FlextInfraModelsDepsToolConfig(
             ),
         ]
         forward_import_form: Annotated[
-            Literal["relative_dot"],
+            Literal["absolute"],
             m.Field(
                 alias="forward-import-form",
                 description=(
                     "How forward (downward) intra-project imports are "
-                    "emitted. ``relative_dot`` uses relative imports "
-                    "within the same package."
+                    "emitted. ``absolute`` names the full module path; "
+                    "relative imports are banned."
                 ),
             ),
-        ] = "relative_dot"
+        ]
 
     class ToolConfigDocument(m.ArbitraryTypesModel):
         """Root schema for canonical ``config/tooling.yaml`` policy data."""

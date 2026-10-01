@@ -51,17 +51,18 @@ class FlextInfraCodegenGenerationStandardMixin(
     @classmethod
     def _runtime_import_lines(cls, plan: m.Infra.LazyInitPlan) -> str:
         """Render explicit eager and wildcard runtime imports."""
+        current_pkg = plan.context.current_pkg
         lines: t.MutableSequenceOf[str] = [
-            f"from {module} import *"
+            f"from {cls._absolute_import_module(current_pkg, module)} import *"
             for module in sorted(set(plan.wildcard_runtime_modules))
         ]
         eager_lines: t.MutableSequenceOf[str] = []
         eager_groups = cls._group_imports(plan.eager_dunders)
         previous_top: str | None = None
         for module in sorted(eager_groups, key=str.lower):
-            rendered_module = cls._compact_lazy_module_path(
-                plan.context.current_pkg,
-                module,
+            rendered_module = cls._absolute_import_module(
+                current_pkg,
+                cls._compact_lazy_module_path(current_pkg, module),
             )
             top = rendered_module.split(".", maxsplit=1)[0]
             if previous_top is not None and top != previous_top:

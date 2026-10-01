@@ -169,6 +169,9 @@ Infra:
           # a rule enters here with evidence that its fix preserves code,
           # comments and diagnostics. None does today.
           extend-safe-fixes: []
+          # Every import is absolute: make mod rewrites relative imports and
+          # the lazy-init generator renders absolute import statements.
+          ban-relative-imports: all
           # Banned API messages are policy data, never template literals.
           banned-api:
             argparse: "Use cli.register_result_command + Pydantic model from flext_cli."
@@ -564,7 +567,7 @@ Infra:
         - api
         - cli
       reverse-import-mode: type_checking
-      forward-import-form: relative_dot
+      forward-import-form: absolute
     mod:
       phases:
         # Component toggles for make mod (rule: toggles are data, not flags).
