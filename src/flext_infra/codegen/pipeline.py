@@ -26,11 +26,6 @@ class FlextInfraCodegenPipeline(
 ):
     """Run the full codegen pipeline directly from the validated CLI model."""
 
-    rope: t.Port[p.Infra.RopeWorkspaceDsl] = m.Field(
-        exclude=True,
-        description="Shared Rope cycle injected by the composition root",
-    )
-
     _state: m.Infra.CodegenPipelineState = u.PrivateAttr(
         default_factory=m.Infra.CodegenPipelineState,
     )

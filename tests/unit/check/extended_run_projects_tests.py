@@ -26,13 +26,11 @@ class TestsFlextInfraRunProjects:
     def test_empty_gate_selection_fails(
         self,
         tmp_path: Path,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         project = u.Tests.mk_project(tmp_path, "p1", with_src=True)
         (project / "src" / "test.py").write_text("value = 1\n", encoding="utf-8")
         checker = FlextInfraWorkspaceChecker(
             repository_root=tmp_path,
-            rope=rope_workspace,
         )
 
         result = checker.run_projects(["p1"], [], reports_dir=tmp_path / "reports")
@@ -42,11 +40,9 @@ class TestsFlextInfraRunProjects:
     def test_invalid_gates_fail(
         self,
         tmp_path: Path,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         result = FlextInfraWorkspaceChecker(
             repository_root=tmp_path,
-            rope=rope_workspace,
         ).run_projects(["p1"], ["invalid_gate"], reports_dir=tmp_path / "reports")
 
         tm.fail(result)
@@ -54,12 +50,10 @@ class TestsFlextInfraRunProjects:
     def test_project_without_pyproject_fails_loudly(
         self,
         tmp_path: Path,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         u.Tests.mk_project(tmp_path, "p1", with_src=True)
         result = FlextInfraWorkspaceChecker(
             repository_root=tmp_path,
-            rope=rope_workspace,
         ).run_projects(
             ["p1", "nonexistent"],
             ["lint"],
@@ -72,11 +66,9 @@ class TestsFlextInfraRunProjects:
     def test_empty_project_selection_fails_loudly(
         self,
         tmp_path: Path,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         result = FlextInfraWorkspaceChecker(
             repository_root=tmp_path,
-            rope=rope_workspace,
         ).run_projects([], ["lint"], reports_dir=tmp_path / "reports")
 
         tm.fail(result, has="selected no projects")
@@ -89,11 +81,9 @@ class TestsFlextInfraRunProjects:
         self,
         tmp_path: Path,
         report_name: str,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         checker = FlextInfraWorkspaceChecker(
             repository_root=tmp_path,
-            rope=rope_workspace,
         )
         project_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
         (project_dir / "src" / "test.py").write_text("value = 1\n", encoding="utf-8")
@@ -111,11 +101,9 @@ class TestsFlextInfraRunProjects:
     def test_run_projects_creates_project_scoped_reports_dir(
         self,
         tmp_path: Path,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         checker = FlextInfraWorkspaceChecker(
             repository_root=tmp_path,
-            rope=rope_workspace,
         )
         project_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
         (project_dir / "src" / "test.py").write_text("value = 1\n", encoding="utf-8")
@@ -132,11 +120,9 @@ class TestsFlextInfraRunProjects:
     def test_fail_fast_stops_after_first_failed_project(
         self,
         tmp_path: Path,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         checker = FlextInfraWorkspaceChecker(
             repository_root=tmp_path,
-            rope=rope_workspace,
         )
         for name in ("p1", "p2", "p3"):
             project_dir = u.Tests.mk_project(tmp_path, name, with_src=True)
@@ -157,11 +143,9 @@ class TestsFlextInfraRunProjects:
     def test_run_projects_reports_mixed_project_errors(
         self,
         tmp_path: Path,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         checker = FlextInfraWorkspaceChecker(
             repository_root=tmp_path,
-            rope=rope_workspace,
         )
         for name in ("p1", "p2"):
             project_dir = u.Tests.mk_project(tmp_path, name, with_src=True)
@@ -185,11 +169,9 @@ class TestsFlextInfraRunProjects:
     def test_run_project_returns_single_project_result(
         self,
         tmp_path: Path,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         checker = FlextInfraWorkspaceChecker(
             repository_root=tmp_path,
-            rope=rope_workspace,
         )
         project_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
         (project_dir / "src" / "test.py").write_text("value = 1\n", encoding="utf-8")

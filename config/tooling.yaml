@@ -169,6 +169,13 @@ Infra:
           # a rule enters here with evidence that its fix preserves code,
           # comments and diagnostics. None does today.
           extend-safe-fixes: []
+          # Every import is absolute: make mod rewrites relative imports and
+          # the lazy-init generator renders absolute import statements.
+          ban-relative-imports: all
+          # Every module carries the copyright notice (CPY001) in the shape the
+          # scaffold templates render from the project's declared author and
+          # copyright year; the SPDX line follows it in the module docstring.
+          copyright-notice-rgx: 'Copyright \(c\) \d{4} \S[^\n]*\. All rights reserved\.'
           # Banned API messages are policy data, never template literals.
           banned-api:
             argparse: "Use cli.register_result_command + Pydantic model from flext_cli."
@@ -182,7 +189,12 @@ Infra:
             combine-as-imports: true
             force-single-line: false
             split-on-trailing-comma: false
-          per-file-ignores: {}
+          # The single operator-authorized exception
+          # (operator-ruling-2026-10-01-tc004-tid252): generated lazy-init
+          # package initializers declare their exports under TYPE_CHECKING and
+          # resolve them lazily at runtime, which TC004 reads as runtime use.
+          per-file-ignores:
+            "**/__init__.py": [TC004]
 
       mypy:
         # Project wall-time budget for the bounded Mypy execution (SSOT;
@@ -571,19 +583,8 @@ Infra:
         - api
         - cli
       reverse-import-mode: type_checking
-      forward-import-form: relative_dot
+      forward-import-form: absolute
     mod:
       phases:
         # Component toggles for make mod (rule: toggles are data, not flags).
         import-alignment: true
-
-# Project-local managed-artifact additions for flext-infra itself.
-#
-# `Infra.tooling` above is the FLEET policy every generated project inherits.
-# This block is the same-file project override that conform merges over it for
-# THIS repository only, matching how flext-cli and flext-auth declare theirs.
-# A path that exists only here belongs in this block, never in the fleet policy:
-# declaring it there writes a dead exemption into every project's pyproject.toml.
-ManagedArtifacts:
-  Ruff:
-    per_file_ignores: {}

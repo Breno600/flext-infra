@@ -402,19 +402,6 @@ class FlextInfraModelsDepsToolConfig(
             return self.case_timeout_seconds + self.termination_grace_seconds
 
         @property
-        def slow_suite_stop_reserve_seconds(self) -> int:
-            """Derive the slow-phase reserve: in-flight items bounded by the slow ceiling."""
-            return (
-                self.xdist_items_per_worker * self.slow_timeout_seconds
-                + self.termination_grace_seconds
-            )
-
-        @property
-        def slow_serial_suite_stop_reserve_seconds(self) -> int:
-            """Derive the slow-phase serial reserve: one slow item plus grace."""
-            return self.slow_timeout_seconds + self.termination_grace_seconds
-
-        @property
         def xdist_items_per_worker(self) -> int:
             """Xdist depth per worker: the running item plus one queued, or a chunk."""
             return max(2, self.parallel_schedule_chunk)
@@ -733,16 +720,16 @@ class FlextInfraModelsDepsToolConfig(
             ),
         ]
         forward_import_form: Annotated[
-            Literal["relative_dot"],
+            Literal["absolute"],
             m.Field(
                 alias="forward-import-form",
                 description=(
                     "How forward (downward) intra-project imports are "
-                    "emitted. ``relative_dot`` uses relative imports "
-                    "within the same package."
+                    "emitted. ``absolute`` names the full module path; "
+                    "relative imports are banned."
                 ),
             ),
-        ] = "relative_dot"
+        ]
 
     class ToolConfigDocument(m.ArbitraryTypesModel):
         """Root schema for canonical ``config/tooling.yaml`` policy data."""

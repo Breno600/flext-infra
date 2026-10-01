@@ -303,17 +303,6 @@ class FlextInfraUtilitiesDiscovery(
             ),
         )
 
-    @staticmethod
-    def _workspace_excluded_top_dirs(project_dir: Path) -> frozenset[str]:
-        """Return first segments of read-only external topology paths."""
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
-        excluded = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
-        if excluded.failure:
-            msg = excluded.error or "workspace analysis scope is unavailable"
-            raise ValueError(msg)
-        return frozenset(path.parts[0] for path in excluded.value if path.parts)
-
     @classmethod
     def rope_repository_root(cls, repository_root: Path) -> Path:
         """Resolve a local project without expanding it to an ancestor workspace."""

@@ -8,8 +8,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import config, u
-from flext_infra.codegen import FlextInfraCodegenConform
+from flext_infra import config, infra, u
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 from flext_infra.worktree import FlextInfraWorktreeService
 from tests import c, m, t
@@ -513,13 +512,11 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 "Declare project identity",
             )
             tm.ok(
-                FlextInfraCodegenConform.execute_request(
-                    TestsFlextInfraUtilitiesCodegenMixin.conform_request(
-                        root,
-                        scope=c.Infra.CodegenConformScope.SELF,
-                        mode=c.Infra.CodegenConformMode.APPLY,
-                    ),
-                ),
+                infra.codegen_conform(TestsFlextInfraUtilitiesCodegenMixin.conform_request(
+                    root,
+                    scope=c.Infra.CodegenConformScope.SELF,
+                    mode=c.Infra.CodegenConformMode.APPLY,
+                ),),
             )
             return root
 

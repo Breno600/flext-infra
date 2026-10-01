@@ -180,17 +180,16 @@ affected paths. A published work-in-progress commit preserves work and enables r
 completion requires integration and runtime measured at the integrated SHA.
 
 For namespace automation, investigate catalog, classifier, transformation, publication,
-and consumers in that order. Zero codemod findings do not prove the namespace gate
-green. Preserve mutability, inheritance, imports, and collection; validate the
+and consumers in that order. The namespace laws are codemod catalog rules, so the
+codemod gate is their one verdict. Preserve mutability, inheritance, imports, and collection; validate the
 transformation through the public interface before widening the batch. Structural
 refactors go through `make mod`.
 
 ## Check gate partitions
 
-The current configuration keeps an explicit suspension of the `namespace` gate; the
-typed owner validates its authority and scope. Lint, format, and type-checker gates
-(`pyrefly`, `mypy`, `pyright`) are never suspendable: the model rejects such a
-suspension when it loads the configuration. `make check` fails when the selection
+No check gate is suspendable: every finding of every selected gate blocks. The
+namespace laws are rule data of the codemod catalog and block through the codemod
+gate. `make check` fails when the selection
 contains no projects or when a selected project has no `pyproject.toml`; no project is
 skipped silently.
 

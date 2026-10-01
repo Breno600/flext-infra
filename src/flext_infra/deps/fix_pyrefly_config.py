@@ -162,10 +162,11 @@ class FlextInfraConfigFixer(FlextInfraConfigFixerSteps, FlextInfraServiceBase[bo
                 continue
             total_fixes += len(fixes)
             if verbose:
-                try:
-                    rel = path.relative_to(self._repository_root)
-                except ValueError:
-                    rel = path
+                rel = (
+                    path.relative_to(self._repository_root)
+                    if path.is_relative_to(self._repository_root)
+                    else path
+                )
                 for fix in fixes:
                     line = f"  {('(dry)' if dry_run else '✓')} {rel}: {fix}"
                     self.logger.info("pyrefly_config_fix", detail=line)

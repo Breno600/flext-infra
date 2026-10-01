@@ -13,6 +13,12 @@ if TYPE_CHECKING:
 class FlextInfraConstantsCodegenLazy:
     """Lazy-init and export-policy constants for codegen."""
 
+    MANIFEST_API_VERSION: ClassVar[str] = "flext-infra/projections-lock/v1"
+    "Version tag of the projected ``.agents/projections.lock.json`` contract."
+    MANIFEST_FILENAME: ClassVar[str] = "projections.lock.json"
+    "Projection lock filename emitted beside the lazy-init projections."
+    PROJECTED_ROOTS: ClassVar[frozenset[str]] = frozenset({".agents", ".codex"})
+    "Roots whose projected files carry a manifest entry."
     MAX_ALIAS_LENGTH: ClassVar[int] = 2
     "Maximum length of a public facade alias."
     AUTOGEN_HEADER: ClassVar[str] = "# AUTO-GENERATED FILE — Regenerate with: make gen"

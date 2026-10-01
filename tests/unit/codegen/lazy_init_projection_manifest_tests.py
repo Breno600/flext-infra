@@ -61,9 +61,7 @@ class TestsFlextInfraLazyInitProjectionManifest:
         manifest = one.value[0]
         tm.that(manifest.path, eq=tmp_path / ".agents" / "projections.lock.json")
         assert manifest.desired_content is not None
-        parsed = test_u.Tests.json_payload(
-            manifest.desired_content.decode("utf-8")
-        )
+        parsed = test_u.Tests.json_payload(manifest.desired_content.decode("utf-8"))
         tm.that(parsed["apiVersion"], eq="flext-infra/projections-lock/v1")
         entries = parsed["entries"]
         assert isinstance(entries, list)

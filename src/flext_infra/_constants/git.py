@@ -19,6 +19,8 @@ class FlextInfraConstantsGit:
 
     GIT_UNBORN_HEAD_ERROR_CODE: ClassVar[str] = "GIT_UNBORN_HEAD"
     "Identity is unavailable because HEAD names a branch that has no ref yet."
+    GIT_UNBORN_HEAD_MARKER: ClassVar[str] = "UNBORN"
+    "Fingerprint input standing for HEAD when the current branch has no commit."
     GIT_REF_MISSING_EXIT_CODE: ClassVar[int] = 2
     "The documented git show-ref --exists result for an absent reference."
 
@@ -38,9 +40,10 @@ class FlextInfraConstantsGit:
     "Symbolic link index mode."
     GIT_MODE_GITLINK: ClassVar[int] = 0o160000
     "Submodule gitlink index mode (used by BaseIndexEntry)."
-    GIT_CACHEINFO_GITLINK: ClassVar[str] = "160000"
-    "Submodule gitlink mode string for ``git update-index --cacheinfo``."
-
+    GIT_GITLINK_MODE_TEXT: ClassVar[str] = f"{GIT_MODE_GITLINK:o}"
+    "Submodule gitlink mode as Git prints it in index, tree and diff records."
+    GIT_LS_FILES_STAGE_FIELDS: ClassVar[int] = 4
+    "Fields of one ``ls-files --stage`` record: mode, oid, stage and path."
     # --- Index stage values ---
 
     GIT_STAGE_NORMAL: ClassVar[int] = 0
@@ -57,6 +60,8 @@ class FlextInfraConstantsGit:
 
     GIT_DEFAULT_REMOTE: ClassVar[str] = "origin"
     "Canonical upstream remote name."
+    GIT_EXIT_NEGATIVE: ClassVar[int] = 1
+    "Exit status a Git predicate command documents for a negative answer."
     GIT_URL_SCHEME_PREFIX: ClassVar[str] = "git+"
     "PEP 508 direct-reference prefix that marks a Git dependency source."
     GIT_PORCELAIN_PATH_OFFSET: ClassVar[int] = 3
