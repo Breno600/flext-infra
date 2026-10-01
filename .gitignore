@@ -206,7 +206,6 @@ fix-report.json
 **/*.backup
 **/*.orig
 **/*_backup
-**/*_backup_*
 **/*.md.backup
 **/archived/
 

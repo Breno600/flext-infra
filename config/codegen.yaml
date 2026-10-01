@@ -1820,7 +1820,6 @@ Infra:
             - "**/*.backup"
             - "**/*.orig"
             - "**/*_backup"
-            - "**/*_backup_*"
             - "**/*.md.backup"
             - "**/archived/"
         - name: "Autofix rejection artifacts (run_skill_autofix.sh rollback output)"
