@@ -166,7 +166,8 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
 
         tm.that(rendered, has="_builtin_setup_environment: _builtin_setup_submodules")
         tm.that(rendered, has="submodule update --init --")
-        tm.that(rendered, has='$(UV) sync --project "$(PROJECT_ROOT)"')
+        # uv syncs the runtime root's project (UV_PROJECT := RUNTIME_ROOT).
+        tm.that(rendered, has='$(UV) sync --project "$(UV_PROJECT)"')
         tm.that(rendered, lacks="submodule update --init --recursive")
 
     def test_make_setup_initializes_once_then_only_validates_present_checkout(
@@ -207,6 +208,70 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
         # branch name is preserved untouched by a green setup.
         tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
         tm.that(self._git_state(child), eq=("conflict", state[1]))
+
+    def test_missing_submodule_origin_fails_without_materializing_checkout(
+        self, tmp_path: Path
+    ) -> None:
+        """A failed real Git clone stays red and leaves its gitlink uninitialized."""
+        rendered = self._render_repository_root_makefile(tmp_path)
+        workspace = self._create_uninitialized_workspace(tmp_path, rendered)
+        missing_origin = tmp_path / "missing-member-origin"
+        tm.ok(
+            u.Cli.run_checked(
+                [
+                    c.Infra.GIT,
+                    "config",
+                    "-f",
+                    ".gitmodules",
+                    "submodule.flext-core.url",
+                    str(missing_origin),
+                ],
+                cwd=workspace,
+            )
+        )
+        credential = "test-submodule-credential-never-log"
+        env = {**os.environ, "GIT_ALLOW_PROTOCOL": "file", "GITHUB_TOKEN": credential}
+
+        process = self._run_setup(workspace, env)
+
+        tm.that(process.outcome.raw_return_code, eq=2)
+        tm.that(process.stderr, has=str(missing_origin))
+        tm.that(process.stdout + process.stderr, lacks=credential)
+        tm.that((workspace / "flext-core" / ".git").exists(), eq=False)
+
+    def test_setup_environment_provisions_members_before_the_environment(
+        self, tmp_path: Path
+    ) -> None:
+        """Setup provisions governed gitlinks before the environment recipe.
+
+        The workspace projections derive from the member checkouts, so a
+        member-less CI checkout renders a different workspace and breaks the
+        gen fixed point (flext-gdm8w).
+        """
+        rendered = self._render_repository_root_makefile(tmp_path)
+        tm.that(rendered, has="MAKE_PROFILE := workspace")
+        workspace = self._create_uninitialized_workspace(tmp_path, rendered)
+        env = {
+            key: value
+            for key, value in os.environ.items()
+            if key not in {"SETUP_PYTHON", "CI"}
+        }
+        env["GIT_ALLOW_PROTOCOL"] = "file"
+
+        process = tm.ok(
+            u.Cli.run_raw(
+                ["make", "--no-print-directory", "_builtin_setup_environment"],
+                cwd=workspace,
+                env=env,
+            )
+        )
+
+        output = process.stdout + process.stderr
+        tm.that(output, has="Submodule path 'flext-core'")
+        tm.that((workspace / "flext-core" / "pyproject.toml").is_file(), eq=True)
+        gitlink = self._git_stdout(workspace, "rev-parse", "HEAD:flext-core")
+        tm.that(self._git_state(workspace / "flext-core"), eq=("", gitlink))
+        tm.that(process.stderr, has="missing Mise-resolved Python executable")
 
     def test_unexpected_git_probe_failure_preserves_cause(self, tmp_path: Path) -> None:
         """A Git probe error is never reclassified as a missing remote ref."""

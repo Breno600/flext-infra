@@ -5,9 +5,10 @@ from __future__ import annotations
 import shutil
 import sys
 from pathlib import Path
+from textwrap import indent
 
-from flext_infra import u
-from tests import c, p, t
+from flext_infra import config, u
+from tests import c, m, p, t
 from tests.utilities_git import TestsFlextInfraUtilitiesGitMixin
 
 
@@ -15,10 +16,64 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
     """Executable, Make, and toolchain-environment fixture helpers."""
 
     @staticmethod
+    def mypy_deadline_limit() -> m.Infra.MypyResourceLimit:
+        """Reserve harness startup and cleanup inside the configured slow budget."""
+        policy = config.Infra.tooling.tools.pytest
+        available = (
+            policy.slow_timeout_seconds
+            - c.Infra.MYPY_TIMEOUT_GRACE_SECONDS
+            - policy.termination_grace_seconds
+        )
+        return m.Infra.MypyResourceLimit(
+            memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
+            timeout_seconds=min(c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT, available // 2),
+        )
+
+    @staticmethod
+    def reap_mypy_descendant(pid_file: Path, timeout: int) -> None:
+        """Reap a registered workload in pytest teardown, preserving call failures."""
+        pid = pid_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+        snapshot = u.Cli.run_raw(
+            ("/bin/ps", "-p", str(int(pid)), "-o", "stat="), timeout=timeout
+        ).unwrap()
+        if snapshot.outcome.raw_return_code not in {0, 1} or snapshot.stderr:
+            raise RuntimeError(snapshot.stderr)
+        state = snapshot.stdout.strip()
+        if state and not state.startswith("Z"):
+            u.Cli.run(("/bin/kill", "-KILL", pid), timeout=timeout).unwrap()
+
+    @staticmethod
+    def mypy_workload(root: Path, plugin_body: str = "") -> m.Infra.MypyInvocation:
+        """Create a real checker project with an optional workload plugin."""
+        source = root / "checked.py"
+        source.write_text("value: int = 1\n", encoding=c.Cli.ENCODING_DEFAULT)
+        config_file = root / "mypy.ini"
+        # The workload checks through the governed checker settings, so its
+        # crash reporting (show_traceback) matches every managed project.
+        config_source = "[mypy]\n" + "".join(
+            f"{key} = {value}\n"
+            for key, value in config.Infra.tooling.tools.mypy.boolean_settings.items()
+        )
+        if plugin_body:
+            plugin = root / "workload.py"
+            plugin.write_text(
+                "from mypy.plugin import Plugin\n\n"
+                "def plugin(version: str) -> type[Plugin]:\n"
+                + indent(plugin_body, "    ")
+                + "\n    return Plugin\n",
+                encoding=c.Cli.ENCODING_DEFAULT,
+            )
+            config_source += f"plugins = {plugin}\n"
+        config_file.write_text(config_source, encoding=c.Cli.ENCODING_DEFAULT)
+        return m.Infra.MypyInvocation(targets=(source,), config_file=config_file)
+
+    @staticmethod
     def create_python_environment(root: Path) -> p.Result[bool]:
         """Provision a physical fixture environment with the current interpreter."""
+        environment = u.Infra.runtime_environment_dir(root)
+        environment.parent.mkdir(parents=True, exist_ok=True)
         return u.Cli.run_checked(
-            ["uv", "venv", "--python", sys.executable, str(root / ".venv")], cwd=root
+            ["uv", "venv", "--python", sys.executable, str(environment)], cwd=root
         )
 
     @staticmethod

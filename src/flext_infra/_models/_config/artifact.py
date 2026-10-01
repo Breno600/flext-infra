@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
+from types import MappingProxyType
 from typing import Annotated, Literal, Self
 
 from flext_cli import m, u
@@ -516,6 +517,17 @@ class FlextInfraConfigModelsArtifact:
             FlextInfraModelsDepsToolConfigProjectArtifacts.ProjectManagedArtifactsSnapshot,
             m.Field(description="Project managed-artifact catalog overlaid on renders"),
         ]
+        integration_branch: Annotated[
+            str | None,
+            m.Field(
+                description=(
+                    "Integration branch the repository integrates on, resolved "
+                    "once per plan for the project context and every workflow; "
+                    "None when Git publishes none, so a render that needs it "
+                    "fails with the resolver's own cause"
+                )
+            ),
+        ]
 
     class CodegenFilePlan(FlextInfraConfigModelsContract.ConfigContract):
         """Exact before state and desired state for one managed file."""
@@ -639,35 +651,6 @@ class FlextInfraConfigModelsArtifact:
             m.Field(description="Fail-closed validation or write errors"),
         ] = ()
 
-    class SedPatternSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """One declared literal regex substitution applied across the mod scope."""
-
-        pattern: Annotated[t.NonEmptyStr, m.Field(description="Regex source to match")]
-        replacement: Annotated[str, m.Field(description="Literal replacement text")]
-        file_glob: Annotated[
-            t.NonEmptyStr | None,
-            m.Field(default=None, description="Optional file glob filter"),
-        ]
-        flags: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                default=(),
-                description=("Regex flags by name (IGNORECASE, MULTILINE, DOTALL)"),
-            ),
-        ] = ()
-        description: Annotated[
-            t.NonEmptyStr | None,
-            m.Field(default=None, description="Why this substitution exists"),
-        ] = None
-
-    class SedPatternsSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Declared sed-by-list substitution set with optional per-pattern filters."""
-
-        patterns: Annotated[
-            t.VariadicTuple[FlextInfraConfigModelsArtifact.SedPatternSpec],
-            m.Field(default=(), description="Ordered substitution patterns"),
-        ] = ()
-
     class RenameCampaignSpec(FlextInfraConfigModelsContract.ConfigContract):
         """One declared CSV-driven rename campaign applied by the mod verb."""
 
@@ -690,6 +673,34 @@ class FlextInfraConfigModelsArtifact:
                 ),
             ),
         ] = ()
+        bindings: Annotated[
+            t.MappingKV[str, t.StrSequence],
+            m.Field(
+                default_factory=lambda: MappingProxyType[str, t.StrSequence]({}),
+                description="CSV expression prefixes mapped to current public Rope owner identities",
+            ),
+        ]
+        text_globs: Annotated[
+            t.StrSequence,
+            m.Field(
+                default=(),
+                description="Explicit root-relative non-Python documentation and configuration text surfaces",
+            ),
+        ]
+        python_documentation: Annotated[
+            bool,
+            m.Field(
+                default=False,
+                description="Rename comments and actual Python docstrings without changing executable strings",
+            ),
+        ]
+        exclude_globs: Annotated[
+            t.StrSequence,
+            m.Field(
+                default=(),
+                description="Generated projections excluded from campaign targets",
+            ),
+        ]
 
     class RefactorCsvCampaignsSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Declared CSV-driven rename campaigns for the mod verb's rename phase."""

@@ -2,8 +2,8 @@
 
 The conform engine (``base/Makefile.j2``) is the SINGLE owner of the generated
 Makefile for every profile. The workspace profile is served by the same
-template — its member gate fan-out is rendered behind a profile gate — so there
-is no second, divergent generator.
+template with the same local verb bodies, so there is no second, divergent
+generator.
 
 Copyright (c) 2025 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT

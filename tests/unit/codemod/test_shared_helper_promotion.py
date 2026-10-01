@@ -11,7 +11,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import infra
-from flext_infra.transformers import publish_semantic_file_plans
+from flext_infra.transformers import FlextInfraSemanticPublication
 from tests import c, m, t, u
 
 
@@ -220,7 +220,11 @@ class TestsFlextInfraSharedHelperPromotion:
             )
             for edit in edits
         )
-        tm.ok(publish_semantic_file_plans(plans, repository_root=root))
+        tm.ok(
+            FlextInfraSemanticPublication.publish_semantic_file_plans(
+                plans, repository_root=root
+            )
+        )
         tm.ok(u.Tests.materialize_lazy_init(u.Tests.create_lazy_init_service(root)))
         tm.that(self._run(root, probe), eq=before)
         identity = (

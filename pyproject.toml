@@ -27,14 +27,14 @@ dependencies = [
   "dependency-injector>=4.49.1",
   "flext-cli @ git+https://github.com/flext-sh/flext-cli.git@0.12.0-dev",
   "flext-core @ git+https://github.com/flext-sh/flext-core.git@0.12.0-dev",
-  "GitPython>=3.1.62",
+  "GitPython>=3.2.0",
   "jinja2>=3.1.6",
   "libcst>=1.9.0",
   "Markdown>=3.11",
   "mkdocs>=1.6.1",
   "packaging>=26.3",
   "pydantic>=2.13.5",
-  "pydantic-settings>=2.14.2,<2.15",
+  "pydantic-settings>=2.15.0,<2.16",
   "pymdown-extensions>=11.0.1",
   "pytest>=9.1.1",
   "pyyaml>=6.0.3",
@@ -59,7 +59,7 @@ email = "team@flext.sh"
 name = "FLEXT Team"
 
 [project.scripts]
-flext-docs = "flext_infra.cli:docs_main"
+flext-docs = "flext_infra.cli:FlextInfraCli.docs_main"
 flext-infra = "flext_infra.cli:main"
 
 [project.urls]
@@ -69,9 +69,6 @@ Repository = "https://github.com/flext-sh/flext-infra"
 
 [project.entry-points.pytest11]
 "flext_infra._pytest_collection" = "flext_infra._pytest_collection:FlextInfraPytestCollection"
-
-[project.optional-dependencies]
-typings = ["types-Markdown"]
 
 [dependency-groups]
 dev = [
@@ -172,13 +169,14 @@ scan_dirs = ["src"]
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/flext_infra"]
+include = ["/src/flext_infra/**", "/config/**"]
 
-[tool.hatch.build.targets.wheel.force-include]
+[tool.hatch.build.targets.wheel.sources]
+"src/flext_infra" = "flext_infra"
 config = "flext_infra/config"
 
 [tool.hatch.build.targets.sdist]
-only-include = ["src/flext_infra", "config"]
+include = ["/src/flext_infra/**", "/config/**"]
 
 [tool.mypy]
 disable_error_code = [
@@ -344,8 +342,6 @@ exclude = [
   "**/node_modules",
   "**/site-packages",
   "**/site-packages/**",
-  "**/tests/fixtures",
-  "**/tests/fixtures/**",
   "**/venv",
   "**/venv/**",
   ".git",
@@ -413,7 +409,7 @@ reportAttributeAccessIssue = "none"
 reportGeneralTypeIssues = "none"
 reportInvalidTypeForm = "none"
 reportPrivateImportUsage = "none"
-reportPrivateUsage = "none"
+reportPrivateUsage = "error"
 reportReturnType = "none"
 reportUnknownArgumentType = "none"
 reportUnknownLambdaType = "none"
@@ -498,7 +494,7 @@ namespace-packages = ["tests", "examples", "scripts"]
 preview = true
 respect-gitignore = true
 show-fixes = true
-src = ["examples", "scripts", "src", "tests"]
+src = ["src", "tests"]
 target-version = "py313"
 
 [tool.ruff.format]
@@ -509,6 +505,7 @@ quote-style = "double"
 skip-magic-trailing-comma = true
 
 [tool.ruff.lint]
+extend-safe-fixes = []
 ignore = [
   "ambiguous-unicode-character-comment",
   "ambiguous-unicode-character-docstring",
@@ -543,6 +540,17 @@ ignore = [
   "typing-only-third-party-import",
 ]
 select = ["ALL"]
+unfixable = [
+  "duplicate-value",
+  "multi-value-repeated-key-literal",
+  "multi-value-repeated-key-variable",
+  "outdated-version-block",
+  "p-print",
+  "print",
+  "pytest-duplicate-parametrize-test-cases",
+  "redefined-while-unused",
+  "unused-variable",
+]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api.argparse]
 msg = "Use cli.register_result_command + Pydantic model from flext_cli."
@@ -552,6 +560,9 @@ msg = "Use flext_cli.cli application, registration, execution, and invocation me
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api.rich]
 msg = "Use cli.print / cli.display_message / cli.render_panel / cli.render_table."
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api.tabulate]
+msg = "Use cli.render_table from flext_cli."
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api.typer]
 msg = "Use cli.create_app_with_common_params / cli.register_command from flext_cli."

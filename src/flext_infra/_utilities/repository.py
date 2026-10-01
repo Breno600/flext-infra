@@ -8,6 +8,7 @@ is detected from live Git or declared explicitly by a caller.
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -16,8 +17,6 @@ from flext_infra import c, m, p, t
 
 from ._git.worktree_discovery import FlextInfraUtilitiesGitWorktreeDiscoveryMixin
 from .dependencies import FlextInfraUtilitiesDependencies
-
-_GIT_URL_SCHEME_PREFIX = "git+"
 
 
 class FlextInfraUtilitiesRepository:
@@ -59,12 +58,12 @@ class FlextInfraUtilitiesRepository:
             # caller reads the empty pair as "no declared source".
             return r[t.Pair[str, str]].ok(("", ""))
         source = source.strip()
-        if not source.startswith(_GIT_URL_SCHEME_PREFIX):
+        if not source.startswith(c.Infra.GIT_URL_SCHEME_PREFIX):
             return r[t.Pair[str, str]].fail(
                 f"internal dependency direct source must be a git URL: {requirement}"
             )
         url, ref_separator, ref = source.rpartition("@")
-        url = url.removeprefix(_GIT_URL_SCHEME_PREFIX).strip()
+        url = url.removeprefix(c.Infra.GIT_URL_SCHEME_PREFIX).strip()
         ref = ref.strip()
         if not ref_separator or not ref:
             return r[t.Pair[str, str]].fail(
@@ -387,7 +386,7 @@ class FlextInfraUtilitiesRepository:
                 requirements.extend(
                     FlextInfraUtilitiesPyprojectConform.raw_requirement_values(group)
                 )
-        lines: dict[t.Pair[str, str], str] = {}
+        lines: MutableMapping[t.Pair[str, str], str] = {}
         for requirement in requirements:
             name = FlextInfraUtilitiesDependencies.dep_name(requirement)
             if name is None or not name.startswith(prefix):

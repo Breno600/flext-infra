@@ -1,8 +1,7 @@
 """Every command in one verb recipe writes to the same root.
 
-Scope follows the invocation point: run a verb at the workspace and it works
-on the whole active workspace; run it in a project and it works on that
-project alone.
+Scope is the invocation point's own repository: every repository, the
+workspace root included, works on itself alone (operator ruling 2026-09-29).
 
 The ``gen`` recipe broke that by mixing two criteria in the same body:
 ``codegen conform`` received ``PROJECT_ROOT`` while dependency stages received
@@ -14,9 +13,9 @@ dirty without the caller ever touching it.
 The damage compounds: ``gen`` runs inside ``check``, and ``check`` runs in the
 pre-commit hook, so a single commit in any lane dirties every sibling.
 
-At the workspace root ``PROJECT_ROOT`` already *is* the workspace, so a single
-root keeps the fan-out where it belongs and restricts it everywhere else. No
-new flag is needed -- one rule, applied consistently.
+At the workspace root ``PROJECT_ROOT`` is the root repository itself, so one
+rule keeps every verb on its own repository everywhere. No flag is needed --
+one rule, applied consistently.
 
 Every contract is asserted on the Makefile the public conform owner renders
 for a workspace fixture composing one member.
@@ -105,7 +104,7 @@ class TestsFlextInfraGenRespectsInvocationScope:
         tm.that(len(conform_lines), eq=1)
         tm.that(conform_lines[0], has="--mode apply")
         tm.that(conform_lines[0], has='--root "$(PROJECT_ROOT)"')
-        tm.that(conform_lines[0], has='--scope "$(CODEGEN_SCOPE)"')
+        tm.that(conform_lines[0], lacks="--scope")
         tm.that(any("deps modernize" in line for line in body), eq=False)
         tm.that(any("deps extra-paths" in line for line in body), eq=False)
 
@@ -125,7 +124,9 @@ class TestsFlextInfraGenRespectsInvocationScope:
         )
         tm.that(any("codegen conform" in line for line in init_lines), eq=False)
         for verb in config.Infra.codegen.make.verbs:
-            if verb.name in {"setup", "upg", "help", "clean"}:
+            if verb.name in {"setup", "upg", "help", "clean"} or (
+                verb.profiles and c.Infra.MakeProfile.WORKSPACE not in verb.profiles
+            ):
                 continue
             tm.that(
                 rendered_makefile,

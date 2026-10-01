@@ -18,7 +18,7 @@ import sys
 import types
 from collections import defaultdict
 from collections.abc import MutableMapping
-from typing import TYPE_CHECKING, Annotated, override
+from typing import TYPE_CHECKING, Annotated, Self, override
 
 from flext_core import r
 from flext_infra import c, config, m, t, u
@@ -26,6 +26,8 @@ from flext_infra import c, config, m, t, u
 from ..base import s
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from flext_infra import p
 
 
@@ -35,6 +37,53 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
     project_filter: Annotated[
         str | None, m.Field(description="Project filter (comma-separated)")
     ] = None
+    census_gate: Annotated[
+        str,
+        m.Field(
+            description=(
+                "Gate whose census rule families this run grades: the runtime "
+                "census gate grades every family no other gate owns"
+            )
+        ),
+    ] = c.Infra.RUNTIME_CENSUS
+
+    @classmethod
+    def for_project(cls, project_dir: Path, *, census_gate: str) -> Self:
+        """Scope one census run to ``project_dir`` for ``census_gate``.
+
+        The filter is the declared project name, never the checkout directory
+        name: a worktree or renamed checkout keeps its manifest identity, and
+        the census discovery keys projects by exactly that pyproject name.
+        """
+        # A checkout without a manifest declares no project: the census then
+        # selects nothing and reports that typed failure. A present manifest
+        # that cannot be read raises instead of falling back to the directory.
+        if not (project_dir / c.PYPROJECT_FILENAME).is_file():
+            return cls(repository_root=project_dir, census_gate=census_gate)
+        metadata = u.Infra.read_project_metadata_result(project_dir).unwrap()
+        return cls(
+            repository_root=project_dir,
+            project_filter=metadata.project.name,
+            census_gate=census_gate,
+        )
+
+    @staticmethod
+    def _gate_rule_families() -> t.MappingKV[str, frozenset[str]]:
+        """Census rule families owned by a gate other than the runtime census.
+
+        Operator ruling 2026-10-01: no smell enters ``make check``; the
+        ``make smells`` verb owns every smell family. The family set derives
+        from the flext-core smell catalog — every smell tag plus the rule id
+        of every catalog row carrying one — so a smell added to the catalog
+        moves to the smells gate in the same edit, with no second list.
+        """
+        smell_rows = (*c.SMELL_BEARTYPE_ROWS, *c.SMELL_CODE_SMELL_ROWS)
+        return {
+            c.Infra.SMELLS: frozenset({
+                *c.ENFORCEMENT_SMELL_TAGS,
+                *(rule_id for rule_id, *_ in smell_rows),
+            })
+        }
 
     @staticmethod
     def _package_name_for_project(project: p.Infra.ProjectInfo) -> str | None:
@@ -215,8 +264,75 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
             )
         )
 
+    @staticmethod
+    def _violation_rule_token(violation: str) -> str | None:
+        """Return the trailing ``[rule]`` token of one census violation line.
+
+        Every enforcement violation ends with its rule id (``[ENFORCE-046]``)
+        when the catalog maps the tag, else the raw tag itself
+        (``[class_prefix]``); bracketless lines (import failures) own no rule
+        family and stay with the runtime census.
+        """
+        match = re.search(r"\[([^[\]]+)\]$", violation)
+        if match is None:
+            return None
+        token: str = match.group(1)
+        return token
+
+    @staticmethod
+    def _matches_census_family(token: str, family: str) -> bool:
+        """Match one rule token against one configured census family.
+
+        ENFORCE-* families name one exact catalog rule and must never
+        prefix-capture a sibling (``ENFORCE-04`` would otherwise swallow
+        ``ENFORCE-046``); every other family is a tag prefix.
+        """
+        if family.startswith("ENFORCE-"):
+            return token == family
+        return token.startswith(family)
+
+    def _gate_owned(self, violations: t.SequenceOf[str]) -> tuple[str, ...]:
+        """The violations ``census_gate`` owns; every other gate never sees them.
+
+        A gate that owns census families grades exactly those families; the
+        runtime census gate grades every family no other gate owns. Ownership
+        is routing, never suppression: a family another gate owns is neither
+        counted nor reported here. Bracketless lines (import failures) own no
+        family and stay with the runtime census.
+        """
+        owned = self._gate_rule_families()
+        own_families = owned.get(self.census_gate)
+        foreign_families = frozenset(
+            family
+            for gate, families in owned.items()
+            if gate != self.census_gate
+            for family in families
+        )
+        kept: list[str] = []
+        for violation in violations:
+            token = self._violation_rule_token(violation)
+            if own_families is None:
+                keep = token is None or not any(
+                    self._matches_census_family(token, family)
+                    for family in foreign_families
+                )
+            else:
+                keep = token is not None and any(
+                    self._matches_census_family(token, family)
+                    for family in own_families
+                )
+            if keep:
+                kept.append(violation)
+        return tuple(kept)
+
     def build_report(self) -> p.Result[m.Infra.ValidationReport]:
         """Build one validation report for the selected workspace projects."""
+        owning_gates = frozenset({c.Infra.RUNTIME_CENSUS, *self._gate_rule_families()})
+        if self.census_gate not in owning_gates:
+            return r[m.Infra.ValidationReport].fail(
+                f"runtime census has no rule families for gate {self.census_gate!r}; "
+                f"owning gates: {', '.join(sorted(owning_gates))}"
+            )
         projects_result = u.Infra.resolve_projects(self.repository_root, ())
         if projects_result.failure:
             return r[m.Infra.ValidationReport].from_failure(projects_result)
@@ -233,15 +349,23 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
                 return r[m.Infra.ValidationReport].from_failure(report_result)
             report = report_result.value
             merged_violations.extend(report.violations)
-        passed = not merged_violations
+        # Every owned finding blocks: ownership routes a family to its gate,
+        # it never suspends one (operator order 2026-10-01, gc-wisp-1n83u4).
+        owned_violations = self._gate_owned(merged_violations)
+        label = (
+            "runtime census"
+            if self.census_gate == c.Infra.RUNTIME_CENSUS
+            else f"runtime census ({self.census_gate})"
+        )
+        passed = not owned_violations
         summary = (
-            "runtime census passed"
-            if passed
-            else f"runtime census found {len(merged_violations)} violation(s)"
+            f"{label} found {len(owned_violations)} violation(s)"
+            if not passed
+            else f"{label} passed"
         )
         return r[m.Infra.ValidationReport].ok(
             m.Infra.ValidationReport(
-                passed=passed, violations=tuple(merged_violations), summary=summary
+                passed=passed, violations=owned_violations, summary=summary
             )
         )
 

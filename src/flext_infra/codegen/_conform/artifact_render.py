@@ -256,27 +256,20 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             # repository's own integration branch is the only branch this layer
             # can name from resolved data; a fleet-wide list hardcoded here would
             # make every repository trigger on branches it does not have.
-            branch = u.Infra.resolve_integration_branch(
-                repository_root,
-                preference=codegen.branch_policy.integration_branch_preference,
-                declared=(
-                    workspace.integration.branch
-                    if workspace.integration is not None
-                    else None
-                ),
-            )
-            if branch.failure:
-                return r[p.Model].from_failure(branch)
+            resolved_branch = self.render_integration_branch(render_inputs)
+            if resolved_branch.failure:
+                return r[p.Model].from_failure(resolved_branch)
+            branch = resolved_branch.value
             return r[p.Model].ok(
                 m.Infra.GithubWorkflowRenderSpec(
                     dist=dist,
                     make_profile=target.make_profile,
                     gascity_enabled=target.gascity_enabled,
-                    repository_branch=branch.value,
+                    repository_branch=branch,
                     ci_trigger_branches=tuple(
                         dict.fromkeys((
                             *codegen.branch_policy.ci_trigger_branches,
-                            branch.value,
+                            branch,
                         ))
                     ),
                     python_version=codegen.toolchain.python_version,
@@ -329,69 +322,10 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 )
             )
         if destination == c.Infra.MAKEFILE_FILENAME:
-            profile = target.make_profile
-            subprojects = (
-                tuple(workspace.subprojects)
-                if profile is c.Infra.MakeProfile.WORKSPACE
-                else ()
-            )
-            gitlinks = self._managed_gitlinks(
-                workspace, codegen, repository_root=repository_root
-            )
-            if gitlinks.failure:
-                return r[p.Model].from_failure(gitlinks)
-            return r[p.Model].ok(
-                m.Infra.MakefileRenderSpec(
-                    pytest=config.Infra.tooling.tools.pytest,
-                    mise_bootstrap=u.Infra.mise_bootstrap_environment(),
-                    dist=dist,
-                    infra_cli=config.Infra.name,
-                    make_profile=profile,
-                    package=repository.package,
-                    makefile_custom_include=c.Infra.MAKEFILE_CUSTOM_INCLUDE,
-                    repository_root_rel=self._repository_root_rel(workspace),
-                    workspace_subprojects=tuple(
-                        item.path.as_posix() for item in workspace.subprojects
-                    ),
-                    workspace_repositories=subprojects,
-                    workspace_gitlinks=gitlinks.value,
-                    uv_link_mode=self.link_mode(repository, codegen.toolchain),
-                    uv_version=codegen.toolchain.uv_version,
-                    mise_lockfile_platforms=codegen.toolchain.mise_lockfile_platforms,
-                    npm_package_manager=codegen.toolchain.npm_package_manager,
-                    qlty_selector=codegen.toolchain.qlty_selector,
-                    jscpd_selector=codegen.toolchain.jscpd_selector,
-                    prettier_selector=codegen.toolchain.prettier_selector,
-                    ast_grep_selector=codegen.toolchain.ast_grep_selector,
-                    scc_selector=codegen.toolchain.scc_selector,
-                    waza_selector=codegen.toolchain.waza_selector,
-                    make=codegen.make,
-                    extra_verbs=(
-                        self._merge_extra_verbs(
-                            repository.extra_verbs,
-                            (
-                                ()
-                                if repository.script_dispatch is None
-                                else self._discover_script_verbs(repository_root)
-                            ),
-                            frozenset(verb.name for verb in codegen.make.verbs),
-                        )
-                    ),
-                    script_dispatch=repository.script_dispatch,
-                    workspace_cli_group=c.Infra.CLI_GROUP_WORKSPACE,
-                    mypy_memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
-                    mypy_timeout_seconds=c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT,
-                    mypy_timeout_exit_code=c.Infra.PROCESS_TIMEOUT_EXIT_CODE,
-                    mypy_signal_exit_offset=c.Infra.PROCESS_SIGNAL_EXIT_OFFSET,
-                    prlimit_command=c.Infra.PRLIMIT_COMMAND,
-                    prlimit_address_space_option=(c.Infra.PRLIMIT_ADDRESS_SPACE_OPTION),
-                    timeout_command=c.Infra.TIMEOUT_COMMAND,
-                    timeout_kill_after_seconds=c.Infra.TIMEOUT_KILL_AFTER_SECONDS,
-                    pytest_process_timeout_seconds=(
-                        config.Infra.tooling.tools.pytest.process_timeout_seconds
-                    ),
-                )
-            )
+            makefile = self._makefile_render_spec(target, workspace, codegen)
+            if makefile.failure:
+                return r[p.Model].from_failure(makefile)
+            return r[p.Model].ok(makefile.value)
         if destination == c.Infra.CUSTOM_MAKE_FILENAME:
             # Existing repositories project custom routes from the same typed
             # Make contract as Makefile; they do not require scaffold-only
@@ -406,6 +340,70 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         if context_result.failure:
             return r[p.Model].from_failure(context_result)
         return r[p.Model].ok(context_result.value)
+
+    def _makefile_render_spec(
+        self,
+        target: m.Infra.RepositoryConformTarget,
+        workspace: m.Infra.WorkspaceSpec,
+        codegen: m.Infra.CodegenConfigSpec,
+    ) -> p.Result[m.Infra.MakefileRenderSpec]:
+        """Resolve Makefile inputs directly from the declared repository topology."""
+        gitlinks = self._managed_gitlinks(
+            workspace, codegen, repository_root=target.root
+        )
+        if gitlinks.failure:
+            return r[m.Infra.MakefileRenderSpec].from_failure(gitlinks)
+        return r[m.Infra.MakefileRenderSpec].ok(
+            m.Infra.MakefileRenderSpec(
+                pytest=config.Infra.tooling.tools.pytest,
+                mise_bootstrap=u.Infra.mise_bootstrap_environment(),
+                dist=target.repository.distribution,
+                infra_cli=config.Infra.name,
+                make_profile=target.make_profile,
+                package=target.repository.package,
+                makefile_custom_include=c.Infra.MAKEFILE_CUSTOM_INCLUDE,
+                repository_root_rel=self._repository_root_rel(workspace),
+                workspace_subprojects=tuple(
+                    item.path.as_posix() for item in workspace.subprojects
+                ),
+                workspace_repositories=(
+                    tuple(workspace.subprojects)
+                    if target.make_profile is c.Infra.MakeProfile.WORKSPACE
+                    else ()
+                ),
+                workspace_gitlinks=gitlinks.value,
+                uv_link_mode=self.link_mode(target.repository, codegen.toolchain),
+                uv_version=codegen.toolchain.uv_version,
+                mise_lockfile_platforms=codegen.toolchain.mise_lockfile_platforms,
+                npm_package_manager=codegen.toolchain.npm_package_manager,
+                qlty_selector=codegen.toolchain.qlty_selector,
+                jscpd_selector=codegen.toolchain.jscpd_selector,
+                prettier_selector=codegen.toolchain.prettier_selector,
+                ast_grep_selector=codegen.toolchain.ast_grep_selector,
+                scc_selector=codegen.toolchain.scc_selector,
+                waza_selector=codegen.toolchain.waza_selector,
+                make=codegen.make,
+                extra_verbs=(
+                    self._merge_extra_verbs(
+                        target.repository.extra_verbs,
+                        (
+                            ()
+                            if target.repository.script_dispatch is None
+                            else self._discover_script_verbs(target.root)
+                        ),
+                        frozenset(verb.name for verb in codegen.make.verbs),
+                    )
+                ),
+                script_dispatch=target.repository.script_dispatch,
+                workspace_cli_group=c.Infra.CLI_GROUP_WORKSPACE,
+                mypy_timeout_exit_code=c.Infra.PROCESS_TIMEOUT_EXIT_CODE,
+                timeout_command=c.Infra.TIMEOUT_COMMAND,
+                timeout_kill_after_seconds=c.Infra.TIMEOUT_KILL_AFTER_SECONDS,
+                pytest_process_timeout_seconds=(
+                    config.Infra.tooling.tools.pytest.process_timeout_seconds
+                ),
+            )
+        )
 
     @staticmethod
     def _custom_ci_steps(repository_root: Path) -> str:

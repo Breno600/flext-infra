@@ -40,6 +40,15 @@ class FlextInfraConstantsNamespace:
         "api",
         "cli",
     )
+    NAMESPACE_DECLARATION_FACADES_RUNTIME: ClassVar[frozenset[str]] = frozenset(
+        layer
+        for layer in NAMESPACE_LAYER_ORDER[
+            NAMESPACE_LAYER_ORDER.index("c") + 1 : NAMESPACE_LAYER_ORDER.index("base")
+        ]
+        if layer != "p"
+    )
+    """Declaration facades importable at runtime: the chain between ``c`` and
+    ``base``, minus the TYPE_CHECKING-only protocols facade ``p``."""
     NAMESPACE_OPERATION_FACADES: ClassVar[t.VariadicTuple[str]] = (
         "r",
         "e",

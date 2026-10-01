@@ -25,6 +25,39 @@ if TYPE_CHECKING:
 class TestsFlextInfraGateErrorReporting:
     """Verify real gate issue reporting through the public ``check()`` contract."""
 
+    def test_workspace_report_retains_all_executed_failures(
+        self, tmp_path: Path, rope_workspace: p.Infra.RopeWorkspaceDsl
+    ) -> None:
+        project_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
+        (project_dir / "src" / "p1" / "value.py").write_text(
+            "value=[1,2,3]\n", encoding="utf-8"
+        )
+        (project_dir / "README.md").write_text(
+            "# Project\n\n[Missing](missing.md)\n", encoding="utf-8"
+        )
+        u.Tests.initialize_git_repo(project_dir)
+        gates = [c.Infra.FORMAT, c.Infra.MARKDOWN]
+        reports_dir = tmp_path / "reports"
+
+        projects = tm.ok(
+            FlextInfraWorkspaceChecker(
+                repository_root=tmp_path, rope=rope_workspace
+            ).run_projects(["p1"], gates, reports_dir=reports_dir)
+        )
+
+        project = projects[0]
+        tm.that(tuple(project.gates), eq=tuple(gates))
+        tm.that(all(not item.result.passed for item in project.gates.values()), eq=True)
+        tm.that(
+            project.total_findings,
+            eq=sum(len(item.issues) for item in project.gates.values()),
+        )
+        report = (reports_dir / c.Infra.CHECK_REPORT_MARKDOWN_FILENAME).read_text(
+            encoding="utf-8"
+        )
+        for gate in gates:
+            tm.that(report, has=f"- {gate}: FAIL")
+
     def test_ruff_format_reports_each_unformatted_file_once(
         self, tmp_path: Path
     ) -> None:

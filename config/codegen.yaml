@@ -4,8 +4,11 @@ Infra:
     version: 1
     # Projections no template renders any more; generation removes the
     # generated copy from every consumer (renamed: install-git-hooks.sh ->
-    # validate-git-hook.sh).
-    retired_projections: [.github/scripts/install-git-hooks.sh]
+    # validate-git-hook.sh; flext-law-loop.sh validated the whole workspace
+    # from its root and retired with the root fan-out, operator 2026-09-29).
+    retired_projections:
+      - .github/scripts/install-git-hooks.sh
+      - .github/scripts/flext-law-loop.sh
 
     # Fresh import probes are independent subprocesses within one validation.
     fresh_import_workers: 3
@@ -51,7 +54,7 @@ Infra:
       # The npm CLI publishes a native musl binary; the GitHub CLI release does
       # not. One selector therefore covers the declared Linux libc variants.
       ast_grep_selector: npm:@ast-grep/cli
-      ast_grep_version: latest
+      ast_grep_version: "0.45.3"
       # ast-grep's native binary is selected by its npm lifecycle script.
       # The embedded aube installer preserves the locked dependency graph;
       # the approved package lifecycle is declared in the mise projection.
@@ -80,23 +83,17 @@ Infra:
         - windows-x64
       # Projection: .mise.toml [tools] keys. Override the selector here.
       qlty_selector: github:qltysh/qlty
-      # Pinned to the last provenance-attested release: 0.644.0 shipped
-      # without github attestations and mise's supply-chain guard rejects
-      # it, breaking `make setup` fleet-wide (bead in flext tracker,
-      # reported by algar-oud-mig 2026-09-18).
+      # Pinned to 0.642.0. The earlier claim that 0.644.0 shipped without
+      # github attestations is FALSE: a by-digest check on 2026-09-22 shows
+      # v0.644.0 carries one attestation bundle per asset for all seven
+      # binaries, same as 0.642.0. The 2026-09-18 fleet-wide setup fire was a
+      # probe false positive (mise treats an unavailable probe as missing).
+      # Bump to 0.644.0 only through an explicit `make upg` reactivation
+      # (bead flext-38odd), never by editing this pin in isolation.
       qlty_version: 0.642.0
       node_version: latest
       jscpd_selector: github:kucherenko/jscpd
       jscpd_version: latest
-      # jscpd release assets carry libc/ABI suffixes; mise cannot autodetect
-      # one per platform, so `mise lock` recorded no URL for them.
-      jscpd_asset_patterns:
-        linux-x64: jscpd-linux-x64-gnu.tar.gz
-        linux-x64-musl: jscpd-linux-x64-musl.tar.gz
-        linux-arm64: jscpd-linux-arm64-gnu.tar.gz
-        macos-x64: jscpd-darwin-x64.tar.gz
-        macos-arm64: jscpd-darwin-arm64.tar.gz
-        windows-x64: jscpd-windows-x64-msvc.tar.gz
       # Prettier is the markdown formatter (markdown-format gate): provisioned
       # through npm so the fleet binary version is owned by this SSOT alone.
       # Pinned to 3.5.x: prettier 3.7+ silently dropped markdown prose
@@ -118,8 +115,6 @@ Infra:
       # through the lifecycle; make is the one tool the Makefile cannot resolve
       # from itself, so mise must provision it.
       make_version: latest
-      # Mise self-provisioning: pin the mise bootstrap binary so it never
-      # resolves 'latest' at runtime. Override to pin a specific release.
       beads:
         # Beads ledger projection (.beads/config.yaml, .beads/metadata.yaml).
         # The bd and gc binaries are host tools owned by ai-hub's global mise
@@ -145,6 +140,11 @@ Infra:
           - spec
           - convergence
           - step
+          # The Gas City runtime mints startup-health-episode beads and writes
+          # the type into every governed ledger's generated `.beads/config.yaml`
+          # (observed in mcb, gmn and gc). Declaring it here keeps the frozen
+          # projection owned by this SSOT instead of hand-adopted per rig.
+          - startup-health-episode
         # Ledger scalars rendered into .beads/config.yaml. Change them here.
         # Per-repo override of Gas City participation is workspace.yaml
         # `gascity_enabled` (flips dolt.auto-start and omits gc.*). Never edit
@@ -337,6 +337,7 @@ Infra:
 
     make:
       examples_timeout_seconds: 120
+      submodule_timeout_seconds: 120
       # Operator 2026-09-08: ruff is the formatting and autofix rule.
       # Every ruff invocation uses --preview. Never weaken ruff to keep a
       # file; change the code. [tool.ruff] preview: true in tooling.yaml is
@@ -345,22 +346,20 @@ Infra:
       # for remaining findings. Reporting never normalizes a red gate.
       # lint_fix is the lint gate's apply mode and the ONLY lint repair: make
       # fmt runs format only (single-pass verb law), so no lint_apply exists.
+      # make fix never deletes information (flext-itpd1.5): lint_fix applies
+      # Ruff's safe fixes only. Unsafe fixes deleted diagnostics (T201 removed
+      # print(..., file=sys.stderr) from a consumer script, turning a failure
+      # silent), so MakeRuffSpec rejects --unsafe-fixes here, and the rules
+      # whose fixes delete code are declared unfixable in tooling.yaml.
       ruff:
         format_check: [--preview, --check]
         format_apply: [--preview]
         lint_check: [--preview, --no-fix]
-        lint_fix: [--preview, --fix, --unsafe-fixes]
+        lint_fix: [--preview, --fix]
       # Gates whose mutating side `make fmt` drives (formatters). Their
       # read-only side runs in `make check`; `make fix` never repeats them
       # (single-pass verb law: one operation per tool per verb).
-      fmt_gates: [markdown-format]
-      check_gate_suspensions:
-        - gate: namespace
-          authority: "flext-itpd1.3; operator decision 2026-09-27 (keep plan v12 suspension); flext-infra#913"
-          reason: "Fleet namespace backlog (141 findings here) is repaired after the fleet is green; the gate returns with its Rope single-cycle owner fix."
-        - gate: smells
-          authority: "operator ruling 2026-09-27 (smells/infra-codegen/slow-tests non-blocking for merge until further notice, coordination gc-wisp-bm2jtn); flext-w41u6"
-          reason: "Pre-existing qlty smell backlog (751 in flext-infra, already red on a9af10130) is burned down under flext-w41u6; the gate returns when the ruling is lifted."
+      fmt_gates: [format, markdown-format]
       # One filename and the root-relative runner paths; the runner places the
       # database in platformdirs' external per-worktree cache.
       testmon_cache:
@@ -372,6 +371,15 @@ Infra:
         external_storage_directory: flext/infra/testmon
         target_directory: tests
         reports_directory: .reports/tests
+      # The Mypy gate shares analysis across checkouts of the same project name.
+      # Relocks retain the directory; Mypy revalidates changed modules. Distinct
+      # project names keep their module namespaces in separate directories.
+      mypy_cache:
+        cache_environment_variable: MYPY_CACHE_DIR
+        data_home_environment_variable: XDG_CACHE_HOME
+        user_home_environment_variable: HOME
+        home_cache_directory: .cache
+        external_storage_directory: flext/infra/mypy
       # Public verbs execute their declared operation without mode selectors.
       ci:
         variable: CI
@@ -380,35 +388,22 @@ Infra:
         # Other pre-push verbs use this token to preserve local test behavior;
         # pre-push check unsets CI so it runs every active check gate.
         local_value: N
-        # RULING 2 (rules, not a skip-list): local_check_gates is the ONLY
-        # declared set. CI=Y runs its strict complement, derived in
-        # MakeSpec.check_gates_ci over the active default universe, so every
-        # active gate retains an owner. CI=N intersects the declared local set
-        # with that universe; an unset CI runs all active gates. `format`
-        # is not a check gate at all -- it mutates files, so it belongs to
-        # make fmt / make fix only. This supersedes the earlier
-        # check_gates_skip list, which could drift out of sync with the set it
-        # was meant to complement.
-        # RULING 1: CI is ternary (Y/N/absent).
-        # tooling.tools.pytest.ci-excluded-markers defines the operator-selected
-        # slow-test exclusion for CI and pre-commit, not local/pre-push runs.
-        # CI=N owns the complementary local check gates; absent uses testmon
-        # for incremental developer runs.
-        #
-        # The set is the SLOW whole-program type checkers: those are the gates
-        # worth deferring
-        # off the fast CI leg, and they are what CI=N exists to own. `lint` is
-        # not here -- ruff is cheap, so making CI skip it buys nothing and
-        # leaves the fast leg without a linter.
-        local_check_gates: [pyrefly, mypy]
-      # Why (operator law 2026-08-24): git-hook stages are disabled by default;
-      # the workflow below still declares stage membership so re-enabling is a
-      # one-key change, case by case. CI owns read-only setup, generation drift,
-      # and checks; it never renders an apply/fmt/fix invocation.
+        # CI is ternary (Y/N/absent). The check partition has no declared
+        # list: MakeSpec derives it from the gate kind declared once in the
+        # gate registry (c.Infra.GATE_TOOLS_BY_KIND). CI=Y (CI and
+        # pre-commit) runs only the active EXTERNAL gates; CI=N runs the
+        # strict complement (type checkers and the validators whose rules
+        # flext-infra owns); an unset CI (pre-push) runs every active gate.
+        # tooling.tools.pytest.ci-excluded-markers defines the slow-test
+        # exclusion for CI and pre-commit, not local/pre-push runs.
+      # The workflow below declares stage membership; these booleans only
+      # decide whether each git-hook stage is generated and installed. CI owns
+      # read-only setup, generation drift, and checks; it never renders an
+      # apply/fmt/fix invocation.
       pre_commit: false
       pre_push: false
       workflow:
-      # Pre-commit runs fmt+fix, then the active CI check partition. Pre-push
+      # Pre-commit runs fmt+fix, then the fast check partition. Pre-push
       # runs check with CI unset to cover the complete active gate universe,
       # and adds gen+test with the declared local token.
         - {verb: setup, contexts: [local, ci]}
@@ -416,10 +411,10 @@ Infra:
         - {verb: fmt, contexts: [local, pre_commit]}
         - {verb: fix, contexts: [local, pre_commit]}
         - {verb: check, contexts: [local, ci, pre_push, pre_commit]}
-      # Operator ruling 2026-09-23: CI runs setup, the gen fixed point, the
-      # deps audit and check only; make test runs locally and on pre-push,
-      # never in CI. The CI test-only steps (testmon cache, test reports)
-      # render only while a test row declares the ci context.
+      # CI runs setup, the gen fixed point, the deps audit and the fast check
+      # partition only; make test runs locally and on pre-push, never in CI.
+      # The CI test-only steps (testmon cache, test reports) render only while
+      # a test row declares the ci context.
         - {verb: test, contexts: [local, pre_push]}
       # Artifacts `make clean` removes. Read by Makefile.j2 for the cache
       # sweep and the root-level directory/file lists.
@@ -442,14 +437,9 @@ Infra:
           - flext-infra-codegen-transaction-journal.json.lock
         trace_globs:
           - "*.pstats"
-      # Branch shapes and PR state that let a push skip the pre-push gate, and
-      # the integration branches the merge lock protects. Read by
-      # ci.yml.j2 and .pre-commit-config.yaml.j2.
+      # Head commit subjects that mark work in progress, and the integration
+      # branches the CI merge guard locks against them. Read by ci.yml.j2.
       work_in_progress:
-        draft_pr: true
-        branch_patterns:
-          - "^wip/"
-          - WIP
         head_subject_patterns:
           - "^\\[WIP\\]"
           - "^WIP"
@@ -479,7 +469,6 @@ Infra:
             - utilities
             - worktree
         mutable_actions: [fix, fmt]
-        warning_actions: [audit]
         reports_dir: .reports/docs
         cross_project_relative_link_pattern: '^(?:\.\./)+flext-[a-z0-9-]+(?:/|$)'
         stale_github_organizations:
@@ -503,7 +492,7 @@ Infra:
         - name: setup
           description: Provision the declared environment and hooks.
         - name: upg
-          description: Resolve the newest declared releases and write the uv and mise locks.
+          description: Resolve the newest declared releases, write the uv and mise locks, then prove the upgraded tree still converges and passes every active check gate.
         # Workspace-only (topology owns applicability): a standalone Makefile
         # never declares it. Never merges; a rerun continues the same lanes.
         - name: propagate
@@ -515,15 +504,17 @@ Infra:
           description: Run the workspace public runtime examples.
           profiles: [workspace]
         - name: check
-          description: Run every configured non-test gate.
+          description: Run the configured non-test gates except the dedicated smells audit.
+        - name: smells
+          description: Run the strict code-smell audit as a dedicated gate.
         - name: test
           description: Run incremental tests through the persistent testmon cache.
         - name: test-full
           description: Run incremental then all tests, including external and CI-excluded markers, through the same persistent testmon cache.
         - name: fmt
-          description: Apply ruff format --preview and ruff check --fix --unsafe-fixes --preview. Ruff is the rule; change code, never ruff.
+          description: Apply ruff format --preview and every declared formatter gate. Ruff is the rule; change code, never ruff.
         - name: fix
-          description: Apply ruff check --fix --unsafe-fixes --preview plus every other configured safe correction. Ruff is the rule; change code, never ruff.
+          description: Apply the safe fixes of ruff check --fix --preview plus every other configured safe correction; never deletes information. Ruff is the rule; change code, never ruff.
         - name: fix-enforcement
           description: Apply the safe fix actions declared by the enforcement catalog.
         - name: fix-namespace
@@ -534,10 +525,14 @@ Infra:
           description: Inspect ownership, dependency, and generated-state health.
         - name: status
           description: Report the resolved runtime and repository state.
+        - name: verify-clean
+          description: Verify that generated documentation and managed artifacts leave the Git tree clean.
         - name: docs
           description: Generate, fix, format, and check documentation.
         - name: clean
           description: Remove every declared disposable artifact.
+        - name: bootstrap-candidate
+          description: Bootstrap declared candidate worktrees with this branch-matched generator.
         - name: release-plan
           description: Resolve the release decision through the public protocol.
         - name: release-version
@@ -554,7 +549,15 @@ Infra:
         - name: initialize
           description: Materialize the declared package initializer graph.
         - name: mod
-          description: Apply the declared structural codemods.
+          description: Apply the declared structural codemods; committed rule-test snapshots are verified, never rewritten.
+        - name: mod-text
+          description: Apply only declared Sed text rules with syntax preflight and atomic publication.
+        - name: mod-text-candidate
+          description: Replay Sed rules in the single candidate worktree declared by the workspace manifest.
+        # The explicit snapshot regeneration (flext-itpd1.7): `mod` only verifies
+        # snapshots, so a changed rule output lands as a reviewed commit.
+        - name: mod-snapshots
+          description: Regenerate the owned ast-grep rule-test snapshots from their tests for a reviewed commit.
         - name: waza
           description: Validate provider-neutral governance semantics with Waza.
         - name: duplication
@@ -562,6 +565,8 @@ Infra:
         - name: sonarcloud-sync
           description: Write the SSOT SonarCloud issue exclusions to the server-side project settings (requires SONAR_TOKEN).
       custom_handler_profile_overrides: {}
+      standalone_check_gates:
+        smells: smells
       custom_handler_policy:
         filename: custom.mk
         # Custom behavior is one private whole-verb replacement or one lifecycle
@@ -971,10 +976,6 @@ Infra:
         owner: codegen
         policy: full
         mode: 493 # 0o755
-      - path: .github/scripts/flext-law-loop.sh
-        owner: codegen
-        policy: full
-        mode: 493 # 0o755
       - path: tests/fixtures/ci/docker/alpine.Dockerfile
         owner: codegen
         policy: full
@@ -1045,8 +1046,8 @@ Infra:
       - path: docs/docs_config.json
         owner: codegen
         policy: full
-    # Qlty refuses to scan without a repository configuration. Keep the
-    # blocking smells posture fleet-wide and generated from this SSOT.
+    # Qlty refuses to scan without a repository configuration. The generated
+    # make smells verb owns this strict, separately scheduled audit fleet-wide.
       - path: .qlty/qlty.toml
         owner: codegen
         policy: full
@@ -1222,7 +1223,7 @@ Infra:
               - dependency-injector>=4.49.1
               - packaging>=26.3
               - pydantic>=2.13.5
-              - pydantic-settings>=2.14.2,<2.15
+              - pydantic-settings>=2.15.0,<2.16
               - pyyaml>=6.0.3
               - structlog>=25.5.0,<27
               - typing-extensions>=4.16.0
@@ -1232,17 +1233,17 @@ Infra:
               - flext-cli
               - flext-core
               - pydantic>=2.13.5
-              - pydantic-settings>=2.14.2,<2.15
+              - pydantic-settings>=2.15.0,<2.16
             codegen: [flext-infra]
         # Project-scoped requirements extend the shared profile without
         # leaking API/Web dependencies into core consumers. Unbounded entries
         # are resolved by deps; its floor writer updates this same owner.
           - upstream: flext_core
             project: flext-api
-            runtime: [flext-web, httpx>=0.28.1, msgpack>=1.2.2]
+            runtime: [flext-web, httpx>=0.28.1, msgpack>=1.2.3]
           - upstream: flext_core
             project: flext-auth
-            runtime: [flext-api, bcrypt>=5.0.0, PyJWT>=2.15.0]
+            runtime: [flext-api, bcrypt>=5.0.0, PyJWT>=2.15.1]
           - upstream: flext_core
             project: flext-cli
           # click floor mirrors the shared fleet lock (8.3.3); meltano upstream
@@ -1250,7 +1251,7 @@ Infra:
             runtime: ["click>=8.3.3,<8.4", typer>=0.27.2, jinja2>=3.1.6, jsonschema>=4.26.0, tomlkit>=0.15.1, ruamel.yaml>=0.19.1, defusedxml>=0.7.1, openpyxl>=3.1.5, python-docx>=1.2.0, python-pptx>=1.0.2]
           - upstream: flext_cli
             project: flext-infra
-            runtime: [flext-cli, defusedxml>=0.7.1, GitPython>=3.1.62, jinja2>=3.1.6, libcst>=1.9.0, Markdown>=3.11, "rope @ git+https://github.com/marlon-costa-dc/rope.git@1.14.0+dc.3", pytest>=9.1.1, mkdocs>=1.6.1]
+            runtime: [flext-cli, defusedxml>=0.7.1, GitPython>=3.2.0, jinja2>=3.1.6, libcst>=1.9.0, Markdown>=3.11, "rope @ git+https://github.com/marlon-costa-dc/rope.git@1.14.0+dc.3", pytest>=9.1.1, mkdocs>=1.6.1]
           - upstream: flext_cli
             project: flext-tests
             runtime: [flext-cli, flext-infra, pytest>=9.1.1, pytest-timeout>=2.4.0, docker>=7.2.0, python-on-whales>=0.81.0]
@@ -1265,10 +1266,10 @@ Infra:
             runtime: [flext-cli]
           - upstream: flext_cli
             project: flext-quality
-            runtime: [flext-cli, flext-infra, flext-web, flext-api, fastmcp>=4.0.10, requests>=2.34.2, aiohttp>=3.14.3, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1]
+            runtime: [flext-cli, flext-web, flext-api, fastmcp>=4.0.10, requests>=2.34.2, aiohttp>=3.14.3, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1]
           - upstream: flext_cli
             project: flext-web
-            runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.54.0, fastapi>=0.141.1, starlette>=1.7.0, werkzeug>=3.1.9]
+            runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.54.0, fastapi>=0.142.1, starlette>=1.7.0, werkzeug>=3.1.9]
           - upstream: flext_cli
             project: flext-db-oracle
             runtime: [flext-cli, oracledb>=26.0.1, sqlalchemy>=2.0.54]
@@ -1280,7 +1281,7 @@ Infra:
             runtime: [flext-ldif, ldap3>=2.10.2rc4]
           - upstream: flext_cli
             project: flext-meltano
-            runtime: [flext-cli, meltano>=4.3.0, singer-sdk>=0.54.6, sqlalchemy>=2.0.54, psycopg2-binary>=2.9.13, redis>=8.1.0]
+            runtime: [flext-cli, meltano>=4.4.0, singer-sdk>=0.54.7, sqlalchemy>=2.0.54, psycopg2-binary>=2.9.13, redis>=8.1.0]
           - upstream: flext_cli
             project: flext-oracle-oic
             runtime: [flext-cli, flext-auth, flext-api]
@@ -1313,7 +1314,7 @@ Infra:
             runtime: [flext-meltano, flext-oracle-oic, flext-api]
           - upstream: flext_core
             project: flext-tap-oracle-wms
-            runtime: [flext-meltano, flext-oracle-wms, singer-sdk>=0.54.6]
+            runtime: [flext-meltano, flext-oracle-wms, singer-sdk>=0.54.7]
           - upstream: flext_core
             project: flext-target-ldap
             runtime: [flext-meltano, flext-ldap]
@@ -1775,8 +1776,6 @@ Infra:
             - "**/*.bkp?"
             - "**/*.backup"
             - "**/*.orig"
-            - "**/*_backup"
-            - "**/*_backup_*"
             - "**/*.md.backup"
             - "**/archived/"
         - name: "Autofix rejection artifacts (run_skill_autofix.sh rollback output)"
@@ -1925,11 +1924,6 @@ Infra:
         - source: base/.github/scripts/validate-git-hook.sh.j2
           destination: .github/scripts/validate-git-hook.sh
           profiles: [workspace, standalone]
-          delegate: render
-          overwrite: false
-        - source: base/.github/scripts/flext-law-loop.sh.j2
-          destination: .github/scripts/flext-law-loop.sh
-          profiles: [workspace]
           delegate: render
           overwrite: false
       # Multi-environment CI base: reusable ci-matrix workflow + per-distro
@@ -2089,7 +2083,7 @@ Infra:
         - source: base/Makefile.j2
           destination: Makefile
         # The generic conform engine is the single Makefile owner for every
-        # profile; workspace fan-out is selected inside this template.
+        # profile; every profile renders the same local verb bodies.
         # Fully generated (overwrite: true): a project never owns a verb.
         # `overwrite: false` froze every existing Makefile at the shape it
         # had when first written, so new builtin verbs never reached the

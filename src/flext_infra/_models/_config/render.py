@@ -8,7 +8,10 @@ from typing import Annotated
 from flext_cli import m
 
 from ... import t
-from ..._constants import FlextInfraConstantsCodegenProject
+from ..._constants import (
+    FlextInfraConstantsCodegenProject,
+    FlextInfraConstantsWorkspace,
+)
 from ..deps_tool_config import FlextInfraModelsDepsToolConfig
 from .contexts import FlextInfraConfigModelsContexts
 from .contract import FlextInfraConfigModelsContract
@@ -221,6 +224,10 @@ class FlextInfraConfigModelsRender:
             FlextInfraConfigModelsContract.MiseBootstrapEnvironmentSpec,
             m.Field(description="Strict persistent Mise storage contract"),
         ]
+        environment_directory: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Runtime-root-local development environment"),
+        ] = FlextInfraConstantsWorkspace.ENVIRONMENT_DIRECTORY
 
     class SonarcloudIssueExclusionSpec(FlextInfraConfigModelsContract.ConfigContract):
         """One SonarCloud issue exclusion applied as a server-side project setting.

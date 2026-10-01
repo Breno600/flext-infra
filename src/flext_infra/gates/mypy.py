@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import ast
 import re
-import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
@@ -99,32 +98,22 @@ class FlextInfraMypyGate(FlextInfraGate):
     ) -> t.StrSequence:
         """Build check command."""
         cfg = self._resolve_config(project_dir, ctx)
-        command = self._python_module_command(
-            c.Infra.MYPY,
-            *check_dirs,
-            "--config-file",
-            str(cfg),
-            "--output",
-            c.Infra.OUTPUT_JSON,
-            "--no-error-summary",
-            "--no-color-output",
-            "--verbose",
-        )
         profile_output = u.Cli.process_env().get(c.Infra.MYPY_PROFILE_OUTPUT_ENV)
+        destination = None
         if profile_output is not None:
             destination = Path(profile_output)
             if not destination.is_absolute() or not destination.parent.is_dir():
                 msg = "Mypy profile output requires an absolute path in an existing directory"
                 raise ValueError(msg)
-            command = (
-                sys.executable,
-                "-m",
-                "cProfile",
-                "-o",
-                str(destination),
-                *command[1:],
+        return u.Infra.mypy_limited_command(
+            m.Infra.MypyInvocation(
+                targets=tuple(project_dir / target for target in check_dirs),
+                config_file=cfg,
+                report_json=True,
+                verbose=True,
+                profile_output=destination,
             )
-        return u.Infra.mypy_limited_command(command)
+        )
 
     @override
     def _validate_check_report(
@@ -175,22 +164,26 @@ class FlextInfraMypyGate(FlextInfraGate):
     @override
     def _check_timeout(self, project_dir: Path, ctx: m.Infra.GateContext) -> int:
         """Keep the outer runner alive through the controlled Mypy deadline."""
-        _ = project_dir, ctx
-        return u.Infra.mypy_runner_timeout()
+        _ = ctx
+        return u.Infra.mypy_runner_timeout_for_project(project_dir)
 
     @override
     def _check_env(
         self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> t.StrMapping | None:
-        """Check env."""
-        _ = project_dir
+        """Run Mypy against the project's shared analysis cache."""
+        overrides = {
+            c.Infra.MypyCacheEnvironment.CACHE_DIR.value: str(
+                u.Infra.mypy_cache_directory(project_dir)
+            )
+        }
         typings_generated = ctx.repository_root / c.Infra.DIR_TYPINGS / "generated"
-        if not typings_generated.is_dir():
-            return None
-        base_env = u.Cli.process_env()
-        existing = base_env.get("MYPYPATH", "")
-        mypy_path = str(typings_generated) + (f":{existing}" if existing else "")
-        return u.Cli.process_env(overrides={"MYPYPATH": mypy_path})
+        if typings_generated.is_dir():
+            existing = u.Cli.process_env().get("MYPYPATH", "")
+            overrides["MYPYPATH"] = str(typings_generated) + (
+                f":{existing}" if existing else ""
+            )
+        return u.Cli.process_env(overrides=overrides)
 
     @override
     def _parse_check_output(

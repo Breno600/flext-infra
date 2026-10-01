@@ -22,12 +22,17 @@ class FlextInfraProtocolsCheck(Protocol):
     """Check-domain protocol definitions."""
 
     @runtime_checkable
+    class PytestRunContextReceiver(Protocol):
+        """Receive the runner's immutable Pydantic receipt through explicit DI."""
+
+        def __call__(self, context: m.Infra.PytestRunContext) -> None: ...
+
+    @runtime_checkable
     class WorkspaceLoopOutcome(Protocol):
         """Public structural view of the workspace gate loop outcome."""
 
         results: tuple[m.Infra.ProjectResult, ...]
         failed: int
-        skipped: int
         total_elapsed: float
 
     @runtime_checkable

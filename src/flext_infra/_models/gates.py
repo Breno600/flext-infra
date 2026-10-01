@@ -143,10 +143,14 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
         ] = None
 
     class PyrightSummary(m.ContractModel):
-        """Native completed-analysis counters; zero collection is not success."""
+        """Native completed-analysis counters.
+
+        The model accepts ``filesAnalyzed=0``; the gate layer decides that an
+        empty analysis of a project with Python targets is a failure.
+        """
 
         files_analyzed: Annotated[
-            t.PositiveInt,
+            t.NonNegativeInt,
             m.Field(alias="filesAnalyzed", description="Number of analyzed files"),
         ]
         error_count: Annotated[

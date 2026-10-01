@@ -65,17 +65,51 @@ class FlextInfraModelsDepsToolConfig(
                 description="Allow direct references in project metadata.",
             ),
         ]
-        packaged_data_dirs: Annotated[
-            t.StrSequence,
+
+    class PytestWorkerCeiling(m.ArbitraryTypesModel):
+        """Tagged per-project pytest worker ceiling: absolute or CPU fraction.
+
+        Exactly one of ``workers`` (absolute count) or ``cpu_fraction``
+        (``"numerator/denominator"`` of the process CPU count) must be set.
+        A bare integer (legacy YAML form) coerces to ``workers``.
+        """
+
+        workers: Annotated[
+            int | None,
             m.Field(
-                alias="packaged-data-dirs",
-                default_factory=tuple,
+                gt=0,
+                le=64,
+                description="Absolute xdist worker ceiling for the project.",
+            ),
+        ] = None
+        cpu_fraction: Annotated[
+            str | None,
+            m.Field(
+                pattern=r"^[1-9][0-9]*/[1-9][0-9]*$",
                 description=(
-                    "Root data directories force-included into the wheel when "
-                    "present (e.g. config, templates), so they survive install."
+                    "CPU-fraction worker ceiling (numerator/denominator of "
+                    'the process CPU count), e.g. "1/4".'
                 ),
             ),
-        ]
+        ] = None
+
+        @m.model_validator(mode="before")
+        @classmethod
+        def _coerce_legacy_int(cls, data: t.JsonValue) -> t.JsonValue:
+            """Accept the legacy bare-integer form as an absolute ceiling."""
+            if isinstance(data, int) and not isinstance(data, bool):
+                return {"workers": data}
+            return data
+
+        @m.model_validator(mode="after")
+        def _require_exactly_one_form(
+            self,
+        ) -> FlextInfraModelsDepsToolConfig.PytestWorkerCeiling:
+            """Reject ambiguous (both or neither) ceiling forms."""
+            if (self.workers is None) == (self.cpu_fraction is None):
+                msg = "PytestWorkerCeiling requires exactly one of workers or cpu_fraction"
+                raise ValueError(msg)
+            return self
 
     class PytestConfig(m.ArbitraryTypesModel):
         """Pytest baseline settings loaded from YAML."""
@@ -95,6 +129,13 @@ class FlextInfraModelsDepsToolConfig(
                 alias="slow-timeout-seconds",
                 gt=0,
                 description="Hard maximum runtime for one explicitly slow item.",
+            ),
+        ]
+        slow_marker: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                alias="slow-marker",
+                description="Native pytest marker whose items run in their own phase.",
             ),
         ]
         run_timeout_seconds: Annotated[
@@ -187,16 +228,33 @@ class FlextInfraModelsDepsToolConfig(
                 description="Pytest-xdist scheduler for full runs.",
             ),
         ]
+        parallel_schedule_chunk: Annotated[
+            int,
+            m.Field(
+                alias="parallel-schedule-chunk",
+                ge=1,
+                description=(
+                    "Maximum tests scheduled per dispatch step under the load "
+                    "distribution. One makes the declared max-failures stop "
+                    "take effect at the next item boundary in every worker "
+                    "instead of after each worker drains a large pre-assigned "
+                    "chunk, so a red suite exits typed and early at fleet "
+                    "scale inside the fixed run budget."
+                ),
+            ),
+        ]
         parallel_worker_overrides: Annotated[
-            Mapping[str, int],
+            Mapping[str, FlextInfraModelsDepsToolConfig.PytestWorkerCeiling],
             m.Field(
                 alias="parallel-worker-overrides",
                 description=(
                     "Per declared-project worker ceilings (``[project].name`` "
-                    "→ workers) resolved by the runner over the fleet-wide "
-                    "``parallel-workers`` default: a consumer whose measured "
-                    "suite cannot fit the single-worker process boundary "
-                    "declares its ceiling here, inside the fleet cycle."
+                    "→ absolute ``workers`` or CPU ``cpu_fraction``) resolved "
+                    "by the runner over the fleet-wide ``parallel-workers`` "
+                    "default: a consumer whose measured suite cannot fit the "
+                    "single-worker process boundary declares its ceiling "
+                    "here, inside the fleet cycle. The legacy bare-integer "
+                    "form still reads as an absolute ``workers`` ceiling."
                 ),
             ),
         ] = {}
@@ -300,6 +358,44 @@ class FlextInfraModelsDepsToolConfig(
             """Derive the outer wall without creating a second config field."""
             return self.run_timeout_seconds + (self.termination_grace_seconds * 2)
 
+        @property
+        def suite_stop_reserve_seconds(self) -> int:
+            """Derive the budgeted-phase reserve kept after the graceful stop.
+
+            xdist keeps every worker at least two items deep (the running item
+            plus one queued) or one schedule chunk, whichever is larger. The
+            budgeted phase never carries slow-marked items, so each in-flight
+            item is bounded by the per-case timeout; the session then needs the
+            termination grace to publish testmon and report evidence.
+            """
+            return (
+                self.xdist_items_per_worker * self.case_timeout_seconds
+                + self.termination_grace_seconds
+            )
+
+        @property
+        def serial_suite_stop_reserve_seconds(self) -> int:
+            """Derive the budgeted serial reserve: one per-case item plus grace."""
+            return self.case_timeout_seconds + self.termination_grace_seconds
+
+        @property
+        def slow_suite_stop_reserve_seconds(self) -> int:
+            """Derive the slow-phase reserve: in-flight items bounded by the slow ceiling."""
+            return (
+                self.xdist_items_per_worker * self.slow_timeout_seconds
+                + self.termination_grace_seconds
+            )
+
+        @property
+        def slow_serial_suite_stop_reserve_seconds(self) -> int:
+            """Derive the slow-phase serial reserve: one slow item plus grace."""
+            return self.slow_timeout_seconds + self.termination_grace_seconds
+
+        @property
+        def xdist_items_per_worker(self) -> int:
+            """Xdist depth per worker: the running item plus one queued, or a chunk."""
+            return max(2, self.parallel_schedule_chunk)
+
         @u.model_validator(mode="after")
         def _validate_execution_limits(self) -> Self:
             """Keep item and termination budgets inside the hard invocation cap."""
@@ -339,6 +435,9 @@ class FlextInfraModelsDepsToolConfig(
                 marker not in declared_markers for marker in self.ci_excluded_markers
             ):
                 msg = "pytest ci-excluded-markers must be declared in standard-markers"
+                raise ValueError(msg)
+            if self.slow_marker not in declared_markers:
+                msg = "pytest slow-marker must be declared in standard-markers"
                 raise ValueError(msg)
             undeclared = [
                 marker
@@ -728,21 +827,21 @@ class FlextInfraModelsDepsToolConfig(
                 validation_alias=m.AliasPath("ruff", "src"),
                 description="Conformed Ruff source roots",
             ),
-        ]
+        ] = ()
         ruff_exclude: Annotated[
             t.StrTuple,
             m.Field(
                 validation_alias=m.AliasPath("ruff", "exclude"),
                 description="Conformed Ruff exclusions",
             ),
-        ]
+        ] = ()
         ruff_ignore: Annotated[
             t.StrTuple,
             m.Field(
                 validation_alias=m.AliasPath("ruff", "lint", "ignore"),
                 description="Conformed Ruff ignores",
             ),
-        ]
+        ] = ()
 
     # flext-j47u (codex): explicit runtime-only values keep the Jinja structure full.
     class ToolingRuntimeContext(m.ArbitraryTypesModel):

@@ -336,3 +336,72 @@ class TestsFlextInfraRule0NamespaceStructure:
             ),
             eq=False,
         )
+
+    @staticmethod
+    def _write_manifest(project_root: Path, *, package: bool) -> None:
+        """Declare the workspace SSOT publish contract for one project."""
+        config_dir = project_root / "config"
+        config_dir.mkdir(exist_ok=True)
+        (config_dir / "workspace.yaml").write_text(
+            "version: 3\n"
+            'name: "content-only"\n'
+            "repository:\n"
+            '  name: "content-only"\n'
+            '  distribution: "content-only"\n'
+            '  provider: "sample"\n'
+            '  url: "https://example.com/content-only.git"\n'
+            '  path: "."\n'
+            '  role: "workspace"\n'
+            '  state: "active"\n'
+            '  checkout: "root"\n'
+            '  codegen: "conform"\n'
+            f"  package: {str(package).lower()}\n"
+            "  editable: false\n"
+            "  read_only: false\n"
+            "members: []\n"
+            "exclusions: []\n",
+            encoding="utf-8",
+        )
+
+    def test_content_only_declared_root_skips_layout_contract(
+        self, tmp_path: Path
+    ) -> None:
+        """A manifest declaring package=false receives the layout receipt.
+
+        The invest root is the real consumer: a workspace shell whose
+        analyzable surface lives in examples/tests owns no facade layout,
+        so NS-LAYOUT-001 must not fire when the SSOT declares
+        repository.package=false (bead invest-6n6u family).
+        """
+        root = u.Tests.namespace_project(
+            tmp_path, module_source="VALUE = 41\n", module_name="loose_module.py"
+        )
+        self._write_manifest(root, package=False)
+        report = u.Tests.validate_namespace_project(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
+        tm.that(
+            any("NS-LAYOUT-001" in violation for violation in report.violations),
+            eq=False,
+        )
+
+    def test_undeclared_root_without_layout_stays_loud(self, tmp_path: Path) -> None:
+        """No manifest declaration keeps NS-LAYOUT-001 loud.
+
+        A root whose package discovery fails without a content-only
+        declaration is a broken packaged project, not a declared topology.
+        """
+        root = tmp_path / "broken_packaged"
+        root.mkdir()
+        (root / "pyproject.toml").write_text(
+            '[project]\nname = "broken-packaged"\nversion = "0.1.0"\n', encoding="utf-8"
+        )
+        (root / "loose_module.py").write_text("VALUE = 41\n", encoding="utf-8")
+        u.Tests.initialize_git_repo(root)
+        report = u.Tests.validate_namespace_project(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
+        tm.that(
+            any("NS-LAYOUT-001" in violation for violation in report.violations),
+            eq=True,
+        )

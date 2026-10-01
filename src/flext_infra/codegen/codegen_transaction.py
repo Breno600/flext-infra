@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import secrets
-from collections.abc import Callable
+from collections.abc import Callable, MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -11,10 +11,10 @@ from flext_core import r
 from flext_infra import m, t, u
 from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
 
-from ._codegen_staging import stage_file_plans
+from ._codegen_staging import FlextInfraCodegenStaging
 from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles as files
 from ._mise_artifacts_journal import FlextInfraMiseArtifactsJournal as journal_io
-from ._mise_artifacts_publication import publish
+from ._mise_artifacts_publication import FlextInfraMisePublication
 from ._mise_artifacts_recovery import FlextInfraMiseRecovery
 from ._mise_artifacts_staging import FlextInfraMiseStaging
 from ._mise_artifacts_state import FlextInfraMiseArtifactsState as state
@@ -36,7 +36,7 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         self._planner = FlextInfraMiseWorkspacePlanner(owner)
         self._recovery = FlextInfraMiseRecovery()
         self._mise_staging = FlextInfraMiseStaging()
-        self._journal_receipts: dict[Path, m.Cli.AtomicFileState] = {}
+        self._journal_receipts: MutableMapping[Path, m.Cli.AtomicFileState] = {}
 
     def run_files_locked[T](
         self, roots: t.MappingKV[str, Path], operation: Callable[[Path], p.Result[T]]
@@ -404,7 +404,9 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
                 desired_mode=item.replacement.mode,
             )
         )
-        ordinary_staged = stage_file_plans(layout, "conform", ordinary)
+        ordinary_staged = FlextInfraCodegenStaging.stage_file_plans(
+            layout, "conform", ordinary
+        )
         if ordinary_staged.failure:
             return result_type.from_failure(
                 self._recover_failure(
@@ -462,7 +464,7 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         )
         if barriers.failure:
             return result_type.from_failure(barriers)
-        published = publish(publications)
+        published = FlextInfraMisePublication.publish(publications)
         if published.failure:
             return result_type.from_failure(
                 self._recover_failure(
@@ -543,7 +545,7 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
                     layout, source_barrier.error or f"{phase} sources changed"
                 )
             )
-        staged = stage_file_plans(layout, phase, changed)
+        staged = FlextInfraCodegenStaging.stage_file_plans(layout, phase, changed)
         if staged.failure:
             return result_type.from_failure(
                 self._recover_failure(
@@ -607,7 +609,7 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
                     or f"{phase} prepublication barrier failed",
                 )
             )
-        published = publish(staged.value)
+        published = FlextInfraMisePublication.publish(staged.value)
         if published.failure:
             return result_type.from_failure(
                 self._recover_failure(
@@ -911,7 +913,7 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         residue = state.transaction_residue(layout.value)
         if residue:
             return r[bool].fail(
-                f"generation residue has no journal authority: {residue[0]}"
+                f"generation staging has no journal authority: {residue[0]}"
             )
         return r[bool].ok(True)
 

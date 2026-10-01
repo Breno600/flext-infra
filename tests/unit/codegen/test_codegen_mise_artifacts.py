@@ -114,7 +114,7 @@ class TestsFlextInfraCodegenMiseArtifacts:
         ``mise.version`` records. A binary planted at that release under the
         declared data dir proves resolution without any download, for both an
         absolute and a ``~``-relative data dir (an unquoted ``~/*)`` pattern
-        once doubled ``$HOME``).
+        once doubled ``${HOME}``).
         """
         packaged = files("flext_infra").joinpath(c.Infra.MISE_COLD_START_DIRECTORY)
         release = tm.ok(
@@ -238,15 +238,6 @@ class TestsFlextInfraCodegenMiseArtifacts:
 
         tm.ok(result, eq=True)
 
-    # Root cause: `config.Infra.codegen.toolchain.suspended_mise_selector_patterns`
-    # is currently an empty tuple in config/codegen.yaml (no toolchain is
-    # suspended today), and it is a fixed-config field with no declared public
-    # input to override in a test. The prior fixture asserted "beads" was
-    # suspended, which is no longer true and cannot be injected through the
-    # public surface, so the retired scenario is dropped rather than faked.
-    # `_validate_suspended_selectors` itself remains covered structurally by
-    # every other `.execute()` call in this file, which passes through it.
-
     def test_config_only_validation_skips_launcher_contract(
         self, tmp_path: Path
     ) -> None:
@@ -290,6 +281,22 @@ class TestsFlextInfraCodegenMiseArtifacts:
 
         tm.fail(result, has="[tools]")
 
+    def test_lock_annotation_in_a_selector_is_rejected(self, tmp_path: Path) -> None:
+        """A ``<version>~<hash>`` lock cache key never becomes a selector."""
+        root = tmp_path / "project"
+        root.mkdir()
+        (root / ".mise.toml").write_text(
+            '[tools]\n"npm:@ast-grep/cli" = { version = "0.45.3~7a027ead" }\n',
+            encoding="utf-8",
+        )
+
+        result = FlextInfraCodegenMiseArtifacts.model_validate({
+            "repository_root": root,
+            "config_only": True,
+        }).execute()
+
+        tm.fail(result, has="lockfile annotation")
+
     def test_apply_validates_the_same_offline_contract(self, tmp_path: Path) -> None:
         """Apply mode owns no tool effect: it validates declarations and launchers."""
         root = self._project(tmp_path / "project")
@@ -320,17 +327,10 @@ class TestsFlextInfraCodegenMiseArtifacts:
         )
         tools = test_u.Tests.toml_mapping(plan["tools"])
 
-        # jscpd release assets carry libc/ABI suffixes, so the route is a
-        # table: the declared version plus one asset pattern per platform.
+        # jscpd declares a host-invariant version so mise writes one lock
+        # entry per tool; the per-platform asset patterns were removed.
         tm.that(
-            tools.get(toolchain.jscpd_selector),
-            eq={
-                "version": toolchain.jscpd_version,
-                "platforms": {
-                    platform: {"asset_pattern": pattern}
-                    for platform, pattern in toolchain.jscpd_asset_patterns.items()
-                },
-            },
+            tools.get(toolchain.jscpd_selector), eq={"version": toolchain.jscpd_version}
         )
         tm.that("npm:jscpd" in tools, eq=False)
 

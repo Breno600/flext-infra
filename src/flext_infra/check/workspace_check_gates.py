@@ -76,16 +76,8 @@ class FlextInfraWorkspaceCheckGatesMixin:
         results: t.MutableSequenceOf[m.Infra.ProjectResult] = []
         total = len(projects)
         failed = 0
-        skipped = 0
         loop_start = time.monotonic()
         for index, target in enumerate(projects, 1):
-            if (
-                not target.path.is_dir()
-                or not (target.path / c.PYPROJECT_FILENAME).exists()
-            ):
-                u.Cli.progress(index, total, target.name, c.Infra.SeverityLevel.SKIP)
-                skipped += 1
-                continue
             u.Cli.progress(index, total, target.name, c.Infra.VERB_CHECK)
             project_result = self._run_single_project(
                 target, resolved_gates, ctx, rope_outcomes
@@ -99,7 +91,6 @@ class FlextInfraWorkspaceCheckGatesMixin:
         return m.Infra.LoopOutcome(
             results=tuple(results),
             failed=failed,
-            skipped=skipped,
             total_elapsed=time.monotonic() - loop_start,
         )
 
@@ -141,12 +132,12 @@ class FlextInfraWorkspaceCheckGatesMixin:
         ctx: m.Infra.GateContext,
         rope_outcomes: t.VariadicTuple[m.Infra.RopeCallbackOutcome],
     ) -> m.Infra.ProjectResult:
-        """Run gates for one project and surface the first failure in gate order.
+        """Run gates for one project and retain every executed gate in order.
 
         Fixers mutate shared files, so an ``--apply`` run chains every gate on
         the previous one. Read-only gates share no mutable state and run as one
-        parallel wave; the verdict still reads them in declared order and stops
-        at the first failing gate, so exactly one defect is reported.
+        parallel wave; reporting retains the complete wave, including failures
+        after the first one. Serialized fail-fast runs stop at their failed gate.
         """
         project_name = project_dir.name
         result = m.Infra.ProjectResult(project=project_name)
@@ -158,6 +149,9 @@ class FlextInfraWorkspaceCheckGatesMixin:
         for gate_id in gates:
             gate_instance = self._registry.create(gate_id, self._repository_root)
             if gate_instance is None:
+                msg = f"{gate_id} gate not registered"
+                raise ValueError(msg)
+            if not gate_instance.selected_for(project_dir):
                 continue
             stages.append(
                 m.Cli.PipelineStageSpec(
@@ -174,9 +168,6 @@ class FlextInfraWorkspaceCheckGatesMixin:
             )
             previous_gate_id = gate_id
 
-        if not stages:
-            return result
-
         cli.pipeline(
             stages,
             context=m.Cli.PipelineStageContext(repository_root=project_dir),
@@ -187,7 +178,7 @@ class FlextInfraWorkspaceCheckGatesMixin:
             result.gates[stage.stage_id] = execution
             u.Cli.gate_result(
                 stage.stage_id,
-                execution.error_count,
+                execution.finding_count,
                 passed=execution.result.passed,
                 elapsed=execution.result.duration,
             )
@@ -200,7 +191,8 @@ class FlextInfraWorkspaceCheckGatesMixin:
                     or any(issue.code == "TOOL_ERROR" for issue in execution.issues)
                 ):
                     u.Cli.info(execution.raw_output)
-                break
+                if ctx.fail_fast or mutating:
+                    break
         return result
 
     # ------------------------------------------------------------------
@@ -256,10 +248,7 @@ class FlextInfraWorkspaceCheckGatesMixin:
                 m.Cli.PipelineStageResult(
                     stage_id=gate_id,
                     status=c.Cli.PipelineStageStatus.OK,
-                    output={
-                        "errors": execution.error_count,
-                        "observations": execution.observational_count,
-                    },
+                    output={"findings": execution.finding_count},
                 )
             )
 

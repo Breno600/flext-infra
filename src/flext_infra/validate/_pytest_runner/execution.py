@@ -34,23 +34,29 @@ class FlextInfraPytestRunnerExecution(
             repository_root=self.root, db_path=self.testmon_db, pre_run_digest=digest
         ).execute()
 
-    def _selection_env(self, manifest: Path | None = None) -> MutableMapping[str, str]:
-        """Return the child environment shared by every runner invocation."""
+    def _selection_env(
+        self, *, execution_mode: c.Infra.PytestExecutionMode
+    ) -> MutableMapping[str, str]:
+        """Return the child environment shared by every runner invocation.
+
+        The coverage verb owns no testmon plugin, so its children neither
+        receive nor inherit a testmon database location.
+        """
+        testmon_keys = (
+            config.Infra.codegen.make.testmon_cache.database_environment_variable,
+            c.Infra.PYTEST_ENV_TESTMON_DATAFILE,
+        )
+        coverage = execution_mode == c.Infra.PytestExecutionMode.COVERAGE
         overrides = {
             c.Infra.ORCHESTRATOR_ENV_PYTHONPATH: str(
                 self.root / c.Infra.DEFAULT_SRC_DIR
-            ),
-            config.Infra.codegen.make.testmon_cache.database_environment_variable: str(
-                self.testmon_db
-            ),
-            c.Infra.PYTEST_ENV_TESTMON_DATAFILE: str(self.testmon_db),
+            )
         }
-        if manifest is not None:
-            overrides[c.Infra.PYTEST_ENV_COLLECTION_MANIFEST] = str(manifest)
-        remove_keys = tuple(
-            key
-            for key in c.Infra.PYTEST_INHERITED_ENV_REMOVE_KEYS
-            if manifest is None or key != c.Infra.PYTEST_ENV_COLLECTION_MANIFEST
+        if not coverage:
+            overrides.update(dict.fromkeys(testmon_keys, str(self.testmon_db)))
+        remove_keys = (
+            *c.Infra.PYTEST_INHERITED_ENV_REMOVE_KEYS,
+            *(testmon_keys if coverage else ()),
         )
         return u.Cli.process_env(remove_keys=remove_keys, overrides=overrides)
 
@@ -68,13 +74,16 @@ class FlextInfraPytestRunnerExecution(
         manifest_path = report_dir / f"{artifact}.json"
         report_log = report_dir / f"{artifact}.events.jsonl"
         command = self.build_selection_command(
-            report_log=report_log, complete=complete, execution_mode=execution_mode
+            report_log=report_log,
+            manifest_path=manifest_path,
+            complete=complete,
+            execution_mode=execution_mode,
         )
         outcome = u.Cli.run_to_file(
             command,
             selection_log,
             cwd=self.root,
-            env=self._selection_env(manifest_path),
+            env=self._selection_env(execution_mode=execution_mode),
             deadline=self._process_deadline(),
         ).unwrap()
         self._record_process_outcome(
@@ -82,20 +91,40 @@ class FlextInfraPytestRunnerExecution(
         )
         log_text = selection_log.read_text(encoding="utf-8")
         # Exit code 5 is pytest's "no tests ran": testmon selected nothing.
+        # For a zero-test project (no test module under the config-owned
+        # roots) rc=5 is the DECLARED inventory outcome in both phases.
+        owns_no_tests = self._owns_no_tests()
+        # A project may declare no slow-marked item at all, so the slow phase
+        # accepts an empty complete inventory as its declared outcome.
+        accepted = {pytest.ExitCode.OK} | (
+            set()
+            if complete and not self.slow_phase
+            else {pytest.ExitCode.NO_TESTS_COLLECTED}
+        )
+        if owns_no_tests:
+            accepted = {pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED}
         if (
-            outcome.raw_return_code
-            not in (
-                {pytest.ExitCode.OK}
-                if complete
-                else {pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED}
-            )
+            outcome.raw_return_code not in accepted
             or outcome.timed_out
             or outcome.forwarded_signal is not None
         ):
             detail = log_text.strip()
             msg = f"testmon selection failed ({outcome.raw_return_code}): {detail}"
             raise RuntimeError(msg)
-        self._collection_diagnostics(report_log)
+        if not owns_no_tests:
+            self._collection_diagnostics(report_log)
+        if (
+            owns_no_tests
+            and outcome.raw_return_code == pytest.ExitCode.NO_TESTS_COLLECTED
+        ):
+            # No manifest artifact is produced for an empty declared suite.
+            return m.Infra.PytestSelectionPlan(
+                manifest_path=manifest_path,
+                node_ids=(),
+                whole_target=True,
+                inventory_collected=complete,
+                owns_no_tests=True,
+            )
         manifest = m.Infra.PytestCollectionManifest.model_validate_json(
             manifest_path.read_text(encoding="utf-8")
         )
@@ -103,7 +132,7 @@ class FlextInfraPytestRunnerExecution(
         if outcome.raw_return_code == pytest.ExitCode.NO_TESTS_COLLECTED and node_ids:
             msg = "pytest reported no collection with a nonempty manifest"
             raise RuntimeError(msg)
-        if complete and not node_ids:
+        if complete and not node_ids and not owns_no_tests and not self.slow_phase:
             msg = "complete pytest inventory must contain at least one test"
             raise RuntimeError(msg)
         u.Cli.atomic_write_text_file(
@@ -124,7 +153,28 @@ class FlextInfraPytestRunnerExecution(
             node_ids=node_ids,
             whole_target=whole_target,
             inventory_collected=complete or verify_inventory,
+            owns_no_tests=owns_no_tests,
         )
+
+    def _owns_no_tests(self) -> bool:
+        """Return whether the project owns zero test files by design.
+
+        The config-owned collection roots (``pytest.test-paths`` SSOT) contain
+        no test module at all: an empty suite is the declared topology (a
+        content-only workspace shell), not a broken collection. A project that
+        DOES own test files but collects nothing keeps the loud failure —
+        zero-execution of an existing suite is never a silent pass (law 14).
+        """
+        pytest_settings = config.Infra.tooling.tools.pytest
+        patterns = ("test_*.py", "*_test.py")
+        for root in pytest_settings.test_paths:
+            base = self.root / root
+            if not base.is_dir():
+                continue
+            for pattern in patterns:
+                if any(base.rglob(pattern)):
+                    return False
+        return True
 
     def _process_deadline(self) -> p.Cli.ProcessDeadline:
         """Use the entrypoint clock for selection, execution, and cleanup."""
@@ -136,7 +186,11 @@ class FlextInfraPytestRunnerExecution(
         )
 
     def _run_suite(
-        self, command: t.VariadicTuple[str], report_dir: Path, *, manifest_path: Path
+        self,
+        command: t.VariadicTuple[str],
+        report_dir: Path,
+        *,
+        execution_mode: c.Infra.PytestExecutionMode,
     ) -> p.Cli.ProcessOutcome:
         """Execute one suite argv under the shared deadline and environment."""
         u.Cli.atomic_write_text_file(
@@ -146,7 +200,7 @@ class FlextInfraPytestRunnerExecution(
             command,
             report_dir / "pytest.log",
             cwd=self.root,
-            env=self._selection_env(manifest_path),
+            env=self._selection_env(execution_mode=execution_mode),
             live=True,
             deadline=self._process_deadline(),
         ).unwrap()
@@ -173,6 +227,31 @@ class FlextInfraPytestRunnerExecution(
             msg = f"pytest {phase} reported zero after an interrupted lifecycle: {receipt}"
             raise RuntimeError(msg)
 
+    @staticmethod
+    def _completed_failure(outcome: p.Cli.ProcessOutcome) -> bool:
+        """Return whether a failing suite still finished its lifecycle.
+
+        Under xdist the declared max-failures stop exits as Interrupted, not
+        TestsFailed; it is still one completed suite lifecycle whose bounded
+        evidence must be published. An operator signal keeps forwarded_signal
+        set and never qualifies.
+        """
+        return (
+            outcome.raw_return_code
+            in {pytest.ExitCode.TESTS_FAILED, pytest.ExitCode.INTERRUPTED}
+            and not outcome.timed_out
+            and outcome.forwarded_signal is None
+        )
+
+    @staticmethod
+    def _record_cache_state(
+        report_dir: Path, name: str, state: m.Infra.TestmonCacheState
+    ) -> None:
+        """Persist one testmon integrity decision before it is acted upon."""
+        u.Cli.atomic_write_text_file(
+            report_dir / f"{name}.json", state.model_dump_json(indent=2) + "\n"
+        ).unwrap()
+
     def _finalize(
         self,
         report_dir: Path,
@@ -192,11 +271,17 @@ class FlextInfraPytestRunnerExecution(
         context = m.Infra.PytestRunContext.model_validate_json(
             (report_dir / "run-context.json").read_text(encoding="utf-8")
         )
-        if not accounting.executed_count and not (
-            cache_hit
-            and context.execution_mode == c.Infra.PytestExecutionMode.INCREMENTAL
-            and raw_return_code
-            in {pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED}
+        # The zero-test receipt travels on the typed accounting the reports
+        # owner parsed from the durable selection plan.
+        if (
+            not accounting.executed_count
+            and not accounting.owns_no_tests
+            and not (
+                cache_hit
+                and context.execution_mode == c.Infra.PytestExecutionMode.INCREMENTAL
+                and raw_return_code
+                in {pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED}
+            )
         ):
             msg = "zero execution is accepted only for a verified incremental cache hit"
             raise RuntimeError(msg)
@@ -206,8 +291,6 @@ class FlextInfraPytestRunnerExecution(
         phases = self._phase_diagnostics(report_dir, context=context, suite=diagnostics)
         self._write_diagnostics(report_dir, diagnostics, phases=phases)
         warnings = sum(item.warning_count for _, item in phases)
-        blocking_warnings = sum(item.blocking_warning_count for _, item in phases)
-        suspended_warnings = sum(item.suspended_warning_count for _, item in phases)
         accounting_complete = (
             accounting.executed_count == accounting.reported_count
             and (
@@ -219,15 +302,48 @@ class FlextInfraPytestRunnerExecution(
         rejected = any((
             diagnostics.failed_count,
             diagnostics.error_count,
-            blocking_warnings,
+            warnings,
             diagnostics.skipped_count,
             diagnostics.collection_failed_count,
             diagnostics.collection_skipped_count,
             not accounting_complete,
         ))
         accepted_cache_hit = cache_hit and not rejected
-        final_exit = 0 if accepted_cache_hit else raw_return_code or int(rejected)
-        if final_exit:
+        # The zero-test receipt exits green: the suite owns nothing to execute
+        # and the run published its typed accounting.
+        accepted_zero_tests = accounting.owns_no_tests and not rejected
+        selected_count = (
+            None
+            if accounting.inventory_count is None
+            else accounting.inventory_count - accounting.deselected_count
+        )
+        # The suite stop instant can land on the last selected test's teardown:
+        # pytest still reports the interrupt, but every selected test executed
+        # with complete accounting and nothing remains for the next selection.
+        # Coverage keeps the interrupt red: its artifact is validated only on a
+        # clean exit.
+        stopped_after_selection = (
+            raw_return_code == pytest.ExitCode.INTERRUPTED
+            and context.execution_mode != c.Infra.PytestExecutionMode.COVERAGE
+            and not rejected
+            and accounting.executed_count == selected_count
+        )
+        final_exit = (
+            0
+            if (accepted_cache_hit or accepted_zero_tests or stopped_after_selection)
+            else raw_return_code or int(rejected)
+        )
+        # A graceful stop at the suite stop instant publishes the executed
+        # prefix and remains red: the unexecuted remainder is the next run's
+        # testmon selection.
+        incomplete = (
+            selected_count is not None
+            and accounting.executed_count < selected_count
+            and not (diagnostics.failed_count or diagnostics.error_count)
+        )
+        if final_exit and incomplete:
+            result = "incomplete"
+        elif final_exit:
             result = "failed"
         elif accepted_cache_hit:
             result = "cache_hit"
@@ -240,13 +356,11 @@ class FlextInfraPytestRunnerExecution(
         )
         ci_excluded = self.ci_excluded_markers(execution_mode=context.execution_mode)
         phase_counts = "".join(
-            f"{phase}_warnings={item.warning_count}\n"
-            f"{phase}_blocking_warnings={item.blocking_warning_count}\n"
-            f"{phase}_suspended_warnings={item.suspended_warning_count}\n"
-            for phase, item in phases
+            f"{phase}_warnings={item.warning_count}\n" for phase, item in phases
         )
         summary = (
             f"outcome={result}\n"
+            f"selected={selected_count}\n"
             f"executed={accounting.executed_count}\n"
             f"reported={accounting.reported_count}\n"
             f"accounting_complete={accounting_complete}\n"
@@ -257,8 +371,6 @@ class FlextInfraPytestRunnerExecution(
             f"cache_restored={cache_restored}\n"
             f"failed={diagnostics.failed_count}\nerrors={diagnostics.error_count}\n"
             f"warnings={warnings}\n"
-            f"blocking_warnings={blocking_warnings}\n"
-            f"suspended_warnings={suspended_warnings}\n"
             f"{phase_counts}"
             f"skipped={diagnostics.skipped_count}\n"
             f"collection_errors={diagnostics.collection_failed_count}\n"
@@ -287,25 +399,38 @@ class FlextInfraPytestRunnerExecution(
 
     def _execute_testmon(self, *, complete: bool) -> p.Result[int]:
         """Execute one selected testmon phase without resetting shared state."""
-        u.Cli.ensure_dir(self.testmon_db.parent).unwrap()
-        report_dir = self._report_directory()
         execution_mode = (
             c.Infra.PytestExecutionMode.FULL
             if complete
             else c.Infra.PytestExecutionMode.INCREMENTAL
         )
+        slow_marker = config.Infra.tooling.tools.pytest.slow_marker
+        if self.slow_phase and slow_marker in self.ci_excluded_markers(
+            execution_mode=execution_mode
+        ):
+            # The CI context deselects the slow marker by declaration, so its
+            # phase is typed NOT EXECUTED here, never a selection of nothing.
+            sys.stderr.write(
+                f"pytest slow phase NOT EXECUTED: ci-excluded-markers declares "
+                f"{slow_marker!r}\n"
+            )
+            return r.ok(0)
+        u.Cli.ensure_dir(self.testmon_db.parent).unwrap()
+        report_dir = self._report_directory()
         self._write_run_context(
             report_dir,
             m.Infra.PytestRunContext(
                 execution_mode=execution_mode,
                 testmon_db=self.testmon_db,
                 deadline_monotonic=self._process_deadline().expires_at_monotonic,
+                report_directory=report_dir,
             ),
         )
         pre_digest = FlextInfraTestmonDbInspector.digest_file(self.testmon_db)
         cache_restored = False
         if pre_digest is not None:
             pre_state = self._inspect_cache(digest=pre_digest).unwrap()
+            self._record_cache_state(report_dir, "cache-before", pre_state)
             cache_restored = pre_state.restored_accepted
             if not cache_restored:
                 msg = f"testmon preflight rejected cache: {pre_state.reason}"
@@ -321,21 +446,16 @@ class FlextInfraPytestRunnerExecution(
             selection_plan.model_dump_json(indent=2) + "\n",
         ).unwrap()
         selection = selection_plan.node_ids
-        if not selection and not cache_restored:
+        if not selection and not cache_restored and not selection_plan.owns_no_tests:
             msg = "empty incremental selection requires an integrity-checked cache"
             raise RuntimeError(msg)
         # Workers execute one centrally ordered selection. The collection plugin
         # enforces that manifest for both cold and warm caches while testmon
         # continues to collect dependencies through its xdist integration.
         command = self.build_command(
-            report_dir,
-            selection,
-            whole_target=selection_plan.whole_target,
-            execution_mode=execution_mode,
+            report_dir, selection_plan, execution_mode=execution_mode
         )
-        outcome = self._run_suite(
-            command, report_dir, manifest_path=selection_plan.manifest_path
-        )
+        outcome = self._run_suite(command, report_dir, execution_mode=execution_mode)
         cache_hit = (
             not complete
             and outcome.raw_return_code
@@ -345,18 +465,28 @@ class FlextInfraPytestRunnerExecution(
             and not selection
             and cache_restored
         )
-        completed_failure = (
-            outcome.raw_return_code == pytest.ExitCode.TESTS_FAILED
+        # A zero-test project (empty suite by declared design) completes its
+        # lifecycle with pytest's NO_TESTS_COLLECTED: the run must reach the
+        # finalizer so the typed receipt is published instead of a bare rc=5.
+        completed_zero_tests = (
+            selection_plan.owns_no_tests
+            and outcome.raw_return_code
+            in {pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED}
             and not outcome.timed_out
             and outcome.forwarded_signal is None
         )
         if (
             not u.Cli.process_succeeded(outcome)
             and not cache_hit
-            and not completed_failure
+            and not completed_zero_tests
+            and not self._completed_failure(outcome)
         ):
             return r.ok(outcome.raw_return_code)
         state = self._inspect_cache(digest=pre_digest).unwrap()
+        self._record_cache_state(report_dir, "cache-after", state)
+        policy = config.Infra.codegen.make.testmon_cache_policy
+        if not policy.save_enabled:
+            self._record_cache_state(report_dir, "cache-policy", state)
         if not state.restored_accepted and not state.saveable:
             msg = f"testmon cache is unusable: {state.reason}"
             raise RuntimeError(msg)
@@ -373,6 +503,8 @@ class FlextInfraPytestRunnerExecution(
         testmon 2.x refuses branch coverage through the cov plugin, so the
         coverage pass is its own process: no selection pass, no cache traffic.
         The coverage artifact is validated here; coverage is reported, never gated.
+        A completed failing suite writes no coverage artifact but still
+        publishes its accounting and diagnostics with the original exit code.
         """
         report_dir = self._report_directory()
         self._write_run_context(
@@ -381,9 +513,11 @@ class FlextInfraPytestRunnerExecution(
                 execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
                 testmon_db=None,
                 deadline_monotonic=self._process_deadline().expires_at_monotonic,
+                report_directory=report_dir,
             ),
         )
-        selection_plan = self._resolve_selection(
+        # The inventory pass enforces the same collection policy before coverage.
+        self._resolve_selection(
             report_dir,
             complete=True,
             execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
@@ -391,8 +525,10 @@ class FlextInfraPytestRunnerExecution(
         )
         command = self.build_coverage_command(report_dir)
         outcome = self._run_suite(
-            command, report_dir, manifest_path=selection_plan.manifest_path
+            command, report_dir, execution_mode=c.Infra.PytestExecutionMode.COVERAGE
         )
+        if self._completed_failure(outcome):
+            return self._finalize(report_dir, raw_return_code=outcome.raw_return_code)
         if not u.Cli.process_succeeded(outcome):
             return r.ok(outcome.raw_return_code)
         self._validate_coverage(report_dir).unwrap()

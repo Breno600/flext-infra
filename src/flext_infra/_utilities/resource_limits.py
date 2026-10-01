@@ -10,9 +10,11 @@ from typing import TYPE_CHECKING, ClassVar
 
 from flext_cli import u
 
-from flext_infra import c, m, t
+from flext_infra import c, config, m, settings, t
 
 from .process import FlextInfraUtilitiesProcess
+from .project_discovery import FlextInfraUtilitiesProjectDiscovery
+from .pyproject import FlextInfraUtilitiesPyproject
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -50,8 +52,14 @@ class FlextInfraUtilitiesResourceLimits:
 
     @staticmethod
     def mypy_resource_limit() -> m.Infra.MypyResourceLimit:
-        """Validate the external Mypy memory and time settings exactly once."""
+        """Validate the external Mypy memory and time settings exactly once.
+
+        The wall-time budget resolves project-first: the ``tooling.yaml``
+        ``tools.mypy.timeout_seconds`` SSOT is the default, the
+        ``MYPY_TIMEOUT_SECONDS`` env overrides it at the ingress boundary.
+        """
         process_env = u.Cli.process_env()
+        project_budget = config.Infra.tooling.tools.mypy.timeout_seconds
         return m.Infra.MypyResourceLimit(
             memory_limit_mb=FlextInfraUtilitiesResourceLimits._environment_integer(
                 process_env,
@@ -59,31 +67,110 @@ class FlextInfraUtilitiesResourceLimits:
                 c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
             ),
             timeout_seconds=FlextInfraUtilitiesResourceLimits._environment_integer(
-                process_env,
-                c.Infra.MYPY_TIMEOUT_SECONDS_ENV,
-                c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT,
+                process_env, c.Infra.MYPY_TIMEOUT_SECONDS_ENV, project_budget
             ),
         )
 
     @staticmethod
+    def mypy_arguments(invocation: m.Infra.MypyInvocation) -> t.StrSequence:
+        """Build checker options shared by the CLI and public profiling API."""
+        return (
+            *(
+                ("--config-file", str(invocation.config_file.resolve()))
+                if invocation.config_file is not None
+                else ()
+            ),
+            "--no-error-summary",
+            "--no-color-output",
+            *(("--output", c.Infra.OUTPUT_JSON) if invocation.report_json else ()),
+            *(("--verbose",) if invocation.verbose else ()),
+            "--",
+            *(str(target.resolve()) for target in invocation.targets),
+        )
+
+    @staticmethod
+    def mypy_command(invocation: m.Infra.MypyInvocation) -> t.StrSequence:
+        """Construct the owned checker entrypoint from typed data, never command text."""
+        interpreter = sys.executable
+        if invocation.workspace is not None:
+            managed_python = FlextInfraUtilitiesProjectDiscovery.runtime_python(
+                invocation.workspace
+            )
+            if not managed_python.is_file():
+                msg = f"managed workspace interpreter is missing: {managed_python}"
+                raise FileNotFoundError(msg)
+            interpreter = str(managed_python)
+            if invocation.profile_output is None:
+                managed_mypy = managed_python.with_name(
+                    f"{c.Infra.MYPY}.exe" if sys.platform == "win32" else c.Infra.MYPY
+                )
+                if not managed_mypy.is_file():
+                    msg = f"managed workspace checker is missing: {managed_mypy}"
+                    raise FileNotFoundError(msg)
+                return (
+                    str(managed_mypy),
+                    *FlextInfraUtilitiesResourceLimits.mypy_arguments(invocation),
+                )
+        if invocation.profile_output is not None:
+            return (
+                interpreter,
+                "-m",
+                f"{__package__}._mypy_profile",
+                invocation.model_dump_json(),
+            )
+        return (
+            interpreter,
+            "-m",
+            c.Infra.MYPY,
+            *FlextInfraUtilitiesResourceLimits.mypy_arguments(invocation),
+        )
+
+    @staticmethod
+    def mypy_cache_directory(project_dir: Path) -> Path:
+        """Resolve the one shared Mypy cache of a project across relocks.
+
+        Mypy keys its cache by module and revalidates each entry by source hash,
+        so every checkout and every relock of one project reuse one analysis: a
+        dependency bump recomputes only the modules it changed. Keying by lock
+        content (flext-7jnr0) forced a cold full-fleet analysis after every
+        relock and broke the bounded Mypy run. Projects keep distinct
+        directories because their ``tests`` packages share one module name.
+        """
+        spec = config.Infra.codegen.make.mypy_cache
+        home = settings.env_lookup(str(spec.data_home_environment_variable)) or str(
+            Path(settings.env_required(str(spec.user_home_environment_variable)))
+            / spec.home_cache_directory
+        )
+        metadata = FlextInfraUtilitiesPyproject.read_project_metadata_result(
+            project_dir
+        )
+        if metadata.failure:
+            msg = metadata.error or f"project metadata unreadable: {project_dir}"
+            raise ValueError(msg)
+        return (
+            Path(home) / spec.external_storage_directory / metadata.value.project.name
+        )
+
+    @staticmethod
     def mypy_limited_command(
-        command: t.StrSequence,
+        invocation: m.Infra.MypyInvocation,
         limit: m.Infra.MypyResourceLimit | None = None,
         *,
         host_system: str | None = None,
     ) -> t.StrSequence:
-        """Prefix one Mypy command with limits for the selected host system."""
+        """Bound the canonical checker; no caller-provided executable can run."""
         validated_limit = (
             limit or FlextInfraUtilitiesResourceLimits.mypy_resource_limit()
         )
         if (host_system or platform.system()) == "Darwin":
             return (
                 sys.executable,
-                str(Path(__file__).with_name("_mypy_supervisor.py")),
+                "-m",
+                f"{__package__}._mypy_supervisor",
                 str(validated_limit.memory_limit_bytes),
                 str(validated_limit.timeout_seconds),
                 str(c.Infra.TIMEOUT_KILL_AFTER_SECONDS),
-                *command,
+                invocation.model_dump_json(),
             )
         prlimit_executable = FlextInfraUtilitiesResourceLimits._required_executable(
             c.Infra.PRLIMIT_COMMAND
@@ -103,7 +190,7 @@ class FlextInfraUtilitiesResourceLimits:
                 f"{validated_limit.memory_limit_bytes}"
             ),
             "--",
-            *command,
+            *FlextInfraUtilitiesResourceLimits.mypy_command(invocation),
         )
 
     @staticmethod
@@ -116,6 +203,47 @@ class FlextInfraUtilitiesResourceLimits:
             validated_limit.timeout_seconds + c.Infra.MYPY_TIMEOUT_GRACE_SECONDS
         )
         return timeout_seconds
+
+    @classmethod
+    def mypy_runner_timeout_for_project(cls, project_dir: Path) -> int:
+        """Runner timeout honoring the project ``config/tooling.yaml`` budget.
+
+        #1113 made the wall-time budget a project SSOT; the standalone check
+        path must resolve that overlay here, with the documented precedence
+        env override > project budget > fleet default. An out-of-bounds or
+        unreadable project budget fails loud through the limit validation.
+        """
+        limit = cls.mypy_resource_limit()
+        if c.Infra.MYPY_TIMEOUT_SECONDS_ENV not in u.Cli.process_env():
+            budget = cls._project_mypy_budget(project_dir)
+            if budget is not None:
+                limit = m.Infra.MypyResourceLimit(
+                    memory_limit_mb=limit.memory_limit_mb, timeout_seconds=budget
+                )
+        return cls.mypy_runner_timeout(limit)
+
+    @staticmethod
+    def _project_mypy_budget(project_dir: Path) -> int | None:
+        """Read ``tools.mypy.timeout_seconds`` from the project overlay."""
+        tooling = project_dir / "config" / "tooling.yaml"
+        if not tooling.is_file():
+            return None
+        parsed = u.Cli.yaml_safe_load(tooling)
+        if parsed.failure:
+            msg = f"project tooling.yaml unreadable: {parsed.error}"
+            raise ValueError(msg)
+        payload = parsed.value or {}
+        tools = payload.get("tools") if isinstance(payload, dict) else None
+        mypy_block = tools.get("mypy") if isinstance(tools, dict) else None
+        raw_budget = (
+            mypy_block.get("timeout_seconds") if isinstance(mypy_block, dict) else None
+        )
+        if raw_budget is None:
+            return None
+        if not isinstance(raw_budget, int) or isinstance(raw_budget, bool):
+            msg = f"project mypy budget must be a plain integer: {raw_budget!r}"
+            raise TypeError(msg)
+        return raw_budget
 
     @staticmethod
     def _bounded_mypy_diagnostic(

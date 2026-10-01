@@ -7,7 +7,7 @@ import operator
 from collections import defaultdict
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import c, m, u
 from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
@@ -31,8 +31,6 @@ from .classvar_constant_autofix import FlextInfraRefactorClassvarConstantAutofix
 if TYPE_CHECKING:
     from flext_infra import p, t
 
-_log = u.fetch_logger(__name__)
-
 
 class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormattingMixin):
     """Apply supported auto-fixes + removal candidates, then regenerate inits.
@@ -41,6 +39,8 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
     detector-context / fix-key / runtime-alias-rewrite helpers + root +
     dry_run_gate_names from the facade and sibling mixins via FLEXT.
     """
+
+    _census_apply_log: ClassVar[p.Logger] = u.fetch_logger(__name__)
 
     if TYPE_CHECKING:
 
@@ -238,7 +238,7 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
                     "simple removal apply failed for "
                     f"{candidate.file_path}:{candidate.line} {candidate.object_name}"
                 )
-                _log.warning(
+                self._census_apply_log.warning(
                     "census_apply_candidate_rejected",
                     candidate=candidate.file_path,
                     object_name=candidate.object_name,
@@ -357,13 +357,23 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
     def _apply_classvar_relocation(
         self, *, rope: p.Infra.RopeWorkspaceDsl, file_path: Path, object_names: set[str]
     ) -> bool:
-        """Apply ENFORCE-079: move ClassVar constants to the _constants module."""
+        """Apply ENFORCE-079: move ClassVar constants to the _constants module.
+
+        Every classvar_relocation violation the detector yields for the file is
+        applied, not only the surfaced ``object_names`` subset: the runtime
+        census surfaces one violating constant per class per pass (single
+        violation per target in the enforcement engine), while the detector
+        enumerates them all. Restricting the apply to the surfaced names would
+        need one full pass per constant; applying the complete set keeps the
+        rule strict and the migration mechanical. ``object_names`` still gates
+        WHICH FILES are visited (files with at least one surfaced fix).
+        """
+        _ = object_names
         ctx = self._detector_context(rope, file_path)
         violations = [
             violation
             for violation in FlextInfraClassPlacementDetector.detect_file(ctx)
             if violation.action == "classvar_relocation"
-            and violation.name in object_names
         ]
         if not violations or ctx.project_root is None:
             return False
@@ -451,11 +461,11 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
                 continue
             if node.lineno != line:
                 continue
-            parent = _find_parent(tree, node)
+            parent = FlextInfraRefactorCensusApplyMixin._find_parent(tree, node)
             while parent is not None:
                 if isinstance(parent, ast.FunctionDef | ast.AsyncFunctionDef):
                     return node
-                parent = _find_parent(tree, parent)
+                parent = FlextInfraRefactorCensusApplyMixin._find_parent(tree, parent)
         return None
 
     @staticmethod
@@ -472,14 +482,14 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
         """Prove initializer planning before conform publishes the transaction."""
         FlextInfraCodegenLazyInit(repository_root=self.root).plan_files().unwrap()
 
-
-def _find_parent(tree: ast.AST, target: ast.AST) -> ast.AST | None:
-    """Return the parent AST node of ``target`` within ``tree``."""
-    for parent in ast.walk(tree):
-        for child in ast.iter_child_nodes(parent):
-            if child is target:
-                return parent
-    return None
+    @staticmethod
+    def _find_parent(tree: ast.AST, target: ast.AST) -> ast.AST | None:
+        """Return the parent AST node of ``target`` within ``tree``."""
+        for parent in ast.walk(tree):
+            for child in ast.iter_child_nodes(parent):
+                if child is target:
+                    return parent
+        return None
 
 
 __all__: list[str] = ["FlextInfraRefactorCensusApplyMixin"]

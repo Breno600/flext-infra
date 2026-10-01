@@ -173,11 +173,22 @@ class FlextInfraUtilitiesDiscovery(
 
     @classmethod
     def alias_migration_context(cls, file_path: Path) -> m.Infra.AliasMigrationContext:
-        """Resolve project policy ownership and public import root for one file."""
+        """Resolve project policy ownership and public import root for one file.
+
+        A content-only root (``package: false``, pyproject without a
+        ``[project]`` table — e.g. a vendored submodule inside a workspace)
+        owns no alias policy: the typed no-owner context, exactly the
+        ``project_root is None`` posture, instead of a TypeError crash
+        (invest-awmk repro: the canonical-alias gate died on the mt5docker
+        submodule).
+        """
         project_root = cls.project_root(file_path)
         if project_root is None:
             return m.Infra.AliasMigrationContext(policy_owner="", import_root="")
-        policy_owner = cls.project_package_name(project_root)
+        try:
+            policy_owner = cls.project_package_name(project_root)
+        except TypeError:
+            return m.Infra.AliasMigrationContext(policy_owner="", import_root="")
         try:
             relative_parts = (
                 file_path.resolve().relative_to(project_root.resolve()).parts

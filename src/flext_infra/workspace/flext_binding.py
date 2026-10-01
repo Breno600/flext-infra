@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import os
 import sysconfig
+from collections.abc import MutableMapping
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
@@ -54,7 +55,13 @@ class FlextInfraFlextBindingService:
             )
         )
         expected = scripts / c.Infra.PromotedSelector.VENV_PYTHON
-        for path in (environment, scripts):
+        # A composed member's own environment path must not borrow another
+        # checkout's environment either, even when the workspace owns the runtime.
+        for path in (
+            environment,
+            scripts,
+            consumer_root / c.Infra.ENVIRONMENT_DIRECTORY,
+        ):
             if path.is_symlink():
                 return r[Path].fail(
                     f"binding requires a physical consumer environment: {path}"
@@ -121,7 +128,7 @@ class FlextInfraFlextBindingService:
                 f"FLEXT is not a flext workspace: {flext_root}: "
                 f"{workspace.error or 'manifest unreadable'}"
             )
-        available: dict[str, Path] = {}
+        available: MutableMapping[str, Path] = {}
         for repository in (workspace.value.repository, *workspace.value.subprojects):
             if not repository.package:
                 continue
@@ -217,6 +224,12 @@ class FlextInfraFlextBindingService:
                     c.Infra.UV,
                     "pip",
                     "install",
+                    # Why: the binding already translated the consumer's
+                    # [tool.uv] overrides/constraints into the files above;
+                    # uv would otherwise rediscover them from the cwd project
+                    # and re-apply an override to the bound editable, sending
+                    # its name to the registry instead of the worktree path.
+                    "--no-config",
                     "--python",
                     str(python),
                     *arguments,

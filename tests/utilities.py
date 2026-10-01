@@ -22,6 +22,7 @@ from tests.utilities_fixture_workspace import (
 )
 from tests.utilities_gates import TestsFlextInfraUtilitiesGatesMixin
 from tests.utilities_git import TestsFlextInfraUtilitiesGitMixin
+from tests.utilities_hermetic_git import TestsFlextInfraUtilitiesHermeticGitMixin
 from tests.utilities_promoted import TestsFlextInfraUtilitiesPromotedMixin
 from tests.utilities_release import TestsFlextInfraUtilitiesReleaseMixin
 from tests.utilities_toml import TestsFlextInfraUtilitiesTomlMixin
@@ -40,6 +41,7 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
         TestsFlextInfraUtilitiesPromotedMixin,
         TestsFlextInfraUtilitiesReleaseMixin,
         TestsFlextInfraUtilitiesGitMixin,
+        TestsFlextInfraUtilitiesHermeticGitMixin,
         TestsFlextInfraUtilitiesGatesMixin,
         TestsFlextInfraUtilitiesCodegenMixin,
         TestsFlextInfraUtilitiesDepsMixin,
@@ -92,7 +94,6 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             tmp_path: Path,
             profile: c.Infra.MakeProfile,
             *,
-            local_infra: bool = False,
             bootstrap: bool = False,
             package: bool = True,
             extra_verbs: t.VariadicTuple[m.Infra.MakeVerbSpec] = (),
@@ -115,7 +116,7 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                 project_root, repository.distribution
             )
             # The generated Makefile consumes the tracked Mise launcher for every
-            # orchestrated verb (setup/check/fix/...), not only at bootstrap: the
+            # verb (setup/check/fix/...), not only at bootstrap: the
             # fixture must carry the governed toolchain seeds exactly as a managed
             # repository does, or the very first mise exec dies with exit 127.
             u.Tests.copy_tracked_mise_seeds(project_root)
@@ -156,20 +157,8 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                 )
             )
             repository_root = project_root
-            infra_repositories = (u.Tests.repository_ref(config.Infra.name),)
-            local_subprojects = (
-                (
-                    infra_repositories[0].model_copy(
-                        update={"path": Path("infra-engine")}
-                    ),
-                )
-                if local_infra
-                else ()
-            )
             workspace = u.Tests.workspace_spec(
-                repository,
-                project=u.Tests.project_spec("fixture-project"),
-                subprojects=local_subprojects,
+                repository, project=u.Tests.project_spec("fixture-project")
             )
             request = u.Tests.conform_request(
                 project_root,

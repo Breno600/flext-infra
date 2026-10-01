@@ -51,7 +51,7 @@ class FlextInfraPyprojectModernizerTooling:
             dry_run: bool,
             skip_comments: bool,
             format_source: bool = True,
-        ) -> t.StrSequence: ...
+        ) -> p.Result[t.StrSequence]: ...
 
     def conform_source(
         self,
@@ -78,7 +78,7 @@ class FlextInfraPyprojectModernizerTooling:
         )
         if canonical_dev.failure:
             return r[str].fail_op("pyproject model validation", canonical_dev.error)
-        changes = self._render_document_state(
+        rendered = self._render_document_state(
             state.value,
             self._apply_document_phases(
                 state.value, canonical_dev=canonical_dev.value, topology=topology
@@ -87,10 +87,8 @@ class FlextInfraPyprojectModernizerTooling:
             skip_comments=False,
             format_source=format_source,
         )
-        if not state.value.rendered:
-            return r[str].fail(
-                changes[0] if changes else f"pyproject tooling render failed: {path}"
-            )
+        if rendered.failure:
+            return r[str].from_failure(rendered)
         return r[str].ok(state.value.rendered)
 
     def resolve_tooling_context(
@@ -221,6 +219,15 @@ class FlextInfraPyprojectModernizerTooling:
                     validated_environment.error,
                 )
             environments.append(validated_environment.value)
+        # Why: the canonical pyproject layer orders the
+        # [[tool.pyright.executionEnvironments]] array tables by root, so a
+        # declared order (for example src, tests, skills) re-renders differently
+        # from the formatted output and `make gen` reports drift forever.
+        # Canonicalize by root here so the first write already matches the
+        # formatted file and generation reaches its fixed point.
+        environments = sorted(
+            environments, key=lambda environment: environment.root or ""
+        )
         # Absent analyzer-path keys fall back to the DERIVED value: they are
         # written by the analyzer-path sync, so a project that has not run it
         # yet has them missing, and an empty default would make the NEXT plan

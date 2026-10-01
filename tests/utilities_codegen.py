@@ -13,6 +13,7 @@ from flext_infra.codegen.consolidator import FlextInfraCodegenConsolidator
 from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
 from tests import c, m, p, t
 from tests.utilities_fixture_project import TestsFlextInfraUtilitiesProjectFixtureMixin
+from tests.utilities_fixture_tooling import TestsFlextInfraUtilitiesToolingFixtureMixin
 from tests.utilities_git import TestsFlextInfraUtilitiesGitMixin
 
 
@@ -44,12 +45,14 @@ class TestsFlextInfraUtilitiesCodegenMixin:
             f'"{pattern}" = [{names}]' for pattern, names in quoted_rules.items()
         )
         isort = ruff_cfg.lint.isort
+        src = ", ".join(f'"{root}"' for root in ruff_cfg.src)
         # Why: without the fleet's isort settings (combine-as-imports in
         # particular), a fixture-generated `X, X as alias` combined import —
         # the real lazy-facade pattern flext-infra's own __init__.py uses —
         # fails ruff's default isort split, unlike production.
         return (
-            f"[tool.ruff]\npreview = {str(ruff_cfg.preview).lower()}\n\n"
+            f"[tool.ruff]\nsrc = [{src}]\n"
+            f"preview = {str(ruff_cfg.preview).lower()}\n\n"
             f"[tool.ruff.lint]\nselect = [{select}]\nignore = [{ignore}]\n\n"
             "[tool.ruff.lint.isort]\n"
             f"combine-as-imports = {str(isort.combine_as_imports).lower()}\n"
@@ -94,6 +97,9 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         are observed exactly as the public codegen owner renders them.
         """
         fixture = TestsFlextInfraUtilitiesProjectFixtureMixin
+        # A governed repository carries its committed Mise lock; generation
+        # formats through the release it pins and never resolves a selector.
+        TestsFlextInfraUtilitiesToolingFixtureMixin.copy_tracked_mise_seeds(root)
         repository = fixture.repository_ref(
             "fixture-project",
             role=(

@@ -9,6 +9,7 @@ from flext_infra.codegen import FlextInfraCodegenConform
 from tests import c, m, t
 from tests.utilities_fixture_project import TestsFlextInfraUtilitiesProjectFixtureMixin
 from tests.utilities_git import TestsFlextInfraUtilitiesGitMixin
+from tests.utilities_toml import TestsFlextInfraUtilitiesTomlMixin
 
 
 class TestsFlextInfraUtilitiesReleaseMixin:
@@ -42,6 +43,8 @@ class TestsFlextInfraUtilitiesReleaseMixin:
         """
         workspace = root / "workspace"
         workspace.mkdir(parents=True, exist_ok=True)
+        # The governed tree above the workspace carries the committed Taplo pin.
+        TestsFlextInfraUtilitiesTomlMixin.seed_locked_taplo(root)
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
             workspace, "workspace"
         )
@@ -120,10 +123,13 @@ class TestsFlextInfraUtilitiesReleaseMixin:
                     'git+https://github.com/flext-sh/flext-tests.git@0.12.0-dev"]\n'
                     "\n"
                     "[tool.hatch.build.targets.sdist]\n"
-                    'include = ["/LICENSE", "/pyproject.toml", "/src"]\n'
+                    f'include = ["/src/{package_name}/**"]\n'
                     "\n"
                     "[tool.hatch.build.targets.wheel]\n"
-                    f'packages = ["src/{package_name}"]\n'
+                    f'include = ["/src/{package_name}/**"]\n'
+                    "\n"
+                    "[tool.hatch.build.targets.wheel.sources]\n"
+                    f'"src/{package_name}" = "{package_name}"\n'
                     "\n"
                     "[tool.hatch.metadata]\n"
                     "allow-direct-references = true\n"

@@ -6,6 +6,7 @@
 - [Registrar antes de ampliar o trabalho](#registrar-antes-de-ampliar-o-trabalho)
 - [Reconciliar decisões com seus responsáveis](#reconciliar-decisoes-com-seus-responsaveis)
 - [Diferenciar checkpoint de conclusão](#diferenciar-checkpoint-de-conclusao)
+- [Bounded Mypy failure status](#bounded-mypy-failure-status)
 - [Abstraction-boundary project identity](#abstraction-boundary-project-identity)
 - [Codemod scanner contract](#codemod-scanner-contract)
 
@@ -111,6 +112,15 @@ exporta esse `RUNTIME_ROOT` e o `flext-infra` o lê como declaração tipada: a 
 interpretador que hospeda a ferramenta. Sem declaração, o dono deriva a raiz Git do
 checkout; uma declaração sem interpretador falha.
 
+O `.venv` pertence ao `RUNTIME_ROOT` (D-VENV, `flext-x8gn6`). Um membro anexado como
+submódulo usa o `.venv` do superprojeto Git que o contém; um checkout standalone ou uma
+worktree vinculada tem o seu próprio. Em desenvolvimento não existe outra opção: o
+ambiente é sempre `<RUNTIME_ROOT>/.venv`, e essa localização é lei, nunca configuração
+(operador 2026-10-01, `flext-h2a9h`). O Makefile gerado, o `.envrc` gerado e
+`runtime_environment_dir` resolvem essa raiz pelo mesmo caminho físico: entrar no
+checkout por um symlink não muda o ambiente selecionado. Nenhum ambiente vive fora do
+checkout que o possui, nem é emprestado de outro checkout por symlink.
+
 Uma raiz de workspace declara cada membro anexado, de qualquer família (`flext-*` ou
 não), como fonte Git inline na linha de integração do próprio workspace, a mesma que o
 `.gitmodules` governado exige do membro; só as dependências `flext-*` que não são
@@ -167,14 +177,15 @@ declarados antes de resolver os locks Python. Os demais verbos que dependem do r
 recusam um pin ausente ou não resolvido antes da ativação; `help` e `clean` continuam
 sendo operações locais sem essa dependência.
 
-A credencial segue a precedência oficial do GitHub CLI: `GH_TOKEN`, `GITHUB_TOKEN` e,
-para o bootstrap de rede, a credencial armazenada pelo `gh`. Um token explícito funciona
-antes de instalar o `gh`. Operações locais já provisionadas não exigem login ou uma
-consulta de autenticação na rede. A fonte selecionada mantém seu erro nativo; um token
-inválido nunca provoca nova tentativa anônima ou troca de fonte. O Mise lê o mesmo
-`GITHUB_TOKEN`; o Make remove do ambiente dos recipes qualquer `MISE_GITHUB_TOKEN`
-herdado, porque um alias da mesma credencial teria precedência sobre ela. Jobs de CI que
-invocam Make recebem `GITHUB_TOKEN`; containers recebem a variável ou o secret do
+O bootstrap de rede recebe credencial explícita no ambiente do processo: `GH_TOKEN` tem
+precedência sobre `GITHUB_TOKEN`. O Make não consulta `gh` nem o keyring. Sem ambas,
+`make setup` pode reutilizar ferramentas e dependências já provisionadas; a operação
+que precisar da rede falha no backend responsável. Um token inválido preserva o erro
+nativo do backend, sem nova
+tentativa anônima ou troca de fonte. O Mise lê o mesmo `GITHUB_TOKEN`; o Make remove do
+ambiente dos recipes qualquer `MISE_GITHUB_TOKEN` herdado, porque um alias da mesma
+credencial teria precedência sobre ela. O launcher de credenciais ou job de CI deve
+injetar `GITHUB_TOKEN` no processo; containers recebem a variável ou o secret do
 BuildKit explicitamente.
 
 ## Registrar antes de ampliar o trabalho
@@ -209,22 +220,48 @@ passando pelo `make mod`.
 Um WIP publicado preserva o trabalho e permite revisão. Conclusão exige os critérios do
 Bead ativo, integração e runtime medido no SHA integrado. Exceções registradas em
 handoffs históricos, incluindo aceite temporário com gates customizados vermelhos, não
-transferem para uma revisão ou Bead posterior. A autorização de 24/09/2026 em
-`flext-xp6ec`, sob `flext-itpd1.3`, suspende somente `duplication`, `codemod`,
-`boundary`, `namespace` e `runtime-census`. O responsável tipado
-`make.check_gate_suspensions` registra gate, autoridade e motivo. O Make emite um recibo
-explícito de cada suspensão, sem contabilizá-la como aprovação. Local, CI e hooks
-derivam seus gates do mesmo conjunto ativo, preservando a partição de tipagem já
-declarada: `CI=N make check` executa a interseção com `make.ci.local_check_gates`,
-`CI=Y make check` executa o complemento e `make check` sem `CI` executa a união. O
-pre-push de `check` remove o `CI` herdado para executar todos os gates ativos; os demais
-verbos do hook mantêm o token local. O workflow de CI executa as duas partições, sem
-sobreposição. Os validadores conservam sua severidade e os gates funcionais ativos
-continuam exigindo execução sem warnings ou findings residuais.
+transferem para uma revisão ou Bead posterior. Todo achado de todo gate selecionado
+bloqueia. Um gate que analisa
+fontes Python (`pyrefly`, `pyright`) só é selecionado para um projeto cujo conteúdo
+detectado possui alvos Python. `make check` falha quando a seleção não
+contém projetos ou quando um projeto selecionado não tem `pyproject.toml`; nenhum
+projeto é pulado em silêncio. Local, CI e hooks derivam seus gates do mesmo conjunto
+ativo. A partição não é uma lista declarada: ela deriva do tipo de cada gate, declarado
+uma única vez no registro (`c.Infra.GATE_TOOLS_BY_KIND`). `CI=Y make check` (CI e
+pre-commit) executa apenas os gates ativos do tipo `external`; `CI=N make check`
+executa o complemento estrito — type-checkers (`pyrefly`, `mypy`, `pyright`) e os
+validadores cujas regras pertencem ao flext-infra (`namespace`, `codemod`,
+`runtime-census` e os demais); `make check` sem `CI` executa a união. O pre-push de
+`check` remove o `CI` herdado para executar todos os gates ativos, onde eles bloqueiam;
+os demais verbos do hook mantêm o token local. O workflow de CI executa somente a
+partição rápida. Os validadores conservam sua
+severidade e os gates funcionais ativos continuam exigindo execução sem warnings ou
+findings residuais.
+
+`smells` não pertence às partições de `make check`. O comando selector-free
+`make smells` executa o mesmo gate de análise em separado e falha quando encontra
+defeitos. Seus achados são tratados em uma campanha posterior para todos os projetos.
+The verb owns every smell family, from qlty and from the runtime census alike. The
+families derive from the flext-core smell catalog: every smell tag plus the rule id of
+each catalog row that carries one. Ownership is routing: the `runtime-census` gate of
+`make check` never evaluates, reports, or counts those families, and the `smells` gate
+grades all of them. No hand-written list declares them.
 
 O handoff final relaciona PRs, commits de merge e prova após integração aos Beads. Se
 algo permanece pendente, o texto deve nomeá-lo e oferecer a próxima ação executável, sem
 declarar fechamento funcional.
+
+## Bounded Mypy failure status
+
+The Linux Mypy command applies `prlimit` before launching the checker. In the observed
+Mypy 2.3.1 run, an exhausted plugin allocation produced `INTERNAL ERROR` and exit status
+2;
+[the tagged Mypy source](https://github.com/python/mypy/blob/v2.3.1/mypy/main.py#L167-L174)
+assigns status 2 to blocking internal errors. This is version-specific behavior, not a
+fixed expectation for later Mypy releases. The resource test requires the workload to
+start, then a nonzero raw status and a diagnostic without a timeout; it never rewrites
+the result into a synthetic `MemoryError` or success. The Darwin supervisor can instead
+terminate a process whose resident memory exceeds its limit.
 
 ## Abstraction-boundary project identity
 
@@ -237,10 +274,9 @@ diagnostic; directory names are never identity fallbacks.
 
 ## Codemod scanner contract
 
-The operator's 2026-09-24 decision, retained by `flext-1pquc`, makes codemod policy
-findings observational. This exception applies to those findings only. It does not
-accept failed rule discovery, failed scanner execution, incomplete output, or invalid
-diagnostic payloads, and it does not close the associated migration work.
+Every codemod rule finding blocks the gate, whatever its native severity, and so does
+every failed rule discovery, failed scanner execution, incomplete output, or invalid
+diagnostic payload.
 
 The gate consumes the complete native `ast-grep scan --json=compact` array. The
 [documented scan contract](https://ast-grep.github.io/reference/cli/scan.html) and
@@ -258,11 +294,10 @@ Timeouts, forwarded signals, other exit codes, malformed JSON, and disagreement 
 exit code and diagnostic severities remain failures, even when stdout exists. Both
 whole-project checks and `check_files` scan every elected provider rule.
 
-`GateExecution.observational_issues` retains original file, position, rule, message, and
-severity separately from blocking issues and error counts. Workspace reports display
-observation counts separately. SARIF uses explicit observational notes and retains the
-native severity in each note; raw scanner output remains available on the execution. A
-passing gate therefore proves the scanner contract, not zero migration findings.
+`GateExecution.issues` retains each finding's original file, position, rule, message,
+and severity. SARIF reports each finding at its native level; raw scanner output remains
+available on the execution. A passing gate therefore proves both the scanner contract
+and zero rule findings.
 
 The same repair validates projected Ruff first-party namespaces strictly: a malformed
 value cannot be replaced with discovered namespaces. A declared empty list remains

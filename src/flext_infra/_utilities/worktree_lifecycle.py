@@ -52,7 +52,7 @@ class FlextInfraWorktreeLifecycle:
 
         if not lane.is_dir():
             return r[str].fail(f"worktree lane does not exist: {lane}")
-        current_branch = u.Infra.git_symbolic_ref_short(
+        current_branch = u.Infra.git_current_branch(
             m.Infra.GitRepoRequest(repo_root=lane)
         )
         if current_branch.failure:
@@ -77,7 +77,7 @@ class FlextInfraWorktreeLifecycle:
             return r[str].from_failure(resolved_base)
         base_oid = resolved_base.value.oid
         contains_base = u.Infra.git_is_ancestor(
-            m.Infra.GitCommitishRequest(repo_root=lane, commitish=base_oid)
+            m.Infra.GitAncestryRequest(repo_root=lane, ancestor=base_oid)
         )
         if contains_base.failure:
             return r[str].from_failure(contains_base)

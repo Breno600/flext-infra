@@ -7,6 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import shutil
+from collections.abc import Mapping, Sequence
 from functools import cache, lru_cache
 from pathlib import Path
 
@@ -112,7 +113,13 @@ class FlextInfraUtilitiesPyproject:
         taplo_version: str,
         process_timeout_seconds: int = c.Infra.TIMEOUT_DEFAULT,
     ) -> p.Result[str]:
-        """Format TOML through the configured workspace Taplo toolchain."""
+        """Format TOML through the configured workspace Taplo toolchain.
+
+        ``taplo_version`` is the declared selector; the one mise.lock owner
+        (``_locked_mise_version``, nearest lock at or above the execution root)
+        resolves it before any shim runs, so generation formats with the locked
+        release and never asks a tool manager to resolve a version mid-run.
+        """
         config_path = toolchain_root / c.Infra.TAPLO_CONFIG_FILENAME
         config_content = config_path.read_bytes() if config_path.is_file() else b""
         resolved_path = path.resolve()
@@ -136,6 +143,43 @@ class FlextInfraUtilitiesPyproject:
             taplo_version=taplo_version,
             process_timeout_seconds=process_timeout_seconds,
         )
+
+    @staticmethod
+    def _locked_taplo_version(toolchain_root: Path, *, declared: str) -> p.Result[str]:
+        """Return the exact Taplo release the committed lock pins.
+
+        The configuration declares the moving selector; only ``make upg``
+        resolves it, into ``mise.lock``. Generation therefore reads the pinned
+        release and passes it on, and an absent lock entry fails loud instead
+        of silently accepting whatever binary the host happens to expose.
+        """
+        if declared != c.Infra.MISE_MOVING_SELECTOR:
+            return r[str].ok(declared)
+        return FlextInfraUtilitiesPyproject._locked_tool_version(
+            toolchain_root, c.Infra.TAPLO_MISE_TOOL_NAME
+        )
+
+    @staticmethod
+    def _locked_tool_version(toolchain_root: Path, tool_name: str) -> p.Result[str]:
+        """Return one tool's pinned version from ``mise.lock`` at the root."""
+        lock_path = toolchain_root / c.Infra.MISE_LOCK_FILENAME
+        source = u.Cli.files_read_text(lock_path)
+        if source.failure:
+            return r[str].from_failure(source)
+        payload = u.Cli.toml_mapping_from_text(source.value)
+        if payload is None:
+            return r[str].fail(f"invalid TOML in {lock_path.name}")
+        raw_tools = payload.get("tools")
+        raw_entry = raw_tools.get(tool_name) if isinstance(raw_tools, Mapping) else None
+        if isinstance(raw_entry, Sequence) and not isinstance(raw_entry, str):
+            raw_entry = raw_entry[0] if raw_entry else None
+        version = raw_entry.get("version") if isinstance(raw_entry, Mapping) else None
+        if not isinstance(version, str) or not version.strip():
+            return r[str].fail(
+                f"{lock_path.name} pins no version for {tool_name}: "
+                "run make upg to resolve the lock"
+            )
+        return r[str].ok(version.strip())
 
     @staticmethod
     @lru_cache(maxsize=128)
@@ -186,12 +230,77 @@ class FlextInfraUtilitiesPyproject:
         return r[str].ok(formatted)
 
     @staticmethod
+    def _locked_mise_version(
+        execution_root: Path, tool: str, selector: str
+    ) -> p.Result[str]:
+        """Resolve the selector's pinned version from the committed mise.lock.
+
+        Only ``make upg`` resolves a moving selector and writes mise.lock;
+        every other execution must authenticate exactly what the lock pins,
+        because a version taken from the selector itself sends the shim's
+        resolution over the network on a cold cache.
+        """
+        lock_path = next(
+            (
+                candidate / c.Infra.MISE_LOCK_FILENAME
+                for candidate in (execution_root, *execution_root.parents)
+                if (candidate / c.Infra.MISE_LOCK_FILENAME).is_file()
+            ),
+            None,
+        )
+        if lock_path is None:
+            return r[str].fail(
+                f"no {c.Infra.MISE_LOCK_FILENAME} above {execution_root} pins "
+                f"{tool}; run make upg so generation stays offline"
+            )
+        document = u.Cli.toml_parse_text(
+            lock_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+        )
+        if document is None:
+            return r[str].fail(f"{lock_path} is not valid TOML")
+        payload = u.Cli.toml_as_mapping(document)
+        if payload is None:
+            return r[str].fail(f"{lock_path} carries no TOML mapping payload")
+        tools = payload.get("tools", {})
+        if not isinstance(tools, Mapping):
+            return r[str].fail(f"{lock_path} has a malformed [tools] table")
+        entries = tools.get(tool)
+        if not isinstance(entries, list):
+            return r[str].fail(f"{lock_path} pins no [[tools.{tool}]] entry")
+        for entry in entries:
+            if not isinstance(entry, Mapping):
+                return r[str].fail(
+                    f"{lock_path} has a malformed [[tools.{tool}]] entry: {entry!r}"
+                )
+            pinned = entry.get("version")
+            specifiers = entry.get("specifiers", ())
+            if not isinstance(pinned, str) or not isinstance(specifiers, (list, tuple)):
+                return r[str].fail(
+                    f"{lock_path} has a malformed [[tools.{tool}]] entry: {entry!r}"
+                )
+            if selector in specifiers or selector == pinned:
+                return r[str].ok(pinned)
+        return r[str].fail(
+            f"{lock_path} pins no {tool} for selector {selector!r}; run make upg"
+        )
+
+    @staticmethod
     @cache
     def _taplo_binary(
         taplo_version: str, process_timeout_seconds: int, execution_root: Path
     ) -> p.Result[Path]:
-        """Resolve and authenticate Make's config-versioned Taplo executable."""
-        u.Cli.info(f"pyproject-tooling: resolve taplo={taplo_version}")
+        """Resolve and authenticate Make's config-versioned Taplo executable.
+
+        ``taplo_version`` is the release selector the workspace declares; the
+        version that authenticates is the one the committed mise.lock pins for
+        it, so no shim run ever resolves a moving selector over the network.
+        """
+        pinned = FlextInfraUtilitiesPyproject._locked_mise_version(
+            execution_root, c.Infra.TAPLO_MISE_TOOL_NAME, taplo_version
+        )
+        if pinned.failure:
+            return r[Path].from_failure(pinned)
+        u.Cli.info(f"pyproject-tooling: resolve taplo={pinned.value} (mise.lock)")
         resolved = shutil.which("taplo")
         if resolved is None:
             return r[Path].fail(
@@ -227,15 +336,11 @@ class FlextInfraUtilitiesPyproject:
                 f"{detail or 'no diagnostic output'}"
             )
         observed = identified.value.stdout.strip()
-        identity_matches = (
-            "taplo" in observed.lower()
-            if taplo_version == "latest"
-            else taplo_version in observed
-        )
+        identity_matches = pinned.value in observed
         if not identity_matches:
             return r[Path].fail(
-                "resolved Taplo executable version differs: "
-                f"expected={taplo_version} observed={observed}"
+                "resolved Taplo executable version differs from the mise.lock "
+                f"pin: expected={pinned.value} observed={observed}"
             )
         return r[Path].ok(binary)
 

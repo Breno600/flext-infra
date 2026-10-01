@@ -8,6 +8,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import hashlib
 import os
 import tempfile
 from pathlib import Path
@@ -173,6 +174,7 @@ def _provision_detector_template(modules: t.StrSequence) -> None:
 _MAKE_UPGRADE_RECEIPT = c.Tests.MAKE_TEMPLATE_UPG_RECEIPT
 _MAKE_CI_SETUP_RECEIPT = c.Tests.MAKE_TEMPLATE_CI_RECEIPT
 _INFRA_SETUP_RECEIPT = "setup-receipt.json"
+_GIT_MIRRORS_RECEIPT = "mirrors-receipt.txt"
 # Every scenario that provisions the candidate's own environment before `gen`.
 _INFRA_CHECKOUT_SCENARIOS = (
     "builtin",
@@ -285,6 +287,32 @@ def _ensure_provisioned(
                 _provision_infra_checkout(key)
             case _:
                 _provision_detector_template(key)
+
+
+@pytest.fixture
+def hermetic_git_environment() -> t.StrMapping:
+    """Serve the fixture provider's Git sources from this run's local mirrors.
+
+    The mirrors are built once per locked-source set under the canonical
+    filesystem lease from objects this checkout already holds; the directory is
+    keyed by that set, so a relock never reuses mirrors of superseded commits.
+    The returned environment routes the provider to them and makes any network
+    transport fail.
+    """
+    sources = "\n".join(
+        "@".join(source) for source in u.Tests.locked_git_sources(_PROJECT_ROOT)
+    )
+    parent = _run_scoped(
+        "git-mirrors", hashlib.sha256(sources.encode()).hexdigest()[:16]
+    )
+    parent.mkdir(parents=True, exist_ok=True)
+    receipt = parent / _GIT_MIRRORS_RECEIPT
+    mirrors = parent / "mirrors"
+    with u.Infra.codegen_transaction_lease(receipt):
+        if not receipt.is_file():
+            mirrored = u.Tests.build_git_mirrors(_PROJECT_ROOT, mirrors)
+            tm.ok(u.Cli.atomic_write_text_file(receipt, "\n".join(mirrored) + "\n"))
+    return u.Tests.hermetic_git_environment(mirrors)
 
 
 @pytest.fixture
@@ -507,12 +535,18 @@ def mod_workspace(tmp_path: Path) -> Path:
     )
     # A declared distribution owns a package: resolving the package name from
     # `[project].name` alone is impossible for a `flext-` distribution, so a
-    # fixture without `src/<pkg>/` is not the project it claims to be.
-    package_dir = (
-        workspace / c.Infra.DEFAULT_SRC_DIR / (project.project.name.replace("-", "_"))
-    )
+    # fixture without `src/<pkg>/` is not the project it claims to be. The
+    # package follows the fixture's own declared name: naming it after the
+    # real project would shadow the installed flext_infra for Rope, and every
+    # packaged campaign binding (flext_infra.c / .t) would lose its owner.
+    package_dir = workspace / c.Infra.DEFAULT_SRC_DIR / workspace.name
     tm.ok(u.Cli.ensure_dir(package_dir))
-    tm.ok(u.Cli.atomic_write_text_file(package_dir / c.Infra.INIT_PY, ""))
+    tm.ok(
+        u.Cli.atomic_write_text_file(
+            package_dir / c.Infra.INIT_PY,
+            '"""Public refactor-mod fixture package."""\n\nfrom __future__ import annotations\n',
+        )
+    )
     tm.ok(
         u.Cli.atomic_write_text_file(
             workspace / "sample.py",
@@ -552,14 +586,6 @@ def mod_workspace(tmp_path: Path) -> Path:
             ),
         )
     )
-    package_dir = workspace / "src" / project.project.name.replace("-", "_")
-    tm.ok(u.Cli.ensure_dir(package_dir))
-    tm.ok(
-        u.Cli.atomic_write_text_file(
-            package_dir / c.Infra.INIT_PY,
-            '"""Public refactor-mod fixture package."""\n\nfrom __future__ import annotations\n',
-        )
-    )
     u.Tests.initialize_git_repo(workspace)
     return workspace
 
@@ -591,6 +617,8 @@ def real_workspace(tmp_path: Path) -> Path:
 def modernizer_workspace(tmp_path: Path) -> Path:
     workspace = tmp_path / "workspace"
     workspace.mkdir(parents=True, exist_ok=True)
+    # The governed tree above the workspace carries the committed Taplo pin.
+    u.Tests.seed_locked_taplo(tmp_path)
     (workspace / c.PYPROJECT_FILENAME).write_text(
         _modernizer_workspace_pyproject(), encoding="utf-8"
     )

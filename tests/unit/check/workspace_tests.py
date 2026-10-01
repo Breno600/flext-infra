@@ -72,8 +72,8 @@ class TestsFlextInfraWorkspaceChecker:
         exit_code = main(["check", "run", "--repository-root", str(tmp_path)])
         tm.that(exit_code, eq=1)
 
-    def test_cli_auto_discovers_projects(self, tmp_path: Path) -> None:
-        """Test that check run discovers workspace projects by default."""
+    def test_cli_requires_explicit_member_selection(self, tmp_path: Path) -> None:
+        """An omitted selection checks only the repository root."""
         project_dir = test_u.Tests.mk_project(
             tmp_path,
             "flext-core",
@@ -98,7 +98,7 @@ class TestsFlextInfraWorkspaceChecker:
         tm.ok(init_result)
         tm.ok(add_result)
 
-        exit_code = main([
+        implicit_exit_code = main([
             "check",
             "run",
             "--repository-root",
@@ -106,8 +106,18 @@ class TestsFlextInfraWorkspaceChecker:
             "--gates",
             "lint",
         ])
-
-        tm.that(exit_code, eq=0)
+        tm.that(implicit_exit_code, eq=1)
+        selected_exit_code = main([
+            "check",
+            "run",
+            "--repository-root",
+            str(tmp_path),
+            "--projects",
+            project_dir.name,
+            "--gates",
+            "lint",
+        ])
+        tm.that(selected_exit_code, eq=0)
 
     def test_resolve_gates_with_valid_gates(self) -> None:
         """Test that resolve_gates normalizes valid gate names."""
@@ -136,19 +146,6 @@ class TestsFlextInfraWorkspaceChecker:
         result = FlextInfraWorkspaceChecker.resolve_gates(["invalid_gate"])
         tm.fail(result)
 
-    def test_run_projects_with_missing_projects(
-        self, tmp_path: Path, rope_workspace: p.Infra.RopeWorkspaceDsl
-    ) -> None:
-        """Test that run_projects handles missing project directories gracefully."""
-        checker = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path, rope=rope_workspace
-        )
-        result = checker.run_projects(
-            ["nonexistent"], ["lint"], reports_dir=tmp_path / "reports"
-        )
-        tm.ok(result)
-        tm.that(result.value, eq=[])
-
     def test_run_projects_creates_reports_dir(
         self, tmp_path: Path, rope_workspace: p.Infra.RopeWorkspaceDsl
     ) -> None:
@@ -156,8 +153,10 @@ class TestsFlextInfraWorkspaceChecker:
         checker = FlextInfraWorkspaceChecker(
             repository_root=tmp_path, rope=rope_workspace
         )
+        project_dir = test_u.Tests.mk_project(tmp_path, "p1", with_src=True)
+        (project_dir / "src" / "test.py").write_text("value = 1\n", encoding="utf-8")
         reports_dir = tmp_path / "reports"
-        result = checker.run_projects([], ["lint"], reports_dir=reports_dir)
+        result = checker.run_projects(["p1"], ["lint"], reports_dir=reports_dir)
         tm.ok(result)
         tm.that(reports_dir.exists(), eq=True)
 

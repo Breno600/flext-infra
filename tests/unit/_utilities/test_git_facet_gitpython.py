@@ -4,14 +4,46 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from flext_tests import tm
 
-from flext_infra import FlextInfraGitService, c, m, u
+from flext_infra import FlextInfraGitService, c, m, main as infra_main, u
 from tests import u as test_u
 
 
 class TestsFlextInfraGitFacet:
     """Exercise the public Git facade against a real repository worktree."""
+
+    def test_identity_marks_only_a_missing_symbolic_branch_as_unborn(
+        self, tmp_path: Path
+    ) -> None:
+        repository = tmp_path / "unborn"
+        repository.mkdir()
+        test_u.Tests.git_run(repository, "init", "--initial-branch=initial")
+        request = m.Infra.GitRepoRequest(repo_root=repository)
+
+        unborn = u.Infra.git_identity(request)
+
+        tm.fail(unborn)
+        tm.that(unborn.error_code, eq=c.Infra.GIT_UNBORN_HEAD_ERROR_CODE)
+        branch_ref = repository / ".git" / "refs" / "heads" / "initial"
+        branch_ref.write_text("invalid object identifier\n", encoding="utf-8")
+
+        corrupted = u.Infra.git_identity(request)
+
+        tm.fail(corrupted)
+        tm.that(corrupted.error_code == c.Infra.GIT_UNBORN_HEAD_ERROR_CODE, eq=False)
+        tm.not_none(corrupted.exception)
+
+    def test_identity_index_failure_is_not_unborn(self, tmp_path: Path) -> None:
+        repository = test_u.Tests.git_repository(tmp_path)
+        (repository / ".git" / "index").write_bytes(b"invalid index")
+
+        result = u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=repository))
+
+        tm.fail(result)
+        tm.that(result.error_code == c.Infra.GIT_UNBORN_HEAD_ERROR_CODE, eq=False)
+        tm.not_none(result.exception)
 
     def _add_submodule(self, repository: Path, source: Path, name: str) -> None:
         """Add and commit ``source`` as a file-protocol submodule named ``name``."""
@@ -163,6 +195,32 @@ class TestsFlextInfraGitFacet:
         assert dirty.success
         assert dirty.value.dirty is True
         assert "dirty.txt" in dirty.value.porcelain
+
+    @pytest.mark.parametrize("change", ["tracked", "staged", "untracked"])
+    def test_verify_clean_cli_rejects_real_worktree_changes(
+        self, real_git_repo: Path, capsys: pytest.CaptureFixture[str], change: str
+    ) -> None:
+        """The public CLI passes a clean checkout and exposes a dirty Git report."""
+        argv = ["workspace", "verify-clean", "--repo-root", str(real_git_repo)]
+        tm.that(infra_main(argv), eq=0)
+        _ = capsys.readouterr()
+
+        if change == "untracked":
+            changed_path = real_git_repo / "dirty.txt"
+            changed_path.write_text("dirty\n", encoding="utf-8")
+        else:
+            changed_path = real_git_repo / "README.md"
+            changed_path.write_text("# Changed Repository\n", encoding="utf-8")
+            if change == "staged":
+                tm.ok(
+                    test_u.Cli.run_checked(
+                        [c.Infra.GIT, "add", changed_path.name], cwd=real_git_repo
+                    )
+                )
+
+        tm.that(infra_main(argv), eq=1)
+        output = capsys.readouterr()
+        tm.that(output.out + output.err, has=changed_path.name)
 
     def test_changed_paths_reports_tracked_and_untracked_files(
         self, real_git_repo: Path
@@ -322,3 +380,87 @@ class TestsFlextInfraGitFacet:
 
         tm.fail(result, has="locked worktree")
         assert lane.is_dir()
+
+    def test_is_ancestor_proves_any_pair_and_defaults_to_head(
+        self, tmp_path: Path
+    ) -> None:
+        """One owner proves ancestry for a pair and for the HEAD-bound case."""
+        repository = test_u.Tests.git_repository(tmp_path)
+        base = tm.ok(
+            u.Infra.git_repository_head(m.Infra.GitRepoRequest(repo_root=repository))
+        ).oid
+        tm.ok(
+            test_u.Cli.run_checked(
+                [c.Infra.GIT, "switch", "-c", "topic"], cwd=repository
+            )
+        )
+        (repository / "topic.txt").write_text("topic\n", encoding="utf-8")
+        tm.ok(test_u.Cli.run_checked([c.Infra.GIT, "add", "topic.txt"], cwd=repository))
+        tm.ok(
+            test_u.Cli.run_checked(
+                [c.Infra.GIT, "commit", "-m", "topic"], cwd=repository
+            )
+        )
+        topic = tm.ok(
+            u.Infra.git_repository_head(m.Infra.GitRepoRequest(repo_root=repository))
+        ).oid
+
+        ancestor = tm.ok(
+            u.Infra.git_is_ancestor(
+                m.Infra.GitAncestryRequest(
+                    repo_root=repository, ancestor=base, descendant=topic
+                )
+            )
+        )
+        reverse = tm.ok(
+            u.Infra.git_is_ancestor(
+                m.Infra.GitAncestryRequest(
+                    repo_root=repository, ancestor=topic, descendant=base
+                )
+            )
+        )
+        defaulted = tm.ok(
+            u.Infra.git_is_ancestor(
+                m.Infra.GitAncestryRequest(repo_root=repository, ancestor=base)
+            )
+        )
+
+        tm.that(ancestor.value, eq=True)
+        tm.that(reverse.value, eq=False)
+        tm.that(defaulted.value, eq=True)
+
+    def test_is_ancestor_fails_on_unknown_commitish(self, tmp_path: Path) -> None:
+        """An unresolvable side is a failure, never a silent negative."""
+        repository = test_u.Tests.git_repository(tmp_path)
+
+        result = u.Infra.git_is_ancestor(
+            m.Infra.GitAncestryRequest(
+                repo_root=repository,
+                ancestor="deadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+            )
+        )
+
+        assert result.failure
+        assert result.error is not None
+
+    def test_has_staged_changes_tracks_the_index(self, tmp_path: Path) -> None:
+        """The staged probe distinguishes a staged delta from a clean index."""
+        repository = test_u.Tests.git_repository(tmp_path)
+        request = m.Infra.GitRepoRequest(repo_root=repository)
+
+        tm.that(tm.ok(u.Infra.git_has_staged_changes(request)).value, eq=False)
+
+        (repository / "staged.txt").write_text("staged\n", encoding="utf-8")
+        tm.that(tm.ok(u.Infra.git_has_staged_changes(request)).value, eq=False)
+
+        tm.ok(
+            test_u.Cli.run_checked([c.Infra.GIT, "add", "staged.txt"], cwd=repository)
+        )
+        tm.that(tm.ok(u.Infra.git_has_staged_changes(request)).value, eq=True)
+
+        tm.ok(
+            test_u.Cli.run_checked(
+                [c.Infra.GIT, "commit", "-m", "staged"], cwd=repository
+            )
+        )
+        tm.that(tm.ok(u.Infra.git_has_staged_changes(request)).value, eq=False)

@@ -359,7 +359,11 @@ class TestsFlextInfraInfraRopeService:
     def test_open_workspace_keeps_the_requested_repository_boundary(
         self, tmp_path: Path
     ) -> None:
-        """Only an explicit workspace call includes declared sibling repositories."""
+        """A workspace root treats declared submodules as external repositories.
+
+        Premise (operator ruling 2026-09-29): every repository evaluates only
+        itself, so a superproject's Rope workspace never indexes its members.
+        """
         monorepo_root = tmp_path / "repo"
         monorepo_root.mkdir()
         u.Tests.declare_workspace_projects(monorepo_root, ("flext-infra", "flext-demo"))
@@ -367,24 +371,24 @@ class TestsFlextInfraInfraRopeService:
             repository_root,
             package_root,
             module_path,
-            sibling_root,
+            _sibling_root,
             sibling_module_path,
         ) = self._paired_namespace_projects(monorepo_root)
 
         for call_root in (monorepo_root, repository_root, package_root):
             workspace_scope = call_root == monorepo_root
             expected_root = monorepo_root if workspace_scope else repository_root
-            expected_projects = {repository_root.resolve()}
-            if workspace_scope:
-                expected_projects.add(sibling_root.resolve())
+            expected_projects = (
+                set() if workspace_scope else {repository_root.resolve()}
+            )
             with flext_infra.infra.rope_workspace(call_root) as rope:
                 tm.that(rope.rope_repository_root, eq=expected_root.resolve())
                 tm.that(
                     {entry.project_root for entry in rope.modules()},
                     eq=expected_projects,
                 )
-                tm.that(rope.module(module_path), none=False)
-                tm.that(rope.module(sibling_module_path), none=not workspace_scope)
+                tm.that(rope.module(module_path), none=workspace_scope)
+                tm.that(rope.module(sibling_module_path), none=True)
 
     def test_open_standalone_keeps_local_project_scope(self, tmp_path: Path) -> None:
         """Without a workspace context, sibling projects remain outside Rope."""

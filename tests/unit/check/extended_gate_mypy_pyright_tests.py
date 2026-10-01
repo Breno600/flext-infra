@@ -8,6 +8,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import c, m
+from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
 from flext_infra.gates.mypy import FlextInfraMypyGate
 from flext_infra.gates.pyrefly import FlextInfraPyreflyGate
 from flext_infra.gates.pyright import FlextInfraPyrightGate
@@ -15,6 +16,7 @@ from flext_infra.gates.pyright import FlextInfraPyrightGate
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from flext_infra import p
     from flext_infra.gates.base_gate import FlextInfraGate
 
 
@@ -209,6 +211,7 @@ class TestsFlextInfraTypeGates:
     def test_empty_source_is_not_passed(
         self, tmp_path: Path, gate_class: type[FlextInfraGate]
     ) -> None:
+        """A checker invoked without inputs never reads as a clean pass."""
         result = gate_class(tmp_path).check(
             tmp_path,
             m.Infra.GateContext(repository_root=tmp_path, reports_dir=tmp_path),
@@ -217,6 +220,21 @@ class TestsFlextInfraTypeGates:
         # An empty source must never read as a clean pass: the skipped state
         # stays visible in the execution errors for every gate posture.
         assert result.result.errors
+
+    @pytest.mark.parametrize(
+        "gate_class", [FlextInfraPyrightGate, FlextInfraPyreflyGate]
+    )
+    def test_python_analysis_gates_follow_detected_content(
+        self,
+        tmp_path: Path,
+        real_python_package: Path,
+        gate_class: type[FlextInfraGate],
+    ) -> None:
+        """Detected Python content, not a pass receipt, selects the type gates."""
+        tm.that(gate_class(tmp_path).selected_for(tmp_path), eq=False)
+        tm.that(
+            gate_class(real_python_package).selected_for(real_python_package), eq=True
+        )
 
     @pytest.mark.parametrize("payload", ["", " ", "not JSON", "{}", "[]", "null"])
     @pytest.mark.parametrize(
@@ -258,10 +276,37 @@ class TestsFlextInfraTypeGates:
         assert report.summary.information_count == 1
 
     def test_pyright_zero_collection(self) -> None:
-        with pytest.raises(c.ValidationError):
-            m.Infra.PyrightReport.model_validate_json(
-                '{"version":"1.1.411","time":"1","generalDiagnostics":[], '
-                '"summary":{"filesAnalyzed":0,"errorCount":0,"warningCount":0,'
-                '"informationCount":0,"timeInSec":0.1}}',
-                strict=True,
+        """filesAnalyzed=0 parses; the gate, not the model, judges it."""
+        report = m.Infra.PyrightReport.model_validate_json(
+            '{"version":"1.1.411","time":"1","generalDiagnostics":[], '
+            '"summary":{"filesAnalyzed":0,"errorCount":0,"warningCount":0,'
+            '"informationCount":0,"timeInSec":0.1}}',
+            strict=True,
+        )
+        assert report.summary.files_analyzed == 0
+        assert not report.general_diagnostics
+
+    def test_checker_does_not_run_type_gates_on_content_only_project(
+        self, real_python_package: Path, rope_workspace: p.Infra.RopeWorkspaceDsl
+    ) -> None:
+        """A project without Python targets gets no type-gate row at all."""
+        for module in (real_python_package / "src").rglob("*.py"):
+            module.unlink()
+        reports = real_python_package / ".reports"
+
+        results = tm.ok(
+            FlextInfraWorkspaceChecker(
+                repository_root=real_python_package.parent, rope=rope_workspace
+            ).run_projects(
+                [real_python_package.name],
+                [FlextInfraPyrightGate.gate_id, FlextInfraPyreflyGate.gate_id],
+                reports_dir=reports,
             )
+        )
+
+        tm.that(results[0].gates, empty=True)
+        markdown = (reports / c.Infra.CHECK_REPORT_MARKDOWN_FILENAME).read_text(
+            encoding="utf-8"
+        )
+        tm.that(markdown, lacks=f"- {FlextInfraPyrightGate.gate_id}:")
+        tm.that(markdown, lacks=f"- {FlextInfraPyreflyGate.gate_id}:")

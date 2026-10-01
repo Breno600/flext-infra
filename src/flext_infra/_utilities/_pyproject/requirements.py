@@ -47,6 +47,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
         document: t.Cli.TomlDocument,
         *,
         declared_sources: t.StrMapping,
+        candidate_sources: t.StrMapping,
         family_line: str | None,
     ) -> p.Result[bool]:
         """Render internal requirements from their declared Git provenance."""
@@ -55,6 +56,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
             project,
             c.Infra.DEPENDENCIES,
             declared_sources=declared_sources,
+            candidate_sources=candidate_sources,
             family_line=family_line,
         )
         if normalized.failure:
@@ -64,6 +66,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
                 section,
                 group_name,
                 declared_sources=declared_sources,
+                candidate_sources=candidate_sources,
                 family_line=family_line,
             )
             if group_result.failure:
@@ -77,6 +80,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
         key: str,
         *,
         declared_sources: t.StrMapping,
+        candidate_sources: t.StrMapping,
         family_line: str | None,
     ) -> p.Result[bool]:
         """Normalize one dependency array and fail on model-less entries."""
@@ -95,7 +99,10 @@ class FlextInfraUtilitiesPyprojectRequirements:
         normalized_items: t.MutableSequenceOf[str] = []
         for item in items:
             normalized = cls._canonical_requirement(
-                item, declared_sources=declared_sources, family_line=family_line
+                item,
+                declared_sources=declared_sources,
+                candidate_sources=candidate_sources,
+                family_line=family_line,
             )
             if normalized.failure:
                 return r[bool].from_failure(normalized)
@@ -121,6 +128,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
         requirement: str,
         *,
         declared_sources: t.StrMapping,
+        candidate_sources: t.StrMapping,
         family_line: str | None,
     ) -> p.Result[str]:
         """Render one internal requirement from its own declared Git source.
@@ -138,7 +146,9 @@ class FlextInfraUtilitiesPyprojectRequirements:
         """
         dependency_name = FlextInfraUtilitiesDependencies.dep_name(requirement)
         if dependency_name is None or not (
-            dependency_name.startswith("flext-") or dependency_name in declared_sources
+            dependency_name.startswith("flext-")
+            or dependency_name in declared_sources
+            or dependency_name in candidate_sources
         ):
             return r[str].ok(requirement.strip())
         requirement_part, separator, marker = requirement.partition(";")
@@ -163,12 +173,37 @@ class FlextInfraUtilitiesPyprojectRequirements:
             declared_url, line = parsed.value
             if not url:
                 url, declared_ref = declared_url, line
+        candidate = candidate_sources.get(dependency_name)
+        if candidate is not None:
+            if not url:
+                return r[str].fail(
+                    "candidate dependency has no declared Git provenance: "
+                    f"{dependency_name}"
+                )
+            selected = FlextInfraUtilitiesRepository.declared_git_source(
+                f"{head} @ {candidate}"
+            )
+            if selected.failure:
+                return r[str].from_failure(selected)
+            candidate_url, candidate_commit = selected.value
+            if not FlextInfraUtilitiesRepository.ref_is_commit(candidate_commit):
+                return r[str].fail(
+                    f"candidate dependency must pin a full Git commit: {dependency_name}"
+                )
+            if url and url != candidate_url:
+                return r[str].fail(
+                    "candidate dependency Git URL differs from declared provenance: "
+                    f"{dependency_name}"
+                )
+            url, declared_ref = candidate_url, candidate_commit
+            line = candidate_commit
         if not url:
             return r[str].fail(
-                "internal dependency declares no direct git source: "
-                f"{dependency_name}"
+                f"internal dependency declares no direct git source: {dependency_name}"
             )
-        if FlextInfraUtilitiesRepository.ref_is_commit(declared_ref):
+        if candidate is None and FlextInfraUtilitiesRepository.ref_is_commit(
+            declared_ref
+        ):
             if line is None:
                 return r[str].fail(
                     f"internal dependency {dependency_name} pins commit "

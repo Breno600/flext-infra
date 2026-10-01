@@ -21,6 +21,7 @@ class FlextInfraPyrightGate(FlextInfraGate):
     gate_id: ClassVar[str] = c.Infra.PYRIGHT
     gate_name: ClassVar[str] = "Pyright"
     can_fix: ClassVar[bool] = False
+    requires_python_targets: ClassVar[bool] = True
 
     @override
     def _get_check_dirs(
@@ -92,6 +93,16 @@ class FlextInfraPyrightGate(FlextInfraGate):
                 ),
             )
         report = validated.value
+        if report.summary.files_analyzed == 0:
+            # The gate is selected only for projects with Python targets, so an
+            # empty analysis is a lost scan, never a pass.
+            return False, (
+                self._malformed_report_issue(
+                    "pyright analyzed no files for a project with Python targets",
+                    tool=c.Infra.PYRIGHT,
+                    file=str(project_dir),
+                ),
+            )
         issues: t.MutableSequenceOf[m.Infra.Issue] = [
             m.Infra.Issue(
                 file=diag.file,

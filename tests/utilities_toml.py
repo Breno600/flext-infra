@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from pathlib import Path
 
 from flext_tests import tm
 
@@ -13,6 +14,51 @@ from tests import c, m, p, t
 
 class TestsFlextInfraUtilitiesTomlMixin:
     """TOML, JSON payload, and typed-mapping test helpers."""
+
+    @staticmethod
+    def write_mise_lock(
+        root: Path, tool: str, version: str, selector: str = "latest"
+    ) -> None:
+        """Pin ``tool`` in a fixture mise.lock the way ``make upg`` writes it."""
+        (root / c.Infra.MISE_LOCK_FILENAME).write_text(
+            f"[[tools.{tool}]]\n"
+            f'version = "{version}"\n'
+            f'backend = "aqua:tamasfe/{tool}"\n'
+            f'specifiers = ["{selector}"]\n',
+            encoding=c.Cli.ENCODING_DEFAULT,
+        )
+
+    @staticmethod
+    def repo_mise_lock() -> str:
+        """Return the repository's committed mise.lock text."""
+        lock = Path(__file__).resolve().parents[1] / c.Infra.MISE_LOCK_FILENAME
+        return lock.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+
+    @staticmethod
+    def pinned_mise_version(lock_text: str, tool: str) -> str:
+        """Return the ``str`` version a mise.lock text pins for ``tool``."""
+        entry = TestsFlextInfraUtilitiesTomlMixin.toml_tables_at(
+            lock_text, "tools", tool
+        )[0]
+        version = entry["version"]
+        assert isinstance(version, str), f"mise.lock pins no {tool} version: {entry!r}"
+        return version
+
+    @staticmethod
+    def seed_locked_taplo(root: Path) -> None:
+        """Pin Taplo under ``root`` exactly as this checkout's committed lock does.
+
+        Generation formats TOML only through the release ``mise.lock`` pins,
+        found at or above the generated tree, so a fixture tree carries it.
+        """
+        tool = c.Infra.TAPLO_MISE_TOOL_NAME
+        TestsFlextInfraUtilitiesTomlMixin.write_mise_lock(
+            root,
+            tool,
+            TestsFlextInfraUtilitiesTomlMixin.pinned_mise_version(
+                TestsFlextInfraUtilitiesTomlMixin.repo_mise_lock(), tool
+            ),
+        )
 
     @staticmethod
     def codegen_file_text(plan: m.Infra.CodegenFilePlan) -> str:

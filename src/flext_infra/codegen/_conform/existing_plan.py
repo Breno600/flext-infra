@@ -47,6 +47,11 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 "PEP 621 project name does not match catalog distribution: "
                 f"{dist} != {repository.distribution}"
             )
+        if contract.destinations == frozenset({c.Infra.MAKEFILE_FILENAME}):
+            return self._plan_existing_makefile(target, workspace, codegen)
+        docs_config = (Path(c.Infra.DIR_DOCS) / c.Infra.DOCS_CONFIG_FILENAME).as_posix()
+        if contract.destinations == frozenset({docs_config}):
+            return self._plan_existing_docs_config(target, codegen, docs_config)
         managed_artifacts = u.Infra.snapshot_committed_project_managed_artifacts(root)
         if managed_artifacts.failure:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
@@ -73,6 +78,11 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 root_packages=(
                     target.project.root_packages if target.project is not None else ()
                 ),
+                packaged_data_paths=(
+                    target.project.packaged_data_paths
+                    if target.project is not None
+                    else ()
+                ),
                 declared_python_dirs=tuple(
                     self._scaffold_python_dirs(
                         codegen.templates.entries,
@@ -93,15 +103,15 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             f"  stage=tooling-context repository={repository.name} "
             f"elapsed={time.monotonic() - stage_started:.2f}s"
         )
+        render_inputs = self.resolve_render_inputs(
+            target=target,
+            workspace=workspace,
+            codegen=codegen,
+            tooling_runtime=tooling_context.value,
+            managed_artifacts=managed_artifacts.value,
+        )
         managed_result = self._plan_existing_templates(
-            render_inputs=m.Infra.CodegenRenderInputs(
-                target=target,
-                workspace=workspace,
-                codegen=codegen,
-                tooling_runtime=tooling_context.value,
-                managed_artifacts=managed_artifacts.value,
-            ),
-            contract=contract,
+            render_inputs=render_inputs, contract=contract
         )
         if managed_result.failure:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(managed_result)
@@ -116,6 +126,94 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 )
             planned.extend(custom_result.value)
         return r[t.SequenceOf[m.Infra.CodegenFilePlan]].ok(tuple(planned))
+
+    def _plan_existing_makefile(
+        self,
+        target: m.Infra.RepositoryConformTarget,
+        workspace: m.Infra.WorkspaceSpec,
+        codegen: m.Infra.CodegenConfigSpec,
+    ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
+        """Render the bootstrap Make surface before sibling checkouts exist."""
+        destination = c.Infra.MAKEFILE_FILENAME
+        entries = tuple(
+            entry
+            for entry in codegen.templates.entries
+            if entry.destination == destination
+            and entry.delegate == c.Infra.TemplateDelegate.RENDER
+            and target.make_profile in entry.profiles
+        )
+        if len(entries) != 1 or entries[0].source is None:
+            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
+                "Makefile requires exactly one render template for its profile"
+            )
+        managed = tuple(
+            item for item in codegen.managed_files if item.path == Path(destination)
+        )
+        if len(managed) != 1:
+            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
+                "Makefile requires exactly one managed-file declaration"
+            )
+        context = self._makefile_render_spec(target, workspace, codegen)
+        if context.failure:
+            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(context)
+        rendered = u.Cli.template_render(
+            u.Infra.codegen_templates_root(codegen) / entries[0].source, context.value
+        )
+        if rendered.failure:
+            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(rendered)
+        conflict_marker = u.Infra.first_merge_conflict_marker(rendered.value)
+        if conflict_marker is not None:
+            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
+                f"rendered Makefile contains a merge conflict marker: {conflict_marker}"
+            )
+        plan = self.file_plan(
+            target.root, destination, rendered.value, mode=managed[0].mode
+        )
+        if plan.failure:
+            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(plan)
+        return r[t.SequenceOf[m.Infra.CodegenFilePlan]].ok((plan.value,))
+
+    def _plan_existing_docs_config(
+        self,
+        target: m.Infra.RepositoryConformTarget,
+        codegen: m.Infra.CodegenConfigSpec,
+        destination: str,
+    ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
+        """Render the declared docs policy before consumers parse its projection."""
+        entries = tuple(
+            entry
+            for entry in codegen.templates.entries
+            if entry.destination == destination
+            and entry.delegate == c.Infra.TemplateDelegate.RENDER
+            and target.make_profile in entry.profiles
+        )
+        managed = tuple(
+            item for item in codegen.managed_files if item.path == Path(destination)
+        )
+        if len(entries) != 1 or entries[0].source is None or len(managed) != 1:
+            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
+                f"docs config requires one declared render template and owner: {destination}"
+            )
+        template = u.Infra.codegen_templates_root(codegen) / entries[0].source
+        source = u.Cli.atomic_read_binary_file_state(template, required=True)
+        if source.failure:
+            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(source)
+        rendered = u.Cli.template_render(template, m.ContractModel())
+        if rendered.failure:
+            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(rendered)
+        parsed = u.Cli.json_loads(rendered.value)
+        if parsed.failure:
+            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(parsed)
+        plan = self.file_plan(
+            target.root,
+            destination,
+            rendered.value,
+            mode=managed[0].mode,
+            source_states=(source.value,),
+        )
+        if plan.failure:
+            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(plan)
+        return r[t.SequenceOf[m.Infra.CodegenFilePlan]].ok((plan.value,))
 
     def _plan_existing_templates(
         self,

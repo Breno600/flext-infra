@@ -6,7 +6,7 @@ from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 from typing import override
 
-from flext_core import r
+from flext_core import c as core_c, r
 from flext_infra import c, config, m, p, t, u
 
 from ._detection_runners import FlextInfraDependencyDetectionRunnersMixin
@@ -34,10 +34,10 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         """Convert container value to namespaced infra value."""
         if value is None:
             return None
-        if isinstance(value, t.PRIMITIVES_TYPES):
+        if isinstance(value, core_c.PRIMITIVES_TYPES):
             primitive: t.JsonValue = value
             return primitive
-        scalar_types = t.PRIMITIVES_TYPES
+        scalar_types = core_c.PRIMITIVES_TYPES
         if isinstance(value, list):
             sequence = t.Cli.JSON_LIST_ADAPTER.validate_python(value)
             converted: t.MutableSequenceOf[t.JsonValue] = []

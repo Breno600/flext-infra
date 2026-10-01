@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, u
-from flext_infra.transformers import publish_semantic_file_plans
+from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
+from flext_infra.transformers import FlextInfraSemanticPublication
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -38,7 +39,7 @@ class FlextInfraModReplacements:
         allowed = cls.require_authored(report)
         if allowed.failure:
             return allowed
-        grouped: dict[Path, list[m.Infra.ModScanFinding]] = {}
+        grouped: MutableMapping[Path, list[m.Infra.ModScanFinding]] = {}
         for finding in report.entries:
             if finding.actionable:
                 grouped.setdefault(root / finding.file, []).append(finding)
@@ -99,9 +100,18 @@ class FlextInfraModReplacements:
                     changes=tuple(finding.rule_id for finding in findings),
                 )
             )
-        published = publish_semantic_file_plans(plans, repository_root=root)
+        published = FlextInfraSemanticPublication.publish_semantic_file_plans(
+            plans, repository_root=root
+        )
         if published.failure:
             return r[bool].from_failure(published)
+        # A node-exact replacement (an emptied statement fix) leaves the
+        # surrounding blank-line skeleton of the source line behind, so the
+        # published bytes must be normalized before the mod circuit's own
+        # first-pass format check reads them.
+        formatted = FlextInfraRuffFormatGate.format_files(root, tuple(sorted(grouped)))
+        if formatted.failure:
+            return r[bool].from_failure(formatted)
         return r[bool].ok(True)
 
 

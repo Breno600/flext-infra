@@ -219,17 +219,25 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 return r[m.Infra.CodegenResult].fail(f"codegen drift detected: {paths}")
             return r[m.Infra.CodegenResult].ok(m.Infra.CodegenResult(plan=plan))
         surface = c.Infra.CodegenConformSurface(request.what)
-        if surface is not c.Infra.CodegenConformSurface.MAKEFILE:
+        if surface not in {
+            c.Infra.CodegenConformSurface.MAKEFILE,
+            c.Infra.CodegenConformSurface.DOCS_CONFIG,
+        }:
             return r[m.Infra.CodegenResult].fail(
                 "partial codegen apply is prohibited; use the complete all surface"
             )
-        expected_path = request.root.expanduser().resolve() / c.Infra.MAKEFILE_FILENAME
+        destination = (
+            Path(c.Infra.DIR_DOCS) / c.Infra.DOCS_CONFIG_FILENAME
+            if surface is c.Infra.CodegenConformSurface.DOCS_CONFIG
+            else Path(c.Infra.MAKEFILE_FILENAME)
+        )
+        expected_path = request.root.expanduser().resolve() / destination
         if (
             any(file.path != expected_path for file in plan.files)
             or len(plan.files) != 1
         ):
             return r[m.Infra.CodegenResult].fail(
-                "Makefile bootstrap plan must own exactly the root dispatcher"
+                f"bootstrap plan must own exactly {destination}"
             )
         written: t.VariadicTuple[Path] = ()
         if changed:
@@ -239,7 +247,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 return r[m.Infra.CodegenResult].from_failure(before)
             if file.desired_content is None or file.desired_mode is None:
                 return r[m.Infra.CodegenResult].fail(
-                    "Makefile bootstrap cannot delete its dispatcher"
+                    f"bootstrap cannot delete {destination}"
                 )
             published = u.Cli.atomic_write_binary_file_guarded(
                 before.value, file.desired_content, permission_mode=file.desired_mode
@@ -257,7 +265,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         )
         if residual:
             return r[m.Infra.CodegenResult].fail(
-                f"Makefile bootstrap did not reach a fixed point: {residual[0].path}"
+                f"bootstrap did not reach a fixed point: {residual[0].path}"
             )
         return r[m.Infra.CodegenResult].ok(
             m.Infra.CodegenResult(plan=verified.value, written_files=written)
@@ -307,23 +315,46 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         return result
 
     def _lazy_phase(
-        self, request: m.Infra.CodegenConformRequest
+        self, request: m.Infra.CodegenConformRequest, plan: m.Infra.CodegenPlan
     ) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
-        """Single lazy-init analysis pass per conform invocation.
+        """Plan each selected repository through its own Rope boundary.
 
         One call site; both CHECK (drift detection) and APPLY
         (phase publication + receipt) consume the same analysis.
         ADR-014: lazy-init ownership stays inside conform's
-        transaction.
+        transaction. Lazy-init plans exactly the repositories conform
+        rewrites: the selected mutable ``internal_flext`` repositories of
+        ``plan``, never a scope-excluded root or a third-party checkout.
         """
-        return FlextInfraCodegenLazyInit(
-            repository_root=request.root,
-            project_scope_root=(
-                request.root
-                if request.scope == c.Infra.CodegenConformScope.SELF
-                else None
-            ),
-        ).plan_files()
+        files: list[m.Infra.CodegenFilePlan] = []
+        inputs: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {}
+        publications: list[m.Infra.LazyInitPlan] = []
+        for repository in plan.repositories:
+            if repository.kind is not c.Infra.ProjectKind.INTERNAL_FLEXT:
+                continue
+            root = (request.root / repository.path).resolve()
+            analysis = FlextInfraCodegenLazyInit(
+                repository_root=root, project_scope_roots=(root,)
+            ).plan_files()
+            if analysis.failure:
+                return r[m.Infra.CodegenPhaseAnalysis].from_failure(analysis)
+            files.extend(analysis.value.files)
+            publications.extend(analysis.value.publications)
+            for state in analysis.value.inputs:
+                existing = inputs.get(state.path)
+                if existing is not None and existing != state:
+                    return r[m.Infra.CodegenPhaseAnalysis].fail(
+                        f"lazy-init input changed across repository plans: {state.path}"
+                    )
+                inputs[state.path] = state
+        return r[m.Infra.CodegenPhaseAnalysis].ok(
+            m.Infra.CodegenPhaseAnalysis(
+                phase="lazy-init",
+                files=tuple(files),
+                inputs=tuple(inputs[path] for path in sorted(inputs)),
+                publications=tuple(publications),
+            )
+        )
 
     def _execute_managed_locked_prepared(
         self,
@@ -370,7 +401,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 return r[m.Infra.CodegenResult].fail(
                     f"codegen drift detected: {paths}\n{report}"
                 )
-            lazy_analysis = self._lazy_phase(request)
+            lazy_analysis = self._lazy_phase(request, plan)
             if lazy_analysis.failure:
                 return r[m.Infra.CodegenResult].from_failure(lazy_analysis)
             lazy_changed = tuple(
@@ -431,7 +462,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         session: m.Infra.CodegenTransactionSession,
     ) -> p.Result[m.Infra.CodegenResult]:
         """Complete every post-begin phase through prepared-state recovery."""
-        lazy_analysis = self._lazy_phase(request)
+        lazy_analysis = self._lazy_phase(request, plan)
         if lazy_analysis.failure:
             aborted = transaction.abort_locked(
                 session, lazy_analysis.error or "lazy-init planning failed"

@@ -88,20 +88,6 @@ class FlextInfraModelsMiseToolchain:
         by pyproject manifests.
         """
 
-        # Selector families rejected while their capabilities are suspended.
-        # Operator order 2026-09-07: nothing stays suspended -- gc and beads are
-        # operator-owned forks resolved as latest, so the default frees every
-        # selector family and the vocabulary stays declared on this owner.
-        suspended_mise_selector_patterns: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                default=(),
-                description=(
-                    "Mise selector families rejected while suspended; empty "
-                    "frees every toolchain"
-                ),
-            ),
-        ] = ()
         python_version: Annotated[
             t.NonEmptyStr,
             m.Field(
@@ -228,16 +214,6 @@ class FlextInfraModelsMiseToolchain:
             t.NonEmptyStr,
             m.Field(description="Moving jscpd release selector, e.g. 'latest'"),
         ]
-        jscpd_asset_patterns: Annotated[
-            t.StrMapping,
-            m.Field(
-                description=(
-                    "Mise platform -> release asset pattern for jscpd. Its "
-                    "assets carry libc/ABI suffixes (-gnu, -musl, -msvc) that "
-                    "mise autodetection cannot resolve into a lock entry."
-                )
-            ),
-        ]
         prettier_selector: Annotated[
             t.NonEmptyStr,
             m.Field(
@@ -279,7 +255,13 @@ class FlextInfraModelsMiseToolchain:
             ),
         ]
         taplo_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact Taplo formatter version")
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Taplo release selector; the committed mise.lock pins the "
+                    "version generation authenticates (flext-t7668)"
+                )
+            ),
         ]
         ast_grep_selector: Annotated[
             t.NonEmptyStr, m.Field(description="Mise selector for the ast-grep CLI")
@@ -341,6 +323,32 @@ class FlextInfraModelsMiseToolchain:
         def python_selector(self) -> str:
             """Mise/pyenv-style selector for the configured Python minor line."""
             return self.python_version
+
+        @u.model_validator(mode="after")
+        def _validate_version_selectors(self) -> Self:
+            """Reject build-identity selectors mise/aube cannot resolve.
+
+            A value like ``0.45.3~7a027ead`` is an aube lock build-identity
+            directory name, not a published package version; aube rejects it
+            ("no version ... matches range") and the whole toolchain lifecycle
+            (make upg/gen/setup, and therefore CI) breaks. Only real selectors
+            (``latest``, a major.minor line, or a released version) may reach
+            the lock.
+            """
+            offenders = sorted(
+                field
+                for field, value in self
+                if field.endswith("_version")
+                and isinstance(value, str)
+                and "~" in value
+            )
+            if offenders:
+                msg = (
+                    "toolchain version selectors must be resolvable package "
+                    "versions, not build identities: " + ", ".join(offenders)
+                )
+                raise ValueError(msg)
+            return self
 
     class BeadsEndpointSpec(_ConfigContract):
         """Static network endpoint projected into Beads configuration."""
@@ -406,7 +414,9 @@ class FlextInfraModelsMiseToolchain:
         release_selector: Annotated[
             t.NonEmptyStr,
             m.Field(
-                pattern=r"^[a-z]+:[A-Za-z0-9._/-]+$",
+                # "@version" suffix pins the selector to a known-good
+                # release when upstream ships a broken one.
+                pattern=r"^[a-z]+:[A-Za-z0-9._/@-]+$",
                 description="Tool selector `make upg` resolves for the Mise release",
             ),
         ]

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, override
+from typing import TYPE_CHECKING, Annotated, ClassVar, override
 
 from flext_core import r
 from flext_infra import c, m, u
@@ -30,6 +30,8 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
     and the explicit report-log for every warning occurrence.
     The human-readable pytest log remains required diagnostic evidence.
     """
+
+    model_config: ClassVar[m.ConfigDict] = m.ConfigDict(populate_by_name=True)
 
     junit: Annotated[Path, m.Field(description="JUnit XML path")]
     log_path: Annotated[Path, m.Field(description="Pytest log path")] = m.Field(
@@ -54,7 +56,11 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
 
     @classmethod
     def _extract_report_events(cls, report_log: Path, diag: m.Infra.DiagResult) -> None:
-        """Read real test attempts and every warning independently of terminal text."""
+        """Read real test attempts and every warning independently of terminal text.
+
+        Every reported node must show one setup and one teardown phase, plus a
+        call phase whenever setup passed; a missing or repeated phase fails.
+        """
         lines = report_log.read_text(encoding=c.Cli.ENCODING_DEFAULT).splitlines()
         if not lines:
             msg = f"pytest report log contains no events: {report_log}"
@@ -75,6 +81,14 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
         ]
         for event, identity in zip(warnings, identities, strict=True):
             cls._record_warning(event, identity, diag)
+        for nodeid, phases in diag.reported_phases.items():
+            if (
+                "setup" not in phases
+                or "teardown" not in phases
+                or (phases["setup"] == "passed" and "call" not in phases)
+            ):
+                msg = f"incomplete pytest lifecycle: {nodeid}: {dict(phases)}"
+                raise ValueError(msg)
 
     @staticmethod
     def _record_case_event(
@@ -83,7 +97,14 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
         if event.nodeid is None:
             return
         if event.report_type == "TestReport":
-            diag.reported_node_ids.append(event.nodeid)
+            if event.when is None or event.outcome is None:
+                msg = f"TestReport without runtest phase or outcome: {event.nodeid}"
+                raise ValueError(msg)
+            phases = diag.reported_phases.setdefault(event.nodeid, {})
+            if event.when in phases:
+                msg = f"duplicate pytest phase: {event.nodeid} {event.when}"
+                raise ValueError(msg)
+            phases[event.when] = event.outcome
         elif event.report_type == "CollectReport":
             if event.outcome == "failed":
                 diag.collection_failed_cases.append(event.nodeid)
@@ -110,8 +131,6 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
             f"{identity.message}"
         )
         diag.warning_lines.append(warning)
-        if identity.suspended:
-            diag.suspended_warning_lines.append(warning)
 
     def extract(
         self, junit_path: Path, log_path: Path, *, report_log: Path
@@ -150,20 +169,15 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
             failed_count=len(diag.failed_cases),
             error_count=len(diag.error_cases),
             warning_count=len(diag.warning_lines),
-            blocking_warning_count=(
-                len(diag.warning_lines) - len(diag.suspended_warning_lines)
-            ),
-            suspended_warning_count=len(diag.suspended_warning_lines),
             skipped_count=len(diag.skip_cases),
             collection_failed_count=len(diag.collection_failed_cases),
             collection_skipped_count=len(diag.collection_skip_cases),
             collection_failed_cases=tuple(diag.collection_failed_cases),
             collection_skip_cases=tuple(diag.collection_skip_cases),
-            reported_node_ids=tuple(sorted(set(diag.reported_node_ids))),
+            reported_node_ids=tuple(sorted(diag.reported_phases)),
             failed_cases=diag.failed_cases,
             error_traces=diag.error_traces,
             warning_lines=diag.warning_lines,
-            suspended_warning_lines=diag.suspended_warning_lines,
             skip_cases=diag.skip_cases,
             slow_entries=diag.slow_entries,
         )
@@ -201,8 +215,6 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
             f"failed_count={diagnostics.failed_count}\n"
             f"error_count={diagnostics.error_count}\n"
             f"warning_count={diagnostics.warning_count}\n"
-            f"blocking_warning_count={diagnostics.blocking_warning_count}\n"
-            f"suspended_warning_count={diagnostics.suspended_warning_count}\n"
             f"skipped_count={diagnostics.skipped_count}\n"
         )
         return r[bool].ok(True)

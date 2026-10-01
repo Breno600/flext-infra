@@ -142,9 +142,7 @@ class TestsFlextInfraCodegenMakeContracts:
         )
         # `check` requires a provisioned interpreter, which `make setup` would
         # build. Stub it so this test stays about hook ordering.
-        u.Tests.write_executable(
-            root / ".venv" / "bin" / "python", "#!/bin/sh\nexit 0\n"
-        )
+        u.Tests.write_executable(u.Infra.runtime_python(root), "#!/bin/sh\nexit 0\n")
         # `check` also requires the Mise pin (db516968e).
         u.Tests.copy_tracked_mise_seeds(root)
         outcome = u.Cli.run_raw(["make", "-C", str(root), "check", ""])

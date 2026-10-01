@@ -10,8 +10,13 @@ importing them. No class name is ever inferred from a package name.
 from __future__ import annotations
 
 import ast
+from collections.abc import MutableMapping
+from functools import lru_cache
 from importlib.util import resolve_name
+from types import MappingProxyType
 from typing import TYPE_CHECKING
+
+from flext_infra import c
 
 from ..private_import_facades import FlextInfraUtilitiesPrivateImportFacades
 from ..rope_analysis import FlextInfraUtilitiesRopeAnalysis
@@ -20,10 +25,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from flext_infra import t
-
-#: The generated lazy publication binding, owned by the flext-core lazy engine
-#: (``install_lazy_exports`` writes it; ``_resolve`` reads it back).
-_LAZY_IMPORTS_TARGET = "_LAZY_IMPORTS"
 
 
 class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
@@ -39,7 +40,7 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         if indexed is None:
             msg = f"facade package is not importable for derivation: {package}"
             raise ValueError(msg)
-        classes: dict[str, str] = {}
+        classes: MutableMapping[str, str] = {}
         for name in FlextInfraUtilitiesRopeAnalysis.public_export_names_source(
             indexed[0]
         ):
@@ -103,10 +104,8 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         package = module if is_package else module.rpartition(".")[0]
         target: t.Pair[str, str] | None = None
         declared = False
-        lazy: dict[str, str] = {}
-        for node in cls._facade_ordered_statements(
-            ast.parse(source, filename=module).body
-        ):
+        lazy = cls._facade_lazy_bindings(source, module)
+        for node in cls._facade_module_statements(source, module):
             if isinstance(node, ast.AnnAssign) and node.value is None:
                 # An annotation without a value does not rebind an existing name.
                 continue
@@ -135,35 +134,6 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
                             else node.module or ""
                         )
                         target, declared = (source_module, imported.name), False
-            elif (
-                isinstance(node, ast.Assign | ast.AnnAssign)
-                and node.value is not None
-                and any(
-                    isinstance(bound, ast.Name) and bound.id == _LAZY_IMPORTS_TARGET
-                    for bound in (
-                        node.targets if isinstance(node, ast.Assign) else (node.target,)
-                    )
-                )
-            ):
-                # The generated lazy publication IS a binding statement: every
-                # name it lists resolves through its submodule entry, exactly
-                # as install_lazy_exports resolves it at runtime.
-                for dict_node in (
-                    d for d in ast.walk(node.value) if isinstance(d, ast.Dict)
-                ):
-                    for key, value in zip(
-                        dict_node.keys, dict_node.values, strict=False
-                    ):
-                        if (
-                            isinstance(key, ast.Constant)
-                            and isinstance(key.value, str)
-                            and isinstance(value, ast.Tuple | ast.List)
-                        ):
-                            for element in value.elts:
-                                if isinstance(element, ast.Constant) and isinstance(
-                                    element.value, str
-                                ):
-                                    lazy.setdefault(element.value, key.value)
         if declared:
             return module, name
         if target is None and name in lazy:
@@ -175,6 +145,70 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         if target is None or ".".join(target) in modules:
             return None
         return cls._facade_declared_class(modules, *target, visiting | {identity})
+
+    @staticmethod
+    @lru_cache(maxsize=256)
+    def _facade_module_statements(
+        source: str, module: str
+    ) -> t.VariadicTuple[ast.stmt]:
+        """Parse one module source once per content; resolution only reads it.
+
+        Every facade letter re-resolves its bindings through the same modules,
+        and each conform plan derives the facades twice (plan and fixed-point
+        replan), so the key is the exact source text: an edited module is a new
+        key, never a stale tree.
+        """
+        return tuple(
+            FlextInfraUtilitiesSemanticCutoverFacadeOwners._facade_ordered_statements(
+                ast.parse(source, filename=module).body
+            )
+        )
+
+    @staticmethod
+    @lru_cache(maxsize=256)
+    def _facade_lazy_bindings(source: str, module: str) -> t.StrMapping:
+        """Index the generated lazy publication of one module source once.
+
+        The lazy publication IS a binding statement: every name it lists
+        resolves through its submodule entry, exactly as install_lazy_exports
+        resolves it at runtime. Walking that mapping once per name made every
+        facade derivation quadratic in the package's export count; the key is
+        the exact source text, so an edited module is a new key.
+        """
+        bindings: MutableMapping[str, str] = {}
+        for (
+            node
+        ) in FlextInfraUtilitiesSemanticCutoverFacadeOwners._facade_module_statements(
+            source, module
+        ):
+            if not (
+                isinstance(node, ast.Assign | ast.AnnAssign)
+                and node.value is not None
+                and any(
+                    isinstance(bound, ast.Name)
+                    and bound.id == c.Infra.LAZY_IMPORTS_BINDING
+                    for bound in (
+                        node.targets if isinstance(node, ast.Assign) else (node.target,)
+                    )
+                )
+            ):
+                continue
+            for dict_node in (
+                d for d in ast.walk(node.value) if isinstance(d, ast.Dict)
+            ):
+                for key, value in zip(dict_node.keys, dict_node.values, strict=False):
+                    if not (
+                        isinstance(key, ast.Constant)
+                        and isinstance(key.value, str)
+                        and isinstance(value, ast.Tuple | ast.List)
+                    ):
+                        continue
+                    for element in value.elts:
+                        if isinstance(element, ast.Constant) and isinstance(
+                            element.value, str
+                        ):
+                            bindings.setdefault(element.value, key.value)
+        return MappingProxyType(bindings)
 
     @classmethod
     def _facade_ordered_statements(

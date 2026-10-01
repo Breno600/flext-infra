@@ -18,6 +18,148 @@ if TYPE_CHECKING:
 class TestsTypingUnifierRuntime:
     """Validate transformed consumers through imports and get_type_hints."""
 
+    def test_unknown_uses_keep_contract_and_iteration_keeps_mutable_elements(
+        self, tmp_path: Path
+    ) -> None:
+        source = f"""from {c.Infra.PKG_CORE_UNDERSCORE} import t
+
+def destructure(values: dict[str, int]) -> int:
+    (selected,) = (values,)
+    selected.update(count=3)
+    return values["count"]
+
+def mutate(values: dict[str, int]) -> None:
+    values.update(count=4)
+
+def escape(values: dict[str, int]) -> int:
+    mutate(values)
+    return values["count"]
+
+def copy_only(values: dict[str, int]) -> int:
+    copied = values.copy()
+    copied.update(count=5)
+    return copied["count"]
+
+def nested(values: list[dict[str, int]]) -> int:
+    [entry.update(count=6) for entry in values]
+    return sum(entry["count"] for entry in values)
+
+def count_nested(values: dict[str, list[int]]) -> int:
+    return len(values)
+"""
+        transformer = FlextInfraRefactorTypingUnifier(
+            canonical_map=c.Infra.TYPING_INLINE_UNION_CANONICAL_MAP
+        )
+        updated, _changes = transformer.apply_to_source(source)
+        (tmp_path / "contract_consumer.py").write_text(updated, encoding="utf-8")
+        probe = f"""from types import MappingProxyType
+from typing import get_type_hints
+from {c.Infra.PKG_CORE_UNDERSCORE} import t
+from contract_consumer import destructure, escape, copy_only, nested, count_nested
+print(get_type_hints(destructure)["values"] == dict[str, int])
+print(get_type_hints(escape)["values"] == dict[str, int])
+print(get_type_hints(copy_only)["values"] == dict[str, int])
+print(get_type_hints(nested)["values"] == t.SequenceOf[dict[str, int]])
+print(get_type_hints(count_nested)["values"] == t.MappingKV[str, list[int]])
+for operation in (destructure, escape, copy_only):
+    values = {{"count": 1}}
+    print(operation(values), values["count"])
+entries = ({{"count": 1}}, {{"count": 2}})
+print(nested(entries), entries[0]["count"], entries[1]["count"])
+print(count_nested(MappingProxyType({{"items": [1]}})))
+"""
+        outcome = tm.ok(u.Cli.run([sys.executable, "-c", probe], cwd=tmp_path))
+        tm.that(
+            outcome.stdout.splitlines(),
+            eq=[
+                "True",
+                "True",
+                "True",
+                "True",
+                "True",
+                "3 3",
+                "4 4",
+                "5 1",
+                "12 6 6",
+                "1",
+            ],
+        )
+        stable, repeat_changes = transformer.apply_to_source(updated)
+        tm.that(stable, eq=updated)
+        tm.that(repeat_changes, eq=[])
+
+    def test_mutation_tracks_lexical_bindings_closures_and_aliases(
+        self, tmp_path: Path
+    ) -> None:
+        source = f"""from {c.Infra.PKG_CORE_UNDERSCORE} import t
+
+def read(values: dict[str, int]) -> int:
+    return values["count"]
+
+def write(values: dict[str, int]) -> int:
+    values["count"] += 1
+    return values["count"]
+
+def closure(values: dict[str, int]) -> int:
+    def update() -> None:
+        values.update(count=3)
+    update()
+    return values["count"]
+
+def shadow(values: dict[str, int]) -> int:
+    def update(values: dict[str, int]) -> None:
+        values.update(count=4)
+    update({{}})
+    return values["count"]
+
+def aliases(first: dict[str, int], second: dict[str, int]) -> int:
+    selected = first
+    selected = second
+    selected.update(count=5)
+    return first["count"] + second["count"]
+"""
+        transformer = FlextInfraRefactorTypingUnifier(
+            canonical_map=c.Infra.TYPING_INLINE_UNION_CANONICAL_MAP
+        )
+        updated, changes = transformer.apply_to_source(source)
+        tm.that(bool(changes), eq=True)
+        (tmp_path / "lexical_consumer.py").write_text(updated, encoding="utf-8")
+        probe = f"""from types import MappingProxyType
+from typing import get_type_hints
+from {c.Infra.PKG_CORE_UNDERSCORE} import t
+from lexical_consumer import read, write, closure, shadow, aliases
+print(get_type_hints(read)["values"] == t.MappingKV[str, int])
+print(get_type_hints(shadow)["values"] == t.MappingKV[str, int])
+print(get_type_hints(write)["values"] == dict[str, int])
+print(get_type_hints(closure)["values"] == dict[str, int])
+print(get_type_hints(aliases)["first"] == dict[str, int])
+print(get_type_hints(aliases)["second"] == dict[str, int])
+immutable = MappingProxyType({{"count": 2}})
+print(read(immutable), shadow(immutable))
+payload = {{"count": 1}}
+print(write(payload), closure(payload), payload["count"])
+first, second = {{"count": 2}}, {{"count": 1}}
+print(aliases(first, second), first["count"], second["count"])
+"""
+        outcome = tm.ok(u.Cli.run([sys.executable, "-c", probe], cwd=tmp_path))
+        tm.that(
+            outcome.stdout.splitlines(),
+            eq=[
+                "True",
+                "True",
+                "True",
+                "True",
+                "True",
+                "True",
+                "2 2",
+                "2 3 3",
+                "7 2 5",
+            ],
+        )
+        stable, repeat_changes = transformer.apply_to_source(updated)
+        tm.that(stable, eq=updated)
+        tm.that(repeat_changes, eq=[])
+
     def test_aliased_typing_preserves_metadata_and_broad_types(
         self, tmp_path: Path
     ) -> None:

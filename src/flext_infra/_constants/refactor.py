@@ -59,11 +59,17 @@ class FlextInfraConstantsRefactor:
         COMPAT_ALIAS = "compat-alias"
         PRIVATE_IMPORT = "private-import"
         FACADE_BASE = "facade-base"
+        MODEL_FIELDS = "model-fields"
+        SELF_FACADE_IMPORT = "self-facade-import"
+        DYNAMIC_ENVIRONMENT = "dynamic-environment"
 
     SEMANTIC_CUTOVER_RULE_IDS: ClassVar[t.MappingKV[str, str]] = MappingProxyType({
         SemanticCutoverPhase.COMPAT_ALIAS: "ban-compat-alias",
         SemanticCutoverPhase.PRIVATE_IMPORT: "ban-private-import",
         SemanticCutoverPhase.FACADE_BASE: "facade-base-by-class-name",
+        SemanticCutoverPhase.MODEL_FIELDS: "rewire-getattr-model-fields-to-direct-access",
+        SemanticCutoverPhase.SELF_FACADE_IMPORT: "ban-infra-utility-module-self-facade-import",
+        SemanticCutoverPhase.DYNAMIC_ENVIRONMENT: "ban-ambient-environ-read",
     })
     "ast-grep rule whose findings select each finding-driven semantic cutover."
 
@@ -118,6 +124,7 @@ class FlextInfraConstantsRefactor:
     CODEMOD_TEXT_KEY_REPLACE: ClassVar[str] = "replace"
     CODEMOD_TEXT_KEY_FLAGS: ClassVar[str] = "flags"
     CODEMOD_TEXT_KEY_EXPECTED: ClassVar[str] = "expected"
+    CODEMOD_TEXT_KEY_CAPTURE_EQUALS: ClassVar[str] = "capture_equals"
     # ast-grep rejects unknown top-level keys, so an ast-grep rule declares
     # its finding-count receipt under the `metadata` mapping it does accept.
     CODEMOD_RULE_METADATA_KEY: ClassVar[str] = "metadata"
@@ -134,6 +141,17 @@ class FlextInfraConstantsRefactor:
     })
     CODEMOD_SNAPSHOT_DIRNAME: ClassVar[str] = "__snapshots__"
     CODEMOD_SNAPSHOT_SUFFIX: ClassVar[str] = "-snapshot.yml"
+    # ast-grep rule-test protocol keys: a test names its rule and lists the
+    # invalid cases; a snapshot file maps each invalid case to its projection.
+    CODEMOD_RULE_TEST_ID_KEY: ClassVar[str] = "id"
+    CODEMOD_RULE_TEST_INVALID_KEY: ClassVar[str] = "invalid"
+    CODEMOD_SNAPSHOTS_KEY: ClassVar[str] = "snapshots"
+    # `make mod` only verifies committed snapshots; the regeneration is its own
+    # verb so every snapshot change lands as a reviewed commit.
+    CODEMOD_SNAPSHOT_REFRESH_HINT: ClassVar[str] = (
+        "ast-grep snapshots are projections of the rule tests: run "
+        "`make mod-snapshots`, review the snapshot diff and commit it"
+    )
     CODEMOD_EPHEMERAL_DIRNAME: ClassVar[str] = "__pycache__"
     REFACTOR_CONFIG_KEYS: ClassVar[t.StrSequence] = (
         RK_PROJECT_SCAN_DIRS,
@@ -211,6 +229,12 @@ class FlextInfraConstantsRefactor:
     "Class-name suffix used to identify constants facades."
     CONSTANT_PATTERN: ClassVar[t.RegexPattern] = re.compile(r"^_*[A-Z][A-Z0-9_]*$")
     "Compiled naming pattern for module-level constant candidates."
+    CLASSVAR_DECLARATION_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"^([A-Z][A-Z0-9_]*:\s*)ClassVar\[(.*)\](\s*=)", re.DOTALL
+    )
+    "One ``NAME: ClassVar[T] =`` declaration head, capturing name, type and ``=``."
+    DOCSTRING_DELIMITER_COUNT: ClassVar[int] = 2
+    "Opening plus closing quote delimiters of a one-line docstring."
     FAMILY_SUFFIXES: ClassVar[t.StrMapping] = MappingProxyType({
         "c": "Constants",
         "t": "Types",

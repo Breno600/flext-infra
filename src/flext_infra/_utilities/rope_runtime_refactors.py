@@ -20,22 +20,34 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
     def unwrap_class_rewrites(
         source: str,
         *,
-        header_start: int,
-        header_end: int,
+        header: m.Infra.LogicalStatement,
+        body: t.SequenceOf[m.Infra.LogicalStatement],
         body_end: int,
-        indentation: int,
     ) -> t.VariadicTuple[m.Infra.SourceRewrite]:
-        """Remove one Rope-resolved header without changing literal payloads."""
+        """Remove one Rope-resolved header without changing literal payloads.
+
+        The body statements own the dedent width and the wrapper docstring, so
+        both derive from the logical facts instead of being passed alongside.
+        """
         lines = codeanalyze.SourceLinesAdapter(source)
+        indentation = body[0].indent - header.indent
+        docstring_span = (
+            (body[0].line, body[0].end_line)
+            if lines
+            .get_line(body[0].line)
+            .lstrip()
+            .startswith(('"""', "'''", '"', "'"))
+            else None
+        )
         regions = tuple(simplify.ignored_regions(source))
-        start = lines.get_line_start(header_start)
-        end = min(lines.get_line_end(header_end) + 1, len(source))
+        start = lines.get_line_start(header.line)
+        end = min(lines.get_line_end(header.end_line) + 1, len(source))
         comments = "".join(
             source[begin:finish] + "\n"
             for begin, finish, _metadata in regions
             if start <= begin < end and source[begin:finish].startswith("#")
         )
-        prefix = lines.get_line(header_start)
+        prefix = lines.get_line(header.line)
         prefix = prefix[: len(prefix) - len(prefix.lstrip())]
         edits = [
             m.Infra.SourceRewrite(
@@ -44,9 +56,13 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
                 text="".join(prefix + line for line in comments.splitlines(True)),
             )
         ]
-        for number in range(header_end + 1, body_end + 1):
+        for number in range(header.end_line + 1, body_end + 1):
             offset = lines.get_line_start(number)
             line = lines.get_line(number)
+            if docstring_span is not None and (
+                docstring_span[0] <= number <= docstring_span[1]
+            ):
+                continue
             if not line.strip() or any(
                 begin < offset < finish
                 for begin, finish, _metadata in regions
@@ -58,6 +74,14 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
                 raise ValueError(msg)
             edits.append(
                 m.Infra.SourceRewrite(start=offset, end=offset + indentation, text="")
+            )
+        if docstring_span is not None:
+            edits.append(
+                m.Infra.SourceRewrite(
+                    start=lines.get_line_start(docstring_span[0]),
+                    end=min(lines.get_line_end(docstring_span[1]) + 1, len(source)),
+                    text="",
+                )
             )
         return tuple(edits)
 

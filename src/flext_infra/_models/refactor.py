@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import MutableMapping, MutableSequence, MutableSet
 from pathlib import Path
+from types import MappingProxyType
 from typing import Annotated, ClassVar
 
 from flext_cli import m, u
@@ -24,6 +25,9 @@ class FlextInfraModelsRefactor(
     - ``ContractModel`` for configuration/policy contracts.
     - ``ArbitraryTypesModel`` for mutable report/result payloads.
     """
+
+    class ModTextCommand(mm.WriteMixin, m.ContractModel):
+        """Repository-scoped request for authenticated Sed rule replay."""
 
     class RefactorNamespaceEnforceInput(mm.WriteMixin, m.ContractModel):
         """CLI/service request for namespace enforcement."""
@@ -252,6 +256,34 @@ class FlextInfraModelsRefactor(
             t.StrSequence,
             m.Field(min_length=1, description="Directories to scan for rename targets"),
         ]
+        bindings: Annotated[
+            t.MappingKV[str, t.StrSequence],
+            m.Field(
+                default_factory=lambda: MappingProxyType[str, t.StrSequence]({}),
+                description="CSV expression prefixes mapped to current public Rope owner identities",
+            ),
+        ]
+        text_globs: Annotated[
+            t.StrSequence,
+            m.Field(
+                default=(),
+                description="Explicit root-relative non-Python documentation and configuration text surfaces",
+            ),
+        ]
+        python_documentation: Annotated[
+            bool,
+            m.Field(
+                default=False,
+                description="Rename comments and actual Python docstrings, preserving executable string payloads",
+            ),
+        ]
+        exclude_globs: Annotated[
+            t.StrSequence,
+            m.Field(
+                default=(),
+                description="Declared generated projections excluded from campaign targets",
+            ),
+        ]
 
     class ApplyRenamesReport(m.ArbitraryTypesModel):
         """Summary of one CSV-driven rename pass."""
@@ -263,7 +295,10 @@ class FlextInfraModelsRefactor(
             t.NonNegativeInt, m.Field(description="Text files scanned")
         ]
         occurrences: Annotated[
-            t.NonNegativeInt, m.Field(description="Pending occurrences in check mode")
+            t.NonNegativeInt,
+            m.Field(
+                description="Pending authenticated source edit spans from the current scan"
+            ),
         ] = 0
         files_changed: Annotated[
             t.NonNegativeInt, m.Field(description="Files rewritten in apply mode")

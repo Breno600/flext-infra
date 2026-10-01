@@ -11,10 +11,8 @@ from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 if TYPE_CHECKING:
     from ._canonical_t_import import FlextInfraEnsureCanonicalTImportMixin
     from ._import_facades import FlextInfraRefactorImportFacades
-    from ._semantic_publication import (
-        publish_semantic_file_plan,
-        publish_semantic_file_plans,
-    )
+    from ._semantic_publication import FlextInfraSemanticPublication
+    from ._typing_mutation import FlextInfraTypingMutation
     from ._typing_rewrite import FlextInfraRefactorTypingUnifierRewriteMixin
     from .class_reconstructor import FlextInfraRefactorClassReconstructor
     from .compatibility_alias import FlextInfraRefactorCompatibilityAlias
@@ -27,7 +25,6 @@ if TYPE_CHECKING:
     from .lazy_import_fixer import FlextInfraRefactorLazyImportFixer
     from .mro_remover import FlextInfraRefactorMroRemover
     from .open_encoding import FlextInfraRefactorOpenEncoding
-    from .pattern import FlextInfraRefactorPatternTransformer
     from .pydantic_modernizer import FlextInfraRefactorPydanticModernizer
     from .rope_transformer import FlextInfraRopeTransformer
     from .signature_propagator import FlextInfraRefactorSignaturePropagator
@@ -49,15 +46,14 @@ __all__: tuple[str, ...] = (
     "FlextInfraRefactorLazyImportFixer",
     "FlextInfraRefactorMroRemover",
     "FlextInfraRefactorOpenEncoding",
-    "FlextInfraRefactorPatternTransformer",
     "FlextInfraRefactorPydanticModernizer",
     "FlextInfraRefactorSignaturePropagator",
     "FlextInfraRefactorSymbolPropagator",
     "FlextInfraRefactorTypingUnifier",
     "FlextInfraRefactorTypingUnifierRewriteMixin",
     "FlextInfraRopeTransformer",
-    "publish_semantic_file_plan",
-    "publish_semantic_file_plans",
+    "FlextInfraSemanticPublication",
+    "FlextInfraTypingMutation",
 )
 
 _LAZY_IMPORTS = MappingProxyType(
@@ -65,10 +61,8 @@ _LAZY_IMPORTS = MappingProxyType(
         MappingProxyType({
             "._canonical_t_import": ("FlextInfraEnsureCanonicalTImportMixin",),
             "._import_facades": ("FlextInfraRefactorImportFacades",),
-            "._semantic_publication": (
-                "publish_semantic_file_plan",
-                "publish_semantic_file_plans",
-            ),
+            "._semantic_publication": ("FlextInfraSemanticPublication",),
+            "._typing_mutation": ("FlextInfraTypingMutation",),
             "._typing_rewrite": ("FlextInfraRefactorTypingUnifierRewriteMixin",),
             ".class_reconstructor": ("FlextInfraRefactorClassReconstructor",),
             ".compatibility_alias": ("FlextInfraRefactorCompatibilityAlias",),
@@ -81,7 +75,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".lazy_import_fixer": ("FlextInfraRefactorLazyImportFixer",),
             ".mro_remover": ("FlextInfraRefactorMroRemover",),
             ".open_encoding": ("FlextInfraRefactorOpenEncoding",),
-            ".pattern": ("FlextInfraRefactorPatternTransformer",),
             ".pydantic_modernizer": ("FlextInfraRefactorPydanticModernizer",),
             ".rope_transformer": ("FlextInfraRopeTransformer",),
             ".signature_propagator": ("FlextInfraRefactorSignaturePropagator",),

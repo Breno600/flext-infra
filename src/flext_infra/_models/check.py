@@ -98,7 +98,11 @@ class FlextInfraModelsCheck:
             m.Field(
                 gt=0,
                 le=c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT,
-                description="Positive Mypy wall-time limit in seconds",
+                description=(
+                    "Positive Mypy wall-time limit in seconds; neither the"
+                    " project budget nor the env override may exceed the"
+                    " fleet bound"
+                ),
             ),
         ] = c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT
 
@@ -107,6 +111,27 @@ class FlextInfraModelsCheck:
         def memory_limit_bytes(self) -> int:
             """Validated memory limit converted to bytes for the platform owner."""
             return self.memory_limit_mb * 1024 * 1024
+
+    class MypyInvocation(m.ContractModel):
+        """Checker inputs; callers cannot select an executable or Python program."""
+
+        targets: Annotated[
+            t.VariadicTuple[Path],
+            m.Field(min_length=1, description="Files or directories to check"),
+        ]
+        workspace: Annotated[
+            Path | None, m.Field(description="Workspace owning the checker environment")
+        ] = None
+        config_file: Annotated[
+            Path | None, m.Field(description="Owned Mypy configuration")
+        ] = None
+        report_json: Annotated[
+            bool, m.Field(description="Emit native JSON diagnostics")
+        ] = False
+        verbose: Annotated[bool, m.Field(description="Emit Mypy progress")] = False
+        profile_output: Annotated[
+            Path | None, m.Field(description="Optional cProfile output destination")
+        ] = None
 
     class FixPyreflyConfigCommand(mm.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra check fix-pyrefly-settings``."""
@@ -180,27 +205,15 @@ class FlextInfraModelsCheck:
         issues: t.VariadicTuple[FlextInfraModelsCheck.Issue] = m.Field(
             default_factory=tuple, description="Blocking gate diagnostics"
         )
-        observational_issues: t.VariadicTuple[FlextInfraModelsCheck.Issue] = m.Field(
-            default_factory=tuple,
-            description="Explicitly observational findings, separate from failures",
-        )
         raw_output: str = m.Field(
             "", description="Raw tool output", validate_default=True
         )
 
         @m.computed_field
         @property
-        def error_count(self) -> int:
-            """Number of diagnostics with error severity."""
-            return sum(
-                1 for issue in self.issues if issue.severity.lower() == c.Infra.ERROR
-            )
-
-        @m.computed_field
-        @property
-        def observational_count(self) -> int:
-            """Number of reported findings outside the blocking verdict."""
-            return len(self.observational_issues)
+        def finding_count(self) -> int:
+            """Number of findings that fail the gate: every issue blocks."""
+            return len(self.issues)
 
     class ProjectResult(mm.ProjectNameMixin, m.ArbitraryTypesModel):
         """Aggregated gate results for a single project.
@@ -222,15 +235,9 @@ class FlextInfraModelsCheck:
 
         @m.computed_field
         @property
-        def total_errors(self) -> int:
-            """Total error-severity diagnostic count across all gates."""
-            return sum(v.error_count for v in self.gates.values())
-
-        @m.computed_field
-        @property
-        def total_observations(self) -> int:
-            """Total observational finding count across all gates."""
-            return sum(v.observational_count for v in self.gates.values())
+        def total_findings(self) -> int:
+            """Total blocking findings across all gates."""
+            return sum(v.finding_count for v in self.gates.values())
 
     class LoopOutcome(m.ArbitraryTypesModel):
         """Bundled results from the project-checking loop."""
@@ -244,12 +251,6 @@ class FlextInfraModelsCheck:
         failed: Annotated[
             int,
             m.Field(description="Number of projects that failed one or more gates."),
-        ]
-        skipped: Annotated[
-            int,
-            m.Field(
-                description="Number of projects that were skipped during execution."
-            ),
         ]
         total_elapsed: Annotated[
             float,

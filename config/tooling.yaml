@@ -11,7 +11,6 @@ Infra:
         pep621-dev-dependency-groups: [dev]
       hatch:
         allow-direct-references: true
-        packaged-data-dirs: [config, templates]
       markdown:
         rules:
           default: true
@@ -22,21 +21,22 @@ Infra:
           # stay at 200 because no tool can reflow a heading — a shorter limit
           # would only manufacture unfixable findings.
           #
-          # flext-md-converge: wrapping is owned by rumdl (`make fix`), not
-          # prettier. `reflow`/`reflow-mode: normalize` make MD013 fixable
-          # (`[*]`) and give rumdl's own reflow-aware writer (atomic code
-          # spans, GFM task-item post-checkbox column) the authority over
-          # line breaks that prettier's proseWrap could not reach (a
-          # 294-char line inside backtick spans that prettier left
-          # unwrapped). prettier keeps `prose-wrap: preserve` below so it
-          # never re-wraps what rumdl already wrapped.
+          # flext-md-converge: wrapping is hand-owned, not tool-owned.
+          # `reflow`/`reflow-mode: normalize` was tried first (it made MD013
+          # `[*]`-fixable), but measured 2026-09-30: rumdl's normalize pass
+          # JOINS a hand-wrapped paragraph into one line and then cannot
+          # re-split lines containing inline-code spans — producing 183–595
+          # char lines no canonical verb can repair (the probe: a 2-line
+          # paragraph became one 171-char line). With reflow off, prettier
+          # keeps `prose-wrap: preserve` below, nobody rewrites an author's
+          # breaks, and MD013 stays the check-only line contract at 88: a
+          # genuinely long line is a finding the author fixes by wrapping.
           MD013:
             line_length: 88
             heading_line_length: 200
             code_block_line_length: 88
             tables: false
-            reflow: true
-            reflow-mode: normalize
+            reflow: false
           MD022: false
           MD023: false
           MD024: { siblings_only: true }
@@ -53,6 +53,16 @@ Infra:
           MD057: false
           MD060: false
           MD076: false
+          # flext-md-converge: prettier is the last writer of the `make docs`
+          # cycle (DOCS_ACTIONS ends at fmt), and its list-continuation printer
+          # reindents wrapped list content to its own column, which MD077's two
+          # accepted columns reject — and no canonical repair runs after fmt, so
+          # the finding is unfixable by construction (measured 2026-09-30: 57
+          # MD077 findings reproduce on every docs cycle and survive both
+          # `docs fix` and the gate's own --apply). A dialect rule the canonical
+          # formatter cannot satisfy leaves the rule set; MD013 keeps owning the
+          # real line contract.
+          MD077: false
         # Prettier formatting policy (markdown-format gate): rendered into the
         # managed .prettierrc. prettier --write is owned by `make fmt` and
         # prettier --check by `make check`; `make fix` never runs it.
@@ -203,6 +213,28 @@ Infra:
         lint:
           select:
             - ALL
+          # make fix never deletes information (flext-itpd1.5). The lint
+          # repair applies safe fixes only (make.ruff.lint_fix rejects
+          # --unsafe-fixes), and these rules are never auto-fixed at all,
+          # because their fixes delete a diagnostic print, an assignment, a
+          # redefinition, a duplicated key/value/test case or a version block
+          # (T201 once deleted print(..., file=sys.stderr) from a consumer
+          # script and turned its failures silent). Ruff keeps reporting them;
+          # the author decides. Also guards direct and IDE Ruff runs.
+          unfixable:
+            - duplicate-value
+            - multi-value-repeated-key-literal
+            - multi-value-repeated-key-variable
+            - outdated-version-block
+            - p-print
+            - print
+            - pytest-duplicate-parametrize-test-cases
+            - redefined-while-unused
+            - unused-variable
+          # The only channel that promotes an unsafe Ruff fix into make fix:
+          # a rule enters here with evidence that its fix preserves code,
+          # comments and diagnostics. None does today.
+          extend-safe-fixes: []
           # flext-j47u (codex): banned API messages are policy data, never template literals.
           banned-api:
             argparse: "Use cli.register_result_command + Pydantic model from flext_cli."
@@ -210,6 +242,7 @@ Infra:
               "Use flext_cli.cli application, registration, execution, and invocation\
               \ methods."
             rich: "Use cli.print / cli.display_message / cli.render_panel / cli.render_table."
+            tabulate: "Use cli.render_table from flext_cli."
             typer: "Use cli.create_app_with_common_params / cli.register_command from flext_cli."
           ignore:
             - ambiguous-unicode-character-comment
@@ -467,15 +500,13 @@ Infra:
             - "**/site-packages/**"
             - "**/dist-packages"
             - "**/dist-packages/**"
-            - "**/tests/fixtures"
-            - "**/tests/fixtures/**"
           root-typings-paths: []
           project-typings-paths: []
           ignored-diagnostic-globs: []
           diagnostic-path-overrides: []
           source-report-private-usage: error
-          test-like-report-private-usage: "none"
-          other-report-private-usage: "none"
+          test-like-report-private-usage: error
+          other-report-private-usage: error
       coverage:
         source: [src]
         show-missing: true
@@ -627,6 +658,11 @@ Infra:
         # Slow marks are a narrow integration-harness budget, not permission
         # for an unbounded test. Cases that exceed it require owner repair.
         slow-timeout-seconds: 30
+        # gate-budget rule: the run budget covers the budgeted phase only;
+        # items carrying this native pytest marker run in their own phase, each
+        # within slow-timeout-seconds (pytest-timeout marker), selected with the
+        # native -m expression.
+        slow-marker: slow
         # A local suite that cannot finish within two minutes is a performance
         # defect. The generated process wall is derived from this value and the
         # termination grace by the typed model; no second timeout source exists.
@@ -652,13 +688,42 @@ Infra:
         # invocation; in-flight cases may report after the stop, which the
         # declaring consumer accepts by declaring.
         parallel-worker-overrides:
-          cosmos-docgen: 4
-          flext-infra: 4
+          ai-hub:
+            # flext-tyir9/aihub-mkigd: the 1940-case suite cannot fit the
+            # single-worker process boundary inside its fixed deadline on cold
+            # testmon, so the consumer declares its ceiling here instead of
+            # patching projections or raising the limit. 4 is the measured
+            # incumbent the fleet already validated (flext-infra/cosmos-docgen);
+            # higher ceilings measurably regressed the cold run (flext-itpd1.3.7).
+            workers: 4
+          cosmos-docgen:
+            workers: 4
+          # flext-itpd1.3.7 measurement: raising this ceiling above 4 measurably
+          # regressed the cold run (16 workers lost one to an early death and
+          # executed fewer tests before the fixed deadline than 4), so the
+          # declared ceiling stays at the measured incumbent.
+          # Re-measured 2026-09-30 on the 20-CPU host (candidate bootstrap
+          # adoption, flext-hi3le): 12 workers regressed the same way
+          # (24 cases in 40.9s vs 197 in 32.4s at 4) — the 4-case-per-window
+          # dispatch overhead dominates on this suite too; the incumbent 4
+          # stands and the suite-wall defect is filed separately.
+          flext-infra:
+            workers: 4
+          # CPU-fraction ceilings (cpu_fraction: "n/d", e.g. algar-oud-mig: 1/4)
+          # resolve at runtime against the process CPU count; consumers declare
+          # them here when their suite budget is a share of the host.
         # Reserve physical memory for each xdist worker and its child process
         # tree; this bound may reduce the tested ceiling on smaller hosts.
         parallel-worker-memory-gb: 2
         # Keep scheduling centralized within the measured worker budget.
         parallel-distribution: load
+        # flext-itpd1.3.7: xdist queues the shutdown marker behind each
+        # worker's pre-dispatched chunk, so the declared max-failures stop only
+        # took effect after every worker drained minutes of assigned items at
+        # fleet scale and red cold runs were deadline-killed untyped. One test
+        # per dispatch step makes that stop immediate; per-item dispatch cost
+        # is noise against this suite's measured per-case time.
+        parallel-schedule-chunk: 1
         profile-sort: cumulative
         profile-limit: 50
         min-version: "8.0"

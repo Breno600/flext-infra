@@ -74,10 +74,45 @@ class TestsFlextInfraCodegenMakeMemberRuntime:
         )
         return workspace.resolve()
 
+    @staticmethod
+    def _direnv_venv(entry: Path) -> str:
+        """Read the ``VENV_DIR`` the real generated ``.envrc`` activation resolves."""
+        (entry / ".envrc.local").write_text(
+            'export OBSERVED_VENV_DIR="${VENV_DIR}"\n', encoding="utf-8"
+        )
+        tm.ok(u.Cli.run_checked((c.Infra.CLI_DIRENV, "allow", str(entry)), cwd=entry))
+        try:
+            process = tm.ok(
+                u.Cli.run_raw(
+                    (
+                        c.Infra.CLI_DIRENV,
+                        # Enter the directory as a shell does: direnv 2.37
+                        # authorizes the physical .envrc, and an explicit
+                        # symlinked path argument is checked unresolved.
+                        "exec",
+                        ".",
+                        "printenv",
+                        "OBSERVED_VENV_DIR",
+                    ),
+                    cwd=entry,
+                    remove_env_keys=c.Tests.MAKE_ISOLATION_ENV_KEYS,
+                )
+            )
+        finally:
+            tm.ok(
+                u.Cli.run_checked((c.Infra.CLI_DIRENV, "deny", str(entry)), cwd=entry)
+            )
+        tm.that(
+            u.Cli.process_succeeded(process.outcome),
+            eq=True,
+            msg=process.stdout + process.stderr,
+        )
+        return process.stdout.strip()
+
     def test_checkout_without_superproject_owns_its_runtime(
         self, tmp_path: Path
     ) -> None:
-        """A standalone clone resolves its own checkout and its own .venv."""
+        """A standalone clone resolves its own physical environment."""
         project_root, _ = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
@@ -86,7 +121,10 @@ class TestsFlextInfraCodegenMakeMemberRuntime:
 
         root = str(project_root.resolve())
         tm.that(values["RUNTIME_ROOT"], eq=root)
-        tm.that(values["RUNTIME_VENV"], eq=f"{root}/.venv")
+        tm.that(
+            values["RUNTIME_VENV"],
+            eq=str(u.Infra.runtime_environment_dir(project_root)),
+        )
 
     def test_submodule_member_resolves_the_workspace_runtime(
         self, tmp_path: Path
@@ -104,4 +142,43 @@ class TestsFlextInfraCodegenMakeMemberRuntime:
         for name in ("REPOSITORY_ROOT", "RUNTIME_ROOT", "UV_PROJECT"):
             tm.that(values[name], eq=str(workspace))
         for name in ("RUNTIME_VENV", "UV_PROJECT_ENVIRONMENT"):
-            tm.that(values[name], eq=f"{workspace}/.venv")
+            tm.that(
+                values[name],
+                eq=str(u.Infra.runtime_environment_dir(member, runtime_root=workspace)),
+            )
+
+    @pytest.mark.parametrize("linked", [False, True])
+    @pytest.mark.parametrize("attached", [False, True])
+    def test_direnv_resolves_the_make_runtime_environment(
+        self, tmp_path: Path, *, attached: bool, linked: bool
+    ) -> None:
+        """Direnv names the same physical environment as the generated Makefile.
+
+        An attached member activates its superproject's environment; an
+        unattached checkout activates its own. Entering through a symlinked
+        path never changes the resolved environment.
+        """
+        project_root, _ = u.Tests.render_make_environment(
+            tmp_path, c.Infra.MakeProfile.STANDALONE
+        )
+        owner = project_root.resolve()
+        member = owner
+        if attached:
+            owner = self._workspace_with_member(tmp_path, project_root)
+            # The member's activation reads the runtime pin of its superproject.
+            u.Tests.copy_tracked_mise_seeds(owner)
+            member = owner / project_root.name
+        entry = member
+        if linked:
+            link = tmp_path / "linked-entry"
+            link.symlink_to(owner, target_is_directory=True)
+            entry = link / member.relative_to(owner)
+
+        values = self._runtime_values(entry)
+        observed = self._direnv_venv(entry)
+
+        tm.that(
+            values["RUNTIME_VENV"],
+            eq=str(u.Infra.runtime_environment_dir(member, runtime_root=owner)),
+        )
+        tm.that(observed, eq=values["RUNTIME_VENV"])

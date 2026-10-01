@@ -60,6 +60,14 @@ class FlextInfraConstantsRelease:
     "The release commit as Git carries it: GitHub appends ` (#N)` when merging."
     RELEASE_PLAN_FILENAME: ClassVar[str] = "plan.json"
     RELEASE_NOTES_FILENAME: ClassVar[str] = "RELEASE_NOTES.md"
+    RELEASE_NOTES_LINE_LENGTH: ClassVar[int] = 88
+    "Markdown line ceiling the notes satisfy (MD013 / prettier printWidth)."
+    RELEASE_NOTES_CONTINUATION_INDENT: ClassVar[str] = "  "
+    "Continuation indent aligning a wrapped bullet's text under its marker."
+    MARKDOWN_INLINE_ESCAPE_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"([\\`*_\[\]<>~|])"
+    )
+    "Inline markdown punctuation escaped so an untrusted subject renders literally."
     RELEASE_REPORT_FILENAME: ClassVar[str] = "build-report.json"
     PYPI_UPLOAD_URL: ClassVar[str] = "https://upload.pypi.org/legacy/"
     "Canonical verified-artifact upload endpoint."
@@ -97,6 +105,12 @@ class FlextInfraConstantsRelease:
     RELEASE_SDIST_ROOT_DIRS: ClassVar[frozenset[str]] = frozenset({"config", "src"})
     RELEASE_SDIST_ROOT_FILES: ClassVar[frozenset[str]] = frozenset({
         ".gitignore",
+        # A project may ship its governance agent manifests as declared
+        # runtime assets at the sdist root (ai-hub embeds AGENTS.md and
+        # CLAUDE.md for the agents it deploys); the build hook
+        # force-includes them by name.
+        "agents.md",
+        "claude.md",
         "pkg-info",
         "pyproject.toml",
     })

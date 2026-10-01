@@ -6,7 +6,7 @@ from typing import Annotated
 
 from flext_cli import m
 
-from flext_infra import t
+from flext_infra import c, t
 
 from .deps_tool_config_project import FlextInfraModelsDepsToolConfigProject
 
@@ -105,6 +105,25 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         ignore: Annotated[
             t.StrSequence, m.Field(description="Ruff lint rule ignore list.")
         ] = m.Field(default_factory=tuple)
+        unfixable: Annotated[
+            t.StrSequence,
+            m.Field(
+                description=(
+                    "Rules whose Ruff fixes delete code or diagnostics; reported, "
+                    "never auto-fixed."
+                )
+            ),
+        ]
+        extend_safe_fixes: Annotated[
+            t.StrSequence,
+            m.Field(
+                alias="extend-safe-fixes",
+                description=(
+                    "Rules whose unsafe Ruff fixes are proven to preserve code, "
+                    "comments and diagnostics."
+                ),
+            ),
+        ]
         ignored_rule_rationales: Annotated[
             t.StrMapping,
             m.Field(
@@ -214,6 +233,18 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
     class MypyConfig(m.ArbitraryTypesModel):
         """Mypy baseline settings loaded from YAML."""
 
+        timeout_seconds: Annotated[
+            int,
+            m.Field(
+                gt=0,
+                le=c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT,
+                description=(
+                    "Project Mypy wall-time budget in seconds (SSOT; the env"
+                    " MYPY_TIMEOUT_SECONDS overrides it at the ingress"
+                    " boundary). It may tighten the fleet bound, never raise it."
+                ),
+            ),
+        ] = c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT
         plugins: Annotated[t.StrSequence, m.Field(description="Mypy plugins list.")] = (
             m.Field(default_factory=tuple)
         )

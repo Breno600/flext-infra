@@ -22,6 +22,7 @@ class FlextInfraPyreflyGate(FlextInfraGate):
     gate_name: ClassVar[str] = "Pyrefly"
     can_fix: ClassVar[bool] = False
     checker_info_prefixes: ClassVar[t.StrSequence] = ("INFO",)
+    requires_python_targets: ClassVar[bool] = True
 
     @override
     def _get_check_dirs(

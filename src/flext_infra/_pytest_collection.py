@@ -9,11 +9,13 @@ records warning identities before report-log reduces their categories to names.
 
 from __future__ import annotations
 
+import time
 from collections.abc import Generator
 from pathlib import Path
 from warnings import WarningMessage
 
 import pytest
+from xdist.dsession import DSession
 
 from ._constants.check import FlextInfraConstantsCheck
 
@@ -26,8 +28,19 @@ class FlextInfraPytestCollection:
         """Require explicit activation by the canonical runner."""
         parser.addoption(
             FlextInfraConstantsCheck.PYTEST_SELECTED_COLLECTION_OPTION,
-            action="store_true",
-            help="Enforce the runner's ordered node-ID selection in every worker.",
+            default=None,
+            help="Manifest whose ordered node-ID selection every worker enforces.",
+        )
+        parser.addoption(
+            FlextInfraConstantsCheck.PYTEST_COLLECTION_MANIFEST_OPTION,
+            default=None,
+            help="Path where a collect-only session publishes its final items.",
+        )
+        parser.addoption(
+            FlextInfraConstantsCheck.PYTEST_SUITE_STOP_OPTION,
+            type=float,
+            default=None,
+            help="Monotonic instant after which the session stops gracefully.",
         )
 
     @staticmethod
@@ -36,27 +49,34 @@ class FlextInfraPytestCollection:
         report_log = config.getoption("report_log")
         if report_log and not hasattr(config, "workerinput"):
             config.pluginmanager.register(
-                FlextInfraPytestCollection.WarningAccounting(
-                    Path(report_log),
-                    enforcement_strict=config.getoption("--flext-enforce-strict"),
-                )
+                FlextInfraPytestCollection.WarningAccounting(Path(report_log))
+            )
+        stop_at = config.getoption(FlextInfraConstantsCheck.PYTEST_SUITE_STOP_OPTION)
+        if stop_at is not None and not hasattr(config, "workerinput"):
+            config.pluginmanager.register(
+                FlextInfraPytestCollection.SuiteStop(stop_at_monotonic=stop_at)
             )
 
     @staticmethod
     @pytest.hookimpl(wrapper=True, tryfirst=True)
     def pytest_collection_finish(session: pytest.Session) -> Generator[None]:
-        """Validate before xdist publishes worker IDs, preserving raw failures."""
-        if session.config.getoption(
-            FlextInfraConstantsCheck.PYTEST_SELECTED_COLLECTION_OPTION
-        ):
-            from flext_infra import c, m, u
+        """Validate before xdist publishes worker IDs, preserving raw failures.
 
-            manifest_path = u.Infra.env_lookup(c.Infra.PYTEST_ENV_COLLECTION_MANIFEST)
-            if not manifest_path:
-                msg = "Runner collection requires its canonical selection manifest"
-                raise ValueError(msg)
-            manifest = m.Infra.PytestCollectionManifest.model_validate_json(
-                Path(manifest_path).read_text(encoding="utf-8")
+        Both manifest routes are runner-passed options: a session that names
+        neither imports no model. A requested manifest loads only its owning
+        model module, never the whole model facade, because every runner
+        collection process pays that import.
+        """
+        selected: str | None = session.config.getoption(
+            FlextInfraConstantsCheck.PYTEST_SELECTED_COLLECTION_OPTION
+        )
+        if selected is not None:
+            from ._models.validate import FlextInfraModelsCore
+
+            manifest = (
+                FlextInfraModelsCore.PytestCollectionManifest.model_validate_json(
+                    Path(selected).read_text(encoding="utf-8")
+                )
             )
             order = {node_id: index for index, node_id in enumerate(manifest.node_ids)}
             collected = [item.nodeid for item in session.items]
@@ -72,43 +92,86 @@ class FlextInfraPytestCollection:
                 raise ValueError(msg)
             session.items.sort(key=lambda item: order[item.nodeid])
         yield
-        FlextInfraPytestCollection._write_collection_manifest(session)
+        target: str | None = session.config.getoption(
+            FlextInfraConstantsCheck.PYTEST_COLLECTION_MANIFEST_OPTION
+        )
+        if target is not None and session.config.getoption("collectonly"):
+            FlextInfraPytestCollection._write_collection_manifest(session, Path(target))
 
     @staticmethod
-    def _write_collection_manifest(session: pytest.Session) -> None:
+    def _write_collection_manifest(session: pytest.Session, target: Path) -> None:
         """Publish final selected items after testmon and every collection hook."""
-        from flext_infra import c, m, u
+        from flext_cli import u
 
-        target = u.Infra.env_lookup(c.Infra.PYTEST_ENV_COLLECTION_MANIFEST)
-        if target is None:
-            return
-        if not target:
-            msg = "collection manifest requires a nonempty path"
-            raise ValueError(msg)
-        if not session.config.getoption("collectonly"):
-            return
-        manifest = m.Infra.PytestCollectionManifest(
+        from ._models.validate import FlextInfraModelsCore
+
+        manifest = FlextInfraModelsCore.PytestCollectionManifest(
             node_ids=tuple(item.nodeid for item in session.items)
         )
-        u.Cli.atomic_write_text_file(
-            Path(target), manifest.model_dump_json() + "\n"
-        ).unwrap()
+        u.Cli.atomic_write_text_file(target, manifest.model_dump_json() + "\n").unwrap()
+
+    class SuiteStop:
+        """End the session gracefully at the runner's derived stop instant.
+
+        The controller stops dispatch through the same path as max-failures:
+        xdist queues the shutdown marker, so each worker's final item runs
+        with no successor and pytest-testmon flushes every batched result.
+        A process-deadline SIGTERM instead discards the unflushed batches.
+
+        When every collected item has already completed, nothing is left to
+        stop and the stop request would only recolor a finished green suite
+        red (flext-xqw3w), so the request is suppressed at that boundary.
+        """
+
+        def __init__(self, *, stop_at_monotonic: float) -> None:
+            self.stop_at_monotonic = stop_at_monotonic
+            self.session: pytest.Session | None = None
+            self.completed_items: set[str] = set()
+
+        def pytest_sessionstart(self, session: pytest.Session) -> None:
+            """Bind the controller session that owns the stop decision."""
+            self.session = session
+
+        def pytest_runtest_logreport(self, report: pytest.TestReport) -> None:
+            """Request the stop once a completed item crosses the instant.
+
+            The request is suppressed when this item was the last one still
+            pending: a suite that already finished must end green instead of
+            being interrupted after its own final result (flext-xqw3w).
+            """
+            session = self.session
+            if (
+                session is None
+                or report.when != "teardown"
+                or time.monotonic() < self.stop_at_monotonic
+            ):
+                return
+            self.completed_items.add(report.nodeid)
+            total_items = len(getattr(session, "items", ()) or ())
+            if total_items and len(self.completed_items) >= total_items:
+                return
+            reason = f"suite stop instant {self.stop_at_monotonic:.3f} reached"
+            controller = session.config.pluginmanager.getplugin("dsession")
+            if isinstance(controller, DSession):
+                if not controller.shouldstop:
+                    controller.shouldstop = reason
+            elif not session.shouldstop:
+                session.shouldstop = reason
 
     class WarningAccounting:
-        """Preserve real class identity and the existing enforcement strict mode."""
+        """Preserve the real class identity of every recorded warning."""
 
-        def __init__(self, report_log: Path, *, enforcement_strict: bool) -> None:
+        def __init__(self, report_log: Path) -> None:
             from flext_infra import c
 
             self.report = report_log.with_suffix(c.Infra.PYTEST_WARNING_EVENTS_SUFFIX)
-            self.enforcement_strict = enforcement_strict
             self.report.parent.mkdir(parents=True, exist_ok=True)
             self.report.write_text("", encoding="utf-8")
 
         @pytest.hookimpl(tryfirst=True)
         def pytest_warning_recorded(self, warning_message: WarningMessage) -> None:
             """Record the real warning once before report-log serializes it."""
-            from flext_infra import c, m
+            from flext_infra import m
 
             category = warning_message.category
             event = m.Infra.PytestWarningEvent(
@@ -118,11 +181,6 @@ class FlextInfraPytestCollection:
                 filename=warning_message.filename,
                 lineno=warning_message.lineno,
                 message=str(warning_message.message),
-                enforcement_strict=self.enforcement_strict,
-                suspended=(
-                    not self.enforcement_strict
-                    and issubclass(category, c.FlextMroViolation)
-                ),
             )
             with self.report.open("a", encoding="utf-8") as stream:
                 stream.write(event.model_dump_json() + "\n")

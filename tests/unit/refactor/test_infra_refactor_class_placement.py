@@ -193,6 +193,25 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         tm.that(violations[0].name, eq="GROUPS")
         tm.that(violations[0].action, eq="classvar_relocation")
 
+    def test_detects_every_class_constant_in_one_class(
+        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+    ) -> None:
+        """Every class-level constant is reported, not only the first one."""
+        source = (
+            "class PlainClass:\n"
+            "    VERSION = '1.0'\n"
+            "    VENDOR_STRING_MAX_TOKENS = 64\n"
+        )
+        violations = FlextInfraClassPlacementDetector.detect_file(
+            u.Tests.detector_context(tmp_path / "consumer.py", source, rope_project)
+        )
+
+        tm.that(
+            sorted(v.name for v in violations),
+            eq=["VENDOR_STRING_MAX_TOKENS", "VERSION"],
+        )
+        tm.that({v.action for v in violations}, eq={"classvar_relocation"})
+
     def test_skips_implicit_constant_inside_constants_directory(
         self, tmp_path: Path, rope_project: t.Infra.RopeProject
     ) -> None:
@@ -205,6 +224,57 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         )
 
         tm.that(violations, eq=[])
+
+    def test_detects_constants_nested_inside_a_facade_class(
+        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+    ) -> None:
+        """Nested domain-class constants carry a dotted owner and are reported."""
+        source = (
+            "class Facade:\n"
+            "    class Domain:\n"
+            "        DEFAULT_CHARSET: str = 'UTF8'\n"
+            "        MAX_NAME_LENGTH: int = 100\n"
+        )
+        violations = FlextInfraClassPlacementDetector.detect_file(
+            u.Tests.detector_context(tmp_path / "constants.py", source, rope_project)
+        )
+
+        tm.that(
+            sorted((v.base_class, v.name) for v in violations),
+            eq=[
+                ("Facade.Domain", "DEFAULT_CHARSET"),
+                ("Facade.Domain", "MAX_NAME_LENGTH"),
+            ],
+        )
+        tm.that({v.action for v in violations}, eq={"classvar_relocation"})
+
+    def test_autofix_relocates_a_nested_owner_constant(self, tmp_path: Path) -> None:
+        """Autofix can relocate a constant owned by a nested class."""
+        pkg = tmp_path / "src" / "demo"
+        (pkg / "_constants").mkdir(parents=True)
+        (pkg / "__init__.py").write_text("", encoding="utf-8")
+        (pkg / "_constants" / "__init__.py").write_text(
+            '"""Constants."""\n', encoding="utf-8"
+        )
+        (pkg / "facade.py").write_text(
+            "class Facade:\n    class Domain:\n        DEFAULT_CHARSET: str = 'UTF8'\n",
+            encoding="utf-8",
+        )
+
+        result = FlextInfraRefactorClassvarConstantAutofix.apply(
+            tmp_path,
+            "demo.facade.Facade.Domain",
+            "DEFAULT_CHARSET",
+            "demo._constants",
+            dry_run=True,
+        )
+
+        touched_files = " ".join(result.touched_files)
+        tm.that(touched_files, has="demo/facade.py")
+        tm.that(touched_files, has="demo/_constants/__init__.py")
+        tm.that(result.source_text, has="class Domain:")
+        tm.that(result.source_text, lacks="DEFAULT_CHARSET: str = 'UTF8'")
+        tm.that(result.target_text, has="DEFAULT_CHARSET: str = 'UTF8'")
 
     def test_autofix_moves_implicit_constant(self, tmp_path: Path) -> None:
         """Autofix can relocate an implicit UPPER_CASE class constant."""
@@ -358,6 +428,37 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
             " ".join(preview.message for preview in result.previewed),
             has="tests._constants",
         )
+
+    def test_classvar_relocation_moves_every_constant_in_one_run(
+        self, tmp_path: Path
+    ) -> None:
+        """ENFORCE-079 relocates every class constant in a single pass."""
+        project_root = tmp_path / "demo"
+        tests_pkg = project_root / "tests" / "unit"
+        tests_pkg.mkdir(parents=True)
+        (project_root / "tests" / "__init__.py").write_text("", encoding="utf-8")
+        (tests_pkg / "__init__.py").write_text("", encoding="utf-8")
+        constants_root = project_root / "tests" / "_constants"
+        constants_root.mkdir(parents=True)
+        (constants_root / "__init__.py").write_text(
+            '"""Constants."""\n', encoding="utf-8"
+        )
+        module_path = tests_pkg / "test_execution_result.py"
+        module_path.write_text(
+            "class TestsDemo:\n"
+            "    VERSION = '1.0'\n"
+            "    VENDOR_STRING_MAX_TOKENS = 64\n",
+            encoding="utf-8",
+        )
+
+        result = u.Tests.run_rope_fixer(
+            tmp_path, project_root, self._classvar_rule(), module_path, apply=True
+        )
+
+        tm.that(result.failed, eq=[])
+        source_text = module_path.read_text(encoding="utf-8")
+        tm.that(source_text, lacks="VERSION = '1.0'")
+        tm.that(source_text, lacks="VENDOR_STRING_MAX_TOKENS = 64")
 
     def test_autofix_dry_run_resolves_package_constants_module(
         self, tmp_path: Path

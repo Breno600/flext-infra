@@ -21,18 +21,9 @@ if TYPE_CHECKING:
     from .loc_cap import FlextInfraLocCapGate
     from .markdown import FlextInfraMarkdownGate
     from .markdown_code import FlextInfraMarkdownCodeGate
-    from .markdown_code_sources import (
-        is_syntax_broken,
-        source_name,
-        write_docstring_sources,
-        write_fenced_block_sources,
-    )
+    from .markdown_code_sources import FlextInfraMarkdownCodeSources
     from .markdown_format import FlextInfraMarkdownFormatGate
-    from .markdown_support import (
-        FlextInfraMarkdownGateBase,
-        collect_markdown_files,
-        read_ignore_patterns,
-    )
+    from .markdown_support import FlextInfraMarkdownGateBase
     from .mypy import FlextInfraMypyGate
     from .namespace import FlextInfraNamespaceGate
     from .pyrefly import FlextInfraPyreflyGate
@@ -58,6 +49,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraLayoutGate",
     "FlextInfraLocCapGate",
     "FlextInfraMarkdownCodeGate",
+    "FlextInfraMarkdownCodeSources",
     "FlextInfraMarkdownFormatGate",
     "FlextInfraMarkdownGate",
     "FlextInfraMarkdownGateBase",
@@ -72,12 +64,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraSilentFailureGate",
     "FlextInfraSmellsGate",
     "FlextInfraTierWhitelistGate",
-    "collect_markdown_files",
-    "is_syntax_broken",
-    "read_ignore_patterns",
-    "source_name",
-    "write_docstring_sources",
-    "write_fenced_block_sources",
 )
 
 _LAZY_IMPORTS = MappingProxyType(
@@ -95,18 +81,9 @@ _LAZY_IMPORTS = MappingProxyType(
             ".loc_cap": ("FlextInfraLocCapGate",),
             ".markdown": ("FlextInfraMarkdownGate",),
             ".markdown_code": ("FlextInfraMarkdownCodeGate",),
-            ".markdown_code_sources": (
-                "is_syntax_broken",
-                "source_name",
-                "write_docstring_sources",
-                "write_fenced_block_sources",
-            ),
+            ".markdown_code_sources": ("FlextInfraMarkdownCodeSources",),
             ".markdown_format": ("FlextInfraMarkdownFormatGate",),
-            ".markdown_support": (
-                "FlextInfraMarkdownGateBase",
-                "collect_markdown_files",
-                "read_ignore_patterns",
-            ),
+            ".markdown_support": ("FlextInfraMarkdownGateBase",),
             ".mypy": ("FlextInfraMypyGate",),
             ".namespace": ("FlextInfraNamespaceGate",),
             ".pyrefly": ("FlextInfraPyreflyGate",),

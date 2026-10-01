@@ -20,6 +20,7 @@ from flext_infra.codegen.version_file import FlextInfraCodegenVersionFile
 from flext_infra.deps.detector import FlextInfraRuntimeDevDependencyDetector
 from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
 from flext_infra.deps.fix_pyrefly_config import FlextInfraConfigFixer
+from flext_infra.deps.lock_integrity import FlextInfraLockIntegrityVerifier
 from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
 from flext_infra.fixers.orchestrator import FlextInfraEnforcementFixerOrchestrator
 
@@ -61,6 +62,15 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
             ),
         ),
         c.Infra.CLI_GROUP_CODEGEN: (
+            m.Cli.ResultCommandRoute(
+                name="candidate-bootstrap",
+                help_text="Atomically conform all declared candidate Makefiles",
+                model_cls=m.Infra.CandidateBootstrapCommand,
+                handler=FlextInfraCliRouteBase.result_handler(
+                    infra.bootstrap_candidate
+                ),
+                success_message="candidate bootstrap complete",
+            ),
             m.Cli.ResultCommandRoute(
                 name="conform",
                 help_text="Conform generated project and workspace files",
@@ -218,6 +228,11 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                     "modernize",
                     "Modernize workspace pyproject files",
                     FlextInfraPyprojectModernizer,
+                ),
+                (
+                    "verify-locks",
+                    "Verify committed generated TOML locks parse and repeat no section",
+                    FlextInfraLockIntegrityVerifier,
                 ),
             )
         ),

@@ -26,8 +26,6 @@ from flext_infra.transformers.import_modernizer import (
 )
 from flext_infra.transformers.mro_remover import FlextInfraRefactorMroRemover
 from flext_infra.transformers.open_encoding import FlextInfraRefactorOpenEncoding
-from flext_infra.transformers.pattern import FlextInfraRefactorPatternTransformer
-from flext_infra.transformers.typing_unifier import FlextInfraRefactorTypingUnifier
 
 from .base import FlextInfraFixerAdapter
 
@@ -51,6 +49,9 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
         super().__init__(repository_root)
 
     # Canonical transformer registry. New deterministic transformers register here.
+    # A whole-file regex is never a transformer: it cannot tell code from a
+    # docstring, comment or string. The retired regex fixes (ENFORCE-026, 027,
+    # 028, 091, 092, 094) are ast-grep rules applied by ``make mod``.
     _TRANSFORMERS: ClassVar[
         t.MutableMappingKV[str, type[FlextInfraRopeTransformer]]
     ] = {
@@ -60,10 +61,8 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
         "import_modernizer": FlextInfraRefactorImportModernizer,
         "mro_remover": FlextInfraRefactorMroRemover,
         "open_encoding": FlextInfraRefactorOpenEncoding,
-        "pattern": FlextInfraRefactorPatternTransformer,
         "project_alias_migrator": FlextInfraRefactorProjectAliasMigrator,
         "rewrite_foreign_canonical_alias": FlextInfraRefactorProjectAliasMigrator,
-        "typing_unifier": FlextInfraRefactorTypingUnifier,
     }
 
     # Why: targets whose rewriting mechanism is deactivated inside flext-infra,
@@ -75,6 +74,16 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
     # ``fix-enforcement`` working for every other rule while guaranteeing the
     # deactivated target never reaches a transformer and never rewrites a file.
     _DEACTIVATED_TARGETS: ClassVar[t.MappingKV[str, str]] = {
+        "pattern": (
+            "fix deactivated: the pattern target once drove a whole-file regex "
+            "transformer (ENFORCE-026/027/028/091/092/094) that could not tell "
+            "code from a docstring, comment or string — it rewrote the "
+            "documentation of the defects it forbids. The rewrites are owned "
+            "by ast-grep codemod rules applied through make mod; violations "
+            "stay reported and only the automatic rewrite is off (flext-oolmd "
+            "family: the missing registry entry made the fix-enforcement "
+            "preflight reject the whole catalog for every member)."
+        ),
         "cast_remover": (
             "fix deactivated: the cast remover rewrote sources through the raw "
             "ast module (whole-file ast.unparse), which is not an approved "
@@ -104,6 +113,17 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
             "structurally by the ast-grep rule typing-dict-to-mapping-kv, whose "
             "import-unsafe cases are reported by typing-dict-missing-t-import. "
             "The violation is still reported; only the automatic rewrite is off."
+        ),
+        "typing_unifier": (
+            "fix deactivated: the typing unifier rewrote annotation text inside "
+            "`fix-enforcement`, whose contract is to keep every byte of the "
+            "module, its docstrings, comments and string literals included (the "
+            "documented ENFORCE-030 expectation). Typing modernization is owned "
+            "by the ast-grep codemod rules of `make mod` and by rope, not by this "
+            "adapter, and the transformer requires runtime parameters "
+            "(symbols_to_replace) that the enforcement action does not declare, "
+            "so constructing it here crashed the whole fix run. The violation is "
+            "still reported; only the automatic rewrite is off."
         ),
     }
 
@@ -382,19 +402,6 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
     ) -> FlextInfraRopeTransformer:
         """Instantiate a transformer with params declared in the catalog."""
         params = dict(fix_action.params)
-        if transformer_cls is FlextInfraRefactorTypingUnifier:
-            targets_value = params.get("targets", [])
-            targets: t.StrSequence = (
-                tuple(item for item in targets_value if isinstance(item, str))
-                if isinstance(targets_value, (list, tuple))
-                else ()
-            )
-            canonical_map: t.MutableMappingKV[frozenset[str], str] = {}
-            if "dict" in targets:
-                canonical_map[frozenset({"MutableMapping[K, V]"})] = "t.MappingKV[K, V]"
-            return FlextInfraRefactorTypingUnifier(
-                canonical_map=canonical_map, file_path=file_path
-            )
         if transformer_cls is FlextInfraRefactorProjectAliasMigrator:
             return FlextInfraRefactorProjectAliasMigrator(file_path=file_path)
         if transformer_cls is FlextInfraRefactorImportModernizer:
@@ -426,17 +433,6 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
                 symbols_to_replace=symbols_to_replace,
                 runtime_aliases=runtime_aliases,
                 blocked_aliases=blocked_aliases,
-            )
-        if transformer_cls is FlextInfraRefactorPatternTransformer:
-            required_alias = params.get("required_alias", "")
-            alias_module = params.get("alias_module", "")
-            return FlextInfraRefactorPatternTransformer(
-                patterns=u.Cli.json_as_mapping_list(params.get("patterns")),
-                required_alias=required_alias
-                if isinstance(required_alias, str)
-                else "",
-                alias_module=alias_module if isinstance(alias_module, str) else "",
-                file_path=file_path,
             )
         # Remaining enforcement transformers require no runtime params.
         return transformer_cls()

@@ -277,15 +277,12 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
         """Run mypy and extract install-package hints."""
         runner = self.runner or u.Cli()
         result = runner.run_raw(
-            u.Infra.mypy_limited_command((
-                c.Infra.POETRY,
-                c.Infra.VERB_RUN,
-                c.Infra.MYPY,
-                c.Infra.DEFAULT_SRC_DIR,
-                "--config-file",
-                c.PYPROJECT_FILENAME,
-                "--no-error-summary",
-            )),
+            u.Infra.mypy_limited_command(
+                m.Infra.MypyInvocation(
+                    targets=(project_dir / c.Infra.DEFAULT_SRC_DIR,),
+                    config_file=project_dir / c.PYPROJECT_FILENAME,
+                )
+            ),
             cwd=project_dir,
             timeout=u.Infra.mypy_runner_timeout(),
         )

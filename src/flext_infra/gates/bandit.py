@@ -30,6 +30,11 @@ class FlextInfraBanditGate(FlextInfraGate):
     )
 
     @override
+    def selected_for(self, project_dir: Path) -> bool:
+        """Only a project with a ``src`` package surface selects bandit."""
+        return (project_dir / c.Infra.DEFAULT_SRC_DIR).is_dir()
+
+    @override
     def _get_check_dirs(
         self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> t.StrSequence:
@@ -38,25 +43,6 @@ class FlextInfraBanditGate(FlextInfraGate):
         if not (project_dir / c.Infra.DEFAULT_SRC_DIR).exists():
             return []
         return [c.Infra.DEFAULT_SRC_DIR]
-
-    @override
-    def _empty_targets_result(
-        self, project_dir: Path, started: float
-    ) -> m.Infra.GateExecution:
-        """No ``src`` tree means no Python package surface to audit.
-
-        A package:false workspace root declares no importable package, so
-        bandit has no legitimate target there; absence is topology, not a
-        lost scan.
-        """
-        return self._neutral_skip_result(
-            project_dir,
-            started,
-            message=(
-                f"{self.gate_id}: no src tree — package:false project declares "
-                "no Python package surface to audit"
-            ),
-        )
 
     @override
     def _parse_check_output(
@@ -109,7 +95,12 @@ class FlextInfraBanditGate(FlextInfraGate):
     def _bandit_issues(
         bandit_data: t.MappingKV[str, t.JsonValue],
     ) -> t.SequenceOf[m.Infra.Issue]:
-        """Build typed gate issues from parsed Bandit result entries."""
+        """Build typed gate issues from parsed Bandit result entries.
+
+        Bandit fails its run on every reported result, so each one is a
+        blocking gate finding; Bandit's own LOW/MEDIUM/HIGH rating is not the
+        gate severity vocabulary and stays in the raw report.
+        """
         return tuple(
             m.Infra.Issue(
                 file=u.Cli.json_pick_str(raw_item, "filename", "?"),
@@ -117,9 +108,7 @@ class FlextInfraBanditGate(FlextInfraGate):
                 column=0,
                 code=u.Cli.json_pick_str(raw_item, "test_id"),
                 message=u.Cli.json_pick_str(raw_item, "issue_text"),
-                severity=u.Cli.json_pick_str(
-                    raw_item, "issue_severity", "MEDIUM"
-                ).lower(),
+                severity=c.Infra.GateSeverity.ERROR.value,
             )
             for raw_item in u.Cli.json_as_mapping_list(
                 bandit_data.get(c.Infra.BANDIT_RESULTS_KEY, [])

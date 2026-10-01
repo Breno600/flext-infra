@@ -9,7 +9,10 @@ from typing import Annotated, ClassVar, Literal
 from flext_cli import m
 
 from ... import t
-from ..._constants import FlextInfraConstantsCodegenProject
+from ..._constants import (
+    FlextInfraConstantsCodegenProject,
+    FlextInfraConstantsWorkspace,
+)
 from ..deps_tool_config import FlextInfraModelsDepsToolConfig
 from .beads import FlextInfraConfigModelsBeads
 from .contract import FlextInfraConfigModelsContract
@@ -47,6 +50,10 @@ class FlextInfraConfigModelsContexts:
             FlextInfraModelsDepsToolConfig.PytestConfig,
             m.Field(description="Typed pytest execution policy"),
         ]
+        environment_directory: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Runtime-root-local development environment"),
+        ] = FlextInfraConstantsWorkspace.ENVIRONMENT_DIRECTORY
 
     class MakefileRenderSpec(MakeCommandContext):
         """Field-only render input for an existing repository Makefile."""
@@ -62,8 +69,7 @@ class FlextInfraConfigModelsContexts:
             m.Field(description="Selected repository Make profile"),
         ]
         package: Annotated[
-            bool,
-            m.Field(description="Repository publishes a Python package"),
+            bool, m.Field(description="Repository publishes a Python package")
         ]
         repository_root_rel: Annotated[
             t.NonEmptyStr, m.Field(description="Relative workspace root path")
@@ -131,25 +137,10 @@ class FlextInfraConfigModelsContexts:
         ]
         workspace_cli_group: Annotated[
             t.NonEmptyStr,
-            m.Field(description="CLI group used for workspace orchestration"),
-        ]
-        mypy_memory_limit_mb: Annotated[
-            int, m.Field(gt=0, description="Generated Mypy address-space limit in MiB")
-        ]
-        mypy_timeout_seconds: Annotated[
-            int, m.Field(gt=0, description="Generated Mypy wall-time limit in seconds")
+            m.Field(description="CLI group that owns the workspace propagate route"),
         ]
         mypy_timeout_exit_code: Annotated[
             int, m.Field(gt=0, description="Wall-time limiter timeout exit code")
-        ]
-        mypy_signal_exit_offset: Annotated[
-            int, m.Field(gt=0, description="Shell signal exit-code offset")
-        ]
-        prlimit_command: Annotated[
-            t.NonEmptyStr, m.Field(description="Address-space limiter executable")
-        ]
-        prlimit_address_space_option: Annotated[
-            t.NonEmptyStr, m.Field(description="Address-space limiter option")
         ]
         timeout_command: Annotated[
             t.NonEmptyStr, m.Field(description="Wall-time limiter executable")
@@ -173,23 +164,8 @@ class FlextInfraConfigModelsContexts:
             FlextInfraConfigModelsMake.MakeSpec,
             m.Field(description="Generated Make command contract"),
         ]
-        mypy_memory_limit_mb: Annotated[
-            int, m.Field(gt=0, description="Generated Mypy address-space limit in MiB")
-        ]
-        mypy_timeout_seconds: Annotated[
-            int, m.Field(gt=0, description="Generated Mypy wall-time limit in seconds")
-        ]
         mypy_timeout_exit_code: Annotated[
             int, m.Field(gt=0, description="Wall-time limiter timeout exit code")
-        ]
-        mypy_signal_exit_offset: Annotated[
-            int, m.Field(gt=0, description="Shell signal exit-code offset")
-        ]
-        prlimit_command: Annotated[
-            t.NonEmptyStr, m.Field(description="Address-space limiter executable")
-        ]
-        prlimit_address_space_option: Annotated[
-            t.NonEmptyStr, m.Field(description="Address-space limiter option")
         ]
         timeout_command: Annotated[
             t.NonEmptyStr, m.Field(description="Wall-time limiter executable")
@@ -258,7 +234,7 @@ class FlextInfraConfigModelsContexts:
             str,
             m.Field(
                 description=(
-                    "CLI group name for the flext-infra workspace orchestrate route"
+                    "CLI group name for the flext-infra workspace propagate route"
                 )
             ),
         ] = ""
@@ -380,9 +356,15 @@ class FlextInfraConfigModelsContexts:
         package_name: Annotated[
             t.NonEmptyStr, m.Field(description="Python import package name")
         ]
-        packaged_data_dirs: Annotated[
+        packaged_data_paths: Annotated[
             t.StrSequence,
-            m.Field(description="Generated root data directories shipped in wheels"),
+            m.Field(
+                description="Validated relative data paths shipped in distributions"
+            ),
+        ]
+        packaged_data_files: Annotated[
+            t.StrSequence,
+            m.Field(description="Validated individually declared data files"),
         ]
         class_stem: Annotated[
             t.NonEmptyStr, m.Field(description="Public facade class stem")
@@ -496,7 +478,13 @@ class FlextInfraConfigModelsContexts:
             m.Field(description="Moving Waza release selector, e.g. 'latest'"),
         ]
         taplo_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact Taplo formatter version")
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Taplo release selector; the committed mise.lock pins the "
+                    "version generation authenticates (flext-t7668)"
+                )
+            ),
         ]
         ast_grep_selector: Annotated[
             t.NonEmptyStr, m.Field(description="Mise selector for the ast-grep CLI")
@@ -650,6 +638,13 @@ class FlextInfraConfigModelsContexts:
                     "shipped alongside the packages; see the root_packages "
                     "namesake for why the declaration is per repository."
                 ),
+            ),
+        ] = ()
+        packaged_data_paths: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                default=(),
+                description="Repository-relative data files and directories shipped with the package",
             ),
         ] = ()
         cli_module: Annotated[
