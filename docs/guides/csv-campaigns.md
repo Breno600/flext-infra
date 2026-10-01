@@ -20,6 +20,12 @@ For regexes that may match several identifiers, declare a named group and
 `capture_equals: {keyword: expected_name}` in the rule. The engine validates
 that the group exists and rejects a different captured value before publishing
 any rewrite in the batch.
+Sed rules may declare `distributions: [flext-infra]` to select consumers by
+their validated `[project].name`. An omitted or empty selector applies to every
+consumer. The packaged catalogue's Infra-specific rules declare this selector,
+so external projects can compose their own rules without inheriting Infra-only
+file requirements. A selected Markdown include still fails if its source is
+absent; a missing project identity is an error rather than an implicit match.
 
 The public `make mod` circuit reads `Infra.refactor_csv_campaigns` from the packaged
 configuration. Each campaign keeps one `old,new` CSV as its rename source. Consumer
