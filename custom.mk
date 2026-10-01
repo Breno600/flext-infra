@@ -1,3 +1,0 @@
-.PHONY: _custom-test-package-namespace
-_custom-test-package-namespace:
-	@"$(RUNTIME_VENV)/bin/python" -m pytest tests/unit/codegen/test_codegen_packaged_data_wheel_collision.py::TestsFlextInfraCodegenPackagedDataWheel::test_repository_namespace_keeps_its_import_path tests/unit/validate/pytest_runner_public_tests.py::TestsFlextInfraPytestRunner::test_marker_selection_is_shared_by_collection_execution_and_coverage tests/unit/validate/pytest_runner_public_tests.py::TestsFlextInfraPytestRunner::test_testmon_commands_name_the_toolchain_environment

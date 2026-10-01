@@ -190,7 +190,8 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             report_dir,
             targets=(
                 (str(self.target),)
-                if (selection_plan is not None and selection_plan.whole_target) or selection is None
+                if (selection_plan is not None and selection_plan.whole_target)
+                or selection is None
                 else tuple(selection)
             ),
             workers=workers,

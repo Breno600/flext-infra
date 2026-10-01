@@ -18,9 +18,7 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
 
     @staticmethod
     def unwrap_class_rewrites(
-        source: str,
-        *,
-        span: m.Infra.ClassWrapperSpan,
+        source: str, *, span: m.Infra.ClassWrapperSpan
     ) -> t.VariadicTuple[m.Infra.SourceRewrite]:
         """Remove one Rope-resolved header without changing literal payloads."""
         lines = codeanalyze.SourceLinesAdapter(source)
@@ -58,13 +56,17 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
                 msg = "Rope wrapper body has inconsistent indentation"
                 raise ValueError(msg)
             edits.append(
-                m.Infra.SourceRewrite(start=offset, end=offset + span.indentation, text="")
+                m.Infra.SourceRewrite(
+                    start=offset, end=offset + span.indentation, text=""
+                )
             )
         if span.docstring_span is not None:
             edits.append(
                 m.Infra.SourceRewrite(
                     start=lines.get_line_start(span.docstring_span[0]),
-                    end=min(lines.get_line_end(span.docstring_span[1]) + 1, len(source)),
+                    end=min(
+                        lines.get_line_end(span.docstring_span[1]) + 1, len(source)
+                    ),
                     text="",
                 )
             )

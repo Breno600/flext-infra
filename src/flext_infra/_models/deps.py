@@ -206,7 +206,9 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
         ] = ()
         repository_namespace_packages: Annotated[
             t.StrTuple,
-            m.Field(description="Implicit namespace directories shipped from the repository root"),
+            m.Field(
+                description="Implicit namespace directories shipped from the repository root"
+            ),
         ] = ()
 
         packaged_data_paths: Annotated[

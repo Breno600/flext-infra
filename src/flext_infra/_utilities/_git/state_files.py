@@ -59,7 +59,10 @@ class FlextInfraUtilitiesGitStateFilesMixin(
             with FlextInfraUtilitiesGitWorktreeIO.git_stdin(observed.content) as stream:
                 oid = cls._repo(root).git.hash_object("--stdin", istream=stream)
             state = m.Infra.GitWorktreeFileState(
-                path=observed.path, mode=observed.mode, permissions=observed.permissions, oid=oid
+                path=observed.path,
+                mode=observed.mode,
+                permissions=observed.permissions,
+                oid=oid,
             )
             if state in allowed:
                 return

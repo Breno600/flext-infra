@@ -204,12 +204,13 @@ class FlextInfraPytestRunnerExecution(
         self._record_process_outcome(report_dir, "suite", outcome)
         if self.profile_enabled:
             profiles = tuple(sorted((report_dir / "profiles").glob("*.pstats")))
-            if not profiles:
+            if not profiles and u.Cli.process_succeeded(outcome):
                 msg = f"pytest produced no child profiles: {report_dir}"
                 raise FileNotFoundError(msg)
-            pstats.Stats(*(str(path) for path in profiles)).dump_stats(
-                str(report_dir / "pytest.pstats")
-            )
+            if profiles:
+                pstats.Stats(*(str(path) for path in profiles)).dump_stats(
+                    str(report_dir / "pytest.pstats")
+                )
         return outcome
 
     @staticmethod
@@ -442,9 +443,7 @@ class FlextInfraPytestRunnerExecution(
         # enforces that manifest for both cold and warm caches while testmon
         # continues to collect dependencies through its xdist integration.
         command = self.build_command(
-            report_dir,
-            selection_plan,
-            execution_mode=execution_mode,
+            report_dir, selection_plan, execution_mode=execution_mode
         )
         outcome = self._run_suite(command, report_dir, execution_mode=execution_mode)
         cache_hit = (

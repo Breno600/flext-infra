@@ -163,7 +163,11 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             )
         if repository_namespace_packages:
             project = project.model_copy(
-                update={"repository_namespace_packages": tuple(repository_namespace_packages)}
+                update={
+                    "repository_namespace_packages": tuple(
+                        repository_namespace_packages
+                    )
+                }
             )
         manifest = m.Infra.WorkspaceManifestSpec(
             version=c.Infra.WORKSPACE_MANIFEST_VERSION,

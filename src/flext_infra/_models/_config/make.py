@@ -234,10 +234,6 @@ class FlextInfraConfigModelsMake:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(min_length=1, description="Docs actions that mutate"),
         ]
-        warning_actions: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(description="Docs actions that warn without failing the gate"),
-        ] = ()
         reports_dir: Annotated[
             Path, m.Field(description="Repository-relative docs reports directory")
         ]
@@ -711,7 +707,7 @@ class FlextInfraConfigModelsMake:
         standalone_check_gates: Annotated[
             Mapping[t.NonEmptyStr, t.NonEmptyStr],
             m.Field(
-                description="Public Make verb to checker gate mapping outside make check",
+                description="Public Make verb to checker gate mapping outside make check"
             ),
         ] = MappingProxyType({})
         check_gate_suspensions: Annotated[
@@ -799,7 +795,9 @@ class FlextInfraConfigModelsMake:
             if len(declared) != len(self.verbs):
                 msg = "make public verb names must be unique"
                 raise ValueError(msg)
-            unknown_standalone_verbs = sorted(set(self.standalone_check_gates) - declared)
+            unknown_standalone_verbs = sorted(
+                set(self.standalone_check_gates) - declared
+            )
             if unknown_standalone_verbs:
                 msg = (
                     "make standalone_check_gates names undeclared verbs: "
@@ -820,7 +818,8 @@ class FlextInfraConfigModelsMake:
                 )
                 raise ValueError(msg)
             unknown_standalone_gates = sorted(
-                set(self.standalone_check_gates.values()) - set(self.check_gates_allowed)
+                set(self.standalone_check_gates.values())
+                - set(self.check_gates_allowed)
             )
             if unknown_standalone_gates:
                 msg = (
@@ -915,7 +914,9 @@ class FlextInfraConfigModelsMake:
                 *self.project_check_gates,
             )
             return tuple(
-                gate for gate in declared if gate not in suspended and gate not in standalone
+                gate
+                for gate in declared
+                if gate not in suspended and gate not in standalone
             )
 
         @m.computed_field

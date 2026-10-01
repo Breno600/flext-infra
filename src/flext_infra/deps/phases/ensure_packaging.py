@@ -116,7 +116,10 @@ class FlextInfraEnsurePackagingPhase:
         package_path = f"{c.Infra.DEFAULT_SRC_DIR}/{package_name}"
         package_paths = (
             package_path,
-            *(f"{c.Infra.DEFAULT_SRC_DIR}/{package}" for package in topology.root_packages),
+            *(
+                f"{c.Infra.DEFAULT_SRC_DIR}/{package}"
+                for package in topology.root_packages
+            ),
         )
         module_paths = tuple(
             f"{c.Infra.DEFAULT_SRC_DIR}/{module}.py" for module in topology.root_modules
@@ -126,7 +129,9 @@ class FlextInfraEnsurePackagingPhase:
             (data_dir, f"{package_name}/{data_dir}") for data_dir in data.files
         ) + tuple(
             (module_path, f"{module}.py")
-            for module_path, module in zip(module_paths, topology.root_modules, strict=True)
+            for module_path, module in zip(
+                module_paths, topology.root_modules, strict=True
+            )
         )
         return toml.PhaseConfig(
             name="packaging",
@@ -140,7 +145,11 @@ class FlextInfraEnsurePackagingPhase:
                         toml.ListOp(key="packages", values=package_paths),
                         toml.ListOp(
                             key="only-include",
-                            values=(*package_paths, *data.directories, *topology.repository_namespace_packages),
+                            values=(
+                                *package_paths,
+                                *data.directories,
+                                *topology.repository_namespace_packages,
+                            ),
                         ),
                         toml.SetOp(
                             key="sources",
@@ -156,7 +165,10 @@ class FlextInfraEnsurePackagingPhase:
                                     directory: f"{package_name}/{directory}"
                                     for directory in data.directories
                                 },
-                                **{namespace: namespace for namespace in topology.repository_namespace_packages},
+                                **{
+                                    namespace: namespace
+                                    for namespace in topology.repository_namespace_packages
+                                },
                             },
                         ),
                         toml.RemoveOp(key="force-include"),
@@ -220,7 +232,12 @@ class FlextInfraEnsurePackagingPhase:
             project_dir, payload, docs_meta
         )
         if not package_name:
-            if topology.root_modules or topology.root_packages or topology.packaged_data_paths or topology.repository_namespace_packages:
+            if (
+                topology.root_modules
+                or topology.root_packages
+                or topology.packaged_data_paths
+                or topology.repository_namespace_packages
+            ):
                 msg = (
                     "project package name is required when additional distribution "
                     "roots are declared"
@@ -267,19 +284,21 @@ class FlextInfraEnsurePackagingPhase:
                 msg = f"repository namespace must be implicit: {source}"
                 raise ValueError(msg)
             self._validate_data_tree(project_dir.resolve(), source, frozenset())
-            if namespace in topology.packaged_data_paths:
+            if any(
+                path == namespace or path.startswith(f"{namespace}/")
+                for path in topology.packaged_data_paths
+            ):
                 msg = f"repository namespace overlaps packaged data: {namespace}"
                 raise ValueError(msg)
         data_paths = self.resolve_data_paths(
-            project_dir, package_name, topology.packaged_data_paths, topology.planned_data_files
+            project_dir,
+            package_name,
+            topology.packaged_data_paths,
+            topology.planned_data_files,
         )
         return u.Infra.apply_toml_phases(
             payload,
-            self._phase(
-                package_name=package_name,
-                data=data_paths,
-                topology=topology,
-            ),
+            self._phase(package_name=package_name, data=data_paths, topology=topology),
         )
 
 

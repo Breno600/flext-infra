@@ -37,7 +37,10 @@ class TestsFlextInfraCodegenPackagedDataWheel:
 
     @staticmethod
     def _prepare_project(
-        root: Path, *, package_config: bool, packaged_data_paths: tuple[str, ...] = (),
+        root: Path,
+        *,
+        package_config: bool,
+        packaged_data_paths: tuple[str, ...] = (),
         repository_namespace_packages: tuple[str, ...] = (),
     ) -> None:
         """Materialize one governed project, optionally shipping in-package data."""
@@ -205,6 +208,44 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         sources = u.Tests.toml_mapping(self._wheel_target(infra_git_repo)["sources"])
         tm.that(sources.get("infra"), eq="infra")
         tm.that("infra" in self._sdist_only_include(infra_git_repo), eq=True)
+
+        wheel_dir = infra_git_repo.parent / "namespace-wheel"
+        sdist_dir = infra_git_repo.parent / "namespace-sdist"
+        tm.ok(
+            u.Cli.run_checked(
+                [
+                    "uv",
+                    "build",
+                    "--wheel",
+                    "--no-build-isolation",
+                    "--out-dir",
+                    str(wheel_dir),
+                ],
+                cwd=infra_git_repo,
+            )
+        )
+        tm.ok(
+            u.Cli.run_checked(
+                [
+                    "uv",
+                    "build",
+                    "--sdist",
+                    "--no-build-isolation",
+                    "--out-dir",
+                    str(sdist_dir),
+                ],
+                cwd=infra_git_repo,
+            )
+        )
+        with zipfile.ZipFile(next(wheel_dir.glob("*.whl"))) as archive:
+            tm.that("infra/pulumi/__main__.py" in archive.namelist(), eq=True)
+        with tarfile.open(next(sdist_dir.glob("*.tar.gz"))) as archive:
+            members = {
+                member.name.partition("/")[2]
+                for member in archive.getmembers()
+                if member.isfile()
+            }
+            tm.that("infra/pulumi/__main__.py" in members, eq=True)
 
     @pytest.mark.slow
     def test_undeclared_infrastructure_dir_stays_out_of_archives(

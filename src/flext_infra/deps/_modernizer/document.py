@@ -250,9 +250,7 @@ class FlextInfraPyprojectModernizerDocument:
                 payload, path=path, generated_python_roots=topology.declared_python_dirs
             ),
             *FlextInfraEnsurePackagingPhase().apply_payload(
-                payload,
-                path=path,
-                topology=topology,
+                payload, path=path, topology=topology
             ),
         ]
         if paths_manager is not None:
