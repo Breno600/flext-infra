@@ -1,0 +1,7 @@
+id: ban-flext-grpc-library-import
+valid:
+  - from flext_grpc import FlextGrpc
+  - import grpc_tools
+invalid:
+  - import grpc
+  - from grpc import aio

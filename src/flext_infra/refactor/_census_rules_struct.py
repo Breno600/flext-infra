@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraRefactorCensusRulesStructMixin(
-    FlextInfraRefactorCensusRulesSharedMixin
+    FlextInfraRefactorCensusRulesSharedMixin,
 ):
     """Compatibility and structural rule scanners for one module.
 
@@ -35,11 +35,14 @@ class FlextInfraRefactorCensusRulesStructMixin(
     """
 
     def _rule_class_placement(
-        self, scan: m.Infra.ModuleScan
+        self,
+        scan: m.Infra.ModuleScan,
     ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]:
         """Detect + plan fixes for misplaced class declarations."""
         ctx = self._detector_context(
-            scan.rope, scan.file_path, convention=scan.convention
+            scan.rope,
+            scan.file_path,
+            convention=scan.convention,
         )
         selected_kinds = scan.scan_config.selected_kinds
         violations: list[m.Infra.Violation] = []
@@ -65,7 +68,7 @@ class FlextInfraRefactorCensusRulesStructMixin(
                     description=detector_violation.suggestion,
                     fixable=detector_violation.fixable,
                     fix_action=action,
-                )
+                ),
             )
             fixes.append(
                 m.Infra.Fix(
@@ -74,25 +77,30 @@ class FlextInfraRefactorCensusRulesStructMixin(
                     source_file=str(scan.file_path),
                     files_changed=1,
                     applied=self._fix_key(
-                        scan.file_path, detector_violation.name, action
+                        scan.file_path,
+                        detector_violation.name,
+                        action,
                     )
                     in scan.scan_config.applied,
-                )
+                ),
             )
         return violations, fixes
 
     def _rule_private_import_bypass(
-        self, scan: m.Infra.ModuleScan
+        self,
+        scan: m.Infra.ModuleScan,
     ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]:
         """Detect + plan fixes for private-import bypass violations."""
         ctx = self._detector_context(
-            scan.rope, scan.file_path, convention=scan.convention
+            scan.rope,
+            scan.file_path,
+            convention=scan.convention,
         )
         selected_kinds = scan.scan_config.selected_kinds
         violations: list[m.Infra.Violation] = []
         fixes: list[m.Infra.Fix] = []
         for detector_violation in FlextInfraPrivateImportBypassDetector.detect_file(
-            ctx
+            ctx,
         ):
             object_kind = "import"
             if selected_kinds and object_kind not in selected_kinds:
@@ -110,7 +118,7 @@ class FlextInfraRefactorCensusRulesStructMixin(
                     description=detector_violation.detail,
                     fixable=fixable,
                     fix_action=action,
-                )
+                ),
             )
             if fixable:
                 fixes.append(
@@ -120,19 +128,24 @@ class FlextInfraRefactorCensusRulesStructMixin(
                         source_file=str(scan.file_path),
                         files_changed=1,
                         applied=self._fix_key(
-                            scan.file_path, detector_violation.imported_symbol, action
+                            scan.file_path,
+                            detector_violation.imported_symbol,
+                            action,
                         )
                         in scan.scan_config.applied,
-                    )
+                    ),
                 )
         return violations, fixes
 
     def _rule_compatibility_alias(
-        self, scan: m.Infra.ModuleScan
+        self,
+        scan: m.Infra.ModuleScan,
     ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]:
         """Detect + plan fixes for compatibility-alias violations."""
         ctx = self._detector_context(
-            scan.rope, scan.file_path, convention=scan.convention
+            scan.rope,
+            scan.file_path,
+            convention=scan.convention,
         )
         selected_kinds = scan.scan_config.selected_kinds
         violations: list[m.Infra.Violation] = []
@@ -154,7 +167,8 @@ class FlextInfraRefactorCensusRulesStructMixin(
             if selected_kinds and object_kind not in selected_kinds:
                 continue
             action = FlextInfraCompatibilityAliasDetector.fix_action_for(
-                detector_violation, current_project=scan.project
+                detector_violation,
+                current_project=scan.project,
             )
             violations.append(
                 m.Infra.Violation(
@@ -171,7 +185,7 @@ class FlextInfraRefactorCensusRulesStructMixin(
                     ),
                     fixable=True,
                     fix_action=action,
-                )
+                ),
             )
             fixes.append(
                 m.Infra.Fix(
@@ -180,19 +194,24 @@ class FlextInfraRefactorCensusRulesStructMixin(
                     source_file=str(scan.file_path),
                     files_changed=1,
                     applied=self._fix_key(
-                        scan.file_path, detector_violation.alias_name, action
+                        scan.file_path,
+                        detector_violation.alias_name,
+                        action,
                     )
                     in scan.scan_config.applied,
-                )
+                ),
             )
         return violations, fixes
 
     def _rule_inline_import(
-        self, scan: m.Infra.ModuleScan
+        self,
+        scan: m.Infra.ModuleScan,
     ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]:
         """Detect + plan fixes for inline/lazy imports inside function bodies."""
         ctx = self._detector_context(
-            scan.rope, scan.file_path, convention=scan.convention
+            scan.rope,
+            scan.file_path,
+            convention=scan.convention,
         )
         selected_kinds = scan.scan_config.selected_kinds
         violations: list[m.Infra.Violation] = []
@@ -217,7 +236,7 @@ class FlextInfraRefactorCensusRulesStructMixin(
                     description=detector_violation.detail,
                     fixable=fixable,
                     fix_action=action,
-                )
+                ),
             )
             if fixable:
                 fixes.append(
@@ -227,25 +246,30 @@ class FlextInfraRefactorCensusRulesStructMixin(
                         source_file=str(scan.file_path),
                         files_changed=1,
                         applied=self._fix_key(
-                            scan.file_path, detector_violation.current_import, action
+                            scan.file_path,
+                            detector_violation.current_import,
+                            action,
                         )
                         in scan.scan_config.applied,
-                    )
+                    ),
                 )
         return violations, fixes
 
     def _rule_silent_failure(
-        self, scan: m.Infra.ModuleScan
+        self,
+        scan: m.Infra.ModuleScan,
     ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]:
         """Detect exception-silencing patterns; auto-fix deterministic sentinels."""
         ctx = self._detector_context(
-            scan.rope, scan.file_path, convention=scan.convention
+            scan.rope,
+            scan.file_path,
+            convention=scan.convention,
         )
         selected_kinds = scan.scan_config.selected_kinds
         violations: list[m.Infra.Violation] = []
         fixes: list[m.Infra.Fix] = []
         for detector_violation in FlextInfraSilentFailureDetector.detect_violations(
-            ctx
+            ctx,
         ):
             object_kind = "statement"
             if selected_kinds and object_kind not in selected_kinds:
@@ -263,7 +287,7 @@ class FlextInfraRefactorCensusRulesStructMixin(
                     description=detector_violation.detail,
                     fixable=fixable,
                     fix_action=action,
-                )
+                ),
             )
             if fixable:
                 fixes.append(
@@ -273,10 +297,12 @@ class FlextInfraRefactorCensusRulesStructMixin(
                         source_file=str(scan.file_path),
                         files_changed=1,
                         applied=self._fix_key(
-                            scan.file_path, detector_violation.kind, action
+                            scan.file_path,
+                            detector_violation.kind,
+                            action,
                         )
                         in scan.scan_config.applied,
-                    )
+                    ),
                 )
         return violations, fixes
 

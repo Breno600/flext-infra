@@ -36,7 +36,8 @@ class FlextInfraRefactorCensusRulesAliasMixin(FlextInfraRefactorCensusRulesShare
         ) -> str: ...
 
     def _rule_runtime_alias(
-        self, scan: m.Infra.ModuleScan
+        self,
+        scan: m.Infra.ModuleScan,
     ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]:
         """Detect + plan fixes for runtime-alias re-export violations."""
         convention = scan.convention
@@ -64,7 +65,8 @@ class FlextInfraRefactorCensusRulesAliasMixin(FlextInfraRefactorCensusRulesShare
                 runtime_target_kind, runtime_target_line = expected_symbol
         fixable = runtime_target is not None or runtime_target_kind == "class"
         for detector_violation in FlextInfraRuntimeAliasDetector.detect_file(
-            ctx, policy=convention.module_policy
+            ctx,
+            policy=convention.module_policy,
         ):
             if detector_violation.kind == "unbound":
                 # A published letter nothing binds is repaired by un-publishing
@@ -81,7 +83,7 @@ class FlextInfraRefactorCensusRulesAliasMixin(FlextInfraRefactorCensusRulesShare
                         description=detector_violation.detail,
                         fixable=True,
                         fix_action="remove_stale_runtime_alias_export",
-                    )
+                    ),
                 )
                 fixes.append(
                     m.Infra.Fix(
@@ -95,7 +97,7 @@ class FlextInfraRefactorCensusRulesAliasMixin(FlextInfraRefactorCensusRulesShare
                             "remove_stale_runtime_alias_export",
                         )
                         in scan.scan_config.applied,
-                    )
+                    ),
                 )
                 continue
             object_name = runtime_target_name if fixable else detector_violation.alias
@@ -115,7 +117,7 @@ class FlextInfraRefactorCensusRulesAliasMixin(FlextInfraRefactorCensusRulesShare
                     description=detector_violation.detail,
                     fixable=fixable,
                     fix_action=action,
-                )
+                ),
             )
             if fixable:
                 fixes.append(
@@ -126,22 +128,25 @@ class FlextInfraRefactorCensusRulesAliasMixin(FlextInfraRefactorCensusRulesShare
                         files_changed=1,
                         applied=self._fix_key(scan.file_path, object_name, action)
                         in scan.scan_config.applied,
-                    )
+                    ),
                 )
         return violations, fixes
 
     def _rule_manual_typing_alias(
-        self, scan: m.Infra.ModuleScan
+        self,
+        scan: m.Infra.ModuleScan,
     ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]:
         """Detect + plan fixes for manual typing-alias violations."""
         manual_ctx = self._detector_context(
-            scan.rope, scan.file_path, convention=scan.convention
+            scan.rope,
+            scan.file_path,
+            convention=scan.convention,
         )
         selected_kinds = scan.scan_config.selected_kinds
         violations: list[m.Infra.Violation] = []
         fixes: list[m.Infra.Fix] = []
         for detector_violation in FlextInfraManualTypingAliasDetector.detect_file(
-            manual_ctx
+            manual_ctx,
         ):
             matched = (
                 self._named_object(scan.objects, detector_violation.name)
@@ -167,7 +172,7 @@ class FlextInfraRefactorCensusRulesAliasMixin(FlextInfraRefactorCensusRulesShare
                     description=detector_violation.detail,
                     fixable=bool(action),
                     fix_action=action,
-                )
+                ),
             )
             if action:
                 fixes.append(
@@ -176,14 +181,16 @@ class FlextInfraRefactorCensusRulesAliasMixin(FlextInfraRefactorCensusRulesShare
                         action=action,
                         source_file=str(scan.file_path),
                         target_file=str(
-                            scan.convention.package_dir / c.Infra.TYPINGS_PY
+                            scan.convention.package_dir / c.Infra.TYPINGS_PY,
                         ),
                         files_changed=2,
                         applied=self._fix_key(
-                            scan.file_path, detector_violation.name, action
+                            scan.file_path,
+                            detector_violation.name,
+                            action,
                         )
                         in scan.scan_config.applied,
-                    )
+                    ),
                 )
         return violations, fixes
 

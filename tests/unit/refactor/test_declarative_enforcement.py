@@ -25,7 +25,8 @@ class TestsFlextInfraRefactorDeclarativeEnforcement:
 
     @staticmethod
     def _ctx(
-        rope_project: t.Infra.RopeProject, file_path: Path
+        rope_project: t.Infra.RopeProject,
+        file_path: Path,
     ) -> m.Infra.DetectorContext:
         return m.Infra.DetectorContext(
             file_path=file_path,
@@ -48,7 +49,8 @@ class TestsFlextInfraRefactorDeclarativeEnforcement:
         source.write_text(source_text, encoding="utf-8")
         with u.Infra.open_project(tmp_path) as rope_project:
             probes = FlextInfraRefactorDeclarativeEnforcement.detect(
-                rule, cls._ctx(rope_project, source)
+                rule,
+                cls._ctx(rope_project, source),
             )
         return source, probes
 
@@ -65,7 +67,8 @@ class TestsFlextInfraRefactorDeclarativeEnforcement:
         tm.that(getattr(probes[0], "rule_id", ""), eq="090")
 
     def test_supported_rules_are_selected_by_source_metadata(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Declarative support is source-driven, not tied to catalog IDs."""
         rule = m.EnforcementRuleSpec(
@@ -73,12 +76,15 @@ class TestsFlextInfraRefactorDeclarativeEnforcement:
             description="Synthetic stub-file rule",
             severity=core_c.EnforcementRuleSeverity.HIGH,
             source=m.EnforcementInfraDetectorSource(
-                violation_field="stub_file_violations"
+                violation_field="stub_file_violations",
             ),
         )
         tm.that(FlextInfraRefactorDeclarativeEnforcement.supports(rule), eq=True)
         stub, probes = self._detect(
-            tmp_path, rule=rule, file_name="demo.pyi", source_text="x: int\n"
+            tmp_path,
+            rule=rule,
+            file_name="demo.pyi",
+            source_text="x: int\n",
         )
         tm.that(len(probes), eq=1)
         tm.that(getattr(probes[0], "file_path", ""), eq=str(stub))
@@ -118,7 +124,10 @@ class TestsFlextInfraRefactorDeclarativeEnforcement:
         ],
     )
     def test_magic_literal_exemptions(
-        self, tmp_path: Path, source_text: str, exemption: str
+        self,
+        tmp_path: Path,
+        source_text: str,
+        exemption: str,
     ) -> None:
         """Default args, annotations, and module constants stay exempt."""
         _source, probes = self._detect(
@@ -169,13 +178,15 @@ class TestsFlextInfraRefactorDeclarativeEnforcement:
             encoding="utf-8",
         )
         (tmp_path / "pyproject.toml").write_text(
-            '[project]\nname = "flext_infra"\nversion = "0.1.0"\n', encoding="utf-8"
+            '[project]\nname = "flext_infra"\nversion = "0.1.0"\n',
+            encoding="utf-8",
         )
         with u.Infra.open_project(tmp_path) as rope_project:
             ctx = self._ctx(rope_project, source)
             ctx.project_name = "flext_infra"
             probes = FlextInfraRefactorDeclarativeEnforcement.detect(
-                u.Tests.enforcement_rule("ENFORCE-080"), ctx
+                u.Tests.enforcement_rule("ENFORCE-080"),
+                ctx,
             )
         tm.that(len(probes), eq=1)
         tm.that(getattr(probes[0], "object_name", ""), eq="c")
@@ -197,7 +208,8 @@ class TestsFlextInfraRefactorDeclarativeEnforcement:
             pytest.raises(ValueError, match="unsupported declarative"),
         ):
             FlextInfraRefactorDeclarativeEnforcement.detect(
-                rule, self._ctx(rope_project, source)
+                rule,
+                self._ctx(rope_project, source),
             )
 
 
@@ -210,10 +222,12 @@ class TestsFlextInfraRefactorDeclarativeEnforcementInCensus:
         src = workspace / "src" / project_name
         src.mkdir(parents=True)
         (src / "__init__.py").write_text(
-            "from __future__ import annotations\n", encoding="utf-8"
+            "from __future__ import annotations\n",
+            encoding="utf-8",
         )
         (workspace / "pyproject.toml").write_text(
-            f'[project]\nname = "{project_name}"\nversion = "0.1.0"\n', encoding="utf-8"
+            f'[project]\nname = "{project_name}"\nversion = "0.1.0"\n',
+            encoding="utf-8",
         )
         return workspace
 
@@ -259,7 +273,10 @@ class TestsFlextInfraRefactorDeclarativeEnforcementInCensus:
         stub.write_text("x: int\n", encoding="utf-8")
 
         u.Tests.census_report(
-            workspace, rules=("ENFORCE-090",), apply_changes=True, dry_run=True
+            workspace,
+            rules=("ENFORCE-090",),
+            apply_changes=True,
+            dry_run=True,
         )
         tm.that(stub.exists(), eq=True)
 
@@ -286,7 +303,8 @@ class TestsFlextInfraRefactorDeclarativeEnforcementInCensus:
         tm.that(violations[0].fixable, eq=False)
 
     def test_census_reports_enforce_080_foreign_canonical_alias(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """ENFORCE-080 appears in the census for foreign canonical aliases."""
         workspace = self._build_workspace(tmp_path, "flext_infra")

@@ -36,7 +36,8 @@ class FlextInfraModelsRopeRules:
         body_classes_or_assigns: Annotated[
             bool | None,
             u.Field(
-                default=None, description="Whether the body declares classes/assigns"
+                default=None,
+                description="Whether the body declares classes/assigns",
             ),
         ]
 
@@ -56,7 +57,8 @@ class FlextInfraModelsRopeRules:
             u.Field(default=0, description="Attribute chain segments dropped by lift"),
         ]
         delete_source: Annotated[
-            bool, u.Field(default=False, description="Lift deletes the source class")
+            bool,
+            u.Field(default=False, description="Lift deletes the source class"),
         ]
         strip_underscore: Annotated[
             bool,
@@ -79,11 +81,12 @@ class FlextInfraModelsRopeRules:
             u.Field(
                 description=(
                     "Violation template with {module}, {class}, and {line} placeholders"
-                )
+                ),
             ),
         ]
         files: Annotated[
-            tuple[str, ...], u.Field(description="Package-relative glob selectors")
+            tuple[str, ...],
+            u.Field(description="Package-relative glob selectors"),
         ]
         select: Annotated[
             FlextInfraModelsRopeRules.RopeSelect,
@@ -94,7 +97,8 @@ class FlextInfraModelsRopeRules:
             u.Field(description="Ordered generic operations"),
         ]
         auto_fix: Annotated[
-            bool, u.Field(default=True, description="Apply the ops automatically")
+            bool,
+            u.Field(default=True, description="Apply the ops automatically"),
         ]
         propagate_mro: Annotated[
             bool,

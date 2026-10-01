@@ -23,7 +23,7 @@ class FlextInfraConstantsPromoted:
         _default_error_code: ClassVar[str] = "PROMOTED_REGISTRY_ERROR"
 
     class PromotedMissingHeaderError(PromotedRegistryError):
-        """Raised when a file carries no ``cosmos-command`` header at all.
+        """Raised when a file carries no ``flext-command`` header at all.
 
         A file without a header is not a promoted command; a present but invalid
         header is a defect, so the two never share an exception type.
@@ -33,9 +33,9 @@ class FlextInfraConstantsPromoted:
 
     @unique
     class PromotedHeader(StrEnum):
-        """``cosmos-command`` header markers and TOML keys."""
+        """``flext-command`` header markers and TOML keys."""
 
-        START = "/// cosmos-command"
+        START = "/// flext-command"
         END = "///"
         COMMENT = "#"
         VERB = "verb"
@@ -62,12 +62,12 @@ class FlextInfraConstantsPromoted:
         WHAT = "WHAT"
         HELP = "HELP"
         OPTIONS = "OPTIONS"
-        DISPATCHED = "COSMOS_COMMAND_DISPATCHED"
-        VERB = "COSMOS_COMMAND_VERB"
-        COMMAND_WHAT = "COSMOS_COMMAND_WHAT"
-        DOMAIN = "COSMOS_COMMAND_DOMAIN"
-        PATH = "COSMOS_COMMAND_PATH"
-        SUBMODULE_ROOT = "COSMOS_SUBMODULE_ROOT"
+        DISPATCHED = "FLEXT_COMMAND_DISPATCHED"
+        VERB = "FLEXT_COMMAND_VERB"
+        COMMAND_WHAT = "FLEXT_COMMAND_WHAT"
+        DOMAIN = "FLEXT_COMMAND_DOMAIN"
+        PATH = "FLEXT_COMMAND_PATH"
+        SUBMODULE_ROOT = "FLEXT_SUBMODULE_ROOT"
         VIRTUAL_ENV = "VIRTUAL_ENV"
         UV_PROJECT_ENVIRONMENT = "UV_PROJECT_ENVIRONMENT"
         PYTHON = "PYTHON"

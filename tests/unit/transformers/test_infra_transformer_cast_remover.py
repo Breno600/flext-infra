@@ -68,7 +68,9 @@ def link_count(value: object) -> Literal[1] | None:
         probe = SimpleNamespace(file_path=str(module))
         adapter = FlextInfraTransformerFixerAdapter(tmp_path)
         ctx = m.Infra.FixEnforcementCommand(
-            repository_root=str(tmp_path), apply=True, check_after=False
+            repository_root=str(tmp_path),
+            apply=True,
+            check_after=False,
         )
         result = adapter.fix_project(tmp_path, ((rule, probe),), ctx)
         tm.that(module.read_text(encoding="utf-8"), eq=self._LOAD_BEARING_SOURCE)

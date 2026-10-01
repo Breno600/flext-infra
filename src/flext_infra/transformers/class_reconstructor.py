@@ -50,14 +50,18 @@ class FlextInfraRefactorClassReconstructor(FlextInfraRopeTransformer):
             if not u.Infra.abstract_class(class_obj):
                 continue
             block_edits = self._class_block_edits(
-                class_name=class_name, class_obj=class_obj, lines=lines
+                class_name=class_name,
+                class_obj=class_obj,
+                lines=lines,
             )
             edits.extend(block_edits)
         if not edits:
             return source, list(self.changes)
         updated = source
         for start, end, replacement in sorted(
-            edits, key=operator.itemgetter(0), reverse=True
+            edits,
+            key=operator.itemgetter(0),
+            reverse=True,
         ):
             updated = f"{updated[:start]}{replacement}{updated[end:]}"
         return updated, list(self.changes)
@@ -82,7 +86,8 @@ class FlextInfraRefactorClassReconstructor(FlextInfraRopeTransformer):
         source = "".join(lines)
         edits: list[t.Triple[int, int, str]] = []
         for block in self._contiguous_method_blocks(
-            method_chunks=method_chunks, source=source
+            method_chunks=method_chunks,
+            source=source,
         ):
             if len(block) < c.Infra.MIN_METHODS_FOR_REORDER:
                 continue
@@ -105,7 +110,10 @@ class FlextInfraRefactorClassReconstructor(FlextInfraRopeTransformer):
         return edits
 
     def _collect_method_chunks(
-        self, *, class_obj: t.Infra.RopePyObject, lines: t.SequenceOf[str]
+        self,
+        *,
+        class_obj: t.Infra.RopePyObject,
+        lines: t.SequenceOf[str],
     ) -> list[t.Quad[m.Infra.MethodInfo, int, int, str]]:
         """Collect ``(MethodInfo, start_offset, end_offset, source_chunk)`` ordered by line."""
         line_offsets = self._line_offsets(lines)
@@ -125,7 +133,8 @@ class FlextInfraRefactorClassReconstructor(FlextInfraRopeTransformer):
                 continue
             decorators = u.Infra.decorator_names(method_obj)
             start_line = u.Infra.first_decorator_line(
-                method_obj, default_line=location[1]
+                method_obj,
+                default_line=location[1],
             )
             method_scope = method_obj.get_scope()
             end_line = (
@@ -163,7 +172,7 @@ class FlextInfraRefactorClassReconstructor(FlextInfraRopeTransformer):
         if not method_chunks:
             return []
         blocks: list[list[t.Quad[m.Infra.MethodInfo, int, int, str]]] = [
-            [method_chunks[0]]
+            [method_chunks[0]],
         ]
         for chunk in method_chunks[1:]:
             previous = blocks[-1][-1]

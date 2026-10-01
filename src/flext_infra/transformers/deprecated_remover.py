@@ -37,7 +37,7 @@ class FlextInfraRefactorDeprecatedRemover:
         if "deprecated" in class_name.lower():
             return True
         return c.Infra.DUNDER_INIT in class_body and bool(
-            c.Infra.DEPRECATION_WARN_RE.search(class_body)
+            c.Infra.DEPRECATION_WARN_RE.search(class_body),
         )
 
     def _record_change(self, message: str) -> None:

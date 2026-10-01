@@ -86,7 +86,9 @@ class FlextInfraRefactorOpenEncoding(FlextInfraRopeTransformer):
 
     @classmethod
     def _mode_expr(
-        cls, node: ast.Call, call_kind: Literal["builtin", "path"]
+        cls,
+        node: ast.Call,
+        call_kind: Literal["builtin", "path"],
     ) -> ast.expr | None:
         """Return the explicit mode expression, or None for default text mode."""
         for keyword in node.keywords:

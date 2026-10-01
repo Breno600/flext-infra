@@ -29,7 +29,8 @@ class TestsFlextInfraUtilitiesDocsGithubLinks:
             tm.that(all(identities), eq=True)
             tm.that(len(identities), eq=len(repos))
             tm.that(
-                all(repo.organization and repo.repository for repo in repos), eq=True
+                all(repo.organization and repo.repository for repo in repos),
+                eq=True,
             )
 
         def test_repos_contain_flext(self) -> None:
@@ -98,7 +99,7 @@ class TestsFlextInfraUtilitiesDocsGithubLinks:
 
         def test_parse_valid_blob_url(self) -> None:
             match = u.Infra.docs_parse_github_doc_url(
-                "https://github.com/flext-sh/flext/blob/main/README.md"
+                "https://github.com/flext-sh/flext/blob/main/README.md",
             )
             tm.that(match is not None, eq=True)
             if match is not None:
@@ -110,7 +111,7 @@ class TestsFlextInfraUtilitiesDocsGithubLinks:
 
         def test_parse_valid_tree_url(self) -> None:
             match = u.Infra.docs_parse_github_doc_url(
-                "https://github.com/example-org/example-repo/tree/feature-line/src/"
+                "https://github.com/example-org/example-repo/tree/feature-line/src/",
             )
             tm.that(match is not None, eq=True)
             if match is not None:
@@ -128,7 +129,7 @@ class TestsFlextInfraUtilitiesDocsGithubLinks:
 
         def test_parse_strips_surrounding_whitespace(self) -> None:
             match = u.Infra.docs_parse_github_doc_url(
-                "  https://github.com/flext-sh/flext/blob/main/README.md  "
+                "  https://github.com/flext-sh/flext/blob/main/README.md  ",
             )
             tm.that(match is not None, eq=True)
 
@@ -146,22 +147,29 @@ class TestsFlextInfraUtilitiesDocsGithubLinks:
 
         def test_canonical_tree_url(self) -> None:
             url = u.Infra.docs_canonical_github_url(
-                "flext-sh", "flext", "src/", is_dir=True
+                "flext-sh",
+                "flext",
+                "src/",
+                is_dir=True,
             )
             tm.that(url is not None, eq=True)
             if url is not None:
                 tm.that(
-                    url, eq="https://github.com/flext-sh/flext/tree/0.12.0-dev/src/"
+                    url,
+                    eq="https://github.com/flext-sh/flext/tree/0.12.0-dev/src/",
                 )
 
         def test_canonical_unknown_repo_returns_none(self) -> None:
             tm.that(
-                u.Infra.docs_canonical_github_url("unknown", "repo", "path"), none=True
+                u.Infra.docs_canonical_github_url("unknown", "repo", "path"),
+                none=True,
             )
 
         def test_canonical_member_repo_url(self) -> None:
             url = u.Infra.docs_canonical_github_url(
-                "flext-sh", "flext-core", "src/__init__.py"
+                "flext-sh",
+                "flext-core",
+                "src/__init__.py",
             )
             tm.that(url is not None, eq=True)
             if url is not None:
@@ -178,7 +186,7 @@ class TestsFlextInfraUtilitiesDocsGithubLinks:
 
         def test_rewrite_stale_org_to_governed(self) -> None:
             rewritten = u.Infra.docs_rewrite_github_url(
-                "https://github.com/organization/flext/blob/main/README.md"
+                "https://github.com/organization/flext/blob/main/README.md",
             )
             tm.that(rewritten is not None, eq=True)
             if rewritten is not None:
@@ -189,7 +197,7 @@ class TestsFlextInfraUtilitiesDocsGithubLinks:
 
         def test_rewrite_wrong_branch(self) -> None:
             rewritten = u.Infra.docs_rewrite_github_url(
-                "https://github.com/flext-sh/flext/blob/main/README.md"
+                "https://github.com/flext-sh/flext/blob/main/README.md",
             )
             tm.that(rewritten is not None, eq=True)
             if rewritten is not None:
@@ -201,14 +209,14 @@ class TestsFlextInfraUtilitiesDocsGithubLinks:
         def test_rewrite_already_correct_returns_none(self) -> None:
             tm.that(
                 u.Infra.docs_rewrite_github_url(
-                    "https://github.com/flext-sh/flext/blob/0.12.0-dev/README.md"
+                    "https://github.com/flext-sh/flext/blob/0.12.0-dev/README.md",
                 ),
                 none=True,
             )
 
         def test_rewrite_member_repo_stale_org(self) -> None:
             rewritten = u.Infra.docs_rewrite_github_url(
-                "https://github.com/organization/flext-core/blob/main/README.md"
+                "https://github.com/organization/flext-core/blob/main/README.md",
             )
             tm.that(rewritten is not None, eq=True)
             if rewritten is not None:
@@ -223,7 +231,7 @@ class TestsFlextInfraUtilitiesDocsGithubLinks:
         def test_rewrite_stale_org_non_flext_returns_none(self) -> None:
             tm.that(
                 u.Infra.docs_rewrite_github_url(
-                    "https://github.com/organization/example-org/foo"
+                    "https://github.com/organization/example-org/foo",
                 ),
                 none=True,
             )
@@ -231,7 +239,7 @@ class TestsFlextInfraUtilitiesDocsGithubLinks:
         def test_rewrite_stale_org_unparseable_returns_none(self) -> None:
             tm.that(
                 u.Infra.docs_rewrite_github_url(
-                    "https://github.com/organization/unknown-repo/blob/main/README.md"
+                    "https://github.com/organization/unknown-repo/blob/main/README.md",
                 ),
                 none=True,
             )
@@ -256,19 +264,24 @@ class TestsFlextInfraUtilitiesDocsGithubLinks:
                 if repo.local_checkout:
                     continue
                 target = u.Infra.docs_canonical_github_url(
-                    repo.organization, repo.repository, "README.md"
+                    repo.organization,
+                    repo.repository,
+                    "README.md",
                 )
                 assert target is not None
                 assert u.Infra.docs_github_local_path(target) is None
                 issues = u.Infra.docs_github_link_issues(
-                    file="example.md", line_number=1, raw=target, target=target
+                    file="example.md",
+                    line_number=1,
+                    raw=target,
+                    target=target,
                 )
                 assert not issues
 
         def test_local_path_stale_org_returns_none(self) -> None:
             tm.that(
                 u.Infra.docs_github_local_path(
-                    "https://github.com/organization/flext/blob/main/README.md"
+                    "https://github.com/organization/flext/blob/main/README.md",
                 ),
                 none=True,
             )
@@ -276,14 +289,15 @@ class TestsFlextInfraUtilitiesDocsGithubLinks:
         def test_local_path_unknown_repo_returns_none(self) -> None:
             tm.that(
                 u.Infra.docs_github_local_path(
-                    "https://github.com/unknown/repo/blob/main/README.md"
+                    "https://github.com/unknown/repo/blob/main/README.md",
                 ),
                 none=True,
             )
 
         def test_local_path_non_github_url_returns_none(self) -> None:
             tm.that(
-                u.Infra.docs_github_local_path("https://example.com/foo/bar"), none=True
+                u.Infra.docs_github_local_path("https://example.com/foo/bar"),
+                none=True,
             )
 
     class TestDocsGithubLinkIssues:
@@ -327,10 +341,13 @@ class TestsFlextInfraUtilitiesDocsGithubLinks:
 
         def test_correct_url_no_branch_issue(self) -> None:
             target = tm.not_none(
-                u.Infra.docs_canonical_github_url("flext-sh", "flext", "README.md")
+                u.Infra.docs_canonical_github_url("flext-sh", "flext", "README.md"),
             )
             issues = u.Infra.docs_github_link_issues(
-                file="test.md", line_number=1, raw=f"[x]({target})", target=target
+                file="test.md",
+                line_number=1,
+                raw=f"[x]({target})",
+                target=target,
             )
             tm.that(
                 [

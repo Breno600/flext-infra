@@ -57,6 +57,10 @@ class FlextInfraConstantsGit:
 
     GIT_DEFAULT_REMOTE: ClassVar[str] = "origin"
     "Canonical upstream remote name."
+    GIT_URL_SCHEME_PREFIX: ClassVar[str] = "git+"
+    "PEP 508 direct-reference prefix that marks a Git dependency source."
+    GIT_PORCELAIN_PATH_OFFSET: ClassVar[int] = 3
+    "Column where the path starts in one ``git status --porcelain`` v1 line."
     GIT_REMOTE_SSH_SCHEMES: ClassVar[frozenset[str]] = frozenset({"ssh", "git+ssh"})
     "Remote URL schemes treated as SSH-style remote identifiers."
     GIT_REMOTE_SENSITIVE_QUERY_KEYS: ClassVar[frozenset[str]] = frozenset({
