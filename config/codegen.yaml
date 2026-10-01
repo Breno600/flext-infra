@@ -370,8 +370,9 @@ Infra:
           # match a census rule id exactly, tag families by prefix. Unmapped
           # families (e.g. ENFORCE-079) stay fully blocking.
           census_rule_families: [ENFORCE-046, ENFORCE-066, ENFORCE-067, ENFORCE-069, class_prefix]
-      # One filename and the root-relative runner paths; the runner places the
-      # database in platformdirs' external per-worktree cache.
+      # One filename and the root-relative runner paths; the generated Makefile
+      # places the database in the external cache under the declared project
+      # name, so every checkout and worktree of a project shares one history.
       testmon_cache:
         database_filename: .testmondata
         database_environment_variable: TESTMON_DATAFILE
@@ -439,11 +440,13 @@ Infra:
         - {verb: fmt, contexts: [local, pre_commit]}
         - {verb: fix, contexts: [local, pre_commit]}
         - {verb: check, contexts: [local, ci, pre_push, pre_commit]}
-      # Operator ruling 2026-09-23: CI runs setup, the gen fixed point, the
-      # deps audit and check only; make test runs locally and on pre-push,
-      # never in CI. The CI test-only steps (testmon cache, test reports)
-      # render only while a test row declares the ci context.
-        - {verb: test, contexts: [local, pre_push]}
+      # make test runs locally, on pre-push and in CI, always through the
+      # persistent testmon database (tracker key
+      # operator-ruling-2026-10-01-testmon-make-test-only). The CI test-only
+      # steps (testmon cache, test reports) render only while a test row
+      # declares the ci context. Pre-commit runs no tests, and test-full is a
+      # local-only verb with no workflow row.
+        - {verb: test, contexts: [local, ci, pre_push]}
       # Artifacts `make clean` removes. Read by Makefile.j2 for the cache
       # sweep and the root-level directory/file lists.
       clean:
@@ -538,7 +541,7 @@ Infra:
         - name: test
           description: Run incremental tests through the persistent testmon cache.
         - name: test-full
-          description: Run incremental then all tests, including external and CI-excluded markers, through the same persistent testmon cache.
+          description: Run every test locally, including external and CI-excluded markers, without testmon and without any time limit.
         - name: fmt
           description: Apply ruff format --preview and every declared formatter gate. Ruff is the rule; change code, never ruff.
         - name: fix

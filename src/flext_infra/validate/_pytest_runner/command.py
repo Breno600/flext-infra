@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import hashlib
 import sys
-from functools import lru_cache
-from importlib.metadata import distributions
 from pathlib import Path
 from typing import ClassVar
 
@@ -18,32 +15,39 @@ from .base import FlextInfraPytestRunnerBase
 class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
     """Build the single supported pytest command family.
 
-    One suite builder owns every flag; the testmon and coverage verbs are two
-    selections over it (testmon 2.x refuses branch coverage through the cov
+    One suite builder owns every flag. Only the incremental verb carries the
+    testmon plugin; the full and coverage verbs are testmon-free selections
+    over the same builder (testmon 2.x refuses branch coverage through the cov
     plugin, so the two never share a process).
+
+    The incremental verb names no testmon environment. The database is
+    already keyed by the declared project, and testmon's single default
+    environment keeps its history across worktrees and relocks: a per-lane or
+    per-lock environment name started every lane from an empty history, so
+    selection degenerated into the whole suite. Testmon itself still resets
+    that history when the installed package versions change.
     """
 
     _NO_COVERAGE: ClassVar[t.VariadicTuple[str]] = ("--no-cov",)
 
     @staticmethod
-    @lru_cache(maxsize=1)
-    def _toolchain_testmon_environment() -> str:
-        """Fingerprint the interpreter and installed distribution provenance.
+    def bounded(execution_mode: c.Infra.PytestExecutionMode) -> bool:
+        """Return whether a verb runs under the declared time budget.
 
-        Git branch dependencies can change commits while retaining the same
-        package version, so their PEP 610 receipts participate in cache identity.
-        Registry distributions legitimately have no direct-URL receipt.
+        The full verb is the complete local verification and carries no case
+        timeout, suite stop or process deadline.
         """
-        fingerprint = "\n".join((
-            sys.version,
-            *sorted(
-                f"{distribution.name}={distribution.version}:"
-                f"{distribution.read_text('direct_url.json')!r}"
-                for distribution in distributions()
-            ),
-        ))
-        digest = hashlib.sha256(fingerprint.encode()).hexdigest()[:12]
-        return f"toolchain-{digest}"
+        return execution_mode != c.Infra.PytestExecutionMode.FULL
+
+    @classmethod
+    def _case_timeout_args(
+        cls, execution_mode: c.Infra.PytestExecutionMode
+    ) -> t.VariadicTuple[str]:
+        """Bound each case, or disable both pytest-timeout budgets for full."""
+        pytest = config.Infra.tooling.tools.pytest
+        if cls.bounded(execution_mode):
+            return (f"--timeout={pytest.case_timeout_seconds}",)
+        return ("--timeout=0", "-o", f"{c.Infra.FLEXT_SLOW_TIMEOUT_SECONDS}=")
 
     def suite_stop_monotonic(self, *, serial: bool = False) -> float:
         """Derive the graceful suite stop instant from the entrypoint deadline.
@@ -109,13 +113,11 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         workers reading the database while a third writes it collect different
         sets, which xdist aborts with "Different tests were collected". This
         pass runs no test and records its collection and warning evidence.
-        The coverage inventory owns no testmon plugin, so it never reads or
-        writes the persistent database.
+        The full and coverage inventories own no testmon plugin, so they never
+        read or write the persistent database.
         """
         testmon = (
-            ()
-            if execution_mode == c.Infra.PytestExecutionMode.COVERAGE
-            else (
+            (
                 "--testmon",
                 "--testmon-nocollect",
                 # Why: the external-gate deselection is a ``-m`` expression, and
@@ -123,9 +125,9 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                 # ``--testmon-forceselect`` is testmon's declared override for
                 # exactly that case (never combined with ``--testmon-noselect``).
                 *(("--testmon-noselect",) if complete else ("--testmon-forceselect",)),
-                "--testmon-env",
-                f"'{self._toolchain_testmon_environment()}'",
             )
+            if execution_mode == c.Infra.PytestExecutionMode.INCREMENTAL
+            else ()
         )
         return (
             sys.executable,
@@ -140,7 +142,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             *self._plugin_policy_args(execution_mode=execution_mode),
             "--benchmark-disable",
             "--strict-markers",
-            f"--timeout={config.Infra.tooling.tools.pytest.case_timeout_seconds}",
+            *self._case_timeout_args(execution_mode),
             "-o",
             "filterwarnings=",
             "-p",
@@ -156,10 +158,10 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         selected_node_ids: t.StrSequence | None = None,
         invocation: m.Infra.PytestInvocation | None = None,
     ) -> t.VariadicTuple[str]:
-        """Build the testmon suite argv (never the cov plugin).
+        """Build the suite argv (never the cov plugin).
 
         A nonempty selection is enforced from its manifest, so it requires
-        ``manifest_path``.
+        ``manifest_path``. Only the incremental verb carries testmon.
         """
         pytest = config.Infra.tooling.tools.pytest
         invocation = invocation or m.Infra.PytestInvocation()
@@ -188,9 +190,22 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         serial = workers in {"0", "1"}
         if serial:
             workers = "0"
+        testmon = (
+            (
+                "--testmon",
+                *(
+                    ("--testmon-noselect",)
+                    if selection
+                    else ("--testmon-forceselect",)
+                ),
+            )
+            if execution_mode == c.Infra.PytestExecutionMode.INCREMENTAL
+            else ()
+        )
         return self._suite_argv(
             report_dir,
             serial=serial,
+            execution_mode=execution_mode,
             targets=(
                 (str(self.target),)
                 if whole_target or selection is None
@@ -208,10 +223,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                     if selection
                     else ()
                 ),
-                "--testmon",
-                *(("--testmon-noselect",) if selection else ("--testmon-forceselect",)),
-                "--testmon-env",
-                f"'{self._toolchain_testmon_environment()}'",
+                *testmon,
                 *self._NO_COVERAGE,
             ),
         )
@@ -230,6 +242,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         return self._suite_argv(
             report_dir,
             serial=workers == "0",
+            execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
             targets=(str(self.target),),
             workers=workers,
             trailing=(
@@ -247,6 +260,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         report_dir: Path,
         *,
         serial: bool,
+        execution_mode: c.Infra.PytestExecutionMode,
         targets: t.StrSequence,
         workers: str,
         trailing: t.StrSequence,
@@ -260,8 +274,15 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             *targets,
             *pytest.progress_args,
             *pytest.report_args,
-            f"--timeout={pytest.case_timeout_seconds}",
-            f"{c.Infra.PYTEST_SUITE_STOP_OPTION}={self.suite_stop_monotonic(serial=serial)!r}",
+            *self._case_timeout_args(execution_mode),
+            *(
+                (
+                    f"{c.Infra.PYTEST_SUITE_STOP_OPTION}="
+                    f"{self.suite_stop_monotonic(serial=serial)!r}",
+                )
+                if self.bounded(execution_mode)
+                else ()
+            ),
             f"--maxfail={pytest.max_failures}",
             f"--junitxml={report_dir / 'junit.xml'}",
             f"--report-log={report_dir / 'events.jsonl'}",

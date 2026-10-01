@@ -766,13 +766,13 @@ Infra:
           - "singer: Singer protocol contract tests"
         # gate-budget/engineering-core: external-token gates never run inside
         # offline verification (`make test`); the runner records their exclusion.
-        # `make test-full` first completes that incremental phase, then executes
-        # every marker under the same database and deadline. Existing external
-        # tests retain their declared environment and authentication requirements.
+        # `make test-full` executes every marker locally, without testmon and
+        # without any time limit. Existing external tests retain their declared
+        # environment and authentication requirements.
         external-gate-markers: [remote, docker]
         # Operator 2026-09-14: CI and pre-commit share make.ci.value;
-        # local and pre-push execution retain slow tests. The full phase of
-        # `make test-full` includes these markers in every context.
+        # local and pre-push execution retain slow tests. `make test-full`
+        # includes these markers.
         ci-excluded-markers: [slow]
         standard-addopts:
           - --benchmark-disable

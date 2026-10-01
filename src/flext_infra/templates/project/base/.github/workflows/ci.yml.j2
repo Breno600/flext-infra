@@ -114,6 +114,9 @@ jobs:
 {%- for step in make.workflow if step.verb == "test" and "ci" in step.contexts %}
 {%- set ci_tests.selected = true %}
 {%- endfor %}
+{%- if ci_tests.selected %}
+{%- include "_fragments/testmon_cache_restore.j2" %}
+{%- endif %}
 
 {%- for step in make.workflow if "ci" in step.contexts %}
       - name: {{ step.verb }} (blocking)
@@ -189,6 +192,7 @@ jobs:
             apps/*/.reports/**/coverage.json
           if-no-files-found: ignore
           retention-days: 7
+{%- include "_fragments/testmon_cache_save.j2" %}
 {%- endif %}
 
       # Why (flext-7jnr0): save on every outcome — including a failing gate — so

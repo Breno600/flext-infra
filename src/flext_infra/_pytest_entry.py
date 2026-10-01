@@ -16,8 +16,9 @@ class FlextInfraPytestEntry:
     def main(cls) -> int:
         """Parse the Make boundary and return the exact child process status.
 
-        ``full`` runs incremental then complete testmon execution. ``coverage``
-        selects coverage alone; the default is the incremental operation.
+        ``full`` runs the complete suite without testmon or a time limit.
+        ``coverage`` selects coverage alone; the default is the incremental
+        testmon operation.
         """
         mode = sys.argv[1] if len(sys.argv) > 1 else ""
         if mode in {"profile", "profile-collection"}:
@@ -39,7 +40,8 @@ class FlextInfraPytestEntry:
         from flext_infra.validate.pytest_runner import FlextInfraPytestRunner
 
         runner = FlextInfraPytestRunner.from_environment(
-            started_at_monotonic=cls._STARTED_AT_MONOTONIC
+            started_at_monotonic=cls._STARTED_AT_MONOTONIC,
+            testmon=mode not in {"coverage", "full"},
         )
         if mode == "coverage":
             return runner.execute_coverage().unwrap()

@@ -22,8 +22,13 @@ class FlextInfraPytestRunnerBase(s[int]):
     target: Annotated[Path, m.Field(description="Repository-relative test root.")]
     reports: Annotated[Path, m.Field(description="Repository-relative report root.")]
     testmon_db: Annotated[
-        Path,
-        m.Field(description="Absolute external pytest-testmon SQLite database path."),
+        Path | None,
+        m.Field(
+            description=(
+                "Absolute external pytest-testmon SQLite database path; absent "
+                "for the testmon-free full and coverage verbs."
+            )
+        ),
     ]
     ci_context: Annotated[
         bool,
@@ -43,9 +48,17 @@ class FlextInfraPytestRunnerBase(s[int]):
 
     @classmethod
     def from_environment(
-        cls, *, started_at_monotonic: float, collection_command_prefix: t.StrTuple = ()
+        cls,
+        *,
+        started_at_monotonic: float,
+        collection_command_prefix: t.StrTuple = (),
+        testmon: bool = True,
     ) -> Self:
-        """Create the runner exclusively from generated Make inputs."""
+        """Create the runner exclusively from generated Make inputs.
+
+        Only the incremental verb reads the persistent database location; the
+        full verb's Make recipe passes none.
+        """
         ci = config.Infra.codegen.make.ci
         return cls(
             repository_root=Path.cwd(),
@@ -54,12 +67,23 @@ class FlextInfraPytestRunnerBase(s[int]):
             ci_context=(u.Infra.env_lookup(ci.variable) or "").strip() == ci.value,
             target=Path(cls._environment_value(c.Infra.PYTEST_ENV_TARGET)),
             reports=Path(cls._environment_value(c.Infra.PYTEST_ENV_REPORTS)),
-            testmon_db=Path(
-                cls._environment_value(
-                    config.Infra.codegen.make.testmon_cache.database_environment_variable
+            testmon_db=(
+                Path(
+                    cls._environment_value(
+                        config.Infra.codegen.make.testmon_cache.database_environment_variable
+                    )
                 )
+                if testmon
+                else None
             ),
         )
+
+    def required_testmon_db(self) -> Path:
+        """Return the persistent database the incremental verb requires."""
+        if self.testmon_db is None:
+            msg = "the incremental pytest verb requires the persistent testmon database"
+            raise ValueError(msg)
+        return self.testmon_db
 
     @u.model_validator(mode="after")
     def _validate_paths(self) -> Self:
@@ -82,6 +106,8 @@ class FlextInfraPytestRunnerBase(s[int]):
         if not target_path.is_dir() or target_path.is_symlink():
             msg = f"test target must be an existing directory: {self.target}"
             raise ValueError(msg)
+        if self.testmon_db is None:
+            return self
         if not self.testmon_db.is_absolute():
             msg = "testmon database path must be absolute"
             raise ValueError(msg)

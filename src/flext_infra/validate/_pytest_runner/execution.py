@@ -31,7 +31,7 @@ class FlextInfraPytestRunnerExecution(
     ) -> p.Result[m.Infra.TestmonCacheState]:
         """Run the SQLite integrity owner for the testmon database."""
         return FlextInfraTestmonDbInspector(
-            repository_root=self.root, db_path=self.testmon_db, pre_run_digest=digest
+            repository_root=self.root, db_path=self.required_testmon_db(), pre_run_digest=digest
         ).execute()
 
     def _selection_env(
@@ -39,24 +39,24 @@ class FlextInfraPytestRunnerExecution(
     ) -> MutableMapping[str, str]:
         """Return the child environment shared by every runner invocation.
 
-        The coverage verb owns no testmon plugin, so its children neither
-        receive nor inherit a testmon database location.
+        Only the incremental verb owns the testmon plugin; the full and
+        coverage children neither receive nor inherit a database location.
         """
         testmon_keys = (
             config.Infra.codegen.make.testmon_cache.database_environment_variable,
             c.Infra.PYTEST_ENV_TESTMON_DATAFILE,
         )
-        coverage = execution_mode == c.Infra.PytestExecutionMode.COVERAGE
+        testmon = execution_mode == c.Infra.PytestExecutionMode.INCREMENTAL
         overrides = {
             c.Infra.ORCHESTRATOR_ENV_PYTHONPATH: str(
                 self.root / c.Infra.DEFAULT_SRC_DIR
             )
         }
-        if not coverage:
-            overrides.update(dict.fromkeys(testmon_keys, str(self.testmon_db)))
+        if testmon:
+            overrides.update(dict.fromkeys(testmon_keys, str(self.required_testmon_db())))
         remove_keys = (
             *c.Infra.PYTEST_INHERITED_ENV_REMOVE_KEYS,
-            *(testmon_keys if coverage else ()),
+            *(() if testmon else testmon_keys),
         )
         return u.Cli.process_env(remove_keys=remove_keys, overrides=overrides)
 
@@ -84,7 +84,7 @@ class FlextInfraPytestRunnerExecution(
             selection_log,
             cwd=self.root,
             env=self._selection_env(execution_mode=execution_mode),
-            deadline=self._process_deadline(),
+            deadline=self._mode_deadline(execution_mode),
         ).unwrap()
         self._record_process_outcome(
             report_dir, "inventory" if complete else "selection", outcome
@@ -181,6 +181,12 @@ class FlextInfraPytestRunnerExecution(
             termination_grace_seconds=pytest_settings.termination_grace_seconds,
         )
 
+    def _mode_deadline(
+        self, execution_mode: c.Infra.PytestExecutionMode
+    ) -> p.Cli.ProcessDeadline | None:
+        """Bind a verb's children to its deadline; the full verb has none."""
+        return self._process_deadline() if self.bounded(execution_mode) else None
+
     def _run_suite(
         self,
         command: t.VariadicTuple[str],
@@ -198,7 +204,7 @@ class FlextInfraPytestRunnerExecution(
             cwd=self.root,
             env=self._selection_env(execution_mode=execution_mode),
             live=True,
-            deadline=self._process_deadline(),
+            deadline=self._mode_deadline(execution_mode),
         ).unwrap()
         self._record_process_outcome(report_dir, "suite", outcome)
         return outcome
@@ -391,33 +397,74 @@ class FlextInfraPytestRunnerExecution(
     @override
     def execute(self) -> p.Result[int]:
         """Execute the incremental testmon operation."""
-        return self._execute_testmon(complete=False)
+        return self._execute_testmon()
 
     def execute_full(self) -> p.Result[int]:
-        """Run incremental then full under one deadline and persistent database."""
-        incremental_exit = self.execute().unwrap()
-        if incremental_exit:
-            return r.ok(incremental_exit)
-        return self._execute_testmon(complete=True)
+        """Execute the complete suite without testmon and without a time limit.
 
-    def _execute_testmon(self, *, complete: bool) -> p.Result[int]:
-        """Execute one selected testmon phase without resetting shared state."""
-        u.Cli.ensure_dir(self.testmon_db.parent).unwrap()
+        The full verb is local verification only: it never reads or writes
+        the persistent testmon database, and no case timeout, suite stop or
+        process deadline bounds it. Its inventory pass accounts for every
+        collected item, including the external and CI-excluded markers.
+        """
+        execution_mode = c.Infra.PytestExecutionMode.FULL
         report_dir = self._report_directory()
-        execution_mode = (
-            c.Infra.PytestExecutionMode.FULL
-            if complete
-            else c.Infra.PytestExecutionMode.INCREMENTAL
-        )
         self._write_run_context(
             report_dir,
             m.Infra.PytestRunContext(
                 execution_mode=execution_mode,
-                testmon_db=self.testmon_db,
+                testmon_db=None,
+                deadline_monotonic=None,
+            ),
+        )
+        selection_plan = self._resolve_selection(
+            report_dir,
+            complete=True,
+            verify_inventory=False,
+            execution_mode=execution_mode,
+        )
+        u.Cli.atomic_write_text_file(
+            report_dir / "selection-plan.json",
+            selection_plan.model_dump_json(indent=2) + "\n",
+        ).unwrap()
+        command = self.build_command(
+            report_dir,
+            selection_plan.node_ids,
+            invocation=m.Infra.PytestInvocation(
+                manifest_path=selection_plan.manifest_path,
+                whole_target=selection_plan.whole_target,
+                execution_mode=execution_mode,
+            ),
+        )
+        outcome = self._run_suite(command, report_dir, execution_mode=execution_mode)
+        completed_zero_tests = (
+            selection_plan.owns_no_tests
+            and outcome.raw_return_code
+            in {pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED}
+            and outcome.forwarded_signal is None
+        )
+        if (
+            not u.Cli.process_succeeded(outcome)
+            and not completed_zero_tests
+            and not self._completed_failure(outcome)
+        ):
+            return r.ok(outcome.raw_return_code)
+        return self._finalize(report_dir, raw_return_code=outcome.raw_return_code)
+
+    def _execute_testmon(self) -> p.Result[int]:
+        """Execute the selected testmon phase without resetting shared state."""
+        u.Cli.ensure_dir(self.required_testmon_db().parent).unwrap()
+        report_dir = self._report_directory()
+        execution_mode = c.Infra.PytestExecutionMode.INCREMENTAL
+        self._write_run_context(
+            report_dir,
+            m.Infra.PytestRunContext(
+                execution_mode=execution_mode,
+                testmon_db=self.required_testmon_db(),
                 deadline_monotonic=self._process_deadline().expires_at_monotonic,
             ),
         )
-        pre_digest = FlextInfraTestmonDbInspector.digest_file(self.testmon_db)
+        pre_digest = FlextInfraTestmonDbInspector.digest_file(self.required_testmon_db())
         cache_restored = False
         if pre_digest is not None:
             pre_state = self._inspect_cache(digest=pre_digest).unwrap()
@@ -428,7 +475,6 @@ class FlextInfraPytestRunnerExecution(
                 raise RuntimeError(msg)
         selection_plan = self._resolve_selection(
             report_dir,
-            complete=complete,
             verify_inventory=pre_digest is not None,
             execution_mode=execution_mode,
         )
@@ -454,8 +500,7 @@ class FlextInfraPytestRunnerExecution(
         )
         outcome = self._run_suite(command, report_dir, execution_mode=execution_mode)
         cache_hit = (
-            not complete
-            and outcome.raw_return_code
+            outcome.raw_return_code
             in {pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED}
             and not outcome.timed_out
             and outcome.forwarded_signal is None
