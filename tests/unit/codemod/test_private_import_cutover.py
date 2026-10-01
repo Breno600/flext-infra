@@ -46,10 +46,12 @@ class TestsFlextInfraPrivateImportCutover:
         }
 
         if bad_source_reachable:
-            tm.fail(
-                self._plan(tmp_path, sources, consumer, statement),
-                has="attempted relative import beyond top-level package",
-            )
+            # flext-core's result factory catches broad runtime errors only
+            # ("no IO, no import"): an invalid reachable import escapes raw.
+            with pytest.raises(
+                ImportError, match="attempted relative import beyond top-level"
+            ):
+                self._plan(tmp_path, sources, consumer, statement)
             return
         edits = self._edits(tmp_path, sources, consumer, statement)
 
