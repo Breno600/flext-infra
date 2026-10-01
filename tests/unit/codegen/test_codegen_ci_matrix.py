@@ -207,8 +207,9 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(workflow, has="CI=Y make gen")
         tm.that(
             workflow,
-            has='test -z "$(git status --porcelain --untracked-files=all --ignore-submodules=none || true)"',
+            has='status="$(git status --porcelain --untracked-files=all --ignore-submodules=none)"',
         )
+        tm.that(workflow, lacks="|| true")
         tm.that(workflow, lacks="run: CI=Y make conform")
         tm.that(workflow, has="run: CI=Y make audit")
         tm.that(workflow, lacks="attest/gates/v1")
@@ -648,6 +649,47 @@ class TestsFlextInfraCodegenCiMatrix:
 
         for branch in config.Infra.codegen.branch_policy.ci_trigger_branches:
             tm.that(content, has=f"      - {branch}")
+
+    def test_docs_failure_upload_keeps_audit_failure_and_scopes_hidden_reports(
+        self, rendered_project: Path
+    ) -> None:
+        """A generated Docs job fails on audit findings and retains safe reports."""
+        workflow = u.Cli.yaml_load_mapping(
+            rendered_project / ".github/workflows/docs.yml"
+        )
+        jobs = workflow["jobs"]
+        assert isinstance(jobs, dict)
+        docs_job = jobs["docs-quality"]
+        assert isinstance(docs_job, dict)
+        raw_steps = docs_job["steps"]
+        assert isinstance(raw_steps, list)
+        steps = [step for step in raw_steps if isinstance(step, dict)]
+        docs_step = next(
+            step for step in steps if step.get("name") == "Docs lifecycle (blocking)"
+        )
+        upload = next(
+            step for step in steps if step.get("name") == "Upload docs reports on failure"
+        )
+        tm.that(docs_step.get("run"), eq="make docs")
+        tm.that(docs_step.get("continue-on-error"), eq=None)
+        tm.that(upload.get("if"), eq="failure()")
+        upload_with = upload.get("with")
+        assert isinstance(upload_with, dict)
+        tm.that(upload_with.get("include-hidden-files"), eq=True)
+        tm.that(upload_with.get("if-no-files-found"), eq="error")
+        report_raw = upload_with.get("path")
+        assert isinstance(report_raw, str)
+        report_paths = report_raw.splitlines()
+        tm.that(report_paths, empty=False)
+        permitted_names = {
+            "audit-summary.json",
+            "audit-report.md",
+            "validate-summary.json",
+            "validate-report.md",
+        }
+        tm.that({Path(path).name for path in report_paths}, eq=permitted_names)
+        for path in report_paths:
+            tm.that(".reports" in Path(path).parts, eq=True)
 
     def test_docs_workflow_jobs_authenticate_toolchain_resolution(
         self, rendered_project: Path

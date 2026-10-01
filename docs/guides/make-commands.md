@@ -99,15 +99,17 @@ read-only — no verb repeats another verb's work across the canonical sequence
 | --------------------------------- | ---------------------------------- | ----------------------- | ------------------------------------------ |
 | `lint` — ruff                     | read-only `ruff` verdict           | —                       | one `ruff` repair pass                     |
 | `format` — ruff                   | — (mutating)                       | `ruff` format pass      | —                                          |
-| `markdown` — rumdl                | `rumdl check`                      | —                       | `rumdl fmt`                                |
+| `markdown` — rumdl                | `rumdl check`                      | —                       | `rumdl check --fix`                        |
 | `markdown-format` — prettier      | `prettier --check`                 | `prettier --write`      | —                                          |
 | `markdown-code` — ruff (embedded) | format verdict on parseable blocks | —                       | one format pass, clean round-trips spliced |
 | `canonical-alias`                 | read-only scan                     | —                       | declared import rewrite                    |
 | `smells` — qlty                   | read-only scan                     | —                       | —                                          |
 
-`make fmt` never runs a lint pass and `make fix` never formats: each operation runs once
-per verb, residue found by a mutation is reported there and enforced only by
-`make check`, and `make fix`/`make fmt` repeated on a green tree are no-ops.
+`make fmt` never runs a lint pass and `make fix` never runs the format-only gates: each
+operation runs once per verb. `rumdl check --fix` repairs fixable findings and returns a
+failing status for residual findings. A mutation that cannot complete its declared
+repair stays red before `make check`; on a green tree, repeated `make fix` and
+`make fmt` are no-ops.
 
 ## Information-preserving repair
 
@@ -139,7 +141,10 @@ The markdown standard lives once in `flext-infra/config/tooling.yaml`
 
 - `rumdl` is the linter (markdownlint-compatible `MD*` rules through the generated
   `.markdownlint.json` / `.markdownlintignore`); syntax findings inside embedded code
-  belong to the flext-tests markdown validator, not to a second linter.
+  belong to the flext-tests markdown validator, not to a second linter. Its fix pass
+  keeps unfixable findings visible and makes `make fix` fail when they remain. MD013
+  uses standard reflow to wrap overlong prose; paragraph-normalization mode is not
+  selected because its separate hint cannot be resolved by the native writer.
 - `prettier` (pinned 3.5.x — newer releases dropped prose reflow) is the formatter:
   `prettier --check` in `make check`, `prettier --write` in `make fmt`.
 - `markdown-code` holds parseable embedded Python and doctest examples to the

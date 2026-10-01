@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from tests import c, u
+from tests import c, t, u
 
 pytestmark = pytest.mark.slow
 
@@ -66,11 +66,9 @@ class TestsFlextInfraCodegenMakeAuthentication:
         tm.that(process.stdout, has="environment-authenticated")
         tm.that(process.stdout + process.stderr, lacks=selected)
 
-    @pytest.mark.parametrize("verb", ["setup", "upg", "status", "help", "clean"])
-    def test_make_defers_missing_credential_to_the_network_operation(
-        self, tmp_path: Path, verb: str
-    ) -> None:
-        """Missing credentials never stop bootstrap before the selected tool runs."""
+    @pytest.mark.parametrize("verb", ["status", "help", "clean"])
+    def test_local_verbs_need_no_credential(self, tmp_path: Path, verb: str) -> None:
+        """Local public verbs complete without a GitHub credential."""
         project_root, _ = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
@@ -103,6 +101,13 @@ class TestsFlextInfraCodegenMakeAuthentication:
                 u.Infra.runtime_environment_dir(project_root).exists(),
                 eq=verb == "status",
             )
+        )
+        tm.that(
+            u.Cli.process_succeeded(process.outcome),
+            eq=True,
+            msg=process.stdout + process.stderr,
+        )
+        tm.that(u.Infra.runtime_environment_dir(project_root).exists(), eq=True)
 
     @pytest.mark.remote
     def test_invalid_explicit_token_fails_at_the_native_mise_backend(

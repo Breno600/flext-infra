@@ -4,9 +4,7 @@ from __future__ import annotations
 
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import override
-
-import libcst as cst
+from typing import TYPE_CHECKING, override
 
 from flext_infra import c, m, p, t
 
@@ -15,36 +13,41 @@ from ..qualified_names import FlextInfraUtilitiesQualifiedNames
 from ..rope_runtime_modules import FlextInfraUtilitiesRopeRuntimeModules
 from .helper_references import FlextInfraUtilitiesSemanticHelperReferences
 
+if TYPE_CHECKING:
+    import libcst as cst
+
 
 class FlextInfraUtilitiesSemanticTestHelpers(
     FlextInfraUtilitiesSemanticHelperReferences
 ):
     """Discover live fixture helpers and move them to their tier utilities owner."""
 
-    class _MovedExports(cst.CSTTransformer):
-        """Retire only the original declaration's former module export."""
-
-        def __init__(self, name: str) -> None:
-            self.names = frozenset({name})
-
-        @override
-        def leave_Assign[N: (cst.Assign, cst.AnnAssign)](
-            self, original_node: N, updated_node: N
-        ) -> N:
-            return FlextInfraUtilitiesQualifiedNames.filter_exports(
-                updated_node, self.names
-            )
-
-        @override
-        def leave_AnnAssign(
-            self, original_node: cst.AnnAssign, updated_node: cst.AnnAssign
-        ) -> cst.AnnAssign:
-            return self.leave_Assign(original_node, updated_node)
-
     @classmethod
     def _test_helper_edits(
         cls, workspace: p.Infra.RopeWorkspaceDsl, sources: t.MappingKV[Path, str]
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
+        import libcst as cst
+
+        class _MovedExports(cst.CSTTransformer):
+            """Retire only the original declaration's former module export."""
+
+            def __init__(self, name: str) -> None:
+                self.names = frozenset({name})
+
+            @override
+            def leave_Assign[N: (cst.Assign, cst.AnnAssign)](
+                self, original_node: N, updated_node: N
+            ) -> N:
+                return FlextInfraUtilitiesQualifiedNames.filter_exports(
+                    updated_node, self.names
+                )
+
+            @override
+            def leave_AnnAssign(
+                self, original_node: cst.AnnAssign, updated_node: cst.AnnAssign
+            ) -> cst.AnnAssign:
+                return self.leave_Assign(original_node, updated_node)
+
         editable = {
             path.resolve(): source
             for path, source in sources.items()
@@ -83,7 +86,7 @@ class FlextInfraUtilitiesSemanticTestHelpers(
                     working[path] = (
                         cst
                         .parse_module(working[path])
-                        .visit(cls._MovedExports(move.class_name))
+                        .visit(_MovedExports(move.class_name))
                         .code
                     )
                 finally:

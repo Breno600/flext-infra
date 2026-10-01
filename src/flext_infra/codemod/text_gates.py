@@ -30,6 +30,35 @@ from ..codegen import FlextInfraCodegenMiseArtifacts, FlextInfraCodegenTransacti
 class FlextInfraModTextGateEngine:
     """Scan, apply, and prove the declarative sed-by-list rule cascade."""
 
+    @staticmethod
+    def _provider_rules_path() -> Path:
+        """Resolve the one configured provider rules file for every phase."""
+        return FlextInfraConfig.ssot_config_dir() / (
+            c.Infra.CODEMOD_TEXT_RULES_RELPATH.relative_to(c.Infra.CODEGEN_CONFIG_DIR)
+        )
+
+    @classmethod
+    def run(cls, root: Path, *, apply: bool) -> p.Result[t.Cli.ResultValue]:
+        """Replay only text rules through their authenticated transaction."""
+        pending = cls.scan(root, fix=False, validate_receipts=True)
+        if pending.failure:
+            return r[t.Cli.ResultValue].from_failure(pending)
+        if apply and pending.value.actionable:
+            applied = cls.scan(root, fix=True, validate_receipts=True)
+            if applied.failure:
+                return r[t.Cli.ResultValue].from_failure(applied)
+        remaining = cls.scan(root, fix=False)
+        if remaining.failure:
+            return r[t.Cli.ResultValue].from_failure(remaining)
+        if remaining.value.findings:
+            return r[t.Cli.ResultValue].fail(
+                f"mod-text has {remaining.value.findings} pending finding(s)"
+            )
+        return r[t.Cli.ResultValue].ok(
+            f"mod-text: {pending.value.actionable if apply else 0} "
+            "actionable finding(s) applied; fixed point verified"
+        )
+
     @classmethod
     def run(
         cls, root: Path, *, apply: bool
@@ -152,6 +181,7 @@ class FlextInfraModTextGateEngine:
             c.Infra.CODEMOD_TEXT_KEY_REPLACE,
             c.Infra.CODEMOD_TEXT_KEY_FLAGS,
             c.Infra.CODEMOD_TEXT_KEY_EXPECTED,
+            c.Infra.CODEMOD_TEXT_KEY_CAPTURE_EQUALS,
         ))
         if unknown:
             return r[m.Infra.ModTextRule].fail(
@@ -177,11 +207,24 @@ class FlextInfraModTextGateEngine:
             return r[m.Infra.ModTextRule].fail(
                 f"text rule expected receipt must be a non-negative integer in {source}"
             )
+        capture_equals = raw.get(c.Infra.CODEMOD_TEXT_KEY_CAPTURE_EQUALS, {})
+        if not isinstance(capture_equals, dict) or any(
+            not isinstance(name, str) or not isinstance(value, str)
+            for name, value in capture_equals.items()
+        ):
+            return r[m.Infra.ModTextRule].fail(
+                f"text rule capture_equals must map capture names to strings in {source}"
+            )
         try:
-            re.compile(find)
+            compiled = re.compile(find)
         except re.error as error:
             return r[m.Infra.ModTextRule].fail(
                 f"invalid find regex in {source}: {error}"
+            )
+        unknown_captures = set(capture_equals).difference(compiled.groupindex)
+        if unknown_captures:
+            return r[m.Infra.ModTextRule].fail(
+                f"unknown regex captures {sorted(unknown_captures)} in {source}"
             )
         rule = m.Infra.ModTextRule(
             rule_id=str(raw.get(c.Infra.CODEMOD_TEXT_KEY_ID, "")),
@@ -195,6 +238,7 @@ class FlextInfraModTextGateEngine:
             find=find,
             replace=str(raw.get(c.Infra.CODEMOD_TEXT_KEY_REPLACE, "")),
             flags=flag_names,
+            capture_equals=capture_equals,
             expected=expected,
         )
         if not rule.rule_id:
@@ -202,6 +246,45 @@ class FlextInfraModTextGateEngine:
                 f"text rule requires a non-empty id in {source}"
             )
         return r[m.Infra.ModTextRule].ok(rule)
+
+    @staticmethod
+    def _source_paths(
+        root: Path, rules: t.VariadicTuple[m.Infra.ModTextRule]
+    ) -> p.Result[t.VariadicTuple[Path]]:
+        """Inventory Python sources and only explicitly declared Markdown globs."""
+        paths: set[Path] = set()
+        for target in u.Infra.ast_grep_scan_targets(root):
+            candidate = root / target
+            if candidate.is_dir():
+                paths.update(candidate.rglob(f"*{c.Infra.EXT_PYTHON}"))
+            else:
+                paths.add(candidate)
+        for rule in rules:
+            for pattern in rule.include:
+                declared = Path(pattern)
+                if declared.suffix != ".md":
+                    continue
+                if declared.is_absolute() or ".." in declared.parts:
+                    return r[t.VariadicTuple[Path]].fail(
+                        f"text Markdown include escapes repository: {pattern}"
+                    )
+                matches = tuple(sorted(root.glob(pattern)))
+                if not matches:
+                    return r[t.VariadicTuple[Path]].fail(
+                        f"text Markdown include has no source: {pattern}"
+                    )
+                for path in matches:
+                    if (
+                        not path.is_file()
+                        or path.is_symlink()
+                        or path.resolve() != path.absolute()
+                        or path.stat().st_nlink != 1
+                    ):
+                        return r[t.VariadicTuple[Path]].fail(
+                            f"text Markdown source must be physical: {path}"
+                        )
+                    paths.add(path)
+        return r[t.VariadicTuple[Path]].ok(tuple(sorted(paths)))
 
     @classmethod
     def scan(
@@ -301,6 +384,7 @@ class FlextInfraModTextGateEngine:
 
     @staticmethod
     def _publish(
+        cls,
         root: Path,
         plans: t.VariadicTuple[m.Infra.CodegenFilePlan],
         inputs: t.VariadicTuple[m.Cli.AtomicFileState],
@@ -412,6 +496,14 @@ class FlextInfraModTextGateEngine:
         match: re.Match[str],
     ) -> str:
         """Record and expand one match, binding every loop value explicitly."""
+        for name, expected in rule.capture_equals.items():
+            actual = match.group(name)
+            if actual != expected:
+                msg = (
+                    f"text rule {rule.rule_id} capture {name} expected "
+                    f"{expected!r}, matched {actual!r} in {target}"
+                )
+                raise ValueError(msg)
         replacement = match.expand(rule.replace)
         line_index = bisect_right(line_starts, match.start()) - 1
         found.append(

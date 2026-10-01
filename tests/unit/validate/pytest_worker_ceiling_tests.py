@@ -10,11 +10,13 @@ SPDX-License-Identifier: MIT.
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import pytest
 from flext_tests import tm
 
-from flext_infra import FlextInfraPytestRunner, m
+from flext_infra import FlextInfraPytestRunner, config, m
+from tests.unit.validate.pytest_runner_support import runner_for
 
 
 @pytest.mark.unit
@@ -82,3 +84,39 @@ class TestsFlextInfraPytestWorkerCeiling:
             tm.that(
                 (declared.workers is None) != (declared.cpu_fraction is None), eq=True
             )
+
+    def test_worker_ceiling_defaults_without_declared_project(
+        self, cached_runner_project: Path
+    ) -> None:
+        """A tree without ``[project].name`` takes the fleet-wide ceiling."""
+        policy = config.Infra.tooling.tools.pytest
+        runner = runner_for(cached_runner_project)
+        assert runner.parallel_worker_budget(policy) == policy.parallel_workers
+
+    def test_worker_ceiling_follows_the_declared_project_override(
+        self, cached_runner_project: Path
+    ) -> None:
+        """The runner resolves the declared project's override from the SSOT."""
+        policy = config.Infra.tooling.tools.pytest
+        assert policy.parallel_worker_overrides
+        declared_name = next(iter(policy.parallel_worker_overrides))
+        pyproject = cached_runner_project / "pyproject.toml"
+        pyproject.write_text(
+            pyproject.read_text(encoding="utf-8")
+            + f'\n[project]\nname = "{declared_name}"\nversion = "0.1.0"\n',
+            encoding="utf-8",
+        )
+        runner = runner_for(cached_runner_project)
+        report = (
+            cached_runner_project
+            / config.Infra.codegen.make.testmon_cache.reports_directory
+        )
+        declared_ceiling = policy.parallel_worker_overrides[declared_name]
+        expected_workers = runner.resolve_worker_ceiling(
+            declared_ceiling, os.process_cpu_count()
+        )
+        budget = runner.parallel_worker_budget(policy)
+        assert budget == expected_workers
+        command = runner.build_command(report)
+        workers = command[command.index("-n") + 1]
+        assert workers == str(budget)

@@ -9,7 +9,10 @@ from typing import Annotated, ClassVar, Literal
 from flext_cli import m
 
 from ... import t
-from ..._constants import FlextInfraConstantsCodegenProject
+from ..._constants import (
+    FlextInfraConstantsCodegenProject,
+    FlextInfraConstantsWorkspace,
+)
 from ..deps_tool_config import FlextInfraModelsDepsToolConfig
 from .beads import FlextInfraConfigModelsBeads
 from .contract import FlextInfraConfigModelsContract
@@ -47,6 +50,10 @@ class FlextInfraConfigModelsContexts:
             FlextInfraModelsDepsToolConfig.PytestConfig,
             m.Field(description="Typed pytest execution policy"),
         ]
+        environment_directory: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Runtime-root-local development environment"),
+        ] = FlextInfraConstantsWorkspace.ENVIRONMENT_DIRECTORY
 
     class MakefileRenderSpec(MakeCommandContext):
         """Field-only render input for an existing repository Makefile."""
@@ -638,6 +645,13 @@ class FlextInfraConfigModelsContexts:
             m.Field(
                 default=(),
                 description="Repository-relative data files and directories shipped with the package",
+            ),
+        ] = ()
+        packaged_data_excludes: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                default=(),
+                description="Repository-relative files omitted from declared data directories",
             ),
         ] = ()
         cli_module: Annotated[

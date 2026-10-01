@@ -191,8 +191,8 @@ Infra:
     campaigns:
       - csv: rules/mod/renames/infra-dedup.csv
         bindings:
-          t: [flext_infra.t]
-          c: [flext_infra.c]
+          t: [flext_infra.t, flext_core.t]
+          c: [flext_infra.c, flext_core.c]
         python_documentation: true
         text_globs:
           - "**/*.md"

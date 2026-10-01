@@ -128,7 +128,7 @@ class FlextInfraApplyRenames:
                 desired_mode=driver.mode,
                 changes=(),
             )
-            publication = publish_semantic_file_plans(
+            publication = FlextInfraSemanticPublication.publish_semantic_file_plans(
                 (*plans, driver_plan),
                 repository_root=Path(commonpath(roots)),
                 validator=verify,

@@ -43,6 +43,20 @@ class FlextInfraConstantsCheck:
         WARNING = "warning"
         NOTE = "note"
 
+    @unique
+    class GateKind(StrEnum):
+        """Who owns a gate's rule catalog, which decides where the gate blocks.
+
+        Only ``EXTERNAL`` gates run in the fast contexts (CI and pre-commit):
+        an external tool applying its own per-file rule catalog. Whole-program
+        type checkers and the validators whose rules this package owns run
+        locally and at pre-push, where they block.
+        """
+
+        EXTERNAL = "external"
+        TYPE_CHECKER = "type-checker"
+        INFRA = "infra"
+
     AST_GREP_DOCS_URL: ClassVar[str] = "https://ast-grep.github.io/"
     "Canonical ast-grep documentation URL for gate metadata."
     # Quality gate identifiers shared with the tool-name vocabulary.
@@ -51,68 +65,92 @@ class FlextInfraConstantsCheck:
     MARKDOWN: ClassVar[str] = "markdown"
     MARKDOWN_FORMAT: ClassVar[str] = "markdown-format"
     MARKDOWN_CODE: ClassVar[str] = "markdown-code"
+    SMELLS: ClassVar[str] = "smells"
+    RUNTIME_CENSUS: ClassVar[str] = "runtime-census"
     SILENT_FAILURE: ClassVar[str] = "silent-failure"
-    TYPE_CHECKER_GATES: ClassVar[frozenset[str]] = frozenset({
-        "pyrefly",
-        "mypy",
-        "pyright",
+    GATE_TOOLS_BY_KIND: ClassVar[t.MappingKV[GateKind, t.MappingKV[str, t.StrPair]]] = (
+        MappingProxyType({
+            GateKind.EXTERNAL: MappingProxyType({
+                "lint": ("Ruff Linter", "https://docs.astral.sh/ruff/"),
+                "format": ("Ruff Formatter", "https://docs.astral.sh/ruff/formatter/"),
+                "security": ("Bandit", "https://bandit.readthedocs.io/"),
+                "markdown": ("rumdl", "https://rumdl.dev/"),
+                "markdown-format": ("Prettier", "https://prettier.io/"),
+                "markdown-code": ("Ruff", "https://docs.astral.sh/ruff/"),
+                "duplication": ("jscpd", "https://github.com/kucherenko/jscpd"),
+            }),
+            GateKind.TYPE_CHECKER: MappingProxyType({
+                "pyrefly": ("Pyrefly", "https://github.com/facebook/pyrefly"),
+                "mypy": ("Mypy", "https://mypy.readthedocs.io/"),
+                "pyright": ("Pyright", "https://github.com/microsoft/pyright"),
+            }),
+            GateKind.INFRA: MappingProxyType({
+                "silent-failure": (
+                    "Flext Silent Failure Detector",
+                    "internal://flext-infra/silent-failure",
+                ),
+                "deferred-self-reference": (
+                    "Flext Deferred Self Reference Detector",
+                    "internal://flext-infra/deferred-self-reference",
+                ),
+                "loc-cap": ("scc", "https://github.com/boyter/scc"),
+                "boundary": (
+                    "Flext Abstraction Boundary Auditor",
+                    "internal://flext-infra/abstraction-boundary",
+                ),
+                RUNTIME_CENSUS: (
+                    "Flext Runtime Enforcement Census",
+                    "internal://flext-infra/runtime-census",
+                ),
+                "namespace": (
+                    "Flext Namespace Rule Gate",
+                    "internal://flext-infra/namespace",
+                ),
+                "tier-whitelist": (
+                    "Flext Tier Whitelist Gate",
+                    "internal://flext-infra/tier-whitelist",
+                ),
+                "index-declarations": (
+                    "Flext Index Declarations Gate",
+                    "internal://flext-infra/index-declarations",
+                ),
+                SMELLS: ("Flext Code Smell Detector", "internal://flext-infra/smells"),
+                "codemod": ("ast-grep", AST_GREP_DOCS_URL),
+                "layout": (
+                    "Flext Project Layout Gate",
+                    "internal://flext-infra/layout",
+                ),
+                "canonical-alias": (
+                    "Flext Canonical Alias Detector",
+                    "internal://flext-infra/canonical-alias",
+                ),
+                "direnv": (
+                    "Flext Direnv Environment Contract Gate",
+                    "internal://flext-infra/direnv",
+                ),
+            }),
+        })
+    )
+    """The gate registry: each gate is declared once, under its kind.
+
+    ``loc-cap`` and ``codemod`` drive an external engine (scc, ast-grep) over a
+    rule catalog this package owns, so they are ``INFRA``. Every other gate
+    vocabulary below is derived from this declaration.
+    """
+    GATE_KINDS: ClassVar[t.MappingKV[str, GateKind]] = MappingProxyType({
+        gate: kind for kind, tools in GATE_TOOLS_BY_KIND.items() for gate in tools
     })
-    "Native type-checker gates: independent read-only analyzers of one tree."
-    UNSUSPENDABLE_GATES: ClassVar[frozenset[str]] = frozenset({
-        LINT,
-        FORMAT,
-        *TYPE_CHECKER_GATES,
-    })
-    "Lint, format and type-checker gates: never suspendable from `make check`."
+    "Gate id -> kind, derived from the registry declaration."
     SARIF_TOOL_INFO: ClassVar[t.MappingKV[str, t.StrPair]] = MappingProxyType({
-        "lint": ("Ruff Linter", "https://docs.astral.sh/ruff/"),
-        "format": ("Ruff Formatter", "https://docs.astral.sh/ruff/formatter/"),
-        "pyrefly": ("Pyrefly", "https://github.com/facebook/pyrefly"),
-        "mypy": ("Mypy", "https://mypy.readthedocs.io/"),
-        "pyright": ("Pyright", "https://github.com/microsoft/pyright"),
-        "silent-failure": (
-            "Flext Silent Failure Detector",
-            "internal://flext-infra/silent-failure",
-        ),
-        "deferred-self-reference": (
-            "Flext Deferred Self Reference Detector",
-            "internal://flext-infra/deferred-self-reference",
-        ),
-        "security": ("Bandit", "https://bandit.readthedocs.io/"),
-        "markdown": ("rumdl", "https://rumdl.dev/"),
-        "markdown-format": ("Prettier", "https://prettier.io/"),
-        "markdown-code": ("Ruff", "https://docs.astral.sh/ruff/"),
-        "loc-cap": ("scc", "https://github.com/boyter/scc"),
-        "boundary": (
-            "Flext Abstraction Boundary Auditor",
-            "internal://flext-infra/abstraction-boundary",
-        ),
-        "runtime-census": (
-            "Flext Runtime Enforcement Census",
-            "internal://flext-infra/runtime-census",
-        ),
-        "namespace": ("Flext Namespace Rule Gate", "internal://flext-infra/namespace"),
-        "tier-whitelist": (
-            "Flext Tier Whitelist Gate",
-            "internal://flext-infra/tier-whitelist",
-        ),
-        "index-declarations": (
-            "Flext Index Declarations Gate",
-            "internal://flext-infra/index-declarations",
-        ),
-        "smells": ("Flext Code Smell Detector", "internal://flext-infra/smells"),
-        "codemod": ("ast-grep", AST_GREP_DOCS_URL),
-        "layout": ("Flext Project Layout Gate", "internal://flext-infra/layout"),
-        "canonical-alias": (
-            "Flext Canonical Alias Detector",
-            "internal://flext-infra/canonical-alias",
-        ),
-        "direnv": (
-            "Flext Direnv Environment Contract Gate",
-            "internal://flext-infra/direnv",
-        ),
-        "duplication": ("jscpd", "https://github.com/kucherenko/jscpd"),
+        gate: tool
+        for tools in GATE_TOOLS_BY_KIND.values()
+        for gate, tool in tools.items()
     })
+    "Gate id -> (tool name, tool url), derived from the registry declaration."
+    TYPE_CHECKER_GATES: ClassVar[frozenset[str]] = frozenset(
+        GATE_TOOLS_BY_KIND[GateKind.TYPE_CHECKER]
+    )
+    "Native type-checker gates: independent read-only analyzers of one tree."
     ALLOWED_GATES: ClassVar[frozenset[str]] = frozenset(SARIF_TOOL_INFO)
     "Gate identifiers — derived from SARIF_TOOL_INFO keys (single SSOT)."
     CHECK_REPORT_MARKDOWN_FILENAME: ClassVar[str] = "check-report.md"
@@ -128,12 +166,6 @@ class FlextInfraConstantsCheck:
     MARKDOWN_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^(?P<file>.*?):(?P<line>\d+):(?P<col>\d+):\s+\[(?P<code>MD\d+)\]\s+(?P<msg>.*)$"
     )
-    MARKDOWN_NORMALIZATION_HINT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"could be normalized to use line length"
-    )
-    """rumdl formatter-mode paragraph hint: an ``[*]`` "repair" its linter reports but its OWN
-    formatter (``rumdl fmt``) never performs, so no canonical verb can clear it. Findings are
-    kept only when the message signals a real violation (``Line length N exceeds M``)."""
     MARKDOWN_FORMAT_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^\[warn\]\s+(?P<file>\S+\.md)\s*$", re.MULTILINE
     )

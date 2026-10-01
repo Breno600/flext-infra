@@ -33,7 +33,7 @@ locked = true
 #          prettier_selector/prettier_version, waza_selector/waza_version/waza_version_prefix,
 #          go_version, make_version)
 [tools]
-python = "3.13"
+python = "3.13.15"
 uv = "latest"
 # Native toolchain (single source: Infra.codegen.toolchain in codegen.yaml).
 kubectl = "latest"
@@ -52,7 +52,7 @@ make = "latest"
 [tools."github:qltysh/qlty"]
 version = "0.642.0"
 [tools."github:kucherenko/jscpd"]
-version = "latest"
+version = "5.4.0"
 [tools."github:microsoft/waza"]
 version = "latest"
 version_prefix = "v"

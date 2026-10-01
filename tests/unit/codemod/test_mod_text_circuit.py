@@ -391,7 +391,7 @@ class TestsFlextInfraModTextGateEngine:
             )
         )
         valid = tm.ok(FlextInfraModTextGateEngine.load_rules(mod_workspace))
-        tm.that(len(valid), eq=2)
+        tm.that({"first", "second"} <= {rule.rule_id for rule in valid}, eq=True)
 
     def test_include_and_exclude_globs_elect_exact_targets(
         self, mod_workspace: Path

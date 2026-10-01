@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from flext_core import r
 from flext_infra import c, m, u
 from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
-from flext_infra.transformers import publish_semantic_file_plans
+from flext_infra.transformers import FlextInfraSemanticPublication
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -100,7 +100,9 @@ class FlextInfraModReplacements:
                     changes=tuple(finding.rule_id for finding in findings),
                 )
             )
-        published = publish_semantic_file_plans(plans, repository_root=root)
+        published = FlextInfraSemanticPublication.publish_semantic_file_plans(
+            plans, repository_root=root
+        )
         if published.failure:
             return r[bool].from_failure(published)
         # A node-exact replacement (an emptied statement fix) leaves the
