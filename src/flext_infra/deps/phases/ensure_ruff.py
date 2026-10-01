@@ -122,22 +122,6 @@ class FlextInfraEnsureRuffConfigPhase:
             The fleet Ruff exemption map scoped to one project.
 
         """
-        effective_global = (
-            config.Infra.tooling.tools.ruff.lint.per_file_ignores
-            if global_ignores is None
-            else global_ignores
-        )
-        # The per-repo Ruff exemption overlay (ManagedArtifacts.Ruff) was
-        # exterminated (flext-edlgx e8b6b2068): no project-local Ruff
-        # per-file-ignores exist. The fleet SSOT owns the complete map.
-        local_ignores: t.MappingKV[str, t.StrSequence] = {}
-        # An exemption glob rooted on a first-class directory that the
-        # workspace retired (e.g. scripts/**, declared as an analysis
-        # exclusion in its workspace SSOT) must not survive the render: it
-        # documents scope that no longer exists and re-created stale entries
-        # on every conformance pass. Declared exclusions are order-independent
-        # — a disk probe oscillated between the deps pass and the
-        # root-materializing gen pass.
         excluded_roots = FlextInfraToolTablesPhase.excluded_roots(project_dir)
         return {
             pattern: tuple(sorted(rules))
@@ -352,7 +336,6 @@ class FlextInfraEnsureRuffConfigPhase:
         path: Path,
         analysis_exclusions: t.StrSequence | None = None,
         generated_python_roots: t.StrSequence = (),
-        analysis_exclusions: t.StrSequence | None = None,
     ) -> t.StrSequence:
         """Apply canonical Ruff settings directly to one normalized payload.
 
@@ -381,7 +364,6 @@ class FlextInfraEnsureRuffConfigPhase:
                             payload,
                             path=path,
                         ),
-                        analysis_exclusions=analysis_exclusions,
                         stale_patterns=[
                             pattern
                             for pattern in current_ignores or ()

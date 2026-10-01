@@ -448,18 +448,6 @@ class FlextInfraWorkspaceDetector(
         result_type = r[tuple[tuple[m.Infra.RepositoryRef, ...], t.VariadicTuple[Path]]]
         if declared.failure:
             return result_type.from_failure(declared)
-        governance = cls._superproject_governance(
-            repository_root,
-            beads=workspace_beads,
-            allow_unprovisioned_members=allow_unprovisioned_members,
-        )
-        baseline = u.Infra.resolve_integration_branch(
-            repository_root,
-            preference=(
-                config.Infra.codegen.branch_policy.integration_branch_preference
-            ),
-        )
-        integration_branch = baseline.value if baseline.success else None
         members = cls._declared_members(repository_root)
         if members.failure:
             return result_type.from_failure(members)
