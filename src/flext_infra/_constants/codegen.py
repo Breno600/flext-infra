@@ -129,12 +129,7 @@ class FlextInfraConstantsCodegen(
     MISE_COLD_START_DIRECTORY: ClassVar[str] = "templates/bootstrap"
     "Package-local byte copy of flext-infra's own upg-written triple (cold start)."
 
-    # 2026.9.17 crashes during the launcher generation (unwrap-on-None in its
-    # script builder); the fleet bootstrap stays on the last known good
-    # release until upstream ships a fixed one. Revert to the bare selector
-    # ("github:jdx/mise") when that release lands.
-    MISE_KNOWN_GOOD_RELEASE: ClassVar[str] = "2026.9.16"
-    MISE_RELEASE_SELECTOR: ClassVar[str] = f"github:jdx/mise@{MISE_KNOWN_GOOD_RELEASE}"
+    MISE_RELEASE_SELECTOR: ClassVar[str] = "github:jdx/mise"
     "Tool selector `make upg` resolves through the pinned mise (`mise latest`)."
     MISE_LATEST_RESOLUTION_MARKER: ClassVar[str] = "releases/latest"
     "Live-resolution endpoint a pinned, offline launcher must never contain."
