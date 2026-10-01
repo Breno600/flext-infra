@@ -6,7 +6,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import FlextInfraWorktreeService, c, config, u as infra_u
+from flext_infra import FlextInfraWorktreeService, c, u as infra_u
 from tests import u
 
 
@@ -25,9 +25,7 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         (repository / "Makefile").write_text(
             "PROJECT_ROOT := $(CURDIR)\n"
             "RUNTIME_ROOT := $(PROJECT_ROOT)\n"
-            "RUNTIME_VENV := $(dir $(CURDIR))"
-            f"{config.Infra.codegen.make.runtime_environment_directory}/"
-            "$(patsubst /%,%,$(CURDIR))\n"
+            f"RUNTIME_VENV := $(PROJECT_ROOT)/{c.Infra.ENVIRONMENT_DIRECTORY}\n"
             ".PHONY: setup\n"
             "setup:\n"
             '\t@test "$(RUNTIME_ROOT)" = "$(PROJECT_ROOT)"\n'

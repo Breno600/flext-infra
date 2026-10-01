@@ -657,6 +657,7 @@ Infra:
         case-timeout-seconds: 10
         # Slow marks cover nested public runner executions, including a cold
         # cache seed and a warm replay under parallel suite load.
+        slow-marker: slow
         slow-timeout-seconds: 180
         # The complete inventory exceeds 3300 cases. A 189-case incremental
         # execution took 127 seconds, projecting over 2200 seconds for the
