@@ -77,7 +77,11 @@ PYTEST_PROCESS_TIMEOUT_SECONDS := 124
 PYTEST_BOUNDED = timeout --signal=TERM --kill-after=5s "$(PYTEST_PROCESS_TIMEOUT_SECONDS)s"
 PYTEST_REPORTS_DIR := .reports/tests
 PYTEST_CACHE_HOME = $(if $(strip $(XDG_CACHE_HOME)),$(XDG_CACHE_HOME),$(if $(strip $(HOME)),$(HOME)/.cache,))
-override FLEXT_PYTEST_TESTMON_DATABASE = $(if $(strip $(PYTEST_CACHE_HOME)),$(PYTEST_CACHE_HOME)/flext/infra/testmon/$(subst /,_,$(PROJECT_ROOT))/.testmondata)
+# One persistent testmon database per project, shared by every checkout and
+# worktree of it (like the Mypy cache): testmon tracks each checkout's source by
+# file checksum, so a new lane starts from the project's measured selection
+# instead of a cold full inventory (flext-3l1gk).
+override FLEXT_PYTEST_TESTMON_DATABASE = $(if $(strip $(PYTEST_CACHE_HOME)),$(PYTEST_CACHE_HOME)/flext/infra/testmon/$(PROJECT_NAME)/.testmondata)
 # Profiles sit beside the other reports of this checkout (.reports is ignored).
 PROFILE_REPORTS_DIR = $(PROJECT_ROOT)/$(dir $(PYTEST_REPORTS_DIR))profiles
 override PYTEST_CASE_TIMEOUT_SECONDS := 10
@@ -1625,7 +1629,8 @@ case "$$database" in /*) ;; *) printf 'ERROR: persistent testmon database requir
 case "$$database" in "$(PROJECT_ROOT)"/*) printf 'ERROR: persistent testmon database must be outside the checkout: %s\n' "$$database" >&2; exit 2 ;; esac; \
 case "$$database" in "$${TMPDIR:-/tmp}"/*|/tmp/*) printf 'ERROR: persistent testmon database must not live under the temporary directory: %s\n' "$$database" >&2; exit 2 ;; esac; \
 mkdir -p "$$(dirname "$$database")"; \
-TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry
+TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry; \
+TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry slow
 
 _builtin_test_full_all: _builtin_require_environment
 	@set -eu; \
@@ -1634,7 +1639,8 @@ case "$$database" in /*) ;; *) printf 'ERROR: persistent testmon database requir
 case "$$database" in "$(PROJECT_ROOT)"/*) printf 'ERROR: persistent testmon database must be outside the checkout: %s\n' "$$database" >&2; exit 2 ;; esac; \
 case "$$database" in "$${TMPDIR:-/tmp}"/*|/tmp/*) printf 'ERROR: persistent testmon database must not live under the temporary directory: %s\n' "$$database" >&2; exit 2 ;; esac; \
 mkdir -p "$$(dirname "$$database")"; \
-TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry full
+TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry full; \
+TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry full-slow
 
 # fmt is format-only (single-pass verb law): ruff formats Python, the
 # fmt_gates formatters run once through the checker's apply mode, and every
