@@ -6,12 +6,8 @@ re-exports, and relative imports) and runs Tarjan's SCC algorithm.
 Any strongly-connected component with more than one module is a
 runtime-import cycle and blocks the validate gate.
 
-Mandate: This is a flext-infra detector and is 100% ROPE-based per the
-ROPE/beartype mandate; raw ``ast`` / ``libcst`` source analysis is
-forbidden in flext-infra detectors.
-
-Architecture: flext-infra validate layer — consumes
-``u.Infra`` Rope boundary helpers.
+Import resolution goes through the ``u.Infra`` Rope boundary helpers;
+the detector parses no source with ``ast`` or ``libcst``.
 
 Copyright (c) 2025 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
