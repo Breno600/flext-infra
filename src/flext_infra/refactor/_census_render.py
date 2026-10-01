@@ -22,8 +22,6 @@ class FlextInfraRefactorCensusRenderMixin:
             "Workspace Census Report",
             f"Objects: {report.total_objects}",
             f"Violations: {report.total_violations}",
-            f"Fixable: {report.total_fixable}",
-            f"Fixes: {report.fixes_total}",
             f"Unused: {report.unused_count}",
             f"Removal candidates: {report.removal_candidate_count}",
             f"Duplicate groups: {len(report.duplicates)}",

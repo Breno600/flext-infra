@@ -213,10 +213,7 @@ class TestsFlextInfraGateRegistry:
         )
         result = TestsFlextInfraGateRegistry._apply_alias_fix(tmp_path, project_dir)
         tm.that(result.result.passed, eq=True)
-        tm.that(
-            consumer.read_text(encoding="utf-8"),
-            has="from flext_infra.constants import c",
-        )
+        tm.that(consumer.read_text(encoding="utf-8"), has="from flext_infra import c")
 
     def test_canonical_alias_fix_rejects_new_cycle_beside_existing_cycle(
         self,

@@ -32,6 +32,23 @@ class FlextInfraModelsRefactorGrep:
             description="Allowed file extensions (empty = all by pattern)",
         )
 
+    class CodemodContextCondition(m.ArbitraryTypesModel):
+        """One project-context condition over a captured metavariable."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        variable: Annotated[
+            t.NonEmptyStr, m.Field(description="Captured single metavariable name")
+        ]
+        predicate: Annotated[
+            c.Infra.CodemodContextPredicate,
+            m.Field(description="Project-context predicate derived from an SSOT"),
+        ]
+        holds: Annotated[
+            bool,
+            m.Field(description="Whether the predicate must hold (is) or fail (not)"),
+        ]
+
     class CodemodRule(m.ArbitraryTypesModel):
         """One validated ast-grep rule document from a composed provider."""
 
@@ -64,6 +81,42 @@ class FlextInfraModelsRefactorGrep:
                 ),
             ),
         ] = None
+        owner: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(
+                description=(
+                    "Canonical distribution name whose own plan drops the rule; "
+                    "absent when the rule applies to every project"
+                )
+            ),
+        ] = None
+        consumers_of: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(
+                description=(
+                    "Canonical distribution name whose runtime consumers alone "
+                    "elect the rule; absent when the rule applies to every project"
+                )
+            ),
+        ] = None
+        relocation: Annotated[
+            c.Infra.CodemodRelocation | None,
+            m.Field(
+                description=(
+                    "Rope relocation that repairs the rule's findings over the "
+                    "captured $NAME; absent for token-fix and plain detection rules"
+                )
+            ),
+        ] = None
+        context: Annotated[
+            t.VariadicTuple[FlextInfraModelsRefactorGrep.CodemodContextCondition],
+            m.Field(
+                description=(
+                    "Project-context conditions a finding must satisfy; empty "
+                    "when the syntactic match alone is the finding"
+                )
+            ),
+        ] = ()
 
     class CodemodRuleset(m.ArbitraryTypesModel):
         """One provider config and its elected, conflict-free rule IDs."""
@@ -134,42 +187,6 @@ class FlextInfraModelsRefactorGrep:
             default_factory=tuple,
             description="Expected method-category order for matching methods",
         )
-
-    class SignatureMigration(m.ContractModel):
-        """Declarative signature migration rule for callsite propagation.
-
-        Enforcement exemption: internal tooling model with intentional
-        mutable state.
-        """
-
-        id: Annotated[str, m.Field(description="Migration ID")] = "signature-migration"
-        enabled: Annotated[bool, m.Field(description="Whether migration is active")] = (
-            True
-        )
-        target_qualified_names: t.StrSequence = m.Field(
-            default_factory=tuple,
-            description="Qualified symbol names targeted by the migration",
-        )
-        target_simple_names: t.StrSequence = m.Field(
-            default_factory=tuple,
-            description="Simple symbol names targeted by the migration",
-        )
-        keyword_renames: t.StrMapping = m.Field(description="Keyword rename mapping")
-        remove_keywords: t.StrSequence = m.Field(
-            default_factory=tuple,
-            description="Keywords removed from matching callsites",
-        )
-        add_keywords: t.StrMapping = m.Field(description="Keywords to add")
-
-    class ImportModernizerRuleConfig(m.ContractModel):
-        """Configuration for a single import modernizer rule.
-
-        Enforcement exemption: internal tooling model with intentional
-        mutable state.
-        """
-
-        module: Annotated[str, m.Field(description="Module path to modernize")] = ""
-        symbol_mapping: t.StrMapping = m.Field(description="Symbol-to-alias mapping")
 
     class AccessorMigrationRule(m.ContractModel):
         """Declarative symbol-rename rule for accessor migration."""

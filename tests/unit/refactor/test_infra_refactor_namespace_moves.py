@@ -76,13 +76,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         u.Infra.rewrite_manual_protocol_violations(
             project_root=project_root,
             py_files=[source_file, consumer_file],
-            violations=[
-                m.Infra.ManualProtocolViolation(
-                    file=str(source_file),
-                    line=5,
-                    name="External",
-                ),
-            ],
+            names_by_file={source_file: {"External"}},
         )
 
         tm.that(
@@ -123,15 +117,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         )
 
         u.Infra.rewrite_manual_typing_alias_violations(
-            project_root=project_root,
-            violations=[
-                m.Infra.ManualTypingAliasViolation(
-                    file=str(source_file),
-                    line=6,
-                    name="PayloadMap",
-                ),
-            ],
-            parse_failures=[],
+            project_root=project_root, names_by_file={source_file: {"PayloadMap"}}
         )
 
         source_text = source_file.read_text(encoding="utf-8")

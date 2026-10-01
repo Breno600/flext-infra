@@ -29,11 +29,11 @@ class TestsJointModFixedPoint:
     @staticmethod
     def _rules(root: Path, *, cycle: bool) -> None:
         """Declare a syntax rule and a text rule with no optional migration receipt."""
-        rules = root / "codemod" / c.Cli.RULES_DIR_NAME
+        config_path = root / c.Infra.CODEMOD_CONFIG_RELPATH
+        rules = config_path.parent / c.Cli.RULES_DIR_NAME
         u.Cli.ensure_dir(rules).unwrap()
         u.Cli.atomic_write_text_file(
-            root / c.Infra.CODEMOD_CONFIG_FILENAME,
-            "ruleDirs:\n  - codemod/rules\ntestConfigs: []\n",
+            config_path, f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\ntestConfigs: []\n"
         ).unwrap()
         u.Cli.atomic_write_text_file(
             rules / "joint.yml",

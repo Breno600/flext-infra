@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import MappingProxyType
 from typing import Annotated, ClassVar, Literal
 
 from flext_core import m
@@ -81,6 +82,16 @@ class FlextInfraModelsCodemod:
                 description="Exclusive UTF-8 byte offset",
             ),
         ]
+        captures: Annotated[
+            t.JsonMapping,
+            m.Field(
+                validation_alias=m.AliasPath("metaVariables", "single"),
+                description=(
+                    "Captured single metavariables; ast-grep omits the payload "
+                    "for a match that captures none"
+                ),
+            ),
+        ] = MappingProxyType({})
 
     class AstGrepReport(m.RootModel[tuple[AstGrepDiagnostic, ...]]):
         """Complete ``ast-grep scan --json=compact`` array; malformed input raises."""

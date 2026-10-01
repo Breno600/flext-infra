@@ -9,9 +9,6 @@ import pytest
 from flext_tests import tm
 
 from flext_infra.detectors.loose_object_detector import FlextInfraLooseObjectDetector
-from flext_infra.detectors.manual_protocol_detector import (
-    FlextInfraManualProtocolDetector,
-)
 from flext_infra.refactor.namespace_enforcer import FlextInfraNamespaceEnforcer
 from tests import m, u
 
@@ -70,7 +67,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             apply=False,
         )
 
-        tm.that(report.projects[0].manual_typing_violations, empty=False)
+        tm.that(report.projects[0].relocation_findings, gte=1)
         tm.that(report.projects[0].compatibility_alias_violations, empty=False)
 
     def test_namespace_enforcer_splits_foreign_canonical_aliases(
@@ -153,13 +150,9 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             apply=False,
         )
 
-        project_report = report.projects[0]
-        violations = project_report.manual_protocol_violations
-        tm.that(len(violations), eq=1)
-        violation = violations[0]
-        tm.that(violation.name, eq="ServiceContract")
+        tm.that(report.projects[0].relocation_findings, gte=1)
         rendered = FlextInfraNamespaceEnforcer.render_text(report)
-        tm.that(rendered, has="Manual protocol violations: 1")
+        tm.that(rendered, has="Relocation findings:")
 
     def test_namespace_enforcer_detects_internal_private_imports(
         self,
@@ -179,64 +172,6 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         tm.that(report.projects[0].internal_import_violations, empty=False)
         rendered = FlextInfraNamespaceEnforcer.render_text(report)
         tm.that(rendered, has="Internal import violations:")
-
-    def test_manual_protocol_detector_sanctions_private_protocols_directory(
-        self,
-        tmp_path: Path,
-        rope_project: t.Infra.RopeProject,
-    ) -> None:
-        """Allow protocols declared in the private protocols directory."""
-        violations = FlextInfraManualProtocolDetector.detect_file(
-            u.Tests.detector_context(
-                tmp_path / "_protocols" / "base.py",
-                "from __future__ import annotations\n"
-                "from typing import Protocol\n\n"
-                "class BaseContract(Protocol):\n"
-                "    def run(self) -> str: ...\n",
-                rope_project,
-            ),
-        )
-
-        tm.that(violations, empty=True)
-
-    def test_manual_protocol_detector_sanctions_canonical_protocols_file(
-        self,
-        tmp_path: Path,
-        rope_project: t.Infra.RopeProject,
-    ) -> None:
-        """Allow protocols declared in the canonical protocols module."""
-        violations = FlextInfraManualProtocolDetector.detect_file(
-            u.Tests.detector_context(
-                tmp_path / "protocols.py",
-                "from __future__ import annotations\n"
-                "from typing import Protocol\n\n"
-                "class BaseContract(Protocol):\n"
-                "    def run(self) -> str: ...\n",
-                rope_project,
-            ),
-        )
-
-        tm.that(violations, empty=True)
-
-    def test_manual_protocol_detector_flags_protocol_in_service_module(
-        self,
-        tmp_path: Path,
-        rope_project: t.Infra.RopeProject,
-    ) -> None:
-        """Flag a protocol declared in a service module."""
-        violations = FlextInfraManualProtocolDetector.detect_file(
-            u.Tests.detector_context(
-                tmp_path / "service.py",
-                "from __future__ import annotations\n"
-                "from typing import Protocol\n\n"
-                "class ServiceContract(Protocol):\n"
-                "    def run(self) -> str: ...\n",
-                rope_project,
-            ),
-        )
-
-        tm.that(len(violations), eq=1)
-        tm.that(violations[0].name, eq="ServiceContract")
 
     def test_namespace_enforcer_exempts_same_package_facade_assembly_imports(
         self,
@@ -506,7 +441,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
                 "from typing import ClassVar\n\n"
                 "class ServiceConfig:\n"
                 "    HOME: ClassVar[Path] = Path('/home')\n"
-                "    AI_HUB: ClassVar[Path] = Path('.ai-hub')\n",
+                "    CACHE: ClassVar[Path] = Path('.cache')\n",
                 rope_project,
                 project_name="sample-proj",
             ),
@@ -514,7 +449,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
 
         classvar_violations = [v for v in violations if v.kind == "classvar"]
         tm.that(len(classvar_violations), eq=2)
-        tm.that({v.name for v in classvar_violations}, eq={"HOME", "AI_HUB"})
+        tm.that({v.name for v in classvar_violations}, eq={"HOME", "CACHE"})
         tm.that(classvar_violations[0].suggestion, has="Constants")
 
     @pytest.mark.parametrize(
@@ -647,7 +582,6 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             apply=True,
         )
 
-        tm.that(report.projects[0].manual_protocol_violations, empty=True)
         protocols_file = pkg / "protocols.py"
         tm.that(protocols_file.exists(), eq=True)
 
@@ -681,7 +615,6 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         )
 
         tm.that(report.has_violations, eq=True)
-        tm.that(report.projects[0].manual_protocol_violations, empty=True)
         tm.that(report.projects[0].loose_objects, empty=False)
         tm.that((pkg / "protocols.py").exists(), eq=True)
         tm.that(
@@ -769,7 +702,6 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         tm.that(report.projects, empty=False)
         for project_report in report.projects:
             tm.that(project_report.runtime_alias_violations, empty=True)
-            tm.that(project_report.manual_typing_violations, empty=True)
         tm.that(alias_file.read_text(encoding="utf-8"), eq=alias_source)
 
     def test_namespace_enforcer_skips_dynamic_dirs_by_default(
@@ -789,7 +721,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             apply=False,
         )
 
-        tm.that(report.projects[0].manual_protocol_violations, empty=True)
+        tm.that(report.projects[0].relocation_findings, eq=0)
 
     def test_namespace_enforcer_apply_keeps_script_shebang_when_adding_future(
         self,

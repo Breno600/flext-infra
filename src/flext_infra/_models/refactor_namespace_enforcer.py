@@ -39,11 +39,6 @@ class FlextInfraModelsNamespaceEnforcer:
         kind: Annotated[str, m.Field(description="Object kind")]
         suggestion: Annotated[str, m.Field(description="Fix suggestion")] = ""
 
-    class LooseTestFunctionViolation(FileLineViolation):
-        """A module-level ``test_*`` function outside a ``Tests*`` class."""
-
-        name: Annotated[t.NonEmptyStr, m.Field(description="Test function name")]
-        suggestion: Annotated[str, m.Field(description="Fix suggestion")] = ""
 
     class ImportAliasViolation(ImportViolationBase):
         """Import alias violation."""
@@ -97,25 +92,6 @@ class FlextInfraModelsNamespaceEnforcer:
     class InternalImportViolation(mm.ViolationDetailMixin, ImportViolationBase):
         """Internal import violation."""
 
-    class ConsumerImportViolation(mm.ViolationDetailMixin, ImportViolationBase):
-        """Consumer import grammar violation (R1 facade-only rule)."""
-
-        target_package: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Target flext package name"),
-        ]
-        imported_path: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Full imported module path"),
-        ]
-        imported_symbol: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Symbol being imported"),
-        ]
-        legal_symbols: Annotated[
-            t.StrSequence,
-            m.Field(description="Legal symbols published by target package"),
-        ] = ()
 
     class PrivateImportBypassViolation(mm.ViolationDetailMixin, ImportViolationBase):
         """Private-module import that should use the canonical facade."""
@@ -137,67 +113,6 @@ class FlextInfraModelsNamespaceEnforcer:
             m.Field(description="Whether the symbol is already exported by the facade"),
         ] = False
 
-    class InlineImportViolation(mm.ViolationDetailMixin, ImportViolationBase):
-        """Inline or lazy import declared inside a function body."""
-
-        module_name: Annotated[
-            str,
-            m.Field(description="Imported module name (empty for importlib dynamic)"),
-        ] = ""
-        imported_symbols: Annotated[
-            t.StrSequence,
-            m.Field(description="Symbols imported from the module, if any"),
-        ] = m.Field(default_factory=tuple)
-        is_importlib: Annotated[
-            bool,
-            m.Field(description="Whether this is an importlib.import_module call"),
-        ] = False
-
-    class SilentFailureViolation(FileLineViolation):
-        """Exception-handling construct that silences failures."""
-
-        kind: Annotated[
-            str,
-            m.Field(description="Violation kind (suppress/except_pass/broad_except)"),
-        ]
-        detail: Annotated[
-            str,
-            m.Field(description="Human-readable violation description"),
-        ] = ""
-        fix_action: Annotated[
-            str,
-            m.Field(description="Recommended fix action identifier"),
-        ] = "manual"
-
-    class SilentFailureFinding(m.ContractModel):
-        """One silent-failure occurrence found in a module, with its optional fix."""
-
-        line: Annotated[t.NonNegativeInt, m.Field(description="1-based source line")]
-        column: Annotated[
-            t.NonNegativeInt,
-            m.Field(description="0-based source column"),
-        ]
-        kind: Annotated[t.NonEmptyStr, m.Field(description="Silent-failure kind")]
-        detail: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Human-readable finding description"),
-        ]
-        fix_action: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Recommended fix action identifier"),
-        ]
-        replacement: Annotated[
-            t.Triple[int, int, str] | None,
-            m.Field(description="Structural fix as (start, end, text) offsets"),
-        ] = None
-
-    class ManualProtocolViolation(FileLineViolation):
-        """Manual protocol violation."""
-
-        name: Annotated[t.NonEmptyStr, m.Field(description="Protocol class name")]
-        suggestion: Annotated[str, m.Field(description="Fix suggestion")] = (
-            "Move to protocols.py/protocols/*.py/_protocols.py"
-        )
 
     class CyclicImportViolation(m.ContractModel):
         """Cyclic import violation."""
@@ -222,22 +137,6 @@ class FlextInfraModelsNamespaceEnforcer:
         kind: Annotated[str, m.Field(description="Violation kind")]
         alias: Annotated[str, m.Field(description="Alias involved")]
 
-    class FutureAnnotationsViolation(mm.FilePathMixin, m.ContractModel):
-        """Future annotations violation."""
-
-    class ManualTypingAliasViolation(mm.ViolationDetailMixin, FileLineViolation):
-        """Manual typing alias violation."""
-
-        name: Annotated[t.NonEmptyStr, m.Field(description="Alias name")]
-
-    class PatternSmellViolation(FileLineViolation):
-        """Generic rope-detected pattern smell (ENFORCE-026..033)."""
-
-        kind: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Pattern smell kind (e.g. bare_except, print)"),
-        ]
-        detail: Annotated[str, m.Field(description="Human-readable description")] = ""
 
     class CompatibilityAliasViolation(FileLineViolation):
         """Compatibility alias violation."""
@@ -294,13 +193,6 @@ class FlextInfraModelsNamespaceEnforcer:
                 description="Internal import violations collected for the project.",
             ),
         ]
-        consumer_import_violations: Annotated[
-            t.SequenceOf[FlextInfraModelsNamespaceEnforcer.ConsumerImportViolation],
-            m.Field(
-                default_factory=tuple,
-                description="Consumer import grammar violations (R1) collected for the project.",
-            ),
-        ]
         private_import_bypass_violations: Annotated[
             t.SequenceOf[
                 FlextInfraModelsNamespaceEnforcer.PrivateImportBypassViolation
@@ -308,13 +200,6 @@ class FlextInfraModelsNamespaceEnforcer:
             m.Field(
                 default_factory=tuple,
                 description="Private-import bypass violations collected for the project.",
-            ),
-        ]
-        manual_protocol_violations: Annotated[
-            t.SequenceOf[FlextInfraModelsNamespaceEnforcer.ManualProtocolViolation],
-            m.Field(
-                default_factory=tuple,
-                description="Manual protocol violations collected for the project.",
             ),
         ]
         cyclic_imports: Annotated[
@@ -331,20 +216,15 @@ class FlextInfraModelsNamespaceEnforcer:
                 description="Runtime alias violations collected for the project.",
             ),
         ]
-        future_violations: Annotated[
-            t.SequenceOf[FlextInfraModelsNamespaceEnforcer.FutureAnnotationsViolation],
+        relocation_findings: Annotated[
+            t.NonNegativeInt,
             m.Field(
-                default_factory=tuple,
-                description="Future-annotations violations collected for the project.",
+                description=(
+                    "Rule-catalog findings whose rule declares a rope relocation "
+                    "and that remain after the namespace pass."
+                )
             ),
-        ]
-        manual_typing_violations: Annotated[
-            t.SequenceOf[FlextInfraModelsNamespaceEnforcer.ManualTypingAliasViolation],
-            m.Field(
-                default_factory=tuple,
-                description="Manual typing alias violations collected for the project.",
-            ),
-        ]
+        ] = 0
         compatibility_alias_violations: Annotated[
             t.SequenceOf[FlextInfraModelsNamespaceEnforcer.CompatibilityAliasViolation],
             m.Field(
@@ -368,86 +248,6 @@ class FlextInfraModelsNamespaceEnforcer:
                 description="Class placement violations collected for the project.",
             ),
         ]
-        bare_except_violations: Annotated[
-            t.SequenceOf[FlextInfraModelsNamespaceEnforcer.PatternSmellViolation],
-            m.Field(
-                default_factory=tuple,
-                description="Bare `except:` violations collected for the project.",
-            ),
-        ]
-        print_violations: Annotated[
-            t.SequenceOf[FlextInfraModelsNamespaceEnforcer.PatternSmellViolation],
-            m.Field(
-                default_factory=tuple,
-                description="`u.Cli.print()` violations collected for the project.",
-            ),
-        ]
-        breakpoint_violations: Annotated[
-            t.SequenceOf[FlextInfraModelsNamespaceEnforcer.PatternSmellViolation],
-            m.Field(
-                default_factory=tuple,
-                description="`breakpoint()` / pdb violations collected for the project.",
-            ),
-        ]
-        open_encoding_violations: Annotated[
-            t.SequenceOf[FlextInfraModelsNamespaceEnforcer.PatternSmellViolation],
-            m.Field(
-                default_factory=tuple,
-                description="`open()` without encoding violations collected for the project.",
-            ),
-        ]
-        dict_annotation_violations: Annotated[
-            t.SequenceOf[FlextInfraModelsNamespaceEnforcer.PatternSmellViolation],
-            m.Field(
-                default_factory=tuple,
-                description="`dict` annotation violations collected for the project.",
-            ),
-        ]
-        typing_dict_attr_violations: Annotated[
-            t.SequenceOf[FlextInfraModelsNamespaceEnforcer.PatternSmellViolation],
-            m.Field(
-                default_factory=tuple,
-                description="`typing.Dict` attribute violations collected for the project.",
-            ),
-        ]
-        typing_dict_import_violations: Annotated[
-            t.SequenceOf[FlextInfraModelsNamespaceEnforcer.PatternSmellViolation],
-            m.Field(
-                default_factory=tuple,
-                description="`from typing import Dict` violations collected for the project.",
-            ),
-        ]
-        hardcoded_version_violations: Annotated[
-            t.SequenceOf[FlextInfraModelsNamespaceEnforcer.PatternSmellViolation],
-            m.Field(
-                default_factory=tuple,
-                description="Hardcoded `__version__` violations collected for the project.",
-            ),
-        ]
-        type_ignore_violations: Annotated[
-            t.SequenceOf[FlextInfraModelsNamespaceEnforcer.PatternSmellViolation],
-            m.Field(
-                default_factory=tuple,
-                description="`# type: ignore` suppression violations collected for the project.",
-            ),
-        ]
-        noqa_violations: Annotated[
-            t.SequenceOf[FlextInfraModelsNamespaceEnforcer.PatternSmellViolation],
-            m.Field(
-                default_factory=tuple,
-                description="`# noqa` suppression violations collected for the project.",
-            ),
-        ]
-        inline_import_violations: Annotated[
-            t.SequenceOf[FlextInfraModelsNamespaceEnforcer.InlineImportViolation],
-            m.Field(
-                description="Inline/lazy import violations collected for the project.",
-            ),
-        ] = ()
-        silent_failure_violations: Annotated[
-            t.SequenceOf[FlextInfraModelsNamespaceEnforcer.SilentFailureViolation],
-            m.Field(description="Silent-failure violations collected for the project."),
-        ] = ()
         parse_failures: Annotated[
             t.SequenceOf[FlextInfraModelsNamespaceEnforcer.ParseFailureViolation],
             m.Field(
@@ -470,31 +270,19 @@ class FlextInfraModelsNamespaceEnforcer:
                 self.import_violations,
                 self.namespace_source_violations,
                 self.internal_import_violations,
-                self.consumer_import_violations,
                 self.private_import_bypass_violations,
-                self.manual_protocol_violations,
                 self.cyclic_imports,
                 self.runtime_alias_violations,
-                self.future_violations,
-                self.manual_typing_violations,
                 self.compatibility_alias_violations,
                 self.foreign_canonical_alias_violations,
                 self.class_placement_violations,
-                self.bare_except_violations,
-                self.print_violations,
-                self.breakpoint_violations,
-                self.open_encoding_violations,
-                self.dict_annotation_violations,
-                self.typing_dict_attr_violations,
-                self.typing_dict_import_violations,
-                self.hardcoded_version_violations,
-                self.type_ignore_violations,
-                self.noqa_violations,
-                self.inline_import_violations,
-                self.silent_failure_violations,
                 self.parse_failures,
             )
-            return missing_facades or any(v for v in violation_fields)
+            return (
+                missing_facades
+                or self.relocation_findings > 0
+                or any(v for v in violation_fields)
+            )
 
     class WorkspaceEnforcementReport(m.ArbitraryTypesModel):
         """Workspace enforcement report."""

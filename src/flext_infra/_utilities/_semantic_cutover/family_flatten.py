@@ -36,9 +36,10 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
             return ()
         rule = m.Infra.FamilyFlattenRule.model_validate(
             u.Cli.yaml_safe_load(
-                type(config).ssot_config_dir()
-                / "rules/rope/flatten-family-namespace-wrapper.yaml",
-            ).unwrap(),
+                type(config).ssot_config_dir().parent
+                / c.Infra.CODEMOD_ROPE_RULES_RELPATH
+                / "flatten-family-namespace-wrapper.yaml"
+            ).unwrap()
         )
         project = FlextInfraUtilitiesRopeRuntimeModules.snapshot_project(
             workspace.rope_project,

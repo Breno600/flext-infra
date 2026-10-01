@@ -546,8 +546,6 @@ Infra:
           description: Apply ruff format --preview and every declared formatter gate. Ruff is the rule; change code, never ruff.
         - name: fix
           description: Apply the safe fixes of ruff check --fix --preview plus every other configured safe correction; never deletes information. Ruff is the rule; change code, never ruff.
-        - name: fix-enforcement
-          description: Apply the safe fix actions declared by the enforcement catalog.
         - name: fix-namespace
           description: Apply the canonical namespace enforcer to the selected workspace.
         - name: fix-accessors
@@ -803,7 +801,6 @@ Infra:
         - GEMINI.md
         - conftest.py
         - mkdocs.yml
-        - sgconfig.yml
       canonical_root_dotfiles:
         - .gitignore
         - .gitattributes
@@ -1372,7 +1369,6 @@ Infra:
             - "!docs/"
             - "!examples/"
             - "!.github/"
-            - "!codemod/"
             - "!src/"
             - "!tests/"
             - "!typings/"
@@ -1404,12 +1400,6 @@ Infra:
             - "scripts/*.sh"
             - "scripts/*.md"
             - "scripts/maintenance/"
-        - name: "TRACK: Local structural rules and their regression fixtures"
-          profiles: [workspace]
-          patterns:
-            - "!/sgconfig.yml"
-            - "!/ast-grep-rules/"
-            - "!/ast-grep-rule-tests/"
         - name: "TRACK: Beads team config; keep Dolt data, runtime state, and JSONL exports local."
           profiles: [workspace, standalone]
           patterns:

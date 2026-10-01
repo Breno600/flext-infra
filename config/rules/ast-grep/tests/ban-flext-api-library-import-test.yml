@@ -1,0 +1,6 @@
+id: ban-flext-api-library-import
+valid:
+  - from flext_api import FlextApi
+invalid:
+  - import httpx
+  - from httpx import AsyncClient

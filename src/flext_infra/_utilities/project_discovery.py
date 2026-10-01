@@ -245,17 +245,21 @@ class FlextInfraUtilitiesProjectDiscovery(
         scan_dirs = refactor_config.project_scan_dirs
         targets: set[str] = set()
         for project in cls.governed_project_roots(resolved_root):
-            # Python files directly in the project root (e.g., conftest.py)
-            for target in project.glob(f"*{c.Infra.EXT_PYTHON}"):
-                if target.exists():
-                    targets.add(target.relative_to(resolved_root).as_posix())
-            # Recursively scan configured directories for Python files
-            for directory in scan_dirs:
-                scan_dir = project / directory
-                if scan_dir.exists():
-                    for target in scan_dir.rglob(f"*{c.Infra.EXT_PYTHON}"):
-                        if target.is_file():
-                            targets.add(target.relative_to(resolved_root).as_posix())
+            for suffix in c.Infra.PYTHON_SOURCE_SUFFIXES:
+                # Python files directly in the project root (e.g., conftest.py)
+                for target in project.glob(f"*{suffix}"):
+                    if target.exists():
+                        targets.add(target.relative_to(resolved_root).as_posix())
+                # Recursively scan configured directories for Python sources:
+                # modules and the stubs the catalog rules also govern.
+                for directory in scan_dirs:
+                    scan_dir = project / directory
+                    if scan_dir.exists():
+                        for target in scan_dir.rglob(f"*{suffix}"):
+                            if target.is_file():
+                                targets.add(
+                                    target.relative_to(resolved_root).as_posix()
+                                )
         return tuple(sorted(targets))
 
     @classmethod

@@ -31,10 +31,6 @@ class FlextInfraClassPlacementDetector:
         if res is None:
             return []
         file_path = ctx.file_path
-        if "ai_hub/hook_client" in file_path.as_posix():
-            # ADR-0018 stdlib island: class-level constants are mandated to
-            # stay inside the standalone native client.
-            return []
         parts = file_path.parts
         violations: list[m.Infra.ClassPlacementViolation] = []
         governed_classes = (
@@ -65,7 +61,7 @@ class FlextInfraClassPlacementDetector:
         #    constant-like assignments (no ClassVar annotation). Scans every
         #    public class, including classes nested inside a canonical
         #    constants.py facade — those declarations are exactly the
-        #    ENFORCE-079 population the relocation owns (flext-xwag0). Files
+        #    ENFORCE-079 population the relocation owns. Files
         #    inside a _constants/ directory are already at their owner and
         #    stay exempt; the constants.py FILENAME alone no longer suppresses
         #    the scan.
@@ -244,7 +240,7 @@ class FlextInfraClassPlacementDetector:
 
         Recursion covers classes nested inside other classes: the ENFORCE-079
         population lives exactly there when a facade composes domain classes
-        (flext-xwag0). Private classes are skipped.
+        Private classes are skipped.
         """
         items: list[tuple[str, t.Infra.RopeAstNode]] = []
 

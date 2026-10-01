@@ -1,4 +1,4 @@
-"""Census duplicate-grouping, object/rule filters, and runtime-alias helpers."""
+"""Census duplicate grouping and object/analysis filters."""
 
 from __future__ import annotations
 
@@ -6,14 +6,14 @@ from collections import defaultdict
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_infra import m, u
+from flext_infra import m
 
 if TYPE_CHECKING:
     from flext_infra import t
 
 
 class FlextInfraRefactorCensusFiltersMixin:
-    """Duplicate detection, inclusion filters, and runtime-alias rewriting.
+    """Duplicate detection and inclusion filters.
 
     Composed into FlextInfraRefactorCensus via inheritance; self-contained
     static helpers over report Object/convention models (no census state).
@@ -61,23 +61,11 @@ class FlextInfraRefactorCensusFiltersMixin:
     def _include_object(
         item: m.Infra.Object,
         *,
-        kind_names: t.StrSequence | None,
         selected_families: frozenset[str],
-        selected_kinds: frozenset[str] | None = None,
+        selected_kinds: frozenset[str] | None,
     ) -> bool:
-        """Include object.
-
-        ``selected_kinds`` is a precomputed frozenset of ``kind_names``; when
-        omitted it is rebuilt from ``kind_names`` (kept for back-compat). Hot
-        callers must pass the precomputed set to avoid per-object frozenset
-        construction.
-        """
-        kinds = (
-            selected_kinds
-            if selected_kinds is not None
-            else (frozenset(kind_names) if kind_names else None)
-        )
-        if kinds and item.kind not in kinds:
+        """Return whether one inventory object passes the kind and family filters."""
+        if selected_kinds and item.kind not in selected_kinds:
             return False
         if not selected_families:
             return True
@@ -101,52 +89,6 @@ class FlextInfraRefactorCensusFiltersMixin:
         if selected_rules is None:
             return rule_names is None or rule in frozenset(rule_names)
         return rule in selected_rules
-
-    @staticmethod
-    def _named_object(
-        objects: t.VariadicTuple[m.Infra.Object],
-        name: str,
-    ) -> m.Infra.Object | None:
-        """Named object."""
-        return next(
-            (item for item in objects if name in {item.scope_path, item.name}),
-            None,
-        )
-
-    @staticmethod
-    def _runtime_alias_target(
-        convention: m.Infra.RopeModuleConvention,
-        objects: t.VariadicTuple[m.Infra.Object] | None,
-    ) -> m.Infra.Object | None:
-        """Runtime alias target."""
-        if objects is None:
-            return None
-        target_name = FlextInfraRefactorCensusFiltersMixin._runtime_alias_target_name(
-            convention,
-        )
-        if not target_name:
-            return None
-        return FlextInfraRefactorCensusFiltersMixin._named_object(objects, target_name)
-
-    @staticmethod
-    def _runtime_alias_target_name(convention: m.Infra.RopeModuleConvention) -> str:
-        """Return the expected runtime alias target name."""
-        return convention.module_policy.expected_family or ""
-
-    @staticmethod
-    def _rewrite_runtime_alias_source(
-        source: str,
-        *,
-        alias: str,
-        target_name: str,
-    ) -> str:
-        """Rewrite runtime alias source."""
-        updated_source: str = u.Infra.ensure_runtime_alias(
-            source,
-            alias=alias,
-            target_name=target_name,
-        )
-        return updated_source
 
 
 __all__: list[str] = ["FlextInfraRefactorCensusFiltersMixin"]

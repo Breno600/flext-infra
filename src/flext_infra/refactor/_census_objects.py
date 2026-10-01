@@ -36,8 +36,6 @@ class FlextInfraRefactorCensusObjectsMixin:
         *,
         kind: str,
         description: str,
-        fixable: bool = False,
-        fix_action: str = "",
     ) -> m.Infra.Violation:
         """Violation."""
         return m.Infra.Violation(
@@ -48,8 +46,6 @@ class FlextInfraRefactorCensusObjectsMixin:
             file_path=item.file_path,
             line=item.line,
             description=description,
-            fixable=fixable,
-            fix_action=fix_action,
         )
 
     @staticmethod
@@ -131,12 +127,6 @@ class FlextInfraRefactorCensusObjectsMixin:
     def _object_key(item: m.Infra.Object) -> str:
         """Object key."""
         return f"{item.file_path}:{item.line}:{item.scope_path}:{item.kind}"
-
-    @staticmethod
-    def _fix_key(file_path: Path, object_name: str, action: str = "") -> str:
-        """Fix key."""
-        suffix = f"::{action}" if action else ""
-        return f"{file_path.resolve()}::{object_name}{suffix}"
 
     @classmethod
     def _impact_map_results(

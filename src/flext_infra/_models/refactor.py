@@ -33,9 +33,6 @@ class FlextInfraModelsRefactor(
     class RefactorNamespaceEnforceInput(mm.WriteMixin, m.ContractModel):
         """CLI/service request for namespace enforcement."""
 
-    class ModernizeInput(mm.WriteMixin, m.ContractModel):
-        """CLI/service request for generic modernize transformers."""
-
     class AccessorMigrationInput(mm.WriteMixin, m.ContractModel):
         """CLI/service request for accessor migration dry-runs and applies."""
 

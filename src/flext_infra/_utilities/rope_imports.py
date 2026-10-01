@@ -953,20 +953,6 @@ class FlextInfraUtilitiesRopeImports:
     # retired libcst draft — cross-layer from-imports take relative form)
     # ------------------------------------------------------------------
 
-    _DEFAULT_IMPORT_LAYER_ORDER: t.StrSequence = (
-        "settings",
-        "config",
-        "c",
-        "t",
-        "p",
-        "m",
-        "u",
-        "base",
-        "services",
-        "api",
-        "cli",
-    )
-
     @classmethod
     def layer_of_module(cls, module_name: str, order: t.StrSequence) -> str | None:
         """Return the canonical layer of a project module path."""
@@ -1014,14 +1000,10 @@ class FlextInfraUtilitiesRopeImports:
         repository_root: Path,
         index: m.Infra.RopeWorkspaceIndex,
         project_package: str,
-        config: m.Infra.LazyInitConfig | None = None,
+        config: m.Infra.LazyInitConfig,
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]:
         """Plan relative-form rewrites for cross-layer project from-imports."""
-        order: t.StrSequence = (
-            tuple(config.import_layer_order)
-            if config is not None
-            else cls._DEFAULT_IMPORT_LAYER_ORDER
-        )
+        order: t.StrSequence = tuple(config.import_layer_order)
         file_plans: list[m.Infra.CodegenFilePlan] = []
         for entry in sorted(
             index.modules_by_path.values(),

@@ -6,7 +6,6 @@ from collections.abc import MutableMapping
 from pathlib import Path
 
 from flext_infra import c, p, t
-from flext_infra.gates.abstraction_boundary import FlextInfraAbstractionBoundaryGate
 from flext_infra.gates.bandit import FlextInfraBanditGate
 from flext_infra.gates.base_gate import FlextInfraGate
 from flext_infra.gates.canonical_alias import FlextInfraCanonicalAliasGate
@@ -29,9 +28,7 @@ from flext_infra.gates.pyright import FlextInfraPyrightGate
 from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
 from flext_infra.gates.ruff_lint import FlextInfraRuffLintGate
 from flext_infra.gates.runtime_census import FlextInfraRuntimeCensusGate
-from flext_infra.gates.silent_failure import FlextInfraSilentFailureGate
 from flext_infra.gates.smells import FlextInfraSmellsGate
-from flext_infra.gates.tier_whitelist import FlextInfraTierWhitelistGate
 
 
 class FlextInfraGateRegistry:
@@ -77,19 +74,16 @@ class FlextInfraGateRegistry:
             FlextInfraPyreflyGate,
             FlextInfraMypyGate,
             FlextInfraPyrightGate,
-            FlextInfraSilentFailureGate,
             FlextInfraDeferredSelfReferenceGate,
             FlextInfraBanditGate,
             FlextInfraMarkdownGate,
             FlextInfraMarkdownFormatGate,
             FlextInfraMarkdownCodeGate,
             FlextInfraLocCapGate,
-            FlextInfraAbstractionBoundaryGate,
             FlextInfraCanonicalAliasGate,
             FlextInfraRuntimeCensusGate,
             FlextInfraNamespaceGate,
             FlextInfraLayoutGate,
-            FlextInfraTierWhitelistGate,
             FlextInfraIndexDeclarationsGate,
             FlextInfraSmellsGate,
             FlextInfraCodemodGate,

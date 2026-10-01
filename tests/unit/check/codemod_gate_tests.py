@@ -24,19 +24,20 @@ class TestsFlextInfraCodemodGate:
     @staticmethod
     def _project(tmp_path: Path, *, severity: str = "error") -> Path:
         project = tmp_path / "scanner-contract"
-        (project / "rules").mkdir(parents=True)
+        config_path = project / c.Infra.CODEMOD_CONFIG_RELPATH
+        rules = config_path.parent / c.Cli.RULES_DIR_NAME
+        rules.mkdir(parents=True)
         (project / "src").mkdir()
         (project / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "scanner-contract"\nversion = "1.0.0"\n'
             "dependencies = []\n",
             encoding="utf-8",
         )
-        (project / c.Infra.CODEMOD_CONFIG_FILENAME).write_text(
-            "ruleDirs: [rules]\n",
-            encoding="utf-8",
+        config_path.write_text(
+            f"ruleDirs: [{c.Cli.RULES_DIR_NAME}]\n", encoding="utf-8"
         )
         for name in ("first", "second"):
-            (project / "rules" / f"{name}.yml").write_text(
+            (rules / f"{name}.yml").write_text(
                 f"id: contract-{name}\nlanguage: Python\nseverity: {severity}\n"
                 f"message: Observed {name}\nrule:\n  pattern: {name}($VALUE)\n",
                 encoding="utf-8",
@@ -169,7 +170,8 @@ class TestsFlextInfraCodemodGate:
 
     def test_invalid_rule_is_a_native_failure(self, tmp_path: Path) -> None:
         project = self._project(tmp_path)
-        (project / "rules" / "second.yml").write_text(
+        rules = (project / c.Infra.CODEMOD_CONFIG_RELPATH).parent / c.Cli.RULES_DIR_NAME
+        (rules / "second.yml").write_text(
             "id: contract-second\nlanguage: invalid-language\n"
             "rule:\n  pattern: second($VALUE)\n",
             encoding="utf-8",

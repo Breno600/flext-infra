@@ -31,7 +31,7 @@ class TestsFlextInfraModCliRoute:
     ) -> None:
         report_path = mod_workspace / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH
         sample_path = mod_workspace / "sample.py"
-        generated_hook = mod_workspace / ".agents/aihub-hooks/session.py"
+        generated_hook = mod_workspace / ".agents/hooks/session.py"
         tm.ok(u.Cli.ensure_dir(generated_hook.parent))
         tm.ok(u.Cli.atomic_write_text_file(generated_hook, "value = 1\n"))
 
@@ -165,14 +165,14 @@ class TestsFlextInfraModCliRoute:
         mod_workspace: Path,
     ) -> None:
         """Carry findings exposed by one rewrite into the next apply iteration."""
-        config_path = mod_workspace / c.Infra.CODEMOD_CONFIG_FILENAME
-        rules_root = mod_workspace / "codemod" / c.Cli.RULES_DIR_NAME
+        config_path = mod_workspace / c.Infra.CODEMOD_CONFIG_RELPATH
+        rules_root = config_path.parent / c.Cli.RULES_DIR_NAME
         tm.ok(u.Cli.ensure_dir(rules_root))
         tm.ok(
             u.Cli.atomic_write_text_file(
                 config_path,
-                "ruleDirs:\n  - codemod/rules\ntestConfigs: []\n",
-            ),
+                f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\ntestConfigs: []\n",
+            )
         )
         tm.ok(
             u.Cli.atomic_write_text_file(
@@ -226,14 +226,16 @@ class TestsFlextInfraModCliRoute:
         tm.that(updated.startswith("from __future__ import annotations"), eq=True)
 
     def test_scan_keeps_prefix_rule_ids_exact(self, mod_workspace: Path) -> None:
-        config_path = mod_workspace / c.Infra.CODEMOD_CONFIG_FILENAME
-        rules_root = mod_workspace / "codemod" / c.Cli.RULES_DIR_NAME
+        config_path = mod_workspace / c.Infra.CODEMOD_CONFIG_RELPATH
+        rules_root = config_path.parent / c.Cli.RULES_DIR_NAME
         first_rule = rules_root / "rewire-first.yml"
         second_rule = rules_root / "rewire-first-message.yml"
 
         tm.ok(u.Cli.ensure_dir(rules_root))
         tm.ok(
-            u.Cli.atomic_write_text_file(config_path, "ruleDirs:\n  - codemod/rules\n"),
+            u.Cli.atomic_write_text_file(
+                config_path, f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\n"
+            )
         )
         tm.ok(
             u.Cli.atomic_write_text_file(
@@ -304,33 +306,27 @@ class TestsFlextInfraModCliRoute:
             },
         )
 
-    def test_scan_aggregates_every_composed_provider_and_accepts_hint(
-        self,
-        mod_workspace: Path,
+    def test_scan_aggregates_every_local_rule_and_accepts_hint(
+        self, mod_workspace: Path
     ) -> None:
-        """Execute each elected provider config and retain its exact rule owner."""
+        """Execute every rule of the local catalog and retain its exact rule file."""
         expected_rule_files: t.MutableMappingKV[str, str] = {}
         source_lines: list[str] = []
+        config_path = mod_workspace / c.Infra.CODEMOD_CONFIG_RELPATH
+        rules_root = config_path.parent / c.Cli.RULES_DIR_NAME
+        tm.ok(u.Cli.ensure_dir(rules_root))
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                config_path,
+                f"{c.Infra.CODEMOD_RULE_DIRS_KEY}:\n  - {c.Cli.RULES_DIR_NAME}\n",
+            )
+        )
         for package, rule_id, severity in (
             ("first_provider", "first-provider-finding", "warning"),
             ("second_provider", "second-provider-finding", "hint"),
         ):
-            config_root = mod_workspace / "src" / package / "codemod"
-            rules_root = config_root / c.Cli.RULES_DIR_NAME
             rule_path = rules_root / f"{rule_id}.yml"
             statement = f"{package}_value = 1"
-            tm.ok(u.Cli.ensure_dir(rules_root))
-            tm.ok(
-                u.Cli.atomic_write_text_file(
-                    config_root / c.Infra.CODEMOD_CONFIG_FILENAME,
-                    (
-                        f"{c.Infra.CODEMOD_SCOPE_KEY}: "
-                        f"{c.Infra.CODEMOD_SCOPE_UNIVERSAL}\n"
-                        f"{c.Infra.CODEMOD_RULE_DIRS_KEY}:\n"
-                        f"  - {c.Cli.RULES_DIR_NAME}\n"
-                    ),
-                ),
-            )
             tm.ok(
                 u.Cli.atomic_write_text_file(
                     rule_path,
@@ -388,18 +384,16 @@ class TestsFlextInfraModCliRoute:
         mod_workspace: Path,
     ) -> None:
         """Keep a declared fix that changes no bytes in the fixed-point residue."""
-        config_path = mod_workspace / c.Infra.CODEMOD_CONFIG_FILENAME
-        rules_root = mod_workspace / "codemod" / c.Cli.RULES_DIR_NAME
+        config_path = mod_workspace / c.Infra.CODEMOD_CONFIG_RELPATH
+        rules_root = config_path.parent / c.Cli.RULES_DIR_NAME
         rule_path = rules_root / "identity-fix.yml"
         statement = "identity_fix_value = 1"
         tm.ok(u.Cli.ensure_dir(rules_root))
         tm.ok(
             u.Cli.atomic_write_text_file(
                 config_path,
-                f"{c.Infra.CODEMOD_RULE_DIRS_KEY}:\n"
-                f"  - {'codemod'}/"
-                f"{c.Cli.RULES_DIR_NAME}\n",
-            ),
+                f"{c.Infra.CODEMOD_RULE_DIRS_KEY}:\n  - {c.Cli.RULES_DIR_NAME}\n",
+            )
         )
         tm.ok(
             u.Cli.atomic_write_text_file(

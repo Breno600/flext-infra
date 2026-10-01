@@ -332,31 +332,12 @@ class TestsFlextInfraRefactorMainCli:
             cls._write(workspace / "tests" / "test_service.py", test_source)
         return workspace, service_file
 
-    @classmethod
-    def _build_basic_workspace(cls, tmp_path: Path) -> t.Pair[Path, Path]:
-        return cls._build_service_workspace(
-            tmp_path,
-            service_source=cls._BASIC_SERVICE,
-            init_source=cls._BASIC_INIT,
-        )
 
-    @classmethod
-    def _build_runtime_alias_duplicate_workspace(
-        cls,
-        tmp_path: Path,
-    ) -> t.Pair[Path, Path]:
-        return cls._build_module_workspace(
-            tmp_path,
-            cls._DUPLICATE_RUNTIME_ALIAS_MODULE,
-        )
 
     @classmethod
     def _build_facade_member_workspace(cls, tmp_path: Path) -> t.Pair[Path, Path]:
         return cls._build_module_workspace(tmp_path, cls._FACADE_MEMBER_MODULE)
 
-    @classmethod
-    def _build_compatibility_alias_workspace(cls, tmp_path: Path) -> t.Pair[Path, Path]:
-        return cls._build_module_workspace(tmp_path, cls._COMPATIBILITY_ALIAS_MODULE)
 
     @classmethod
     def _build_test_only_workspace(cls, tmp_path: Path) -> Path:
@@ -435,166 +416,13 @@ class TestsFlextInfraRefactorMainCli:
         result = self._refactor_main("census", "--repository-root", str(workspace))
         tm.that(result, eq=0)
 
-    def test_refactor_census_does_not_infer_runtime_alias_from_filename(
-        self,
-        tmp_path: Path,
-    ) -> None:
-        """A module that declares no letter never acquires one from its name."""
-        workspace, module_path = self._build_module_workspace(
-            tmp_path,
-            self._UNDECLARED_RUNTIME_ALIAS_MODULE,
-        )
 
-        self._apply_census(workspace, rules="runtime_alias")
 
-        source = module_path.read_text(encoding="utf-8")
-        tm.that(source, lacks='"m"')
-        tm.that(source, lacks="m = FlextDemoModels")
 
-    def test_refactor_census_removes_unbound_declared_runtime_alias_export(
-        self,
-        tmp_path: Path,
-    ) -> None:
-        """An unbound letter is removed from ``__all__``, never inferred."""
-        workspace, module_path = self._build_module_workspace(
-            tmp_path,
-            self._UNBOUND_RUNTIME_ALIAS_EXPORT_MODULE,
-        )
 
-        self._apply_census(workspace, rules="runtime_alias")
 
-        source = module_path.read_text(encoding="utf-8")
-        tm.that(source, lacks='"m"')
-        tm.that(source, lacks="m = FlextDemoModels")
 
-    def test_refactor_census_reports_duplicate_runtime_alias(
-        self,
-        tmp_path: Path,
-    ) -> None:
-        workspace, _ = self._build_runtime_alias_duplicate_workspace(tmp_path)
 
-        report = u.Tests.census_report(
-            workspace,
-            kinds=("class",),
-            rules=("runtime_alias",),
-        )
-        violations = u.Tests.census_violations(report)
-
-        tm.that(len(violations), eq=1)
-        tm.that(report.fixes_total, eq=1)
-        tm.that(violations[0].kind, eq="runtime_alias")
-        tm.that(violations[0].object_name, eq="FlextDemoModels")
-        tm.that(violations[0].description, has="Found 2 'm = ...' assignments")
-
-    def test_refactor_census_reports_manual_typing_alias(self, tmp_path: Path) -> None:
-        workspace, _ = self._build_basic_workspace(tmp_path)
-
-        report = u.Tests.census_report(
-            workspace,
-            kinds=("assignment",),
-            rules=("manual_typing_alias",),
-        )
-        violations = u.Tests.census_violations(report)
-
-        tm.that(len(violations), eq=1)
-        tm.that(report.fixes_total, eq=1)
-        tm.that(violations[0].kind, eq="manual_typing_alias")
-        tm.that(violations[0].object_name, eq="PayloadMap")
-        tm.that(violations[0].object_kind, eq="assignment")
-        tm.that(violations[0].description, has="typings scope")
-
-    def test_refactor_census_reports_compatibility_alias(self, tmp_path: Path) -> None:
-        workspace, _ = self._build_compatibility_alias_workspace(tmp_path)
-
-        report = u.Tests.census_report(
-            workspace,
-            kinds=("class",),
-            rules=("compatibility_alias",),
-        )
-        violations = u.Tests.census_violations(report)
-
-        tm.that(len(violations), eq=1)
-        tm.that(report.fixes_total, eq=1)
-        tm.that(violations[0].kind, eq="compatibility_alias")
-        tm.that(violations[0].object_name, eq="LegacyThing")
-        tm.that(violations[0].object_kind, eq="class")
-        tm.that(violations[0].description, has="should use 'NewThing' directly")
-
-    @pytest.mark.parametrize(
-        ("builder_name", "kinds", "rules", "expected_kind"),
-        [
-            (
-                "_build_runtime_alias_duplicate_workspace",
-                ("class",),
-                ("runtime_alias",),
-                "runtime_alias",
-            ),
-            (
-                "_build_basic_workspace",
-                ("assignment",),
-                ("manual_typing_alias",),
-                "manual_typing_alias",
-            ),
-            (
-                "_build_compatibility_alias_workspace",
-                ("class",),
-                ("compatibility_alias",),
-                "compatibility_alias",
-            ),
-        ],
-    )
-    def test_refactor_census_detector_rules_report_public_violations(
-        self,
-        tmp_path: Path,
-        builder_name: str,
-        kinds: t.StrSequence,
-        rules: t.StrSequence,
-        expected_kind: str,
-    ) -> None:
-        builder = getattr(self, builder_name)
-        built_workspace = builder(tmp_path)
-        workspace = (
-            built_workspace[0]
-            if isinstance(built_workspace, tuple)
-            else built_workspace
-        )
-
-        report = u.Tests.census_report(workspace, kinds=kinds, rules=rules)
-        violations = u.Tests.census_violations(report)
-
-        tm.that(violations, empty=False)
-        tm.that(
-            all(violation.kind == expected_kind for violation in violations),
-            eq=True,
-        )
-
-    def test_refactor_census_apply_rewrites_manual_typing_alias(
-        self,
-        tmp_path: Path,
-    ) -> None:
-        workspace, service_file = self._build_basic_workspace(tmp_path)
-        typings_file = service_file.parent / "typings.py"
-
-        self._apply_census(workspace, rules="manual_typing_alias")
-
-        service_source = service_file.read_text(encoding="utf-8")
-        typings_source = typings_file.read_text(encoding="utf-8")
-        tm.that(service_source, lacks="PayloadMap: TypeAlias = t.StrMapping")
-        tm.that(service_source, has="from sample_pkg.typings import PayloadMap")
-        tm.that(typings_source, has="type PayloadMap = t.StrMapping")
-        tm.that(typings_source, has="from flext_core import t")
-
-    def test_refactor_census_apply_rewrites_compatibility_alias(
-        self,
-        tmp_path: Path,
-    ) -> None:
-        workspace, module_path = self._build_compatibility_alias_workspace(tmp_path)
-
-        self._apply_census(workspace, rules="compatibility_alias")
-
-        source = module_path.read_text(encoding="utf-8")
-        tm.that(source, lacks="LegacyThing = NewThing")
-        tm.that(source, has="class NewThing:")
 
     def test_refactor_census_flags_unused_when_only_tests_reference_source(
         self,

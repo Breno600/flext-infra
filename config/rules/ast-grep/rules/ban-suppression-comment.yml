@@ -1,0 +1,24 @@
+# A checker finding is fixed at its root; a suppression comment hides it.
+# Comments are tree-sitter `comment` nodes, so a marker quoted inside a string
+# or docstring is unreachable.
+id: ban-type-ignore-comment
+language: python
+severity: error
+files:
+  - "**/*.py"
+rule:
+  kind: comment
+  regex: "#\\s*type:\\s*ignore"
+message: >-
+  `# type: ignore` hides a typing defect: fix the contract it suppresses.
+---
+id: ban-noqa-comment
+language: python
+severity: error
+files:
+  - "**/*.py"
+rule:
+  kind: comment
+  regex: "#\\s*noqa\\b"
+message: >-
+  `# noqa` hides a lint defect: fix the code it suppresses.

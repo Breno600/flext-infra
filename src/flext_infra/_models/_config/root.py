@@ -42,10 +42,6 @@ class FlextInfraConfigModelsRoot:
             FlextInfraConfigModelsRelease.ReleasePolicySpec,
             m.Field(description="Release protocol policy"),
         ]
-        enforcement: Annotated[
-            FlextInfraConfigModelsStatic.StaticEnforcementSpec,
-            m.Field(description="Rope-only static enforcement policy"),
-        ]
         sed_patterns: Annotated[
             FlextInfraConfigModelsArtifact.SedPatternsSpec,
             m.Field(

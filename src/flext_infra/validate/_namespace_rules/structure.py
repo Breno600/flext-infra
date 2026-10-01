@@ -20,7 +20,7 @@ class FlextInfraNamespaceRulesStructure(FlextInfraNamespaceRulesBase):
     def _is_functional_module(cls, tree: p.AttributeProbe) -> bool:
         """Return whether a module only re-exports symbols or runs an entry.
 
-        Why (cosmos-3flk9): the operational ``r/e/x/h/d/s`` re-export modules
+        Why: the operational ``r/e/x/h/d/s`` re-export modules
         and the ``python -m`` entrypoint stub carry no class by law. The shape
         is derived from the AST — imports, the export manifest, the ``__main__``
         guard and one exit call — so the exemption follows what the module IS,
@@ -306,7 +306,7 @@ class FlextInfraNamespaceRulesStructure(FlextInfraNamespaceRulesBase):
     def _module_docstring(cls, node: p.AttributeProbe) -> bool:
         """Return whether an expression is a module docstring."""
         value: p.AttributeProbe = getattr(node, "value", None)
-        # NOTE (multi-agent, flext-n6ge5): statements such as definitions and
+        # Statements such as definitions and
         # ``pass`` have no expression value; keep node_kind strict for real nodes.
         if value is None:
             return False
