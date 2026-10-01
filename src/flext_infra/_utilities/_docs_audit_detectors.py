@@ -27,21 +27,6 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
     """
 
     @staticmethod
-    def _policy_text_files(
-        scope: m.Infra.DocScope,
-        exempt_paths: t.StrSequence,
-    ) -> t.SequenceOf[t.Pair[str, Path]]:
-        """Return ``(relative_posix, path)`` for policy checks, skipping exempt prefixes."""
-        exempt = tuple(exempt_paths)
-        files: t.MutableSequenceOf[t.Pair[str, Path]] = []
-        for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
-            rel = md_file.relative_to(scope.path).as_posix()
-            if rel.startswith(exempt):
-                continue
-            files.append((rel, md_file))
-        return files
-
-    @staticmethod
     def docs_text_token_issues(
         scope: m.Infra.DocScope, *, tokens: t.StrSequence, issue_type: str
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
@@ -49,13 +34,8 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         if not tokens:
             return issues
-        for (
-            rel,
-            md_file,
-        ) in FlextInfraUtilitiesDocsAuditDetectorsMixin._policy_text_files(
-            scope,
-            exempt_paths,
-        ):
+        for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
+            rel = md_file.relative_to(scope.path).as_posix()
             text = md_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
             for token in tokens:
                 if token in text:
@@ -95,7 +75,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
     def docs_machine_path_issues(
         scope: m.Infra.DocScope,
         *,
-        exempt_paths: t.StrSequence,
+        historical_evidence_files: t.VariadicTuple[Path],
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
         """Collect per-user absolute paths (``/home/<user>``) frozen into markdown.
 
@@ -105,13 +85,11 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
         retain the observed machine path.
         """
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
-        for (
-            rel,
-            md_file,
-        ) in FlextInfraUtilitiesDocsAuditDetectorsMixin._policy_text_files(
-            scope,
-            exempt_paths,
-        ):
+        evidence = set(historical_evidence_files)
+        for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
+            rel = md_file.relative_to(scope.path).as_posix()
+            if Path(rel) in evidence:
+                continue
             text = md_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
             for line_number, line in enumerate(text.splitlines(), start=1):
                 for match in c.Infra.MACHINE_PATH_RE.finditer(line):

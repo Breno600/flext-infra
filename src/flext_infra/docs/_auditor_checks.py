@@ -20,9 +20,9 @@ class FlextInfraDocAuditorChecksMixin:
         scope: m.Infra.DocScope,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
         """Return forbidden-term issues configured for one scope."""
-        return FlextInfraDocAuditorChecksMixin._policy_token_issues(
+        return u.Infra.docs_text_token_issues(
             scope,
-            policy_key="forbidden_terms",
+            tokens=u.Infra.docs_audit_policy(scope).forbidden_terms,
             issue_type="forbidden_term",
         )
 
@@ -40,10 +40,8 @@ class FlextInfraDocAuditorChecksMixin:
         """Return machine-local paths outside exact historical evidence files."""
         return u.Infra.docs_machine_path_issues(
             scope,
-            exempt_paths=u.Infra.docs_policy_list(
-                scope,
-                section="audit",
-                key="machine_path_exempt_paths",
+            historical_evidence_files=(
+                u.Infra.docs_audit_policy(scope).historical_evidence_files
             ),
         )
 

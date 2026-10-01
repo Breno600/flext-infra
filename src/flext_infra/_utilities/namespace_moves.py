@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import MutableMapping
 from pathlib import Path
 
-from flext_infra import c, m, p, t
+from flext_infra import c, m, t
 
 from ._rope_analysis.asthelpers import FlextInfraUtilitiesRopeAnalysisAstHelpers
 from .namespace_common import FlextInfraUtilitiesRefactorNamespaceCommon
