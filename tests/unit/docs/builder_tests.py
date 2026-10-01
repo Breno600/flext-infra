@@ -20,17 +20,18 @@ if TYPE_CHECKING:
     from tests import t
 
 
-@pytest.fixture
-def builder() -> FlextInfraDocBuilder:
-    """Provide the public documentation builder service."""
-    return FlextInfraDocBuilder()
-
-
-class TestBuilderCore:
+class TestsFlextInfraBuilder:
     """Core build invocation tests."""
 
+    @pytest.fixture
+    def builder(self) -> FlextInfraDocBuilder:
+        """Provide the public documentation builder service."""
+        return FlextInfraDocBuilder()
+
     def test_build_with_valid_scope_returns_success(
-        self, builder: FlextInfraDocBuilder, tmp_path: Path
+        self,
+        builder: FlextInfraDocBuilder,
+        tmp_path: Path,
     ) -> None:
         """Test build with valid scope returns success."""
         reports: t.SequenceOf[m.Infra.DocsPhaseReport] = tm.ok(builder.build(tmp_path))
@@ -52,14 +53,14 @@ class TestBuilderCore:
         self,
         builder: FlextInfraDocBuilder,
         tmp_path: Path,
-        kwargs: dict[str, str | list[str]],
+        kwargs: t.MappingKV[str, str | t.SequenceOf[str]],
     ) -> None:
         """Build runs with each option variant and returns a railway result."""
         if "output_dir" in kwargs:
             match kwargs["output_dir"]:
                 case str() as output_dir:
                     tm.ok(
-                        builder.build(tmp_path, output_dir=str(tmp_path / output_dir))
+                        builder.build(tmp_path, output_dir=str(tmp_path / output_dir)),
                     )
                 case invalid:
                     pytest.fail(f"invalid output_dir test case: {invalid!r}")
@@ -72,7 +73,9 @@ class TestBuilderCore:
 
     @pytest.mark.parametrize("status", ["OK", "FAIL", "SKIP"])
     def test_build_report_result_field_values(
-        self, status: str, tmp_path: Path
+        self,
+        status: str,
+        tmp_path: Path,
     ) -> None:
         """Test BuildReport result field accepts valid values."""
         report = m.Infra.DocsPhaseReport(
@@ -96,7 +99,9 @@ class TestBuilderCore:
         tm.that(report.site_dir, eq="/path/to/site")
 
     def test_build_with_multiple_projects_returns_list(
-        self, builder: FlextInfraDocBuilder, tmp_path: Path
+        self,
+        builder: FlextInfraDocBuilder,
+        tmp_path: Path,
     ) -> None:
         """Test build with multiple projects returns list of reports."""
         result = builder.build(tmp_path, projects=["proj1", "proj2"])

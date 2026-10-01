@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from flext_infra.constants import c
+from flext_infra import c
 
 
 class FlextInfraUtilitiesGitRemote:

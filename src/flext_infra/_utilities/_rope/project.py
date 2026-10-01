@@ -10,13 +10,55 @@ warning or weakening the process warning policy.
 
 from __future__ import annotations
 
-from typing import override
+from collections.abc import Mapping
+from pathlib import Path
+from typing import TYPE_CHECKING, Self, override
+
+if TYPE_CHECKING:
+    from flext_infra import t
 
 from rope.base.project import Project
 
 
 class FlextInfraRopeProject(Project):
     """Rope project with the upstream self-warning initializer repaired."""
+
+    class SnapshotFiles:
+        """Closed, read-only input inventory for a semantic planning project.
+
+        Deliberately exposes no filesystem mutation operations. Missing inputs
+        are errors, never an invitation to consult a newer disk version.
+        """
+
+        def __init__(self, sources: Mapping[Path, str]) -> None:
+            self._sources = {
+                path.resolve(): source.encode("utf-8")
+                for path, source in sources.items()
+            }
+
+        def read(self, path: str) -> bytes:
+            """Read the exact captured source, including proposed edits."""
+            return self._sources[Path(path).resolve()]
+
+    @classmethod
+    def from_snapshot(
+        cls,
+        root: str,
+        sources: Mapping[Path, str],
+        source_folders: t.SequenceOf[str],
+    ) -> Self:
+        """Construct a fresh Rope identity graph without persistent state."""
+        if not Path(root).is_dir():
+            msg = f"Rope snapshot root must already exist: {root}"
+            raise ValueError(msg)
+        return cls(
+            root,
+            fscommands=cls.SnapshotFiles(sources),
+            ropefolder=None,
+            save_objectdb=False,
+            save_history=False,
+            source_folders=source_folders,
+        )
 
     @override
     def _init_source_folders(self) -> None:

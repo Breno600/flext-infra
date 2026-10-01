@@ -1,148 +1,177 @@
-"""Test detection deptry behavior."""
+"""``run_deptry`` executes the environment's real ``deptry`` executable."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import sys
+from pathlib import Path
 
 from flext_tests import tm
 
-from tests import c, u
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from tests import t
+from flext_infra import config
+from flext_infra.deps.detection import FlextInfraDependencyDetectionService
+from tests import c, t, u
 
 
 class TestsFlextInfraDepsDetectionDeptry:
-    """Test flext infra deps detection deptry behavior."""
+    """Behaviour of ``run_deptry`` against a deptry executable on disk."""
 
     @staticmethod
-    def _deptry_environment(tmp_path: Path) -> tuple[Path, Path]:
-        """Create one venv bin directory and a minimal deptry project."""
+    def _environment(
+        tmp_path: Path,
+        report: str | None,
+        *,
+        exit_code: int = 0,
+    ) -> t.Pair[Path, Path]:
+        """Create a project and a ``deptry`` that writes ``report`` as its JSON."""
         venv_bin = tmp_path / "venv" / "bin"
         venv_bin.mkdir(parents=True)
-        project = tmp_path / "test-project-dir"
+        project = tmp_path / "project"
         project.mkdir()
-        (project / c.Infra.PYPROJECT_FILENAME).write_text(
-            "", encoding=c.Cli.ENCODING_DEFAULT
+        (project / c.PYPROJECT_FILENAME).write_text("", encoding=c.Cli.ENCODING_DEFAULT)
+        write = ""
+        if report is not None:
+            payload = tmp_path / "deptry-payload.json"
+            payload.write_text(report, encoding=c.Cli.ENCODING_DEFAULT)
+            write = (
+                'while [ "$#" -gt 0 ]; do\n'
+                '  if [ "$1" = "--json-output" ]; then cp '
+                f'"{payload}" "$2"; fi\n'
+                "  shift\n"
+                "done\n"
+            )
+        deptry = venv_bin / c.Infra.DEPTRY
+        deptry.write_text(
+            f"#!/bin/sh\n{write}exit {exit_code}\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
+        deptry.chmod(0o755)
         return venv_bin, project
 
-    def test_success(self, tmp_path: Path) -> None:
-        """Verify dependency project discovery succeeds."""
-        project = u.Tests.create_project_info(tmp_path / "test-project")
-        project.path.mkdir()
-        (project.path / c.Infra.PYPROJECT_FILENAME).write_text(
-            "", encoding=c.Cli.ENCODING_DEFAULT
-        )
-        service = u.Tests.create_deptry_service(projects=[project])
-
-        result = service.discover_project_paths(tmp_path)
-
-        tm.ok(result)
-        tm.that(result.value, eq=[project.path])
-
-    def test_failure(self, tmp_path: Path) -> None:
-        """Verify project selection failures propagate."""
-        service = u.Tests.create_deptry_service(selection_error="selector failed")
-
-        tm.fail(service.discover_project_paths(tmp_path))
-
-    def test_filters_without_pyproject(self, tmp_path: Path) -> None:
-        """Verify filters without pyproject."""
-        project = u.Tests.create_project_info(
-            tmp_path / "empty-project", name="empty-project"
-        )
-        project.path.mkdir()
-        service = u.Tests.create_deptry_service(projects=[project])
-
-        result = service.discover_project_paths(tmp_path)
-
-        tm.ok(result)
-        tm.that(result.value, empty=True)
-
-    def test_success_with_issues(
-        self, tmp_path: Path, deptry_report_payload: t.JsonPayload
+    def test_issues_and_exit_code_are_reported(
+        self,
+        tmp_path: Path,
+        deptry_report_payload: t.JsonPayload,
     ) -> None:
-        """Verify success with issues."""
-        venv_bin, project = TestsFlextInfraDepsDetectionDeptry._deptry_environment(
-            tmp_path
-        )
-        out_file = project / ".deptry-report.json"
-        write_result = u.Cli.json_write(out_file, deptry_report_payload)
-        tm.ok(write_result)
-        service = u.Tests.create_deptry_service(
-            command_output=u.Tests.create_command_output()
+        source = tmp_path / "source-report.json"
+        tm.ok(u.Cli.json_write(source, deptry_report_payload))
+        report = source.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+        venv_bin, project = self._environment(tmp_path, report, exit_code=1)
+
+        issues, exit_code = tm.ok(
+            FlextInfraDependencyDetectionService().run_deptry(project, venv_bin),
         )
 
-        result = service.run_deptry(project, venv_bin, json_output_path=out_file)
-
-        tm.ok(result)
-        issues, exit_code = result.value
-        tm.that(exit_code, eq=0)
+        tm.that(exit_code, eq=1)
         tm.that(len(issues), eq=1)
 
-    def test_no_config_file(self, tmp_path: Path) -> None:
-        """Verify no config file."""
-        service = u.Tests.create_deptry_service()
+    def test_project_without_config_is_skipped(self, tmp_path: Path) -> None:
         venv_bin = tmp_path / "venv" / "bin"
         venv_bin.mkdir(parents=True)
-        project = tmp_path / "test-project-dir"
+        project = tmp_path / "project"
         project.mkdir()
 
-        result = service.run_deptry(project, venv_bin)
+        result = FlextInfraDependencyDetectionService().run_deptry(project, venv_bin)
 
-        tm.ok(result)
-        tm.that(result.value, eq=([], 0))
+        tm.that(tm.ok(result), eq=([], 0))
 
-    def test_runner_failure(self, tmp_path: Path) -> None:
-        """Verify runner failure."""
-        service = u.Tests.create_deptry_service(run_error="runner failed")
-        venv_bin, project = TestsFlextInfraDepsDetectionDeptry._deptry_environment(
-            tmp_path
-        )
+    def test_unlaunchable_deptry_is_a_failure(self, tmp_path: Path) -> None:
+        venv_bin, project = self._environment(tmp_path, None)
+        (venv_bin / c.Infra.DEPTRY).chmod(0o644)
 
-        tm.fail(service.run_deptry(project, venv_bin))
+        tm.fail(FlextInfraDependencyDetectionService().run_deptry(project, venv_bin))
 
-    def test_invalid_and_empty_json_output_surfaces_failure(
-        self, tmp_path: Path
-    ) -> None:
-        """Unparseable deptry output (deptry exited 0) surfaces as a failure.
+    def test_invalid_or_empty_report_is_a_failure(self, tmp_path: Path) -> None:
+        for index, report in enumerate(("{ invalid json }", "")):
+            venv_bin, project = self._environment(tmp_path / str(index), report)
 
-        deptry writes ``[]`` for a clean run; invalid/empty output is an anomaly
-        that must never be silently swallowed as "no issues" (SUPREME RULE).
-        """
-        service = u.Tests.create_deptry_service(
-            command_output=u.Tests.create_command_output()
-        )
-        venv_bin, project = TestsFlextInfraDepsDetectionDeptry._deptry_environment(
-            tmp_path
-        )
-        for payload in ("{ invalid json }", ""):
-            out_file = project / ".deptry-report.json"
-            out_file.write_text(payload, encoding=c.Cli.ENCODING_DEFAULT)
-
-            result = service.run_deptry(project, venv_bin, json_output_path=out_file)
+            result = FlextInfraDependencyDetectionService().run_deptry(
+                project,
+                venv_bin,
+            )
 
             tm.that(result.failure, eq=True)
 
-    def test_with_extend_exclude_and_cleanup(self, tmp_path: Path) -> None:
-        """Verify with extend exclude and cleanup."""
-        service = u.Tests.create_deptry_service(
-            command_output=u.Tests.create_command_output()
+    def test_non_mapping_issue_is_a_failure(self, tmp_path: Path) -> None:
+        venv_bin, project = self._environment(
+            tmp_path,
+            '["not_a_dict", {"error": {"code": "DEP001"}}]',
         )
-        venv_bin, project = TestsFlextInfraDepsDetectionDeptry._deptry_environment(
-            tmp_path
-        )
-        default_out = project / ".deptry-report.json"
-        default_out.write_text("[]", encoding=c.Cli.ENCODING_DEFAULT)
 
-        extend_result = service.run_deptry(
-            project, venv_bin, extend_exclude=["tests", "docs"]
-        )
-        default_result = service.run_deptry(project, venv_bin)
+        result = FlextInfraDependencyDetectionService().run_deptry(project, venv_bin)
 
-        tm.ok(extend_result)
-        tm.ok(default_result)
-        tm.that(default_out.exists(), eq=False)
+        tm.fail(result, has="must be a mapping")
+
+    @staticmethod
+    def _profile_runtime(upstream: str) -> t.StrSequence:
+        """Read one shared dependency profile's runtime from the codegen SSOT."""
+        return next(
+            item.runtime
+            for item in config.Infra.codegen.scaffold.project.dependency_profiles
+            if item.project is None and item.upstream == upstream
+        )
+
+    def test_profile_injected_dependencies_are_governed(self, tmp_path: Path) -> None:
+        """Real deptry DEP002 findings for profile requirements are policy."""
+        upstream = next(
+            item.upstream
+            for item in config.Infra.codegen.scaffold.project.dependency_profiles
+            if item.project is None
+        )
+        runtime = self._profile_runtime(upstream)
+        declared = ", ".join(f'"{item}"' for item in (*runtime, "six"))
+        project = u.Tests.mk_project(
+            tmp_path,
+            "governed-consumer",
+            with_src=True,
+            pyproject=(
+                '[project]\nname = "governed-consumer"\nversion = "0.1.0"\n'
+                f"dependencies = [{declared}]\n"
+            ),
+        )
+        service = FlextInfraDependencyDetectionService()
+        issues, _ = tm.ok(service.run_deptry(project, Path(sys.executable).parent))
+        unused = {
+            u.Infra.dep_name(str(issue.get(c.Infra.MODULE)))
+            for issue in issues
+            if u.Cli.json_as_mapping(issue.get(c.Infra.ERROR)).get(c.Infra.CODE)
+            == c.Infra.DEPTRY_UNUSED_DEPENDENCY_CODE
+        }
+        tm.that(unused, has="six")
+        governed = set(tm.ok(service.governed_profile_dependencies(project)))
+        tm.that(governed, eq={u.Infra.dep_name(item) for item in runtime})
+        tm.that(governed - unused, empty=True)
+        report = service.build_project_report(
+            project.name,
+            tm.ok(service.govern_deptry_issues(project, issues)),
+        )
+        tm.that(list(report.deptry.unused), eq=["six"])
+
+    def test_project_without_profile_keeps_every_finding(self, tmp_path: Path) -> None:
+        """A project no shared profile governs keeps deptry's findings intact."""
+        project = u.Tests.mk_project(
+            tmp_path,
+            "independent",
+            with_src=True,
+            pyproject=(
+                '[project]\nname = "independent"\nversion = "0.1.0"\n'
+                'dependencies = ["six"]\n'
+            ),
+        )
+        service = FlextInfraDependencyDetectionService()
+        tm.that(tm.ok(service.governed_profile_dependencies(project)), empty=True)
+        issues: t.SequenceOf[t.JsonMapping] = [
+            {"error": {"code": c.Infra.DEPTRY_UNUSED_DEPENDENCY_CODE}, "module": "six"},
+        ]
+        tm.that(tm.ok(service.govern_deptry_issues(project, issues)), eq=tuple(issues))
+
+    def test_default_report_is_removed_after_parsing(self, tmp_path: Path) -> None:
+        venv_bin, project = self._environment(tmp_path, "[]")
+
+        result = FlextInfraDependencyDetectionService().run_deptry(
+            project,
+            venv_bin,
+            extend_exclude=["tests", "docs"],
+        )
+
+        tm.that(tm.ok(result), eq=([], 0))
+        tm.that((project / ".deptry-report.json").exists(), eq=False)

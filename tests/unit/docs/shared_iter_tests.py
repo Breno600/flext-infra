@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-class TestIterMarkdownFiles:
+class TestsFlextInfraDocsSharedIter:
     """Tests for u.Infra.iter_markdown_files."""
 
     def test_empty_directory(self, tmp_path: Path) -> None:
@@ -43,7 +43,8 @@ class TestIterMarkdownFiles:
         tm.that(not any(".hidden" in str(f) for f in files), eq=True)
 
     def test_hidden_workspace_ancestor_does_not_exclude_docs(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Exclude hidden descendants without rejecting a worktree ancestor."""
         workspace = tmp_path / ".worktrees" / "project"
@@ -102,11 +103,11 @@ class TestIterMarkdownFiles:
         tm.that(not any("node_modules" in str(f) for f in files), eq=True)
 
     def test_excludes_archived_markdown(self, tmp_path: Path) -> None:
-        """Test historical backup files and legado roots remain evidence-only."""
+        """Archived roots stay evidence-only; a backup-named page is governed."""
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir(parents=True, exist_ok=True)
-        backup = docs_dir / "guide.bak-legacy.md"
-        backup.write_text("# Archived backup\n")
+        backup_named = docs_dir / "guide.bak-legacy.md"
+        backup_named.write_text("# Archived backup\n")
         legado = docs_dir / "legado"
         legado.mkdir()
         archived = legado / "guide.md"
@@ -114,5 +115,32 @@ class TestIterMarkdownFiles:
 
         files = u.Infra.iter_markdown_files(tmp_path)
 
-        tm.that(backup in files, eq=False)
+        tm.that(backup_named in files, eq=True)
         tm.that(archived in files, eq=False)
+
+    def test_excludes_generated_crg_reports(self, tmp_path: Path) -> None:
+        """Keep graph evidence outside mutable documentation normalization."""
+        maintained = tmp_path / "docs/architecture/README.md"
+        maintained.parent.mkdir(parents=True)
+        maintained.write_text("# Architecture\n")
+        generated = tmp_path / "docs/architecture/crg-reports/architecture.md"
+        generated.parent.mkdir(parents=True)
+        generated.write_text("# CRG report\n")
+
+        files = u.Infra.iter_markdown_files(tmp_path)
+
+        tm.that(maintained in files, eq=True)
+        tm.that(generated in files, eq=False)
+
+    def test_excludes_immutable_plan_collection_revisions(self, tmp_path: Path) -> None:
+        docs_dir = tmp_path / "docs"
+        current = docs_dir / "plans" / "current.md"
+        incoming = docs_dir / "plans" / "current" / "incoming" / "digest" / "plan.md"
+        incoming.parent.mkdir(parents=True)
+        current.write_text("# Current\n")
+        incoming.write_text("# Immutable revision\n")
+
+        files = u.Infra.iter_markdown_files(tmp_path)
+
+        tm.that(current in files, eq=True)
+        tm.that(incoming in files, eq=False)

@@ -12,28 +12,28 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated, override
+from typing import Annotated, override
 
 from flext_core import r
-from flext_infra import c, m
+from flext_infra import c, m, p, t
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
 
 from ._fixer_workspace import FlextInfraCodegenFixerWorkspaceMixin
 
-if TYPE_CHECKING:
-    from flext_infra import p, t
-
 
 class FlextInfraCodegenFixer(
-    FlextInfraProjectSelectionServiceBase[str], FlextInfraCodegenFixerWorkspaceMixin
+    FlextInfraProjectSelectionServiceBase[str],
+    FlextInfraCodegenFixerWorkspaceMixin,
 ):
     """Rope-oriented auto-fixer for namespace violations (Rules 1-5)."""
 
     dry_run: Annotated[
-        bool, m.Field(description="Preview changes without modifying files")
+        bool,
+        m.Field(description="Preview changes without modifying files"),
     ] = False
     rules_only: Annotated[
-        bool, m.Field(description="Only apply rule-based fixes, skip heuristic ones")
+        bool,
+        m.Field(description="Only apply rule-based fixes, skip heuristic ones"),
     ] = False
 
     @override
@@ -56,7 +56,7 @@ class FlextInfraCodegenFixer(
         )
         lines.append(
             f"Auto-fix: {total_fixed} fixed, {total_skipped} skipped"
-            f" across {len(results)} projects"
+            f" across {len(results)} projects",
         )
         return r[str].ok("\n".join(lines))
 

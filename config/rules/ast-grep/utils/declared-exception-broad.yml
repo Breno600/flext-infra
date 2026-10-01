@@ -1,0 +1,16 @@
+# A declared exception expression that names Exception or BaseException, alone
+# or as an element of a tuple, or whose element is neither a name nor a dotted
+# name (it cannot be proven narrow).
+id: declared-exception-broad
+language: python
+rule:
+  any:
+    - all:
+        - pattern: $_
+        - matches: broad-exception-element
+    - all:
+        - any:
+            - kind: tuple
+            - kind: parenthesized_expression
+        - has:
+            matches: broad-exception-element

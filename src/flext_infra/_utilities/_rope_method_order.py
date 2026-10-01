@@ -4,11 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_infra.constants import c
+from flext_infra import c
 
 if TYPE_CHECKING:
-    from flext_infra.models import m
-    from flext_infra.typings import t
+    from flext_infra import m, t
 
 
 class FlextInfraUtilitiesRopeMethodOrderMixin:
@@ -25,7 +24,8 @@ class FlextInfraUtilitiesRopeMethodOrderMixin:
 
     @staticmethod
     def matches_method_rule(
-        method: m.Infra.MethodInfo, rule: m.Infra.MethodOrderRule
+        method: m.Infra.MethodInfo,
+        rule: m.Infra.MethodOrderRule,
     ) -> bool:
         """Check if a method matches an ordering rule."""
         decorators = set(method.decorators)
@@ -35,16 +35,16 @@ class FlextInfraUtilitiesRopeMethodOrderMixin:
                 visibility_matches = not method.name.startswith("_")
             case "protected":
                 visibility_matches = method.name.startswith(
-                    "_"
+                    "_",
                 ) and not method.name.startswith("__")
             case "private":
                 visibility_matches = method.name.startswith(
-                    "__"
+                    "__",
                 ) and not method.name.endswith("__")
             case _:
                 visibility_matches = True
         decorators_match = not rule.decorators or bool(
-            decorators.intersection(rule.decorators)
+            decorators.intersection(rule.decorators),
         )
         excluded = bool(excludes and decorators.intersection(excludes))
         patterns = rule.patterns
@@ -57,7 +57,8 @@ class FlextInfraUtilitiesRopeMethodOrderMixin:
 
     @staticmethod
     def build_method_sort_key(
-        method: m.Infra.MethodInfo, order_config: t.SequenceOf[m.Infra.MethodOrderRule]
+        method: m.Infra.MethodInfo,
+        order_config: t.SequenceOf[m.Infra.MethodOrderRule],
     ) -> t.Triple[int, int, str]:
         """Build a sort key tuple for method ordering."""
         cls = FlextInfraUtilitiesRopeMethodOrderMixin

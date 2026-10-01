@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -16,7 +17,7 @@ from flext_infra.fixers.orchestrator import FlextInfraEnforcementFixerOrchestrat
 from tests import c, u
 
 
-class TestsEnforcementFixerOrchestrator:
+class TestsFlextInfraEnforcementFixerOrchestrator:
     """Root-cause guardrails for fixer collection and routing."""
 
     @staticmethod
@@ -38,6 +39,7 @@ class TestsEnforcementFixerOrchestrator:
         source_file = project_dir / "src" / "demo" / "sample.py"
         source_file.parent.mkdir(parents=True)
         source_file.write_text("from __future__ import annotations\n", encoding="utf-8")
+        u.Tests.initialize_git_repo(project_dir)
         orchestrator = FlextInfraEnforcementFixerOrchestrator(
             repository_root=project_dir,
             selected_projects=("demo",),
@@ -224,6 +226,80 @@ class TestsEnforcementFixerOrchestrator:
 
         tm.that((result.error or ""), lacks="no registered fixer adapter")
 
+    @pytest.mark.slow
+    def test_fix_enforcement_never_rewrites_text_or_typing_list(
+        self, tmp_path: Path
+    ) -> None:
+        """The applied fix run leaves a module that quotes its own defects intact.
+
+        Retired whole-file regex fixes rewrote the docstrings, comments and
+        strings documenting bare ``except:``, ``breakpoint()`` and ``List[``,
+        and turned ``typing.List[`` into ``typing.t.SequenceOf[``. Those
+        rewrites belong to the ast-grep rules of ``make mod``; the enforcement
+        fix run keeps every byte of the module, real violations included.
+        """
+        project_dir = u.Tests.mk_project(
+            tmp_path, "demo", pyproject='[project]\nname = "demo"\nversion = "0.1.0"\n'
+        )
+        u.Tests.declare_workspace_projects(tmp_path, ("demo",))
+        source_file = project_dir / "src" / "demo" / "documented.py"
+        source_file.parent.mkdir(parents=True)
+        source = (
+            '"""Document the defects this module still carries.\n'
+            "\n"
+            "except:\n"
+            "    raise\n"
+            "breakpoint()\n"
+            "Annotate with List[str], never typing.List[str].\n"
+            '"""\n'
+            "\n"
+            "from __future__ import annotations\n"
+            "\n"
+            "import typing\n"
+            "from typing import List\n"
+            "\n"
+            'HINT = "rewrite except: and drop breakpoint() and List[str]"\n'
+            "\n"
+            "\n"
+            "def first(values: List[str]) -> str:\n"
+            "    # List[str] and typing.List[str] stay text in this comment.\n"
+            "    try:\n"
+            "        return values[0]\n"
+            "    except:\n"
+            "        raise\n"
+            "\n"
+            "\n"
+            "def total(values: typing.List[int]) -> int:\n"
+            "    breakpoint()\n"
+            "    return sum(values)\n"
+        )
+        source_file.write_text(source, encoding="utf-8")
+        u.Tests.initialize_git_repo(project_dir)
+
+        # Baseline run of the documented surface: the probe imports the module
+        # and exercises only the defect-free call, so the debugger trap inside
+        # ``total`` is never armed. Byte-for-byte stdout/stderr equality below
+        # proves the fix run rewrote nothing.
+        probe = (
+            "import documented\n"
+            "print(documented.HINT)\n"
+            "print(documented.first(['a', 'b']))\n"
+        )
+        tm.ok(
+            u.Cli.run_raw((sys.executable, "-c", probe), cwd=source_file.parent.parent)
+        )
+
+        result = FlextInfraEnforcementFixerOrchestrator(
+            repository_root=project_dir, selected_projects=("demo",), apply=True
+        ).execute()
+
+        # The module carries real violations whose catalog fix_action is
+        # ``manual`` (ENFORCE-052/083/084/095/096); an apply run reports each as
+        # a failure by design and rewrites nothing. The contract under test is
+        # byte-for-byte preservation, proven by the equality below.
+        tm.fail(result, has="manual fix required")
+        tm.that(source_file.read_text(encoding="utf-8"), eq=source)
+
     # Exemplar: this drives the real CLI entry point against a real Git
     # repository, so its cost is the runtime's import chain plus several git
     # invocations. The slow marker opts into the config-owned slow-item budget.
@@ -254,8 +330,8 @@ class TestsEnforcementFixerOrchestrator:
             'MODULE_KIND: ClassVar[str] = "demo"\n\n\n'
             "class DemoWorker:\n"
             '    """Worker with one misplaced constant."""\n\n'
-            '    GROUPS: ClassVar[tuple[str, ...]] = ("alpha", "beta")\n\n'
-            "    def groups(self) -> tuple[str, ...]:\n"
+            '    GROUPS: ClassVar[t.VariadicTuple[str]] = ("alpha", "beta")\n\n'
+            "    def groups(self) -> t.VariadicTuple[str]:\n"
             '        """Return the configured groups."""\n'
             "        return self.GROUPS\n",
             encoding="utf-8",

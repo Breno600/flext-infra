@@ -1,9 +1,9 @@
 """Integration tests for flext_infra cross-module flows.
 
-Tests exercise cross-module flows using the public runtime surfaces, validating:
-- Output/reporting methods via u.Infra
-- Service r chaining
-- Command runtime operations via u.Cli.run_checked/capture
+Every test here exercises a real cross-module flow through the public
+runtime surfaces: the markdown gate fix contract over the filesystem, and
+the canonical CLI process boundary driving real git and external commands.
+Detector, discovery, and result-monad behavior keep their dedicated suites.
 
 Copyright (c) 2025 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -16,11 +16,8 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import m, r, u
-from flext_infra.gates.markdown import FlextInfraMarkdownGate
-from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-from flext_infra.workspace.orchestrator import FlextInfraOrchestratorService
-from tests import TestsFlextInfraUtilities as tu
+from flext_infra import FlextInfraMarkdownGate, m
+from tests import TestsFlextInfraUtilities as tu, u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -32,163 +29,56 @@ class TestsFlextInfraIntegrationInfraIntegration:
     """Integration tests for the public FlextInfra surface."""
 
     @pytest.mark.integration
-    def test_workspace_detector_and_orchestrator_share_state(
-        self, tmp_path: Path
-    ) -> None:
-        """Test that FlextInfraWorkspaceDetector and orchestrator share state.
-
-        Validates:
-        - Detector can be created
-        - Orchestrator can be created
-        - Both can access shared workspace information
-        """
-        repository_root = tmp_path / "workspace"
-        repository_root.mkdir()
-        (repository_root / ".git").mkdir()
-        detector = FlextInfraWorkspaceDetector()
-        orchestrator = FlextInfraOrchestratorService(verb="test")
-        tm.that(detector, none=False)
-        tm.that(orchestrator, none=False)
-        tm.that(detector, is_=FlextInfraWorkspaceDetector)
-        tm.that(orchestrator, is_=FlextInfraOrchestratorService)
-
-    @pytest.mark.integration
-    def test_workspace_detector_returns_flext_result(self) -> None:
-        """Test that workspace detector operations return r.
-
-        Validates:
-        - Detector methods return r
-        - Result typing is correct
-        """
-        detector = FlextInfraWorkspaceDetector()
-        tm.that(detector, none=False)
-        tm.that(detector, is_=FlextInfraWorkspaceDetector)
-
-    @pytest.mark.integration
-    def test_markdown_fix_formats_instead_of_linting(self, tmp_path: Path) -> None:
-        """The mutating verb must format Markdown, never lint it.
-
-        ``rumdl check --fix`` is a linter: it exits non-zero whenever a finding
-        has no autofix, so a run that repaired every fixable file still failed
-        the verb. ``rumdl fmt`` carries formatter-style exit codes, which is
-        the contract the mutating verb promises.
-
-        The gate pipeline owns this contract. The document below
-        carries an unfixable finding (MD041: no top-level heading) next to a
-        fixable one (MD009: trailing whitespace): the linter fails on it, the
-        formatter repairs what it can and still succeeds.
-        """
+    def test_markdown_fix_reports_residual_after_repair(self, tmp_path: Path) -> None:
+        """A fixable finding is repaired while an unfixable one stays red."""
         project_dir = tu.Tests.mk_project(tmp_path, "markdown-fmt-contract")
         document = project_dir / "README.md"
         document.write_text("not a heading   \n", encoding="utf-8")
         tu.Tests.initialize_git_repo(project_dir)
         context = m.Infra.GateContext(
-            repository_root=tmp_path, reports_dir=tmp_path, apply_fixes=True
+            repository_root=tmp_path,
+            reports_dir=tmp_path,
+            apply_fixes=True,
         )
 
         execution = FlextInfraMarkdownGate(tmp_path).fix(project_dir, context)
 
-        tm.that(execution.result.passed, eq=True)
+        tm.that(execution.result.passed, eq=False)
         tm.that(document.read_text(encoding="utf-8"), eq="not a heading\n")
+        tm.that(execution.issues[0].code, eq="MD041")
 
     @pytest.mark.integration
-    @pytest.mark.parametrize(
-        "method_name",
-        ["status", "summary", "error", "warning", "info", "header", "progress"],
-    )
-    def test_output_singleton_has_expected_methods(self, method_name: str) -> None:
-        """Every public output operation is callable on the real CLI facade."""
-        tm.that(callable(getattr(u.Cli, method_name)), eq=True)
-
-    @pytest.mark.integration
-    def test_service_result_chaining_with_map(self) -> None:
-        """Test chaining multiple services via .map().
-
-        Validates:
-        - r.map() works with service results
-        - Type is preserved through chain
-        - Value is transformed correctly
-        """
-        initial_value = 10
-        result = r[int].ok(initial_value).map(lambda x: x * 2).map(lambda x: x + 5)
-        tm.ok(result)
-        tm.that(result.value, eq=25)
-
-    @pytest.mark.integration
-    def test_service_result_chaining_with_flat_map(self) -> None:
-        """Test chaining multiple services via .flat_map().
-
-        Validates:
-        - r.flat_map() works with service results
-        - Type is preserved through chain
-        - Failures propagate correctly
-        """
-        initial_value = 10
-        result = (
-            r[int]
-            .ok(initial_value)
-            .flat_map(lambda x: r[int].ok(x * 2))
-            .flat_map(lambda x: r[int].ok(x + 5))
+    def test_markdown_check_retains_normalization_finding(self, tmp_path: Path) -> None:
+        """A native MD013 normalization diagnostic remains visible to callers."""
+        project_dir = tu.Tests.mk_project(tmp_path, "markdown-normalization")
+        (project_dir / ".markdownlint.json").write_text(
+            tm.ok(
+                u.Cli.json_dumps({
+                    "default": False,
+                    "MD013": {
+                        "line_length": 60,
+                        "reflow": True,
+                        "reflow-mode": "normalize",
+                    },
+                }),
+            ),
+            encoding="utf-8",
         )
-        tm.ok(result)
-        tm.that(result.value, eq=25)
-
-    @pytest.mark.integration
-    def test_service_result_chaining_failure_propagation(self) -> None:
-        """Test that failures propagate through result chains.
-
-        Validates:
-        - Failure stops the chain
-        - Error message is preserved
-        - Subsequent operations are not executed
-        """
-        initial_value = 10
-        result = (
-            r[int]
-            .ok(initial_value)
-            .flat_map(lambda x: r[int].ok(x * 2))
-            .flat_map(lambda _: r[int].fail("intentional error"))
-            .flat_map(lambda x: r[int].ok(x + 5))
+        (project_dir / "README.md").write_text(
+            "# Title\n\nThis paragraph has\n"
+            "several short lines that could be joined without\n"
+            "changing the meaning of its content.\n",
+            encoding="utf-8",
         )
-        tm.fail(result)
-        tm.that(result.error, is_=str)
-        tm.that(result.error, has="intentional error")
+        tu.Tests.initialize_git_repo(project_dir)
 
-    @pytest.mark.integration
-    def test_service_result_chaining_with_mixed_operations(self) -> None:
-        """Test chaining with mixed map and flat_map operations.
-
-        Validates:
-        - Mixed operations work together
-        - Type is preserved
-        - Values are transformed correctly
-        """
-        initial_value = 5
-        result = (
-            r[int]
-            .ok(initial_value)
-            .map(lambda x: x * 2)
-            .flat_map(lambda x: r[int].ok(x + 3))
-            .map(lambda x: x * 2)
+        execution = FlextInfraMarkdownGate(tmp_path).check(
+            project_dir,
+            m.Infra.GateContext(repository_root=tmp_path, reports_dir=tmp_path),
         )
-        tm.ok(result)
-        tm.that(result.value, eq=26)
 
-    @pytest.mark.integration
-    def test_discover_projects_via_flext(self) -> None:
-        """Test u.Infra.discover_projects flow.
-
-        Validates:
-        - discover_projects is callable via u.Infra FLEXT
-        - repository_root is callable via u.Infra FLEXT
-        """
-        tm.that(callable(u.Infra.discover_projects), eq=True)
-        tm.that(callable(u.Infra.resolve_repository_root_or_cwd), eq=True)
-
-    @pytest.mark.integration
-    def test_path_utilities_via_flext(self) -> None:
-        """Test u.Infra path utility methods are available via FLEXT."""
-        tm.that(callable(u.Infra.resolve_project_root), eq=True)
+        tm.that(execution.result.passed, eq=False)
+        tm.that(execution.issues[0].code, eq="MD013")
 
     @pytest.mark.integration
     def test_cli_capture_git_current_branch_in_real_repo(self, tmp_path: Path) -> None:
@@ -198,11 +88,13 @@ class TestsFlextInfraIntegrationInfraIntegration:
         init_result = u.Cli.run_checked(["git", "init"], cwd=repo_root)
         tm.ok(init_result)
         email_result = u.Cli.run_checked(
-            ["git", "config", "user.email", "infra@example.com"], cwd=repo_root
+            ["git", "config", "user.email", "infra@example.com"],
+            cwd=repo_root,
         )
         tm.ok(email_result)
         name_result = u.Cli.run_checked(
-            ["git", "config", "user.name", "Infra Test"], cwd=repo_root
+            ["git", "config", "user.name", "Infra Test"],
+            cwd=repo_root,
         )
         tm.ok(name_result)
         sample_file = repo_root / "README.md"
@@ -210,11 +102,13 @@ class TestsFlextInfraIntegrationInfraIntegration:
         add_result = u.Cli.run_checked(["git", "add", "README.md"], cwd=repo_root)
         tm.ok(add_result)
         commit_result = u.Cli.run_checked(
-            ["git", "commit", "-m", "initial"], cwd=repo_root
+            ["git", "commit", "-m", "initial"],
+            cwd=repo_root,
         )
         tm.ok(commit_result)
         branch_result = u.Cli.capture(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=repo_root
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=repo_root,
         )
         tm.ok(branch_result)
         tm.that(branch_result.value, ne="")

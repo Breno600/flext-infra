@@ -1,105 +1,148 @@
-"""Lock-derived dependency floors written back to the codegen SSOT (flext-gzfd2)."""
+"""Runtime-derived dependency floors written back to the codegen SSOT."""
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra import config, u
+from flext_infra import c, config, m, u
 
 if TYPE_CHECKING:
     from flext_infra import t
 
 
 class FlextInfraDepsFloorProfileWriter:
-    """Rewrite dependency_profiles floors from the resolved uv.lock state."""
+    """Rewrite dependency_profiles floors from the provisioned runtime."""
+
+    @staticmethod
+    def _source_paths(root: Path) -> t.SequenceOf[Path]:
+        """Elect the local owner from the caller's typed workspace declaration."""
+        root = root.resolve()
+        manifests = u.Infra.load_workspace_manifest(root).unwrap()
+        relative = Path(c.Infra.CODEGEN_CONFIG_DIR) / c.Infra.CODEGEN_CONFIG_FILENAME
+        local = root / relative
+        owners = [root] if local.exists() or local.is_symlink() else []
+        for manifest in manifests:
+            for member in manifest.members:
+                if member.distribution != config.Infra.name:
+                    continue
+                owner = (root / member.path).resolve()
+                if not owner.is_relative_to(root) or member.read_only:
+                    message = f"dependency floor owner is not writable in this workspace: {owner}"
+                    raise ValueError(message)
+                owners.append(owner)
+            if manifest.repository.distribution == config.Infra.name and not owners:
+                owners.append(root)
+        if len(owners) > 1:
+            message = f"ambiguous dependency floor owners in {root}: {owners}"
+            raise ValueError(message)
+        sources = tuple(owner / relative for owner in owners)
+        for source in sources:
+            if not source.resolve().is_relative_to(root):
+                message = (
+                    f"dependency floor configuration is outside workspace: {source}"
+                )
+                raise ValueError(message)
+        return sources
 
     @classmethod
-    def rewrite_profiles_from_lock(
-        cls, *, locked_versions: t.MappingKV[str, str], internal_names: t.StrSequence
+    def rewrite_profiles_from_resolution(
+        cls,
+        *,
+        root: Path,
+        resolved_versions: t.MappingKV[str, str],
+        internal_names: t.StrSequence,
     ) -> t.StrSequence:
-        """Update dependency_profiles in config/codegen.yaml with raised floors.
+        """Update dependency_profiles in the caller's local codegen owner.
+
+        ``root`` is the modernizer's own declared ``--repository-root``.
+        A workspace declares its infrastructure member through its typed
+        manifest; a standalone owner carries its own configuration. Neither
+        route consults the installed package location.
 
         Returns a list of change descriptions for the deps report.
         """
-        # Resolve the config/codegen.yaml path through the loaded config's own dir
-        ssot_path = type(config).ssot_config_dir() / "codegen.yaml"
+        sources = cls._source_paths(root)
+        if not sources:
+            return ()
+        (ssot_path,) = sources
 
-        # Round-trip load preserves comments and ordering
+        # Round-trip load preserves comments and ordering. A missing or
+        # unparseable owner is the same invalid-owner failure as a missing
+        # section below: one ValueError contract, original cause chained.
         loaded = u.Cli.yaml_roundtrip_load_map(ssot_path)
         if loaded.failure:
-            u.Cli.error(f"failed to load {ssot_path}: {loaded.failure}")
-            return ()
-
+            raise ValueError(loaded.error) from loaded.exception
         document = loaded.value
 
         # Navigate to Infra.codegen.scaffold.project.dependency_profiles
         infra = document.get("Infra")
         if not infra or not isinstance(infra, dict):
-            u.Cli.error("Infra section missing in codegen.yaml")
-            return ()
+            message = f"Infra section missing in {ssot_path}"
+            raise ValueError(message)
         codegen = infra.get("codegen")
         if not codegen or not isinstance(codegen, dict):
-            u.Cli.error("Infra.codegen section missing in codegen.yaml")
-            return ()
+            message = f"Infra.codegen section missing in {ssot_path}"
+            raise ValueError(message)
+        validated = m.Infra.CodegenConfigSpec.model_validate(codegen)
         scaffold = codegen.get("scaffold")
         if not scaffold or not isinstance(scaffold, dict):
-            u.Cli.error("Infra.codegen.scaffold section missing in codegen.yaml")
-            return ()
+            message = f"Infra.codegen.scaffold section missing in {ssot_path}"
+            raise ValueError(message)
         project = scaffold.get("project")
         if not project or not isinstance(project, dict):
-            u.Cli.error(
-                "Infra.codegen.scaffold.project section missing in codegen.yaml"
-            )
-            return ()
+            message = f"Infra.codegen.scaffold.project section missing in {ssot_path}"
+            raise ValueError(message)
         profiles = project.get("dependency_profiles")
         if not profiles or not isinstance(profiles, list):
-            u.Cli.error("dependency_profiles missing or not a list in codegen.yaml")
-            return ()
+            message = f"dependency_profiles missing or not a list in {ssot_path}"
+            raise ValueError(message)
 
         changes: t.MutableSequenceOf[str] = []
 
         # Rewrite each profile's runtime and codegen requirement lists
-        for profile in profiles:
+        for profile, contract in zip(
+            profiles,
+            validated.scaffold.project.dependency_profiles,
+            strict=True,
+        ):
             if not isinstance(profile, dict):
-                continue
-            upstream = str(profile.get("upstream", ""))
+                message = f"dependency profile must be a mapping in {ssot_path}"
+                raise TypeError(message)
+            upstream = contract.upstream
             runtime_reqs = profile.get("runtime")
-            codegen_reqs = profile.get("codegen")
+            codegen_reqs = profile.get("codegen", [])
             for key_name, reqs in (
                 ("runtime", runtime_reqs),
                 ("codegen", codegen_reqs),
             ):
                 if not isinstance(reqs, list):
-                    continue
+                    message = f"{upstream}.{key_name} must be a list in {ssot_path}"
+                    raise TypeError(message)
                 for idx, req in enumerate(reqs):
                     if not isinstance(req, str):
-                        continue
+                        message = (
+                            f"{upstream}.{key_name} requires strings in {ssot_path}"
+                        )
+                        raise TypeError(message)
                     rewritten = u.Infra.rewrite_requirement_constraint(
                         req,
-                        locked_versions=locked_versions,
+                        resolved_versions=resolved_versions,
                         internal_names=internal_names,
                     )
                     if rewritten is not None and rewritten != req:
                         # Update in place preserves surrounding comments/keys
                         reqs[idx] = rewritten
                         changes.append(
-                            f"profile({upstream}).{key_name}: {req} -> {rewritten}"
+                            f"profile({upstream}).{key_name}: {req} -> {rewritten}",
                         )
 
         if not changes:
             return ()
 
         # Dump back with comments preserved
-        dumped = u.Cli.yaml_roundtrip_dump_text(document)
-        if dumped.failure:
-            u.Cli.error(f"failed to dump codegen.yaml: {dumped.failure}")
-            return ()
-
-        # Atomic write
-        write_result = u.Cli.atomic_write_text_file(ssot_path, dumped.value)
-        if write_result.failure:
-            u.Cli.error(f"failed to write {ssot_path}: {write_result.failure}")
-            return ()
+        dumped = u.Cli.yaml_roundtrip_dump_text(document).unwrap()
+        u.Cli.atomic_write_text_file(ssot_path, dumped).unwrap()
 
         return tuple(changes)
 

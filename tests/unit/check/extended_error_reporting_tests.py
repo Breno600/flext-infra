@@ -6,132 +6,197 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import os
 from typing import TYPE_CHECKING
 
+import pytest
 from flext_tests import tm
 
+from flext_infra.__version__ import FlextInfraVersion
 from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
-from flext_infra.gates.mypy import FlextInfraMypyGate
 from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
-from tests import c, u
+from tests import c, m, u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    import pytest
-
-    from tests import m, p, t
+    from tests import p, t
 
 
-class TestGateErrorReportingPublicBehavior:
-    """Verify gate issue parsing through the public ``check()`` contract."""
+class TestsFlextInfraGateErrorReporting:
+    """Verify real gate issue reporting through the public ``check()`` contract."""
 
-    @staticmethod
-    def failing_markdown_run(
-        tmp_path: Path, runner: p.Cli.CommandRunner
-    ) -> p.Result[t.SequenceOf[m.Infra.ProjectResult]]:
-        """Run the markdown gate once through the checker with one runner."""
-        project_dir = u.Tests.mk_project(tmp_path, "p1")
-        _ = (project_dir / "README.md").write_text("# Project\n", encoding="utf-8")
+    def test_workspace_report_retains_all_executed_failures(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        project_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
+        (project_dir / "src" / "p1" / "value.py").write_text(
+            "value=[1,2,3]\n",
+            encoding="utf-8",
+        )
+        (project_dir / "README.md").write_text(
+            "# Project\n\n[Missing](missing.md)\n",
+            encoding="utf-8",
+        )
         u.Tests.initialize_git_repo(project_dir)
-        return FlextInfraWorkspaceChecker(
-            repository_root=tmp_path, gate_runners={c.Infra.MARKDOWN: runner}
-        ).run_projects(["p1"], ["markdown"], reports_dir=tmp_path / "reports")
+        gates = [c.Infra.FORMAT, c.Infra.MARKDOWN]
+        reports_dir = tmp_path / "reports"
 
-    def test_mypy_ignores_empty_lines_in_json_output(self, tmp_path: Path) -> None:
-        proj_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
-        (proj_dir / "src" / "main.py").write_text("# code\n", encoding="utf-8")
-        fake_modules = tmp_path / "fake_modules" / "mypy"
-        fake_modules.mkdir(parents=True, exist_ok=True)
-        (fake_modules / "__init__.py").write_text("", encoding="utf-8")
-        (fake_modules / "__main__.py").write_text(
-            (
-                "import sys\n"
-                'sys.stdout.write(\'{"file":"a.py","line":1,"column":0,"code":"E001","message":"Error","severity":"error"}\\n\')\n'
-                "sys.stdout.write('\\n')\n"
-                'sys.stdout.write(\'{"file":"b.py","line":2,"column":0,"code":"E002","message":"Error","severity":"error"}\\n\')\n'
-                "raise SystemExit(1)\n"
-            ),
+        projects = tm.ok(
+            FlextInfraWorkspaceChecker(
+                repository_root=tmp_path,
+            ).run_projects(["p1"], gates, reports_dir=reports_dir),
+        )
+
+        project = projects[0]
+        tm.that(tuple(project.gates), eq=tuple(gates))
+        tm.that(all(not item.result.passed for item in project.gates.values()), eq=True)
+        tm.that(
+            project.total_findings,
+            eq=sum(len(item.issues) for item in project.gates.values()),
+        )
+        report = (reports_dir / c.Infra.CHECK_REPORT_MARKDOWN_FILENAME).read_text(
             encoding="utf-8",
         )
-        original_pythonpath = os.environ.get("PYTHONPATH")
-        fake_pythonpath = str(fake_modules.parent)
-        os.environ["PYTHONPATH"] = (
-            f"{fake_pythonpath}:{original_pythonpath}"
-            if original_pythonpath
-            else fake_pythonpath
-        )
-        try:
-            result = u.Tests.run_gate_check(FlextInfraMypyGate, tmp_path, proj_dir)
-        finally:
-            if original_pythonpath is None:
-                os.environ.pop("PYTHONPATH", None)
-            else:
-                os.environ["PYTHONPATH"] = original_pythonpath
+        for gate in gates:
+            tm.that(report, has=f"- {gate}: FAIL")
 
-        tm.that(not result.result.passed, eq=True)
-        tm.that(len(result.issues), eq=2)
-
-    def test_ruff_format_deduplicates_reported_files(self, tmp_path: Path) -> None:
+    def test_ruff_format_reports_each_unformatted_file_once(
+        self,
+        tmp_path: Path,
+    ) -> None:
         proj_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
-        (proj_dir / "src" / "main.py").write_text("# code\n", encoding="utf-8")
-        fake_pkg = tmp_path / "fake_modules" / "ruff"
-        fake_pkg.mkdir(parents=True, exist_ok=True)
-        (fake_pkg / "__init__.py").write_text("", encoding="utf-8")
-        (fake_pkg / "__main__.py").write_text(
-            (
-                "import sys\n"
-                "sys.stdout.write(\n"
-                "    '--> src/file.py:1:1\\n'\n"
-                "    '--> src/file.py:1:1\\n'\n"
-                "    '--> src/other.py:1:1\\n'\n"
-                ")\n"
-                "raise SystemExit(1)\n"
-            ),
-            encoding="utf-8",
-        )
-        original_pythonpath = u.Tests.prepend_env_path(
-            "PYTHONPATH", str(fake_pkg.parent)
-        )
-        try:
-            result = u.Tests.run_gate_check(
-                FlextInfraRuffFormatGate, tmp_path, proj_dir
+        unformatted = "value=[1,2,3]\n\n\n\n\nother=(4,5)\n"
+        for name in ("one.py", "two.py"):
+            (proj_dir / c.Infra.DEFAULT_SRC_DIR / name).write_text(
+                unformatted,
+                encoding="utf-8",
             )
-        finally:
-            u.Tests.restore_env("PYTHONPATH", original_pythonpath)
 
-        tm.that(not result.result.passed, eq=True)
-        tm.that(len(result.issues), eq=2)
+        result = u.Tests.run_gate_check(FlextInfraRuffFormatGate, tmp_path, proj_dir)
 
-    def test_workspace_checker_emits_gate_process_failure(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        runner = u.Tests.command_runner(stderr="rumdl execution failed", returncode=2)
-
-        result = TestGateErrorReportingPublicBehavior.failing_markdown_run(
-            tmp_path, runner
+        tm.that(result.result.passed, eq=False)
+        tm.that(
+            sorted(issue.file for issue in result.issues),
+            eq=[f"{c.Infra.DEFAULT_SRC_DIR}/{name}" for name in ("one.py", "two.py")],
         )
 
-        tm.ok(result)
-        tm.that(result.value[0].passed, eq=False)
-        captured = capsys.readouterr()
-        tm.that(f"{captured.out}\n{captured.err}", has="rumdl execution failed")
-
-    def test_workspace_checker_emits_parsed_gate_issue(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    @pytest.mark.slow
+    def test_workspace_checker_emits_ruff_stderr_without_findings(
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
-        diagnostic = "README.md:3:2: [MD057] Relative link 'missing.md' does not exist"
-        runner = u.Tests.command_runner(stdout=diagnostic, returncode=1)
-
-        result = TestGateErrorReportingPublicBehavior.failing_markdown_run(
-            tmp_path, runner
+        """A real formatter configuration error remains visible without issues."""
+        project_dir = u.Tests.mk_project(
+            tmp_path,
+            "p1",
+            pyproject='[tool.ruff]\nline-length = "invalid-line-length"\n',
+            with_src=True,
         )
+        (project_dir / "src" / "p1" / "value.py").write_text(
+            "value = 1\n",
+            encoding="utf-8",
+        )
+        u.Tests.initialize_git_repo(project_dir)
+
+        result = FlextInfraWorkspaceChecker(
+            repository_root=tmp_path,
+        ).run_projects(["p1"], [c.Infra.FORMAT], reports_dir=tmp_path / "reports")
 
         tm.ok(result)
-        tm.that(result.value[0].passed, eq=False)
+        project = result.value[0]
+        tm.that(project.passed, eq=False)
+        execution = project.gates[c.Infra.FORMAT]
+        tm.that(bool(execution.issues), eq=False)
+        tm.that(bool(execution.result.errors), eq=False)
+        tm.that(execution.raw_output, has="invalid-line-length")
         captured = capsys.readouterr()
         tm.that(
             f"{captured.out}\n{captured.err}",
-            has="README.md:3:2 [MD057] Relative link 'missing.md' does not exist",
+            has=["TOML parse error", "invalid-line-length"],
         )
+
+    @pytest.mark.slow
+    def test_workspace_checker_emits_mypy_plugin_traceback(
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Mypy's real plugin loader failure survives structured-output parsing."""
+        project_dir = u.Tests.mk_project(
+            tmp_path,
+            "p1",
+            pyproject=(
+                '[tool.mypy]\nplugins = ["broken_plugin.py"]\nshow_traceback = true\n'
+            ),
+            with_src=True,
+        )
+        (project_dir / "src" / "p1" / "value.py").write_text(
+            "value: int = 1\n",
+            encoding="utf-8",
+        )
+        (project_dir / "broken_plugin.py").write_text(
+            "def plugin(version: str) -> None:\n"
+            '    raise RuntimeError("broken plugin entry point")\n',
+            encoding="utf-8",
+        )
+        u.Tests.initialize_git_repo(project_dir)
+
+        result = FlextInfraWorkspaceChecker(
+            repository_root=tmp_path,
+        ).run_projects(["p1"], [c.Infra.MYPY], reports_dir=tmp_path / "reports")
+
+        tm.ok(result)
+        project = result.value[0]
+        tm.that(project.passed, eq=False)
+        execution = project.gates[c.Infra.MYPY]
+        tm.that(any(issue.code == "TOOL_ERROR" for issue in execution.issues), eq=True)
+        captured = capsys.readouterr()
+        tm.that(
+            f"{captured.out}\n{captured.err}",
+            has=[
+                "Error calling the plugin(version) entry point",
+                "Traceback (most recent call last)",
+                "RuntimeError: broken plugin entry point",
+            ],
+        )
+
+    @pytest.mark.parametrize(
+        ("readme", "config_text", "expected"),
+        [
+            ("# Project\n", '{"broken": [', [f"{c.Infra.RUMDL} exited with code"]),
+            ("# Project\n\n[Missing](missing.md)\n", None, ["[MD057]", "missing.md"]),
+        ],
+    )
+    def test_workspace_checker_emits_real_markdown_failure(
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+        readme: str,
+        config_text: str | None,
+        expected: t.StrSequence,
+    ) -> None:
+        project_dir = u.Tests.mk_project(tmp_path, "p1")
+        (project_dir / "README.md").write_text(readme, encoding="utf-8")
+        if config_text is not None:
+            (project_dir / c.Infra.MARKDOWNLINT_CONFIG_FILENAME).write_text(
+                config_text,
+                encoding="utf-8",
+            )
+        u.Tests.initialize_git_repo(project_dir)
+
+        result = FlextInfraWorkspaceChecker(
+            repository_root=tmp_path,
+        ).run_projects(["p1"], [c.Infra.MARKDOWN], reports_dir=tmp_path / "reports")
+
+        tm.ok(result)
+        tm.that(result.value[0].passed, eq=False)
+        captured = capsys.readouterr()
+        tm.that(f"{captured.out}\n{captured.err}", has=list(expected))
+        report = m.Infra.SarifReport.model_validate_json(
+            (tmp_path / "reports" / c.Infra.CHECK_REPORT_SARIF_FILENAME).read_text(
+                encoding="utf-8",
+            ),
+        )
+        tm.that(report.runs[0].information_uri, eq=FlextInfraVersion.__url__)

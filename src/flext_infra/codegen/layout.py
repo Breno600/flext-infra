@@ -1,4 +1,4 @@
-"""Project-layout engine command service (flext-0wuz, epic flext-hzox).
+"""Project-layout engine command service.
 
 Check mode reports layout violations from the declarative SSOT in
 ``config/codegen.yaml``; apply mode performs the reorganization idempotently
@@ -14,20 +14,24 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, override
 
-from flext_infra import c, m, p, r, t, u
-from flext_infra.base import s
+from flext_core import r
+from flext_infra import c, m, p, t, u
 
+from ..base import s
 from ._layout_apply import FlextInfraCodegenLayoutApplyMixin
 from ._layout_plan import FlextInfraCodegenLayoutPlanMixin
 
 
 class FlextInfraCodegenLayout(
-    FlextInfraCodegenLayoutApplyMixin, FlextInfraCodegenLayoutPlanMixin, s[str]
+    FlextInfraCodegenLayoutApplyMixin,
+    FlextInfraCodegenLayoutPlanMixin,
+    s[str],
 ):
     """Check or apply the canonical project layout from the layout SSOT."""
 
     project_name: Annotated[
-        str | None, m.Field(alias="project", description="Single project to conform")
+        str | None,
+        m.Field(alias="project", description="Single project to conform"),
     ] = None
 
     @override
@@ -36,7 +40,6 @@ class FlextInfraCodegenLayout(
         selected = self._project_dirs()
         if selected.failure:
             return r[str].from_failure(selected)
-        spec = self._layout_spec
         reports: list[m.Infra.LayoutProjectReport] = []
         for project_dir in selected.value:
             planned = self.plan_project(project_dir)
@@ -55,11 +58,11 @@ class FlextInfraCodegenLayout(
                 paths = ", ".join(unresolved)
                 return r[str].fail(
                     f"layout apply did not reach a fixed point in "
-                    f"{project_dir.name}: {paths}"
+                    f"{project_dir.name}: {paths}",
                 )
             reports.append(applied.value)
         output = self._render_output(reports)
-        if self.effective_dry_run and spec.severity == "error":
+        if self.effective_dry_run:
             blocking: list[str] = []
             for report in reports:
                 report_actionable: t.VariadicTuple[m.Infra.LayoutFinding] = (
@@ -86,7 +89,7 @@ class FlextInfraCodegenLayout(
             ):
                 return r[t.SequenceOf[Path]].ok((self.repository_root,))
             return r[t.SequenceOf[Path]].fail(
-                f"project not found in workspace: {self.project_name}"
+                f"project not found in workspace: {self.project_name}",
             )
         discovered = u.Infra.projects(self.repository_root)
         if discovered.success and discovered.value:
@@ -115,7 +118,7 @@ class FlextInfraCodegenLayout(
         applied = sum(report.applied_count for report in reports)
         lines.append(
             f"{len(reports)} project(s), {actionable} actionable finding(s), "
-            f"{applied} applied"
+            f"{applied} applied",
         )
         return "\n".join(lines)
 

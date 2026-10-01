@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flext_cli import u
 from flext_tests import tm
 
-from flext_infra import c
+from flext_infra import c, u
+from tests import t
 
 from ._support import CodegenTestSupport
 
 
-class TestsCiSystemPackages:
+class TestsFlextInfraCiSystemPackages:
     """A declared engine is installed on the runner; nothing is skipped."""
 
     ci_template = (
@@ -22,7 +22,7 @@ class TestsCiSystemPackages:
     step_name = "Install declared system packages"
 
     @classmethod
-    def _render_ci(cls, *, system_packages: tuple[str, ...]) -> str:
+    def _render_ci(cls, *, system_packages: t.VariadicTuple[str]) -> str:
         spec = CodegenTestSupport.Ci.workflow_spec(
             dist="fixture-engine",
             make_profile=c.Infra.MakeProfile.STANDALONE,
@@ -41,13 +41,11 @@ class TestsCiSystemPackages:
             has="apt-get install -y -qq --no-install-recommends engine-calc engine-fonts",
         )
         tm.that(
-            rendered.index(self.step_name) < rendered.index("setup (blocking)"), eq=True
+            rendered.index(self.step_name) < rendered.index("setup (blocking)"),
+            eq=True,
         )
 
     def test_no_declaration_renders_no_install_step(self) -> None:
         rendered = self._render_ci(system_packages=())
 
         tm.that(rendered, lacks=self.step_name)
-
-
-__all__: tuple[str, ...] = ()

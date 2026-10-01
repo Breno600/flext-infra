@@ -6,25 +6,11 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import m, u as infra_u
-from flext_infra.deps.detector import FlextInfraRuntimeDevDependencyDetector
+from flext_infra import m
 
 
 class TestsFlextInfraDepsDetectorInit:
     """Test flext infra deps detector init behavior."""
-
-    def test_detector_initialization(self) -> None:
-        """Verify detector initialization."""
-        detector = FlextInfraRuntimeDevDependencyDetector()
-        tm.that(
-            detector.__class__.__name__, eq="FlextInfraRuntimeDevDependencyDetector"
-        )
-
-    def test_detector_has_required_services(self) -> None:
-        """Verify detector has required services."""
-        detector = FlextInfraRuntimeDevDependencyDetector()
-        tm.that(type(detector.deps).__name__, eq="FlextInfraDependencyDetectionService")
-        tm.that(detector.runner is infra_u.Cli, eq=True)
 
     def test_detect_command_normalizes_public_fields(self, tmp_path: Path) -> None:
         """Verify detect command normalizes public fields."""
@@ -53,7 +39,8 @@ class TestsFlextInfraDepsDetectorInit:
         tm.that(str(params.limits_path), eq=str(Path("/custom/limits.toml").resolve()))
 
     def test_detect_command_project_names_with_single_project(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Verify detect command project names with single project."""
         params = m.Infra.DetectCommand(repository_root=tmp_path, projects=["test-proj"])
@@ -62,7 +49,8 @@ class TestsFlextInfraDepsDetectorInit:
     def test_detect_command_project_names_split_csv(self, tmp_path: Path) -> None:
         """Verify detect command project names split csv."""
         params = m.Infra.DetectCommand(
-            repository_root=tmp_path, projects=["proj-a,proj-b", "proj-c"]
+            repository_root=tmp_path,
+            projects=["proj-a,proj-b", "proj-c"],
         )
         tm.that(params.project_names, eq=["proj-a", "proj-b", "proj-c"])
 

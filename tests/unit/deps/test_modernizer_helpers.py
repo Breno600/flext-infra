@@ -2,49 +2,46 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import pytest
 from flext_tests import tm
 
 from tests import c, u
 
-_FULL_OPTIONAL_DEPS: dict[str, list[str]] = {
-    "dev": ["pytest"],
-    "docs": ["sphinx"],
-    "security": ["bandit"],
-    "test": ["coverage"],
-    "typings": ["mypy"],
-}
-
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from tests import t
-
-
-@pytest.fixture
-def doc() -> t.Cli.TomlDocument:
-    """Provide a mutable TOML document fixture."""
-    return u.Cli.toml_document()
-
-
-def _toml_table_item() -> t.Cli.TomlItem:
-    tbl = u.Cli.toml_table()
-    tbl["key"] = "value"
-    return tbl
-
-
-def _doc_with_optional_deps(
-    optional_deps: t.MappingKV[str, t.StrSequence],
-) -> t.Cli.TomlDocument:
-    doc = u.Cli.toml_document()
-    doc["project"] = {"optional-dependencies": optional_deps}
-    return doc
 
 
 class TestsFlextInfraDepsModernizerHelpers:
     """Behavior contract for test_modernizer_helpers."""
+
+    _FULL_OPTIONAL_DEPS: ClassVar[t.MappingKV[str, t.StrSequence]] = {
+        "dev": ["pytest"],
+        "docs": ["sphinx"],
+        "security": ["bandit"],
+        "test": ["coverage"],
+        "typings": ["mypy"],
+    }
+
+    @pytest.fixture
+    def doc(self) -> t.Cli.TomlDocument:
+        """Provide a mutable TOML document fixture."""
+        return u.Cli.toml_document()
+
+    @staticmethod
+    def _toml_table_item() -> t.Cli.TomlItem:
+        tbl = u.Cli.toml_table()
+        tbl["key"] = "value"
+        return tbl
+
+    @staticmethod
+    def _doc_with_optional_deps(
+        optional_deps: t.MappingKV[str, t.StrSequence],
+    ) -> t.Cli.TomlDocument:
+        doc = u.Cli.toml_document()
+        doc["project"] = {"optional-dependencies": optional_deps}
+        return doc
 
     @pytest.mark.parametrize(
         ("raw", "expected"),
@@ -101,7 +98,9 @@ class TestsFlextInfraDepsModernizerHelpers:
         [("test", "test"), (None, None), ({"key": "value"}, {"key": "value"})],
     )
     def test_unwrap_item(
-        self, value: t.Cli.TomlMappingSource | None, expected: t.Infra.InfraValue
+        self,
+        value: t.Cli.TomlMappingSource | None,
+        expected: t.JsonValue,
     ) -> None:
         """Verify unwrap item."""
         actual = None if value is None else u.Cli.toml_unwrap_item(value)
@@ -123,7 +122,9 @@ class TestsFlextInfraDepsModernizerHelpers:
         ],
     )
     def test_as_string_list(
-        self, value: t.Cli.TomlItem | None, expected: t.StrSequence
+        self,
+        value: t.Cli.TomlItem | None,
+        expected: t.StrSequence,
     ) -> None:
         """Verify as string list."""
         actual: t.StrSequence = (
@@ -141,7 +142,8 @@ class TestsFlextInfraDepsModernizerHelpers:
         tm.that(u.Cli.toml_as_string_list(int_val), eq=[])
 
     @pytest.mark.parametrize(
-        ("items", "expected"), [(["a", "b", "c"], 3), ([], 0), (["single"], 1)]
+        ("items", "expected"),
+        [(["a", "b", "c"], 3), ([], 0), (["single"], 1)],
     )
     def test_array(self, items: t.StrSequence, expected: int) -> None:
         """Verify TOML array construction preserves item count."""
@@ -180,7 +182,7 @@ class TestsFlextInfraDepsModernizerHelpers:
         expected_docs: t.StrSequence,
     ) -> None:
         """Verify project dev groups."""
-        groups = u.Infra.project_dev_groups(_doc_with_optional_deps(optional_deps))
+        groups = u.Infra.project_dev_groups(self._doc_with_optional_deps(optional_deps))
         tm.that(list(groups.get("dev", [])), eq=list(expected_dev))
         tm.that(list(groups.get("docs", [])), eq=list(expected_docs))
 
@@ -207,7 +209,7 @@ class TestsFlextInfraDepsModernizerHelpers:
     ) -> None:
         """Verify canonical dev dependencies."""
         result = u.Infra.canonical_dev_dependencies(
-            _doc_with_optional_deps(optional_deps)
+            self._doc_with_optional_deps(optional_deps),
         )
         tm.that(result, length=expected_length)
         if expect_pytest:
@@ -226,8 +228,8 @@ class TestsFlextInfraDepsModernizerHelpers:
         doc["dependency-groups"] = {"test": ["flext-tests", "coverage>=7.0"]}
         doc["tool"] = {
             "poetry": {
-                "dependencies": {"python": ">=3.13,<3.14", "flext-api": "^0.1.0"}
-            }
+                "dependencies": {"python": ">=3.13,<3.14", "flext-api": "^0.1.0"},
+            },
         }
 
         result = u.Infra.declared_dependency_names(doc)
@@ -236,33 +238,11 @@ class TestsFlextInfraDepsModernizerHelpers:
         tm.that(result, has="flext-infra")
         tm.that(result, has="flext-tests")
 
-    def test_locked_dependency_versions_skips_non_registry_sources(
-        self, tmp_path: Path
-    ) -> None:
-        """Verify locked dependency versions skips non registry sources."""
-        locked_version = c.Tests.RELEASE_VERSION_TARGET
-        lock_path = tmp_path / "uv.lock"
-        lock_path.write_text(
-            (
-                "version = 1\n"
-                "[manifest]\n"
-                'members = ["flext-core"]\n'
-                "[[package]]\n"
-                'name = "requests"\n'
-                f'version = "{locked_version}"\n'
-                'source = { registry = "https://pypi.org/simple" }\n'
-                "[[package]]\n"
-                'name = "flext-core"\n'
-                'version = "0.12.0-dev"\n'
-                'source = { editable = "." }\n'
-            ),
-            encoding="utf-8",
-        )
-
-        tm.that(
-            u.Infra.locked_dependency_versions(lock_path),
-            eq={"requests": locked_version},
-        )
+    def test_resolved_dependency_versions_excludes_editable_distribution(self) -> None:
+        """Registry versions exclude editable source distributions."""
+        versions = u.Infra.resolved_dependency_versions()
+        tm.that(bool(versions), eq=True)
+        tm.that("flext-infra" in versions, eq=False)
 
     def test_rewrite_requirement_constraint_preserves_extras_and_markers(self) -> None:
         """Verify rewrite requirement constraint preserves extras and markers."""
@@ -270,7 +250,7 @@ class TestsFlextInfraDepsModernizerHelpers:
         tm.that(
             u.Infra.rewrite_requirement_constraint(
                 "httpx[socks]>=0.1; python_version < '3.14'",
-                locked_versions={"httpx": locked_version},
+                resolved_versions={"httpx": locked_version},
             ),
             eq=f"httpx[socks]>={locked_version}; python_version < '3.14'",
         )

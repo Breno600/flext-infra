@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_infra.constants import c
+from flext_infra import c
 
 from .dependencies import FlextInfraUtilitiesDependencies
 from .pyproject import FlextInfraUtilitiesPyproject
@@ -30,7 +30,7 @@ class FlextInfraUtilitiesProjectDiscoveryShapeMixin:
         """Return whether one path matches the canonical governed project shape."""
         if not path.is_dir():
             return False
-        pyproject_path = path / c.Infra.PYPROJECT_FILENAME
+        pyproject_path = path / c.PYPROJECT_FILENAME
         if pyproject_path.exists() and (
             path.name in configured_project_set
             or (path / c.Infra.MAKEFILE_FILENAME).exists()
@@ -41,8 +41,8 @@ class FlextInfraUtilitiesProjectDiscoveryShapeMixin:
             return False
         dependency_names: set[str] = set(
             FlextInfraUtilitiesDependencies.declared_dependency_names_from_payload(
-                payload
-            )
+                payload,
+            ),
         )
         if c.Infra.PKG_CORE in dependency_names:
             return True

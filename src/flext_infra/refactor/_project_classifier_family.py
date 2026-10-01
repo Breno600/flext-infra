@@ -21,7 +21,7 @@ class FlextInfraProjectClassifierFamilyMixin:
     via FLEXT.
     """
 
-    _CLASS_DEF_RE: t.Infra.RegexPattern = c.Infra.CLASS_WITH_BASES_RE
+    _CLASS_DEF_RE: t.RegexPattern = c.Infra.CLASS_WITH_BASES_RE
 
     if TYPE_CHECKING:
         _src_path: Path
@@ -32,24 +32,30 @@ class FlextInfraProjectClassifierFamilyMixin:
         self,
     ) -> t.Pair[t.MappingKV[str, t.Infra.StrSet], t.Infra.StrSet]:
         """Discover facade inheritance."""
+        families = u.Infra.facade_families()
         family_bases: t.MappingKV[str, t.Infra.StrSet] = {
-            family: set() for family in c.Infra.FAMILY_SUFFIXES
+            family: set() for family in families
         }
         local_facade_classes: t.Infra.StrSet = set()
         if not self._src_path.is_dir():
             return (family_bases, local_facade_classes)
-        for family, suffix in c.Infra.FAMILY_SUFFIXES.items():
-            file_pattern = c.Infra.FAMILY_FILES[family]
+        for family, declared in families.items():
             for file_path in u.Infra.iter_matching_files(
-                self._src_path, includes=[file_pattern]
+                self._src_path,
+                includes=[f"*{declared.module}{c.Infra.EXT_PYTHON}"],
             ):
-                class_bases, class_names = self._parse_family_file(file_path, suffix)
+                class_bases, class_names = self._parse_family_file(
+                    file_path,
+                    declared.suffix,
+                )
                 family_bases[family].update(class_bases)
                 local_facade_classes.update(class_names)
         return (family_bases, local_facade_classes)
 
     def _parse_family_file(
-        self, file_path: Path, suffix: str
+        self,
+        file_path: Path,
+        suffix: str,
     ) -> t.Pair[t.Infra.StrSet, t.Infra.StrSet]:
         """Parse family file."""
         source = u.Cli.files_read_text(file_path).unwrap()
@@ -78,9 +84,10 @@ class FlextInfraProjectClassifierFamilyMixin:
     ) -> t.MappingKV[str, t.StrSequence]:
         """Build confirmed family chains."""
         family_chains: MutableMapping[str, t.StrSequence] = {}
-        for family, suffix in c.Infra.FAMILY_SUFFIXES.items():
+        for family, declared in u.Infra.facade_families().items():
             expected_parents = self._expected_parents_for_family(
-                family_suffix=suffix, internal_dependencies=internal_dependencies
+                family_suffix=declared.suffix,
+                internal_dependencies=internal_dependencies,
             )
             confirmed_bases = family_bases.get(family, set())
             confirmed_expected = [
@@ -93,7 +100,10 @@ class FlextInfraProjectClassifierFamilyMixin:
         return family_chains
 
     def _expected_parents_for_family(
-        self, *, family_suffix: str, internal_dependencies: t.StrSequence
+        self,
+        *,
+        family_suffix: str,
+        internal_dependencies: t.StrSequence,
     ) -> t.StrSequence:
         """Return the expected parents for a family."""
         expected: t.MutableSequenceOf[str] = []

@@ -6,11 +6,17 @@ import sys
 
 from flext_infra import c, t
 
-from .services.cli_dispatch import CliDispatchService
+from .services.cli_dispatch import FlextInfraCliDispatchService
 
 
-class FlextInfraCli(CliDispatchService):
+class FlextInfraCli(FlextInfraCliDispatchService):
     """Single CLI entry surface for every flext-infra command group."""
+
+    @staticmethod
+    def docs_main(args: t.StrSequence | None = None) -> int:
+        """Run the docs group directly (``flext-docs`` == ``flext-infra docs``)."""
+        cli_args = list(args) if args is not None else sys.argv[1:]
+        return FlextInfraCli().main([c.Infra.CLI_GROUP_DOCS, *cli_args])
 
 
 def main(args: t.StrSequence | None = None) -> int:
@@ -19,10 +25,4 @@ def main(args: t.StrSequence | None = None) -> int:
     return FlextInfraCli().main(cli_args)
 
 
-def docs_main(args: t.StrSequence | None = None) -> int:
-    """Run the docs group directly (``flext-docs`` == ``flext-infra docs``)."""
-    cli_args = list(args) if args is not None else sys.argv[1:]
-    return FlextInfraCli().main([c.Infra.CLI_GROUP_DOCS, *cli_args])
-
-
-__all__: list[str] = ["FlextInfraCli", "docs_main", "main"]
+__all__: list[str] = ["FlextInfraCli", "main"]

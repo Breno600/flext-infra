@@ -12,7 +12,7 @@ by ``FlextInfraCodegenConform``.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, MutableMapping
 from typing import TYPE_CHECKING
 
 from flext_core import r
@@ -63,7 +63,7 @@ class FlextInfraCodegenVscodeMixin:
         if not isinstance(parsed.value, Mapping):
             return r[t.JsonMapping].fail("VS Code settings root must be an object")
         return r[t.JsonMapping].ok(
-            t.Cli.JSON_MAPPING_ADAPTER.validate_python(parsed.value)
+            t.Cli.JSON_MAPPING_ADAPTER.validate_python(parsed.value),
         )
 
     @classmethod
@@ -119,7 +119,9 @@ class FlextInfraCodegenVscodeMixin:
                 continue
             if char == '"':
                 index = FlextInfraCodegenVscodeMixin._copy_string_literal(
-                    content, index, output
+                    content,
+                    index,
+                    output,
                 )
                 continue
             if char == "/" and next_char == "/":
@@ -143,7 +145,9 @@ class FlextInfraCodegenVscodeMixin:
             char = content[index]
             if char == '"':
                 index = FlextInfraCodegenVscodeMixin._copy_string_literal(
-                    content, index, output
+                    content,
+                    index,
+                    output,
                 )
                 continue
             if char == ",":
@@ -159,7 +163,9 @@ class FlextInfraCodegenVscodeMixin:
 
     @classmethod
     def _apply_canonical_settings(
-        cls, settings: t.MutableJsonMapping, repository_root: Path
+        cls,
+        settings: t.MutableJsonMapping,
+        repository_root: Path,
     ) -> p.Result[bool]:
         """Merge canonical codegen VS Code settings into one settings mapping."""
         spec = config.Infra.codegen.vscode
@@ -170,13 +176,13 @@ class FlextInfraCodegenVscodeMixin:
             repository_root=repository_root,
         )
         if changed.failure:
-            return r[bool].fail(changed.error)
+            return r[bool].from_failure(changed)
         # The three exclude maps are complete projections of the artifact SSOT.
         # Replacing them removes retired artifacts instead of preserving stale
         # generated keys forever. Only explicitly declared non-artifact maps use
         # merge semantics.
         codegen = config.Infra.codegen
-        artifact_maps: dict[str, Mapping[str, str | bool]] = {
+        artifact_maps: MutableMapping[str, Mapping[str, str | bool]] = {
             "files.exclude": dict(codegen.vscode_files_exclude_map),
             "files.watcherExclude": dict(codegen.vscode_watcher_exclude_map),
             "search.exclude": dict(codegen.vscode_search_exclude_map),
@@ -191,11 +197,30 @@ class FlextInfraCodegenVscodeMixin:
                 continue
             settings[key] = canonical
             artifacts_changed = True
+        # Stripped keys are owned canonically by pyproject.toml [tool.pyright];
+        # keeping them in settings.json makes Pylance emit settingsNotOverridable
+        # warnings. Actively delete every retired key so existing files converge
+        # to a warning-free projection.
+        stripped_changed = cls._strip_retired_keys(settings, spec.stripped_keys)
         return r[bool].ok(
             cls._apply_union_settings(settings, spec.map_union_settings)
             or artifacts_changed
-            or changed.value
+            or stripped_changed
+            or changed.value,
         )
+
+    @staticmethod
+    def _strip_retired_keys(
+        settings: t.MutableJsonMapping,
+        stripped_keys: t.StrSequence,
+    ) -> bool:
+        """Delete every key listed in ``stripped_keys`` from the settings mapping."""
+        changed = False
+        for key in stripped_keys:
+            if key in settings:
+                del settings[key]
+                changed = True
+        return changed
 
     @classmethod
     def _apply_enforced_settings(
@@ -216,10 +241,12 @@ class FlextInfraCodegenVscodeMixin:
             changed = True
         for key, list_value in list_settings.items():
             entries = cls._resolve_list_setting(
-                key, list_value, repository_root=repository_root
+                key,
+                list_value,
+                repository_root=repository_root,
             )
             if entries.failure:
-                return r[bool].fail(entries.error)
+                return r[bool].from_failure(entries)
             canonical: list[t.JsonValue] = [
                 u.normalize_to_json_value(entry) for entry in entries.value
             ]
@@ -238,7 +265,7 @@ class FlextInfraCodegenVscodeMixin:
         changed = False
         for key, canonical_map in map_union_settings.items():
             current = settings.get(key)
-            existing: dict[str, t.JsonValue] = (
+            existing: t.MutableJsonMapping = (
                 {
                     name: u.normalize_to_json_value(value)
                     for name, value in current.items()
@@ -246,9 +273,12 @@ class FlextInfraCodegenVscodeMixin:
                 if isinstance(current, Mapping)
                 else {}
             )
-            merged: dict[str, t.JsonValue] = existing | {
-                name: u.normalize_to_json_value(value)
-                for name, value in canonical_map.items()
+            merged = {
+                **dict(existing),
+                **{
+                    name: u.normalize_to_json_value(value)
+                    for name, value in canonical_map.items()
+                },
             }
             if settings.get(key) == merged:
                 continue
@@ -264,7 +294,7 @@ class FlextInfraCodegenVscodeMixin:
         """Replace generated maps so removed SSOT entries leave no residue."""
         changed = False
         for key, canonical_map in exact_maps.items():
-            exact: dict[str, t.JsonValue] = {
+            exact = {
                 name: u.normalize_to_json_value(value)
                 for name, value in canonical_map.items()
             }
@@ -276,11 +306,14 @@ class FlextInfraCodegenVscodeMixin:
 
     @staticmethod
     def _resolve_list_setting(
-        key: str, base_entries: t.VariadicTuple[str], *, repository_root: Path
+        key: str,
+        base_entries: t.VariadicTuple[str],
+        *,
+        repository_root: Path,
     ) -> p.Result[t.VariadicTuple[str]]:
         """Return one canonical list without consulting repository topology."""
         del key, repository_root
-        return r[tuple[str, ...]].ok(base_entries)
+        return r[t.VariadicTuple[str]].ok(base_entries)
 
 
 __all__: list[str] = ["FlextInfraCodegenVscodeMixin"]

@@ -5,18 +5,17 @@ from __future__ import annotations
 import hashlib
 import os
 import stat
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra.constants import c
-from flext_infra.models import m
+from flext_infra import c, m
 
 from .git import FlextInfraUtilitiesGit
 
 if TYPE_CHECKING:
-    from flext_infra.protocols import p
-    from flext_infra.typings import t
+    from flext_infra import p, t
 
 
 class FlextInfraUtilitiesWorkspaceFingerprint:
@@ -46,7 +45,7 @@ class FlextInfraUtilitiesWorkspaceFingerprint:
             digest.update(b"file\0")
             with path.open("rb") as stream:
                 while chunk := stream.read(
-                    c.Infra.WORKSPACE_FINGERPRINT_READ_CHUNK_BYTES
+                    c.Infra.WORKSPACE_FINGERPRINT_READ_CHUNK_BYTES,
                 ):
                     digest.update(chunk)
         elif stat.S_ISDIR(metadata.st_mode):
@@ -65,12 +64,15 @@ class FlextInfraUtilitiesWorkspaceFingerprint:
 
     @classmethod
     def workspace_fingerprint(
-        cls, checkout: Path, *, excluded_paths: t.SequenceOf[Path] = ()
+        cls,
+        checkout: Path,
+        *,
+        excluded_paths: t.SequenceOf[Path] = (),
     ) -> p.Result[m.Infra.WorkspaceFingerprint]:
         """Capture a content-addressed snapshot of one Git checkout."""
         root = checkout.resolve()
         inputs = FlextInfraUtilitiesGit.git_fingerprint_inputs(
-            m.Infra.GitRepoRequest(repo_root=root)
+            m.Infra.GitRepoRequest(repo_root=root),
         )
         if inputs.failure:
             return r[m.Infra.WorkspaceFingerprint].from_failure(inputs)
@@ -78,7 +80,7 @@ class FlextInfraUtilitiesWorkspaceFingerprint:
         index_result_value = inputs.value.index_z
         head = inputs.value.head
 
-        index_entries: dict[bytes, list[bytes]] = {}
+        index_entries: MutableMapping[bytes, list[bytes]] = {}
         for record in index_result_value.split(b"\0"):
             if not record:
                 continue
@@ -86,7 +88,7 @@ class FlextInfraUtilitiesWorkspaceFingerprint:
                 metadata, raw_path = record.split(b"\t", maxsplit=1)
             except ValueError:
                 return r[m.Infra.WorkspaceFingerprint].fail(
-                    "invalid NUL-delimited git index entry"
+                    "invalid NUL-delimited git index entry",
                 )
             index_entries.setdefault(raw_path, []).append(metadata)
 
@@ -96,7 +98,7 @@ class FlextInfraUtilitiesWorkspaceFingerprint:
             relative = Path(os.fsdecode(raw_path))
             if relative.is_absolute() or ".." in relative.parts:
                 return r[m.Infra.WorkspaceFingerprint].fail(
-                    f"unsafe repository path in fingerprint: {relative}"
+                    f"unsafe repository path in fingerprint: {relative}",
                 )
             if cls._excluded(relative, exclusions):
                 continue
@@ -112,8 +114,9 @@ class FlextInfraUtilitiesWorkspaceFingerprint:
             entry_digest.update(content_result.value)
             entries.append(
                 m.Infra.WorkspaceFingerprintEntry(
-                    path=relative.as_posix(), digest=entry_digest.hexdigest()
-                )
+                    path=relative.as_posix(),
+                    digest=entry_digest.hexdigest(),
+                ),
             )
 
         aggregate = hashlib.sha256(head)
@@ -124,13 +127,15 @@ class FlextInfraUtilitiesWorkspaceFingerprint:
             aggregate.update(b"\0")
         return r[m.Infra.WorkspaceFingerprint].ok(
             m.Infra.WorkspaceFingerprint(
-                digest=aggregate.hexdigest(), entries=tuple(entries)
-            )
+                digest=aggregate.hexdigest(),
+                entries=tuple(entries),
+            ),
         )
 
     @staticmethod
     def workspace_fingerprint_changes(
-        before: m.Infra.WorkspaceFingerprint, after: m.Infra.WorkspaceFingerprint
+        before: m.Infra.WorkspaceFingerprint,
+        after: m.Infra.WorkspaceFingerprint,
     ) -> t.StrSequence:
         """Return repository paths whose content or index state changed."""
         before_entries = {entry.path: entry.digest for entry in before.entries}

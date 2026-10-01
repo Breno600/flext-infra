@@ -7,17 +7,15 @@ from typing import TYPE_CHECKING, ClassVar
 
 from flext_cli import cli as cli_facade
 
-from flext_infra import c
-from flext_infra.typings import t
-from flext_infra.utilities import u
+from flext_infra import c, t, u
 
-from .cli_routes import CliRouteService
+from .cli_routes import FlextInfraCliRouteService
 
 if TYPE_CHECKING:
     from flext_infra import p
 
 
-class CliDispatchService(CliRouteService, type(cli_facade)):
+class FlextInfraCliDispatchService(FlextInfraCliRouteService, type(cli_facade)):
     """Dispatch public command groups through their typed route models."""
 
     app_name: ClassVar[str] = "flext-infra"
@@ -45,7 +43,8 @@ class CliDispatchService(CliRouteService, type(cli_facade)):
     def print_help(self) -> None:
         """Display the canonical command groups."""
         self.display_message(
-            "Usage: flext-infra <group> [subcommand] [args...]", c.Cli.MessageTypes.INFO
+            "Usage: flext-infra <group> [subcommand] [args...]",
+            c.Cli.MessageTypes.INFO,
         )
         self.display_message("Groups", c.Cli.MessageTypes.INFO)
         for group in sorted(c.Infra.CLI_GROUP_DESCRIPTIONS):
@@ -61,7 +60,7 @@ class CliDispatchService(CliRouteService, type(cli_facade)):
                 args,
                 bool_options=tuple(self.shared_bool_flags),
                 value_options=tuple(self.shared_value_flags),
-            )
+            ),
         )
         return list(normalized)
 
@@ -79,11 +78,15 @@ class CliDispatchService(CliRouteService, type(cli_facade)):
         normalized_args = self.normalize_group_args(args)
         if not normalized_args:
             _ = self.execute_app(
-                app, prog_name=f"{self.app_name} {group}", args=["--help"]
+                app,
+                prog_name=f"{self.app_name} {group}",
+                args=["--help"],
             )
             return 1
         result = self.execute_app(
-            app, prog_name=f"{self.app_name} {group}", args=normalized_args
+            app,
+            prog_name=f"{self.app_name} {group}",
+            args=normalized_args,
         )
         if result.success:
             return c.Infra.PROCESS_SUCCESS_EXIT_CODE
@@ -106,4 +109,4 @@ class CliDispatchService(CliRouteService, type(cli_facade)):
         return 2 if error_message and u.Cli.cli_usage_error(error_message) else 1
 
 
-__all__: list[str] = ["CliDispatchService"]
+__all__: list[str] = ["FlextInfraCliDispatchService"]

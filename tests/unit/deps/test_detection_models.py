@@ -8,7 +8,6 @@ from pathlib import Path
 
 import pytest
 from flext_tests import tm
-from pydantic import ValidationError
 
 from flext_infra import m, t
 from flext_infra.deps.detection import FlextInfraDependencyDetectionService
@@ -28,7 +27,11 @@ class TestsFlextInfraDepsDetectionModels:
     def test_deptry_report_creation(self) -> None:
         """Verify deptry report creation."""
         report = m.Infra.DeptryReport(
-            missing=[], unused=[], transitive=[], dev_in_runtime=[], raw_count=0
+            missing=[],
+            unused=[],
+            transitive=[],
+            dev_in_runtime=[],
+            raw_count=0,
         )
         tm.that(report.missing, empty=True)
         tm.that(report.unused, empty=True)
@@ -39,7 +42,11 @@ class TestsFlextInfraDepsDetectionModels:
     def test_project_dependency_report_creation(self) -> None:
         """Verify project dependency report creation."""
         deptry = m.Infra.DeptryReport(
-            missing=[], unused=[], transitive=[], dev_in_runtime=[], raw_count=0
+            missing=[],
+            unused=[],
+            transitive=[],
+            dev_in_runtime=[],
+            raw_count=0,
         )
         report = m.Infra.ProjectDependencyReport(project="test-project", deptry=deptry)
         tm.that(report.project, eq="test-project")
@@ -54,7 +61,9 @@ class TestsFlextInfraDepsDetectionModels:
             current=[],
             to_add=[],
             to_remove=[],
+            untyped_imports_followed=True,
         )
+        tm.that(report.untyped_imports_followed, eq=True)
         tm.that(report.required_packages, empty=True)
         tm.that(report.hinted, empty=True)
         tm.that(report.missing_modules, empty=True)
@@ -73,10 +82,10 @@ class TestsFlextInfraDepsDetectionModels:
         service = FlextInfraDependencyDetectionService()
         limits = service.load_dependency_limits()
         typing_libraries = t.Cli.JSON_MAPPING_ADAPTER.validate_python(
-            limits["typing_libraries"]
+            limits["typing_libraries"],
         )
         module_to_package = t.Cli.JSON_MAPPING_ADAPTER.validate_python(
-            typing_libraries["module_to_package"]
+            typing_libraries["module_to_package"],
         )
         expected = module_to_package["yaml"]
 
@@ -89,7 +98,8 @@ class TestsFlextInfraDepsDetectionModels:
     def test_string_value(self) -> None:
         """Verify string value."""
         tm.that(
-            FlextInfraDependencyDetectionService.to_infra_value("hello"), eq="hello"
+            FlextInfraDependencyDetectionService.to_infra_value("hello"),
+            eq="hello",
         )
 
     def test_int_value(self) -> None:
@@ -99,7 +109,8 @@ class TestsFlextInfraDepsDetectionModels:
     def test_float_value(self) -> None:
         """Verify float value."""
         tm.that(
-            FlextInfraDependencyDetectionService.to_infra_value(math.pi), eq=math.pi
+            FlextInfraDependencyDetectionService.to_infra_value(math.pi),
+            eq=math.pi,
         )
 
     def test_bool_value(self) -> None:
@@ -117,7 +128,8 @@ class TestsFlextInfraDepsDetectionModels:
     def test_list_with_unconvertible(self) -> None:
         """Verify list with unconvertible."""
         tm.that(
-            FlextInfraDependencyDetectionService.to_infra_value([["nested"]]), none=True
+            FlextInfraDependencyDetectionService.to_infra_value([["nested"]]),
+            none=True,
         )
 
     def test_mapping_value(self) -> None:
@@ -139,7 +151,7 @@ class TestsFlextInfraDepsDetectionModels:
 
     def test_unsupported_type(self, tmp_path: Path) -> None:
         """Verify unsupported type."""
-        with pytest.raises(ValidationError):
+        with pytest.raises(m.ValidationError):
             _ = t.Infra.INFRA_MAPPING_ADAPTER.validate_python(str(tmp_path))
 
     def test_list_with_none_item(self) -> None:

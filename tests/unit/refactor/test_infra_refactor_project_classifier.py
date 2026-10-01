@@ -12,18 +12,19 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def _write_pyproject(project_root: Path, content: str) -> None:
-    pyproject_path = project_root / "pyproject.toml"
-    pyproject_path.write_text(content.strip() + "\n", encoding="utf-8")
-
-
 class TestsFlextInfraRefactorInfraRefactorProjectClassifier:
     """Behavior contract for test_infra_refactor_project_classifier."""
 
+    @staticmethod
+    def _write_pyproject(project_root: Path, content: str) -> None:
+        pyproject_path = project_root / "pyproject.toml"
+        pyproject_path.write_text(content.strip() + "\n", encoding="utf-8")
+
     def test_classify_reads_internal_dependencies_from_pep621(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
-        _write_pyproject(
+        self._write_pyproject(
             tmp_path,
             """
             [project]
@@ -41,9 +42,10 @@ class TestsFlextInfraRefactorInfraRefactorProjectClassifier:
         tm.that(classification.project_kind, eq="platform")
 
     def test_classify_reads_internal_dependencies_from_poetry(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
-        _write_pyproject(
+        self._write_pyproject(
             tmp_path,
             """
             [tool.poetry]

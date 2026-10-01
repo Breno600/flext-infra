@@ -17,8 +17,6 @@ from tests import c
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from tests import t
-
 
 class TestsFlextInfraCodegenPyTyped:
     def test_creates_marker_in_dir_with_py_files(self, tmp_path: Path) -> None:
@@ -67,7 +65,9 @@ class TestsFlextInfraCodegenPyTyped:
 
     @pytest.mark.parametrize("skip_dir", tuple(c.Tests.CODEGEN_SKIPPED_DIRS))
     def test_skips_known_excluded_directories(
-        self, tmp_path: Path, skip_dir: str
+        self,
+        tmp_path: Path,
+        skip_dir: str,
     ) -> None:
         skipped_pkg = tmp_path / "src" / skip_dir / "mypkg"
         skipped_pkg.mkdir(parents=True)
@@ -149,6 +149,3 @@ class TestsFlextInfraCodegenPyTyped:
         tm.that(count, eq=3)
         for name in ("pkga", "pkgb", "pkgc"):
             tm.that((tmp_path / "src" / name / c.Infra.PY_TYPED).exists(), eq=True)
-
-
-__all__: t.StrSequence = []

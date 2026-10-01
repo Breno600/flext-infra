@@ -1,17 +1,12 @@
-"""Canonical process-exit classification and hermetic child-environment utilities."""
+"""Canonical process-exit classification utilities."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from flext_infra import c, config
-
-if TYPE_CHECKING:
-    from flext_infra import t
+from flext_infra import c
 
 
 class FlextInfraUtilitiesProcess:
-    """Normalize external process exits and derive hermetic child environments."""
+    """Normalize external process exits without discarding their status."""
 
     @staticmethod
     def process_exit_classification(exit_code: int) -> str:
@@ -23,30 +18,6 @@ class FlextInfraUtilitiesProcess:
         if exit_code > c.Infra.PROCESS_SIGNAL_EXIT_OFFSET:
             return f"signal={exit_code - c.Infra.PROCESS_SIGNAL_EXIT_OFFSET}"
         return "failure"
-
-    @staticmethod
-    def make_hermetic_env_remove_keys() -> t.StrSequence:
-        """Return every Make-owned variable a gate child process must not inherit.
-
-        GNU make exports command-line assignments (``APPLY=Y``) and its own
-        recursion state to every child, so pytest and any ``make`` a test
-        spawns would otherwise see the outer verb's selectors and refuse
-        (``verb help is read-only and does not accept APPLY``). The generated
-        Makefile is selector-free — its only public input is the apply
-        variable — so the set is derived from the declared owners only: the
-        orchestrator recursion keys, the config-owned apply variable, the
-        settings identity variable, the pytest-specific keys, and the host
-        color-forcing signal. No list is repeated here.
-        """
-        make = config.Infra.codegen.make
-        ordered: dict[str, None] = dict.fromkeys((
-            *c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
-            make.apply_variable,
-            c.Infra.ENV_VAR_STANDALONE,
-            *c.Infra.PYTEST_INHERITED_ENV_REMOVE_KEYS,
-            c.Infra.ENV_VAR_FORCE_COLOR,
-        ))
-        return tuple(ordered)
 
 
 __all__: list[str] = ["FlextInfraUtilitiesProcess"]

@@ -14,9 +14,21 @@ class FlextInfraCodegenGenerationFileMixin(FlextInfraCodegenGenerationStandardMi
 
     @staticmethod
     def _init_template_name(plan: m.Infra.LazyInitPlan) -> str:
-        """Select the sole template source for one resolved initializer."""
+        """Select the sole template source for one resolved initializer.
+
+        The bootstrap-cycle exception (side-effect-free static init) belongs
+        ONLY to the bootstrap-owning distribution (``flext_core``): its
+        ``_typings``/``_lazy_parts`` are imported while the lazy runtime is
+        still initializing. Every other distribution's private packages load
+        normally and receive the populated lazy facade (operator init law
+        2026-09-16: light init WITH exports — never an empty facade).
+        """
+        root_package = plan.context.current_pkg.split(".", maxsplit=1)[0]
         segments = frozenset(plan.context.current_pkg.split("."))
-        if segments & c.Infra.BOOTSTRAP_CYCLE_EXCEPTION_SEGMENTS:
+        if (
+            root_package == c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
+            and segments & c.Infra.BOOTSTRAP_CYCLE_EXCEPTION_SEGMENTS
+        ):
             return c.Infra.TEMPLATE_STATIC_INIT
         return c.Infra.TEMPLATE_ROOT_INIT
 

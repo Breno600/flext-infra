@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from configparser import Error as ConfigParserError
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from git import GitCommandError, GitConfigParser
 
 from flext_core import r
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra import c, m, t
 
 from .semantic_identity import FlextInfraUtilitiesGitSemanticIdentityMixin
 
@@ -19,13 +19,14 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesGitSemanticSubmoduleMixin(
-    FlextInfraUtilitiesGitSemanticIdentityMixin
+    FlextInfraUtilitiesGitSemanticIdentityMixin,
 ):
     """Own semantic submodule operations."""
 
     @classmethod
     def git_submodule_init(
-        cls, request: m.Infra.GitRefRequest
+        cls,
+        request: m.Infra.GitRefRequest,
     ) -> p.Result[m.Infra.GitBoolReport]:
         """Initialize one declared submodule at its recorded gitlink."""
         try:
@@ -40,7 +41,8 @@ class FlextInfraUtilitiesGitSemanticSubmoduleMixin(
 
     @classmethod
     def git_submodule_config_value(
-        cls, request: m.Infra.GitSubmoduleConfigRequest
+        cls,
+        request: m.Infra.GitSubmoduleConfigRequest,
     ) -> p.Result[m.Infra.GitTextReport]:
         """Read one ``.gitmodules`` value, returning empty text when unset."""
         gitmodules = request.repo_root / c.Infra.GITMODULES
@@ -53,13 +55,15 @@ class FlextInfraUtilitiesGitSemanticSubmoduleMixin(
                 )
         except (ConfigParserError, OSError, TypeError, ValueError) as exc:
             return r[m.Infra.GitTextReport].fail(
-                f"failed to read {request.section}.{request.key}: {exc}", exception=exc
+                f"failed to read {request.section}.{request.key}: {exc}",
+                exception=exc,
             )
         return r[m.Infra.GitTextReport].ok(m.Infra.GitTextReport(text=value.strip()))
 
     @classmethod
     def git_submodule_sections(
-        cls, request: m.Infra.GitRepoRequest
+        cls,
+        request: m.Infra.GitRepoRequest,
     ) -> p.Result[t.StrMapping]:
         """Map every declared submodule path to its ``.gitmodules`` section.
 
@@ -79,18 +83,48 @@ class FlextInfraUtilitiesGitSemanticSubmoduleMixin(
                 )
         except (ConfigParserError, OSError, TypeError, ValueError) as exc:
             return r[t.StrMapping].fail(
-                f"failed to read submodule declarations: {exc}", exception=exc
+                f"failed to read submodule declarations: {exc}",
+                exception=exc,
             )
-        sections: dict[str, str] = {}
+        sections: MutableMapping[str, str] = {}
         for declared, section in declarations:
             if not declared:
                 continue
             if declared in sections:
                 return r[t.StrMapping].fail(
-                    f"governed gitlink path is duplicated: {declared}"
+                    f"governed gitlink path is duplicated: {declared}",
                 )
             sections[declared] = section
         return r[t.StrMapping].ok(sections)
+
+    @classmethod
+    def git_unmanaged_submodule_paths(
+        cls,
+        request: m.Infra.GitRepoRequest,
+    ) -> p.Result[t.SequenceOf[Path]]:
+        """Return declared submodule paths that opt out of workspace governance.
+
+        An absent ``flext-managed`` key keeps the member governed. Any explicit
+        value other than ``true`` declares a vendored or non-Python checkout
+        that no governed stage may treat as a workspace project.
+        """
+        sections = cls.git_submodule_sections(request)
+        if sections.failure:
+            return r[t.SequenceOf[Path]].from_failure(sections)
+        unmanaged: t.MutableSequenceOf[Path] = []
+        for declared, section in sections.value.items():
+            flag = cls.git_submodule_config_value(
+                m.Infra.GitSubmoduleConfigRequest(
+                    repo_root=request.repo_root,
+                    section=section,
+                    key=c.Infra.GITMODULE_MANAGED_KEY,
+                ),
+            )
+            if flag.failure:
+                return r[t.SequenceOf[Path]].from_failure(flag)
+            if flag.value.text and flag.value.text.lower() != "true":
+                unmanaged.append(Path(declared))
+        return r[t.SequenceOf[Path]].ok(tuple(unmanaged))
 
 
 __all__: list[str] = ["FlextInfraUtilitiesGitSemanticSubmoduleMixin"]

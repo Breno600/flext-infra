@@ -9,7 +9,8 @@ from typing import TYPE_CHECKING, Annotated, Self, override
 
 from flext_core import r
 from flext_infra import m, u
-from flext_infra.base import s
+
+from ..base import s
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -26,9 +27,12 @@ class FlextInfraTestmonDbInspector(s[m.Infra.TestmonCacheState]):
 
     @u.model_validator(mode="after")
     def _validate_absolute_db(self) -> Self:
-        """Reject relative or empty DB paths."""
+        """Reject relative or in-checkout database paths."""
         if not self.db_path.is_absolute():
             msg = "testmon db_path must be absolute"
+            raise ValueError(msg)
+        if self.db_path.resolve().is_relative_to(self.root.resolve()):
+            msg = "testmon database must be outside the repository checkout"
             raise ValueError(msg)
         return self
 
@@ -62,7 +66,7 @@ class FlextInfraTestmonDbInspector(s[m.Infra.TestmonCacheState]):
         tables = {
             row[0]
             for row in connection.execute(
-                "SELECT name FROM sqlite_master WHERE type='table'"
+                "SELECT name FROM sqlite_master WHERE type='table'",
             ).fetchall()
         }
         if not tables:
@@ -102,7 +106,7 @@ class FlextInfraTestmonDbInspector(s[m.Infra.TestmonCacheState]):
                 changed=changed,
                 saveable=saveable,
                 reason=reason,
-            )
+            ),
         )
 
     @override

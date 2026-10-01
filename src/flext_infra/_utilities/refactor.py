@@ -9,14 +9,12 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from pathlib import Path
 
 from flext_cli import r, u
 
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra import c, m, p, t
 
 
 class FlextInfraUtilitiesRefactor:
@@ -30,20 +28,20 @@ class FlextInfraUtilitiesRefactor:
     """
 
     @staticmethod
-    def string_list(value: t.Infra.InfraValue | None) -> t.StrSequence:
+    def string_list(value: t.JsonValue | None) -> t.StrSequence:
         """Normalize policy fields that should contain string collections."""
         if value is None:
             return []
         if isinstance(value, str):
             return [value]
-        try:
-            return list(t.Infra.STR_SEQ_ADAPTER.validate_python(value))
-        except TypeError as exc:
-            msg = "expected list value"
-            raise TypeError(msg) from exc
-        except c.ValidationError as exc:
-            msg = "expected list value"
-            raise TypeError(msg) from exc
+        validated: p.Result[t.StrSequence] = u.validate_value(
+            t.Infra.STR_SEQ_ADAPTER,
+            value,
+        )
+        if validated.failure:
+            msg = f"expected list value: {validated.error}"
+            raise TypeError(msg) from validated.exception
+        return list(validated.value)
 
     @staticmethod
     def normalize_module_path(path_value: str | Path) -> str:
@@ -59,7 +57,8 @@ class FlextInfraUtilitiesRefactor:
 
     @staticmethod
     def write_impact_map(
-        results: t.SequenceOf[m.Infra.Result], output_path: Path
+        results: t.SequenceOf[m.Infra.Result],
+        output_path: Path,
     ) -> p.Result[bool]:
         """Write refactor impact map JSON to disk."""
         payload = {
@@ -72,10 +71,10 @@ class FlextInfraUtilitiesRefactor:
                     "changes": list(item.changes),
                 }
                 for item in results
-            ]
+            ],
         }
         normalized_payload: t.JsonValue = t.Cli.JSON_VALUE_ADAPTER.validate_python(
-            payload
+            payload,
         )
         write_result = u.Cli.json_write(output_path, normalized_payload)
         if write_result.failure:
@@ -98,12 +97,13 @@ class FlextInfraUtilitiesRefactor:
             return r[m.Infra.ModScanEvidenceReceipt].fail(
                 "mod scan classification invariant failed: "
                 f"findings={report.findings} entries={len(report.entries)} "
-                f"classified={classified}"
+                f"classified={classified}",
             )
-        repository_totals: dict[str, int] = {}
-        rule_totals: dict[str, int] = {}
-        class_totals: dict[c.Infra.ModScanFindingClass, int] = dict.fromkeys(
-            c.Infra.ModScanFindingClass, 0
+        repository_totals: MutableMapping[str, int] = {}
+        rule_totals: MutableMapping[str, int] = {}
+        class_totals: MutableMapping[c.Infra.ModScanFindingClass, int] = dict.fromkeys(
+            c.Infra.ModScanFindingClass,
+            0,
         )
         for finding in report.entries:
             repository_totals[finding.repository] = (
@@ -121,7 +121,7 @@ class FlextInfraUtilitiesRefactor:
         if class_totals != expected_class_totals:
             return r[m.Infra.ModScanEvidenceReceipt].fail(
                 "mod scan entry classification differs from report totals: "
-                f"entries={class_totals} report={expected_class_totals}"
+                f"entries={class_totals} report={expected_class_totals}",
             )
         evidence = m.Infra.ModScanEvidence(
             schema_version=c.Infra.MOD_SCAN_REPORT_SCHEMA_VERSION,
@@ -138,7 +138,7 @@ class FlextInfraUtilitiesRefactor:
             entries=report.entries,
         )
         content = (evidence.model_dump_json(indent=2) + "\n").encode(
-            c.Cli.ENCODING_DEFAULT
+            c.Cli.ENCODING_DEFAULT,
         )
         report_path = root.resolve() / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH
         prepared = u.Cli.ensure_dir(report_path.parent)
@@ -148,7 +148,9 @@ class FlextInfraUtilitiesRefactor:
         if before.failure:
             return r[m.Infra.ModScanEvidenceReceipt].from_failure(before)
         written = u.Cli.atomic_write_binary_file_guarded(
-            before.value, content, permission_mode=c.Infra.MOD_SCAN_REPORT_MODE
+            before.value,
+            content,
+            permission_mode=c.Infra.MOD_SCAN_REPORT_MODE,
         )
         if written.failure:
             return r[m.Infra.ModScanEvidenceReceipt].from_failure(written)
@@ -160,12 +162,14 @@ class FlextInfraUtilitiesRefactor:
             or published.value.mode != c.Infra.MOD_SCAN_REPORT_MODE
         ):
             return r[m.Infra.ModScanEvidenceReceipt].fail(
-                f"published mod evidence differs from planned bytes: {report_path}"
+                f"published mod evidence differs from planned bytes: {report_path}",
             )
         return r[m.Infra.ModScanEvidenceReceipt].ok(
             m.Infra.ModScanEvidenceReceipt(
-                path=report_path, sha256=u.Cli.sha256_bytes(content), evidence=evidence
-            )
+                path=report_path,
+                sha256=u.Cli.sha256_bytes(content),
+                evidence=evidence,
+            ),
         )
 
 

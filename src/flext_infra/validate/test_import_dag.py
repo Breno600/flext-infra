@@ -6,13 +6,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING, override
 
 from flext_core import r
-from flext_infra import c, m, s, t, u
+from flext_infra import c, m, t, u
+from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
 
 if TYPE_CHECKING:
     from flext_infra import p
 
 
-class FlextInfraValidateTestImportDag(s[bool]):
+class FlextInfraValidateTestImportDag(FlextInfraProjectSelectionServiceBase[bool]):
     """Enforce directed imports between production, tests, and test facets."""
 
     def build_report(self, repository_root: Path) -> p.Result[m.Infra.ValidationReport]:
@@ -35,8 +36,10 @@ class FlextInfraValidateTestImportDag(s[bool]):
         )
         return r[m.Infra.ValidationReport].ok(
             m.Infra.ValidationReport(
-                passed=not violations, violations=violations, summary=summary
-            )
+                passed=not violations,
+                violations=violations,
+                summary=summary,
+            ),
         )
 
     def _project_violations(self, project_root: Path) -> t.StrSequence:
@@ -51,7 +54,7 @@ class FlextInfraValidateTestImportDag(s[bool]):
                 file_path = u.Infra.resource_file_path(project, resource)
                 if file_path is None:
                     continue
-                module_imports = u.Infra.get_module_imports(project, resource)
+                module_imports = u.Infra.resolve_module_imports(project, resource)
                 for imported in u.Infra.imported_module_paths(module_imports):
                     reason = self._edge_violation(
                         file_path,
@@ -68,7 +71,7 @@ class FlextInfraValidateTestImportDag(s[bool]):
     def _facet(file_path: Path) -> str | None:
         if c.Infra.DIR_TESTS not in file_path.parts:
             return None
-        return c.Infra.NAMESPACE_FILE_TO_FAMILY.get(file_path.name)
+        return u.Infra.facade_family_of_file(file_path.name)
 
     @staticmethod
     def _imported_facet(imported: str) -> str | None:
@@ -77,10 +80,14 @@ class FlextInfraValidateTestImportDag(s[bool]):
             return None
         return next(
             (
-                c.Infra.NAMESPACE_FILE_TO_FAMILY[module_file]
+                family
                 for part in parts[1:]
-                if (module_file := f"{part}{c.Infra.EXT_PYTHON}")
-                in c.Infra.NAMESPACE_FILE_TO_FAMILY
+                if (
+                    family := u.Infra.facade_family_of_file(
+                        f"{part}{c.Infra.EXT_PYTHON}",
+                    )
+                )
+                is not None
             ),
             None,
         )
@@ -128,13 +135,9 @@ class FlextInfraValidateTestImportDag(s[bool]):
                 return "test facets cannot import the tests package root"
             if imports_test_support:
                 return "test facets cannot import fixtures, conftest, or test modules"
-            facade_order = tuple(
-                alias
-                for alias in c.Infra.PUBLIC_ROOT_ALIAS_ORDER
-                if alias in c.Infra.FLEXT_FAMILIES
-            )
+            facade_order = tuple(u.Infra.facade_families())
             if imported_facet is not None and facade_order.index(
-                imported_facet
+                imported_facet,
             ) < facade_order.index(source_facet):
                 return "reverse canonical test-facet edge"
         if (

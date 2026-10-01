@@ -1,0 +1,11 @@
+{{ {
+  "printWidth": tooling.tools.markdown.rules["MD013"]["line_length"],
+  "proseWrap": tooling.tools.markdown.prettier.prose_wrap,
+  "tabWidth": tooling.tools.markdown.prettier.tab_width,
+  "overrides": [
+    {
+      "files": ["*.md", "*.markdown"],
+      "options": {"tabWidth": tooling.tools.markdown.prettier.md_tab_width}
+    }
+  ]
+} | tojson(indent=2) }}

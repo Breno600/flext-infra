@@ -15,10 +15,12 @@ if TYPE_CHECKING:
     from _pytest.capture import CaptureFixture
 
 
-def test_fix_pyrefly_config_main_executes_real_cli_help(
-    capsys: CaptureFixture[str],
-) -> None:
-    exit_code = infra_main(["check", "fix-pyrefly-settings", "--help"])
-    captured = capsys.readouterr()
-    tm.that(exit_code, eq=0)
-    tm.that(captured.out.lower(), has="usage:")
+class TestsFlextInfraFixPyreflyConfig:
+    def test_fix_pyrefly_config_main_executes_real_cli_help(
+        self,
+        capsys: CaptureFixture[str],
+    ) -> None:
+        exit_code = infra_main(["check", "fix-pyrefly-settings", "--help"])
+        captured = capsys.readouterr()
+        tm.that(exit_code, eq=0)
+        tm.that(captured.out.lower(), has="usage:")

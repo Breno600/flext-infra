@@ -9,7 +9,9 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import config, u
-from flext_infra.services.cli_routes_validate_commands import ValidationCommandRoutes
+from flext_infra.services.cli_routes_validate_commands import (
+    FlextInfraValidationCommandRoutes,
+)
 from flext_infra.validate.cprofile_report import FlextInfraCProfileReport
 
 
@@ -51,13 +53,14 @@ class TestsFlextInfraCProfileReport:
     def test_validate_route_uses_typed_profile_owner(self) -> None:
         routes = {
             route.name: route.model_cls
-            for route in ValidationCommandRoutes.validate_command_routes
+            for route in FlextInfraValidationCommandRoutes.validate_command_routes
         }
 
         tm.that(routes["cprofile-report"], eq=FlextInfraCProfileReport)
 
     def test_profile_artifacts_cannot_escape_workspace_reports(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         policy = config.Infra.tooling.tools.pytest
 

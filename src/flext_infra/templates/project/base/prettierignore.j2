@@ -1,0 +1,7 @@
+# @flext-managed: continuous
+# @flext-regenerate: make gen
+# @flext-ssot: flext-infra/config/tooling.yaml
+# @flext-maintenance: do not edit generated projections; edit the SSOT and regenerate
+{% for pattern in tooling.tools.markdown.exclude -%}
+{{ pattern }}
+{% endfor -%}

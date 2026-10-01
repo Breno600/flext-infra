@@ -4,13 +4,14 @@ Copyright (c) {{ year }} {{ author_name }}. All rights reserved.
 SPDX-License-Identifier: MIT
 """
 
-{# NOTE (multi-agent, flext-wkii.17): no config/settings intermediary is generated. -#}
+{# NOTE:no config/settings intermediary is generated. -#}
 from __future__ import annotations
 
-from {{ upstream }} import u
+{# NOTE:extend the class the upstream declares for `u` in its own __all__; the letter is rebound below as a plain alias. -#}
+from {{ upstream }} import {{ upstream_facades["u"] }}
 
 
-class {{ class_stem }}Utilities(u):
+class {{ class_stem }}Utilities({{ upstream_facades["u"] }}):
     """{{ class_stem }} utilities extending the upstream facade."""
 
 

@@ -6,10 +6,8 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 
-from flext_infra import config
-from flext_infra.typings import t
+from flext_infra import config, t
 
-from ._rope.pep695_patch import FlextInfraUtilitiesRopePep695Patch
 from ._rope_core_pymodule import FlextInfraUtilitiesRopeCorePyModuleMixin
 from ._rope_core_resources import FlextInfraUtilitiesRopeCoreResourcesMixin
 from .project_discovery import FlextInfraUtilitiesProjectDiscovery
@@ -17,38 +15,41 @@ from .rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeCore(
-    FlextInfraUtilitiesRopeCoreResourcesMixin, FlextInfraUtilitiesRopeCorePyModuleMixin
+    FlextInfraUtilitiesRopeCoreResourcesMixin,
+    FlextInfraUtilitiesRopeCorePyModuleMixin,
 ):
     """Core Rope lifecycle helpers."""
 
     @staticmethod
     def init_rope_project(repository_root: Path) -> t.Infra.RopeProject:
         """Create a project-scoped Rope session with no disk artifacts."""
-        FlextInfraUtilitiesRopePep695Patch.apply()
         resolved_root = repository_root.resolve()
         return FlextInfraUtilitiesRopeCore._new_project(
-            resolved_root, project_roots=(resolved_root,)
+            resolved_root,
+            project_roots=(resolved_root,),
         )
 
     @staticmethod
     def init_rope_workspace(repository_root: Path) -> t.Infra.RopeProject:
         """Create a Rope session spanning every project below a workspace root."""
-        FlextInfraUtilitiesRopePep695Patch.apply()
         resolved_root = repository_root.resolve()
         project_roots = tuple(
             project_root
             for project_root in FlextInfraUtilitiesProjectDiscovery.discover_rope_project_roots(
-                resolved_root
+                resolved_root,
             )
             if project_root.resolve().is_relative_to(resolved_root)
         )
         return FlextInfraUtilitiesRopeCore._new_project(
-            resolved_root, project_roots=project_roots
+            resolved_root,
+            project_roots=project_roots,
         )
 
     @staticmethod
     def _new_project(
-        resolved_root: Path, *, project_roots: t.SequenceOf[Path]
+        resolved_root: Path,
+        *,
+        project_roots: t.SequenceOf[Path],
     ) -> t.Infra.RopeProject:
         """Create one Rope project from validated source roots."""
         source_folders = sorted({
@@ -68,9 +69,25 @@ class FlextInfraUtilitiesRopeCore(
 
     @staticmethod
     @contextmanager
-    def open_project(repository_root: Path) -> Generator[t.Infra.RopeProject]:
+    def open_project(
+        repository_root: Path,
+        *,
+        project_roots: t.SequenceOf[Path] | None = None,
+    ) -> Generator[t.Infra.RopeProject]:
         """Open one Rope project and always close it through the core boundary."""
-        rope_project = FlextInfraUtilitiesRopeCore.init_rope_project(repository_root)
+        resolved = repository_root.resolve()
+        roots = (
+            (resolved,)
+            if project_roots is None
+            else tuple(path.resolve() for path in project_roots)
+        )
+        if not roots or any(not path.is_relative_to(resolved) for path in roots):
+            msg = "Rope project roots must be nonempty and remain inside the declared workspace"
+            raise ValueError(msg)
+        rope_project = FlextInfraUtilitiesRopeCore._new_project(
+            resolved,
+            project_roots=roots,
+        )
         try:
             yield rope_project
         finally:

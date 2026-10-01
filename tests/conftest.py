@@ -6,18 +6,73 @@ import importlib
 import sys
 from collections.abc import Iterator
 from pathlib import Path
-from types import ModuleType
 
 import pytest
 from flext_tests import tm
 
-import flext_infra as infra_pkg
-from flext_infra import config
+from flext_infra import config, infra, p
 from tests import c, t, u
 
 # NOTE(flext-p68a.9.4, agent codex): the installed flext-tests pytest11 plugin is
 # the only fixture owner; conftest must not re-export or shadow its fixtures.
 pytest_plugins = ["tests.unit.fixtures", "tests.unit.fixtures_git"]
+
+_TRACKED_CODEGEN_CONFIG_PATH = (
+    Path(__file__).resolve().parent.parent
+    / c.Infra.CODEGEN_CONFIG_DIR
+    / c.Infra.CODEGEN_CONFIG_FILENAME
+)
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """Register the slow-timeout ini option consumed by the test suite.
+
+    Why (root cause, rc0 plugin gap): the pyproject ``[tool.pytest.ini_options]``
+    declares ``flext_slow_timeout_seconds`` (consumed by ``flext_tests``) and
+    ``tests/unit/deps/test_modernizer_pytest`` reads it back through
+    ``config.getini``. The installed ``flext-tests 0.12.0rc0`` entry-point does
+    not register the option, so pytest aborts collection with
+    ``Unknown config option`` before any test runs. This conftest owns its ini
+    surface and declares the option here; a real plugin re-registering the same
+    name is a no-op merge.
+    """
+    parser.addini(
+        "flext_slow_timeout_seconds",
+        help="Seconds after which a test is flagged slow (flext-tests option)",
+    )
+
+
+@pytest.fixture
+def rope_workspace(tmp_path: Path) -> Iterator[p.Infra.RopeWorkspaceDsl]:
+    """Provide one real Rope workspace through the public composition root."""
+    with infra.rope_workspace(tmp_path) as workspace:
+        yield workspace
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _guard_tracked_codegen_config_untouched() -> Iterator[None]:
+    """Fail loud if the suite writes to the real, tracked ``config/codegen.yaml``.
+
+    Root cause (flext-eles2): dependency-floor rewrite tests exercised the
+    public ``--rewrite-constraints`` entry point through workspaces that never
+    declared their own governed SSOT, so the floor writer fell back to the
+    packaged/installed ``flext_infra`` config directory — this very checkout
+    in an editable install — and silently flipped floors in the real tracked
+    file. The floor writer now resolves its target from the modernizer's own
+    ``repository_root`` and every workspace fixture declares its own isolated
+    ``config/codegen.yaml``; this session-wide guard proves the real file
+    stays untouched by the whole suite, current and future.
+    """
+    before = _TRACKED_CODEGEN_CONFIG_PATH.read_bytes()
+    yield
+    after = _TRACKED_CODEGEN_CONFIG_PATH.read_bytes()
+    if after != before:
+        pytest.fail(
+            "test suite modified the tracked repository file "
+            f"{_TRACKED_CODEGEN_CONFIG_PATH}; dependency-floor and codegen "
+            "writers must target an isolated workspace, never the real "
+            "checkout (flext-eles2)",
+        )
 
 
 @pytest.fixture
@@ -35,105 +90,14 @@ def installed_dependency_path(tmp_path: Path) -> Iterator[Path]:
 
 
 @pytest.fixture
-def isolate_github_trigger_sha() -> Iterator[None]:
-    """Remove the outer checkout identity for explicit conform test consumers."""
-    with u.Tests.env_vars_context(vars_to_clear=(c.Infra.ENV_VAR_GITHUB_SHA,)):
-        yield
-
-
-@pytest.fixture
-def infra_public_root() -> Iterator[ModuleType]:
-    """Reload the root public package after clearing lazy-export caches.
-
-    Why (root cause, reload isolation): ``importlib.reload(flext_infra)``
-    re-executes the package ``__init__``, which re-imports ``pathlib`` and
-    binds a NEW ``Path`` class. Any ``Path`` instance created before the
-    reload keeps the OLD class, whose private slots (``_str``/``_drv``) no
-    longer match, so every later ``path.exists()`` on a pre-reload instance
-    raises ``AttributeError`` — corrupting every test that runs after this
-    fixture. The purge also drops the lazy-export registry the ``tests``
-    package shares, so ``tests.u`` resolved to the infra facade without
-    ``Tests``. Both module snapshots are restored after the fixture so the
-    process-global interpreter state is left exactly as found.
-    """
-    stdlib_snapshots = {
-        name: module
-        for name, module in sys.modules.items()
-        if name == "pathlib" or name.startswith("pathlib.")
-    }
-    wrapper_snapshots = {
-        name: sys.modules[name]
-        for name in c.Tests.INFRA_PUBLIC_WRAPPER_MODULES
-        if name in sys.modules
-    }
-    for name in c.Tests.INFRA_PUBLIC_WRAPPER_MODULES:
-        _ = sys.modules.pop(name, None)
-    try:
-        for export_name in c.Tests.INFRA_PUBLIC_ROOT_EXPORTS:
-            _ = infra_pkg.__dict__.pop(export_name, None)
-        yield importlib.reload(infra_pkg)
-    finally:
-        for name, module in stdlib_snapshots.items():
-            sys.modules[name] = module
-        # Why (review #355): a wrapper the reload imported but that was absent
-        # before the fixture must be dropped, not kept — leaving it would leak
-        # the reloaded module identity into later tests.
-        for name in c.Tests.INFRA_PUBLIC_WRAPPER_MODULES:
-            if name in wrapper_snapshots:
-                sys.modules[name] = wrapper_snapshots[name]
-            else:
-                _ = sys.modules.pop(name, None)
-
-
-def _is_collectable_test_module(collection_path: Path) -> bool:
-    tests_root = Path(__file__).parent
-    try:
-        collection_path.relative_to(tests_root)
-    except ValueError:
-        return True
-
-    file_name = collection_path.name
-    if collection_path.suffix != ".py" or file_name == "conftest.py":
-        return True
-
-    return file_name.startswith("test_") or file_name.endswith("_tests.py")
-
-
-def pytest_ignore_collect(collection_path: Path, config: pytest.Config) -> bool | None:
-    """Collect only executable test modules from the canonical test tree."""
-    del config
-    if _is_collectable_test_module(collection_path):
-        return None
-    return True
-
-
-def pytest_collection_modifyitems(
-    config: pytest.Config, items: list[pytest.Item]
-) -> None:
-    """Deselect non-test facade modules that pytest plugins may discover."""
-    kept_items: list[pytest.Item] = []
-    deselected_items: list[pytest.Item] = []
-
-    for item in items:
-        if _is_collectable_test_module(Path(item.path)):
-            # flext-wkii.4.15: settings identity is fixed at process startup.
-            kept_items.append(item)
-            continue
-        deselected_items.append(item)
-
-    if deselected_items:
-        config.hook.pytest_deselected(items=deselected_items)
-        items[:] = kept_items
-
-
-@pytest.fixture
 def infra_test_workspace(tmp_path: Path) -> Path:
     """Create a minimal typed project workspace for public service tests."""
     workspace = tmp_path / "workspace"
     src_pkg = workspace / "src" / "infra_pkg"
     src_pkg.mkdir(parents=True, exist_ok=True)
     (workspace / "pyproject.toml").write_text(
-        "[project]\nname='infra-pkg'\nversion='0.0.0'\n", encoding="utf-8"
+        "[project]\nname='infra-pkg'\nversion='0.0.0'\n",
+        encoding="utf-8",
     )
     (workspace / "Makefile").write_text("help:\n\t@pwd\n", encoding="utf-8")
     (src_pkg / "__init__.py").write_text("", encoding="utf-8")
@@ -183,18 +147,14 @@ def infra_selection() -> u.Infra:
 
 
 @pytest.fixture
-def infra_reporting() -> u.Infra:
-    """Provide the public infrastructure utility facade for reporting tests."""
-    return u.Infra()
-
-
-@pytest.fixture
 def infra_safe_command_output(
-    infra_subprocess: u.Cli, infra_test_workspace: Path
+    infra_subprocess: u.Cli,
+    infra_test_workspace: Path,
 ) -> str:
     """Capture successful public command output inside the test workspace."""
     echo_result = infra_subprocess.capture(
-        ["echo", "infra-ok"], cwd=infra_test_workspace
+        ["echo", "infra-ok"],
+        cwd=infra_test_workspace,
     )
     tm.ok(echo_result)
     pwd_result = infra_subprocess.capture(["pwd"], cwd=infra_test_workspace)
@@ -208,7 +168,7 @@ def infra_git_repo(infra_test_workspace: Path) -> Path:
 
     Conformance reads this repository twice and both reads must agree. Detection
     only accepts a remote whose host and organization match the provider, while
-    baseline ancestry resolves the already materialized provider tracking ref.
+    integration-branch discovery reads the already materialized tracking ref.
     Declaring the real upstream URL satisfies detection but grades the fixture
     against the live repository; declaring a local path fails detection outright.
     The fixture therefore declares the provider URL and rewrites it to a local
@@ -217,20 +177,28 @@ def infra_git_repo(infra_test_workspace: Path) -> Path:
     """
     repo = infra_test_workspace / "repo"
     repo.mkdir(parents=True, exist_ok=True)
+    # The governed tree above the clone carries the committed Taplo pin.
+    u.Tests.seed_locked_taplo(infra_test_workspace.parent)
     baseline_file = repo / ".infra-baseline"
     baseline_file.write_text("baseline\n", encoding="utf-8")
     u.Tests.write_project_beads_config(repo, config.Infra.name)
-    provider = u.Tests.provider()
     upstream = u.Tests.repository_ref(config.Infra.name).url
     origin = infra_test_workspace / "origin.git"
     origin.mkdir(parents=True, exist_ok=True)
     u.Tests.git_bootstrap(origin, ("init", "--bare"))
     u.Tests.initialize_git_repo(repo, origin_url=upstream)
     u.Tests.git_bootstrap(
-        repo, ("config", "--local", f"url.{origin}.insteadOf", upstream)
+        repo,
+        ("config", "--local", f"url.{origin}.insteadOf", upstream),
     )
     u.Tests.git_bootstrap(
-        repo, ("push", "-q", c.Infra.GIT_ORIGIN, f"HEAD:refs/heads/{provider.branch}")
+        repo,
+        (
+            "push",
+            "-q",
+            c.Infra.GIT_ORIGIN,
+            f"HEAD:refs/heads/{u.Tests.provider_branch()}",
+        ),
     )
     u.Tests.git_bootstrap(
         repo,
@@ -238,7 +206,10 @@ def infra_git_repo(infra_test_workspace: Path) -> Path:
             "fetch",
             "-q",
             c.Infra.GIT_ORIGIN,
-            f"+refs/heads/{provider.branch}:refs/remotes/origin/{provider.branch}",
+            (
+                f"+refs/heads/{u.Tests.provider_branch()}:refs/remotes/origin/"
+                f"{u.Tests.provider_branch()}"
+            ),
         ),
     )
     return repo

@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, m, u
+from flext_infra import c, m, t, u
 
 if TYPE_CHECKING:
-    from flext_infra import p, t
+    from flext_infra import p
 
 
 class FlextInfraCodegenLazyInitGenerationRegistryMixin:
@@ -32,26 +33,31 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
             flags = (path.is_symlink(), path.is_file(), path.exists(), path.is_dir())
         except OSError as exc:
             return r[tuple[bool, bool, bool, bool]].fail_op(
-                f"classify lazy-init support path {path}", exc
+                f"classify lazy-init support path {path}",
+                exc,
             )
         return r[tuple[bool, bool, bool, bool]].ok(flags)
 
     @staticmethod
     def _glob_paths(
-        directory: Path, pattern: str, *, operation: str
+        directory: Path,
+        pattern: str,
+        *,
+        operation: str,
     ) -> p.Result[t.VariadicTuple[Path]]:
         """Return deterministic glob results with their causal I/O failure."""
         try:
             paths = tuple(sorted(directory.glob(pattern)))
         except OSError as exc:
-            return r[tuple[Path, ...]].fail_op(operation, exc)
-        return r[tuple[Path, ...]].ok(paths)
+            return r[t.VariadicTuple[Path]].fail_op(operation, exc)
+        return r[t.VariadicTuple[Path]].ok(paths)
 
     def _cleanup_generated_support_file_states(
-        self, plan: m.Infra.LazyInitPlan
+        self,
+        plan: m.Infra.LazyInitPlan,
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
         """Return the complete physical file set selected for deletion."""
-        states: dict[Path, m.Cli.AtomicFileState] = {}
+        states: MutableMapping[Path, m.Cli.AtomicFileState] = {}
         for result in (
             self._obsolete_generated_file_states(plan),
             self._obsolete_root_support_states(plan),
@@ -64,15 +70,16 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
                 previous = states.get(state.path)
                 if previous is not None and previous != state:
                     return r[tuple[m.Cli.AtomicFileState, ...]].fail(
-                        f"lazy-init sidecar changed during inventory: {state.path}"
+                        f"lazy-init sidecar changed during inventory: {state.path}",
                     )
                 states[state.path] = state
         return r[tuple[m.Cli.AtomicFileState, ...]].ok(
-            tuple(states[path] for path in sorted(states))
+            tuple(states[path] for path in sorted(states)),
         )
 
     def _obsolete_root_support_states(
-        self, plan: m.Infra.LazyInitPlan
+        self,
+        plan: m.Infra.LazyInitPlan,
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
         """Inventory closed root registries superseded by inline maps."""
         context = plan.context
@@ -97,7 +104,7 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
             is_symlink, is_file, exists, is_dir = flags.value
             if is_symlink:
                 return r[tuple[m.Cli.AtomicFileState, ...]].fail(
-                    f"refusing obsolete root-support symlink: {path}"
+                    f"refusing obsolete root-support symlink: {path}",
                 )
             if is_file:
                 stale_paths.append(path)
@@ -106,10 +113,12 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
                 continue
             if not is_dir:
                 return r[tuple[m.Cli.AtomicFileState, ...]].fail(
-                    f"unexpected obsolete root-support path type: {path}"
+                    f"unexpected obsolete root-support path type: {path}",
                 )
             children = self._glob_paths(
-                path, "**/*", operation="inventory obsolete root support"
+                path,
+                "**/*",
+                operation="inventory obsolete root support",
             )
             if children.failure:
                 return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(children)
@@ -117,28 +126,29 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
                 child_flags = self._path_flags(child)
                 if child_flags.failure:
                     return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(
-                        child_flags
+                        child_flags,
                     )
                 child_is_symlink, child_is_file, _, child_is_dir = child_flags.value
                 if child_is_symlink:
                     return r[tuple[m.Cli.AtomicFileState, ...]].fail(
-                        f"refusing obsolete root-support symlink: {child}"
+                        f"refusing obsolete root-support symlink: {child}",
                     )
                 if child_is_dir:
                     if child.name != "__pycache__":
                         return r[tuple[m.Cli.AtomicFileState, ...]].fail(
-                            f"unexpected directory in obsolete root support: {child}"
+                            f"unexpected directory in obsolete root support: {child}",
                         )
                     continue
                 if not child_is_file or child.suffix not in {".py", ".pyi", ".pyc"}:
                     return r[tuple[m.Cli.AtomicFileState, ...]].fail(
-                        f"unexpected file in obsolete root support: {child}"
+                        f"unexpected file in obsolete root support: {child}",
                     )
                 stale_paths.append(child)
         return u.Infra.required_file_states(stale_paths)
 
     def _obsolete_generated_file_states(
-        self, plan: m.Infra.LazyInitPlan
+        self,
+        plan: m.Infra.LazyInitPlan,
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
         """Inventory generated artifacts retired by the inline-root contract."""
         states: list[m.Cli.AtomicFileState] = []
@@ -152,7 +162,8 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
         return r[tuple[m.Cli.AtomicFileState, ...]].ok(tuple(states))
 
     def _generated_typing_stub_states(
-        self, plan: m.Infra.LazyInitPlan
+        self,
+        plan: m.Infra.LazyInitPlan,
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
         """Inventory stale codegen-owned ``__init__.pyi`` files."""
         stub_path = plan.context.pkg_dir / c.Infra.INIT_PYI
@@ -160,11 +171,12 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
         if state.failure:
             return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(state)
         return r[tuple[m.Cli.AtomicFileState, ...]].ok(
-            (state.value,) if self._is_generated(state.value.content) else ()
+            (state.value,) if self._is_generated(state.value.content) else (),
         )
 
     def _generated_export_sidecar_states(
-        self, plan: m.Infra.LazyInitPlan
+        self,
+        plan: m.Infra.LazyInitPlan,
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
         """Inventory legacy generated export files outside the canonical owner."""
         search_dirs = {
@@ -179,12 +191,14 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
             is_symlink, _, _, is_dir = flags.value
             if is_symlink:
                 return r[tuple[m.Cli.AtomicFileState, ...]].fail(
-                    f"refusing generated sidecar directory symlink: {base_dir}"
+                    f"refusing generated sidecar directory symlink: {base_dir}",
                 )
             if not is_dir:
                 continue
             candidates = self._glob_paths(
-                base_dir, "*.py", operation="inventory generated export sidecars"
+                base_dir,
+                "*.py",
+                operation="inventory generated export sidecars",
             )
             if candidates.failure:
                 return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(candidates)
@@ -197,7 +211,7 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
                 path_is_symlink, path_is_file, _, _ = path_flags.value
                 if path_is_symlink:
                     return r[tuple[m.Cli.AtomicFileState, ...]].fail(
-                        f"refusing generated sidecar symlink: {path}"
+                        f"refusing generated sidecar symlink: {path}",
                     )
                 if path_is_file:
                     stale_paths.add(path)
@@ -209,11 +223,13 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
         init_is_symlink, init_is_file, _, _ = init_flags.value
         if init_is_symlink:
             return r[tuple[m.Cli.AtomicFileState, ...]].fail(
-                f"refusing generated constants initializer symlink: {constants_init}"
+                f"refusing generated constants initializer symlink: {constants_init}",
             )
         if init_is_file:
             modules = self._glob_paths(
-                constants_dir, "*.py", operation="inventory generated constants package"
+                constants_dir,
+                "*.py",
+                operation="inventory generated constants package",
             )
             if modules.failure:
                 return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(modules)

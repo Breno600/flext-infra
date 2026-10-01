@@ -2,16 +2,203 @@
 
 from __future__ import annotations
 
+import ast
 from collections.abc import Iterable
+from pathlib import Path
 
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra import c, p, t
 
 from .rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
 
 
 class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
     """Load Rope project/module/import objects behind protocols."""
+
+    @classmethod
+    def parse_rope_module(cls, source: str, *, filename: str) -> t.Infra.RopeAstNode:
+        """Parse one source snapshot through Rope's canonical syntax boundary."""
+        parsed = cls._runtime_callable("rope.base.ast", "parse")(
+            source,
+            filename=filename,
+        )
+        if not isinstance(parsed, p.Infra.RopeAstNode):
+            msg = "rope parser returned an invalid module node"
+            raise TypeError(msg)
+        return parsed
+
+    @classmethod
+    def snapshot_project(
+        cls,
+        project: p.Infra.RopeProject,
+        sources: t.MappingKV[Path, str],
+    ) -> p.Infra.RopeProject:
+        """Capture a complete identity graph with proposed sources authoritative.
+
+        Unchanged dependencies are captured once before graph construction;
+        subsequent imports and MRO resolution only read that closed inventory.
+        Governed project-root entry modules (e.g. conftest.py) are real project
+        resources outside every source folder; they join the closed inventory
+        from disk so consumer rewrites still resolve inside the snapshot.
+        """
+        inventory = {
+            Path(resource.real_path).resolve(): resource.read()
+            for resource in project.get_python_files()
+        }
+        root = Path(project.root.real_path).resolve()
+        for path, source in sources.items():
+            resolved = path.resolve()
+            if resolved not in inventory:
+                try:
+                    relative = resolved.relative_to(root)
+                except ValueError as error:
+                    msg = f"Rope proposed source is outside its input inventory: {path}"
+                    raise ValueError(msg) from error
+                resource = project.get_resource(relative.as_posix())
+                if not Path(resource.real_path).is_file():
+                    msg = f"Rope proposed source is outside its input inventory: {path}"
+                    raise ValueError(msg)
+                inventory[resolved] = resource.read()
+            inventory[resolved] = source
+        owner = cls.runtime_type(
+            "flext_infra._utilities._rope.project",
+            "FlextInfraRopeProject",
+        )
+        factory = getattr(owner, "from_snapshot", None)
+        if not callable(factory):
+            msg = "Rope project owner does not expose snapshot construction"
+            raise TypeError(msg)
+        snapshot = factory(
+            project.root.real_path,
+            inventory,
+            [folder.path for folder in project.get_source_folders()],
+        )
+        if not isinstance(snapshot, p.Infra.RopeProject):
+            msg = "Rope snapshot does not satisfy its project contract"
+            raise TypeError(msg)
+        return snapshot
+
+    @classmethod
+    def imported_name_at(
+        cls,
+        pymodule: t.Infra.RopePyModule,
+        offset: int,
+    ) -> p.Infra.RopeImportedName | None:
+        """Resolve a lexical binding; local shadows are not imported names."""
+        resolver = cls._runtime_callable("rope.base.evaluate", "eval_location")
+        result = resolver(pymodule, offset)
+        return result if isinstance(result, p.Infra.RopeImportedName) else None
+
+    @staticmethod
+    def source_offset(source: str, node: p.Infra.RopeAstNode) -> int:
+        """Resolve Rope AST byte coordinates to a Python source offset."""
+        line = getattr(node, "lineno", None)
+        column = getattr(node, "col_offset", None)
+        lines = source.splitlines(keepends=True)
+        if not isinstance(line, int) or not isinstance(column, int):
+            msg = "Rope AST node has no source position"
+            raise TypeError(msg)
+        if line < 1 or line > len(lines):
+            msg = f"Rope AST node line is outside its source: {line}"
+            raise ValueError(msg)
+        encoded_prefix = lines[line - 1].encode("utf-8")[:column]
+        prefix = encoded_prefix.decode("utf-8")
+        return sum(map(len, lines[: line - 1])) + len(prefix)
+
+    @staticmethod
+    def scope_at(
+        pymodule: p.Infra.RopePyModule,
+        offset: int,
+        *,
+        declaration_line: int | None = None,
+    ) -> p.Infra.RopeScope:
+        """Return Rope's lexical scope for a source position."""
+        scope = pymodule.get_scope()
+        lookup = getattr(scope, "get_inner_scope_for_offset", None)
+        if not callable(lookup):
+            msg = "Rope module scope has no lexical offset lookup"
+            raise TypeError(msg)
+        result = lookup(offset)
+        if not isinstance(result, p.Infra.RopeScope):
+            msg = "Rope lexical lookup returned an invalid scope"
+            raise TypeError(msg)
+        if (
+            result.get_start() == declaration_line
+            and result.get_kind() != c.Infra.RopeScopeKind.MODULE
+        ):
+            parent = getattr(result, "parent", None)
+            if not isinstance(parent, p.Infra.RopeScope):
+                msg = "Rope declaration has no defining scope"
+                raise TypeError(msg)
+            return parent
+        return result
+
+    @classmethod
+    def resolve_symbol(
+        cls,
+        scope: p.Infra.RopeScope,
+        expression: p.Infra.RopeAstNode,
+    ) -> p.Infra.RopePyName | None:
+        """Resolve an identifier chain without evaluating Python expressions."""
+        primary = expression
+        while isinstance(primary, ast.Attribute):
+            primary = primary.value
+        if not isinstance(primary, ast.Name):
+            return None
+        result = cls._runtime_callable("rope.base.evaluate", "eval_node")(
+            scope,
+            expression,
+        )
+        if result is not None and not isinstance(result, p.Infra.RopePyName):
+            msg = "Rope identifier resolution returned an invalid name"
+            raise TypeError(msg)
+        return result
+
+    @classmethod
+    def same_name(
+        cls,
+        expected: p.Infra.RopePyName,
+        actual: p.Infra.RopePyName | None,
+    ) -> bool:
+        """Use Rope's imported-name identity contract for semantic comparisons."""
+        result = cls._runtime_callable("rope.refactor.occurrences", "same_pyname")(
+            expected,
+            actual,
+        )
+        if not isinstance(result, bool):
+            msg = "Rope name comparison returned a non-boolean result"
+            raise TypeError(msg)
+        return result
+
+    @staticmethod
+    def imported_module_path(
+        project: p.Infra.RopeProject,
+        binding: p.Infra.RopeImportedName,
+    ) -> Path:
+        """Resolve import provenance through Rope without evaluating its target.
+
+        Generated initializers may still await publication. Their content is
+        not required to identify which module an authored import names.
+        """
+        imported = binding.imported_module
+        resource = imported.resource
+        if resource is None:
+            name = imported.module_name
+            module = imported.importing_module.get_module()
+            source = module.get_resource() if module is not None else None
+            if name is None or source is None:
+                message = (
+                    f"import has no declared module location: {binding.imported_name}"
+                )
+                raise ValueError(message)
+            resource = (
+                project.find_module(name, source.parent)
+                if imported.level == 0
+                else project.find_relative_module(name, source.parent, imported.level)
+            )
+        if resource is None:
+            message = f"unresolved imported module: {imported.module_name}"
+            raise ValueError(message)
+        return Path(resource.real_path).resolve()
 
     @classmethod
     def new_project(
@@ -24,11 +211,13 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         source_folders: t.SequenceOf[str],
     ) -> t.Infra.RopeProject:
         project_factory = cls._runtime_callable(
-            "flext_infra._utilities._rope.project", "FlextInfraRopeProject"
+            "flext_infra._utilities._rope.project",
+            "FlextInfraRopeProject",
         )
-        # flext-i6nq.10: FLEXT owns writes; disable Rope's leaking Git subprocess.
+        # FLEXT owns writes; disable Rope's leaking Git subprocess.
         fscommands_factory = cls._runtime_callable(
-            "rope.base.fscommands", "FileSystemCommands"
+            "rope.base.fscommands",
+            "FileSystemCommands",
         )
         project = project_factory(
             root,
@@ -46,10 +235,13 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
 
     @classmethod
     def module_imports_for_pymodule(
-        cls, rope_project: t.Infra.RopeProject, pymodule: t.Infra.RopePyModule
+        cls,
+        rope_project: t.Infra.RopeProject,
+        pymodule: t.Infra.RopePyModule,
     ) -> t.Infra.RopeModuleImports:
         loader = cls._runtime_callable(
-            "rope.refactor.importutils", "get_module_imports"
+            c.Infra.ROPE_IMPORTUTILS_MODULE,
+            "get_module_imports",
         )
         result = loader(rope_project, pymodule)
         if not isinstance(result, p.Infra.RopeModuleImports):
@@ -58,7 +250,35 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         return result
 
     @classmethod
-    def get_string_module(
+    def import_binding(
+        cls,
+        project: p.Infra.RopeProject,
+        module: p.Infra.RopePyModule,
+        module_name: str,
+        name: str,
+    ) -> t.Pair[str, str]:
+        """Plan an import and use the expression elected by Rope's import owner."""
+        result = cls._runtime_callable(c.Infra.ROPE_IMPORTUTILS_MODULE, "add_import")(
+            project,
+            module,
+            module_name,
+            name,
+        )
+        if not isinstance(result, tuple):
+            msg = "Rope add_import returned an invalid source and binding pair"
+            raise TypeError(msg)
+        match result:
+            case (source, binding):
+                if not isinstance(source, str) or not isinstance(binding, str):
+                    msg = "Rope add_import returned non-text source or binding"
+                    raise TypeError(msg)
+                return (source, binding)
+            case _:
+                msg = "Rope add_import returned an invalid source and binding pair"
+                raise TypeError(msg)
+
+    @classmethod
+    def build_string_module(
         cls,
         rope_project: t.Infra.RopeProject,
         source: str,
@@ -74,10 +294,12 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
 
     @classmethod
     def import_organizer(
-        cls, rope_project: t.Infra.RopeProject
+        cls,
+        rope_project: t.Infra.RopeProject,
     ) -> p.Infra.RopeImportOrganizer:
         organizer_factory = cls._runtime_callable(
-            "rope.refactor.importutils", "ImportOrganizer"
+            c.Infra.ROPE_IMPORTUTILS_MODULE,
+            "ImportOrganizer",
         )
         organizer = organizer_factory(rope_project)
         if not isinstance(organizer, p.Infra.RopeImportOrganizer):
@@ -120,7 +342,8 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         names_and_aliases: t.SequenceOf[t.Pair[str, str | None]],
     ) -> t.Infra.RopeFromImport:
         from_import_factory = cls._runtime_callable(
-            "rope.refactor.importutils.importinfo", "FromImport"
+            "rope.refactor.importutils.importinfo",
+            "FromImport",
         )
         from_import = from_import_factory(module_name, level, list(names_and_aliases))
         if not isinstance(from_import, p.Infra.RopeFromImport):

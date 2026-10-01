@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
-from flext_core import m
-from flext_infra import t
+from flext_cli import m
 
-from ._defaults import ImmutableEmptyMapping
+from flext_infra import c, t
+
 from .deps_tool_config_project import FlextInfraModelsDepsToolConfigProject
 
 
@@ -100,18 +100,28 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         """Ruff lint settings loaded from YAML."""
 
         select: Annotated[
-            t.StrSequence, m.Field(description="Ruff lint rule selectors.")
+            t.StrSequence,
+            m.Field(description="Ruff lint rule selectors."),
         ] = m.Field(default_factory=tuple)
-        ignore: Annotated[
-            t.StrSequence, m.Field(description="Ruff lint rule ignore list.")
-        ] = m.Field(default_factory=tuple)
-        ignored_rule_rationales: Annotated[
-            t.StrMapping,
+        unfixable: Annotated[
+            t.StrSequence,
             m.Field(
-                alias="ignored-rule-rationales",
-                description="Global Ruff exclusions mapped to verified architecture rationales.",
+                description=(
+                    "Rules whose Ruff fixes delete code or diagnostics; reported, "
+                    "never auto-fixed."
+                ),
             ),
-        ] = m.Field(default_factory=ImmutableEmptyMapping)
+        ]
+        extend_safe_fixes: Annotated[
+            t.StrSequence,
+            m.Field(
+                alias="extend-safe-fixes",
+                description=(
+                    "Rules whose unsafe Ruff fixes are proven to preserve code, "
+                    "comments and diagnostics."
+                ),
+            ),
+        ]
         banned_api: Annotated[
             t.StrMapping,
             m.Field(
@@ -119,8 +129,22 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 description="Forbidden direct APIs and their canonical alternatives.",
             ),
         ]
+        ban_relative_imports: Annotated[
+            Literal["all"],
+            m.Field(
+                alias="ban-relative-imports",
+                description="Relative imports are banned; every import is absolute.",
+            ),
+        ]
+        copyright_notice_rgx: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                alias="copyright-notice-rgx",
+                description="Regex every module's copyright notice must match.",
+            ),
+        ]
         isort: FlextInfraModelsDepsToolConfigLinters.RuffIsortConfig = m.Field(
-            description="Ruff isort configuration"
+            description="Ruff isort configuration",
         )
         per_file_ignores: Annotated[
             t.Infra.PerFileIgnores,
@@ -133,10 +157,6 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
     class RuffConfig(m.ArbitraryTypesModel):
         """Ruff top-level settings loaded from YAML."""
 
-        exclude: Annotated[
-            t.StrSequence,
-            m.Field(description="Directory/file globs excluded from ruff checks."),
-        ] = m.Field(default_factory=tuple)
         namespace_packages: Annotated[
             t.StrSequence,
             m.Field(
@@ -146,13 +166,15 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         ] = m.Field(default_factory=tuple)
         fix: Annotated[bool, m.Field(description="Enable automatic ruff fixes")]
         line_length: Annotated[
-            int, m.Field(alias="line-length", description="Maximum line length.")
+            int,
+            m.Field(alias="line-length", description="Maximum line length."),
         ]
         preview: Annotated[bool, m.Field(description="Enable preview ruff behavior.")]
         respect_gitignore: Annotated[
             bool,
             m.Field(
-                alias="respect-gitignore", description="Respect .gitignore exclusions."
+                alias="respect-gitignore",
+                description="Respect .gitignore exclusions.",
             ),
         ]
         show_fixes: Annotated[
@@ -169,29 +191,31 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         target_version: Annotated[
             str,
             m.Field(
-                alias="target-version", description="Python target version for ruff."
+                alias="target-version",
+                description="Python target version for ruff.",
             ),
         ]
         format: FlextInfraModelsDepsToolConfigLinters.RuffFormatConfig = m.Field(
-            description="Ruff format configuration"
+            description="Ruff format configuration",
         )
         lint: FlextInfraModelsDepsToolConfigLinters.RuffLintConfig = m.Field(
-            description="Ruff lint configuration"
+            description="Ruff lint configuration",
         )
 
     class MypyOverrideConfig(m.ArbitraryTypesModel):
         """Single [[tool.mypy.overrides]] entry."""
 
         modules: Annotated[
-            t.StrSequence, m.Field(description="Module patterns for this override.")
-        ]
-        disable_error_codes: Annotated[
             t.StrSequence,
-            m.Field(
-                alias="disable-error-codes",
-                description="Error codes disabled for these modules.",
-            ),
+            m.Field(description="Module patterns for this override."),
         ]
+        follow_untyped_imports: Annotated[
+            bool,
+            m.Field(
+                alias="follow-untyped-imports",
+                description="Analyze installed source even without typing metadata.",
+            ),
+        ] = False
         justification: Annotated[
             str,
             m.Field(
@@ -200,31 +224,27 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                     "this override. AGENTS.md:319 forbids suppressions without "
                     "evidence; leave empty only for strictly transitional overrides "
                     "with a TODO in the module comment."
-                )
+                ),
             ),
         ] = ""
 
     class MypyConfig(m.ArbitraryTypesModel):
         """Mypy baseline settings loaded from YAML."""
 
-        plugins: Annotated[t.StrSequence, m.Field(description="Mypy plugins list.")] = (
-            m.Field(default_factory=tuple)
-        )
-        exclude: Annotated[
-            str,
+        timeout_seconds: Annotated[
+            int,
             m.Field(
-                description="Regex used to exclude generated or fixture-like paths from mypy."
-            ),
-        ] = ""
-        disabled_error_codes: Annotated[
-            t.StrMapping,
-            m.Field(
-                alias="disabled-error-codes",
+                gt=0,
+                le=c.Infra.MYPY_TIMEOUT_SECONDS_FLEET_BOUND,
                 description=(
-                    "Mypy error codes mapped to their tested facade-FLEXT rationale."
+                    "Mypy wall-time budget in seconds (SSOT); a project"
+                    " overlay may only lower it."
                 ),
             ),
         ]
+        plugins: Annotated[t.StrSequence, m.Field(description="Mypy plugins list.")] = (
+            m.Field(default_factory=tuple)
+        )
         boolean_settings: Annotated[
             t.BoolMapping,
             m.Field(
@@ -241,11 +261,11 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                     "(e.g. follow_imports='normal')."
                 ),
             ),
-        ] = m.Field(default_factory=ImmutableEmptyMapping)
+        ]
         overrides: Annotated[
             t.VariadicTuple[FlextInfraModelsDepsToolConfigLinters.MypyOverrideConfig],
             m.Field(
-                description="Per-module mypy overrides for auto-generated files and PEP 695 generics."
+                description="Per-module mypy overrides for auto-generated files and PEP 695 generics.",
             ),
         ] = m.Field(
             default_factory=tuple,
@@ -258,19 +278,19 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         init_forbid_extra: Annotated[
             bool,
             m.Field(
-                description="Enable forbid-extra init behavior in pydantic mypy plugin."
+                description="Enable forbid-extra init behavior in pydantic mypy plugin.",
             ),
         ]
         init_typed: Annotated[
             bool,
             m.Field(
-                description="Enable typed __init__ signatures in pydantic mypy plugin."
+                description="Enable typed __init__ signatures in pydantic mypy plugin.",
             ),
         ]
         warn_required_dynamic_aliases: Annotated[
             bool,
             m.Field(
-                description="Warn on required dynamic aliases in pydantic mypy plugin."
+                description="Warn on required dynamic aliases in pydantic mypy plugin.",
             ),
         ]
 

@@ -3,22 +3,55 @@
 from __future__ import annotations
 
 import importlib
+import os
 import sys
 from pathlib import Path
 
 import pytest
 from flext_tests import tm
 
-from tests import c, u
+from flext_infra import infra
+from tests import c, t, u
 
 
 class TestsFlextInfraLazyInitRuntime:
     """Exercise generated roots through Python's real import machinery."""
 
+    def test_pytest_private_source_is_not_reintroduced_by_typing_projection(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        repository, _ = u.Tests.create_lazy_init_workspace(
+            tmp_path,
+            project_name="flext-fixtures",
+            package_name="flext_fixtures",
+        )
+        package = repository / "tests" / "unit"
+        package.mkdir(parents=True, exist_ok=True)
+        (package / c.Infra.INIT_PY).write_text("", encoding=c.Cli.ENCODING_DEFAULT)
+        (package / "support.py").write_text(
+            "class PublishedSupport:\n    pass\n__all__ = ['PublishedSupport']\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
+        )
+        conftest = package / "conftest.py"
+        private_source = "pytest_plugins = []\n__all__ = ['pytest_plugins']\n"
+        conftest.write_text(private_source, encoding=c.Cli.ENCODING_DEFAULT)
+
+        tm.that(u.Tests.run_lazy_init(repository), eq=0)
+
+        generated = (package / c.Infra.INIT_PY).read_text(
+            encoding=c.Cli.ENCODING_DEFAULT,
+        )
+        tm.that(generated, has="PublishedSupport")
+        tm.that(generated, lacks="pytest_plugins")
+        tm.that(conftest.read_text(encoding=c.Cli.ENCODING_DEFAULT), eq=private_source)
+
     @staticmethod
-    def _generate_package(tmp_path: Path) -> tuple[Path, Path]:
+    def _generate_package(tmp_path: Path) -> t.Pair[Path, Path]:
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-runtime", package_name="flext_runtime"
+            tmp_path,
+            project_name="flext-lazy-demo",
+            package_name="flext_lazy_demo",
         )
         package_root.joinpath("api.py").write_text(
             "from pathlib import Path\n"
@@ -33,14 +66,15 @@ class TestsFlextInfraLazyInitRuntime:
         return repository_root, package_root
 
     def test_generated_root_preserves_lazy_runtime_contract(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         repository_root, package_root = self._generate_package(tmp_path)
-        with tm.scope(python_paths=(str(repository_root / c.Infra.DEFAULT_SRC_DIR),)):
-            package = importlib.import_module("flext_runtime")
+        with tm.scope(python_paths=[str(repository_root / c.Infra.DEFAULT_SRC_DIR)]):
+            package = importlib.import_module("flext_lazy_demo")
 
-            tm.that("flext_runtime.api" in sys.modules, eq=False)
-            tm.that(package.__all__, eq=("FlextDemo", "primary", "runtime"))
+            tm.that("flext_lazy_demo.api" in sys.modules, eq=False)
+            tm.that(package.__all__, eq=("FlextDemo", "primary"))
             tm.that(dir(package), eq=list(package.__all__))
             first = package.FlextDemo
             second = package.FlextDemo
@@ -48,9 +82,33 @@ class TestsFlextInfraLazyInitRuntime:
             tm.that(package.primary is first, eq=True)
             tm.that(package_root.joinpath("imports.txt").read_text(), eq="x")
 
+    def test_generated_root_never_invents_undeclared_api_alias(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        repository_root, package_root = u.Tests.create_lazy_init_workspace(
+            tmp_path,
+            project_name="flext-bare",
+            package_name="flext_bare",
+        )
+        package_root.joinpath("api.py").write_text(
+            "class FlextBare:\n    pass\n__all__ = ('FlextBare',)\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
+        )
+        tm.that(u.Tests.run_lazy_init(repository_root), eq=0)
+        with tm.scope(python_paths=[str(repository_root / c.Infra.DEFAULT_SRC_DIR)]):
+            package = importlib.import_module("flext_bare")
+            tm.that(package.__all__, eq=("FlextBare",))
+            tm.that(
+                [name for name in package.__all__ if not hasattr(package, name)],
+                eq=[],
+            )
+
     def test_generated_root_preserves_import_failures(self, tmp_path: Path) -> None:
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-failure", package_name="flext_failure"
+            tmp_path,
+            project_name="flext-failure",
+            package_name="flext_failure",
         )
         package_root.joinpath("api.py").write_text(
             "raise ModuleNotFoundError('missing runtime dependency')\n"
@@ -59,11 +117,118 @@ class TestsFlextInfraLazyInitRuntime:
             encoding=c.Cli.ENCODING_DEFAULT,
         )
         tm.that(u.Tests.run_lazy_init(repository_root), eq=0)
-        with tm.scope(python_paths=(str(repository_root / c.Infra.DEFAULT_SRC_DIR),)):
+        with tm.scope(python_paths=[str(repository_root / c.Infra.DEFAULT_SRC_DIR)]):
             package = importlib.import_module("flext_failure")
 
             with pytest.raises(ModuleNotFoundError, match="missing runtime dependency"):
                 _ = package.FlextDemo
 
+    def test_conflicted_generated_initializer_is_rebuilt_from_declarations(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Generated bytes are outputs, including while a merge is unresolved."""
+        repository, package = u.Tests.create_lazy_init_workspace(
+            tmp_path,
+            project_name="flext-rebuilt",
+            package_name="flext_rebuilt",
+        )
+        declaration = package / "models.py"
+        u.Tests.write_lazy_init_namespace_module(
+            declaration,
+            class_name="FlextRebuiltModels",
+            alias="m",
+            docstring="Models.",
+        )
+        tm.that(u.Tests.run_lazy_init(repository), eq=0)
+        initializer = package / c.Infra.INIT_PY
+        canonical = initializer.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+        conflicted = canonical + (
+            "\n<<<<<<< HEAD\n__all__ = ['stale']\n"
+            "=======\n__all__ = ['obsolete']\n>>>>>>> incoming\n"
+        )
+        initializer.write_text(conflicted, encoding=c.Cli.ENCODING_DEFAULT)
+        with infra.rope_workspace(repository) as rope:
+            layout = tm.not_none(rope.layout(repository))
+            tm.that(layout.runtime_aliases, eq=("m",))
+        tm.that(initializer.read_text(encoding=c.Cli.ENCODING_DEFAULT), eq=conflicted)
 
-__all__: list[str] = ["TestsFlextInfraLazyInitRuntime"]
+        tm.that(u.Tests.run_lazy_init(repository), eq=0)
+
+        tm.that(initializer.read_text(encoding=c.Cli.ENCODING_DEFAULT), eq=canonical)
+        with tm.scope(python_paths=[str(repository / c.Infra.DEFAULT_SRC_DIR)]):
+            generated = importlib.import_module("flext_rebuilt")
+            declared = importlib.import_module("flext_rebuilt.models")
+            tm.that(generated.m is declared.FlextRebuiltModels, eq=True)
+            tm.that(
+                all(hasattr(generated, name) for name in generated.__all__),
+                eq=True,
+            )
+        declaration.write_text(
+            "<<<<<<< HEAD\n=======\n>>>>>>> incoming\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
+        )
+        with infra.rope_workspace(repository) as rope, pytest.raises(SyntaxError):
+            rope.layout(repository)
+
+    def test_internal_facade_requires_its_local_declaration(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """An undeclared letter propagates the declaring root's binding.
+
+        Operator ruling (tier-alias propagation): a module declaring the
+        letter wins. A facet that declares no letter inherits the root's
+        declared letter, and the generator never rewrites the facet to
+        substitute a local class for it.
+        """
+        repository, package = u.Tests.create_lazy_init_workspace(
+            tmp_path,
+            project_name="flext-local",
+            package_name="flext_local",
+        )
+        package.joinpath("constants.py").write_text(
+            "class Parent:\n    class Domain:\n        pass\n"
+            "c = Parent\n__all__ = ('Parent', 'c')\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
+        )
+        examples = repository / "examples"
+        examples.mkdir()
+        examples.joinpath("__init__.py").write_text("", encoding=c.Cli.ENCODING_DEFAULT)
+        facet = examples / "constants.py"
+        facet_source = (
+            "from flext_local.constants import Parent\n"
+            "class Local(Parent):\n    pass\n__all__ = ('Local',)\n"
+        )
+        facet.write_text(facet_source, encoding=c.Cli.ENCODING_DEFAULT)
+        tm.that(u.Tests.run_lazy_init(repository), eq=0)
+        # The facet declares no letter, so the generator leaves it untouched:
+        # no runtime-alias repair may invent a local binding for one.
+        tm.that(facet.read_text(encoding=c.Cli.ENCODING_DEFAULT), eq=facet_source)
+        exports = u.Infra.public_export_names_source(
+            examples.joinpath("__init__.py").read_text(encoding=c.Cli.ENCODING_DEFAULT),
+        )
+        tm.that("c" in exports, eq=True)
+        probe_env = dict(os.environ)
+        probe_env["PYTHONPATH"] = os.pathsep.join([
+            str(repository),
+            str(repository / c.Infra.DEFAULT_SRC_DIR),
+            *sys.path,
+        ])
+        probe = (
+            "import examples as generated\n"
+            "import examples.constants as local\n"
+            "import flext_local.constants as parent\n"
+            "print('c' in generated.__all__)\n"
+            "print(generated.c is parent.c)\n"
+            "print(generated.c is parent.Parent)\n"
+            "print(generated.c is local.Local)\n"
+            "print(all(hasattr(generated, name) for name in generated.__all__))\n"
+        )
+        result = tm.ok(
+            u.Cli.run([sys.executable, "-c", probe], env=probe_env, cwd=repository),
+        )
+        tm.that(
+            result.stdout.splitlines(),
+            eq=["True", "True", "True", "False", "True"],
+        )

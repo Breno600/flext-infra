@@ -1,0 +1,165 @@
+# flext-cli owns the CLI domain: commands, prompts, terminal output, process
+# exit, and JSON/YAML/CSV/TOML serialization. A project that consumes flext-cli
+# routes every one of them through the flext-cli facade. `metadata.consumers_of`
+# elects these rules only for projects whose runtime closure contains
+# flext-cli, so flext-cli itself and the projects below it are never bound.
+#
+# Print calls and subprocess imports are owned by Ruff (print, S404) in every
+# project; they are not repeated here.
+#
+# Detection only: the facade member that replaces a direct use is chosen per
+# call site.
+id: ban-cli-domain-library-import
+language: python
+severity: error
+files:
+  - "**/*.py"
+metadata:
+  consumers_of: flext-cli
+rule:
+  any:
+    - any:
+        - all:
+            - kind: import_statement
+            - has:
+                stopBy: end
+                kind: dotted_name
+                regex: "^(?:typer|argparse|tabulate|colorama|prompt_toolkit|tqdm|getpass|ujson|simplejson)(?:\\.|$)"
+        - all:
+            - kind: import_from_statement
+            - has:
+                field: module_name
+                regex: "^(?:typer|argparse|tabulate|colorama|prompt_toolkit|tqdm|getpass|ujson|simplejson)(?:\\.|$)"
+    # Runtime imports of the libraries flext-cli owns are reported by
+    # ban-flext-cli-library-import; a consumer may not name them even for
+    # annotations.
+    - all:
+        - matches: inside-type-checking-guard
+        - any:
+            - all:
+                - kind: import_statement
+                - has:
+                    stopBy: end
+                    kind: dotted_name
+                    regex: "^(?:rich|orjson|click)(?:\\.|$)"
+            - all:
+                - kind: import_from_statement
+                - has:
+                    field: module_name
+                    regex: "^(?:rich|orjson|click)(?:\\.|$)"
+message: >-
+  The CLI domain belongs to flext-cli: commands and argument parsing through
+  cli.register_result_command with a Pydantic model, prompts through
+  cli.prompt / cli.confirm / cli.prompt_password, tables through
+  cli.format_table / cli.show_table, progress through cli.display_progress,
+  styled output through cli.print with c.Cli.MessageStyles, and JSON through
+  u.Cli.json_* / cli.read_json_file / cli.write_json_file.
+---
+id: ban-toml-library-import
+language: python
+severity: error
+files:
+  - "**/*.py"
+metadata:
+  consumers_of: flext-cli
+rule:
+  any:
+    - all:
+        - kind: import_statement
+        - has:
+            stopBy: end
+            kind: dotted_name
+            regex: "^(?:tomllib|tomlkit)(?:\\.|$)"
+    - all:
+        - kind: import_from_statement
+        - has:
+            field: module_name
+            regex: "^(?:tomllib|tomlkit)(?:\\.|$)"
+message: >-
+  TOML parsing belongs to flext-cli: read and write TOML through u.Cli.toml_*.
+---
+id: ban-sys-exit-call
+language: python
+severity: error
+files:
+  - "**/*.py"
+metadata:
+  consumers_of: flext-cli
+rule:
+  pattern: sys.exit($$$ARGS)
+message: >-
+  Process exit belongs to flext-cli: end a command through cli.exit(), never
+  sys.exit().
+---
+id: ban-direct-serialization-call
+language: python
+severity: error
+files:
+  - "**/*.py"
+metadata:
+  consumers_of: flext-cli
+rule:
+  kind: attribute
+  any:
+    - all:
+        - has:
+            field: object
+            kind: identifier
+            regex: "^json$"
+        - has:
+            field: attribute
+            regex: "^(?:dump|dumps|load|loads)$"
+    - all:
+        - has:
+            field: object
+            kind: identifier
+            regex: "^yaml$"
+        - has:
+            field: attribute
+            regex: "^(?:dump|load|safe_load)$"
+    - all:
+        - has:
+            field: object
+            kind: identifier
+            regex: "^csv$"
+        - has:
+            field: attribute
+            regex: "^(?:DictReader|DictWriter|reader|writer)$"
+message: >-
+  JSON, YAML and CSV serialization belongs to flext-cli: use u.Cli.json_* /
+  cli.json_*, u.Cli.yaml_* / cli.yaml_*, or u.Cli.csv_* / cli.csv_*.
+---
+# A consumer reaches flext-cli through its facades (cli, c, m, p, t, u, s),
+# never through a concrete FlextCli<X> class. The facade extension modules of
+# a package source tree extend the flext-cli facades by inheritance and are the
+# only modules that name them.
+id: ban-concrete-flext-cli-import
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/src/**/constants.py"
+  - "**/src/**/models.py"
+  - "**/src/**/protocols.py"
+  - "**/src/**/typings.py"
+  - "**/src/**/utilities.py"
+  - "**/src/**/config.py"
+  - "**/src/**/settings.py"
+  - "**/src/**/_config.py"
+  - "**/src/**/_settings.py"
+metadata:
+  consumers_of: flext-cli
+rule:
+  kind: import_from_statement
+  all:
+    - has:
+        field: module_name
+        regex: "^flext_cli$"
+    - has:
+        stopBy: end
+        kind: dotted_name
+        regex: "^FlextCli[A-Z]\\w*$"
+message: >-
+  Concrete flext-cli classes stay behind its facades: import cli, c, m, p, t,
+  u or s from flext_cli instead.

@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import ast
+from collections.abc import MutableMapping
 from operator import itemgetter
 
-from flext_infra.typings import t
+from flext_infra import t
 
 
 class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
@@ -29,14 +30,16 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
 
     @classmethod
     def _base_edits(
-        cls, source: str, outer: ast.ClassDef
+        cls,
+        source: str,
+        outer: ast.ClassDef,
     ) -> t.SequenceOf[t.Triple[int, int, str]]:
         """Make already-defined sibling bases executable inside the owner body."""
         siblings = tuple(node for node in outer.body if isinstance(node, ast.ClassDef))
         sibling_names = frozenset(node.name for node in siblings)
         available: set[str] = set()
         offsets = cls._line_offsets(source)
-        edits: list[tuple[int, int, str]] = []
+        edits: list[t.Triple[int, int, str]] = []
         for sibling in siblings:
             for base in sibling.bases:
                 if not (
@@ -74,7 +77,9 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
 
     @classmethod
     def _annotation_edits(
-        cls, source: str, outer: ast.ClassDef
+        cls,
+        source: str,
+        outer: ast.ClassDef,
     ) -> t.SequenceOf[t.Triple[int, int, str]]:
         """Plan owner-qualified sibling references inside deferred annotations."""
         siblings = tuple(node for node in outer.body if isinstance(node, ast.ClassDef))
@@ -97,7 +102,7 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
                 if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store)
             )
         offsets = cls._line_offsets(source)
-        edits: dict[tuple[int, int], str] = {}
+        edits: MutableMapping[t.Pair[int, int], str] = {}
         for sibling in siblings:
             for expression in cls._annotation_expressions(sibling):
                 for node in ast.walk(expression):
@@ -133,7 +138,7 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
                 expressions.append(statement.annotation)
                 return
             if isinstance(statement, ast.FunctionDef | ast.AsyncFunctionDef):
-                expressions.extend(cls._function_annotations(statement))
+                expressions.extend(cls._evaluated_function_annotations(statement))
                 for child in statement.body:
                     collect(child)
                 return
@@ -153,7 +158,7 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
         return tuple(expressions)
 
     @staticmethod
-    def _function_annotations(
+    def _evaluated_function_annotations(
         node: ast.FunctionDef | ast.AsyncFunctionDef,
     ) -> t.SequenceOf[ast.expr]:
         """Return annotations evaluated when one function is defined."""
@@ -179,7 +184,7 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
         return tuple(offsets)
 
     @staticmethod
-    def _node_span(offsets: tuple[int, ...], node: ast.expr) -> t.Pair[int, int]:
+    def _node_span(offsets: t.VariadicTuple[int], node: ast.expr) -> t.Pair[int, int]:
         """Return one expression's exact source character span."""
         end_line = node.end_lineno or node.lineno
         end_column = node.end_col_offset or node.col_offset
@@ -189,7 +194,7 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
         )
 
     @staticmethod
-    def _apply_edits(source: str, edits: t.SequenceOf[tuple[int, int, str]]) -> str:
+    def _apply_edits(source: str, edits: t.SequenceOf[t.Triple[int, int, str]]) -> str:
         """Apply non-overlapping source edits from the end of the file."""
         updated = source
         previous_start = len(source)

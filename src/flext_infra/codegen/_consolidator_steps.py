@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_infra import c, m, p, r, t, u
+from flext_core import r
+from flext_infra import c, m, p, t, u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -19,12 +20,13 @@ class FlextInfraCodegenConsolidatorStepsMixin:
     """
 
     _ALL_LINT_GATES: ClassVar[t.StrSequence] = tuple(
-        tool for tool, _ in c.Infra.LINT_TOOLS
+        entry[0] for entry in c.Infra.LINT_TOOLS
     )
 
     @classmethod
     def _build_value_map_from_constants_file(
-        cls, constants_file: Path
+        cls,
+        constants_file: Path,
     ) -> p.Result[t.StrMapping]:
         """Build value map from a constants file.
 
@@ -38,7 +40,7 @@ class FlextInfraCodegenConsolidatorStepsMixin:
             return r[t.StrMapping].from_failure(read)
         value_map: t.MutableStrMapping = {}
         for name, _, raw, class_path, _ in u.Infra.parse_final_constant_definitions(
-            read.value.splitlines()
+            read.value.splitlines(),
         ):
             if not raw:
                 continue
@@ -59,19 +61,12 @@ class FlextInfraCodegenConsolidatorStepsMixin:
         rope_project: t.Infra.RopeProject,
         python_file: Path,
         value_map: t.StrMapping,
-    ) -> (
-        t.Triple[
-            t.Infra.RopeResource,
-            str,
-            t.SequenceOf[t.Triple[m.Infra.SymbolInfo, str, str]],
-        ]
-        | None
-    ):
+    ) -> m.Infra.ConsolidatorScannedFile | None:
         """Scan file."""
-        resource = u.Infra.get_resource_from_path(rope_project, python_file)
+        resource = u.Infra.resolve_resource_from_path(rope_project, python_file)
         if resource is None:
             return None
-        symbols = u.Infra.get_module_symbols(rope_project, resource)
+        symbols = u.Infra.resolve_module_symbols(rope_project, resource)
         assignments = [symbol for symbol in symbols if symbol.kind == "assignment"]
         if not assignments:
             return None
@@ -79,19 +74,23 @@ class FlextInfraCodegenConsolidatorStepsMixin:
         matches = self._match_assignments(assignments, source.splitlines(), value_map)
         if not matches:
             return None
-        return (resource, source, matches)
+        return m.Infra.ConsolidatorScannedFile(
+            resource=resource,
+            source=source,
+            matches=matches,
+        )
 
     @staticmethod
     def _match_assignments(
         symbols: t.SequenceOf[m.Infra.SymbolInfo],
-        # flext-j47u (codex): use the canonical scalar sequence alias directly.
+        # Use the canonical scalar sequence alias directly.
         source_lines: t.StrSequence,
         value_to_ref: t.StrMapping,
     ) -> t.SequenceOf[t.Triple[m.Infra.SymbolInfo, str, str]]:
         """Match assignments."""
         matches: t.MutableSequenceOf[t.Triple[m.Infra.SymbolInfo, str, str]] = []
         for symbol in symbols:
-            # flext-j47u (codex): widen the validated constrained int for indexing.
+            # Widen the validated constrained int for indexing.
             line_number: int = symbol.line
             if line_number < 1 or line_number > len(source_lines):
                 continue
@@ -115,19 +114,19 @@ class FlextInfraCodegenConsolidatorStepsMixin:
     def _apply_and_validate(
         cls,
         rope_project: t.Infra.RopeProject,
-        resource: t.Infra.RopeResource,
+        scanned: m.Infra.ConsolidatorScannedFile,
         py_file: Path,
         workspace: Path,
         pkg_name: str,
-        backup: str,
-        matches: t.SequenceOf[tuple[m.Infra.SymbolInfo, str, str]],
     ) -> t.Infra.EditResultWithDescs:
         """Apply and validate."""
-        src_lines = backup.splitlines(keepends=True)
+        resource = scanned.resource
+        original_source = scanned.source
+        src_lines = original_source.splitlines(keepends=True)
         rel = py_file.relative_to(workspace)
         edits: t.MutableSequenceOf[t.Triple[int, int, str]] = []
         descs: t.MutableSequenceOf[str] = []
-        for symbol, ref, value in matches:
+        for symbol, ref, value in scanned.matches:
             line_number = symbol.line
             if line_number < 1 or line_number > len(src_lines):
                 continue
@@ -149,18 +148,24 @@ class FlextInfraCodegenConsolidatorStepsMixin:
             py_file,
             request=m.Infra.ProtectedFileEditRequest(
                 workspace=workspace,
-                before_source=backup,
+                before_source=original_source,
                 edit_fn=lambda: (
                     u.Infra.rewrite_source_at_offsets(
-                        rope_project, resource, edits, apply=True
+                        rope_project,
+                        resource,
+                        edits,
+                        apply=True,
                     ),
                     u.Infra.add_import(
-                        rope_project, resource, pkg_name, ["c"], apply=True
+                        rope_project,
+                        resource,
+                        pkg_name,
+                        ["c"],
+                        apply=True,
                     ),
                     None,
                 )[-1],
-                restore_fn=lambda: resource.write(backup),
-                keep_backup=True,
+                restore_fn=lambda: resource.write(original_source),
                 gates=cls._ALL_LINT_GATES,
             ),
         )

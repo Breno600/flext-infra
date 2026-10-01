@@ -21,12 +21,11 @@ from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
 from flext_infra import c, m, u
-from flext_infra.base import s
+
+from ..base import s
 
 if TYPE_CHECKING:
     from flext_infra import p, t
-
-logger = u.fetch_logger(__name__)
 
 
 class FlextInfraPythonVersionEnforcer(s[int]):
@@ -42,15 +41,20 @@ class FlextInfraPythonVersionEnforcer(s[int]):
     """
 
     check_only: Annotated[
-        bool, m.Field(description="Only validate Python version constraints")
+        bool,
+        m.Field(description="Only validate Python version constraints"),
     ] = False
     verbose: Annotated[
-        bool, m.Field(description="Emit detailed per-project validation logs")
+        bool,
+        m.Field(description="Emit detailed per-project validation logs"),
     ] = False
 
     @override
     def execute(
-        self, *, check_only: bool | None = None, verbose: bool | None = None
+        self,
+        *,
+        check_only: bool | None = None,
+        verbose: bool | None = None,
     ) -> p.Result[int]:
         """Execute Python version enforcement; returns r[int] exit code."""
         if check_only is not None:
@@ -66,17 +70,17 @@ class FlextInfraPythonVersionEnforcer(s[int]):
             projects = tuple(
                 project.path
                 for project in discovered_projects.unwrap()
-                if (project.path / c.Infra.PYPROJECT_FILENAME).exists()
+                if (project.path / c.PYPROJECT_FILENAME).exists()
             )
         mode = "Checking" if self.check_only else "Enforcing"
-        logger.info(
+        self.logger.info(
             "python_version_enforcement_started",
             mode=mode,
             required_minor=required_minor,
             project_count=len(projects),
         )
         if not self._ensure_python_version_file(root, required_minor):
-            logger.error(
+            self.logger.error(
                 "python_version_enforcement_failed",
                 reason="missing_enforcement",
                 required_minor=required_minor,
@@ -84,14 +88,14 @@ class FlextInfraPythonVersionEnforcer(s[int]):
             return r[int].fail("enforcement failed")
         for project in projects:
             if not self._ensure_python_version_file(project, required_minor):
-                logger.error(
+                self.logger.error(
                     "python_version_enforcement_failed",
                     reason="missing_enforcement",
                     required_minor=required_minor,
                     project=project.name,
                 )
                 return r[int].fail("enforcement failed")
-        logger.info(
+        self.logger.info(
             "python_version_enforcement_completed",
             project_count=len(projects),
             required_minor=required_minor,
@@ -110,19 +114,19 @@ class FlextInfraPythonVersionEnforcer(s[int]):
         local_minor = self._read_required_minor(project)
         if local_minor != required_minor:
             if self.check_only:
-                logger.error(
+                self.logger.error(
                     "python_version_pyproject_wrong",
                     local_minor=local_minor,
                     project=project.name,
                 )
             else:
-                logger.error(
+                self.logger.error(
                     "python_version_pyproject_mismatch",
                     local_minor=local_minor,
                     required_minor=required_minor,
                     project=project.name,
                 )
-                logger.error(
+                self.logger.error(
                     "python_version_manual_update_required",
                     project=project.name,
                     file=f"{project.name}/pyproject.toml",
@@ -130,7 +134,7 @@ class FlextInfraPythonVersionEnforcer(s[int]):
             return False
         runtime_minor = sys.version_info.minor
         if runtime_minor != required_minor:
-            logger.error(
+            self.logger.error(
                 "python_runtime_minor_mismatch",
                 runtime_minor=runtime_minor,
                 required_minor=required_minor,
@@ -140,7 +144,7 @@ class FlextInfraPythonVersionEnforcer(s[int]):
         if not self._conform_python_version_file(project, required_minor):
             return False
         if self.verbose:
-            logger.info(
+            self.logger.info(
                 "python_version_validated",
                 required_minor=required_minor,
                 project=project.name,
@@ -164,7 +168,7 @@ class FlextInfraPythonVersionEnforcer(s[int]):
         if current == desired:
             return True
         if self.check_only:
-            logger.error(
+            self.logger.error(
                 "python_version_file_out_of_sync",
                 project=project.name,
                 file=c.Infra.PYTHON_VERSION_FILENAME,
@@ -174,7 +178,7 @@ class FlextInfraPythonVersionEnforcer(s[int]):
         if write_result.failure:
             msg = f"failed to write {version_file}: {write_result.error}"
             raise RuntimeError(msg)
-        logger.info(
+        self.logger.info(
             "python_version_file_conformed",
             project=project.name,
             version=desired.strip(),
@@ -183,7 +187,7 @@ class FlextInfraPythonVersionEnforcer(s[int]):
 
     def _read_required_minor(self, repository_root: Path) -> int:
         """Read requires-python minor from pyproject; default 13 when absent."""
-        pyproject = repository_root / c.Infra.PYPROJECT_FILENAME
+        pyproject = repository_root / c.PYPROJECT_FILENAME
         if not pyproject.is_file():
             return 13
         content = u.Cli.files_read_text(pyproject).unwrap()
@@ -201,11 +205,7 @@ class FlextInfraPythonVersionEnforcer(s[int]):
         if current.is_file():
             current = current.parent
         for parent in [current, *list(current.parents)]:
-            markers = {
-                c.Infra.GIT_DIR,
-                c.Infra.MAKEFILE_FILENAME,
-                c.Infra.PYPROJECT_FILENAME,
-            }
+            markers = {c.Infra.GIT_DIR, c.Infra.MAKEFILE_FILENAME, c.PYPROJECT_FILENAME}
             if all((parent / marker).exists() for marker in markers):
                 return parent
         msg = f"repository root not found from {file}"

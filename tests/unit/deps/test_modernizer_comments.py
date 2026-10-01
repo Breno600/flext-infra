@@ -4,22 +4,20 @@ from __future__ import annotations
 
 from flext_tests import tm
 
-from flext_infra import c, u
-from flext_infra.deps.phases.inject_comments import FlextInfraInjectCommentsPhase
-
-
-def _owned_marker(section: str) -> str:
-    spec = tm.ok(u.Infra.pyproject_managed_file())
-    owned = next(
-        item
-        for item in spec.conflict_sections
-        if u.Infra.toml_section_is_owned(section, (item,))
-    )
-    return f"# [MANAGED] {owned}"
+from flext_infra import FlextInfraInjectCommentsPhase, c, u
 
 
 class TestsFlextInfraDepsModernizerComments:
     """Tests comment injection behavior."""
+
+    def _owned_marker(self, section: str) -> str:
+        spec = tm.ok(u.Infra.pyproject_managed_file())
+        owned = next(
+            item
+            for item in spec.conflict_sections
+            if u.Infra.toml_section_is_owned(section, (item,))
+        )
+        return f"# [MANAGED] {owned}"
 
     def test_inject_comments_adds_banner(self) -> None:
         """Inject the canonical managed banner."""
@@ -38,7 +36,7 @@ class TestsFlextInfraDepsModernizerComments:
         """[project] comments list preserve/overwrite keys from the managed file."""
         spec = tm.ok(u.Infra.pyproject_managed_file())
         result, _changes = FlextInfraInjectCommentsPhase().apply(
-            "[project]\nname = 'test'\n"
+            "[project]\nname = 'test'\n",
         )
         custom_line = next(
             line for line in result.splitlines() if line.startswith("# [CUSTOM]")
@@ -51,7 +49,7 @@ class TestsFlextInfraDepsModernizerComments:
     def test_inject_comments_marks_unlisted_tool_table_custom(self) -> None:
         """A [tool.*] table absent from conflict_sections is CUSTOM."""
         result, _changes = FlextInfraInjectCommentsPhase().apply(
-            "[tool.bandit]\nskips = []\n"
+            "[tool.bandit]\nskips = []\n",
         )
         tm.that(result, has="# [CUSTOM] tool.bandit")
 
@@ -72,7 +70,7 @@ class TestsFlextInfraDepsModernizerComments:
         """Restamp a managed section from the SSOT, not a frozen phrase."""
         rendered = "# [MANAGED] build-system\n[build-system]"
         result, _ = FlextInfraInjectCommentsPhase().apply(rendered)
-        tm.that(result, has=_owned_marker("build-system"))
+        tm.that(result, has=self._owned_marker("build-system"))
 
     def test_inject_comments_phase_apply_banner(self) -> None:
         """Return a change record when injecting the banner."""
@@ -102,11 +100,11 @@ class TestsFlextInfraDepsModernizerComments:
 
     def test_inject_comments_phase_repositions_marker_before_section(self) -> None:
         """Position a managed marker immediately before its section."""
-        rendered = '[tool.coverage.report]\nfail_under = 45\n# [MANAGED] pyrefly\n[tool.pyrefly]\npython-version = "3.13"'
+        rendered = '[tool.coverage.report]\nprecision = 2\n# [MANAGED] pyrefly\n[tool.pyrefly]\npython-version = "3.13"'
         result, _changes = FlextInfraInjectCommentsPhase().apply(rendered)
         lines = result.splitlines()
         pyrefly_idx = lines.index("[tool.pyrefly]")
-        tm.that(lines[pyrefly_idx - 1], eq=_owned_marker("tool.pyrefly"))
+        tm.that(lines[pyrefly_idx - 1], eq=self._owned_marker("tool.pyrefly"))
 
     def test_inject_comments_phase_removes_auto_banner_and_auto_marker(self) -> None:
         """Replace superseded automatic banner and marker variants."""
@@ -117,16 +115,18 @@ class TestsFlextInfraDepsModernizerComments:
 
     def test_inject_comments_phase_marks_pytest_and_coverage_subtables(self) -> None:
         """Annotate governed pytest and coverage subtables from the SSOT."""
-        rendered = '[tool.pytest.ini_options]\nminversion = "8.0"\n[tool.coverage.report]\nfail_under = 45'
+        rendered = '[tool.pytest.ini_options]\nminversion = "8.0"\n[tool.coverage.report]\nprecision = 2'
         result, _changes = FlextInfraInjectCommentsPhase().apply(rendered)
-        tm.that(result, has=_owned_marker("tool.pytest.ini_options"))
-        tm.that(result, has=_owned_marker("tool.coverage.report"))
+        tm.that(result, has=self._owned_marker("tool.pytest.ini_options"))
+        tm.that(result, has=self._owned_marker("tool.coverage.report"))
 
     def test_inject_comments_phase_deduplicates_family_markers(self) -> None:
         """Emit one marker for multiple tables in the same tool family."""
-        rendered = "[tool.coverage.run]\nbranch = true\n[tool.coverage.report]\nfail_under = 45"
+        rendered = (
+            "[tool.coverage.run]\nbranch = true\n[tool.coverage.report]\nprecision = 2"
+        )
         result, _changes = FlextInfraInjectCommentsPhase().apply(rendered)
-        tm.that(result.count(_owned_marker("tool.coverage")), eq=1)
+        tm.that(result.count(self._owned_marker("tool.coverage")), eq=1)
 
     def test_inject_comments_phase_is_idempotent_on_managed_content(self) -> None:
         """Produce byte-identical output and no changes on a second pass."""
@@ -135,7 +135,7 @@ class TestsFlextInfraDepsModernizerComments:
         )
         first_result, first_changes = FlextInfraInjectCommentsPhase().apply(rendered)
         second_result, second_changes = FlextInfraInjectCommentsPhase().apply(
-            first_result
+            first_result,
         )
         tm.that(first_changes, len=(1, 20))
         tm.that(second_result, eq=first_result)
@@ -154,7 +154,7 @@ class TestsFlextInfraDepsModernizerComments:
         """Converge when a blank line already separates marker and section."""
         rendered = (
             '[project]\nname = "test"\n'
-            f"\n{_owned_marker('tool.pytest')}\n\n"
+            f"\n{self._owned_marker('tool.pytest')}\n\n"
             '[tool.pytest.ini_options]\nminversion = "8.0"\n'
         )
         phase = FlextInfraInjectCommentsPhase()

@@ -14,8 +14,8 @@ from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
 from flext_infra import c, m, t, u
-from flext_infra.base import s
 
+from ..base import s
 from ._skill_rule_runner import FlextInfraSkillRuleRunnerMixin
 
 if TYPE_CHECKING:
@@ -46,7 +46,7 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
 
     def _apply_baseline_comparison(
         self,
-        rules: t.MappingKV[str, t.Infra.InfraValue],
+        rules: t.MappingKV[str, t.JsonValue],
         root: Path,
         skill_name: str,
         counts: t.IntMapping,
@@ -54,7 +54,8 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
     ) -> bool:
         """Compare counts against the baseline file and return pass/fail."""
         baseline_obj = u.Cli.json_deep_mapping(
-            rules, c.Infra.OperationMode.BASELINE.value
+            rules,
+            c.Infra.OperationMode.BASELINE.value,
         )
         if not baseline_obj:
             return True
@@ -68,7 +69,11 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
             return True
         bl_data_result = u.Cli.json_read(baseline_path)
         if bl_data_result.failure:
-            return True
+            # A present-but-unreadable risk baseline must fail loud, never
+            # read as "allowed" (missing baselines legitimately allow above).
+            raise ValueError(
+                bl_data_result.error or f"cannot read baseline: {baseline_path}",
+            )
         bl_data = u.Cli.json_as_mapping(bl_data_result.value)
         bl_counts_raw_map = u.Cli.json_deep_mapping(bl_data, "counts")
         bl_counts: t.MutableIntMapping = {}
@@ -119,19 +124,17 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
 
     @staticmethod
     def _scan_globs(
-        scan_targets: t.MappingKV[str, t.Infra.InfraValue],
+        scan_targets: t.MappingKV[str, t.JsonValue],
     ) -> t.Pair[t.StrSequence, t.StrSequence]:
         """Return include and exclude glob lists from rules.yml scan targets."""
         include_globs = u.Infra.string_list(
-            scan_targets.get("include", ["**/*.py"])
+            scan_targets.get("include", ["**/*.py"]),
         ) or ["**/*"]
         exclude_globs = u.Infra.string_list(scan_targets.get(c.Infra.EXCLUDE, []))
         return include_globs, exclude_globs
 
     @staticmethod
-    def _rules_list(
-        rules: t.MappingKV[str, t.Infra.InfraValue],
-    ) -> p.Result[t.JsonList]:
+    def _rules_list(rules: t.MappingKV[str, t.JsonValue]) -> p.Result[t.JsonList]:
         """Validate the rules.yml rules payload."""
         rules_list_obj = rules.get(c.Infra.RK_RULES, [])
         if not isinstance(rules_list_obj, list):
@@ -139,7 +142,8 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
         return r[t.JsonList].ok(t.Cli.JSON_LIST_ADAPTER.validate_python(rules_list_obj))
 
     def _evaluate_rules(
-        self, context: m.Infra.SkillRuleEvaluationContext
+        self,
+        context: m.Infra.SkillRuleEvaluationContext,
     ) -> t.Pair[t.IntMapping, t.StrSequence]:
         """Evaluate skill validation rules and return counts plus violations."""
         counts: t.MutableIntMapping = {}
@@ -148,20 +152,12 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
             rule_obj = u.Cli.json_as_mapping(rule_obj_raw)
             if not rule_obj:
                 continue
-            self._evaluate_single_rule(
-                rule_obj,
-                context.skill_dir,
-                context.root,
-                context.mode,
-                context.include_globs,
-                context.exclude_globs,
-                counts,
-                violations,
-            )
+            self._evaluate_single_rule(rule_obj, context, counts, violations)
         return counts, tuple(violations)
 
     def _skill_report_model(
-        self, context: m.Infra.SkillReportContext
+        self,
+        context: m.Infra.SkillReportContext,
     ) -> m.Infra.ValidationReport:
         """Build the canonical skill validation report model."""
         total = sum(context.counts.values())
@@ -169,7 +165,11 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
             total == 0
             if context.mode == c.Infra.OperationMode.STRICT
             else self._apply_baseline_comparison(
-                context.rules, context.root, context.skill_name, context.counts, total
+                context.rules,
+                context.root,
+                context.skill_name,
+                context.counts,
+                total,
             )
         )
         summary = (
@@ -177,11 +177,16 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
             f"{('PASS' if passed else 'FAIL')}"
         )
         return m.Infra.ValidationReport(
-            passed=passed, violations=context.violations, summary=summary
+            passed=passed,
+            violations=context.violations,
+            summary=summary,
         )
 
     def _build_skill_report(
-        self, repository_root: Path, skill_name: str, mode: c.Infra.OperationMode
+        self,
+        repository_root: Path,
+        skill_name: str,
+        mode: c.Infra.OperationMode,
     ) -> p.Result[m.Infra.ValidationReport]:
         """Build a skill validation report after path resolution."""
         root = repository_root.resolve()
@@ -189,14 +194,14 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
         rules_path = skills_dir / skill_name / "rules.yml"
         if not rules_path.exists():
             return r[m.Infra.ValidationReport].ok(
-                self._missing_rules_report(skill_name)
+                self._missing_rules_report(skill_name),
             )
         rules = u.Cli.yaml_load_mapping(rules_path)
         scan_targets_raw = rules.get("scan_targets", {})
         scan_targets = u.Cli.json_as_mapping(scan_targets_raw)
         if not scan_targets and scan_targets_raw not in ({}, None):
             return r[m.Infra.ValidationReport].fail(
-                f"scan_targets must be a mapping: {rules_path}"
+                f"scan_targets must be a mapping: {rules_path}",
             )
         include_globs, exclude_globs = self._scan_globs(scan_targets)
         rules_list_result = self._rules_list(rules)
@@ -210,7 +215,7 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
                 mode=mode,
                 include_globs=include_globs,
                 exclude_globs=exclude_globs,
-            )
+            ),
         )
         return r[m.Infra.ValidationReport].ok(
             self._skill_report_model(
@@ -221,15 +226,17 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
                     mode=mode,
                     counts=counts,
                     violations=violations,
-                )
-            )
+                ),
+            ),
         )
 
     @override
     def execute(self) -> p.Result[bool]:
         """Execute the skill-validation CLI flow."""
         report_result = self.build_report(
-            self.repository_root, self.skill, mode=self.mode
+            self.repository_root,
+            self.skill,
+            mode=self.mode,
         )
         if report_result.failure:
             return r[bool].from_failure(report_result)

@@ -23,12 +23,13 @@ class FlextInfraUtilitiesPyrefly:
 
     @staticmethod
     def pyrefly_target_args(
-        project_dir: Path, discovered_dirs: t.StrSequence
+        project_dir: Path,
+        discovered_dirs: t.StrSequence,
     ) -> t.StrSequence:
         """Preserve explicit files; use configured includes for discovered roots."""
         if any((project_dir / target).is_file() for target in discovered_dirs):
             return discovered_dirs
-        document = u.Cli.toml_read(project_dir / c.Infra.PYPROJECT_FILENAME)
+        document = u.Cli.toml_read(project_dir / c.PYPROJECT_FILENAME)
         if document is None:
             return discovered_dirs
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)

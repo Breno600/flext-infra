@@ -19,60 +19,45 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-@pytest.fixture
-def auditor() -> FlextInfraDocAuditor:
-    return FlextInfraDocAuditor()
+class TestsFlextInfraAuditor:
+    """Tests for the docs auditor and its static helpers."""
 
+    @pytest.fixture
+    def auditor(self) -> FlextInfraDocAuditor:
+        return FlextInfraDocAuditor()
 
-@pytest.fixture
-def normalize_link() -> Callable[[str], str]:
-    def _normalize(value: str) -> str:
-        normalized: str = u.Infra.docs_normalize_link(value)
-        return normalized
+    @pytest.fixture
+    def normalize_link(self) -> Callable[[str], str]:
+        def _normalize(value: str) -> str:
+            normalized: str = u.Infra.docs_normalize_link(value)
+            return normalized
 
-    return _normalize
+        return _normalize
 
+    @pytest.fixture
+    def should_skip_target(self) -> Callable[[str, str], bool]:
+        def _should_skip(link: str, target: str) -> bool:
+            should_skip: bool = u.Infra.docs_should_skip_target(link, target)
+            return should_skip
 
-@pytest.fixture
-def should_skip_target() -> Callable[[str, str], bool]:
-    def _should_skip(link: str, target: str) -> bool:
-        should_skip: bool = u.Infra.docs_should_skip_target(link, target)
-        return should_skip
+        return _should_skip
 
-    return _should_skip
+    @pytest.fixture
+    def is_external(self) -> Callable[[str], bool]:
+        def _is_external(value: str) -> bool:
+            external: bool = u.Infra.docs_is_external(value)
+            return external
 
-
-@pytest.fixture
-def is_external() -> Callable[[str], bool]:
-    def _is_external(value: str) -> bool:
-        external: bool = u.Infra.docs_is_external(value)
-        return external
-
-    return _is_external
-
-
-class TestAuditorCore:
-    """Tests for the docs auditor."""
-
-    def test_returns_flext_result(
-        self, auditor: FlextInfraDocAuditor, tmp_path: Path
-    ) -> None:
-        result = auditor.audit(tmp_path)
-        tm.that(result.success or result.failure, eq=True)
+        return _is_external
 
     def test_valid_scope_returns_success(
-        self, auditor: FlextInfraDocAuditor, tmp_path: Path
+        self,
+        auditor: FlextInfraDocAuditor,
+        tmp_path: Path,
     ) -> None:
         workspace = u.Tests.create_docs_workspace(tmp_path)
         result = auditor.audit(workspace)
         tm.ok(result)
-
-    def test_report_structure(
-        self, auditor: FlextInfraDocAuditor, tmp_path: Path
-    ) -> None:
-        result = auditor.audit(tmp_path)
-        if result.success and result.value:
-            result.value[0]
 
     def test_issue_structure(self) -> None:
         issue = m.Infra.AuditIssue(
@@ -110,24 +95,35 @@ class TestAuditorCore:
         u.Tests.write_project_beads_config(tmp_path, "audit-fixture")
         output_dir_value = (
             str(tmp_path / output_dir) if output_dir == "custom_output" else output_dir
-        )
-        result = auditor.audit(
+        # repository-local Beads configuration every real repository carries,
+        # and it resolves a Git identity from the audited root. A selected
+        # ``projects`` entry only matches a scope the workspace actually
+        # declares, so the fixture is built by the canonical docs workspace
+        # owner with exactly the declared members rather than a bare temp
+        # directory that happens to carry a Beads file.
+        workspace = u.Tests.create_docs_workspace(
             tmp_path,
+            project_names=tuple(projects or ()),
+        )
+        # The output directory is resolved relative to each project root, so a
+        # custom name is passed through as the relative name it is. Building an
+        # absolute path here is rejected by scope resolution.
+        result = auditor.audit(
+            workspace,
             projects=projects,
-            output_dir=output_dir_value,
+            output_dir=output_dir,
             params=m.Infra.AuditScopeParams(check=check),
         )
-        tm.that(result.success or result.failure, eq=True)
+        # Every variant here is a valid option combination, so the observable
+        # outcome is a successful audit. Asserting "success or failure" would
+        # hold whatever the runtime did and prove nothing.
+        tm.ok(result)
 
     def test_report_frozen(self) -> None:
         tm.that(m.Infra.DocsPhaseReport.model_config.get("frozen"), eq=True)
 
     def test_issue_frozen(self) -> None:
         tm.that(m.Infra.AuditIssue.model_config.get("frozen"), eq=True)
-
-
-class TestAuditorNormalize:
-    """Additional tests for the docs auditor."""
 
     @pytest.mark.parametrize(
         ("raw", "expected"),
@@ -140,7 +136,10 @@ class TestAuditorNormalize:
         ],
     )
     def test_normalize_link(
-        self, normalize_link: Callable[[str], str], raw: str, expected: str
+        self,
+        normalize_link: Callable[[str], str],
+        raw: str,
+        expected: str,
     ) -> None:
         tm.that(normalize_link(raw), eq=expected)
 
@@ -166,7 +165,10 @@ class TestAuditorNormalize:
 
     @pytest.mark.parametrize("scheme", sorted(c.Infra.DOCS_EXTERNAL_SCHEMES))
     def test_permitted_external_schemes_are_preserved(
-        self, *, is_external: Callable[[str], bool], scheme: str
+        self,
+        *,
+        is_external: Callable[[str], bool],
+        scheme: str,
     ) -> None:
         target = (
             f"{scheme}://example.invalid"
@@ -185,12 +187,17 @@ class TestAuditorNormalize:
         ],
     )
     def test_insecure_documentation_urls_fail_fast(
-        self, *, is_external: Callable[[str], bool], target: str
+        self,
+        *,
+        is_external: Callable[[str], bool],
+        target: str,
     ) -> None:
         with pytest.raises(ValueError, match="use HTTPS"):
             is_external(target)
 
     def test_repository_paths_are_not_external(
-        self, *, is_external: Callable[[str], bool]
+        self,
+        *,
+        is_external: Callable[[str], bool],
     ) -> None:
         tm.that(is_external("path/to/file.md"), eq=False)

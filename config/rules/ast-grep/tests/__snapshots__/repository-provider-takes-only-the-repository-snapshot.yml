@@ -1,0 +1,9 @@
+id: repository-provider-takes-only-the-repository
+snapshots:
+  provider = u.Infra.repository_provider(repository, codegen.providers):
+    fixed: provider = u.Infra.repository_provider(repository)
+    labels:
+    - source: u.Infra.repository_provider(repository, codegen.providers)
+      style: primary
+      start: 11
+      end: 69

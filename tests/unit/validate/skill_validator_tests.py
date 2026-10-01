@@ -17,11 +17,11 @@ from tests import c, u
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from tests import m, t
+    from tests import m
 
 
-class TestSafeLoadYaml:
-    """Test u.Infra.yaml_load_infra_mapping helper function."""
+class TestsFlextInfraSkillValidator:
+    """Skill validator, YAML/list helpers, ast-grep rules, and baseline templating."""
 
     def test_valid_yaml(self, tmp_path: Path) -> None:
         """Valid YAML file loads correctly."""
@@ -47,10 +47,6 @@ class TestSafeLoadYaml:
         (tmp_path / "str.yml").write_text("just a string")
         tm.that(dict(u.Cli.yaml_load_mapping(tmp_path / "str.yml")), eq={})
 
-
-class TestStringList:
-    """Test u.Infra.string_list helper function."""
-
     def test_none_returns_empty(self) -> None:
         """None returns empty list."""
         tm.that(u.Infra.string_list(None), empty=True)
@@ -70,17 +66,13 @@ class TestStringList:
         with pytest.raises(TypeError, match="expected list"):
             u.Infra.string_list({"key": "value"})
 
-
-class TestSkillValidatorCore:
-    """Core validation tests for FlextInfraSkillValidator."""
-
     def test_validate_missing_rules_yml(self, tmp_path: Path) -> None:
         """Missing rules.yml returns not-passed report."""
         validator = FlextInfraSkillValidator(skill="test-skill")
         skills = tmp_path / c.Infra.SKILLS_DIR / "test-skill"
         skills.mkdir(parents=True)
         report: m.Infra.ValidationReport = tm.ok(
-            validator.build_report(tmp_path, "test-skill")
+            validator.build_report(tmp_path, "test-skill"),
         )
         tm.that(not report.passed, eq=True)
         tm.that(report.summary, contains="no rules.yml")
@@ -100,7 +92,8 @@ class TestSkillValidatorCore:
         skill.mkdir(parents=True)
         (skill / "rules.yml").write_text("rules: {not: a_list}")
         tm.fail(
-            validator.build_report(tmp_path, "test-skill"), has="rules must be a list"
+            validator.build_report(tmp_path, "test-skill"),
+            has="rules must be a list",
         )
 
     def test_validate_non_dict_rule_skipped(self, tmp_path: Path) -> None:
@@ -110,12 +103,13 @@ class TestSkillValidatorCore:
         skill.mkdir(parents=True)
         (skill / "rules.yml").write_text("rules:\n  - not_a_dict\n  - another_string")
         report: m.Infra.ValidationReport = tm.ok(
-            validator.build_report(tmp_path, "test-skill")
+            validator.build_report(tmp_path, "test-skill"),
         )
         tm.that(report.passed, eq=True)
 
     def test_validate_scalar_rules_yml_yields_empty_success(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Scalar rules.yml content yields an empty successful report."""
         validator = FlextInfraSkillValidator(skill="test-skill")
@@ -123,17 +117,12 @@ class TestSkillValidatorCore:
         skill.mkdir(parents=True)
         (skill / "rules.yml").write_text("just a plain string")
         report: m.Infra.ValidationReport = tm.ok(
-            validator.build_report(tmp_path, "test-skill")
+            validator.build_report(tmp_path, "test-skill"),
         )
         tm.that(report.passed, eq=True)
         tm.that(report.violations, empty=True)
 
-
-class TestSkillValidatorAstGrepRules:
-    """Public build_report coverage for ast-grep rule counting."""
-
-    @staticmethod
-    def _write_skill(root: Path, rules_yml: str) -> None:
+    def _write_skill(self, root: Path, rules_yml: str) -> None:
         skill = root / c.Infra.SKILLS_DIR / "test-skill"
         skill.mkdir(parents=True)
         (skill / "rule.yaml").write_text(
@@ -142,8 +131,7 @@ class TestSkillValidatorAstGrepRules:
         )
         (skill / "rules.yml").write_text(rules_yml, encoding="utf-8")
 
-    @staticmethod
-    def _write_target(root: Path, source: str) -> None:
+    def _write_target(self, root: Path, source: str) -> None:
         package_root = root / "demo" / "src" / "demo"
         package_root.mkdir(parents=True)
         (package_root / "m.py").write_text(source, encoding="utf-8")
@@ -151,11 +139,14 @@ class TestSkillValidatorAstGrepRules:
     def test_empty_ast_grep_rule_file_fails_closed(self, tmp_path: Path) -> None:
         """An ast-grep rule with an empty file is invalid configuration."""
         self._write_skill(
-            tmp_path, 'rules:\n  - id: t\n    type: ast-grep\n    file: ""\n'
+            tmp_path,
+            'rules:\n  - id: t\n    type: ast-grep\n    file: ""\n',
         )
         tm.fail(
             FlextInfraSkillValidator(skill="test-skill").build_report(
-                tmp_path, "test-skill", mode=c.Infra.OperationMode.STRICT
+                tmp_path,
+                "test-skill",
+                mode=c.Infra.OperationMode.STRICT,
             ),
             has="non-empty file",
         )
@@ -168,7 +159,9 @@ class TestSkillValidatorAstGrepRules:
         )
         tm.fail(
             FlextInfraSkillValidator(skill="test-skill").build_report(
-                tmp_path, "test-skill", mode=c.Infra.OperationMode.STRICT
+                tmp_path,
+                "test-skill",
+                mode=c.Infra.OperationMode.STRICT,
             ),
             has="does not exist",
         )
@@ -181,10 +174,12 @@ class TestSkillValidatorAstGrepRules:
             'rules:\n  - id: t\n    type: ast-grep\n    file: "rule.yaml"\n',
         )
         self._write_target(tmp_path, "forbidden_token = 1\n")
-        report: m.Infra.ValidationReport = tm.ok(
+        report = tm.ok(
             FlextInfraSkillValidator(skill="test-skill").build_report(
-                tmp_path, "test-skill", mode=c.Infra.OperationMode.STRICT
-            )
+                tmp_path,
+                "test-skill",
+                mode=c.Infra.OperationMode.STRICT,
+            ),
         )
         tm.that(report.passed, eq=False)
         tm.that(report.summary, has="1 violations")
@@ -197,17 +192,16 @@ class TestSkillValidatorAstGrepRules:
         )
         tm.fail(
             FlextInfraSkillValidator(skill="test-skill").build_report(
-                tmp_path, "test-skill", mode=c.Infra.OperationMode.STRICT
+                tmp_path,
+                "test-skill",
+                mode=c.Infra.OperationMode.STRICT,
             ),
             has="does not exist",
         )
 
-
-class TestSkillValidatorBaselineTemplate:
-    """Public build_report coverage for {skill} baseline path templating."""
-
     def test_relative_baseline_path_resolves_with_skill_name(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A relative baseline file template is resolved under the workspace."""
         skill_dir = tmp_path / c.Infra.SKILLS_DIR / "test-skill"
@@ -228,17 +222,17 @@ class TestSkillValidatorBaselineTemplate:
         baseline_path = tmp_path / ".reports" / "test-skill" / "baseline.json"
         baseline_path.parent.mkdir(parents=True)
         baseline_path.write_text(
-            tm.ok(u.Cli.json_dumps({"counts": {"t": 0}})), encoding="utf-8"
+            tm.ok(u.Cli.json_dumps({"counts": {"t": 0}})),
+            encoding="utf-8",
         )
 
-        report: m.Infra.ValidationReport = tm.ok(
+        report = tm.ok(
             FlextInfraSkillValidator(skill="test-skill").build_report(
-                tmp_path, "test-skill", mode=c.Infra.OperationMode.BASELINE
-            )
+                tmp_path,
+                "test-skill",
+                mode=c.Infra.OperationMode.BASELINE,
+            ),
         )
 
         # Resolved templated baseline (counts.t=0) disallows the 1 real match.
         tm.that(report.passed, eq=False)
-
-
-__all__: t.StrSequence = []

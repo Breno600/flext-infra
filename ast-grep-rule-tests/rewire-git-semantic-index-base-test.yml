@@ -1,9 +1,0 @@
-id: rewire-git-semantic-index-name
-valid:
-  - |
-    class FlextInfraUtilitiesGitScopeMixin(FlextInfraUtilitiesGitSemanticIndexMixin):
-        pass
-invalid:
-  - |
-    class FlextInfraUtilitiesGitScopeMixin(FlextInfraUtilitiesGitSemanticMixin):
-        pass

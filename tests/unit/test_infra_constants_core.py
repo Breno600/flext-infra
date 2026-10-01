@@ -10,52 +10,31 @@ from __future__ import annotations
 
 from flext_tests import tm
 
+from flext_infra import config
+from flext_infra.check.gate_registry import FlextInfraGateRegistry
 from tests import c
 
 
 class TestsFlextInfraInfraConstantsCore:
     """Tests for Paths namespace constants."""
 
-    def test_venv_bin_rel_constant(self) -> None:
-        tm.that(c.Infra.VENV_BIN_REL, eq=".venv/bin")
-
-    def test_default_src_dir_constant(self) -> None:
-        tm.that(c.Infra.DEFAULT_SRC_DIR, eq="src")
-
     def test_paths_constants_are_strings(self) -> None:
-        tm.that(c.Infra.VENV_BIN_REL, is_=str)
         tm.that(c.Infra.DEFAULT_SRC_DIR, is_=str)
 
-    def test_pyproject_filename_constant(self) -> None:
-        tm.that(c.Infra.PYPROJECT_FILENAME, eq="pyproject.toml")
-
-    def test_makefile_filename_constant(self) -> None:
-        tm.that(c.Infra.MAKEFILE_FILENAME, eq="Makefile")
-
     def test_files_constants_are_strings(self) -> None:
-        tm.that(c.Infra.PYPROJECT_FILENAME, is_=str)
+        tm.that(c.PYPROJECT_FILENAME, is_=str)
         tm.that(c.Infra.MAKEFILE_FILENAME, is_=str)
 
-    def test_gate_constants_exist(self) -> None:
-        tm.that(c.Infra.LINT, eq="lint")
-        tm.that(c.Infra.FORMAT, eq="format")
-        tm.that(c.Infra.PYREFLY, eq="pyrefly")
-        tm.that(c.Infra.MYPY, eq="mypy")
-        tm.that(c.Infra.PYRIGHT, eq="pyright")
-        tm.that(c.Infra.SECURITY, eq="security")
-        tm.that(c.Infra.MARKDOWN, eq="markdown")
+    def test_gate_constants_resolve_config_check_gates(self) -> None:
+        """Every config-declared default check gate resolves to a live gate.
 
-    def test_pass_status_constant(self) -> None:
-        tm.that(c.Infra.ResultStatus.PASSED, eq="PASS")
-
-    def test_fail_status_constant(self) -> None:
-        tm.that(c.Infra.ResultStatus.FAIL, eq="FAIL")
-
-    def test_ok_status_constant(self) -> None:
-        tm.that(c.Infra.ResultStatus.OK, eq="OK")
-
-    def test_warn_status_constant(self) -> None:
-        tm.that(c.Infra.ResultStatus.WARN, eq="WARN")
+        The gate vocabulary is config-owned (P0): instead of pinning the
+        constant strings to today's literals, the constants must keep
+        resolving the exact gate ids the generated Make surface will run.
+        """
+        registry = FlextInfraGateRegistry()
+        for gate_id in config.Infra.codegen.make.check_gates_default:
+            tm.that(registry.get(gate_id), none=False)
 
     def test_status_constants_are_result_status_members(self) -> None:
         tm.that(c.Infra.ResultStatus.PASSED, is_=c.Infra.ResultStatus)

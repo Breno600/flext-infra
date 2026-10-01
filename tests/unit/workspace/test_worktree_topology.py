@@ -8,14 +8,14 @@ from flext_tests import tm
 
 from flext_infra import FlextInfraWorktreeService, c, m
 from tests import u
-from tests.unit.workspace import WorktreeFixture
 
 
-class TestsWorktreeTopology(WorktreeFixture):
+class TestsFlextInfraWorktreeTopology(u.Tests.WorktreeFixture):
     """Group cohesive worktree behavior."""
 
     def test_update_merges_the_requested_base_with_an_explicit_merge_commit(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Update preserves lane ancestry through the canonical no-ff merge."""
         repository = self._repository(tmp_path)
@@ -28,16 +28,16 @@ class TestsWorktreeTopology(WorktreeFixture):
             u.Cli.run_checked(
                 [c.Infra.GIT, "commit", "-m", "test: advance update base"],
                 cwd=repository,
-            )
+            ),
         )
         base = tm.ok(
-            u.Infra.git_repository_head(m.Infra.GitRepoRequest(repo_root=repository))
+            u.Infra.git_repository_head(m.Infra.GitRepoRequest(repo_root=repository)),
         ).oid
         tm.that(
             tm.ok(
                 u.Infra.git_primary_worktree_root(
-                    m.Infra.GitRepoRequest(repo_root=lane)
-                )
+                    m.Infra.GitRepoRequest(repo_root=lane),
+                ),
             ).primary_root,
             eq=repository.resolve(),
         )
@@ -49,18 +49,19 @@ class TestsWorktreeTopology(WorktreeFixture):
                 branch=branch,
                 base=base,
                 apply_changes=True,
-            ).execute()
+            ).execute(),
         )
 
         tm.that(updated, eq=str(lane))
         updated_head = tm.ok(
-            u.Infra.git_repository_head(m.Infra.GitRepoRequest(repo_root=lane))
+            u.Infra.git_repository_head(m.Infra.GitRepoRequest(repo_root=lane)),
         ).oid
         tm.that(updated_head == base, eq=False)
         parents = tm.ok(
             u.Cli.capture(
-                [c.Infra.GIT, "rev-list", "--parents", "-n", "1", "HEAD"], cwd=lane
-            )
+                [c.Infra.GIT, "rev-list", "--parents", "-n", "1", "HEAD"],
+                cwd=lane,
+            ),
         ).split()
         tm.that(parents, length=3)
         tm.that(parents, has=base)
@@ -80,7 +81,7 @@ class TestsWorktreeTopology(WorktreeFixture):
                 base=epic_branch,
                 epic_lane=epic,
                 apply_changes=True,
-            ).execute()
+            ).execute(),
         )
 
         child_path = child
@@ -89,10 +90,9 @@ class TestsWorktreeTopology(WorktreeFixture):
         tm.that(Path(child_path).is_relative_to(container), where=bool)
         tm.that(
             tm.ok(
-                u.Infra.git_list_worktrees(m.Infra.GitRepoRequest(repo_root=repository))
-            ).text,
+                u.Infra.git_list_worktrees(
+                    m.Infra.GitRepoRequest(repo_root=repository),
+                ),
+            ).porcelain,
             has=f"worktree {child_path}",
         )
-
-
-__all__: tuple[str, ...] = ()

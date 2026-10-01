@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import Annotated, override
 
-from flext_infra import m, p, t, u
+from flext_infra import m, p, t
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
 
 from .detection import FlextInfraDependencyDetectionService
@@ -13,22 +14,25 @@ from .detector_runtime import FlextInfraDependencyDetectorRuntime
 
 
 class FlextInfraRuntimeDevDependencyDetector(
-    FlextInfraProjectSelectionServiceBase[bool]
+    FlextInfraProjectSelectionServiceBase[bool],
 ):
     """CLI tool for detecting runtime vs dev dependencies across workspace."""
 
     output_format: Annotated[
-        str, m.Field(alias="format", description="Output format for dependency report")
+        str,
+        m.Field(alias="format", description="Output format for dependency report"),
     ] = "text"
     output: Annotated[str | None, m.Field(None, description="Optional output path")] = (
         None
     )
     quiet: Annotated[bool, m.Field(False, description="Reduce command output")] = False
     no_fail: Annotated[
-        bool, m.Field(alias="no-fail", description="Exit successfully even with issues")
+        bool,
+        m.Field(alias="no-fail", description="Exit successfully even with issues"),
     ] = False
     typings: Annotated[
-        bool, m.Field(False, description="Detect required typing packages")
+        bool,
+        m.Field(False, description="Detect required typing packages"),
     ] = False
     apply_typings: Annotated[
         bool,
@@ -38,19 +42,13 @@ class FlextInfraRuntimeDevDependencyDetector(
         ),
     ] = False
     no_pip_check: Annotated[
-        bool, m.Field(alias="no-pip-check", description="Skip workspace pip check")
+        bool,
+        m.Field(alias="no-pip-check", description="Skip workspace pip check"),
     ] = False
     limits: Annotated[
-        str | None, m.Field(None, description="Dependency limits TOML")
+        str | None,
+        m.Field(None, description="Dependency limits TOML"),
     ] = None
-    deps: Annotated[
-        p.Infra.DepsService,
-        m.Field(exclude=True, description="Dependency analysis service"),
-    ] = m.Field(default_factory=FlextInfraDependencyDetectionService)
-    runner: Annotated[
-        p.Infra.RunnerService,
-        m.Field(exclude=True, description="Command runner for follow-up operations"),
-    ] = m.Field(default_factory=lambda: u.Cli)
 
     @property
     def output_path(self) -> Path | None:
@@ -69,7 +67,7 @@ class FlextInfraRuntimeDevDependencyDetector(
     @override
     def execute(self) -> p.Result[bool]:
         """Execute dependency detection and generate workspace report."""
-        payload: dict[str, t.Infra.InfraValue] = {
+        payload: MutableMapping[str, t.JsonValue] = {
             "repository_root": str(self.root),
             "apply": self.apply_changes,
             "format": self.output_format,
@@ -85,11 +83,10 @@ class FlextInfraRuntimeDevDependencyDetector(
             projects_list: t.JsonValueList = list(self.selected_projects)
             payload["projects"] = projects_list
         params = m.Infra.DetectCommand.model_validate(payload)
+        # This command is the CLI composition point of the detect route: it
+        # wires the dependency-analysis port into the runtime it drives.
         runtime = FlextInfraDependencyDetectorRuntime(
-            detector=self,
-            workspace_report_factory=m.Infra.WorkspaceDependencyReport,
-            dependency_limits_factory=m.Infra.DependencyLimitsInfo,
-            pip_check_factory=m.Infra.PipCheckReport,
+            detector=self, deps=FlextInfraDependencyDetectionService()
         )
         return runtime.run(params)
 

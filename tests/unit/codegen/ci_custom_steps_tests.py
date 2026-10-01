@@ -14,20 +14,32 @@ from flext_tests import tm
 
 from flext_infra import c, m
 
+from ._support import CodegenTestSupport
 
-class TestsCiCustomSteps:
+
+class TestsFlextInfraCodegenCiCustomSteps:
     """The declared contract of the project-owned CI extension point."""
+
+    @staticmethod
+    def _workflow_spec(*, custom_steps: str = "") -> m.Infra.GithubWorkflowRenderSpec:
+        return CodegenTestSupport.Ci.workflow_spec(
+            dist="mcb",
+            make_profile=c.Infra.MakeProfile.STANDALONE,
+            repository_branch="main",
+            ci_trigger_branches=CodegenTestSupport.Ci.CI_TRIGGER_BASELINE_BRANCHES,
+            custom_steps=custom_steps,
+        )
 
     def test_a_project_declaring_nothing_changes_nothing(self) -> None:
         """The extension is absent by default, so generation is unaffected."""
-        spec = m.Infra.GithubWorkflowRenderSpec.model_construct()
+        spec = self._workflow_spec()
 
         tm.that(spec.custom_steps, eq="")
 
     def test_declared_steps_reach_the_workflow_verbatim(self) -> None:
         """The block is carried as text; the generator never parses it."""
         block = "      - name: Authenticate\n        run: echo declared"
-        spec = m.Infra.GithubWorkflowRenderSpec.model_construct(custom_steps=block)
+        spec = self._workflow_spec(custom_steps=block)
 
         tm.that(spec.custom_steps, eq=block)
 

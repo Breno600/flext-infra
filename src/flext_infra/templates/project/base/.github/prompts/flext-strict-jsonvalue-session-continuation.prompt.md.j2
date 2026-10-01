@@ -20,8 +20,8 @@ compatibility, fallbacks, suppressions, local type carriers, or hardcoded
 project-owned values.
 
 Use canonical `c`, `t`, `p`, `m`, and `u` facades with Pydantic 2 boundaries.
-Use `make mod APPLY=Y` for structural propagation. Use only selector-free root
-Make verbs and `APPLY=Y`; every test uses `make test APPLY=Y` and testmon.
+Use `make mod ` for structural propagation. Use only selector-free root
+Make verbs and ``; every test uses `make test ` and testmon.
 
 Do not report completion before fixed-point generation, public runtime proof,
 all gates, zero residue, integration merge, and post-merge validation.

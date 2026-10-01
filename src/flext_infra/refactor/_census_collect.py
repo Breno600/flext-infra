@@ -1,4 +1,4 @@
-"""Census per-module scan + workspace-report assembly — extracted concern."""
+"""Census per-module inventory + workspace-report assembly — extracted concern."""
 
 from __future__ import annotations
 
@@ -6,195 +6,120 @@ from typing import TYPE_CHECKING
 
 from flext_infra import m, u
 
-from ._census_rules_dispatch import FlextInfraRefactorCensusRulesDispatchMixin
-from ._census_validate import FlextInfraRefactorCensusValidateMixin
-
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from flext_infra import p, t
 
-_ROPE_SAFE_EXCEPTIONS: t.VariadicTuple[type[BaseException]] = (
-    *u.Infra.rope_runtime_errors(),
-    *u.Infra.rope_error_types(),
-    RecursionError,
-    SyntaxError,
-    ValueError,
-    RuntimeError,
-)
 
-
-class FlextInfraRefactorCensusCollectMixin(
-    FlextInfraRefactorCensusRulesDispatchMixin, FlextInfraRefactorCensusValidateMixin
-):
-    """Scan one module (inventory + rules) and assemble the WorkspaceReport."""
+class FlextInfraRefactorCensusCollectMixin:
+    """Inventory one module and assemble the WorkspaceReport."""
 
     if TYPE_CHECKING:
 
         @property
         def effective_dry_run(self) -> bool: ...
 
+        def _validated_project_reports(
+            self,
+            rope: p.Infra.RopeWorkspaceDsl,
+            project_reports: t.VariadicTuple[m.Infra.ProjectReport],
+        ) -> t.VariadicTuple[m.Infra.ProjectReport]: ...
+
         @staticmethod
         def _project_name_for_module(
             module: m.Infra.RopeModuleIndexEntry,
             convention: m.Infra.RopeModuleConvention,
         ) -> str: ...
-        def _handle_rope_stage_failure(
-            self, *, file_path: Path, stage: str, exc: BaseException
-        ) -> None: ...
         @staticmethod
         def _include_object(
-            item: m.Infra.Census.Object,
+            item: m.Infra.Object,
             *,
-            kind_names: t.StrSequence | None,
             selected_families: frozenset[str],
-            selected_kinds: frozenset[str] | None = None,
+            selected_kinds: frozenset[str] | None,
         ) -> bool: ...
         @staticmethod
         def _duplicate_groups(
-            project_objects: t.VariadicTuple[t.SequenceOf[m.Infra.Census.Object]],
-        ) -> t.VariadicTuple[m.Infra.Census.DuplicateGroup]: ...
+            project_objects: t.VariadicTuple[t.SequenceOf[m.Infra.Object]],
+        ) -> t.VariadicTuple[m.Infra.DuplicateGroup]: ...
         @staticmethod
-        def _object_key(item: m.Infra.Census.Object) -> str: ...
+        def _object_key(item: m.Infra.Object) -> str: ...
         def _project_report(
             self,
             project: str,
             *,
-            objects: t.VariadicTuple[m.Infra.Census.Object],
-            seed_violations: t.VariadicTuple[m.Infra.Census.Violation],
-            fixes: t.VariadicTuple[m.Infra.Census.Fix],
+            findings: m.Infra.ScanFindings,
             duplicate_keys: frozenset[str],
-            rule_names: t.StrSequence | None,
-            selected_rules: frozenset[str] | None = None,
-        ) -> m.Infra.Census.ProjectReport: ...
+            scan_config: m.Infra.ScanConfig,
+        ) -> m.Infra.ProjectReport: ...
 
     def _scan_module(
         self,
         rope: p.Infra.RopeWorkspaceDsl,
         module: m.Infra.RopeModuleIndexEntry,
-        config: m.Infra.Census.ScanConfig,
+        scan_config: m.Infra.ScanConfig,
         *,
-        project_objects: t.MappingKV[str, t.MutableSequenceOf[m.Infra.Census.Object]],
-        project_violations: t.MappingKV[
-            str, t.MutableSequenceOf[m.Infra.Census.Violation]
-        ],
-        project_fixes: t.MappingKV[str, t.MutableSequenceOf[m.Infra.Census.Fix]],
-        report_projects: set[str],
+        findings: m.Infra.ScanFindings,
     ) -> None:
-        """Scan one module, accumulating objects/violations/fixes per project."""
+        """Inventory one module, accumulating its selected objects per project.
+
+        A Rope failure on a module escapes with its cause: a census that skips
+        the modules it could not read reports a partial workspace as whole.
+        """
         convention = rope.convention(module.file_path)
         project = self._project_name_for_module(module, convention)
         if not project:
             return
-        module_objects: t.VariadicTuple[m.Infra.Census.Object] | None = None
-        objects: t.VariadicTuple[m.Infra.Census.Object] = ()
-        inventory_failed = False
-        if config.collect_object_inventory:
-            try:
-                module_objects = tuple(
-                    rope.objects(
-                        module.file_path,
-                        include_local_scopes=config.include_local_scopes,
-                        include_references=config.include_object_references,
-                    )
-                )
-            except _ROPE_SAFE_EXCEPTIONS as exc:
-                self._handle_rope_stage_failure(
-                    file_path=module.file_path, stage="inventory", exc=exc
-                )
-                inventory_failed = True
-            else:
-                objects = tuple(
-                    item
-                    for item in module_objects
-                    if self._include_object(
-                        item,
-                        kind_names=config.kind_names,
-                        selected_families=config.selected_families,
-                        selected_kinds=config.selected_kinds,
-                    )
-                )
-                if objects:
-                    project_objects[project].extend(objects)
-        if objects:
-            report_projects.add(project)
-        if inventory_failed:
-            return
-        try:
-            violations, fixes = self._module_rules(
-                rope,
+        findings.report_projects.add(project)
+        objects = tuple(
+            item
+            for item in rope.objects(
                 module.file_path,
-                objects=module_objects,
-                project_name=project,
-                applied=config.applied,
-                kind_names=config.kind_names,
-                rule_names=config.rule_names,
-                selected_kinds=config.selected_kinds,
-                selected_rules=config.selected_rules,
-                convention=convention,
+                include_local_scopes=scan_config.include_local_scopes,
+                include_references=scan_config.include_object_references,
             )
-        except _ROPE_SAFE_EXCEPTIONS as exc:
-            self._handle_rope_stage_failure(
-                file_path=module.file_path, stage="rules", exc=exc
+            if self._include_object(
+                item,
+                selected_families=scan_config.selected_families,
+                selected_kinds=scan_config.selected_kinds,
             )
-        else:
-            report_projects.add(project)
-            if not objects and not violations and not fixes:
-                return
-            project_violations[project].extend(violations)
-            project_fixes[project].extend(fixes)
+        )
+        if objects:
+            findings.project_objects.setdefault(project, []).extend(objects)
 
     def _assemble_report(
         self,
         rope: p.Infra.RopeWorkspaceDsl,
         *,
-        project_objects: t.MappingKV[str, t.SequenceOf[m.Infra.Census.Object]],
-        project_violations: t.MappingKV[str, t.SequenceOf[m.Infra.Census.Violation]],
-        project_fixes: t.MappingKV[str, t.SequenceOf[m.Infra.Census.Fix]],
-        report_projects: set[str],
-        rule_names: t.StrSequence | None,
-        selected_rules: frozenset[str] | None,
-    ) -> m.Infra.Census.WorkspaceReport:
-        """Aggregate per-project scans into the final workspace census report."""
-        duplicates = self._duplicate_groups(tuple(project_objects.values()))
+        findings: m.Infra.ScanFindings,
+        scan_config: m.Infra.ScanConfig,
+    ) -> m.Infra.WorkspaceReport:
+        """Aggregate per-project inventories into the workspace census report.
+
+        In dry-run the removal candidates are previewed through the gates and
+        only the ones that pass stay candidates.
+        """
+        duplicates = self._duplicate_groups(tuple(findings.project_objects.values()))
         duplicate_keys = frozenset(
             self._object_key(item)
             for group in duplicates
             for item in group.definitions[1:]
         )
-        report_project_names = tuple(
-            sorted(
-                report_projects
-                | set(project_objects)
-                | set(project_violations)
-                | set(project_fixes)
-            )
-        )
         project_reports = tuple(
             self._project_report(
                 project,
-                objects=tuple(project_objects[project]),
-                seed_violations=tuple(project_violations[project]),
-                fixes=tuple(project_fixes[project]),
+                findings=findings,
                 duplicate_keys=duplicate_keys,
-                rule_names=rule_names,
-                selected_rules=selected_rules,
+                scan_config=scan_config,
             )
-            for project in report_project_names
+            for project in sorted(
+                findings.report_projects | set(findings.project_objects)
+            )
         )
         if self.effective_dry_run:
             project_reports = self._validated_project_reports(rope, project_reports)
-        return m.Infra.Census.WorkspaceReport(
+        return m.Infra.WorkspaceReport(
             projects=project_reports,
             total_objects=sum(report.objects_total for report in project_reports),
             total_violations=sum(report.violations_total for report in project_reports),
-            total_fixable=sum(
-                1
-                for report in project_reports
-                for violation in report.violations
-                if violation.fixable
-            ),
-            fixes_total=sum(len(report.fixes) for report in project_reports),
             duplicates=duplicates,
             unused_count=sum(report.unused_count for report in project_reports),
             removal_candidate_count=sum(

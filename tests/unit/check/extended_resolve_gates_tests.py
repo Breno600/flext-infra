@@ -9,9 +9,10 @@ from __future__ import annotations
 from flext_tests import tm
 
 from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
+from tests import c
 
 
-class TestWorkspaceCheckerResolveGates:
+class TestsFlextInfraWorkspaceCheckerResolveGates:
     """Test FlextInfraWorkspaceChecker.resolve_gates."""
 
     def test_resolve_gates_type_is_rejected(self) -> None:
@@ -35,22 +36,8 @@ class TestWorkspaceCheckerResolveGates:
         result = FlextInfraWorkspaceChecker.resolve_gates(["invalid"])
         tm.fail(result, has="unknown gate")
 
-    def test_resolve_gates_all_valid_types(self) -> None:
-        gates = [
-            "lint",
-            "format",
-            "pyrefly",
-            "mypy",
-            "pyright",
-            "silent-failure",
-            "security",
-            "markdown",
-        ]
+    def test_resolve_gates_accepts_every_declared_gate(self) -> None:
+        gates = sorted(c.Infra.ALLOWED_GATES)
         result = FlextInfraWorkspaceChecker.resolve_gates(gates)
         tm.ok(result)
-        tm.that(len(result.value) > 0, eq=True)
-
-    def test_resolve_gates_accepts_silent_failure(self) -> None:
-        result = FlextInfraWorkspaceChecker.resolve_gates(["silent-failure"])
-        tm.ok(result)
-        tm.that(result.value, eq=["silent-failure"])
+        tm.that(sorted(result.value), eq=gates)

@@ -2,25 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import TYPE_CHECKING
-
-from flext_cli import r, u
-
-from flext_infra import m
-from flext_infra.constants import c
-from flext_infra.typings import t
-
-from .._utilities.dependencies import FlextInfraUtilitiesDependencies
-from .._utilities.repository import FlextInfraUtilitiesRepository
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator
-
-    from flext_infra.protocols import p
+from ._pyproject.base import FlextInfraUtilitiesPyprojectConformBase
 
 
-class FlextInfraUtilitiesPyprojectConform:
+class FlextInfraUtilitiesPyprojectConform(FlextInfraUtilitiesPyprojectConformBase):
     """Render root workspace and autonomous library metadata deterministically."""
 
     # This pure renderer replaces the mutating dependency path-sync command;

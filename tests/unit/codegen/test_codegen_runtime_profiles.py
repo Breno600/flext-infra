@@ -11,10 +11,9 @@ from flext_infra import c, config, m
 from flext_infra.codegen import FlextInfraCodegenConform
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 from tests import u
-from tests.unit.workspace import WorktreeFixture
 
 
-class TestCodegenRuntimeProfiles:
+class TestsFlextInfraCodegenRuntimeProfiles:
     @pytest.mark.parametrize(
         "upstream",
         tuple(
@@ -25,20 +24,24 @@ class TestCodegenRuntimeProfiles:
     )
     @pytest.mark.parametrize("composed", [False, True])
     def test_declared_profile_restores_runtime_and_preserves_custom_specs(
-        self, tmp_path: Path, upstream: str, *, composed: bool
+        self,
+        tmp_path: Path,
+        upstream: str,
+        *,
+        composed: bool,
     ) -> None:
         """Real standalone and parent plans consume the same member-owned profile."""
         root = tmp_path / "workspace"
         member = root / "sample-member" if composed else tmp_path / "sample-member"
         if composed:
-            WorktreeFixture.initialize_governed_project(
+            u.Tests.WorktreeFixture.initialize_governed_project(
                 root,
                 "sample-workspace",
                 workspace="sample-workspace",
                 database="sample_workspace",
                 issue_prefix="sample",
             )
-        pyproject = WorktreeFixture.initialize_governed_project(
+        pyproject = u.Tests.WorktreeFixture.initialize_governed_project(
             member,
             "sample-member",
             workspace="sample-workspace",
@@ -47,7 +50,7 @@ class TestCodegenRuntimeProfiles:
         )
         observed = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(member))
         project = u.Tests.project_spec(observed.repository.name).model_copy(
-            update={"upstream": upstream}
+            update={"upstream": upstream},
         )
         manifest = m.Infra.WorkspaceManifestSpec(
             version=c.Infra.WORKSPACE_MANIFEST_VERSION,
@@ -57,7 +60,8 @@ class TestCodegenRuntimeProfiles:
             # A member cannot introduce another parent target through its manifest.
             members=(
                 u.Tests.repository_ref(
-                    "unselected-project", path=Path("unselected-project")
+                    "unselected-project",
+                    path=Path("unselected-project"),
                 ),
             ),
         )
@@ -81,16 +85,23 @@ class TestCodegenRuntimeProfiles:
             u.Cli.json_dumps([
                 f"{owned_name.upper().replace('-', '_')}[old]==0",
                 *custom,
-            ])
+            ]),
         )
+        # The governed fixture already declares `dependencies`; replace that
+        # declaration instead of adding a second (invalid) key.
         pyproject.write_text(
-            pyproject.read_text(encoding="utf-8").replace(
-                "[project]\n", f"[project]\ndependencies = {declared}\n"
+            "".join(
+                f"dependencies = {declared}\n"
+                if line.startswith("dependencies = ")
+                else line
+                for line in pyproject.read_text(encoding="utf-8").splitlines(
+                    keepends=True,
+                )
             ),
             encoding="utf-8",
         )
         if composed:
-            WorktreeFixture.attach_submodule(
+            u.Tests.WorktreeFixture.attach_submodule(
                 root,
                 member,
                 distribution="sample-member",
@@ -117,27 +128,46 @@ class TestCodegenRuntimeProfiles:
             mode=c.Infra.CodegenConformMode.CHECK,
         )
         service = FlextInfraCodegenConform(
-            repository_root=request_root, request=request
+            repository_root=request_root,
+            request=request,
         )
         first = tm.ok(service.plan(request))
         rendered = u.Tests.codegen_file_text(
-            next(item for item in first.files if item.path == pyproject)
+            next(item for item in first.files if item.path == pyproject),
         )
+        rendered_dependencies = set(
+            u.Tests.toml_strings_at(rendered, "project", "dependencies"),
+        )
+        owned = rendered_dependencies - set(custom)
+        tm.that(rendered_dependencies, has=list(custom))
+        # The profile owns which runtime requirements are restored; the
+        # dependency conform owner (6086621bd) owns their canonical form, so the
+        # restored set must be names of the profile and a conform fixed point.
+        tm.that(
+            {u.Infra.dep_name(item) for item in owned},
+            eq={u.Infra.dep_name(item) for item in profile.runtime},
+        )
+        toolchain = config.Infra.codegen.toolchain
         expected = tm.ok(
-            u.Infra.pyproject_dependencies_conform(
+            u.Infra.pyproject_conform(
                 '[project]\nname = "sample-member"\ndependencies = '
-                + tm.ok(u.Cli.json_dumps([*profile.runtime]))
+                + u.Cli.toml_array(sorted(owned)).as_string()
                 + "\n",
-                providers=config.Infra.codegen.providers,
                 workspace=tm.ok(
-                    FlextInfraWorkspaceDetector.load_workspace_spec(member)
+                    FlextInfraWorkspaceDetector.load_workspace_spec(member),
                 ),
-                workspace_mode=c.Infra.MakeProfile.STANDALONE,
-            )
+                required_dev_dependencies=(),
+                uv_resolution=m.Infra.UvResolutionSpec(
+                    link_mode=toolchain.uv_link_mode,
+                    constraint_dependencies=tuple(toolchain.uv_constraint_dependencies),
+                    exclude_dependencies=(),
+                    environments=tuple(toolchain.uv_environments),
+                ),
+            ),
         )
         tm.that(
-            set(u.Tests.toml_strings_at(rendered, "project", "dependencies")),
-            eq={*u.Tests.toml_strings_at(expected, "project", "dependencies"), *custom},
+            set(u.Tests.toml_strings_at(expected, "project", "dependencies")),
+            eq=owned,
         )
         tm.that(first.workspace.repository, eq=before.repository)
         tm.that(first.workspace.subprojects, eq=before.subprojects)
@@ -147,7 +177,7 @@ class TestCodegenRuntimeProfiles:
         second = tm.ok(service.plan(request))
         tm.that(
             u.Tests.codegen_file_text(
-                next(item for item in second.files if item.path == pyproject)
+                next(item for item in second.files if item.path == pyproject),
             ),
             eq=rendered,
         )
@@ -159,10 +189,11 @@ class TestCodegenRuntimeProfiles:
         rendered = '[project]\nname = "sample"\ndependencies = ["owned>=2"]\n'
         live = '[project]\nname = "sample"\ndependencies = ["external[extra]>=1"]\n'
         result = tm.ok(
-            u.Infra.overlay_preserved(rendered, live, preserve_project_keys=())
+            u.Infra.overlay_preserved(rendered, live, preserve_project_keys=()),
         )
         tm.that(
-            u.Tests.toml_strings_at(result, "project", "dependencies"), eq=("owned>=2",)
+            u.Tests.toml_strings_at(result, "project", "dependencies"),
+            eq=("owned>=2",),
         )
 
     @pytest.mark.parametrize("invalid", ['["external>=1", 42]', '"external>=1"'])

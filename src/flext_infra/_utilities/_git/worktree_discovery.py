@@ -10,9 +10,7 @@ from urllib.parse import urlparse
 from git import GitCommandError, GitConfigParser
 
 from flext_core import r
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra import c, m, t
 
 from ..base import FlextInfraUtilitiesBase
 from .worktree_roots import FlextInfraUtilitiesGitWorktreeRootsMixin
@@ -22,7 +20,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
-    FlextInfraUtilitiesGitWorktreeRootsMixin
+    FlextInfraUtilitiesGitWorktreeRootsMixin,
 ):
     """Own worktree discovery operations."""
 
@@ -57,7 +55,8 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
 
     @classmethod
     def git_declared_submodule_paths(
-        cls, repository_root: Path
+        cls,
+        repository_root: Path,
     ) -> p.Result[t.SequenceOf[Path]]:
         """Read every valid path declared by the repository's ``.gitmodules``.
 
@@ -70,7 +69,7 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
             return r[t.SequenceOf[Path]].ok(())
         if not gitmodules.is_file():
             return r[t.SequenceOf[Path]].fail(
-                f"Git submodule manifest is not a regular file: {gitmodules}"
+                f"Git submodule manifest is not a regular file: {gitmodules}",
             )
         try:
             with GitConfigParser(file_or_files=gitmodules, read_only=True) as config:
@@ -82,25 +81,27 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
                 )
         except (ConfigParserError, OSError, TypeError, ValueError) as exc:
             return r[t.SequenceOf[Path]].fail(
-                f"failed to read Git submodule declarations: {exc}", exception=exc
+                f"failed to read Git submodule declarations: {exc}",
+                exception=exc,
             )
         paths: t.MutableSequenceOf[Path] = []
         for raw_path in raw_paths:
             relative = Path(raw_path)
             if relative.is_absolute() or relative == Path() or ".." in relative.parts:
                 return r[t.SequenceOf[Path]].fail(
-                    f"invalid Git submodule path: {raw_path}"
+                    f"invalid Git submodule path: {raw_path}",
                 )
             if relative in paths:
                 return r[t.SequenceOf[Path]].fail(
-                    f"duplicate Git submodule path: {raw_path}"
+                    f"duplicate Git submodule path: {raw_path}",
                 )
             paths.append(relative)
         return r[t.SequenceOf[Path]].ok(tuple(paths))
 
     @classmethod
     def gitmodule_contract(
-        cls, request: m.Infra.GitSubmoduleContractRequest
+        cls,
+        request: m.Infra.GitSubmoduleContractRequest,
     ) -> p.Result[m.Infra.GitSubmoduleContractReport]:
         """Read the exact declared URL and branch for one submodule path.
 
@@ -112,23 +113,25 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
             url, branch = cls._read_gitmodule_contract(gitmodules, request.member_path)
         except (ConfigParserError, OSError, TypeError, ValueError) as exc:
             return r[m.Infra.GitSubmoduleContractReport].fail(
-                f"failed to read Git submodule paths: {exc}", exception=exc
+                f"failed to read Git submodule paths: {exc}",
+                exception=exc,
             )
         if not url:
             return r[m.Infra.GitSubmoduleContractReport].fail(
-                f"Git submodule URL is missing: {request.member_path}"
+                f"Git submodule URL is missing: {request.member_path}",
             )
         if not branch:
             return r[m.Infra.GitSubmoduleContractReport].fail(
-                f"Git submodule branch is missing: {request.member_path}"
+                f"Git submodule branch is missing: {request.member_path}",
             )
         return r[m.Infra.GitSubmoduleContractReport].ok(
-            m.Infra.GitSubmoduleContractReport(url=url, branch=branch)
+            m.Infra.GitSubmoduleContractReport(url=url, branch=branch),
         )
 
     @staticmethod
     def _read_gitmodule_contract(
-        gitmodules: Path, member_path: str
+        gitmodules: Path,
+        member_path: str,
     ) -> t.Pair[str, str]:
         """Read URL and branch for one submodule from .gitmodules."""
         with GitConfigParser(file_or_files=gitmodules, read_only=True) as config:
@@ -165,24 +168,25 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
             return r[t.SequenceOf[Path]].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[t.SequenceOf[Path]].fail(
-                f"failed to discover Git submodules: {exc}", exception=exc
+                f"failed to discover Git submodules: {exc}",
+                exception=exc,
             )
         paths: t.MutableSequenceOf[Path] = []
         for raw_line in status.splitlines():
             normalized = raw_line.strip()
             if not normalized:
                 continue
-            try:
-                _status_and_sha, relative_path_text, *_description = normalized.split(
-                    maxsplit=2
-                )
-            except ValueError:
-                continue
+            _status_and_sha, separator, remainder = normalized.partition(" ")
+            path_fields = remainder.split(maxsplit=1)
+            if not separator or not path_fields:
+                msg = f"malformed git submodule status line: {raw_line!r}"
+                raise ValueError(msg)
+            relative_path_text = path_fields[0]
             relative_path = Path(relative_path_text)
             if (repository_root / relative_path / ".git").exists():
                 paths.append(relative_path)
         return r[t.SequenceOf[Path]].ok(
-            tuple(sorted(paths, key=FlextInfraUtilitiesBase.path_depth_then_text))
+            tuple(sorted(paths, key=FlextInfraUtilitiesBase.path_depth_then_text)),
         )
 
 

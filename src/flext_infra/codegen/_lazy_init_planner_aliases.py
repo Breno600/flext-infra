@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -15,20 +16,13 @@ class FlextInfraCodegenLazyInitPlannerAliasesMixin:
     if TYPE_CHECKING:
         rope_workspace: p.Infra.RopeWorkspaceDsl
         lazy_init: m.Infra.LazyInitConfig
-        _parent_package_cache: dict[str, t.StrSequence]
+        _parent_package_cache: MutableMapping[str, t.StrSequence]
 
         def _source_package_name(self, pkg_dir: Path, inherited_key: str) -> str: ...
 
-        def _module_exports(
-            self,
-            py_file: Path,
-            module_path: str,
-            *,
-            export_options: m.Infra.ExportOptions | None = None,
-        ) -> t.MutableLazyAliasMap: ...
-
         def _package_entry(
-            self, pkg_dir: Path
+            self,
+            pkg_dir: Path,
         ) -> m.Infra.RopePackageIndexEntry | None: ...
 
         def _export_names_for_package(self, package_name: str) -> frozenset[str]: ...
@@ -36,7 +30,10 @@ class FlextInfraCodegenLazyInitPlannerAliasesMixin:
         def _package_name_from_target(self, target: str) -> str: ...
 
         def _parents_from_constants_module(
-            self, module_path: Path, current_pkg: str, visited: set[str] | None = None
+            self,
+            module_path: Path,
+            current_pkg: str,
+            visited: set[str] | None = None,
         ) -> t.StrSequence: ...
 
         def _resolve_inherited_alias_source(
@@ -45,7 +42,6 @@ class FlextInfraCodegenLazyInitPlannerAliasesMixin:
             alias_name: str,
             *,
             current_pkg: str,
-            use_test_runtime_aliases: bool,
         ) -> str: ...
 
     def _resolve_aliases(
@@ -56,183 +52,91 @@ class FlextInfraCodegenLazyInitPlannerAliasesMixin:
         pkg_dir: Path,
         surface: str,
     ) -> None:
-        """Inject inherited and local aliases into the lazy map."""
-        is_test_runtime_alias_surface = c.Infra.DIR_TESTS in {
-            current_pkg,
-            pkg_dir.name,
-            surface,
-        }
-        local_parent_packages = self._local_parent_packages(pkg_dir)
-        local_import_alias_targets = self._local_import_alias_targets(pkg_dir)
-        if (
-            not u.Infra.matches_project_namespace_package(current_pkg)
-            and not is_test_runtime_alias_surface
-            and not local_parent_packages
-            and not local_import_alias_targets
+        """Inherit declared aliases without inventing missing local bindings."""
+        project_root = u.Infra.project_root(pkg_dir)
+        if project_root is None:
+            return
+        layout = self.rope_workspace.layout(project_root)
+        if pkg_dir.parent != project_root and (
+            layout is None or pkg_dir != layout.package_dir
         ):
             return
-        inherited_packages = self._resolve_transitive_parent_packages((
+        local_owners = {
+            alias
+            for module_path in sorted(pkg_dir.glob("*.py"))
+            if module_path.name != c.Infra.INIT_PY and module_path.stem.isidentifier()
+            if (
+                alias := u.Infra.publication_policy(
+                    module_path,
+                    rope_project=self.rope_workspace.rope_project,
+                ).expected_alias
+            )
+            is not None
+        }
+        direct_packages = (
             *self._parent_packages(pkg_dir),
-            *local_parent_packages,
             self._source_package_name(pkg_dir, surface),
-        ))
-        runtime_alias_names: list[str] = []
-        if is_test_runtime_alias_surface:
-            runtime_alias_names = list(c.Infra.TEST_RUNTIME_ALIAS_TARGETS)
-        inherited_alias_names = tuple(
-            name
-            for package_name in inherited_packages
-            for name in self._export_names_for_package(package_name)
-            if (
-                name.isidentifier()
-                and name.islower()
-                and len(name) <= c.Infra.MAX_ALIAS_LENGTH
-            )
         )
-        inherited_alias_names = tuple(
-            dict.fromkeys((
-                *inherited_alias_names,
-                *(
-                    name
-                    for package_name in inherited_packages
-                    for name in u.Infra.installed_package_exports(package_name)
-                    if (
-                        name.isidentifier()
-                        and name.islower()
-                        and len(name) <= c.Infra.MAX_ALIAS_LENGTH
-                    )
-                ),
-            ))
+        inherited_packages = self._resolve_transitive_parent_packages(
+            direct_packages,
+            within_project=None,
         )
-        declared_parent_alias_names = tuple(
-            name
-            for package_name in inherited_packages
-            for name in self._declared_parent_aliases(package_name)
-            if (
-                name.isidentifier()
-                and name.islower()
-                and len(name) <= c.Infra.MAX_ALIAS_LENGTH
-            )
+        # Election reads only this project's own facade chain: a parent from
+        # another project is a leaf served through its published re-exports,
+        # exactly as a standalone checkout of this project sees it.
+        election_packages = self._resolve_transitive_parent_packages(
+            direct_packages,
+            within_project=project_root,
         )
-        local_declared_alias_names = tuple(
-            name
-            for name in self._declared_parent_aliases_for_directory(pkg_dir)
-            if (
-                name.isidentifier()
-                and name.islower()
-                and len(name) <= c.Infra.MAX_ALIAS_LENGTH
-            )
-        )
+        # Discovery reads only the facade parents, never the dependency closure:
+        # a dev or codegen dependency is a consumer, never a facade ancestor.
+        # An indexed parent is read from its declared sources (its generated
+        # initializer is this run's output, never its input); an external
+        # parent is read from its published initializer.
         alias_names = tuple(
-            dict.fromkeys((
-                *inherited_alias_names,
-                *declared_parent_alias_names,
-                *local_declared_alias_names,
-                *runtime_alias_names,
-            ))
+            dict.fromkeys(
+                name
+                for package_name in inherited_packages
+                for name in self._export_names_for_package(package_name)
+                if name.isidentifier() and name.islower() and not name.startswith("_")
+            ),
         )
         for alias_name in alias_names:
+            # A missing local declaration is a source finding. Inheriting a
+            # parent's value here would conceal it and change the local MRO.
+            if alias_name in local_owners:
+                continue
             existing = lazy_map.get(alias_name)
             if existing is not None and existing[0] != current_pkg:
-                # A real provider (facet module or foreign package) already owns
-                # this alias; only an exact self-referential entry — collected
-                # from a module importing the letter from the package root —
-                # still needs its true inherited source resolved below.
                 continue
             package_name = self._resolve_inherited_alias_source(
-                inherited_packages,
+                election_packages,
                 alias_name,
                 current_pkg=current_pkg,
-                use_test_runtime_aliases=is_test_runtime_alias_surface,
-            )
-            if package_name and package_name != current_pkg:
-                # flext-pulj (codex): the generated root TYPE_CHECKING contract
-                # makes the public package itself the single inherited owner.
-                lazy_map[alias_name] = (package_name, alias_name)
-        for alias_name, target in local_import_alias_targets.items():
-            if target[0] != current_pkg:
-                lazy_map.setdefault(alias_name, target)
-        letter_module = {
-            letter: filename.removesuffix(".py")
-            for filename, letter in c.Infra.NAMESPACE_LAYER_BY_FILE.items()
-            if letter in c.Infra.ALIAS_NAMES
-        }
-        for alias_name in c.Infra.ALIAS_NAMES:
-            existing = lazy_map.get(alias_name)
-            owner_module = existing[0] if existing is not None else ""
-            if owner_module and owner_module != current_pkg:
-                continue
-            local_stem = letter_module.get(alias_name)
-            if local_stem is not None and (pkg_dir / f"{local_stem}.py").is_file():
-                lazy_map[alias_name] = (f"{current_pkg}.{local_stem}", alias_name)
-                continue
-            package_name = self._resolve_inherited_alias_source(
-                inherited_packages,
-                alias_name,
-                current_pkg=current_pkg,
-                use_test_runtime_aliases=is_test_runtime_alias_surface,
             )
             if package_name and package_name != current_pkg:
                 lazy_map[alias_name] = (package_name, alias_name)
-            elif owner_module == current_pkg:
+            elif existing is not None and existing[0] == current_pkg:
                 del lazy_map[alias_name]
 
-    def _declared_parent_aliases(self, package_name: str) -> t.StrSequence:
-        package_dir = self.rope_workspace.workspace_index.package_dir_by_name.get(
-            package_name
-        )
-        if package_dir is None:
-            return ()
-        constants_path = package_dir / c.Infra.CONSTANTS_PY
-        if self.rope_workspace.resource(constants_path) is None:
-            return ()
-        state = self.rope_workspace.semantic(constants_path)
-        return tuple(state.declared_imports)
-
-    def _declared_parent_aliases_for_directory(self, pkg_dir: Path) -> t.StrSequence:
-        constants_path = pkg_dir / c.Infra.CONSTANTS_PY
-        if self.rope_workspace.resource(constants_path) is None:
-            return ()
-        return tuple(self.rope_workspace.semantic(constants_path).declared_imports)
-
-    def _local_parent_packages(self, pkg_dir: Path) -> t.StrSequence:
-        constants_path = pkg_dir / c.Infra.CONSTANTS_PY
-        if self.rope_workspace.resource(constants_path) is None:
-            return ()
-        package_entry = self._package_entry(pkg_dir)
-        current_name = package_entry.package_name if package_entry is not None else ""
-        state = self.rope_workspace.semantic(constants_path)
-        return tuple(
-            package_name
-            for target in state.declared_imports.values()
-            if (package_name := self._package_name_from_target(target))
-            and package_name != current_name
-        )
-
-    def _local_import_alias_targets(self, pkg_dir: Path) -> t.LazyAliasMap:
-        constants_path = pkg_dir / c.Infra.CONSTANTS_PY
-        if self.rope_workspace.resource(constants_path) is None:
-            return {}
-        state = self.rope_workspace.semantic(constants_path)
-        return {
-            alias: (module_path, attribute)
-            for alias, target in state.declared_imports.items()
-            if alias != target
-            if alias != "annotations" and not target.startswith("__future__")
-            if (module_path := target.rpartition(".")[0])
-            if (attribute := target.rpartition(".")[2])
-        }
-
     def _resolve_transitive_parent_packages(
-        self, package_names: t.StrSequence
+        self,
+        package_names: t.StrSequence,
+        *,
+        within_project: Path | None,
     ) -> t.StrSequence:
-        """Return package_names plus transitive parents, ordered nearest-first.
+        """Return package_names plus transitive parents, nearest-first.
 
         Breadth-first from the immediate parents outward: a directly declared
         parent (e.g. ``flext_web`` for ``flext_api``) is always resolved before
-        its own ancestors (``flext_core`` and its submodules). This guarantees
-        an inherited alias is sourced from the nearest owning facade rather than
-        falling through to a distant root package that also re-exports it.
+        its own ancestors. ``within_project=None`` expands every indexed
+        package (letter discovery); a project root expands only that project's
+        packages, so a parent from another project is a leaf whose re-export
+        chain the election follows through its published surface. Electing
+        over the unrestricted closure made the result depend on the scan scope:
+        a workspace run reached the distant declaring owner (``flext_core``)
+        and elected it over the nearest re-exporting parent that a standalone
+        run of the same project elects.
         """
         ordered: list[str] = []
         queue: list[str] = list(package_names)
@@ -242,9 +146,16 @@ class FlextInfraCodegenLazyInitPlannerAliasesMixin:
                 continue
             ordered.append(package_name)
             package_dir = self.rope_workspace.workspace_index.package_dir_by_name.get(
-                package_name
+                package_name,
             )
-            if package_dir is not None:
+            if package_dir is None:
+                continue
+            package_entry = self._package_entry(package_dir)
+            if within_project is None or (
+                package_entry is not None
+                and package_entry.project_root is not None
+                and package_entry.project_root.resolve() == within_project.resolve()
+            ):
                 queue.extend(self._parent_packages(package_dir))
         return tuple(ordered)
 

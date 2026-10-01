@@ -9,75 +9,30 @@ from typing import TYPE_CHECKING, ClassVar, override
 from flext_core import r
 from flext_infra import c, m, u
 from flext_infra.gates.base_gate import FlextInfraGate
-from flext_infra.transformers.smells.base import FlextInfraSmellFixer
-from flext_infra.transformers.smells.boolean_logic import FlextInfraBooleanLogicFixer
-
-# flext-0ftd.3.5: the empty package initializer is not a compatibility export;
-# consume the declaration at its canonical owner after the lazy-init cutover.
+from flext_infra.validate.runtime_census import FlextInfraRuntimeCensusValidator
 
 if TYPE_CHECKING:
     from flext_infra import p, t
 
 
 class FlextInfraSmellsGate(FlextInfraGate):
-    """Report qlty smells per project from one fresh workspace scan.
+    """Report qlty smells for one project from a scan of its check directories.
 
-    A single ``qlty smells --all`` scan covers the whole workspace so
-    cross-project duplication clusters stay visible; per-project results are
-    filtered by SARIF URI prefix.
+    Every repository evaluates only itself, locally exactly as in CI: qlty
+    receives the project's own paths and the SARIF URI prefix keys each
+    finding to that project.
     """
 
-    gate_id: ClassVar[str] = "smells"
+    gate_id: ClassVar[str] = c.Infra.SMELLS
     gate_name: ClassVar[str] = "Code Smells"
-    can_fix: ClassVar[bool] = True
     scanner_binary: ClassVar[str] = c.Infra.QLTY_BINARY
 
-    # flext-pulj: process results stay structural outside the Pydantic boundary.
-    _scan_cache: ClassVar[dict[str, p.Cli.CommandOutput]] = {}
-
-    @override
-    def fix(self, project_dir: Path, ctx: m.Infra.GateContext) -> m.Infra.GateExecution:
-        """Apply AST-based fixers for auto-fixable smell findings.
-
-        Runs the same scan as ``check()``, then attempts a registered fixer
-        for every issue whose code has ``auto=true`` in flext-core metadata.
-        Only rewrites files when a fixer actually changes the source.
-        """
-        if ctx.check_only or not ctx.apply_fixes:
-            return self._check_only_fix_result(project_dir)
-        started = time.monotonic()
-        scan = self._workspace_scan()
-        issues = self._scanned_issues(scan, project_dir.name)
-        auto_issues = [issue for issue in issues if self._is_auto_fixable(issue)]
-        changes: list[str] = []
-        for issue in auto_issues:
-            tag = c.Infra.SMELLS_RULE_TAGS.get(issue.code, "")
-            fixer = (
-                FlextInfraBooleanLogicFixer()
-                if tag == FlextInfraBooleanLogicFixer.tag
-                else FlextInfraSmellFixer.smell_fixer_for(tag)
-            )
-            if fixer is None:
-                continue
-            fixed, fix_changes = fixer.fix(project_dir, issue)
-            if fixed:
-                changes.extend(fix_changes)
-        self._scan_cache.pop(str(self._repository_root), None)
-        verified_scan = self._workspace_scan()
-        remaining = self._scanned_issues(verified_scan, project_dir.name)
-        return self._build_check_gate_execution(
-            project_dir,
-            passed=not remaining,
-            issues=remaining,
-            raw_output="\n".join(changes) if changes else verified_scan.stderr,
-            started=started,
-            errors=[issue.formatted for issue in remaining] if remaining else (),
-        )
-
     def _scanned_issues(
-        self, scan: p.Cli.CommandOutput, project: str
+        self,
+        scan: p.Cli.CommandOutput,
+        project_dir: Path,
     ) -> t.SequenceOf[m.Infra.Issue]:
-        """Filter one workspace scan to the blocking issues owned by ``project``.
+        """Filter one scan to the blocking issues owned by ``project``.
 
         The process outcome decides what an unusable payload means: a
         successful scan that emits no SARIF payload is a zero-findings pass,
@@ -85,7 +40,12 @@ class FlextInfraSmellsGate(FlextInfraGate):
         issue carrying its own error, never a clean pass. Non-blank output
         that fails to parse stays a loud parse failure.
         """
-        parsed = self._issues_from_sarif(scan.stdout, project)
+        prefix = (
+            ""
+            if project_dir.resolve() == self._repository_root.resolve()
+            else f"{project_dir.relative_to(self._repository_root).as_posix()}/"
+        )
+        parsed = self._issues_from_sarif(scan.stdout, prefix)
         issues: t.VariadicTuple[m.Infra.Issue]
         if parsed.success:
             issues = parsed.value
@@ -93,26 +53,22 @@ class FlextInfraSmellsGate(FlextInfraGate):
             issues = ()
         else:
             issues = (self._failure_issue(parsed.error),)
-        issues = self._drop_generated_projections(issues)
+        issues = self._drop_generated_projections(issues, project_dir)
         if not issues and not u.Cli.process_succeeded(scan.outcome):
             return (self._tool_failure_issue(scan),)
         return issues
 
-    @staticmethod
-    def _is_auto_fixable(issue: m.Infra.Issue) -> bool:
-        """Return True when flext-core marks this smell tag as auto-fixable."""
-        tag = c.Infra.SMELLS_RULE_TAGS.get(issue.code, "")
-        return tag in FlextInfraSmellFixer.auto_fixable_smell_tags()
-
     @override
     def check(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
-        """One cached full-workspace qlty scan, filtered to ``project_dir``."""
+        """One qlty scan of ``project_dir``'s check directories."""
         _ = ctx
         started = time.monotonic()
-        scan = self._workspace_scan()
-        issues = self._scanned_issues(scan, project_dir.name)
+        scan = self._scan(project_dir)
+        issues = self._owned_issues(scan, project_dir)
         return self._build_check_gate_execution(
             project_dir,
             passed=not issues,
@@ -121,35 +77,88 @@ class FlextInfraSmellsGate(FlextInfraGate):
             started=started,
         )
 
+    def _owned_issues(
+        self, scan: p.Cli.CommandOutput, project_dir: Path
+    ) -> t.VariadicTuple[m.Infra.Issue]:
+        """Every smell this gate owns: the qlty scan and the census families.
+
+        The single composition behind both entry points, so ``check`` and the
+        ``check_files`` path can never grade different finding sets.
+        """
+        return (
+            *self._scanned_issues(scan, project_dir),
+            *self._census_issues(project_dir),
+        )
+
+    def _census_issues(self, project_dir: Path) -> t.SequenceOf[m.Infra.Issue]:
+        """Runtime-census findings of the smell families this gate owns.
+
+        Every smell family, qlty or runtime census, runs through
+        ``make smells`` and never ``make check``. A census that cannot run
+        is a blocking issue, never a clean pass.
+        """
+        validator = FlextInfraRuntimeCensusValidator.for_project(
+            project_dir, census_gate=self.gate_id
+        )
+        if validator.failure:
+            messages: t.StrSequence = (
+                validator.error or "runtime census scoping failed",
+            )
+        else:
+            report = validator.value.build_report()
+            messages = (
+                report.value.violations
+                if report.success
+                else (report.error or "runtime census failed",)
+            )
+        return tuple(
+            m.Infra.Issue(
+                file=str(project_dir),
+                line=1,
+                column=1,
+                code=self.gate_id,
+                message=message,
+                severity=str(c.Infra.GateSeverity.ERROR.value),
+            )
+            for message in messages
+        )
+
     @override
     def _build_check_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        check_dirs: t.StrSequence,
     ) -> t.StrSequence:
-        """Full-workspace scan command (check() bypasses per-project dirs)."""
-        _ = project_dir, ctx, check_dirs
+        """The project's scan command (check() names its check dirs itself)."""
+        _ = ctx, check_dirs
         binary = self._resolve_binary()
         if binary is None:
             raise FileNotFoundError(c.Infra.QLTY_BINARY)
-        return [binary, *c.Infra.SMELLS_QLTY_ARGS]
+        return self._scan_command(binary, project_dir)
 
     @override
     def _parse_check_output(
-        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        result: p.Cli.CommandOutput,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
         """Parse SARIF stdout into per-project issues (check_files path)."""
         _ = ctx
-        issues = self._scanned_issues(result, project_dir.name)
+        issues = self._owned_issues(result, project_dir)
         return not issues, issues
 
-    def _workspace_scan(self) -> p.Cli.CommandOutput:
-        """Scan the workspace once per root and preserve its exact process result."""
-        key = str(self._repository_root)
-        cached = self._scan_cache.get(key)
-        if cached is not None:
-            return cached
-        output = self._uncached_workspace_scan()
-        self._scan_cache[key] = output
-        return output
+    def _scan_command(self, binary: str, project_dir: Path) -> t.StrSequence:
+        """Name the project's paths explicitly; qlty scans them in full."""
+        paths = tuple(
+            (project_dir / directory).relative_to(self._repository_root).as_posix()
+            for directory in self._existing_check_dirs(project_dir)
+        )
+        if not paths:
+            message = f"smells: no check targets for {project_dir}"
+            raise ValueError(message)
+        return (binary, *c.Infra.SMELLS_QLTY_ARGS, *paths)
 
     @staticmethod
     def _unrunnable_scan_output(stderr: str) -> p.Cli.CommandOutput:
@@ -164,7 +173,7 @@ class FlextInfraSmellsGate(FlextInfraGate):
             ),
         )
 
-    def _uncached_workspace_scan(self) -> p.Cli.CommandOutput:
+    def _scan(self, project_dir: Path) -> p.Cli.CommandOutput:
         """Run one qlty scan, or synthesize the blocking reason it cannot run.
 
         Codegen renders the qlty config from its template; this gate used to
@@ -179,7 +188,7 @@ class FlextInfraSmellsGate(FlextInfraGate):
         binary = self._resolve_binary()
         if binary is None:
             return self._unrunnable_scan_output(
-                f"{c.Infra.QLTY_BINARY} binary not found on PATH"
+                f"{c.Infra.QLTY_BINARY} binary not found on PATH",
             )
         config_path = (
             self._repository_root
@@ -188,11 +197,10 @@ class FlextInfraSmellsGate(FlextInfraGate):
         )
         if not config_path.is_file():
             return self._unrunnable_scan_output(
-                f"generated qlty configuration is absent: {config_path}; "
-                "run make gen"
+                f"generated qlty configuration is absent: {config_path}; run make gen",
             )
         return self._run(
-            [binary, *c.Infra.SMELLS_QLTY_ARGS],
+            self._scan_command(binary, project_dir),
             self._repository_root,
             timeout=c.Infra.TIMEOUT_LONG,
         )
@@ -201,7 +209,7 @@ class FlextInfraSmellsGate(FlextInfraGate):
     def _failure_issue(message: str | None) -> m.Infra.Issue:
         """Represent malformed or absent scanner output as a blocking issue."""
         return m.Infra.Issue(
-            file=c.Infra.PYPROJECT_FILENAME,
+            file=c.PYPROJECT_FILENAME,
             line=1,
             column=0,
             code=FlextInfraSmellsGate.gate_id,
@@ -210,31 +218,33 @@ class FlextInfraSmellsGate(FlextInfraGate):
         )
 
     def _drop_generated_projections(
-        self, issues: t.VariadicTuple[m.Infra.Issue]
+        self,
+        issues: t.VariadicTuple[m.Infra.Issue],
+        project_dir: Path,
     ) -> t.VariadicTuple[m.Infra.Issue]:
         """Drop findings in generated projections; their owner is the generator.
 
         A file whose first line carries the canonical AUTO-GENERATED header is a
         projection of one codegen source, so duplication between projections is
         by construction and the smell gate reports only hand-written source.
-        Unreadable files keep their findings (fail-closed).
+        ``Issue.file`` is project-relative while ``qlty`` URIs are
+        workspace-relative, so the project directory is joined to the workspace
+        root before reading the header.
         """
         visible: list[m.Infra.Issue] = []
         for issue in issues:
-            path = self._repository_root / issue.file
-            try:
-                with path.open("r", encoding=c.Cli.ENCODING_DEFAULT) as handle:
-                    first_line = handle.readline()
-            except OSError:
-                visible.append(issue)
-                continue
+            path = project_dir / issue.file
+            with path.open("r", encoding=c.Cli.ENCODING_DEFAULT) as handle:
+                first_line = handle.readline()
             if c.Infra.AUTOGEN_HEADER not in first_line:
                 visible.append(issue)
         return tuple(visible)
 
     @classmethod
     def _issues_from_sarif(
-        cls, sarif_json: str, project_name: str
+        cls,
+        sarif_json: str,
+        prefix: str,
     ) -> p.Result[t.VariadicTuple[m.Infra.Issue]]:
         """Extract one Issue per smell finding inside ``project_name``.
 
@@ -247,14 +257,13 @@ class FlextInfraSmellsGate(FlextInfraGate):
         if parsed.failure:
             return r[tuple[m.Infra.Issue, ...]].from_failure(parsed)
         data = u.Cli.json_as_mapping(parsed.value)
-        prefix = f"{project_name}/"
         return r[tuple[m.Infra.Issue, ...]].ok(
             tuple(
                 cls._issue_from_result(result, prefix)
                 for run in u.Cli.json_deep_mapping_list(data, "runs")
                 for result in u.Cli.json_deep_mapping_list(run, "results")
                 if cls._result_uri(result).startswith(prefix)
-            )
+            ),
         )
 
     @classmethod
@@ -263,10 +272,12 @@ class FlextInfraSmellsGate(FlextInfraGate):
         rule_id = u.Cli.json_pick_str(result, "ruleId")
         code = rule_id.removeprefix(c.Infra.SMELLS_RULE_PREFIX)
         physical = u.Cli.json_deep_mapping(
-            cls._first_location(result), "physicalLocation"
+            cls._first_location(result),
+            "physicalLocation",
         )
         sarif_text = u.Cli.json_pick_str(
-            u.Cli.json_deep_mapping(result, "message"), "text"
+            u.Cli.json_deep_mapping(result, "message"),
+            "text",
         )
         return m.Infra.Issue(
             file=cls._result_uri(result).removeprefix(prefix),
@@ -282,7 +293,9 @@ class FlextInfraSmellsGate(FlextInfraGate):
         """Workspace-relative URI of the finding's first location."""
         uri: str = u.Cli.json_pick_str(
             u.Cli.json_deep_mapping(
-                cls._first_location(result), "physicalLocation", "artifactLocation"
+                cls._first_location(result),
+                "physicalLocation",
+                "artifactLocation",
             ),
             "uri",
         )
@@ -296,13 +309,18 @@ class FlextInfraSmellsGate(FlextInfraGate):
 
     @staticmethod
     def _enriched_message(code: str, sarif_text: str) -> str:
-        """Append the flext-core (problem, fix) law text when the tag exists."""
+        """Append the flext-core fix law text when the tag exists.
+
+        The SARIF text already states the concrete problem (name and count);
+        the core problem text is a census template whose placeholders qlty
+        does not supply, so only the fix is appended.
+        """
         tag = c.Infra.SMELLS_RULE_TAGS.get(code, "")
         text = c.ENFORCEMENT_RULES_TEXT.get(tag) if tag else None
         if text is None:
             return sarif_text
-        problem, fix = text
-        return f"{sarif_text} — {problem}. Fix: {fix}"
+        _, fix = text
+        return f"{sarif_text}. Fix: {fix}"
 
 
 __all__: list[str] = ["FlextInfraSmellsGate"]

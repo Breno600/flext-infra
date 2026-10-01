@@ -8,10 +8,6 @@ repo_url: {{ repo_url }}
 edit_uri: edit/main/{{ scope_name }}/
 {{ mk.site_components(exclude_docs_block, exclude_plugin_block, mkdocstrings_paths_block) }}
 
-nav:
-  - Home: index.md
-  - Guides: guides/README.md
-  - API Reference: api-reference/README.md
-
-{{ mk.not_in_nav_block() }}
+# MkDocs discovers the complete documentation tree, including maintained pages.
+# A fixed three-page nav silently omitted every domain guide and decision record.
 {{ mk.validation_block() }}

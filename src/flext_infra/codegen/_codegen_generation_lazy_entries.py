@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from ._codegen_generation_type_checking import (
@@ -12,11 +13,11 @@ from ._codegen_generation_type_checking import (
 if TYPE_CHECKING:
     from flext_infra import t
 
-type _LazyEntryContext = tuple[str, frozenset[str], bool]
+type _LazyEntryContext = t.Triple[str, frozenset[str], bool]
 
 
 class FlextInfraCodegenGenerationLazyEntriesMixin(
-    FlextInfraCodegenGenerationTypeCheckingMixin
+    FlextInfraCodegenGenerationTypeCheckingMixin,
 ):
     """Lazy-entry grouping and publication helper methods."""
 
@@ -34,7 +35,7 @@ class FlextInfraCodegenGenerationLazyEntriesMixin(
                 continue
             mod, attr = lazy_filtered[exp]
             module_or_package_export = FlextInfraCodegenGenerationLazyEntriesMixin._is_module_or_package_export(
-                attr
+                attr,
             )
             if module_or_package_export and not include_module_exports:
                 continue
@@ -45,7 +46,8 @@ class FlextInfraCodegenGenerationLazyEntriesMixin(
             )
             compact_mod = (
                 FlextInfraCodegenGenerationLazyEntriesMixin._compact_lazy_module_path(
-                    current_pkg, mod
+                    current_pkg,
+                    mod,
                 )
             )
             if mod in child_aliases and not attr and not child_package_module:
@@ -58,8 +60,8 @@ class FlextInfraCodegenGenerationLazyEntriesMixin(
         lazy_entries: t.SequenceOf[t.Triple[str, str, str]],
     ) -> t.Pair[t.SequenceOf[t.StrSequencePair], t.SequenceOf[t.StrPairSequencePair]]:
         """Group lazy entries by module and alias group."""
-        module_groups: dict[str, list[str]] = defaultdict(list)
-        alias_groups: dict[str, list[t.StrPair]] = defaultdict(list)
+        module_groups: MutableMapping[str, list[str]] = defaultdict(list)
+        alias_groups: MutableMapping[str, list[t.StrPair]] = defaultdict(list)
         for export_name, mod, attr_name in lazy_entries:
             if not attr_name or attr_name == export_name:
                 module_groups[mod].append(export_name)
@@ -77,10 +79,11 @@ class FlextInfraCodegenGenerationLazyEntriesMixin(
 
     @staticmethod
     def _build_published_exports(
-        exports: t.StrSequence, lazy_filtered: t.LazyAliasMap
+        exports: t.StrSequence,
+        lazy_filtered: t.LazyAliasMap,
     ) -> t.StrSequence:
         """Build root public exports in Ruff's canonical isort-style order."""
-        # flext-wkii.17.26 (codex): the planner is the sole ABI filter; rendering
+        # The planner is the sole ABI filter; rendering
         # only orders its validated contract and must not reinterpret target paths.
         _ = lazy_filtered
         export_candidates = tuple(dict.fromkeys(exports))
@@ -88,14 +91,14 @@ class FlextInfraCodegenGenerationLazyEntriesMixin(
             sorted(
                 export_candidates,
                 key=FlextInfraCodegenGenerationLazyEntriesMixin._public_export_order_key,
-            )
+            ),
         )
 
     @staticmethod
     def _public_export_order_key(export_name: str) -> t.Pair[int, str]:
         """Classify one export using Ruff's canonical ``RUF022`` order."""
         category = 0 if export_name.isupper() else 1 if export_name[:1].isupper() else 2
-        # flext-wkii.17 (Codex): dependency order belongs to facade imports;
+        # Dependency order belongs to facade imports;
         # published __all__ values follow Ruff RUF022 (case-sensitive ASCII
         # secondary sort) so the two contracts never fight.
         return (category, export_name)

@@ -1,0 +1,23 @@
+# Reusable guard: an UPPER_CASE assignment declared directly in the body of a
+# `Tests(FlextTestsConstants.Tests)` namespace holder. That base carries
+# FlextSettings in its MRO (ENFORCE-042 namespace-holder contract), so every
+# member of the class is a pydantic field unless it is a ClassVar.
+id: pydantic-namespace-constant
+language: Python
+rule:
+  kind: assignment
+  has:
+    field: left
+    kind: identifier
+    regex: "^[A-Z][A-Z0-9_]*$"
+  inside:
+    kind: expression_statement
+    inside:
+      kind: block
+      inside:
+        kind: class_definition
+        has:
+          field: superclasses
+          has:
+            kind: attribute
+            regex: "^FlextTestsConstants\\.Tests$"

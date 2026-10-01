@@ -7,8 +7,7 @@ import token
 import tokenize
 from typing import TYPE_CHECKING
 
-from flext_infra.constants import c
-from flext_infra.models import m
+from flext_infra import c, m
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -64,7 +63,8 @@ class FlextInfraUtilitiesTransformerHeaderParser:
             ):
                 continue
             span.last_import_end = max(
-                span.last_import_end, cls._find_import_line_end(source, tokens, index)
+                span.last_import_end,
+                cls._find_import_line_end(source, tokens, index),
             )
             imported_aliases = cls._extract_imported_aliases(tokens, index)
             if module_token.string == "__future__":
@@ -114,7 +114,10 @@ class FlextInfraUtilitiesTransformerHeaderParser:
 
     @classmethod
     def _find_import_line_end(
-        cls, source: str, tokens: t.SequenceOf[tokenize.TokenInfo], from_index: int
+        cls,
+        source: str,
+        tokens: t.SequenceOf[tokenize.TokenInfo],
+        from_index: int,
     ) -> int:
         """Return the offset after the selected import statement."""
         for current in tokens[from_index:]:
@@ -145,7 +148,8 @@ class FlextInfraUtilitiesTransformerHeaderParser:
 
     @staticmethod
     def _extract_imported_aliases(
-        tokens: t.SequenceOf[tokenize.TokenInfo], from_index: int
+        tokens: t.SequenceOf[tokenize.TokenInfo],
+        from_index: int,
     ) -> frozenset[str]:
         """Return local names bound by a from-import statement."""
         aliases: set[str] = set()

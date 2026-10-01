@@ -15,7 +15,7 @@ from .docs_api import FlextInfraUtilitiesDocsApi
 from .docs_scope import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
-    from flext_infra.typings import t
+    from flext_infra import t
 
 
 class FlextInfraUtilitiesDocsAudit(
@@ -70,21 +70,14 @@ class FlextInfraUtilitiesDocsAudit(
         return targets
 
     @staticmethod
-    def docs_policy_list(
-        scope: m.Infra.DocScope, section: str, key: str
-    ) -> t.StrSequence:
-        """Read one list of policy tokens from the minimal root docs settings."""
-        repository_root = (
-            scope.path if scope.name == c.Infra.RK_ROOT else scope.path.parent
-        )
-        payload = FlextInfraUtilitiesDocsScope.load_config(repository_root)
-        container = payload.get(section)
-        if not isinstance(container, dict):
-            return []
-        values = container.get(key)
-        return (
-            [str(item).strip() for item in values] if isinstance(values, list) else []
-        )
+    def docs_audit_policy(scope: m.Infra.DocScope) -> m.Infra.DocsAuditPolicySpec:
+        """Parse the scope's authenticated audit declaration once into its contract."""
+        # Why: the scope's own declared `repository_root` (not a `.parent`
+        # heuristic) owns docs policy resolution — a workspace-root project
+        # scope IS its own repository root, and only a genuine member-project
+        # scope carries a `repository_root_override` set at scope build time.
+        payload = FlextInfraUtilitiesDocsScope.load_config(scope.repository_root)
+        return m.Infra.DocsAuditPolicySpec.model_validate(payload.get("audit", {}))
 
     @staticmethod
     def docs_generated_api_reference_path(relative_docs_path: str) -> bool:
@@ -178,14 +171,9 @@ class FlextInfraUtilitiesDocsAudit(
         scope: m.Infra.DocScope,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
         """Collect stale-symbol issues outside the explicit migration docs."""
-        tokens = FlextInfraUtilitiesDocsAudit.docs_policy_list(
-            scope, section="audit", key="stale_symbols"
-        )
-        exempt_paths = set(
-            FlextInfraUtilitiesDocsAudit.docs_policy_list(
-                scope, section="audit", key="stale_symbol_exempt_paths"
-            )
-        )
+        policy = FlextInfraUtilitiesDocsAudit.docs_audit_policy(scope)
+        tokens = policy.stale_symbols
+        exempt_paths = set(policy.stale_symbol_exempt_paths)
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         if not tokens:
             return issues

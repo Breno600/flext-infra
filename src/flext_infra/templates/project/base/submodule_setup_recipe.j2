@@ -1,9 +1,9 @@
-{% macro submodule_setup_recipe(target, project_root) -%}
+{% macro submodule_setup_recipe(target, project_root, timeout_command, timeout_kill_after_seconds, submodule_timeout_seconds) -%}
 .PHONY: {{ target }}
 
 # === SECTION: submodule setup (managed) ===
 # Source: template (submodule_setup_recipe.j2)
-# Computed: workspace uses DECLARED_REPOSITORIES from config; standalone discovers
+# Computed: workspace uses MANAGED_GITLINKS from config; standalone discovers
 #           submodules with flext-managed=true from .gitmodules at runtime.
 # Rule: setup PROVISIONS an absent governed gitlink and VERIFIES a present one.
 #       An absent checkout holds no work, so setup initializes it at the recorded
@@ -16,8 +16,12 @@
 #       Nested gitlinks belong to their own setup.
 # Free: no
 # End SECTION: submodule setup
+# Why: runners expose umask 002 and `submodule update --init`
+# materializes tracked files as 0664; canonical Mise artifact gates demand
+# exact modes, so provisioning normalizes the umask before checkout.
 {{ target }}:
 	@set -eu; \
+	umask 022; \
 	root="{{ project_root }}"; \
 	if [ ! -f "$$root/.gitmodules" ]; then exit 0; fi; \
 	profile="$(MAKE_PROFILE)"; \
@@ -48,6 +52,17 @@
 	fi; \
 	managed=$$(printf '%s' "$$managed" | tr ' ' '\n' | sort -u | tr '\n' ' '); \
 	if [ -z "$$managed" ]; then exit 0; fi; \
+	absent=""; \
+	for path in $$managed; do \
+		[ -e "$$root/$$path/.git" ] || absent="$$absent $$path"; \
+	done; \
+	if [ -n "$$absent" ]; then \
+		credential_helper='!f() { if [ "$$1" = get ]; then printf "username=x-access-token\npassword=%s\n" "$$GITHUB_TOKEN"; fi; }; f'; \
+		GIT_TERMINAL_PROMPT=0 {{ timeout_command }} --signal=TERM --kill-after={{ timeout_kill_after_seconds }}s "{{ submodule_timeout_seconds }}s" \
+			git -C "$$root" -c credential.helper= \
+			-c "credential.https://$${GH_HOST:-github.com}.helper=$$credential_helper" \
+			submodule update --init --jobs "$${FLEXT_SUBMODULE_JOBS:-8}" -- $$absent; \
+	fi; \
 	validate_submodule() { \
 		superproject="$$1"; \
 		child_path="$$2"; \
@@ -107,7 +122,8 @@
 		fi; \
 		gitlink="$$2"; \
 		if [ ! -e "$$child_root/.git" ]; then \
-			git -C "$$superproject" submodule update --init -- "$$child_path"; \
+			printf 'ERROR: governed gitlink is not materialized: %s\n' "$$child_path" >&2; \
+			exit 2; \
 		fi; \
 		current=$$(git -C "$$child_root" branch --show-current); \
 		head=$$(git -C "$$child_root" rev-parse HEAD); \
@@ -118,9 +134,9 @@
 		fi; \
 		if [ "$$ancestor" = N ]; then \
 			if [ -z "$$current" ]; then \
-				printf 'ERROR: %s: detached HEAD %s does not contain recorded gitlink %s\n' "$$child_path" "$$head" "$$gitlink" >&2; \
+				printf 'ERROR: %s: detached HEAD %s does not contain recorded gitlink %s; merge the superproject gitlink into this head\n' "$$child_path" "$$head" "$$gitlink" >&2; \
 			else \
-				printf 'ERROR: %s: branch %s does not contain recorded gitlink %s\n' "$$child_path" "$$branch" "$$gitlink" >&2; \
+				printf 'ERROR: %s: checked-out branch %s at %s does not contain recorded gitlink %s; merge the superproject gitlink into this branch\n' "$$child_path" "$$current" "$$head" "$$gitlink" >&2; \
 			fi; \
 			exit 1; \
 		fi; \

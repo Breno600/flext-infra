@@ -16,7 +16,7 @@ class TestsFlextInfraLazyInitProcessing:
     def _read(package_dir: Path) -> str:
         """Read one generated package initializer."""
         return package_dir.joinpath(c.Infra.INIT_PY).read_text(
-            encoding=c.Cli.ENCODING_DEFAULT
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
 
     def test_apply_generates_inline_lazy_public_root(self, tmp_path: Path) -> None:
@@ -43,7 +43,9 @@ class TestsFlextInfraLazyInitProcessing:
         """Report initializer drift while preserving every source byte."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         u.Tests.write_lazy_init_namespace_module(
-            package_root / "models.py", class_name="FlextTestsModels", alias="m"
+            package_root / "models.py",
+            class_name="FlextTestsModels",
+            alias="m",
         )
         init_path = package_root / c.Infra.INIT_PY
         original = init_path.read_bytes()
@@ -56,7 +58,8 @@ class TestsFlextInfraLazyInitProcessing:
         tm.that(str(init_path) in service.modified_files, eq=True)
 
     def test_every_nested_level_is_lazy_formatted_and_idempotent(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Generate lazy facades at every importable package level."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
@@ -66,7 +69,8 @@ class TestsFlextInfraLazyInitProcessing:
         for package_dir in (level_two, level_three, level_four):
             package_dir.mkdir()
             package_dir.joinpath(c.Infra.INIT_PY).write_text(
-                "", encoding=c.Cli.ENCODING_DEFAULT
+                "",
+                encoding=c.Cli.ENCODING_DEFAULT,
             )
         u.Tests.write_lazy_init_namespace_module(
             level_four / "worker.py",
@@ -118,8 +122,11 @@ class TestsFlextInfraLazyInitProcessing:
         tm.that(check_service.modified_files, empty=True)
         tm.that(after, eq=before)
 
-    def test_manual_private_initializer_is_preserved(self, tmp_path: Path) -> None:
-        """Keep an authored static private facade byte-identical."""
+    def test_manual_private_initializer_exports_survive_adoption(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Adopt the private facade while retaining its declared public export."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         private_dir = package_root / "_facade"
         private_dir.mkdir()
@@ -134,28 +141,30 @@ class TestsFlextInfraLazyInitProcessing:
             '__all__ = ["FlextTestsRuntime"]\n',
             encoding=c.Cli.ENCODING_DEFAULT,
         )
-        before = init_path.read_bytes()
-
         result = u.Tests.run_lazy_init(repository_root)
 
         tm.that(result, eq=0)
-        tm.that(init_path.read_bytes(), eq=before)
+        generated = init_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+        tm.that(generated, has='__all__: tuple[str, ...] = ("FlextTestsRuntime",)')
+        tm.that(generated, has="from .runtime import FlextTestsRuntime")
+        tm.that(u.Tests.run_lazy_init(repository_root), eq=0)
+        tm.that(init_path.read_text(encoding=c.Cli.ENCODING_DEFAULT), eq=generated)
 
     def test_apply_removes_obsolete_generated_sidecars(self, tmp_path: Path) -> None:
         """Remove retired generated manifests while writing the initializer."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         u.Tests.write_lazy_init_namespace_module(
-            package_root / "models.py", class_name="FlextTestsModels", alias="m"
+            package_root / "models.py",
+            class_name="FlextTestsModels",
+            alias="m",
         )
         unit_path = package_root / "__unit__.py"
         unit_path.write_text(
-            f"{c.Infra.AUTOGEN_HEADER}\n", encoding=c.Cli.ENCODING_DEFAULT
+            f"{c.Infra.AUTOGEN_HEADER}\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
 
         result = u.Tests.run_lazy_init(repository_root)
 
         tm.that(result, eq=0)
         tm.that(unit_path.exists(), eq=False)
-
-
-__all__: list[str] = ["TestsFlextInfraLazyInitProcessing"]

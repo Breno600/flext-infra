@@ -15,12 +15,11 @@ from typing import TYPE_CHECKING, override
 
 from flext_core import r
 from flext_infra import c, u
-from flext_infra.base import s
+
+from ..base import s
 
 if TYPE_CHECKING:
     from flext_infra import p, t
-
-logger = u.fetch_logger(__name__)
 
 
 class FlextInfraCleanService(s[int]):

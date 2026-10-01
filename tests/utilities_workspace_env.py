@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import tempfile
 from pathlib import Path
 
 from flext_tests import tm
@@ -23,43 +24,27 @@ class TestsFlextInfraUtilitiesWorkspaceEnvMixin:
             os.environ.pop(name, None)
 
     @staticmethod
-    def prepend_env_path(name: str, entry: str) -> str | None:
-        """Prepend one entry to a path-like env variable, returning its original."""
-        original = os.environ.get(name)
-        os.environ[name] = f"{entry}:{original}" if original else entry
-        return original
-
-    @staticmethod
-    def vscode_declared_search_paths() -> t.JsonList:
-        """Return the config-declared VS Code search paths as rendered JSON."""
-        return list(
-            config.Infra.codegen.vscode.list_settings[
-                c.Infra.VSCODE_PYTHON_ENVS_SEARCH_PATHS_KEY
-            ]
-        )
-
-    @staticmethod
     def repository_profile(root: Path) -> c.Infra.MakeProfile:
         """Return the Make profile derived from the repository itself."""
         from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
         mode = tm.ok(FlextInfraWorkspaceDetector().detect(root))
-        by_mode: dict[c.Infra.MakeProfile, c.Infra.MakeProfile] = {
+        by_mode: t.MutableMappingKV[c.Infra.MakeProfile, c.Infra.MakeProfile] = {
             c.Infra.MakeProfile.WORKSPACE: c.Infra.MakeProfile.WORKSPACE,
             c.Infra.MakeProfile.STANDALONE: c.Infra.MakeProfile.STANDALONE,
         }
         return by_mode[mode]
 
     @staticmethod
-    def ignore_patterns_for(root: Path) -> tuple[str, ...]:
-        """Return the ignore patterns that apply to *root*'s declared profile.
+    def ignore_patterns_for_profile(profile: c.Infra.MakeProfile) -> t.StrTuple:
+        """Return every SSOT ignore pattern whose section targets *profile*.
 
-        Returns:
-            Every SSOT pattern whose section targets that profile.
-
+        Taking the profile rather than a root lets a test state both sides of a
+        profile-split rule from the SSOT alone. Deriving it from a path makes
+        the same assertion depend on where the checkout happens to sit, which
+        differs between the workspace and a standalone CI clone.
         """
-        profile = TestsFlextInfraUtilitiesWorkspaceEnvMixin.repository_profile(root)
-        gitignore_sections: tuple[m.Infra.ScaffoldGitignoreSectionSpec, ...] = (
+        gitignore_sections: t.VariadicTuple[m.Infra.ScaffoldGitignoreSectionSpec] = (
             config.Infra.codegen.gitignore_sections
         )
         return tuple(
@@ -67,6 +52,18 @@ class TestsFlextInfraUtilitiesWorkspaceEnvMixin:
             for section in gitignore_sections
             if not section.profiles or profile in section.profiles
             for pattern in section.patterns
+        )
+
+    @staticmethod
+    def ignore_patterns_for(root: Path) -> t.StrTuple:
+        """Return the ignore patterns that apply to *root*'s declared profile.
+
+        Returns:
+            Every SSOT pattern whose section targets that profile.
+
+        """
+        return TestsFlextInfraUtilitiesWorkspaceEnvMixin.ignore_patterns_for_profile(
+            TestsFlextInfraUtilitiesWorkspaceEnvMixin.repository_profile(root),
         )
 
     @staticmethod
@@ -81,8 +78,6 @@ class TestsFlextInfraUtilitiesWorkspaceEnvMixin:
             ``True`` when git would track the path.
 
         """
-        import tempfile
-
         with tempfile.TemporaryDirectory() as raw_root:
             probe_root = Path(raw_root)
             tm.ok(u.Cli.run_checked(["git", "init", "-q", str(probe_root)]))
@@ -94,10 +89,13 @@ class TestsFlextInfraUtilitiesWorkspaceEnvMixin:
             # failed run is the success case for a tracked artifact.
             probe: p.Cli.CommandOutput = tm.ok(
                 u.Cli.run_raw(
-                    ["git", "check-ignore", "-q", relative_path], cwd=probe_root
-                )
+                    ["git", "check-ignore", "-q", relative_path],
+                    cwd=probe_root,
+                ),
             )
-        return probe.outcome.raw_return_code != int(c.Infra.ScriptExitCode.PASS)
+        code = probe.outcome.raw_return_code
+        tm.that(code in {0, 1}, eq=True)
+        return code == 1
 
 
 __all__: list[str] = ["TestsFlextInfraUtilitiesWorkspaceEnvMixin"]

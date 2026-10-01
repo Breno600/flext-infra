@@ -30,12 +30,15 @@ class FlextInfraAccessorMigrationRewriteMixin:
     # renamed, subsequent passes find zero matching tokens.
     _AUTOMATED_RULES: ClassVar[t.VariadicTuple[m.Infra.AccessorMigrationRule]] = tuple(
         m.Infra.AccessorMigrationRule(
-            source_name=src, replacement_name=repl, reason=reason, origin="flext_core"
+            source_name=src,
+            replacement_name=repl,
+            reason=reason,
+            origin="flext_core",
         )
         for src, (repl, reason) in c.ENFORCEMENT_ACCESSOR_RENAMES.items()
     )
     _AUTOMATED_NAMES: ClassVar[frozenset[str]] = frozenset(
-        c.ENFORCEMENT_ACCESSOR_RENAMES
+        c.ENFORCEMENT_ACCESSOR_RENAMES,
     )
     _MANUAL_WARNING_REASON: ClassVar[str] = (
         "Public {prefix}-prefixed accessor: rename to canonical verb "
@@ -43,22 +46,21 @@ class FlextInfraAccessorMigrationRewriteMixin:
     )
 
     def _apply_automated_rewrites(
-        self, rope_project: t.Infra.RopeProject, py_file: Path, source: str
+        self,
+        rope_project: t.Infra.RopeProject,
+        py_file: Path,
+        source: str,
     ) -> t.Pair[str, t.SequenceOf[m.Infra.AccessorMigrationChange]]:
         """Apply automated rewrites."""
-        resource = u.Infra.get_resource_from_path(rope_project, py_file)
+        resource = u.Infra.resolve_resource_from_path(rope_project, py_file)
         if resource is None:
             return source, ()
         updated_source = source
         changes: t.MutableSequenceOf[m.Infra.AccessorMigrationChange] = []
         for rule in self._AUTOMATED_RULES:
             updated_source, rule_changes = self._rename_symbol_tokens(
-                rope_project,
-                resource,
                 updated_source,
-                source_name=rule.source_name,
-                replacement_name=rule.replacement_name,
-                reason=rule.reason,
+                rule=rule,
                 file_path=py_file,
             )
             changes.extend(rule_changes)
@@ -66,44 +68,42 @@ class FlextInfraAccessorMigrationRewriteMixin:
 
     @staticmethod
     def _rename_symbol_tokens(
-        rope_project: t.Infra.RopeProject,
-        resource: t.Infra.RopeResource,
         source: str,
         *,
-        source_name: str,
-        replacement_name: str,
-        reason: str,
+        rule: m.Infra.AccessorMigrationRule,
         file_path: Path,
     ) -> t.Pair[str, t.SequenceOf[m.Infra.AccessorMigrationChange]]:
         """Rename symbol tokens."""
         token_lines: t.MutableSequenceOf[m.Infra.AccessorMigrationChange] = []
         rewrite_ranges: t.MutableSequenceOf[t.Triple[int, int, str]] = []
         for token in generate_tokens(io.StringIO(source).readline):
-            if token.type != NAME or token.string != source_name:
+            if token.type != NAME or token.string != rule.source_name:
                 continue
             line, column = token.start
             start = FlextInfraAccessorMigrationRewriteMixin._offset_from_position(
-                source, line, column
+                source,
+                line,
+                column,
             )
-            end = start + len(source_name)
-            rewrite_ranges.append((start, end, replacement_name))
+            end = start + len(rule.source_name)
+            rewrite_ranges.append((start, end, rule.replacement_name))
             token_lines.append(
                 m.Infra.AccessorMigrationChange(
                     file=str(file_path),
                     line=line,
-                    original_name=source_name,
-                    replacement_name=replacement_name,
+                    original_name=rule.source_name,
+                    replacement_name=rule.replacement_name,
                     automated=True,
-                    reason=reason,
-                )
+                    reason=rule.reason,
+                ),
             )
         if not rewrite_ranges:
             return source, ()
-        del rope_project
-        del resource
         updated_source = source
         for start, end, replacement in sorted(
-            rewrite_ranges, key=itemgetter(0), reverse=True
+            rewrite_ranges,
+            key=itemgetter(0),
+            reverse=True,
         ):
             updated_source = updated_source[:start] + replacement + updated_source[end:]
         return updated_source, tuple(token_lines)
@@ -116,7 +116,9 @@ class FlextInfraAccessorMigrationRewriteMixin:
         return line_offset + column
 
     def _collect_manual_warnings(
-        self, py_file: Path, source: str
+        self,
+        py_file: Path,
+        source: str,
     ) -> t.SequenceOf[m.Infra.AccessorMigrationChange]:
         """Collect manual warnings."""
         lines = source.splitlines()
@@ -156,7 +158,11 @@ class FlextInfraAccessorMigrationRewriteMixin:
             scope_stack.append((f"def:{function_name}", indent))
             if parent_scope.startswith("def:"):
                 continue
-            if function_name.startswith("_") or function_name in self._AUTOMATED_NAMES:
+            if (
+                function_name.startswith("_")
+                or function_name in self._AUTOMATED_NAMES
+                or function_name in c.ENFORCEMENT_ACCESSOR_EXTERNAL_CONTRACTS
+            ):
                 continue
             matched_prefix = next(
                 (
@@ -176,9 +182,9 @@ class FlextInfraAccessorMigrationRewriteMixin:
                     replacement_name=function_name[len(matched_prefix) :],
                     automated=False,
                     reason=self._MANUAL_WARNING_REASON.format(
-                        prefix=matched_prefix.rstrip("_")
+                        prefix=matched_prefix.rstrip("_"),
                     ),
-                )
+                ),
             )
         return warnings
 

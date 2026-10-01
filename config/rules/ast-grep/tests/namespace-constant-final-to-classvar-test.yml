@@ -1,0 +1,41 @@
+id: namespace-constant-final-to-classvar
+# `valid` MUST NOT match: already ClassVar, lower-case name, plain constants
+# class (no FlextTestsConstants.Tests base), nested plain class inside a holder.
+valid:
+  - |
+    from typing import ClassVar
+    from flext_tests import FlextTestsConstants
+    class C:
+        class Tests(FlextTestsConstants.Tests):
+            RETRIES: ClassVar[int] = 30
+  - |
+    from typing import Final
+    from flext_tests import FlextTestsConstants
+    class C:
+        class Tests(FlextTestsConstants.Tests):
+            retries: Final[int] = 30
+  - |
+    from typing import Final
+    class FlextThingConstants:
+        RETRIES: Final[int] = 30
+  - |
+    from typing import Final
+    from flext_tests import FlextTestsConstants
+    class C:
+        class Tests(FlextTestsConstants.Tests):
+            class Inner:
+                RETRIES: Final[int] = 30
+# `invalid` MUST match and rewrite Final to ClassVar.
+invalid:
+  - |
+    from typing import Final
+    from flext_tests import FlextTestsConstants
+    class C:
+        class Tests(FlextTestsConstants.Tests):
+            POSTGRES_READY_MAX_RETRIES: Final[int] = 30
+  - |
+    from typing import Final
+    from flext_tests import FlextTestsConstants
+    class TestsFlextWebConstants:
+        class Tests(FlextTestsConstants.Tests):
+            DEFAULT_HOST: Final[str] = "localhost"

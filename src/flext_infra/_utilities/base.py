@@ -6,13 +6,19 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import os
 import re
+from collections.abc import MutableMapping
 from pathlib import Path
 
 from flext_cli import u as cli_u
 
-from flext_infra.constants import c
-from flext_infra.typings import t
+from flext_infra import c, t
+
+from .._settings import FlextInfraSettings
+
+if os.name != "nt":
+    import pwd
 
 
 class FlextInfraUtilitiesBase:
@@ -22,6 +28,28 @@ class FlextInfraUtilitiesBase:
     Generic ``validate`` and ``deep`` methods use PEP 695 type parameters
     so callers can validate ANY shape with a single SSOT helper.
     """
+
+    @staticmethod
+    def env_lookup(name: str) -> str | None:
+        """Return one raw environment value through the governed boundary.
+
+        The only sanctioned escape hatch for keys that are dynamic by
+        contract (caller-named CLI parameters, CI passthrough variables,
+        subprocess environment merges). Static values must be typed
+        ``settings.Infra.*`` fields instead; ambient ``os.environ`` reads
+        elsewhere are banned by the ``ban-ambient-environ-read`` rule.
+        """
+        return FlextInfraSettings.env_lookup(name)
+
+    @staticmethod
+    def env_value(name: str, default: str = "") -> str:
+        """Return one stripped dynamic environment value, or the stripped default.
+
+        Only an unset variable falls back to ``default``; a set but blank value
+        stays blank so callers can reject it explicitly.
+        """
+        value = FlextInfraSettings.env_lookup(name)
+        return default.strip() if value is None else value.strip()
 
     @staticmethod
     def resolve_repository_root_or_cwd(repository_root: Path | None = None) -> Path:
@@ -42,6 +70,19 @@ class FlextInfraUtilitiesBase:
         if target.is_file():
             target = target.parent
         return target.resolve()
+
+    @staticmethod
+    def real_account_home() -> Path:
+        """Return the real account home directory, never the ambient ``HOME``.
+
+        A workspace contract target written as ``${HOME}/...`` describes machine
+        state, so it probes the account's own home directory: check pipelines run
+        under redirected homes where the referenced files legitimately live only
+        in the real account. On Windows the process home is authoritative.
+        """
+        return (
+            Path.home() if os.name == "nt" else Path(pwd.getpwuid(os.getuid()).pw_dir)
+        )
 
     @staticmethod
     def normalize_optional_path(value: str | Path | None) -> Path | None:
@@ -130,7 +171,7 @@ class FlextInfraUtilitiesBase:
             tuple(rule_ids)
             if rule_ids
             else tuple(
-                sorted(FlextInfraUtilitiesBase.ast_grep_rule_contract(rule_path)[0])
+                sorted(FlextInfraUtilitiesBase.ast_grep_rule_contract(rule_path)[0]),
             )
         )
         if any(not rule_id or "|" in rule_id for rule_id in selected_rule_ids):
@@ -159,7 +200,7 @@ class FlextInfraUtilitiesBase:
         rule_ids: set[str] = set()
         fixable_ids: set[str] = set()
         for raw_document in rule_path.read_text(encoding=c.Cli.ENCODING_DEFAULT).split(
-            "\n---"
+            "\n---",
         ):
             if not any(
                 line.strip() and not line.lstrip().startswith("#")
@@ -189,8 +230,8 @@ class FlextInfraUtilitiesBase:
         """Return every strongly connected component in one directed graph."""
         next_index = 0
         stack: list[str] = []
-        indexes: dict[str, int] = {}
-        lowlinks: dict[str, int] = {}
+        indexes: MutableMapping[str, int] = {}
+        lowlinks: MutableMapping[str, int] = {}
         on_stack: set[str] = set()
         components: list[t.StrSequence] = []
 

@@ -8,24 +8,27 @@ from typing import TYPE_CHECKING
 from git import GitCommandError
 
 from flext_core import r
-from flext_infra.constants import c
-from flext_infra.models import m
+from flext_infra import c, m
 
 from .worktree_checkpoint import FlextInfraUtilitiesGitWorktreeCheckpointMixin
-from .worktree_io import git_stdin
+from .worktree_io import FlextInfraUtilitiesGitWorktreeIO
 
 if TYPE_CHECKING:
     from flext_infra import p, t
 
 
 class FlextInfraUtilitiesGitWorktreePatchMixin(
-    FlextInfraUtilitiesGitWorktreeCheckpointMixin
+    FlextInfraUtilitiesGitWorktreeCheckpointMixin,
 ):
     """Own worktree patch operations."""
 
     @classmethod
     def _git_check_patch_at(
-        cls, repository_root: Path, patch: bytes, *, reverse: bool
+        cls,
+        repository_root: Path,
+        patch: bytes,
+        *,
+        reverse: bool,
     ) -> p.Result[bool]:
         """Check one patch direction against an explicit repository root."""
         if not patch:
@@ -33,7 +36,7 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
         direction: list[str] = ["--reverse"] if reverse else []
         try:
             repo = cls._repo(repository_root)
-            with git_stdin(patch) as istream:
+            with FlextInfraUtilitiesGitWorktreeIO.git_stdin(patch) as istream:
                 repo.git.apply("--check", "--binary", *direction, "-", istream=istream)
         except GitCommandError as exc:
             return r[bool].fail(str(exc), exception=exc)
@@ -75,14 +78,16 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
         """Apply submodule entries that have no working-tree file representation."""
         current: Path | None = None
         gitlink = False
+        gitlink_mode = c.Infra.GIT_GITLINK_MODE_TEXT.encode()
         for raw_line in patch.splitlines():
             if raw_line.startswith(b"diff --git a/"):
                 _, _, _source, target = raw_line.split(maxsplit=3)
                 current = Path(target.removeprefix(b"b/").decode())
                 gitlink = False
                 continue
-            if raw_line == b"new file mode 160000" or (
-                raw_line.startswith(b"index ") and raw_line.endswith(b" 160000")
+            if raw_line == b"new file mode " + gitlink_mode or (
+                raw_line.startswith(b"index ")
+                and raw_line.endswith(b" " + gitlink_mode)
             ):
                 gitlink = True
                 continue
@@ -97,19 +102,21 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
                     repo.git.update_index(
                         "--add",
                         "--cacheinfo",
-                        c.Infra.GIT_CACHEINFO_GITLINK,
+                        c.Infra.GIT_GITLINK_MODE_TEXT,
                         commit,
                         current.as_posix(),
                     )
-                except GitCommandError as exc:
-                    return r[bool].fail(str(exc), exception=exc)
-                except (OSError, ValueError) as exc:
-                    return r[bool].fail(f"failed to apply gitlink: {current}: {exc}")
+                except (GitCommandError, OSError, ValueError) as exc:
+                    return r[bool].fail(
+                        f"failed to apply gitlink: {current}: {exc}",
+                        exception=exc,
+                    )
         return r[bool].ok(True)
 
     @classmethod
     def _git_apply_with_ignored_additions(
-        cls, delta: m.Infra.RepositoryDelta
+        cls,
+        delta: m.Infra.RepositoryDelta,
     ) -> p.Result[bool]:
         """Apply additions over existing ignored projections with rollback."""
         collisions = tuple(
@@ -122,23 +129,24 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
         original = {
             path: (delta.source_root / path).read_bytes() for path in collisions
         }
-        for path in collisions:
-            (delta.source_root / path).unlink()
         try:
+            for path in collisions:
+                (delta.source_root / path).unlink()
             repo = cls._repo(delta.source_root)
-            with git_stdin(delta.patch) as istream:
+            with FlextInfraUtilitiesGitWorktreeIO.git_stdin(delta.patch) as istream:
                 repo.git.apply("--binary", "-", istream=istream)
-        except GitCommandError:
-            # Rollback: restore original ignored files.
+        except (GitCommandError, OSError, ValueError) as exc:
+            # Rollback restores the ignored files this invocation removed; the
+            # apply failure stays the reported cause.
             for path, content in original.items():
                 target = delta.source_root / path
-                if target.exists():
-                    target.unlink()
+                target.unlink(missing_ok=True)
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(content)
-            return r[bool].fail("git apply failed on ignored additions")
-        except (OSError, ValueError) as exc:
-            return r[bool].fail(f"git apply failed: {exc}", exception=exc)
+            return r[bool].fail(
+                f"git apply failed on ignored additions: {exc}",
+                exception=exc,
+            )
         return r[bool].ok(True)
 
     @classmethod
@@ -157,14 +165,9 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
             return r[bool].from_failure(check_result)
         try:
             repo = cls._repo(delta.source_root)
-            with git_stdin(delta.patch) as istream:
+            with FlextInfraUtilitiesGitWorktreeIO.git_stdin(delta.patch) as istream:
                 repo.git.apply("--binary", "-", istream=istream)
-        except GitCommandError:
-            converged_result = cls._git_source_has_patch(delta)
-            if converged_result.success:
-                return cls._git_apply_gitlinks(delta.source_root, delta.patch)
-            return r[bool].fail("git apply failed")
-        except (OSError, ValueError) as exc:
+        except (GitCommandError, OSError, ValueError) as exc:
             return r[bool].fail(f"git apply failed: {exc}", exception=exc)
         return cls._git_apply_gitlinks(delta.source_root, delta.patch)
 

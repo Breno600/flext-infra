@@ -5,14 +5,15 @@ from __future__ import annotations
 import operator
 import shutil
 import sys
+from collections.abc import MutableMapping
 from concurrent.futures import Future, ThreadPoolExecutor
 from typing import TYPE_CHECKING, override
 
 from flext_core import r
 from flext_infra import c, m, t, u
-from flext_infra.base import s
 from flext_infra.refactor.census import FlextInfraRefactorCensus
 
+from ..base import s
 from .lazy_init import FlextInfraCodegenLazyInit
 
 if TYPE_CHECKING:
@@ -38,7 +39,7 @@ class FlextInfraCodegenQualityGate(s[bool]):
     def build_report(self) -> p.Result[t.JsonMapping]:
         """Execute quality gate and return structured report payload."""
         lazy_plans = FlextInfraCodegenLazyInit(
-            repository_root=self.repository_root
+            repository_root=self.repository_root,
         ).plan_files()
         if lazy_plans.failure:
             return r[t.JsonMapping].from_failure(lazy_plans)
@@ -50,18 +51,21 @@ class FlextInfraCodegenQualityGate(s[bool]):
         if pending_lazy:
             paths = ", ".join(str(plan.path) for plan in pending_lazy)
             return r[t.JsonMapping].fail(
-                f"lazy-init artifacts require codegen conform: {paths}"
+                f"lazy-init artifacts require codegen conform: {paths}",
             )
         census = FlextInfraRefactorCensus(
-            include_local_scopes=False, kinds=("constant",)
+            include_local_scopes=False,
+            kinds=("constant",),
         ).model_copy(update={"repository_root": self.repository_root})
         census_report = census.build_report()
         modified_files = self.modified_python_files(self.repository_root)
         pyrefly_check, ruff_check = self._run_static_checks(
-            self.repository_root, modified_files
+            self.repository_root,
+            modified_files,
         )
         after_metrics = self.after_metrics(
-            census_report=census_report, modified_files=modified_files
+            census_report=census_report,
+            modified_files=modified_files,
         )
         checks = self.build_checks(
             after_metrics=after_metrics,
@@ -95,7 +99,7 @@ class FlextInfraCodegenQualityGate(s[bool]):
             return r[t.JsonMapping].from_failure(artifacts)
         report_data["artifacts"] = artifacts.value
         return r[t.JsonMapping].ok(
-            t.Infra.INFRA_MAPPING_ADAPTER.validate_python(report_data)
+            t.Infra.INFRA_MAPPING_ADAPTER.validate_python(report_data),
         )
 
     @staticmethod
@@ -127,8 +131,10 @@ class FlextInfraCodegenQualityGate(s[bool]):
 
     @staticmethod
     def run_static_check(
-        repository_root: Path, modified_files: t.StrSequence, tool: str
-    ) -> t.MappingKV[str, t.Infra.InfraValue]:
+        repository_root: Path,
+        modified_files: t.StrSequence,
+        tool: str,
+    ) -> t.MappingKV[str, t.JsonValue]:
         """Run a targeted static tool on modified files and normalize result."""
         if not modified_files:
             return {
@@ -144,7 +150,7 @@ class FlextInfraCodegenQualityGate(s[bool]):
                 c.Infra.CHECK,
                 *modified_files,
                 "--config",
-                c.Infra.PYPROJECT_FILENAME,
+                c.PYPROJECT_FILENAME,
                 "--summary=none",
             ]
         elif tool == c.Infra.RUFF:
@@ -181,10 +187,10 @@ class FlextInfraCodegenQualityGate(s[bool]):
 
     @classmethod
     def _run_static_checks(
-        cls, repository_root: Path, modified_files: t.StrSequence
-    ) -> t.Pair[
-        t.MappingKV[str, t.Infra.InfraValue], t.MappingKV[str, t.Infra.InfraValue]
-    ]:
+        cls,
+        repository_root: Path,
+        modified_files: t.StrSequence,
+    ) -> t.Pair[t.MappingKV[str, t.JsonValue], t.MappingKV[str, t.JsonValue]]:
         """Run pyrefly and ruff checks in parallel over the same file set.
 
         Both tools operate on the unmodified ``modified_files`` list and are
@@ -192,7 +198,7 @@ class FlextInfraCodegenQualityGate(s[bool]):
         the empty-result payload is reused for both tools without spawning
         subprocesses.
         """
-        empty_result: t.MappingKV[str, t.Infra.InfraValue] = {
+        empty_result: t.MappingKV[str, t.JsonValue] = {
             "passed": True,
             "detail": "no modified python files detected",
             "exit_code": 0,
@@ -201,11 +207,14 @@ class FlextInfraCodegenQualityGate(s[bool]):
             return (empty_result, empty_result)
 
         tools = (c.Infra.PYREFLY, c.Infra.RUFF)
-        results: dict[str, t.MappingKV[str, t.Infra.InfraValue]] = {}
+        results: MutableMapping[str, t.MappingKV[str, t.JsonValue]] = {}
         with ThreadPoolExecutor(max_workers=len(tools)) as executor:
-            futures: dict[Future[t.MappingKV[str, t.Infra.InfraValue]], str] = {
+            futures: MutableMapping[Future[t.MappingKV[str, t.JsonValue]], str] = {
                 executor.submit(
-                    cls.run_static_check, repository_root, modified_files, tool
+                    cls.run_static_check,
+                    repository_root,
+                    modified_files,
+                    tool,
                 ): tool
                 for tool in tools
             }
@@ -216,8 +225,10 @@ class FlextInfraCodegenQualityGate(s[bool]):
 
     @staticmethod
     def after_metrics(
-        *, census_report: m.Infra.Census.WorkspaceReport, modified_files: t.StrSequence
-    ) -> t.MappingKV[str, t.Infra.InfraValue]:
+        *,
+        census_report: m.Infra.WorkspaceReport,
+        modified_files: t.StrSequence,
+    ) -> t.MappingKV[str, t.JsonValue]:
         """Build post-run metrics summary used by quality checks."""
         by_kind: t.MutableIntMapping = {}
         for project in census_report.projects:
@@ -225,22 +236,20 @@ class FlextInfraCodegenQualityGate(s[bool]):
                 by_kind[parsed.kind] = by_kind.get(parsed.kind, 0) + 1
         total = len(census_report.projects)
         passed = u.count(
-            census_report.projects, lambda project: project.violations_total == 0
+            census_report.projects,
+            lambda project: project.violations_total == 0,
         )
-        modified_python_files: list[t.Infra.InfraValue] = list(modified_files)
-        violations_by_rule: dict[str, t.Infra.InfraValue] = dict(
-            sorted(by_kind.items())
+        modified_python_files: list[t.JsonValue] = list(modified_files)
+        violations_by_rule: t.MutableMappingKV[str, t.JsonValue] = dict(
+            sorted(by_kind.items()),
         )
-        summary: dict[str, t.Infra.InfraValue] = {
+        summary: MutableMapping[str, t.JsonValue] = {
             "total_violations": census_report.total_violations,
-            "violations_by_rule": violations_by_rule,
+            "violations_by_rule": dict(violations_by_rule),
             "duplicate_groups": len(census_report.duplicates),
             "projects_total": total,
             "projects_passed": passed,
             "projects_failed": total - passed,
-            "flext_failures": 0,
-            "layer_violations": 0,
-            "cross_project_reference_violations": 0,
             "modified_python_files": modified_python_files,
         }
         return summary
@@ -248,10 +257,10 @@ class FlextInfraCodegenQualityGate(s[bool]):
     @staticmethod
     def build_checks(
         *,
-        after_metrics: t.MappingKV[str, t.Infra.InfraValue],
-        pyrefly_check: t.MappingKV[str, t.Infra.InfraValue],
-        ruff_check: t.MappingKV[str, t.Infra.InfraValue],
-    ) -> t.SequenceOf[t.MappingKV[str, t.Infra.InfraValue]]:
+        after_metrics: t.MappingKV[str, t.JsonValue],
+        pyrefly_check: t.MappingKV[str, t.JsonValue],
+        ruff_check: t.MappingKV[str, t.JsonValue],
+    ) -> t.SequenceOf[t.MappingKV[str, t.JsonValue]]:
         """Build quality gate check entries from metrics and tool results."""
         # Metric-driven checks share the shape ``(name, value==0, "label=value")``.
         # Each row maps to a single ``QualityGateCheck`` via Pydantic v2 batch
@@ -259,13 +268,6 @@ class FlextInfraCodegenQualityGate(s[bool]):
         # (e.g. ``total_violations`` → ``total``).
         metric_check_rows: t.VariadicTuple[t.Triple[str, str, str]] = (
             (c.Infra.QG_CHECK_NAMESPACE_COMPLIANCE, "total_violations", "total"),
-            (c.Infra.QG_CHECK_FLEXT_VALIDITY, "flext_failures", "flext_failures"),
-            (
-                c.Infra.QG_CHECK_IMPORT_RESOLUTION,
-                "cross_project_reference_violations",
-                "cross_project_reference_violations",
-            ),
-            (c.Infra.QG_CHECK_LAYER_COMPLIANCE, "layer_violations", "layer_violations"),
             (
                 c.Infra.QG_CHECK_DUPLICATION_REDUCTION,
                 "duplicate_groups",
@@ -301,9 +303,7 @@ class FlextInfraCodegenQualityGate(s[bool]):
         return [check.model_dump() for check in checks]
 
     @staticmethod
-    def compute_verdict(
-        checks: t.SequenceOf[t.MappingKV[str, t.Infra.InfraValue]],
-    ) -> str:
+    def compute_verdict(checks: t.SequenceOf[t.MappingKV[str, t.JsonValue]]) -> str:
         """Return PASS only when all checks passed."""
         return (
             "PASS"
@@ -313,8 +313,8 @@ class FlextInfraCodegenQualityGate(s[bool]):
 
     @staticmethod
     def project_findings(
-        census_report: m.Infra.Census.WorkspaceReport,
-    ) -> t.SequenceOf[t.MappingKV[str, t.Infra.InfraValue]]:
+        census_report: m.Infra.WorkspaceReport,
+    ) -> t.SequenceOf[t.MappingKV[str, t.JsonValue]]:
         """Convert census reports into sorted per-project findings."""
         return [
             item.model_dump()
@@ -323,11 +323,7 @@ class FlextInfraCodegenQualityGate(s[bool]):
                     m.Infra.QualityGateProjectFinding(
                         project=report.project,
                         violations_total=report.violations_total,
-                        fixable_violations=len(report.fixes),
                         validator_passed=report.violations_total == 0,
-                        flext_failures=0,
-                        layer_violations=0,
-                        cross_project_reference_violations=0,
                     )
                     for report in census_report.projects
                 ),
@@ -337,7 +333,9 @@ class FlextInfraCodegenQualityGate(s[bool]):
 
     @staticmethod
     def write_artifacts(
-        repository_root: Path, report: t.JsonMapping, render_text: str
+        repository_root: Path,
+        report: t.JsonMapping,
+        render_text: str,
     ) -> p.Result[t.JsonMapping]:
         """Persist quality gate artifacts to the report directory."""
         report_dir = repository_root / c.Infra.QG_REPORT_DIR
@@ -347,7 +345,7 @@ class FlextInfraCodegenQualityGate(s[bool]):
         json_write = u.Cli.atomic_write_text_file(
             report_json,
             t.Infra.INFRA_MAPPING_ADAPTER.dump_json(report, by_alias=True).decode(
-                c.Cli.ENCODING_DEFAULT
+                c.Cli.ENCODING_DEFAULT,
             ),
         )
         if json_write.failure:
@@ -366,7 +364,8 @@ class FlextInfraCodegenQualityGate(s[bool]):
         checks = u.Cli.json_deep_mapping_list(report, "checks")
         after = u.Cli.json_deep_mapping(report, "after")
         duplicate_groups = u.Cli.json_deep_mapping_list(
-            report, "duplicate_constant_groups"
+            report,
+            "duplicate_constant_groups",
         )
         lines: t.MutableSequenceOf[str] = [
             f"Workspace: {report.get('workspace', '')}",
@@ -377,7 +376,7 @@ class FlextInfraCodegenQualityGate(s[bool]):
         for check in checks:
             status = "PASS" if u.Cli.json_pick_bool(check, "passed") else "FAIL"
             lines.append(
-                f"- [{status}] {u.Cli.json_pick_str(check, 'name', 'unknown')}"
+                f"- [{status}] {u.Cli.json_pick_str(check, 'name', 'unknown')}",
             )
             detail = u.Cli.json_pick_str(check, "detail")
             if detail:
@@ -392,7 +391,7 @@ class FlextInfraCodegenQualityGate(s[bool]):
         if duplicate_groups:
             lines.extend(["", "Duplicate Groups:"])
         for group in duplicate_groups:
-            parsed_group = m.Infra.Census.DuplicateGroup.model_validate(group)
+            parsed_group = m.Infra.DuplicateGroup.model_validate(group)
             projects = sorted({
                 definition.project for definition in parsed_group.definitions
             })
@@ -401,7 +400,7 @@ class FlextInfraCodegenQualityGate(s[bool]):
                 f"{parsed_group.name}: "
                 f"projects={len(projects)}, "
                 f"definitions={len(parsed_group.definitions)}, "
-                f"values_identical={parsed_group.value_identical}"
+                f"values_identical={parsed_group.value_identical}",
             )
             if projects:
                 lines.append(f"  projects: {', '.join(projects)}")

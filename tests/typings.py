@@ -11,10 +11,10 @@ from __future__ import annotations
 
 from flext_tests import FlextTestsTypes
 
-from flext_infra import t
+from flext_infra import FlextInfraTypes
 
 
-class TestsFlextInfraTypes(FlextTestsTypes, t):
+class TestsFlextInfraTypes(FlextTestsTypes, FlextInfraTypes):
     """Type system for FLEXT infra tests."""
 
     class Tests(FlextTestsTypes.Tests):

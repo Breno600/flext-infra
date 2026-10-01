@@ -1,0 +1,23 @@
+# ``TypeAdapter`` bound unaliased from ``pydantic``, so a bare ``TypeAdapter(...)``
+# call in the same module provably resolves to the pydantic constructor.
+#
+# Aliased imports are excluded: the call site then uses a module-local name that
+# ast-grep cannot carry from the import into the call pattern.
+id: type-adapter-imported-from-pydantic
+language: python
+rule:
+  kind: import_from_statement
+  all:
+    - has:
+        field: module_name
+        regex: "^pydantic$"
+    - has:
+        pattern: TypeAdapter
+        stopBy: end
+    - not:
+        has:
+          kind: aliased_import
+          stopBy: end
+          has:
+            pattern: TypeAdapter
+            stopBy: end

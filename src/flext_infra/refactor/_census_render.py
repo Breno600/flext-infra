@@ -16,14 +16,12 @@ class FlextInfraRefactorCensusRenderMixin:
     """
 
     @staticmethod
-    def _render_workspace_report(report: m.Infra.Census.WorkspaceReport) -> str:
+    def _render_workspace_report(report: m.Infra.WorkspaceReport) -> str:
         """Render workspace census report from typed model fields."""
         lines = [
             "Workspace Census Report",
             f"Objects: {report.total_objects}",
             f"Violations: {report.total_violations}",
-            f"Fixable: {report.total_fixable}",
-            f"Fixes: {report.fixes_total}",
             f"Unused: {report.unused_count}",
             f"Removal candidates: {report.removal_candidate_count}",
             f"Duplicate groups: {len(report.duplicates)}",
@@ -59,12 +57,12 @@ class FlextInfraRefactorCensusRenderMixin:
                     f"{candidate.reason} "
                     f"{candidate.object_name} "
                     f"@ {candidate.file_path}:{candidate.line}"
-                    + (f" refs={reference_preview}" if reference_preview else "")
+                    + (f" refs={reference_preview}" if reference_preview else ""),
                 )
         return "\n".join(lines)
 
     @staticmethod
-    def render_text(report: m.Infra.Census.WorkspaceReport) -> str:
+    def render_text(report: m.Infra.WorkspaceReport) -> str:
         """Render the canonical workspace census report."""
         return FlextInfraRefactorCensusRenderMixin._render_workspace_report(report)
 
