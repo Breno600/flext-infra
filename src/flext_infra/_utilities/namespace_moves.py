@@ -191,17 +191,14 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         *,
         project_root: Path,
         py_files: t.SequenceOf[Path],
-        violations: t.SequenceOf[m.Infra.ManualProtocolViolation],
+        names_by_file: t.MappingKV[Path, t.Infra.StrSet],
         gates: t.StrSequence | None = None,
     ) -> None:
-        """Rewrite manual protocol violations."""
-        grouped: t.MappingKV[Path, t.Infra.StrSet] = defaultdict(set)
-        for violation in violations:
-            grouped[Path(violation.file)].add(violation.name)
+        """Relocate the named Protocol classes of each file to its protocols owner."""
         protocol_moves: t.MutableSequenceOf[
             t.Triple[Path, Path, t.VariadicTuple[str]]
         ] = []
-        for source_file, protocol_names in grouped.items():
+        for source_file, protocol_names in names_by_file.items():
             move = FlextInfraUtilitiesRefactorNamespaceMoves._move_protocol_blocks(
                 project_root=project_root,
                 source_file=source_file,
@@ -219,16 +216,11 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
     def rewrite_manual_typing_alias_violations(
         *,
         project_root: Path,
-        violations: t.SequenceOf[m.Infra.ManualTypingAliasViolation],
-        parse_failures: t.MutableSequenceOf[m.Infra.ParseFailureViolation],
+        names_by_file: t.MappingKV[Path, t.Infra.StrSet],
         gates: t.StrSequence | None = None,
     ) -> None:
-        """Rewrite manual typing alias violations."""
-        _ = parse_failures
-        grouped: t.MappingKV[Path, t.Infra.StrSet] = defaultdict(set)
-        for violation in violations:
-            grouped[Path(violation.file)].add(violation.name)
-        for source_file, alias_names in grouped.items():
+        """Relocate the named typing declarations of each file to its typings owner."""
+        for source_file, alias_names in names_by_file.items():
             FlextInfraUtilitiesRefactorNamespaceMoves._move_typing_alias_lines(
                 project_root=project_root,
                 source_file=source_file,

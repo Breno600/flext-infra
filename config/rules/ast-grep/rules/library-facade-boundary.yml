@@ -1,0 +1,51 @@
+# A third-party library with an owning FLEXT facade is imported only by its
+# owner; every other package routes through the owner's facade. One document
+# per library; `metadata.owner` names the owning distribution, whose own rule
+# plan drops the rule (source and tests of the owner may use the library).
+#
+# Detection only: the facade member that replaces a direct use is chosen per
+# call site.
+id: ban-direct-structlog-import
+language: python
+severity: error
+files:
+  - "**/*.py"
+metadata:
+  owner: flext-core
+rule:
+  any:
+    - pattern: import structlog
+    - pattern: import structlog.$$$MODULE
+    - pattern: from structlog import $$$NAMES
+    - pattern: from structlog.$$$MODULE import $$$NAMES
+message: >-
+  structlog is owned by flext-core: obtain loggers through u.fetch_logger.
+---
+id: ban-direct-oracledb-import
+language: python
+severity: error
+files:
+  - "**/*.py"
+metadata:
+  owner: flext-db-oracle
+rule:
+  any:
+    - pattern: import oracledb
+    - pattern: from oracledb import $$$NAMES
+message: >-
+  oracledb is owned by flext-db-oracle: use its database facade.
+---
+id: ban-direct-ldap3-import
+language: python
+severity: error
+files:
+  - "**/*.py"
+metadata:
+  owner: flext-ldap
+rule:
+  any:
+    - pattern: import ldap3
+    - pattern: from ldap3 import $$$NAMES
+    - pattern: from ldap3.$$$MODULE import $$$NAMES
+message: >-
+  ldap3 is owned by flext-ldap: use its LDAP facade.

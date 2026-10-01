@@ -2,8 +2,9 @@
 # protocols package. Declaring one anywhere else creates a second owner of a
 # structural contract.
 #
-# Detection only: relocating the class rewires every consumer, a semantic move
-# owned by the rope phases of make mod.
+# No token fix: relocating the class rewires every consumer. The rule names the
+# rope relocation that performs the move and captures the class as $NAME, the
+# input that relocation consumes.
 id: ban-loose-protocol
 language: python
 severity: error
@@ -22,26 +23,32 @@ ignores:
   - "**/__main__.py"
   - "**/__version__.py"
   - "**/conftest.py"
+metadata:
+  relocation: protocol
 rule:
-  kind: class_definition
-  # A class built inside a function body is local data (a test input, a
-  # factory result), not a declared contract of the module.
-  not:
-    inside:
-      kind: function_definition
-      stopBy: end
-  has:
-    field: superclasses
-    has:
-      any:
-        - kind: identifier
-          regex: "^Protocol$"
-        - kind: subscript
-          has:
-            field: value
-            regex: "^(?:typing\\.)?Protocol$"
-        - kind: attribute
-          regex: "^typing\\.Protocol$"
+  all:
+    - kind: class_definition
+    - has:
+        field: name
+        pattern: $NAME
+    # A class built inside a function body is local data (a test input, a
+    # factory result), not a declared contract of the module.
+    - not:
+        inside:
+          kind: function_definition
+          stopBy: end
+    - has:
+        field: superclasses
+        has:
+          any:
+            - kind: identifier
+              regex: "^Protocol$"
+            - kind: subscript
+              has:
+                field: value
+                regex: "^(?:typing\\.)?Protocol$"
+            - kind: attribute
+              regex: "^typing\\.Protocol$"
 message: >-
   Protocol class outside the protocols family: declare it in protocols.py or
   the _protocols package.

@@ -1,0 +1,6 @@
+id: ban-direct-oracledb-import
+valid:
+  - from flext_db_oracle import FlextDbOracleApi
+invalid:
+  - import oracledb
+  - from oracledb import Connection

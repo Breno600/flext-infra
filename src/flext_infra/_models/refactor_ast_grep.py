@@ -60,6 +60,24 @@ class FlextInfraModelsRefactorGrep:
                 ),
             ),
         ] = None
+        owner: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(
+                description=(
+                    "Canonical distribution name whose own plan drops the rule; "
+                    "absent when the rule applies to every project"
+                )
+            ),
+        ] = None
+        relocation: Annotated[
+            c.Infra.CodemodRelocation | None,
+            m.Field(
+                description=(
+                    "Rope relocation that repairs the rule's findings over the "
+                    "captured $NAME; absent for token-fix and plain detection rules"
+                )
+            ),
+        ] = None
 
     class CodemodRuleset(m.ArbitraryTypesModel):
         """One provider config and its elected, conflict-free rule IDs."""

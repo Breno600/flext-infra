@@ -5,8 +5,9 @@
 # Scope is the module body: a declaration nested in a class or function is the
 # enclosing namespace's own member, not a loose module object.
 #
-# Detection only: relocating the declaration rewires every consumer, a
-# semantic move owned by the rope phases of make mod.
+# No token fix: relocating the declaration rewires every consumer. The rule
+# names the rope relocation that performs the move and captures the declared
+# name as $NAME, the input that relocation consumes.
 id: ban-loose-typing-alias
 language: python
 severity: error
@@ -17,26 +18,42 @@ ignores:
   - "**/_typings.py"
   - "**/typings/**"
   - "**/_typings/**"
+metadata:
+  relocation: typing-alias
 rule:
   inside:
     kind: module
   any:
     - kind: type_alias_statement
+      has:
+        field: left
+        has:
+          kind: identifier
+          pattern: $NAME
+          stopBy: end
     - kind: expression_statement
       has:
         kind: assignment
-        has:
-          field: type
-          regex: "^(?:[A-Za-z_][A-Za-z0-9_]*\\.)*TypeAlias$"
+        all:
+          - has:
+              field: left
+              pattern: $NAME
+          - has:
+              field: type
+              regex: "^(?:[A-Za-z_][A-Za-z0-9_]*\\.)*TypeAlias$"
     - kind: expression_statement
       has:
         kind: assignment
-        has:
-          field: right
-          kind: call
-          has:
-            field: function
-            regex: "^(?:[A-Za-z_][A-Za-z0-9_]*\\.)*(?:TypeVar|ParamSpec|TypeVarTuple|NewType)$"
+        all:
+          - has:
+              field: left
+              pattern: $NAME
+          - has:
+              field: right
+              kind: call
+              has:
+                field: function
+                regex: "^(?:[A-Za-z_][A-Za-z0-9_]*\\.)*(?:TypeVar|ParamSpec|TypeVarTuple|NewType)$"
 message: >-
   Module-level typing declaration outside the typings owner: declare it in
   typings.py or the typings package.

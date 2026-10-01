@@ -121,44 +121,6 @@ class FlextInfraModelsRope:
             str, m.Field(description="Rope-owned source slice for the statement")
         ] = ""
 
-    # flext-j47u (codex): normalize Rope payloads before enforcement consumes them.
-    class ImportFact(mm.PositiveLineMixin, m.ContractModel):
-        """One normalized binding emitted by Rope import-info semantics."""
-
-        module: t.NonEmptyStr = m.Field(description="Imported module path")
-        member: str = m.Field(default="", description="Imported member")
-        local_name: t.NonEmptyStr = m.Field(description="Bound local name")
-        from_import_info: bool = m.Field(description="From-import marker")
-
-    class IgnoredRegion(mm.PositiveLineMixin, m.ContractModel):
-        """One Rope-classified string or comment region in source text."""
-
-        start_offset: int = m.Field(ge=0, description="Inclusive offset")
-        end_offset: int = m.Field(ge=1, description="Exclusive offset")
-        text: t.NonEmptyStr = m.Field(description="Exact source region")
-        is_comment: bool = m.Field(description="Comment marker")
-
-    class RopeSourceFacts(m.ArbitraryTypesModel):
-        """One Rope fact pass over a module source, shared by every static rule."""
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
-
-        source: Annotated[
-            str, m.Field(description="Exact module source the facts describe")
-        ]
-        imports: Annotated[
-            t.VariadicTuple[FlextInfraModelsRope.ImportFact],
-            m.Field(description="Normalized Rope import bindings of the module"),
-        ]
-        regions: Annotated[
-            t.VariadicTuple[FlextInfraModelsRope.IgnoredRegion],
-            m.Field(description="Rope-classified string and comment regions"),
-        ]
-        word_finder: Annotated[
-            p.Infra.RopeWorder,
-            m.Field(description="Rope word and call classifier over the same source"),
-        ]
-
     class FamilyWrapperFlatten(m.ArbitraryTypesModel):
         """Rope identity of one namespace wrapper flattened into its family owner."""
 

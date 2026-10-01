@@ -18,9 +18,6 @@ from flext_infra.detectors.compatibility_alias_detector import (
     FlextInfraCompatibilityAliasDetector,
 )
 from flext_infra.detectors.inline_import_detector import FlextInfraInlineImportDetector
-from flext_infra.detectors.manual_typing_alias_detector import (
-    FlextInfraManualTypingAliasDetector,
-)
 from flext_infra.detectors.private_import_bypass_detector import (
     FlextInfraPrivateImportBypassDetector,
 )
@@ -112,21 +109,9 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
             elif action == "rewrite_manual_typing_alias":
                 if ctx.project_root is None:
                     continue
-                manual_typing_violations: t.VariadicTuple[
-                    m.Infra.ManualTypingAliasViolation
-                ] = tuple(
-                    violation
-                    for violation in FlextInfraManualTypingAliasDetector.detect_file(
-                        ctx
-                    )
-                    if violation.name in object_names
-                )
-                if not manual_typing_violations:
-                    continue
                 u.Infra.rewrite_manual_typing_alias_violations(
                     project_root=ctx.project_root,
-                    violations=manual_typing_violations,
-                    parse_failures=parse_failures,
+                    names_by_file={file_path: set(object_names)},
                     gates=self.dry_run_gate_names,
                 )
                 changed = True

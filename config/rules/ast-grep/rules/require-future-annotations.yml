@@ -14,6 +14,8 @@ ignores:
   - "**/node_modules/**"
   - "**/*_pb2.py"
   - "**/*_pb2_grpc.py"
+metadata:
+  relocation: future-annotations
 rule:
   kind: module
   not:
@@ -21,9 +23,10 @@ rule:
       pattern: from __future__ import annotations
       stopBy: end
 message: >-
-  Python modules must declare `from __future__ import annotations`; insertion
-  remains detection-only because module docstrings, shebangs, encoding markers,
-  and other future imports determine the only legal insertion point.
+  Python modules must declare `from __future__ import annotations`; the
+  insertion point depends on module docstrings, shebangs, encoding markers and
+  other future imports, so the rope future-annotations relocation inserts it,
+  not a token fix.
 ---
 id: ban-star-import-src
 language: python

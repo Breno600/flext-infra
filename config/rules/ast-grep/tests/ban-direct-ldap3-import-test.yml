@@ -1,0 +1,7 @@
+id: ban-direct-ldap3-import
+valid:
+  - from flext_ldap import FlextLdap
+invalid:
+  - import ldap3
+  - from ldap3 import Server
+  - from ldap3.core.exceptions import LDAPException

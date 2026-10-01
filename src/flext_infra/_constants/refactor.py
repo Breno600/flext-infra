@@ -52,6 +52,19 @@ class FlextInfraConstantsRefactor:
         NON_ACTIONABLE_WITH_FIX = "non_actionable_with_fix"
 
     @unique
+    class CodemodRelocation(StrEnum):
+        """Rope relocation a detection-only rule names in its metadata.
+
+        The engine's own capability set: a rule declares which relocation
+        repairs its findings, and the namespace phase runs that relocation
+        over the names the rule captured as ``$NAME``.
+        """
+
+        PROTOCOL = "protocol"
+        TYPING_ALIAS = "typing-alias"
+        FUTURE_ANNOTATIONS = "future-annotations"
+
+    @unique
     class SemanticCutoverPhase(StrEnum):
         """Semantic ``make mod`` cutovers planned by ``u.Infra.plan_semantic_cutover``."""
 
@@ -131,6 +144,13 @@ class FlextInfraConstantsRefactor:
     # ast-grep rejects unknown top-level keys, so an ast-grep rule declares
     # its finding-count receipt under the `metadata` mapping it does accept.
     CODEMOD_RULE_METADATA_KEY: ClassVar[str] = "metadata"
+    # A rule scoped to everything but its owning project names that project's
+    # distribution under `metadata.owner`; the plan of the owner drops it.
+    CODEMOD_RULE_OWNER_KEY: ClassVar[str] = "owner"
+    # A detection-only rule names the rope relocation that repairs it under
+    # `metadata.relocation` and captures the relocated symbol as `$NAME`.
+    CODEMOD_RULE_RELOCATION_KEY: ClassVar[str] = "relocation"
+    CODEMOD_RULE_NAME_METAVARIABLE: ClassVar[str] = "NAME"
     # The declarative signature-migration catalogue: one owner per governed
     # repository, read by the propagate-signatures verb.
     REFACTOR_SIGNATURE_RULES_RELPATH: ClassVar[Path] = (
@@ -402,9 +422,6 @@ class FlextInfraConstantsRefactor:
     # flext-j47u: consume core enforcement data through its exact canonical alias.
     ENFORCEMENT_LIBRARY_OWNERS: ClassVar[t.StrMapping] = c.ENFORCEMENT_LIBRARY_OWNERS
     "External library → project that owns its abstraction facade (SSOT: flext-core)."
-    FUTURE_ANNOTATIONS_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^from\s+__future__\s+import\s+annotations\b", re.MULTILINE
-    )
     "Matches 'from __future__ import annotations' import statement."
     ONLY_DOCSTRING_RE: ClassVar[t.RegexPattern] = re.compile(
         r'^("""[\s\S]*?"""|\'\'\'[\s\S]*?\'\'\')\s*$'

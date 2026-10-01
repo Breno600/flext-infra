@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import MutableMapping
+from collections import defaultdict
+from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
-from flext_infra import config, m, u
+from flext_infra import c, m, u
+from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
 from flext_infra.detectors.class_placement_detector import (
     FlextInfraClassPlacementDetector,
 )
@@ -13,20 +15,11 @@ from flext_infra.detectors.compatibility_alias_detector import (
     FlextInfraCompatibilityAliasDetector,
 )
 from flext_infra.detectors.cyclic_import_detector import FlextInfraCyclicImportDetector
-from flext_infra.detectors.future_annotations_detector import (
-    FlextInfraFutureAnnotationsDetector,
-)
 from flext_infra.detectors.import_alias_detector import FlextInfraImportAliasDetector
 from flext_infra.detectors.internal_import_detector import (
     FlextInfraInternalImportDetector,
 )
 from flext_infra.detectors.loose_object_detector import FlextInfraLooseObjectDetector
-from flext_infra.detectors.manual_protocol_detector import (
-    FlextInfraManualProtocolDetector,
-)
-from flext_infra.detectors.manual_typing_alias_detector import (
-    FlextInfraManualTypingAliasDetector,
-)
 from flext_infra.detectors.namespace_source_detector import (
     FlextInfraNamespaceSourceDetector,
 )
@@ -36,7 +29,7 @@ from flext_infra.detectors.private_import_bypass_detector import (
 from flext_infra.detectors.runtime_alias_detector import FlextInfraRuntimeAliasDetector
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, MutableMapping
     from pathlib import Path
 
     from flext_infra import t
@@ -230,51 +223,8 @@ class FlextInfraNamespaceEnforcerProjectMixin:
             ),
             apply=apply,
         )
-        future_violations = self._detect_and_apply(
-            py_files=py_files,
-            detect_fn=lambda f: FlextInfraFutureAnnotationsDetector.detect_file(
-                self._detector_context(
-                    file_path=f,
-                    rope_project=rope_project,
-                    parse_failures=parse_failures,
-                    project_root=project_root,
-                )
-            ),
-            rewrite_fn=lambda _vs: u.Infra.rewrite_missing_future_annotations(
-                py_files=py_files
-            ),
-            apply=apply,
-        )
-        manual_protocol_violations = self._detect_and_apply(
-            py_files=py_files,
-            detect_fn=lambda f: FlextInfraManualProtocolDetector.detect_file(
-                self._detector_context(
-                    file_path=f,
-                    rope_project=rope_project,
-                    parse_failures=parse_failures,
-                )
-            ),
-            rewrite_fn=lambda vs: u.Infra.rewrite_manual_protocol_violations(
-                project_root=project_root, py_files=py_files, violations=vs, gates=gates
-            ),
-            apply=apply,
-        )
-        manual_typing_violations = self._detect_and_apply(
-            py_files=py_files,
-            detect_fn=lambda f: FlextInfraManualTypingAliasDetector.detect_file(
-                self._detector_context(
-                    file_path=f,
-                    rope_project=rope_project,
-                    parse_failures=parse_failures,
-                )
-            ),
-            rewrite_fn=lambda vs: u.Infra.rewrite_manual_typing_alias_violations(
-                project_root=project_root,
-                violations=vs,
-                parse_failures=parse_failures,
-                gates=gates,
-            ),
-            apply=apply,
+        relocation_findings = self._relocate_rule_findings(
+            project_root=project_root, py_files=py_files, apply=apply, gates=gates
         )
         compatibility_alias_violations = self._detect_and_apply(
             py_files=py_files,
@@ -307,38 +257,6 @@ class FlextInfraNamespaceEnforcerProjectMixin:
             rewrite_fn=None,
             apply=apply,
         )
-        pattern_smells = self._detect_and_apply(
-            py_files=py_files,
-            # Config data + u.Infra are the only static-policy path.
-            detect_fn=lambda f: u.Infra.detect_static_rules(
-                self._detector_context(
-                    file_path=f,
-                    rope_project=rope_project,
-                    parse_failures=parse_failures,
-                    project_name=project_name,
-                    project_root=project_root,
-                ),
-                config.Infra.enforcement.rules,
-            ),
-            rewrite_fn=None,
-            apply=apply,
-        )
-        smell_buckets: MutableMapping[str, list[m.Infra.PatternSmellViolation]] = {
-            "bare_except": [],
-            "print": [],
-            "breakpoint": [],
-            "open_encoding": [],
-            "dict_annotation": [],
-            "typing_dict_attr": [],
-            "typing_dict_import": [],
-            "hardcoded_version": [],
-            "type_ignore": [],
-            "noqa": [],
-        }
-        for smell in pattern_smells:
-            bucket = smell_buckets.get(smell.kind)
-            if bucket is not None:
-                bucket.append(smell)
         return m.Infra.ProjectEnforcementReport(
             project=project_name,
             project_root=str(project_root),
@@ -348,27 +266,108 @@ class FlextInfraNamespaceEnforcerProjectMixin:
             namespace_source_violations=list(namespace_source_violations),
             internal_import_violations=list(internal_import_violations),
             private_import_bypass_violations=list(private_import_bypass_violations),
-            manual_protocol_violations=list(manual_protocol_violations),
             cyclic_imports=list(cyclic_imports),
             runtime_alias_violations=list(runtime_alias_violations),
-            future_violations=list(future_violations),
-            manual_typing_violations=list(manual_typing_violations),
+            relocation_findings=relocation_findings,
             compatibility_alias_violations=list(compatibility_alias_violations),
             foreign_canonical_alias_violations=list(foreign_canonical_alias_violations),
             class_placement_violations=list(class_placement_violations),
-            bare_except_violations=smell_buckets["bare_except"],
-            print_violations=smell_buckets["print"],
-            breakpoint_violations=smell_buckets["breakpoint"],
-            open_encoding_violations=smell_buckets["open_encoding"],
-            dict_annotation_violations=smell_buckets["dict_annotation"],
-            typing_dict_attr_violations=smell_buckets["typing_dict_attr"],
-            typing_dict_import_violations=smell_buckets["typing_dict_import"],
-            hardcoded_version_violations=smell_buckets["hardcoded_version"],
-            type_ignore_violations=smell_buckets["type_ignore"],
-            noqa_violations=smell_buckets["noqa"],
             parse_failures=list(parse_failures),
             files_scanned=len(py_files),
         )
+
+    def _relocate_rule_findings(
+        self,
+        *,
+        project_root: Path,
+        py_files: t.SequenceOf[Path],
+        apply: bool,
+        gates: t.StrSequence | None,
+    ) -> t.NonNegativeInt:
+        """Run the rope relocation each finding's rule declares; count the rest.
+
+        The rule catalog owns detection: a detection-only rule names the rope
+        relocation that repairs it (``metadata.relocation``) and captures the
+        relocated symbol as ``$NAME``. With ``apply`` the engine's relocations
+        run once over the captured names and the catalog is scanned again; the
+        returned count is what remains.
+        """
+        findings = self._relocation_findings(project_root, py_files)
+        if not (apply and findings):
+            return len(findings)
+        names: MutableMapping[
+            c.Infra.CodemodRelocation, MutableMapping[Path, set[str]]
+        ] = defaultdict(lambda: defaultdict(set))
+        for relocation, finding in findings:
+            target = names[relocation][project_root / finding.file]
+            if relocation is not c.Infra.CodemodRelocation.FUTURE_ANNOTATIONS:
+                target.add(self._captured_name(finding))
+        for relocation, names_by_file in names.items():
+            match relocation:
+                case c.Infra.CodemodRelocation.PROTOCOL:
+                    u.Infra.rewrite_manual_protocol_violations(
+                        project_root=project_root,
+                        py_files=py_files,
+                        names_by_file=names_by_file,
+                        gates=gates,
+                    )
+                case c.Infra.CodemodRelocation.TYPING_ALIAS:
+                    u.Infra.rewrite_manual_typing_alias_violations(
+                        project_root=project_root,
+                        names_by_file=names_by_file,
+                        gates=gates,
+                    )
+                case c.Infra.CodemodRelocation.FUTURE_ANNOTATIONS:
+                    u.Infra.rewrite_missing_future_annotations(
+                        py_files=tuple(names_by_file)
+                    )
+        self._rope_project.validate(self._rope_project.root)
+        return len(self._relocation_findings(project_root, py_files))
+
+    @staticmethod
+    def _relocation_findings(
+        project_root: Path, py_files: t.SequenceOf[Path]
+    ) -> t.VariadicTuple[t.Pair[c.Infra.CodemodRelocation, m.Infra.ModScanFinding]]:
+        """Return the engine's relocation findings inside the enforcer's file scope.
+
+        The scope is the project's namespace file set (its declared scan
+        directories), so a relocation never reaches a file the namespace pass
+        does not govern.
+        """
+        relocation_by_rule = {
+            rule.id: rule.relocation
+            for rule in u.Infra.codemod_rule_plan(project_root).unwrap().rules
+            if rule.relocation is not None
+        }
+        scoped = frozenset(path.resolve() for path in py_files)
+        report = FlextInfraModGateEngine.scan(project_root, fix=False).unwrap()
+        return tuple(
+            (relocation_by_rule[entry.rule_id], entry)
+            for entry in report.entries
+            if entry.rule_id in relocation_by_rule
+            and (project_root / entry.file).resolve() in scoped
+        )
+
+    @staticmethod
+    def _captured_name(finding: m.Infra.ModScanFinding) -> str:
+        """Return the ``$NAME`` metavariable a relocation rule captured."""
+        metavariables = finding.payload["metaVariables"]
+        if not isinstance(metavariables, Mapping):
+            msg = f"ast-grep finding without metaVariables: {finding.rule_id}"
+            raise TypeError(msg)
+        single = metavariables["single"]
+        if not isinstance(single, Mapping):
+            msg = f"ast-grep finding without single captures: {finding.rule_id}"
+            raise TypeError(msg)
+        captured = single[c.Infra.CODEMOD_RULE_NAME_METAVARIABLE]
+        if not isinstance(captured, Mapping):
+            msg = f"relocation rule {finding.rule_id} did not capture $NAME"
+            raise TypeError(msg)
+        text = captured["text"]
+        if not isinstance(text, str) or not text:
+            msg = f"relocation rule {finding.rule_id} captured an empty $NAME"
+            raise TypeError(msg)
+        return text
 
     @staticmethod
     def _split_compatibility_alias_violations(

@@ -64,7 +64,7 @@ class FlextInfraUtilitiesCodemodRules:
         local_config = root / c.Infra.CODEMOD_CONFIG_RELPATH
         if local_config.is_file():
             providers.append((f"{root_name}:local", local_config))
-        return cls._compose(tuple(providers))
+        return cls._compose(tuple(providers), root_name)
 
     @staticmethod
     def codemod_rule_filter(rule_ids: t.StrSequence) -> str:
@@ -253,8 +253,14 @@ class FlextInfraUtilitiesCodemodRules:
 
     @classmethod
     def _compose(
-        cls, providers: t.SequenceOf[t.Pair[str, Path]]
+        cls, providers: t.SequenceOf[t.Pair[str, Path]], root_name: str
     ) -> p.Result[m.Infra.CodemodRulePlan]:
+        """Elect every provider rule once; a rule owned by ``root_name`` is dropped.
+
+        A rule that bans a library outside its owning project declares the
+        owner's distribution under ``metadata.owner``: the owner's own plan
+        never elects it, every other project's plan does.
+        """
         selected: MutableMapping[str, m.Infra.CodemodRule] = {}
         rulesets: list[m.Infra.CodemodRuleset] = []
         provider_order: list[str] = []
@@ -270,6 +276,8 @@ class FlextInfraUtilitiesCodemodRules:
             elected: list[str] = []
             fixable: list[str] = []
             for rule in parsed.value:
+                if rule.owner is not None and canonicalize_name(rule.owner) == root_name:
+                    continue
                 previous = selected.get(rule.id)
                 if previous is not None:
                     if previous.provider == provider:
@@ -372,15 +380,25 @@ class FlextInfraUtilitiesCodemodRules:
                         return r[t.SequenceOf[m.Infra.CodemodRule]].fail(
                             f"{declared.error}: {resource}"
                         )
+                    metadata = parsed_rule.value.get(c.Infra.CODEMOD_RULE_METADATA_KEY)
+                    declared_metadata = (
+                        metadata if isinstance(metadata, Mapping) else {}
+                    )
                     rules.append(
-                        m.Infra.CodemodRule(
-                            id=rule_id,
-                            digest=u.Cli.sha256_content(canonical.value),
-                            provider=provider,
-                            resource=resource,
-                            fixable="fix" in parsed_rule.value,
-                            expected=declared.value[0] if declared.value else None,
-                        )
+                        m.Infra.CodemodRule.model_validate({
+                            "id": rule_id,
+                            "digest": u.Cli.sha256_content(canonical.value),
+                            "provider": provider,
+                            "resource": resource,
+                            "fixable": "fix" in parsed_rule.value,
+                            "expected": declared.value[0] if declared.value else None,
+                            "owner": declared_metadata.get(
+                                c.Infra.CODEMOD_RULE_OWNER_KEY
+                            ),
+                            "relocation": declared_metadata.get(
+                                c.Infra.CODEMOD_RULE_RELOCATION_KEY
+                            ),
+                        })
                     )
         return r[t.SequenceOf[m.Infra.CodemodRule]].ok(tuple(rules))
 
