@@ -325,6 +325,7 @@ Infra:
       # Physical workspace environments live beside the checkout so a linked
       # worktree shares one project-keyed environment instead of an in-tree
       # duplicate (runtime_environment_dir derives the same path).
+      runtime_environment_directory: .flext-venvs
       examples_timeout_seconds: 120
       submodule_timeout_seconds: 120
       # Operator 2026-09-08: ruff is the formatting and autofix rule.
@@ -420,6 +421,7 @@ Infra:
         # the project-owned timeout budget (tools.mypy.timeout_seconds) makes
         # it runnable on the runner.
         # pyrefly stays local-only (fast; pyright already covers CI).
+        local_check_gates: [pyrefly]
       # Git-hook stages are disabled by default;
       # the workflow below still declares stage membership so re-enabling is a
       # one-key change, case by case. CI owns read-only setup, generation drift,
@@ -482,6 +484,12 @@ Infra:
         actions: [generate, fix, fmt, validate, audit]
         mutable_actions: [fix, fmt]
         reports_dir: .reports/docs
+        overview_preview_limits:
+          aliases: 11
+          public_symbols: 10
+          facades: 8
+          module_exports: 8
+          keywords: 8
         cross_project_relative_link_pattern: '^(?:\.\./)+flext-[a-z0-9-]+(?:/|$)'
         stale_github_organizations:
           - organization

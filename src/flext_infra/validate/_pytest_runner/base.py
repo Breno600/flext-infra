@@ -40,6 +40,10 @@ class FlextInfraPytestRunnerBase(s[int]):
             description="Explicit profiling child invocation from the outer boundary."
         ),
     ] = ()
+    slow_phase: Annotated[
+        bool,
+        m.Field(description="Select only the declared slow marker in this phase"),
+    ] = False
 
     @staticmethod
     def _environment_value(name: str) -> str:
@@ -53,6 +57,7 @@ class FlextInfraPytestRunnerBase(s[int]):
         started_at_monotonic: float,
         collection_command_prefix: t.StrTuple = (),
         testmon: bool = True,
+        slow_phase: bool = False,
     ) -> Self:
         """Create the runner exclusively from generated Make inputs.
 
@@ -64,6 +69,7 @@ class FlextInfraPytestRunnerBase(s[int]):
             repository_root=Path.cwd(),
             started_at_monotonic=started_at_monotonic,
             collection_command_prefix=collection_command_prefix,
+            slow_phase=slow_phase,
             ci_context=(u.Infra.env_lookup(ci.variable) or "").strip() == ci.value,
             target=Path(cls._environment_value(c.Infra.PYTEST_ENV_TARGET)),
             reports=Path(cls._environment_value(c.Infra.PYTEST_ENV_REPORTS)),

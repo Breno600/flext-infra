@@ -10,6 +10,7 @@ from flext_cli import m
 from ... import t
 from ..._constants import (
     FlextInfraConstantsCodegenProject,
+    FlextInfraConstantsDocs,
     FlextInfraConstantsWorkspace,
 )
 from ..deps_tool_config import FlextInfraModelsDepsToolConfig
@@ -57,6 +58,10 @@ class FlextInfraConfigModelsRender:
             Mapping[str, FlextInfraConfigModelsProvider.GithubActionPinSpec],
             m.Field(description="Immutable GitHub Action catalog"),
         ]
+        docs_report_filenames: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(description="Structured docs reports CI dumps and uploads"),
+        ] = FlextInfraConstantsDocs.DOCS_STRUCTURED_REPORT_FILENAMES
         make: Annotated[
             FlextInfraConfigModelsMake.MakeSpec,
             m.Field(description="Canonical workflow command contract"),
@@ -213,6 +218,11 @@ class FlextInfraConfigModelsRender:
 
     class EnvrcRenderSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Typed input consumed only by the generated project ``.envrc``."""
+
+        runtime_environment_directory: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Sibling directory for physical workspace environments"),
+        ]
 
         repository_root_rel: Annotated[
             t.NonEmptyStr,
