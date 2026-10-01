@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import shutil
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import pytest
+from flext_cli import cli
 from flext_tests import tm
 
-from flext_infra import m, t
+from flext_infra import config, m, t
 from flext_infra.gates.bandit import FlextInfraBanditGate
 from flext_infra.gates.markdown import FlextInfraMarkdownGate
 from tests import TestsFlextInfraUtilities as u, c
@@ -27,6 +28,11 @@ class TestsFlextInfraBanditAndMarkdownGates:
         "Kappa lambda mu nu xi omicron pi rho sigma tau.\n"
     )
     LONG_LINE = "# Test\n\n" + " ".join(["word"] * 30) + "\n"
+    # The .markdownlint.json projection renders this exact typed SSOT; tests
+    # of the markdown contract read it instead of freezing a config literal.
+    CANONICAL_MARKDOWNLINT_CONFIG: ClassVar[str] = cli.json_dumps(
+        dict(config.Infra.tooling.tools.markdown.rules)
+    ).unwrap()
 
     def test_bandit_reports_real_finding(self, tmp_path: Path) -> None:
         project_dir = u.Tests.mk_project(tmp_path, "bandit-project")
@@ -79,20 +85,26 @@ class TestsFlextInfraBanditAndMarkdownGates:
             ("", None, False, []),
             (HEADING_SKIP, None, True, ["MD001"]),
             ("# Test\n", '{"broken": [', True, ["TOOL_ERROR"]),
-            # MD013 reflow hints are reported by the linter and counted in its
-            # exit code, but its own formatter rejoins the paragraph instead of
-            # normalizing it, so no canonical verb can clear them. The gate drops
-            # the hint and must not convert the resulting non-zero exit into a
-            # tool error (flext-4n2hk; root flext#305/#306 were blocked on it).
+            # Residual MD013 findings remain blocking when the native formatter
+            # cannot repair the configured paragraph width.
             (
                 REFLOW_HINT,
                 (
                     '{"MD013": {"line_length": 88, "reflow": true,'
                     ' "reflow-mode": "normalize"}}'
                 ),
-                False,
-                [],
+                True,
+                ["MD013"],
             ),
+            # A hand-wrapped document that rumdl's normalize pass would only
+            # hint at must pass under the PROJECTED config: the canonical
+            # MD013 declares reflow disabled (flext-md-converge: wrapping is
+            # hand-owned — the normalize pass joins paragraphs into lines no
+            # verb can repair), so the hint path cannot fire and the gate
+            # reads the same typed rules SSOT the .markdownlint.json
+            # projection renders. A hand-written config literal here would
+            # freeze a shape no projection produces.
+            (REFLOW_HINT, CANONICAL_MARKDOWNLINT_CONFIG, False, []),
         ],
     )
     def test_markdown_check(
@@ -111,7 +123,6 @@ class TestsFlextInfraBanditAndMarkdownGates:
             (project_dir / c.Infra.MARKDOWNLINT_CONFIG_FILENAME).write_text(
                 config_text, encoding="utf-8"
             )
-
         result = u.Tests.check_gate_asserting(
             FlextInfraMarkdownGate,
             tmp_path,

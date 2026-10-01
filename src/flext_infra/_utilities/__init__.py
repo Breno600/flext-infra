@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from ._docs_scope_selection import FlextInfraUtilitiesDocsScopeSelectionMixin
     from ._docs_scope_state import FlextInfraUtilitiesDocsScopeStateMixin
     from ._git.attestation import FlextInfraUtilitiesGitAttestationMixin
+    from ._git.mutation_scope import FlextInfraUtilitiesGitMutationScopeMixin
     from ._git.remote import FlextInfraUtilitiesGitRemote
     from ._git.repo import FlextInfraUtilitiesGitRepo
     from ._git.scope import FlextInfraUtilitiesGitScopeMixin
@@ -36,6 +37,13 @@ if TYPE_CHECKING:
     from ._git.semantic_refs import FlextInfraUtilitiesGitSemanticRefsMixin
     from ._git.semantic_submodule import FlextInfraUtilitiesGitSemanticSubmoduleMixin
     from ._git.semantic_worktree import FlextInfraUtilitiesGitSemanticWorktreeMixin
+    from ._git.state_capture import FlextInfraUtilitiesGitStateCaptureMixin
+    from ._git.state_checkpoint import FlextInfraUtilitiesGitStateCheckpointMixin
+    from ._git.state_files import FlextInfraUtilitiesGitStateFilesMixin
+    from ._git.state_publication import FlextInfraUtilitiesGitStatePublicationMixin
+    from ._git.state_snapshot import FlextInfraUtilitiesGitStateSnapshotMixin
+    from ._git.state_transition import FlextInfraUtilitiesGitStateTransitionMixin
+    from ._git.state_trees import FlextInfraUtilitiesGitStateTreesMixin
     from ._git.worktree import FlextInfraUtilitiesGitWorktreeMixin
     from ._git.worktree_checkpoint import FlextInfraUtilitiesGitWorktreeCheckpointMixin
     from ._git.worktree_discovery import FlextInfraUtilitiesGitWorktreeDiscoveryMixin
@@ -80,6 +88,10 @@ if TYPE_CHECKING:
     from ._semantic_cutover.alias_cst import FlextInfraUtilitiesSemanticCutoverAliasCst
     from ._semantic_cutover.aliases import FlextInfraUtilitiesSemanticCutoverAliases
     from ._semantic_cutover.base import FlextInfraUtilitiesSemanticCutoverBase
+    from ._semantic_cutover.bindings import FlextInfraUtilitiesSemanticCutoverBindings
+    from ._semantic_cutover.dynamic_environment import (
+        FlextInfraUtilitiesSemanticCutoverDynamicEnvironment,
+    )
     from ._semantic_cutover.edits import FlextInfraUtilitiesSemanticCutoverEdits
     from ._semantic_cutover.facade_base_cst import (
         FlextInfraUtilitiesSemanticCutoverFacadeBaseCst,
@@ -102,6 +114,12 @@ if TYPE_CHECKING:
     from ._semantic_cutover.helper_references import (
         FlextInfraUtilitiesSemanticHelperReferences,
     )
+    from ._semantic_cutover.model_fields import (
+        FlextInfraUtilitiesSemanticCutoverModelFields,
+    )
+    from ._semantic_cutover.model_fields_bindings import (
+        FlextInfraUtilitiesSemanticCutoverModelFieldsBindings,
+    )
     from ._semantic_cutover.nesting import FlextInfraUtilitiesSemanticCutoverNesting
     from ._semantic_cutover.nesting_cst import (
         FlextInfraUtilitiesSemanticCutoverNestingCst,
@@ -115,6 +133,9 @@ if TYPE_CHECKING:
     )
     from ._semantic_cutover.private_imports import (
         FlextInfraUtilitiesSemanticCutoverPrivateImports,
+    )
+    from ._semantic_cutover.self_facade import (
+        FlextInfraUtilitiesSemanticCutoverSelfFacade,
     )
     from .base import FlextInfraUtilitiesBase
     from .census import FlextInfraUtilitiesRefactorCensus
@@ -260,6 +281,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesDocsValidate",
     "FlextInfraUtilitiesGit",
     "FlextInfraUtilitiesGitAttestationMixin",
+    "FlextInfraUtilitiesGitMutationScopeMixin",
     "FlextInfraUtilitiesGitRemote",
     "FlextInfraUtilitiesGitRepo",
     "FlextInfraUtilitiesGitScopeMixin",
@@ -271,6 +293,13 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesGitSemanticRefsMixin",
     "FlextInfraUtilitiesGitSemanticSubmoduleMixin",
     "FlextInfraUtilitiesGitSemanticWorktreeMixin",
+    "FlextInfraUtilitiesGitStateCaptureMixin",
+    "FlextInfraUtilitiesGitStateCheckpointMixin",
+    "FlextInfraUtilitiesGitStateFilesMixin",
+    "FlextInfraUtilitiesGitStatePublicationMixin",
+    "FlextInfraUtilitiesGitStateSnapshotMixin",
+    "FlextInfraUtilitiesGitStateTransitionMixin",
+    "FlextInfraUtilitiesGitStateTreesMixin",
     "FlextInfraUtilitiesGitWorktreeCheckpointMixin",
     "FlextInfraUtilitiesGitWorktreeDiscoveryMixin",
     "FlextInfraUtilitiesGitWorktreeFactsMixin",
@@ -362,15 +391,20 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesSemanticCutoverAliasCst",
     "FlextInfraUtilitiesSemanticCutoverAliases",
     "FlextInfraUtilitiesSemanticCutoverBase",
+    "FlextInfraUtilitiesSemanticCutoverBindings",
+    "FlextInfraUtilitiesSemanticCutoverDynamicEnvironment",
     "FlextInfraUtilitiesSemanticCutoverEdits",
     "FlextInfraUtilitiesSemanticCutoverFacadeBaseCst",
     "FlextInfraUtilitiesSemanticCutoverFacadeBases",
     "FlextInfraUtilitiesSemanticCutoverFacadeOwners",
+    "FlextInfraUtilitiesSemanticCutoverModelFields",
+    "FlextInfraUtilitiesSemanticCutoverModelFieldsBindings",
     "FlextInfraUtilitiesSemanticCutoverNesting",
     "FlextInfraUtilitiesSemanticCutoverNestingCst",
     "FlextInfraUtilitiesSemanticCutoverNestingReferences",
     "FlextInfraUtilitiesSemanticCutoverPrivateImportCst",
     "FlextInfraUtilitiesSemanticCutoverPrivateImports",
+    "FlextInfraUtilitiesSemanticCutoverSelfFacade",
     "FlextInfraUtilitiesSemanticFamilyFlatten",
     "FlextInfraUtilitiesSemanticFamilyReferences",
     "FlextInfraUtilitiesSemanticFamilyTypeReferences",
@@ -412,6 +446,7 @@ _LAZY_IMPORTS = MappingProxyType(
             "._docs_scope_state": ("FlextInfraUtilitiesDocsScopeStateMixin",),
             "._git": ("_git",),
             "._git.attestation": ("FlextInfraUtilitiesGitAttestationMixin",),
+            "._git.mutation_scope": ("FlextInfraUtilitiesGitMutationScopeMixin",),
             "._git.remote": ("FlextInfraUtilitiesGitRemote",),
             "._git.repo": ("FlextInfraUtilitiesGitRepo",),
             "._git.scope": ("FlextInfraUtilitiesGitScopeMixin",),
@@ -425,6 +460,13 @@ _LAZY_IMPORTS = MappingProxyType(
                 "FlextInfraUtilitiesGitSemanticSubmoduleMixin",
             ),
             "._git.semantic_worktree": ("FlextInfraUtilitiesGitSemanticWorktreeMixin",),
+            "._git.state_capture": ("FlextInfraUtilitiesGitStateCaptureMixin",),
+            "._git.state_checkpoint": ("FlextInfraUtilitiesGitStateCheckpointMixin",),
+            "._git.state_files": ("FlextInfraUtilitiesGitStateFilesMixin",),
+            "._git.state_publication": ("FlextInfraUtilitiesGitStatePublicationMixin",),
+            "._git.state_snapshot": ("FlextInfraUtilitiesGitStateSnapshotMixin",),
+            "._git.state_transition": ("FlextInfraUtilitiesGitStateTransitionMixin",),
+            "._git.state_trees": ("FlextInfraUtilitiesGitStateTreesMixin",),
             "._git.worktree": ("FlextInfraUtilitiesGitWorktreeMixin",),
             "._git.worktree_checkpoint": (
                 "FlextInfraUtilitiesGitWorktreeCheckpointMixin",
@@ -490,6 +532,12 @@ _LAZY_IMPORTS = MappingProxyType(
                 "FlextInfraUtilitiesSemanticCutoverAliases",
             ),
             "._semantic_cutover.base": ("FlextInfraUtilitiesSemanticCutoverBase",),
+            "._semantic_cutover.bindings": (
+                "FlextInfraUtilitiesSemanticCutoverBindings",
+            ),
+            "._semantic_cutover.dynamic_environment": (
+                "FlextInfraUtilitiesSemanticCutoverDynamicEnvironment",
+            ),
             "._semantic_cutover.edits": ("FlextInfraUtilitiesSemanticCutoverEdits",),
             "._semantic_cutover.facade_base_cst": (
                 "FlextInfraUtilitiesSemanticCutoverFacadeBaseCst",
@@ -512,6 +560,12 @@ _LAZY_IMPORTS = MappingProxyType(
             "._semantic_cutover.helper_references": (
                 "FlextInfraUtilitiesSemanticHelperReferences",
             ),
+            "._semantic_cutover.model_fields": (
+                "FlextInfraUtilitiesSemanticCutoverModelFields",
+            ),
+            "._semantic_cutover.model_fields_bindings": (
+                "FlextInfraUtilitiesSemanticCutoverModelFieldsBindings",
+            ),
             "._semantic_cutover.nesting": (
                 "FlextInfraUtilitiesSemanticCutoverNesting",
             ),
@@ -529,6 +583,9 @@ _LAZY_IMPORTS = MappingProxyType(
             ),
             "._semantic_cutover.private_imports": (
                 "FlextInfraUtilitiesSemanticCutoverPrivateImports",
+            ),
+            "._semantic_cutover.self_facade": (
+                "FlextInfraUtilitiesSemanticCutoverSelfFacade",
             ),
             ".base": ("FlextInfraUtilitiesBase",),
             ".census": ("FlextInfraUtilitiesRefactorCensus",),

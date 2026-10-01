@@ -17,13 +17,23 @@ class FlextInfraDocAuditorChecksMixin:
 
     @staticmethod
     def _policy_token_issues(
-        scope: m.Infra.DocScope, *, policy_key: str, issue_type: str
+        scope: m.Infra.DocScope,
+        *,
+        policy_key: str,
+        issue_type: str,
+        exempt_key: str | None = None,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
         """Return text-token issues for one scope using the named policy list."""
+        exempt = (
+            u.Infra.docs_policy_list(scope, section="audit", key=exempt_key)
+            if exempt_key is not None
+            else ()
+        )
         issues: t.SequenceOf[m.Infra.AuditIssue] = u.Infra.docs_text_token_issues(
             scope,
             tokens=u.Infra.docs_policy_list(scope, section="audit", key=policy_key),
             issue_type=issue_type,
+            exempt_paths=exempt,
         )
         return issues
 
@@ -40,7 +50,10 @@ class FlextInfraDocAuditorChecksMixin:
     def placeholder_issues(scope: m.Infra.DocScope) -> t.SequenceOf[m.Infra.AuditIssue]:
         """Return placeholder-text issues for one scope."""
         return FlextInfraDocAuditorChecksMixin._policy_token_issues(
-            scope, policy_key="placeholder_terms", issue_type="placeholder"
+            scope,
+            policy_key="placeholder_terms",
+            issue_type="placeholder",
+            exempt_key="placeholder_exempt_paths",
         )
 
     @staticmethod

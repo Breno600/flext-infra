@@ -65,17 +65,6 @@ class FlextInfraModelsDepsToolConfig(
                 description="Allow direct references in project metadata.",
             ),
         ]
-        packaged_data_dirs: Annotated[
-            t.StrSequence,
-            m.Field(
-                alias="packaged-data-dirs",
-                default_factory=tuple,
-                description=(
-                    "Root data directories force-included into the wheel when "
-                    "present (e.g. config, templates), so they survive install."
-                ),
-            ),
-        ]
 
     class PytestWorkerCeiling(m.ArbitraryTypesModel):
         """Tagged per-project pytest worker ceiling: absolute or CPU fraction.
@@ -106,7 +95,7 @@ class FlextInfraModelsDepsToolConfig(
 
         @m.model_validator(mode="before")
         @classmethod
-        def _coerce_legacy_int(cls, data: object) -> object:
+        def _coerce_legacy_int(cls, data: t.JsonValue) -> t.JsonValue:
             """Accept the legacy bare-integer form as an absolute ceiling."""
             if isinstance(data, int) and not isinstance(data, bool):
                 return {"workers": data}
@@ -377,6 +366,16 @@ class FlextInfraModelsDepsToolConfig(
                 items_per_worker * self.slow_timeout_seconds
                 + self.termination_grace_seconds
             )
+
+        @property
+        def serial_suite_stop_reserve_seconds(self) -> int:
+            """Derive the serial stop budget.
+
+            Serial execution keeps at most one item in flight, so only that
+            item can still run to the slow per-item ceiling after the stop,
+            followed by the same termination grace.
+            """
+            return self.slow_timeout_seconds + self.termination_grace_seconds
 
         @u.model_validator(mode="after")
         def _validate_execution_limits(self) -> Self:

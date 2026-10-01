@@ -8,7 +8,7 @@ from pathlib import Path
 from flext_core import r
 
 from ... import c, config, m, p, t, u
-from ...deps import FlextInfraEnsureRuffConfigPhase
+from ...deps import FlextInfraEnsurePackagingPhase, FlextInfraEnsureRuffConfigPhase
 from .pyproject_policy import FlextInfraCodegenConformPyprojectPolicy
 
 
@@ -206,7 +206,10 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         )
 
     def _project_render_context(
-        self, render_inputs: m.Infra.CodegenRenderInputs
+        self,
+        render_inputs: m.Infra.CodegenRenderInputs,
+        *,
+        planned_data_files: t.StrSequence = (),
     ) -> p.Result[m.Infra.ProjectRenderContext]:
         """Build the complete typed context consumed by project templates."""
         target = render_inputs.target
@@ -300,26 +303,15 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
             return r[m.Infra.ProjectRenderContext].fail(
                 "detected FLEXT line carries no provider base URL"
             )
-        # A data dir already shipped inside the package (``src/<pkg>/<dir>``)
-        # must not also be force-included from the repo root: both map to the
-        # same wheel path and hatchling rejects the duplicate archive entry.
-        # Force-include stays reserved for root data that the package does not
-        # already carry (mirrors the ensure-packaging phase rule).
-        package_root = repository_root / c.Infra.DEFAULT_SRC_DIR / project.package_name
-        packaged_data_dirs = (
-            tuple(
-                data_dir
-                for data_dir in config.Infra.tooling.tools.hatch.packaged_data_dirs
-                if any(
-                    profile in entry.profiles
-                    and Path(entry.destination).parts
-                    and Path(entry.destination).parts[0] == data_dir
-                    for entry in codegen.templates.entries
-                )
-                and not (package_root / data_dir).is_dir()
+        packaged_data_paths = (
+            FlextInfraEnsurePackagingPhase.resolve_data_paths(
+                repository_root,
+                project.package_name,
+                project.packaged_data_paths,
+                planned_data_files,
             )
             if profile is not c.Infra.MakeProfile.WORKSPACE
-            else ()
+            else m.Infra.PackagedDataSelection()
         )
         # The planner resolved the catalog once per repository: the committed
         # HEAD catalog for an existing tree, the empty one for a scaffold.
@@ -374,7 +366,11 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 canonical_project_name=target.canonical_project_name,
                 const_name=project.constant_name,
                 package_name=project.package_name,
-                packaged_data_dirs=packaged_data_dirs,
+                packaged_data_paths=(
+                    *packaged_data_paths.files,
+                    *packaged_data_paths.directories,
+                ),
+                packaged_data_files=packaged_data_paths.files,
                 namespace_scan_dirs=project.namespace_scan_dirs,
                 workspace_integration=workspace.integration,
                 # NOTE (multi-agent, flext-get3j): carry only the validated

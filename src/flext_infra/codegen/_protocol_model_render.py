@@ -32,7 +32,7 @@ class FlextInfraCodegenProtocolModelRender:
         grouped: MutableMapping[str, list[type[m.BaseModel]]] = {}
         for model in sorted(models, key=cls._model_sort_key):
             grouped.setdefault(cls._owner_name(model), []).append(model)
-        modules: dict[str, str] = {}
+        modules: MutableMapping[str, str] = {}
         part_names: list[str] = []
         for owner, owner_models in sorted(grouped.items()):
             for index, chunk in enumerate(cls._chunks(owner_models, target), 1):
@@ -125,7 +125,7 @@ class FlextInfraCodegenProtocolModelRender:
         if getter is None:
             msg = f"owned member {name!r} has no getter on {model.__name__}"
             raise TypeError(msg)
-        annotations: dict[str, t.TypeHintSpecifier | None] = getattr(
+        annotations: t.MappingKV[str, t.TypeHintSpecifier | None] = getattr(
             getter, "__annotations__", {}
         )
         annotation = annotations.get("return")

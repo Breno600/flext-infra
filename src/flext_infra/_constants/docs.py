@@ -61,8 +61,37 @@ class FlextInfraConstantsDocs:
         "ANN204",
         "ANN205",
         "PLC0415",
+        "D106",
+        "B018",
+        "F821",
+        "F811",
+        "SLF001",
+        "S106",
+        "PT004",
+        "E402",
+        "PLW0127",
+        "PLC0414",
+        "pytest-useless-yield-fixture",
+        "unused-variable",
+        "unused-static-method-argument",
     )
-    """Rules ignored for executable docs snippets that are not full modules/tests."""
+    """Rules ignored for executable docs snippets that are not full modules/tests.
+
+    ``D106`` and ``B018`` join the set because the docs are teaching material:
+    a nested example class needs no docstring, and a bare attribute access
+    (``c.Settings.y``) is the idiom being demonstrated, not a useless
+    expression (measured 2026-09-30: 61 findings across the root's docs were
+    exactly these two rules). ``F821`` joins for the same reason one level up:
+    docs snippets are fragments that cite symbols defined in the surrounding
+    prose, other repositories, or the installed fleet — a snippet is never a
+    whole module, so every foreign name is undefined by construction
+    (measured: the root's remaining 57 fence findings were all F821). The
+    final block joins the last fragment-inherent rules measured on the same
+    sweep: ``F811`` (each block re-exemplifies the same protocol), ``SLF001``
+    (demonstrating the lazy internal accessor), ``S106`` (example docker
+    credentials), ``PT004`` (didactic fixture), ``E402`` (contextual import
+    mid-document), ``PLW0127``/``PLC0414`` (the self-assignment aliasing the
+    lazy-export pattern itself teaches)."""
     MACHINE_PATH_RE: ClassVar[t.RegexPattern] = re.compile(
         r"(?<![\w./-])/(?:home|Users)/(?P<user>[A-Za-z0-9_.-]+)(?=/|\b)"
     )
@@ -152,6 +181,10 @@ class FlextInfraConstantsDocs:
     """Match internal anchor links, capturing text and anchor."""
     INLINE_CODE_RE: ClassVar[t.RegexPattern] = re.compile(r"`[^`]*`")
     """Match inline code spans for stripping before analysis."""
+    DOCS_INLINE_COMMAND_DIRECTIVE_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"\b(?:run|execute|invoke|try|use)(?:\s+the\s+command)?\s*$", re.IGNORECASE
+    )
+    """Recognize an instruction preceding a shell command in inline code."""
     STRING_LITERAL_RE: ClassVar[t.RegexPattern] = re.compile(
         r"""["']([a-zA-Z0-9_\.]+)["']"""
     )

@@ -349,9 +349,15 @@ class FlextInfraConfigModelsContexts:
         package_name: Annotated[
             t.NonEmptyStr, m.Field(description="Python import package name")
         ]
-        packaged_data_dirs: Annotated[
+        packaged_data_paths: Annotated[
             t.StrSequence,
-            m.Field(description="Generated root data directories shipped in wheels"),
+            m.Field(
+                description="Validated relative data paths shipped in distributions"
+            ),
+        ]
+        packaged_data_files: Annotated[
+            t.StrSequence,
+            m.Field(description="Validated individually declared data files"),
         ]
         class_stem: Annotated[
             t.NonEmptyStr, m.Field(description="Public facade class stem")
@@ -627,6 +633,13 @@ class FlextInfraConfigModelsContexts:
                 ),
             ),
         ] = ()
+        packaged_data_paths: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                default=(),
+                description="Repository-relative data files and directories shipped with the package",
+            ),
+        ] = ()
         cli_module: Annotated[
             bool,
             m.Field(
@@ -803,6 +816,32 @@ class FlextInfraConfigModelsContexts:
                 )
             ),
         ] = None
+
+    class SubprojectPolicy(FlextInfraConfigModelsContract.ConfigContract):
+        """Workspace policy one governed .gitmodules entry loads under."""
+
+        integration_branch: Annotated[
+            str | None,
+            m.Field(
+                default=None,
+                description="Detected integration line; None follows the superproject",
+            ),
+        ]
+        workspace_beads: Annotated[
+            FlextInfraConfigModelsBeads.BeadsProjectSpec | None,
+            m.Field(default=None, description="Inherited workspace beads spec"),
+        ]
+        declared_member: Annotated[
+            FlextInfraConfigModelsContexts.RepositoryRef | None,
+            m.Field(default=None, description="Catalog-declared member reference"),
+        ]
+        allow_unprovisioned_members: Annotated[
+            bool,
+            m.Field(
+                default=False,
+                description="Accept members without provisioned checkouts",
+            ),
+        ]
 
     class RepositoryConformTarget(FlextInfraConfigModelsContract.ConfigContract):
         """Runtime-derived conformance identity for one repository."""

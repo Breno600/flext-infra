@@ -178,6 +178,43 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             t.MutableJsonMapping, m.Field(description="Validated plain TOML payload")
         ] = m.Field(default_factory=dict)
 
+    class PackagedDataSelection(m.ContractModel):
+        """Validated data inputs separated by Hatch selection semantics."""
+
+        files: Annotated[
+            t.StrTuple, m.Field(description="Explicit data files included individually")
+        ] = ()
+        directories: Annotated[
+            t.StrTuple,
+            m.Field(description="Data directories selected with VCS filters"),
+        ] = ()
+
+    class RuffProjectFacts(m.ContractModel):
+        """Measured per-project facts the canonical Ruff phase derives from."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+        first_party: Annotated[
+            t.StrSequence, m.Field(description="Detected first-party namespaces")
+        ]
+        stale_patterns: Annotated[
+            t.StrSequence,
+            m.Field(description="Legacy per-file ignore patterns to retire"),
+        ]
+        per_file_ignores: Annotated[
+            t.MappingKV[str, t.StrSequence],
+            m.Field(description="Effective managed per-file ignores"),
+        ]
+        analysis_exclusions: Annotated[
+            t.StrSequence | None,
+            m.Field(
+                default=None,
+                description="Declared analysis exclusions; None derives workspace globs",
+            ),
+        ]
+        generated_python_roots: Annotated[
+            t.StrSequence, m.Field(description="Generated python roots to exclude")
+        ]
+
     class PyprojectDeclaredTopology(m.ContractModel):
         """Project topology a caller declares instead of discovering it on disk.
 
@@ -192,6 +229,16 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
         root_packages: Annotated[
             t.StrTuple,
             m.Field(description="Top-level packages shipped beyond the primary one"),
+        ] = ()
+        packaged_data_paths: Annotated[
+            t.StrTuple,
+            m.Field(description="Repository-declared relative data paths to ship"),
+        ] = ()
+        planned_data_files: Annotated[
+            t.StrTuple,
+            m.Field(
+                description="Exact scaffold file destinations planned before publication"
+            ),
         ] = ()
         declared_python_dirs: Annotated[
             t.StrTuple, m.Field(description="Python roots declared for the project")

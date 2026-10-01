@@ -31,7 +31,6 @@ class TestsFlextInfraUtilitiesResourceLimits:
 
         tm.ok(result)
         tm.that(u.Cli.process_succeeded(result.value.outcome), eq=True)
-        tm.that(result.value.outcome.raw_return_code, eq=0)
 
     def test_mypy_profile_records_the_real_checker(self, tmp_path: Path) -> None:
         """Keep the public profiling contract while removing executable selection."""
@@ -137,13 +136,13 @@ class TestsFlextInfraUtilitiesResourceLimits:
             # Real interpreter startup and controlled group cleanup use the
             # existing integration-harness budget, not the default case budget.
             pytest.param("deadline", 124, marks=pytest.mark.slow),
-            # Darwin's supervisor samples group RSS and stops it (137); Linux
-            # prlimit makes the allocation fail inside the process (exit 1).
-            ("memory", (137 if sys.platform == "darwin" else 1)),
+            # The checker may use different nonzero exit codes while reporting
+            # the same bounded allocation failure through its public output.
+            ("memory", None),
         ],
     )
     def test_resource_limit_enforces_exit_deadline_and_memory(
-        self, tmp_path: Path, scenario: str, expected: int
+        self, tmp_path: Path, scenario: str, expected: int | None
     ) -> None:
         """Exercise a real exit, deadline and resident allocation through the owner."""
         limit = m.Infra.MypyResourceLimit(
@@ -161,20 +160,31 @@ class TestsFlextInfraUtilitiesResourceLimits:
             if scenario == "memory":
                 source += f"allocation = bytearray({limit.memory_limit_bytes * 2}); "
             source += f"time.sleep({limit.timeout_seconds + 1})"
-        result = u.Cli.run_raw(
-            u.Infra.mypy_limited_command(
-                test_u.Tests.mypy_workload(tmp_path, source), limit
-            ),
-            timeout=u.Infra.mypy_runner_timeout(limit),
+        command = u.Infra.mypy_limited_command(
+            test_u.Tests.mypy_workload(tmp_path, source), limit
         )
+        result = u.Cli.run_raw(command, timeout=u.Infra.mypy_runner_timeout(limit))
         tm.ok(result)
         tm.that(result.value.stdout, has="workload-ready")
-        tm.that(result.value.outcome.raw_return_code, eq=expected)
         if scenario == "memory":
             tm.that(
-                result.value.stderr,
-                has="RSS limit reached" if sys.platform == "darwin" else "MemoryError",
+                any(str(limit.memory_limit_bytes) in part for part in command[:-1]),
+                eq=True,
             )
+            tm.that(u.Cli.process_succeeded(result.value.outcome), eq=False)
+            tm.that(result.value.outcome.timed_out, eq=False)
+            # The configured bound itself must cause the stop: only a
+            # resource-exhaustion outcome (memory marker or signal) yields the
+            # public diagnostic, so an unrelated checker failure after the
+            # workload start can no longer satisfy this scenario.
+            diagnostic = tm.not_none(
+                u.Infra.mypy_failure_diagnostic(result.value, limit)
+            )
+            tm.that(diagnostic, has=f"memory_limit={limit.memory_limit_mb} MiB")
+            if sys.platform == "darwin":
+                tm.that(result.value.stderr, has="RSS limit reached")
+        else:
+            tm.that(result.value.outcome.raw_return_code, eq=expected)
 
     @pytest.mark.slow
     @pytest.mark.parametrize("expected", [7, 124])
@@ -286,7 +296,19 @@ class TestsFlextInfraUtilitiesResourceLimits:
         tm.that(limit.memory_limit_mb, eq=memory_limit)
         tm.that(limit.timeout_seconds, eq=timeout_limit)
 
-    @pytest.mark.parametrize("invalid_value", ["", "1024.0", "-1", " 1024"])
+    @pytest.mark.parametrize(
+        "invalid_value",
+        [
+            # Each case spawns a real interpreter that imports the full
+            # package tree before the boundary rejects the text, so they run
+            # on the integration-harness budget like the deadline scenario
+            # above, never on the default case budget.
+            pytest.param("", marks=pytest.mark.slow),
+            pytest.param("1024.0", marks=pytest.mark.slow),
+            pytest.param("-1", marks=pytest.mark.slow),
+            pytest.param(" 1024", marks=pytest.mark.slow),
+        ],
+    )
     def test_mypy_resource_limit_rejects_non_integer_environment(
         self, invalid_value: str
     ) -> None:
@@ -384,3 +406,30 @@ class TestsFlextInfraUtilitiesResourceLimits:
         )
 
         tm.that(diagnostic, has=["Traceback: checker frame", "INTERNAL ERROR"])
+
+    def test_mypy_cache_directory_is_project_keyed_and_survives_relocks(
+        self, tmp_path: Path
+    ) -> None:
+        """One shared Mypy cache per project, reused by every checkout and relock."""
+        spec = config.Infra.codegen.make.mypy_cache
+
+        def checkout(name: str, project: str) -> Path:
+            root = tmp_path / name
+            root.mkdir()
+            (root / c.PYPROJECT_FILENAME).write_text(
+                f"[project]\nname = '{project}'\nversion = '0.0.0'\n", encoding="utf-8"
+            )
+            return root
+
+        lane = checkout("lane", "fixture-alpha")
+        primary = checkout("primary", "fixture-alpha")
+        other = checkout("other", "fixture-beta")
+        shared = u.Infra.mypy_cache_directory(lane)
+        # Every checkout of one project reuses one analysis.
+        tm.that(u.Infra.mypy_cache_directory(primary), eq=shared)
+        tm.that(shared.parent.name, eq=Path(spec.external_storage_directory).name)
+        # A relock keeps the directory: Mypy revalidates changed modules itself.
+        (lane / c.Infra.UV_LOCK_FILENAME).write_text("rotated\n", encoding="utf-8")
+        tm.that(u.Infra.mypy_cache_directory(lane), eq=shared)
+        # Distinct projects never share one tests package namespace.
+        tm.that(u.Infra.mypy_cache_directory(other) != shared, eq=True)

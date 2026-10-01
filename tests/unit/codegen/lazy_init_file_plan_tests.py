@@ -105,12 +105,18 @@ class TestsFlextInfraCodegenLazyInitFilePlans:
             package / c.Infra.INIT_PY: (package / c.Infra.INIT_PY).read_bytes()
             for package in packages
         }
-        analysis = tm.ok(
-            FlextInfraCodegenLazyInit(
-                repository_root=root, project_scope_roots=selected
-            ).plan_files()
+        analyses = tuple(
+            tm.ok(
+                FlextInfraCodegenLazyInit(
+                    repository_root=repository, project_scope_roots=(repository,)
+                ).plan_files()
+            )
+            for repository in selected
         )
-        tm.that({file.project for file in analysis.files}, eq=expected)
+        tm.that(
+            {file.project for analysis in analyses for file in analysis.files},
+            eq=expected,
+        )
         tm.that({path: path.read_bytes() for path in before}, eq=before)
         applied = request.model_copy(update={"mode": c.Infra.CodegenConformMode.APPLY})
         tm.ok(FlextInfraCodegenConform.execute_request(applied, workspace))

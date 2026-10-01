@@ -22,12 +22,31 @@ if TYPE_CHECKING:
     from flext_infra import p, t
 
 
+def _contract_boundary() -> type[p.Infra.WorkspaceEnvironmentContracts]:
+    """Return the contract owner typed at its published ``p.Infra`` boundary."""
+    return FlextInfraWorkspaceEnvironmentContracts
+
+
 class FlextInfraDirenvGate(FlextInfraGate):
     """Enforce direnv file contracts, then prove real activation."""
 
     gate_id: ClassVar[str] = "direnv"
     gate_name: ClassVar[str] = "DIRENV ENVIRONMENT CONTRACT"
     can_fix: ClassVar[bool] = False
+
+    @staticmethod
+    def _contract_issue(
+        file: str, violation: m.Infra.EnvironmentContractViolation
+    ) -> m.Infra.Issue:
+        """Render one typed contract violation as a gate issue."""
+        return m.Infra.Issue(
+            file=file,
+            line=violation.line,
+            column=0,
+            code="DIRENV_CONTRACT",
+            message=f"line {violation.line}: {violation.message}",
+            severity="ERROR",
+        )
 
     @override
     def check(
@@ -55,18 +74,11 @@ class FlextInfraDirenvGate(FlextInfraGate):
                 raw_output=issue.message,
                 started=started,
             )
-        violations = FlextInfraWorkspaceEnvironmentContracts.envrc_contract_violations(
+        violations = _contract_boundary().envrc_contract_violations(
             content.value, root=project_dir
         )
         issues = tuple(
-            m.Infra.Issue(
-                file=c.Infra.ENVRC_FILENAME,
-                line=0,
-                column=0,
-                code="DIRENV_CONTRACT",
-                message=violation,
-                severity="ERROR",
-            )
+            FlextInfraDirenvGate._contract_issue(c.Infra.ENVRC_FILENAME, violation)
             for violation in violations
         )
         local = project_dir / c.Infra.ENVRC_LOCAL_RELPATH
@@ -88,15 +100,10 @@ class FlextInfraDirenvGate(FlextInfraGate):
                 issues = (
                     *issues,
                     *(
-                        m.Infra.Issue(
-                            file=c.Infra.ENVRC_LOCAL_RELPATH,
-                            line=0,
-                            column=0,
-                            code="DIRENV_CONTRACT",
-                            message=violation,
-                            severity="ERROR",
+                        FlextInfraDirenvGate._contract_issue(
+                            c.Infra.ENVRC_LOCAL_RELPATH, violation
                         )
-                        for violation in FlextInfraWorkspaceEnvironmentContracts.envrc_local_contract_violations(
+                        for violation in _contract_boundary().envrc_local_contract_violations(
                             local_read.value
                         )
                     ),

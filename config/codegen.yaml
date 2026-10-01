@@ -337,6 +337,8 @@ Infra:
 
     make:
       examples_timeout_seconds: 120
+      submodule_timeout_seconds: 120
+      runtime_environment_directory: .flext-venvs
       # Operator 2026-09-08: ruff is the formatting and autofix rule.
       # Every ruff invocation uses --preview. Never weaken ruff to keep a
       # file; change the code. [tool.ruff] preview: true in tooling.yaml is
@@ -358,7 +360,7 @@ Infra:
       # Gates whose mutating side `make fmt` drives (formatters). Their
       # read-only side runs in `make check`; `make fix` never repeats them
       # (single-pass verb law: one operation per tool per verb).
-      fmt_gates: [markdown-format]
+      fmt_gates: [format, markdown-format]
       check_gate_suspensions:
         - gate: namespace
           authority: "flext-itpd1.3; operator decision 2026-09-27 (keep plan v12 suspension); flext-infra#913"
@@ -368,12 +370,6 @@ Infra:
           # match a census rule id exactly, tag families by prefix. Unmapped
           # families (e.g. ENFORCE-079) stay fully blocking.
           census_rule_families: [ENFORCE-046, ENFORCE-066, ENFORCE-067, ENFORCE-069, class_prefix]
-        - gate: smells
-          authority: "operator ruling 2026-09-27 (smells/infra-codegen/slow-tests non-blocking for merge until further notice, coordination gc-wisp-bm2jtn); flext-w41u6"
-          reason: "Pre-existing qlty smell backlog (751 in flext-infra, already red on a9af10130) is burned down under flext-w41u6; the gate returns when the ruling is lifted."
-          # Census consistency (gc-wisp-d7mnad): same ruling, same families in
-          # the runtime census; suppressed findings still surface as INFO.
-          census_rule_families: [smell_, no_accessor_methods, utility_not_static]
       # One filename and the root-relative runner paths; the runner places the
       # database in platformdirs' external per-worktree cache.
       testmon_cache:
@@ -501,7 +497,6 @@ Infra:
             - utilities
             - worktree
         mutable_actions: [fix, fmt]
-        warning_actions: [audit]
         reports_dir: .reports/docs
         cross_project_relative_link_pattern: '^(?:\.\./)+flext-[a-z0-9-]+(?:/|$)'
         stale_github_organizations:
@@ -537,7 +532,9 @@ Infra:
           description: Run the workspace public runtime examples.
           profiles: [workspace]
         - name: check
-          description: Run every configured non-test gate.
+          description: Run the configured non-test gates except the dedicated smells audit.
+        - name: smells
+          description: Run the strict code-smell audit as a dedicated gate.
         - name: test
           description: Run incremental tests through the persistent testmon cache.
         - name: test-full
@@ -556,10 +553,14 @@ Infra:
           description: Inspect ownership, dependency, and generated-state health.
         - name: status
           description: Report the resolved runtime and repository state.
+        - name: verify-clean
+          description: Verify that generated documentation and managed artifacts leave the Git tree clean.
         - name: docs
           description: Generate, fix, format, and check documentation.
         - name: clean
           description: Remove every declared disposable artifact.
+        - name: bootstrap-candidate
+          description: Bootstrap declared candidate worktrees with this branch-matched generator.
         - name: release-plan
           description: Resolve the release decision through the public protocol.
         - name: release-version
@@ -588,6 +589,8 @@ Infra:
         - name: sonarcloud-sync
           description: Write the SSOT SonarCloud issue exclusions to the server-side project settings (requires SONAR_TOKEN).
       custom_handler_profile_overrides: {}
+      standalone_check_gates:
+        smells: smells
       custom_handler_policy:
         filename: custom.mk
         # Custom behavior is one private whole-verb replacement or one lifecycle
@@ -1067,8 +1070,8 @@ Infra:
       - path: docs/docs_config.json
         owner: codegen
         policy: full
-    # Qlty refuses to scan without a repository configuration. Keep the
-    # blocking smells posture fleet-wide and generated from this SSOT.
+    # Qlty refuses to scan without a repository configuration. The generated
+    # make smells verb owns this strict, separately scheduled audit fleet-wide.
       - path: .qlty/qlty.toml
         owner: codegen
         policy: full
@@ -1244,7 +1247,7 @@ Infra:
               - dependency-injector>=4.49.1
               - packaging>=26.3
               - pydantic>=2.13.5
-              - pydantic-settings>=2.14.2,<2.16
+              - pydantic-settings>=2.15.0,<2.16
               - pyyaml>=6.0.3
               - structlog>=25.5.0,<27
               - typing-extensions>=4.16.0
@@ -1254,7 +1257,7 @@ Infra:
               - flext-cli
               - flext-core
               - pydantic>=2.13.5
-              - pydantic-settings>=2.14.2,<2.16
+              - pydantic-settings>=2.15.0,<2.16
             codegen: [flext-infra]
         # Project-scoped requirements extend the shared profile without
         # leaking API/Web dependencies into core consumers. Unbounded entries
@@ -1272,7 +1275,7 @@ Infra:
             runtime: ["click>=8.3.3,<8.4", typer>=0.27.2, jinja2>=3.1.6, jsonschema>=4.26.0, tomlkit>=0.15.1, ruamel.yaml>=0.19.1, defusedxml>=0.7.1, openpyxl>=3.1.5, python-docx>=1.2.0, python-pptx>=1.0.2]
           - upstream: flext_cli
             project: flext-infra
-            runtime: [flext-cli, defusedxml>=0.7.1, GitPython>=3.1.62, jinja2>=3.1.6, libcst>=1.9.0, Markdown>=3.11, "rope @ git+https://github.com/marlon-costa-dc/rope.git@1.14.0+dc.3", pytest>=9.1.1, mkdocs>=1.6.1]
+            runtime: [flext-cli, defusedxml>=0.7.1, GitPython>=3.2.0, jinja2>=3.1.6, libcst>=1.9.0, Markdown>=3.11, "rope @ git+https://github.com/marlon-costa-dc/rope.git@1.14.0+dc.3", pytest>=9.1.1, mkdocs>=1.6.1]
           - upstream: flext_cli
             project: flext-tests
             runtime: [flext-cli, flext-infra, pytest>=9.1.1, pytest-timeout>=2.4.0, docker>=7.2.0, python-on-whales>=0.81.0]
@@ -1797,8 +1800,6 @@ Infra:
             - "**/*.bkp?"
             - "**/*.backup"
             - "**/*.orig"
-            - "**/*_backup"
-            - "**/*_backup_*"
             - "**/*.md.backup"
             - "**/archived/"
         - name: "Autofix rejection artifacts (run_skill_autofix.sh rollback output)"

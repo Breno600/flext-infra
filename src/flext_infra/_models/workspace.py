@@ -28,6 +28,47 @@ class FlextInfraModelsWorkspace:
 
         repository_root: Annotated[Path, m.Field(description="Repository root path")]
 
+    class SubprojectLoadContext(m.ContractModel):
+        """Workspace governance scope shared by every declared subproject entry."""
+
+        integration_branch: Annotated[
+            str | None,
+            m.Field(
+                description=(
+                    "Resolved workspace integration line; absent defers to the "
+                    "provider's conventional branch fallback"
+                )
+            ),
+        ] = None
+        workspace_beads: Annotated[
+            FlextInfraConfigModels.BeadsProjectSpec | None,
+            m.Field(description="Workspace Beads ledger spec; absent disables routing"),
+        ] = None
+        allow_unprovisioned_members: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Whether declared Python members may stay unprovisioned "
+                    "checkouts while CI omits them deliberately"
+                )
+            ),
+        ] = False
+
+    class EnvironmentContractViolation(mm.PositiveLineMixin, m.ContractModel):
+        """One static ``.envrc``/``.envrc.local`` contract violation.
+
+        The line is carried as a typed field; the consuming gate renders the
+        canonical ``line N: <message>`` text, so the textual projection stays at
+        the reporting boundary and never in the declaration layer.
+        """
+
+        message: Annotated[
+            str, m.Field(description="Violation description without the line prefix")
+        ]
+        token: Annotated[
+            str, m.Field(description="Offending token when the contract is token-based")
+        ] = ""
+
     class WorkspaceProjectContext(m.ContractModel):
         """Canonical context derived from one runtime working directory."""
 

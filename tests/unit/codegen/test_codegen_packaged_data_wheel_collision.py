@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import tarfile
+import zipfile
 from typing import TYPE_CHECKING
 
 import pytest
 from flext_tests import tm
 
 from flext_infra import c, config, main as infra_main
+from flext_infra.codegen import FlextInfraCodegenConform
 from tests import t, u
 
 if TYPE_CHECKING:
@@ -33,7 +36,9 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         )
 
     @staticmethod
-    def _prepare_project(root: Path, *, package_config: bool) -> None:
+    def _prepare_project(
+        root: Path, *, package_config: bool, packaged_data_paths: tuple[str, ...] = ()
+    ) -> None:
         """Materialize one governed project, optionally shipping in-package data."""
         _ = u.Tests.standalone_workspace(root, FIXTURE_DISTRIBUTION)
         if package_config:
@@ -64,7 +69,10 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         # The existing fixture package ships no cli module, so its manifest
         # declares none and conform renders no console script to load.
         _ = u.Tests.write_standalone_workspace_manifest(
-            root, FIXTURE_DISTRIBUTION, cli_module=False
+            root,
+            FIXTURE_DISTRIBUTION,
+            cli_module=False,
+            packaged_data_paths=packaged_data_paths,
         )
         u.Tests.git_bootstrap(
             root,
@@ -110,30 +118,87 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         )
 
     @staticmethod
-    def _sdist_only_include(root: Path) -> t.JsonList:
-        """Read the rendered sdist only-include list of the conformed project."""
+    def _sdist_include(root: Path) -> t.JsonList:
+        """Read the rendered sdist source patterns of the conformed project."""
         manifest = (root / c.PYPROJECT_FILENAME).read_text(encoding="utf-8")
         sdist = u.Tests.toml_table_at(
             manifest, c.Infra.TOOL, "hatch", "build", "targets", "sdist"
         )
-        return u.Tests.toml_list(sdist["only-include"])
+        return u.Tests.toml_list(sdist["include"])
 
     @pytest.mark.slow
-    def test_root_only_data_dir_stays_force_included(
-        self, infra_git_repo: Path
-    ) -> None:
-        """A root data dir the package does not carry still reaches the wheel."""
-        self._prepare_project(infra_git_repo, package_config=False)
+    def test_declared_root_data_dir_stays_selected(self, infra_git_repo: Path) -> None:
+        """A declared root directory reaches the wheel through native selection."""
+        self._prepare_project(
+            infra_git_repo,
+            package_config=False,
+            packaged_data_paths=(FIXTURE_DISTRIBUTION_DATA_DIR,),
+        )
 
         applied = self._conform_self(infra_git_repo)
 
         tm.that(applied, eq=0)
         package_name = u.Tests.project_spec(FIXTURE_DISTRIBUTION).package_name
-        force_include = self._wheel_force_include(infra_git_repo)
+        sources = u.Tests.toml_mapping(self._wheel_target(infra_git_repo)["sources"])
         tm.that(
-            force_include.get(FIXTURE_DISTRIBUTION_DATA_DIR),
+            sources.get(FIXTURE_DISTRIBUTION_DATA_DIR),
             eq=f"{package_name}/{FIXTURE_DISTRIBUTION_DATA_DIR}",
         )
+
+    @pytest.mark.slow
+    def test_undeclared_governance_config_stays_out_of_archives(
+        self, infra_git_repo: Path
+    ) -> None:
+        """A governance config directory is not implicitly package data."""
+        self._prepare_project(infra_git_repo, package_config=False)
+
+        tm.that(self._conform_self(infra_git_repo), eq=0)
+
+        tm.that(
+            FIXTURE_DISTRIBUTION_DATA_DIR in self._wheel_force_include(infra_git_repo),
+            eq=False,
+        )
+        tm.that(
+            f"/{FIXTURE_DISTRIBUTION_DATA_DIR}/**"
+            in self._sdist_include(infra_git_repo),
+            eq=False,
+        )
+
+    @pytest.mark.slow
+    def test_existing_infrastructure_dir_reaches_both_archives(
+        self, infra_git_repo: Path
+    ) -> None:
+        """A project-owned IaC directory ships without a generator template row."""
+        self._prepare_project(
+            infra_git_repo, package_config=False, packaged_data_paths=("infra",)
+        )
+        infrastructure = infra_git_repo / "infra" / "ansible" / "site.yml"
+        tm.ok(u.Cli.atomic_write_text_file(infrastructure, "---\n- hosts: all\n"))
+
+        tm.that(self._conform_self(infra_git_repo), eq=0)
+
+        package_name = u.Tests.project_spec(FIXTURE_DISTRIBUTION).package_name
+        tm.that(
+            u.Tests.toml_mapping(self._wheel_target(infra_git_repo)["sources"]).get(
+                "infra"
+            ),
+            eq=f"{package_name}/infra",
+        )
+        tm.that("/infra/**" in self._sdist_include(infra_git_repo), eq=True)
+
+    @pytest.mark.slow
+    def test_undeclared_infrastructure_dir_stays_out_of_archives(
+        self, infra_git_repo: Path
+    ) -> None:
+        """An unrelated root directory cannot enter a package by discovery."""
+        self._prepare_project(infra_git_repo, package_config=False)
+        infrastructure = infra_git_repo / "infra" / "ansible" / "site.yml"
+        tm.ok(u.Cli.atomic_write_text_file(infrastructure, "---\n- hosts: all\n"))
+
+        tm.that(self._conform_self(infra_git_repo), eq=0)
+
+        tm.that("infra" in self._wheel_force_include(infra_git_repo), eq=False)
+        tm.that("/infra/**" in self._sdist_include(infra_git_repo), eq=False)
 
     @pytest.mark.slow
     def test_in_package_data_dir_is_never_force_included(
@@ -154,14 +219,206 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         force_include = self._wheel_force_include(infra_git_repo)
         tm.that(FIXTURE_DISTRIBUTION_DATA_DIR in force_include, eq=False)
         tm.that(
-            FIXTURE_DISTRIBUTION_DATA_DIR in self._sdist_only_include(infra_git_repo),
+            f"/{FIXTURE_DISTRIBUTION_DATA_DIR}/**"
+            in self._sdist_include(infra_git_repo),
             eq=False,
         )
         # The package copy still ships through the packages entry.
         package_name = u.Tests.project_spec(FIXTURE_DISTRIBUTION).package_name
         wheel = self._wheel_target(infra_git_repo)
         tm.that(
-            f"{c.Infra.DEFAULT_SRC_DIR}/{package_name}"
-            in u.Tests.toml_list(wheel["packages"]),
+            f"/{c.Infra.DEFAULT_SRC_DIR}/{package_name}/**"
+            in u.Tests.toml_list(wheel["include"]),
             eq=True,
+        )
+
+    @pytest.mark.slow
+    def test_declared_file_keeps_sibling_governance_out(
+        self, infra_git_repo: Path
+    ) -> None:
+        """One catalog file ships without its governance siblings."""
+        catalog = "config/deployment.yaml"
+        self._prepare_project(
+            infra_git_repo, package_config=False, packaged_data_paths=(catalog,)
+        )
+        tm.ok(u.Cli.atomic_write_text_file(infra_git_repo / catalog, "profiles: {}\n"))
+        tm.that(self._conform_self(infra_git_repo), eq=0)
+        package_name = u.Tests.project_spec(FIXTURE_DISTRIBUTION).package_name
+        tm.that(
+            self._wheel_force_include(infra_git_repo),
+            eq={catalog: f"{package_name}/{catalog}"},
+        )
+        tm.that(f"/{catalog}" in self._sdist_include(infra_git_repo), eq=True)
+        tm.that("/config/**" in self._sdist_include(infra_git_repo), eq=False)
+
+    @pytest.mark.slow
+    @pytest.mark.parametrize(
+        "declarations",
+        [
+            ("../outside",),
+            ("/absolute",),
+            ("config", "config"),
+            ("config", "config/workspace.yaml"),
+        ],
+    )
+    def test_invalid_declaration_fails_before_effects(
+        self, infra_git_repo: Path, declarations: tuple[str, ...]
+    ) -> None:
+        """Escaping and overlapping archive inputs cannot mutate the manifest."""
+        self._prepare_project(
+            infra_git_repo, package_config=False, packaged_data_paths=declarations
+        )
+        before = (infra_git_repo / c.PYPROJECT_FILENAME).read_bytes()
+        with pytest.raises(ValueError, match="packaged data"):
+            self._conform_self(infra_git_repo)
+        tm.that((infra_git_repo / c.PYPROJECT_FILENAME).read_bytes(), eq=before)
+
+    @pytest.mark.slow
+    def test_missing_data_fails_before_effects(self, infra_git_repo: Path) -> None:
+        """A missing declared file cannot silently disappear from distributions."""
+        self._prepare_project(
+            infra_git_repo,
+            package_config=False,
+            packaged_data_paths=("absent/catalog.yaml",),
+        )
+        before = (infra_git_repo / c.PYPROJECT_FILENAME).read_bytes()
+        with pytest.raises(FileNotFoundError, match="packaged data"):
+            self._conform_self(infra_git_repo)
+        tm.that((infra_git_repo / c.PYPROJECT_FILENAME).read_bytes(), eq=before)
+
+    @pytest.mark.slow
+    def test_declared_collision_fails_before_effects(
+        self, infra_git_repo: Path
+    ) -> None:
+        """Distinct roots cannot claim the same wheel destination."""
+        self._prepare_project(
+            infra_git_repo, package_config=True, packaged_data_paths=("config",)
+        )
+        before = (infra_git_repo / c.PYPROJECT_FILENAME).read_bytes()
+        with pytest.raises(ValueError, match="collides"):
+            self._conform_self(infra_git_repo)
+        tm.that((infra_git_repo / c.PYPROJECT_FILENAME).read_bytes(), eq=before)
+
+    @pytest.mark.slow
+    @pytest.mark.parametrize(
+        "link_kind", ["external", "transitive", "cycle", "dangling"]
+    )
+    def test_data_links_are_validated_transitively(
+        self, infra_git_repo: Path, link_kind: str
+    ) -> None:
+        """Hatch cannot traverse a link the preflight has not authenticated."""
+        self._prepare_project(
+            infra_git_repo, package_config=False, packaged_data_paths=("infra",)
+        )
+        data = infra_git_repo / "infra"
+        data.mkdir()
+        external = infra_git_repo.parent / "outside-data"
+        external.write_text("outside", encoding="utf-8")
+        if link_kind == "transitive":
+            shared = infra_git_repo / "shared"
+            shared.mkdir()
+            (shared / "external").symlink_to(external)
+            (data / "shared").symlink_to(shared, target_is_directory=True)
+        elif link_kind == "cycle":
+            (data / "cycle").symlink_to(data, target_is_directory=True)
+        elif link_kind == "dangling":
+            (data / "missing").symlink_to(infra_git_repo / "absent")
+        else:
+            (data / "external").symlink_to(external)
+        before = (infra_git_repo / c.PYPROJECT_FILENAME).read_bytes()
+        with pytest.raises((ValueError, FileNotFoundError)):
+            self._conform_self(infra_git_repo)
+        tm.that((infra_git_repo / c.PYPROJECT_FILENAME).read_bytes(), eq=before)
+
+    @pytest.mark.slow
+    def test_real_archives_preserve_data_selection(self, infra_git_repo: Path) -> None:
+        """Direct wheel, sdist and rebuilt wheel carry the same selected bytes."""
+        catalog = "config/deployment.yaml"
+        asset = "infra/ansible/site.yml"
+        self._prepare_project(
+            infra_git_repo, package_config=False, packaged_data_paths=(catalog, "infra")
+        )
+        tm.ok(u.Cli.atomic_write_text_file(infra_git_repo / catalog, "profiles: {}\n"))
+        tm.ok(
+            u.Cli.atomic_write_text_file(infra_git_repo / asset, "---\n- hosts: all\n")
+        )
+        tm.that(self._conform_self(infra_git_repo), eq=0)
+        ignored = "infra/state.json"
+        tm.ok(u.Cli.atomic_write_text_file(infra_git_repo / ignored, "private state\n"))
+        with (infra_git_repo / ".gitignore").open("a", encoding="utf-8") as stream:
+            stream.write(f"\n/{ignored}\n")
+        output = infra_git_repo.parent / "artifacts"
+        direct = output / "direct"
+        source = output / "source"
+        rebuilt = output / "rebuilt"
+        tm.ok(
+            u.Cli.run_checked(
+                ["uv", "build", "--wheel", "--out-dir", str(direct)], cwd=infra_git_repo
+            )
+        )
+        tm.ok(
+            u.Cli.run_checked(
+                ["uv", "build", "--sdist", "--out-dir", str(source)], cwd=infra_git_repo
+            )
+        )
+        sdist = next(source.glob("*.tar.gz"))
+        tm.ok(
+            u.Cli.run_checked(
+                ["uv", "build", str(sdist), "--wheel", "--out-dir", str(rebuilt)],
+                cwd=infra_git_repo,
+            )
+        )
+        package_name = u.Tests.project_spec(FIXTURE_DISTRIBUTION).package_name
+        expected = {
+            catalog: (infra_git_repo / catalog).read_bytes(),
+            asset: (infra_git_repo / asset).read_bytes(),
+        }
+        for directory in (direct, rebuilt):
+            with zipfile.ZipFile(next(directory.glob("*.whl"))) as archive:
+                for name, content in expected.items():
+                    tm.that(archive.read(f"{package_name}/{name}"), eq=content)
+                tm.that(f"{package_name}/{ignored}" in archive.namelist(), eq=False)
+                tm.that(
+                    f"{package_name}/config/workspace.yaml" in archive.namelist(),
+                    eq=False,
+                )
+        with tarfile.open(sdist) as archive:
+            members = {
+                member.name.partition("/")[2]: member
+                for member in archive.getmembers()
+                if member.isfile()
+            }
+            for name, content in expected.items():
+                stream = archive.extractfile(members[name])
+                assert stream is not None
+                with stream:
+                    tm.that(stream.read(), eq=content)
+            tm.that(ignored in members, eq=False)
+            tm.that("config/workspace.yaml" in members, eq=False)
+
+    @pytest.mark.slow
+    def test_scaffold_validates_data_against_planned_files(
+        self, tmp_path: Path
+    ) -> None:
+        """A declared generated manifest is accepted before scaffold effects."""
+        root = tmp_path / "scaffold-data"
+        u.Tests.seed_locked_taplo(tmp_path)
+        repository = u.Tests.repository_ref(
+            "scaffold-data", role=c.Infra.MakeProfile.STANDALONE
+        )
+        project = u.Tests.project_spec(repository.name).model_copy(
+            update={"packaged_data_paths": ("config/workspace.yaml",)}
+        )
+        workspace = u.Tests.workspace_spec(repository, project=project)
+        request = u.Tests.conform_request(
+            root,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.APPLY,
+        )
+        tm.that(root.exists(), eq=False)
+        tm.ok(FlextInfraCodegenConform.execute_request(request, workspace))
+        tm.that((root / "config/workspace.yaml").is_file(), eq=True)
+        tm.that(
+            self._wheel_force_include(root).get("config/workspace.yaml"),
+            eq=f"{project.package_name}/config/workspace.yaml",
         )
