@@ -13,6 +13,20 @@ from flext_infra import c, infra, m, p, t, u
 class TestsFlextInfraPrivateImportCutover:
     """Exercise private-import automation only through ``u.Infra``."""
 
+    def test_earlier_semantic_move_retires_stale_preflight_import(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        consumer, statement, _ = self._facade_case(
+            tmp_path,
+            "constants",
+            "profile",
+            "Profile",
+            "c",
+        )
+        sources = {consumer: "from flext_sample import c\nvalue = c.Profile.Value\n"}
+        tm.that(self._edits(tmp_path, sources, consumer, statement), empty=True)
+
     @pytest.mark.parametrize("bad_source_reachable", [False, True])
     def test_installed_import_validation_follows_public_reachability(
         self,

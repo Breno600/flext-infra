@@ -7,8 +7,8 @@ from pathlib import Path
 
 from flext_tests import tm
 
+import tests.utilities
 from flext_infra import c, t, u
-from tests.unit.codegen._support import CodegenTestSupport
 
 
 class TestsFlextInfraCiDeclaredSecretsContract:
@@ -30,11 +30,11 @@ class TestsFlextInfraCiDeclaredSecretsContract:
     @classmethod
     def render_ci(cls, tmp_path: Path) -> Path:
         """Render the ci.yml template once and materialize it for parsing."""
-        spec = CodegenTestSupport.Ci.workflow_spec(
+        spec = tests.utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.workflow_spec(
             dist="mcb",
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch="conformance/declared-secrets",
-            ci_trigger_branches=CodegenTestSupport.Ci.ci_trigger_branches(
+            ci_trigger_branches=tests.utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.ci_trigger_branches(
                 "conformance/declared-secrets",
             ),
         )

@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from flext_tests import api, d, e, h, r, td, tf, tk, tm, x
+    from flext_tests import api, d, e, h, r, td, tf, tk, tm, u, x
 
     from tests import fixtures, integration, refactor, unit
     from tests.base import TestsFlextInfraServiceBase, TestsFlextInfraServiceBase as s
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from tests.models import TestsFlextInfraModels, TestsFlextInfraModels as m
     from tests.protocols import TestsFlextInfraProtocols, TestsFlextInfraProtocols as p
     from tests.typings import TestsFlextInfraTypes, TestsFlextInfraTypes as t
-    from tests.utilities import TestsFlextInfraUtilities, TestsFlextInfraUtilities as u
+    from tests.utilities import TestsFlextInfraUtilities
     from tests.utilities_codegen import TestsFlextInfraUtilitiesCodegenMixin
     from tests.utilities_deps import TestsFlextInfraUtilitiesDepsMixin
     from tests.utilities_fixture_docs import TestsFlextInfraUtilitiesDocsFixtureMixin
@@ -98,7 +98,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".refactor": ("refactor",),
             ".typings": ("TestsFlextInfraTypes", "t"),
             ".unit": ("unit",),
-            ".utilities": ("TestsFlextInfraUtilities", "u"),
+            ".utilities": ("TestsFlextInfraUtilities",),
             ".utilities_codegen": ("TestsFlextInfraUtilitiesCodegenMixin",),
             ".utilities_deps": ("TestsFlextInfraUtilitiesDepsMixin",),
             ".utilities_fixture_docs": ("TestsFlextInfraUtilitiesDocsFixtureMixin",),
@@ -117,7 +117,19 @@ _LAZY_IMPORTS = MappingProxyType(
             ".utilities_release": ("TestsFlextInfraUtilitiesReleaseMixin",),
             ".utilities_toml": ("TestsFlextInfraUtilitiesTomlMixin",),
             ".utilities_workspace_env": ("TestsFlextInfraUtilitiesWorkspaceEnvMixin",),
-            "flext_tests": ("api", "d", "e", "h", "r", "td", "tf", "tk", "tm", "x"),
+            "flext_tests": (
+                "api",
+                "d",
+                "e",
+                "h",
+                "r",
+                "td",
+                "tf",
+                "tk",
+                "tm",
+                "u",
+                "x",
+            ),
         }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,

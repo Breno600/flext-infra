@@ -12,8 +12,8 @@ from pathlib import Path
 
 from flext_tests import tm
 
+import tests.utilities
 from flext_infra import c, m
-from tests.unit.codegen._support import CodegenTestSupport
 
 
 class TestsFlextInfraCodegenCiCustomSteps:
@@ -21,11 +21,11 @@ class TestsFlextInfraCodegenCiCustomSteps:
 
     @staticmethod
     def _workflow_spec(*, custom_steps: str = "") -> m.Infra.GithubWorkflowRenderSpec:
-        return CodegenTestSupport.Ci.workflow_spec(
+        return tests.utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.workflow_spec(
             dist="mcb",
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch="main",
-            ci_trigger_branches=CodegenTestSupport.Ci.CI_TRIGGER_BASELINE_BRANCHES,
+            ci_trigger_branches=tests.utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.CI_TRIGGER_BASELINE_BRANCHES,
             custom_steps=custom_steps,
         )
 

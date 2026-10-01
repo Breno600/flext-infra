@@ -97,8 +97,13 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
         findings: t.SequenceOf[m.Infra.ModScanFinding],
     ) -> t.Infra.PrivateImportReferences:
         """Resolve every reported cross-owner private import to its public owner."""
+        live_findings = tuple(
+            finding
+            for finding in findings
+            if cls._finding_is_live(root, sources, finding)
+        )
         cross_owner_statements: list[str] = []
-        for finding in findings:
+        for finding in live_findings:
             statement = cls._finding_statement(finding)
             if not isinstance(statement, ast.ImportFrom) or statement.level:
                 continue
@@ -139,7 +144,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
             )
         direct_specs: MutableMapping[Path, MutableMapping[str, t.Pair[str, str]]] = {}
         specs: MutableMapping[Path, list[t.Infra.PrivateImportSpec]] = {}
-        for finding in findings:
+        for finding in live_findings:
             statement = cls._finding_statement(finding)
             if not isinstance(statement, ast.ImportFrom) or statement.level:
                 continue
@@ -193,6 +198,31 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
                     target_reference,
                 ))
         return specs, direct_specs, facades
+
+    @classmethod
+    def _finding_is_live(
+        cls,
+        root: Path,
+        sources: t.MappingKV[Path, str],
+        finding: m.Infra.ModScanFinding,
+    ) -> bool:
+        """Reject a preflight import already moved by an earlier semantic phase."""
+        statement = cls._finding_statement(finding)
+        if not isinstance(statement, ast.ImportFrom):
+            return False
+        path = (root / finding.file).resolve()
+        source = sources.get(path)
+        if source is None:
+            msg = f"private import source missing from inventory: {path}"
+            raise ValueError(msg)
+        expected = tuple((alias.name, alias.asname) for alias in statement.names)
+        return any(
+            isinstance(node, ast.ImportFrom)
+            and node.module == statement.module
+            and node.level == statement.level
+            and tuple((alias.name, alias.asname) for alias in node.names) == expected
+            for node in ast.walk(ast.parse(source))
+        )
 
     @classmethod
     def _plan_private_imports(

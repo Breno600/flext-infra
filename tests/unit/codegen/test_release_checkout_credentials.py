@@ -6,8 +6,8 @@ from pathlib import Path
 
 from flext_tests import tm
 
+import tests.utilities
 from flext_infra import c, t, u
-from tests.unit.codegen._support import CodegenTestSupport
 
 
 class TestsFlextInfraReleaseCheckoutCredentials:
@@ -21,17 +21,17 @@ class TestsFlextInfraReleaseCheckoutCredentials:
     @classmethod
     def render_release(cls) -> t.JsonMapping:
         repository_branch = "develop"
-        spec = CodegenTestSupport.Ci.workflow_spec(
+        spec = tests.utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.workflow_spec(
             dist="example-workspace",
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch=repository_branch,
-            ci_trigger_branches=CodegenTestSupport.Ci.ci_trigger_branches(
+            ci_trigger_branches=tests.utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.ci_trigger_branches(
                 repository_branch,
             ),
         ).model_copy(
             update={
                 "private_submodules": (
-                    CodegenTestSupport.Ci.synthetic_private_submodules()
+                    tests.utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.synthetic_private_submodules()
                 ),
             },
         )
