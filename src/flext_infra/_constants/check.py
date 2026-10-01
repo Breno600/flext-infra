@@ -67,6 +67,7 @@ class FlextInfraConstantsCheck:
     MARKDOWN_CODE: ClassVar[str] = "markdown-code"
     SMELLS: ClassVar[str] = "smells"
     RUNTIME_CENSUS: ClassVar[str] = "runtime-census"
+    SILENT_FAILURE: ClassVar[str] = "silent-failure"
     "Gate id whose census rule families no other gate owns."
     GATE_TOOLS_BY_KIND: ClassVar[
         t.MappingKV[GateKind, t.MappingKV[str, t.StrPair]]
@@ -114,6 +115,10 @@ class FlextInfraConstantsCheck:
         gate: kind for kind, tools in GATE_TOOLS_BY_KIND.items() for gate in tools
     })
     "Gate id -> kind, derived from the registry declaration."
+    TYPE_CHECKER_GATES: ClassVar[frozenset[str]] = frozenset(
+        GATE_TOOLS_BY_KIND[GateKind.TYPE_CHECKER]
+    )
+    "Native type-checker gates, derived from the registry declaration."
     SARIF_TOOL_INFO: ClassVar[t.MappingKV[str, t.StrPair]] = MappingProxyType({
         gate: tool for tools in GATE_TOOLS_BY_KIND.values() for gate, tool in tools.items()
     })

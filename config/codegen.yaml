@@ -28,6 +28,7 @@ Infra:
       # writes the committed uv.lock and mise.lock; setup, gen, and fmt install
       # frozen from those locks.
       python_version: "3.13"
+      python_tool_version: "3.13.15"
       # Supply-chain cooldown (operator 2026-10-01): ONE value for every
       # resolver — the generated mise `minimum_release_age` (so `make upg`
       # never selects a release younger than this, e.g. a Python patch with
@@ -353,8 +354,9 @@ Infra:
       # formats — without it the ruff-format surface has no verb home and
       # drift survives a green check until `make mod` validates.
       fmt_gates: [format, markdown-format]
-      # One filename and the root-relative runner paths; the runner places the
-      # database in platformdirs' external per-worktree cache.
+      # One filename and the root-relative runner paths; the generated Makefile
+      # places the database in the external cache under the declared project
+      # name, so every checkout and worktree of a project shares one history.
       testmon_cache:
         database_filename: .testmondata
         database_environment_variable: TESTMON_DATAFILE
@@ -397,6 +399,31 @@ Infra:
         local_value: N
         # The gate registry derives the fast CI set by gate kind; CI=N runs
         # its strict complement and an unset CI runs every active check gate.
+        # Rules, not a skip-list: local_check_gates is the ONLY
+        # declared set. CI=Y runs its strict complement, derived in
+        # MakeSpec.check_gates_ci over the active default universe, so every
+        # active gate retains an owner. CI=N intersects the declared local set
+        # with that universe; an unset CI runs all active gates. `format`
+        # is not a check gate at all -- it mutates files, so it belongs to
+        # make fmt / make fix only. This supersedes the earlier
+        # check_gates_skip list, which could drift out of sync with the set it
+        # was meant to complement.
+        # CI is ternary (Y/N/absent).
+        # tooling.tools.pytest.ci-excluded-markers defines the slow-test
+        # exclusion for CI and pre-commit, not local/pre-push runs.
+        # CI=N owns the complementary local check gates; absent uses testmon
+        # for incremental developer runs.
+        #
+        # The set is the SLOW whole-program type checkers: those are the gates
+        # worth deferring
+        # off the fast CI leg, and they are what CI=N exists to own. `lint` is
+        # not here -- ruff is cheap, so making CI skip it buys nothing and
+        # leaves the fast leg without a linter.
+        # mypy runs in the CI context so its red content cannot merge unseen;
+        # the project-owned timeout budget (tools.mypy.timeout_seconds) makes
+        # it runnable on the runner.
+        # pyrefly stays local-only (fast; pyright already covers CI).
+        local_check_gates: [pyrefly]
       # Git-hook stages are disabled by default;
       # the workflow below still declares stage membership so re-enabling is a
       # one-key change, case by case. CI owns read-only setup, generation drift,
@@ -412,11 +439,13 @@ Infra:
         - {verb: fmt, contexts: [local, pre_commit]}
         - {verb: fix, contexts: [local, pre_commit]}
         - {verb: check, contexts: [local, ci, pre_push, pre_commit]}
-      # CI runs setup, the gen fixed point, the
-      # deps audit and check only; make test runs locally and on pre-push,
-      # never in CI. The CI test-only steps (testmon cache, test reports)
-      # render only while a test row declares the ci context.
-        - {verb: test, contexts: [local, pre_push]}
+      # make test runs locally, on pre-push and in CI, always through the
+      # persistent testmon database (tracker key
+      # operator-ruling-2026-10-01-testmon-make-test-only). The CI test-only
+      # steps (testmon cache, test reports) render only while a test row
+      # declares the ci context. Pre-commit runs no tests, and test-full is a
+      # local-only verb with no workflow row.
+        - {verb: test, contexts: [local, ci, pre_push]}
       # Artifacts `make clean` removes. Read by Makefile.j2 for the cache
       # sweep and the root-level directory/file lists.
       clean:
@@ -503,7 +532,7 @@ Infra:
         - name: test
           description: Run incremental tests through the persistent testmon cache.
         - name: test-full
-          description: Run incremental then all tests, including external and CI-excluded markers, through the same persistent testmon cache.
+          description: Run every test locally, including external and CI-excluded markers, without testmon and without any time limit.
         - name: fmt
           description: Apply ruff format --preview and every declared formatter gate. Ruff is the rule; change code, never ruff.
         - name: fix

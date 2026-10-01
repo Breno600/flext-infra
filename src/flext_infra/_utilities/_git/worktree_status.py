@@ -49,12 +49,18 @@ class FlextInfraUtilitiesGitWorktreeStatusMixin(FlextInfraUtilitiesGitRepo):
         cls,
         request: m.Infra.GitStatusRequest,
     ) -> p.Result[m.Infra.GitStatusReport]:
-        """Capture porcelain status for one repository."""
+        """Capture porcelain status for one repository.
+
+        The report carries the lifecycle porcelain (registered nested worktrees
+        excluded) so ``dirty`` and every consumer reading ``porcelain`` grade
+        the same lines; administrative worktrees are never repository change.
+        """
         repo_path = request.repo_root.expanduser().resolve()
         try:
             repo = cls._repo(repo_path)
-            porcelain = repo.git.status("--porcelain", "--untracked-files=all")
-            lifecycle = cls._lifecycle_porcelain(repo, repo_path, porcelain)
+            lifecycle = cls._lifecycle_porcelain(
+                repo, repo_path, repo.git.status("--porcelain", "--untracked-files=all")
+            )
         except GitCommandError as exc:
             return r[m.Infra.GitStatusReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
@@ -65,7 +71,7 @@ class FlextInfraUtilitiesGitWorktreeStatusMixin(FlextInfraUtilitiesGitRepo):
         return r[m.Infra.GitStatusReport].ok(
             m.Infra.GitStatusReport(
                 repo_root=repo_path,
-                porcelain=porcelain,
+                porcelain=lifecycle,
                 dirty=bool(lifecycle.strip()),
             ),
         )

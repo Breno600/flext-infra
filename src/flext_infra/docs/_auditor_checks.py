@@ -46,9 +46,7 @@ class FlextInfraDocAuditorChecksMixin:
         )
 
     def _collect_issues(
-        self,
-        scope: m.Infra.DocScope,
-        checks: t.StrSequence,
+        self, scope: m.Infra.DocScope, checks: t.StrSequence
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
         """Collect issues for the requested check set in canonical order."""
         handlers: t.VariadicTuple[
