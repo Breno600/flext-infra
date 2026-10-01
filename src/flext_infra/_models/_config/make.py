@@ -159,6 +159,10 @@ class FlextInfraConfigModelsMake:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(min_length=1, description="Docs actions that mutate"),
         ]
+        warning_actions: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(description="Docs actions that warn without failing the gate"),
+        ] = ()
         reports_dir: Annotated[
             Path, m.Field(description="Repository-relative docs reports directory")
         ]
