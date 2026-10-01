@@ -1,4 +1,8 @@
-"""Guarded live publication for one fully journaled generation phase."""
+"""Guarded live publication for one fully journaled generation phase.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,8 +11,9 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, t, u
-
-from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles as files
+from flext_infra.codegen._mise_artifacts_files import (
+    FlextInfraMiseArtifactsFiles as files,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -33,7 +38,12 @@ class FlextInfraMisePublication:
         *,
         phase: str,
     ) -> p.Result[bool]:
-        """Publish one FilePlan through write_publication without a journal."""
+        """Publish one FilePlan through write_publication without a journal.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         if not u.Infra.codegen_file_requires_effect(plan):
             return r[bool].ok(True)
         before = u.Infra.codegen_file_before_state(plan)
@@ -77,7 +87,12 @@ class FlextInfraMisePublication:
     def publish(
         publications: t.VariadicTuple[m.Infra.CodegenStagedFile],
     ) -> p.Result[t.VariadicTuple[Path]]:
-        """Apply an already durable phase through full-state guarded primitives."""
+        """Apply an already durable phase through full-state guarded primitives.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[Path]]``.
+
+        """
         written: list[Path] = []
         total = len(publications)
         for index, publication in enumerate(publications, start=1):

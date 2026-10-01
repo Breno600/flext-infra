@@ -11,8 +11,7 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, config, t, u
-
-from .extra_paths import FlextInfraExtraPathsManager
+from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -32,7 +31,12 @@ class FlextInfraConfigFixerSteps:
         *,
         is_root: bool,
     ) -> p.Result[t.StrSequence]:
-        """Synchronize tool.pyrefly.search-path from YAML rules."""
+        """Synchronize tool.pyrefly.search-path from YAML rules.
+
+        Returns:
+            The resulting ``p.Result[t.StrSequence]``.
+
+        """
         search_raw = pyrefly.get(c.Infra.SEARCH_PATH)
         if not isinstance(search_raw, list):
             return r[t.StrSequence].ok(())
@@ -57,7 +61,12 @@ class FlextInfraConfigFixerSteps:
         *,
         is_root: bool,
     ) -> p.Result[t.StrSequence]:
-        """Synchronize tool.pyrefly.project-includes from canonical path rules."""
+        """Synchronize tool.pyrefly.project-includes from canonical path rules.
+
+        Returns:
+            The resulting ``p.Result[t.StrSequence]``.
+
+        """
         includes_raw = pyrefly.get(c.Infra.PROJECT_INCLUDES)
         if not isinstance(includes_raw, list):
             return r[t.StrSequence].ok(())
@@ -84,7 +93,12 @@ class FlextInfraConfigFixerSteps:
         self,
         pyrefly: MutableMapping[str, t.JsonValue],
     ) -> p.Result[t.Pair[t.StrSequence, bool]]:
-        """Drop ignore=true entries from tool.pyrefly.sub-config."""
+        """Drop ignore=true entries from tool.pyrefly.sub-config.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[t.StrSequence, bool]]``.
+
+        """
         sub_configs = pyrefly.get(c.Infra.SUB_CONFIG)
         if not isinstance(sub_configs, list):
             return r[tuple[t.StrSequence, bool]].ok(((), False))
@@ -134,7 +148,12 @@ class FlextInfraConfigFixerSteps:
         self,
         pyrefly: MutableMapping[str, t.JsonValue],
     ) -> p.Result[t.StrSequence]:
-        """Synchronize tool.pyrefly.project-excludes from YAML rules."""
+        """Synchronize tool.pyrefly.project-excludes from YAML rules.
+
+        Returns:
+            The resulting ``p.Result[t.StrSequence]``.
+
+        """
         current_excludes: t.StrSequence = []
         excludes = pyrefly.get(c.Infra.PROJECT_EXCLUDES)
         if isinstance(excludes, list):

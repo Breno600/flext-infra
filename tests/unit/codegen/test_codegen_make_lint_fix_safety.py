@@ -1,5 +1,8 @@
 """make fix never deletes information: the lint repair applies safe fixes only.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Ruff's unsafe fixes delete code: the T201 fix removed
 ``print(..., file=sys.stderr)`` from a consumer script and turned its failures
 silent. The typed Make contract refuses the unsafe-fix flag, and every
@@ -24,7 +27,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraCodegenMakeLintFixSafety:
     """The lint repair contract and its projection preserve information."""
 
-    def test_lint_fix_rejects_the_unsafe_fix_flag(self) -> None:
+    @staticmethod
+    def test_lint_fix_rejects_the_unsafe_fix_flag() -> None:
         """An information-destroying lint repair is unrepresentable."""
         ruff = config.Infra.codegen.make.ruff
         payload = ruff.model_dump()
@@ -64,4 +68,8 @@ class TestsFlextInfraCodegenMakeLintFixSafety:
                 ),
             ),
             eq=sorted(policy.extend_safe_fixes),
+        )
+        tm.that(
+            list(u.Tests.toml_strings_at(pyproject, "tool", "ruff", "lint", "ignore")),
+            eq=list(policy.ignore),
         )

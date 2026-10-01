@@ -260,20 +260,6 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
         end_line: int
 
     @runtime_checkable
-    class RopeWorder(Protocol):
-        """Rope word/call classifier consumed by the static fact engine."""
-
-        def get_primary_range(self, offset: int) -> tuple[int, int]: ...
-
-        def get_primary_at(self, offset: int) -> str: ...
-
-        def is_a_function_being_called(self, offset: int) -> bool: ...
-
-        def get_word_parens_range(self, offset: int) -> tuple[int, int]: ...
-
-        def is_function_keyword_parameter(self, offset: int) -> bool: ...
-
-    @runtime_checkable
     class RopeChangeSet(Protocol):
         """Rope change set shape."""
 
@@ -343,14 +329,6 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
         def get_word_range(self) -> tuple[int, int]: ...
 
         def is_defined(self) -> bool: ...
-
-    @runtime_checkable
-    class RopeWorder(Protocol):
-        """Rope word and call classifier over one source string."""
-
-        def get_primary_range(self, offset: int) -> tuple[int, int]: ...
-
-        def is_a_function_being_called(self, offset: int) -> bool: ...
 
     @runtime_checkable
     class RopeOccurrenceFinder(Protocol):

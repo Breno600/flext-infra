@@ -1,4 +1,8 @@
-"""Typed Git request/report contracts for flext-infra public Git API."""
+"""Typed Git request/report contracts for flext-infra public Git API.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,10 +12,9 @@ from typing import Annotated, ClassVar
 from flext_cli import m
 
 from flext_infra import t
-
-from ._git.identity import FlextInfraModelsGitIdentity
-from ._git.worktree_facts import FlextInfraModelsGitWorktreeFacts
-from ._git.worktree_state import FlextInfraModelsGitWorktreeState
+from flext_infra._models._git.identity import FlextInfraModelsGitIdentity
+from flext_infra._models._git.worktree_facts import FlextInfraModelsGitWorktreeFacts
+from flext_infra._models._git.worktree_state import FlextInfraModelsGitWorktreeState
 
 
 class FlextInfraModelsGit(

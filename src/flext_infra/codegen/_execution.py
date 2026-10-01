@@ -1,4 +1,8 @@
-"""Typed common execution inputs for codegen services."""
+"""Typed common execution inputs for codegen services.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

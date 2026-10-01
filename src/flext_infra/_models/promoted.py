@@ -1,5 +1,8 @@
 """Promoted-command domain models for flext-infra.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 ``PromotedParam``/``PromotedCommand``/``PromotedAliasTarget`` mirror the frozen
 promoted-command contract; ``PromotedWorkspaceSpec`` is the typed
 projection of repository facts the framework consumes. Construction is
@@ -14,8 +17,7 @@ from pathlib import Path
 from flext_cli import m
 
 from flext_infra import t
-
-from .base import FlextInfraModelsBase
+from flext_infra._models.base import FlextInfraModelsBase
 
 
 class FlextInfraModelsPromoted(FlextInfraModelsBase):

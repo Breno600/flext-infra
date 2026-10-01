@@ -1,4 +1,8 @@
-"""Aggregate workspace artifact rendering for documentation generation."""
+"""Aggregate workspace artifact rendering for documentation generation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,11 +13,12 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, t
-
-from ._docs_generate_project import FlextInfraUtilitiesDocsGenerateProjectMixin
-from .docs_api import FlextInfraUtilitiesDocsApi
-from .docs_contract import FlextInfraUtilitiesDocsContract
-from .docs_render import FlextInfraUtilitiesDocsRender
+from flext_infra._utilities._docs_generate_project import (
+    FlextInfraUtilitiesDocsGenerateProjectMixin,
+)
+from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
+from flext_infra._utilities.docs_contract import FlextInfraUtilitiesDocsContract
+from flext_infra._utilities.docs_render import FlextInfraUtilitiesDocsRender
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -29,7 +34,13 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
         repository_root: Path,
         scopes: t.SequenceOf[m.Infra.DocScope],
     ) -> p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]:
-        """Render aggregate root targets from the complete discovered project set."""
+        """Render aggregate root targets from the complete discovered project set.
+
+        Returns:
+            The resulting
+                ``p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]``.
+
+        """
         workspace_contract = FlextInfraUtilitiesDocsContract.docs_workspace_contract(
             repository_root,
         )
@@ -199,6 +210,10 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
         """Return the rendered artifact inventory for one docs scope.
 
         The scope label is the only topology input (see ``build_scopes``).
+
+        Returns:
+            The rendered artifact inventory for one docs scope.
+
         """
         if scope.name == c.Infra.RK_ROOT:
             return FlextInfraUtilitiesDocsGenerateRootMixin.docs_root_artifacts(

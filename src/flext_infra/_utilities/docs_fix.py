@@ -1,4 +1,8 @@
-"""Fix helpers for docs services."""
+"""Fix helpers for docs services.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,11 +11,10 @@ from typing import TYPE_CHECKING
 
 from flext_cli import u
 
-from flext_infra import c, m, t
-
-from ._docs_github_links import FlextInfraUtilitiesDocsGithubLinks
-from .docs import FlextInfraUtilitiesDocs
-from .docs_contract import FlextInfraUtilitiesDocsContract
+from flext_infra import c, config, m, t
+from flext_infra._utilities._docs_github_links import FlextInfraUtilitiesDocsGithubLinks
+from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
+from flext_infra._utilities.docs_contract import FlextInfraUtilitiesDocsContract
 
 if TYPE_CHECKING:
     import re
@@ -23,7 +26,12 @@ class FlextInfraUtilitiesDocsFix:
 
     @staticmethod
     def docs_maybe_fix_link(md_file: Path, raw_link: str) -> str | None:
-        """Return a corrected link target when a simple fix is possible."""
+        """Return a corrected link target when a simple fix is possible.
+
+        Returns:
+            A corrected link target when a simple fix is possible.
+
+        """
         if FlextInfraUtilitiesDocs.docs_is_secure_web_url(raw_link):
             return FlextInfraUtilitiesDocsGithubLinks.docs_rewrite_github_url(raw_link)
         result: str | None = None
@@ -53,6 +61,10 @@ class FlextInfraUtilitiesDocsFix:
         Apply only fixes that ``ruff`` resolves completely. An unfixable
         diagnostic fails this phase with the original process detail so the
         authored Markdown can be corrected before publication.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.GeneratedFile]``.
+
         """
         changed: t.MutableSequenceOf[m.Infra.GeneratedFile] = []
         for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
@@ -75,7 +87,7 @@ class FlextInfraUtilitiesDocsFix:
                         "-m",
                         c.Infra.RUFF,
                         c.Infra.VERB_CHECK,
-                        "--fix",
+                        *config.Infra.codegen.make.ruff.lint_fix,
                         "--extend-ignore",
                         ",".join(c.Infra.PYTHON_FENCE_RUFF_EXTEND_IGNORE),
                         "--stdin-filename",
@@ -87,7 +99,7 @@ class FlextInfraUtilitiesDocsFix:
                 if outcome.failure:
                     raise RuntimeError(outcome.error or f"Ruff could not inspect {rel}")
                 if outcome.value.stderr or not u.Cli.process_succeeded(
-                    outcome.value.outcome
+                    outcome.value.outcome,
                 ):
                     msg = (
                         f"Ruff could not fix {rel}: "
@@ -132,7 +144,12 @@ class FlextInfraUtilitiesDocsFix:
         *,
         apply: bool,
     ) -> m.Infra.DocsPhaseItemModel:
-        """Fix one markdown file and return the phase item summary."""
+        """Fix one markdown file and return the phase item summary.
+
+        Returns:
+            The resulting ``m.Infra.DocsPhaseItemModel``.
+
+        """
         original = md_file.read_text(
             encoding=c.Cli.ENCODING_DEFAULT,
             errors=c.Infra.IGNORE,
@@ -140,7 +157,12 @@ class FlextInfraUtilitiesDocsFix:
         link_count = 0
 
         def replace_link(match: t.RegexMatch) -> str:
-            """Replace link."""
+            """Replace link.
+
+            Returns:
+                The resulting ``str``.
+
+            """
             nonlocal link_count
             text, link = match.groups()
             fixed = FlextInfraUtilitiesDocsFix.docs_maybe_fix_link(md_file, link)

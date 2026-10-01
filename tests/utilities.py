@@ -1,4 +1,8 @@
-"""Test utilities for flext-infra."""
+"""Test utilities for flext-infra.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -32,6 +36,118 @@ from tests.utilities_workspace_env import TestsFlextInfraUtilitiesWorkspaceEnvMi
 class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
     """Typed test utilities for flext-infra."""
 
+    class CodegenTestSupport:
+        """Own shared typed construction for codegen test contracts."""
+
+        class Ci:
+            """Construct GitHub workflow render contracts from canonical config."""
+
+            @staticmethod
+            def ci_trigger_branches(repository_branch: str) -> t.VariadicTuple[str]:
+                """Derive the repository trigger set from the configured policy.
+
+                Returns:
+                    The resulting ``t.VariadicTuple[str]``.
+
+                """
+                return tuple(
+                    dict.fromkeys((
+                        *config.Infra.codegen.branch_policy.ci_trigger_branches,
+                        repository_branch,
+                    )),
+                )
+
+            @staticmethod
+            def synthetic_private_submodules() -> m.Infra.CiPrivateSubmodulesSpec:
+                """One schema-valid deploy-key contract carrying zero org data.
+
+                The private-submodule init mechanism is proven against this
+                synthetic contract instead of any real workspace entry: real
+                deploy-key contracts are operator-private config living in the
+                gitignored local override layer, never in this public repository.
+
+                Returns:
+                    The resulting ``m.Infra.CiPrivateSubmodulesSpec``.
+
+                """
+                key = m.Infra.CiPrivateSubmoduleDeployKeySpec.model_validate({
+                    "secret": "EXAMPLE_SIBLING_DEPLOY_KEY",
+                    "submodule": "example-sibling",
+                    "path": "libs/example-sibling",
+                    "remote": "git@github.com:example-org/example-sibling.git",
+                })
+                return m.Infra.CiPrivateSubmodulesSpec(
+                    known_hosts=("github.com ssh-ed25519 AAAA-public-host-key-line",),
+                    paths=("libs/example-sibling",),
+                    deploy_keys=(key,),
+                )
+
+            @staticmethod
+            def workflow_spec(
+                *,
+                dist: t.NonEmptyStr,
+                make_profile: c.Infra.MakeProfile,
+                repository_branch: t.NonEmptyStr,
+                ci_trigger_branches: t.VariadicTuple[t.NonEmptyStr],
+                system_packages: t.VariadicTuple[t.NonEmptyStr] = (),
+                packages_read: bool = False,
+                custom_steps: str = "",
+                has_devcontainer: bool = False,
+                workspace_repositories: t.VariadicTuple[m.Infra.RepositoryRef] = (),
+                cooldown_excluded_dependencies: t.VariadicTuple[t.NonEmptyStr] = (),
+            ) -> m.Infra.GithubWorkflowRenderSpec:
+                """Build the common strictly typed workflow rendering contract.
+
+                Returns:
+                    The resulting ``m.Infra.GithubWorkflowRenderSpec``.
+
+                """
+                codegen = config.Infra.codegen
+                return m.Infra.GithubWorkflowRenderSpec(
+                    dist=dist,
+                    make_profile=make_profile,
+                    repository_branch=repository_branch,
+                    ci_trigger_branches=ci_trigger_branches,
+                    system_packages=system_packages,
+                    packages_read=packages_read,
+                    python_version=codegen.toolchain.python_version,
+                    github_actions=codegen.github_actions,
+                    make=codegen.make,
+                    workspace_repositories=workspace_repositories,
+                    checkout_submodules=codegen.checkout_submodules,
+                    custom_steps=custom_steps,
+                    has_devcontainer=has_devcontainer,
+                    dependency_cooldown_days=codegen.toolchain.dependency_cooldown_days,
+                    cooldown_excluded_dependencies=cooldown_excluded_dependencies,
+                )
+
+            @staticmethod
+            def ci_job_steps(rendered: str) -> t.VariadicTuple[t.JsonMapping]:
+                """Parse the rendered ci workflow into its ordered job steps.
+
+                One owner for the YAML parse and the jobs/ci/steps navigation every
+                CI-contract test shares; consumers assert on the returned steps.
+
+                Returns:
+                    The resulting ``t.VariadicTuple[t.JsonMapping]``.
+
+                Raises:
+                    TypeError: If workflow job steps must be a sequence.
+
+                """
+                document = t.Cli.JSON_MAPPING_ADAPTER.validate_python(
+                    tm.ok(u.Cli.yaml_parse(rendered)),
+                )
+                jobs = t.Cli.JSON_MAPPING_ADAPTER.validate_python(document["jobs"])
+                job = t.Cli.JSON_MAPPING_ADAPTER.validate_python(jobs["ci"])
+                steps = job["steps"]
+                if not isinstance(steps, list):
+                    msg = "workflow job steps must be a sequence"
+                    raise TypeError(msg)
+                return tuple(
+                    t.Cli.JSON_MAPPING_ADAPTER.validate_python(step) for step in steps
+                )
+
     class Tests(
         TestsFlextInfraUtilitiesTomlMixin,
         TestsFlextInfraUtilitiesProjectFixtureMixin,
@@ -52,7 +168,15 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
 
         @staticmethod
         def number(value: t.JsonValue) -> float:
-            """Narrow one parsed payload value to a real number."""
+            """Narrow one parsed payload value to a real number.
+
+            Returns:
+                The resulting ``float``.
+
+            Raises:
+                TypeError: If payload value is not a number.
+
+            """
             tm.that(isinstance(value, (int, float)), eq=True)
             if not isinstance(value, (int, float)):
                 msg = "payload value is not a number"
@@ -61,7 +185,12 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
 
         @staticmethod
         def json_payload(content: str) -> t.JsonMapping:
-            """Parse JSON text through the canonical reader and narrow it."""
+            """Parse JSON text through the canonical reader and narrow it.
+
+            Returns:
+                The resulting ``t.JsonMapping``.
+
+            """
             return TestsFlextInfraUtilitiesTomlMixin.toml_mapping(
                 tm.ok(u.Cli.json_loads(content)),
             )
@@ -73,6 +202,13 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             The facade returns an absent mapping for unparseable text; a test
             that asked for a payload has already decided the text is one, so
             the absence is a defect rather than a value to carry forward.
+
+            Returns:
+                The resulting ``t.JsonMapping``.
+
+            Raises:
+                ValueError: If TOML payload is not parseable.
+
             """
             parsed = u.Cli.toml_mapping_from_text(content)
             if parsed is None:
@@ -90,7 +226,12 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             extra_verbs: t.VariadicTuple[m.Infra.MakeVerbSpec] = (),
             script_dispatch: m.Infra.ScriptDispatchSpec | None = None,
         ) -> t.Pair[Path, Path]:
-            """Build the generated Make and activation fixture consumed by real verbs."""
+            """Build the generated Make and activation fixture consumed by real verbs.
+
+            Returns:
+                The resulting ``t.Pair[Path, Path]``.
+
+            """
             role = c.Infra.MakeProfile(profile.value)
             repository = u.Tests.repository_ref(
                 "fixture-project",
@@ -246,6 +387,10 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             The checkout carries the source and locks the upgrade wrote, never
             the template's environment or Git store; frozen setup provisions
             its own environment from those locks.
+
+            Returns:
+                The resulting ``Path``.
+
             """
             root = parent / profile.value / template.name
             shutil.copytree(
@@ -269,7 +414,12 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
 
         @staticmethod
         def hostile_uv_environment(hostile_venv: Path) -> t.StrMapping:
-            """Point every uv and interpreter selector at a foreign environment."""
+            """Point every uv and interpreter selector at a foreign environment.
+
+            Returns:
+                The resulting ``t.StrMapping``.
+
+            """
             hostile_bin = hostile_venv / "bin"
             return {
                 "PATH": f"{hostile_bin}:{os.environ['PATH']}",
@@ -283,14 +433,24 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
 
         @staticmethod
         def command_receipt(path: Path) -> m.Cli.CommandOutput:
-            """Read one recorded provisioning command outcome."""
+            """Read one recorded provisioning command outcome.
+
+            Returns:
+                The resulting ``m.Cli.CommandOutput``.
+
+            """
             return m.Cli.CommandOutput.model_validate_json(
                 path.read_text(encoding="utf-8"),
             )
 
         @staticmethod
         def infra_source_checkout(parent: Path) -> Path:
-            """Copy this repository's Git-visible inputs into a fresh Git checkout."""
+            """Copy this repository's Git-visible inputs into a fresh Git checkout.
+
+            Returns:
+                The resulting ``Path``.
+
+            """
             source = Path(__file__).resolve().parents[1]
             root = parent / config.Infra.name
             paths = tm.not_none(u.Infra.git_tracked_scope_paths(source))
@@ -310,7 +470,12 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
         def materialize_docs_bundle(
             bundle: m.Infra.DocsGenerationBundle,
         ) -> p.Result[bool]:
-            """Publish one immutable docs bundle through atomic file primitives."""
+            """Publish one immutable docs bundle through atomic file primitives.
+
+            Returns:
+                The resulting ``p.Result[bool]``.
+
+            """
             required = u.Infra.docs_required_directories(bundle)
             if required.failure:
                 return r[bool].from_failure(required)
@@ -331,7 +496,12 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
 
         @staticmethod
         def write_package_init(directory: Path, content: str) -> Path:
-            """Materialize one importable package initializer under a test root."""
+            """Materialize one importable package initializer under a test root.
+
+            Returns:
+                The resulting ``Path``.
+
+            """
             directory.mkdir(parents=True, exist_ok=True)
             init_file = directory / c.Infra.INIT_PY
             init_file.write_text(content, encoding=c.Infra.ENCODING_DEFAULT)

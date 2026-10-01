@@ -1,4 +1,8 @@
-"""Constants namespace for flext_infra.refactor."""
+"""Constants namespace for flext_infra.refactor.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,8 +13,7 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, ClassVar, Literal
 
 from flext_core import c
-
-from .base import FlextInfraConstantsBase as cb
+from flext_infra._constants.base import FlextInfraConstantsBase as cb
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -149,6 +152,7 @@ class FlextInfraConstantsRefactor:
         COMPOSES_FAMILY = "composes-family"
         CLASS_STEM = "class-stem"
         PACKAGE_LAYERS = "package-layers"
+        PACKAGE_ROOT_INIT = "package-root-init"
         FAMILY_BASE = "family-base"
 
     @unique
@@ -162,6 +166,8 @@ class FlextInfraConstantsRefactor:
         MODEL_FIELDS = "model-fields"
         SELF_FACADE_IMPORT = "self-facade-import"
         DYNAMIC_ENVIRONMENT = "dynamic-environment"
+        MODULE_END = "module-end"
+        NOTICE_LAST = "notice-last"
 
     SEMANTIC_CUTOVER_RULE_IDS: ClassVar[t.MappingKV[str, str]] = MappingProxyType({
         SemanticCutoverPhase.COMPAT_ALIAS: "ban-compat-alias",
@@ -170,6 +176,8 @@ class FlextInfraConstantsRefactor:
         SemanticCutoverPhase.MODEL_FIELDS: "rewire-getattr-model-fields-to-direct-access",
         SemanticCutoverPhase.SELF_FACADE_IMPORT: "ban-infra-utility-module-self-facade-import",
         SemanticCutoverPhase.DYNAMIC_ENVIRONMENT: "ban-ambient-environ-read",
+        SemanticCutoverPhase.MODULE_END: "require-all-last",
+        SemanticCutoverPhase.NOTICE_LAST: "require-notice-last",
     })
     "ast-grep rule whose findings select each finding-driven semantic cutover."
 

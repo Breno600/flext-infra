@@ -1,4 +1,8 @@
-"""Release source staging: committed snapshot, sensitive paths, secret scan."""
+"""Release source staging: committed snapshot, sensitive paths, secret scan.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,8 +11,7 @@ from pathlib import Path
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
-
-from ._release_artifact import FlextInfraReleaseArtifactMixin
+from flext_infra.release._release_artifact import FlextInfraReleaseArtifactMixin
 
 
 class FlextInfraReleaseSourceMixin(FlextInfraReleaseArtifactMixin):
@@ -21,7 +24,12 @@ class FlextInfraReleaseSourceMixin(FlextInfraReleaseArtifactMixin):
         stage_path: Path,
         gitleaks_config: Path,
     ) -> p.Result[t.Pair[m.Infra.SourceSnapshot, str]]:
-        """Extract HEAD of a clean project, scan it, and return identity and license digest."""
+        """Extract HEAD of a clean project, scan it, and return identity and license digest.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[m.Infra.SourceSnapshot, str]]``.
+
+        """
         result_type = r[t.Pair[m.Infra.SourceSnapshot, str]]
         status = u.Cli.capture(
             [c.Infra.GIT, "status", "--porcelain"],
@@ -110,7 +118,12 @@ class FlextInfraReleaseSourceMixin(FlextInfraReleaseArtifactMixin):
 
     @staticmethod
     def _scan_source(stage_path: Path, gitleaks_config: Path) -> p.Result[bool]:
-        """Scan the staged source with the trusted policy, never an ambient one."""
+        """Scan the staged source with the trusted policy, never an ambient one.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         policy = u.Cli.files_read_text(gitleaks_config)
         if policy.failure or not policy.value.strip():
             return r[bool].fail(

@@ -11,9 +11,9 @@ from typing import Annotated, ClassVar
 
 from flext_cli import m
 
-from .. import c, p, t
-from . import FlextInfraModelsMixins as mm
-from ._codegen.base import FlextInfraCodegen
+from flext_infra import c, p, t
+from flext_infra._models import FlextInfraModelsMixins as mm
+from flext_infra._models._codegen.base import FlextInfraCodegen
 
 
 class FlextInfraModelsRope:
@@ -130,9 +130,6 @@ class FlextInfraModelsRope:
             str,
             m.Field(description="Rope-owned source slice for the statement"),
         ] = ""
-
-
-
 
     class FamilyWrapperFlatten(m.ArbitraryTypesModel):
         """Rope identity of one namespace wrapper flattened into its family owner."""

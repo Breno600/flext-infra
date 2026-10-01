@@ -1,4 +1,8 @@
-"""Real Git state boundaries for nested repositories and path-kind changes."""
+"""Real Git state boundaries for nested repositories and path-kind changes.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -14,8 +18,8 @@ from tests import u as test_u
 class TestsFlextInfraGitStateBoundaries:
     """Keep unsupported flags explicit and retain independently owned gitlinks."""
 
+    @staticmethod
     def test_cleanup_rejects_unsupported_baseline_symlink_before_effects(
-        self,
         tmp_path: Path,
     ) -> None:
         source = test_u.Tests.git_repository(tmp_path)
@@ -75,7 +79,8 @@ class TestsFlextInfraGitStateBoundaries:
             eq=snapshot,
         )
 
-    def test_scope_rejects_unowned_symlink_ancestor(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_scope_rejects_unowned_symlink_ancestor(tmp_path: Path) -> None:
         source = test_u.Tests.git_repository(tmp_path)
         directory = source / "shape"
         directory.mkdir()
@@ -106,7 +111,8 @@ class TestsFlextInfraGitStateBoundaries:
             ),
         )
 
-    def test_index_flags_fail_without_clearing_them(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_index_flags_fail_without_clearing_them(tmp_path: Path) -> None:
         source = test_u.Tests.git_repository(tmp_path)
         (source / "README.md").write_text("tracked baseline\n", encoding="utf-8")
         test_u.Tests.git_run(source, "add", "README.md")
@@ -122,8 +128,8 @@ class TestsFlextInfraGitStateBoundaries:
             tm.that(test_u.Tests.git_capture(source, "ls-files", "-v"), eq=before)
             test_u.Tests.git_run(source, "update-index", f"--no-{flag}", "README.md")
 
+    @staticmethod
     def test_file_directory_roundtrip_preserves_partial_index(
-        self,
         tmp_path: Path,
     ) -> None:
         source = test_u.Tests.git_repository(tmp_path)
@@ -185,8 +191,8 @@ class TestsFlextInfraGitStateBoundaries:
         tm.that(path.read_bytes(), eq=b"original file\n")
         tm.that(test_u.Tests.git_capture(source, "status", "--porcelain=v1"), eq="")
 
+    @staticmethod
     def test_gitlink_staging_is_retained_and_unreconciled_child_refuses_apply(
-        self,
         tmp_path: Path,
     ) -> None:
         source = test_u.Tests.git_repository(tmp_path)
@@ -256,7 +262,8 @@ class TestsFlextInfraGitStateBoundaries:
         tm.that(indexed in reachable, eq=True)
         tm.that(snapshot.head_entries[0].oid in reachable, eq=True)
 
-    def test_remote_drift_refuses_source_cleanup(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_remote_drift_refuses_source_cleanup(tmp_path: Path) -> None:
         source = test_u.Tests.git_repository(tmp_path)
         (source / "README.md").write_text("baseline\n", encoding="utf-8")
         test_u.Tests.git_run(source, "add", "README.md")

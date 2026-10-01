@@ -14,8 +14,7 @@ from typing import ClassVar
 
 from flext_core import FlextSettings
 from flext_infra import m
-
-from ._models.settings import FlextInfraSettingsModels
+from flext_infra._models.settings import FlextInfraSettingsModels
 
 
 class FlextInfraSettings(FlextSettings):
@@ -43,12 +42,21 @@ class FlextInfraSettings(FlextSettings):
         variables, subprocess environment merges). Static values must be typed
         ``settings.Infra.*`` fields instead; ambient ``os.environ`` reads
         elsewhere are banned by the ``ban-ambient-environ-read`` rule.
+
+        Returns:
+            One raw environment value through the settings boundary.
+
         """
         return _os.environ.get(name)
 
     @staticmethod
     def env_required(name: str) -> str:
-        """Read a required dynamic key, preserving native missing-key semantics."""
+        """Read a required dynamic key, preserving native missing-key semantics.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return _os.environ[name]
 
 

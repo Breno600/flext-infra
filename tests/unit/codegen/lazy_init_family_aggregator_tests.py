@@ -1,5 +1,8 @@
 """A re-export aggregator's ``__all__`` never claims single ownership.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Regression coverage: a generated TYPE_CHECKING re-export sidecar (e.g.
 ``tests/_exports_typing_facades.py`` in flext-core) imports many facades and
 relists their class/alias names in its own ``__all__``. ``_resolve_family``
@@ -25,8 +28,8 @@ from tests import c, u
 class TestsFlextInfraLazyInitFamilyAggregator:
     """A multi-name aggregator module never wins family/alias ownership."""
 
+    @staticmethod
     def test_aggregator_sidecar_never_shadows_real_constants_owner(
-        self,
         tmp_path: Path,
     ) -> None:
         """The real ``constants.py`` owner survives a re-export aggregator."""
@@ -76,7 +79,8 @@ class TestsFlextInfraLazyInitFamilyAggregator:
 
         tm.that(
             generated,
-            has="from .constants import FlextTestAggConstants, FlextTestAggConstants as c",
+            has="from .constants import FlextTestAggConstants, c",
         )
+        tm.that(generated, lacks="FlextTestAggConstants as c")
         tm.that(generated, has='".constants": ("FlextTestAggConstants", "c")')
         tm.that(generated, lacks="_exports_typing_aggregate")

@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core.lazy import build_lazy_import_map, install_lazy_exports
+from flext_core import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_infra.codegen import _conform
@@ -88,35 +88,51 @@ if TYPE_CHECKING:
     from flext_infra.codegen._lazy_init_planner_public_root import (
         FlextInfraCodegenLazyInitPlannerPublicRootMixin,
     )
-    from ._lazy_init_projection_manifest import (
+    from flext_infra.codegen._lazy_init_projection_manifest import (
         FlextInfraCodegenLazyInitProjectionManifest,
     )
-    from ._mise_artifacts_candidates import FlextInfraMiseArtifactsCandidates
-    from ._mise_artifacts_cold_start import FlextInfraMiseColdStart
-    from ._mise_artifacts_derivation import FlextInfraMiseArtifactsDerivation
-    from ._mise_artifacts_journal import FlextInfraMiseArtifactsJournal
-    from ._mise_artifacts_process import FlextInfraMiseArtifactsProcess
-    from ._mise_artifacts_recovery import FlextInfraMiseRecovery
-    from ._mise_artifacts_staging import FlextInfraMiseStaging
-    from ._mise_artifacts_state import FlextInfraMiseArtifactsState
-    from ._mise_artifacts_verification import FlextInfraMiseArtifactsVerification
-    from ._protocol_model_annotations import FlextInfraCodegenProtocolModelAnnotations
-    from ._protocol_model_render import FlextInfraCodegenProtocolModelRender
-    from .census import FlextInfraCodegenCensus
-    from .codegen_generation import FlextInfraCodegenGeneration
-    from .codegen_transaction import FlextInfraCodegenTransaction
-    from .conform import FlextInfraCodegenConform
-    from .consolidator import FlextInfraCodegenConsolidator
-    from .constants_quality_gate import FlextInfraCodegenQualityGate
-    from .file_leases import FlextInfraCodegenFileLeases
-    from .fixer import FlextInfraCodegenFixer
-    from .layout import FlextInfraCodegenLayout
-    from .lazy_init import FlextInfraCodegenLazyInit
-    from .lazy_init_planner import FlextInfraCodegenLazyInitPlanner
-    from .make_bootstrap import FlextInfraCodegenMakeBootstrap
-    from .mise_artifacts import FlextInfraCodegenMiseArtifacts
-    from .mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
-    from .pipeline import (
+    from flext_infra.codegen._mise_artifacts_candidates import (
+        FlextInfraMiseArtifactsCandidates,
+    )
+    from flext_infra.codegen._mise_artifacts_cold_start import FlextInfraMiseColdStart
+    from flext_infra.codegen._mise_artifacts_derivation import (
+        FlextInfraMiseArtifactsDerivation,
+    )
+    from flext_infra.codegen._mise_artifacts_journal import (
+        FlextInfraMiseArtifactsJournal,
+    )
+    from flext_infra.codegen._mise_artifacts_process import (
+        FlextInfraMiseArtifactsProcess,
+    )
+    from flext_infra.codegen._mise_artifacts_recovery import FlextInfraMiseRecovery
+    from flext_infra.codegen._mise_artifacts_staging import FlextInfraMiseStaging
+    from flext_infra.codegen._mise_artifacts_state import FlextInfraMiseArtifactsState
+    from flext_infra.codegen._mise_artifacts_verification import (
+        FlextInfraMiseArtifactsVerification,
+    )
+    from flext_infra.codegen._protocol_model_annotations import (
+        FlextInfraCodegenProtocolModelAnnotations,
+    )
+    from flext_infra.codegen._protocol_model_render import (
+        FlextInfraCodegenProtocolModelRender,
+    )
+    from flext_infra.codegen.census import FlextInfraCodegenCensus
+    from flext_infra.codegen.codegen_generation import FlextInfraCodegenGeneration
+    from flext_infra.codegen.codegen_transaction import FlextInfraCodegenTransaction
+    from flext_infra.codegen.conform import FlextInfraCodegenConform
+    from flext_infra.codegen.consolidator import FlextInfraCodegenConsolidator
+    from flext_infra.codegen.constants_quality_gate import FlextInfraCodegenQualityGate
+    from flext_infra.codegen.file_leases import FlextInfraCodegenFileLeases
+    from flext_infra.codegen.fixer import FlextInfraCodegenFixer
+    from flext_infra.codegen.layout import FlextInfraCodegenLayout
+    from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
+    from flext_infra.codegen.lazy_init_planner import FlextInfraCodegenLazyInitPlanner
+    from flext_infra.codegen.make_bootstrap import FlextInfraCodegenMakeBootstrap
+    from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+    from flext_infra.codegen.mise_artifacts_workspace import (
+        FlextInfraMiseWorkspacePlanner,
+    )
+    from flext_infra.codegen.pipeline import (
         FlextInfraCodegenLazyInitGenerationMixin,
         FlextInfraCodegenPipeline,
         FlextInfraCodegenPipelineStagesMixin,
@@ -299,7 +315,7 @@ _LAZY_IMPORTS = MappingProxyType(
         }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,
-    )
+    ),
 )
 
 install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

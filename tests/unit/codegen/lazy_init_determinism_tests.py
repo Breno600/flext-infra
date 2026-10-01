@@ -23,8 +23,8 @@ class TestsFlextInfraLazyInitDeterminism:
     different committed inits and every consumer's gen fixed point drifts.
     """
 
+    @staticmethod
     def test_rendered_lazy_map_keys_are_canonically_ordered(
-        self,
         tmp_path: Path,
     ) -> None:
         """Every rendered mapping key row follows lexicographic order."""

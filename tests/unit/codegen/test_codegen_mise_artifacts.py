@@ -1,4 +1,8 @@
-"""Offline contracts for generated Mise declarations and launchers."""
+"""Offline contracts for generated Mise declarations and launchers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -160,7 +164,8 @@ class TestsFlextInfraCodegenMiseArtifacts:
 
         tm.that(executed.stdout.strip(), eq="planted-mise version")
 
-    def test_resource_read_accepts_installer_hard_links(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_resource_read_accepts_installer_hard_links(tmp_path: Path) -> None:
         """A hard-linked package file (uv cache + venv) is readable as a resource."""
         owner = tmp_path / "seed"
         owner.write_bytes(b"#!/bin/sh\n")
@@ -243,6 +248,7 @@ class TestsFlextInfraCodegenMiseArtifacts:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test complete artifacts validate without running mise."""
         root = self._project(tmp_path / "project")
 
         service = FlextInfraCodegenMiseArtifacts.model_validate({
@@ -272,6 +278,7 @@ class TestsFlextInfraCodegenMiseArtifacts:
         tm.that((root / "bin").exists(), eq=False)
 
     def test_full_validation_requires_committed_launchers(self, tmp_path: Path) -> None:
+        """Test full validation requires committed launchers."""
         root = tmp_path / "project"
         root.mkdir()
         test_u.Tests.initialize_git_repo(root)
@@ -286,7 +293,9 @@ class TestsFlextInfraCodegenMiseArtifacts:
         # them names that verb as its single repair.
         tm.fail(result, has="run make upg")
 
-    def test_tools_section_is_mandatory(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_tools_section_is_mandatory(tmp_path: Path) -> None:
+        """Test tools section is mandatory."""
         root = tmp_path / "project"
         root.mkdir()
         (root / ".mise.toml").write_text("[settings]\n", encoding="utf-8")
@@ -298,7 +307,8 @@ class TestsFlextInfraCodegenMiseArtifacts:
 
         tm.fail(result, has="[tools]")
 
-    def test_lock_annotation_in_a_selector_is_rejected(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_lock_annotation_in_a_selector_is_rejected(tmp_path: Path) -> None:
         """A ``<version>~<hash>`` lock cache key never becomes a selector."""
         root = tmp_path / "project"
         root.mkdir()
@@ -336,7 +346,8 @@ class TestsFlextInfraCodegenMiseArtifacts:
 
         tm.ok(result, eq=True)
 
-    def test_shipped_jscpd_plan_uses_only_configured_route(self) -> None:
+    @staticmethod
+    def test_shipped_jscpd_plan_uses_only_configured_route() -> None:
         """The generated plan must contain only the typed jscpd route."""
         toolchain = config.Infra.codegen.toolchain
         plan = test_u.Tests.toml_payload(
@@ -352,7 +363,8 @@ class TestsFlextInfraCodegenMiseArtifacts:
         )
         tm.that("npm:jscpd" in tools, eq=False)
 
-    def test_project_filter_is_internal_to_make_propagation(self) -> None:
+    @staticmethod
+    def test_project_filter_is_internal_to_make_propagation() -> None:
         """Keep project selection on the Make propagation boundary."""
         field = FlextInfraCodegenMiseArtifacts.model_fields["project_filter"]
 

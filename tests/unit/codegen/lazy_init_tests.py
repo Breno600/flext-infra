@@ -24,7 +24,12 @@ if TYPE_CHECKING:
 
 @pytest.fixture
 def governed_project(tmp_path: Path) -> Path:
-    """Provide a valid project identity for package discovery."""
+    """Provide a valid project identity for package discovery.
+
+    Returns:
+        The resulting ``Path``.
+
+    """
     (tmp_path / "pyproject.toml").write_text(
         '[project]\nname = "test-helpers"\nversion = "0.1.0"\n',
         encoding="utf-8",
@@ -46,7 +51,8 @@ class TestsFlextInfraCodegenLazyInit:
         '__all__: list[str] = ["SomeFixture"]\n'
     )
 
-    def _create_init_file(self, directory: Path, content: str) -> Path:
+    @staticmethod
+    def _create_init_file(directory: Path, content: str) -> Path:
         directory.mkdir(parents=True, exist_ok=True)
         init_file = directory / "__init__.py"
         init_file.write_text(content, encoding="utf-8")
@@ -66,7 +72,8 @@ class TestsFlextInfraCodegenLazyInit:
             '__all__: list[str] = ["SomeFixture"]\n'
         )
 
-        def _create_init_file(self, directory: Path, content: str) -> Path:
+        @staticmethod
+        def _create_init_file(directory: Path, content: str) -> Path:
             directory.mkdir(parents=True, exist_ok=True)
             init_file = directory / "__init__.py"
             init_file.write_text(content, encoding="utf-8")
@@ -125,7 +132,8 @@ class TestsFlextInfraCodegenLazyInit:
             '__all__: list[str] = ["SomeFixture"]\n'
         )
 
-        def _create_init_file(self, directory: Path, content: str) -> Path:
+        @staticmethod
+        def _create_init_file(directory: Path, content: str) -> Path:
             directory.mkdir(parents=True, exist_ok=True)
             init_file = directory / "__init__.py"
             init_file.write_text(content, encoding="utf-8")
@@ -156,7 +164,8 @@ class TestsFlextInfraCodegenLazyInit:
             '__all__: list[str] = ["SomeFixture"]\n'
         )
 
-        def _create_init_file(self, directory: Path, content: str) -> Path:
+        @staticmethod
+        def _create_init_file(directory: Path, content: str) -> Path:
             directory.mkdir(parents=True, exist_ok=True)
             init_file = directory / "__init__.py"
             init_file.write_text(content, encoding="utf-8")
@@ -242,13 +251,15 @@ class TestsFlextInfraCodegenLazyInit:
             '__all__: list[str] = ["TestClass"]\n'
         )
 
-        def _create_init_file(self, directory: Path, content: str) -> Path:
+        @staticmethod
+        def _create_init_file(directory: Path, content: str) -> Path:
             directory.mkdir(parents=True, exist_ok=True)
             init_file = directory / "__init__.py"
             init_file.write_text(content, encoding="utf-8")
             return init_file
 
-        def test_empty_workspace_returns_zero(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_empty_workspace_returns_zero(tmp_path: Path) -> None:
             """Return zero changes for an empty workspace."""
             generator = FlextInfraCodegenLazyInit(repository_root=tmp_path)
             tm.that(generator.plan_files().success, eq=True)

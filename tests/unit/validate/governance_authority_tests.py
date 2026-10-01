@@ -1,4 +1,8 @@
-"""Reject dead governance skill paths and conflicting authority sequences."""
+"""Reject dead governance skill paths and conflicting authority sequences.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -47,6 +51,7 @@ class TestsFlextInfraGovernanceAuthority:
         )
 
     def test_prompt_skills_resolve_to_existing_paths(self) -> None:
+        """Test prompt skills resolve to existing paths."""
         prompts = self.ROOT / ".github" / "prompts"
         law_link = "../../.agents/skills/flext-law/SKILL.md"
         for prompt in prompts.glob("*.prompt.md"):
@@ -62,6 +67,7 @@ class TestsFlextInfraGovernanceAuthority:
                 assert target.exists(), f"{prompt.name} dead skill path: {law_link}"
 
     def test_markdownlint_does_not_suppress_strict_rules(self) -> None:
+        """Test markdownlint does not suppress strict rules."""
         config = u.Tests.json_payload(
             (self.ROOT / ".markdownlint.json").read_text(encoding="utf-8"),
         )
@@ -78,6 +84,7 @@ class TestsFlextInfraGovernanceAuthority:
         # formatter chooses, so a literal match answers about the wrap and not
         # about the law. Collapse runs of whitespace and assert the sentence
         # itself.
+        """Test flext law requires automated structural rewires."""
         law = " ".join(
             (self._repository_root() / ".agents/skills/flext-law/SKILL.md")
             .read_text(encoding="utf-8")

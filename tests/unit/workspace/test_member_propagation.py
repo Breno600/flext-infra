@@ -1,5 +1,8 @@
 """Member propagation: this workspace's flext-infra reaches each member as one lane.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Every case drives the public ``workspace propagate`` CLI (what ``make
 propagate`` runs) over a real workspace: a superproject declaring two member
 repositories in ``.gitmodules``, each pushing to its own local bare origin,
@@ -49,6 +52,10 @@ class TestsFlextInfraWorkspaceMemberPropagation:
         hermetic mirror routes encode it) and member layout under the canonical
         lease; the first consumer pays it inside its own deadline and every
         test clones the result.
+
+        Returns:
+            The declared workspace with ``settled`` conformed, built once.
+
         """
         material = "\n".join((
             *(f"{name}={value}" for name, value in sorted(hermetic.items())),
@@ -100,7 +107,12 @@ class TestsFlextInfraWorkspaceMemberPropagation:
         settled: t.StrSequence,
         hermetic: t.StrMapping,
     ) -> Generator[t.Pair[Path, Path]]:
-        """Yield a clone of the workspace whose ``settled`` members are propagated."""
+        """Yield a clone of the workspace whose ``settled`` members are propagated.
+
+        Yields:
+            Each ``t.Pair[Path, Path]``.
+
+        """
         # Every settle and propagation locks against the run's local mirrors.
         with u.Tests.env_vars_context(env_vars=hermetic):
             root = tmp_path / "workspace"
@@ -130,7 +142,12 @@ class TestsFlextInfraWorkspaceMemberPropagation:
 
     @staticmethod
     def _propagate(root: Path) -> int:
-        """Run the public propagation CLI once."""
+        """Run the public propagation CLI once.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         return main([
             c.Infra.CLI_GROUP_WORKSPACE,
             "propagate",
@@ -140,7 +157,12 @@ class TestsFlextInfraWorkspaceMemberPropagation:
 
     @staticmethod
     def _lane_commits(member: Path) -> str:
-        """Count the lane's commits beyond the member's integration branch."""
+        """Count the lane's commits beyond the member's integration branch.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         base = u.Tests.integration_branch(member)
         return u.Tests.git_capture(
             member,
@@ -151,7 +173,12 @@ class TestsFlextInfraWorkspaceMemberPropagation:
 
     @staticmethod
     def _published(tmp_path: Path, name: str) -> str:
-        """Return the lane tip the member's bare origin carries, or empty."""
+        """Return the lane tip the member's bare origin carries, or empty.
+
+        Returns:
+            The lane tip the member's bare origin carries, or empty.
+
+        """
         return u.Tests.git_capture(
             tmp_path / "remotes" / name / "origin.git",
             "for-each-ref",
@@ -161,7 +188,12 @@ class TestsFlextInfraWorkspaceMemberPropagation:
 
     @staticmethod
     def _on_clean_base(member: Path) -> bool:
-        """Return whether the member checkout rests clean on its integration line."""
+        """Return whether the member checkout rests clean on its integration line.
+
+        Returns:
+            Whether the member checkout rests clean on its integration line.
+
+        """
         current = u.Tests.git_capture(member, "branch", "--show-current").strip()
         status = u.Tests.git_capture(member, "status", "--porcelain").strip()
         return current == u.Tests.integration_branch(member) and not status

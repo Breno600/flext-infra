@@ -1,4 +1,8 @@
-"""Destination-local staging for complete Mise artifact projections."""
+"""Destination-local staging for complete Mise artifact projections.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,9 +11,12 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, u
-
-from ._mise_artifacts_candidates import FlextInfraMiseArtifactsCandidates
-from ._mise_artifacts_process import FlextInfraMiseArtifactsProcess as process
+from flext_infra.codegen._mise_artifacts_candidates import (
+    FlextInfraMiseArtifactsCandidates,
+)
+from flext_infra.codegen._mise_artifacts_process import (
+    FlextInfraMiseArtifactsProcess as process,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -32,7 +39,13 @@ class FlextInfraMiseStaging:
             t.VariadicTuple[m.Cli.AtomicDirectoryState],
         ]
     ]:
-        """Stage the runtime-root triple alongside each project's declaration."""
+        """Stage the runtime-root triple alongside each project's declaration.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[t.VariadicTuple[m.Infra.CodegenStagedFile],
+                t.VariadicTuple[m.Cli.AtomicDirectoryState]]]``.
+
+        """
         result_type = r[
             tuple[
                 tuple[m.Infra.CodegenStagedFile, ...],
@@ -83,7 +96,12 @@ class FlextInfraMiseStaging:
         stage_root: Path,
         projected: t.VariadicTuple[bytes],
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicDirectoryState]]:
-        """Build one project and retain its guarded directory creation receipts."""
+        """Build one project and retain its guarded directory creation receipts.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Cli.AtomicDirectoryState]]``.
+
+        """
         result_type = r[tuple[m.Cli.AtomicDirectoryState, ...]]
         stage_plan = u.Cli.atomic_plan_directory_chain(stage_root / "bin")
         if stage_plan.failure:

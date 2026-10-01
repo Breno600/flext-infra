@@ -23,12 +23,25 @@ from tests import TestsFlextInfraUtilities as tu, u
 
 
 class TestsFlextInfraPyprojectConformPreservesLintScope:
-    def _repository_root(self) -> Path:
-        """Return the repository root that owns this checkout."""
+    """Tests for ``FlextInfraPyprojectConformPreservesLintScope``."""
+
+    @staticmethod
+    def _repository_root() -> Path:
+        """Return the repository root that owns this checkout.
+
+        Returns:
+            The repository root that owns this checkout.
+
+        """
         return Path(__file__).resolve().parents[2]
 
     def _live_per_file_ignores(self) -> frozenset[str]:
-        """Return the per-file-ignore globs the governed pyproject declares."""
+        """Return the per-file-ignore globs the governed pyproject declares.
+
+        Returns:
+            The per-file-ignore globs the governed pyproject declares.
+
+        """
         content = (self._repository_root() / "pyproject.toml").read_text(
             encoding="utf-8",
         )
@@ -50,6 +63,10 @@ class TestsFlextInfraPyprojectConformPreservesLintScope:
         ``config/*.yaml`` adds exemptions that belong to that repository alone.
         A path that exists in one repository is declared project-locally so the
         fleet policy does not write a dead exemption into every project.
+
+        Returns:
+            Every per-file-ignore glob the generator can reproduce.
+
         """
         ruff = config.Infra.tooling.tools.ruff
         fleet = frozenset(ruff.lint.per_file_ignores)

@@ -1,4 +1,8 @@
-"""Canonical Git responsibility mixin for ``u.Infra``."""
+"""Canonical Git responsibility mixin for ``u.Infra``.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -14,8 +18,9 @@ from git import (
 
 from flext_core import r
 from flext_infra import c, m, t
-
-from .semantic_paths import FlextInfraUtilitiesGitSemanticPathsMixin
+from flext_infra._utilities._git.semantic_paths import (
+    FlextInfraUtilitiesGitSemanticPathsMixin,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -39,6 +44,10 @@ class FlextInfraUtilitiesGitSemanticIndexMixin(
         Git objects are immutable, so the content is returned by name without
         a physical source state. A directory absent from HEAD is the typed
         empty mapping; an unreadable repository or object fails loud.
+
+        Returns:
+            The resulting ``p.Result[t.MappingKV[str, bytes]]``.
+
         """
         opened = cls._open_repo(repo_root)
         if opened.failure:
@@ -63,7 +72,12 @@ class FlextInfraUtilitiesGitSemanticIndexMixin(
         cls,
         request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitNumstatReport]:
-        """Capture HEAD subject and ``HEAD~1..HEAD`` numstat."""
+        """Capture HEAD subject and ``HEAD~1..HEAD`` numstat.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitNumstatReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             subject = repo.git.log("-1", "--format=%s")
@@ -84,7 +98,12 @@ class FlextInfraUtilitiesGitSemanticIndexMixin(
         cls,
         request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitFingerprintInputsReport]:
-        """Capture byte-exact fingerprint inputs for one worktree."""
+        """Capture byte-exact fingerprint inputs for one worktree.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitFingerprintInputsReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             paths_z, index_z, head = cls._git_capture_fingerprint(repo)
@@ -105,7 +124,12 @@ class FlextInfraUtilitiesGitSemanticIndexMixin(
 
     @staticmethod
     def _git_capture_fingerprint(repo: Repo) -> t.Triple[bytes, bytes, bytes]:
-        """Capture (paths_z, index_z, head) bytes for fingerprinting."""
+        """Capture (paths_z, index_z, head) bytes for fingerprinting.
+
+        Returns:
+            The resulting ``t.Triple[bytes, bytes, bytes]``.
+
+        """
         paths_z = repo.git.ls_files(
             "-z",
             "--cached",
@@ -127,7 +151,12 @@ class FlextInfraUtilitiesGitSemanticIndexMixin(
         cls,
         request: m.Infra.GitUpdateIndexGitlinkRequest,
     ) -> p.Result[m.Infra.GitBoolReport]:
-        """Stage one gitlink (mode 160000) into the index."""
+        """Stage one gitlink (mode 160000) into the index.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitBoolReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             entry = BaseIndexEntry((
@@ -155,6 +184,10 @@ class FlextInfraUtilitiesGitSemanticIndexMixin(
 
         The ``ls-files --stage`` entry is validated structurally: gitlink
         mode, normal stage, and an exact path match.
+
+        Returns:
+            The gitlink OID the index records for one submodule path.
+
         """
         try:
             repo = cls._repo(request.repo_root)
@@ -189,6 +222,10 @@ class FlextInfraUtilitiesGitSemanticIndexMixin(
         index is therefore the only place that knows the complete set; reading
         it is how a caller compares what is recorded against what the
         repository declares.
+
+        Returns:
+            Every path the index records as a gitlink (mode ``160000``).
+
         """
         try:
             repo = cls._repo(repository_root)

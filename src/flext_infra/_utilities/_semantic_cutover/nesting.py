@@ -1,4 +1,8 @@
-"""Automatic class-nesting plans derived from the public Rope workspace."""
+"""Automatic class-nesting plans derived from the public Rope workspace.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,13 +12,22 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import m, t
-
-from ..namespace import FlextInfraUtilitiesCodegenNamespace
-from ..rope_runtime_modules import FlextInfraUtilitiesRopeRuntimeModules
-from .edits import FlextInfraUtilitiesSemanticCutoverEdits
-from .family_flatten import FlextInfraUtilitiesSemanticFamilyFlatten
-from .nesting_cst import FlextInfraUtilitiesSemanticCutoverNestingCst
-from .test_helpers import FlextInfraUtilitiesSemanticTestHelpers
+from flext_infra._utilities._semantic_cutover.edits import (
+    FlextInfraUtilitiesSemanticCutoverEdits,
+)
+from flext_infra._utilities._semantic_cutover.family_flatten import (
+    FlextInfraUtilitiesSemanticFamilyFlatten,
+)
+from flext_infra._utilities._semantic_cutover.nesting_cst import (
+    FlextInfraUtilitiesSemanticCutoverNestingCst,
+)
+from flext_infra._utilities._semantic_cutover.test_helpers import (
+    FlextInfraUtilitiesSemanticTestHelpers,
+)
+from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities.rope_runtime_modules import (
+    FlextInfraUtilitiesRopeRuntimeModules,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -44,6 +57,10 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         it either, because the owner's base list is evaluated before its body
         exists. Either move produces a NameError at import, so both are excluded
         from the plan and stay at module level.
+
+        Returns:
+            Top-level classes an owner cannot contain.
+
         """
 
         def ancestors(name: str) -> frozenset[str]:
@@ -74,7 +91,12 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         file_path: Path,
         source: str,
     ) -> p.Result[t.StrMapping]:
-        """Map each loose top-level class to the owner Rope's module policy elects."""
+        """Map each loose top-level class to the owner Rope's module policy elects.
+
+        Returns:
+            The resulting ``p.Result[t.StrMapping]``.
+
+        """
         planned = r[t.StrMapping]
         family = FlextInfraUtilitiesCodegenNamespace.facade_family_of_file(
             file_path.name,
@@ -106,7 +128,12 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         rope_workspace: p.Infra.RopeWorkspaceDsl,
         sources: t.MappingKV[Path, str],
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
-        """Compose helper promotion, family flattening, and orphan nesting."""
+        """Compose helper promotion, family flattening, and orphan nesting.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
+
+        """
         planned = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
         # The planner contract keeps every failure in the Result (see
         # plan_semantic_cutover); helper promotion raises per rejected move.
@@ -152,7 +179,12 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         rope_workspace: p.Infra.RopeWorkspaceDsl,
         sources: t.MappingKV[Path, str],
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
-        """Plan all structural nesting and consumer rewrites without effects."""
+        """Plan all structural nesting and consumer rewrites without effects.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
+
+        """
         planned_edits = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
         modules = {
             entry.file_path.resolve(): entry for entry in rope_workspace.modules()

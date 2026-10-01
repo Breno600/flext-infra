@@ -1,4 +1,8 @@
-"""Mise toolchain and beads configuration models."""
+"""Mise toolchain and beads configuration models.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -42,7 +46,8 @@ class FlextInfraModelsMiseToolchain:
             t.NonEmptyStr,
             m.Field(
                 description=(
-                    "Rendered as dolt.mode in .beads/config.yaml. Change "
+                    "Rendered as dolt_mode in .beads/metadata.json and, for a "
+                    "Gas City rig, as dolt.mode in .beads/config.yaml. Change "
                     "toolchain.beads.dolt_mode; never the projection."
                 ),
             ),
@@ -68,7 +73,8 @@ class FlextInfraModelsMiseToolchain:
             bool,
             m.Field(
                 description=(
-                    "Rendered as dolt.disable-event-flush. Override "
+                    "Rendered for a Gas City rig as the nested "
+                    "dolt: disable-event-flush switch gc reads. Override "
                     "toolchain.beads.dolt_disable_event_flush."
                 ),
             ),
@@ -76,7 +82,15 @@ class FlextInfraModelsMiseToolchain:
 
         @u.model_validator(mode="after")
         def _validate_required_custom_types(self) -> Self:
-            """Reject ambiguous duplicate type declarations at the owner."""
+            """Reject ambiguous duplicate type declarations at the owner.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If beads required_custom_types must be unique.
+
+            """
             if len(set(self.required_custom_types)) != len(self.required_custom_types):
                 msg = "beads required_custom_types must be unique"
                 raise ValueError(msg)
@@ -85,10 +99,10 @@ class FlextInfraModelsMiseToolchain:
     class ToolchainSpec(_ConfigContract):
         """Language-runtime and native-tool versions shared by generated projects.
 
-        Language runtimes and native tools are declared as moving ``latest``
-        selectors or a major.minor line. Only ``make upg`` resolves them and
-        writes the committed mise.lock; setup installs frozen from it. Python linters/type-checkers remain owned
-        by pyproject manifests.
+        Native tools use moving ``latest`` selectors; Python retains its
+        required major.minor runtime line. Only ``make upg`` resolves the
+        selectors and writes mise.lock; setup installs frozen from that lock.
+        Python linters and type checkers remain owned by pyproject manifests.
         """
 
         # Selector families rejected while their capabilities are suspended.
@@ -110,13 +124,6 @@ class FlextInfraModelsMiseToolchain:
             m.Field(
                 pattern=r"^[0-9]+\.[0-9]+$",
                 description="Python major.minor line, e.g. '3.13'",
-            ),
-        ]
-        python_tool_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                pattern=r"^[0-9]+\.[0-9]+\.[0-9]+$",
-                description="Python runtime patch available on every locked platform",
             ),
         ]
         dependency_cooldown_days: Annotated[
@@ -231,12 +238,31 @@ class FlextInfraModelsMiseToolchain:
                     "MISE_PYTHON_COMPILE. False restricts Python resolution "
                     "and installation to precompiled builds. "
                     "Override toolchain.python_compile."
-                )
+                ),
             ),
         ]
         npm_package_manager: Annotated[
             Literal["aube"],
             m.Field(description="Mise npm installer with a locked dependency graph"),
+        ]
+        mise_selector: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Selector `make upg` resolves for the Mise release itself. "
+                    "Override toolchain.mise_selector."
+                ),
+            ),
+        ]
+        mise_version: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Mise release `make upg` writes to mise.version and the "
+                    "launchers: 'latest', or a held release while upstream's "
+                    "newest one is broken"
+                ),
+            ),
         ]
         qlty_selector: Annotated[
             t.NonEmptyStr,
@@ -274,7 +300,7 @@ class FlextInfraModelsMiseToolchain:
                 description=(
                     "Mise selector for prettier. Override toolchain.prettier_selector; "
                     "never the .mise.toml key."
-                )
+                ),
             ),
         ]
         prettier_version: Annotated[
@@ -310,7 +336,7 @@ class FlextInfraModelsMiseToolchain:
                 description=(
                     "Taplo release selector; the committed mise.lock pins the "
                     "version generation authenticates"
-                )
+                ),
             ),
         ]
         ast_grep_selector: Annotated[
@@ -386,13 +412,17 @@ class FlextInfraModelsMiseToolchain:
             A value like ``0.45.3~7a027ead`` is an aube lock build-identity
             directory name, not a published package version; aube rejects it
             ("no version ... matches range") and the whole toolchain lifecycle
-            (make upg/gen/setup, and therefore CI) breaks.             Only real selectors
+            (make upg/gen/setup, and therefore CI) breaks. Only real selectors
             (``latest``, a major.minor line, or a released version) may reach
             the lock.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If ``offenders``.
+
             """
-            if not self.python_tool_version.startswith(f"{self.python_version}."):
-                msg = "Python runtime patch must match the declared language minor line"
-                raise ValueError(msg)
             offenders = sorted(
                 field
                 for field, value in self
@@ -507,7 +537,21 @@ class FlextInfraModelsMiseToolchain:
 
         @u.model_validator(mode="after")
         def _validate_environment_contract(self) -> Self:
-            """Reject shell-unsafe, ambiguous, or escaping generated values."""
+            """Reject shell-unsafe, ambiguous, or escaping generated values.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If Mise bootstrap environment variables must be globally
+                    unique; or if Mise pin header lines must be comments; or if invalid
+                    Mise bootstrap environment variable; or if Mise storage variable
+                    must own the persistent root; or if Mise pin header and reader must
+                    be literal-shell safe; or if Mise fixed environment values must be
+                    literal-shell safe; or if relative path must not be absolute or
+                    escape.
+
+            """
             groups = (
                 self.fixed_environment,
                 self.transient_environment,

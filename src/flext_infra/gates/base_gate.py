@@ -1,4 +1,8 @@
-"""Shared gate template abstraction for workspace quality checks."""
+"""Shared gate template abstraction for workspace quality checks.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -11,9 +15,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import c, config, m, u
-
-from ..codegen.file_leases import FlextInfraCodegenFileLeases
-from ..workspace.detector import FlextInfraWorkspaceDetector
+from flext_infra.codegen.file_leases import FlextInfraCodegenFileLeases
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -43,15 +46,29 @@ class FlextInfraGate:
         The single selection hook: a gate whose inputs depend on the project's
         content overrides it to declare that content. An unselected gate never
         runs, never passes, and is never listed.
+
+        Returns:
+            The resulting ``bool``.
+
         """
         return not self.requires_python_targets or bool(
-            u.Infra.discover_python_targets(
-                project_dir,
-                workspace_excluded_top_dirs=(
-                    FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
-                        project_dir
-                    ).unwrap()
-                ),
+            self._python_targets(project_dir),
+        )
+
+    @staticmethod
+    def _python_targets(project_dir: Path) -> t.StrSequence:
+        """First-party Python targets outside the workspace's analysis exclusions.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
+        return u.Infra.discover_python_targets(
+            project_dir,
+            workspace_excluded_top_dirs=(
+                FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
+                    project_dir,
+                ).unwrap()
             ),
         )
 
@@ -74,12 +91,21 @@ class FlextInfraGate:
         active ``.venv`` and never depends on ``PATH`` ordering or an external
         mise/system shim. This is the single source for building a Python
         module command shared by all gates.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
         """
         return (sys.executable, "-m", module, *args)
 
     @staticmethod
     def _python_console_script_command(tool: str, *args: str) -> t.StrSequence:
-        """Invoke a uv-managed console script from the active interpreter directory."""
+        """Invoke a uv-managed console script from the active interpreter directory.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         return (str(Path(sys.executable).with_name(tool)), *args)
 
     # ------------------------------------------------------------------
@@ -91,7 +117,12 @@ class FlextInfraGate:
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
-        """Template method: timing + dirs + skip + run + parse + result."""
+        """Template method: timing + dirs + skip + run + parse + result.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
+        """
         started = time.monotonic()
         check_dirs = self._get_check_dirs(project_dir, ctx)
         if not check_dirs:
@@ -110,6 +141,10 @@ class FlextInfraGate:
 
         Passes file paths directly to the tool CLI for scoped validation.
         Falls back to directory check if no files provided.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
         """
         if not files:
             return self.check(project_dir, ctx)
@@ -126,7 +161,12 @@ class FlextInfraGate:
         targets: t.StrSequence,
         started: float,
     ) -> m.Infra.GateExecution:
-        """Build, run, and parse the check command — shared by ``check`` and ``check_files``."""
+        """Build, run, and parse the check command — shared by ``check`` and ``check_files``.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
+        """
         report_path = self._check_report_path(project_dir, ctx)
         if report_path is not None:
             report_path.unlink(missing_ok=True)
@@ -144,11 +184,21 @@ class FlextInfraGate:
 
     @classmethod
     def _resolve_binary(cls) -> str | None:
-        """Locate the provisioned scanner on PATH; None when absent."""
+        """Locate the provisioned scanner on PATH; None when absent.
+
+        Returns:
+            The resulting ``str | None``.
+
+        """
         return shutil.which(cls.scanner_binary)
 
     def _tool_failure_issue(self, scan: p.Cli.CommandOutput) -> m.Infra.Issue:
-        """Scanner absence/crash must never read as a clean pass."""
+        """Scanner absence/crash must never read as a clean pass.
+
+        Returns:
+            The resulting ``m.Infra.Issue``.
+
+        """
         return m.Infra.Issue(
             file=c.PYPROJECT_FILENAME,
             line=1,
@@ -167,13 +217,18 @@ class FlextInfraGate:
         line: int,
         column: int,
     ) -> m.Infra.Issue:
-        """Report an unsuccessful command that supplied no structured issues."""
+        """Report an unsuccessful command that supplied no structured issues.
+
+        Returns:
+            The resulting ``m.Infra.Issue``.
+
+        """
         detail = (result.stderr or result.stdout).strip() or "no diagnostics"
         return m.Infra.Issue(
             file=file,
             line=line,
             column=column,
-            code="TOOL_ERROR",
+            code=c.Infra.ToolOutcome.ERROR.value,
             message=f"{tool} exited with code {result.outcome.raw_return_code}: {detail}",
             severity="ERROR",
         )
@@ -185,10 +240,15 @@ class FlextInfraGate:
         issues: t.SequenceOf[m.Infra.Issue],
         tool: str,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Apply the standard tool-error fallback to parsed issues.
+        """Surface a failed tool run that parsed no issues.
 
-        If the tool exited unsuccessfully and no issues were parsed, synthesize a
-        TOOL_ERROR issue so the failure is visible rather than silently passing.
+        If the tool exited unsuccessfully and no issues were parsed, add one
+        ``c.Infra.ToolOutcome.ERROR`` issue so the failure is visible rather
+        than silently passing.
+
+        Returns:
+            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
+
         """
         if not u.Cli.process_succeeded(result.outcome) and not issues:
             issues = (
@@ -205,12 +265,17 @@ class FlextInfraGate:
 
     @staticmethod
     def _malformed_report_issue(detail: str, *, tool: str, file: str) -> m.Infra.Issue:
-        """Report a checker whose structured report failed typed validation."""
+        """Report a checker whose structured report failed typed validation.
+
+        Returns:
+            The resulting ``m.Infra.Issue``.
+
+        """
         return m.Infra.Issue(
             file=file,
             line=0,
             column=0,
-            code="TOOL_ERROR",
+            code=c.Infra.ToolOutcome.ERROR.value,
             message=f"{tool} report is not a valid structured report: {detail}",
             severity="ERROR",
         )
@@ -220,7 +285,12 @@ class FlextInfraGate:
         result: p.Cli.CommandOutput,
         project_dir: Path,
     ) -> t.SequenceOf[m.Infra.Issue]:
-        """Retain checker failures while accounting for native informational logs."""
+        """Retain checker failures while accounting for native informational logs.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.Issue]``.
+
+        """
         return tuple(
             m.Infra.Issue(
                 file=str(project_dir),
@@ -242,7 +312,12 @@ class FlextInfraGate:
         result: p.Cli.CommandOutput,
         started: float,
     ) -> m.Infra.GateExecution:
-        """Parse one tool result and assemble the gate execution it reports."""
+        """Parse one tool result and assemble the gate execution it reports.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
+        """
         passed, issues = self._parse_check_output(result, project_dir, ctx)
         return self._build_check_gate_execution(
             project_dir,
@@ -259,7 +334,12 @@ class FlextInfraGate:
         issues: t.SequenceOf[m.Infra.Issue],
         started: float,
     ) -> m.Infra.GateExecution:
-        """Assemble one gate execution from detector-produced issues."""
+        """Assemble one gate execution from detector-produced issues.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
+        """
         return self._build_check_gate_execution(
             project_dir,
             passed=len(issues) == 0,
@@ -276,7 +356,12 @@ class FlextInfraGate:
         errors: t.StrSequence,
         started: float,
     ) -> m.Infra.GateResult:
-        """Summarize one gate run: identity, verdict, report lines and duration."""
+        """Summarize one gate run: identity, verdict, report lines and duration.
+
+        Returns:
+            The resulting ``m.Infra.GateResult``.
+
+        """
         return m.Infra.GateResult(
             gate=self.gate_id,
             project=project_dir.name,
@@ -298,6 +383,10 @@ class FlextInfraGate:
 
         Fix paths use it directly: reported issues are the residue a fixer
         could not repair and do not decide acceptance.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
         """
         return m.Infra.GateExecution(
             result=self._gate_result(
@@ -322,6 +411,10 @@ class FlextInfraGate:
         """Assemble a gate execution from parsed check output.
 
         Every parsed finding blocks the gate, whatever its native severity.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
         """
         return m.Infra.GateExecution(
             result=self._gate_result(
@@ -342,7 +435,12 @@ class FlextInfraGate:
         errors: t.SequenceOf[str],
         started: float,
     ) -> m.Infra.GateExecution:
-        """Preserve project-level failures as blocking structured diagnostics."""
+        """Preserve project-level failures as blocking structured diagnostics.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
+        """
         issues = [
             m.Infra.Issue(
                 file=str(project_dir),
@@ -371,7 +469,12 @@ class FlextInfraGate:
         passed: bool,
         started: float,
     ) -> m.Infra.GateExecution:
-        """Build a gate execution from a single issue (scan-failure / fix-failure)."""
+        """Build a gate execution from a single issue (scan-failure / fix-failure).
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
+        """
         issue = m.Infra.Issue(
             file=str(file_path),
             line=1,
@@ -397,7 +500,12 @@ class FlextInfraGate:
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
-        """Return directories to check. Default: discover + filter for .py files."""
+        """Return directories to check. Default: discover + filter for .py files.
+
+        Returns:
+            Directories to check. Default: discover + filter for .py files.
+
+        """
         _ = ctx
         return self._dirs_with_py(project_dir, self._existing_check_dirs(project_dir))
 
@@ -411,6 +519,10 @@ class FlextInfraGate:
 
         Default: none, so a gate that overrides ``check`` directly still gets no
         command.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
         """
         _ = project_dir, ctx
         if not self.check_module_command_prefix:
@@ -427,12 +539,22 @@ class FlextInfraGate:
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Parse tool output into (passed, issues). Default: no-op (check overridden)."""
+        """Parse tool output into (passed, issues). Default: no-op (check overridden).
+
+        Returns:
+            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
+
+        """
         _ = result, project_dir, ctx
         return True, ()
 
     def _check_timeout(self, project_dir: Path, ctx: m.Infra.GateContext) -> int:
-        """Timeout for the check command. Override for long-running tools."""
+        """Timeout for the check command. Override for long-running tools.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         _ = project_dir, ctx
         timeout: int = c.Infra.TIMEOUT_DEFAULT
         return timeout
@@ -442,7 +564,12 @@ class FlextInfraGate:
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> Path | None:
-        """Name the native output replaced by this invocation, when required."""
+        """Name the native output replaced by this invocation, when required.
+
+        Returns:
+            The resulting ``Path | None``.
+
+        """
         _ = project_dir, ctx
         return None
 
@@ -461,7 +588,12 @@ class FlextInfraGate:
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.StrMapping | None:
-        """Return a custom environment for the check command. Default: None (inherit)."""
+        """Return a custom environment for the check command. Default: None (inherit).
+
+        Returns:
+            A custom environment for the check command. Default: None (inherit).
+
+        """
         _ = project_dir, ctx
         return None
 
@@ -475,6 +607,10 @@ class FlextInfraGate:
         Every gate parses its tool's output, so the host color-forcing signal is
         never inherited: with the orchestrator's NO_COLOR it made Node-based
         tools print a warning on stderr that the gate then counted as a finding.
+
+        Returns:
+            Inherited environment keys removed for this tool invocation.
+
         """
         _ = project_dir, ctx
         return (c.Infra.ENV_VAR_FORCE_COLOR,)
@@ -491,7 +627,12 @@ class FlextInfraGate:
             yield
 
     def fix(self, project_dir: Path, ctx: m.Infra.GateContext) -> m.Infra.GateExecution:
-        """Template method: timing + targets + skip + run fix + result."""
+        """Template method: timing + targets + skip + run fix + result.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
+        """
         if ctx.check_only or not ctx.apply_fixes:
             return self._check_only_fix_result(project_dir)
         if not self.can_fix:
@@ -509,19 +650,55 @@ class FlextInfraGate:
         cmd = self._build_fix_command(project_dir, ctx, targets)
         with self._mutation_lease(project_dir):
             result = self._run(cmd, project_dir)
-        # A fixer repairs what it can and succeeds on its own exit status;
-        # what remains is reported here and enforced by ``check``.
+        # A fixer repairs what it can. The run's outcome decides the verdict:
+        # the findings it reports stay for ``check``, and only an error (a
+        # status the tool does not declare, a timeout, a signal, a findings
+        # status with nothing reported) breaks the verb with its cause.
         _, issues = self._parse_check_output(result, project_dir, ctx)
+        errors = [issue for issue in issues if issue.code == c.Infra.ToolOutcome.ERROR]
+        outcome = u.Infra.tool_outcome(
+            result.outcome,
+            findings=len(issues) - len(errors),
+            findings_exit_codes=self._findings_exit_codes(),
+        )
+        if outcome is c.Infra.ToolOutcome.ERROR and not errors:
+            issues = (
+                *issues,
+                self._command_error_issue(
+                    result,
+                    tool=self.gate_id,
+                    file=str(project_dir),
+                    line=1,
+                    column=1,
+                ),
+            )
         return self._build_gate_execution(
             project_dir,
-            verdict=u.Cli.process_succeeded(result.outcome),
+            verdict=outcome is not c.Infra.ToolOutcome.ERROR,
             issues=issues,
             raw_output=self._raw_output(result),
             started=started,
         )
 
+    @staticmethod
+    def _findings_exit_codes() -> t.VariadicTuple[int]:
+        """Exit statuses with which this gate's tool reports its findings.
+
+        A tool that declares none completes only with a success status.
+
+        Returns:
+            The findings statuses the tool's config declares.
+
+        """
+        return ()
+
     def _check_only_fix_result(self, project_dir: Path) -> m.Infra.GateExecution:
-        """Return a non-mutating fix preview for check-only gate contexts."""
+        """Return a non-mutating fix preview for check-only gate contexts.
+
+        Returns:
+            A non-mutating fix preview for check-only gate contexts.
+
+        """
         return self._build_check_gate_execution(
             project_dir,
             passed=True,
@@ -539,7 +716,12 @@ class FlextInfraGate:
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
-        """Targets for fix. Default: same as check dirs."""
+        """Targets for fix. Default: same as check dirs.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         return self._get_check_dirs(project_dir, ctx)
 
     def _build_fix_command(
@@ -554,13 +736,23 @@ class FlextInfraGate:
         raise NotImplementedError(msg)
 
     def _fix_raw_output(self, result: p.Cli.CommandOutput) -> str:
-        """Assemble raw output from fix result. Default: stderr only."""
+        """Assemble raw output from fix result. Default: stderr only.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         stderr: str = result.stderr
         return stderr
 
     @staticmethod
     def _raw_output(result: p.Cli.CommandOutput) -> str:
-        """Preserve diagnostics regardless of the stream selected by a tool."""
+        """Preserve diagnostics regardless of the stream selected by a tool.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return "\n".join(output for output in (result.stdout, result.stderr) if output)
 
     def _run(
@@ -571,7 +763,15 @@ class FlextInfraGate:
         env: t.StrMapping | None = None,
         remove_env_keys: t.StrSequence = (),
     ) -> p.Cli.CommandOutput:
-        """Run."""
+        """Run.
+
+        Returns:
+            The resulting ``p.Cli.CommandOutput``.
+
+        Raises:
+            RuntimeError: If ``result.failure``.
+
+        """
         runner = self._runner or u.Cli
         result = runner.run_raw(
             cmd,
@@ -594,12 +794,22 @@ class FlextInfraGate:
         return result.value
 
     def _existing_check_dirs(self, project_dir: Path) -> t.StrSequence:
-        """Return every first-class project-owned Python directory."""
+        """Return every first-class project-owned Python directory.
+
+        Returns:
+            Every first-class project-owned Python directory.
+
+        """
         return self._dirs_with_py(project_dir, config.Infra.source_scan.roots)
 
     @staticmethod
     def _dirs_with_py(project_dir: Path, dirs: t.StrSequence) -> t.StrSequence:
-        """Dirs with py."""
+        """Dirs with py.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         out: t.MutableSequenceOf[str] = []
         for directory in dirs:
             path = project_dir / directory
@@ -613,7 +823,12 @@ class FlextInfraGate:
         return out
 
     def _skip_result(self, project_dir: Path, started: float) -> m.Infra.GateExecution:
-        """A selected gate with no inputs did not establish acceptance."""
+        """A selected gate with no inputs did not establish acceptance.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
+        """
         message = f"{self.gate_id}: no check targets were collected"
         return m.Infra.GateExecution(
             result=self._gate_result(

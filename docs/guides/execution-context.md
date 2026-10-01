@@ -99,17 +99,20 @@ A member attached as a submodule uses the environment of its containing Git
 superproject; a standalone checkout or linked worktree has its own. The physical
 directory is `.venv` at the runtime root (`c.Infra.ENVIRONMENT_DIRECTORY`), never a
 configuration value. The generated Makefile, the generated `.envrc`, and
-`runtime_environment_dir` resolve that location from the same resolved runtime root, so
-entering the checkout through a symlink does not change the selected environment. No environment is borrowed from another checkout
-through a symlink.
+`runtime_environment_dir` resolve that location from the same resolved runtime root,
+so entering the checkout through a symlink does not change the selected environment.
+No environment is borrowed from another checkout through a symlink.
 
 ## Mise launchers
 
 `make upg` is also the only writer of `mise.version`, `bin/mise`, and `bin/mise.cmd`. It
-resolves the Mise release once, through Mise itself (`mise latest github:jdx/mise`,
-authenticated by `GITHUB_TOKEN` and subject to Mise's `minimum_release_age`), and
-generates both launchers with `mise generate install-script --version <release>
---windows`, run by that release. Each launcher embeds the release and its checksums, so
+resolves the Mise release once, through Mise itself (`mise latest` of
+`toolchain.mise_selector`, narrowed to `toolchain.mise_version` when
+`flext-infra/config/codegen.yaml` holds a release, authenticated by `GITHUB_TOKEN` and
+subject to Mise's `minimum_release_age`), and generates both launchers with
+`mise generate install-script --version <release> --windows`, run by that release. A
+held release carries its reason beside it in the configuration and returns to `latest`
+when the newest release outside the cooldown works. Each launcher embeds the release and its checksums, so
 direct, PATH, or shim calls never query the network to choose a version.
 `mise.version` holds a generated header followed by the single release line.
 
@@ -129,6 +132,13 @@ checkout fixtures. Frozen setup requires the graph and a valid digest, per the
 [official Mise sidecar contract](https://mise.jdx.dev/dev-tools/mise-lock.html#native-dependency-sidecars).
 Caches, installations, and local lock graphs stay out of Git. Never format or edit the
 native payload: a byte change requires a new resolution through `make upg`.
+
+During `make upg`, Mise resolves and installs in a sibling directory on the checkout's
+filesystem. The generated `bin/mise-lock-transaction.py` verifies the staged native
+graphs, publishes them before replacing `mise.lock`, and records a durable journal.
+If publication stops after a graph moves, the next upgrade restores the committed
+graph before starting its own publication. The lock rename is the commit point; a
+failed upgrade leaves the previous lock usable without a live `.bak` copy.
 
 The platforms declared by `toolchain.mise_lockfile_platforms` compose the lock together
 with the platform of the machine running the upgrade, which Mise always includes.
@@ -160,15 +170,15 @@ never authorizes broad exclusions or changes to the native payload.
 
 ## Bootstrap credentials
 
-Network bootstrap receives an explicit credential in the process environment: `GH_TOKEN`
-takes precedence over `GITHUB_TOKEN`. Make never queries `gh` or the keyring. Without
-either, `make setup` may reuse already provisioned tools and dependencies; an operation
-that needs the network fails in the owning backend. An invalid token preserves the
-backend's native error, without an anonymous retry or source switch. Mise reads the same
-`GITHUB_TOKEN`; Make removes any inherited `MISE_GITHUB_TOKEN` from recipe environments,
-because an alias of the same credential would take precedence over it. The credential
-launcher or CI job must inject `GITHUB_TOKEN` into the process; containers receive the
-variable or BuildKit secret explicitly.
+The GitHub credential is optional and has one variable, `GITHUB_TOKEN`, which mise,
+gh, and uv all read. Only the caller's environment supplies it: when the caller sets
+it, every recipe receives it; when the caller does not, mise runs anonymously. No
+recipe reads a stored credential (`gh auth token`, a keyring, netrc) to fill an absent
+one. Make unexports the tool-scoped aliases `GH_TOKEN`, `MISE_GITHUB_TOKEN`, and
+`GITHUB_API_TOKEN` from every recipe, because an alias of the same credential would
+shadow or outrank `GITHUB_TOKEN`. An invalid token preserves the backend's native
+error, without an anonymous retry or source switch. CI jobs inject `GITHUB_TOKEN`;
+containers receive the variable or a BuildKit secret explicitly.
 
 ## Evidence and checkpoints
 
@@ -180,9 +190,9 @@ completion requires integration and runtime measured at the integrated SHA.
 
 For namespace automation, investigate catalog, classifier, transformation, publication,
 and consumers in that order. The namespace laws are codemod catalog rules, so the
-codemod gate is their one verdict. Preserve mutability, inheritance, imports, and collection; validate the
-transformation through the public interface before widening the batch. Structural
-refactors go through `make mod`.
+codemod gate is their one verdict. Preserve mutability, inheritance, imports, and
+collection; validate the transformation through the public interface before widening
+the batch. Structural refactors go through `make mod`.
 
 ## Check gate partitions
 
@@ -201,7 +211,10 @@ both partitions without overlap. Validators keep their severity, and active func
 gates still require execution without warnings or residual findings.
 
 `smells` is not part of the `make check` partitions. The selector-free `make smells`
-verb runs the same analysis gate separately and fails when it finds defects.
+verb runs only the qlty smell scan and fails when it finds defects. The
+`runtime-census` gate stays in `make check` and grades every runtime enforcement
+finding, including rules that qlty also classifies as smells. An empty or
+malformed qlty SARIF response is a failed scan, not a zero-finding receipt.
 
 ## Bounded Mypy failure status
 

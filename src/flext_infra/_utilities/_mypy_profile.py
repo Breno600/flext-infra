@@ -1,4 +1,8 @@
-"""Profile the public Mypy API without its command-line hard exit."""
+"""Profile the public Mypy API without its command-line hard exit.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -15,7 +19,15 @@ class FlextInfraMypyProfiler:
 
     @staticmethod
     def run(invocation: m.Infra.MypyInvocation) -> int:
-        """Run the public checker API, whose clean exit lets cProfile save data."""
+        """Run the public checker API, whose clean exit lets cProfile save data.
+
+        Returns:
+            The resulting ``int``.
+
+        Raises:
+            ValueError: If Mypy profiling requires an output destination.
+
+        """
         from flext_infra import u
 
         destination = invocation.profile_output

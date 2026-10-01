@@ -1,4 +1,8 @@
-"""Defer elected self-facade imports to their resolved function-body uses."""
+"""Defer elected self-facade imports to their resolved function-body uses.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,9 +13,10 @@ import libcst as cst
 from libcst.metadata import MetadataWrapper, ParentNodeProvider, QualifiedNameProvider
 
 from flext_infra import m, t
-
-from ..qualified_names import FlextInfraUtilitiesQualifiedNames
-from .edits import FlextInfraUtilitiesSemanticCutoverEdits
+from flext_infra._utilities._semantic_cutover.edits import (
+    FlextInfraUtilitiesSemanticCutoverEdits,
+)
+from flext_infra._utilities.qualified_names import FlextInfraUtilitiesQualifiedNames
 
 if TYPE_CHECKING:
     from pathlib import Path

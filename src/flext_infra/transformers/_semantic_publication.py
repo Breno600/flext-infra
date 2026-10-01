@@ -1,4 +1,8 @@
-"""Semantic publication through the canonical recoverable file transaction."""
+"""Semantic publication through the canonical recoverable file transaction.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -32,6 +36,10 @@ class FlextInfraSemanticPublication:
 
         ``None`` content means no semantic change, never deletion. The existing
         transaction owns identity checks, staging, durable recovery and rollback.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[Path]]``.
+
         """
         files: list[m.Infra.CodegenFilePlan] = []
         template_sources = u.Infra.codegen_template_sources(

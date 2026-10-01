@@ -1,4 +1,8 @@
-"""Release automation and override specification models."""
+"""Release automation and override specification models.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,10 +12,10 @@ from typing import Annotated, ClassVar, Self
 
 from flext_cli import m, u
 
-from ... import t
-from ..._constants import FlextInfraConstantsRelease
-from .contexts import FlextInfraConfigModelsContexts
-from .contract import FlextInfraConfigModelsContract
+from flext_infra import t
+from flext_infra._constants import FlextInfraConstantsRelease
+from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
 
 
 class FlextInfraConfigModelsRelease:
@@ -94,7 +98,15 @@ class FlextInfraConfigModelsRelease:
 
         @u.model_validator(mode="after")
         def _validate_anchors(self) -> Self:
-            """Every anchor must name a target, or the tool rewrites nothing."""
+            """Every anchor must name a target, or the tool rewrites nothing.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If release version anchor must be '<file>.
+
+            """
             for anchor in (*self.version_variables, *self.version_toml):
                 if ":" not in anchor:
                     msg = f"release version anchor must be '<file>:<target>': {anchor}"

@@ -9,6 +9,9 @@ evaluates only itself, a self-scoped plan refuses loud when a declared facade
 parent is another repository that the active environment has not installed,
 and the workspace root plans nothing — zero effects is the contract, not a
 regression.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

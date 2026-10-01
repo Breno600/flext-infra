@@ -1,4 +1,8 @@
-"""Postconditions for semantic private-import rewrites."""
+"""Postconditions for semantic private-import rewrites.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,7 +10,7 @@ import ast
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from .qualified_names import FlextInfraUtilitiesQualifiedNames
+from flext_infra._utilities.qualified_names import FlextInfraUtilitiesQualifiedNames
 
 if TYPE_CHECKING:
     from flext_infra import m, t
@@ -27,6 +31,11 @@ class FlextInfraUtilitiesPrivateImportValidation:
 
         ``removals`` is every import binding that must disappear: the plan's
         private removals, its superseded public roots, and relocated exports.
+
+        Raises:
+            ValueError: If private binding residue; or if private import residue from;
+                or if public facade import.
+
         """
         tree = ast.parse(source, filename=str(file_path))
         for module, symbols in removals.items():

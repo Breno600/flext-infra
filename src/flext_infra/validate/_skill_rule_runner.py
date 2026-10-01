@@ -1,4 +1,8 @@
-"""Skill validation per-rule execution + violation counting — extracted concern."""
+"""Skill validation per-rule execution + violation counting — extracted concern.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -66,7 +70,17 @@ class FlextInfraSkillRuleRunnerMixin:
         include_globs: t.StrSequence,
         exclude_globs: t.StrSequence,
     ) -> int:
-        """Run an ast-grep rule and return match count."""
+        """Run an ast-grep rule and return match count.
+
+        Returns:
+            The resulting ``int``.
+
+        Raises:
+            RuntimeError: If ast-grep rule must declare a non-empty file; or if ast-grep
+                rule file does not exist; or if ``result_wrapper.failure``; or if
+                ast-grep exited with code.
+
+        """
         rule_file_raw = u.Cli.json_get_str_key(rule, c.Infra.RK_FILE)
         if not rule_file_raw:
             msg = "ast-grep rule must declare a non-empty file"
@@ -110,7 +124,12 @@ class FlextInfraSkillRuleRunnerMixin:
 
     @staticmethod
     def _parse_violation_count(stdout: str) -> int:
-        """Parse violation count from JSON-line stdout of a custom script."""
+        """Parse violation count from JSON-line stdout of a custom script.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         count = 0
         for raw_line in stdout.splitlines():
             line = raw_line.strip()
@@ -131,7 +150,17 @@ class FlextInfraSkillRuleRunnerMixin:
         project_path: Path,
         mode: c.Infra.OperationMode,
     ) -> int:
-        """Run a custom rule script and return violation count."""
+        """Run a custom rule script and return violation count.
+
+        Returns:
+            The resulting ``int``.
+
+        Raises:
+            RuntimeError: If custom rule must declare a non-empty script; or if custom
+                rule script does not exist; or if ``result_wrapper.failure``; or if
+                custom rule exited with code.
+
+        """
         script_raw = u.Cli.json_get_str_key(rule, "script")
         if not script_raw:
             msg = "custom rule must declare a non-empty script"
