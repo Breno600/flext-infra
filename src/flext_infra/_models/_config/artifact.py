@@ -113,15 +113,6 @@ class FlextInfraConfigModelsArtifact:
             int,
             m.Field(ge=1, le=16, description="Concurrent fresh-import subprocesses"),
         ]
-        root_template_public_exports: Annotated[
-            Mapping[str, t.VariadicTuple[t.NonEmptyStr]],
-            m.Field(
-                description=(
-                    "Public eager initializer bindings by package root; every name "
-                    "must already be imported by the shared root template"
-                ),
-            ),
-        ]
         loc_cap: Annotated[
             FlextInfraConfigModelsArtifact.CodegenLocCapSpec,
             m.Field(description="Per-module code-LOC ceiling policy"),
@@ -743,7 +734,15 @@ class FlextInfraConfigModelsArtifact:
 
         @u.model_validator(mode="after")
         def _validate_source_paths(self) -> Self:
-            """Keep campaign drivers and scan roots inside their declared owners."""
+            """Keep campaign drivers and scan roots inside their declared owners.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If CSV campaign path must be relative and non-escaping.
+
+            """
             for value in (self.csv, *self.roots):
                 path = Path(value)
                 if (
@@ -754,7 +753,9 @@ class FlextInfraConfigModelsArtifact:
                     or "\\" in value
                     or PureWindowsPath(value).drive
                 ):
-                    msg = f"CSV campaign path must be relative and non-escaping: {value}"
+                    msg = (
+                        f"CSV campaign path must be relative and non-escaping: {value}"
+                    )
                     raise ValueError(msg)
             return self
 

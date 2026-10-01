@@ -1,12 +1,12 @@
 """Member propagation: this workspace's flext-infra reaches each member as one lane.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 Every case drives the public ``workspace propagate`` CLI (what ``make
 propagate`` runs) over a real workspace: a superproject declaring two member
 repositories in ``.gitmodules``, each pushing to its own local bare origin,
 with a recording ``gh`` on PATH instead of GitHub.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

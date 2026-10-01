@@ -30,7 +30,6 @@ if TYPE_CHECKING:
         codegen,
         codemod,
         deps,
-        detectors,
         docs,
         gates,
         maintenance,
@@ -115,7 +114,6 @@ if TYPE_CHECKING:
     from flext_infra.deps.phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
     from flext_infra.deps.phases.inject_comments import FlextInfraInjectCommentsPhase
     from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
-    from flext_infra.detectors.lsp_diagnostics import FlextInfraLspDiagnosticsDetector
     from flext_infra.docs.auditor import FlextInfraDocAuditor
     from flext_infra.docs.auditor_mixin import FlextInfraDocAuditorMixin
     from flext_infra.docs.base import FlextInfraDocServiceBase
@@ -285,7 +283,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraLocCapGate",
     "FlextInfraLocDeltaValidator",
     "FlextInfraLockIntegrityVerifier",
-    "FlextInfraLspDiagnosticsDetector",
     "FlextInfraManualCommandValidator",
     "FlextInfraMarkdownCodeGate",
     "FlextInfraMarkdownCodeSources",
@@ -364,7 +361,6 @@ __all__: tuple[str, ...] = (
     "config",
     "d",
     "deps",
-    "detectors",
     "docs",
     "e",
     "gates",
@@ -455,8 +451,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".deps.phases.ensure_ruff": ("FlextInfraEnsureRuffConfigPhase",),
             ".deps.phases.inject_comments": ("FlextInfraInjectCommentsPhase",),
             ".deps.phases.tool_tables": ("FlextInfraToolTablesPhase",),
-            ".detectors": ("detectors",),
-            ".detectors.lsp_diagnostics": ("FlextInfraLspDiagnosticsDetector",),
             ".docs": ("docs",),
             ".docs.auditor": ("FlextInfraDocAuditor",),
             ".docs.auditor_mixin": ("FlextInfraDocAuditorMixin",),

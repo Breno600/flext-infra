@@ -1,8 +1,5 @@
 """Manual-command blocker (AGENTS.md `Build & Test`).
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 ``command_blocked`` — predicate flagging a bare tool invocation (ruff/pytest/git/…)
 that bypasses the ``make`` / ``python -m flext_infra`` monopoly. Deny rules are
 evaluated FIRST, per shell segment, after stripping wrappers and path components
@@ -14,6 +11,9 @@ The former pre-commit-config drift half of this module is retired: the
 detector, ``codegen conform --mode check`` (wired into ``make check``). A
 second detector diffing the live file against a hand-copied constant was
 permanently red on any conforming repository.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

@@ -12,6 +12,10 @@ checks Python syntax before publication, applies the authenticated text batch,
 and verifies that no findings remain. It does not enter the Rope or ast-grep
 phases of `make mod`. Repair a malformed rule in its authored YAML catalogue,
 then replay through this verb; do not edit a generated projection.
+Python files in governed source trees are scanned by default. A rule may also
+declare a relative `include` glob ending in a file suffix to elect authored
+Markdown or configuration text. The same authenticated inventory and atomic
+publisher cover these files; a generated-file header rejects a direct rewrite.
 When a candidate's Python package cannot import, the healthy Infra provider
 can run `make mod-text-candidate` after its workspace manifest declares exactly
 one `candidate_bootstrap_targets` entry. The same target declaration also

@@ -80,9 +80,6 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                     f"{renames_pending.value} pending CSV-rename occurrence(s), "
                     f"across {len(rules)} rule file(s)",
                 )
-            validated = FlextInfraModGateEngine.validate(self.repository_root)
-            if validated.failure:
-                return r[t.Cli.ResultValue].from_failure(validated)
             self.progress.emit("mod: no pending ast-grep or sed-by-list fixes")
             return r[t.Cli.ResultValue].ok(True)
         return self._execute_apply(rules)
@@ -202,20 +199,8 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             owned = FlextInfraModReplacements.require_authored(current.entries)
             if owned.failure:
                 return r[t.Cli.ResultValue].from_failure(owned)
-            self.progress.emit(
-                "mod: require canonical formatting and zero Ruff, Pyrefly, and LSP diagnostics",
-            )
-            validated = FlextInfraModGateEngine.validate(root)
-            if validated.failure:
-                return r[t.Cli.ResultValue].from_failure(validated)
-            # Validation is read-only. Authenticate the source identity once;
-            # repeating two complete scanner passes cannot strengthen that
-            # contract and makes a no-change mod run exceed its deadline.
-            if fingerprint(root, current) != after:
-                return r[t.Cli.ResultValue].fail(
-                    "mod validation changed source after the fixed-point scan",
-                )
-            # Repair reports non-rewritable defects; check owns their verdict.
+            # Repair reports non-rewritable defects; check owns their verdict,
+            # and the Ruff, Pyrefly and Pyright findings are check's alone.
             if current.detection_only or current.non_actionable_with_fix:
                 detection_rules = sorted({
                     finding.rule_id

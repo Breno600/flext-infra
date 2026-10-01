@@ -1,14 +1,14 @@
 """Semantic facade-base cutover: extend the parent by its declared class name.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 A facade module that imports its parent's short letter, subclasses it, and then
 rebinds the same letter to the subclass binds that letter twice. Type checkers
 then read the letter as a variable, so every ``m.X`` annotation reached through
 the facade resolves to Unknown. An annotated rebind (``m: type[X] = X``) has the
 same effect. This phase extends the class the parent declares for the letter in
 its own ``__all__`` and keeps the letter a plain alias of the facade.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

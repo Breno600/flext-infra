@@ -1,8 +1,5 @@
 """Deterministic projection lock emitted beside the lazy-init projections.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 ``.agents/projections.lock.json`` (v1) is derived entirely from the composed
 lazy-init file plans: one entry per projected ``.agents``/``.codex`` file with
 its sha256 digest and byte length, ordered by path. Being just another plan
@@ -11,6 +8,9 @@ consumers gain the machine-checkable contract their post-generation
 projection synchronization verifies. The path deliberately avoids the
 ai-hub-owned ``.agents/projection.json`` (the projection INPUT manifest);
 this file is the projected OUTPUT state, owned by the generator alone.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

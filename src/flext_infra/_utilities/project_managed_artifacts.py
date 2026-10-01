@@ -323,6 +323,8 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
         mise_tools: MutableMapping[str, m.Infra.ProjectMiseTool] = {}
         mise_sources: MutableMapping[str, Path] = {}
         gitignore_patterns: list[str] = []
+        gitignore_blocks: list[m.Infra.ProjectGitignorePreservedBlock] = []
+        gitignore_block_markers: dict[str, Path] = {}
 
         for source, content in sorted(payloads.items()):
             try:
@@ -346,6 +348,16 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
                 for pattern in artifacts.Gitignore.patterns:
                     if pattern not in gitignore_patterns:
                         gitignore_patterns.append(pattern)
+                for block in artifacts.Gitignore.preserved_blocks:
+                    for marker in (block.begin, block.end):
+                        previous = gitignore_block_markers.get(marker)
+                        if previous is not None:
+                            return r[m.Infra.ProjectManagedArtifactsResolution].fail(
+                                "duplicate project gitignore preserved marker "
+                                f"{marker!r}: {previous} and {source}",
+                            )
+                        gitignore_block_markers[marker] = source
+                    gitignore_blocks.append(block)
             if artifacts.Mise is None:
                 continue
             for selector, tool in artifacts.Mise.tools.items():
@@ -362,6 +374,7 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
             Mise=m.Infra.ProjectMiseConfig(tools=dict(sorted(mise_tools.items()))),
             Gitignore=m.Infra.ProjectGitignoreConfig(
                 patterns=tuple(gitignore_patterns),
+                preserved_blocks=tuple(gitignore_blocks),
             ),
         )
         return r[m.Infra.ProjectManagedArtifactsResolution].ok(

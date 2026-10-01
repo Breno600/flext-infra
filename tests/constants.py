@@ -1,13 +1,13 @@
 """Constants for FLEXT infra tests.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 Provides TestsFlextInfraConstants, extending FlextTestsConstants with
 infra-specific constants for infrastructure testing, project names, and test
 markers.
 
 Copyright (FlextTestsConstants) 2025 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
 """
 

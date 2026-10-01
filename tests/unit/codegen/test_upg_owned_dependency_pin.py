@@ -1,13 +1,13 @@
 """uv.lock, written only by ``make upg``, owns every internal dependency pin.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 Each ``flext-*`` requirement renders on its integration line. ``make upg``
 re-resolves that line (``uv lock --upgrade --refresh``) to the branch tip and
 records the commit in uv.lock; generation re-renders any commit left in the
 pyproject projection on the detected line instead of writing it back, and no
 manifest or override pins one beside the lock (flext-oe420).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
