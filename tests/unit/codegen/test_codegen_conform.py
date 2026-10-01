@@ -1164,8 +1164,8 @@ class TestsFlextInfraCodegenConform:
     # Why (suite budget): full conform cycle plus subprocess make validation;
     # the default case timeout only holds on an idle machine.
 
+    @staticmethod
     def test_invalid_public_custom_make_fails_without_side_effects(
-        self,
         infra_git_repo: Path,
     ) -> None:
         root = infra_git_repo
@@ -1224,7 +1224,8 @@ class TestsFlextInfraCodegenConform:
         tm.that("WARN:" in capsys.readouterr().out, eq=False)
         tm.that(Path(f"{custom}.rej").exists(), eq=False)
 
-    def test_custom_make_rejects_unterminated_phony_continuation(self) -> None:
+    @staticmethod
+    def test_custom_make_rejects_unterminated_phony_continuation() -> None:
         """Fail closed when a multiline private-handler declaration is truncated."""
         policy: m.Infra.CustomHandlerPolicy = (
             config.Infra.codegen.make.custom_handler_policies[
@@ -1306,8 +1307,8 @@ class TestsFlextInfraCodegenConform:
         tm.that(pre_at < body_at, eq=True)
         tm.that(body_at < post_at, eq=True)
 
+    @staticmethod
     def test_custom_make_accepts_pre_post_verb_hooks(
-        self,
         infra_git_repo: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -1747,6 +1748,3 @@ class TestScriptDispatchMakefile:
             eq=True,
         )
         tm.that("$(PROJECT_ROOT)/scripts" in rendered, eq=False)
-
-
-__all__: list[str] = []
