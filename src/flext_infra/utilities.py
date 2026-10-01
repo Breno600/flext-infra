@@ -73,7 +73,6 @@ from ._utilities.rope_source import FlextInfraUtilitiesRopeSource
 from ._utilities.rope_structure import FlextInfraUtilitiesRopeStructure
 from ._utilities.safety import FlextInfraUtilitiesSafety
 from ._utilities.semantic_cutover import FlextInfraUtilitiesSemanticCutover
-from ._utilities.signature_rules import FlextInfraUtilitiesSignatureRules
 from ._utilities.transformer_header import FlextInfraUtilitiesTransformerHeader
 from ._utilities.versioning import FlextInfraUtilitiesVersioning
 from ._utilities.workspace_fingerprint import FlextInfraUtilitiesWorkspaceFingerprint
@@ -156,7 +155,6 @@ class FlextInfraUtilities(FlextCliUtilities):
         FlextInfraWorktreeProvisioning,
         FlextInfraUtilitiesWorkspaceFingerprint,
         FlextInfraUtilitiesCodemodRules,
-        FlextInfraUtilitiesSignatureRules,
         FlextInfraUtilitiesPrivateImportAncestry,
         FlextInfraUtilitiesPrivateImportFacades,
     ):

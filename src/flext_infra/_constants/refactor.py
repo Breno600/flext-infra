@@ -155,12 +155,6 @@ class FlextInfraConstantsRefactor:
     # `metadata.relocation` and captures the relocated symbol as `$NAME`.
     CODEMOD_RULE_RELOCATION_KEY: ClassVar[str] = "relocation"
     CODEMOD_RULE_NAME_METAVARIABLE: ClassVar[str] = "NAME"
-    # The declarative signature-migration catalogue: one owner per governed
-    # repository, read by the propagate-signatures verb.
-    REFACTOR_SIGNATURE_RULES_RELPATH: ClassVar[Path] = (
-        CODEMOD_RULES_RELPATH / "refactor" / "signature-propagation.yml"
-    )
-    REFACTOR_SIGNATURE_RULES_KEY: ClassVar[str] = "migrations"
     CODEMOD_TEXT_FLAG_NAMES: ClassVar[t.MappingKV[str, int]] = MappingProxyType({
         "IGNORECASE": re.IGNORECASE,
         "MULTILINE": re.MULTILINE,

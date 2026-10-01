@@ -174,42 +174,6 @@ class FlextInfraModelsRefactorGrep:
             description="Expected method-category order for matching methods",
         )
 
-    class SignatureMigration(m.ContractModel):
-        """Declarative signature migration rule for callsite propagation.
-
-        Enforcement exemption: internal tooling model with intentional
-        mutable state.
-        """
-
-        id: Annotated[str, m.Field(description="Migration ID")] = "signature-migration"
-        enabled: Annotated[bool, m.Field(description="Whether migration is active")] = (
-            True
-        )
-        target_qualified_names: t.StrSequence = m.Field(
-            default_factory=tuple,
-            description="Qualified symbol names targeted by the migration",
-        )
-        target_simple_names: t.StrSequence = m.Field(
-            default_factory=tuple,
-            description="Simple symbol names targeted by the migration",
-        )
-        keyword_renames: t.StrMapping = m.Field(description="Keyword rename mapping")
-        remove_keywords: t.StrSequence = m.Field(
-            default_factory=tuple,
-            description="Keywords removed from matching callsites",
-        )
-        add_keywords: t.StrMapping = m.Field(description="Keywords to add")
-
-    class ImportModernizerRuleConfig(m.ContractModel):
-        """Configuration for a single import modernizer rule.
-
-        Enforcement exemption: internal tooling model with intentional
-        mutable state.
-        """
-
-        module: Annotated[str, m.Field(description="Module path to modernize")] = ""
-        symbol_mapping: t.StrMapping = m.Field(description="Symbol-to-alias mapping")
-
     class AccessorMigrationRule(m.ContractModel):
         """Declarative symbol-rename rule for accessor migration."""
 
