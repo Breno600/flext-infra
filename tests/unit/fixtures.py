@@ -284,6 +284,7 @@ def _provision_infra_checkout(run_root: Path, scenario: str) -> None:
 
 
 def _ensure_provisioned(
+    run_root: Path,
     parent: Path,
     receipt: str,
     key: c.Infra.MakeProfile | str | t.StrSequence,

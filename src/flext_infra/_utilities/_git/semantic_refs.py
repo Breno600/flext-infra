@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from git import BadName, GitCommandError
 
 from flext_core import r
-from flext_infra import m
+from flext_infra import c, m
 
 from .worktree import FlextInfraUtilitiesGitWorktreeMixin
 
@@ -53,8 +53,14 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
         try:
             repo = cls._repo(request.repo_root)
             repo.git.check_ref_format("--branch", request.branch)
-        except GitCommandError:
-            return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=False))
+        except GitCommandError as exc:
+            # check-ref-format documents exit 1 for an invalid name; any other
+            # status is a real failure.
+            if exc.status == c.Infra.GIT_EXIT_NEGATIVE:
+                return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=False))
+            return r[m.Infra.GitBoolReport].fail(
+                f"failed to validate branch name: {exc}", exception=exc
+            )
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitBoolReport].fail(
                 f"failed to validate branch name: {exc}",
@@ -71,9 +77,14 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
         try:
             repo = cls._repo(request.repo_root)
             repo.git.show_ref("--verify", "--quiet", request.reference)
-        except GitCommandError:
-            # show-ref exits 1 when the ref does not exist — not an error.
-            return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=False))
+        except GitCommandError as exc:
+            # show-ref documents exit 1 for a missing ref; any other status is
+            # a real failure.
+            if exc.status == c.Infra.GIT_EXIT_NEGATIVE:
+                return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=False))
+            return r[m.Infra.GitBoolReport].fail(
+                f"failed to inspect Git ref: {exc}", exception=exc
+            )
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitBoolReport].fail(
                 f"failed to inspect Git ref: {exc}",

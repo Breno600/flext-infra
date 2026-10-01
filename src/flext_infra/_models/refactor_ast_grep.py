@@ -39,6 +39,24 @@ class FlextInfraModelsRefactorGrep:
                 )
             ),
         ] = None
+        arg: Annotated[
+            t.StrSequence,
+            m.Field(
+                description=(
+                    "Literal operands the rule passes to the predicate (layer "
+                    "names, for the layer predicates); empty when it takes none"
+                )
+            ),
+        ] = ()
+        as_: Annotated[
+            t.StrSequence,
+            m.Field(
+                description=(
+                    "Layer the predicate assumes for a captured name that is "
+                    "not itself a layer; empty when the rule assumes none"
+                )
+            ),
+        ] = ()
 
     class CodemodRule(m.ArbitraryTypesModel):
         """One validated ast-grep rule document from a composed provider."""

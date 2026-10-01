@@ -264,14 +264,12 @@ class FlextInfraPyprojectModernizerDocument:
                 ),
                 paths_manager=paths_manager,
             ),
-            *FlextInfraEnsureRuffConfigPhase(
-                tooling,
-                self.managed_artifacts,
-            ).apply_payload(
+            *FlextInfraEnsureRuffConfigPhase(tooling).apply_payload(
                 payload,
                 path=path,
                 analysis_exclusions=topology.analysis_exclusions,
                 generated_python_roots=topology.declared_python_dirs,
+                analysis_exclusions=topology.analysis_exclusions,
             ),
             *FlextInfraEnsurePackagingPhase().apply_payload(
                 payload,

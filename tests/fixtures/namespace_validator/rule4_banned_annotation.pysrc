@@ -1,5 +1,0 @@
-from __future__ import annotations
-
-class FlextTestServices:
-    def transform(self, data: dict) -> object:
-        return data

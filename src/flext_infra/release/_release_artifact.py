@@ -88,6 +88,7 @@ class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):
         path: Path,
         project: str,
         members: t.SequenceOf[t.Triple[str, bool, bool]],
+        allowed_roots: t.StrSequence,
     ) -> str:
         """Return why an archive's members leave the public boundary, or ''."""
         wheel = path.suffix == ".whl"

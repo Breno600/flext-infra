@@ -169,43 +169,35 @@ class FlextInfraUtilitiesGitRepo:
                 git_dir = Path(
                     repo.git.rev_parse("--path-format=absolute", "--git-dir").strip(),
                 ).resolve()
-            except GitCommandError as exc:
-                return r[Path].fail(str(exc), exception=exc)
-            if git_dir == common_dir:
-                primary_root = Path(
+                caller_root = Path(
                     repo.git.rev_parse("--show-toplevel").strip(),
                 ).resolve()
-            else:
-                registered = tuple(
-                    entry.path
-                    for entry in cls._registered_worktree_entries(
+                entries = (
+                    ()
+                    if git_dir == common_dir
+                    else cls._registered_worktree_entries(
                         repo.git.worktree("list", "--porcelain"),
                     )
                 )
-                if not registered:
-                    return r[Path].fail(
-                        f"Git worktree registry is empty for {repository_path}",
-                    )
-                primary_root = registered[0]
-                primary_repo = cls._open_repo(primary_root)
-                primary_top: Path | None = None
-                if primary_repo.success:
-                    try:
-                        primary_top = Path(
-                            primary_repo.value.git.rev_parse("--show-toplevel").strip(),
-                        ).resolve()
-                    except GitCommandError:
-                        primary_top = None
-                if primary_top != primary_root:
-                    caller_root = Path(
-                        repo.git.rev_parse("--show-toplevel").strip(),
-                    ).resolve()
-                    if caller_root not in registered:
-                        return r[Path].fail(
-                            "current worktree is absent from Git's canonical registry: "
-                            f"{caller_root}",
-                        )
-                    primary_root = caller_root
+            except GitCommandError as exc:
+                return r[Path].fail(str(exc), exception=exc)
+            # Git lists the main worktree first. Bare shared storage has no main
+            # checkout, so each registered worktree is its own primary.
+            if git_dir == common_dir:
+                primary_root = caller_root
+            elif not entries:
+                return r[Path].fail(
+                    f"Git worktree registry is empty for {repository_path}",
+                )
+            elif not entries[0].bare:
+                primary_root = entries[0].path
+            elif caller_root in {entry.path for entry in entries}:
+                primary_root = caller_root
+            else:
+                return r[Path].fail(
+                    "current worktree is absent from Git's canonical registry: "
+                    f"{caller_root}",
+                )
 
         primary_repo = cls._open_repo(primary_root)
         if primary_repo.failure:
@@ -217,7 +209,10 @@ class FlextInfraUtilitiesGitRepo:
                 primary_repo.value.git.rev_parse("--show-toplevel").strip(),
             ).resolve()
         except GitCommandError as exc:
-            return r[Path].fail(f"invalid primary worktree: {primary_root}: {exc}")
+            return r[Path].fail(
+                f"invalid primary worktree: {primary_root}: {exc}",
+                exception=exc,
+            )
         if resolved_top != primary_root:
             return r[Path].fail(
                 f"Git primary worktree mismatch: {primary_root} != {resolved_top}",
