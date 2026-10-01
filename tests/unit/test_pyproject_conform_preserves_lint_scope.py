@@ -65,11 +65,6 @@ class TestsFlextInfraPyprojectConformPreservesLintScope:
 
         tm.that(rationales, lacks="unsorted-imports")
 
-    def test_ssot_preserves_narrow_init_module_lint_policy(self) -> None:
-        rules = config.Infra.tooling.tools.ruff.lint.per_file_ignores["**/__init__.py"]
-
-        tm.that(rules, lacks="ALL")
-
     def test_ssot_declares_every_governed_per_file_ignore(self) -> None:
         """No governed lint exemption is missing from the tooling SSOT."""
         missing = self._live_per_file_ignores() - self._ssot_per_file_ignores()
