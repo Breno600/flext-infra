@@ -27,6 +27,10 @@ class FlextInfraConfigModelsRender:
         """Typed input consumed by generated GitHub workflow templates."""
 
         dist: Annotated[t.NonEmptyStr, m.Field(description="Distribution name")]
+        docs_report_filenames: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(description="Structured docs reports CI dumps and uploads"),
+        ] = FlextInfraConstantsDocs.DOCS_STRUCTURED_REPORT_FILENAMES
         make_profile: Annotated[
             FlextInfraConstantsCodegenProject.MakeProfile,
             m.Field(
