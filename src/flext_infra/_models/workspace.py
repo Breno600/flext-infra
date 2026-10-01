@@ -108,6 +108,20 @@ class FlextInfraModelsWorkspace:
             bool, m.Field(description="Distribution is installed as editable")
         ]
 
+    class DirectUrlReceipt(m.ContractModel):
+        """Any installed distribution's PEP 610 receipt, read for its kind only.
+
+        VCS and archive receipts carry other keys; only the directory metadata
+        decides whether the receipt names a checkout path.
+        """
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore", frozen=True)
+
+        dir_info: Annotated[
+            FlextInfraModelsWorkspace.DirectUrlDirectoryInfo | None,
+            m.Field(description="Directory metadata of a local install"),
+        ] = None
+
     class EditableDirectUrl(m.ContractModel):
         """Validated PEP 610 editable provenance payload."""
 
