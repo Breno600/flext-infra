@@ -82,10 +82,10 @@ class FlextInfraModelsMiseToolchain:
     class ToolchainSpec(_ConfigContract):
         """Language-runtime and native-tool versions shared by generated projects.
 
-        Language runtimes and native tools are declared as moving ``latest``
-        selectors or a major.minor line. Only ``make upg`` resolves them and
-        writes the committed mise.lock; setup installs frozen from it. Python linters/type-checkers remain owned
-        by pyproject manifests.
+        Native tools use moving ``latest`` selectors; Python retains its
+        required major.minor runtime line. Only ``make upg`` resolves the
+        selectors and writes mise.lock; setup installs frozen from that lock.
+        Python linters and type checkers remain owned by pyproject manifests.
         """
 
         # Selector families rejected while their capabilities are suspended.
@@ -135,16 +135,16 @@ class FlextInfraModelsMiseToolchain:
             ),
         ] = ()
         kubectl_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact kubectl version, e.g. '1.32.0'")
+            t.NonEmptyStr, m.Field(description="Moving kubectl release selector")
         ]
         helm_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact Helm version, e.g. '3.19.4'")
+            t.NonEmptyStr, m.Field(description="Moving Helm release selector")
         ]
         kind_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact kind version, e.g. '0.31.0'")
+            t.NonEmptyStr, m.Field(description="Moving kind release selector")
         ]
         direnv_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Compatible direnv major.minor line")
+            t.NonEmptyStr, m.Field(description="Moving direnv release selector")
         ]
         environment_path_prepends: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
@@ -159,7 +159,7 @@ class FlextInfraModelsMiseToolchain:
             ),
         ] = ()
         uv_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Compatible uv major.minor line")
+            t.NonEmptyStr, m.Field(description="Moving uv release selector")
         ]
         mise_lockfile: Annotated[
             bool,
@@ -213,7 +213,7 @@ class FlextInfraModelsMiseToolchain:
             m.Field(description="Moving qlty release selector, e.g. 'latest'"),
         ]
         node_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Compatible Node.js major.minor line")
+            t.NonEmptyStr, m.Field(description="Moving Node.js release selector")
         ]
         jscpd_selector: Annotated[
             t.NonEmptyStr,
@@ -281,10 +281,10 @@ class FlextInfraModelsMiseToolchain:
             t.NonEmptyStr, m.Field(description="Mise selector for the ast-grep CLI")
         ]
         ast_grep_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact ast-grep analyzer version")
+            t.NonEmptyStr, m.Field(description="Moving ast-grep analyzer selector")
         ]
         gitleaks_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact Gitleaks scanner version")
+            t.NonEmptyStr, m.Field(description="Moving Gitleaks scanner selector")
         ]
         scc_selector: Annotated[
             t.NonEmptyStr,
@@ -299,7 +299,7 @@ class FlextInfraModelsMiseToolchain:
             t.NonEmptyStr, m.Field(description="scc release selector (latest)")
         ]
         kubeconform_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Compatible kubeconform minor line")
+            t.NonEmptyStr, m.Field(description="Moving kubeconform release selector")
         ]
         go_version: Annotated[
             t.NonEmptyStr,
@@ -345,9 +345,8 @@ class FlextInfraModelsMiseToolchain:
             A value like ``0.45.3~7a027ead`` is an aube lock build-identity
             directory name, not a published package version; aube rejects it
             ("no version ... matches range") and the whole toolchain lifecycle
-            (make upg/gen/setup, and therefore CI) breaks. Only real selectors
-            (``latest``, a major.minor line, or a released version) may reach
-            the lock.
+            (make upg/gen/setup, and therefore CI) breaks. Moving release
+            selectors enter the committed lock through ``make upg``.
             """
             offenders = sorted(
                 field
