@@ -42,13 +42,12 @@ if TYPE_CHECKING:
     from ._config import FlextInfraConfig, config
     from ._settings import FlextInfraSettings, settings
     from .api import FlextInfra, infra
-    from .base import FlextInfraServiceBase, s
+    from .base import FlextInfraServiceBase, FlextInfraServiceBase as s
     from .base_selection import FlextInfraProjectSelectionServiceBase
     from .check.gate_registry import FlextInfraGateRegistry
     from .check.workspace_check import FlextInfraWorkspaceChecker
     from .check.workspace_check_gates import FlextInfraWorkspaceCheckGatesMixin
-    from .cli import FlextInfraCli, docs_main, main
-    from .codegen.candidate_bootstrap import FlextInfraCodegenCandidateBootstrap
+    from .cli import FlextInfraCli, main
     from .codegen.census import FlextInfraCodegenCensus
     from .codegen.codegen_generation import FlextInfraCodegenGeneration
     from .codegen.codegen_transaction import FlextInfraCodegenTransaction
@@ -68,7 +67,7 @@ if TYPE_CHECKING:
         FlextInfraCodegenPipeline,
         FlextInfraCodegenPipelineStagesMixin,
         FlextInfraMiseArtifactsFiles,
-        publish_file_plan,
+        FlextInfraMisePublication,
     )
     from .codegen.project_new import FlextInfraCodegenProjectNew
     from .codegen.protocol_models import FlextInfraCodegenProtocolModels
@@ -80,6 +79,7 @@ if TYPE_CHECKING:
     from .codemod.batch_apply import FlextInfraCodemodBatchApply
     from .codemod.batch_gates import FlextInfraModGateEngine
     from .codemod.batch_replacements import FlextInfraModReplacements
+    from .codemod.sed_apply import FlextInfraCodemodSedApply
     from .codemod.semantic_apply import FlextInfraCodemodSemanticApply
     from .codemod.snapshot_reconciler import FlextInfraCodemodSnapshotReconciler
     from .codemod.snapshot_refresh import FlextInfraCodemodSnapshotRefresh
@@ -157,18 +157,9 @@ if TYPE_CHECKING:
     from .gates.loc_cap import FlextInfraLocCapGate
     from .gates.markdown import FlextInfraMarkdownGate
     from .gates.markdown_code import FlextInfraMarkdownCodeGate
-    from .gates.markdown_code_sources import (
-        is_syntax_broken,
-        source_name,
-        write_docstring_sources,
-        write_fenced_block_sources,
-    )
+    from .gates.markdown_code_sources import FlextInfraMarkdownCodeSources
     from .gates.markdown_format import FlextInfraMarkdownFormatGate
-    from .gates.markdown_support import (
-        FlextInfraMarkdownGateBase,
-        collect_markdown_files,
-        read_ignore_patterns,
-    )
+    from .gates.markdown_support import FlextInfraMarkdownGateBase
     from .gates.mypy import FlextInfraMypyGate
     from .gates.namespace import FlextInfraNamespaceGate
     from .gates.pyrefly import FlextInfraPyreflyGate
@@ -206,6 +197,7 @@ if TYPE_CHECKING:
     from .refactor.signature_propagation import FlextInfraRefactorSignaturePropagation
     from .refactor.wrapper_root_namespace import FlextInfraWrapperRootNamespaceRefactor
     from .release.orchestrator import FlextInfraReleaseOrchestrator
+    from .services.candidate_bootstrap import FlextInfraCandidateBootstrapService
     from .services.cli_dispatch import FlextInfraCliDispatchService
     from .services.cli_route_base import FlextInfraCliRouteBase
     from .services.cli_routes import FlextInfraCliRouteService
@@ -278,6 +270,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraApplyRenames",
     "FlextInfraBanditGate",
     "FlextInfraCProfileReport",
+    "FlextInfraCandidateBootstrapService",
     "FlextInfraCanonicalAliasGate",
     "FlextInfraClassPlacementDetector",
     "FlextInfraCleanService",
@@ -286,7 +279,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraCliRouteBase",
     "FlextInfraCliRouteService",
     "FlextInfraCodegen",
-    "FlextInfraCodegenCandidateBootstrap",
     "FlextInfraCodegenCensus",
     "FlextInfraCodegenConform",
     "FlextInfraCodegenConsolidator",
@@ -311,6 +303,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenVersionFile",
     "FlextInfraCodemodAstScan",
     "FlextInfraCodemodBatchApply",
+    "FlextInfraCodemodSedApply",
     "FlextInfraCodemodSemanticApply",
     "FlextInfraCodemodSnapshotReconciler",
     "FlextInfraCodemodSnapshotRefresh",
@@ -372,10 +365,12 @@ __all__: tuple[str, ...] = (
     "FlextInfraManualProtocolDetector",
     "FlextInfraManualTypingAliasDetector",
     "FlextInfraMarkdownCodeGate",
+    "FlextInfraMarkdownCodeSources",
     "FlextInfraMarkdownFormatGate",
     "FlextInfraMarkdownGate",
     "FlextInfraMarkdownGateBase",
     "FlextInfraMiseArtifactsFiles",
+    "FlextInfraMisePublication",
     "FlextInfraMiseWorkspacePlanner",
     "FlextInfraModGateEngine",
     "FlextInfraModReplacements",
@@ -476,39 +471,31 @@ __all__: tuple[str, ...] = (
     "check",
     "codegen",
     "codemod",
-    "collect_markdown_files",
     "config",
     "d",
     "deps",
     "detectors",
     "docs",
-    "docs_main",
     "e",
     "fixers",
     "gates",
     "h",
     "infra",
-    "is_syntax_broken",
     "m",
     "main",
     "maintenance",
     "p",
-    "publish_file_plan",
     "r",
-    "read_ignore_patterns",
     "refactor",
     "release",
     "s",
     "services",
     "settings",
-    "source_name",
     "t",
     "transformers",
     "u",
     "validate",
     "workspace",
-    "write_docstring_sources",
-    "write_fenced_block_sources",
     "x",
 )
 
@@ -524,9 +511,8 @@ _LAZY_IMPORTS = MappingProxyType(
             ".check.gate_registry": ("FlextInfraGateRegistry",),
             ".check.workspace_check": ("FlextInfraWorkspaceChecker",),
             ".check.workspace_check_gates": ("FlextInfraWorkspaceCheckGatesMixin",),
-            ".cli": ("FlextInfraCli", "docs_main", "main"),
+            ".cli": ("FlextInfraCli", "main"),
             ".codegen": ("codegen",),
-            ".codegen.candidate_bootstrap": ("FlextInfraCodegenCandidateBootstrap",),
             ".codegen.census": ("FlextInfraCodegenCensus",),
             ".codegen.codegen_generation": ("FlextInfraCodegenGeneration",),
             ".codegen.codegen_transaction": ("FlextInfraCodegenTransaction",),
@@ -546,7 +532,7 @@ _LAZY_IMPORTS = MappingProxyType(
                 "FlextInfraCodegenPipeline",
                 "FlextInfraCodegenPipelineStagesMixin",
                 "FlextInfraMiseArtifactsFiles",
-                "publish_file_plan",
+                "FlextInfraMisePublication",
             ),
             ".codegen.project_new": ("FlextInfraCodegenProjectNew",),
             ".codegen.protocol_models": ("FlextInfraCodegenProtocolModels",),
@@ -559,6 +545,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".codemod.batch_apply": ("FlextInfraCodemodBatchApply",),
             ".codemod.batch_gates": ("FlextInfraModGateEngine",),
             ".codemod.batch_replacements": ("FlextInfraModReplacements",),
+            ".codemod.sed_apply": ("FlextInfraCodemodSedApply",),
             ".codemod.semantic_apply": ("FlextInfraCodemodSemanticApply",),
             ".codemod.snapshot_reconciler": ("FlextInfraCodemodSnapshotReconciler",),
             ".codemod.snapshot_refresh": ("FlextInfraCodemodSnapshotRefresh",),
@@ -649,18 +636,9 @@ _LAZY_IMPORTS = MappingProxyType(
             ".gates.loc_cap": ("FlextInfraLocCapGate",),
             ".gates.markdown": ("FlextInfraMarkdownGate",),
             ".gates.markdown_code": ("FlextInfraMarkdownCodeGate",),
-            ".gates.markdown_code_sources": (
-                "is_syntax_broken",
-                "source_name",
-                "write_docstring_sources",
-                "write_fenced_block_sources",
-            ),
+            ".gates.markdown_code_sources": ("FlextInfraMarkdownCodeSources",),
             ".gates.markdown_format": ("FlextInfraMarkdownFormatGate",),
-            ".gates.markdown_support": (
-                "FlextInfraMarkdownGateBase",
-                "collect_markdown_files",
-                "read_ignore_patterns",
-            ),
+            ".gates.markdown_support": ("FlextInfraMarkdownGateBase",),
             ".gates.mypy": ("FlextInfraMypyGate",),
             ".gates.namespace": ("FlextInfraNamespaceGate",),
             ".gates.pyrefly": ("FlextInfraPyreflyGate",),
@@ -706,6 +684,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".release": ("release",),
             ".release.orchestrator": ("FlextInfraReleaseOrchestrator",),
             ".services": ("services",),
+            ".services.candidate_bootstrap": ("FlextInfraCandidateBootstrapService",),
             ".services.cli_dispatch": ("FlextInfraCliDispatchService",),
             ".services.cli_route_base": ("FlextInfraCliRouteBase",),
             ".services.cli_routes": ("FlextInfraCliRouteService",),
@@ -792,7 +771,7 @@ _LAZY_IMPORTS = MappingProxyType(
         }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,
-    )
+    ),
 )
 
 install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

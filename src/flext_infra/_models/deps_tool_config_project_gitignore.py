@@ -12,7 +12,7 @@ from .deps_tool_config_project_mise import FlextInfraModelsDepsToolConfigProject
 
 
 class FlextInfraModelsDepsToolConfigProjectGitignore(
-    FlextInfraModelsDepsToolConfigProjectMise
+    FlextInfraModelsDepsToolConfigProjectMise,
 ):
     """Project-local ignore patterns appended to generated gitignore output."""
 
@@ -25,7 +25,7 @@ class FlextInfraModelsDepsToolConfigProjectGitignore(
                 description=(
                     "Ignore patterns appended, in declaration order, as one "
                     "project-owned section of the generated .gitignore."
-                )
+                ),
             ),
         ] = ()
 

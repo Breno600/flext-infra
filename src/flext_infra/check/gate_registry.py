@@ -38,7 +38,9 @@ class FlextInfraGateRegistry:
     """Explicit gate registry mapping gate IDs to gate classes."""
 
     def __init__(
-        self, *, runners: t.MappingKV[str, p.Cli.CommandRunner] | None = None
+        self,
+        *,
+        runners: t.MappingKV[str, p.Cli.CommandRunner] | None = None,
     ) -> None:
         """Build the gate-id to gate-class mapping used by check execution.
 

@@ -33,17 +33,19 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
     app_name: ClassVar[str] = "flext-infra"
 
     def bootstrap_candidate(
-        self, request: m.Infra.CandidateBootstrapCommand
+        self,
+        request: m.Infra.CandidateBootstrapCommand,
     ) -> p.Result[bool]:
         """Compose typed declarations, conform planner and one atomic publisher."""
         identity = u.Infra.exact_worktree_root(
-            request.repository_root.expanduser().absolute()
+            request.repository_root.expanduser().absolute(),
         )
         if identity.failure:
             return r[bool].from_failure(identity)
         source_root = identity.value.repo_root
         manifest = u.Cli.atomic_read_binary_file_state(
-            u.Infra.workspace_manifest_path(source_root), required=True
+            u.Infra.workspace_manifest_path(source_root),
+            required=True,
         )
         if manifest.failure:
             return r[bool].from_failure(manifest)
@@ -53,12 +55,13 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         return FlextInfraCandidateBootstrapService(
             planner=FlextInfraCodegenConform(repository_root=source_root),
             transaction=FlextInfraCodegenTransaction(
-                FlextInfraCodegenMiseArtifacts(repository_root=source_root)
+                FlextInfraCodegenMiseArtifacts(repository_root=source_root),
             ),
         ).execute(source_root, workspace.value, request, manifest.value)
 
     def rope_workspace(
-        self, repository_root: Path | None = None
+        self,
+        repository_root: Path | None = None,
     ) -> p.Infra.RopeWorkspaceDsl:
         """Open the public Rope workspace DSL directly from the facade."""
         # NOTE (multi-agent, flext-wkii.17.24): Rope reads its source policy
@@ -72,7 +75,8 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         """Compose one shared Rope cycle and execute every requested gate."""
         with FlextInfraRopeWorkspace.open_workspace(request.repository_root) as rope:
             return FlextInfraWorkspaceChecker(
-                repository_root=request.repository_root, rope=rope
+                repository_root=request.repository_root,
+                rope=rope,
             ).execute_payload(request)
 
     def codegen_census(self, request: m.Infra.CodegenCommand) -> p.Result[str]:
@@ -166,12 +170,14 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         )
 
     def validate_namespace(
-        self, request: m.Infra.NamespaceValidateCommand
+        self,
+        request: m.Infra.NamespaceValidateCommand,
     ) -> p.Result[m.Infra.ValidationReport]:
         """Validate one project through a single composed Rope cycle."""
         with FlextInfraRopeWorkspace.open_workspace(request.repository_root) as rope:
             return FlextInfraNamespaceValidator(
-                repository_root=request.repository_root, rope=rope
+                repository_root=request.repository_root,
+                rope=rope,
             ).build_report()
 
     def mod_text(self, request: m.Infra.ModTextCommand) -> p.Result[t.Cli.ResultValue]:
@@ -207,17 +213,17 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         resolved = cwd.expanduser().resolve()
         if not resolved.is_dir():
             return r[m.Infra.WorkspaceProjectContext].fail(
-                f"project context cwd is not a directory: {resolved}"
+                f"project context cwd is not a directory: {resolved}",
             )
         identity = u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=resolved))
         if identity.failure:
             return r[m.Infra.WorkspaceProjectContext].ok(
-                m.Infra.WorkspaceProjectContext(cwd=resolved)
+                m.Infra.WorkspaceProjectContext(cwd=resolved),
             )
         root = identity.value.repo_root
         if not u.Infra.workspace_manifest_path(root).is_file():
             return r[m.Infra.WorkspaceProjectContext].ok(
-                m.Infra.WorkspaceProjectContext(cwd=resolved, identity=identity.value)
+                m.Infra.WorkspaceProjectContext(cwd=resolved, identity=identity.value),
             )
         workspace = u.Infra.workspace_spec_load(root)
         if workspace.failure:
@@ -232,7 +238,7 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
                 workspace=workspace.value,
                 target=target.value,
                 governed=True,
-            )
+            ),
         )
 
     @override

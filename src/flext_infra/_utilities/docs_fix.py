@@ -44,7 +44,9 @@ class FlextInfraUtilitiesDocsFix:
 
     @staticmethod
     def docs_fix_python_codeblocks(
-        scope: m.Infra.DocScope, *, apply: bool
+        scope: m.Infra.DocScope,
+        *,
+        apply: bool,
     ) -> t.SequenceOf[m.Infra.GeneratedFile]:
         """Auto-fix ``python`` fenced code blocks using ``ruff check --fix``.
 
@@ -54,10 +56,14 @@ class FlextInfraUtilitiesDocsFix:
         """
         changed: t.MutableSequenceOf[m.Infra.GeneratedFile] = []
         for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
-            original = md_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+            original = md_file.read_text(
+                encoding=c.Cli.ENCODING_DEFAULT,
+                errors=c.Infra.IGNORE,
+            )
 
             def _replace_fence(
-                match: re.Match[str], source_file: Path = md_file
+                match: re.Match[str],
+                source_file: Path = md_file,
             ) -> str:
                 body = match.group("body")
                 rel = source_file.relative_to(scope.path).as_posix()
@@ -113,17 +119,24 @@ class FlextInfraUtilitiesDocsFix:
                 continue
             changed.append(
                 FlextInfraUtilitiesDocsContract.docs_write_if_needed(
-                    md_file, sanitized, apply=apply
-                )
+                    md_file,
+                    sanitized,
+                    apply=apply,
+                ),
             )
         return changed
 
     @staticmethod
     def docs_process_markdown_file(
-        md_file: Path, *, apply: bool
+        md_file: Path,
+        *,
+        apply: bool,
     ) -> m.Infra.DocsPhaseItemModel:
         """Fix one markdown file and return the phase item summary."""
-        original = md_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+        original = md_file.read_text(
+            encoding=c.Cli.ENCODING_DEFAULT,
+            errors=c.Infra.IGNORE,
+        )
         link_count = 0
 
         def replace_link(match: t.RegexMatch) -> str:

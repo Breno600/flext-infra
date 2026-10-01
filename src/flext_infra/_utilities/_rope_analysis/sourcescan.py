@@ -75,12 +75,13 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         """Collect strings from a literal module-level assignment."""
         value_source = (
             FlextInfraUtilitiesRopeAnalysisSourceScan._assignment_value_source(
-                source, name
+                source,
+                name,
             )
         )
         values = (
             FlextInfraUtilitiesRopeAnalysisSourceScan._literal_string_sequence_source(
-                value_source
+                value_source,
             )
         )
         if values:
@@ -89,29 +90,32 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         # bound name so docs validate matches the live lazy-init ABI.
         nested_name = (
             FlextInfraUtilitiesRopeAnalysisSourceScan._sequence_constructor_ref_source(
-                value_source
+                value_source,
             )
         )
         if not nested_name or nested_name == name:
             return ()
         return (
             FlextInfraUtilitiesRopeAnalysisSourceScan.module_assignment_strings_source(
-                source, nested_name
+                source,
+                nested_name,
             )
         )
 
     @staticmethod
     def module_mapping_assignment_source(
-        source: str, name: str
+        source: str,
+        name: str,
     ) -> t.Pair[t.VariadicTuple[t.Pair[str, t.StrSequence]], t.StrSequence]:
         """Collect mapping entries and referenced names from an assignment."""
         value_source = (
             FlextInfraUtilitiesRopeAnalysisSourceScan._assignment_value_source(
-                source, name
+                source,
+                name,
             )
         )
         return FlextInfraUtilitiesRopeAnalysisSourceScan._mapping_entries_refs_source(
-            value_source
+            value_source,
         )
 
     @staticmethod
@@ -141,7 +145,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
             first_arg = args[0]
             if FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(first_arg):
                 return FlextInfraUtilitiesRopeAnalysisSourceScan.mapping_entries_refs(
-                    first_arg
+                    first_arg,
                 )
         if function_name != "merge_lazy_imports":
             return ((), ())
@@ -170,7 +174,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
             if key_node is None:
                 if FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(value_node):
                     ref_name = FlextInfraUtilitiesRopeAnalysisAstHelpers.name_of(
-                        value_node
+                        value_node,
                     )
                     if ref_name:
                         refs.append(ref_name)
@@ -183,7 +187,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
             if FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(value_node):
                 value_strings = (
                     FlextInfraUtilitiesRopeAnalysisSourceScan.literal_string_sequence(
-                        value_node
+                        value_node,
                     )
                 )
             else:
@@ -194,7 +198,11 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
 
     @staticmethod
     def relative_import_module_name(
-        *, current_module: str, imported_module: str, level: int, package_module: bool
+        *,
+        current_module: str,
+        imported_module: str,
+        level: int,
+        package_module: bool,
     ) -> str:
         """Resolve a parsed ``from`` import module into an absolute module name."""
         if level == 0:
@@ -206,7 +214,11 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
 
     @staticmethod
     def imported_symbol_binding_source(
-        source: str, *, current_module: str, symbol_name: str, package_module: bool
+        source: str,
+        *,
+        current_module: str,
+        symbol_name: str,
+        package_module: bool,
     ) -> t.Pair[str, str]:
         """Return ``(module, original_name)`` for one imported symbol binding."""
         for (
@@ -215,7 +227,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
             original_name,
             bound_name,
         ) in FlextInfraUtilitiesRopeAnalysisSourceScan._from_import_bindings_source(
-            source
+            source,
         ):
             if bound_name != symbol_name:
                 continue
@@ -234,7 +246,8 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
     def class_bases_source(source: str, class_name: str) -> t.StrSequence:
         """Return declared base names for one class in source."""
         class_source = FlextInfraUtilitiesRopeAnalysisSourceScan._class_header_source(
-            source, class_name
+            source,
+            class_name,
         )
         if not class_source:
             return ()
@@ -248,7 +261,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
             for base_name in (
                 FlextInfraUtilitiesRopeAnalysisSourceScan._symbol_name_source(item)
                 for item in FlextInfraUtilitiesRopeAnalysisSourceScan._split_top_level_commas(
-                    bases_source
+                    bases_source,
                 )
             )
             if base_name
@@ -259,31 +272,34 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         """Return whether one class is declared in source."""
         return bool(
             FlextInfraUtilitiesRopeAnalysisSourceScan._class_header_source(
-                source, class_name
-            )
+                source,
+                class_name,
+            ),
         )
 
     @staticmethod
     def lazy_public_exports_source(source: str) -> t.Pair[t.StrSequence, str]:
         """Return lazy-loader public exports or the local symbol holding them."""
         call_args = FlextInfraUtilitiesRopeAnalysisSourceScan._call_args_source(
-            source, "install_lazy_exports"
+            source,
+            "install_lazy_exports",
         )
         public_exports = (
             FlextInfraUtilitiesRopeAnalysisSourceScan._keyword_value_source(
-                call_args, "public_exports"
+                call_args,
+                "public_exports",
             )
         )
         if public_exports:
             values = FlextInfraUtilitiesRopeAnalysisSourceScan._literal_string_sequence_source(
-                public_exports
+                public_exports,
             )
             if values:
                 return (values, "")
             return (
                 (),
                 FlextInfraUtilitiesRopeAnalysisSourceScan._symbol_name_source(
-                    public_exports
+                    public_exports,
                 ),
             )
         return ((), "")
@@ -292,7 +308,8 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
     def lazy_imports_name_source(source: str) -> str:
         """Return the local symbol passed as the lazy import map."""
         call_args = FlextInfraUtilitiesRopeAnalysisSourceScan._call_args_source(
-            source, "install_lazy_exports"
+            source,
+            "install_lazy_exports",
         )
         if (
             len(call_args)
@@ -301,14 +318,15 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
             return FlextInfraUtilitiesRopeAnalysisSourceScan._symbol_name_source(
                 call_args[
                     FlextInfraUtilitiesRopeAnalysisSourceScan._INSTALL_LAZY_IMPORTS_ARG_INDEX
-                ]
+                ],
             )
         keyword_value = FlextInfraUtilitiesRopeAnalysisSourceScan._keyword_value_source(
-            call_args, "lazy_imports"
+            call_args,
+            "lazy_imports",
         )
         if keyword_value:
             return FlextInfraUtilitiesRopeAnalysisSourceScan._symbol_name_source(
-                keyword_value
+                keyword_value,
             )
         return ""
 
@@ -329,7 +347,6 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         # reachable to the type checker.
         value: ast.expr | None
         for node in tree.body:
-            value: ast.expr | None
             if isinstance(node, ast.Assign):
                 targets: list[ast.expr] = list(node.targets)
                 value = node.value
@@ -355,7 +372,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         for line in lines[start_index:]:
             collected.append(line)
             depth += FlextInfraUtilitiesRopeAnalysisSourceScan._bracket_depth_delta(
-                line
+                line,
             )
             if depth <= 0:
                 break
@@ -495,10 +512,10 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         inner = text[1:-1]
         values: list[str] = []
         for item in FlextInfraUtilitiesRopeAnalysisSourceScan._split_top_level_commas(
-            inner
+            inner,
         ):
             value = FlextInfraUtilitiesRopeAnalysisSourceScan._literal_string_source(
-                item
+                item,
             )
             if not value:
                 return ()
@@ -522,13 +539,14 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
                 continue
             close_index = (
                 FlextInfraUtilitiesRopeAnalysisSourceScan._matching_close_index(
-                    source, open_index
+                    source,
+                    open_index,
                 )
             )
             if close_index < 0:
                 return ()
             return FlextInfraUtilitiesRopeAnalysisSourceScan._split_top_level_commas(
-                source[open_index + 1 : close_index]
+                source[open_index + 1 : close_index],
             )
 
     @staticmethod
@@ -541,7 +559,8 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
             index,
             char,
         ) in FlextInfraUtilitiesRopeAnalysisSourceScan._unquoted_characters(
-            source, open_index
+            source,
+            open_index,
         ):
             if char == open_char:
                 depth += 1
@@ -561,7 +580,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
             text = arg.strip()
             if text.startswith(prefix):
                 value: str = t.Infra.STR_ADAPTER.validate_python(
-                    text[len(prefix) :].strip()
+                    text[len(prefix) :].strip(),
                 )
                 return value
         return ""
@@ -579,11 +598,12 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         call_name = FlextInfraUtilitiesRopeAnalysisSourceScan._call_name_source(text)
         if call_name in {"MappingProxyType", "build_lazy_import_map"}:
             args = FlextInfraUtilitiesRopeAnalysisSourceScan._call_args_source(
-                text, call_name
+                text,
+                call_name,
             )
             return (
                 FlextInfraUtilitiesRopeAnalysisSourceScan._mapping_entries_refs_source(
-                    args[0]
+                    args[0],
                 )
                 if args
                 else ((), ())
@@ -592,11 +612,12 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
             entries: list[t.Pair[str, t.StrSequence]] = []
             refs: list[str] = []
             for arg in FlextInfraUtilitiesRopeAnalysisSourceScan._call_args_source(
-                text, call_name
+                text,
+                call_name,
             ):
                 next_entries, next_refs = (
                     FlextInfraUtilitiesRopeAnalysisSourceScan._mapping_entries_refs_source(
-                        arg
+                        arg,
                     )
                 )
                 entries.extend(next_entries)
@@ -607,13 +628,13 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         entries = []
         refs = []
         for item in FlextInfraUtilitiesRopeAnalysisSourceScan._split_top_level_commas(
-            text[1:-1]
+            text[1:-1],
         ):
             stripped = item.strip()
             if stripped.startswith("**"):
                 ref_name = (
                     FlextInfraUtilitiesRopeAnalysisSourceScan._symbol_name_source(
-                        stripped[2:]
+                        stripped[2:],
                     )
                 )
                 if ref_name:
@@ -621,16 +642,17 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
                 continue
             key_source, separator, value_source = (
                 FlextInfraUtilitiesRopeAnalysisSourceScan._top_level_partition(
-                    stripped, ":"
+                    stripped,
+                    ":",
                 )
             )
             if not separator:
                 continue
             key = FlextInfraUtilitiesRopeAnalysisSourceScan._literal_string_source(
-                key_source
+                key_source,
             )
             values = FlextInfraUtilitiesRopeAnalysisSourceScan._literal_string_sequence_source(
-                value_source
+                value_source,
             )
             if key and values:
                 entries.append((key, values))
@@ -644,7 +666,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         if open_index < 0:
             return ""
         return FlextInfraUtilitiesRopeAnalysisSourceScan._symbol_name_source(
-            text[:open_index]
+            text[:open_index],
         )
 
     @staticmethod
@@ -673,7 +695,8 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
             if not stripped.startswith("from ") or " import " not in stripped:
                 continue
             statement = FlextInfraUtilitiesRopeAnalysisSourceScan._collect_statement(
-                lines, index
+                lines,
+                index,
             ).strip()
             import_index = statement.find(" import ")
             module_source = statement[5:import_index].strip()
@@ -685,11 +708,11 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
             for (
                 alias_source
             ) in FlextInfraUtilitiesRopeAnalysisSourceScan._split_top_level_commas(
-                aliases_source
+                aliases_source,
             ):
                 original, bound = (
                     FlextInfraUtilitiesRopeAnalysisSourceScan._import_alias_names(
-                        alias_source
+                        alias_source,
                     )
                 )
                 if original and bound:
@@ -725,14 +748,17 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
             if tail and tail[0] not in {"(", ":"}:
                 continue
             statement = FlextInfraUtilitiesRopeAnalysisSourceScan._collect_statement(
-                lines, index
+                lines,
+                index,
             )
             return statement.rsplit(":", maxsplit=1)[0]
         return ""
 
     @staticmethod
     def export_target_modules_source(
-        source: str, package_name: str, exports: t.StrSequence
+        source: str,
+        package_name: str,
+        exports: t.StrSequence,
     ) -> MutableMapping[str, str]:
         """Map exports → defining module via rope's parsed-source import table."""
         export_names = {name for name in exports if name}
@@ -740,7 +766,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         pymodule = FlextInfraUtilitiesRopeAnalysisAstHelpers.parse_string_module(source)
         module_ast = pymodule.get_ast()
         for node in FlextInfraUtilitiesRopeAnalysisAstHelpers.walk_ast_nodes(
-            module_ast
+            module_ast,
         ):
             kind = FlextInfraUtilitiesRopeAnalysisAstHelpers.node_kind(node)
             if kind == "ImportFrom":

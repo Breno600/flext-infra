@@ -9,7 +9,10 @@ class FlextInfraModelsMiseToolchainBase(m.ContractModel):
     """Strict immutable base shared by Mise configuration records."""
 
     model_config = m.ConfigDict(
-        strict=False, frozen=True, extra="forbid", str_strip_whitespace=False
+        strict=False,
+        frozen=True,
+        extra="forbid",
+        str_strip_whitespace=False,
     )
 
 

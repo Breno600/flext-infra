@@ -50,7 +50,10 @@ class FlextInfraMiseArtifactsDerivation:
             if relative == c.Infra.MISE_VERSION_PIN_FILENAME:
                 continue
             launcher = cls._validate_launcher(
-                project_root / relative, relative, mode, release.value
+                project_root / relative,
+                relative,
+                mode,
+                release.value,
             )
             if launcher.failure:
                 return launcher
@@ -69,7 +72,7 @@ class FlextInfraMiseArtifactsDerivation:
             if projected.value != owner.value:
                 return r[bool].fail(
                     f"{project_root / relative} differs from the runtime root "
-                    f"{runtime_root / relative}; run make upg in {runtime_root}"
+                    f"{runtime_root / relative}; run make upg in {runtime_root}",
                 )
         return r[bool].ok(True)
 
@@ -109,7 +112,7 @@ class FlextInfraMiseArtifactsDerivation:
         raw_tools = payload.get("tools")
         if not isinstance(raw_tools, Mapping):
             return r[bool].fail(
-                f"{c.Infra.MISE_LOCK_FILENAME} must declare a [tools] section"
+                f"{c.Infra.MISE_LOCK_FILENAME} must declare a [tools] section",
             )
         for selector, raw_tool in sorted(raw_tools.items()):
             entries = raw_tool if isinstance(raw_tool, list) else (raw_tool,)
@@ -128,24 +131,25 @@ class FlextInfraMiseArtifactsDerivation:
                 if mismatch.failure:
                     return r[bool].fail(
                         f"{c.Infra.MISE_LOCK_FILENAME} tool {selector} references "
-                        f"the aube sidecar {relative}: {mismatch.error}; run make upg"
+                        f"the aube sidecar {relative}: {mismatch.error}; run make upg",
                     )
         return r[bool].ok(True)
 
     @staticmethod
     def _sidecar_annotation(
-        selector: str, sidecar: Mapping[str, t.JsonValue]
+        selector: str,
+        sidecar: Mapping[str, t.JsonValue],
     ) -> p.Result[tuple[str, str]]:
         """Return one tool's ``(sidecar path, digest)`` from its aube table."""
         relative = sidecar.get("path")
         digest = sidecar.get("digest")
         if not isinstance(relative, str) or not relative.strip():
             return r[tuple[str, str]].fail(
-                f"tool {selector} carries an aube annotation without a path"
+                f"tool {selector} carries an aube annotation without a path",
             )
         if not isinstance(digest, str) or not digest.startswith("sha256:"):
             return r[tuple[str, str]].fail(
-                f"tool {selector} carries an aube annotation without a sha256 digest"
+                f"tool {selector} carries an aube annotation without a sha256 digest",
             )
         return r[tuple[str, str]].ok((relative, digest.removeprefix("sha256:")))
 
@@ -157,7 +161,7 @@ class FlextInfraMiseArtifactsDerivation:
         actual = sha256(lockfile.read_bytes()).hexdigest()
         if actual != digest:
             return r[bool].fail(
-                f"{lockfile} digest {actual} differs from the locked {digest}"
+                f"{lockfile} digest {actual} differs from the locked {digest}",
             )
         return r[bool].ok(True)
 
@@ -178,7 +182,11 @@ class FlextInfraMiseArtifactsDerivation:
 
     @classmethod
     def _validate_launcher(
-        cls, path: Path, relative: str, mode: int, release: str
+        cls,
+        path: Path,
+        relative: str,
+        mode: int,
+        release: str,
     ) -> p.Result[bool]:
         """Require the generator's baked release, no live resolution, and mode."""
         content = cls._read(path)
@@ -187,7 +195,7 @@ class FlextInfraMiseArtifactsDerivation:
         if c.Infra.MISE_LATEST_RESOLUTION_MARKER in content.value:
             return r[bool].fail(
                 f"{path} resolves {c.Infra.MISE_LATEST_RESOLUTION_MARKER} at run "
-                "time instead of baking a release; run make upg"
+                "time instead of baking a release; run make upg",
             )
         pattern = c.Infra.MISE_LAUNCHER_BAKED_RELEASE_PATTERNS[relative]
         baked = sorted({
@@ -196,7 +204,7 @@ class FlextInfraMiseArtifactsDerivation:
         if baked != [release]:
             return r[bool].fail(
                 f"{path} bakes Mise {', '.join(baked) or 'no release'} but "
-                f"{c.Infra.MISE_VERSION_PIN_FILENAME} records {release}; run make upg"
+                f"{c.Infra.MISE_VERSION_PIN_FILENAME} records {release}; run make upg",
             )
         if mode & 0o100 and not path.stat().st_mode & 0o100:
             return r[bool].fail(f"{path} is not executable; run make upg")

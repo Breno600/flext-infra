@@ -29,6 +29,6 @@ class TestsFlextInfraRuffComposeSignature:
     def test_constructed_call_composes_the_exemption_map(self, tmp_path: Path) -> None:
         """The conform context render's shape works with one positional."""
         composed = FlextInfraEnsureRuffConfigPhase(
-            config.Infra.tooling
+            config.Infra.tooling,
         ).compose_per_file_ignores(tmp_path, managed_artifacts=None)
         tm.that(isinstance(composed, dict), eq=True)

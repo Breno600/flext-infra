@@ -160,7 +160,7 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
                                 reason=deactivation,
                             ),
                         ),
-                    )
+                    ),
                 )
                 continue
             transformer_cls = self._TRANSFORMERS.get(target)
@@ -175,7 +175,7 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
                                 error=f"transformer {target} not registered",
                             ),
                         ),
-                    )
+                    ),
                 )
                 continue
             fix_action = target_violations[0][0].fix_action
@@ -195,7 +195,7 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
                                     ),
                                 ),
                             ),
-                        )
+                        ),
                     )
                     continue
                 results.append(
@@ -205,7 +205,7 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
                         fix_action=fix_action,
                         ctx=ctx,
                         rule_id=rule_id,
-                    )
+                    ),
                 )
         files_modified = {path for result in results for path in result.files_modified}
         if ctx.apply and files_modified:
@@ -224,13 +224,15 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
                                 ),
                             ),
                         ),
-                    )
+                    ),
                 )
         return self._merge_project_fix_results(project_dir, results)
 
     @staticmethod
     def _is_owned_library_exempt(
-        project_dir: Path, fix_action: m.EnforcementFixAction | None, file_path: Path
+        project_dir: Path,
+        fix_action: m.EnforcementFixAction | None,
+        file_path: Path,
     ) -> bool:
         """Skip import modernization inside the library's owning project.
 
@@ -242,7 +244,7 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
         if fix_action is None or fix_action.target != "import_modernizer":
             return False
         imports_to_remove = u.Cli.json_as_sequence(
-            fix_action.params.get("imports_to_remove")
+            fix_action.params.get("imports_to_remove"),
         )
         for module in imports_to_remove:
             if not isinstance(module, str):
@@ -262,7 +264,9 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
         paths = tuple(Path(path) for path in file_paths)
         with u.Infra.open_project(self._repository_root) as rope_project:
             return u.Infra.normalize_imports(
-                rope_project, file_paths=paths, preserve_canonical_aliases=True
+                rope_project,
+                file_paths=paths,
+                preserve_canonical_aliases=True,
             )
 
     def _fix_file(
@@ -317,14 +321,16 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
                 ),
             )
         transformer = self._build_transformer(
-            transformer_cls=transformer_cls, fix_action=fix_action, file_path=file_path
+            transformer_cls=transformer_cls,
+            fix_action=fix_action,
+            file_path=file_path,
         )
         try:
             updated, changes = transformer.apply_to_source(source)
         except Exception as exc:
             exc.add_note(
                 f"enforcement transformer {transformer_cls.__name__} failed for "
-                f"{file_path} (rule {rule_id})"
+                f"{file_path} (rule {rule_id})",
             )
             raise
         if not changes:
@@ -413,7 +419,7 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
             symbols_to_replace = {
                 k: str(v)
                 for k, v in u.Cli.json_as_mapping(
-                    params.get("symbols_to_replace")
+                    params.get("symbols_to_replace"),
                 ).items()
                 # flext-i6nq.10: Mapping keys are already typed as strings.
                 if isinstance(v, (str, int, float))

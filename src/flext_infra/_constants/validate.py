@@ -88,38 +88,38 @@ class FlextInfraConstantsSharedInfra:
     })
     SKILL_REPORT_SKIPPED_FILES: ClassVar[frozenset[str]] = frozenset({".gitkeep"})
     PYTHON_IMPORT_NAME_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$"
+        r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$",
     )
     SKILL_OWNER_MARKER_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^# Owner-Skill:\s+(.agents/skills/([a-z0-9][-a-z0-9]*)/SKILL\.md)\s*$"
+        r"^# Owner-Skill:\s+(.agents/skills/([a-z0-9][-a-z0-9]*)/SKILL\.md)\s*$",
     )
     SKILL_REPORT_ARTIFACT_NAME_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^[a-z][-a-z0-9]*--[a-z]+--[a-z][-a-z0-9]*\.[a-z]+$"
+        r"^[a-z][-a-z0-9]*--[a-z]+--[a-z][-a-z0-9]*\.[a-z]+$",
     )
     SKILL_REPORT_ARTIFACT_SKILL_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^[a-z][-a-z0-9]*$"
+        r"^[a-z][-a-z0-9]*$",
     )
     SKILL_REPORT_ARTIFACT_SLUG_INVALID_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"[^a-z0-9-]+"
+        r"[^a-z0-9-]+",
     )
     SKILL_REPORT_ARTIFACT_MULTI_DASH_RE: ClassVar[t.RegexPattern] = re.compile(r"-+")
     SKILL_REPORTS_PATH_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"\.reports/([^\s\"']+)"
+        r"\.reports/([^\s\"']+)",
     )
     SKILL_BASH_EXIT_RE: ClassVar[t.RegexPattern] = re.compile(r"^\s*exit\s+(\d+)")
     SKILL_INTERACTIVE_PY_RE: ClassVar[t.RegexPattern] = re.compile(r"\binput\s*\(")
     SKILL_INTERACTIVE_SH_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"\bread\s+-p\b|\bselect\s+\w+\s+in\b|\bdialog\b|\bwhiptail\b"
+        r"\bread\s+-p\b|\bselect\s+\w+\s+in\b|\bdialog\b|\bwhiptail\b",
     )
     SKILL_INTERACTIVE_GATE_RE: ClassVar[t.RegexPattern] = re.compile(r"--interactive")
     SKILL_VALIDATOR_NAME_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(enforce|check|validate|test|verify|audit|lint|scan)[-_]"
+        r"^(enforce|check|validate|test|verify|audit|lint|scan)[-_]",
     )
     SKILL_FIXER_NAME_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(fix|autofix|repair|correct|reorder|refactor|standardize)[-_]"
+        r"^(fix|autofix|repair|correct|reorder|refactor|standardize)[-_]",
     )
     MISSING_IMPORT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"Cannot find module `([^`]+)` \[missing-import\]"
+        r"Cannot find module `([^`]+)` \[missing-import\]",
     )
     MYPY_HINT_RE: ClassVar[t.RegexPattern] = re.compile(
         r'note:\s+(?:hint|note):\s+(?:["`].*?\bpip\s+install\s+|install\s+stub\s+package\s+["`]?)'
@@ -127,7 +127,7 @@ class FlextInfraConstantsSharedInfra:
         re.IGNORECASE,
     )
     MYPY_STUB_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"Library stubs not installed for ['\"](\S+?)['\"]"
+        r"Library stubs not installed for ['\"](\S+?)['\"]",
     )
     INTERNAL_PREFIXES: ClassVar[t.VariadicTuple[str]] = ("flext_", "flext-")
     METADATA_TOMLLIB_MODULES: ClassVar[frozenset[str]] = frozenset({"tomllib"})
@@ -165,11 +165,11 @@ class FlextInfraConstantsSharedInfra:
     # Why: conform .gitmodules merge classifies sections via these patterns;
     # they belong beside GITMODULES on c.Infra, not as leaf re.compile copies.
     GITMODULE_SECTION_RE: ClassVar[t.RegexPattern] = re.compile(
-        r'(?m)^\[submodule "[^"]+"\]\s*$'
+        r'(?m)^\[submodule "[^"]+"\]\s*$',
     )
     "``.gitmodules`` submodule section header at line start."
     GITMODULE_PATH_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"(?m)^[ \t]*path[ \t]*=[ \t]*(.+?)[ \t]*$"
+        r"(?m)^[ \t]*path[ \t]*=[ \t]*(.+?)[ \t]*$",
     )
     "``.gitmodules`` path assignment value inside a submodule section."
     GITMODULE_MANAGED_KEY: ClassVar[str] = "flext-managed"
@@ -257,10 +257,10 @@ class FlextInfraConstantsSharedInfra:
         "evaluate",
     })
     TIER_WHITELIST_SETTINGS_MODULE_LIBRARIES: ClassVar[frozenset[str]] = frozenset({
-        "pydantic_settings"
+        "pydantic_settings",
     })
     TIER_WHITELIST_LEAF_CONFIG_FILES: ClassVar[frozenset[str]] = frozenset({
-        "_config.py"
+        "_config.py",
     })
     "Leaf config modules (e.g. ai-hub/_config.py) that own their external-library"
     "imports directly as the bottom of the c/t/p/m/u chain."

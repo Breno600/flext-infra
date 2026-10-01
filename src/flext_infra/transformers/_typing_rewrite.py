@@ -84,7 +84,10 @@ class FlextInfraRefactorTypingUnifierRewriteMixin:
             )
 
         def rewrite(
-            self, node: cst.BaseExpression, *, allow_widen: bool | None = None
+            self,
+            node: cst.BaseExpression,
+            *,
+            allow_widen: bool | None = None,
         ) -> cst.BaseExpression:
             """Rewrite types while leaving calls and non-type payloads untouched."""
             widen = self.widen if allow_widen is None else allow_widen
@@ -100,7 +103,8 @@ class FlextInfraRefactorTypingUnifierRewriteMixin:
             if isinstance(node, cst.Subscript):
                 return self._subscript(node, widen=widen)
             if isinstance(node, cst.BinaryOperation) and isinstance(
-                node.operator, cst.BitOr
+                node.operator,
+                cst.BitOr,
             ):
                 canonical = self._union(node)
                 if canonical is not None:
@@ -113,17 +117,19 @@ class FlextInfraRefactorTypingUnifierRewriteMixin:
                 return node.with_changes(
                     elements=tuple(
                         element.with_changes(
-                            value=self.rewrite(element.value, allow_widen=False)
+                            value=self.rewrite(element.value, allow_widen=False),
                         )
                         for element in node.elements
-                    )
+                    ),
                 )
             if isinstance(node, cst.Name | cst.Attribute):
                 replacement = self.replacements.get(self.qualified_name(node) or "")
                 if replacement is not None:
                     self.replaced_symbols.append((node, replacement))
                     return self._changed(
-                        node, cst.parse_expression(replacement), "symbol"
+                        node,
+                        cst.parse_expression(replacement),
+                        "symbol",
                     )
             return node
 
@@ -138,8 +144,8 @@ class FlextInfraRefactorTypingUnifierRewriteMixin:
                         value=self.rewrite(
                             element.slice.value,
                             allow_widen=widen if annotated else False,
-                        )
-                    )
+                        ),
+                    ),
                 )
                 if isinstance(element.slice, cst.Index)
                 and (not annotated or index == 0)
@@ -181,7 +187,8 @@ class FlextInfraRefactorTypingUnifierRewriteMixin:
             while pending:
                 member = pending.pop()
                 if isinstance(member, cst.BinaryOperation) and isinstance(
-                    member.operator, cst.BitOr
+                    member.operator,
+                    cst.BitOr,
                 ):
                     pending.extend((member.left, member.right))
                     continue
@@ -194,16 +201,21 @@ class FlextInfraRefactorTypingUnifierRewriteMixin:
                 return None
             self.requires_t = self.requires_t or replacement.startswith("t.")
             return self._changed(
-                node, cst.parse_expression(replacement), "inline union"
+                node,
+                cst.parse_expression(replacement),
+                "inline union",
             )
 
         def _changed(
-            self, original: cst.BaseExpression, updated: cst.BaseExpression, kind: str
+            self,
+            original: cst.BaseExpression,
+            updated: cst.BaseExpression,
+            kind: str,
         ) -> cst.BaseExpression:
             if not original.deep_equals(updated):
                 self.changes.append(
                     f"Canonicalized {kind} {self.module.code_for_node(original)} -> "
-                    f"{self.module.code_for_node(updated)}"
+                    f"{self.module.code_for_node(updated)}",
                 )
             return updated
 

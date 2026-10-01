@@ -36,7 +36,9 @@ class TestsFlextInfraRopeSignaturePatch:
         annotation carried a call (bead flext-4frn5).
         """
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo"
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         module_path = package_root / "command.py"
         module_path.write_text(
@@ -66,7 +68,9 @@ class TestsFlextInfraRopeSignaturePatch:
     def test_objects_walk_full_signature_shapes(self, tmp_path: Path) -> None:
         """Positional-only, vararg, keyword-only and kwargs walk in order."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo"
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         module_path = package_root / "shapes.py"
         module_path.write_text(
@@ -94,7 +98,9 @@ class TestsFlextInfraRopeSignaturePatch:
     def test_scope_at_walks_pep701_nested_quotes(self, tmp_path: Path) -> None:
         """Rope resolves scope when an f-string expression reuses quote style."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo"
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         module_path = package_root / "quoted.py"
         source = (
@@ -105,7 +111,9 @@ class TestsFlextInfraRopeSignaturePatch:
 
         with FlextInfraRopeWorkspace.open_workspace(repository_root) as rope:
             pymodule = u.Infra.build_string_module(
-                rope.rope_project, source, resource=rope.resource(module_path)
+                rope.rope_project,
+                source,
+                resource=rope.resource(module_path),
             )
             scope = u.Infra.scope_at(pymodule, source.index("values["))
 
@@ -117,7 +125,9 @@ class TestsFlextInfraRopeSignaturePatch:
     def test_rename_writes_pep701_nested_quote_expression(self, tmp_path: Path) -> None:
         """Rope preserves f-string fragments while writing a renamed AST child."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo"
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         module_path = package_root / "quoted_rename.py"
         source = (
@@ -150,7 +160,9 @@ class TestsFlextInfraRopeSignaturePatch:
     def test_rename_writes_generator_inside_format_spec(self, tmp_path: Path) -> None:
         """Rope patches generator scopes nested in an f-string format spec."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo"
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         module_path = package_root / "format_spec.py"
         source = (

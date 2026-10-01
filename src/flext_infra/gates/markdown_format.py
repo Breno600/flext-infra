@@ -50,7 +50,9 @@ class FlextInfraMarkdownFormatGate(FlextInfraMarkdownGateBase):
 
     @override
     def check(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
         """Run prettier --check only when markdown files exist."""
         started = time.monotonic()
@@ -75,7 +77,9 @@ class FlextInfraMarkdownFormatGate(FlextInfraMarkdownGateBase):
         return super().check(project_dir, ctx)
 
     def _binary_missing_result(
-        self, project_dir: Path, started: float
+        self,
+        project_dir: Path,
+        started: float,
     ) -> m.Infra.GateExecution:
         """A missing provisioned binary is a tool error, never a clean pass."""
         return self._build_single_issue_result(
@@ -91,7 +95,10 @@ class FlextInfraMarkdownFormatGate(FlextInfraMarkdownGateBase):
 
     @override
     def _build_check_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        check_dirs: t.StrSequence,
     ) -> t.StrSequence:
         """Build the read-only ``prettier --check`` pass."""
         _ = ctx
@@ -105,7 +112,10 @@ class FlextInfraMarkdownFormatGate(FlextInfraMarkdownGateBase):
 
     @override
     def _build_fix_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, targets: t.StrSequence
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        targets: t.StrSequence,
     ) -> t.StrSequence:
         """Build the single mutating pass: ``prettier --write``."""
         _ = ctx
@@ -119,7 +129,10 @@ class FlextInfraMarkdownFormatGate(FlextInfraMarkdownGateBase):
 
     @override
     def _parse_check_output(
-        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        result: p.Cli.CommandOutput,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
         """Parse prettier output: one repairable finding per unformatted file."""
         _ = project_dir, ctx
@@ -135,7 +148,10 @@ class FlextInfraMarkdownFormatGate(FlextInfraMarkdownGateBase):
             if (match := c.Infra.MARKDOWN_FORMAT_RE.match(line.strip()))
         ]
         return self._finalize_parse_result(
-            result, project_dir, issues, c.Infra.PRETTIER_BINARY
+            result,
+            project_dir,
+            issues,
+            c.Infra.PRETTIER_BINARY,
         )
 
 

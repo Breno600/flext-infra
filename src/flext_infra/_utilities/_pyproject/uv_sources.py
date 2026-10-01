@@ -18,13 +18,15 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesPyprojectUvSources(
-    FlextInfraUtilitiesPyprojectRequirements, FlextInfraUtilitiesPyprojectSession
+    FlextInfraUtilitiesPyprojectRequirements,
+    FlextInfraUtilitiesPyprojectSession,
 ):
     """Render the conform-owned ``[tool.uv]`` keys of one pyproject document."""
 
     @classmethod
     def _document_requirement_lines(
-        cls, document: t.Cli.TomlDocument
+        cls,
+        document: t.Cli.TomlDocument,
     ) -> p.Result[list[str]]:
         """Collect every declared requirement line of one pyproject document."""
         payload = u.Cli.toml_as_mapping(document)
@@ -43,7 +45,10 @@ class FlextInfraUtilitiesPyprojectUvSources(
 
     @classmethod
     def active_session_requirements(
-        cls, document: t.Cli.TomlDocument, *, environment: t.StrMapping
+        cls,
+        document: t.Cli.TomlDocument,
+        *,
+        environment: t.StrMapping,
     ) -> t.VariadicTuple[str]:
         """Read strictly parsed requirements active on the consumer interpreter."""
         return tuple(
@@ -51,7 +56,8 @@ class FlextInfraUtilitiesPyprojectUvSources(
             for item in cls._document_requirement_lines(document).unwrap()
             if (
                 active := FlextInfraUtilitiesDependencies.active_requirement(
-                    item, environment=environment
+                    item,
+                    environment=environment,
                 )
             )
             is not None
@@ -63,7 +69,6 @@ class FlextInfraUtilitiesPyprojectUvSources(
         document: t.Cli.TomlDocument,
         *,
         resolution: m.Infra.UvResolutionSpec,
-        candidate_sources: t.StrMapping,
     ) -> p.Result[bool]:
         """Render the conform-owned ``[tool.uv]`` keys and drop workspace sources.
 
@@ -102,7 +107,9 @@ class FlextInfraUtilitiesPyprojectUvSources(
         )
         if retained_constraints:
             u.Cli.toml_sync_string_list(
-                uv, "constraint-dependencies", retained_constraints
+                uv,
+                "constraint-dependencies",
+                retained_constraints,
             )
         else:
             u.Cli.toml_remove_key_if_present(uv, "constraint-dependencies")
@@ -135,12 +142,13 @@ class FlextInfraUtilitiesPyprojectUvSources(
                 {
                     key: value
                     for key, value in item.model_dump(
-                        mode="json", exclude_none=True
+                        mode="json",
+                        exclude_none=True,
                     ).items()
                     if key != "project"
                 }
                 for item in resolution.exclude_dependencies
-            ])
+            ]),
         )
         if exclude_payload:
             u.Cli.toml_sync_value(uv, "exclude-dependencies", exclude_payload)
@@ -171,7 +179,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
             values: list[str] = []
             for group in raw.values():
                 values.extend(
-                    FlextInfraUtilitiesPyprojectUvSources.raw_requirement_values(group)
+                    FlextInfraUtilitiesPyprojectUvSources.raw_requirement_values(group),
                 )
             return values
         if isinstance(raw, (list, tuple)):

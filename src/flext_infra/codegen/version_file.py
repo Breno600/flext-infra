@@ -103,7 +103,8 @@ class FlextInfraCodegenVersionFile(FlextInfraCodegenExecutionBase[bool]):
                 policy="full",
             )
             write_result = FlextInfraMisePublication.publish_file_plan(
-                planned, phase="version-file"
+                planned,
+                phase="version-file",
             )
             if write_result.failure:
                 return r[bool].from_failure(write_result)

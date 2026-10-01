@@ -22,7 +22,9 @@ class FlextInfraUtilitiesDocsGuidesMixin:
 
     @staticmethod
     def docs_project_guide_content(
-        content: str, project_name: str, guide_name: str
+        content: str,
+        project_name: str,
+        guide_name: str,
     ) -> str:
         """Render a member guide with explicit source and regeneration ownership."""
         lines = content.splitlines()
@@ -80,7 +82,7 @@ class FlextInfraUtilitiesDocsGuidesMixin:
             return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].ok(())
         if not scope.path.is_relative_to(repository_root):
             return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].fail(
-                f"docs guide scope escapes repository {repository_root}: {scope.path}"
+                f"docs guide scope escapes repository {repository_root}: {scope.path}",
             )
         sources: MutableMapping[Path, str] = {}
         destinations: MutableMapping[Path, str] = {}
@@ -94,7 +96,7 @@ class FlextInfraUtilitiesDocsGuidesMixin:
                 continue
             if state.content is None:
                 return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].fail(
-                    f"docs guide source is absent: {path}"
+                    f"docs guide source is absent: {path}",
                 )
             content = state.content.decode(c.Cli.ENCODING_DEFAULT)
             if path.parent == source_root:
@@ -126,7 +128,9 @@ class FlextInfraUtilitiesDocsGuidesMixin:
                 owned.add(path)
                 continue
             ownership = FlextInfraUtilitiesDocsGuidesMixin.docs_project_guide_content(
-                "", scope.name, path.name
+                "",
+                scope.name,
+                path.name,
             ).partition("\n\n")[0]
             previous_ownership = ownership.replace("`<workspace-root>/", "`")
             legacy_ownership = (
@@ -146,7 +150,7 @@ class FlextInfraUtilitiesDocsGuidesMixin:
         loaded = u.Infra.workspace_spec_load(repository_root)
         if loaded.failure:
             return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
-                loaded
+                loaded,
             )
         effective_verbs = (
             *config.Infra.codegen.make.verbs,
@@ -156,31 +160,35 @@ class FlextInfraUtilitiesDocsGuidesMixin:
             destination = destination_root / source_path.name
             if destination in destinations and destination not in owned:
                 return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].fail(
-                    f"canonical guide collides with protected custom guide: {destination}"
+                    f"canonical guide collides with protected custom guide: {destination}",
                 )
             relative_path = source_path.relative_to(repository_root).as_posix()
             issues = FlextInfraUtilitiesDocsCommandContractMixin.docs_command_contract_content_issues(
-                source, relative_path=relative_path, effective_verbs=effective_verbs
+                source,
+                relative_path=relative_path,
+                effective_verbs=effective_verbs,
             )
             if issues:
                 first = issues[0]
                 msg = f"{first.file}: {first.message}"
                 raise ValueError(msg)
             rendered = FlextInfraUtilitiesDocsGuidesMixin.docs_project_guide_content(
-                source, scope.name, source_path.name
+                source,
+                scope.name,
+                source_path.name,
             )
             artifacts.append((
                 scope.path,
                 destination,
                 FlextInfraUtilitiesDocsGuidesMixin.docs_sanitize_internal_anchor_links(
-                    rendered
+                    rendered,
                 ),
             ))
         artifacts.extend(
             (scope.path, path, None) for path in sorted(owned - expected_paths)
         )
         return FlextInfraUtilitiesDocsGeneratePlanMixin.docs_normalize_artifacts(
-            artifacts
+            artifacts,
         )
 
 

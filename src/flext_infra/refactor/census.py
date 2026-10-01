@@ -47,10 +47,12 @@ class FlextInfraRefactorCensus(
     """Generalized Rope-only census service for Python objects across the workspace."""
 
     json_output: Annotated[
-        str | None, m.Field(description="Path to write JSON report")
+        str | None,
+        m.Field(description="Path to write JSON report"),
     ] = None
     impact_map_output: Annotated[
-        str | None, m.Field(description="Path to write dry-run impact map JSON")
+        str | None,
+        m.Field(description="Path to write dry-run impact map JSON"),
     ] = None
     kinds: Annotated[
         t.StrSequence | None,
@@ -63,11 +65,12 @@ class FlextInfraRefactorCensus(
     families: Annotated[
         t.StrSequence | None,
         m.Field(
-            description="Optional namespace-family filters; repeat --families NAME"
+            description="Optional namespace-family filters; repeat --families NAME",
         ),
     ] = None
     include_local_scopes: Annotated[
-        bool, m.Field(description="Include locals, parameters, and nested scopes")
+        bool,
+        m.Field(description="Include locals, parameters, and nested scopes"),
     ] = True
 
     @property
@@ -141,7 +144,8 @@ class FlextInfraRefactorCensus(
         impact_map_report: m.Infra.WorkspaceReport | None = None
         rope_root = self._rope_root_for_selection()
         with FlextInfraRopeWorkspace.open_workspace(
-            self.root, rope_repository_root=rope_root
+            self.root,
+            rope_repository_root=rope_root,
         ) as rope:
 
             def collect(applied: frozenset[str]) -> m.Infra.WorkspaceReport:
@@ -156,7 +160,7 @@ class FlextInfraRefactorCensus(
                     rope.reload()
                     report = collect(applied)
         finalized_report = report.model_copy(
-            update={"scan_duration_seconds": time.monotonic() - started}
+            update={"scan_duration_seconds": time.monotonic() - started},
         )
         return finalized_report, impact_map_report
 

@@ -19,7 +19,7 @@ _LAZY_IMPORTS = MappingProxyType(
         MappingProxyType({"._fixtures": ("_fixtures",)}),
         alias_groups=MappingProxyType({}),
         sort_keys=False,
-    )
+    ),
 )
 
 install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

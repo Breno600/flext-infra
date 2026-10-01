@@ -17,7 +17,8 @@ if TYPE_CHECKING:
 
 
 class FlextInfraRefactorCensusCollectMixin(
-    FlextInfraRefactorCensusRulesDispatchMixin, FlextInfraRefactorCensusValidateMixin
+    FlextInfraRefactorCensusRulesDispatchMixin,
+    FlextInfraRefactorCensusValidateMixin,
 ):
     """Scan one module (inventory + rules) and assemble the WorkspaceReport."""
 
@@ -42,10 +43,16 @@ class FlextInfraRefactorCensusCollectMixin(
         ) -> str: ...
         @classmethod
         def _lightweight_symbol_index(
-            cls, rope: p.Infra.RopeWorkspaceDsl, file_path: Path
+            cls,
+            rope: p.Infra.RopeWorkspaceDsl,
+            file_path: Path,
         ) -> MutableMapping[str, t.Pair[str, int]]: ...
         def _handle_rope_stage_failure(
-            self, *, file_path: Path, stage: str, exc: BaseException
+            self,
+            *,
+            file_path: Path,
+            stage: str,
+            exc: BaseException,
         ) -> None: ...
         @staticmethod
         def _include_object(
@@ -93,11 +100,13 @@ class FlextInfraRefactorCensusCollectMixin(
                         module.file_path,
                         include_local_scopes=scan_config.include_local_scopes,
                         include_references=scan_config.include_object_references,
-                    )
+                    ),
                 )
             except self._rope_safe_exceptions as exc:
                 self._handle_rope_stage_failure(
-                    file_path=module.file_path, stage="inventory", exc=exc
+                    file_path=module.file_path,
+                    stage="inventory",
+                    exc=exc,
                 )
                 inventory_failed = True
             else:
@@ -128,11 +137,13 @@ class FlextInfraRefactorCensusCollectMixin(
                     objects=module_objects,
                     symbol_index=self._lightweight_symbol_index(rope, module.file_path),
                     scan_config=scan_config,
-                )
+                ),
             )
         except self._rope_safe_exceptions as exc:
             self._handle_rope_stage_failure(
-                file_path=module.file_path, stage="rules", exc=exc
+                file_path=module.file_path,
+                stage="rules",
+                exc=exc,
             )
         else:
             findings.report_projects.add(project)
@@ -160,8 +171,8 @@ class FlextInfraRefactorCensusCollectMixin(
                 findings.report_projects
                 | set(findings.project_objects)
                 | set(findings.project_violations)
-                | set(findings.project_fixes)
-            )
+                | set(findings.project_fixes),
+            ),
         )
         project_reports = tuple(
             self._project_report(

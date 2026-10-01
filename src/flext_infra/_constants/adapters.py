@@ -30,7 +30,7 @@ class FlextInfraConstantsAdapters:
     "Validates MutableMapping[str, InfraValue] for in-place mutation."
 
     STR_MAPPING_ADAPTER: ClassVar[m.TypeAdapter[t.StrMapping]] = m.TypeAdapter(
-        t.StrMapping
+        t.StrMapping,
     )
     "Validates t.StrMapping."
 
@@ -48,7 +48,7 @@ class FlextInfraConstantsAdapters:
     "Validates t.SequenceOf[ContainerDict]."
 
     STR_SEQ_ADAPTER: ClassVar[m.TypeAdapter[t.StrSequence]] = m.TypeAdapter(
-        t.StrSequence
+        t.StrSequence,
     )
     "Validates t.StrSequence."
 

@@ -57,7 +57,8 @@ class TestsFlextInfraPytestRunnerZeroTest:
 
     @pytest.mark.slow
     def test_incremental_run_publishes_receipt_for_zero_test_project(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Make test on a zero-test project exits 0 with typed accounting."""
         project = self._zero_test_project(tmp_path)
@@ -70,17 +71,18 @@ class TestsFlextInfraPytestRunnerZeroTest:
         reports_root = project / cache.reports_directory
         summary = self._latest_summary(reports_root)
         accounting = m.Infra.TestmonRunAccounting.model_validate_json(
-            self._read(summary.parent / "run-accounting.json")
+            self._read(summary.parent / "run-accounting.json"),
         )
         tm.that(accounting.executed_count, eq=0)
         plan = m.Infra.PytestSelectionPlan.model_validate_json(
-            self._read(summary.parent / "selection-plan.json")
+            self._read(summary.parent / "selection-plan.json"),
         )
         tm.that(plan.owns_no_tests, eq=True)
 
     @pytest.mark.slow
     def test_full_run_publishes_receipt_for_zero_test_project(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Make test-full on a zero-test project exits 0 with typed accounting."""
         project = self._zero_test_project(tmp_path)
@@ -93,11 +95,11 @@ class TestsFlextInfraPytestRunnerZeroTest:
         reports_root = project / cache.reports_directory
         summary = self._latest_summary(reports_root)
         plan = m.Infra.PytestSelectionPlan.model_validate_json(
-            self._read(summary.parent / "selection-plan.json")
+            self._read(summary.parent / "selection-plan.json"),
         )
         tm.that(plan.owns_no_tests, eq=True)
         accounting = m.Infra.TestmonRunAccounting.model_validate_json(
-            self._read(summary.parent / "run-accounting.json")
+            self._read(summary.parent / "run-accounting.json"),
         )
         tm.that(accounting.executed_count, eq=0)
 
@@ -110,6 +112,7 @@ class TestsFlextInfraPytestRunnerZeroTest:
     def _latest_summary(reports_root: Path) -> Path:
         """Return the newest bounded report directory's summary receipt."""
         summaries = sorted(
-            reports_root.glob("*/summary.txt"), key=lambda path: path.stat().st_mtime
+            reports_root.glob("*/summary.txt"),
+            key=lambda path: path.stat().st_mtime,
         )
         return summaries[-1]

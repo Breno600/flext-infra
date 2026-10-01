@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 # flext-wkii.17.26 (codex): Keep lazy loading only at the public package root and
 # bind Ruff validation to each target project's real initializer path.
 class FlextInfraCodegenGenerationStandardMixin(
-    FlextInfraCodegenGenerationRenderersMixin
+    FlextInfraCodegenGenerationRenderersMixin,
 ):
     """Render the two canonical generated initializer forms."""
 
@@ -60,7 +60,8 @@ class FlextInfraCodegenGenerationStandardMixin(
         previous_top: str | None = None
         for module in sorted(eager_groups, key=str.lower):
             rendered_module = cls._compact_lazy_module_path(
-                plan.context.current_pkg, module
+                plan.context.current_pkg,
+                module,
             )
             top = rendered_module.split(".", maxsplit=1)[0]
             if previous_top is not None and top != previous_top:
@@ -83,7 +84,8 @@ class FlextInfraCodegenGenerationStandardMixin(
 
     @classmethod
     def _lazy_groups(
-        cls, plan: m.Infra.LazyInitPlan
+        cls,
+        plan: m.Infra.LazyInitPlan,
     ) -> t.Triple[
         t.SequenceOf[t.StrSequencePair],
         t.SequenceOf[t.StrPairSequencePair],
@@ -163,9 +165,8 @@ class FlextInfraCodegenGenerationStandardMixin(
     def _lazy_module_argument_inline(groups: t.SequenceOf[t.StrSequencePair]) -> str:
         """Render the module mapping as one indent-free call argument.
 
-        Ruff (skip-magic-trailing-comma) joins any mapping that fits the line,
-        whatever its entry count, so the inline form covers every group count;
-        the caller keeps it only when the width fits.
+        The caller keeps the inline form only when its line fits; it carries no
+        trailing comma inside the braces, so Ruff keeps it joined.
         """
         entries: t.MutableSequenceOf[str] = []
         for module, names in groups:
@@ -190,29 +191,9 @@ class FlextInfraCodegenGenerationStandardMixin(
         return f"alias_groups=MappingProxyType({{{', '.join(entries)}}})"
 
     @classmethod
-    def _format_lazy_call_arguments(
-        cls,
-        module_groups: t.SequenceOf[t.StrSequencePair],
-        alias_groups: t.SequenceOf[t.StrPairSequencePair],
-    ) -> str:
-        """Join the lazy-import call arguments on one line when they fit.
-
-        The project fixer flattens a call whose joined arguments fit on one
-        continuation line, so an always-exploded render oscillates between
-        ``make gen`` and ``make fix`` (the fleet-wide dirty ``__init__.py``
-        residue). Emitting the joined form keeps the projection a fixed
-        point of both tools; 8 is the argument continuation indent.
-        """
-        module_argument = cls._lazy_module_argument_inline(module_groups)
-        alias_argument = cls._lazy_alias_argument_inline(alias_groups)
-        joined = f"{module_argument}, {alias_argument}, sort_keys=False"
-        if 8 + len(joined) > config.Infra.tooling.tools.ruff.line_length:
-            return ""
-        return joined
-
-    @classmethod
     def _format_lazy_module_mapping(
-        cls, groups: t.SequenceOf[t.StrSequencePair]
+        cls,
+        groups: t.SequenceOf[t.StrSequencePair],
     ) -> str:
         """Render the immutable module mapping without a formatter subprocess."""
         compact = f"        {cls._lazy_module_argument_inline(groups)},"
@@ -225,14 +206,15 @@ class FlextInfraCodegenGenerationStandardMixin(
                     module,
                     tuple(f'"{name}"' for name in names),
                     trailing=len(groups) > 1,
-                )
+                ),
             )
         lines.append("        }),")
         return "\n".join(lines)
 
     @classmethod
     def _format_lazy_alias_mapping(
-        cls, groups: t.SequenceOf[t.StrPairSequencePair]
+        cls,
+        groups: t.SequenceOf[t.StrPairSequencePair],
     ) -> str:
         """Render the immutable alias mapping without a formatter subprocess."""
         compact = f"        {cls._lazy_alias_argument_inline(groups)},"
@@ -248,7 +230,7 @@ class FlextInfraCodegenGenerationStandardMixin(
                         for export_name, attr_name in pairs
                     ),
                     trailing=len(groups) > 1,
-                )
+                ),
             )
         lines.append("        }),")
         return "\n".join(lines)
@@ -283,7 +265,7 @@ class FlextInfraCodegenGenerationStandardMixin(
     def _project_first_party_names(project_root: Path) -> t.StrSequence:
         """Read strict Ruff policy, deriving namespaces only when it is absent."""
         project_payload = u.Infra.pyproject_payload(
-            (project_root / c.PYPROJECT_FILENAME).resolve()
+            (project_root / c.PYPROJECT_FILENAME).resolve(),
         )
         projected: t.JsonValue | None = project_payload.get("tool")
         for section in ("ruff", "lint", "isort", "known-first-party"):
@@ -349,7 +331,7 @@ class FlextInfraCodegenGenerationStandardMixin(
                 child_packages=plan.child_packages_for_lazy,
                 local_package_root=current_pkg,
                 root_names=type_checking_root_names,
-            )
+            ),
         )
         runtime_import_lines = cls._runtime_import_lines(plan)
         return m.Infra.LazyInitRootRender(
@@ -368,24 +350,22 @@ class FlextInfraCodegenGenerationStandardMixin(
                         if name in lazy_map or name in plan.eager_dunders
                     ),
                     lazy_map,
-                )
+                ),
             ),
             lazy_module_mapping=cls._format_lazy_module_mapping(lazy_module_groups),
             lazy_alias_mapping=cls._format_lazy_alias_mapping(lazy_alias_groups),
-            lazy_call_arguments=cls._format_lazy_call_arguments(
-                lazy_module_groups, lazy_alias_groups
-            ),
         )
 
     @classmethod
     def _static_context(
-        cls, plan: m.Infra.LazyInitPlan
+        cls,
+        plan: m.Infra.LazyInitPlan,
     ) -> m.Infra.StaticPackageInitRender:
         """Build a side-effect-free private or non-production initializer."""
         return m.Infra.StaticPackageInitRender(
             autogen_header=c.Infra.AUTOGEN_HEADER,
             docstring=cls._format_root_package_docstring(
-                plan.context.current_pkg.rsplit(".", maxsplit=1)[-1]
+                plan.context.current_pkg.rsplit(".", maxsplit=1)[-1],
             ),
         )
 

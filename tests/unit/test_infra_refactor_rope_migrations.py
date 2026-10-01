@@ -31,7 +31,9 @@ class TestsFlextInfraInfraRefactorRopeMigrations:
         file_path.parent.mkdir(parents=True, exist_ok=True)
         file_path.write_text(source, encoding="utf-8")
         updated, changes = u.Infra.apply_transformer_to_source(
-            source, file_path, transform
+            source,
+            file_path,
+            transform,
         )
         return updated, list(changes)
 
@@ -44,7 +46,10 @@ class TestsFlextInfraInfraRefactorRopeMigrations:
             import_symbol_renames={},
         )
         result, changes = self._apply_transformer(
-            tmp_path, "demo.py", source, transformer.transform
+            tmp_path,
+            "demo.py",
+            source,
+            transformer.transform,
         )
         tm.that(result, has="new_module")
         tm.that(result, lacks="old_module")
@@ -59,7 +64,10 @@ class TestsFlextInfraInfraRefactorRopeMigrations:
             import_symbol_renames={"OldName": "NewName"},
         )
         result, _ = self._apply_transformer(
-            tmp_path, "demo.py", source, transformer.transform
+            tmp_path,
+            "demo.py",
+            source,
+            transformer.transform,
         )
         tm.that(result, has="NewName")
         tm.that(result, lacks="OldName")
@@ -73,7 +81,10 @@ class TestsFlextInfraInfraRefactorRopeMigrations:
             import_symbol_renames={"Alpha": "Beta"},
         )
         result, _ = self._apply_transformer(
-            tmp_path, "demo.py", source, transformer.transform
+            tmp_path,
+            "demo.py",
+            source,
+            transformer.transform,
         )
         tm.that(result, has="Beta")
         tm.that(result, lacks="Alpha")
@@ -87,7 +98,10 @@ class TestsFlextInfraInfraRefactorRopeMigrations:
             import_symbol_renames={"OldName": "NewName"},
         )
         result, changes = self._apply_transformer(
-            tmp_path, "demo.py", source, transformer.transform
+            tmp_path,
+            "demo.py",
+            source,
+            transformer.transform,
         )
         tm.that(result, eq=source)
         tm.that(changes, eq=[])
@@ -115,14 +129,18 @@ class TestsFlextInfraInfraRefactorRopeMigrations:
             import_symbol_renames={"OldName": "NewName"},
         )
         rope_result, rope_changes = self._apply_transformer(
-            tmp_path, "demo.py", source, transformer.transform
+            tmp_path,
+            "demo.py",
+            source,
+            transformer.transform,
         )
         text_result, text_changes = transformer.apply_to_source(source)
         tm.that(text_result, eq=rope_result)
         tm.that(text_changes, eq=rope_changes)
 
     def test_apply_transformer_to_source_restores_disk_state(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Temporary rope sync must not leak source updates to the real file."""
         file_path = tmp_path / "src" / "demo.py"
@@ -137,7 +155,9 @@ class TestsFlextInfraInfraRefactorRopeMigrations:
         )
 
         updated, changes = u.Infra.apply_transformer_to_source(
-            staged_source, file_path, transformer.transform
+            staged_source,
+            file_path,
+            transformer.transform,
         )
 
         tm.that(updated, has="NewName")

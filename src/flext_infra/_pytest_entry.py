@@ -41,7 +41,7 @@ class FlextInfraPytestEntry:
         from flext_infra.validate.pytest_runner import FlextInfraPytestRunner
 
         runner = FlextInfraPytestRunner.from_environment(
-            started_at_monotonic=cls._STARTED_AT_MONOTONIC
+            started_at_monotonic=cls._STARTED_AT_MONOTONIC,
         )
         if mode == "coverage":
             return runner.execute_coverage().unwrap()

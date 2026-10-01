@@ -43,13 +43,14 @@ class TestsFlextInfraLooseObjectCharacterization:
                     parse_failures=parse_failures,
                     project_root=project,
                     project_name="demo-project",
-                )
+                ),
             )
         return {(v.kind, v.name) for v in violations}
 
     def test_flags_loose_final_constant(self, tmp_path: Path) -> None:
         kinds = self._kinds_for(
-            tmp_path, "from __future__ import annotations\n\nTIMEOUT = 30\n"
+            tmp_path,
+            "from __future__ import annotations\n\nTIMEOUT = 30\n",
         )
 
         tm.that(("constant", "TIMEOUT") in kinds, eq=True)
@@ -74,7 +75,8 @@ class TestsFlextInfraLooseObjectCharacterization:
 
     def test_flags_loose_type_alias(self, tmp_path: Path) -> None:
         kinds = self._kinds_for(
-            tmp_path, "from __future__ import annotations\n\ntype Alias = int\n"
+            tmp_path,
+            "from __future__ import annotations\n\ntype Alias = int\n",
         )
 
         tm.that(any(kind == "typealias" for kind, _ in kinds), eq=True)

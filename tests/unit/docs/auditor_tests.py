@@ -51,7 +51,9 @@ class TestsFlextInfraAuditor:
         return _is_external
 
     def test_valid_scope_returns_success(
-        self, auditor: FlextInfraDocAuditor, tmp_path: Path
+        self,
+        auditor: FlextInfraDocAuditor,
+        tmp_path: Path,
     ) -> None:
         workspace = u.Tests.create_docs_workspace(tmp_path)
         result = auditor.audit(workspace)
@@ -96,7 +98,8 @@ class TestsFlextInfraAuditor:
         # owner with exactly the declared members rather than a bare temp
         # directory that happens to carry a Beads file.
         workspace = u.Tests.create_docs_workspace(
-            tmp_path, project_names=tuple(projects or ())
+            tmp_path,
+            project_names=tuple(projects or ()),
         )
         # The output directory is resolved relative to each project root, so a
         # custom name is passed through as the relative name it is. Building an
@@ -129,7 +132,10 @@ class TestsFlextInfraAuditor:
         ],
     )
     def test_normalize_link(
-        self, normalize_link: Callable[[str], str], raw: str, expected: str
+        self,
+        normalize_link: Callable[[str], str],
+        raw: str,
+        expected: str,
     ) -> None:
         tm.that(normalize_link(raw), eq=expected)
 
@@ -155,7 +161,10 @@ class TestsFlextInfraAuditor:
 
     @pytest.mark.parametrize("scheme", sorted(c.Infra.DOCS_EXTERNAL_SCHEMES))
     def test_permitted_external_schemes_are_preserved(
-        self, *, is_external: Callable[[str], bool], scheme: str
+        self,
+        *,
+        is_external: Callable[[str], bool],
+        scheme: str,
     ) -> None:
         target = (
             f"{scheme}://example.invalid"
@@ -174,12 +183,17 @@ class TestsFlextInfraAuditor:
         ],
     )
     def test_insecure_documentation_urls_fail_fast(
-        self, *, is_external: Callable[[str], bool], target: str
+        self,
+        *,
+        is_external: Callable[[str], bool],
+        target: str,
     ) -> None:
         with pytest.raises(ValueError, match="use HTTPS"):
             is_external(target)
 
     def test_repository_paths_are_not_external(
-        self, *, is_external: Callable[[str], bool]
+        self,
+        *,
+        is_external: Callable[[str], bool],
     ) -> None:
         tm.that(is_external("path/to/file.md"), eq=False)

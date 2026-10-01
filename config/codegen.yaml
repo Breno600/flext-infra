@@ -788,11 +788,9 @@ Infra:
     # NOTE(mro-0wuz, epic mro-hzox): declarative project-layout SSOT consumed by
     # the layout engine (codegen/layout.py) and the layout quality gate. Every
     # move/archive/gitignore decision derives from this section — the engine
-    # carries zero hardcoded layout knowledge. severity=warning keeps the gate
-    # report-only; flipping to error makes violations fail the check pipeline.
+    # carries zero hardcoded layout knowledge. Every violation fails the check.
     layout:
       version: 1
-      severity: warning
       # Archive-not-delete root: archived entries land in <archive_root>/<project>/.
       archive_root: .bkp
       docs_target: docs

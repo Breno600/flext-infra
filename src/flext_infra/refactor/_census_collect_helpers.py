@@ -117,7 +117,8 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
 
     @staticmethod
     def _project_name_for_module(
-        module: m.Infra.RopeModuleIndexEntry, convention: m.Infra.RopeModuleConvention
+        module: m.Infra.RopeModuleIndexEntry,
+        convention: m.Infra.RopeModuleConvention,
     ) -> str:
         """Project name for a module entry."""
         layout = convention.project_layout
@@ -171,7 +172,7 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
                 module.project_root.resolve()
                 for module in modules
                 if module.project_root is not None
-            })
+            }),
         )
         entries: list[m.Infra.RopeModuleIndexEntry] = []
         for root in roots:
@@ -212,7 +213,10 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
         )
 
     def _collect_report(
-        self, rope: p.Infra.RopeWorkspaceDsl, *, applied: frozenset[str]
+        self,
+        rope: p.Infra.RopeWorkspaceDsl,
+        *,
+        applied: frozenset[str],
     ) -> m.Infra.WorkspaceReport:
         """Scan selected modules then assemble the workspace census report."""
         project_names = self.project_names
@@ -231,10 +235,11 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
             selected_kinds=frozenset(kind_names) if kind_names else None,
             selected_rules=selected_rules,
             collect_object_inventory=self._should_collect_object_inventory(
-                rule_names, selected_rules=selected_rules
+                rule_names,
+                selected_rules=selected_rules,
             ),
             include_object_references=self._should_collect_object_references(
-                rule_names
+                rule_names,
             ),
             include_local_scopes=include_local_scopes,
             applied=applied,
@@ -246,7 +251,9 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
             report_projects=set(),
         )
         for module in self._modules_for_rules(
-            rope, project_names=project_names, rule_names=rule_names
+            rope,
+            project_names=project_names,
+            rule_names=rule_names,
         ):
             self._scan_module(rope, module, scan_config, findings=findings)
         return self._assemble_report(rope, findings=findings, scan_config=scan_config)

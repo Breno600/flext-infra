@@ -40,14 +40,17 @@ class FlextInfraApplyRenames:
         occurrences = 0
         with u.Infra.open_project(root, project_roots=roots) as project:
             symbols = FlextInfraRenameSymbols.plan(
-                project, python, pairs, params.bindings
+                project,
+                python,
+                pairs,
+                params.bindings,
             )
             for path, source in sources.items():
                 edits = list(symbols.get(path, ()))
                 if path in python:
                     if params.python_documentation:
                         edits.extend(
-                            FlextInfraRenameSources.documentation_edits(source, pairs)
+                            FlextInfraRenameSources.documentation_edits(source, pairs),
                         )
                 else:
                     edits.extend(FlextInfraRenameSources.text_edits(source, pairs))
@@ -67,20 +70,21 @@ class FlextInfraApplyRenames:
                         desired_content=desired if edits else None,
                         desired_mode=inventory[path].mode,
                         changes=("CSV campaign",) if edits else (),
-                    )
+                    ),
                 )
         return tuple(plans), occurrences
 
     @classmethod
     def run(
-        cls, params: m.Infra.ApplyRenamesInput
+        cls,
+        params: m.Infra.ApplyRenamesInput,
     ) -> p.Result[m.Infra.ApplyRenamesReport]:
         """Apply one declared campaign; check and verification share the planner."""
         roots = tuple(sorted({Path(value).resolve() for value in params.roots}))
         for root in roots:
             if not root.is_dir():
                 return r[m.Infra.ApplyRenamesReport].fail(
-                    f"rename root is not a directory: {root}"
+                    f"rename root is not a directory: {root}",
                 )
         if (
             not params.bindings
@@ -88,16 +92,16 @@ class FlextInfraApplyRenames:
             and not params.python_documentation
         ):
             return r[m.Infra.ApplyRenamesReport].fail(
-                "rename campaign has no declared symbol or text surfaces"
+                "rename campaign has no declared symbol or text surfaces",
             )
         csv_path = Path(params.csv).resolve()
         driver = u.Cli.atomic_read_binary_file_state(csv_path, required=True).unwrap()
         if driver.content is None:
             return r[m.Infra.ApplyRenamesReport].fail(
-                f"rename CSV disappeared: {csv_path}"
+                f"rename CSV disappeared: {csv_path}",
             )
         pairs = FlextInfraRenameSources.pairs(
-            driver.content.decode(c.Cli.ENCODING_DEFAULT)
+            driver.content.decode(c.Cli.ENCODING_DEFAULT),
         )
         plans, pending = cls._plan(params, roots, pairs)
         changed: t.SequenceOf[Path] = ()
@@ -106,17 +110,18 @@ class FlextInfraApplyRenames:
             def verify() -> p.Result[bool]:
                 nonlocal pending
                 current_driver = u.Cli.atomic_read_binary_file_state(
-                    csv_path, required=True
+                    csv_path,
+                    required=True,
                 ).unwrap()
                 if current_driver != driver:
                     return r[bool].fail(
-                        f"rename campaign driver changed during publication: {csv_path}"
+                        f"rename campaign driver changed during publication: {csv_path}",
                     )
                 _fresh, remaining = cls._plan(params, roots, pairs)
                 pending = remaining
                 if remaining:
                     return r[bool].fail(
-                        f"CSV campaign post-scan found {remaining} pending source edits"
+                        f"CSV campaign post-scan found {remaining} pending source edits",
                     )
                 return r[bool].ok(True)
 
@@ -147,6 +152,30 @@ class FlextInfraApplyRenames:
             applied=params.apply,
         )
         return r[m.Infra.ApplyRenamesReport].ok(report)
+
+    @staticmethod
+    def render_text(report: m.Infra.ApplyRenamesReport) -> str:
+        """Report native published paths and actual pending source edit spans."""
+        return (
+            f"{report.label}: {report.files_changed} published file(s), "
+            f"{report.occurrences} pending source edit(s), "
+            f"{report.files_scanned} scanned file(s)"
+        )
+
+    @classmethod
+    def execute_command(
+        cls,
+        params: m.Infra.ApplyRenamesInput,
+    ) -> p.Result[t.Cli.ResultValue]:
+        """Fail the public command whenever the observed scan retains work."""
+        result = cls.run(params)
+        if result.failure:
+            return r[t.Cli.ResultValue].from_failure(result)
+        if result.value.occurrences:
+            return r[t.Cli.ResultValue].fail(
+                f"{result.value.occurrences} pending source edits",
+            )
+        return r[t.Cli.ResultValue].ok(True)
 
 
 __all__: list[str] = ["FlextInfraApplyRenames"]
