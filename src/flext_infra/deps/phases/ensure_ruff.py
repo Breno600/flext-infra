@@ -149,16 +149,11 @@ class FlextInfraEnsureRuffConfigPhase:
         first_party: t.StrSequence,
         stale_patterns: t.StrSequence,
         per_file_ignores: t.MappingKV[str, t.StrSequence],
-        analysis_exclusions: t.StrSequence | None,
         generated_python_roots: t.StrSequence,
     ) -> m.Infra.DepsToml.PhaseConfig:
         """Build the canonical Ruff phase for one project path."""
         ruff_cfg = self._tool_config.tools.ruff
-        workspace_exclusions = (
-            self._workspace_exclusion_globs(path.parent)
-            if analysis_exclusions is None
-            else analysis_exclusions
-        )
+        workspace_exclusions = self._workspace_exclusion_globs(path.parent)
         # Models stay declaration-only; the
         # Ruff phase owns the derived union consumed by emitted tool config.
         effective_ignore = sorted({
@@ -318,7 +313,6 @@ class FlextInfraEnsureRuffConfigPhase:
         payload: t.MutableJsonMapping,
         *,
         path: Path,
-        analysis_exclusions: t.StrSequence | None = None,
         generated_python_roots: t.StrSequence = (),
     ) -> t.StrSequence:
         """Apply canonical Ruff settings directly to one normalized payload."""
@@ -345,7 +339,6 @@ class FlextInfraEnsureRuffConfigPhase:
                         if pattern not in effective_ignores
                     ],
                     per_file_ignores=effective_ignores,
-                    analysis_exclusions=analysis_exclusions,
                     generated_python_roots=generated_python_roots,
                 ),
             )
