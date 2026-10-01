@@ -535,12 +535,18 @@ def mod_workspace(tmp_path: Path) -> Path:
     )
     # A declared distribution owns a package: resolving the package name from
     # `[project].name` alone is impossible for a `flext-` distribution, so a
-    # fixture without `src/<pkg>/` is not the project it claims to be.
-    package_dir = (
-        workspace / c.Infra.DEFAULT_SRC_DIR / (project.project.name.replace("-", "_"))
-    )
+    # fixture without `src/<pkg>/` is not the project it claims to be. The
+    # package follows the fixture's own declared name: naming it after the
+    # real project would shadow the installed flext_infra for Rope, and every
+    # packaged campaign binding (flext_infra.c / .t) would lose its owner.
+    package_dir = workspace / c.Infra.DEFAULT_SRC_DIR / workspace.name
     tm.ok(u.Cli.ensure_dir(package_dir))
-    tm.ok(u.Cli.atomic_write_text_file(package_dir / c.Infra.INIT_PY, ""))
+    tm.ok(
+        u.Cli.atomic_write_text_file(
+            package_dir / c.Infra.INIT_PY,
+            '"""Public refactor-mod fixture package."""\n\nfrom __future__ import annotations\n',
+        )
+    )
     tm.ok(
         u.Cli.atomic_write_text_file(
             workspace / "sample.py",
@@ -578,14 +584,6 @@ def mod_workspace(tmp_path: Path) -> Path:
                 "\n"
                 "u.Infra.serialization_lock_execute(paths, timeout)\n"
             ),
-        )
-    )
-    package_dir = workspace / "src" / project.project.name.replace("-", "_")
-    tm.ok(u.Cli.ensure_dir(package_dir))
-    tm.ok(
-        u.Cli.atomic_write_text_file(
-            package_dir / c.Infra.INIT_PY,
-            '"""Public refactor-mod fixture package."""\n\nfrom __future__ import annotations\n',
         )
     )
     u.Tests.initialize_git_repo(workspace)

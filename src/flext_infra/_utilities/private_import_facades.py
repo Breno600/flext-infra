@@ -114,6 +114,14 @@ class FlextInfraUtilitiesPrivateImportFacades:
                     )
                 for imported in imported_modules:
                     reverse.setdefault(imported, set()).add(module)
+                    # Importing a package's child can expose a name exported
+                    # by the parent package. Keep that importer reachable when
+                    # the requested private import names the package itself.
+                    parent = imported.rpartition(".")[0]
+                    while parent:
+                        if parent in sources and sources[parent][1]:
+                            reverse.setdefault(parent, set()).add(module)
+                        parent = parent.rpartition(".")[0]
         reachable = {
             node.module
             for statement in statements

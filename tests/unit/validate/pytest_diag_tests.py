@@ -8,7 +8,7 @@ import pytest
 from defusedxml import ElementTree as DefusedET
 from flext_tests import tm
 
-from flext_infra import FlextInfraPytestDiagExtractor, c
+from flext_infra import FlextInfraPytestDiagExtractor, c, t
 from tests import m
 
 if TYPE_CHECKING:
@@ -47,14 +47,7 @@ class TestsFlextInfraPytestDiag:
         )
 
     @staticmethod
-    def _identity(
-        category: str,
-        message: str,
-        *,
-        strict: bool = False,
-        suspended: bool = False,
-        module: str = "consumer",
-    ) -> str:
+    def _identity(category: str, message: str, *, module: str = "consumer") -> str:
         return (
             m.Infra.PytestWarningEvent(
                 category=category,
@@ -63,8 +56,6 @@ class TestsFlextInfraPytestDiag:
                 filename="test_case.py",
                 lineno=10,
                 message=message,
-                enforcement_strict=strict,
-                suspended=suspended,
             ).model_dump_json()
             + "\n"
         )
@@ -234,8 +225,6 @@ class TestsFlextInfraPytestDiag:
         tm.that(report.error_count, eq=0)
         tm.that(report.warning_lines, length_gt=0)
         tm.that(report.warning_count, eq=1)
-        tm.that(report.blocking_warning_count, eq=1)
-        tm.that(report.suspended_warning_count, eq=0)
 
     def test_count_each_custom_warning_without_a_terminal_summary(
         self, tmp_path: Path
@@ -262,7 +251,6 @@ class TestsFlextInfraPytestDiag:
         )
 
         tm.that(report.warning_count, eq=2)
-        tm.that(report.blocking_warning_count, eq=2)
         tm.that(report.warning_lines[0], contains="first\nsecond")
 
     def test_extract_invalid_duration_preserves_value_error(
@@ -319,11 +307,10 @@ class TestsFlextInfraPytestDiag:
         tm.that((tmp_path / "slow.txt").read_text(), contains="TC::test_fail")
         tm.that((tmp_path / "skips.txt").read_text(), contains="TC::test_skip")
 
-    @pytest.mark.parametrize("strict", [False, True])
-    def test_recorded_warning_decision_retains_the_occurrence(
-        self, tmp_path: Path, *, strict: bool
+    def test_mro_violation_warning_is_counted_like_every_warning(
+        self, tmp_path: Path
     ) -> None:
-        """The configured visible category remains counted without blocking."""
+        """An MRO enforcement warning is one counted occurrence with its identity."""
         junit = tmp_path / "junit.xml"
         junit.write_text('<testsuites><testsuite name="t"/></testsuites>')
         log = tmp_path / "pytest.log"
@@ -334,19 +321,17 @@ class TestsFlextInfraPytestDiag:
             log,
             events='{"$report_type":"WarningMessage",'
             f'"category":"{category}","filename":"test_case.py",'
-            '"lineno":10,"message":"suspended policy evidence"}\n',
+            '"lineno":10,"message":"enforcement evidence"}\n',
             identities=self._identity(
                 category,
-                "suspended policy evidence",
-                strict=strict,
-                suspended=not strict,
+                "enforcement evidence",
                 module=c.FlextSmellViolation.__module__,
             ),
         )
         report = tm.ok(extractor.extract(junit, log, report_log=extractor.report_log))
         tm.that(report.warning_count, eq=1)
-        tm.that(report.suspended_warning_count, eq=int(not strict))
-        tm.that(report.blocking_warning_count, eq=int(strict))
+        tm.that(report.warning_lines[0], contains="enforcement evidence")
+        tm.that(report.warning_lines[0], contains=c.FlextSmellViolation.__module__)
 
     @pytest.mark.parametrize(
         "events",
@@ -397,3 +382,37 @@ class TestsFlextInfraPytestDiag:
         )
         with pytest.raises(ValueError, match="zip"):
             extractor.extract(junit, log, report_log=extractor.report_log)
+
+    @pytest.mark.parametrize(
+        ("phases", "expected"),
+        [
+            (("setup", "teardown"), "incomplete pytest lifecycle"),
+            (("setup", "call"), "incomplete pytest lifecycle"),
+            (("setup", "setup", "call", "teardown"), "duplicate pytest phase"),
+        ],
+        ids=["missing-call", "missing-teardown", "duplicate-setup"],
+    )
+    def test_report_log_rejects_incomplete_or_repeated_lifecycles(
+        self, tmp_path: Path, phases: t.StrTuple, expected: str
+    ) -> None:
+        """Every reported node needs exactly one setup, call and teardown."""
+        report_log = tmp_path / "suite.events.jsonl"
+        report_log.write_text(
+            "".join(
+                m.Infra.PytestReportEvent.model_validate({
+                    "$report_type": "TestReport",
+                    "nodeid": "tests/test_lifecycle.py::test_case",
+                    "when": phase,
+                    "outcome": "passed",
+                }).model_dump_json(by_alias=True, exclude_none=True)
+                + "\n"
+                for phase in phases
+            ),
+            encoding="utf-8",
+        )
+        report_log.with_suffix(c.Infra.PYTEST_WARNING_EVENTS_SUFFIX).write_text(
+            "", encoding="utf-8"
+        )
+
+        with pytest.raises(ValueError, match=expected):
+            FlextInfraPytestDiagExtractor.extract_report_log(report_log)

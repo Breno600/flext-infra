@@ -25,7 +25,7 @@ dependencies = [
   "beartype>=0.22.9",
   "defusedxml>=0.7.1",
   "dependency-injector>=4.49.1",
-  "flext-cli @ git+https://github.com/flext-sh/flext-cli.git@8b2aea801805b2e5efa0fce6424e97fc45635260",
+  "flext-cli @ git+https://github.com/flext-sh/flext-cli.git@0.12.0-dev",
   "flext-core @ git+https://github.com/flext-sh/flext-core.git@0.12.0-dev",
   "GitPython>=3.1.62",
   "jinja2>=3.1.6",
@@ -34,7 +34,7 @@ dependencies = [
   "mkdocs>=1.6.1",
   "packaging>=26.3",
   "pydantic>=2.13.5",
-  "pydantic-settings>=2.14.2,<2.16",
+  "pydantic-settings>=2.15.0,<2.16",
   "pymdown-extensions>=11.0.1",
   "pytest>=9.1.1",
   "pyyaml>=6.0.3",
@@ -59,7 +59,7 @@ email = "team@flext.sh"
 name = "FLEXT Team"
 
 [project.scripts]
-flext-docs = "flext_infra.cli:docs_main"
+flext-docs = "flext_infra.cli:FlextInfraCli.docs_main"
 flext-infra = "flext_infra.cli:main"
 
 [project.urls]
@@ -76,7 +76,7 @@ dev = [
   "bandit>=1.9.4",
   "deptry",
   "editables>=0.6",
-  "flext-tests @ git+https://github.com/flext-sh/flext-tests.git@575a431d8b72a29b8db6e0eeca7d7764f62f4340",
+  "flext-tests @ git+https://github.com/flext-sh/flext-tests.git@0.12.0-dev",
   "hypothesis",
   "mkdocs",
   "mkdocs-autorefs",
@@ -169,15 +169,14 @@ scan_dirs = ["src"]
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/flext_infra"]
-only-include = ["src/flext_infra", "config"]
+include = ["/src/flext_infra/**", "/config/**"]
 
 [tool.hatch.build.targets.wheel.sources]
 "src/flext_infra" = "flext_infra"
 config = "flext_infra/config"
 
 [tool.hatch.build.targets.sdist]
-only-include = ["src/flext_infra", "config"]
+include = ["/src/flext_infra/**", "/config/**"]
 
 [tool.mypy]
 disable_error_code = [

@@ -125,7 +125,7 @@ class FlextInfraCodegenLazyInit(
             else tuple(sorted({root.resolve() for root in self.project_scope_roots}))
         )
         analyses: list[m.Infra.CodegenPhaseAnalysis] = []
-        inputs: dict[Path, m.Cli.AtomicFileState] = {}
+        inputs: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {}
         target_roots = 0
         for root in roots:
             with FlextInfraRopeWorkspace.open_workspace(

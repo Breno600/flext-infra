@@ -10,7 +10,11 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import FlextInfraPytestRunner, config, m, t, u
+from flext_infra import FlextInfraPytestRunner, c, config, m, t, u
+from tests.unit.validate.pytest_runner_support import (
+    declare_parallel_project,
+    runner_for,
+)
 
 
 class TestsFlextInfraPytestRunnerSuiteStop:
@@ -22,21 +26,27 @@ class TestsFlextInfraPytestRunnerSuiteStop:
         return tm.ok(u.Cli.files_read_text(path))
 
     @staticmethod
-    def _spent_runner(project: Path) -> FlextInfraPytestRunner:
+    def _spent_runner(project: Path, *, serial: bool = False) -> FlextInfraPytestRunner:
         """Build the real runner whose derived stop instant has already passed.
 
         The entrypoint clock is placed so pytest must stop dispatch gracefully
-        at the first completed item, never through the deadline SIGTERM.
+        at the first completed item, never through the deadline SIGTERM. The
+        reserve matches the runner's own serial decision for the selection.
         """
         cache = config.Infra.codegen.make.testmon_cache
         policy = config.Infra.tooling.tools.pytest
+        reserve = (
+            policy.serial_suite_stop_reserve_seconds
+            if serial
+            else policy.suite_stop_reserve_seconds
+        )
         testmon_db = project.parent / ".testmon-cache" / cache.database_filename
         testmon_db.parent.mkdir(parents=True)
         return FlextInfraPytestRunner(
             repository_root=project,
             started_at_monotonic=time.monotonic()
             - policy.run_timeout_seconds
-            + policy.suite_stop_reserve_seconds,
+            + reserve,
             target=cache.target_directory,
             reports=cache.reports_directory,
             testmon_db=testmon_db,
@@ -62,6 +72,63 @@ class TestsFlextInfraPytestRunnerSuiteStop:
             self._read(bounded / "run-accounting.json")
         ).executed_count
         return bounded, selected, executed
+
+    def test_stop_reserve_matches_the_runner_dispatch_decision(
+        self, cached_runner_project: Path
+    ) -> None:
+        """The typed reserve follows the same serial decision as the workers.
+
+        xdist selections keep the two-deep drain reserve; a selection no larger
+        than one worker executes serially and keeps only one in-flight item.
+        """
+        policy = config.Infra.tooling.tools.pytest
+
+        def dispatch_plan(node_ids: t.StrSequence) -> m.Infra.PytestSelectionPlan:
+            """Synthetic selection whose manifest path matches the real argv."""
+            return m.Infra.PytestSelectionPlan(
+                manifest_path=Path("m.json"),
+                node_ids=tuple(node_ids),
+                whole_target=False,
+                inventory_collected=False,
+                owns_no_tests=False,
+            )
+
+        declare_parallel_project(cached_runner_project)
+        multi = [f"tests/test_serial_{'x' * index}.py::test_one" for index in range(4)]
+        runner = runner_for(cached_runner_project)
+        multi_plan = dispatch_plan(multi)
+        multi_command = runner.build_command(
+            cached_runner_project / runner.reports, multi_plan
+        )
+        serial_plan = dispatch_plan(multi[:1])
+        serial_command = runner.build_command(
+            cached_runner_project / runner.reports, serial_plan
+        )
+
+        def stop_value(command: t.StrSequence) -> float:
+            (raw,) = (
+                argument
+                for argument in command
+                if argument.startswith(c.Infra.PYTEST_SUITE_STOP_OPTION)
+            )
+            return float(raw.partition("=")[2])
+
+        workers_index = list(multi_command).index("-n") + 1
+        tm.that(list(multi_command)[workers_index] != "0", eq=True)
+        tm.that(
+            stop_value(multi_command),
+            eq=runner.started_at_monotonic
+            + policy.run_timeout_seconds
+            - policy.suite_stop_reserve_seconds,
+        )
+        serial_workers_index = list(serial_command).index("-n") + 1
+        tm.that(list(serial_command)[serial_workers_index], eq="0")
+        tm.that(
+            stop_value(serial_command),
+            eq=runner.started_at_monotonic
+            + policy.run_timeout_seconds
+            - policy.serial_suite_stop_reserve_seconds,
+        )
 
     @pytest.mark.slow
     def test_suite_stop_instant_persists_the_executed_prefix(
@@ -114,29 +181,30 @@ class TestsFlextInfraPytestRunnerSuiteStop:
         tm.that(persisted <= set(selected), eq=True)
 
     @pytest.mark.slow
-    def test_stop_after_the_last_selected_test_preserves_the_raw_interrupt(
+    def test_stop_instant_after_the_last_selected_test_completes_the_run(
         self, cached_runner_project: Path
     ) -> None:
-        """Complete item accounting never normalizes an interrupted session.
+        """A stop requested on the last selected test's teardown ends nothing.
 
-        The fixture project owns one test, so the stop request lands after the
-        whole selection executed and passed. The accounting is complete, but
-        pytest's interrupted lifecycle remains a failing process outcome.
+        The fixture project owns one test, so the serial dispatch applies and
+        the stop request lands after the whole selection executed and passed:
+        the accounting is complete and the run is green although pytest still
+        reports its interrupt.
         """
-        runner = self._spent_runner(cached_runner_project)
+        runner = self._spent_runner(cached_runner_project, serial=True)
 
-        tm.that(tm.ok(runner.execute()), eq=pytest.ExitCode.INTERRUPTED.value)
+        tm.that(tm.ok(runner.execute()), eq=pytest.ExitCode.OK.value)
 
         bounded, selected, executed = self._interrupted_run(cached_runner_project)
         tm.that(executed, eq=len(selected))
         tm.that(
             self._read(bounded / "summary.txt"),
             has=[
-                "outcome=failed",
+                "outcome=executed",
                 f"selected={len(selected)}",
                 f"executed={executed}",
                 "accounting_complete=True",
                 "failed=0",
-                f"exit={pytest.ExitCode.INTERRUPTED.value}",
+                "exit=0",
             ],
         )

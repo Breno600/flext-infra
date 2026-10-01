@@ -21,6 +21,28 @@ class FlextInfraModelsWorkspace:
     - ``ContractModel`` reserved for immutable workspace settings contracts.
     """
 
+    class SuperprojectGovernance(m.ContractModel):
+        """Facts of one superproject that govern every composed subproject.
+
+        Resolved once per superproject, then shared by each member load.
+        """
+
+        root: Annotated[Path, m.Field(description="Superproject repository root")]
+        integration_branch: Annotated[
+            str | None, m.Field(description="Detected workspace integration branch")
+        ] = None
+        beads: Annotated[
+            FlextInfraConfigModels.BeadsProjectSpec | None,
+            m.Field(description="Workspace Beads contract members inherit"),
+        ] = None
+        members: Annotated[
+            t.MappingKV[Path, FlextInfraConfigModels.RepositoryRef],
+            m.Field(description="Manifest-declared member identities by path"),
+        ]
+        allow_unprovisioned_members: Annotated[
+            bool, m.Field(description="Accept manifest identity before checkout setup")
+        ] = False
+
     class WorkspaceEnvironmentRequest(m.ContractModel):
         """Read-only request for validating the active workspace environment."""
 
@@ -85,6 +107,20 @@ class FlextInfraModelsWorkspace:
         editable: Annotated[
             bool, m.Field(description="Distribution is installed as editable")
         ]
+
+    class DirectUrlReceipt(m.ContractModel):
+        """Any installed distribution's PEP 610 receipt, read for its kind only.
+
+        VCS and archive receipts carry other keys; only the directory metadata
+        decides whether the receipt names a checkout path.
+        """
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore", frozen=True)
+
+        dir_info: Annotated[
+            FlextInfraModelsWorkspace.DirectUrlDirectoryInfo | None,
+            m.Field(description="Directory metadata of a local install"),
+        ] = None
 
     class EditableDirectUrl(m.ContractModel):
         """Validated PEP 610 editable provenance payload."""

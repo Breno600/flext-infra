@@ -11,7 +11,7 @@ case "${stage}" in
     fi
     ;;
   pre-push)
-    test -z "$(git status --porcelain --untracked-files=all --ignore-submodules=none || true)"
+    test -z "$(git status --porcelain --untracked-files=all --ignore-submodules=none)"
     ;;
   *) printf 'Unsupported Git hook stage: %s\n' "${stage}" >&2; exit 2 ;;
 esac

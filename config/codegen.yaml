@@ -364,16 +364,7 @@ Infra:
       # Gates whose mutating side `make fmt` drives (formatters). Their
       # read-only side runs in `make check`; `make fix` never repeats them
       # (single-pass verb law: one operation per tool per verb).
-      fmt_gates: [markdown-format]
-      check_gate_suspensions:
-        - gate: namespace
-          authority: "flext-itpd1.3; operator decision 2026-09-27 (keep plan v12 suspension); flext-infra#913"
-          reason: "Fleet namespace backlog (141 findings here) is repaired after the fleet is green; the gate returns with its Rope single-cycle owner fix."
-          # Census consistency (gc-wisp-d7mnad): the runtime census honors the
-          # SAME suspension for the rule families this gate owns — ENFORCE ids
-          # match a census rule id exactly, tag families by prefix. Unmapped
-          # families (e.g. ENFORCE-079) stay fully blocking.
-          census_rule_families: [ENFORCE-046, ENFORCE-066, ENFORCE-067, ENFORCE-069, class_prefix]
+      fmt_gates: [format, markdown-format]
       # One filename and the root-relative runner paths; the runner places the
       # database in platformdirs' external per-worktree cache.
       testmon_cache:
@@ -402,40 +393,22 @@ Infra:
         # Other pre-push verbs use this token to preserve local test behavior;
         # pre-push check unsets CI so it runs every active check gate.
         local_value: N
-        # RULING 2 (rules, not a skip-list): local_check_gates is the ONLY
-        # declared set. CI=Y runs its strict complement, derived in
-        # MakeSpec.check_gates_ci over the active default universe, so every
-        # active gate retains an owner. CI=N intersects the declared local set
-        # with that universe; an unset CI runs all active gates. `format`
-        # is not a check gate at all -- it mutates files, so it belongs to
-        # make fmt / make fix only. This supersedes the earlier
-        # check_gates_skip list, which could drift out of sync with the set it
-        # was meant to complement.
-        # RULING 1: CI is ternary (Y/N/absent).
-        # tooling.tools.pytest.ci-excluded-markers defines the operator-selected
-        # slow-test exclusion for CI and pre-commit, not local/pre-push runs.
-        # CI=N owns the complementary local check gates; absent uses testmon
-        # for incremental developer runs.
-        #
-        # The set is the SLOW whole-program type checkers: those are the gates
-        # worth deferring
-        # off the fast CI leg, and they are what CI=N exists to own. `lint` is
-        # not here -- ruff is cheap, so making CI skip it buys nothing and
-        # leaves the fast leg without a linter.
-        # Operator decision 2026-09-29: mypy leaves this set and returns to
-        # the CI context — it was the only gate whose red content could merge
-        # unseen (#535/#523/#539), and the project-owned timeout budget
-        # (tools.mypy.timeout_seconds) makes it runnable on the runner.
-        # pyrefly stays local-only (fast; pyright already covers CI).
-        local_check_gates: [pyrefly]
-      # Why (operator law 2026-08-24): git-hook stages are disabled by default;
-      # the workflow below still declares stage membership so re-enabling is a
-      # one-key change, case by case. CI owns read-only setup, generation drift,
-      # and checks; it never renders an apply/fmt/fix invocation.
+        # CI is ternary (Y/N/absent). The check partition has no declared
+        # list: MakeSpec derives it from the gate kind declared once in the
+        # gate registry (c.Infra.GATE_TOOLS_BY_KIND). CI=Y (CI and
+        # pre-commit) runs only the active EXTERNAL gates; CI=N runs the
+        # strict complement (type checkers and the validators whose rules
+        # flext-infra owns); an unset CI (pre-push) runs every active gate.
+        # tooling.tools.pytest.ci-excluded-markers defines the slow-test
+        # exclusion for CI and pre-commit, not local/pre-push runs.
+      # The workflow below declares stage membership; these booleans only
+      # decide whether each git-hook stage is generated and installed. CI owns
+      # read-only setup, generation drift, and checks; it never renders an
+      # apply/fmt/fix invocation.
       pre_commit: false
       pre_push: false
       workflow:
-      # Pre-commit runs fmt+fix, then the active CI check partition. Pre-push
+      # Pre-commit runs fmt+fix, then the fast check partition. Pre-push
       # runs check with CI unset to cover the complete active gate universe,
       # and adds gen+test with the declared local token.
         - {verb: setup, contexts: [local, ci]}
@@ -443,10 +416,10 @@ Infra:
         - {verb: fmt, contexts: [local, pre_commit]}
         - {verb: fix, contexts: [local, pre_commit]}
         - {verb: check, contexts: [local, ci, pre_push, pre_commit]}
-      # Operator ruling 2026-09-23: CI runs setup, the gen fixed point, the
-      # deps audit and check only; make test runs locally and on pre-push,
-      # never in CI. The CI test-only steps (testmon cache, test reports)
-      # render only while a test row declares the ci context.
+      # CI runs setup, the gen fixed point, the deps audit and the fast check
+      # partition only; make test runs locally and on pre-push, never in CI.
+      # The CI test-only steps (testmon cache, test reports) render only while
+      # a test row declares the ci context.
         - {verb: test, contexts: [local, pre_push]}
       # Artifacts `make clean` removes. Read by Makefile.j2 for the cache
       # sweep and the root-level directory/file lists.
@@ -501,7 +474,6 @@ Infra:
             - utilities
             - worktree
         mutable_actions: [fix, fmt]
-        warning_actions: [audit]
         reports_dir: .reports/docs
         cross_project_relative_link_pattern: '^(?:\.\./)+flext-[a-z0-9-]+(?:/|$)'
         stale_github_organizations:
@@ -558,10 +530,14 @@ Infra:
           description: Inspect ownership, dependency, and generated-state health.
         - name: status
           description: Report the resolved runtime and repository state.
+        - name: verify-clean
+          description: Verify that generated documentation and managed artifacts leave the Git tree clean.
         - name: docs
           description: Generate, fix, format, and check documentation.
         - name: clean
           description: Remove every declared disposable artifact.
+        - name: bootstrap-candidate
+          description: Bootstrap declared candidate worktrees with this branch-matched generator.
         - name: release-plan
           description: Resolve the release decision through the public protocol.
         - name: release-version
@@ -579,6 +555,10 @@ Infra:
           description: Materialize the declared package initializer graph.
         - name: mod
           description: Apply the declared structural codemods; committed rule-test snapshots are verified, never rewritten.
+        - name: mod-text
+          description: Apply only declared Sed text rules with syntax preflight and atomic publication.
+        - name: mod-text-candidate
+          description: Replay Sed rules in the single candidate worktree declared by the workspace manifest.
         # The explicit snapshot regeneration (flext-itpd1.7): `mod` only verifies
         # snapshots, so a changed rule output lands as a reviewed commit.
         - name: mod-snapshots
@@ -1248,7 +1228,7 @@ Infra:
               - dependency-injector>=4.49.1
               - packaging>=26.3
               - pydantic>=2.13.5
-              - pydantic-settings>=2.14.2,<2.16
+              - pydantic-settings>=2.15.0,<2.16
               - pyyaml>=6.0.3
               - structlog>=25.5.0,<27
               - typing-extensions>=4.16.0
@@ -1258,7 +1238,7 @@ Infra:
               - flext-cli
               - flext-core
               - pydantic>=2.13.5
-              - pydantic-settings>=2.14.2,<2.16
+              - pydantic-settings>=2.15.0,<2.16
             codegen: [flext-infra]
         # Project-scoped requirements extend the shared profile without
         # leaking API/Web dependencies into core consumers. Unbounded entries
@@ -1276,7 +1256,7 @@ Infra:
             runtime: ["click>=8.3.3,<8.4", typer>=0.27.2, jinja2>=3.1.6, jsonschema>=4.26.0, tomlkit>=0.15.1, ruamel.yaml>=0.19.1, defusedxml>=0.7.1, openpyxl>=3.1.5, python-docx>=1.2.0, python-pptx>=1.0.2]
           - upstream: flext_cli
             project: flext-infra
-            runtime: [flext-cli, defusedxml>=0.7.1, GitPython>=3.1.62, jinja2>=3.1.6, libcst>=1.9.0, Markdown>=3.11, "rope @ git+https://github.com/marlon-costa-dc/rope.git@1.14.0+dc.3", pytest>=9.1.1, mkdocs>=1.6.1]
+            runtime: [flext-cli, defusedxml>=0.7.1, GitPython>=3.2.0, jinja2>=3.1.6, libcst>=1.9.0, Markdown>=3.11, "rope @ git+https://github.com/marlon-costa-dc/rope.git@1.14.0+dc.3", pytest>=9.1.1, mkdocs>=1.6.1]
           - upstream: flext_cli
             project: flext-tests
             runtime: [flext-cli, flext-infra, pytest>=9.1.1, pytest-timeout>=2.4.0, docker>=7.2.0, python-on-whales>=0.81.0]
@@ -1291,7 +1271,7 @@ Infra:
             runtime: [flext-cli]
           - upstream: flext_cli
             project: flext-quality
-            runtime: [flext-cli, flext-infra, flext-web, flext-api, fastmcp>=4.0.10, requests>=2.34.2, aiohttp>=3.14.3, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1]
+            runtime: [flext-cli, flext-web, flext-api, fastmcp>=4.0.10, requests>=2.34.2, aiohttp>=3.14.3, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1]
           - upstream: flext_cli
             project: flext-web
             runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.54.0, fastapi>=0.142.1, starlette>=1.7.0, werkzeug>=3.1.9]
@@ -1801,8 +1781,6 @@ Infra:
             - "**/*.bkp?"
             - "**/*.backup"
             - "**/*.orig"
-            - "**/*_backup"
-            - "**/*_backup_*"
             - "**/*.md.backup"
             - "**/archived/"
         - name: "Autofix rejection artifacts (run_skill_autofix.sh rollback output)"

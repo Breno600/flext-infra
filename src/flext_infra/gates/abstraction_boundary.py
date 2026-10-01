@@ -34,6 +34,18 @@ class FlextInfraAbstractionBoundaryGate(FlextInfraGate):
     can_fix: ClassVar[bool] = False
 
     @override
+    def selected_for(self, project_dir: Path) -> bool:
+        """A declared boundary owner never selects the gate that guards it.
+
+        Unreadable metadata selects the gate, whose check reports the failure.
+        """
+        metadata = u.Infra.read_project_metadata_result(project_dir)
+        return (
+            metadata.failure
+            or metadata.value.project.name not in c.Infra.BOUNDARY_SKIP_PROJECTS
+        )
+
+    @override
     def check(
         self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> m.Infra.GateExecution:
@@ -47,13 +59,9 @@ class FlextInfraAbstractionBoundaryGate(FlextInfraGate):
             )
         project_name = metadata.value.project.name
         if project_name in c.Infra.BOUNDARY_SKIP_PROJECTS:
-            # A declared boundary owner is exempt by design: an intentional
-            # skip passes, never a non-acceptance for missing targets.
-            return self._neutral_skip_result(
-                project_dir,
-                started,
-                message=f"{self.gate_id}: {project_name} is a declared boundary owner",
-            )
+            # The checker never selects a declared boundary owner; a direct
+            # call on one establishes no acceptance.
+            return self._skip_result(project_dir, started)
         files_result = u.Infra.iter_python_files(
             m.Infra.SourceScanRequest(project_roots=(project_dir,))
         )

@@ -24,12 +24,15 @@ class FlextInfraToolTablesPhase:
     def first_party_namespaces(
         payload: t.MutableJsonMapping, *, path: Path
     ) -> t.StrSequence:
-        """Return base, discovered, declared-FLEXT, and own first-party namespaces."""
+        """Prefer live package names over a distribution-derived fallback."""
+        discovered = u.Infra.discover_first_party_namespaces(path.parent)
+        own = discovered or [
+            u.Infra.project_name_from_payload(path, payload).replace("-", "_")
+        ]
         return sorted({
             *config.Infra.tooling.tools.deptry.known_first_party,
-            *u.Infra.discover_first_party_namespaces(path.parent),
+            *own,
             *u.Infra.flext_dependency_namespaces_from_payload(payload),
-            u.Infra.project_name_from_payload(path, payload).replace("-", "_"),
         })
 
     def _mypy_phase(self) -> m.Infra.DepsToml.PhaseConfig:

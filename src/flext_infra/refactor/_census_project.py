@@ -3,16 +3,14 @@
 from __future__ import annotations
 
 from collections import Counter
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import m, u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import t
-
-_log = u.fetch_logger(__name__)
+    from flext_infra import p, t
 
 
 class FlextInfraRefactorCensusProjectMixin:
@@ -21,6 +19,8 @@ class FlextInfraRefactorCensusProjectMixin:
     Composed into FlextInfraRefactorCensus via inheritance; borrows the
     rule-inclusion + object-classification helpers from sibling mixins via FLEXT.
     """
+
+    _census_project_log: ClassVar[p.Logger] = u.fetch_logger(__name__)
 
     if TYPE_CHECKING:
 
@@ -57,7 +57,7 @@ class FlextInfraRefactorCensusProjectMixin:
     ) -> None:
         """Handle rope stage failure."""
         error = f"{type(exc).__name__}: {exc}"
-        _log.warning(
+        self._census_project_log.warning(
             "census_rope_stage_failed",
             stage=stage,
             file_path=str(file_path),

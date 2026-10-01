@@ -1,4 +1,4 @@
-"""One atomic campaign for declared candidate Makefile projections."""
+"""One atomic campaign for declared candidate recovery projections."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ class FlextInfraCandidateBootstrapService:
         targets = workspace.candidate_bootstrap_targets
         if not targets:
             return r[bool].fail("candidate bootstrap targets are not declared")
-        roots: dict[str, Path] = {}
+        roots: t.MutableMappingKV[str, Path] = {}
         for index, target in enumerate(targets):
             identity = u.Infra.exact_worktree_root(
                 (source_root / target.path).resolve(strict=True)
@@ -79,7 +79,7 @@ class FlextInfraCandidateBootstrapService:
     ) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
         """Compose one immutable receipt from all conform planners."""
         files: list[m.Infra.CodegenFilePlan] = []
-        inputs: dict[Path, m.Cli.AtomicFileState] = {
+        inputs: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {
             manifest_state.path: manifest_state
         }
         for root, target in zip(roots.values(), targets, strict=True):
@@ -92,10 +92,15 @@ class FlextInfraCandidateBootstrapService:
             planned = self._planner.plan(request)
             if planned.failure:
                 return r[m.Infra.CodegenPhaseAnalysis].from_failure(planned)
-            expected = root / c.Infra.MAKEFILE_FILENAME
+            destination = (
+                Path(c.Infra.DIR_DOCS) / c.Infra.DOCS_CONFIG_FILENAME
+                if target.what == c.Infra.CodegenConformSurface.DOCS_CONFIG
+                else Path(c.Infra.MAKEFILE_FILENAME)
+            )
+            expected = root / destination
             if len(planned.value.files) != 1 or planned.value.files[0].path != expected:
                 return r[m.Infra.CodegenPhaseAnalysis].fail(
-                    f"candidate bootstrap must plan exactly one Makefile: {root}"
+                    f"candidate bootstrap must plan exactly one {destination}: {root}"
                 )
             for file in planned.value.files:
                 files.append(file)

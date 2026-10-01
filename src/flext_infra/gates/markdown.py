@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, m, u
 
-from .markdown_support import FlextInfraMarkdownGateBase, read_ignore_patterns
+from .markdown_support import FlextInfraMarkdownGateBase
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -40,7 +40,7 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
         once and its patterns are forwarded via ``--exclude`` to replicate
         standard tool behavior.
         """
-        patterns = read_ignore_patterns(
+        patterns = self.read_ignore_patterns(
             project_dir, c.Infra.MARKDOWNLINT_IGNORE_FILENAME
         )
         if not patterns:

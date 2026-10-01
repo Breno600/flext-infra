@@ -9,11 +9,10 @@ from importlib.metadata import distributions
 from pathlib import Path
 from typing import ClassVar
 
-from flext_infra import c, config, t
+from flext_infra import c, config, m, t
 
 from ..._pytest_collection import FlextInfraPytestCollection
 from .base import FlextInfraPytestRunnerBase
-from .inputs import FlextInfraPytestInputs
 
 
 class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
@@ -33,38 +32,52 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
 
         Git branch dependencies can change commits while retaining the same
         package version, so their PEP 610 receipts participate in cache identity.
-        Registry distributions legitimately have no direct-URL receipt.
+        Registry distributions legitimately have no direct-URL receipt. An
+        editable install names a checkout path, not a toolchain: testmon already
+        tracks that source by file checksum, so every checkout of one project
+        on the same lock shares one environment record (flext-3l1gk).
         """
-        fingerprint = "\n".join((
-            sys.version,
-            *sorted(
-                f"{distribution.name}={distribution.version}:"
-                f"{distribution.read_text('direct_url.json')!r}"
-                for distribution in distributions()
-            ),
-        ))
+        provenance: t.MutableSequenceOf[str] = []
+        for distribution in distributions():
+            receipt = distribution.read_text("direct_url.json")
+            dir_info = (
+                None
+                if receipt is None
+                else m.Infra.DirectUrlReceipt.model_validate_json(receipt).dir_info
+            )
+            identity = (
+                "editable" if dir_info is not None and dir_info.editable else receipt
+            )
+            provenance.append(
+                f"{distribution.name}={distribution.version}:{identity!r}"
+            )
+        fingerprint = "\n".join((sys.version, *sorted(provenance)))
         digest = hashlib.sha256(fingerprint.encode()).hexdigest()[:12]
         return f"toolchain-{digest}"
 
-    def testmon_environment(self) -> str:
-        """Bind supported Testmon partitions to current governed behavior inputs."""
-        fingerprint = f"{self._toolchain_testmon_environment()}:{FlextInfraPytestInputs.fingerprint(self.root)}"
-        return f"toolchain-{hashlib.sha256(fingerprint.encode()).hexdigest()[:12]}"
-
-    def suite_stop_monotonic(self) -> float:
+    def suite_stop_monotonic(self, *, serial: bool = False) -> float:
         """Derive the graceful suite stop instant from the entrypoint deadline.
 
         Selection and inventory consume the same clock, so the instant leaves
         exactly the typed stop reserve before the process deadline: pytest
         ends its own session there and testmon persists what ran, instead of
-        the deadline SIGTERM discarding every unflushed result.
+        the deadline SIGTERM discarding every unflushed result. Serial runs
+        keep at most one item in flight, so their reserve is smaller.
         """
         pytest = config.Infra.tooling.tools.pytest
-        return (
-            self.started_at_monotonic
-            + pytest.run_timeout_seconds
-            - pytest.suite_stop_reserve_seconds
-        )
+        if self.slow_phase:
+            reserve = (
+                pytest.slow_serial_suite_stop_reserve_seconds
+                if serial
+                else pytest.slow_suite_stop_reserve_seconds
+            )
+        else:
+            reserve = (
+                pytest.serial_suite_stop_reserve_seconds
+                if serial
+                else pytest.suite_stop_reserve_seconds
+            )
+        return self.started_at_monotonic + pytest.run_timeout_seconds - reserve
 
     def ci_excluded_markers(
         self,
@@ -79,16 +92,40 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
     def _plugin_policy_args(
         self, *, execution_mode: c.Infra.PytestExecutionMode
     ) -> t.VariadicTuple[str]:
-        """Apply the same configured plugin contract to collection and execution."""
+        """Apply the same configured plugin contract to collection and execution.
+
+        The phase split is a native pytest marker expression: the budgeted
+        phase deselects the slow marker, the slow phase selects only it.
+        """
         pytest = config.Infra.tooling.tools.pytest
-        excluded = (
-            (
-                *pytest.external_gate_markers,
-                *self.ci_excluded_markers(execution_mode=execution_mode),
-            )
-            if execution_mode != c.Infra.PytestExecutionMode.FULL
-            else ()
+        excluded = tuple(
+            dict.fromkeys((
+                *(
+                    (
+                        *pytest.external_gate_markers,
+                        *self.ci_excluded_markers(execution_mode=execution_mode),
+                    )
+                    if execution_mode != c.Infra.PytestExecutionMode.FULL
+                    else ()
+                ),
+                *(
+                    ()
+                    if self.slow_phase
+                    or execution_mode == c.Infra.PytestExecutionMode.COVERAGE
+                    else (pytest.slow_marker,)
+                ),
+            ))
         )
+        if self.slow_phase:
+            expression = (
+                f"{pytest.slow_marker} and not ({' or '.join(excluded)})"
+                if excluded
+                else pytest.slow_marker
+            )
+        elif excluded:
+            expression = f"not ({' or '.join(excluded)})"
+        else:
+            expression = ""
         return (
             "-p",
             pytest.enforcement_plugin,
@@ -96,7 +133,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             "no:metadata",
             "-o",
             f"{c.Infra.ASYNCIO_DEFAULT_FIXTURE_LOOP_SCOPE}={pytest.asyncio_default_fixture_loop_scope}",
-            *(("-m", f"not ({' or '.join(excluded)})") if excluded else ()),
+            *(("-m", expression) if expression else ()),
         )
 
     def build_selection_command(
@@ -128,23 +165,15 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                 # exactly that case (never combined with ``--testmon-noselect``).
                 *(("--testmon-noselect",) if complete else ("--testmon-forceselect",)),
                 "--testmon-env",
-                f"'{self.testmon_environment()}'",
+                f"'{self._toolchain_testmon_environment()}'",
             )
         )
-        return (
-            sys.executable,
-            "-m",
-            "pytest",
+        pytest_arguments = (
             str(self.target),
             *testmon,
             "--collect-only",
             f"{c.Infra.PYTEST_COLLECTION_MANIFEST_OPTION}={manifest_path}",
             f"--report-log={report_log}",
-            *(
-                (f"{c.Infra.PYTEST_PROFILE_OPTION}={report_log.parent / 'profiles'}",)
-                if self.profile_enabled
-                else ()
-            ),
             "-q",
             *self._plugin_policy_args(execution_mode=execution_mode),
             "--benchmark-disable",
@@ -158,27 +187,32 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             "0",
             "--no-cov",
         )
+        # A profiled run routes the collection child through the profiling
+        # adapter declared at the outer boundary; otherwise pytest runs as is.
+        if self.collection_command_prefix:
+            return (
+                *self.collection_command_prefix,
+                str(manifest_path.with_suffix(".pstats")),
+                str(manifest_path.parent / "run-context.json"),
+                *pytest_arguments,
+            )
+        return (sys.executable, "-m", "pytest", *pytest_arguments)
 
     def build_command(
         self,
         report_dir: Path,
-        selected_node_ids: t.StrSequence | None = None,
+        selection_plan: m.Infra.PytestSelectionPlan | None = None,
         *,
-        manifest_path: Path | None = None,
         serialize: bool = False,
-        whole_target: bool = False,
         execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
     ) -> t.VariadicTuple[str]:
         """Build the testmon suite argv (never the cov plugin).
 
-        A nonempty selection is enforced from its manifest, so it requires
-        ``manifest_path``.
+        A resolved plan carries the selected IDs and their manifest together.
         """
         pytest = config.Infra.tooling.tools.pytest
+        selected_node_ids = selection_plan.node_ids if selection_plan else None
         selection = selected_node_ids or None
-        if selection and manifest_path is None:
-            msg = "a runner selection requires its collection manifest path"
-            raise ValueError(msg)
         # An empty selection needs no workers, and a selection smaller than the
         # worker budget never needs more workers than items: every extra worker
         # only pays startup cost for an empty queue. Explicit serial execution
@@ -191,11 +225,21 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             workers = str(min(budget, len(selection)))
         else:
             workers = str(budget)
+        # A serial dispatch keeps one item in flight, so its drain reserve is
+        # the single-item budget instead of the xdist two-deep worst case.
+        serial = workers in {"0", "1"}
+        if serial:
+            workers = "0"
         return self._suite_argv(
             report_dir,
+            serial=serial,
             targets=(
                 (str(self.target),)
-                if whole_target or selection is None
+                if (
+                    selection_plan is None
+                    or selection_plan.whole_target
+                    or selection is None
+                )
                 else tuple(selection)
             ),
             workers=workers,
@@ -205,15 +249,15 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                     (
                         "-p",
                         FlextInfraPytestCollection.__module__,
-                        f"{c.Infra.PYTEST_SELECTED_COLLECTION_OPTION}={manifest_path}",
+                        f"{c.Infra.PYTEST_SELECTED_COLLECTION_OPTION}={selection_plan.manifest_path}",
                     )
-                    if selection
+                    if selection_plan is not None and selection
                     else ()
                 ),
                 "--testmon",
                 *(("--testmon-noselect",) if selection else ("--testmon-forceselect",)),
                 "--testmon-env",
-                f"'{self.testmon_environment()}'",
+                f"'{self._toolchain_testmon_environment()}'",
                 *self._NO_COVERAGE,
             ),
         )
@@ -231,6 +275,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         workers = "0" if serialize else str(self.parallel_worker_budget(pytest))
         return self._suite_argv(
             report_dir,
+            serial=workers == "0",
             targets=(str(self.target),),
             workers=workers,
             trailing=(
@@ -247,6 +292,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         self,
         report_dir: Path,
         *,
+        serial: bool,
         targets: t.StrSequence,
         workers: str,
         trailing: t.StrSequence,
@@ -261,15 +307,10 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             *pytest.progress_args,
             *pytest.report_args,
             f"--timeout={pytest.case_timeout_seconds}",
-            f"{c.Infra.PYTEST_SUITE_STOP_OPTION}={self.suite_stop_monotonic()!r}",
+            f"{c.Infra.PYTEST_SUITE_STOP_OPTION}={self.suite_stop_monotonic(serial=serial)!r}",
             f"--maxfail={pytest.max_failures}",
             f"--junitxml={report_dir / 'junit.xml'}",
             f"--report-log={report_dir / 'events.jsonl'}",
-            *(
-                (f"{c.Infra.PYTEST_PROFILE_OPTION}={report_dir / 'profiles'}",)
-                if self.profile_enabled
-                else ()
-            ),
             *trailing,
             "-n",
             workers,

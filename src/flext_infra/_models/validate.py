@@ -158,6 +158,15 @@ class FlextInfraModelsCore:
         deadline_monotonic: float = m.Field(
             gt=0, description="Shared absolute deadline across all execution phases"
         )
+        report_directory: Path | None = m.Field(
+            default=None,
+            description="Explicit directory binding profiled parent and children",
+        )
+        profile_sha256: str | None = m.Field(
+            default=None,
+            pattern=r"^[0-9a-f]{64}$",
+            description="Digest binding a profile sidecar to its exact pstats artifact",
+        )
 
     class PytestReportEvent(m.Value):
         """Common report-log envelope and the complete warning payload."""
@@ -210,7 +219,7 @@ class FlextInfraModelsCore:
             return self
 
     class PytestWarningEvent(m.Value):
-        """Warning identity and enforcement decision captured before report-log."""
+        """Warning identity captured before report-log; every warning blocks."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(strict=True)
 
@@ -220,8 +229,6 @@ class FlextInfraModelsCore:
         filename: str = m.Field(description="Warning source filename")
         lineno: int = m.Field(ge=0, description="Warning source line")
         message: str = m.Field(description="Complete warning message")
-        enforcement_strict: bool = m.Field(description="Resolved enforcement mode")
-        suspended: bool = m.Field(description="Runtime enforcement policy decision")
 
     class PytestDiagnostics(m.ArbitraryTypesModel):
         """Extracted diagnostics summary from JUnit XML and pytest report-log."""
@@ -234,12 +241,6 @@ class FlextInfraModelsCore:
         ]
         warning_count: Annotated[
             t.NonNegativeInt, m.Field(description="Recorded warning event count")
-        ]
-        blocking_warning_count: Annotated[
-            t.NonNegativeInt, m.Field(description="Warnings outside suspended policy")
-        ]
-        suspended_warning_count: Annotated[
-            t.NonNegativeInt, m.Field(description="Warnings retained under suspension")
         ]
         skipped_count: Annotated[
             t.NonNegativeInt, m.Field(description="Skipped test case count")
@@ -269,9 +270,6 @@ class FlextInfraModelsCore:
         ] = m.Field(default_factory=tuple)
         warning_lines: Annotated[
             t.StrSequence, m.Field(description="Captured warning lines")
-        ] = m.Field(default_factory=tuple)
-        suspended_warning_lines: Annotated[
-            t.StrSequence, m.Field(description="Visible suspended warning occurrences")
         ] = m.Field(default_factory=tuple)
         skip_cases: Annotated[
             t.StrSequence, m.Field(description="Skipped test labels")
@@ -316,10 +314,6 @@ class FlextInfraModelsCore:
         ] = m.Field(default_factory=list)
         warning_lines: Annotated[
             t.MutableSequenceOf[str], m.Field(description="Collected warning lines")
-        ] = m.Field(default_factory=list)
-        suspended_warning_lines: Annotated[
-            t.MutableSequenceOf[str],
-            m.Field(description="Collected suspended warning occurrences"),
         ] = m.Field(default_factory=list)
         slow_entries: Annotated[
             t.MutableSequenceOf[str], m.Field(description="Collected slow-test entries")

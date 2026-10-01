@@ -1,8 +1,8 @@
 """Codemod enforcement quality gate.
 
 Runs ``ast-grep scan`` with the codemod rules discovered via
-``importlib.resources`` cascade (ADR-014). Valid policy findings remain
-observable; incomplete scans and native machinery failures block the build.
+``importlib.resources`` cascade (ADR-014). Every rule finding, incomplete
+scan, and native machinery failure blocks the build.
 
 Copyright (c) 2025 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -157,22 +157,19 @@ class FlextInfraCodemodGate(FlextInfraGate):
                 for finding in report.root
             )
 
-        # Operator order (2026-09-24): codemod policy findings are
-        # observational. Native scanner failures remain blocking.
+        # Every elected rule finding blocks the gate, regardless of its native
+        # severity. Preserve the scanner's severity on each reported issue.
+        issues = (*failures, *findings)
         return m.Infra.GateExecution(
             result=self._gate_result(
                 project_dir,
-                passed=not failures,
-                errors=[issue.formatted for issue in failures],
+                passed=not issues,
+                errors=[issue.formatted for issue in issues],
                 started=started,
             ),
-            issues=tuple(failures),
-            observational_issues=tuple(findings),
+            issues=issues,
             raw_output="\n".join((
-                (
-                    f"{len(findings)} observational findings; "
-                    f"{len(failures)} native failures"
-                ),
+                (f"{len(findings)} policy findings; {len(failures)} native failures"),
                 *raw_output,
             )),
         )

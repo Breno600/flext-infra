@@ -67,8 +67,8 @@ class TestsFlextInfraModels:
             eq=("lint", "format", "pyrefly", "mypy", "pyright", "security", "markdown"),
         )
 
-    def test_total_errors_multiple_gates(self) -> None:
-        """Test _ProjectResult.total_errors across multiple gates."""
+    def test_total_findings_multiple_gates(self) -> None:
+        """Every gate's findings add to the project total."""
         gate1 = m.Infra.GateResult(
             gate="lint", project="p", passed=True, errors=[], duration=0.0
         )
@@ -83,10 +83,10 @@ class TestsFlextInfraModels:
         project = m.Infra.ProjectResult(
             project="p", gates={"lint": exec1, "format": exec2}
         )
-        tm.that(project.total_errors, eq=3)
+        tm.that(project.total_findings, eq=3)
 
-    def test_total_errors_ignores_warning_issues(self) -> None:
-        """Test _ProjectResult.total_errors ignores warning-severity issues."""
+    def test_warning_findings_count_like_every_finding(self) -> None:
+        """A warning that fails the gate is counted like any other finding."""
         gate = m.Infra.GateResult(
             gate="pyright", project="p", passed=True, errors=[], duration=0.0
         )
@@ -101,8 +101,8 @@ class TestsFlextInfraModels:
         execution = m.Infra.GateExecution(result=gate, issues=(warning,), raw_output="")
         project = m.Infra.ProjectResult(project="p", gates={"pyright": execution})
 
-        tm.that(execution.error_count, eq=0)
-        tm.that(project.total_errors, eq=0)
+        tm.that(execution.finding_count, eq=1)
+        tm.that(project.total_findings, eq=1)
 
     def test_passed_all_gates_pass(self) -> None:
         """Test _ProjectResult.passed when all gates pass."""
@@ -149,5 +149,5 @@ class TestsFlextInfraModels:
         exec2 = m.Infra.GateExecution(result=gate2, issues=(issue3,), raw_output="")
         proj1 = m.Infra.ProjectResult(project="proj1", gates={"lint": exec1})
         proj2 = m.Infra.ProjectResult(project="proj2", gates={"format": exec2})
-        tm.that(proj1.total_errors, eq=2)
-        tm.that(proj2.total_errors, eq=1)
+        tm.that(proj1.total_findings, eq=2)
+        tm.that(proj2.total_findings, eq=1)

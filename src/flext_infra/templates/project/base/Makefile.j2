@@ -11,9 +11,6 @@
 {%- macro check_run(gates, extra="") -%}$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "{{ gates }}"{{ extra }}{%- endmacro -%}
 {%- macro local_check_body() -%}
 {{ "\t" }}@set -eu; \
-{% for suspension in make.check_gate_suspensions -%}
-		printf '%s\n' '{{ ("INFO: SUSPENDED check gate " ~ suspension.gate ~ "; authority=" ~ suspension.authority ~ "; reason=" ~ suspension.reason) | replace("\n", " ") | replace("$", "$$") | replace("'", "'\"'\"'") }}'; \
-{% endfor -%}
 		gates="{{ gates_csv(make.check_gates_default) }}"; \
 		if [ "$(strip $({{ make.ci.variable }}))" = "{{ make.ci.value }}" ]; then \
 			gates="{{ gates_csv(make.check_gates_ci) }}"; \
@@ -44,9 +41,14 @@ case "$$database" in "$(PROJECT_ROOT)"/*) printf 'ERROR: persistent testmon data
 case "$$database" in "$${TMPDIR:-/tmp}"/*|/tmp/*) printf 'ERROR: persistent testmon database must not live under the temporary directory: %s\n' "$$database" >&2; exit 2 ;; esac; \
 mkdir -p "$$(dirname "$$database")"; \
 {%- endmacro -%}
-{%- macro pytest_test_runner(operation="") -%}
+{#- Each phase is its own bounded runner process with its own entrypoint clock:
+    the budgeted phase never carries slow-marked items, which run afterwards in
+    their own phase, each within the per-item slow bound (gate-budget rule). -#}
+{%- macro pytest_test_runner(operations=("",)) -%}
 {{ pytest_testmon_guard() }}
-{{ make.testmon_cache.database_environment_variable }}="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry{% if operation %} {{ operation }}{% endif %}
+{%- for operation in operations %}
+{{ make.testmon_cache.database_environment_variable }}="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry{% if operation %} {{ operation }}{% endif %}{% if not loop.last %}; \{% endif %}
+{%- endfor %}
 {%- endmacro -%}
 # @flext-generated: continuous
 # @flext-owner: flext-infra/config/codegen.yaml + flext-infra/src/flext_infra/templates/project/base/Makefile.j2
@@ -127,7 +129,11 @@ PYTEST_PROCESS_TIMEOUT_SECONDS := {{ pytest_process_timeout_seconds }}
 PYTEST_BOUNDED = {{ timeout_command }} --signal=TERM --kill-after={{ timeout_kill_after_seconds }}s "$(PYTEST_PROCESS_TIMEOUT_SECONDS)s"
 PYTEST_REPORTS_DIR := {{ make.testmon_cache.reports_directory }}
 PYTEST_CACHE_HOME = $(if $(strip $({{ make.testmon_cache.data_home_environment_variable }})),$({{ make.testmon_cache.data_home_environment_variable }}),$(if $(strip $({{ make.testmon_cache.user_home_environment_variable }})),$({{ make.testmon_cache.user_home_environment_variable }})/{{ make.testmon_cache.home_cache_directory }},))
-override export FLEXT_PYTEST_TESTMON_DATABASE = $(if $(strip $(PYTEST_CACHE_HOME)),$(PYTEST_CACHE_HOME)/{{ make.testmon_cache.external_storage_directory }}/$(subst /,_,$(PROJECT_ROOT))/{{ make.testmon_cache.database_filename }})
+# One persistent testmon database per project, shared by every checkout and
+# worktree of it (like the Mypy cache): testmon tracks each checkout's source by
+# file checksum, so a new lane starts from the project's measured selection
+# instead of a cold full inventory (flext-3l1gk).
+override FLEXT_PYTEST_TESTMON_DATABASE = $(if $(strip $(PYTEST_CACHE_HOME)),$(PYTEST_CACHE_HOME)/{{ make.testmon_cache.external_storage_directory }}/$(PROJECT_NAME)/{{ make.testmon_cache.database_filename }})
 # Profiles sit beside the other reports of this checkout (.reports is ignored).
 PROFILE_REPORTS_DIR = $(PROJECT_ROOT)/$(dir $(PYTEST_REPORTS_DIR))profiles
 override PYTEST_CASE_TIMEOUT_SECONDS := {{ pytest.case_timeout_seconds }}
@@ -235,7 +241,7 @@ endif
 endif
 # End SECTION: profile routing
 
-override RUNTIME_VENV := $(abspath $(RUNTIME_ROOT)/../{{ make.runtime_environment_directory }}/$(subst :,/,$(patsubst /%,%,$(RUNTIME_ROOT))))
+override RUNTIME_VENV := $(RUNTIME_ROOT)/{{ environment_directory }}
 ifeq ($(OS),Windows_NT)
 override RUNTIME_BIN := $(RUNTIME_VENV)/Scripts
 override RUNTIME_PYTHON := $(RUNTIME_BIN)/python.exe
@@ -298,7 +304,6 @@ TOOL_BOOTSTRAP_LOCK :=
 SETUP_ENVIRONMENT_RECIPE = set -eu; \
 	$(REQUIRE_WORKSPACE_ENVIRONMENT); \
 	desired_python="$${SETUP_PYTHON:?missing Mise-resolved Python executable}"; \
-	mkdir -p "$(dir $(RUNTIME_VENV))"; \
 	if [ ! -x "$(RUNTIME_PYTHON)" ]; then \
 		$(UV) venv --python "$$desired_python" "$(RUNTIME_VENV)"; \
 	else \
@@ -324,7 +329,7 @@ REQUIRE_WORKSPACE_ENVIRONMENT = case "$(PROJECT_ROOT)/" in \
 	"$(RUNTIME_ROOT)/"*) ;; \
 	*) printf 'ERROR: runtime workspace does not contain this project: %s\n' "$(RUNTIME_ROOT)" >&2; exit 2 ;; \
 	esac; \
-	for environment_path in "$(RUNTIME_VENV)" "$(RUNTIME_BIN)" "$(PROJECT_ROOT)/.venv"; do \
+	for environment_path in "$(RUNTIME_VENV)" "$(RUNTIME_BIN)" "$(PROJECT_ROOT)/{{ environment_directory }}" "$(PROJECT_ROOT)/{{ environment_directory }}/bin"; do \
 		if [ -L "$$environment_path" ]; then \
 			printf 'ERROR: workspace environment must be physical, not a symlink: %s\n' "$$environment_path" >&2; exit 2; \
 		fi; \
@@ -404,6 +409,8 @@ endef
 # interrupted run never touches the committed lock. A full upgrade resolves
 # from declared manifests without prior lock preferences, including during
 # conflict repair; the final non-upgrade relock retains the resolved lock.
+# The second argument seeds the mirror with the committed lock: only that
+# retaining relock passes it, so a full upgrade never parses a prior lock.
 define _lock_project
 	@set -eu; \
 	workspace=$$($(UV) workspace dir --project "$(PROJECT_ROOT)"); \
@@ -416,7 +423,7 @@ define _lock_project
 		mkdir -p "$${stage}/mirror$$relative"; \
 		cp "$$member/pyproject.toml" "$${stage}/mirror$$relative/pyproject.toml"; \
 	done < "$${stage}/.members"; \
-	if [ -f "$$workspace/uv.lock" ]; then cp "$$workspace/uv.lock" "$${stage}/mirror/uv.lock"; fi; \
+	$(if $(2),if [ -f "$$workspace/uv.lock" ]; then cp "$$workspace/uv.lock" "$${stage}/mirror/uv.lock"; fi;) \
 	$(UV) lock --project "$${stage}/mirror" $(1); \
 	$(UV) lock --check --project "$${stage}/mirror"; \
 	if [ -e "$$candidate" ]; then printf 'ERROR: lock staging path already exists: %s\n' "$$candidate" >&2; exit 2; fi; \
@@ -612,7 +619,7 @@ _upg_relock: _bootstrap_setup_tools
 # red tests or red CI.
 .PHONY: _upg_converge
 _upg_converge:
-	$(call _lock_project,)
+	$(call _lock_project,,retain)
 	@$(SELF_MAKE) _builtin_setup_environment
 	@$(UV) lock --check --project "$(PROJECT_ROOT)"
 	@set -eu; \
@@ -647,20 +654,21 @@ _builtin_build_artifacts:
 
 # Check is read-only: it runs the gates without --apply, so the tree is left
 # unchanged; fix applies the declared repairs of the fixable gates.
-# CI={{ make.ci.value }} keeps make.check_gates_ci, the strict complement of
-# make.check_gates_local; CI={{ make.ci.local_value }} runs that local partition.
+# CI={{ make.ci.value }} runs make.check_gates_ci, the external gates of the
+# registry; CI={{ make.ci.local_value }} runs make.check_gates_local, its strict
+# complement (type checkers and flext-infra validators).
 # An absent CI token runs every active default gate.
 _builtin_check_all: _builtin_require_environment
 {{ local_check_body() }}
 
 _builtin_test_all: _builtin_require_environment
 {{ test_report_recipe(
-    runner=pytest_test_runner(),
+    runner=pytest_test_runner(("", "slow")),
 ) }}
 
 _builtin_test_full_all: _builtin_require_environment
 {{ test_report_recipe(
-    runner=pytest_test_runner("full"),
+    runner=pytest_test_runner(("full",)),
 ) }}
 
 # fmt is format-only (single-pass verb law): ruff formats Python, the
@@ -740,16 +748,25 @@ profile-gen-report: _builtin_require_environment
 		'import pstats, sys; pstats.Stats(sys.argv[1]).sort_stats("cumtime").print_stats(50)' \
 		"$(PROFILE_REPORTS_DIR)/lazy-init.pstats"
 
-# Profile the canonical runner and its real pytest controllers/workers.
-# The runner retains the same persistent database, selection and deadline.
+# Profile the cold canonical pytest execution through its thin entrypoint
+# for startup diagnosis (flext-itpd1.3.7): the same persistent testmon database
+# guard and environment as the bounded gate, but deliberately NOT wrapped in
+# PYTEST_BOUNDED. The runner's own deadline still applies. Central collection
+# children also write profiles beside their manifests and print their paths.
+# The stdlib-only adapter starts profiling before runner/model/pytest imports.
+# The parent sidecar binds the exact run;
+# reports never combine a parent profile with the mutable latest.txt pointer.
 .PHONY: profile-test
 profile-test: _builtin_require_environment
-	@{{ pytest_test_runner('profile "$(PROFILE_REPORTS_DIR)/pytest.pstats"') }}
+	@mkdir -p "$(PROFILE_REPORTS_DIR)"
+	@{{ pytest_testmon_guard() }}
+	{{ make.testmon_cache.database_environment_variable }}="$$database" $(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -m flext_infra._pytest_entry profile \
+		"$(PROFILE_REPORTS_DIR)/pytest.pstats"
 
 .PHONY: profile-test-report
 profile-test-report: _builtin_require_environment
 	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -m flext_infra._cprofile_entry \
-		"$(PROFILE_REPORTS_DIR)/pytest.pstats" "$(PYTEST_REPORTS_DIR)"
+		"$(PROFILE_REPORTS_DIR)/pytest.pstats" "$(PROFILE_REPORTS_DIR)/pytest.pstats.json"
 
 _builtin_status_diagnostics: _builtin_require_environment
 	@printf 'profile=%s\nproject=%s\nruntime=%s\n' \
@@ -838,6 +855,12 @@ _builtin-bootstrap-candidate: _builtin_require_environment
 _builtin_mod_apply: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) refactor mod --apply
 
+_builtin_mod_text_apply: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) refactor mod-text --apply
+
+_builtin_mod_text_candidate_apply: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) refactor mod-text-candidate --apply
+
 # `mod` verifies committed rule-test snapshots and never rewrites them; this is
 # the one explicit regeneration, whose diff is reviewed and committed.
 _builtin_mod_snapshots: _builtin_require_environment
@@ -882,6 +905,8 @@ _builtin-publication: _builtin_release_publish
 _builtin-gen: _builtin_gen_all
 _builtin-initialize: _builtin_gen_init
 _builtin-mod: _builtin_mod_apply
+_builtin-mod-text: _builtin_mod_text_apply
+_builtin-mod-text-candidate: _builtin_mod_text_candidate_apply
 _builtin-mod-snapshots: _builtin_mod_snapshots
 _builtin-waza:
 	@cd "$(PROJECT_ROOT)" && $(PROJECT_TOOL_EXEC) waza check --no-update-check
@@ -892,7 +917,6 @@ _builtin-{{ verb }}:
 _builtin-duplication:
 	@{{ check_run("duplication") }}
 _builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all
-
 {% if script_dispatch %}
 # Repository-owned script verbs route through the promoted command framework:
 # custom.mk handlers override via RUN_PUBLIC; otherwise the dispatcher resolves
@@ -901,4 +925,4 @@ _builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all
 _builtin-{{ verb.name }}: _builtin_require_environment
 	$(call _dispatch,{{ verb.name }})
 {% endfor %}
-{% endif %}
+{% endif -%}
