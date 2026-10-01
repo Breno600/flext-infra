@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from types import MappingProxyType
 from typing import Annotated, Literal, Self
 
@@ -705,6 +705,22 @@ class FlextInfraConfigModelsArtifact:
                 description="Generated projections excluded from campaign targets",
             ),
         ]
+
+        @u.model_validator(mode="after")
+        def _validate_source_paths(self) -> Self:
+            """Keep campaign drivers and scan roots inside their declared owners."""
+            for value in (self.csv, *self.roots):
+                path = Path(value)
+                if (
+                    path.is_absolute()
+                    or not path.parts
+                    or ".." in path.parts
+                    or "\\" in value
+                    or PureWindowsPath(value).drive
+                ):
+                    msg = f"CSV campaign path must be relative and non-escaping: {value}"
+                    raise ValueError(msg)
+            return self
 
     class SedPatternSpec(FlextInfraConfigModelsContract.ConfigContract):
         """One declared literal regex substitution for the mod verb's sed phase."""

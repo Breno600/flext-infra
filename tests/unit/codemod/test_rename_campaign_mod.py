@@ -126,3 +126,100 @@ class TestsRenameCampaignMod:
             tm.that(second.files_changed, eq=0)
             tm.that(second.occurrences, eq=0)
             tm.that(guide.read_bytes(), eq=first)
+
+    @pytest.mark.parametrize(
+        ("csv", "roots"),
+        [
+            ("../outside.csv", ()),
+            ("/outside.csv", ()),
+            ("renames.csv", ("../outside",)),
+            ("renames.csv", ("/outside",)),
+            ("renames.csv", (r"C:\\outside",)),
+        ],
+    )
+    def test_public_config_rejects_escaping_campaign_paths(
+        self,
+        mod_workspace: Path,
+        tmp_path: Path,
+        csv: str,
+        roots: tuple[str, ...],
+    ) -> None:
+        """A malformed campaign fails at config validation before source edits."""
+        config_dir = tmp_path / "campaign_config"
+        self._declare(config_dir)
+        (config_dir / c.Infra.CODEGEN_LOCAL_OVERRIDES_FILENAME).write_text(
+            "Infra:\n  refactor_csv_campaigns:\n    campaigns:\n"
+            f"      - csv: {csv!r}\n"
+            f"        roots: {list(roots)!r}\n"
+            "        text_globs: ['**/*.md']\n",
+            encoding="utf-8",
+        )
+        guide = mod_workspace / "guide.md"
+        guide.write_text("A campaign_token paragraph.\n", encoding="utf-8")
+        result = tm.ok(
+            u.Cli.run_raw(
+                (
+                    sys.executable,
+                    "-m",
+                    "flext_infra",
+                    "refactor",
+                    "mod",
+                    "--repository-root",
+                    str(mod_workspace),
+                    "--apply",
+                ),
+                env={"FLEXT_INFRA_CONFIG_DIR": str(config_dir)},
+            ),
+        )
+        tm.that(u.Cli.process_succeeded(result.outcome), eq=False)
+        tm.that(result.stderr, has="CSV campaign path must be relative and non-escaping")
+        tm.that(guide.read_text(encoding="utf-8"), eq="A campaign_token paragraph.\n")
+
+    @pytest.mark.parametrize("escape", ["driver", "root"])
+    def test_public_mod_rejects_symlink_escape_before_publication(
+        self,
+        mod_workspace: Path,
+        tmp_path: Path,
+        escape: str,
+    ) -> None:
+        """A relative declaration cannot follow a link outside its owner."""
+        config_dir = tmp_path / "campaign_config"
+        self._declare(config_dir)
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        guide = outside / "guide.md"
+        guide.write_text("A campaign_token paragraph.\n", encoding="utf-8")
+        if escape == "driver":
+            source = outside / "renames.csv"
+            source.write_bytes((config_dir / "renames.csv").read_bytes())
+            (config_dir / "renames.csv").unlink()
+            (config_dir / "renames.csv").symlink_to(source)
+            expected = "CSV campaign driver escapes config directory"
+        else:
+            (mod_workspace / "outside").symlink_to(outside, target_is_directory=True)
+            (config_dir / c.Infra.CODEGEN_LOCAL_OVERRIDES_FILENAME).write_text(
+                "Infra:\n  refactor_csv_campaigns:\n    campaigns:\n"
+                "      - csv: renames.csv\n"
+                "        roots: [outside]\n"
+                "        text_globs: ['**/*.md']\n",
+                encoding="utf-8",
+            )
+            expected = "CSV campaign scan root escapes repository"
+        result = tm.ok(
+            u.Cli.run_raw(
+                (
+                    sys.executable,
+                    "-m",
+                    "flext_infra",
+                    "refactor",
+                    "mod",
+                    "--repository-root",
+                    str(mod_workspace),
+                    "--apply",
+                ),
+                env={"FLEXT_INFRA_CONFIG_DIR": str(config_dir)},
+            ),
+        )
+        tm.that(u.Cli.process_succeeded(result.outcome), eq=False)
+        tm.that(result.stderr, has=expected)
+        tm.that(guide.read_text(encoding="utf-8"), eq="A campaign_token paragraph.\n")

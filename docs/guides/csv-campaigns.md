@@ -26,6 +26,10 @@ configuration. Each campaign keeps one `old,new` CSV as its rename source. Consu
 repositories, including repositories outside the FLEXT superproject, consume that same
 declared campaign through their own root verb. There is no per-campaign executable and
 no direct ast-grep write pass.
+The CSV path is relative to the declaring config directory; any declared scan roots
+are relative to the consumer repository. Absolute and parent-traversing declarations
+fail during typed config validation; resolved paths that leave either owner through a
+symbolic link fail during public composition before source publication.
 
 `make mod-text` replays only the declared Sed text rules through the same authenticated
 publisher used by `make mod`. It exists for recovery when a text rule has left an

@@ -190,17 +190,25 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         root = u.Infra.resolve_repository_root_or_cwd(request.repository_root)
         config = FlextInfraConfig.fetch_global().Infra.refactor_csv_campaigns
         config_dir = FlextInfraConfig.ssot_config_dir()
+        config_root = config_dir.resolve()
+        repository_root = root.resolve()
         campaigns: list[m.Infra.ApplyRenamesInput] = []
         for declared in config.campaigns:
-            csv = Path(declared.csv)
-            campaign_roots = tuple(
-                str(path if path.is_absolute() else root / path)
-                for path in (Path(value) for value in declared.roots)
-            )
+            csv = config_dir / declared.csv
+            if not csv.resolve().is_relative_to(config_root):
+                return r[t.Cli.ResultValue].fail(
+                    f"CSV campaign driver escapes config directory: {csv}"
+                )
+            campaign_roots = tuple(root / value for value in declared.roots) or (root,)
+            for path in campaign_roots:
+                if not path.resolve().is_relative_to(repository_root):
+                    return r[t.Cli.ResultValue].fail(
+                        f"CSV campaign scan root escapes repository: {path}"
+                    )
             campaigns.append(
                 m.Infra.ApplyRenamesInput(
-                    csv=str(csv if csv.is_absolute() else config_dir / csv),
-                    roots=campaign_roots or (str(root),),
+                    csv=str(csv),
+                    roots=tuple(str(path) for path in campaign_roots),
                     apply=request.apply
                     and not request.check
                     and not request.dry_run_mode,
