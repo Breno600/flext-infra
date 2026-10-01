@@ -101,7 +101,7 @@ class TestsFlextInfraUpgLockAtomicPublication:
             else:
                 pytest.fail(
                     "owned uv never opened the dependency for resolution; "
-                    f"last session processes: {last_observed!r}"
+                    f"last session processes: {last_observed!r}",
                 )
         finally:
             primary = sys.exception()

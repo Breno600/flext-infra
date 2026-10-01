@@ -106,7 +106,9 @@ class FlextInfraUtilitiesRopeSource:
 
     @classmethod
     def hoist_inline_imports(
-        cls, file_path: Path, statement_lines: t.SequenceOf[t.IntPair]
+        cls,
+        file_path: Path,
+        statement_lines: t.SequenceOf[t.IntPair],
     ) -> bool:
         """Move function-local import statements to the module import block.
 

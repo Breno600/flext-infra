@@ -34,7 +34,10 @@ class FlextInfraMiseArtifactsDerivation:
             if relative == c.Infra.MISE_VERSION_PIN_FILENAME:
                 continue
             launcher = cls._validate_launcher(
-                directory / Path(relative).name, relative, mode, release.value
+                directory / Path(relative).name,
+                relative,
+                mode,
+                release.value,
             )
             if launcher.failure:
                 return launcher

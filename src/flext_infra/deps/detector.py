@@ -86,7 +86,8 @@ class FlextInfraRuntimeDevDependencyDetector(
         # This command is the CLI composition point of the detect route: it
         # wires the dependency-analysis port into the runtime it drives.
         runtime = FlextInfraDependencyDetectorRuntime(
-            detector=self, deps=FlextInfraDependencyDetectionService()
+            detector=self,
+            deps=FlextInfraDependencyDetectionService(),
         )
         return runtime.run(params)
 

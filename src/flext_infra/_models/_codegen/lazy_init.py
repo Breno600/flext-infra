@@ -18,13 +18,16 @@ class FlextInfraModelsCodegenLazyInitModels:
         """One projected file recorded in the deterministic projection lock."""
 
         path: Annotated[
-            t.NonEmptyStr, m.Field(description="Project-relative projected path")
+            t.NonEmptyStr,
+            m.Field(description="Project-relative projected path"),
         ]
         sha256: Annotated[
-            t.NonEmptyStr, m.Field(description="Digest of the projected bytes")
+            t.NonEmptyStr,
+            m.Field(description="Digest of the projected bytes"),
         ]
         bytes: Annotated[
-            t.NonNegativeInt, m.Field(description="Byte length of the projected file")
+            t.NonNegativeInt,
+            m.Field(description="Byte length of the projected file"),
         ]
 
     class ProjectionLockPayload(m.ContractModel):

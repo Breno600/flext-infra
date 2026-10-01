@@ -32,7 +32,9 @@ class TestsFlextInfraCodegenConformProgress:
         )
         tm.ok(infra.codegen_conform(request, workspace))
         _ = capsys.readouterr()
-        checked = infra.codegen_conform(request.model_copy(update={"mode": c.Infra.CodegenConformMode.CHECK}),)
+        checked = infra.codegen_conform(
+            request.model_copy(update={"mode": c.Infra.CodegenConformMode.CHECK})
+        )
         tm.ok(checked)
         captured = capsys.readouterr().out
         tm.that("Codegen Conform" in captured, where=bool, msg=captured[-3000:])

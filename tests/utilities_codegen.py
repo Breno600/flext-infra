@@ -162,9 +162,9 @@ class TestsFlextInfraUtilitiesCodegenMixin:
                 package_dir
                 / f"{TestsFlextInfraUtilitiesCodegenMixin.family_public_module(family)}.py"
             )
-            if (package_dir / u.Infra.facade_families()[family].directory).is_dir() and (
-                not facade.is_file()
-            ):
+            if (
+                package_dir / u.Infra.facade_families()[family].directory
+            ).is_dir() and (not facade.is_file()):
                 facade.write_text(
                     f"class FixtureProject{family.capitalize()}Facade:\n    pass\n",
                     encoding="utf-8",

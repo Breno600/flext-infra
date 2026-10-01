@@ -16,7 +16,6 @@ from flext_infra.gates.pyright import FlextInfraPyrightGate
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p
     from flext_infra.gates.base_gate import FlextInfraGate
 
 
@@ -25,7 +24,8 @@ class TestsFlextInfraTypeGates:
 
     @pytest.mark.slow
     def test_mypy_cache_is_project_keyed_across_checkouts_and_relocks(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Real gate runs populate one external cache per declared project name."""
         spec = config.Infra.codegen.make.mypy_cache
@@ -46,13 +46,15 @@ class TestsFlextInfraTypeGates:
                 (root / "sample.py").write_text("value: int = 1\n", encoding="utf-8")
                 lock = root / c.Infra.UV_LOCK_FILENAME
                 context = m.Infra.GateContext(
-                    repository_root=root, reports_dir=root / ".reports"
+                    repository_root=root,
+                    reports_dir=root / ".reports",
                 )
                 gate = FlextInfraMypyGate(root)
                 cache = shared_root / project
                 for revision in (1, 2):
                     lock.write_text(
-                        f"version = 1\nrevision = {revision}\n", encoding="utf-8"
+                        f"version = 1\nrevision = {revision}\n",
+                        encoding="utf-8",
                     )
                     execution = gate.check(root, context)
                     tm.that(execution.result.passed, eq=True)

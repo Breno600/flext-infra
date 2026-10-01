@@ -529,7 +529,7 @@ class FlextInfraConfigModelsArtifact:
                     "Planners compose the pyproject first and record them; "
                     "None means this plan composes no pyproject, so the "
                     "committed one is the source"
-                )
+                ),
             ),
         ] = None
 

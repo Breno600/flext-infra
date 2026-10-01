@@ -29,7 +29,8 @@ class FlextInfraCodegenLazyInitProjectionManifest:
 
     @staticmethod
     def projection_manifest_plans(
-        *, files: t.VariadicTuple[m.Infra.CodegenFilePlan]
+        *,
+        files: t.VariadicTuple[m.Infra.CodegenFilePlan],
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]:
         """Append one manifest plan per project that owns projected files.
 
@@ -51,7 +52,7 @@ class FlextInfraCodegenLazyInitProjectionManifest:
                     path=relative.as_posix(),
                     sha256=hashlib.sha256(plan.desired_content).hexdigest(),
                     bytes=len(plan.desired_content),
-                )
+                ),
             )
         plans: list[m.Infra.CodegenFilePlan] = []
         for project in sorted(projected):
@@ -59,14 +60,14 @@ class FlextInfraCodegenLazyInitProjectionManifest:
                 {
                     "apiVersion": c.Infra.PROJECTIONS_LOCK_API_VERSION,
                     "entries": tuple(
-                        sorted(projected[project], key=lambda entry: entry.path)
+                        sorted(projected[project], key=lambda entry: entry.path),
                     ),
-                }
+                },
             )
             serialized = u.Cli.json_dumps(payload.model_dump(by_alias=True), indent=2)
             if serialized.failure:
                 return r[t.VariadicTuple[m.Infra.CodegenFilePlan]].from_failure(
-                    serialized
+                    serialized,
                 )
             content = f"{serialized.value}\n".encode(c.Cli.ENCODING_DEFAULT)
             manifest_path = project / ".agents" / c.Infra.PROJECTIONS_LOCK_FILENAME
@@ -80,7 +81,7 @@ class FlextInfraCodegenLazyInitProjectionManifest:
                     before=state.value,
                     desired_content=content,
                     desired_mode=0o644,
-                )
+                ),
             )
         return r[t.VariadicTuple[m.Infra.CodegenFilePlan]].ok(tuple(plans))
 

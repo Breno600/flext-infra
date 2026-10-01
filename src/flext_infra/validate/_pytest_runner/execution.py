@@ -431,13 +431,13 @@ class FlextInfraPytestRunnerExecution(
         )
         slow_marker = config.Infra.tooling.tools.pytest.slow_marker
         if self.slow_phase and slow_marker in self.ci_excluded_markers(
-            execution_mode=execution_mode
+            execution_mode=execution_mode,
         ):
             # The CI context deselects the slow marker by declaration, so its
             # phase is typed NOT EXECUTED here, never a selection of nothing.
             sys.stderr.write(
                 f"pytest slow phase NOT EXECUTED: ci-excluded-markers declares "
-                f"{slow_marker!r}\n"
+                f"{slow_marker!r}\n",
             )
             return r.ok(0)
         u.Cli.ensure_dir(self.testmon_db.parent).unwrap()
@@ -447,11 +447,15 @@ class FlextInfraPytestRunnerExecution(
         # it; a held lease refuses at once instead of spending this deadline.
         with u.Infra.codegen_transaction_lease(self.testmon_db, wait_seconds=0):
             return self._execute_testmon_leased(
-                complete=complete, execution_mode=execution_mode
+                complete=complete,
+                execution_mode=execution_mode,
             )
 
     def _execute_testmon_leased(
-        self, *, complete: bool, execution_mode: c.Infra.PytestExecutionMode
+        self,
+        *,
+        complete: bool,
+        execution_mode: c.Infra.PytestExecutionMode,
     ) -> p.Result[int]:
         """Run one testmon phase while holding the database lease."""
         report_dir = self._report_directory()
@@ -493,7 +497,9 @@ class FlextInfraPytestRunnerExecution(
         # enforces that manifest for both cold and warm caches while testmon
         # continues to collect dependencies through its xdist integration.
         command = self.build_command(
-            report_dir, selection_plan, execution_mode=execution_mode
+            report_dir,
+            selection_plan,
+            execution_mode=execution_mode,
         )
         outcome = self._run_suite(command, report_dir, execution_mode=execution_mode)
         cache_hit = (

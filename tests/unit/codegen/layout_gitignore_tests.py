@@ -130,21 +130,25 @@ class TestsFlextInfraCodegenLayoutGitignore:
         repository = u.Tests.repository_ref(owner)
         project = u.Tests.project_spec(owner)
         tm.ok(
-            infra.codegen_new(FlextInfraCodegenProjectNew(flext_source=u.Tests.flext_source(),
-            name=owner,
-            kind=c.Infra.ProjectKind.INTERNAL_FLEXT,
-            output_root=root,
-            provider=repository.provider,
-            repository_url=repository.url,
-            repository_branch=u.Tests.provider_branch(),
-            flext_repository_url=u.Tests.repository_ref(config.Infra.name).url,
-            flext_repository_ref=u.Tests.provider_branch(),
-            license=project.license,
-            author_name=project.author_name,
-            author_email=project.author_email,
-            upstream=project.upstream,
-            year=project.year,
-            apply_changes=True,)),
+            infra.codegen_new(
+                FlextInfraCodegenProjectNew(
+                    flext_source=u.Tests.flext_source(),
+                    name=owner,
+                    kind=c.Infra.ProjectKind.INTERNAL_FLEXT,
+                    output_root=root,
+                    provider=repository.provider,
+                    repository_url=repository.url,
+                    repository_branch=u.Tests.provider_branch(),
+                    flext_repository_url=u.Tests.repository_ref(config.Infra.name).url,
+                    flext_repository_ref=u.Tests.provider_branch(),
+                    license=project.license,
+                    author_name=project.author_name,
+                    author_email=project.author_email,
+                    upstream=project.upstream,
+                    year=project.year,
+                    apply_changes=True,
+                )
+            ),
         )
         tm.that(
             (root / c.CONFIG_DIR_NAME / c.Infra.WORKSPACE_MANIFEST_FILENAME).is_file(),

@@ -21,16 +21,21 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
     """Apply every discovered AST rewrite without destructive rollback."""
 
     rename_runner: t.Port[p.Infra.RenameCampaignRunner] = m.Field(
-        exclude=True, description="Injected CSV campaign execution port"
+        exclude=True,
+        description="Injected CSV campaign execution port",
     )
     progress: t.Port[p.Infra.ModProgress] = m.Field(
-        exclude=True, description="Injected mod progress transport port"
+        exclude=True,
+        description="Injected mod progress transport port",
     )
     rope: t.Port[p.Infra.RopeWorkspaceDsl] = m.Field(
-        exclude=True, description="Injected Rope workspace port"
+        exclude=True,
+        description="Injected Rope workspace port",
     )
     rename_inputs: t.VariadicTuple[m.Infra.ApplyRenamesInput] = m.Field(
-        exclude=True, default=(), description="Typed declared CSV campaigns"
+        exclude=True,
+        default=(),
+        description="Typed declared CSV campaigns",
     )
 
     @override

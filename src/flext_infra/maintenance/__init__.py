@@ -1,5 +1,9 @@
 # AUTO-GENERATED FILE — Regenerate with: make gen
-"""Flext Infra.maintenance package."""
+"""Flext Infra.maintenance package.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,9 +13,9 @@ from typing import TYPE_CHECKING
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from .clean import FlextInfraCleanService
-    from .python_version import FlextInfraPythonVersionEnforcer
-    from .sonarcloud import FlextInfraSonarcloudSettingsSync
+    from flext_infra.maintenance.clean import FlextInfraCleanService
+    from flext_infra.maintenance.python_version import FlextInfraPythonVersionEnforcer
+    from flext_infra.maintenance.sonarcloud import FlextInfraSonarcloudSettingsSync
 
 
 __all__: tuple[str, ...] = (

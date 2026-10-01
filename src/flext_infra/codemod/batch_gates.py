@@ -404,7 +404,7 @@ class FlextInfraModGateEngine:
             actionable=classes.count(c.Infra.ModScanFindingClass.ACTIONABLE),
             detection_only=classes.count(c.Infra.ModScanFindingClass.DETECTION_ONLY),
             non_actionable_with_fix=classes.count(
-                c.Infra.ModScanFindingClass.NON_ACTIONABLE_WITH_FIX
+                c.Infra.ModScanFindingClass.NON_ACTIONABLE_WITH_FIX,
             ),
             files=frozenset(entry.file for entry in entries),
             entries=entries,

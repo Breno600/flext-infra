@@ -463,7 +463,9 @@ class FlextInfraUtilitiesDocsRender:
 
     @staticmethod
     def docs_api_readme(
-        scope: m.Infra.DocScope, contract: t.JsonMapping, modules: t.SequenceOf[str]
+        scope: m.Infra.DocScope,
+        contract: t.JsonMapping,
+        modules: t.SequenceOf[str],
     ) -> str:
         """Return the standard API readme for a project.
 
@@ -583,7 +585,9 @@ class FlextInfraUtilitiesDocsRender:
 
     @staticmethod
     def docs_overview_page(
-        scope: m.Infra.DocScope, contract: t.JsonMapping, modules: t.SequenceOf[str]
+        scope: m.Infra.DocScope,
+        contract: t.JsonMapping,
+        modules: t.SequenceOf[str],
     ) -> str:
         """Return the generated overview page for a project API.
 

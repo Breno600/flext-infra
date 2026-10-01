@@ -398,7 +398,7 @@ class FlextInfraModelsCore:
         repository_root: Annotated[
             Path,
             m.Field(
-                description="Repository root whose namespace contract is validated"
+                description="Repository root whose namespace contract is validated",
             ),
         ]
 

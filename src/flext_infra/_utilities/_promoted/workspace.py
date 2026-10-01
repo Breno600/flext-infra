@@ -93,8 +93,7 @@ class FlextInfraUtilitiesPromotedWorkspace:
         if (
             settings.Infra.flext_command_dispatched
             != c.Infra.PromotedSelector.DISPATCHED
-            or settings.Infra.flext_command_path
-            != str(Path(script_file).resolve())
+            or settings.Infra.flext_command_path != str(Path(script_file).resolve())
         ):
             sys.stderr.write(c.Infra.PromotedMessage.NOT_DISPATCHED)
             raise SystemExit(c.Infra.ScriptExitCode.USAGE)

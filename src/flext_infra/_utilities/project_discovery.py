@@ -36,7 +36,7 @@ class FlextInfraUtilitiesProjectDiscovery(
             repository_root,
         )
         packaged = m.Infra.RefactorConfigSpec(
-            project_scan_dirs=config.Infra.source_scan.roots
+            project_scan_dirs=config.Infra.source_scan.roots,
         )
         if not manifest_path.is_file():
             return packaged
@@ -265,7 +265,7 @@ class FlextInfraUtilitiesProjectDiscovery(
                         for target in scan_dir.rglob(f"*{suffix}"):
                             if target.is_file():
                                 targets.add(
-                                    target.relative_to(resolved_root).as_posix()
+                                    target.relative_to(resolved_root).as_posix(),
                                 )
         return tuple(sorted(targets))
 

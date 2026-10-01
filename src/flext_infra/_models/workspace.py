@@ -29,7 +29,8 @@ class FlextInfraModelsWorkspace:
 
         root: Annotated[Path, m.Field(description="Superproject repository root")]
         integration_branch: Annotated[
-            str | None, m.Field(description="Detected workspace integration branch")
+            str | None,
+            m.Field(description="Detected workspace integration branch"),
         ] = None
         beads: Annotated[
             FlextInfraConfigModels.BeadsProjectSpec | None,
@@ -40,7 +41,8 @@ class FlextInfraModelsWorkspace:
             m.Field(description="Manifest-declared member identities by path"),
         ]
         allow_unprovisioned_members: Annotated[
-            bool, m.Field(description="Accept manifest identity before checkout setup")
+            bool,
+            m.Field(description="Accept manifest identity before checkout setup"),
         ] = False
 
     class WorkspaceEnvironmentRequest(m.ContractModel):

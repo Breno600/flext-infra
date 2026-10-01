@@ -144,7 +144,7 @@ class TestsFlextInfraPytestTimeoutConfig:
         policy = config.Infra.tooling.tools.pytest
         payload = policy.model_dump(by_alias=True, exclude_computed_fields=True)
         payload["run-timeout-overrides"] = {
-            config.Infra.name: policy.suite_stop_reserve_seconds
+            config.Infra.name: policy.suite_stop_reserve_seconds,
         }
 
         with pytest.raises(

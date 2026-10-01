@@ -62,7 +62,7 @@ class TestsFlextInfraCodegenMain:
                 project_root / "src" / "flext_infra",
                 root / "src" / "flext_infra",
                 dirs_exist_ok=True,
-            )
+            ),
         )
         tests_init = root / "tests" / "__init__.py"
         tests_init.parent.mkdir(parents=True, exist_ok=True)
@@ -90,7 +90,7 @@ class TestsFlextInfraCodegenMain:
                 u.Cli.atomic_write_text_file(
                     package_init.parent / c.Infra.CODEGEN_CLI_MODULE_FILENAME,
                     "def main() -> int:\n    return 0\n",
-                )
+                ),
             )
 
     @staticmethod

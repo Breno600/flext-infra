@@ -43,13 +43,16 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
             description=(
                 "Gate whose census rule families this run grades: the runtime "
                 "census gate grades every family no other gate owns"
-            )
+            ),
         ),
     ] = c.Infra.RUNTIME_CENSUS
 
     @classmethod
     def for_project(
-        cls, project_dir: Path, *, census_gate: str
+        cls,
+        project_dir: Path,
+        *,
+        census_gate: str,
     ) -> p.Result[FlextInfraRuntimeCensusValidator]:
         """Scope one census run to ``project_dir`` for ``census_gate``.
 
@@ -64,7 +67,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         # that cannot be read fails instead of falling back to the directory.
         if not (project_dir / c.PYPROJECT_FILENAME).is_file():
             return r[FlextInfraRuntimeCensusValidator].ok(
-                cls(repository_root=project_dir, census_gate=census_gate)
+                cls(repository_root=project_dir, census_gate=census_gate),
             )
         metadata = u.Infra.read_project_metadata_result(project_dir)
         if metadata.failure:
@@ -74,7 +77,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
                 repository_root=project_dir,
                 project_filter=metadata.value.project.name,
                 census_gate=census_gate,
-            )
+            ),
         )
 
     @staticmethod
@@ -92,7 +95,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
             c.Infra.SMELLS: frozenset({
                 *c.ENFORCEMENT_SMELL_TAGS,
                 *(rule_id for rule_id, *_ in smell_rows),
-            })
+            }),
         }
 
     @staticmethod
@@ -267,7 +270,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         if self.census_gate not in owning_gates:
             return r[m.Infra.ValidationReport].fail(
                 f"runtime census has no rule families for gate {self.census_gate!r}; "
-                f"owning gates: {', '.join(sorted(owning_gates))}"
+                f"owning gates: {', '.join(sorted(owning_gates))}",
             )
         projects_result = u.Infra.resolve_projects(self.repository_root, ())
         if projects_result.failure:

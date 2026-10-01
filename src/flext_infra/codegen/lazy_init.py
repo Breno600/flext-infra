@@ -163,7 +163,7 @@ class FlextInfraCodegenLazyInit(
         composed = tuple(file for analysis in analyses for file in analysis.files)
         manifests = (
             FlextInfraCodegenLazyInitProjectionManifest.projection_manifest_plans(
-                files=composed
+                files=composed,
             )
         )
         if manifests.failure:

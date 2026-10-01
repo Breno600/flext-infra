@@ -271,7 +271,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
                 family_line=test_u.Tests.provider_branch(),
-            )
+            ),
         )
         parsed = tu.Tests.toml_mapping(u.Cli.toml_parse_text(rendered))
         tool = tu.Tests.toml_mapping(parsed.get("tool"))

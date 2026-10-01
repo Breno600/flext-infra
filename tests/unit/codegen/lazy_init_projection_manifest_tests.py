@@ -17,7 +17,9 @@ from tests import u as test_u
 
 
 def _plan(
-    project: Path, relative: str, content: bytes | None
+    project: Path,
+    relative: str,
+    content: bytes | None,
 ) -> m.Infra.CodegenFilePlan:
     path = project / relative
     if content is None:
@@ -51,10 +53,10 @@ class TestsFlextInfraLazyInitProjectionManifest:
         second = _plan(tmp_path, ".codex/rules/rule.mdc", b"beta")
         composed = (first, second)
         one = FlextInfraCodegenLazyInitProjectionManifest.projection_manifest_plans(
-            files=composed
+            files=composed,
         )
         two = FlextInfraCodegenLazyInitProjectionManifest.projection_manifest_plans(
-            files=composed
+            files=composed,
         )
         tm.that(one.failure, eq=False)
         tm.that(one.value, eq=two.value)
@@ -78,22 +80,25 @@ class TestsFlextInfraLazyInitProjectionManifest:
         tm.that(manifest.desired_content.endswith(b"\n"), eq=True)
 
     def test_manifest_excludes_itself_and_non_projected_plans(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Only .agents/.codex projections feed entries; the manifest never self-refs."""
         projected = _plan(tmp_path, ".agents/aihub-hooks/x.py", b"kept")
         engine = _plan(tmp_path, "src/engine.py", b"ignored")
         existing = _plan(
-            tmp_path, ".agents/projections.lock.json", b'{"apiVersion": "stale"}'
+            tmp_path,
+            ".agents/projections.lock.json",
+            b'{"apiVersion": "stale"}',
         )
         result = FlextInfraCodegenLazyInitProjectionManifest.projection_manifest_plans(
-            files=(projected, engine, existing)
+            files=(projected, engine, existing),
         )
         tm.that(result.failure, eq=False)
         tm.that(len(result.value), eq=1)
         assert result.value[0].desired_content is not None
         parsed = test_u.Tests.json_payload(
-            result.value[0].desired_content.decode("utf-8")
+            result.value[0].desired_content.decode("utf-8"),
         )
         entries = parsed["entries"]
         assert isinstance(entries, list)
@@ -105,7 +110,7 @@ class TestsFlextInfraLazyInitProjectionManifest:
         """A project owning no projected files emits no manifest plan."""
         engine = _plan(tmp_path, "src/engine.py", b"only")
         result = FlextInfraCodegenLazyInitProjectionManifest.projection_manifest_plans(
-            files=(engine,)
+            files=(engine,),
         )
         tm.that(result.failure, eq=False)
         tm.that(result.value, eq=())
@@ -119,7 +124,7 @@ class TestsFlextInfraLazyInitProjectionManifest:
             _plan(other, ".codex/b.mdc", b"member"),
         )
         result = FlextInfraCodegenLazyInitProjectionManifest.projection_manifest_plans(
-            files=composed
+            files=composed,
         )
         tm.that(result.failure, eq=False)
         tm.that(len(result.value), eq=2)

@@ -207,7 +207,10 @@ class FlextInfraUtilitiesDiscovery(
 
     @classmethod
     def discover_python_targets(
-        cls, project_dir: Path, *, workspace_excluded_top_dirs: frozenset[str]
+        cls,
+        project_dir: Path,
+        *,
+        workspace_excluded_top_dirs: frozenset[str],
     ) -> t.StrSequence:
         """Return every first-party Python target owned by one project root.
 
@@ -225,7 +228,8 @@ class FlextInfraUtilitiesDiscovery(
         ]
         return [
             *cls.discover_python_dirs(
-                project_dir, workspace_excluded_top_dirs=workspace_excluded_top_dirs
+                project_dir,
+                workspace_excluded_top_dirs=workspace_excluded_top_dirs,
             ),
             *root_modules,
         ]

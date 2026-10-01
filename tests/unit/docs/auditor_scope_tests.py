@@ -253,7 +253,8 @@ class TestsFlextInfraAuditorScope:
         tm.that(issues[1].message, has="/Users/someone")
 
     def test_machine_path_issues_honours_exact_evidence_files(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Only a named historical file keeps an observed machine path."""
         auditor = FlextInfraDocAuditor()
@@ -277,17 +278,20 @@ class TestsFlextInfraAuditorScope:
         )
 
     def test_placeholder_patterns_distinguish_open_marker_from_plural_word(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """The declared lexical rule flags TODO colon, not ordinary TODOS prose."""
         docs = tmp_path / "docs"
         docs.mkdir()
         (docs / "guide.md").write_text("TODOS are reviewed.\n")
         (docs / "docs_config.json").write_text(
-            '{"audit": {"placeholder_patterns": ["TODO[ ]*:"]}}'
+            '{"audit": {"placeholder_patterns": ["TODO[ ]*:"]}}',
         )
         scope = m.Infra.DocScope(
-            name="root", path=tmp_path, report_dir=tmp_path / "reports"
+            name="root",
+            path=tmp_path,
+            report_dir=tmp_path / "reports",
         )
         auditor = FlextInfraDocAuditor()
         tm.that(auditor.placeholder_issues(scope), eq=[])
@@ -302,10 +306,12 @@ class TestsFlextInfraAuditorScope:
         docs.mkdir()
         (docs / "guide.md").write_text("/home/someone/flext\n")
         (docs / "docs_config.json").write_text(
-            '{"audit": {"historical_evidence_files": ["docs/plans/"]}}'
+            '{"audit": {"historical_evidence_files": ["docs/plans/"]}}',
         )
         scope = m.Infra.DocScope(
-            name="root", path=tmp_path, report_dir=tmp_path / "reports"
+            name="root",
+            path=tmp_path,
+            report_dir=tmp_path / "reports",
         )
         with pytest.raises(ValueError, match="historical evidence"):
             FlextInfraDocAuditor().machine_path_issues(scope)

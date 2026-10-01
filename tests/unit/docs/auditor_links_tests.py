@@ -246,7 +246,7 @@ class TestsFlextInfraAuditorLinks:
             never rewritten by guess.
             """
             branch = tm.not_none(
-                u.Infra.docs_github_repo_lookup("flext-sh", "flext")
+                u.Infra.docs_github_repo_lookup("flext-sh", "flext"),
             ).branch
             docs_dir = tmp_path / "docs"
             docs_dir.mkdir(parents=True, exist_ok=True)

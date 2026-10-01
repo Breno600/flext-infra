@@ -487,7 +487,7 @@ class FlextInfraWorkspaceDetector(
                 beads=beads,
                 members=members.value,
                 allow_unprovisioned_members=allow_unprovisioned_members,
-            )
+            ),
         )
 
     @classmethod
@@ -713,9 +713,7 @@ class FlextInfraWorkspaceDetector(
                 member_path,
                 declared_member=superproject_members.value.get(member_path),
                 context=m.Infra.SubprojectLoadContext(
-                    integration_branch=(
-                        baseline.value if baseline.success else None
-                    ),
+                    integration_branch=(baseline.value if baseline.success else None),
                     workspace_beads=inherited_beads.value,
                 ),
             )
@@ -905,7 +903,8 @@ class FlextInfraWorkspaceDetector(
 
     @classmethod
     def analysis_excluded_top_dirs(
-        cls, repository_root: Path
+        cls,
+        repository_root: Path,
     ) -> p.Result[frozenset[str]]:
         """Return the first segments of the read-only external topology paths.
 
@@ -913,7 +912,7 @@ class FlextInfraWorkspaceDetector(
         callers: the topology owner computes it, the utilities only apply it.
         """
         return cls.analysis_exclusion_paths(repository_root).map(
-            lambda paths: frozenset(path.parts[0] for path in paths if path.parts)
+            lambda paths: frozenset(path.parts[0] for path in paths if path.parts),
         )
 
     def detect(self, project_root: Path) -> p.Result[c.Infra.MakeProfile]:

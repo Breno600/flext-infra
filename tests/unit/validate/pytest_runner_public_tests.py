@@ -44,7 +44,8 @@ class TestsFlextInfraPytestRunner:
 
         def deselected(expression: str) -> frozenset[str]:
             tm.that(
-                expression.startswith("not (") and expression.endswith(")"), eq=True
+                expression.startswith("not (") and expression.endswith(")"),
+                eq=True,
             )
             return frozenset(expression.removeprefix("not (")[:-1].split(" or "))
 
@@ -107,13 +108,14 @@ class TestsFlextInfraPytestRunner:
         assert len(set(names)) == 1
         (name,) = {name.strip("'") for name in names}
         tm.that(
-            name, eq=runner.testmon_environment(c.Infra.PytestExecutionMode.INCREMENTAL)
+            name,
+            eq=runner.testmon_environment(c.Infra.PytestExecutionMode.INCREMENTAL),
         )
         # Each marker scope owns its environment: the slow phase never shares
         # the budgeted phase's records.
         tm.that(
             runner_for(cached_runner_project, slow_phase=True).testmon_environment(
-                c.Infra.PytestExecutionMode.INCREMENTAL
+                c.Infra.PytestExecutionMode.INCREMENTAL,
             ),
             ne=name,
         )
@@ -127,7 +129,8 @@ class TestsFlextInfraPytestRunner:
 
     @pytest.mark.slow
     def test_config_only_changes_invalidate_the_persistent_cache(
-        self, cached_runner_project: Path
+        self,
+        cached_runner_project: Path,
     ) -> None:
         """A governed YAML change executes again using the same Testmon database."""
         config_root = cached_runner_project / c.CONFIG_DIR_NAME
@@ -153,7 +156,7 @@ class TestsFlextInfraPytestRunner:
         assert "outcome=cache_hit" in summary(reports)
         warm_latest = (reports / "latest.txt").read_text().strip()
         warm_accounting = m.Infra.TestmonRunAccounting.model_validate_json(
-            (reports / warm_latest / "run-accounting.json").read_text()
+            (reports / warm_latest / "run-accounting.json").read_text(),
         )
         assert warm_accounting.cache_restored
         assert warm_accounting.executed_count == 0
@@ -165,7 +168,7 @@ class TestsFlextInfraPytestRunner:
         assert "executed=1" in summary(reports)
         latest = (reports / "latest.txt").read_text().strip()
         accounting = m.Infra.TestmonRunAccounting.model_validate_json(
-            (reports / latest / "run-accounting.json").read_text()
+            (reports / latest / "run-accounting.json").read_text(),
         )
         assert accounting.executed_count == accounting.reported_count
         assert (
@@ -174,13 +177,15 @@ class TestsFlextInfraPytestRunner:
         )
 
     def test_declared_project_uses_its_configured_run_wall(
-        self, cached_runner_project: Path
+        self,
+        cached_runner_project: Path,
     ) -> None:
         """The suite argv and process policy share one declared project budget."""
         policy = config.Infra.tooling.tools.pytest
         declared_name = next(iter(policy.run_timeout_overrides), config.Infra.name)
         expected = policy.run_timeout_overrides.get(
-            declared_name, policy.run_timeout_seconds
+            declared_name,
+            policy.run_timeout_seconds,
         )
         pyproject = cached_runner_project / "pyproject.toml"
         pyproject.write_text(
@@ -206,7 +211,7 @@ class TestsFlextInfraPytestRunner:
             eq=pytest.approx(
                 runner.started_at_monotonic
                 + expected
-                - policy.suite_stop_reserve_seconds
+                - policy.suite_stop_reserve_seconds,
             ),
         )
 
@@ -274,7 +279,8 @@ class TestsFlextInfraPytestRunner:
 
     @pytest.mark.slow
     def test_failed_slow_item_stays_red_across_budgeted_runs(
-        self, cached_runner_project: Path
+        self,
+        cached_runner_project: Path,
     ) -> None:
         """A budgeted xdist run never erases the slow phase's failure.
 
@@ -305,13 +311,15 @@ class TestsFlextInfraPytestRunner:
 
         tm.that(tm.ok(runner_for(cached_runner_project).execute()), eq=0)
         tm.that(
-            tm.ok(runner_for(cached_runner_project, slow_phase=True).execute()), ne=0
+            tm.ok(runner_for(cached_runner_project, slow_phase=True).execute()),
+            ne=0,
         )
         source.write_text("def answer() -> int:\n    return 41 + 1\n", encoding="utf-8")
         tm.that(tm.ok(runner_for(cached_runner_project).execute()), eq=0)
 
         tm.that(
-            tm.ok(runner_for(cached_runner_project, slow_phase=True).execute()), ne=0
+            tm.ok(runner_for(cached_runner_project, slow_phase=True).execute()),
+            ne=0,
         )
 
     @pytest.mark.slow
@@ -643,7 +651,8 @@ class TestsFlextInfraPytestRunner:
                 eq=f"not ({config.Infra.tooling.tools.pytest.slow_marker})",
             )
         slow_full = runner_for(cached_runner_project, slow_phase=True).build_command(
-            full, execution_mode=c.Infra.PytestExecutionMode.FULL
+            full,
+            execution_mode=c.Infra.PytestExecutionMode.FULL,
         )
         tm.that(
             slow_full[slow_full.index("-m", 3) + 1],

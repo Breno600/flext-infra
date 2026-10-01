@@ -251,11 +251,13 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(steps_index < setup_index, eq=True)
 
     def test_gen_fixed_point_rejects_dirty_git_tree(
-        self, rendered_project: Path, tmp_path: Path
+        self,
+        rendered_project: Path,
+        tmp_path: Path,
     ) -> None:
         """Run the generated post-generation shell check in a dirty repository."""
         workflow = u.Cli.yaml_load_mapping(
-            rendered_project / ".github" / "workflows" / "ci.yml"
+            rendered_project / ".github" / "workflows" / "ci.yml",
         )
         jobs = t.Cli.JSON_MAPPING_ADAPTER.validate_python(workflow["jobs"])
         runs: list[str] = []
@@ -280,7 +282,7 @@ class TestsFlextInfraCodegenCiMatrix:
         u.Tests.initialize_git_repo(repository)
         (repository / "untracked.txt").write_text("dirty\n", encoding="utf-8")
         outcome = tm.ok(
-            u.Cli.run_raw(["sh", "-eu", "-c", post_generation], cwd=repository)
+            u.Cli.run_raw(["sh", "-eu", "-c", post_generation], cwd=repository),
         )
         tm.that(u.Cli.process_succeeded(outcome.outcome), eq=False)
 
@@ -437,7 +439,8 @@ class TestsFlextInfraCodegenCiMatrix:
                 tm.that(version, eq=action.version)
 
     def test_dependabot_applies_the_fleet_cooldown_everywhere(
-        self, rendered_project: Path
+        self,
+        rendered_project: Path,
     ) -> None:
         """Every ecosystem entry carries the one configured cooldown."""
         root = rendered_project
@@ -456,7 +459,8 @@ class TestsFlextInfraCodegenCiMatrix:
             tm.that(cooldown["default-days"], eq=days)
 
     def test_cooldown_exclusion_is_the_direct_git_requirement_set(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Only requirements taken by direct reference are excluded."""
         pyproject = tmp_path / c.Infra.PYPROJECT_FILENAME
@@ -737,11 +741,12 @@ class TestsFlextInfraCodegenCiMatrix:
             tm.that(content, has=f"      - {branch}")
 
     def test_docs_failure_upload_keeps_audit_failure_and_scopes_hidden_reports(
-        self, rendered_project: Path
+        self,
+        rendered_project: Path,
     ) -> None:
         """A generated Docs job fails on audit findings and retains safe reports."""
         workflow = u.Cli.yaml_load_mapping(
-            rendered_project / ".github/workflows/docs.yml"
+            rendered_project / ".github/workflows/docs.yml",
         )
         jobs = t.Cli.JSON_MAPPING_ADAPTER.validate_python(workflow["jobs"])
         docs_job = t.Cli.JSON_MAPPING_ADAPTER.validate_python(jobs["docs-quality"])

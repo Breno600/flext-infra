@@ -49,7 +49,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                 "editable" if dir_info is not None and dir_info.editable else receipt
             )
             provenance.append(
-                f"{distribution.name}={distribution.version}:{identity!r}"
+                f"{distribution.name}={distribution.version}:{identity!r}",
             )
         fingerprint = "\n".join((sys.version, *sorted(provenance)))
         digest = hashlib.sha256(fingerprint.encode()).hexdigest()[:12]
@@ -120,7 +120,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         between run configurations, so each marker scope owns one.
         """
         scope = hashlib.sha256(
-            self._marker_expression(execution_mode).encode()
+            self._marker_expression(execution_mode).encode(),
         ).hexdigest()[:8]
         return f"{self._toolchain_testmon_environment()}-{scope}"
 
@@ -146,7 +146,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                     if self.carries_slow_items(execution_mode)
                     else (pytest.slow_marker,)
                 ),
-            ))
+            )),
         )
         if self.slow_phase:
             return (
@@ -157,7 +157,9 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         return f"not ({' or '.join(excluded)})" if excluded else ""
 
     def _plugin_policy_args(
-        self, *, execution_mode: c.Infra.PytestExecutionMode
+        self,
+        *,
+        execution_mode: c.Infra.PytestExecutionMode,
     ) -> t.VariadicTuple[str]:
         """Apply the same configured plugin contract to collection and execution."""
         pytest = config.Infra.tooling.tools.pytest

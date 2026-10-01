@@ -92,7 +92,10 @@ Infra:
         - windows-x64
       # Projection: .mise.toml [tools] keys. Override the selector here.
       qlty_selector: github:qltysh/qlty
-      qlty_version: latest
+      # 0.645.0 shipped without linux-x64 release assets; mise refuses to
+      # replace the working locked 0.642.0 (same upstream pattern as jscpd
+      # 5.4.0). Pinned to the last resolvable release until upstream fixes it.
+      qlty_version: "0.642.0"
       node_version: latest
       jscpd_selector: github:kucherenko/jscpd
       jscpd_version: latest
