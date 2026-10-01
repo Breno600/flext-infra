@@ -16,8 +16,13 @@ def runner_for(
     *,
     ci_context: bool = False,
     profile_collection: bool = False,
+    testmon: bool = True,
 ) -> FlextInfraPytestRunner:
-    """Bind one runner to the fixture project's canonical cache paths."""
+    """Bind one runner to the fixture project's canonical cache paths.
+
+    ``testmon=False`` mirrors the full verb's Make recipe, which passes no
+    database location.
+    """
     cache = config.Infra.codegen.make.testmon_cache
     testmon_db = (
         cached_runner_project.parent
@@ -44,7 +49,7 @@ def runner_for(
         started_at_monotonic=time.monotonic(),
         target=cache.target_directory,
         reports=cache.reports_directory,
-        testmon_db=testmon_db,
+        testmon_db=testmon_db if testmon else None,
     )
 
 
@@ -63,7 +68,9 @@ def profile_parent(runner: FlextInfraPytestRunner, output: Path) -> int:
                 overrides={
                     c.Infra.PYTEST_ENV_TARGET: str(runner.target),
                     c.Infra.PYTEST_ENV_REPORTS: str(runner.reports),
-                    cache.database_environment_variable: str(runner.testmon_db),
+                    cache.database_environment_variable: str(
+                        runner.required_testmon_db()
+                    ),
                 }
             ),
             deadline=m.Cli.ProcessDeadline(

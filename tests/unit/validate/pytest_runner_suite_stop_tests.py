@@ -168,7 +168,7 @@ class TestsFlextInfraPytestRunnerSuiteStop:
         # pytest-testmon's durable record is what the next selection excludes:
         # collected-but-unexecuted tests keep a row without a measured duration.
         with closing(
-            sqlite3.connect(f"file:{runner.testmon_db}?mode=ro", uri=True)
+            sqlite3.connect(f"file:{runner.required_testmon_db()}?mode=ro", uri=True)
         ) as connection:
             persisted = {
                 name
