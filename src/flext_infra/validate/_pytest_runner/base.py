@@ -46,6 +46,15 @@ class FlextInfraPytestRunnerBase(s[int]):
             description="Explicit profiling child invocation from the outer boundary.",
         ),
     ] = ()
+    profile_enabled: Annotated[
+        bool,
+        m.Field(
+            description=(
+                "Run the suite under the profiling entrypoint bound to this "
+                "invocation's run receipt."
+            ),
+        ),
+    ] = False
     slow_phase: Annotated[
         bool,
         m.Field(
@@ -200,11 +209,9 @@ class FlextInfraPytestRunnerBase(s[int]):
         """
         if not policy.parallel_worker_overrides:
             return policy.parallel_workers
-        pyproject_path = self.root / c.PYPROJECT_FILENAME
-        name = u.Infra.project_name_from_payload(
-            pyproject_path,
-            u.Infra.pyproject_payload(pyproject_path),
-        )
+        name = self._declared_project_name()
+        if name is None:
+            return policy.parallel_workers
         return policy.parallel_worker_overrides.get(name, policy.parallel_workers)
 
     @staticmethod

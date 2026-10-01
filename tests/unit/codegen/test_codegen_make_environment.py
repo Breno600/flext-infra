@@ -572,7 +572,10 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(u.Infra.runtime_environment_dir(project_root), eq=checkout_venv)
         tm.that(environment.stdout, has=f"RUNTIME_VENV={checkout_venv}\n")
         envrc = (project_root / ".envrc").read_text(encoding="utf-8")
-        tm.that(envrc, has='VENV_DIR="${RUNTIME_ROOT}/.venv"')
+        tm.that(
+            envrc,
+            has=f'VENV_DIR="${{RUNTIME_ROOT}}/{c.Infra.ENVIRONMENT_DIRECTORY}"',
+        )
         # One testmon database per project (flext-3l1gk): every checkout and
         # worktree of the project resolves the same file, so a new lane starts
         # from the project's measured selection, never a cold inventory.
