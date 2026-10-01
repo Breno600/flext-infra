@@ -100,9 +100,6 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
             entry.name
             for entry in route.iterdir()
             if entry.name not in allowed_entries
-            and not FlextInfraCodegenConformBeadsRoutes.dry_run_config_backup(
-                entry.name,
-            )
         )
         if unexpected:
             return r[bool].fail(
@@ -111,19 +108,6 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
             )
         route.chmod(c.Infra.BEADS_DIRECTORY_MODE)
         return r[bool].ok(True)
-
-    @staticmethod
-    def dry_run_config_backup(name: str) -> bool:
-        """Return whether ``name`` is a dry-run ``config.yaml`` backup snapshot.
-
-        Why: the bd client rewrites ``last-touched`` on every
-        write, and a dry-run ``make gen`` leaves ``config.yaml.<ts>.bak``
-        snapshots behind — both are ephemeral tooling state, not unmerged
-        ledger state, so they must not fail the composed-project verify.
-        """
-        return name.startswith(
-            f"{Path(c.Infra.BEADS_CONFIG_RELPATH).name}.",
-        ) and name.endswith(".bak")
 
 
 __all__: list[str] = ["FlextInfraCodegenConformBeadsRoutes"]

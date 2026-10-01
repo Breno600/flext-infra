@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from rope.base import codeanalyze, simplify
-
 from flext_infra import m, p, t
 
 from .rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
@@ -21,7 +19,13 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
         source: str,
         layout: m.Infra.ClassBlockLayout,
     ) -> t.VariadicTuple[m.Infra.SourceRewrite]:
-        """Remove one Rope-resolved header without changing literal payloads."""
+        """Remove one Rope-resolved header without changing literal payloads.
+
+        The body statements own the dedent width and the wrapper docstring, so
+        both derive from the logical facts instead of being passed alongside.
+        """
+        from rope.base import codeanalyze, simplify
+
         lines = codeanalyze.SourceLinesAdapter(source)
         regions = tuple(simplify.ignored_regions(source))
         start = lines.get_line_start(layout.header_start)

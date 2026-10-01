@@ -405,7 +405,11 @@ class FlextInfraMiseArtifactsState:
         cls,
         layout: m.Infra.MiseToolchainWorkspaceLayout,
     ) -> t.VariadicTuple[Path]:
-        """Return every transaction-prefixed child or unsafe state-root alias."""
+        """Return every transaction-prefixed child or unsafe state-root alias.
+
+        An unreadable state root is a read failure, never classified as
+        residue; the read error escapes.
+        """
         residue: list[Path] = []
         for project in files.transaction_participants(layout):
             state_root = project.root / c.Infra.MISE_ARTIFACTS_STATE_DIRECTORY
@@ -414,15 +418,11 @@ class FlextInfraMiseArtifactsState:
             if state_root.is_symlink():
                 residue.append(state_root)
                 continue
-            try:
-                root_state = state_root.lstat()
-                if not stat.S_ISDIR(root_state.st_mode) or cls._is_reparse(root_state):
-                    residue.append(state_root)
-                    continue
-                children = tuple(state_root.iterdir())
-            except OSError:
+            root_state = state_root.lstat()
+            if not stat.S_ISDIR(root_state.st_mode) or cls._is_reparse(root_state):
                 residue.append(state_root)
                 continue
+            children = tuple(state_root.iterdir())
             residue.extend(
                 child
                 for child in children
