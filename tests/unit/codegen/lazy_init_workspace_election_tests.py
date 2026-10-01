@@ -57,7 +57,8 @@ class TestsFlextInfraLazyInitWorkspaceElection:
         planned = tm.ok(u.Tests.plan_lazy_init(workspace)).files
         child_plan = next(item for item in planned if item.path == child_init)
         tm.that(
-            child_plan.desired_content.decode(), has="from flext_ws_middle import r"
+            child_plan.desired_content,
+            has=b"from flext_ws_middle import r",
         )
         with pytest.raises(
             ValueError,
