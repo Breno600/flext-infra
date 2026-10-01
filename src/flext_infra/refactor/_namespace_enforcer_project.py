@@ -115,7 +115,6 @@ class FlextInfraNamespaceEnforcerProjectMixin:
             MutableMapping[Path, set[str]],
         ] = defaultdict(lambda: defaultdict(set))
         spans: MutableMapping[Path, list[t.IntPair]] = defaultdict(list)
-        tails: MutableMapping[Path, list[t.IntPair]] = defaultdict(list)
         imports: MutableMapping[Path, MutableMapping[t.StrPair, set[str]]] = (
             defaultdict(lambda: defaultdict(set))
         )
@@ -126,8 +125,6 @@ class FlextInfraNamespaceEnforcerProjectMixin:
             match relocation:
                 case c.Infra.CodemodRelocation.MODULE_IMPORT:
                     spans[file_path].append(self._finding_lines(finding))
-                case c.Infra.CodemodRelocation.MODULE_END:
-                    tails[file_path].append(self._finding_lines(finding))
                 case c.Infra.CodemodRelocation.FUTURE_ANNOTATIONS:
                     names[relocation].setdefault(file_path, set())
                 case c.Infra.CodemodRelocation.PACKAGE_ROOT_IMPORT:
@@ -162,11 +159,6 @@ class FlextInfraNamespaceEnforcerProjectMixin:
                     )
         for file_path, statement_lines in spans.items():
             u.Infra.hoist_inline_imports(file_path, statement_lines)
-        # Both moves address the scan's line spans: a module whose imports were
-        # just hoisted keeps its tail finding for the next pass, which rescans.
-        for file_path, statement_lines in tails.items():
-            if file_path not in spans:
-                u.Infra.move_statements_to_module_end(file_path, statement_lines)
         self._rebind_imports(imports)
         self._move_classes(project_root, classes)
         for relocation, names_by_file in names.items():

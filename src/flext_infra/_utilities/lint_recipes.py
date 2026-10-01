@@ -567,6 +567,54 @@ class FlextInfraUtilitiesLintRecipes:
         return f'{prefix}"""{inner}\n{indent}"""'
 
     @classmethod
+    def notice_last(cls, source: str, *, path: Path) -> str:
+        """Return ``source`` with its docstring notice paragraph as the last text.
+
+        The notice paragraph starts at the line the declared notice pattern
+        (``tools.ruff.lint.copyright-notice-rgx``) matches and runs to the
+        next blank line; the other paragraphs keep their order. ``path`` names
+        the module in every refusal.
+
+        Returns:
+            The rewritten source; ``source`` itself when the notice already
+            closes the docstring.
+
+        Raises:
+            ValueError: If the module has no docstring or its docstring
+                carries no notice.
+
+        """
+        docstring = cls._docstring_expr(ast.parse(source, filename=str(path)))
+        if docstring is None:
+            msg = f"{path}: module has no docstring carrying a notice"
+            raise ValueError(msg)
+        start, end, raw = cls._literal(
+            source.splitlines(keepends=True),
+            docstring,
+            path,
+        )
+        prefix, inner = cls._split_literal(raw)
+        found = re.search(
+            config.Infra.tooling.tools.ruff.lint.copyright_notice_rgx,
+            inner,
+        )
+        if found is None:
+            msg = f"{path}: module docstring carries no copyright notice"
+            raise ValueError(msg)
+        first = inner.rfind("\n", 0, found.start()) + 1
+        blank = inner.find("\n\n", found.end())
+        last = len(inner) if blank < 0 else blank
+        after = inner[last:].strip("\n")
+        if not after.strip():
+            return source
+        before = inner[:first].rstrip("\n")
+        text = f"{before}\n\n{after}" if before.strip() else after
+        updated = cls._with_notice(f'{prefix}"""{text}"""', inner[first:last].strip())
+        rewritten = f"{source[:start]}{updated}{source[end:]}"
+        ast.parse(rewritten, filename=str(path))
+        return rewritten
+
+    @classmethod
     def _with_notice(cls, raw: str, notice: str) -> str:
         """Return the module docstring with the notice as its last lines.
 
