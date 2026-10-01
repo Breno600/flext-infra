@@ -6,7 +6,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import FlextInfraWorktreeService, c, u as infra_u
+from flext_infra import FlextInfraWorktreeService, c, config, u as infra_u
 from tests import u
 
 
@@ -25,7 +25,9 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         (repository / "Makefile").write_text(
             "PROJECT_ROOT := $(CURDIR)\n"
             "RUNTIME_ROOT := $(PROJECT_ROOT)\n"
-            f"RUNTIME_VENV := $(CURDIR)/{c.Infra.ENVIRONMENT_DIRECTORY}\n"
+            "RUNTIME_VENV := $(dir $(CURDIR))"
+            f"{config.Infra.codegen.make.runtime_environment_directory}/"
+            "$(patsubst /%,%,$(CURDIR))\n"
             ".PHONY: setup\n"
             "setup:\n"
             '\t@test "$(RUNTIME_ROOT)" = "$(PROJECT_ROOT)"\n'
@@ -81,7 +83,7 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         primary_sentinel = (
             infra_u.Infra.runtime_environment_dir(repository) / "primary-sentinel"
         )
-        primary_sentinel.parent.mkdir()
+        primary_sentinel.parent.mkdir(parents=True, exist_ok=True)
         primary_sentinel.write_text("untouched\n", encoding="utf-8")
         lane = self._lane(repository, "feature/isolated-environment")
         with tm.scope(
@@ -140,7 +142,7 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         repository = self._repository(tmp_path)
         lane = self._lane(repository, "feature/preserve-local")
         sentinel = infra_u.Infra.runtime_environment_dir(lane) / "sentinel"
-        sentinel.parent.mkdir()
+        sentinel.parent.mkdir(parents=True, exist_ok=True)
         sentinel.write_text("local\n", encoding="utf-8")
 
         tm.ok(FlextInfraWorktreeService.setup_lane(lane))

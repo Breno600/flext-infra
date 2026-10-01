@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import cProfile
+import os
 import runpy
 import sys
 import time
@@ -65,7 +66,9 @@ class FlextInfraPytestProfile:
         from flext_infra.validate.pytest_runner import FlextInfraPytestRunner
 
         runner = FlextInfraPytestRunner.from_environment(
-            started_at_monotonic=started_at_monotonic, collection_command_prefix=prefix
+            started_at_monotonic=started_at_monotonic,
+            collection_command_prefix=prefix,
+            profile_enabled=True,
         )
         # The runner publishes its run context before any child can fail; the
         # parent binds the profile to the receipt THIS invocation wrote, also
@@ -115,6 +118,15 @@ class FlextInfraPytestProfile:
     def _finish(self, profile: cProfile.Profile) -> None:
         """Keep raw profiles on early failure, but publish only this run's receipt."""
         profile.dump_stats(str(self.output))
+        from flext_infra import config
+
+        policy = config.Infra.tooling.tools.pytest
+        if self.output.name == policy.profile_suite_filename:
+            process_dir = self.output.parent / policy.profile_process_directory
+            process_dir.mkdir(parents=True, exist_ok=True)
+            (process_dir / f"{os.getpid()}{self.output.suffix}").hardlink_to(
+                self.output
+            )
         if self.context is not None:
             from flext_infra import u
 

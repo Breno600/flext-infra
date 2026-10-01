@@ -281,6 +281,20 @@ class FlextInfraModelsDepsToolConfig(
                 description="Maximum cProfile rows rendered.",
             ),
         ]
+        profile_suite_filename: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                alias="profile-suite-filename",
+                description="Suite cProfile artifact filename",
+            ),
+        ]
+        profile_process_directory: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                alias="profile-process-directory",
+                description="Per-process cProfile artifact directory",
+            ),
+        ]
         min_version: Annotated[
             t.NonEmptyStr,
             m.Field(alias="min-version", description="Minimum pytest version."),

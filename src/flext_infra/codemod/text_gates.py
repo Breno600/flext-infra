@@ -30,6 +30,13 @@ from ..codegen import FlextInfraCodegenMiseArtifacts, FlextInfraCodegenTransacti
 class FlextInfraModTextGateEngine:
     """Scan, apply, and prove the declarative sed-by-list rule cascade."""
 
+    @staticmethod
+    def _provider_rules_path() -> Path:
+        """Resolve the one configured provider rules file for every phase."""
+        return FlextInfraConfig.ssot_config_dir() / (
+            c.Infra.CODEMOD_TEXT_RULES_RELPATH.relative_to(c.Infra.CODEGEN_CONFIG_DIR)
+        )
+
     @classmethod
     def run(cls, root: Path, *, apply: bool) -> p.Result[t.Cli.ResultValue]:
         """Replay only text rules through their authenticated transaction."""
@@ -60,15 +67,12 @@ class FlextInfraModTextGateEngine:
             return r[t.VariadicTuple[m.Infra.ModTextRule]].from_failure(snapshots)
         return cls._rules_from_states(snapshots.value)
 
-    @staticmethod
+    @classmethod
     def _catalogue_states(
-        root: Path,
+        cls, root: Path
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
         """Capture the packaged rules and the consumer overlay exactly once."""
-        provider = (
-            FlextInfraConfig.ssot_config_dir().parent
-            / c.Infra.CODEMOD_TEXT_RULES_RELPATH
-        )
+        provider = cls._provider_rules_path()
         consumer = root / c.Infra.CODEMOD_TEXT_RULES_RELPATH
         snapshots: list[m.Cli.AtomicFileState] = []
         for path, required in ((provider, True), (consumer, False)):
@@ -327,8 +331,9 @@ class FlextInfraModTextGateEngine:
                 return r[m.Infra.ModTextReport].from_failure(published)
         return r[m.Infra.ModTextReport].ok(report)
 
-    @staticmethod
+    @classmethod
     def _publish(
+        cls,
         root: Path,
         plans: t.VariadicTuple[m.Infra.CodegenFilePlan],
         inputs: t.VariadicTuple[m.Cli.AtomicFileState],
@@ -345,8 +350,7 @@ class FlextInfraModTextGateEngine:
 
         def validate_inventory() -> p.Result[bool]:
             catalogues = {
-                FlextInfraConfig.ssot_config_dir().parent
-                / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
+                cls._provider_rules_path(),
                 root / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
             }
             expected = {state.path for state in inputs if state.path not in catalogues}

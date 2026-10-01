@@ -29,6 +29,12 @@ class FlextInfraPytestRunnerBase(s[int]):
         bool,
         m.Field(description="CI/pre-commit selection captured at the Make boundary."),
     ] = False
+    profile_enabled: Annotated[
+        bool,
+        m.Field(
+            description="Profile the real suite child and preserve its native exit"
+        ),
+    ] = False
     collection_command_prefix: Annotated[
         t.StrTuple,
         m.Field(
@@ -56,7 +62,7 @@ class FlextInfraPytestRunnerBase(s[int]):
         *,
         started_at_monotonic: float,
         collection_command_prefix: t.StrTuple = (),
-        slow_phase: bool = False,
+        profile_enabled: bool = False,
     ) -> Self:
         """Create the runner exclusively from generated Make inputs."""
         ci = config.Infra.codegen.make.ci
@@ -64,7 +70,7 @@ class FlextInfraPytestRunnerBase(s[int]):
             repository_root=Path.cwd(),
             started_at_monotonic=started_at_monotonic,
             collection_command_prefix=collection_command_prefix,
-            slow_phase=slow_phase,
+            profile_enabled=profile_enabled,
             ci_context=(u.Infra.env_lookup(ci.variable) or "").strip() == ci.value,
             target=Path(cls._environment_value(c.Infra.PYTEST_ENV_TARGET)),
             reports=Path(cls._environment_value(c.Infra.PYTEST_ENV_REPORTS)),
