@@ -1,11 +1,15 @@
-"""Verify ci.yml reuses the declared tool caches and saves them on failure."""
+"""Verify ci.yml reuses the declared tool caches and saves them on failure.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from flext_tests import tm
 
-from tests import u
 from flext_infra import c, config, t
+from tests import u
 from tests.unit.codegen.test_ci_integration_branch_triggers import (
     TestsFlextInfraCiIntegrationBranchTriggers,
 )
@@ -16,6 +20,7 @@ class TestsFlextInfraCiToolCacheReuse:
 
     @staticmethod
     def test_ci_reuses_and_saves_the_declared_tool_caches() -> None:
+        """Test ci reuses and saves the declared tool caches."""
         steps = u.CodegenTestSupport.Ci.ci_job_steps(
             TestsFlextInfraCiIntegrationBranchTriggers.render_ci(
                 repository_branch="0.12.0-dev",

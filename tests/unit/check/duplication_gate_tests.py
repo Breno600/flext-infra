@@ -1,4 +1,8 @@
-"""Fail-closed public behavior for the jscpd duplication gate."""
+"""Fail-closed public behavior for the jscpd duplication gate.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -34,10 +38,12 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
 
     @staticmethod
     def test_registry_exposes_the_canonical_gate() -> None:
+        """Test registry exposes the canonical gate."""
         gate = FlextInfraGateRegistry.default().create("duplication", Path.cwd())
         tm.that(isinstance(gate, FlextInfraDuplicationGate), eq=True)
 
     def test_empty_workspace_scope_is_a_blocking_failure(self, tmp_path: Path) -> None:
+        """Test empty workspace scope is a blocking failure."""
         project = tmp_path / "missing-project"
         project.mkdir()
 
@@ -53,7 +59,12 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
 
     @staticmethod
     def _governed_with_declared_trees(tmp_path: Path, *, declare_trees: bool) -> Path:
-        """One governed checkout whose clones live only inside charts/."""
+        """One governed checkout whose clones live only inside charts/.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         root = tmp_path / "governed-duplication"
         u.Tests.WorktreeFixture.initialize_governed_project(
             root,
@@ -136,6 +147,10 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
         ``fixture-dup`` and ``fixture-dup-extra`` share a string prefix but are
         distinct projects; a clone between them must never be attributed to the
         shorter one.
+
+        Returns:
+            The resulting ``Path``.
+
         """
         root = tmp_path / "sibling-workspace"
         root.mkdir()

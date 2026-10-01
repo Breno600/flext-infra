@@ -3,6 +3,9 @@
 Every case drives the public CLI over a real repository whose merge commits
 carry pull-request titles, exactly as GitHub leaves them when the merge commit
 subject is the pull-request title.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -39,7 +42,12 @@ class TestsFlextInfraReleaseProtocol:
 
     @staticmethod
     def _plan(workspace: Path) -> m.Infra.ReleasePlan:
-        """Read the plan receipt the last ``plan`` phase wrote."""
+        """Read the plan receipt the last ``plan`` phase wrote.
+
+        Returns:
+            The resulting ``m.Infra.ReleasePlan``.
+
+        """
         payload = workspace / ".reports" / "release" / c.Infra.RELEASE_PLAN_FILENAME
         return m.Infra.ReleasePlan.model_validate_json(
             payload.read_text(encoding="utf-8"),
@@ -51,7 +59,12 @@ class TestsFlextInfraReleaseProtocol:
         tm.ok(cli.run_checked([c.Infra.GIT, "tag", "-a", tag, "-m", tag], cwd=repo))
 
     def _released_workspace(self, tmp_path: Path) -> Path:
-        """Return a workspace on its integration branch with ``v0.1.0`` released."""
+        """Return a workspace on its integration branch with ``v0.1.0`` released.
+
+        Returns:
+            A workspace on its integration branch with ``v0.1.0`` released.
+
+        """
         workspace = u.Tests.create_release_workspace(tmp_path)
         u.Tests.checkout_integration(workspace)
         self._tag(workspace, "v0.1.0")
@@ -59,7 +72,12 @@ class TestsFlextInfraReleaseProtocol:
 
     @staticmethod
     def _release_lane_workspace(tmp_path: Path) -> Path:
-        """Return a pre-release workspace that can push to a local bare origin."""
+        """Return a pre-release workspace that can push to a local bare origin.
+
+        Returns:
+            A pre-release workspace that can push to a local bare origin.
+
+        """
         workspace = u.Tests.create_release_workspace(
             tmp_path,
             version=c.Tests.RELEASE_VERSION_PRERELEASE,
@@ -110,7 +128,12 @@ class TestsFlextInfraReleaseProtocol:
         )
 
     def _planned_release(self, workspace: Path) -> m.Infra.ReleasePlan:
-        """Run the plan phase once and return its receipt."""
+        """Run the plan phase once and return its receipt.
+
+        Returns:
+            The resulting ``m.Infra.ReleasePlan``.
+
+        """
         tm.that(u.Tests.run_release_main(workspace, "--phase", "plan"), eq=0)
         return self._plan(workspace)
 
@@ -121,6 +144,10 @@ class TestsFlextInfraReleaseProtocol:
         Why: PATH is restored by the public ``env_vars_context`` facade rather
         than ``monkeypatch``, so the fixture stays inside the test utilities
         contract.
+
+        Yields:
+            Each ``t.Pair[Path, Path]``.
+
         """
         workspace = self._release_lane_workspace(tmp_path)
         gh_log = u.Tests.cli_shim(tmp_path / "bin", c.Infra.GH)

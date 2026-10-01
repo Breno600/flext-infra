@@ -44,12 +44,17 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
 
             @staticmethod
             def ci_trigger_branches(repository_branch: str) -> t.VariadicTuple[str]:
-                """Derive the repository trigger set from the configured policy."""
+                """Derive the repository trigger set from the configured policy.
+
+                Returns:
+                    The resulting ``t.VariadicTuple[str]``.
+
+                """
                 return tuple(
                     dict.fromkeys((
                         *config.Infra.codegen.branch_policy.ci_trigger_branches,
                         repository_branch,
-                    ))
+                    )),
                 )
 
             @staticmethod
@@ -60,6 +65,10 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                 synthetic contract instead of any real workspace entry: real
                 deploy-key contracts are operator-private config living in the
                 gitignored local override layer, never in this public repository.
+
+                Returns:
+                    The resulting ``m.Infra.CiPrivateSubmodulesSpec``.
+
                 """
                 key = m.Infra.CiPrivateSubmoduleDeployKeySpec.model_validate({
                     "secret": "EXAMPLE_SIBLING_DEPLOY_KEY",
@@ -87,7 +96,12 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                 workspace_repositories: t.VariadicTuple[m.Infra.RepositoryRef] = (),
                 cooldown_excluded_dependencies: t.VariadicTuple[t.NonEmptyStr] = (),
             ) -> m.Infra.GithubWorkflowRenderSpec:
-                """Build the common strictly typed workflow rendering contract."""
+                """Build the common strictly typed workflow rendering contract.
+
+                Returns:
+                    The resulting ``m.Infra.GithubWorkflowRenderSpec``.
+
+                """
                 codegen = config.Infra.codegen
                 return m.Infra.GithubWorkflowRenderSpec(
                     dist=dist,
@@ -117,6 +131,13 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
 
                 One owner for the YAML parse and the jobs/ci/steps navigation every
                 CI-contract test shares; consumers assert on the returned steps.
+
+                Returns:
+                    The resulting ``t.VariadicTuple[t.JsonMapping]``.
+
+                Raises:
+                    TypeError: If workflow job steps must be a sequence.
+
                 """
                 document = t.Cli.JSON_MAPPING_ADAPTER.validate_python(
                     tm.ok(u.Cli.yaml_parse(rendered)),

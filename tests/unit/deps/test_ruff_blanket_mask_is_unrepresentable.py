@@ -94,7 +94,7 @@ class TestsFlextInfraRuffBlanketMaskIsUnrepresentable:
     def test_unscoped_exception_renders_as_ignore(self) -> None:
         """A named rule without a glob is excepted for every file."""
         payload = self._lint_policy(
-            self._exception("invalid-function-name", files=None)
+            self._exception("invalid-function-name", files=None),
         )
 
         parsed = m.Infra.RuffLintConfig.model_validate(payload)

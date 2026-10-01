@@ -1,4 +1,8 @@
-"""Immutable source-bundle and physical-path contracts for docs planning."""
+"""Immutable source-bundle and physical-path contracts for docs planning.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,7 +23,12 @@ class TestsFlextInfraDocsGeneratorBundle:
 
     @staticmethod
     def _generator(workspace: Path) -> FlextInfraDocGenerator:
-        """Return the public generator for the governed fixture project."""
+        """Return the public generator for the governed fixture project.
+
+        Returns:
+            The public generator for the governed fixture project.
+
+        """
         return FlextInfraDocGenerator(
             repository_root=workspace,
             selected_projects=["flext-a"],

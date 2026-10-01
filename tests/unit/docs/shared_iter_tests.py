@@ -144,6 +144,7 @@ class TestsFlextInfraDocsSharedIter:
 
     @staticmethod
     def test_excludes_immutable_plan_collection_revisions(tmp_path: Path) -> None:
+        """Test excludes immutable plan collection revisions."""
         docs_dir = tmp_path / "docs"
         current = docs_dir / "plans" / "current.md"
         incoming = docs_dir / "plans" / "current" / "incoming" / "digest" / "plan.md"

@@ -1,4 +1,8 @@
-"""Verify generated release jobs retain the credential required by Git pushes."""
+"""Verify generated release jobs retain the credential required by Git pushes.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,8 +10,8 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from tests import u
 from flext_infra import c, t
+from tests import u
 
 
 class TestsFlextInfraReleaseCheckoutCredentials:
@@ -20,6 +24,12 @@ class TestsFlextInfraReleaseCheckoutCredentials:
 
     @classmethod
     def render_release(cls) -> t.JsonMapping:
+        """Provide ``render_release``.
+
+        Returns:
+            The resulting ``t.JsonMapping``.
+
+        """
         repository_branch = "develop"
         spec = u.CodegenTestSupport.Ci.workflow_spec(
             dist="example-workspace",
@@ -42,6 +52,16 @@ class TestsFlextInfraReleaseCheckoutCredentials:
 
     @staticmethod
     def checkout_credentials(job: t.JsonValue) -> bool:
+        """Provide ``checkout_credentials``.
+
+        Returns:
+            The resulting ``bool``.
+
+        Raises:
+            TypeError: If workflow job steps must be a sequence; or if
+                persist-credentials must render as a YAML boolean.
+
+        """
         mapping = t.Cli.JSON_MAPPING_ADAPTER.validate_python(job)
         steps = mapping["steps"]
         if not isinstance(steps, list):
@@ -56,6 +76,7 @@ class TestsFlextInfraReleaseCheckoutCredentials:
         return value
 
     def test_release_push_jobs_persist_declared_checkout_token(self) -> None:
+        """Test release push jobs persist declared checkout token."""
         document = self.render_release()
         jobs = t.Cli.JSON_MAPPING_ADAPTER.validate_python(document["jobs"])
 

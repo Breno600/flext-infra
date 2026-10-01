@@ -4,6 +4,9 @@ The generator injects the declared block verbatim and never interprets it, so a
 project adds a step its pipeline needs — a credential, a service, a probe —
 without the generator carrying that project's concerns. This is the CI
 counterpart of ``custom.mk``.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -12,8 +15,8 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from tests import u
 from flext_infra import c, m
+from tests import u
 
 
 class TestsFlextInfraCodegenCiCustomSteps:

@@ -188,7 +188,7 @@ class FlextInfraConfigModelsMake:
                 description=(
                     "Items listed per contract field on the generated API "
                     "overview page before the preview is truncated"
-                )
+                ),
             ),
         ]
         cross_project_relative_link_pattern: Annotated[

@@ -1,4 +1,8 @@
-"""Behavior tests for FlextInfraPytestDiagExtractor."""
+"""Behavior tests for FlextInfraPytestDiagExtractor.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -16,6 +20,8 @@ if TYPE_CHECKING:
 
 
 class TestsFlextInfraPytestDiag:
+    """Tests for ``FlextInfraPytestDiag``."""
+
     @staticmethod
     def _extractor(
         junit: Path,
@@ -62,6 +68,7 @@ class TestsFlextInfraPytestDiag:
         )
 
     def test_extract_valid_junit_xml(self, tmp_path: Path) -> None:
+        """Test extract valid junit xml."""
         junit = tmp_path / "junit.xml"
         junit.write_text(
             '<?xml version="1.0"?><testsuites><testsuite name="t" tests="1"'
@@ -83,6 +90,7 @@ class TestsFlextInfraPytestDiag:
         tm.that(report.error_count, eq=0)
 
     def test_extract_missing_xml_preserves_file_error(self, tmp_path: Path) -> None:
+        """Test extract missing xml preserves file error."""
         log = tmp_path / "log.txt"
         log.write_text("FAILED test_case.py::test_foo")
         missing_xml = tmp_path / "missing.xml"
@@ -95,6 +103,7 @@ class TestsFlextInfraPytestDiag:
             )
 
     def test_extract_invalid_xml_preserves_parser_error(self, tmp_path: Path) -> None:
+        """Test extract invalid xml preserves parser error."""
         log = tmp_path / "log.txt"
         log.write_text("")
 
@@ -109,6 +118,7 @@ class TestsFlextInfraPytestDiag:
             )
 
     def test_extract_failed_and_error_tests_from_xml(self, tmp_path: Path) -> None:
+        """Test extract failed and error tests from xml."""
         log = tmp_path / "log.txt"
         log.write_text("")
         fail_xml = tmp_path / "fail.xml"
@@ -148,6 +158,7 @@ class TestsFlextInfraPytestDiag:
         tm.that(err_report.error_count, eq=1)
 
     def test_extract_skipped_and_slow_tests_from_xml(self, tmp_path: Path) -> None:
+        """Test extract skipped and slow tests from xml."""
         log = tmp_path / "log.txt"
         log.write_text("")
         skip_xml = tmp_path / "skip.xml"
@@ -184,6 +195,7 @@ class TestsFlextInfraPytestDiag:
         tm.that(slow_report.slow_entries, length_gt=0)
 
     def test_extract_missing_log_preserves_file_error(self, tmp_path: Path) -> None:
+        """Test extract missing log preserves file error."""
         junit = tmp_path / "junit.xml"
         junit.write_text(
             '<?xml version="1.0"?><testsuites>'
@@ -198,6 +210,7 @@ class TestsFlextInfraPytestDiag:
             )
 
     def test_extract_unreadable_log_surfaces_failure(self, tmp_path: Path) -> None:
+        """Test extract unreadable log surfaces failure."""
         junit = tmp_path / "junit.xml"
         junit.write_text(
             '<?xml version="1.0"?><testsuites>'
@@ -214,6 +227,7 @@ class TestsFlextInfraPytestDiag:
             )
 
     def test_extract_warnings_from_report_log(self, tmp_path: Path) -> None:
+        """Test extract warnings from report log."""
         junit = tmp_path / "junit.xml"
         junit.write_text(
             '<?xml version="1.0"?><testsuites>'
@@ -249,6 +263,7 @@ class TestsFlextInfraPytestDiag:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test count each custom warning without a terminal summary."""
         junit = tmp_path / "junit.xml"
         junit.write_text(
             '<?xml version="1.0"?><testsuites>'
@@ -277,6 +292,7 @@ class TestsFlextInfraPytestDiag:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test extract invalid duration preserves value error."""
         junit = tmp_path / "junit.xml"
         junit.write_text(
             '<?xml version="1.0"?><testsuites><testsuite name="t" tests="1">'
@@ -294,6 +310,7 @@ class TestsFlextInfraPytestDiag:
             )
 
     def test_execute_writes_selected_output_files(self, tmp_path: Path) -> None:
+        """Test execute writes selected output files."""
         junit = tmp_path / "junit.xml"
         junit.write_text(
             '<?xml version="1.0"?><testsuites><testsuite name="t" tests="2">'
@@ -385,6 +402,7 @@ class TestsFlextInfraPytestDiag:
             extractor.extract(junit, log, report_log=extractor.report_log)
 
     def test_missing_report_log_preserves_file_error(self, tmp_path: Path) -> None:
+        """Test missing report log preserves file error."""
         junit = tmp_path / "junit.xml"
         junit.write_text('<testsuites><testsuite name="t"/></testsuites>')
         log = tmp_path / "pytest.log"
@@ -397,6 +415,7 @@ class TestsFlextInfraPytestDiag:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test warning without identity is not counted as green."""
         junit = tmp_path / "junit.xml"
         junit.write_text('<testsuites><testsuite name="t"/></testsuites>')
         log = tmp_path / "pytest.log"

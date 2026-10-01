@@ -548,7 +548,9 @@ class FlextInfraUtilitiesLintRecipes:
                 )
             ]
             existing = re.search(
-                rf"^{re.escape(indent)}{header}:\s*$", inner, re.MULTILINE
+                rf"^{re.escape(indent)}{header}:\s*$",
+                inner,
+                re.MULTILINE,
             )
             if existing is None:
                 appended.append("\n".join((f"{indent}{header}:", *block)))

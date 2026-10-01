@@ -1,4 +1,8 @@
-"""Verify ci.yml grants packages: read only to declared registry consumers."""
+"""Verify ci.yml grants packages: read only to declared registry consumers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -38,6 +42,7 @@ class TestsFlextInfraCiPackageRegistryRead:
         return permissions
 
     def test_declared_consumer_ci_job_reads_packages(self) -> None:
+        """Test declared consumer ci job reads packages."""
         permissions = self._job_permissions(packages_read=True)
 
         tm.that(permissions["ci"], eq={"contents": "read", "packages": "read"})
@@ -45,6 +50,7 @@ class TestsFlextInfraCiPackageRegistryRead:
         tm.that(permissions["merge-guard"], eq={"contents": "read"})
 
     def test_undeclared_consumer_stays_contents_only(self) -> None:
+        """Test undeclared consumer stays contents only."""
         permissions = self._job_permissions(packages_read=False)
 
         for job_permissions in permissions.values():

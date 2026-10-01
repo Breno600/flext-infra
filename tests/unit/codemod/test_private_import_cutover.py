@@ -21,6 +21,7 @@ class TestsFlextInfraPrivateImportCutover:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test earlier semantic move retires stale preflight import."""
         consumer, statement, _ = self._facade_case(
             tmp_path,
             "constants",

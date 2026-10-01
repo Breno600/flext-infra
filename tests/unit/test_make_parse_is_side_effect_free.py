@@ -31,6 +31,8 @@ class TestsFlextInfraMakeParseIsSideEffectFree:
     # ``$(shell ...)`` call marker. Assignment identity uses
     # c.Infra.MAKE_ASSIGNMENT_RE; immediacy is ``:=`` / ``::=`` (name token
     # ends with ``:`` before ``=``).
+    """Tests for ``FlextInfraMakeParseIsSideEffectFree``."""
+
     _SHELL_CALL = re.compile(r"\$\(shell\b")
     # Executing an interpreter costs hundreds of milliseconds to seconds. Merely
     # *locating* one (`command -v python3`) is a cheap PATH lookup and is allowed:
@@ -41,11 +43,21 @@ class TestsFlextInfraMakeParseIsSideEffectFree:
 
     @staticmethod
     def _repository_root() -> Path:
-        """Return the repository root that owns this checkout."""
+        """Return the repository root that owns this checkout.
+
+        Returns:
+            The repository root that owns this checkout.
+
+        """
         return Path(__file__).resolve().parents[2]
 
     def _make_surfaces(self) -> t.VariadicTuple[Path]:
-        """Return every Make surface plus the templates that generate them."""
+        """Return every Make surface plus the templates that generate them.
+
+        Returns:
+            Every Make surface plus the templates that generate them.
+
+        """
         root = self._repository_root()
         names = (c.Infra.MAKEFILE_FILENAME, c.Infra.CUSTOM_MAKE_FILENAME)
         templates = Path(flext_infra.__file__).resolve().parent / "templates"
@@ -55,7 +67,12 @@ class TestsFlextInfraMakeParseIsSideEffectFree:
         )
 
     def _is_immediate_shell_assignment(self, line: str) -> bool:
-        """True when a column-0 Make assignment is immediate and calls $(shell)."""
+        """True when a column-0 Make assignment is immediate and calls $(shell).
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         if c.Infra.MAKE_ASSIGNMENT_RE.match(line) is None:
             return False
         before_eq, sep, _after = line.partition("=")
@@ -67,7 +84,12 @@ class TestsFlextInfraMakeParseIsSideEffectFree:
         )
 
     def _interpreter_at_parse_time(self, surface: Path) -> t.VariadicTuple[str]:
-        """Return immediate assignments that spawn an interpreter while parsing."""
+        """Return immediate assignments that spawn an interpreter while parsing.
+
+        Returns:
+            Immediate assignments that spawn an interpreter while parsing.
+
+        """
         return tuple(
             f"{surface.name}:{number}: {line.strip()}"
             for number, line in enumerate(
@@ -79,7 +101,12 @@ class TestsFlextInfraMakeParseIsSideEffectFree:
 
     @staticmethod
     def _silencing_lines(surface: Path) -> t.VariadicTuple[str]:
-        """Return recipe lines that discard a command's exit status."""
+        """Return recipe lines that discard a command's exit status.
+
+        Returns:
+            Recipe lines that discard a command's exit status.
+
+        """
         return tuple(
             f"{surface.name}:{number}: {line.strip()}"
             for number, line in enumerate(

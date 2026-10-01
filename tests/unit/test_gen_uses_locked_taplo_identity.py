@@ -27,7 +27,12 @@ class TestsFlextInfraGenUsesLockedTaploIdentity:
 
     @staticmethod
     def _toolchain_root(tmp_path: Path, lock_body: str | None) -> Path:
-        """Build a toolchain root holding the declared config and *lock_body*."""
+        """Build a toolchain root holding the declared config and *lock_body*.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         root = tmp_path / "toolchain"
         root.mkdir()
         (root / c.Infra.TAPLO_CONFIG_FILENAME).write_text("", encoding="utf-8")
@@ -36,7 +41,12 @@ class TestsFlextInfraGenUsesLockedTaploIdentity:
         return root
 
     def _format(self, root: Path, declared: str) -> p.Result[str]:
-        """Format through the public utility facade for the given selector."""
+        """Format through the public utility facade for the given selector.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         return u.Infra.format_toml_source(
             self._SOURCE,
             path=root / c.PYPROJECT_FILENAME,
