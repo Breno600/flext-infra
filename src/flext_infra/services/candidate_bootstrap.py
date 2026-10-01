@@ -79,7 +79,9 @@ class FlextInfraCandidateBootstrapService:
     ) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
         """Compose one immutable receipt from all conform planners."""
         files: list[m.Infra.CodegenFilePlan] = []
-        inputs: dict[Path, m.Cli.AtomicFileState] = {manifest_state.path: manifest_state}
+        inputs: dict[Path, m.Cli.AtomicFileState] = {
+            manifest_state.path: manifest_state
+        }
         for root, target in zip(roots.values(), targets, strict=True):
             request = m.Infra.CodegenConformRequest(
                 root=root,

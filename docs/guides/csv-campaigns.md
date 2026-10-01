@@ -1,0 +1,50 @@
+# CSV rename campaigns
+
+The public `make mod` circuit reads `Infra.refactor_csv_campaigns` from the packaged
+configuration. Each campaign keeps one `old,new` CSV as its rename source. Consumer
+repositories, including repositories outside the FLEXT superproject, consume that same
+declared campaign through their own root verb. There is no per-campaign executable and
+no direct ast-grep write pass.
+
+`bindings` maps CSV expression prefixes to current public Rope identities. An empty
+prefix describes member names relative to an owner; a nonempty prefix describes
+qualified CSV expressions. Rope resolves aliases and class inheritance against those
+owners and verifies the replacement member exists. The retired member need not remain
+importable. A homonym belonging to another object is not part of the campaign. Receiver
+inheritance alone is insufficient: an overriding old member retains its independent
+identity. An overriding destination or an independently owned intermediate namespace
+blocks the proposed migration. A missing destination blocks the whole campaign before
+publication; historical lists cannot be enabled before their definers publish the
+destination contract.
+
+`text_globs` explicitly selects non-Python documentation and configuration text.
+`python_documentation` selects comments and actual module, class and function
+docstrings, including concatenated string tokens. Executable string payloads are
+preserved. `exclude_globs` declares additional projection exclusions. Every CSV driver,
+configured managed file and recognized generated projection is excluded from mutation.
+CSV data with another header is eligible only when explicitly declared as a text
+surface. Manifest-declared template inputs retain their source identity even when they
+emit a generated-file header; arbitrary files with a template suffix receive no such
+permission. Inventory comes from the existing Git scope owner, including untracked files
+and literal unusual filenames.
+
+Identical duplicate CSV rows coalesce. Conflicting duplicates, identity mappings,
+overlapping source patterns, cycles and cascading destinations are rejected. This
+ensures every accepted campaign has a stable single-pass meaning.
+
+Multiple declared roots supply explicit source folders to the existing Rope project
+owner. The engine does not discover unrelated host repositories under their common
+ancestor. Planning authenticates physical source identity and bytes, asks Rope for
+in-memory changes, and merges only disjoint source spans. The existing semantic
+publisher owns the recoverable transaction. Its acceptance callback reopens the driver
+and performs a fresh campaign scan before commit. Driver drift or pending changes
+rejects publication and rolls back this invocation's consumer changes; an independent
+writer's driver change is preserved.
+
+Reports count actual published paths and pending authenticated source edit spans. A
+second unchanged invocation reports zero published paths only after a fresh scan. These
+reports do not substitute for the repository's full generation, format, check, test and
+runtime acceptance receipts.
+
+The binding behavior follows Rope's documented
+[restructuring wildcard contract](https://github.com/python-rope/rope/blob/master/docs/overview.rst#restructurings).

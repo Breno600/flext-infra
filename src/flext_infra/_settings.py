@@ -46,6 +46,11 @@ class FlextInfraSettings(FlextSettings):
         """
         return _os.environ.get(name)
 
+    @staticmethod
+    def env_required(name: str) -> str:
+        """Read a required dynamic key, preserving native missing-key semantics."""
+        return _os.environ[name]
+
 
 settings: FlextInfraSettings = FlextInfraSettings.fetch_global()
 """Process-wide infra settings singleton — ``from flext_infra import settings``."""
