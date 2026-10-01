@@ -176,7 +176,9 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         the exact source text, so an edited module is a new key.
         """
         bindings: MutableMapping[str, str] = {}
-        for node in FlextInfraUtilitiesSemanticCutoverFacadeOwners._facade_module_statements(
+        for (
+            node
+        ) in FlextInfraUtilitiesSemanticCutoverFacadeOwners._facade_module_statements(
             source, module
         ):
             if not (
@@ -191,7 +193,9 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
                 )
             ):
                 continue
-            for dict_node in (d for d in ast.walk(node.value) if isinstance(d, ast.Dict)):
+            for dict_node in (
+                d for d in ast.walk(node.value) if isinstance(d, ast.Dict)
+            ):
                 for key, value in zip(dict_node.keys, dict_node.values, strict=False):
                     if not (
                         isinstance(key, ast.Constant)

@@ -10,7 +10,11 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import c, config, m, t, u
-from tests.unit.validate.pytest_runner_support import runner_for, summary
+from tests.unit.validate.pytest_runner_support import (
+    declare_parallel_project,
+    runner_for,
+    summary,
+)
 
 
 class TestsFlextInfraPytestRunner:
@@ -159,6 +163,7 @@ class TestsFlextInfraPytestRunner:
         self, cached_runner_project: Path, *, omit_case: bool
     ) -> None:
         """Real workers must agree even when a consumer hook reorders per worker."""
+        declare_parallel_project(cached_runner_project)
         cache = config.Infra.codegen.make.testmon_cache
         sample = cached_runner_project / cache.target_directory / "test_runtime.py"
         sample.write_text(
@@ -206,6 +211,7 @@ class TestsFlextInfraPytestRunner:
         self, cached_runner_project: Path
     ) -> None:
         """Expose the first failure and do not execute later failing cases."""
+        declare_parallel_project(cached_runner_project)
         cache = config.Infra.codegen.make.testmon_cache
         (
             cached_runner_project / cache.target_directory / "test_failures.py"

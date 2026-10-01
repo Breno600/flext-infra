@@ -76,7 +76,9 @@ class TestsFlextInfraCodegenManifestlessExisting:
                     "".join(
                         f"class {owner}:\n"
                         + (
-                            "".join(f"    {member} = None\n" for member in sorted(members))
+                            "".join(
+                                f"    {member} = None\n" for member in sorted(members)
+                            )
                             or "    pass\n"
                         )
                         + "\n\n"
