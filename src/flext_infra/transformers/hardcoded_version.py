@@ -27,7 +27,8 @@ class FlextInfraRefactorHardcodedVersion(FlextInfraRopeTransformer):
 
     # Matches `__version__ = "..."` or `__version__ = '...'`.
     _HARDCODED_VERSION_RE: re.Pattern[str] = re.compile(
-        r"^__version__\s*=\s*(['\"])[^'\"]*\1", re.MULTILINE
+        r"^__version__\s*=\s*(['\"])[^'\"]*\1",
+        re.MULTILINE,
     )
 
     @override
@@ -36,7 +37,7 @@ class FlextInfraRefactorHardcodedVersion(FlextInfraRopeTransformer):
         for match in self._HARDCODED_VERSION_RE.finditer(source):
             self._record_change(
                 f"Hardcoded __version__ assignment found: {match.group(0).strip()!r}. "
-                "Use importlib.metadata.version(__name__.split('.')[0]) instead."
+                "Use importlib.metadata.version(__name__.split('.')[0]) instead.",
             )
         return source, list(self.changes)
 

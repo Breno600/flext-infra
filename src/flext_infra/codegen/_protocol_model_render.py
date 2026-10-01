@@ -10,9 +10,12 @@ from collections.abc import MutableMapping
 from inspect import getattr_static
 from types import FunctionType
 
-from flext_infra import c, m, t
+from flext_infra import config, m, t
 
 from ._protocol_model_annotations import FlextInfraCodegenProtocolModelAnnotations
+
+Target = FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget
+MinimalBodyLines = 3
 
 
 class FlextInfraCodegenProtocolModelRender:
@@ -50,16 +53,21 @@ class FlextInfraCodegenProtocolModelRender:
         models: t.SequenceOf[type[m.BaseModel]],
         target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
     ) -> t.SequenceOf[str]:
-        """Split one owner's protocol bodies under the line budget."""
+        """Split one owner's protocol bodies under the configured module LOC cap.
+
+        The budget is ``loc_cap.max_lines`` minus the module header and the
+        part class line, so every generated part module stays under the cap.
+        """
+        budget = (
+            config.Infra.codegen.loc_cap.max_lines
+            - cls._module_header(target).count("\n")
+            - 1
+        )
         chunks: list[str] = []
         current = ""
         for model in models:
             body = cls._render_protocol(model, target)
-            if (
-                current
-                and current.count("\n") + body.count("\n")
-                > c.Infra.PROTOCOL_MODEL_LINE_BUDGET
-            ):
+            if current and current.count("\n") + body.count("\n") > budget:
                 chunks.append(current)
                 current = ""
             current += body
@@ -82,7 +90,9 @@ class FlextInfraCodegenProtocolModelRender:
         ]
         for name, field in model.model_fields.items():
             rendered = cls._render_annotation(
-                name, getattr(field, "annotation", None), target
+                name,
+                getattr(field, "annotation", None),
+                target,
             )
             lines.extend((
                 "    @property",
@@ -142,7 +152,9 @@ class FlextInfraCodegenProtocolModelRender:
             msg = f"owned member {name!r} has no getter on {model.__name__}"
             raise TypeError(msg)
         annotations: t.MappingKV[str, t.TypeHintSpecifier | None] = getattr(
-            getter, "__annotations__", {}
+            getter,
+            "__annotations__",
+            {},
         )
         annotation = annotations.get("return")
         if annotation is None:
@@ -186,7 +198,8 @@ class FlextInfraCodegenProtocolModelRender:
 
     @classmethod
     def _aggregate_path(
-        cls, target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget
+        cls,
+        target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
     ) -> str:
         """Return the generated aggregate module path."""
         return f"src/{target.package_name}/_protocols/generated_models.py"

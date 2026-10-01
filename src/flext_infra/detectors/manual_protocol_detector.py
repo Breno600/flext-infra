@@ -37,7 +37,9 @@ class FlextInfraManualProtocolDetector:
             raise RuntimeError(msg) from exc
         return [
             m.Infra.ManualProtocolViolation(
-                file=str(file_path), line=ci.line, name=ci.name
+                file=str(file_path),
+                line=ci.line,
+                name=ci.name,
             )
             for ci in u.Infra.class_info_from_source(source)
             if "Protocol" in ci.bases

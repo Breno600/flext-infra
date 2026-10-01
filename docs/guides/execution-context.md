@@ -1,255 +1,209 @@
-# Recuperar e manter o contexto de execução
+# Execution context
 
 <!-- TOC START -->
 
-- [Começar pela decisão pendente](#comecar-pela-decisao-pendente)
-- [Registrar antes de ampliar o trabalho](#registrar-antes-de-ampliar-o-trabalho)
-- [Reconciliar decisões com seus responsáveis](#reconciliar-decisoes-com-seus-responsaveis)
-- [Diferenciar checkpoint de conclusão](#diferenciar-checkpoint-de-conclusao)
+- [Runtime is the authority](#runtime-is-the-authority)
+- [Environment activation](#environment-activation)
+- [Dependency locks](#dependency-locks)
+- [Runtime environment](#runtime-environment)
+- [Mise launchers](#mise-launchers)
+- [SonarCloud exclusions](#sonarcloud-exclusions)
+- [Bootstrap credentials](#bootstrap-credentials)
+- [Evidence and checkpoints](#evidence-and-checkpoints)
+- [Check gate partitions](#check-gate-partitions)
 - [Bounded Mypy failure status](#bounded-mypy-failure-status)
 - [Abstraction-boundary project identity](#abstraction-boundary-project-identity)
 - [Codemod scanner contract](#codemod-scanner-contract)
 
 <!-- TOC END -->
 
-O ponto de entrada da estabilização é o
-[handoff de namespace e runtime](../roadmap/namespace-automation-handoff-2026-09-14.md).
-Ele reconcilia pedidos, plano reconstruído, mudanças, críticas, ADRs e Beads. O Beads
-continua sendo o responsável pelo estado de execução; o handoff contém evidência e
-instruções de retomada, sem criar uma fila paralela de tarefas.
+## Runtime is the authority
 
-**Estado corrente (2026-09-17):** a tip ativa é `flext-infra@0.12.0-dev@a2bd0a726`
-(superprojeto `676ae7aa3c`). Nenhum SHA citado no handoff de 14/09 é ancestral dela. O
-CRG citado não existe no checkout atual — o único válido é da worktree `rope-modernize`,
-construído em `469b26b4e`, ancestral da tip. O defeito `_lazy_analysis` em
-`src/flext_infra/codegen/_conform/execute.py:376/598` permanece e os god modules estão
-inalterados. Gas City task `flext-itpd1.2` mantém o cursor da convergência documental e
-`flext-5fxu6.4` continua sendo o proprietário técnico da modernização. O handoff
-versionado deste repositório é a rota standalone; planos locais do superprojeto
-preservam contexto de sessão, mas não são links portáveis nem substituem o tracker. As
-fases 3 e 8 ainda não têm prova verde. Esta correção substitui somente os SHA, fases e
-proprietários caducos do handoff.
+Correct runtime behavior defines the contract; tests verify it. Replace mocks, fake
+tools, private-function access, and assertions that only check how code was written
+with observable inputs and effects through public interfaces, preserving functional
+coverage. First reproduce the real public path and identify the executed artifact. Fix
+obsolete tests or fixtures after that proof, never by changing the environment to keep
+their expectations. A test result alone does not certify setup, generation, or
+consumption at the integrated revision.
 
-## Começar pela decisão pendente
+Before repeating a broad search, confirm branch, HEAD, local changes, PR, and declared
+base. Check the runtime with `make status`: the execution path and installed version
+must match the code under validation. An earlier log or an installation from a parent
+workspace does not certify a standalone checkout. Work on the freshly fetched
+integration tip of every repository involved.
 
-O runtime correto define o comportamento; os testes verificam esse contrato. Extermine
-mocks, ferramentas falsas, acesso a funções privadas e asserções que só verificam como o
-código foi escrito. Substitua-os por entradas e efeitos observáveis através das
-interfaces públicas, preservando a cobertura funcional. Primeiro reproduza o caminho
-público real e identifique o artefato executado. Corrija testes ou fixtures obsoletos
-depois dessa prova, sem mudar o ambiente para preservar suas expectativas. O resultado
-de um teste não certifica, por si só, setup, geração ou consumo na revisão integrada.
+## Environment activation
 
-Leia a tabela inicial do handoff e o Bead indicado antes de repetir uma busca ampla.
-Confirme branch, HEAD, alterações locais, PR e base declarada. Verifique o runtime por
-`make status`; o caminho de execução e a versão instalada precisam corresponder ao
-código que será validado. Um log anterior ou uma instalação do workspace pai não
-certifica o checkout standalone.
+The `make setup` contract includes approving the `.envrc` with `direnv allow`.
+Operational Make verbs activate that environment before handlers and hooks, except the
+activation producer declared in `make.verbs`. For `gen`, the pin and the provisioned
+physical environment are required before `pre-gen` and the selected handler. The default
+handler runs one conform transaction, which includes generating the `.envrc`; a declared
+`_custom-gen` still replaces that handler. Only then does Make activate the generated
+environment and run `post-gen`. A producer or activation failure prevents the later hook
+and keeps the command red, so `make gen` can repair a broken generated activation
+without another writer outside the journal. Initial provisioning remains the
+responsibility of `make setup`. Real commands work without wrapping each call in
+`direnv exec`.
 
-Trabalhe sobre a tip de integração recém-buscada em cada repositório envolvido,
-preservando as contribuições existentes e integrando divergências para frente. O
-contrato de `make setup` inclui aprovar o `.envrc` com `direnv allow`; os verbos
-operacionais do Make ativam esse ambiente antes dos handlers e hooks, exceto o produtor
-de ativação declarado em `make.verbs`. Para `gen`, o pin e o ambiente físico já
-provisionado são exigidos antes de `pre-gen` e do handler selecionado. O handler padrão
-executa uma única transação conform, que inclui a geração do `.envrc`; um `_custom-gen`
-declarado continua substituindo esse handler. Só então o Make ativa o ambiente gerado e
-executa `post-gen`. Uma falha do produtor ou da ativação impede o hook posterior e
-mantém o comando vermelho. Assim, `make gen` pode reparar uma ativação gerada quebrada
-sem outro escritor fora do journal. A provisão inicial continua sendo responsabilidade
-de `make setup`. Confirme o funcionamento pelos comandos reais, sem exigir que o
-operador envolva cada chamada em `direnv exec`. Os testes verificam esse runtime; não
-definem nem substituem seu comportamento correto.
+Activation queries `bin-paths` from the installed, pinned Mise and prepends the real
+tool directories to the host's shared shims. The query is isolated, offline, and
+frozen: it neither installs tools nor changes locks. The `.envrc` also watches
+`mise.version` and `mise.lock` to reload paths after `make upg`. A missing pin
+requires `make upg`; a runtime that is not yet installed requires `make setup`, whose
+provisioning happens before activation.
 
-A ativação consulta `bin-paths` no Mise pinado já instalado e antepõe os diretórios
-reais das ferramentas aos shims compartilhados do host. Essa consulta é isolada, offline
-e congelada: não instala ferramentas nem altera os locks. O `.envrc` acompanha também
-`mise.version` e `mise.lock`, para recarregar os caminhos após `make upg`. Pin ausente
-exige `make upg`; runtime ainda não instalado exige `make setup`, cuja provisão ocorre
-antes de ativar o ambiente.
+When Beads tracking is configured, the generated `.envrc.local` carries its environment:
+`AGENTS_GAS_CITY_ROOT` selects the Gas City root, the Gas City runtime publication
+provides the port, and the rig metadata provides its database in `server` mode. The
+`.envrc` loads that file last. The environment source declared in
+`BeadsWorkspaceEnvironmentSpec.environment_sources` provides the city identity; the
+template fixes neither its location nor a port. JSON reads must succeed before any
+variable is exported. If generation drops the server selection, fix the model or
+template and regenerate; never initialize an embedded database or write host and port
+by hand.
 
-Na execução de 14/09/2026, o operador selecionou o tracker do checkout `flext`
-explicitamente. O comando Beads precisa do diretório de trabalho dessa raiz, além do
-ambiente carregado por `direnv`. Isso é contexto autorizado dessa execução, não uma
-regra para procurar runtimes no pai de todo repositório. O banco é o central do Gas
-City. Use `direnv exec <rig> bd ...` no checkout do rig e confira uma leitura real. Se a
-geração apagar a escolha de servidor, corrija seu modelo/template e regenere; não
-inicialize um banco embedded ou grave host/porta manualmente. O Gas City mantém a
-resolução do endpoint.
+## Dependency locks
 
-O contrato recuperado do histórico de `.envrc` é gerado em `.envrc.local`:
-`AGENTS_GAS_CITY_ROOT` seleciona a cidade, a publicação de runtime do Gas City fornece a
-porta e a metadata do rig fornece seu banco em modo `server`. O `.envrc` carrega esse
-arquivo ao final. A fonte de ambiente declarada em
-`BeadsWorkspaceEnvironmentSpec.environment_sources` fornece a identidade da cidade; o
-template não fixa sua localização nem uma porta. As leituras JSON precisam terminar com
-sucesso antes de exportar as variáveis.
+Configuration declares `latest`. `make upg` is the only verb that resolves newer
+releases and writes the committed `uv.lock` and `mise.lock`. `make setup`, `make gen`,
+and `make fmt` never upgrade: they install frozen from those locks, which is the CI
+path. Git dependencies follow the tips of their declared integration branches, and `APPLY`
+stays removed.
 
-Servidor central não significa substituir a identidade de um rig pela do HQ. Um
-redirecionamento para o HQ combinado com o banco do rig causou
-`PROJECT IDENTITY MISMATCH`. A operação nativa `gc rig set-endpoint <rig> --inherit`,
-executada na cidade, recuperou a vinculação; a prova foi uma leitura real com
-`direnv exec <rig> bd show <id> --json`. Não recrie metadata ou bancos manualmente para
-contornar essa validação.
+Each internal `flext-*` requirement declares its integration line in `pyproject.toml`,
+never a commit: the resolved commit exists only in `uv.lock`, and only `make upg` moves
+it to the line tip. The manifest does not pin revisions. A commit left in the
+`pyproject.toml` projection is residue: `make gen` re-renders it on the detected line.
+When the projection carries no line, a hand-written `project.flext_source` in the
+manifest declares it, and a commit in a hand-written source fails. Fix the setup or
+`upg` owner and regenerate through `make gen`; manual installs do not replace the cycle.
 
-As correções mais recentes do operador (2026-09-24) declaram `latest` na configuração e
-fazem de `make upg` o único verbo que resolve versões novas e grava os `uv.lock` e
-`mise.lock` versionados. `make setup`, `make gen` e `make fmt` nunca atualizam: instalam
-congelados a partir desses locks, que é o caminho do CI. Dependências Git seguem os tips
-das branches de integração declaradas e `APPLY` continua removido. Cada requisito
-interno `flext-*` declara no `pyproject.toml` a sua linha de integração, nunca um
-commit: o commit resolvido existe só no `uv.lock`, e só o `make upg` o move para o tip
-da linha. O manifesto não fixa revisões (`project.dependency_revisions` foi removido).
-Um commit deixado na projeção do `pyproject.toml` é resíduo: o `make gen` o re-renderiza
-na linha detectada e nunca o regrava; quando a projeção não traz linha alguma, o
-`project.flext_source` escrito à mão no manifesto a declara, e um commit numa fonte
-escrita à mão falha (operador 2026-09-28, `flext-oe420`). Corrija o responsável do setup
-ou do `upg` e regenere pelo `make gen`; instalações manuais não substituem o ciclo.
+A workspace root declares each attached member, of any family, as an inline Git source
+on the workspace's own integration line, the same line the governed `.gitmodules` requires
+of that member. Only `flext-*` dependencies that are not members follow the FLEXT line.
+The root `uv.lock` therefore resolves every member without a `[tool.uv.workspace]`
+overlay.
 
-O código de um checkout executa no ambiente do seu `RUNTIME_ROOT`. O Makefile gerado
-exporta esse `RUNTIME_ROOT` e o `flext-infra` o lê como declaração tipada: a validação
-`fresh-import` roda as sondas com `<RUNTIME_ROOT>/.venv/bin/python`, nunca com o
-interpretador que hospeda a ferramenta. Sem declaração, o dono deriva a raiz Git do
-checkout; uma declaração sem interpretador falha.
+## Runtime environment
 
-O `.venv` pertence ao `RUNTIME_ROOT` (D-VENV, `flext-x8gn6`). Um membro anexado como
-submódulo usa o `.venv` do superprojeto Git que o contém; um checkout standalone ou uma
-worktree vinculada tem o seu próprio. Em desenvolvimento não existe outra opção: o
-ambiente é sempre `<RUNTIME_ROOT>/.venv`, e essa localização é lei, nunca configuração
-(operador 2026-10-01, `flext-h2a9h`). O Makefile gerado, o `.envrc` gerado e
-`runtime_environment_dir` resolvem essa raiz pelo mesmo caminho físico: entrar no
-checkout por um symlink não muda o ambiente selecionado. Nenhum ambiente vive fora do
-checkout que o possui, nem é emprestado de outro checkout por symlink.
+Code in a checkout runs in the environment of its `RUNTIME_ROOT`. The generated Makefile
+exports `RUNTIME_ROOT`, and flext-infra reads it as a typed declaration: the
+`fresh-import` validation runs its probes with the Python of the external physical
+environment the Makefile declares, never with the interpreter hosting the tool. Without
+a declaration, the owner derives the checkout's Git root; a declaration without an
+interpreter fails.
 
-Uma raiz de workspace declara cada membro anexado, de qualquer família (`flext-*` ou
-não), como fonte Git inline na linha de integração do próprio workspace, a mesma que o
-`.gitmodules` governado exige do membro; só as dependências `flext-*` que não são
-membros seguem a linha FLEXT. Assim o `uv.lock` da raiz resolve todos os membros sem
-overlay `[tool.uv.workspace]` (`flext-kd07c`).
+A member attached as a submodule uses the environment of its containing Git
+superproject; a standalone checkout or linked worktree has its own. The physical
+directory lives in the sibling directory configured by
+`make.runtime_environment_directory`, keyed by the checkout's absolute path. The
+generated Makefile, the generated `.envrc`, and `runtime_environment_dir` resolve that
+location through the same physical path, so entering the checkout through a symlink does
+not change the selected environment. No environment is borrowed from another checkout
+through a symlink.
 
-O mesmo `make upg` é o único escritor de `mise.version`, `bin/mise` e `bin/mise.cmd`.
-Ele resolve o release do Mise uma vez, pelo próprio Mise (`mise latest github:jdx/mise`,
-autenticado por `GITHUB_TOKEN` e sujeito ao `minimum_release_age` do Mise), e gera os
-dois launchers com `mise generate install-script --version <release> --windows`,
-executado por esse release. Cada launcher embute o release e os checksums dele, então
-chamadas diretas, por PATH ou por shim nunca consultam a rede para escolher versão.
-`mise.version` leva um cabeçalho gerado seguido da única linha de release. `make gen`,
-`make check` e o CI apenas verificam, offline, que os launchers embutem o release do
-pin; um membro de workspace recebe do `make gen` da raiz a cópia exata desse trio, e só
-a raiz de runtime executa `make upg`. O pacote `flext_infra` distribui em
-`templates/bootstrap/` a cópia do trio do próprio flext-infra, usada apenas por um
-repositório que ainda não tem nenhum ou que ainda carrega a projeção anterior ao bake,
-cujos launchers resolvem `releases/latest` em tempo de execução: o `make gen` desse
-repositório publica a cópia empacotada, já assada, e o `make upg` seguinte a regrava
-para o release resolvido. Nunca edite esses arquivos; a correção é `make upg`. Um `bin/`
-de projeto nunca entra no PATH (shell, `BASH_ENV` ou `GITHUB_PATH` do CI): o Mise liga
-os shims compartilhados ao primeiro `mise` do PATH. Versione o pin, `mise.lock` e os
-grafos nativos referenciados em `.mise/locks/` juntos; para ferramentas npm, o grafo
-contém `package.json` e `aube-lock.yaml`. Esses arquivos também entram no contexto
-Docker e nas fixtures de checkout. O setup congelado exige o grafo e seu digest válido,
-conforme o
-[contrato oficial de sidecars do Mise](https://mise.jdx.dev/dev-tools/mise-lock.html#native-dependency-sidecars).
-Caches, instalações e grafos de locks locais continuam fora do Git. Não formate nem
-edite o payload nativo: uma alteração dos bytes exige nova resolução pelo `make upg`. As
-plataformas declaradas por `toolchain.mise_lockfile_platforms` compõem o lock junto com
-a plataforma da máquina que executa a atualização, sempre incluída pelo Mise. Como
-`MISE_SAFE` ignora os settings locais, o bootstrap encaminha `MISE_LOCKFILE`,
-`MISE_LOCKED` e `MISE_LOCKFILE_PLATFORMS`, derivados do mesmo responsável tipado.
-`MISE_LOCKED` ativa também a proteção global contra regravação durante a instalação:
-`tool_config.locked` sozinho não protege essa fronteira. A prova de setup usa storage
-Mise vazio e verifica os bytes dos locks, do pin e de todo o grafo nativo depois da
-instalação.
+## Mise launchers
 
-O contrato de locks versionados também remove a antiga exclusão de lock ausente do
-SonarCloud. `codegen.sonarcloud.issue_exclusions` continua sendo a fonte única da
-configuração do servidor. Com `SONAR_TOKEN` no ambiente, `make sonarcloud-sync` envia
-uma lista não vazia pela API `settings/set`; uma lista vazia usa
-[`settings/reset`](https://sonarcloud.io/web_api/api/settings/reset), com `component` e
-`keys`. O comando relê `settings/values` e exige o valor efetivo exato, incluindo
-exclusões herdadas. Se o reset revelar uma exclusão do nível superior, a divergência
-permanece uma falha. Um falso positivo sobre o formato nativo `aube-lock.yaml` exige
-adjudicação individual com prova de instalação congelada; não autoriza exclusões amplas
-nem alteração do payload nativo.
+`make upg` is also the only writer of `mise.version`, `bin/mise`, and `bin/mise.cmd`. It
+resolves the Mise release once, through Mise itself (`mise latest github:jdx/mise`,
+authenticated by `GITHUB_TOKEN` and subject to Mise's `minimum_release_age`), and
+generates both launchers with `mise generate install-script --version <release>
+--windows`, run by that release. Each launcher embeds the release and its checksums, so
+direct, PATH, or shim calls never query the network to choose a version.
+`mise.version` holds a generated header followed by the single release line.
 
-Depois de resolver o release do Mise, o bootstrap mantém essa versão em todas as
-chamadas da mesma operação e no lifecycle recursivo. O `upg` inicializa os gitlinks
-declarados antes de resolver os locks Python. Os demais verbos que dependem do runtime
-recusam um pin ausente ou não resolvido antes da ativação; `help` e `clean` continuam
-sendo operações locais sem essa dependência.
+`make gen`, `make check`, and CI only verify offline that the launchers embed the pinned
+release. A workspace member receives an exact copy of that trio from the root
+`make gen`, and only the runtime root runs `make upg`. The `flext_infra` package ships
+its own trio under `templates/bootstrap/`, used only by a repository that has none or
+still carries a projection whose launchers resolve `releases/latest` at run time: that
+repository's `make gen` publishes the packaged, baked copy, and the next `make upg`
+rewrites it for the resolved release. Never edit these files; the fix is `make upg`.
 
-O bootstrap de rede recebe credencial explícita no ambiente do processo: `GH_TOKEN` tem
-precedência sobre `GITHUB_TOKEN`. O Make não consulta `gh` nem o keyring. Sem ambas,
-`make setup` pode reutilizar ferramentas e dependências já provisionadas; a operação
-que precisar da rede falha no backend responsável. Um token inválido preserva o erro
-nativo do backend, sem nova
-tentativa anônima ou troca de fonte. O Mise lê o mesmo `GITHUB_TOKEN`; o Make remove do
-ambiente dos recipes qualquer `MISE_GITHUB_TOKEN` herdado, porque um alias da mesma
-credencial teria precedência sobre ela. O launcher de credenciais ou job de CI deve
-injetar `GITHUB_TOKEN` no processo; containers recebem a variável ou o secret do
-BuildKit explicitamente.
+A project `bin/` never enters PATH (shell, `BASH_ENV`, or CI `GITHUB_PATH`): Mise binds
+the shared shims to the first `mise` on PATH. Version the pin, `mise.lock`, and the
+native graphs referenced under `.mise/locks/` together; for npm tools the graph contains
+`package.json` and `aube-lock.yaml`. These files also enter the Docker context and
+checkout fixtures. Frozen setup requires the graph and a valid digest, per the
+[official Mise sidecar contract](https://mise.jdx.dev/dev-tools/mise-lock.html#native-dependency-sidecars).
+Caches, installations, and local lock graphs stay out of Git. Never format or edit the
+native payload: a byte change requires a new resolution through `make upg`.
 
-## Registrar antes de ampliar o trabalho
+The platforms declared by `toolchain.mise_lockfile_platforms` compose the lock together
+with the platform of the machine running the upgrade, which Mise always includes.
+Because `MISE_SAFE` ignores local settings, bootstrap forwards `MISE_LOCKFILE`,
+`MISE_LOCKED`, and `MISE_LOCKFILE_PLATFORMS`, derived from the same typed owner.
+`MISE_LOCKED` also enables the global guard against rewrites during installation;
+`tool_config.locked` alone does not protect that boundary. The setup proof uses empty
+Mise storage and verifies the bytes of the locks, the pin, and the whole native graph
+after installation.
 
-Mantenha no início do handoff o pedido vigente, suas exceções, SHA/PR, primeira falha,
-última evidência completa e próxima ação concreta. Atualize esse bloco ao mudar escopo,
-integrar contribuições, encontrar uma falha diferente ou publicar um checkpoint. Quando
-o operador pedir o handoff, entregue o link disponível imediatamente e indique o estado
-real da integração.
+After resolving the Mise release, bootstrap keeps that version for every call of the
+same operation and the recursive lifecycle. `upg` initializes the declared gitlinks
+before resolving the Python locks. Other runtime-dependent verbs reject a missing or
+unresolved pin before activation; `help` and `clean` remain local operations without
+that dependency.
 
-Cada evidência deve identificar comando, diretório, revisão observada, exit code e
-resultado decisivo. Uma execução em andamento, interrompida ou sem seu exit code não é
-verde. Alterações concorrentes exigem nova leitura antes de gravar e tornam necessária a
-revalidação dos caminhos afetados.
+## SonarCloud exclusions
 
-## Reconciliar decisões com seus responsáveis
+The committed-lock contract also removes the former SonarCloud exclusion for a missing
+lock. `codegen.sonarcloud.issue_exclusions` remains the single source of the server
+configuration. With `SONAR_TOKEN` in the environment, `make sonarcloud-sync` sends a
+non-empty list through the `settings/set` API; an empty list uses
+[`settings/reset`](https://sonarcloud.io/web_api/api/settings/reset) with `component`
+and `keys`. The command rereads `settings/values` and requires the exact effective
+value, including inherited exclusions. If the reset reveals an exclusion from a higher
+level, the divergence remains a failure. A false positive on the native
+`aube-lock.yaml` format requires individual adjudication with frozen-install proof; it
+never authorizes broad exclusions or changes to the native payload.
 
-Use o [mapa de ADRs](../architecture/adr/README.md) para localizar os documentos reais.
-Uma referência ausente é um problema documental a corrigir; não invente um ADR nem
-reviva uma decisão superada. Registre divergências e a instrução mais recente que as
-resolve. Planos de capacidades relacionadas não substituem o plano de execução da tarefa
-atual.
+## Bootstrap credentials
 
-Na automação de namespace, investigue catálogo, classificador, transformação, publicação
-e consumidores nessa ordem. Um finding zero de codemod não prova que o gate de namespace
-está verde. Preserve mutabilidade, herança, imports e collection; valide a transformação
-na interface pública antes de ampliar o lote. Refatorações estruturais continuam
-passando pelo `make mod`.
+Network bootstrap receives an explicit credential in the process environment: `GH_TOKEN`
+takes precedence over `GITHUB_TOKEN`. Make never queries `gh` or the keyring. Without
+either, `make setup` may reuse already provisioned tools and dependencies; an operation
+that needs the network fails in the owning backend. An invalid token preserves the
+backend's native error, without an anonymous retry or source switch. Mise reads the same
+`GITHUB_TOKEN`; Make removes any inherited `MISE_GITHUB_TOKEN` from recipe environments,
+because an alias of the same credential would take precedence over it. The credential
+launcher or CI job must inject `GITHUB_TOKEN` into the process; containers receive the
+variable or BuildKit secret explicitly.
 
-## Diferenciar checkpoint de conclusão
+## Evidence and checkpoints
 
-Um WIP publicado preserva o trabalho e permite revisão. Conclusão exige os critérios do
-Bead ativo, integração e runtime medido no SHA integrado. Exceções registradas em
-handoffs históricos, incluindo aceite temporário com gates customizados vermelhos, não
-transferem para uma revisão ou Bead posterior. Todo achado de todo gate selecionado
-bloqueia. Um gate que analisa
-fontes Python (`pyrefly`, `pyright`) só é selecionado para um projeto cujo conteúdo
-detectado possui alvos Python. `make check` falha quando a seleção não
-contém projetos ou quando um projeto selecionado não tem `pyproject.toml`; nenhum
-projeto é pulado em silêncio. Local, CI e hooks derivam seus gates do mesmo conjunto
-ativo. A partição não é uma lista declarada: ela deriva do tipo de cada gate, declarado
-uma única vez no registro (`c.Infra.GATE_TOOLS_BY_KIND`). `CI=Y make check` (CI e
-pre-commit) executa apenas os gates ativos do tipo `external`; `CI=N make check`
-executa o complemento estrito — type-checkers (`pyrefly`, `mypy`, `pyright`) e os
-validadores cujas regras pertencem ao flext-infra (`namespace`, `codemod`,
-`runtime-census` e os demais); `make check` sem `CI` executa a união. O pre-push de
-`check` remove o `CI` herdado para executar todos os gates ativos, onde eles bloqueiam;
-os demais verbos do hook mantêm o token local. O workflow de CI executa somente a
-partição rápida. Os validadores conservam sua
-severidade e os gates funcionais ativos continuam exigindo execução sem warnings ou
-findings residuais.
+Each piece of evidence identifies command, directory, observed revision, exit code, and
+decisive result. A run that is in progress, interrupted, or missing its exit code is not
+green. Concurrent changes require a fresh read before writing and revalidation of the
+affected paths. A published work-in-progress commit preserves work and enables review;
+completion requires integration and runtime measured at the integrated SHA.
 
-`smells` não pertence às partições de `make check`. O comando selector-free
-`make smells` executa o mesmo gate de análise em separado e falha quando encontra
-defeitos. Seus achados são tratados em uma campanha posterior para todos os projetos.
-The verb owns every smell family, from qlty and from the runtime census alike. The
-families derive from the flext-core smell catalog: every smell tag plus the rule id of
-each catalog row that carries one. Ownership is routing: the `runtime-census` gate of
-`make check` never evaluates, reports, or counts those families, and the `smells` gate
-grades all of them. No hand-written list declares them.
+For namespace automation, investigate catalog, classifier, transformation, publication,
+and consumers in that order. Zero codemod findings do not prove the namespace gate
+green. Preserve mutability, inheritance, imports, and collection; validate the
+transformation through the public interface before widening the batch. Structural
+refactors go through `make mod`.
 
-O handoff final relaciona PRs, commits de merge e prova após integração aos Beads. Se
-algo permanece pendente, o texto deve nomeá-lo e oferecer a próxima ação executável, sem
-declarar fechamento funcional.
+## Check gate partitions
+
+The current configuration keeps an explicit suspension of the `namespace` gate; the
+typed owner validates its authority and scope. Lint, format, and type-checker gates
+(`pyrefly`, `mypy`, `pyright`) are never suspendable: the model rejects such a
+suspension when it loads the configuration. `make check` fails when the selection
+contains no projects or when a selected project has no `pyproject.toml`; no project is
+skipped silently.
+
+Local runs, CI, and hooks derive their gates from the same active set, preserving the
+declared typing partition: `CI=N make check` runs the intersection with
+`make.ci.local_check_gates`, `CI=Y make check` runs the complement, and `make check`
+without `CI` runs the union. The `check` pre-push hook drops the inherited `CI` to run
+every active gate; the hook's other verbs keep the local token. The CI workflow runs
+both partitions without overlap. Validators keep their severity, and active functional
+gates still require execution without warnings or residual findings.
+
+`smells` is not part of the `make check` partitions. The selector-free `make smells`
+verb runs the same analysis gate separately and fails when it finds defects.
 
 ## Bounded Mypy failure status
 
@@ -274,9 +228,10 @@ diagnostic; directory names are never identity fallbacks.
 
 ## Codemod scanner contract
 
-Every codemod rule finding blocks the gate, whatever its native severity, and so does
-every failed rule discovery, failed scanner execution, incomplete output, or invalid
-diagnostic payload.
+Codemod policy findings are observational. This exception applies to those findings
+only. It does not accept failed rule discovery, failed scanner execution, incomplete
+output, or invalid diagnostic payloads, and it does not close the associated migration
+work.
 
 The gate consumes the complete native `ast-grep scan --json=compact` array. The
 [documented scan contract](https://ast-grep.github.io/reference/cli/scan.html) and

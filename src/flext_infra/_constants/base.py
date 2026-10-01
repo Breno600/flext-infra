@@ -67,8 +67,20 @@ class FlextInfraConstantsBase(
     "Project release version key within [project]."
     PACKAGE_IMPORT_NAME: ClassVar[str] = "flext_infra"
     "Canonical import package name for flext-infra itself."
-    WORKSPACE_FINGERPRINT_READ_CHUNK_BYTES: ClassVar[int] = 1024 * 1024
+    BYTES_PER_KIB: ClassVar[int] = 1024
+    "Bytes in one kibibyte; the one owner of binary byte-unit conversion."
+    BYTES_PER_MIB: ClassVar[int] = BYTES_PER_KIB * BYTES_PER_KIB
+    "Bytes in one mebibyte."
+    BYTES_PER_GIB: ClassVar[int] = BYTES_PER_MIB * BYTES_PER_KIB
+    "Bytes in one gibibyte."
+    WORKSPACE_FINGERPRINT_READ_CHUNK_BYTES: ClassVar[int] = BYTES_PER_MIB
     "Bounded read size used while hashing workspace files."
+    EDIT_DIFF_PREVIEW_MAX_LINES: ClassVar[int] = 30
+    "Unified-diff lines shown when an edit preview or revert is reported."
+    CONTENT_CACHE_MAXSIZE: ClassVar[int] = 256
+    "Entries kept by the content-keyed parse and format memo caches."
+    DIRECTORY_CACHE_MAXSIZE: ClassVar[int] = 32768
+    "Entries kept by the per-directory ownership memo cache of a workspace scan."
     PYREFLY: ClassVar[str] = "pyrefly"
     "Pyrefly tool section key."
     MYPY: ClassVar[str] = "mypy"
@@ -135,8 +147,6 @@ class FlextInfraConstantsBase(
     "Pytest markers settings key."
     PLUGINS: ClassVar[str] = "plugins"
     "Mypy plugins settings key."
-    DISABLE_ERROR_CODE: ClassVar[str] = "disable_error_code"
-    "Mypy disable_error_code settings key."
     IGNORE: ClassVar[str] = "ignore"
     "Pyrefly/sub-settings ignore key."
     INCLUDE: ClassVar[str] = "include"
@@ -183,16 +193,6 @@ class FlextInfraConstantsBase(
         TEST,
         TYPINGS,
     )
-
-    # ANSI color codes and terminal symbols (SSOT for output styling).
-
-    RESET: ClassVar[str] = "\x1b[0m"
-    RED: ClassVar[str] = "\x1b[31m"
-    GREEN: ClassVar[str] = "\x1b[32m"
-    YELLOW: ClassVar[str] = "\x1b[33m"
-    BLUE: ClassVar[str] = "\x1b[34m"
-    CYAN: ClassVar[str] = "\x1b[36m"
-    BOLD: ClassVar[str] = "\x1b[1m"
 
     # Unicode/ASCII symbols
     OK: ClassVar[str] = "✓"

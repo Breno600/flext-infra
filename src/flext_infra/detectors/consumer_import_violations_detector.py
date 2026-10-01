@@ -53,7 +53,8 @@ class FlextInfraConsumerImportViolationsDetector:
 
     @classmethod
     def detect_file(
-        cls, ctx: m.Infra.DetectorContext
+        cls,
+        ctx: m.Infra.DetectorContext,
     ) -> t.VariadicTuple[m.Infra.ConsumerImportViolation]:
         """Detect R1 violations in one file with true statement line numbers."""
         path: Path = ctx.file_path
@@ -63,7 +64,10 @@ class FlextInfraConsumerImportViolationsDetector:
         renames = core_u.compatibility_alias_renames()
 
         def violation(
-            lineno: int, target: str, symbol: str, detail: str
+            lineno: int,
+            target: str,
+            symbol: str,
+            detail: str,
         ) -> m.Infra.ConsumerImportViolation:
             """Build one typed violation with the true line and a derived hint."""
             canonical = renames.get(symbol)
@@ -91,7 +95,7 @@ class FlextInfraConsumerImportViolationsDetector:
             if root not in family_roots or root == importer_root:
                 continue
             published = FlextInfraConsumerImportViolationsDetector._published_symbols(
-                root
+                root,
             )
             if "." in target:
                 violations.append(
@@ -100,7 +104,7 @@ class FlextInfraConsumerImportViolationsDetector:
                         target,
                         target.rsplit(".", maxsplit=1)[-1],
                         "submodule path import violates R1 facade-only grammar",
-                    )
+                    ),
                 )
                 continue
             for alias in node.names:
@@ -112,7 +116,7 @@ class FlextInfraConsumerImportViolationsDetector:
                             f"{target}.<star>",
                             "(wildcard)",
                             "wildcard import cannot prove published membership",
-                        )
+                        ),
                     )
                     continue
                 if symbol in published:
@@ -123,7 +127,7 @@ class FlextInfraConsumerImportViolationsDetector:
                         target,
                         symbol,
                         "symbol not published by target root (R1 facade-only grammar)",
-                    )
+                    ),
                 )
         return tuple(violations)
 

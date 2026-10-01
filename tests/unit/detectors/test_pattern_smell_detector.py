@@ -107,7 +107,9 @@ class TestsFlextInfraPatternSmellDetector:
         )
         violations = u.Infra.detect_static_rules(
             m.Infra.DetectorContext(
-                file_path=sample, rope_project=rope_project, project_name=project_name
+                file_path=sample,
+                rope_project=rope_project,
+                project_name=project_name,
             ),
             config.Infra.enforcement.rules,
         )

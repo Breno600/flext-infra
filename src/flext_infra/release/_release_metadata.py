@@ -37,11 +37,14 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
         if raw is None:
             return r[bool].ok(True)
         items: p.Result[t.StrSequence] = u.validate_value(
-            t.Infra.STR_SEQ_ADAPTER, u.Cli.json_as_sequence(raw), strict=True
+            t.Infra.STR_SEQ_ADAPTER,
+            u.Cli.json_as_sequence(raw),
+            strict=True,
         )
         if items.failure:
             return r[bool].fail_op(
-                f"validate release dependency group {key}", items.error
+                f"validate release dependency group {key}",
+                items.error,
             )
         rendered: t.MutableSequenceOf[str] = []
         for requirement in items.value:
@@ -55,7 +58,7 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
                 continue
             if name not in versions:
                 return r[bool].fail(
-                    f"internal dependency version unknown to this release: {name}"
+                    f"internal dependency version unknown to this release: {name}",
                 )
             pin = cls._release_specifier(versions[name])
             if pin.failure:
@@ -68,7 +71,10 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
 
     @classmethod
     def _release_pyproject(
-        cls, source: str, version: str, versions: t.StrMapping
+        cls,
+        source: str,
+        version: str,
+        versions: t.StrMapping,
     ) -> p.Result[str]:
         """Render a pyproject a public registry accepts: pinned, sourceless, bounded."""
         document = u.Cli.toml_parse_text(source)
@@ -79,7 +85,7 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
         )
         if document is None or project is None:
             return r[str].fail(
-                "release pyproject must be valid TOML defining [project]"
+                "release pyproject must be valid TOML defining [project]",
             )
         project[c.Infra.VERSION] = version
         fields = (
@@ -118,7 +124,7 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
         return r[str].ok(rendered)
 
     @classmethod
-    def _sdist_boundary(cls, hatch: t.Cli.TomlTable) -> p.Result[bool]:
+    def _sdist_boundary(cls, hatch: t.Cli.TomlTable) -> p.Result[t.StrSequence]:
         """Verify matching, bounded source selection for both archive targets."""
         build = u.Cli.toml_table_child(hatch, "build")
         targets = (
@@ -131,13 +137,13 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
             u.Cli.toml_table_child(targets, "sdist") if targets is not None else None
         )
         if targets is None or wheel is None or sdist is None:
-            return r[bool].fail(
+            return r[t.StrSequence].fail(
                 "release pyproject must define Hatch wheel and sdist targets"
             )
         if build is not None and any(
             key in build for key in ("only-include", "packages", "exclude")
         ):
-            return r[bool].fail(
+            return r[t.StrSequence].fail(
                 "Hatch build must use target source patterns without exclusions"
             )
         wheel_includes: p.Result[t.StrSequence] = u.validate_value(
@@ -145,19 +151,31 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
             u.Cli.json_as_sequence(u.Cli.toml_value(wheel, "include")),
             strict=True,
         )
-        if wheel_includes.failure:
-            return r[bool].fail_op("validate Hatch wheel include", wheel_includes.error)
-        sdist_includes: p.Result[t.StrSequence] = u.validate_value(
-            t.Infra.STR_SEQ_ADAPTER,
-            u.Cli.json_as_sequence(u.Cli.toml_value(sdist, "include")),
-            strict=True,
+        if packages.failure:
+            return r[bool].fail_op("validate Hatch wheel packages", packages.error)
+        if not packages.value:
+            return r[bool].fail("Hatch wheel target must declare packages")
+        forced = u.Cli.toml_table_child(wheel, "force-include")
+        sources = tuple(
+            dict.fromkeys((*packages.value, *(str(k) for k in forced or ()))),
         )
         if sdist_includes.failure:
-            return r[bool].fail_op("validate Hatch sdist include", sdist_includes.error)
+            return r[t.StrSequence].fail_op(
+                "validate Hatch sdist include", sdist_includes.error
+            )
         if not wheel_includes.value or set(wheel_includes.value) != set(
             sdist_includes.value
         ):
-            return r[bool].fail("Hatch wheel and sdist source patterns must match")
+            return r[t.StrSequence].fail(
+                "Hatch wheel and sdist source patterns must match"
+            )
+        roots = tuple(
+            sorted({
+                PurePosixPath(pattern.removeprefix("/").removesuffix("/**")).parts[0]
+                for pattern in wheel_includes.value
+                if pattern.startswith("/") and pattern.endswith("/**")
+            })
+        )
         wheel_forced = u.Cli.toml_table_child(wheel, "force-include")
         sdist_forced = u.Cli.toml_table_child(sdist, "force-include")
         sources = (
@@ -170,21 +188,29 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
             and {str(source): str(target) for source, target in sdist_forced.items()}
             != {source: source for source in sources}
         ):
-            return r[bool].fail("Hatch sdist must retain every forced wheel source")
-        for target in (wheel, sdist):
-            if any(key in target for key in ("only-include", "packages", "exclude")):
-                return r[bool].fail(
-                    "Hatch targets must use source patterns without exclusions"
+            return r[t.StrSequence].fail(
+                "Hatch sdist must retain every forced wheel source"
+            )
+        wheel_excludes = u.Cli.json_as_sequence(u.Cli.toml_value(wheel, "exclude"))
+        sdist_excludes = u.Cli.json_as_sequence(u.Cli.toml_value(sdist, "exclude"))
+        if wheel_excludes != sdist_excludes:
+            return r[t.StrSequence].fail("Hatch wheel and sdist exclusions must match")
+        for excluded in wheel_excludes:
+            if not isinstance(excluded, str) or not excluded.startswith("/"):
+                return r[t.StrSequence].fail(f"invalid Hatch exclusion: {excluded}")
+            path = PurePosixPath(excluded.removeprefix("/"))
+            if (
+                ".." in path.parts
+                or path.as_posix() != excluded.removeprefix("/")
+                or len(path.parts) <= 1
+                or path.parts[0] == c.Infra.DEFAULT_SRC_DIR
+                or not any(
+                    excluded.startswith(pattern.removesuffix("**"))
+                    for pattern in wheel_includes.value
                 )
-        for pattern in wheel_includes.value:
-            if not pattern.startswith("/") or not pattern.endswith("/**"):
+            ):
                 return r[bool].fail(
-                    f"Hatch source pattern is not a directory: {pattern}"
-                )
-        for source in sources:
-            if PurePosixPath(source).is_absolute():
-                return r[bool].fail(
-                    f"Hatch source path is outside the release boundary: {source}"
+                    f"Hatch source path is outside the release boundary: {source}",
                 )
         for source in (*wheel_includes.value, *sources):
             relative = (
@@ -193,17 +219,20 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
                 else source
             )
             path = PurePosixPath(relative)
-            if (
-                not relative
-                or path.is_absolute()
-                or ".." in path.parts
-                or path.as_posix() != relative
-                or not cls._sdist_member_allowed(("release-root", *path.parts))
+            safe_path = (
+                bool(relative)
+                and not path.is_absolute()
+                and ".." not in path.parts
+                and path.as_posix() == relative
+            )
+            if not safe_path or (
+                cls._path_error(relative, "release source", root_index=0)
+                or not cls._sdist_member_allowed(("release-root", *path.parts), roots)
             ):
-                return r[bool].fail(
+                return r[t.StrSequence].fail(
                     f"Hatch source path is outside the release boundary: {source}"
                 )
-        return r[bool].ok(True)
+        return r[t.StrSequence].ok(roots)
 
 
 __all__: list[str] = ["FlextInfraReleaseMetadataMixin"]

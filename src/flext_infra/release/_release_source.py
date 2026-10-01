@@ -16,7 +16,10 @@ class FlextInfraReleaseSourceMixin(FlextInfraReleaseArtifactMixin):
 
     @classmethod
     def _stage_source(
-        cls, project_path: Path, stage_path: Path, gitleaks_config: Path
+        cls,
+        project_path: Path,
+        stage_path: Path,
+        gitleaks_config: Path,
     ) -> p.Result[t.Pair[m.Infra.SourceSnapshot, str]]:
         """Extract HEAD of a clean project, scan it, and return identity and license digest."""
         result_type = r[t.Pair[m.Infra.SourceSnapshot, str]]
@@ -45,14 +48,16 @@ class FlextInfraReleaseSourceMixin(FlextInfraReleaseArtifactMixin):
         oid, _, epoch = identity.value.strip().partition(" ")
         if not epoch.isdigit():
             return result_type.fail(
-                f"commit epoch is not an integer for {project_path}: {epoch}"
+                f"commit epoch is not an integer for {project_path}: {epoch}",
             )
         snapshot: p.Result[m.Infra.SourceSnapshot] = u.validate_value(
-            m.Infra.SourceSnapshot, {"commit_oid": oid, "source_date_epoch": int(epoch)}
+            m.Infra.SourceSnapshot,
+            {"commit_oid": oid, "source_date_epoch": int(epoch)},
         )
         if snapshot.failure:
             return result_type.fail_op(
-                "validate committed release source identity", snapshot.error
+                "validate committed release source identity",
+                snapshot.error,
             )
         archive_path = stage_path.parent / f"{stage_path.name}.tar"
         archived = u.Cli.run_checked(
@@ -67,7 +72,8 @@ class FlextInfraReleaseSourceMixin(FlextInfraReleaseArtifactMixin):
                 extracted = u.Infra.materialize_tar_tree(archive, stage_path)
         except (OSError, tarfile.TarError) as exc:
             return result_type.fail(
-                f"extract committed release source failed: {exc}", exception=exc
+                f"extract committed release source failed: {exc}",
+                exception=exc,
             )
         if extracted.failure:
             return result_type.from_failure(extracted)
@@ -88,14 +94,14 @@ class FlextInfraReleaseSourceMixin(FlextInfraReleaseArtifactMixin):
                 return result_type.fail(error)
             if member.is_symlink():
                 return result_type.fail(
-                    f"staged source contains symbolic link: {relative}"
+                    f"staged source contains symbolic link: {relative}",
                 )
         scanned = cls._scan_source(stage_path, gitleaks_config)
         if scanned.failure:
             return result_type.from_failure(scanned)
         if len(licenses) != 1:
             return result_type.fail(
-                f"release source must contain exactly one LICENSE: {stage_path}"
+                f"release source must contain exactly one LICENSE: {stage_path}",
             )
         try:
             return result_type.ok((snapshot.value, u.Cli.sha256_file(licenses[0])))
@@ -108,7 +114,7 @@ class FlextInfraReleaseSourceMixin(FlextInfraReleaseArtifactMixin):
         policy = u.Cli.files_read_text(gitleaks_config)
         if policy.failure or not policy.value.strip():
             return r[bool].fail(
-                policy.error or f"release Gitleaks policy is empty: {gitleaks_config}"
+                policy.error or f"release Gitleaks policy is empty: {gitleaks_config}",
             )
         scan = u.Cli.run_raw(
             [

@@ -27,6 +27,7 @@ from flext_infra.detectors.private_import_bypass_detector import (
 
 from ._census_apply_formatting import FlextInfraRefactorCensusApplyFormattingMixin
 from .classvar_constant_autofix import FlextInfraRefactorClassvarConstantAutofix
+from .project_alias_migrator import FlextInfraRefactorProjectAliasMigrator
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -62,11 +63,16 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
         def _fix_key(file_path: Path, object_name: str, action: str = "") -> str: ...
         @staticmethod
         def _rewrite_runtime_alias_source(
-            source: str, *, alias: str, target_name: str
+            source: str,
+            *,
+            alias: str,
+            target_name: str,
         ) -> str: ...
 
     def _apply_supported_fixes(
-        self, rope: p.Infra.RopeWorkspaceDsl, report: m.Infra.WorkspaceReport
+        self,
+        rope: p.Infra.RopeWorkspaceDsl,
+        report: m.Infra.WorkspaceReport,
     ) -> frozenset[str]:
         """Apply supported fixes."""
         applied: set[str] = set()
@@ -100,7 +106,9 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
                     raise ValueError(message)
                 source = rope.source(file_path)
                 updated = self._rewrite_runtime_alias_source(
-                    source, alias=alias, target_name=target_name
+                    source,
+                    alias=alias,
+                    target_name=target_name,
                 )
                 if updated == source:
                     continue
@@ -117,7 +125,7 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
                 ] = tuple(
                     violation
                     for violation in FlextInfraManualTypingAliasDetector.detect_file(
-                        ctx
+                        ctx,
                     )
                     if violation.name in object_names
                 )
@@ -136,14 +144,16 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
                 ] = tuple(
                     violation
                     for violation in FlextInfraCompatibilityAliasDetector.detect_file(
-                        ctx
+                        ctx,
                     )
                     if violation.alias_name in object_names
                 )
                 if not compatibility_violations:
                     continue
                 u.Infra.rewrite_compatibility_alias_violations(
-                    violations=compatibility_violations, parse_failures=parse_failures
+                    violations=compatibility_violations,
+                    parse_failures=parse_failures,
+                    alias_migrator=FlextInfraRefactorProjectAliasMigrator,
                 )
                 changed = True
             elif action == "rewrite_private_import_bypass":
@@ -152,7 +162,7 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
                 ] = tuple(
                     violation
                     for violation in FlextInfraPrivateImportBypassDetector.detect_file(
-                        ctx
+                        ctx,
                     )
                     if violation.imported_symbol in object_names
                     and violation.symbol_exported
@@ -178,7 +188,7 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
                 ] = tuple(
                     violation
                     for violation in FlextInfraCompatibilityAliasDetector.detect_file(
-                        ctx
+                        ctx,
                     )
                     if violation.alias_name in object_names
                     and FlextInfraCompatibilityAliasDetector.fix_action_for(
@@ -193,11 +203,14 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
                     rope_project=ctx.rope_project,
                     violations=foreign_canonical_violations,
                     parse_failures=parse_failures,
+                    alias_migrator=FlextInfraRefactorProjectAliasMigrator,
                 )
                 changed = True
             elif action == "classvar_relocation":
                 changed = self._apply_classvar_relocation(
-                    rope=rope, file_path=file_path, object_names=object_names
+                    rope=rope,
+                    file_path=file_path,
+                    object_names=object_names,
                 )
             elif action == "remove_stub_file":
                 if file_path.suffix == ".pyi" and file_path.exists():
@@ -205,7 +218,9 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
                     changed = True
             elif action == "relocate_facade_class":
                 changed = self._apply_class_family_relocation(
-                    rope=rope, file_path=file_path, object_names=object_names
+                    rope=rope,
+                    file_path=file_path,
+                    object_names=object_names,
                 )
             elif action == "fix_silent_failure_sentinels":
                 resource = rope.resource(file_path)
@@ -231,7 +246,10 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
             )
         for candidate in report.removal_candidates:
             apply_result = u.Infra.apply_simple_removal_candidate(
-                rope, self.root, candidate, gates=self.dry_run_gate_names
+                rope,
+                self.root,
+                candidate,
+                gates=self.dry_run_gate_names,
             )
             if apply_result.failure:
                 msg = apply_result.error or (
@@ -247,7 +265,7 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
                 continue
             if apply_result.unwrap():
                 applied.add(
-                    self._fix_key(Path(candidate.file_path), candidate.object_name)
+                    self._fix_key(Path(candidate.file_path), candidate.object_name),
                 )
                 touched_paths.add(Path(candidate.file_path).resolve())
                 touched_paths.update(
@@ -288,7 +306,8 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
             for violation in FlextInfraInlineImportDetector.detect_file(ctx)
             if violation.current_import in object_names
             and FlextInfraInlineImportDetector.fix_action_for(
-                module_name=violation.module_name, is_importlib=violation.is_importlib
+                module_name=violation.module_name,
+                is_importlib=violation.is_importlib,
             )
             == action
         ]
@@ -340,7 +359,11 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
         for module_name, names in imports_to_add:
             if module_name:
                 u.Infra.add_import(
-                    rope.rope_project, resource, module_name, names, apply=True
+                    rope.rope_project,
+                    resource,
+                    module_name,
+                    names,
+                    apply=True,
                 )
             else:
                 for name in names:
@@ -355,7 +378,11 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
         return True
 
     def _apply_classvar_relocation(
-        self, *, rope: p.Infra.RopeWorkspaceDsl, file_path: Path, object_names: set[str]
+        self,
+        *,
+        rope: p.Infra.RopeWorkspaceDsl,
+        file_path: Path,
+        object_names: set[str],
     ) -> bool:
         """Apply ENFORCE-079: move ClassVar constants to the _constants module.
 
@@ -400,7 +427,11 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
         return changed
 
     def _apply_class_family_relocation(
-        self, *, rope: p.Infra.RopeWorkspaceDsl, file_path: Path, object_names: set[str]
+        self,
+        *,
+        rope: p.Infra.RopeWorkspaceDsl,
+        file_path: Path,
+        object_names: set[str],
     ) -> bool:
         """Relocate misplaced facade classes to their derived family modules."""
         ctx = self._detector_context(rope, file_path)
@@ -421,7 +452,9 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
         )
         changed = False
         for violation in sorted(
-            violations, key=operator.attrgetter("line"), reverse=True
+            violations,
+            key=operator.attrgetter("line"),
+            reverse=True,
         ):
             family = violation.family
             if not family:
@@ -440,7 +473,7 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
                     class_name=violation.name,
                     line=violation.line,
                     apply=True,
-                )
+                ),
             )
             changed = True
         return changed
@@ -453,7 +486,8 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
 
     @staticmethod
     def _find_inline_import_node(
-        tree: ast.Module, line: int
+        tree: ast.Module,
+        line: int,
     ) -> ast.Import | ast.ImportFrom | None:
         """Find an Import/ImportFrom node at ``line`` inside a function body."""
         for node in ast.walk(tree):
@@ -470,7 +504,8 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
 
     @staticmethod
     def _remove_line_ranges(
-        lines: t.SequenceOf[str], ranges: t.SequenceOf[t.Pair[int, int]]
+        lines: t.SequenceOf[str],
+        ranges: t.SequenceOf[t.Pair[int, int]],
     ) -> list[str]:
         """Remove 1-based inclusive line ranges, returning the updated line list."""
         drop: set[int] = set()

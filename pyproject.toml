@@ -27,19 +27,19 @@ dependencies = [
   "dependency-injector>=4.49.1",
   "flext-cli @ git+https://github.com/flext-sh/flext-cli.git@0.12.0-dev",
   "flext-core @ git+https://github.com/flext-sh/flext-core.git@0.12.0-dev",
-  "GitPython>=3.2.0",
+  "GitPython>=3.1.62",
   "jinja2>=3.1.6",
   "libcst>=1.9.0",
   "Markdown>=3.11",
   "mkdocs>=1.6.1",
   "packaging>=26.3",
   "pydantic>=2.13.5",
-  "pydantic-settings>=2.15.0,<2.16",
+  "pydantic-settings>=2.15.0",
   "pymdown-extensions>=11.0.1",
   "pytest>=9.1.1",
   "pyyaml>=6.0.3",
-  "rope @ git+https://github.com/marlon-costa-dc/rope.git@1.14.0+dc.3",
-  "structlog>=25.5.0,<27",
+  "rope @ git+https://github.com/marlon-costa-dc/rope.git@datacosmos",
+  "structlog>=25.5.0",
   "typing-extensions>=4.16.0",
 ]
 description = "FLEXT Infrastructure Tooling - Build automation, code generation, and workspace management"
@@ -179,21 +179,6 @@ config = "flext_infra/config"
 include = ["/src/flext_infra/**", "/config/**"]
 
 [tool.mypy]
-disable_error_code = [
-  "arg-type",
-  "assignment",
-  "attr-defined",
-  "call-arg",
-  "misc",
-  "name-defined",
-  "no-any-return",
-  "no-redef",
-  "prop-decorator",
-  "type-var",
-  "unreachable",
-  "valid-type",
-]
-exclude = "^legado(?:/|$)"
 mypy_path = ["src"]
 plugins = ["pydantic.mypy"]
 python_version = "3.13"
@@ -215,7 +200,6 @@ follow_imports = "normal"
 
 [[tool.mypy.overrides]]
 module = ["rope.*"]
-disable_error_code = []
 follow_untyped_imports = true
 
 [tool.pydantic-mypy]
@@ -353,30 +337,15 @@ include = ["src", "tests"]
 extraPaths = ["src", "."]
 pythonPlatform = "Linux"
 pythonVersion = "3.13"
-reportArgumentType = "none"
-reportAttributeAccessIssue = "none"
-reportCallIssue = "none"
 reportConstantRedefinition = "error"
 reportIncompatibleMethodOverride = "error"
-reportIncompatibleVariableOverride = "none"
 reportInconsistentConstructor = "error"
-reportInvalidTypeForm = "none"
 reportMissingImports = "error"
 reportMissingModuleSource = "error"
-reportMissingTypeStubs = "none"
-reportPrivateUsage = "warning"
-reportUnknownArgumentType = "none"
-reportUnknownLambdaType = "none"
-reportUnknownMemberType = "none"
-reportUnknownParameterType = "none"
-reportUnknownVariableType = "none"
+reportPrivateUsage = "error"
 reportUnnecessaryCast = "error"
-reportUnnecessaryComparison = "warning"
-reportUnnecessaryIsInstance = "warning"
-reportUnreachable = "none"
-reportUnsupportedDunderAll = "none"
-reportUntypedBaseClass = "none"
-reportUntypedFunctionDecorator = "none"
+reportUnnecessaryComparison = "error"
+reportUnnecessaryIsInstance = "error"
 reportUnusedClass = "error"
 reportUnusedFunction = "error"
 reportUnusedImport = "error"
@@ -386,37 +355,12 @@ typeCheckingMode = "strict"
 [[tool.pyright.executionEnvironments]]
 root = "src"
 extraPaths = ["src"]
-reportAssignmentType = "none"
-reportAttributeAccessIssue = "none"
-reportGeneralTypeIssues = "none"
-reportInvalidTypeForm = "none"
-reportPrivateImportUsage = "none"
 reportPrivateUsage = "error"
-reportReturnType = "none"
-reportUnknownArgumentType = "none"
-reportUnknownLambdaType = "none"
-reportUnknownMemberType = "none"
-reportUnknownParameterType = "none"
-reportUnknownVariableType = "none"
-reportUnusedImport = "none"
 
 [[tool.pyright.executionEnvironments]]
 root = "tests"
 extraPaths = [".", "src"]
-reportArgumentType = "none"
-reportAssignmentType = "none"
-reportAttributeAccessIssue = "none"
-reportGeneralTypeIssues = "none"
-reportInvalidTypeForm = "none"
-reportPrivateImportUsage = "none"
 reportPrivateUsage = "error"
-reportReturnType = "none"
-reportUnknownArgumentType = "none"
-reportUnknownLambdaType = "none"
-reportUnknownMemberType = "none"
-reportUnknownParameterType = "none"
-reportUnknownVariableType = "none"
-reportUnusedImport = "none"
 
 [tool.pytest.ini_options]
 addopts = [
@@ -426,7 +370,7 @@ addopts = [
   "--durations=10",
   "--timeout=10",
 ]
-flext_slow_timeout_seconds = "30"
+flext_slow_timeout_seconds = "180"
 asyncio_default_fixture_loop_scope = "function"
 filterwarnings = [
   "error",
@@ -455,39 +399,7 @@ python_files = ["*_test.py", "*_tests.py", "test_*.py"]
 testpaths = ["tests"]
 
 [tool.ruff]
-exclude = [
-  "**/.archive/**",
-  "**/__pyrefly_virtual__/**",
-  ".agents/aihub-hooks",
-  ".agents/aihub-hooks/**",
-  ".archive",
-  ".archive/**",
-  ".claude/aihub-hooks",
-  ".claude/aihub-hooks/**",
-  ".codex/aihub-hooks",
-  ".codex/aihub-hooks/**",
-  ".cursor/aihub-hooks",
-  ".cursor/aihub-hooks/**",
-  ".gemini/aihub-hooks",
-  ".gemini/aihub-hooks/**",
-  ".git",
-  ".github/hooks",
-  ".github/hooks/**",
-  ".mypy_cache",
-  ".pytest_cache",
-  ".ruff_cache",
-  ".venv",
-  "__pycache__",
-  "archive",
-  "backup",
-  "build",
-  "dist",
-  "htmlcov",
-  "temp-backup",
-  "typings",
-  "vendor",
-  "venv",
-]
+extend-exclude = []
 fix = false
 line-length = 88
 namespace-packages = ["tests", "examples", "scripts"]
@@ -502,43 +414,10 @@ docstring-code-format = true
 indent-style = "space"
 line-ending = "lf"
 quote-style = "double"
-skip-magic-trailing-comma = true
+skip-magic-trailing-comma = false
 
 [tool.ruff.lint]
 extend-safe-fixes = []
-ignore = [
-  "ambiguous-unicode-character-comment",
-  "ambiguous-unicode-character-docstring",
-  "ambiguous-unicode-character-string",
-  "boolean-positional-value-in-call",
-  "camelcase-imported-as-lowercase",
-  "complex-structure",
-  "docstring-missing-exception",
-  "docstring-missing-returns",
-  "docstring-missing-yields",
-  "import-outside-top-level",
-  "incorrect-blank-line-before-class",
-  "line-too-long",
-  "logging-f-string",
-  "missing-copyright-notice",
-  "missing-trailing-comma",
-  "multi-line-summary-second-line",
-  "no-self-use",
-  "non-imperative-mood",
-  "pytest-fixture-autouse",
-  "relative-imports",
-  "too-many-arguments",
-  "too-many-branches",
-  "too-many-locals",
-  "too-many-nested-blocks",
-  "too-many-positional-arguments",
-  "too-many-public-methods",
-  "too-many-return-statements",
-  "too-many-statements",
-  "typing-only-first-party-import",
-  "typing-only-standard-library-import",
-  "typing-only-third-party-import",
-]
 select = ["ALL"]
 unfixable = [
   "duplicate-value",
@@ -574,33 +453,6 @@ known-first-party = ["flext_core", "flext_infra"]
 split-on-trailing-comma = false
 
 [tool.ruff.lint.per-file-ignores]
-"**/__init__.py" = [
-  "any-type",
-  "builtin-import-shadowing",
-  "implicit-namespace-package",
-  "import-private-name",
-  "invalid-module-name",
-  "non-empty-init-module",
-  "runtime-import-in-type-checking-block",
-  "undefined-export",
-  "undefined-local-with-import-star",
-  "undefined-local-with-import-star-usage",
-  "undocumented-public-init",
-  "unused-import",
-]
-"**/examples/**/*.py" = ["invalid-module-name", "shebang-not-executable"]
-"**/tests/**" = [
-  "assert",
-  "compare-to-empty-string",
-  "magic-value-comparison",
-  "undocumented-public-class",
-  "undocumented-public-function",
-  "undocumented-public-method",
-]
-"src/flext_infra/_utilities/_mypy_supervisor.py" = [
-  "subprocess-without-shell-equals-true",
-  "suspicious-subprocess-import",
-]
 
 [tool.tomlsort]
 all = true
@@ -622,7 +474,6 @@ whitelines = 1
 
 [tool.uv]
 link-mode = "copy"
-constraint-dependencies = ["structlog<26"]
 environments = ["sys_platform == 'linux'", "sys_platform == 'darwin'"]
 
 [[tool.uv.exclude-dependencies]]

@@ -20,7 +20,6 @@ if TYPE_CHECKING:
     from .codegen_project import FlextInfraConstantsCodegenProject
     from .codegen_render_names import FlextInfraConstantsCodegenRenderNames
     from .deps import FlextInfraConstantsDeps
-    from .detectors import FlextInfraConstantsDetectors
     from .docs import FlextInfraConstantsDocs
     from .git import FlextInfraConstantsGit
     from .make import FlextInfraConstantsMake
@@ -47,7 +46,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraConstantsCodegenProject",
     "FlextInfraConstantsCodegenRenderNames",
     "FlextInfraConstantsDeps",
-    "FlextInfraConstantsDetectors",
     "FlextInfraConstantsDocs",
     "FlextInfraConstantsGit",
     "FlextInfraConstantsMake",
@@ -76,7 +74,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".codegen_project": ("FlextInfraConstantsCodegenProject",),
             ".codegen_render_names": ("FlextInfraConstantsCodegenRenderNames",),
             ".deps": ("FlextInfraConstantsDeps",),
-            ".detectors": ("FlextInfraConstantsDetectors",),
             ".docs": ("FlextInfraConstantsDocs",),
             ".git": ("FlextInfraConstantsGit",),
             ".make": ("FlextInfraConstantsMake",),

@@ -33,7 +33,8 @@ class FlextInfraInlineImportDetector:
 
     @classmethod
     def detect_file(
-        cls, ctx: m.Infra.DetectorContext
+        cls,
+        ctx: m.Infra.DetectorContext,
     ) -> t.SequenceOf[m.Infra.InlineImportViolation]:
         """Return Rope-resolved inline imports and dynamic import calls."""
         file_path = ctx.file_path
@@ -45,7 +46,9 @@ class FlextInfraInlineImportDetector:
         ):
             return ()
         resource = u.Infra.fetch_python_resource(
-            ctx.rope_project, file_path, skip_init_py=False
+            ctx.rope_project,
+            file_path,
+            skip_init_py=False,
         )
         if resource is None:
             return ()
@@ -64,10 +67,12 @@ class FlextInfraInlineImportDetector:
             in_function = statement.enclosing_kind == c.Infra.RopeScopeKind.FUNCTION
             at_module = statement.enclosing_kind == c.Infra.RopeScopeKind.MODULE
             pymodule = u.Infra.build_string_module(
-                ctx.rope_project, statement.text.strip()
+                ctx.rope_project,
+                statement.text.strip(),
             )
             module_imports = u.Infra.module_imports_for_pymodule(
-                ctx.rope_project, pymodule
+                ctx.rope_project,
+                pymodule,
             )
             for import_statement in u.Infra.import_statements(module_imports):
                 import_info = import_statement.import_info
@@ -86,7 +91,7 @@ class FlextInfraInlineImportDetector:
                                     ),
                                     module_name=imported_name.split(".", maxsplit=1)[0],
                                     imported_symbols=(alias_name or imported_name,),
-                                )
+                                ),
                             )
                         elif at_module and imported_name == module:
                             local_name = alias_name or imported_name
@@ -121,7 +126,7 @@ class FlextInfraInlineImportDetector:
                             imported_symbols=tuple(
                                 name for name, _alias in import_info.names_and_aliases
                             ),
-                        )
+                        ),
                     )
                     continue
                 if at_module and import_info.module_name == module:
@@ -141,7 +146,10 @@ class FlextInfraInlineImportDetector:
                         ))
         for primary, suffix_offset, binding_offset in bindings:
             for location in u.Infra.find_occurrences(
-                ctx.rope_project, resource, binding_offset, resources=(resource,)
+                ctx.rope_project,
+                resource,
+                binding_offset,
+                resources=(resource,),
             ):
                 primary_offset = location.offset + suffix_offset
                 region = next(
@@ -168,7 +176,7 @@ class FlextInfraInlineImportDetector:
                                 "flext_core/lazy.py"
                             ),
                             is_importlib=True,
-                        )
+                        ),
                     )
         return tuple(sorted(violations, key=operator.attrgetter("line")))
 

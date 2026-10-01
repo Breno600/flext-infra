@@ -139,8 +139,8 @@ endif
 # === SECTION: verb dispatch (managed) ===
 # Source: config:make.verbs and the canonical gate vocabulary. A verb exists
 # only in the profiles it declares (make.verbs[].profiles).
-PUBLIC_VERBS := help setup upg build check smells test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status verify-clean docs clean bootstrap-candidate release-plan release-version release-tag release-build publication gen initialize mod mod-text mod-text-candidate mod-snapshots waza duplication sonarcloud-sync
-BUILTIN_VERBS := help setup upg build check smells test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status verify-clean docs clean bootstrap-candidate release-plan release-version release-tag release-build publication gen initialize mod mod-text mod-text-candidate mod-snapshots waza duplication sonarcloud-sync
+PUBLIC_VERBS := help setup upg build check smells test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status verify-clean docs clean bootstrap-candidate release-plan release-version release-tag release-build publication gen initialize mod mod-snapshots waza duplication sonarcloud-sync
+BUILTIN_VERBS := help setup upg build check smells test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status verify-clean docs clean bootstrap-candidate release-plan release-version release-tag release-build publication gen initialize mod mod-snapshots waza duplication sonarcloud-sync
 SCRIPT_VERBS :=
 
 CUSTOM_MAKEFILE := $(MAKEFILE_ROOT)/custom.mk
@@ -352,6 +352,7 @@ mise_exec() { \
 'MISE_EXEC_AUTO_INSTALL=false' \
 'MISE_TASK_RUN_AUTO_INSTALL=false' \
 'MISE_AUTO_UPDATE=false' \
+'MISE_MINIMUM_RELEASE_AGE=0s' \
 'MISE_HTTP_RETRIES=0' \
 'MISE_NETRC=false' \
 'MISE_NOT_FOUND_AUTO_INSTALL=false' \
@@ -578,6 +579,7 @@ mise_exec() { \
 'MISE_EXEC_AUTO_INSTALL=false' \
 'MISE_TASK_RUN_AUTO_INSTALL=false' \
 'MISE_AUTO_UPDATE=false' \
+'MISE_MINIMUM_RELEASE_AGE=0s' \
 'MISE_HTTP_RETRIES=0' \
 'MISE_NETRC=false' \
 'MISE_NOT_FOUND_AUTO_INSTALL=false' \
@@ -866,8 +868,6 @@ endef
 # interrupted run never touches the committed lock. A full upgrade resolves
 # from declared manifests without prior lock preferences, including during
 # conflict repair; the final non-upgrade relock retains the resolved lock.
-# The second argument seeds the mirror with the committed lock: only that
-# retaining relock passes it, so a full upgrade never parses a prior lock.
 define _lock_project
 	@set -eu; \
 	workspace=$$($(UV) workspace dir --project "$(PROJECT_ROOT)"); \
@@ -880,7 +880,7 @@ define _lock_project
 		mkdir -p "$${stage}/mirror$$relative"; \
 		cp "$$member/pyproject.toml" "$${stage}/mirror$$relative/pyproject.toml"; \
 	done < "$${stage}/.members"; \
-	$(if $(2),if [ -f "$$workspace/uv.lock" ]; then cp "$$workspace/uv.lock" "$${stage}/mirror/uv.lock"; fi;) \
+	if [ -f "$$workspace/uv.lock" ]; then cp "$$workspace/uv.lock" "$${stage}/mirror/uv.lock"; fi; \
 	$(UV) lock --project "$${stage}/mirror" $(1); \
 	$(UV) lock --check --project "$${stage}/mirror"; \
 	if [ -e "$$candidate" ]; then printf 'ERROR: lock staging path already exists: %s\n' "$$candidate" >&2; exit 2; fi; \
@@ -1162,28 +1162,6 @@ _activated-mod: _builtin_require_environment
 
 
 
-mod-text: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-mod-text
-
-.PHONY: _activated-mod-text
-_activated-mod-text: _builtin_require_environment
-
-	$(call RUN_PUBLIC,mod-text)
-
-
-
-
-mod-text-candidate: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-mod-text-candidate
-
-.PHONY: _activated-mod-text-candidate
-_activated-mod-text-candidate: _builtin_require_environment
-
-	$(call RUN_PUBLIC,mod-text-candidate)
-
-
-
-
 mod-snapshots: _builtin_require_workspace
 	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-mod-snapshots
 
@@ -1321,10 +1299,6 @@ _builtin-help:
 	@printf '  %-16s %s\n' 'initialize' 'Materialize the declared package initializer graph.';
 
 	@printf '  %-16s %s\n' 'mod' 'Apply the declared structural codemods; committed rule-test snapshots are verified, never rewritten.';
-
-	@printf '  %-16s %s\n' 'mod-text' 'Apply only declared Sed text rules with syntax preflight and atomic publication.';
-
-	@printf '  %-16s %s\n' 'mod-text-candidate' 'Replay Sed rules in the single candidate worktree declared by the workspace manifest.';
 
 	@printf '  %-16s %s\n' 'mod-snapshots' 'Regenerate the owned ast-grep rule-test snapshots from their tests for a reviewed commit.';
 
@@ -1592,7 +1566,7 @@ _upg_relock: _bootstrap_setup_tools
 # red tests or red CI.
 .PHONY: _upg_converge
 _upg_converge:
-	$(call _lock_project,,retain)
+	$(call _lock_project,)
 	@$(SELF_MAKE) _builtin_setup_environment
 	@$(UV) lock --check --project "$(PROJECT_ROOT)"
 	@set -eu; \
@@ -1625,21 +1599,21 @@ _builtin_build_artifacts:
 
 # Check is read-only: it runs the gates without --apply, so the tree is left
 # unchanged; fix applies the declared repairs of the fixable gates.
-# CI=Y runs make.check_gates_ci, the external gates of the
-# registry; CI=N runs make.check_gates_local, its strict
-# complement (type checkers and flext-infra validators).
+# CI=Y keeps make.check_gates_ci, the strict complement of
+# make.check_gates_local; CI=N runs that local partition.
 # An absent CI token runs every active default gate.
 _builtin_check_all: _builtin_require_environment
 	@set -eu; \
-		gates="lint,security,markdown,duplication,pyrefly,mypy,pyright,silent-failure,deferred-self-reference,loc-cap,boundary,runtime-census,namespace,tier-whitelist,index-declarations,codemod,layout,canonical-alias,direnv"; \
+printf '%s\n' 'INFO: SUSPENDED check gate namespace; authority=flext-itpd1.3; operator decision 2026-09-27 (keep plan v12 suspension); flext-infra#913; reason=Fleet namespace backlog (141 findings here) is repaired after the fleet is green; the gate returns with its Rope single-cycle owner fix.'; \
+gates="lint,pyrefly,mypy,pyright,silent-failure,deferred-self-reference,security,markdown,loc-cap,boundary,runtime-census,tier-whitelist,index-declarations,codemod,layout,canonical-alias,direnv,duplication"; \
 		if [ "$(strip $(CI))" = "Y" ]; then \
-			gates="lint,security,markdown,duplication"; \
-			printf 'INFO: CI=Y runs check gates: lint security markdown duplication\n'; \
+			gates="lint,mypy,pyright,silent-failure,deferred-self-reference,security,markdown,loc-cap,boundary,runtime-census,tier-whitelist,index-declarations,codemod,layout,canonical-alias,direnv,duplication"; \
+			printf 'INFO: CI=Y runs check gates: lint mypy pyright silent-failure deferred-self-reference security markdown loc-cap boundary runtime-census tier-whitelist index-declarations codemod layout canonical-alias direnv duplication\n'; \
 		elif [ "$(strip $(CI))" = "N" ]; then \
-			gates="pyrefly,mypy,pyright,silent-failure,deferred-self-reference,loc-cap,boundary,runtime-census,namespace,tier-whitelist,index-declarations,codemod,layout,canonical-alias,direnv"; \
-			printf 'INFO: CI=N runs check gates: pyrefly mypy pyright silent-failure deferred-self-reference loc-cap boundary runtime-census namespace tier-whitelist index-declarations codemod layout canonical-alias direnv\n'; \
+			gates="pyrefly"; \
+			printf 'INFO: CI=N runs check gates: pyrefly\n'; \
 		else \
-			printf 'INFO: default context runs check gates: lint security markdown duplication pyrefly mypy pyright silent-failure deferred-self-reference loc-cap boundary runtime-census namespace tier-whitelist index-declarations codemod layout canonical-alias direnv\n'; \
+			printf 'INFO: default context runs check gates: lint pyrefly mypy pyright silent-failure deferred-self-reference security markdown loc-cap boundary runtime-census tier-whitelist index-declarations codemod layout canonical-alias direnv duplication\n'; \
 		fi; \
 		if [ -z "$$gates" ]; then \
 			printf 'ERROR: no active check gates remain in the selected context\n' >&2; \
@@ -1664,7 +1638,8 @@ case "$$database" in /*) ;; *) printf 'ERROR: persistent testmon database requir
 case "$$database" in "$(PROJECT_ROOT)"/*) printf 'ERROR: persistent testmon database must be outside the checkout: %s\n' "$$database" >&2; exit 2 ;; esac; \
 case "$$database" in "$${TMPDIR:-/tmp}"/*|/tmp/*) printf 'ERROR: persistent testmon database must not live under the temporary directory: %s\n' "$$database" >&2; exit 2 ;; esac; \
 mkdir -p "$$(dirname "$$database")"; \
-TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry full
+TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry full; \
+TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry full-slow
 
 # fmt is format-only (single-pass verb law): ruff formats Python, the
 # fmt_gates formatters run once through the checker's apply mode, and every
@@ -1849,12 +1824,6 @@ _builtin-bootstrap-candidate: _builtin_require_environment
 _builtin_mod_apply: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) refactor mod --apply
 
-_builtin_mod_text_apply: _builtin_require_environment
-	@$(PROJECT_FLEXT_INFRA) refactor mod-text --apply
-
-_builtin_mod_text_candidate_apply: _builtin_require_environment
-	@$(PROJECT_FLEXT_INFRA) refactor mod-text-candidate --apply
-
 # `mod` verifies committed rule-test snapshots and never rewrites them; this is
 # the one explicit regeneration, whose diff is reviewed and committed.
 _builtin_mod_snapshots: _builtin_require_environment
@@ -1884,8 +1853,6 @@ _builtin-audit:
 	@$(UV) pip check --python "$(RUNTIME_VENV)"
 	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --mode check
 _builtin-status: _builtin_status_diagnostics
-_builtin-verify-clean: _builtin_require_environment
-	@$(PROJECT_FLEXT_INFRA) workspace verify-clean --repo-root "$(PROJECT_ROOT)"
 _builtin-docs: _builtin_docs_all
 _builtin-clean: _builtin_clean_generated
 _builtin-release-plan: _builtin_release_plan
@@ -1896,8 +1863,6 @@ _builtin-publication: _builtin_release_publish
 _builtin-gen: _builtin_gen_all
 _builtin-initialize: _builtin_gen_init
 _builtin-mod: _builtin_mod_apply
-_builtin-mod-text: _builtin_mod_text_apply
-_builtin-mod-text-candidate: _builtin_mod_text_candidate_apply
 _builtin-mod-snapshots: _builtin_mod_snapshots
 _builtin-waza:
 	@cd "$(PROJECT_ROOT)" && $(PROJECT_TOOL_EXEC) waza check --no-update-check

@@ -57,13 +57,16 @@ class FlextInfraCyclicImportDetector:
             resolved_file = Path(file_path).resolve()
             semantic_targets = (
                 FlextInfraCyclicImportDetector._prospective_import_targets(
-                    rope_project, resource, source_updates[resolved_file]
+                    rope_project,
+                    resource,
+                    source_updates[resolved_file],
                 )
                 if resolved_file in source_updates
                 else tuple(
                     u.Infra.resolve_semantic_module_imports(
-                        rope_project, resource
-                    ).values()
+                        rope_project,
+                        resource,
+                    ).values(),
                 )
             )
             for semantic_target in semantic_targets:
@@ -85,7 +88,9 @@ class FlextInfraCyclicImportDetector:
 
     @staticmethod
     def _prospective_import_targets(
-        rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource, source: str
+        rope_project: t.Infra.RopeProject,
+        resource: t.Infra.RopeResource,
+        source: str,
     ) -> t.StrSequence:
         """Return Rope-resolved import targets for one proposed source."""
         pymodule = u.Infra.build_string_module(rope_project, source, resource=resource)
@@ -100,7 +105,8 @@ class FlextInfraCyclicImportDetector:
             else ""
         )
         return u.Infra.imported_module_paths(
-            module_imports, current_package=current_package
+            module_imports,
+            current_package=current_package,
         )
 
 

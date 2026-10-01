@@ -38,7 +38,7 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
     # Projects that only re-export aliases (e.g. flext_cli) are NOT listed here;
     # per-file facade guards protect their facade implementation files.
     _ALIAS_SOURCE_PACKAGES: ClassVar[frozenset[str]] = frozenset({
-        c.Infra.PKG_CORE_UNDERSCORE
+        c.Infra.PKG_CORE_UNDERSCORE,
     })
 
     @staticmethod
@@ -69,7 +69,7 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
                 file_path
                 for directory_name in u.Infra.namespace_scan_dirs(project_dir)
                 for file_path in u.Infra.iter_directory_python_files(
-                    project_dir / directory_name
+                    project_dir / directory_name,
                 )
             }
         except OSError as exc:
@@ -78,7 +78,9 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
 
     @override
     def check(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
         """Scan one project's Python sources for ENFORCE-080 violations."""
         _ = ctx
@@ -109,7 +111,7 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
                         project_root=project_dir,
                         rope_project=rope_project,
                         project_name=project_dir.name,
-                    )
+                    ),
                 ):
                     if violation.module_name != migration_context.policy_owner:
                         continue
@@ -131,13 +133,15 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
                                 f"{violation.alias_name}"
                             ),
                             severity="ERROR",
-                        )
+                        ),
                     )
         finally:
             rope_project.close()
 
         return self._detected_gate_execution(
-            project_dir, issues=issues, started=started
+            project_dir,
+            issues=issues,
+            started=started,
         )
 
     @override
@@ -152,7 +156,11 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
         if files_result.failure:
             message = files_result.error or "canonical-alias fix failed"
             return self._build_single_issue_result(
-                project_dir, project_dir, message, passed=False, started=started
+                project_dir,
+                project_dir,
+                message,
+                passed=False,
+                started=started,
             )
 
         rope_project = u.Infra.init_rope_project(project_dir)
@@ -175,7 +183,8 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
                 return self.check(project_dir, ctx)
             updates = {edit.file_path: edit.updated_source for edit in edits}
             baseline_cycles = FlextInfraCyclicImportDetector.scan_project(
-                project_root=project_dir, rope_project=rope_project
+                project_root=project_dir,
+                rope_project=rope_project,
             )
             prospective_cycles = FlextInfraCyclicImportDetector.scan_project(
                 project_root=project_dir,
@@ -246,7 +255,7 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
                     project_root=project_dir,
                     rope_project=rope_project,
                     project_name=project_dir.name,
-                )
+                ),
             )
             if any(
                 violation.module_name == context.policy_owner
@@ -271,7 +280,8 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
                 updated, changes = transformer.apply_to_source(read.value)
             except ValueError as exc:
                 return r[tuple[m.Infra.SemanticMigrationEdit, ...]].fail(
-                    str(exc), exception=exc
+                    str(exc),
+                    exception=exc,
                 )
             if changes and updated != read.value:
                 edits.append(
@@ -280,7 +290,7 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
                         original_source=read.value,
                         updated_source=updated,
                         changes=tuple(changes),
-                    )
+                    ),
                 )
         return r[tuple[m.Infra.SemanticMigrationEdit, ...]].ok(tuple(edits))
 
@@ -307,11 +317,20 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
             raise RuntimeError(msg)
 
     def _fix_failure_result(
-        self, *, project_dir: Path, file_path: Path, message: str, started: float
+        self,
+        *,
+        project_dir: Path,
+        file_path: Path,
+        message: str,
+        started: float,
     ) -> m.Infra.GateExecution:
         """Build a failed fix result for local rewrite failures."""
         return self._build_single_issue_result(
-            project_dir, file_path, message, passed=False, started=started
+            project_dir,
+            file_path,
+            message,
+            passed=False,
+            started=started,
         )
 
 

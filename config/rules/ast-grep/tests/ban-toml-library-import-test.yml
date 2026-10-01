@@ -1,0 +1,11 @@
+id: ban-toml-library-import
+valid:
+  - from flext_cli import u
+  - import toml_helpers
+invalid:
+  - import tomllib
+  - from tomlkit import document
+  - import tomlkit.items
+  - |
+    if TYPE_CHECKING:
+        import tomllib

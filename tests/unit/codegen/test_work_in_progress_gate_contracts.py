@@ -63,7 +63,9 @@ class TestsWorkInProgressGates:
         test_u.Tests.git_bootstrap(root, ("commit", "--allow-empty", "-m", subject))
         with cls._base_ref(base):
             return u.Cli.capture(
-                ["bash", "-c", cls._merge_guard_script()], cwd=root, timeout=120
+                ["bash", "-c", cls._merge_guard_script()],
+                cwd=root,
+                timeout=120,
             )
 
     def test_template_binds_the_config_owned_predicate(self) -> None:
