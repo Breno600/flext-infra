@@ -49,7 +49,7 @@ class TestsFlextInfraCiToolCacheReuse:
                 repository_branch="0.12.0-dev"
             )
         )
-        mypy_storage = make.mypy_cache.external_storage_directory
+        mypy_storage = str(make.mypy_cache.external_storage_directory)
         for step in steps:
             options = step.get("with")
             if options is None:
