@@ -112,6 +112,7 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         target: t.Pair[str, str] | None = None
         declared = False
         lazy = cls._facade_lazy_bindings(source, module)
+        inline: dict[str, str] = {}
         for node in cls._facade_module_statements(source, module):
             if isinstance(node, ast.AnnAssign) and node.value is None:
                 # An annotation without a value does not rebind an existing name.
@@ -174,13 +175,15 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
                                     element.value,
                                     str,
                                 ):
-                                    lazy.setdefault(element.value, key.value)
+                                    inline.setdefault(element.value, key.value)
         if declared:
             return module, name
-        if target is None and name in lazy:
+        # The cached lazy map is immutable: bindings discovered during this
+        # walk stay in the local inline view, merged read-only below.
+        sub = lazy.get(name) or inline.get(name)
+        if target is None and sub is not None:
             # A lazy entry binds the name through its submodule; resolution
             # continues where the submodule defines it.
-            sub = lazy[name]
             target = (f"{module}{sub}" if sub.startswith(".") else sub, name)
         # A submodule import binds a module, never a facade class.
         if target is None or ".".join(target) in modules:
