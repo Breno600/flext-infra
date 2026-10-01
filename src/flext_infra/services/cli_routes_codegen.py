@@ -6,7 +6,6 @@ from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import c, m
-from flext_infra.codegen.candidate_bootstrap import FlextInfraCodegenCandidateBootstrap
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from flext_infra.codegen.consolidator import FlextInfraCodegenConsolidator
 from flext_infra.codegen.constants_quality_gate import FlextInfraCodegenQualityGate
@@ -65,10 +64,10 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
         c.Infra.CLI_GROUP_CODEGEN: (
             m.Cli.ResultCommandRoute(
                 name="candidate-bootstrap",
-                help_text="Conform one declared sibling candidate worktree",
-                model_cls=FlextInfraCodegenCandidateBootstrap,
+                help_text="Atomically conform all declared candidate Makefiles",
+                model_cls=m.Infra.CandidateBootstrapCommand,
                 handler=FlextInfraCliRouteBase.result_handler(
-                    FlextInfraCodegenCandidateBootstrap.execute
+                    infra.bootstrap_candidate
                 ),
                 success_message="candidate bootstrap complete",
             ),

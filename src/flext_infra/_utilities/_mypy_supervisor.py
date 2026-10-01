@@ -16,7 +16,7 @@ import sys
 import time
 from types import FrameType
 
-from flext_infra import m, t, u
+from flext_infra import c, m, t
 
 
 class FlextInfraMypyDarwinSupervisor:
@@ -46,8 +46,11 @@ class FlextInfraMypyDarwinSupervisor:
 
     @staticmethod
     def _usage(pid: int) -> t.Pair[int, bool]:
+        from flext_infra import u
+
         snapshot = u.Cli.run(
-            ("/bin/ps", "-axo", "pgid=,rss=,stat="), timeout=1
+            ("/bin/ps", "-axo", "pgid=,rss=,stat="),
+            timeout=c.Infra.MYPY_SUPERVISOR_PS_TIMEOUT,
         ).unwrap()
         total_kib = 0
         alive = False
@@ -67,6 +70,8 @@ class FlextInfraMypyDarwinSupervisor:
         kill_after: int,
     ) -> int:
         """Run the owned checker with inherited streams and bounded group lifetime."""
+        from flext_infra import u
+
         if min(memory_bytes, timeout, kill_after) <= 0:
             msg = "positive memory, timeout and kill-after are required"
             raise ValueError(msg)
@@ -96,7 +101,7 @@ class FlextInfraMypyDarwinSupervisor:
                 if cls._usage(child.pid)[0] > memory_bytes:
                     sys.stderr.write("Mypy out of memory: RSS limit reached\n")
                     return 137
-                time.sleep(0.1)
+                time.sleep(c.Infra.MYPY_SUPERVISOR_POLL_SECONDS)
             return exit_code if exit_code >= 0 else 128 - exit_code
         finally:
             # Always clean descendants, even when their leader already exited.
@@ -111,7 +116,7 @@ class FlextInfraMypyDarwinSupervisor:
                     child.poll()
                     if not cls._usage(child.pid)[1]:
                         break
-                    time.sleep(0.05)
+                    time.sleep(c.Infra.MYPY_SUPERVISOR_SHUTDOWN_POLL_SECONDS)
             finally:
                 try:
                     if cls._usage(child.pid)[1]:

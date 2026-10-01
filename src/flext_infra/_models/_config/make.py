@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
+from types import MappingProxyType
 from typing import Annotated, Literal, Self
 
 from flext_cli import m, u
@@ -26,6 +27,13 @@ def _shared_mypy_cache_spec() -> FlextInfraConfigModelsMake.MypyCacheSpec:
     to repeat the same block just to satisfy a required field.
     """
     return FlextInfraConfigModelsMake.MypyCacheSpec()
+
+
+def _default_testmon_cache_policy() -> (
+    FlextInfraConfigModelsMake.TestmonCachePolicySpec
+):
+    """Build the declared default testmon cache policy (#1001 delta)."""
+    return FlextInfraConfigModelsMake.TestmonCachePolicySpec()
 
 
 class FlextInfraConfigModelsMake:
@@ -371,6 +379,62 @@ class FlextInfraConfigModelsMake:
                 raise ValueError(msg)
             return self
 
+    class TestmonCachePolicySpec(FlextInfraConfigModelsContract.ConfigContract):
+        """Declarative Actions-cache policy for the shared testmon database.
+
+        Implements the preserved #1001 delta (bead flext-j0u23): two-phase
+        generations with per-mode caps, a per-repository byte budget with a
+        three-stage quota ladder, a save-ref allowlist (never save from PRs)
+        and a cache-key namespace.
+        """
+
+        mode: Annotated[
+            Literal["bootstrap", "stable"],
+            m.Field(description="Cache phase: bootstrap seeds, stable saves"),
+        ] = "stable"
+        save_enabled: Annotated[
+            bool, m.Field(description="Master switch for cache publishes")
+        ] = False
+        max_bootstrap_generations: Annotated[
+            int, m.Field(gt=0, description="Retention cap for bootstrap generations")
+        ] = 3
+        max_stable_generations: Annotated[
+            int, m.Field(gt=0, description="Retention cap for stable generations")
+        ] = 3
+        per_repo_budget_bytes: Annotated[
+            int, m.Field(gt=0, description="Per-repository byte budget")
+        ] = 52_428_800
+        warning_threshold_percent: Annotated[
+            int, m.Field(ge=0, le=100, description="Quota-ladder warning stage")
+        ] = 80
+        maintenance_threshold_percent: Annotated[
+            int, m.Field(ge=0, le=100, description="Quota-ladder maintenance stage")
+        ] = 90
+        block_threshold_percent: Annotated[
+            int, m.Field(ge=0, le=100, description="Quota-ladder block stage")
+        ] = 95
+        allowed_save_refs: Annotated[
+            tuple[t.NonEmptyStr, ...],
+            m.Field(description="Refs whose pushes may publish cache generations"),
+        ] = ("main", "0.12.0-dev")
+        key_prefix: Annotated[
+            t.NonEmptyStr, m.Field(description="Actions cache key namespace")
+        ] = "flext-testmon"
+
+        @u.model_validator(mode="after")
+        def require_ascending_quota_ladder(self) -> Self:
+            """Keep the quota ladder strictly ascending within the percent scale."""
+            full_scale = 100
+            if not (
+                self.warning_threshold_percent
+                < self.maintenance_threshold_percent
+                < self.block_threshold_percent
+                <= full_scale
+            ):
+                msg = "testmon cache quota ladder must ascend warning < maintenance < block <= 100"
+                raise ValueError(msg)
+            return self
+
     class MypyCacheSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Project-keyed shared Mypy cache: one analysis per project, reused across relocks."""
 
@@ -586,6 +650,13 @@ class FlextInfraConfigModelsMake:
             FlextInfraConfigModelsMake.TestmonCacheSpec,
             m.Field(description="Adaptive testmon Actions cache policy"),
         ]
+        testmon_cache_policy: Annotated[
+            FlextInfraConfigModelsMake.TestmonCachePolicySpec,
+            m.Field(
+                default_factory=_default_testmon_cache_policy,
+                description="Declarative save/budget/quota policy for the shared testmon cache (#1001 delta)",
+            ),
+        ]
         mypy_cache: Annotated[
             FlextInfraConfigModelsMake.MypyCacheSpec,
             m.Field(
@@ -633,6 +704,12 @@ class FlextInfraConfigModelsMake:
                 ),
             ),
         ] = ()
+        standalone_check_gates: Annotated[
+            Mapping[t.NonEmptyStr, t.NonEmptyStr],
+            m.Field(
+                description="Public Make verb to checker gate mapping outside make check",
+            ),
+        ] = MappingProxyType({})
         check_gate_suspensions: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsMake.MakeGateSuspensionSpec],
             m.Field(
@@ -658,6 +735,14 @@ class FlextInfraConfigModelsMake:
                 msg = (
                     "make check_gate_suspensions cannot suspend lint, format "
                     f"or type-checker gates: {', '.join(protected)}"
+                )
+                raise ValueError(msg)
+            standalone = set(self.standalone_check_gates.values())
+            misplaced = sorted(set(gates) & standalone)
+            if misplaced:
+                msg = (
+                    "make check_gate_suspensions cannot suspend standalone gates: "
+                    f"{', '.join(misplaced)}"
                 )
                 raise ValueError(msg)
             families = [
@@ -709,6 +794,39 @@ class FlextInfraConfigModelsMake:
             declared = {verb.name for verb in self.verbs}
             if len(declared) != len(self.verbs):
                 msg = "make public verb names must be unique"
+                raise ValueError(msg)
+            unknown_standalone_verbs = sorted(set(self.standalone_check_gates) - declared)
+            if unknown_standalone_verbs:
+                msg = (
+                    "make standalone_check_gates names undeclared verbs: "
+                    f"{', '.join(unknown_standalone_verbs)}"
+                )
+                raise ValueError(msg)
+            partial_standalone = sorted(
+                verb.name
+                for verb in self.verbs
+                if verb.name in self.standalone_check_gates
+                and set(verb.profiles)
+                != set(FlextInfraConstantsCodegenProject.MakeProfile)
+            )
+            if partial_standalone:
+                msg = (
+                    "make standalone_check_gates requires verbs in every profile: "
+                    f"{', '.join(partial_standalone)}"
+                )
+                raise ValueError(msg)
+            unknown_standalone_gates = sorted(
+                set(self.standalone_check_gates.values()) - set(self.check_gates_allowed)
+            )
+            if unknown_standalone_gates:
+                msg = (
+                    "make standalone_check_gates names unknown gates: "
+                    f"{', '.join(unknown_standalone_gates)}"
+                )
+                raise ValueError(msg)
+            standalone_gates = tuple(self.standalone_check_gates.values())
+            if len(standalone_gates) != len(set(standalone_gates)):
+                msg = "make standalone_check_gates must route each gate once"
                 raise ValueError(msg)
             # Why (hq-36xk, flext-lq86m): the guard that lived here read
             # `if "setup" in serialized` and protected `make setup` from being
@@ -787,11 +905,14 @@ class FlextInfraConfigModelsMake:
         def check_gates_default(self) -> t.VariadicTuple[str]:
             """Active default gates, shared by local, CI, hooks, and project gates."""
             suspended = frozenset(item.gate for item in self.check_gate_suspensions)
+            standalone = frozenset(self.standalone_check_gates.values())
             declared = (
                 *FlextInfraConstantsMake.CANONICAL_DEFAULT_GATE_IDS,
                 *self.project_check_gates,
             )
-            return tuple(gate for gate in declared if gate not in suspended)
+            return tuple(
+                gate for gate in declared if gate not in suspended and gate not in standalone
+            )
 
         @m.computed_field
         @property

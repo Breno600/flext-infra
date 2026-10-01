@@ -160,8 +160,13 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
         declared_exports: t.MappingKV[str, set[str]] = {}
         class_bases: t.MappingKV[str, t.VariadicTuple[str]] = {}
         if cross_owner_statements:
-            discovery_sources = FlextInfraUtilitiesPrivateImportFacades.source_modules(
-                sources, tuple(cross_owner_statements)
+            discovery_sources = (
+                FlextInfraUtilitiesPrivateImportFacades.reachable_sources(
+                    FlextInfraUtilitiesPrivateImportFacades.source_modules(
+                        sources, tuple(cross_owner_statements)
+                    ),
+                    tuple(cross_owner_statements),
+                )
             )
             facades = FlextInfraUtilitiesPrivateImportFacades.discover(
                 discovery_sources
