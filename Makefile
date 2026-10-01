@@ -715,7 +715,39 @@ caller_mise_version=; \
 		if [ -f "$$project_root/mise.lock" ]; then cp "$$project_root/mise.lock" "$$lock_stage/mise.lock"; fi; \
 		mise_checked "$$scratch/lock.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" lock --bump; \
 		mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" install --yes; \
+		# mise lock writes each tool's dependency sidecar under .mise/locks \
+		# beside the staged lock. Every sidecar the bumped lock references is \
+		# published first (a path the committed lock does not reference yet is \
+		# inert), the lock rename is the commit point, and default-lock sidecars \
+		# it no longer references are removed afterwards. Sidecar paths carry \
+		# their build identity, so a referenced path whose staged content \
+		# differs from the published one fails instead of being replaced under \
+		# the committed lock. \
+		referenced_sidecars=" $$(sed -n 's|.*path = "\(\.mise/locks/[^"]*\)".*|\1|p' "$$lock_stage/mise.lock" | tr '\n' ' ')"; \
+		for relative in $$referenced_sidecars; do \
+			staged="$$lock_stage/$$relative"; \
+			published="$$project_root/$$relative"; \
+			if [ -e "$$published" ]; then \
+				if [ -e "$$staged" ] && ! diff -r "$$staged" "$$published" >&2; then \
+					printf 'ERROR: mise lock rewrote the published sidecar %s under an unchanged path\n' "$$relative" >&2; \
+					exit 2; \
+				fi; \
+			elif [ -d "$$staged" ]; then \
+				mkdir -p "$$(dirname "$$published")"; \
+				mv "$$staged" "$$published"; \
+			else \
+				printf 'ERROR: mise.lock references the sidecar %s that mise lock did not write\n' "$$relative" >&2; \
+				exit 2; \
+			fi; \
+		done; \
 		mv "$$lock_stage/mise.lock" "$$project_root/mise.lock"; \
+		for sidecar in "$$project_root"/.mise/locks/*/*; do \
+			[ -d "$$sidecar" ] || continue; \
+			relative="$${sidecar#"$$project_root"/}"; \
+			case "$$relative" in .mise/locks/mise.*) continue ;; esac; \
+			case "$$referenced_sidecars" in *" $$relative "*) ;; *) find "$$sidecar" -depth -delete ;; esac; \
+		done; \
+		if [ -d "$$project_root/.mise/locks" ]; then find "$$project_root/.mise/locks" -mindepth 1 -type d -empty -delete; fi; \
 		find "$$lock_stage" -depth -delete; \
 		trap - EXIT; \
 	else \
@@ -1548,11 +1580,8 @@ _upg_lifecycle: _builtin_setup_submodules
 	@$(SELF_MAKE) _upg_relock
 	@set -eu; \
 	if [ -d .mise/locks ]; then \
-		if git add -- .mise/locks; then \
-			printf 'INFO: staged the .mise/locks sidecars written by mise lock (declared tracked by the generated .gitignore; commit them with the relock)\n'; \
-		else \
-			printf 'WARN: .mise/locks exist but could not be staged (not a git worktree?); commit them manually\n'; \
-		fi; \
+		git add -- .mise/locks; \
+		printf 'INFO: staged the .mise/locks sidecars written by mise lock (declared tracked by the generated .gitignore; commit them with the relock)\n'; \
 	fi
 
 # The second half belongs to the Makefile `gen` just rendered, so it runs as a
@@ -1580,7 +1609,7 @@ _upg_converge:
 	@$(UV) lock --check --project "$(PROJECT_ROOT)"
 	@set -eu; \
 	before="$$(git -C "$(PROJECT_ROOT)" status --porcelain --untracked-files=all --ignore-submodules=none | sort)"; \
-	$(SELF_MAKE) gen > /dev/null; \
+	$(SELF_MAKE) gen; \
 	after="$$(git -C "$(PROJECT_ROOT)" status --porcelain --untracked-files=all --ignore-submodules=none | sort)"; \
 	if [ "$$before" != "$$after" ]; then \
 		printf 'ERROR: make upg did not converge; `make gen` still rewrites:\n%s\n' "$$after" >&2; \

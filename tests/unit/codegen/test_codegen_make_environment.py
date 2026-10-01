@@ -872,6 +872,47 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(waza.get("version"), eq=toolchain.waza_version)
         tm.that(waza.get("version_prefix"), eq=toolchain.waza_version_prefix)
 
+    @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
+    def test_upg_publishes_the_lock_with_the_sidecars_it_references(
+        self,
+        tmp_path: Path,
+        profile: c.Infra.MakeProfile,
+    ) -> None:
+        """The staged lock reaches the tree only with every sidecar it names.
+
+        ``mise lock`` writes each tool's sidecar under ``.mise/locks`` beside
+        the staged lock, so publishing the lock alone leaves it naming a
+        sidecar that the next ``make gen`` rejects. Referenced sidecars land
+        before the lock rename (the commit point), unreferenced default-lock
+        sidecars are removed after it, and the converge step keeps ``gen``
+        output so a failure carries its cause.
+        """
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path,
+            profile,
+            bootstrap=True,
+        )
+        makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding="utf-8",
+        )
+        publish_sidecar = 'mv "$$staged" "$$published";'
+        publish_lock = 'mv "$$lock_stage/mise.lock" "$$project_root/mise.lock";'
+        retire_sidecar = (
+            'case "$$referenced_sidecars" in *" $$relative "*) ;; '
+            '*) find "$$sidecar" -depth -delete ;; esac;'
+        )
+        tm.that(makefile, has=[publish_sidecar, publish_lock, retire_sidecar])
+        tm.that(
+            makefile.index(publish_sidecar) < makefile.index(publish_lock),
+            eq=True,
+        )
+        tm.that(
+            makefile.index(publish_lock) < makefile.index(retire_sidecar),
+            eq=True,
+        )
+        tm.that(makefile, has="$(SELF_MAKE) gen; \\")
+        tm.that(makefile, lacks=["gen > /dev/null", "could not be staged"])
+
     @staticmethod
     def test_public_gate_fails_closed_before_managed_environment_exists(
         tmp_path: Path,
