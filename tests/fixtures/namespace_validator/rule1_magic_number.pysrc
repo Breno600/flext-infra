@@ -1,7 +1,0 @@
-from __future__ import annotations
-
-VALUES = list((1, 2, 3))
-
-
-class FlextTestModels:
-    pass

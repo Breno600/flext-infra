@@ -181,11 +181,23 @@ class FlextInfraModelsCore:
             description="Canonical test operation for this report directory",
         )
         testmon_db: Path | None = m.Field(
-            description="External pytest-testmon database; absent for coverage",
+            description="External pytest-testmon database; absent for full and coverage"
         )
-        deadline_monotonic: float = m.Field(
+        deadline_monotonic: float | None = m.Field(
             gt=0,
-            description="Shared absolute deadline across all execution phases",
+            description=(
+                "Shared absolute deadline across all execution phases; absent "
+                "for the unbounded full verb"
+            ),
+        )
+        report_directory: Path | None = m.Field(
+            default=None,
+            description="Explicit directory binding profiled parent and children",
+        )
+        profile_sha256: str | None = m.Field(
+            default=None,
+            pattern=r"^[0-9a-f]{64}$",
+            description="Digest binding a profile sidecar to its exact pstats artifact",
         )
         report_directory: Path | None = m.Field(
             default=None,
@@ -383,7 +395,7 @@ class FlextInfraModelsCore:
     class NamespaceValidateCommand(m.ContractModel):
         """CLI payload for ``flext-infra validate namespace``.
 
-        Read-only namespace rule scan (NS-000..003) for one repository root.
+        Read-only rule-catalog scan of one repository root's namespace scope.
         """
 
         repository_root: Annotated[

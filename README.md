@@ -59,7 +59,7 @@ verification).
 - Public extensions exposed by this project: `FlextInfra`,
   `FlextInfraAccessorMigrationOrchestrator`, `FlextInfraApplyRenames`,
   `FlextInfraBanditGate`, `FlextInfraCProfileReport`,
-  `FlextInfraCandidateBootstrapService` (+149 more).
+  `FlextInfraCandidateBootstrapService` (+136 more).
 - Library abstraction boundaries: see AGENTS.md §2.7.
 
 ## Quality Gates

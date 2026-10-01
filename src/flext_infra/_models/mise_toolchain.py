@@ -112,6 +112,13 @@ class FlextInfraModelsMiseToolchain:
                 description="Python major.minor line, e.g. '3.13'",
             ),
         ]
+        python_tool_version: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                pattern=r"^[0-9]+\.[0-9]+\.[0-9]+$",
+                description="Python runtime patch available on every locked platform",
+            ),
+        ]
         dependency_cooldown_days: Annotated[
             int,
             m.Field(
@@ -379,7 +386,7 @@ class FlextInfraModelsMiseToolchain:
             A value like ``0.45.3~7a027ead`` is an aube lock build-identity
             directory name, not a published package version; aube rejects it
             ("no version ... matches range") and the whole toolchain lifecycle
-            (make upg/gen/setup, and therefore CI) breaks. Only real selectors
+            (make upg/gen/setup, and therefore CI) breaks.             Only real selectors
             (``latest``, a major.minor line, or a released version) may reach
             the lock.
             """

@@ -148,86 +148,6 @@ class TestsFlextInfraInfraRopeService:
         finally:
             rope.close()
 
-    def test_callback_cycle_observes_and_mutates_one_live_rope_session(
-        self,
-        tmp_path: Path,
-    ) -> None:
-        """A later callback observes a prior callback's write in the same cycle."""
-        repository_root, module_path = self._demo_module(
-            tmp_path,
-            "cycle.py",
-            'VALUE = "before"\n',
-        )
-        observed: t.MutableSequenceOf[str] = []
-        written: t.MutableSequenceOf[str] = []
-
-        def rewrite(
-            _workspace: p.Infra.RopeWorkspaceDsl,
-            visit: m.Infra.RopeModuleVisit,
-        ) -> p.Result[m.Infra.RopeCallbackOutcome]:
-            if visit.file_path != module_path:
-                return r[m.Infra.RopeCallbackOutcome].ok(
-                    m.Infra.RopeCallbackOutcome(
-                        file_path=visit.file_path,
-                        project_root=visit.project_root,
-                        callback_id="rewrite",
-                    ),
-                )
-            updated_source = visit.source.replace('"before"', '"after"')
-            visit.resource.write(updated_source)
-            written.append(updated_source)
-            return r[m.Infra.RopeCallbackOutcome].ok(
-                m.Infra.RopeCallbackOutcome(
-                    file_path=visit.file_path,
-                    project_root=visit.project_root,
-                    callback_id="rewrite",
-                    changed=True,
-                    changes=("value updated",),
-                ),
-            )
-
-        def collect(
-            _workspace: p.Infra.RopeWorkspaceDsl,
-            visit: m.Infra.RopeModuleVisit,
-        ) -> p.Result[m.Infra.RopeCallbackOutcome]:
-            if visit.file_path == module_path:
-                observed.append(visit.source)
-            return r[m.Infra.RopeCallbackOutcome].ok(
-                m.Infra.RopeCallbackOutcome(
-                    file_path=visit.file_path,
-                    project_root=visit.project_root,
-                    callback_id="collect",
-                ),
-            )
-
-        with FlextInfraRopeWorkspace.open_workspace(repository_root) as rope:
-            file_paths = frozenset(
-                entry.file_path.resolve() for entry in rope.modules()
-            )
-            report = tm.ok(
-                rope.cycle((
-                    m.Infra.RopeCallbackBinding(
-                        callback=rewrite,
-                        file_paths=file_paths,
-                    ),
-                    m.Infra.RopeCallbackBinding(
-                        callback=collect,
-                        file_paths=file_paths,
-                    ),
-                )),
-            )
-
-        tm.that(observed, eq=written)
-        tm.that(report.callbacks_executed, eq=report.modules_visited * 2)
-        tm.that(len(written), eq=1)
-        rewrite_outcome = next(
-            outcome
-            for outcome in report.outcomes
-            if outcome.file_path == module_path and outcome.callback_id == "rewrite"
-        )
-        tm.that(rewrite_outcome.changes, eq=("value updated",))
-        tm.that(module_path.read_text(encoding="utf-8"), eq=written[0])
-
     def test_script_guard_bindings_are_not_exports(self, tmp_path: Path) -> None:
         """A name bound under ``if __name__ == "__main__":`` is not a module export.
 
@@ -362,7 +282,7 @@ class TestsFlextInfraInfraRopeService:
                 eq=True,
             )
 
-    @pytest.mark.parametrize("family_alias", sorted(c.Infra.FLEXT_FAMILIES))
+    @pytest.mark.parametrize("family_alias", sorted(u.Infra.facade_families()))
     def test_class_nesting_cutover_uses_declared_family_owner(
         self, tmp_path: Path, family_alias: str
     ) -> None:
@@ -371,7 +291,7 @@ class TestsFlextInfraInfraRopeService:
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         owner_name = (
             f"{u.derive_class_stem(repository_root.name)}"
-            f"{c.Infra.FAMILY_SUFFIXES[family_alias]}"
+            f"{u.Infra.facade_families()[family_alias].suffix}"
         )
         extra_class_name = f"{owner_name}Member"
         module_path = package_root / f"{module_name}.py"

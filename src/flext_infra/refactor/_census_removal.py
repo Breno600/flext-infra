@@ -15,15 +15,15 @@ if TYPE_CHECKING:
     from flext_infra import p, t
 
 
-class FlextInfraRefactorCensusRemovalMixin(FlextInfraRefactorCensusApplyFormattingMixin):
+class FlextInfraRefactorCensusRemovalMixin(
+    FlextInfraRefactorCensusApplyFormattingMixin
+):
     """Preview and apply the inventory's removal candidates through gates.
 
     Removal of unreferenced objects is the census's own effect: it acts on
     what the workspace object inventory proved unused, which no code-shape
     rule can see.
     """
-
-    _census_validate_log: ClassVar[p.Logger] = u.fetch_logger(__name__)
 
     if TYPE_CHECKING:
         dry_run: bool

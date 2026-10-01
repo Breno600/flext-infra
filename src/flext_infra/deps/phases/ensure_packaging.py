@@ -113,6 +113,42 @@ class FlextInfraEnsurePackagingPhase:
             directories=tuple(directories),
         )
 
+    @staticmethod
+    def resolve_data_excludes(
+        project_dir: Path,
+        data: m.Infra.PackagedDataSelection,
+        declarations: t.StrSequence,
+    ) -> t.StrSequence:
+        """Validate exact files omitted within declared distribution directories."""
+        root = project_dir.resolve()
+        directories = tuple(Path(item) for item in data.directories)
+        excluded: list[str] = []
+        for declaration in declarations:
+            relative = Path(declaration)
+            source = root / relative
+            valid_path = (
+                bool(declaration)
+                and not relative.is_absolute()
+                and ".." not in relative.parts
+                and relative.as_posix() == declaration
+                and source.resolve().is_relative_to(root)
+            )
+            declared_child = any(
+                relative.is_relative_to(directory) and relative != directory
+                for directory in directories
+            )
+            if (
+                not valid_path
+                or not declared_child
+                or declaration in excluded
+                or source.is_dir()
+                or source.is_symlink()
+            ):
+                msg = f"invalid packaged data exclusion: {declaration}"
+                raise ValueError(msg)
+            excluded.append(declaration)
+        return tuple(excluded)
+
     def _phase(
         self,
         *,

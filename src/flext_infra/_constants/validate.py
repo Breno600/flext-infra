@@ -54,21 +54,8 @@ class FlextInfraConstantsSharedInfra:
         "x",
         "tc",
     })
-    DUNDER_ALLOWED: ClassVar[frozenset[str]] = frozenset({"__all__", "__version__"})
-    TYPEVAR_CALLABLES: ClassVar[frozenset[str]] = frozenset({
-        "TypeVar",
-        "ParamSpec",
-        "TypeVarTuple",
-    })
-    ENUM_BASES: ClassVar[frozenset[str]] = frozenset({"StrEnum", "Enum", "IntEnum"})
     CLASSVAR_ANNOTATION_NAMES: ClassVar[frozenset[str]] = frozenset({"ClassVar"})
     "Names treated as class-variable constant annotations."
-    COLLECTION_CALLS: ClassVar[frozenset[str]] = frozenset({
-        "frozenset",
-        "tuple",
-        "dict",
-        "list",
-    })
     SKILLS_DIR: ClassVar[Path] = Path(".agents/skills")
     BASELINE_DEFAULT: ClassVar[str] = ".agents/skills/{skill}/baseline.json"
     CPROFILE_RECEIPT_ARGUMENT_COUNT: ClassVar[int] = 3
@@ -190,23 +177,6 @@ class FlextInfraConstantsSharedInfra:
     DIR_TESTS: ClassVar[str] = "tests"
     DIR_EXAMPLES: ClassVar[str] = "examples"
     DIR_SCRIPTS: ClassVar[str] = "scripts"
-    # Runtime-exempt surfaces, matched on path parts RELATIVE to the scanned
-    # repository root (X-75): an ancestor directory name never grants an
-    # exemption. Scope exclusions (state/cache dirs) belong to the source-scan
-    # ignore list, not here.
-    TIER_WHITELIST_NON_RUNTIME_DIR_PARTS: ClassVar[frozenset[str]] = frozenset({
-        DIR_TESTS,
-        DIR_EXAMPLES,
-        DIR_SCRIPTS,
-        "evaluate",
-    })
-    TIER_WHITELIST_SETTINGS_MODULE_LIBRARIES: ClassVar[frozenset[str]] = frozenset({
-        "pydantic_settings"
-    })
-    TIER_WHITELIST_LEAF_CONFIG_FILES: ClassVar[frozenset[str]] = frozenset({
-        "_config.py"
-    })
-    "Leaf config modules (e.g. a consumer's _config.py) that own their external-library"
     "imports directly as the bottom of the c/t/p/m/u chain."
     DIR_TYPINGS: ClassVar[str] = "typings"
     DIR_DOCS: ClassVar[str] = "docs"

@@ -81,14 +81,13 @@ class TestsFlextInfraGitRefsSemantics:
                 m.Infra.GitBranchRequest(repo_root=repository, branch="feature/ok"),
             ),
         )
-        invalid = tm.ok(
-            u.Infra.git_check_branch_format(
-                m.Infra.GitBranchRequest(repo_root=repository, branch="bad name"),
-            ),
+        invalid = u.Infra.git_check_branch_format(
+            m.Infra.GitBranchRequest(repo_root=repository, branch="bad name"),
         )
 
         tm.that(valid.value, eq=True)
-        tm.that(invalid.value, eq=False)
+        tm.that(invalid.failure, eq=True)
+        tm.that(invalid.error, contains="not a valid branch name")
 
     def test_resolve_commit_and_rev_parse_agree_on_head(self, tmp_path: Path) -> None:
         """Both oid owners resolve the same HEAD to the same 40-hex oid."""

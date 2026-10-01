@@ -214,16 +214,12 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
         header scan stops at the first non-header statement, so an alias
         imported in that block read as absent and a duplicate was injected
         next to it. This proves a lexical declaration only; callers requiring
-        runtime availability use ``has_runtime_alias_import``.
+        runtime availability use ``has_runtime_alias_import``. Source that does
+        not parse raises its ``SyntaxError``.
         """
-        try:
-            module = ast.parse(source)
-        except SyntaxError:
-            info = cls._parse_header(source)
-            return alias in info.aliases
         return any(
             (name.asname or name.name) == alias
-            for node in ast.walk(module)
+            for node in ast.walk(ast.parse(source))
             if isinstance(node, ast.ImportFrom | ast.Import)
             for name in node.names
         )

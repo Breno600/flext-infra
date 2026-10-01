@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from rope.base import codeanalyze, simplify
-
 from flext_infra import m, p, t
 
 from .rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
@@ -26,16 +24,9 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
         The body statements own the dedent width and the wrapper docstring, so
         both derive from the logical facts instead of being passed alongside.
         """
+        from rope.base import codeanalyze, simplify
+
         lines = codeanalyze.SourceLinesAdapter(source)
-        indentation = body[0].indent - header.indent
-        docstring_span = (
-            (body[0].line, body[0].end_line)
-            if lines
-            .get_line(body[0].line)
-            .lstrip()
-            .startswith(('"""', "'''", '"', "'"))
-            else None
-        )
         regions = tuple(simplify.ignored_regions(source))
         start = lines.get_line_start(layout.header_start)
         end = min(lines.get_line_end(layout.header_end) + 1, len(source))
@@ -225,15 +216,6 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
             msg = "rope Worder returned invalid primary range"
             raise TypeError(msg)
         return value
-
-    @classmethod
-    def word_primary_at(cls, source: str, offset: int) -> str:
-        word_finder = cls._word_finder(source)
-        primary_at = getattr(word_finder, "get_primary_at", None)
-        if not callable(primary_at):
-            msg = "rope Worder does not expose callable get_primary_at"
-            raise TypeError(msg)
-        return str(primary_at(offset))
 
     @classmethod
     def word_is_function_call(cls, source: str, offset: int) -> bool:

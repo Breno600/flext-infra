@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
-from flext_infra import m
+from flext_infra import m, u
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -12,15 +12,6 @@ if TYPE_CHECKING:
 
 class FlextInfraRefactorCensusCollectMixin:
     """Inventory one module and assemble the WorkspaceReport."""
-
-    _rope_safe_exceptions: ClassVar[t.VariadicTuple[type[BaseException]]] = (
-        *u.Infra.rope_runtime_errors(),
-        *u.Infra.rope_error_types(),
-        RecursionError,
-        SyntaxError,
-        ValueError,
-        RuntimeError,
-    )
 
     if TYPE_CHECKING:
 

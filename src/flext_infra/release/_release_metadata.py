@@ -151,13 +151,15 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
             u.Cli.json_as_sequence(u.Cli.toml_value(wheel, "include")),
             strict=True,
         )
-        if packages.failure:
-            return r[bool].fail_op("validate Hatch wheel packages", packages.error)
-        if not packages.value:
-            return r[bool].fail("Hatch wheel target must declare packages")
-        forced = u.Cli.toml_table_child(wheel, "force-include")
-        sources = tuple(
-            dict.fromkeys((*packages.value, *(str(k) for k in forced or ()))),
+        if wheel_includes.failure:
+            return r[t.StrSequence].fail_op(
+                "validate Hatch wheel include",
+                wheel_includes.error,
+            )
+        sdist_includes: p.Result[t.StrSequence] = u.validate_value(
+            t.Infra.STR_SEQ_ADAPTER,
+            u.Cli.json_as_sequence(u.Cli.toml_value(sdist, "include")),
+            strict=True,
         )
         if sdist_includes.failure:
             return r[t.StrSequence].fail_op(
@@ -209,7 +211,22 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
                     for pattern in wheel_includes.value
                 )
             ):
-                return r[bool].fail(
+                return r[t.StrSequence].fail(
+                    f"Hatch exclusion is outside declared data: {excluded}",
+                )
+        for target in (wheel, sdist):
+            if any(key in target for key in ("only-include", "packages")):
+                return r[t.StrSequence].fail(
+                    "Hatch targets must use bounded source patterns",
+                )
+        for pattern in wheel_includes.value:
+            if not pattern.startswith("/") or not pattern.endswith("/**"):
+                return r[t.StrSequence].fail(
+                    f"Hatch source pattern is not a directory: {pattern}",
+                )
+        for source in sources:
+            if PurePosixPath(source).is_absolute():
+                return r[t.StrSequence].fail(
                     f"Hatch source path is outside the release boundary: {source}",
                 )
         for source in (*wheel_includes.value, *sources):

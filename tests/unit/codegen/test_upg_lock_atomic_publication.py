@@ -87,9 +87,11 @@ class TestsFlextInfraUpgLockAtomicPublication:
                 rows = tuple(
                     row.split(maxsplit=2) for row in observed.stdout.splitlines()
                 )
-                owned = {
-                    row[0] for row in rows if len(row) > 1 and row[1] == c.Infra.UV
-                }
+                # uv resolves on a tokio worker pool: the blocking wheel open
+                # parks a thread whose comm is a runtime-internal name, never
+                # the main ``uv`` thread. The owned uv process is identified by
+                # its main-thread comm (execve names it), and the dependency
+                # observation is any of its threads in wait_for_partner.
                 if any(
                     len(row) > 2
                     and row[0] in owned

@@ -7,11 +7,56 @@ from typing import Annotated, ClassVar
 
 from flext_cli import m
 
-from flext_infra import t
+from flext_infra import c, t
 
 
 class FlextInfraModelsRefactorGrep:
     """Mixin containing migration/reporting contracts for refactor orchestration."""
+
+    class CodemodContextCondition(m.ArbitraryTypesModel):
+        """One project-context condition over a captured metavariable."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        variable: Annotated[
+            t.NonEmptyStr, m.Field(description="Captured single metavariable name")
+        ]
+        predicate: Annotated[
+            c.Infra.CodemodContextPredicate,
+            m.Field(description="Project-context predicate derived from an SSOT"),
+        ]
+        holds: Annotated[
+            bool,
+            m.Field(description="Whether the predicate must hold (is) or fail (not)"),
+        ]
+        of: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(
+                description=(
+                    "Captured metavariable naming the module the predicate is "
+                    "evaluated against; absent for predicates of the project "
+                    "or of the finding's own module"
+                )
+            ),
+        ] = None
+        arg: Annotated[
+            t.StrSequence,
+            m.Field(
+                description=(
+                    "Literal operands the rule passes to the predicate (layer "
+                    "names, for the layer predicates); empty when it takes none"
+                )
+            ),
+        ] = ()
+        as_: Annotated[
+            t.StrSequence,
+            m.Field(
+                description=(
+                    "Layer the predicate assumes for a captured name that is "
+                    "not itself a layer; empty when the rule assumes none"
+                )
+            ),
+        ] = ()
 
     class CodemodRule(m.ArbitraryTypesModel):
         """One validated ast-grep rule document from a composed provider."""

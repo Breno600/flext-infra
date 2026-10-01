@@ -16,9 +16,9 @@ from ._utilities.base import FlextInfraUtilitiesBase
 from ._utilities.census import FlextInfraUtilitiesRefactorCensus
 from ._utilities.codegen import FlextInfraUtilitiesCodegen
 from ._utilities.codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
-from ._utilities.codemod_rules import FlextInfraUtilitiesCodemodRules
-from ._utilities.deferred_self_reference_ast import (
-    FlextInfraUtilitiesDeferredSelfReference,
+from ._utilities.codemod_project import FlextInfraUtilitiesCodemodProject
+from ._utilities.deferred_self_reference_rewrite import (
+    FlextInfraUtilitiesDeferredSelfReferenceRewrite,
 )
 from ._utilities.dependencies import FlextInfraUtilitiesDependencies
 from ._utilities.discovery import FlextInfraUtilitiesDiscovery
@@ -39,7 +39,6 @@ from ._utilities.managed_conflicts import FlextInfraUtilitiesManagedConflicts
 from ._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
 from ._utilities.namespace_analysis import FlextInfraUtilitiesRefactorNamespaceFlext
 from ._utilities.namespace_common import FlextInfraUtilitiesRefactorNamespaceCommon
-from ._utilities.namespace_facades import FlextInfraUtilitiesRefactorNamespaceFacades
 from ._utilities.namespace_moves import FlextInfraUtilitiesRefactorNamespaceMoves
 from ._utilities.network import FlextInfraUtilitiesNetwork
 from ._utilities.private_import_ancestry import FlextInfraUtilitiesPrivateImportAncestry
@@ -71,7 +70,6 @@ from ._utilities.rope_module_patch import FlextInfraUtilitiesRopeModulePatch
 from ._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 from ._utilities.rope_source import FlextInfraUtilitiesRopeSource
 from ._utilities.rope_structure import FlextInfraUtilitiesRopeStructure
-from ._utilities.safety import FlextInfraUtilitiesSafety
 from ._utilities.semantic_cutover import FlextInfraUtilitiesSemanticCutover
 from ._utilities.transformer_header import FlextInfraUtilitiesTransformerHeader
 from ._utilities.versioning import FlextInfraUtilitiesVersioning
@@ -134,7 +132,7 @@ class FlextInfraUtilities(FlextCliUtilities):
         FlextInfraUtilitiesDocsValidate,
         FlextInfraUtilitiesWorkspaceManifest,
         FlextInfraUtilitiesDependencies,
-        FlextInfraUtilitiesDeferredSelfReference,
+        FlextInfraUtilitiesDeferredSelfReferenceRewrite,
         FlextInfraUtilitiesGit,
         FlextInfraUtilitiesIteration,
         FlextInfraUtilitiesLogParser,
@@ -145,16 +143,14 @@ class FlextInfraUtilities(FlextCliUtilities):
         FlextInfraUtilitiesRefactorCensus,
         FlextInfraUtilitiesRefactorNamespaceFlext,
         FlextInfraUtilitiesRefactorNamespaceCommon,
-        FlextInfraUtilitiesRefactorNamespaceFacades,
         FlextInfraUtilitiesRefactorNamespaceMoves,
         FlextInfraUtilitiesRelease,
         FlextInfraUtilitiesRepository,
-        FlextInfraUtilitiesSafety,
         FlextInfraUtilitiesVersioning,
         FlextInfraWorktreeLifecycle,
         FlextInfraWorktreeProvisioning,
         FlextInfraUtilitiesWorkspaceFingerprint,
-        FlextInfraUtilitiesCodemodRules,
+        FlextInfraUtilitiesCodemodProject,
         FlextInfraUtilitiesPrivateImportAncestry,
         FlextInfraUtilitiesPrivateImportFacades,
     ):

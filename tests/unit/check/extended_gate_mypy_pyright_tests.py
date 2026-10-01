@@ -8,6 +8,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import c, config, m
+from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
 from flext_infra.gates.mypy import FlextInfraMypyGate
 from flext_infra.gates.pyrefly import FlextInfraPyreflyGate
 from flext_infra.gates.pyright import FlextInfraPyrightGate
@@ -39,7 +40,8 @@ class TestsFlextInfraTypeGates:
                 root = tmp_path / checkout
                 root.mkdir()
                 (root / c.PYPROJECT_FILENAME).write_text(
-                    f"[project]\nname = '{project}'\nversion = '0.0.0'\n[tool.mypy]\n",
+                    f"[project]\nname = '{project}'\nversion = '0.0.0'\n"
+                    "[tool.mypy]\n",
                     encoding="utf-8",
                 )
                 (root / "sample.py").write_text("value: int = 1\n", encoding="utf-8")
@@ -359,7 +361,6 @@ class TestsFlextInfraTypeGates:
     def test_checker_does_not_run_type_gates_on_content_only_project(
         self,
         real_python_package: Path,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         """A project without Python targets gets no type-gate row at all."""
         for module in (real_python_package / "src").rglob("*.py"):
@@ -369,7 +370,6 @@ class TestsFlextInfraTypeGates:
         results = tm.ok(
             FlextInfraWorkspaceChecker(
                 repository_root=real_python_package.parent,
-                rope=rope_workspace,
             ).run_projects(
                 [real_python_package.name],
                 [FlextInfraPyrightGate.gate_id, FlextInfraPyreflyGate.gate_id],

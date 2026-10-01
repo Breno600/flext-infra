@@ -6,7 +6,7 @@ import re
 import sys
 from collections.abc import Mapping, MutableMapping, Sequence
 from functools import lru_cache
-from importlib.metadata import Distribution, distributions, packages_distributions
+from importlib.metadata import Distribution, distributions
 from importlib.util import find_spec
 from pathlib import Path
 
@@ -14,10 +14,8 @@ from flext_cli import u
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 
-from .. import c, config, m, p, r, t
-from ._rope_analysis.exports import FlextInfraUtilitiesRopeAnalysisExports
+from .. import c, m, p, r, t
 from .dependencies import FlextInfraUtilitiesDependencies
-from .pyproject import FlextInfraUtilitiesPyproject
 
 
 class FlextInfraUtilitiesCodemodRules:
@@ -33,12 +31,12 @@ class FlextInfraUtilitiesCodemodRules:
         single ``mod`` invocation issues while converging to a fixed point, and
         a fresh process (a new ``make mod`` run) always recomputes it from disk.
         """
-        project = cls._project(root)
+        project = cls.codemod_project_requirements(root)
         if project.failure:
             return r[m.Infra.CodemodRulePlan].from_failure(project)
         root_name, direct_runtime = project.value
-        indexed = cls._distributions()
-        runtime_closure = cls._runtime_closure(direct_runtime, indexed)
+        indexed = cls.codemod_distributions()
+        runtime_closure = cls.codemod_runtime_closure(direct_runtime, indexed)
         universal = cls._providers(
             indexed,
             scope=c.Infra.CODEMOD_SCOPE_UNIVERSAL,
@@ -77,7 +75,7 @@ class FlextInfraUtilitiesCodemodRules:
         return "^(?:" + "|".join(re.escape(rule_id) for rule_id in rule_ids) + ")$"
 
     @staticmethod
-    def _project(root: Path) -> p.Result[t.Pair[str, t.StrSequence]]:
+    def codemod_project_requirements(root: Path) -> p.Result[t.Pair[str, t.StrSequence]]:
         pyproject = root / c.PYPROJECT_FILENAME
         document = u.Cli.toml_read_document(pyproject)
         if document.failure:
@@ -116,7 +114,7 @@ class FlextInfraUtilitiesCodemodRules:
         ))
 
     @staticmethod
-    def _distributions() -> MutableMapping[str, Distribution]:
+    def codemod_distributions() -> MutableMapping[str, Distribution]:
         indexed: MutableMapping[str, Distribution] = {}
         # Import search paths may repeat the same physical directory. Query each
         # directory once; distinct installations with the same name still fail.
@@ -133,7 +131,7 @@ class FlextInfraUtilitiesCodemodRules:
         return indexed
 
     @classmethod
-    def _runtime_closure(
+    def codemod_runtime_closure(
         cls,
         direct: t.StrSequence,
         indexed: t.MappingKV[str, Distribution],
@@ -292,7 +290,10 @@ class FlextInfraUtilitiesCodemodRules:
             elected: list[str] = []
             fixable: list[str] = []
             for rule in parsed.value:
-                if rule.owner is not None and canonicalize_name(rule.owner) == root_name:
+                if (
+                    rule.owner is not None
+                    and canonicalize_name(rule.owner) == root_name
+                ):
                     continue
                 if (
                     rule.consumers_of is not None
@@ -415,6 +416,24 @@ class FlextInfraUtilitiesCodemodRules:
                         return r[t.SequenceOf[m.Infra.CodemodRule]].fail(
                             f"{context.error}: {resource}"
                         )
+                    body = u.Cli.json_dumps({
+                        key: value
+                        for key, value in parsed_rule.value.items()
+                        if key != c.Infra.CODEMOD_RULE_METADATA_KEY
+                    })
+                    if body.failure:
+                        return r[t.SequenceOf[m.Infra.CodemodRule]].from_failure(body)
+                    unbound = sorted(
+                        variable
+                        for condition in context.value
+                        for variable in (condition.variable, condition.of)
+                        if variable is not None and f"${variable}" not in body.value
+                    )
+                    if unbound:
+                        return r[t.SequenceOf[m.Infra.CodemodRule]].fail(
+                            f"ast-grep rule {rule_id} context names variables "
+                            f"its rule never captures {unbound}: {resource}"
+                        )
                     rules.append(
                         m.Infra.CodemodRule.model_validate({
                             "id": rule_id,
@@ -437,15 +456,17 @@ class FlextInfraUtilitiesCodemodRules:
                     )
         return r[t.SequenceOf[m.Infra.CodemodRule]].ok(tuple(rules))
 
-    @staticmethod
+    @classmethod
     def _declared_context(
-        raw: t.JsonValue | None,
+        cls, raw: t.JsonValue | None
     ) -> p.Result[t.VariadicTuple[m.Infra.CodemodContextCondition]]:
-        """Read ``metadata.context``: ``{VAR: {is|not: predicate}}``.
+        """Read ``metadata.context``: ``{VAR: {is|not: predicate[, of: VAR]}}``.
 
-        Each entry binds one captured single metavariable to one project
-        predicate that must hold (``is``) or fail (``not``). Absence is the
-        empty tuple; any other shape is a malformed rule document.
+        Each entry binds one captured metavariable (single or transformed) to
+        one project predicate, or to a sequence of them, that must hold
+        (``is``) or fail (``not``), optionally evaluated against the module
+        another capture names (``of``). Absence is the empty tuple; any other
+        shape is a malformed rule document.
         """
         conditions = r[t.VariadicTuple[m.Infra.CodemodContextCondition]]
         if raw is None:
@@ -454,109 +475,60 @@ class FlextInfraUtilitiesCodemodRules:
             return conditions.fail(
                 "ast-grep rule metadata.context must be a non-empty mapping"
             )
+        verdicts = {
+            c.Infra.CODEMOD_CONTEXT_HOLDS_KEY,
+            c.Infra.CODEMOD_CONTEXT_FAILS_KEY,
+        }
         parsed: list[m.Infra.CodemodContextCondition] = []
-        for variable, condition in raw.items():
-            if not isinstance(condition, Mapping) or len(condition) != 1:
-                return conditions.fail(
-                    f"ast-grep rule context ${variable} must hold exactly one of "
-                    f"{c.Infra.CODEMOD_CONTEXT_HOLDS_KEY!r} or "
-                    f"{c.Infra.CODEMOD_CONTEXT_FAILS_KEY!r}"
-                )
-            ((key, predicate),) = condition.items()
-            if key not in {
-                c.Infra.CODEMOD_CONTEXT_HOLDS_KEY,
-                c.Infra.CODEMOD_CONTEXT_FAILS_KEY,
-            }:
-                return conditions.fail(
-                    f"ast-grep rule context ${variable} has unknown key {key!r}"
-                )
-            parsed.append(
-                m.Infra.CodemodContextCondition.model_validate({
-                    "variable": variable,
-                    "predicate": predicate,
-                    "holds": key == c.Infra.CODEMOD_CONTEXT_HOLDS_KEY,
-                })
+        for variable, declared in raw.items():
+            entries = (
+                declared
+                if isinstance(declared, Sequence) and not isinstance(declared, str)
+                else (declared,)
             )
+            for condition in entries:
+                if not isinstance(condition, Mapping):
+                    return conditions.fail(
+                        f"ast-grep rule context ${variable} must be a mapping "
+                        "or a sequence of mappings"
+                    )
+                verdict = cls._context_verdict(variable, condition, verdicts)
+                if verdict.failure:
+                    return conditions.from_failure(verdict)
+                parsed.append(
+                    m.Infra.CodemodContextCondition.model_validate({
+                        "variable": variable,
+                        "predicate": condition[verdict.value],
+                        "holds": verdict.value == c.Infra.CODEMOD_CONTEXT_HOLDS_KEY,
+                        "of": condition.get(c.Infra.CODEMOD_CONTEXT_OF_KEY),
+                        "arg": str(
+                            condition.get(c.Infra.CODEMOD_CONTEXT_ARG_KEY, "")
+                        ).split(),
+                        "as_": str(
+                            condition.get(c.Infra.CODEMOD_CONTEXT_AS_KEY, "")
+                        ).split(),
+                    })
+                )
         return conditions.ok(tuple(parsed))
 
-    @classmethod
-    def codemod_context_admits(
-        cls,
-        root: Path,
-        rule: m.Infra.CodemodRule,
-        file_path: Path,
-        captures: t.JsonMapping,
-    ) -> bool:
-        """Return whether one finding satisfies its rule's project context.
-
-        ``captures`` is ast-grep's ``metaVariables.single`` payload of the
-        finding. A declared variable the finding did not capture is a rule
-        defect and raises; the syntactic match alone never stands in for it.
-        """
-        for condition in rule.context:
-            capture = captures.get(condition.variable)
-            text = capture.get("text") if isinstance(capture, Mapping) else None
-            if not isinstance(text, str) or not text.strip():
-                msg = (
-                    f"{rule.id}: context variable ${condition.variable} was not "
-                    f"captured in {file_path}"
-                )
-                raise ValueError(msg)
-            source = file_path if file_path.is_absolute() else root / file_path
-            holds = cls._context_holds(
-                root.resolve(), condition.predicate, text.strip(), source.resolve()
-            )
-            if holds is not condition.holds:
-                return False
-        return True
-
-    @classmethod
-    def _context_holds(
-        cls,
-        root: Path,
-        predicate: c.Infra.CodemodContextPredicate,
-        value: str,
-        file_path: Path,
-    ) -> bool:
-        """Evaluate one predicate against the project SSOT it names."""
-        module = value.split(maxsplit=1)[0].split(".", maxsplit=1)[0]
-        match predicate:
-            case c.Infra.CodemodContextPredicate.STDLIB_MODULE:
-                return module in sys.stdlib_module_names
-            case c.Infra.CodemodContextPredicate.OWN_PACKAGE:
-                return module == FlextInfraUtilitiesPyproject.project_package_name(
-                    root
-                )
-            case c.Infra.CodemodContextPredicate.RUNTIME_PACKAGE:
-                return module in cls._runtime_modules(root)
-            case c.Infra.CodemodContextPredicate.FILE_FAMILY:
-                return value in cls._file_families(file_path)
-
-    @classmethod
-    @lru_cache(maxsize=8)
-    def _runtime_modules(cls, root: Path) -> frozenset[str]:
-        """Top-level import names provided by the project's runtime closure."""
-        project = cls._project(root).unwrap()
-        closure = cls._runtime_closure(project[1], cls._distributions())
-        return frozenset(
-            module
-            for module, providers in packages_distributions().items()
-            if any(canonicalize_name(name) in closure for name in providers)
-        )
-
     @staticmethod
-    def _file_families(file_path: Path) -> frozenset[str]:
-        """Facade letters the module itself declares in its ``__all__``.
-
-        Letter ownership is the module's own declaration, never its file
-        name; the letter vocabulary is the tooling import-layer order.
-        """
-        declared = FlextInfraUtilitiesRopeAnalysisExports.public_export_names_source(
-            file_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
-        )
-        return frozenset(config.Infra.tooling.lazy_init.import_layer_order).intersection(
-            declared
-        )
+    def _context_verdict(
+        variable: str, condition: t.JsonMapping, verdicts: t.StrSequence | set[str]
+    ) -> p.Result[str]:
+        """Return the one verdict key (``is``/``not``) of a context condition."""
+        keys = set(condition)
+        verdict = keys.intersection(verdicts)
+        operands = {
+            c.Infra.CODEMOD_CONTEXT_OF_KEY,
+            c.Infra.CODEMOD_CONTEXT_ARG_KEY,
+            c.Infra.CODEMOD_CONTEXT_AS_KEY,
+        }
+        if len(verdict) != 1 or keys - set(verdicts) - operands:
+            return r[str].fail(
+                f"ast-grep rule context ${variable} must hold exactly one of "
+                f"{sorted(verdicts)} and at most {sorted(operands)}"
+            )
+        return r[str].ok(verdict.pop())
 
     @staticmethod
     def _declared_expected(

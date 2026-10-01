@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from flext_cli import m
 
@@ -129,6 +129,20 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 description="Forbidden direct APIs and their canonical alternatives.",
             ),
         ]
+        ban_relative_imports: Annotated[
+            Literal["all"],
+            m.Field(
+                alias="ban-relative-imports",
+                description="Relative imports are banned; every import is absolute.",
+            ),
+        ]
+        copyright_notice_rgx: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                alias="copyright-notice-rgx",
+                description="Regex every module's copyright notice must match.",
+            ),
+        ]
         isort: FlextInfraModelsDepsToolConfigLinters.RuffIsortConfig = m.Field(
             description="Ruff isort configuration",
         )
@@ -221,11 +235,10 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
             int,
             m.Field(
                 gt=0,
-                le=c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT,
+                le=c.Infra.MYPY_TIMEOUT_SECONDS_FLEET_BOUND,
                 description=(
-                    "Project Mypy wall-time budget in seconds (SSOT; the env"
-                    " MYPY_TIMEOUT_SECONDS overrides it at the ingress"
-                    " boundary)."
+                    "Mypy wall-time budget in seconds (SSOT); a project"
+                    " overlay may only lower it."
                 ),
             ),
         ]

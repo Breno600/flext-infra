@@ -164,7 +164,7 @@ class FlextInfraCodemodGate(FlextInfraGate):
                     project_dir,
                     rules_by_id[finding.rule_id],
                     Path(finding.file),
-                    finding.captures,
+                    {**finding.captures, **finding.transformed},
                 )
             )
 
@@ -179,7 +179,6 @@ class FlextInfraCodemodGate(FlextInfraGate):
                 started=started,
             ),
             issues=issues,
-            observational_issues=(),
             raw_output="\n".join((
                 (f"{len(findings)} policy findings; {len(failures)} native failures"),
                 *raw_output,

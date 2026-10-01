@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import shutil
 import stat
 from pathlib import Path
 
@@ -19,21 +18,6 @@ class FlextInfraUtilitiesGitStateFilesMixin(
     FlextInfraUtilitiesGitStatePublicationMixin,
 ):
     """Consume CLI physical-state primitives under the shared writer lease."""
-
-    @staticmethod
-    def _state_remove_symlink_target(target: Path) -> None:
-        """Remove an existing file, directory, or symlink at ``target``.
-
-        The CLI facet publishes no public removal primitive on this line
-        (only its private helper exists upstream), so the guarded-effects
-        owner keeps the physical removal inside its own lease boundary.
-        """
-        if not target.exists() and not target.is_symlink():
-            return
-        if target.is_dir() and not target.is_symlink():
-            shutil.rmtree(target)
-        else:
-            target.unlink()
 
     @classmethod
     def _state_blob_payload(cls, root: Path, oid: str) -> bytes:
@@ -69,7 +53,7 @@ class FlextInfraUtilitiesGitStateFilesMixin(
         with FlextInfraUtilitiesGitWorktreeIO.git_stdin(content) as stream:
             return cls._repo(root).git.hash_object("--stdin", istream=stream)
 
-    @staticmethod
+    @classmethod
     def _state_require_payload(
         cls,
         root: Path,
@@ -77,17 +61,15 @@ class FlextInfraUtilitiesGitStateFilesMixin(
         observed: m.Infra.GitWorktreeObservedFile,
         allowed: t.SequenceOf[m.Infra.GitWorktreeFileState | None],
     ) -> None:
-        """Accept only an allowed captured working state."""
-        if observed in allowed:
+        """Hash the observed bytes and accept only an allowed captured state."""
+        if observed.content is None and None in allowed:
             return
         if observed.content is not None:
-            with FlextInfraUtilitiesGitWorktreeIO.git_stdin(observed.content) as stream:
-                oid = cls._repo(root).git.hash_object("--stdin", istream=stream)
             captured = m.Infra.GitWorktreeFileState(
                 path=path,
                 mode=observed.mode,
                 permissions=observed.permissions,
-                oid=oid,
+                oid=cls._state_blob_oid(root, observed.content),
             )
             if captured in allowed:
                 return
@@ -125,8 +107,8 @@ class FlextInfraUtilitiesGitStateFilesMixin(
             cls._state_require_payload(
                 root,
                 path,
-                m.Infra.GitWorktreeFileState(
-                    path=path,
+                m.Infra.GitWorktreeObservedFile(
+                    content=os.fsencode(raw_target),
                     mode="120000",
                     permissions=link_mode,
                 ),

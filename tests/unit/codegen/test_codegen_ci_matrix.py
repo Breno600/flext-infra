@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, t
+from flext_infra import c, config, infra, t
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from flext_infra.codegen.project_new import FlextInfraCodegenProjectNew
 from tests import u
@@ -66,7 +66,7 @@ class TestsFlextInfraCodegenCiMatrix:
             year=2026,
             apply_changes=True,
         )
-        result = service.execute()
+        result = infra.codegen_new(service)
         tm.ok(result)
         return root
 
@@ -199,8 +199,7 @@ class TestsFlextInfraCodegenCiMatrix:
         )
         for run_line in ci_step_runs:
             tm.that(workflow, has=run_line)
-        # A verb whose workflow row omits the ci context never renders into CI
-        # (operator ruling 2026-09-23: make test runs locally and on pre-push).
+        # A verb whose workflow row omits the ci context never renders into CI.
         for step in config.Infra.codegen.make.workflow:
             if "ci" not in step.contexts:
                 tm.that(workflow, lacks=f"run: CI=Y make {step.verb}\n")
@@ -210,14 +209,10 @@ class TestsFlextInfraCodegenCiMatrix:
         # step, which runs `make gen` and proves the tree is unchanged.
         tm.that(workflow, has="- name: gen fixed point (blocking)")
         tm.that(workflow, has="CI=Y make gen")
-        tm.that(
-            workflow,
-            has='candidate_status="$(git status --porcelain --untracked-files=all --ignore-submodules=none)"\n          test -z "$candidate_status"',
-        )
-        tm.that(workflow, lacks="|| true")
         tm.that(workflow, lacks="run: CI=Y make conform")
         tm.that(workflow, has="run: CI=Y make audit")
         tm.that(workflow, lacks="attest/gates/v1")
+
         tm.that(workflow, lacks="github verify-gates")
         tm.that(workflow, lacks="WHAT=")
         step_indices = tuple(workflow.index(run_line) for run_line in ci_step_runs)
@@ -237,6 +232,34 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(jobs, has="merge-guard:")
         tm.that(jobs, has="Block WIP heads from protected integration branches")
 
+    def test_ci_runs_make_test_through_the_persistent_testmon_database(
+        self, rendered_project: Path
+    ) -> None:
+        """CI selects through testmon and hands its database to the next run.
+
+        The database directory is restored before ``make test`` and saved on
+        every outcome after it; the full verb never renders into CI.
+        """
+        workflow = (rendered_project / ".github" / "workflows" / "ci.yml").read_text(
+            encoding="utf-8"
+        )
+        make = config.Infra.codegen.make
+        cache = make.testmon_cache
+        test_run = f"run: {make.ci.variable}={make.ci.value} make test\n"
+        tm.that(workflow, has=test_run)
+        tm.that(workflow, lacks="make test-full")
+        path = f"path: ~/{cache.home_cache_directory}/{cache.external_storage_directory}"
+        restore = workflow.index("- name: Restore testmon database")
+        save = workflow.index("- name: Save testmon database")
+        tm.that(restore < workflow.index(test_run) < save, eq=True)
+        for step_start in (restore, save):
+            step = workflow[step_start:].split("\n      - name:", maxsplit=1)[0]
+            tm.that(step, has=[path, make.testmon_cache_policy.key_prefix])
+        tm.that(
+            workflow[save:].split("\n      - name:", maxsplit=1)[0],
+            has="if: ${{ always() }}",
+        )
+
     def test_blocking_ci_does_not_configure_github_cli_auth(
         self,
         rendered_project: Path,
@@ -253,6 +276,40 @@ class TestsFlextInfraCodegenCiMatrix:
         steps_index = workflow.index("    steps:")
         setup_index = workflow.index("run: CI=Y make setup")
         tm.that(steps_index < setup_index, eq=True)
+
+    def test_gen_fixed_point_rejects_dirty_git_tree(
+        self, rendered_project: Path, tmp_path: Path
+    ) -> None:
+        """Run the generated post-generation shell check in a dirty repository."""
+        workflow = u.Cli.yaml_load_mapping(
+            rendered_project / ".github" / "workflows" / "ci.yml"
+        )
+        jobs = t.Cli.JSON_MAPPING_ADAPTER.validate_python(workflow["jobs"])
+        runs: list[str] = []
+        for raw_job in jobs.values():
+            job = t.Cli.JSON_MAPPING_ADAPTER.validate_python(raw_job)
+            steps = job["steps"]
+            if not isinstance(steps, list):
+                msg = "workflow job steps must be a sequence"
+                raise TypeError(msg)
+            for raw_step in steps:
+                step = t.Cli.JSON_MAPPING_ADAPTER.validate_python(raw_step)
+                if step.get("name") == "gen fixed point (blocking)":
+                    script = step.get("run")
+                    if not isinstance(script, str):
+                        msg = "fixed-point step must have a shell script"
+                        raise TypeError(msg)
+                    runs.append(script)
+        tm.that(len(runs), eq=1)
+        post_generation = runs[0].split("CI=Y make gen", maxsplit=1)[1]
+        repository = tmp_path / "dirty-repository"
+        repository.mkdir()
+        u.Tests.initialize_git_repo(repository)
+        (repository / "untracked.txt").write_text("dirty\n", encoding="utf-8")
+        outcome = tm.ok(
+            u.Cli.run_raw(["sh", "-eu", "-c", post_generation], cwd=repository)
+        )
+        tm.that(u.Cli.process_succeeded(outcome.outcome), eq=False)
 
     def test_rendered_workflow_python_commands_compile(
         self,
@@ -724,7 +781,9 @@ class TestsFlextInfraCodegenCiMatrix:
             step for step in steps if step["name"] == "Docs lifecycle (blocking)"
         )
         upload = next(
-            step for step in steps if step.get("name") == "Upload docs reports on failure"
+            step
+            for step in steps
+            if step.get("name") == "Upload docs reports on failure"
         )
         tm.that(docs_step.get("run"), eq="make docs")
         tm.that(docs_step.get("continue-on-error"), eq=None)

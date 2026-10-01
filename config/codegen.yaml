@@ -28,6 +28,7 @@ Infra:
       # writes the committed uv.lock and mise.lock; setup, gen, and fmt install
       # frozen from those locks.
       python_version: "3.13"
+      python_tool_version: "3.13.15"
       # Supply-chain cooldown (operator 2026-10-01): ONE value for every
       # resolver — the generated mise `minimum_release_age` (so `make upg`
       # never selects a release younger than this, e.g. a Python patch with
@@ -61,6 +62,10 @@ Infra:
       # The embedded aube installer preserves the locked dependency graph;
       # the approved package lifecycle is declared in the mise projection.
       npm_package_manager: aube
+      # False keeps Python resolution and installation on precompiled builds:
+      # compiling from source selected releases ahead of their published
+      # builds and stalled the fleet bootstrap (operator 2026-10-01).
+      python_compile: false
       gitleaks_version: latest
       kubeconform_version: latest
       # Projection: .mise.toml [settings] lockfile / locked and [tool_config] locked.
@@ -87,7 +92,7 @@ Infra:
       qlty_version: latest
       node_version: latest
       jscpd_selector: github:kucherenko/jscpd
-      jscpd_version: "5.4.0"
+      jscpd_version: latest
       # Prettier is the markdown formatter (markdown-format gate): provisioned
       # through npm so the fleet binary version is owned by this SSOT alone.
       prettier_selector: npm:prettier
@@ -317,6 +322,10 @@ Infra:
         discovery_scope: none
 
     make:
+      # Physical workspace environments live beside the checkout so a linked
+      # worktree shares one project-keyed environment instead of an in-tree
+      # duplicate (runtime_environment_dir derives the same path).
+      runtime_environment_directory: .flext-venvs
       examples_timeout_seconds: 120
       submodule_timeout_seconds: 120
       # Operator 2026-09-08: ruff is the formatting and autofix rule.
@@ -345,17 +354,9 @@ Infra:
       # formats — without it the ruff-format surface has no verb home and
       # drift survives a green check until `make mod` validates.
       fmt_gates: [format, markdown-format]
-      check_gate_suspensions:
-        - gate: namespace
-          authority: "flext-itpd1.3; operator decision 2026-09-27 (keep plan v12 suspension); flext-infra#913"
-          reason: "Fleet namespace backlog (141 findings here) is repaired after the fleet is green; the gate returns with its Rope single-cycle owner fix."
-          # Census consistency (gc-wisp-d7mnad): the runtime census honors the
-          # SAME suspension for the rule families this gate owns — ENFORCE ids
-          # match a census rule id exactly, tag families by prefix. Unmapped
-          # families (e.g. ENFORCE-079) stay fully blocking.
-          census_rule_families: [ENFORCE-046, ENFORCE-066, ENFORCE-067, ENFORCE-069, class_prefix]
-      # One filename and the root-relative runner paths; the runner places the
-      # database in platformdirs' external per-worktree cache.
+      # One filename and the root-relative runner paths; the generated Makefile
+      # places the database in the external cache under the declared project
+      # name, so every checkout and worktree of a project shares one history.
       testmon_cache:
         database_filename: .testmondata
         database_environment_variable: TESTMON_DATAFILE
@@ -436,11 +437,13 @@ Infra:
         - {verb: fmt, contexts: [local, pre_commit]}
         - {verb: fix, contexts: [local, pre_commit]}
         - {verb: check, contexts: [local, ci, pre_push, pre_commit]}
-      # CI runs setup, the gen fixed point, the
-      # deps audit and check only; make test runs locally and on pre-push,
-      # never in CI. The CI test-only steps (testmon cache, test reports)
-      # render only while a test row declares the ci context.
-        - {verb: test, contexts: [local, pre_push]}
+      # make test runs locally, on pre-push and in CI, always through the
+      # persistent testmon database (tracker key
+      # operator-ruling-2026-10-01-testmon-make-test-only). The CI test-only
+      # steps (testmon cache, test reports) render only while a test row
+      # declares the ci context. Pre-commit runs no tests, and test-full is a
+      # local-only verb with no workflow row.
+        - {verb: test, contexts: [local, ci, pre_push]}
       # Artifacts `make clean` removes. Read by Makefile.j2 for the cache
       # sweep and the root-level directory/file lists.
       clean:
@@ -527,7 +530,7 @@ Infra:
         - name: test
           description: Run incremental tests through the persistent testmon cache.
         - name: test-full
-          description: Run incremental then all tests, including external and CI-excluded markers, through the same persistent testmon cache.
+          description: Run every test locally, including external and CI-excluded markers, without testmon and without any time limit.
         - name: fmt
           description: Apply ruff format --preview and every declared formatter gate. Ruff is the rule; change code, never ruff.
         - name: fix

@@ -25,17 +25,16 @@ class FlextInfraRefactorCensusObjectsMixin:
         """Return the selected families."""
         if not family_names:
             return frozenset()
+        families = u.Infra.facade_families()
         resolved = {
-            c.Infra.FAMILY_SUFFIXES.get(name, name).lower() for name in family_names
+            (families[name].suffix if name in families else name).lower()
+            for name in family_names
         }
         return frozenset(resolved)
 
     @staticmethod
     def _violation(
-        item: m.Infra.Object,
-        *,
-        kind: str,
-        description: str,
+        item: m.Infra.Object, *, kind: str, description: str
     ) -> m.Infra.Violation:
         """Violation."""
         return m.Infra.Violation(

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import operator
 from collections import defaultdict
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
@@ -43,8 +42,8 @@ class FlextInfraCodegenGenerationImportsMixin(FlextInfraCodegenGenerationPathsMi
 
     @staticmethod
     def _format_module_alias_import(indent: str, mod: str, export_name: str) -> str:
-        """Format a module alias import."""
-        if mod.startswith(".") and mod != ".":
+        """Format a module alias import as a from-import of its parent package."""
+        if "." in mod and mod != ".":
             parent_mod, _, child_name = mod.rpartition(".")
             return (
                 f"{indent}from {parent_mod or '.'} import {child_name} as {export_name}"
@@ -93,56 +92,6 @@ class FlextInfraCodegenGenerationImportsMixin(FlextInfraCodegenGenerationPathsMi
         # (``TEST_FACADE_BASES`` < ``TESTS_ROOT``): raw ASCII puts ``S`` (83)
         # before ``_`` (95) and flips the pair, producing a gen/fmt flip-flop.
         return (category, imported.casefold()), export_name != imported_name
-
-    @staticmethod
-    def _generate_import_lines(
-        groups: t.MappingKV[str, t.StrPairSequence],
-        *,
-        indent: str = "",
-    ) -> t.StrSequence:
-        """Generate import lines grouped by module path."""
-        if not groups:
-            return ()
-        lines: t.MutableSequenceOf[str] = []
-
-        def _emit_module(mod: str) -> None:
-            items = groups[mod]
-            alias_items = sorted(
-                (item for item in items if not item[1]),
-                key=operator.itemgetter(0),
-            )
-            sorted_items = sorted(
-                (item for item in items if item[1]),
-                key=FlextInfraCodegenGenerationImportsMixin._import_item_sort_key,
-            )
-            for export_name, _ in alias_items:
-                lines.append(
-                    FlextInfraCodegenGenerationImportsMixin._format_module_alias_import(
-                        indent,
-                        mod,
-                        export_name,
-                    ),
-                )
-            if not sorted_items:
-                return
-            parts: t.StrSequence = [
-                FlextInfraCodegenGenerationImportsMixin._format_import_part(
-                    attr_name,
-                    export_name,
-                )
-                for export_name, attr_name in sorted_items
-            ]
-            lines.extend(
-                FlextInfraCodegenGenerationImportsMixin._format_import(
-                    indent,
-                    mod,
-                    parts,
-                ),
-            )
-
-        for mod in sorted(groups, key=str.lower):
-            _emit_module(mod)
-        return lines
 
 
 __all__: list[str] = ["FlextInfraCodegenGenerationImportsMixin"]

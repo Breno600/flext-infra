@@ -17,7 +17,7 @@ import re
 import sys
 from collections import defaultdict
 from collections.abc import MutableMapping
-from typing import TYPE_CHECKING, Annotated, Self, override
+from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
 from flext_infra import c, config, m, t, u
@@ -48,31 +48,41 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
     ] = c.Infra.RUNTIME_CENSUS
 
     @classmethod
-    def for_project(cls, project_dir: Path, *, census_gate: str) -> Self:
+    def for_project(
+        cls, project_dir: Path, *, census_gate: str
+    ) -> p.Result[FlextInfraRuntimeCensusValidator]:
         """Scope one census run to ``project_dir`` for ``census_gate``.
 
         The filter is the declared project name, never the checkout directory
         name: a worktree or renamed checkout keeps its manifest identity, and
         the census discovery keys projects by exactly that pyproject name.
+        An unreadable manifest is a typed failure so every gate grades it on
+        its own failure path instead of an exception escaping the gate.
         """
         # A checkout without a manifest declares no project: the census then
         # selects nothing and reports that typed failure. A present manifest
-        # that cannot be read raises instead of falling back to the directory.
+        # that cannot be read fails instead of falling back to the directory.
         if not (project_dir / c.PYPROJECT_FILENAME).is_file():
-            return cls(repository_root=project_dir, census_gate=census_gate)
-        metadata = u.Infra.read_project_metadata_result(project_dir).unwrap()
-        return cls(
-            repository_root=project_dir,
-            project_filter=metadata.project.name,
-            census_gate=census_gate,
+            return r[FlextInfraRuntimeCensusValidator].ok(
+                cls(repository_root=project_dir, census_gate=census_gate)
+            )
+        metadata = u.Infra.read_project_metadata_result(project_dir)
+        if metadata.failure:
+            return r[FlextInfraRuntimeCensusValidator].from_failure(metadata)
+        return r[FlextInfraRuntimeCensusValidator].ok(
+            cls(
+                repository_root=project_dir,
+                project_filter=metadata.value.project.name,
+                census_gate=census_gate,
+            )
         )
 
     @staticmethod
     def _gate_rule_families() -> t.MappingKV[str, frozenset[str]]:
         """Census rule families owned by a gate other than the runtime census.
 
-        Operator ruling 2026-10-01: no smell enters ``make check``; the
-        ``make smells`` verb owns every smell family. The family set derives
+        No smell enters ``make check``; the ``make smells`` verb owns every
+        smell family. The family set derives
         from the flext-core smell catalog — every smell tag plus the rule id
         of every catalog row carrying one — so a smell added to the catalog
         moves to the smells gate in the same edit, with no second list.
@@ -276,7 +286,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
             report = report_result.value
             merged_violations.extend(report.violations)
         # Every owned finding blocks: ownership routes a family to its gate,
-        # it never suspends one (operator order 2026-10-01, gc-wisp-1n83u4).
+        # it never suspends one.
         owned_violations = self._gate_owned(merged_violations)
         label = (
             "runtime census"
