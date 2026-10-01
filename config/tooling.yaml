@@ -189,12 +189,15 @@ Infra:
             combine-as-imports: true
             force-single-line: false
             split-on-trailing-comma: false
-          # The single operator-authorized exception
-          # (operator-ruling-2026-10-01-tc004-tid252): generated lazy-init
-          # package initializers declare their exports under TYPE_CHECKING and
-          # resolve them lazily at runtime, which TC004 reads as runtime use.
+          # The single operator-authorized exception entry, for generated
+          # lazy-init package initializers only:
+          # - TC004 (operator-ruling-2026-10-01-tc004-tid252): they declare
+          #   their exports under TYPE_CHECKING and resolve them lazily at
+          #   runtime, which TC004 reads as runtime use;
+          # - RUF067 (operator-ruling-2026-10-01-ruf067-lazy-init): they must
+          #   execute the lazy installation, which is not a re-export.
           per-file-ignores:
-            "**/__init__.py": [TC004]
+            "**/__init__.py": [TC004, RUF067]
 
       mypy:
         # Wall-time bound for the bounded Mypy execution (SSOT). A project
