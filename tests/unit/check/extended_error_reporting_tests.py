@@ -159,7 +159,7 @@ class TestsFlextInfraGateErrorReporting:
         project = result.value[0]
         tm.that(project.passed, eq=False)
         execution = project.gates[c.Infra.MYPY]
-        tm.that(any(issue.code == "TOOL_ERROR" for issue in execution.issues), eq=True)
+        tm.that(any(issue.code == c.Infra.ToolOutcome.ERROR for issue in execution.issues), eq=True)
         captured = capsys.readouterr()
         tm.that(
             f"{captured.out}\n{captured.err}",

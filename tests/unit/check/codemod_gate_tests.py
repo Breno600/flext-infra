@@ -182,7 +182,7 @@ class TestsFlextInfraCodemodGate:
         execution = u.Tests.run_gate_check(FlextInfraCodemodGate, tmp_path, project)
 
         tm.that(execution.result.passed, eq=False)
-        tm.that(any(issue.code == "TOOL_ERROR" for issue in execution.issues), eq=True)
+        tm.that(any(issue.code == c.Infra.ToolOutcome.ERROR for issue in execution.issues), eq=True)
         # The native ast-grep diagnostic names the rule file it cannot parse;
         # its wording for the bad field is the tool's, not this contract's.
         tm.that(execution.raw_output, has="Cannot parse rule")
@@ -208,7 +208,7 @@ class TestsFlextInfraCodemodGate:
             blocked.chmod(original_mode)
 
         tm.that(execution.result.passed, eq=False)
-        tm.that(any(issue.code == "TOOL_ERROR" for issue in execution.issues), eq=True)
+        tm.that(any(issue.code == c.Infra.ToolOutcome.ERROR for issue in execution.issues), eq=True)
         tm.that(execution.raw_output, has="ERROR:")
         tm.that(execution.raw_output, has="error(s) found in code")
 

@@ -240,10 +240,11 @@ class FlextInfraGate:
         issues: t.SequenceOf[m.Infra.Issue],
         tool: str,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Apply the standard tool-error fallback to parsed issues.
+        """Surface a failed tool run that parsed no issues.
 
-        If the tool exited unsuccessfully and no issues were parsed, synthesize a
-        TOOL_ERROR issue so the failure is visible rather than silently passing.
+        If the tool exited unsuccessfully and no issues were parsed, add one
+        ``c.Infra.ToolOutcome.ERROR`` issue so the failure is visible rather
+        than silently passing.
 
         Returns:
             The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.

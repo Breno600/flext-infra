@@ -75,6 +75,11 @@ rules:
     find: '^from flext_infra import FlextInfraUtilities, c, config, m, t$'
     replace: 'from flext_infra import FlextInfraUtilities, config'
     flags: [MULTILINE]
+  - id: gate-tool-error-typed-code
+    description: Read the tool-error issue code from the typed outcome instead of the retired literal.
+    include: ["tests/**/*.py"]
+    find: '"TOOL_ERROR"'
+    replace: 'c.Infra.ToolOutcome.ERROR'
   - id: codegen-test-retire-shadowed-utility-import
     description: Let the test u facade supply inherited production utilities.
     include:

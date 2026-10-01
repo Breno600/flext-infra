@@ -99,7 +99,7 @@ class TestsFlextInfraBanditAndMarkdownGates:
         ("markdown_text", "config_text", "findings_block", "codes"),
         [
             (HEADING_SKIP, None, True, ["MD001"]),
-            ("# Test\n", '{"broken": [', True, ["TOOL_ERROR"]),
+            ("# Test\n", '{"broken": [', True, [c.Infra.ToolOutcome.ERROR]),
             # A residual MD013 reflow finding remains blocking when the
             # formatter cannot normalize the paragraph.
             (
