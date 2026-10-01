@@ -263,6 +263,17 @@ class FlextInfraEnsureRuffConfigPhase:
                 toml.PhaseConfig(
                     name="ruff",
                     root_path=(),
+                    table_path=(c.Infra.LINT_SECTION, "flake8-copyright"),
+                    operations=(
+                        toml.SetOp(
+                            key="notice-rgx",
+                            value=ruff_cfg.lint.copyright_notice_rgx,
+                        ),
+                    ),
+                ),
+                toml.PhaseConfig(
+                    name="ruff",
+                    root_path=(),
                     table_path=(c.Infra.LINT_SECTION, "flake8-tidy-imports"),
                     operations=(
                         toml.SetOp(

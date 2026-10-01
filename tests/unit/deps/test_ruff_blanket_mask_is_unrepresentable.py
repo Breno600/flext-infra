@@ -44,6 +44,7 @@ class TestsFlextInfraRuffBlanketMaskIsUnrepresentable:
             "extend-safe-fixes": [],
             "banned-api": {},
             "ban-relative-imports": "all",
+            "copyright-notice-rgx": "Copyright",
             "isort": {
                 "combine-as-imports": True,
                 "force-single-line": False,

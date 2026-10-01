@@ -186,11 +186,11 @@ class FlextInfraCodegenGenerationPathsMixin:
             raise ValueError(msg)
 
     @staticmethod
-    def _format_root_package_docstring(current_pkg: str) -> str:
-        """Format a generated package docstring."""
+    def _format_root_package_docstring(current_pkg: str, notice: str) -> str:
+        """Format a generated package docstring carrying the copyright notice."""
         label = current_pkg.replace("_", " ").replace("-", " ").strip()
         package_name = " ".join(word.capitalize() for word in label.split())
-        return f'"""{package_name} package."""'
+        return f'"""{package_name} package.\n\n{notice}\n"""'
 
 
 __all__: list[str] = ["FlextInfraCodegenGenerationPathsMixin"]

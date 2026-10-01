@@ -136,6 +136,13 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 description="Relative imports are banned; every import is absolute.",
             ),
         ]
+        copyright_notice_rgx: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                alias="copyright-notice-rgx",
+                description="Regex every module's copyright notice must match.",
+            ),
+        ]
         isort: FlextInfraModelsDepsToolConfigLinters.RuffIsortConfig = m.Field(
             description="Ruff isort configuration",
         )

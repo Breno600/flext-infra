@@ -401,6 +401,9 @@ unfixable = [
 {% endfor %}
 ]
 
+[tool.ruff.lint.flake8-copyright]
+notice-rgx = {{ tooling.tools.ruff.lint.copyright_notice_rgx | tojson }}
+
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = {{ tooling.tools.ruff.lint.ban_relative_imports | tojson }}
 {% for name, message in tooling.tools.ruff.lint.banned_api | dictsort %}
