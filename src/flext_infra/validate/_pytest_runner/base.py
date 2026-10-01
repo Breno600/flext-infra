@@ -29,6 +29,9 @@ class FlextInfraPytestRunnerBase(s[int]):
         bool,
         m.Field(description="CI/pre-commit selection captured at the Make boundary."),
     ] = False
+    profile_enabled: Annotated[
+        bool, m.Field(description="Capture child process cProfile evidence.")
+    ] = False
 
     @staticmethod
     def _environment_value(name: str) -> str:
@@ -36,12 +39,15 @@ class FlextInfraPytestRunnerBase(s[int]):
         return u.Cli.env_read(name, dict(os.environ)).unwrap().strip()
 
     @classmethod
-    def from_environment(cls, *, started_at_monotonic: float) -> Self:
+    def from_environment(
+        cls, *, started_at_monotonic: float, profile_enabled: bool = False
+    ) -> Self:
         """Create the runner exclusively from generated Make inputs."""
         ci = config.Infra.codegen.make.ci
         return cls(
             repository_root=Path.cwd(),
             started_at_monotonic=started_at_monotonic,
+            profile_enabled=profile_enabled,
             ci_context=(u.Infra.env_lookup(ci.variable) or "").strip() == ci.value,
             target=Path(cls._environment_value(c.Infra.PYTEST_ENV_TARGET)),
             reports=Path(cls._environment_value(c.Infra.PYTEST_ENV_REPORTS)),
@@ -95,6 +101,16 @@ class FlextInfraPytestRunnerBase(s[int]):
             raise ValueError(msg)
         return memory_gb
 
+    def _declared_project_name(self) -> str | None:
+        """Read the declared project identity shared by runtime policies."""
+        pyproject_path = self.root / c.PYPROJECT_FILENAME
+        if not pyproject_path.is_file():
+            return None
+        payload = u.Infra.pyproject_payload(pyproject_path)
+        if "project" not in payload:
+            return None
+        return u.Infra.project_name_from_payload(pyproject_path, payload)
+
     def _declared_worker_ceiling(
         self, policy: PytestPolicy
     ) -> int | m.Infra.PytestWorkerCeiling:
@@ -103,14 +119,8 @@ class FlextInfraPytestRunnerBase(s[int]):
         A tree without a declared ``[project].name`` (fixture projects, raw
         workbenches) is an expected state and takes the fleet-wide default.
         """
-        if not policy.parallel_worker_overrides:
-            return policy.parallel_workers
-        pyproject_path = self.root / c.PYPROJECT_FILENAME
-        try:
-            name = u.Infra.project_name_from_payload(
-                pyproject_path, u.Infra.pyproject_payload(pyproject_path)
-            )
-        except (TypeError, ValueError):
+        name = self._declared_project_name()
+        if name is None:
             return policy.parallel_workers
         return policy.parallel_worker_overrides.get(name, policy.parallel_workers)
 

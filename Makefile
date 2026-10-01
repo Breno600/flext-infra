@@ -77,11 +77,10 @@ PYTEST_PROCESS_TIMEOUT_SECONDS := 124
 PYTEST_BOUNDED = timeout --signal=TERM --kill-after=5s "$(PYTEST_PROCESS_TIMEOUT_SECONDS)s"
 PYTEST_REPORTS_DIR := .reports/tests
 PYTEST_CACHE_HOME = $(if $(strip $(XDG_CACHE_HOME)),$(XDG_CACHE_HOME),$(if $(strip $(HOME)),$(HOME)/.cache,))
-override FLEXT_PYTEST_TESTMON_DATABASE = $(if $(strip $(PYTEST_CACHE_HOME)),$(PYTEST_CACHE_HOME)/flext/infra/testmon/$(subst /,_,$(PROJECT_ROOT))/.testmondata)
+override export FLEXT_PYTEST_TESTMON_DATABASE = $(if $(strip $(PYTEST_CACHE_HOME)),$(PYTEST_CACHE_HOME)/flext/infra/testmon/$(subst /,_,$(PROJECT_ROOT))/.testmondata)
 # Profiles sit beside the other reports of this checkout (.reports is ignored).
 PROFILE_REPORTS_DIR = $(PROJECT_ROOT)/$(dir $(PYTEST_REPORTS_DIR))profiles
 override PYTEST_CASE_TIMEOUT_SECONDS := 10
-override PYTEST_RUN_TIMEOUT_SECONDS := 120
 override PYTEST_TERMINATION_GRACE_SECONDS := 2
 override PYTEST_TIMEOUT_EXIT_CODE := 124
 override PYTEST_ENFORCEMENT_PLUGIN := flext_tests_enforcement
@@ -1720,29 +1719,22 @@ profile-gen-report: _builtin_require_environment
 		'import pstats, sys; pstats.Stats(sys.argv[1]).sort_stats("cumtime").print_stats(50)' \
 		"$(PROFILE_REPORTS_DIR)/lazy-init.pstats"
 
-# Profile the canonical pytest entry (flext_infra._pytest_entry) under cProfile
-# for cold-run diagnosis (flext-itpd1.3.7): the same persistent testmon database
-# guard and environment as the bounded gate, but deliberately NOT wrapped in
-# PYTEST_BOUNDED so the diagnostic completes and dumps its profile; the gate's
-# own timeout on `make test` stays untouched.
+# Profile the canonical runner and its real pytest controllers/workers.
+# The runner retains the same persistent database, selection and deadline.
 .PHONY: profile-test
 profile-test: _builtin_require_environment
-	@mkdir -p "$(PROFILE_REPORTS_DIR)"
 	@set -eu; \
 database="$(FLEXT_PYTEST_TESTMON_DATABASE)"; \
 case "$$database" in /*) ;; *) printf 'ERROR: persistent testmon database requires XDG_CACHE_HOME or HOME\n' >&2; exit 2 ;; esac; \
 case "$$database" in "$(PROJECT_ROOT)"/*) printf 'ERROR: persistent testmon database must be outside the checkout: %s\n' "$$database" >&2; exit 2 ;; esac; \
 case "$$database" in "$${TMPDIR:-/tmp}"/*|/tmp/*) printf 'ERROR: persistent testmon database must not live under the temporary directory: %s\n' "$$database" >&2; exit 2 ;; esac; \
 mkdir -p "$$(dirname "$$database")"; \
-	TESTMON_DATAFILE="$$database" $(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
-		'import cProfile, sys; path = sys.argv[1]; sys.argv = [sys.argv[0]]; from flext_infra._pytest_entry import FlextInfraPytestEntry; profile = cProfile.Profile(); status = profile.runcall(FlextInfraPytestEntry.main); profile.dump_stats(path); raise SystemExit(status)' \
-		"$(PROFILE_REPORTS_DIR)/pytest.pstats"
+TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry profile "$(PROFILE_REPORTS_DIR)/pytest.pstats"
 
 .PHONY: profile-test-report
 profile-test-report: _builtin_require_environment
-	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
-		'import pstats, sys; pstats.Stats(sys.argv[1]).sort_stats("cumtime").print_stats(50)' \
-		"$(PROFILE_REPORTS_DIR)/pytest.pstats"
+	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -m flext_infra._cprofile_entry \
+		"$(PROFILE_REPORTS_DIR)/pytest.pstats" "$(PYTEST_REPORTS_DIR)"
 
 _builtin_status_diagnostics: _builtin_require_environment
 	@printf 'profile=%s\nproject=%s\nruntime=%s\n' \
@@ -1866,6 +1858,8 @@ _builtin-audit:
 	@$(UV) pip check --python "$(RUNTIME_VENV)"
 	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --mode check
 _builtin-status: _builtin_status_diagnostics
+_builtin-verify-clean: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) workspace verify-clean --repo-root "$(PROJECT_ROOT)"
 _builtin-docs: _builtin_docs_all
 _builtin-clean: _builtin_clean_generated
 _builtin-release-plan: _builtin_release_plan

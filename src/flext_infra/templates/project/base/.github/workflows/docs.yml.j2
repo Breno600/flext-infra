@@ -63,11 +63,14 @@ jobs:
       - name: Generation drift (blocking)
         run: |
           make gen
-          git status --short
-          test -z "$(git status --porcelain --untracked-files=all)"
+          make verify-clean
 
       - name: Docs lifecycle (blocking)
         run: make docs
+
+      # The preceding generation check cannot see changes made by make docs.
+      - name: Verify docs byte-identical repository
+        run: make verify-clean
 
       # Failure diagnostics execute only after the original Make step has
       # already propagated its exact status to Actions.
@@ -107,6 +110,9 @@ jobs:
             apps/*/.reports/**/validate-summary.json
             apps/*/.reports/**/validate-report.md
           if-no-files-found: error
+          # The allowlisted reports live under hidden .reports directories.
+          # upload-artifact excludes hidden paths unless this is explicit.
+          include-hidden-files: true
           retention-days: 7
 
   build:
@@ -140,9 +146,7 @@ jobs:
         run: make docs
 
       - name: Verify byte-identical repository
-        run: |
-          git diff --exit-code -- .
-          git diff --cached --exit-code -- .
+        run: make verify-clean
 
       # Pages configure/upload exist only to feed deploy on main. Running them on
       # every integration push fails closed when Pages is unset and is wasted
