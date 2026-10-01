@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Literal
 from flext_infra import c
 
 from .rope_core import FlextInfraUtilitiesRopeCore
+from .rope_module_patch import FlextInfraUtilitiesRopeModulePatch
 from .rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 if TYPE_CHECKING:
@@ -18,6 +19,31 @@ if TYPE_CHECKING:
 
 class FlextInfraUtilitiesCodegenFacades:
     """Project utility owners required by real public-facade consumers."""
+
+    @staticmethod
+    def facade_module_path(pkg_dir: Path, family: str) -> Path | None:
+        """Return the package module that declares facade letter ``family``.
+
+        The owner of a facade letter is the module that publishes it in its own
+        ``__all__`` (generator law p.1); it is derived from the package, never
+        from a letter-to-filename table. ``None`` means no module declares it.
+        """
+        owners = tuple(
+            module
+            for module in sorted(pkg_dir.glob(c.Infra.EXT_PYTHON_GLOB))
+            if module.name != c.Infra.INIT_PY
+            and family
+            in FlextInfraUtilitiesRopeModulePatch.facade_letter_names_source(
+                module.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+            )
+        )
+        if len(owners) > 1:
+            message = (
+                f"facade letter {family!r} is declared by more than one module "
+                f"in {pkg_dir}: {[owner.name for owner in owners]}"
+            )
+            raise ValueError(message)
+        return owners[0] if owners else None
 
     @classmethod
     def render_utility_facade(
@@ -30,25 +56,23 @@ class FlextInfraUtilitiesCodegenFacades:
         The corresponding private family selects unique owners. Existing
         facade content remains unchanged except for missing imports and bases.
         """
-        facade_path = pkg_dir / (
-            c.Infra.FAMILY_PUBLIC_MODULES[family] + c.Infra.EXT_PYTHON
-        )
+        facade_path = cls.facade_module_path(pkg_dir, family)
         owners_dir = pkg_dir / c.Infra.FAMILY_DIRECTORIES[family]
-        owners_exist, facade_exists = owners_dir.is_dir(), facade_path.is_file()
+        owners_exist = owners_dir.is_dir()
         # Why: only owners-without-facade is incomplete -- the owners would have
         # no public surface at all. A facade with no owners directory is the
         # legitimate pure re-export shape this same generator emits for a package
         # that adds no local utilities (src/flext: `class FlextRootUtilities(u)`),
         # and there is simply nothing to project onto it.
-        if owners_exist and not facade_exists:
+        if not owners_exist:
+            return None
+        if facade_path is None:
             # Conform preflights its family directories before rendering files.
             # An empty directory contains no owner requiring a public surface.
             if not any(owners_dir.iterdir()):
                 return None
             message = f"utility owners in {pkg_dir} have no public facade"
             raise ValueError(message)
-        if not owners_exist:
-            return None
         owners, ancestors = cls._utility_owners(owners_dir, family=family)
         source: str = facade_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         facade, namespace = cls._facade_classes(

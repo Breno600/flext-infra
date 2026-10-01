@@ -243,14 +243,6 @@ class FlextInfraConstantsRefactor:
         "u": "*utilities.py",
     })
     "Facade family letter → file glob mapping."
-    FAMILY_PUBLIC_MODULES: ClassVar[t.StrMapping] = MappingProxyType({
-        "c": "constants",
-        "m": "models",
-        "p": "protocols",
-        "t": "typings",
-        "u": "utilities",
-    })
-    "Facade family letter → public facade module suffix mapping."
     NAMESPACE_FILE_TO_FAMILY: ClassVar[t.StrMapping] = MappingProxyType(
         dict.fromkeys(FLEXT_CONSTANTS_FILE_NAMES, "c")
         | dict.fromkeys(FLEXT_TYPINGS_FILE_NAMES, "t")
