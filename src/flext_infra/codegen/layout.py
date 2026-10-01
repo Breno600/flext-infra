@@ -35,7 +35,12 @@ class FlextInfraCodegenLayout(
 
     @override
     def execute(self) -> p.Result[str]:
-        """Run check (default) or apply across the selected projects."""
+        """Run check (default) or apply across the selected projects.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         selected = self._project_dirs()
         if selected.failure:
             return r[str].from_failure(selected)
@@ -73,11 +78,21 @@ class FlextInfraCodegenLayout(
         return r[str].ok(output)
 
     def check_project(self, project_dir: Path) -> m.Infra.LayoutProjectReport:
-        """Plan one project directory (gate seam — pure, never writes)."""
+        """Plan one project directory (gate seam — pure, never writes).
+
+        Returns:
+            The resulting ``m.Infra.LayoutProjectReport``.
+
+        """
         return self.plan_project(project_dir)
 
     def _project_dirs(self) -> p.Result[t.SequenceOf[Path]]:
-        """Resolve the selected project directories, degrading to plain dirs."""
+        """Resolve the selected project directories, degrading to plain dirs.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[Path]]``.
+
+        """
         if self.project_name is not None:
             candidate = self.repository_root / self.project_name
             if candidate.is_dir():
@@ -102,7 +117,12 @@ class FlextInfraCodegenLayout(
         return r[t.SequenceOf[Path]].fail("no projects discovered")
 
     def _render_output(self, reports: t.SequenceOf[m.Infra.LayoutProjectReport]) -> str:
-        """Render the text or JSON summary for the collected reports."""
+        """Render the text or JSON summary for the collected reports.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         if self.output_format == c.Cli.OutputFormats.JSON:
             return m.Infra.LayoutRunReport(reports=tuple(reports)).model_dump_json()
         lines: t.MutableSequenceOf[str] = []

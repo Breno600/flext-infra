@@ -1,4 +1,8 @@
-"""Domain models for the refactor subpackage."""
+"""Domain models for the refactor subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

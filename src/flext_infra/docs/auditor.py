@@ -1,4 +1,8 @@
-"""Documentation auditor service."""
+"""Documentation auditor service.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -48,7 +52,12 @@ class FlextInfraDocAuditor(
         output_dir: Path | str | None = None,
         params: m.Infra.AuditScopeParams | None = None,
     ) -> p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]:
-        """Audit root and governed project docs scopes."""
+        """Audit root and governed project docs scopes.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]``.
+
+        """
         resolved_params = (
             params
             if params is not None
@@ -70,7 +79,12 @@ class FlextInfraDocAuditor(
         *,
         params: m.Infra.AuditScopeParams,
     ) -> m.Infra.DocsPhaseReport:
-        """Audit one scope and persist the standard reports."""
+        """Audit one scope and persist the standard reports.
+
+        Returns:
+            The resulting ``m.Infra.DocsPhaseReport``.
+
+        """
         checks = sorted(self.resolve_checks(params.check))
         issues = self._collect_issues(scope, checks)
         docstring_coverage = (
@@ -103,7 +117,12 @@ class FlextInfraDocAuditor(
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute the configured docs audit flow."""
+        """Execute the configured docs audit flow.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         return self._propagate_phase_outcome(
             "audit",
             self.audit(

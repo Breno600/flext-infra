@@ -1,4 +1,8 @@
-"""Documentation fixer service."""
+"""Documentation fixer service.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -23,7 +27,12 @@ class FlextInfraDocFixer(FlextInfraDocServiceBase):
         output_dir: Path | str | None = None,
         apply: bool = False,
     ) -> p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]:
-        """Run documentation fixes across project scopes."""
+        """Run documentation fixes across project scopes.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]``.
+
+        """
         return self.run_scoped_docs(
             repository_root,
             projects=projects,
@@ -33,7 +42,12 @@ class FlextInfraDocFixer(FlextInfraDocServiceBase):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute the configured docs fix flow."""
+        """Execute the configured docs fix flow.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         return self._propagate_phase_outcome(
             "fix",
             self.fix(
@@ -51,7 +65,12 @@ class FlextInfraDocFixer(FlextInfraDocServiceBase):
         *,
         apply: bool,
     ) -> m.Infra.DocsPhaseReport:
-        """Run TOC, link and python-codeblock fixes on one scope."""
+        """Run TOC, link and python-codeblock fixes on one scope.
+
+        Returns:
+            The resulting ``m.Infra.DocsPhaseReport``.
+
+        """
         collected: list[m.Infra.DocsPhaseItemModel] = []
         for md_file in u.Infra.iter_scope_markdown_files(scope):
             item = u.Infra.docs_process_markdown_file(md_file, apply=apply)

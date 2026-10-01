@@ -1,4 +1,8 @@
-"""Cohesive environment-setup + per-project execution mixin for the dependency detector runtime."""
+"""Cohesive environment-setup + per-project execution mixin for the dependency detector runtime.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -21,7 +25,12 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         root: Path,
         venv_bin: Path,
     ) -> p.Result[t.Pair[t.SequenceOf[Path], Path]]:
-        """Discover projects and verify deptry binary; return ``(projects, limits_path)``."""
+        """Discover projects and verify deptry binary; return ``(projects, limits_path)``.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[t.SequenceOf[Path], Path]]``.
+
+        """
         detector = self._detector
         projects_result = self._deps.discover_project_paths(
             root,
@@ -50,7 +59,12 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         limits_path: Path,
         report_model: p.Infra.WorkspaceReport,
     ) -> p.Result[bool]:
-        """Load dependency-limits TOML and seed the workspace report's limits info."""
+        """Load dependency-limits TOML and seed the workspace report's limits info.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         limits_data = self._deps.load_dependency_limits(limits_path)
         if not limits_data:
             return r[bool].ok(False)
@@ -77,7 +91,12 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         params: m.Infra.DetectCommand,
         projects_report: MutableMapping[str, MutableMapping[str, t.JsonValue]],
     ) -> p.Result[bool]:
-        """Run deptry + optional typings detection/apply for one project."""
+        """Run deptry + optional typings detection/apply for one project.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         detector = self._detector
         deps_service = self._deps
         do_typings = params.typings or params.apply_typings
@@ -116,7 +135,12 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         params: m.Infra.DetectCommand,
         projects_report: MutableMapping[str, MutableMapping[str, t.JsonValue]],
     ) -> p.Result[bool]:
-        """Declare CUSTOM typing extras and install them through UV's source editor."""
+        """Declare CUSTOM typing extras and install them through UV's source editor.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         detector = self._detector
         project_name = project_path.name
         if not params.quiet:
@@ -165,7 +189,12 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         params: m.Infra.DetectCommand,
         report_model: p.Infra.WorkspaceReport,
     ) -> p.Result[bool]:
-        """Execute the workspace ``pip check`` and stamp the report; ``r.ok(pip_ok)``."""
+        """Execute the workspace ``pip check`` and stamp the report; ``r.ok(pip_ok)``.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         if params.no_pip_check:
             return r[bool].ok(True)
         detector = self._detector

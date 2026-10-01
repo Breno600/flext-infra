@@ -1,4 +1,8 @@
-"""Quoted type references resolved in the original Rope lexical scope."""
+"""Quoted type references resolved in the original Rope lexical scope.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,7 +23,12 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
 
     @classmethod
     def type_expression_ranges(cls, source: str) -> frozenset[t.Pair[int, int]]:
-        """Expose the same structural roots to concrete-syntax consumer adapters."""
+        """Expose the same structural roots to concrete-syntax consumer adapters.
+
+        Returns:
+            The resulting ``frozenset[t.Pair[int, int]]``.
+
+        """
         return frozenset(
             cls._expression_range(source, expression)
             for expression, _line in cls._annotation_roots(ast.parse(source))
@@ -116,7 +125,12 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
         *,
         flatten: m.Infra.FamilyWrapperFlatten,
     ) -> t.Pair[bool, m.Infra.SourceRewrite | None]:
-        """Resolve one selected node; nested strings retain their original scope."""
+        """Resolve one selected node; nested strings retain their original scope.
+
+        Returns:
+            The resulting ``t.Pair[bool, m.Infra.SourceRewrite | None]``.
+
+        """
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         names = flatten.names
         start, end = cls._expression_range(source, node)
@@ -167,7 +181,12 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
         owner_name: str,
         name: str,
     ) -> str:
-        """Keep an explicit parent or the method's owning class after promotion."""
+        """Keep an explicit parent or the method's owning class after promotion.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         if isinstance(node.value, ast.Attribute):
             return f"{ast.unparse(node.value.value)}.{name}"
         if scope.get_kind() == c.Infra.RopeScopeKind.FUNCTION:
@@ -196,7 +215,12 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
     def _type_parameter_annotations(
         node: ast.TypeVar | ast.ParamSpec | ast.TypeVarTuple,
     ) -> Iterator[t.Pair[ast.expr, int | None]]:
-        """Yield a type parameter's bound before its optional default."""
+        """Yield a type parameter's bound before its optional default.
+
+        Yields:
+            Each ``t.Pair[ast.expr, int | None]``.
+
+        """
         if isinstance(node, ast.TypeVar) and node.bound is not None:
             yield (node.bound, None)
         if node.default_value is not None:
@@ -206,7 +230,12 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
     def _function_annotations(
         node: ast.FunctionDef | ast.AsyncFunctionDef,
     ) -> Iterator[t.Pair[ast.expr, int | None]]:
-        """Yield each parameter and return annotation in declaration order."""
+        """Yield each parameter and return annotation in declaration order.
+
+        Yields:
+            Each ``t.Pair[ast.expr, int | None]``.
+
+        """
         arguments = (
             *node.args.posonlyargs,
             *node.args.args,

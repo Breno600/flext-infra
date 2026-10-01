@@ -27,6 +27,7 @@ class TestsFlextInfraExtendedProjectRunners:
         self,
         real_python_package: Path,
     ) -> None:
+        """Test run projects records requested gates."""
         checker = FlextInfraWorkspaceChecker(repository_root=real_python_package.parent)
         result = checker.run_projects(
             [real_python_package.name],
@@ -47,6 +48,7 @@ class TestsFlextInfraExtendedProjectRunners:
         gate_method: str,
         real_python_package: Path,
     ) -> None:
+        """Test public method returns gate result."""
         checker = FlextInfraWorkspaceChecker(repository_root=real_python_package.parent)
         result = (
             checker.lint(real_python_package)

@@ -1,4 +1,8 @@
-"""Domain models for the check subpackage."""
+"""Domain models for the check subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -40,16 +44,6 @@ class FlextInfraModelsCheck:
             m.Field(
                 alias="check-only",
                 description="Enable check-only mode for supported tools",
-            ),
-        ] = False
-        report_findings: Annotated[
-            bool,
-            m.Field(
-                alias="report-findings",
-                description=(
-                    "Emit additional context for findings left after applying; "
-                    "remaining findings still fail the command"
-                ),
             ),
         ] = False
         ruff_args: Annotated[
@@ -100,7 +94,6 @@ class FlextInfraModelsCheck:
             int,
             m.Field(
                 gt=0,
-                le=c.Infra.MYPY_TIMEOUT_SECONDS_FLEET_BOUND,
                 description=(
                     "Positive Mypy wall-time limit in seconds, resolved from"
                     " tools.mypy.timeout_seconds in tooling.yaml or the env"
@@ -272,7 +265,12 @@ class FlextInfraModelsCheck:
 
         @u.model_serializer
         def _serialize(self) -> t.JsonMapping:
-            """Serialize."""
+            """Serialize.
+
+            Returns:
+                The resulting ``t.JsonMapping``.
+
+            """
             return {
                 "id": self.id,
                 "shortDescription": {"text": self.short_description},
@@ -326,7 +324,12 @@ class FlextInfraModelsCheck:
 
         @u.model_serializer
         def _serialize(self) -> t.JsonMapping:
-            """Serialize."""
+            """Serialize.
+
+            Returns:
+                The resulting ``t.JsonMapping``.
+
+            """
             return {
                 "physicalLocation": {
                     "artifactLocation": {
@@ -363,7 +366,12 @@ class FlextInfraModelsCheck:
 
         @u.model_serializer
         def _serialize(self) -> t.JsonMapping:
-            """Serialize."""
+            """Serialize.
+
+            Returns:
+                The resulting ``t.JsonMapping``.
+
+            """
             return {
                 "ruleId": self.rule_id,
                 "level": self.level,
@@ -403,7 +411,12 @@ class FlextInfraModelsCheck:
 
         @u.model_serializer
         def _serialize(self) -> t.JsonMapping:
-            """Serialize."""
+            """Serialize.
+
+            Returns:
+                The resulting ``t.JsonMapping``.
+
+            """
             return {
                 "tool": {
                     "driver": {

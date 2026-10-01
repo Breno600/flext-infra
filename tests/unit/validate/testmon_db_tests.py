@@ -1,4 +1,8 @@
-"""Testmon SQLite integrity and saveability contracts."""
+"""Testmon SQLite integrity and saveability contracts.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -16,6 +20,7 @@ class TestsFlextInfraTestmonDbInspector:
 
     @staticmethod
     def test_missing_db_fails_loud(tmp_path: Path) -> None:
+        """Test missing db fails loud."""
         filename = config.Infra.codegen.make.testmon_cache.database_filename
         repository_root = tmp_path / "checkout"
         repository_root.mkdir()
@@ -30,6 +35,7 @@ class TestsFlextInfraTestmonDbInspector:
 
     @staticmethod
     def test_database_inside_checkout_is_rejected(tmp_path: Path) -> None:
+        """Test database inside checkout is rejected."""
         repository_root = tmp_path / "checkout"
         repository_root.mkdir()
 
@@ -43,6 +49,7 @@ class TestsFlextInfraTestmonDbInspector:
 
     @staticmethod
     def test_corrupt_db_preserves_sqlite_failure(tmp_path: Path) -> None:
+        """Test corrupt db preserves sqlite failure."""
         repository_root = tmp_path / "checkout"
         repository_root.mkdir()
         db = (
@@ -62,6 +69,7 @@ class TestsFlextInfraTestmonDbInspector:
 
     @staticmethod
     def test_healthy_new_db_is_saveable_seed(tmp_path: Path) -> None:
+        """Test healthy new db is saveable seed."""
         repository_root = tmp_path / "checkout"
         repository_root.mkdir()
         db = (
@@ -88,6 +96,7 @@ class TestsFlextInfraTestmonDbInspector:
 
     @staticmethod
     def test_unchanged_db_is_not_saveable(tmp_path: Path) -> None:
+        """Test unchanged db is not saveable."""
         repository_root = tmp_path / "checkout"
         repository_root.mkdir()
         db = (
@@ -114,6 +123,7 @@ class TestsFlextInfraTestmonDbInspector:
 
     @staticmethod
     def test_in_checkout_database_is_rejected(tmp_path: Path) -> None:
+        """Test in checkout database is rejected."""
         filename = config.Infra.codegen.make.testmon_cache.database_filename
 
         with pytest.raises(ValueError, match="outside the repository checkout"):

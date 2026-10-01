@@ -1,4 +1,8 @@
-"""Behavior tests for the Rope snapshot inventory boundary."""
+"""Behavior tests for the Rope snapshot inventory boundary.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -27,7 +27,12 @@ class FlextInfraCodegenLayoutGitignoreMixin:
         project_dir: Path,
         patterns: t.StrSequence,
     ) -> p.Result[t.Infra.LayoutStatus]:
-        """Ensure gitignore patterns via the canonical render or appending."""
+        """Ensure gitignore patterns via the canonical render or appending.
+
+        Returns:
+            The resulting ``p.Result[t.Infra.LayoutStatus]``.
+
+        """
         managed = self._managed_profile(project_dir)
         if managed.failure:
             return r[t.Infra.LayoutStatus].from_failure(managed)
@@ -41,7 +46,12 @@ class FlextInfraCodegenLayoutGitignoreMixin:
         project_dir: Path,
         profile: c.Infra.MakeProfile,
     ) -> p.Result[t.Infra.LayoutStatus]:
-        """Write the canonical rendered gitignore for a governed project."""
+        """Write the canonical rendered gitignore for a governed project.
+
+        Returns:
+            The resulting ``p.Result[t.Infra.LayoutStatus]``.
+
+        """
         rendered = u.Infra.render_project_gitignore(
             config.Infra.codegen,
             profile=profile,
@@ -85,7 +95,12 @@ class FlextInfraCodegenLayoutGitignoreMixin:
         project_dir: Path,
         patterns: t.StrSequence,
     ) -> p.Result[t.Infra.LayoutStatus]:
-        """Append missing patterns for an unmanaged or external project."""
+        """Append missing patterns for an unmanaged or external project.
+
+        Returns:
+            The resulting ``p.Result[t.Infra.LayoutStatus]``.
+
+        """
         gitignore_path = project_dir / c.Infra.GITIGNORE
         current = ""
         if gitignore_path.is_file():
@@ -129,7 +144,12 @@ class FlextInfraCodegenLayoutGitignoreMixin:
 
     @staticmethod
     def _managed_profile(project_dir: Path) -> p.Result[c.Infra.MakeProfile | None]:
-        """Make profile when the project is governed by a workspace."""
+        """Make profile when the project is governed by a workspace.
+
+        Returns:
+            The resulting ``p.Result[c.Infra.MakeProfile | None]``.
+
+        """
         workspace = FlextInfraWorkspaceDetector.load_workspace_spec(
             u.Infra.resolve_repository_root_or_cwd(project_dir),
         )

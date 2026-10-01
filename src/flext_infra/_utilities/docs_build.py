@@ -1,4 +1,8 @@
-"""Build helpers for docs services."""
+"""Build helpers for docs services.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -23,7 +27,15 @@ class FlextInfraUtilitiesDocsBuild:
 
     @staticmethod
     def _module_callable(module: ModuleType, name: str) -> p.Infra.MkDocsAnyCallable:
-        """Return a named callable from a lazily loaded module."""
+        """Return a named callable from a lazily loaded module.
+
+        Returns:
+            A named callable from a lazily loaded module.
+
+        Raises:
+            OSError: Always.
+
+        """
         value: p.AttributeProbe = getattr(module, name)
         if callable(value):
             return cast("p.Infra.MkDocsAnyCallable", value)
@@ -36,12 +48,22 @@ class FlextInfraUtilitiesDocsBuild:
         settings: Path,
         site_dir: Path,
     ) -> MutableMapping[str, p.AttributeProbe]:
-        """Load and validate a MkDocs config mapping."""
+        """Load and validate a MkDocs config mapping.
+
+        Returns:
+            The resulting ``MutableMapping[str, p.AttributeProbe]``.
+
+        """
         return load(config_file_path=str(settings), site_dir=str(site_dir))
 
     @staticmethod
     def docs_mkdocs_config_files(scope: m.Infra.DocScope) -> t.VariadicTuple[Path]:
-        """Return primary mkdocs.yml then optional product mkdocs.yaml."""
+        """Return primary mkdocs.yml then optional product mkdocs.yaml.
+
+        Returns:
+            Primary mkdocs.yml then optional product mkdocs.yaml.
+
+        """
         configs: list[Path] = []
         primary = scope.path / "mkdocs.yml"
         secondary = scope.path / "mkdocs.yaml"
@@ -53,7 +75,12 @@ class FlextInfraUtilitiesDocsBuild:
 
     @staticmethod
     def docs_run_mkdocs(scope: m.Infra.DocScope) -> m.Infra.DocsPhaseReport:
-        """Run MkDocs for primary yml and optional product yaml configs."""
+        """Run MkDocs for primary yml and optional product yaml configs.
+
+        Returns:
+            The resulting ``m.Infra.DocsPhaseReport``.
+
+        """
         configs = FlextInfraUtilitiesDocsBuild.docs_mkdocs_config_files(scope)
         if not configs:
             return m.Infra.DocsPhaseReport(
@@ -103,6 +130,10 @@ class FlextInfraUtilitiesDocsBuild:
         """Build one MkDocs config file into a site directory.
 
         A MkDocs failure escapes with its own exception and traceback.
+
+        Returns:
+            The resulting ``m.Infra.DocsPhaseReport``.
+
         """
         site_dir = (
             scope.path
@@ -149,7 +180,12 @@ class FlextInfraUtilitiesDocsBuild:
         livereload: bool,
         strict: bool,
     ) -> m.Infra.DocsPhaseReport:
-        """Serve one scope through the MkDocs Python serve API (blocking)."""
+        """Serve one scope through the MkDocs Python serve API (blocking).
+
+        Returns:
+            The resulting ``m.Infra.DocsPhaseReport``.
+
+        """
         settings = scope.path / "mkdocs.yml"
         if not settings.exists():
             return m.Infra.DocsPhaseReport(

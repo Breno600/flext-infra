@@ -1,4 +1,8 @@
-"""Public utility evidence for semantic API-alias cutovers."""
+"""Public utility evidence for semantic API-alias cutovers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

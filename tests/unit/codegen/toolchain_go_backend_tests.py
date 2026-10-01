@@ -1,4 +1,8 @@
-"""Contract tests for the Go runtime required by go: backend selectors."""
+"""Contract tests for the Go runtime required by go: backend selectors.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

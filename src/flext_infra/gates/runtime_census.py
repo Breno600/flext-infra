@@ -1,5 +1,8 @@
 """Runtime enforcement census quality gate.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Imports every ``flext_*`` module in the selected project and runs
 ``FlextUtilitiesEnforcement.check()`` against every locally-defined class.
 """
@@ -31,22 +34,27 @@ class FlextInfraRuntimeCensusGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
-        """Run the runtime census scoped to ``project_dir``."""
+        """Run the runtime census scoped to ``project_dir``.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
+        """
         _ = ctx
         started = time.monotonic()
-        validator_result = FlextInfraRuntimeCensusValidator.for_project(
+        validator = FlextInfraRuntimeCensusValidator.for_project(
             project_dir,
         )
-        if validator_result.failure:
+        if validator.failure:
             return self._build_project_error_gate_result(
                 project_dir,
                 passed=False,
-                errors=[validator_result.error or "runtime census project failed"],
+                errors=[validator.error or "runtime census scoping failed"],
                 started=started,
             )
         # ``build_report`` (not ``execute``) keeps violations structured so the
         # gate can grade a broken invocation separately from found violations.
-        report_result = validator_result.value.build_report()
+        report_result = validator.value.build_report()
         if report_result.failure:
             return self._build_project_error_gate_result(
                 project_dir,

@@ -1,4 +1,8 @@
-"""Rendered GitHub workflows satisfy the YAML inline-comment spacing contract."""
+"""Rendered GitHub workflows satisfy the YAML inline-comment spacing contract.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -34,6 +38,10 @@ class TestsFlextInfraWorkflowCommentSpacing:
         and it is inline when it starts on the line where the previous token
         ends. Block-scalar bodies are token content, so shell ``#`` never
         counts.
+
+        Returns:
+            Inline comments closer than two spaces to their content.
+
         """
         offenders: list[str] = []
         lines = text.splitlines()

@@ -1,4 +1,8 @@
-"""Narrow untrusted model-class boundaries before required field access."""
+"""Narrow untrusted model-class boundaries before required field access.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -34,7 +38,12 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
         cls,
         sources: t.MappingKV[Path, str],
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
-        """Inspect all sources, including direct access emitted by older rules."""
+        """Inspect all sources, including direct access emitted by older rules.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
+
+        """
         return cls._semantic_edits(cls._editable_sources(sources), cls._rewrite_fields)
 
     @classmethod
@@ -130,7 +139,12 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
 
     @staticmethod
     def _field_receiver(statement: ast.stmt) -> str | None:
-        """Identify a single field assignment without evaluating its receiver."""
+        """Identify a single field assignment without evaluating its receiver.
+
+        Returns:
+            The resulting ``str | None``.
+
+        """
         if not isinstance(statement, ast.Assign) or len(statement.targets) != 1:
             return None
         value = statement.value
@@ -160,7 +174,12 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
 
     @staticmethod
     def _rejecting_guard(statement: ast.stmt | None, target: str) -> bool:
-        """Require exactly the original shape error and an unconditional raise."""
+        """Require exactly the original shape error and an unconditional raise.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         if not isinstance(statement, ast.If) or statement.orelse:
             return False
         expected = ast.parse(

@@ -1,4 +1,8 @@
-"""Public fix-workflow tests for docs services."""
+"""Public fix-workflow tests for docs services.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -20,6 +24,7 @@ class TestsFlextInfraDocsFixer:
     def test_fix_returns_reports_for_root_and_selected_project(
         tmp_path: Path,
     ) -> None:
+        """Test fix returns reports for root and selected project."""
         workspace = u.Tests.create_docs_workspace(
             tmp_path,
             project_names=("flext-a", "flext-b"),
@@ -35,6 +40,7 @@ class TestsFlextInfraDocsFixer:
     def test_fix_apply_updates_docs_file_and_writes_reports(
         tmp_path: Path,
     ) -> None:
+        """Test fix apply updates docs file and writes reports."""
         workspace = u.Tests.create_docs_workspace(tmp_path, include_fixable_link=True)
 
         result = FlextInfraDocFixer().fix(workspace, apply=True)
@@ -68,6 +74,7 @@ class TestsFlextInfraDocsFixer:
 
     @staticmethod
     def test_fix_item_model_tracks_link_and_toc_counts() -> None:
+        """Test fix item model tracks link and toc counts."""
         item = m.Infra.DocsPhaseItemModel(phase="fix", file="README.md", links=2, toc=1)
 
         tm.that(item.file, eq="README.md")

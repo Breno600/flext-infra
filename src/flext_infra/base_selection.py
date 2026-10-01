@@ -1,4 +1,8 @@
-"""Project-selection service base for flext-infra command services."""
+"""Project-selection service base for flext-infra command services.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

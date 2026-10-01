@@ -1,4 +1,8 @@
-"""Documentation scope behavior inside linked-worktree directory layouts."""
+"""Documentation scope behavior inside linked-worktree directory layouts.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

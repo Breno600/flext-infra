@@ -1,4 +1,8 @@
-"""Config models base: composes every config family via MRO in dependency order."""
+"""Config models base: composes every config family via MRO in dependency order.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

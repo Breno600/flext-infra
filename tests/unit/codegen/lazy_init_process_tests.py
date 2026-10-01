@@ -1,4 +1,8 @@
-"""End-to-end tests for canonical package initializer generation."""
+"""End-to-end tests for canonical package initializer generation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -14,7 +18,12 @@ class TestsFlextInfraLazyInitProcessing:
 
     @staticmethod
     def _read(package_dir: Path) -> str:
-        """Read one generated package initializer."""
+        """Read one generated package initializer.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return package_dir.joinpath(c.Infra.INIT_PY).read_text(
             encoding=c.Cli.ENCODING_DEFAULT,
         )

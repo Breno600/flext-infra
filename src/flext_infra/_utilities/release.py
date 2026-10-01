@@ -1,4 +1,8 @@
-"""Release protocol utilities for the u.Infra FLEXT chain."""
+"""Release protocol utilities for the u.Infra FLEXT chain.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,7 +23,12 @@ class FlextInfraUtilitiesRelease:
 
     @staticmethod
     def archive_member_path(name: str) -> p.Result[Path]:
-        """Return one safe relative archive member path."""
+        """Return one safe relative archive member path.
+
+        Returns:
+            One safe relative archive member path.
+
+        """
         relative = PurePosixPath(name)
         if (
             not name
@@ -37,7 +46,12 @@ class FlextInfraUtilitiesRelease:
         archive: tarfile.TarFile,
         destination: Path,
     ) -> p.Result[bool]:
-        """Materialize one trusted tar tree without path traversal."""
+        """Materialize one trusted tar tree without path traversal.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         try:
             members = tuple(archive.getmembers())
         except tarfile.TarError as exc:
@@ -94,7 +108,12 @@ class FlextInfraUtilitiesRelease:
         staging: Path,
         validated_members: Sequence[t.Pair[tarfile.TarInfo, Path]],
     ) -> p.Result[bool]:
-        """Write prevalidated tar members into a staging directory."""
+        """Write prevalidated tar members into a staging directory.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         for member, relative_path in validated_members:
             member_path = staging / relative_path
             if member.isdir():
@@ -142,6 +161,10 @@ class FlextInfraUtilitiesRelease:
         subject carries no release information and therefore fails loudly: the
         protocol requires the title, never a guess. Any other merge subject (a
         lane absorbing its integration base) contributes nothing.
+
+        Returns:
+            The resulting ``p.Result[c.Infra.VersionBump]``.
+
         """
         order = tuple(c.Infra.VersionBump)
         bump = c.Infra.VersionBump.NONE
@@ -169,6 +192,10 @@ class FlextInfraUtilitiesRelease:
 
         Matches the commit as the lane wrote it and as GitHub merged it, which
         appends the pull-request number to the subject.
+
+        Returns:
+            The resulting ``bool``.
+
         """
         match = c.Infra.RELEASE_COMMIT_SUBJECT_RE.match(subject)
         return match is not None and match.group("version") == version
@@ -181,7 +208,12 @@ class FlextInfraUtilitiesRelease:
         changes: str,
         output_path: Path,
     ) -> p.Result[bool]:
-        """Generate release notes markdown from release context."""
+        """Generate release notes markdown from release context.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         lines: t.MutableSequenceOf[str] = [
             f"# Release {tag}",
             "",
@@ -228,6 +260,10 @@ class FlextInfraUtilitiesRelease:
         inline punctuation first keeps every character literal, and wrapping
         each bullet keeps it inside the ceiling. The transform is deterministic,
         so re-stamping an unchanged plan is byte-identical.
+
+        Returns:
+            The resulting ``str``.
+
         """
         rendered: t.MutableSequenceOf[str] = []
         for raw in changes.splitlines():
@@ -259,7 +295,12 @@ class FlextInfraUtilitiesRelease:
         tag: str,
         notes_path: Path,
     ) -> p.Result[bool]:
-        """Update docs/changelog and docs/releases entries."""
+        """Update docs/changelog and docs/releases entries.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         try:
             FlextInfraUtilitiesRelease._write_changelog_files(
                 repository_root=repository_root,
@@ -311,7 +352,12 @@ class FlextInfraUtilitiesRelease:
 
     @staticmethod
     def _updated_changelog(*, existing: str, version: str, tag: str) -> str:
-        """Return changelog text with a release section for the version."""
+        """Return changelog text with a release section for the version.
+
+        Returns:
+            Changelog text with a release section for the version.
+
+        """
         date = u.now().date().isoformat()
         heading = f"## {version} - "
         section = (
@@ -343,6 +389,10 @@ class FlextInfraUtilitiesRelease:
         SSOT, and a hand-written order would be a second source that diverges
         in silence. Every project in a wave depends only on earlier waves, so a
         wave may upload in parallel while the sequence between waves is strict.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[t.StrSequence]]``.
+
         """
         selected = {name for name, _ in targets}
         edges: MutableMapping[str, t.StrSequence] = {}
@@ -370,6 +420,10 @@ class FlextInfraUtilitiesRelease:
         published distribution, so an index never resolves them -- and because
         the platform packages test against each other, counting them would
         report the whole workspace as one cycle.
+
+        Returns:
+            The runtime dependency names declared by one project.
+
         """
         pyproject = path / c.PYPROJECT_FILENAME
         if not pyproject.is_file():

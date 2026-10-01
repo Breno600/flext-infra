@@ -1,4 +1,8 @@
-"""Member propagation: this workspace's flext-infra, one pull request per member."""
+"""Member propagation: this workspace's flext-infra, one pull request per member.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -25,7 +29,12 @@ class FlextInfraWorkspacePropagation(s[bool]):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Propagate to every generated member in declared order."""
+        """Propagate to every generated member in declared order.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         root = self.root
         loaded = FlextInfraWorkspaceDetector.load_workspace_spec(root)
         if loaded.failure:
@@ -59,7 +68,12 @@ class FlextInfraWorkspacePropagation(s[bool]):
         member: m.Infra.RepositoryRef,
         revision: str,
     ) -> p.Result[bool]:
-        """Publish one member's settled projections, then return it to its base."""
+        """Publish one member's settled projections, then return it to its base.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         member_root = self.root / member.path
         base = u.Infra.resolve_integration_branch(
             member_root,
@@ -102,7 +116,12 @@ class FlextInfraWorkspacePropagation(s[bool]):
         member: m.Infra.RepositoryRef,
         revision: str,
     ) -> p.Result[Path]:
-        """Write the member's pull-request body under the workspace reports."""
+        """Write the member's pull-request body under the workspace reports.
+
+        Returns:
+            The resulting ``p.Result[Path]``.
+
+        """
         directory = u.Cli.ensure_dir(
             u.Cli.resolve_report_dir(
                 self.root,

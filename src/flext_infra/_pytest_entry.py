@@ -1,4 +1,8 @@
-"""Source-live pytest entrypoint with a pre-import absolute clock."""
+"""Source-live pytest entrypoint with a pre-import absolute clock.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -20,6 +24,13 @@ class FlextInfraPytestEntry:
         selects coverage alone; the default is the incremental operation. The
         ``slow`` operation runs the incremental phase over the slow marker
         only, as its own bounded process outside the budgeted clock.
+
+        Returns:
+            The resulting ``int``.
+
+        Raises:
+            ValueError: If unsupported pytest operation.
+
         """
         mode = sys.argv[1] if len(sys.argv) > 1 else ""
         if mode in {"profile", "profile-collection"}:

@@ -1,4 +1,8 @@
-"""Direct codegen pipeline command service."""
+"""Direct codegen pipeline command service.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -38,7 +42,12 @@ class FlextInfraCodegenPipeline(
 
     @override
     def execute(self) -> p.Result[str]:
-        """Execute the end-to-end codegen pipeline via DAG runner."""
+        """Execute the end-to-end codegen pipeline via DAG runner.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         self._state = m.Infra.CodegenPipelineState()
         stages = self._build_codegen_stages()
 
@@ -63,7 +72,12 @@ class FlextInfraCodegenPipeline(
     # ------------------------------------------------------------------
 
     def _build_codegen_stages(self) -> t.SequenceOf[m.Cli.PipelineStageSpec]:
-        """Build DAG stage specs with linear dependency chain."""
+        """Build DAG stage specs with linear dependency chain.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Cli.PipelineStageSpec]``.
+
+        """
         handlers: t.MappingKV[str, p.Cli.PipelineStage] = {
             c.Infra.PipelineStage.DISCOVER: self._stage_discover,
             c.Infra.PipelineStage.TOOLCHAIN: self._stage_toolchain,
@@ -92,6 +106,10 @@ class FlextInfraCodegenPipeline(
 
         ``action`` performs the work and may mutate ``self._state``; ``emit``
         builds the output payload from the action's return value.
+
+        Returns:
+            The resulting ``p.Result[m.Cli.PipelineStageResult]``.
+
         """
         return r[m.Cli.PipelineStageResult].ok(
             m.Cli.PipelineStageResult(
@@ -106,7 +124,12 @@ class FlextInfraCodegenPipeline(
     # ------------------------------------------------------------------
 
     def _collect_pipeline_output(self) -> p.Result[str]:
-        """Convert typed pipeline state into the original output format."""
+        """Convert typed pipeline state into the original output format.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         reports_before = self._state.reports_before
         reports_after = self._state.reports_after
         scaffold_results = self._state.scaffold_results

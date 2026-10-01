@@ -9,8 +9,7 @@ from typing import TYPE_CHECKING
 {%- endif %}
 
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
-{% if runtime_import_lines %}
-{{ runtime_import_lines }}
+{% if runtime_import_lines %}{{ runtime_import_lines }}
 {% endif %}{% if type_checking_lines %}
 {{ type_checking_lines }}
 {% endif %}{{ blank_lines_before_exports }}__all__: tuple[str, ...] = {{ exports_tuple }}

@@ -56,6 +56,12 @@ def _write_modernizer_codegen_config(workspace: Path) -> None:
 
 @pytest.fixture
 def deptry_report_payload() -> t.JsonPayload:
+    """Provide ``deptry_report_payload``.
+
+    Returns:
+        The resulting ``t.JsonPayload``.
+
+    """
     parsed = u.Cli.json_parse(_read_fixture("deps", "deptry_report.json"))
     parsed = tm.not_none(parsed)
     tm.ok(parsed)
@@ -64,6 +70,12 @@ def deptry_report_payload() -> t.JsonPayload:
 
 @pytest.fixture
 def tool_config_document() -> m.Infra.ToolConfigDocument:
+    """Provide ``tool_config_document``.
+
+    Returns:
+        The resulting ``m.Infra.ToolConfigDocument``.
+
+    """
     return u.Tests.tool_config_document()
 
 
@@ -76,6 +88,10 @@ def _detector_template_parent(run_root: Path, modules: t.StrSequence) -> Path:
 
     The pytest invocation's temporary root is shared by every worker of one
     run and removed with it, so each run resolves its own environment once.
+
+    Returns:
+        The run-scoped home of one resolved detector consumer.
+
     """
     return run_root / "detector-templates" / "-".join(modules)
 
@@ -192,13 +208,23 @@ _INFRA_CHECKOUT_SCENARIOS = (
 
 
 def _run_root(factory: pytest.TempPathFactory) -> Path:
-    """Use pytest's invocation directory, shared across xdist workers."""
+    """Use pytest's invocation directory, shared across xdist workers.
+
+    Returns:
+        The resulting ``Path``.
+
+    """
     base = factory.getbasetemp()
     return base.parent if os.environ.get("PYTEST_XDIST_WORKER") else base
 
 
 def _run_scoped(run_root: Path, kind: str, key: str) -> Path:
-    """Return the run-scoped home of one provisioned consumer."""
+    """Return the run-scoped home of one provisioned consumer.
+
+    Returns:
+        The run-scoped home of one provisioned consumer.
+
+    """
     return run_root / kind / key
 
 
@@ -317,6 +343,10 @@ def hermetic_git_environment(tmp_path_factory: pytest.TempPathFactory) -> t.StrM
     keyed by that set, so a relock never reuses mirrors of superseded commits.
     The returned environment routes the provider to them and makes any network
     transport fail.
+
+    Returns:
+        The resulting ``t.StrMapping``.
+
     """
     sources = "\n".join(
         "@".join(source) for source in u.Tests.locked_git_sources(_PROJECT_ROOT)
@@ -343,6 +373,10 @@ def resolved_make_templates(
 
     Consumers clone a template rather than resolving inside their budget; the
     template directory also holds the upgrade and cold CI setup receipts.
+
+    Returns:
+        Every profile's committed ``make upg`` template for this run.
+
     """
     templates: dict[c.Infra.MakeProfile, Path] = {}
     for profile in c.Infra.MakeProfile:
@@ -364,7 +398,12 @@ def provisioned_infra_checkout(
     request: pytest.FixtureRequest,
     tmp_path_factory: pytest.TempPathFactory,
 ) -> t.Pair[str, Path]:
-    """Return one scenario's candidate checkout, set up from committed locks."""
+    """Return one scenario's candidate checkout, set up from committed locks.
+
+    Returns:
+        One scenario's candidate checkout, set up from committed locks.
+
+    """
     scenario = str(request.param)
     run_root = _run_root(tmp_path_factory)
     parent = _run_scoped(run_root, "infra-checkouts", scenario)
@@ -391,6 +430,10 @@ def real_detector_project(
     The consumer clones the committed template exactly as a developer clones a
     reviewed repository, then ``make setup`` provisions its own environment
     from the committed locks without resolving anything new.
+
+    Returns:
+        The resulting ``Path``.
+
     """
     modules = t.Infra.STR_SEQ_ADAPTER.validate_python(request.param)
     run_root = _run_root(tmp_path_factory)
@@ -428,7 +471,12 @@ def real_detector_project(
 
 @pytest.fixture
 def real_toml_project(tmp_path: Path) -> Path:
-    """Create a real project with valid pyproject.toml."""
+    """Create a real project with valid pyproject.toml.
+
+    Returns:
+        The resulting ``Path``.
+
+    """
     project_root = tmp_path / "test_project"
     project_root.mkdir()
     pyproject_content = """\
@@ -448,7 +496,12 @@ authors = [{name = "Test", email = "test@example.com"}]
 
 @pytest.fixture
 def real_makefile_project(tmp_path: Path) -> Path:
-    """Create a real project with valid Makefile."""
+    """Create a real project with valid Makefile.
+
+    Returns:
+        The resulting ``Path``.
+
+    """
     project_root = tmp_path / "makefile_project"
     project_root.mkdir()
     makefile_content = """\
@@ -472,7 +525,12 @@ test:
 
 @pytest.fixture
 def real_python_package(tmp_path: Path) -> Path:
-    """Create a real Python package with src layout."""
+    """Create a real Python package with src layout.
+
+    Returns:
+        The resulting ``Path``.
+
+    """
     project_root = tmp_path / "python_package"
     project_root.mkdir()
     src_dir = project_root / "src" / "test_pkg"
@@ -496,7 +554,12 @@ def real_python_package(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def cached_runner_project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Create a real one-test consumer for the public cached pytest runner."""
+    """Create a real one-test consumer for the public cached pytest runner.
+
+    Returns:
+        The resulting ``Path``.
+
+    """
     external_cache = tmp_path / "external-cache"
     monkeypatch.setenv("XDG_CACHE_HOME", str(external_cache))
     monkeypatch.setenv("LOCALAPPDATA", str(external_cache))
@@ -531,7 +594,12 @@ def cached_runner_project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
 
 @pytest.fixture
 def policy_violation_project(tmp_path: Path) -> Path:
-    """Create a real consumer whose suite violates the slow-timeout policy."""
+    """Create a real consumer whose suite violates the slow-timeout policy.
+
+    Returns:
+        The resulting ``Path``.
+
+    """
     project_root = tmp_path / "policy_violation_project"
     policy = config.Infra.codegen.make.testmon_cache
     tests_root = project_root / policy.target_directory
@@ -555,7 +623,12 @@ def policy_violation_project(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def mod_workspace(tmp_path: Path) -> Path:
-    """Create the shared real workspace for the public refactor-mod CLI."""
+    """Create the shared real workspace for the public refactor-mod CLI.
+
+    Returns:
+        The resulting ``Path``.
+
+    """
     project_document = u.read_project_document_cached(_PROJECT_ROOT)
     project = u.build_project_metadata(_PROJECT_ROOT, project_document)
     workspace = tmp_path / "mod_workspace"
@@ -638,7 +711,12 @@ def mod_workspace(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def real_workspace(tmp_path: Path) -> Path:
-    """Create a real multi-project workspace."""
+    """Create a real multi-project workspace.
+
+    Returns:
+        The resulting ``Path``.
+
+    """
     repository_root = tmp_path / "workspace"
     repository_root.mkdir()
     (repository_root / "Makefile").write_text(
@@ -661,6 +739,12 @@ def real_workspace(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def modernizer_workspace(tmp_path: Path) -> Path:
+    """Provide ``modernizer_workspace``.
+
+    Returns:
+        The resulting ``Path``.
+
+    """
     workspace = tmp_path / "workspace"
     workspace.mkdir(parents=True, exist_ok=True)
     # The governed tree above the workspace carries the committed Taplo pin.
@@ -681,6 +765,12 @@ def modernizer_workspace(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def modernizer_workspace_with_projects(modernizer_workspace: Path) -> Path:
+    """Provide ``modernizer_workspace_with_projects``.
+
+    Returns:
+        The resulting ``Path``.
+
+    """
     (modernizer_workspace / c.PYPROJECT_FILENAME).write_text(
         _modernizer_workspace_pyproject("selected", "ignored"),
         encoding="utf-8",
@@ -716,7 +806,12 @@ def modernizer_workspace_with_projects(modernizer_workspace: Path) -> Path:
 
 @pytest.fixture
 def real_docs_project(tmp_path: Path) -> Path:
-    """Create a real project with documentation."""
+    """Create a real project with documentation.
+
+    Returns:
+        The resulting ``Path``.
+
+    """
     project_root = tmp_path / "docs_project"
     project_root.mkdir()
     docs_dir = project_root / "docs"
@@ -732,7 +827,12 @@ def real_docs_project(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def semantic_rope_workspace(tmp_path: Path) -> t.Pair[t.Infra.RopeProject, Path]:
-    """Create a real rope workspace with semantic-analysis fixtures."""
+    """Create a real rope workspace with semantic-analysis fixtures.
+
+    Returns:
+        The resulting ``t.Pair[t.Infra.RopeProject, Path]``.
+
+    """
     repository_root = tmp_path / "rope_workspace"
     package_root = repository_root / "src" / "rope_demo"
     package_root.mkdir(parents=True, exist_ok=True)
@@ -769,7 +869,12 @@ def semantic_rope_workspace(tmp_path: Path) -> t.Pair[t.Infra.RopeProject, Path]
 def models_resource(
     semantic_rope_workspace: t.Pair[t.Infra.RopeProject, Path],
 ) -> t.Infra.RopeResource:
-    """Return the Rope resource for the semantic models fixture module."""
+    """Return the Rope resource for the semantic models fixture module.
+
+    Returns:
+        The Rope resource for the semantic models fixture module.
+
+    """
     rope_project, repository_root = semantic_rope_workspace
     resource = u.Infra.resolve_resource_from_path(
         rope_project,
@@ -783,7 +888,12 @@ def models_resource(
 def services_resource(
     semantic_rope_workspace: t.Pair[t.Infra.RopeProject, Path],
 ) -> t.Infra.RopeResource:
-    """Return the Rope resource for the semantic services fixture module."""
+    """Return the Rope resource for the semantic services fixture module.
+
+    Returns:
+        The Rope resource for the semantic services fixture module.
+
+    """
     rope_project, repository_root = semantic_rope_workspace
     resource = u.Infra.resolve_resource_from_path(
         rope_project,

@@ -23,7 +23,12 @@ class TestsFlextInfraScanner:
 
     @staticmethod
     def _scanner() -> FlextInfraTextPatternScanner:
-        """Return a scanner instance with a harmless default pattern for helper tests."""
+        """Return a scanner instance with a harmless default pattern for helper tests.
+
+        Returns:
+            A scanner instance with a harmless default pattern for helper tests.
+
+        """
         return FlextInfraTextPatternScanner(pattern="")
 
     def test_scan_matching_pattern(self, tmp_path: Path) -> None:

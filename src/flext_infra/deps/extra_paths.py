@@ -1,5 +1,8 @@
 """Synchronize pyright, mypy, and pyrefly paths from workspace dependencies.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Handlers are called by the canonical CLI via FlextInfraCliDeps.register_deps.
 
 Every emitted entry is relative to the project that owns the file it is written
@@ -70,7 +73,12 @@ class FlextInfraExtraPathsManager(
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Synchronize extra paths for the configured project slice."""
+        """Synchronize extra paths for the configured project slice.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         result = self.sync_extra_paths(
             dry_run=self.effective_dry_run,
             project_dirs=self.project_dirs,
@@ -86,7 +94,12 @@ class FlextInfraExtraPathsManager(
         project_dir: Path,
         is_root: bool,
     ) -> t.StrSequence:
-        """Return the configured typings roots that exist under ``project_dir``."""
+        """Return the configured typings roots that exist under ``project_dir``.
+
+        Returns:
+            The configured typings roots that exist under ``project_dir``.
+
+        """
         configured_typings = (
             rules.root_typings_paths if is_root else rules.project_typings_paths
         )
@@ -110,6 +123,10 @@ class FlextInfraExtraPathsManager(
         ``include_generated_roots`` carries the only difference between the two
         callers: pyrefly also accepts a shared root the active codegen plan is
         about to materialize, mypy accepts only roots already on disk.
+
+        Returns:
+            The unordered search roots a checker shares, minus ordered ones.
+
         """
         shared_paths = [
             relative_path
@@ -133,7 +150,12 @@ class FlextInfraExtraPathsManager(
 
     @override
     def pyright_extra_paths(self, *, project_dir: Path, is_root: bool) -> t.StrSequence:
-        """Compute pyright extra paths for a project."""
+        """Compute pyright extra paths for a project.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         rules = config.Infra.tooling.tools.pyright.path_rules
         source_root = rules.source_dir
         typings_paths = self._existing_typings_paths(
@@ -162,6 +184,10 @@ class FlextInfraExtraPathsManager(
         workspace projects are importable through their installed distributions,
         so they need no search-path entry and must never be described by a path
         that leaves the project.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
         """
         rules = config.Infra.tooling.tools.pyrefly.path_rules
         source_root = rules.source_dir
@@ -207,6 +233,10 @@ class FlextInfraExtraPathsManager(
         pyrefly does not have that failure mode: it resolves imports
         first-match-wins, so the project root is a safe resolution aid there
         and stays one (see :meth:`pyrefly_search_paths`).
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
         """
         rules = config.Infra.tooling.tools.pyrefly.path_rules
         source_root = rules.source_dir
@@ -227,7 +257,12 @@ class FlextInfraExtraPathsManager(
         project_dir: Path,
         is_root: bool,
     ) -> t.StrSequence:
-        """Build Pyrefly includes from configured productive directories."""
+        """Build Pyrefly includes from configured productive directories.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         rules = config.Infra.tooling.tools.pyrefly.path_rules
         # Never reread an on-disk Pyright table while its
         # in-memory payload is being conformed; include only real production roots.
@@ -267,7 +302,12 @@ class FlextInfraExtraPathsManager(
 
     @staticmethod
     def pyrefly_include_globs(env_dirs: t.StrSequence) -> t.StrSequence:
-        """Render Pyrefly include globs for already validated Python roots."""
+        """Render Pyrefly include globs for already validated Python roots.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         return tuple(f"{directory}/**/*.py*" for directory in env_dirs)
 
 

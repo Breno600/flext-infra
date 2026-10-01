@@ -1,5 +1,8 @@
 """Behavior contract for the deferred-self-reference normalizer.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Detection is rule data (``ban-deferred-self-reference`` and
 ``ban-recursive-model``, with their ast-grep fixtures); this module covers the
 semantic repair the mod phase applies.

@@ -1,4 +1,8 @@
-"""Owner-declared managed document conflict recovery tests."""
+"""Owner-declared managed document conflict recovery tests.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

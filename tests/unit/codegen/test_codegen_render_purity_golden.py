@@ -1,4 +1,8 @@
-"""Tri-environment golden contract for pure generation inputs."""
+"""Tri-environment golden contract for pure generation inputs.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -17,7 +21,12 @@ class TestsFlextInfraCodegenRenderPurityGolden:
 
     @staticmethod
     def _project(root: Path) -> Path:
-        """Materialize one governed fixture repository."""
+        """Materialize one governed fixture repository.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         project = u.Tests.mk_project(
             root,
             "render-purity",

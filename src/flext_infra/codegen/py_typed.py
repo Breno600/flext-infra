@@ -30,7 +30,12 @@ class FlextInfraCodegenPyTyped(FlextInfraCodegenExecutionBase[bool]):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute ``py.typed`` synchronization from the validated CLI model."""
+        """Execute ``py.typed`` synchronization from the validated CLI model.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         changes = self.run(check_only=self.check_only)
         if self.check_only and changes:
             return r[bool].fail(
@@ -45,6 +50,9 @@ class FlextInfraCodegenPyTyped(FlextInfraCodegenExecutionBase[bool]):
             check_only: If True, only report changes without writing.
 
         Returns the number of marker files created or removed.
+
+        Returns:
+            The resulting ``int``.
 
         """
         dirs_to_scan: t.SequenceOf[Path] = [

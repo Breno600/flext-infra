@@ -1,4 +1,8 @@
-"""Zero-test projects run to a typed green receipt instead of rc=5 (6n6u)."""
+"""Zero-test projects run to a typed green receipt instead of rc=5 (6n6u).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -27,6 +31,10 @@ class TestsFlextInfraPytestRunnerZeroTest:
         The tracked tests root exists (the fleet scaffold materializes it and
         the invest root carries ``tests/fixtures``), but it holds no
         ``test_*.py``/``*_test.py`` module — an empty suite by design.
+
+        Returns:
+            The resulting ``Path``.
+
         """
         project_root = tmp_path / "zero_test_project"
         cache = config.Infra.codegen.make.testmon_cache
@@ -47,7 +55,12 @@ class TestsFlextInfraPytestRunnerZeroTest:
         *,
         slow_phase: bool = False,
     ) -> FlextInfraPytestRunner:
-        """Build the public runner exactly as the make verbs do."""
+        """Build the public runner exactly as the make verbs do.
+
+        Returns:
+            The resulting ``FlextInfraPytestRunner``.
+
+        """
         cache = config.Infra.codegen.make.testmon_cache
         testmon_db = tmp_path / ".testmon-cache" / cache.database_filename
         testmon_db.parent.mkdir(parents=True, exist_ok=True)
@@ -165,12 +178,22 @@ class TestsFlextInfraPytestRunnerZeroTest:
 
     @staticmethod
     def _read(path: Path) -> str:
-        """Read one published receipt through the files facade."""
+        """Read one published receipt through the files facade.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return tm.ok(u.Cli.files_read_text(path))
 
     @staticmethod
     def _latest_summary(reports_root: Path) -> Path:
-        """Return the newest bounded report directory's summary receipt."""
+        """Return the newest bounded report directory's summary receipt.
+
+        Returns:
+            The newest bounded report directory's summary receipt.
+
+        """
         summaries = sorted(
             reports_root.glob("*/summary.txt"),
             key=lambda path: path.stat().st_mtime,

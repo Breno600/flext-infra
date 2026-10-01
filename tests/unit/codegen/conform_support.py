@@ -26,7 +26,12 @@ class TestsFlextInfraConformSupport:
         *,
         make_profile: c.Infra.MakeProfile,
     ) -> m.Infra.RepositoryConformTarget:
-        """Build the current public target without retired branch-policy fields."""
+        """Build the current public target without retired branch-policy fields.
+
+        Returns:
+            The resulting ``m.Infra.RepositoryConformTarget``.
+
+        """
         return m.Infra.RepositoryConformTarget(
             repository=repository,
             root=root,
@@ -38,7 +43,12 @@ class TestsFlextInfraConformSupport:
 
     @staticmethod
     def standalone_workspace(root: Path) -> m.Infra.WorkspaceSpec:
-        """Load the smallest repository-local topology for conform tests."""
+        """Load the smallest repository-local topology for conform tests.
+
+        Returns:
+            The resulting ``m.Infra.WorkspaceSpec``.
+
+        """
         return u.Tests.standalone_workspace(root)
 
     @staticmethod
@@ -62,7 +72,12 @@ class TestsFlextInfraConformSupport:
 
     @staticmethod
     def project_tree(root: Path) -> t.VariadicTuple[t.Pair[str, bytes]]:
-        """Return the versionable project tree independently of Git test fixtures."""
+        """Return the versionable project tree independently of Git test fixtures.
+
+        Returns:
+            The versionable project tree independently of Git test fixtures.
+
+        """
         return tuple(
             sorted(
                 (path.relative_to(root).as_posix(), path.read_bytes())
@@ -78,7 +93,12 @@ class TestsFlextInfraConformSupport:
         expected: t.VariadicTuple[t.Pair[str, bytes]],
         actual: t.VariadicTuple[t.Pair[str, bytes]],
     ) -> str:
-        """Render only differing generated files when a fixed-point contract fails."""
+        """Render only differing generated files when a fixed-point contract fails.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         expected_files = dict(expected)
         actual_files = dict(actual)
         return "\n".join(
@@ -129,7 +149,13 @@ class TestsFlextInfraConformSupport:
     def self_check_conform_service(
         root: Path,
     ) -> t.Pair[FlextInfraCodegenConform, m.Infra.CodegenConformRequest]:
-        """Materialize the standalone root fixture and its CHECK-mode conform service."""
+        """Materialize the standalone root fixture and its CHECK-mode conform service.
+
+        Returns:
+            The resulting ``t.Pair[FlextInfraCodegenConform,
+                m.Infra.CodegenConformRequest]``.
+
+        """
         repository = u.Tests.repository_ref("flext-infra").model_copy(
             update={"path": Path()},
         )

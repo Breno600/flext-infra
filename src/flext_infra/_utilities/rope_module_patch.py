@@ -1,4 +1,8 @@
-"""Small Rope-driven text patch helpers for governed module aliases."""
+"""Small Rope-driven text patch helpers for governed module aliases.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -22,7 +26,12 @@ class FlextInfraUtilitiesRopeModulePatch:
         *,
         alias: str,
     ) -> t.VariadicTuple[ast.Assign | ast.AnnAssign]:
-        """Return only direct module bindings for the declared alias."""
+        """Return only direct module bindings for the declared alias.
+
+        Returns:
+            Only direct module bindings for the declared alias.
+
+        """
         return tuple(
             node
             for node in ast.parse(source).body
@@ -45,6 +54,10 @@ class FlextInfraUtilitiesRopeModulePatch:
         Singleton instances (``cli = FlextCli.fetch_global()``), functions
         (``main``), and attributes of instances (``lazy.attribute``) stay in
         the namespace root that declares them and are never inherited.
+
+        Returns:
+            The exported lower-case names bound directly to a class.
+
         """
         tree = ast.parse(source)
         class_names = {
@@ -73,7 +86,12 @@ class FlextInfraUtilitiesRopeModulePatch:
 
     @staticmethod
     def absolute_import_sources_source(source: str, *, name: str) -> t.StrSequence:
-        """Return the top-level packages an absolute ``from X import`` binds name from."""
+        """Return the top-level packages an absolute ``from X import`` binds name from.
+
+        Returns:
+            The top-level packages an absolute ``from X import`` binds name from.
+
+        """
         return tuple(
             dict.fromkeys(
                 node.module.split(".", 1)[0]
@@ -92,6 +110,10 @@ class FlextInfraUtilitiesRopeModulePatch:
         The owner of a declared-but-unbound letter is the declaration itself:
         removing the letter repairs the published surface without inventing a
         runtime binding the module never wrote.
+
+        Returns:
+            Source with one published alias letter removed from ``__all__``.
+
         """
         exports = FlextInfraUtilitiesRopeAnalysisExports.public_export_names_source(
             source,
@@ -105,7 +127,18 @@ class FlextInfraUtilitiesRopeModulePatch:
 
     @staticmethod
     def _rewrite_all_declaration(source: str, *, names: list[str]) -> str:
-        """Publish exactly ``names`` through the canonical ``__all__`` rewrite."""
+        """Publish exactly ``names`` through the canonical ``__all__`` rewrite.
+
+        Returns:
+            The resulting ``str``.
+
+        Raises:
+            ValueError: If ambiguous __all__ declarations during facade repair; or if
+                facade repair requires an explicit literal __all__ declaration; or if
+                __all__ declaration has no complete source span; or if __all__
+                declaration shares a source line with another statement.
+
+        """
         declarations = [
             node
             for node in ast.parse(source).body

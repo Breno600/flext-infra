@@ -1,4 +1,8 @@
-"""Shared lexical binding discovery for conservative semantic migrations."""
+"""Shared lexical binding discovery for conservative semantic migrations.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -14,7 +18,12 @@ class FlextInfraUtilitiesSemanticCutoverBindings:
 
     @staticmethod
     def _bound_identifiers(node: ast.AST) -> t.VariadicTuple[str]:
-        """Include match, exception, import, type-parameter and scope targets."""
+        """Include match, exception, import, type-parameter and scope targets.
+
+        Returns:
+            The resulting ``t.VariadicTuple[str]``.
+
+        """
         match node:
             case ast.Name(id=name, ctx=ast.Store() | ast.Del()):
                 return (name,)
