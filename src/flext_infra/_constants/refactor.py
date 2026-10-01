@@ -110,7 +110,28 @@ class FlextInfraConstantsRefactor:
         - ``file-family``: it is a facade letter (tooling import-layer order)
           of the family the finding's module belongs to: the letters its own
           ``__all__`` declares and those its private family package's facade
-          module declares.
+          module declares;
+        - ``facade-module``: the finding's module declares a facade letter in
+          its ``__all__`` (the captured value is not read);
+        - ``later-layer``: the captured import (a module of the own package or
+          a facade letter) belongs to a later layer of the import-layer order
+          than the finding's module;
+        - ``import-cycle``: the captured import (module as written, with the
+          imported name as ``of``) is an edge of a runtime import cycle of the
+          project's import graph;
+        - ``composes-family``: the captured class of a facade module reaches,
+          through its bases, every class the facade's family package
+          declares in ``__all__``;
+        - ``class-stem``: the captured class name starts with the project's
+          class stem (``Tests`` + stem under the tests tree);
+        - ``package-layers``: the finding's package provides every layer the
+          rule names in ``arg`` (a declared facade letter, a module, a
+          private module or a subpackage of that name);
+        - ``family-base``: the private family package holding the finding's
+          module begins with ``base.py``.
+
+        ``later-layer`` compares with the layer the rule names in ``arg`` when
+        it names one.
         """
 
         STDLIB_MODULE = "stdlib-module"
@@ -122,6 +143,13 @@ class FlextInfraConstantsRefactor:
         MODULE_EXPORT = "module-export"
         PACKAGE_EXPORT = "package-export"
         FILE_FAMILY = "file-family"
+        FACADE_MODULE = "facade-module"
+        LATER_LAYER = "later-layer"
+        IMPORT_CYCLE = "import-cycle"
+        COMPOSES_FAMILY = "composes-family"
+        CLASS_STEM = "class-stem"
+        PACKAGE_LAYERS = "package-layers"
+        FAMILY_BASE = "family-base"
 
     @unique
     class SemanticCutoverPhase(StrEnum):
@@ -219,6 +247,8 @@ class FlextInfraConstantsRefactor:
     CODEMOD_CONTEXT_HOLDS_KEY: ClassVar[str] = "is"
     CODEMOD_CONTEXT_FAILS_KEY: ClassVar[str] = "not"
     CODEMOD_CONTEXT_OF_KEY: ClassVar[str] = "of"
+    CODEMOD_CONTEXT_ARG_KEY: ClassVar[str] = "arg"
+    CODEMOD_CONTEXT_AS_KEY: ClassVar[str] = "as"
     CODEMOD_RULE_NAME_METAVARIABLE: ClassVar[str] = "NAME"
     CODEMOD_RULE_MODULE_METAVARIABLE: ClassVar[str] = "MODULE"
     CODEMOD_RULE_FAMILY_METAVARIABLE: ClassVar[str] = "FAMILY"
