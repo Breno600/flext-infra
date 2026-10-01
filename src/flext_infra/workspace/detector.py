@@ -432,6 +432,10 @@ class FlextInfraWorkspaceDetector(
         if declared.failure:
             return result_type.from_failure(declared)
         governance = cls._superproject_governance(
+            repository_root,
+            beads=workspace_beads,
+            allow_unprovisioned_members=allow_unprovisioned_members,
+        )
         baseline = u.Infra.resolve_integration_branch(
             repository_root,
             preference=(
