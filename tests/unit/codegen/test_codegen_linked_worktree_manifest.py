@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, m
+from flext_infra import c, infra, m
 from flext_infra.codegen import FlextInfraCodegenConform
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 from tests import u
@@ -127,13 +127,11 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
             beads_path.write_text(beads_content, encoding="utf-8")
         before = u.Tests.WorktreeFixture.repository_snapshot(root)
 
-        result = FlextInfraCodegenConform.execute_request(
-            u.Tests.conform_request(
-                root,
-                scope=c.Infra.CodegenConformScope.SELF,
-                mode=c.Infra.CodegenConformMode.APPLY,
-            ),
-        )
+        result = infra.codegen_conform(u.Tests.conform_request(
+            root,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.APPLY,
+        ),)
 
         tm.fail(result, has=expected_error)
         tm.that(u.Tests.WorktreeFixture.repository_snapshot(root), eq=before)
@@ -182,13 +180,11 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
             tm.that(beads.issue_prefix, eq="root-prefix")
 
         applied = tm.ok(
-            FlextInfraCodegenConform.execute_request(
-                u.Tests.conform_request(
-                    root,
-                    scope=c.Infra.CodegenConformScope.DECLARED,
-                    mode=c.Infra.CodegenConformMode.APPLY,
-                ),
-            ),
+            infra.codegen_conform(u.Tests.conform_request(
+                root,
+                scope=c.Infra.CodegenConformScope.DECLARED,
+                mode=c.Infra.CodegenConformMode.APPLY,
+            ),),
         )
 
         tm.that(bool(applied.written_files), eq=True)
@@ -235,14 +231,12 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
         u.Tests.WorktreeFixture.write_gitmodules(root, ("linked-project",))
         outside_snapshot = u.Tests.WorktreeFixture.repository_snapshot(outside)
 
-        result = FlextInfraCodegenConform.execute_request(
-            u.Tests.conform_request(
-                root,
-                what=c.Infra.CodegenConformSurface.MAKEFILE,
-                scope=c.Infra.CodegenConformScope.DECLARED,
-                mode=c.Infra.CodegenConformMode.CHECK,
-            ),
-        )
+        result = infra.codegen_conform(u.Tests.conform_request(
+            root,
+            what=c.Infra.CodegenConformSurface.MAKEFILE,
+            scope=c.Infra.CodegenConformScope.DECLARED,
+            mode=c.Infra.CodegenConformMode.CHECK,
+        ),)
 
         tm.fail(result, has="escapes workspace root")
         tm.that(

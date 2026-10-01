@@ -417,6 +417,7 @@ Infra:
         # Slow marks are a narrow integration-harness budget, not permission
         # for an unbounded test. Cases that exceed it require owner repair.
         slow-timeout-seconds: 30
+        slow-marker: slow
         # A local suite that cannot finish within run-timeout-seconds is a
         # performance defect. The generated process wall is derived from this
         # value and the termination grace by the typed model; no second timeout
@@ -452,6 +453,12 @@ Infra:
           # The measured ceiling for this suite; higher ceilings regressed the
           # cold run because per-window dispatch overhead dominates.
           flext-infra:
+            workers: 4
+          # algar-oud-mig measurement 2026-10-01: a cold run of 401 items on
+          # one worker executed 2 (each < 1 s) before the suite stop instant;
+          # worker start-up and collection consumed the window. Same measured
+          # ceiling as flext-infra.
+          algar-oud-mig:
             workers: 4
           # CPU-fraction ceilings (cpu_fraction: "n/d") resolve at runtime
           # against the process CPU count.

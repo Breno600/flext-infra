@@ -61,6 +61,10 @@ Infra:
       # The embedded aube installer preserves the locked dependency graph;
       # the approved package lifecycle is declared in the mise projection.
       npm_package_manager: aube
+      # False keeps Python resolution and installation on precompiled builds:
+      # compiling from source selected releases ahead of their published
+      # builds and stalled the fleet bootstrap (operator 2026-10-01).
+      python_compile: false
       gitleaks_version: latest
       kubeconform_version: latest
       # Projection: .mise.toml [settings] lockfile / locked and [tool_config] locked.
@@ -317,6 +321,9 @@ Infra:
         discovery_scope: none
 
     make:
+      # Physical workspace environments live beside the checkout so a linked
+      # worktree shares one project-keyed environment instead of an in-tree
+      # duplicate (runtime_environment_dir derives the same path).
       examples_timeout_seconds: 120
       submodule_timeout_seconds: 120
       # Operator 2026-09-08: ruff is the formatting and autofix rule.
@@ -345,15 +352,6 @@ Infra:
       # formats — without it the ruff-format surface has no verb home and
       # drift survives a green check until `make mod` validates.
       fmt_gates: [format, markdown-format]
-      check_gate_suspensions:
-        - gate: namespace
-          authority: "flext-itpd1.3; operator decision 2026-09-27 (keep plan v12 suspension); flext-infra#913"
-          reason: "Fleet namespace backlog (141 findings here) is repaired after the fleet is green; the gate returns with its Rope single-cycle owner fix."
-          # Census consistency (gc-wisp-d7mnad): the runtime census honors the
-          # SAME suspension for the rule families this gate owns — ENFORCE ids
-          # match a census rule id exactly, tag families by prefix. Unmapped
-          # families (e.g. ENFORCE-079) stay fully blocking.
-          census_rule_families: [ENFORCE-046, ENFORCE-066, ENFORCE-067, ENFORCE-069, class_prefix]
       # One filename and the root-relative runner paths; the runner places the
       # database in platformdirs' external per-worktree cache.
       testmon_cache:
@@ -420,7 +418,6 @@ Infra:
         # the project-owned timeout budget (tools.mypy.timeout_seconds) makes
         # it runnable on the runner.
         # pyrefly stays local-only (fast; pyright already covers CI).
-        local_check_gates: [pyrefly]
       # Git-hook stages are disabled by default;
       # the workflow below still declares stage membership so re-enabling is a
       # one-key change, case by case. CI owns read-only setup, generation drift,
@@ -479,14 +476,10 @@ Infra:
         # prerequisite. `validate` is the structural check (blocking when the
         # .md set is incomplete).
         actions: [generate, fix, fmt, validate, audit]
+        api_modules:
+          flext-infra: [flext_infra]
         mutable_actions: [fix, fmt]
         reports_dir: .reports/docs
-        overview_preview_limits:
-          aliases: 11
-          public_symbols: 10
-          facades: 8
-          module_exports: 8
-          keywords: 8
         cross_project_relative_link_pattern: '^(?:\.\./)+flext-[a-z0-9-]+(?:/|$)'
         stale_github_organizations:
           - organization

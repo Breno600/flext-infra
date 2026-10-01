@@ -5,12 +5,17 @@ from __future__ import annotations
 import ast
 import operator
 from collections.abc import MutableMapping
+from functools import cache
+from importlib import import_module
+from inspect import getfile
+from os.path import commonprefix
 from pathlib import Path
+from types import MappingProxyType
 from typing import ClassVar
 
 from flext_cli import r, u
 
-from flext_infra import c, m, p, t
+from flext_infra import c, config, m, p, t
 
 from .discovery import FlextInfraUtilitiesDiscovery
 from .docs_scope import FlextInfraUtilitiesDocsScope
@@ -30,24 +35,70 @@ class FlextInfraUtilitiesCodegenNamespace:
     ] = {}
 
     @staticmethod
-    def _is_rule_fixable(rule_id: str, module: str) -> bool:
-        """Derive fix support from the implemented namespace-rule contract."""
-        match rule_id:
-            case "NS-000":
-                return False
-            case "NS-001" | "NS-003":
-                return True
-            case "NS-002":
-                typings_filename: str = c.Infra.TYPINGS_PY
-                return Path(module).name != typings_filename
-            # Validator-reported families with no auto-fix keyed to their
-            # codes: reported as violations, never claimed as fixed.
-            case "NS-STRUCT" | "NS-IMPORT" | "NS-CONTRACT" | "NS-PARSE" | "NS-LAYOUT":
-                return False
+    @cache
+    def facade_families() -> t.MappingKV[str, m.Infra.FacadeFamily]:
+        """Derive the facade families from the core package's declarations.
 
-            case _:
-                msg = f"unsupported namespace rule: {rule_id}"
-                raise ValueError(msg)
+        A family is a layer of the import-layer order that the core package
+        binds to a class whose module has a private ``_<module>/`` package
+        beside it. Its suffix is the bound class name past the stem every
+        family class shares. No letter, file or suffix is listed here.
+        """
+        core = import_module(c.Infra.PKG_CORE_UNDERSCORE)
+        core_dir = Path(getfile(core)).parent
+        bound: MutableMapping[str, t.StrPair] = {}
+        for layer in config.Infra.tooling.lazy_init.import_layer_order:
+            facade = getattr(core, layer, None)
+            if not isinstance(facade, type):
+                continue
+            module = facade.__module__.rpartition(".")[2]
+            if (core_dir / f"_{module}").is_dir():
+                bound[layer] = (module, facade.__name__)
+        if not bound:
+            msg = f"{c.Infra.PKG_CORE_UNDERSCORE} binds no facade family"
+            raise ValueError(msg)
+        stem = commonprefix([name for _, name in bound.values()])
+        return MappingProxyType({
+            letter: m.Infra.FacadeFamily(
+                letter=letter,
+                module=module,
+                suffix=name.removeprefix(stem),
+            )
+            for letter, (module, name) in bound.items()
+        })
+
+    @classmethod
+    def facade_family_of_file(cls, file_name: str) -> str | None:
+        """Return the family letter whose facade module file is ``file_name``."""
+        return next(
+            (
+                letter
+                for letter, family in cls.facade_families().items()
+                if file_name in family.file_names
+            ),
+            None,
+        )
+
+    @classmethod
+    def facade_family_declared_by(cls, file_name: str) -> m.Infra.FacadeFamily:
+        """Return the family whose facade module is ``file_name``."""
+        letter = cls.facade_family_of_file(file_name)
+        if letter is None:
+            msg = f"no facade family declares the module {file_name}"
+            raise ValueError(msg)
+        return cls.facade_families()[letter]
+
+    @classmethod
+    def facade_family_of_directory(cls, directory: str) -> str | None:
+        """Return the family letter whose private package is ``directory``."""
+        return next(
+            (
+                letter
+                for letter, family in cls.facade_families().items()
+                if directory == family.directory
+            ),
+            None,
+        )
 
     @classmethod
     def matches_root_namespace_file(cls, file_name: str) -> bool:
@@ -281,14 +332,7 @@ class FlextInfraUtilitiesCodegenNamespace:
         project_layout: m.Infra.RopeProjectLayout | None = None,
     ) -> t.Quad[str | None, str | None, str | None, t.StrSequence]:
         """Return (family_alias, expected_family, expected_alias, family_tokens)."""
-        family_alias = next(
-            (
-                alias
-                for alias, directory in c.Infra.FAMILY_DIRECTORIES.items()
-                if file_path.parent.name == directory
-            ),
-            None,
-        )
+        family_alias = cls.facade_family_of_directory(file_path.parent.name)
         declared_exports = cls._declared_exports(file_path)
         uppercase_names = tuple(name for name in declared_exports if name[:1].isupper())
         # Family nesting remains a separate concern. Public alias ownership
@@ -298,7 +342,7 @@ class FlextInfraUtilitiesCodegenNamespace:
             uppercase_names[0]
             if len(uppercase_names) == 1
             else (
-                c.Infra.FAMILY_SUFFIXES.get(family_alias)
+                cls.facade_families()[family_alias].suffix
                 if family_alias is not None
                 else None
             )
@@ -348,7 +392,9 @@ class FlextInfraUtilitiesCodegenNamespace:
         """
         package_depth = len(package_parts)
         is_fixture_module = file_path.parent.name == "_fixtures"
-        family_dir_values = set(c.Infra.FAMILY_DIRECTORIES.values())
+        family_dir_values = {
+            family.directory for family in cls.facade_families().values()
+        }
         is_family_module = any(
             part in family_dir_values for part in resolved_rel_path.parts
         )
@@ -508,7 +554,8 @@ class FlextInfraUtilitiesCodegenNamespace:
             allow_main_export="main" in cls._declared_exports(file_path),
             allow_type_alias=(
                 file_path.name == c.Infra.TYPINGS_PY
-                or file_path.parent.name == c.Infra.FAMILY_DIRECTORIES["t"]
+                or cls.facade_family_of_directory(file_path.parent.name)
+                == cls.facade_family_of_file(c.Infra.TYPINGS_PY)
             ),
             is_fixture_module=is_fixture_module,
             type_checking_imports=type_checking_imports,
@@ -595,33 +642,6 @@ class FlextInfraUtilitiesCodegenNamespace:
             if (project.path / c.PYPROJECT_FILENAME).exists()
         )
         return r[t.SequenceOf[m.Infra.ProjectInfo]].ok(selected)
-
-    @classmethod
-    def parse_namespace_validation(
-        cls,
-        validation: p.Result[m.Infra.ValidationReport],
-    ) -> p.Result[t.VariadicTuple[m.Infra.CensusViolation]]:
-        """Convert validator output into typed census violations."""
-        if validation.failure:
-            return r[tuple[m.Infra.CensusViolation, ...]].from_failure(validation)
-        report = validation.unwrap()
-        parsed: list[m.Infra.CensusViolation] = []
-        for violation in report.violations:
-            match = c.Infra.VIOLATION_PATTERN.match(violation)
-            if match is None:
-                continue
-            rule = match.group("rule")
-            module = match.group("module")
-            parsed.append(
-                m.Infra.CensusViolation(
-                    module=module,
-                    rule=rule,
-                    line=int(match.group("line")),
-                    message=match.group("message"),
-                    fixable=cls._is_rule_fixable(rule, module),
-                ),
-            )
-        return r[tuple[m.Infra.CensusViolation, ...]].ok(tuple(parsed))
 
     @classmethod
     def normalize_canonical_facades(

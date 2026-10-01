@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, m
+from flext_infra import c, config, infra, m
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from tests import u
 
@@ -58,14 +58,12 @@ class TestsFlextInfraCodegenCatalogExtensions:
                 ),
             },
         )
-        result = FlextInfraCodegenConform.execute_request(
-            u.Tests.conform_request(
-                root,
-                scope=c.Infra.CodegenConformScope.SELF,
-                mode=c.Infra.CodegenConformMode.APPLY,
-            ),
-            initial_workspace=workspace,
-        )
+        result = infra.codegen_conform(u.Tests.conform_request(
+            root,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.APPLY,
+        ),
+        initial_workspace=workspace,)
         tm.that(result.failure, eq=True)
         tm.that(
             result.error,

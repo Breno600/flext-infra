@@ -184,7 +184,7 @@ class TestsFlextInfraCodegenConsolidator:
             / "flext-demo"
             / "src"
             / "flext_demo"
-            / c.Infra.FAMILY_DIRECTORIES["c"]
+            / u.Infra.facade_family_declared_by(c.Infra.CONSTANTS_PY).directory
             / "internal.py"
         )
         constants_family_path.parent.mkdir(parents=True, exist_ok=True)
