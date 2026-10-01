@@ -52,10 +52,11 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         if not tokens:
             return issues
-        for rel, md_file in (
-            FlextInfraUtilitiesDocsAuditDetectorsMixin._policy_text_files(
-                scope, exempt_paths
-            )
+        for (
+            rel,
+            md_file,
+        ) in FlextInfraUtilitiesDocsAuditDetectorsMixin._policy_text_files(
+            scope, exempt_paths
         ):
             text = md_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
             for token in tokens:
@@ -83,10 +84,11 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
         policy; they are skipped whole.
         """
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
-        for rel, md_file in (
-            FlextInfraUtilitiesDocsAuditDetectorsMixin._policy_text_files(
-                scope, exempt_paths
-            )
+        for (
+            rel,
+            md_file,
+        ) in FlextInfraUtilitiesDocsAuditDetectorsMixin._policy_text_files(
+            scope, exempt_paths
         ):
             text = md_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
             for line_number, line in enumerate(text.splitlines(), start=1):
