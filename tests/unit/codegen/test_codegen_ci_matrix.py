@@ -11,7 +11,6 @@ import shutil
 from pathlib import Path
 
 import pytest
-import yaml
 from flext_tests import tm
 
 from flext_infra import c, config, t
@@ -654,30 +653,34 @@ class TestsFlextInfraCodegenCiMatrix:
         self, rendered_project: Path
     ) -> None:
         """A generated Docs job fails on audit findings and retains safe reports."""
-        workflow = yaml.safe_load(
-            (rendered_project / ".github/workflows/docs.yml").read_text(
-                encoding="utf-8"
-            )
+        document = u.Cli.yaml_load_mapping(
+            rendered_project / ".github" / "workflows" / "docs.yml"
         )
-        steps = workflow["jobs"]["docs-quality"]["steps"]
-        docs_step = next(step for step in steps if step["name"] == "Docs lifecycle (blocking)")
+        jobs = t.Cli.JSON_MAPPING_ADAPTER.validate_python(document["jobs"])
+        job = t.Cli.JSON_MAPPING_ADAPTER.validate_python(jobs["docs-quality"])
+        steps = [
+            t.Cli.JSON_MAPPING_ADAPTER.validate_python(step) for step in job["steps"]
+        ]
+        docs_step = next(step for step in steps if step.get("run") == "make docs")
         upload = next(
-            step for step in steps if step["name"] == "Upload docs reports on failure"
+            step
+            for step in steps
+            if t.Cli.JSON_MAPPING_ADAPTER.validate_python(step.get("with", {})).get(
+                "include-hidden-files"
+            )
+            is not None
         )
-        tm.that(docs_step["run"], eq="make docs")
+        upload_with = t.Cli.JSON_MAPPING_ADAPTER.validate_python(upload["with"])
         tm.that(docs_step.get("continue-on-error"), eq=None)
         tm.that(upload["if"], eq="failure()")
-        tm.that(upload["with"]["include-hidden-files"], eq=True)
-        tm.that(upload["with"]["if-no-files-found"], eq="error")
-        report_paths = upload["with"]["path"].splitlines()
+        tm.that(upload_with["include-hidden-files"], eq=True)
+        tm.that(upload_with["if-no-files-found"], eq="error")
+        report_paths = str(upload_with["path"]).splitlines()
         tm.that(report_paths, empty=False)
-        permitted_names = {
-            "audit-summary.json",
-            "audit-report.md",
-            "validate-summary.json",
-            "validate-report.md",
-        }
-        tm.that({Path(path).name for path in report_paths}, eq=permitted_names)
+        tm.that(
+            {Path(path).name for path in report_paths},
+            eq=set(c.Infra.DOCS_STRUCTURED_REPORT_FILENAMES),
+        )
         for path in report_paths:
             tm.that(".reports" in Path(path).parts, eq=True)
 

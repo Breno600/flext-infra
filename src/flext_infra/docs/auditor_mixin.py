@@ -79,9 +79,11 @@ class FlextInfraDocAuditorMixin:
             c.Infra.RK_SUMMARY: summary,
             "issues": issues_payload,
         }
-        _ = u.Cli.json_write(scope.report_dir / "audit-summary.json", summary_payload)
+        _ = u.Cli.json_write(
+            scope.report_dir / c.Infra.DOCS_AUDIT_SUMMARY_FILENAME, summary_payload
+        )
         _ = u.Infra.write_markdown(
-            scope.report_dir / "audit-report.md",
+            scope.report_dir / c.Infra.DOCS_AUDIT_REPORT_FILENAME,
             to_markdown_fn(scope, issues, docstring_coverage),
         )
 

@@ -81,8 +81,7 @@ jobs:
           for report_root in .reports apps; do
             if [ -d "$report_root" ]; then
               find "$report_root" \
-                \( -path '*/audit-summary.json' -o -path '*/audit-report.md' \
-                   -o -path '*/validate-summary.json' -o -path '*/validate-report.md' \) \
+                \( {% for name in docs_report_filenames %}{% if not loop.first %}-o {% endif %}-path '*/{{ name }}' {% endfor %}\) \
                 -type f -exec sh -eu -c '
                   for report_file do
                     printf "::group::%s\n" "$report_file"
@@ -100,15 +99,8 @@ jobs:
           name: docs-reports
           # Structured docs reports only — omit raw docs log trees that may carry
           # env-derived secrets from setup/docs phases.
-          path: |
-            .reports/**/audit-summary.json
-            .reports/**/audit-report.md
-            .reports/**/validate-summary.json
-            .reports/**/validate-report.md
-            apps/*/.reports/**/audit-summary.json
-            apps/*/.reports/**/audit-report.md
-            apps/*/.reports/**/validate-summary.json
-            apps/*/.reports/**/validate-report.md
+          path: |{% for prefix in (".reports/**", "apps/*/.reports/**") %}{% for name in docs_report_filenames %}
+            {{ prefix }}/{{ name }}{% endfor %}{% endfor %}
           if-no-files-found: error
           # The allowlisted reports live under hidden .reports directories.
           # upload-artifact excludes hidden paths unless this is explicit.
