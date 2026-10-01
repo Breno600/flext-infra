@@ -36,7 +36,7 @@ class TestsFlextInfraMakeParseIsSideEffectFree:
     # *locating* one (`command -v python3`) is a cheap PATH lookup and is allowed:
     # the toolchain has to resolve its own interpreter before it can dispatch.
     _INTERPRETER_RUN = re.compile(
-        r"(?<!command -v )(?:\buv run\b|\bpython[0-9.]*\s+-[cm]\b|\bnode\s+-e\b)",
+        r"(?<!command -v )(?:\buv run\b|\bpython[0-9.]*\s+-[cm]\b|\bnode\s+-e\b)"
     )
 
     def _repository_root(self) -> Path:
@@ -70,8 +70,7 @@ class TestsFlextInfraMakeParseIsSideEffectFree:
         return tuple(
             f"{surface.name}:{number}: {line.strip()}"
             for number, line in enumerate(
-                surface.read_text(encoding="utf-8").splitlines(),
-                start=1,
+                surface.read_text(encoding="utf-8").splitlines(), start=1
             )
             if self._is_immediate_shell_assignment(line)
         )
@@ -81,8 +80,7 @@ class TestsFlextInfraMakeParseIsSideEffectFree:
         return tuple(
             f"{surface.name}:{number}: {line.strip()}"
             for number, line in enumerate(
-                surface.read_text(encoding="utf-8").splitlines(),
-                start=1,
+                surface.read_text(encoding="utf-8").splitlines(), start=1
             )
             if line.startswith("\t") and "|| true" in line
         )

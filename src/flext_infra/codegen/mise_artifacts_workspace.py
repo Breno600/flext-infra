@@ -38,7 +38,7 @@ class FlextInfraMiseWorkspacePlanner:
         superproject_root = identity.value.superproject_root
         if superproject_root is None:
             return r[m.Infra.GitIdentityReport].fail(
-                f"Git submodule has no Mise coordination root: {requested}",
+                f"Git submodule has no Mise coordination root: {requested}"
             )
         scope_root = superproject_root.expanduser().absolute()
         # A linked worktree nested under the superproject directory is not the
@@ -73,10 +73,7 @@ class FlextInfraMiseWorkspacePlanner:
         return u.Infra.exact_worktree_root(requested)
 
     def layout(
-        self,
-        scope_root: Path | None = None,
-        *,
-        transaction_id: str | None = None,
+        self, scope_root: Path | None = None, *, transaction_id: str | None = None
     ) -> p.Result[m.Infra.MiseToolchainWorkspaceLayout]:
         """Resolve governed topology after the stable workspace lock is held."""
         requested = self._owner.repository_root.expanduser().absolute()
@@ -94,16 +91,14 @@ class FlextInfraMiseWorkspacePlanner:
             for project in workspace.value.subprojects
         ):
             return r[m.Infra.MiseToolchainWorkspaceLayout].fail(
-                f"Git submodule is absent from governed workspace: {requested}",
+                f"Git submodule is absent from governed workspace: {requested}"
             )
         selectors = (
             ".",
             *(project.path.as_posix() for project in workspace.value.subprojects),
         )
         return self.layout_from_selectors(
-            scope_root,
-            selectors,
-            transaction_id=transaction_id,
+            scope_root, selectors, transaction_id=transaction_id
         )
 
     def layout_from_selectors(
@@ -118,24 +113,17 @@ class FlextInfraMiseWorkspacePlanner:
         if identity.failure:
             return r[m.Infra.MiseToolchainWorkspaceLayout].from_failure(identity)
         return self._layout_from_identity(
-            identity.value,
-            selectors,
-            transaction_id=transaction_id,
+            identity.value, selectors, transaction_id=transaction_id
         )
 
     def journal_layout(
-        self,
-        identity: m.Infra.GitIdentityReport,
+        self, identity: m.Infra.GitIdentityReport
     ) -> p.Result[m.Infra.MiseToolchainWorkspaceLayout]:
         """Build the no-effect journal layout from the descriptor-locked identity."""
         return self._layout_from_identity(identity, (".",), transaction_id=None)
 
     def file_layout(
-        self,
-        scope_root: Path,
-        roots: t.MappingKV[str, Path],
-        *,
-        transaction_id: str,
+        self, scope_root: Path, roots: t.MappingKV[str, Path], *, transaction_id: str
     ) -> p.Result[m.Infra.MiseToolchainWorkspaceLayout]:
         """Bind explicit file capabilities without reading any Mise declaration."""
         result_type = r[m.Infra.MiseToolchainWorkspaceLayout]
@@ -160,7 +148,7 @@ class FlextInfraMiseWorkspacePlanner:
                     inode=physical.value[1],
                     transaction_root=staging.value
                     / f"{c.Infra.TRANSACTION_DIR_PREFIX}{transaction_id}",
-                ),
+                )
             )
         state_root = self._state_root(scope_root)
         if state_root.failure:
@@ -173,7 +161,7 @@ class FlextInfraMiseWorkspacePlanner:
                 transaction_id=transaction_id,
                 projects=(),
                 file_participants=tuple(participants),
-            ),
+            )
         )
 
     @staticmethod
@@ -191,15 +179,13 @@ class FlextInfraMiseWorkspacePlanner:
         """Build one typed layout from an already exact scope identity."""
         if not selectors or len(set(selectors)) != len(selectors):
             return r[m.Infra.MiseToolchainWorkspaceLayout].fail(
-                "Mise project selectors must be nonempty and unique",
+                "Mise project selectors must be nonempty and unique"
             )
         scope_root = identity.repo_root
         projects: list[m.Infra.MiseToolchainProjectLayout] = []
         for selector in selectors:
             project = self._project_layout(
-                scope_root,
-                selector,
-                transaction_id=transaction_id,
+                scope_root, selector, transaction_id=transaction_id
             )
             if project.failure:
                 return r[m.Infra.MiseToolchainWorkspaceLayout].from_failure(project)
@@ -214,7 +200,7 @@ class FlextInfraMiseWorkspacePlanner:
                 journal_path=self.journal_path(identity),
                 transaction_id=transaction_id,
                 projects=tuple(projects),
-            ),
+            )
         )
 
     def select_layout(
@@ -227,13 +213,13 @@ class FlextInfraMiseWorkspacePlanner:
             planned_paths = tuple(item.path for item in config_plans)
             if len(set(planned_paths)) != len(planned_paths):
                 return r[m.Infra.MiseToolchainWorkspaceLayout].fail(
-                    "duplicate Mise configuration plans",
+                    "duplicate Mise configuration plans"
                 )
             known = {project.artifacts.config for project in layout.projects}
             unknown = tuple(path for path in planned_paths if path not in known)
             if unknown:
                 return r[m.Infra.MiseToolchainWorkspaceLayout].fail(
-                    f"Mise configuration plan is outside workspace: {unknown[0]}",
+                    f"Mise configuration plan is outside workspace: {unknown[0]}"
                 )
             selected = tuple(
                 project
@@ -251,7 +237,7 @@ class FlextInfraMiseWorkspacePlanner:
             )
         if not selected:
             return r[m.Infra.MiseToolchainWorkspaceLayout].fail(
-                "Mise transaction selected no governed project",
+                "Mise transaction selected no governed project"
             )
         return r[m.Infra.MiseToolchainWorkspaceLayout].ok(
             m.Infra.MiseToolchainWorkspaceLayout(
@@ -260,7 +246,7 @@ class FlextInfraMiseWorkspacePlanner:
                 journal_path=layout.journal_path,
                 transaction_id=layout.transaction_id,
                 projects=selected,
-            ),
+            )
         )
 
     def layout_for_config_plans(
@@ -273,26 +259,24 @@ class FlextInfraMiseWorkspacePlanner:
         """Derive exact selected project topology from the locked conform plan."""
         if not config_plans:
             return r[m.Infra.MiseToolchainWorkspaceLayout].fail(
-                "Mise transaction requires configuration plans",
+                "Mise transaction requires configuration plans"
             )
         selectors: list[str] = []
         expected_paths: list[Path] = []
         for plan in config_plans:
             if plan.path.name != c.Infra.CONFIG_SPEC[0] or ".." in plan.path.parts:
                 return r[m.Infra.MiseToolchainWorkspaceLayout].fail(
-                    f"invalid Mise configuration plan path: {plan.path}",
+                    f"invalid Mise configuration plan path: {plan.path}"
                 )
             plan_dir = plan.path.parent.absolute()
             if not plan_dir.is_relative_to(scope_root.absolute()):
                 return r[m.Infra.MiseToolchainWorkspaceLayout].fail(
-                    f"Mise configuration plan escapes scope: {plan.path}",
+                    f"Mise configuration plan escapes scope: {plan.path}"
                 )
             selectors.append(plan_dir.relative_to(scope_root.absolute()).as_posix())
             expected_paths.append(plan.path)
         layout = self.layout_from_selectors(
-            scope_root,
-            tuple(selectors),
-            transaction_id=transaction_id,
+            scope_root, tuple(selectors), transaction_id=transaction_id
         )
         if layout.failure:
             return layout
@@ -300,7 +284,7 @@ class FlextInfraMiseWorkspacePlanner:
             project.artifacts.config for project in layout.value.projects
         ) != tuple(expected_paths):
             return r[m.Infra.MiseToolchainWorkspaceLayout].fail(
-                "Mise configuration plan paths differ from derived topology",
+                "Mise configuration plan paths differ from derived topology"
             )
         return layout
 
@@ -317,13 +301,12 @@ class FlextInfraMiseWorkspacePlanner:
             or set(planned_configs) != expected_paths
         ):
             return r[m.Infra.MiseToolchainWorkspacePlan].fail(
-                "Mise configuration plans differ from workspace topology",
+                "Mise configuration plans differ from workspace topology"
             )
         projects: list[m.Infra.MiseToolchainProjectState] = []
         for project_layout in layout.projects:
             project = self._project_state(
-                project_layout,
-                planned_configs.get(project_layout.artifacts.config),
+                project_layout, planned_configs.get(project_layout.artifacts.config)
             )
             if project.failure:
                 return r[m.Infra.MiseToolchainWorkspacePlan].from_failure(project)
@@ -333,10 +316,8 @@ class FlextInfraMiseWorkspacePlanner:
             return r[m.Infra.MiseToolchainWorkspacePlan].from_failure(runtime)
         return r[m.Infra.MiseToolchainWorkspacePlan].ok(
             m.Infra.MiseToolchainWorkspacePlan(
-                layout=layout,
-                projects=tuple(projects),
-                runtime_artifacts=runtime.value,
-            ),
+                layout=layout, projects=tuple(projects), runtime_artifacts=runtime.value
+            )
         )
 
     @staticmethod
@@ -345,21 +326,20 @@ class FlextInfraMiseWorkspacePlanner:
         config_plan: m.Infra.CodegenFilePlan | None,
     ) -> p.Result[m.Infra.MiseToolchainProjectState]:
         config_state = files.read_state(
-            layout.artifacts.config,
-            required=config_plan is None,
+            layout.artifacts.config, required=config_plan is None
         )
         if config_state.failure:
             return r[m.Infra.MiseToolchainProjectState].from_failure(config_state)
         if config_plan is None:
             if config_state.value.content is None:
                 return r[m.Infra.MiseToolchainProjectState].fail(
-                    f"committed Mise configuration is absent: {layout.artifacts.config}",
+                    f"committed Mise configuration is absent: {layout.artifacts.config}"
                 )
             replacement_content = config_state.value.content
         else:
             if config_plan.desired_content is None:
                 return r[m.Infra.MiseToolchainProjectState].fail(
-                    f"invalid Mise configuration plan: {config_plan.path}",
+                    f"invalid Mise configuration plan: {config_plan.path}"
                 )
             replacement_content = config_plan.desired_content
         if (
@@ -376,7 +356,7 @@ class FlextInfraMiseWorkspacePlanner:
             current_sources = u.Infra.snapshot_config_sources(layout.root)
             if current_sources.failure:
                 return r[m.Infra.MiseToolchainProjectState].from_failure(
-                    current_sources,
+                    current_sources
                 )
             config_sources = current_sources.value
         artifact_set = FlextInfraMiseWorkspacePlanner._artifact_set(
@@ -396,7 +376,7 @@ class FlextInfraMiseWorkspacePlanner:
                     sources=config_sources,
                 ),
                 artifacts=artifact_set.value,
-            ),
+            )
         )
 
     @staticmethod
@@ -419,7 +399,7 @@ class FlextInfraMiseWorkspacePlanner:
                 unix_launcher=states[0],
                 windows_launcher=states[1],
                 version_pin=states[2],
-            ),
+            )
         )
 
     @staticmethod
@@ -441,16 +421,14 @@ class FlextInfraMiseWorkspacePlanner:
         result_type = r[m.Infra.MiseToolchainArtifactSet]
         paths = tuple(scope_root / name for name, _mode in c.Infra.ARTIFACT_SPECS)
         runtime = FlextInfraMiseWorkspacePlanner._artifact_set(
-            paths[0],
-            paths[1],
-            paths[2],
+            paths[0], paths[1], paths[2]
         )
         if runtime.failure:
             return runtime
         present = tuple(state.content is not None for state in runtime.value.states)
         if all(present):
             if not FlextInfraMiseArtifactsDerivation.resolves_at_run_time(
-                runtime.value,
+                runtime.value
             ):
                 return runtime
         elif any(present):
@@ -460,25 +438,18 @@ class FlextInfraMiseWorkspacePlanner:
                 if not found
             )
             return result_type.fail(
-                f"runtime root lacks {missing}; run make upg in {scope_root}",
+                f"runtime root lacks {missing}; run make upg in {scope_root}"
             )
         packaged = tuple(
             files.cold_start_directory() / Path(name).name
             for name, _mode in c.Infra.ARTIFACT_SPECS
         )
         return FlextInfraMiseWorkspacePlanner._artifact_set(
-            packaged[0],
-            packaged[1],
-            packaged[2],
-            required=True,
+            packaged[0], packaged[1], packaged[2], required=True
         )
 
     def _project_layout(
-        self,
-        scope_root: Path,
-        selector: str,
-        *,
-        transaction_id: str | None = None,
+        self, scope_root: Path, selector: str, *, transaction_id: str | None = None
     ) -> p.Result[m.Infra.MiseToolchainProjectLayout]:
         root = self._project_root(scope_root, selector)
         if root.failure:
@@ -502,7 +473,7 @@ class FlextInfraMiseWorkspacePlanner:
                     windows_launcher=root.value / c.Infra.ARTIFACT_NAMES[1],
                     version_pin=root.value / c.Infra.ARTIFACT_NAMES[2],
                 ),
-            ),
+            )
         )
 
     def _project_root(self, scope_root: Path, selector: str) -> p.Result[Path]:
@@ -541,9 +512,7 @@ class FlextInfraMiseWorkspacePlanner:
         except OSError as exc:
             return r[bool].fail_op(f"inspect Mise directory {path}", exc)
         reparse = getattr(state, "st_file_attributes", 0) & getattr(
-            stat,
-            "FILE_ATTRIBUTE_REPARSE_POINT",
-            0,
+            stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0
         )
         if not stat.S_ISDIR(state.st_mode) or reparse:
             return r[bool].fail(f"Mise directory is not physical: {path}")

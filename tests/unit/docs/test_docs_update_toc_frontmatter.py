@@ -20,8 +20,7 @@ class TestsFlextInfraDocsUpdateTocFrontmatter:
         tm.that("# Documentation" in updated, eq=False)
         tm.that("<!-- TOC START -->" in updated, eq=True)
         tm.that(
-            updated.index("# ADR-001") < updated.index("<!-- TOC START -->"),
-            eq=True,
+            updated.index("# ADR-001") < updated.index("<!-- TOC START -->"), eq=True
         )
 
     def test_docs_contract_update_toc_repairs_invented_h1_before_frontmatter(
@@ -50,8 +49,7 @@ class TestsFlextInfraDocsUpdateTocFrontmatter:
         tm.that(updated.startswith("# Documentation"), eq=False)
         tm.that(updated.count("<!-- TOC START -->"), eq=1)
         tm.that(
-            updated.index("# ADR-001") < updated.index("<!-- TOC START -->"),
-            eq=True,
+            updated.index("# ADR-001") < updated.index("<!-- TOC START -->"), eq=True
         )
 
     def test_docs_contract_update_toc_still_invents_h1_for_headingless_stub(

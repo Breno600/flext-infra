@@ -40,7 +40,7 @@ class FlextInfraMiseArtifactsVerification:
                 for project in files.transaction_participants(layout)
             ):
                 return result_type.fail(
-                    f"created staging receipt escapes transaction topology: {receipt.path}",
+                    f"created staging receipt escapes transaction topology: {receipt.path}"
                 )
         registered: list[m.Infra.CodegenJournalDirectory] = []
         for directory in journal.directories:
@@ -50,9 +50,7 @@ class FlextInfraMiseArtifactsVerification:
                 if item.selector == directory.project
             )
             target = files.resolve_transaction(
-                layout,
-                directory.path,
-                purpose="temporary tree manifest",
+                layout, directory.path, purpose="temporary tree manifest"
             )
             if target.failure:
                 return result_type.from_failure(target)
@@ -64,7 +62,7 @@ class FlextInfraMiseArtifactsVerification:
                 continue
             if directory.created is None:
                 return result_type.fail(
-                    f"temporary tree has no created identity: {directory.path}",
+                    f"temporary tree has no created identity: {directory.path}"
                 )
             if not target.value.exists() and not target.value.is_symlink():
                 registered.append(directory)
@@ -83,15 +81,11 @@ class FlextInfraMiseArtifactsVerification:
             if aliases:
                 return result_type.fail(
                     "temporary tree contains aliases: "
-                    + ", ".join(path.as_posix() for path in aliases),
+                    + ", ".join(path.as_posix() for path in aliases)
                 )
             if directory.manifest is not None:
                 transition = cls._validate_manifest_transition(
-                    layout,
-                    journal,
-                    directory.manifest,
-                    observed.value,
-                    created=created,
+                    layout, journal, directory.manifest, observed.value, created=created
                 )
                 if transition.failure:
                     return result_type.from_failure(transition)
@@ -101,8 +95,7 @@ class FlextInfraMiseArtifactsVerification:
             )
             if validated.failure:
                 return result_type.fail_op(
-                    "validate temporary-tree manifest",
-                    validated.error,
+                    "validate temporary-tree manifest", validated.error
                 )
             registered.append(validated.value)
         return result_type.ok(tuple(registered))
@@ -118,7 +111,7 @@ class FlextInfraMiseArtifactsVerification:
         result_type = r[m.Cli.AtomicPhysicalTreeManifest]
         if directory.manifest is None:
             return result_type.fail(
-                f"temporary tree has no authorized manifest: {directory.path}",
+                f"temporary tree has no authorized manifest: {directory.path}"
             )
         root = directory.manifest.root.path
         if not root.exists() and not root.is_symlink():
@@ -128,13 +121,10 @@ class FlextInfraMiseArtifactsVerification:
             return result_type.from_failure(observed)
         if any(entry.kind == "symlink" for entry in observed.value.entries):
             return result_type.fail(
-                f"temporary tree contains an unregistered alias: {directory.path}",
+                f"temporary tree contains an unregistered alias: {directory.path}"
             )
         transition = cls._validate_manifest_transition(
-            layout,
-            journal,
-            directory.manifest,
-            observed.value,
+            layout, journal, directory.manifest, observed.value
         )
         if transition.failure:
             return result_type.from_failure(transition)
@@ -158,7 +148,7 @@ class FlextInfraMiseArtifactsVerification:
             project.selector for project in layout.projects
         ):
             return r[bool].fail(
-                "generation journal project topology differs from layout",
+                "generation journal project topology differs from layout"
             )
         if journal.file_participants != layout.file_participants:
             return r[bool].fail("generation file capabilities differ from the journal")
@@ -169,9 +159,7 @@ class FlextInfraMiseArtifactsVerification:
         directory_targets: MutableMapping[Path, m.Infra.CodegenJournalDirectory] = {}
         for directory in journal.directories:
             target = files.resolve_transaction(
-                layout,
-                directory.path,
-                purpose="journaled generation directory",
+                layout, directory.path, purpose="journaled generation directory"
             )
             if target.failure:
                 return r[bool].from_failure(target)
@@ -183,7 +171,7 @@ class FlextInfraMiseArtifactsVerification:
                 return r[bool].from_failure(identity)
             if identity.value != (recorded.device, recorded.inode):
                 return r[bool].fail(
-                    f"generation project identity changed: {recorded.selector}",
+                    f"generation project identity changed: {recorded.selector}"
                 )
         for directory in journal.directories:
             project = by_selector[directory.project]
@@ -193,22 +181,22 @@ class FlextInfraMiseArtifactsVerification:
                 if candidate == directory
             )
             if resolved_target == project.root or not resolved_target.is_relative_to(
-                project.root,
+                project.root
             ):
                 return r[bool].fail(
-                    f"generation directory escapes its project: {directory.path}",
+                    f"generation directory escapes its project: {directory.path}"
                 )
             if (
                 directory.before is not None
                 and directory.before.path != resolved_target
             ):
                 return r[bool].fail(
-                    f"generation directory preflight path differs: {directory.path}",
+                    f"generation directory preflight path differs: {directory.path}"
                 )
             if directory.created is not None:
                 if directory.created.path != resolved_target:
                     return r[bool].fail(
-                        f"generation created directory path differs: {directory.path}",
+                        f"generation created directory path differs: {directory.path}"
                     )
                 parent = directory_targets.get(resolved_target.parent)
                 expected_parent = (
@@ -226,7 +214,7 @@ class FlextInfraMiseArtifactsVerification:
                     != expected_parent
                 ):
                     return r[bool].fail(
-                        f"generation directory parent binding differs: {directory.path}",
+                        f"generation directory parent binding differs: {directory.path}"
                     )
             if directory.disposition == "temporary":
                 transaction_root = project.transaction_root
@@ -236,20 +224,18 @@ class FlextInfraMiseArtifactsVerification:
                     or not transaction_root.is_relative_to(resolved_target)
                 ):
                     return r[bool].fail(
-                        f"temporary directory escapes transaction root: {directory.path}",
+                        f"temporary directory escapes transaction root: {directory.path}"
                     )
         for entry in journal.entries:
             project = by_selector[entry.project]
             target = files.resolve_transaction(
-                layout,
-                entry.path,
-                purpose="generated destination",
+                layout, entry.path, purpose="generated destination"
             )
             if target.failure:
                 return r[bool].from_failure(target)
             if not target.value.is_relative_to(project.root):
                 return r[bool].fail(
-                    f"generation entry escapes its project: {entry.path}",
+                    f"generation entry escapes its project: {entry.path}"
                 )
             staging_paths: list[t.Pair[str, str]] = []
             if entry.original_backup is not None:
@@ -261,27 +247,23 @@ class FlextInfraMiseArtifactsVerification:
             transaction_root = project.transaction_root
             if staging_paths and transaction_root is None:
                 return r[bool].fail(
-                    "generation recovery layout has no transaction root",
+                    "generation recovery layout has no transaction root"
                 )
             for role, selector in staging_paths:
                 staging = files.resolve_transaction(
-                    layout,
-                    selector,
-                    purpose=f"generation {role} staging",
+                    layout, selector, purpose=f"generation {role} staging"
                 )
                 if staging.failure:
                     return r[bool].from_failure(staging)
                 if transaction_root is None or not staging.value.is_relative_to(
-                    transaction_root,
+                    transaction_root
                 ):
                     return r[bool].fail(
-                        f"generation {role} staging escapes transaction root: {entry.path}",
+                        f"generation {role} staging escapes transaction root: {entry.path}"
                     )
             if entry.original_backup is not None:
                 backup = files.resolve_transaction(
-                    layout,
-                    entry.original_backup,
-                    purpose="generation recovery backup",
+                    layout, entry.original_backup, purpose="generation recovery backup"
                 )
                 if backup.failure:
                     return r[bool].from_failure(backup)
@@ -289,7 +271,7 @@ class FlextInfraMiseArtifactsVerification:
                     transaction_root / "recovery"
                 ):
                     return r[bool].fail(
-                        f"generation backup escapes its recovery root: {entry.path}",
+                        f"generation backup escapes its recovery root: {entry.path}"
                     )
         return r[bool].ok(True)
 
@@ -305,9 +287,7 @@ class FlextInfraMiseArtifactsVerification:
             return topology
         for entry in journal.entries:
             path = files.resolve_transaction(
-                layout,
-                entry.path,
-                purpose="published destination",
+                layout, entry.path, purpose="published destination"
             )
             if path.failure:
                 return r[bool].from_failure(path)
@@ -339,7 +319,7 @@ class FlextInfraMiseArtifactsVerification:
             )
             if identity != expected:
                 return r[bool].fail(
-                    f"published generation identity changed: {entry.path}",
+                    f"published generation identity changed: {entry.path}"
                 )
         return r[bool].ok(True)
 
@@ -378,28 +358,24 @@ class FlextInfraMiseArtifactsVerification:
             else:
                 rebound_expected = expected
             observed = files.read_state(
-                rebound_expected.path,
-                required=rebound_expected.content is not None,
+                rebound_expected.path, required=rebound_expected.content is not None
             )
             if observed.failure:
                 return r[bool].from_failure(observed)
             if observed.value != rebound_expected:
                 return r[bool].fail(
-                    f"generation authenticated state changed: {rebound_expected.path}",
+                    f"generation authenticated state changed: {rebound_expected.path}"
                 )
         return r[bool].ok(True)
 
     @classmethod
     def _bind_source_parent(
-        cls,
-        expected: m.Cli.AtomicFileState,
-        journal: m.Infra.CodegenTransactionJournal,
+        cls, expected: m.Cli.AtomicFileState, journal: m.Infra.CodegenTransactionJournal
     ) -> p.Result[m.Cli.AtomicFileState]:
         """Recognize only parent identities created under the durable absence witness."""
         result = r[m.Cli.AtomicFileState]
         source = next(
-            (item for item in journal.sources if item.path == expected.path),
-            None,
+            (item for item in journal.sources if item.path == expected.path), None
         )
         if (
             source is None
@@ -407,7 +383,7 @@ class FlextInfraMiseArtifactsVerification:
             or expected.content is not None
         ):
             return result.fail(
-                f"generation source has no absence witness: {expected.path}",
+                f"generation source has no absence witness: {expected.path}"
             )
         witness = source.absent_parent
         current = u.Cli.atomic_plan_directory_chain(witness.target)
@@ -425,44 +401,43 @@ class FlextInfraMiseArtifactsVerification:
             identity = created.get(path)
             if identity is None or identity.device is None or identity.inode is None:
                 return result.fail(
-                    f"generation source parent was not created by this journal: {path}",
+                    f"generation source parent was not created by this journal: {path}"
                 )
             if (identity.parent_device, identity.parent_inode) != ancestry[-1]:
                 return result.fail(
-                    f"generation source parent ancestry differs from its journal: {path}",
+                    f"generation source parent ancestry differs from its journal: {path}"
                 )
             ancestry.append((identity.device, identity.inode))
         observed = current.value
         if observed.directories or observed.anchor_ancestry != tuple(ancestry):
             return result.fail(
-                f"generation source parent identity changed: {expected.path}",
+                f"generation source parent identity changed: {expected.path}"
             )
         return result.ok(
             expected.model_copy(
                 update={
                     "parent_device": ancestry[-1][0],
                     "parent_inode": ancestry[-1][1],
-                },
-            ),
+                }
+            )
         )
 
     @classmethod
     def phase_analysis_live(
-        cls,
-        analysis: m.Infra.CodegenPhaseAnalysis,
+        cls, analysis: m.Infra.CodegenPhaseAnalysis
     ) -> p.Result[bool]:
         """Prove one published phase from its authenticated analysis receipt."""
         destination_paths = frozenset(file.path for file in analysis.files)
         u.Cli.info(
             f"phase={analysis.phase} verify inputs={len(analysis.inputs)} "
-            f"destinations={len(analysis.files)}",
+            f"destinations={len(analysis.files)}"
         )
         source_state = cls.states_current(
             tuple(
                 state
                 for state in analysis.inputs
                 if state.path not in destination_paths
-            ),
+            )
         )
         if source_state.failure:
             return source_state
@@ -471,8 +446,7 @@ class FlextInfraMiseArtifactsVerification:
             if before.failure:
                 return r[bool].from_failure(before)
             observed = files.read_state(
-                plan.path,
-                required=plan.desired_content is not None,
+                plan.path, required=plan.desired_content is not None
             )
             if observed.failure:
                 return r[bool].from_failure(observed)
@@ -490,7 +464,7 @@ class FlextInfraMiseArtifactsVerification:
             ):
                 return r[bool].fail(
                     f"published {analysis.phase} destination differs from receipt: "
-                    f"{plan.path}",
+                    f"{plan.path}"
                 )
         return r[bool].ok(True)
 
@@ -528,8 +502,7 @@ class FlextInfraMiseArtifactsVerification:
 
     @classmethod
     def publications_live(
-        cls,
-        publications: t.VariadicTuple[m.Infra.CodegenStagedFile],
+        cls, publications: t.VariadicTuple[m.Infra.CodegenStagedFile]
     ) -> p.Result[bool]:
         """Prove live destinations have the exact staged inode or planned absence."""
         for publication in publications:
@@ -545,7 +518,7 @@ class FlextInfraMiseArtifactsVerification:
                 or before.parent_inode is None
             ):
                 return r[bool].fail(
-                    f"generation destination parent identity is incomplete: {before.path}",
+                    f"generation destination parent identity is incomplete: {before.path}"
                 )
             replacement = publication.replacement
             if replacement is None:
@@ -556,7 +529,7 @@ class FlextInfraMiseArtifactsVerification:
                 ):
                     return r[bool].fail(
                         "deleted generation destination or its parent changed: "
-                        f"{publication.before.path}",
+                        f"{publication.before.path}"
                     )
                 continue
             if cls._file_identity(
@@ -569,7 +542,7 @@ class FlextInfraMiseArtifactsVerification:
                 parent_inode=before.parent_inode,
             ):
                 return r[bool].fail(
-                    f"live generation destination differs from staged identity: {current.path}",
+                    f"live generation destination differs from staged identity: {current.path}"
                 )
         return r[bool].ok(True)
 
@@ -589,7 +562,7 @@ class FlextInfraMiseArtifactsVerification:
             replacement = publication.replacement
             if replacement is None or replacement.content is None:
                 return r[bool].fail(
-                    f"Mise replacement is absent: {publication.before.path}",
+                    f"Mise replacement is absent: {publication.before.path}"
                 )
             replacements[publication.before.path] = (
                 replacement.content,
@@ -600,8 +573,7 @@ class FlextInfraMiseArtifactsVerification:
             return r[bool].from_failure(artifact_before)
         for project in plan.projects:
             validated = owner.validate_artifacts(
-                project.layout.root,
-                plan.layout.scope_root,
+                project.layout.root, plan.layout.scope_root
             )
             if validated.failure:
                 return r[bool].from_failure(validated)
@@ -634,7 +606,7 @@ class FlextInfraMiseArtifactsVerification:
         """
         if not cls._same_directory_identity(authorized.root, observed.root):
             return r[bool].fail(
-                f"temporary tree root identity changed: {authorized.root.path}",
+                f"temporary tree root identity changed: {authorized.root.path}"
             )
         expected = {entry.path: entry for entry in authorized.entries}
         current = {entry.path: entry for entry in observed.entries}
@@ -652,12 +624,12 @@ class FlextInfraMiseArtifactsVerification:
                 if entry.kind == "file" and path in consumable:
                     continue
                 return r[bool].fail(
-                    f"journaled temporary-tree entry is missing: {path}",
+                    f"journaled temporary-tree entry is missing: {path}"
                 )
             if entry.kind == "directory":
                 if not cls._same_directory_identity(entry, current_entry):
                     return r[bool].fail(
-                        f"temporary-tree directory identity changed: {path}",
+                        f"temporary-tree directory identity changed: {path}"
                     )
             elif current_entry != entry:
                 return r[bool].fail(f"temporary-tree file identity changed: {path}")
@@ -671,26 +643,26 @@ class FlextInfraMiseArtifactsVerification:
                 path in expected or path not in current
             ):
                 return r[bool].fail(
-                    f"created temporary-tree entry is not a new present artifact: {path}",
+                    f"created temporary-tree entry is not a new present artifact: {path}"
                 )
         for entry in additions:
             receipt = created_by_path.get(entry.path)
             if receipt is not None:
                 if not cls._matches_created_entry(entry, receipt):
                     return r[bool].fail(
-                        f"created temporary-tree identity changed: {entry.path}",
+                        f"created temporary-tree identity changed: {entry.path}"
                     )
                 continue
             if entry.kind == "directory":
                 if not any(entry.path in path.parents for path in authorized_files):
                     return r[bool].fail(
-                        f"unregistered temporary-tree directory exists: {entry.path}",
+                        f"unregistered temporary-tree directory exists: {entry.path}"
                     )
                 continue
             spec = file_specs.value.get(entry.path)
             if spec is None or not cls._matches_journal_file(entry, *spec):
                 return r[bool].fail(
-                    f"unregistered temporary-tree file exists: {entry.path}",
+                    f"unregistered temporary-tree file exists: {entry.path}"
                 )
         return r[bool].ok(True)
 
@@ -742,8 +714,7 @@ class FlextInfraMiseArtifactsVerification:
             MutableMapping[Path, tuple[_JournalFileRole, m.Infra.CodegenJournalEntry]]
         ]
         specs: MutableMapping[
-            Path,
-            t.Pair[_JournalFileRole, m.Infra.CodegenJournalEntry],
+            Path, t.Pair[_JournalFileRole, m.Infra.CodegenJournalEntry]
         ] = {}
         for entry in journal.entries:
             selectors: t.VariadicTuple[t.Pair[_JournalFileRole, str | None]] = (
@@ -755,16 +726,14 @@ class FlextInfraMiseArtifactsVerification:
                 if selector is None:
                     continue
                 resolved = files.resolve_transaction(
-                    layout,
-                    selector,
-                    purpose=f"{role} staging file",
+                    layout, selector, purpose=f"{role} staging file"
                 )
                 if resolved.failure:
                     return result_type.from_failure(resolved)
                 previous = specs.get(resolved.value)
                 if previous is not None and previous != (role, entry):
                     return result_type.fail(
-                        f"temporary file has multiple journal owners: {selector}",
+                        f"temporary file has multiple journal owners: {selector}"
                     )
                 specs[resolved.value] = (role, entry)
         return result_type.ok(specs)
@@ -864,7 +833,7 @@ class FlextInfraMiseArtifactsVerification:
         created = directory.created
         if created is None:
             return r[bool].fail(
-                f"temporary tree has no created identity: {directory.path}",
+                f"temporary tree has no created identity: {directory.path}"
             )
         root = manifest.root
         if (
@@ -887,7 +856,7 @@ class FlextInfraMiseArtifactsVerification:
             created.reparse_tag,
         ):
             return r[bool].fail(
-                f"temporary tree differs from created identity: {directory.path}",
+                f"temporary tree differs from created identity: {directory.path}"
             )
         return r[bool].ok(True)
 
@@ -906,9 +875,7 @@ class FlextInfraMiseArtifactsVerification:
                 project.artifacts.version_pin,
             )
             for expected, (_name, required_mode) in zip(
-                artifacts,
-                c.Infra.PUBLICATION_SPECS,
-                strict=True,
+                artifacts, c.Infra.PUBLICATION_SPECS, strict=True
             ):
                 current = files.read_state(expected.path, required=False)
                 if current.failure or current.value.content is None:
@@ -917,37 +884,32 @@ class FlextInfraMiseArtifactsVerification:
                     )
                     return r[tuple[m.Cli.AtomicFileState, ...]].fail(
                         f"published Mise artifact is absent: {expected.path}; "
-                        f"run {repair}",
+                        f"run {repair}"
                     )
                 if current.value.mode is None:
                     return r[tuple[m.Cli.AtomicFileState, ...]].fail(
-                        f"published Mise artifact mode is unreadable: {expected.path}",
+                        f"published Mise artifact mode is unreadable: {expected.path}"
                     )
                 expected_state = replacements.get(
-                    expected.path,
-                    (expected.content, expected.mode),
+                    expected.path, (expected.content, expected.mode)
                 )
                 if (current.value.content, current.value.mode) != expected_state:
                     return r[tuple[m.Cli.AtomicFileState, ...]].fail(
-                        f"published Mise artifact differs from plan: {expected.path}",
+                        f"published Mise artifact differs from plan: {expected.path}"
                     )
                 if current.value.mode != required_mode:
                     return r[tuple[m.Cli.AtomicFileState, ...]].fail(
                         "published Mise artifact mode is noncanonical:"
                         f" {expected.path}"
                         f" (observed {oct(current.value.mode)},"
-                        f" canonical {oct(required_mode)})",
+                        f" canonical {oct(required_mode)})"
                     )
                 states.append(current.value)
         return r[tuple[m.Cli.AtomicFileState, ...]].ok(tuple(states))
 
     @classmethod
     def _file_identity(
-        cls,
-        value: m.Cli.AtomicFileState,
-        *,
-        parent_device: int,
-        parent_inode: int,
+        cls, value: m.Cli.AtomicFileState, *, parent_device: int, parent_inode: int
     ) -> tuple[
         int,
         int,

@@ -31,7 +31,7 @@ class TestsFlextInfraDepsDetectionTypings:
     def test_missing_limits_file_fails_loud(self, tmp_path: Path) -> None:
         with pytest.raises(RuntimeError, match="failed to load dependency limits"):
             FlextInfraDependencyDetectionService().load_dependency_limits(
-                tmp_path / "absent.toml",
+                tmp_path / "absent.toml"
             )
 
     def test_invalid_limits_file_fails_loud(self, tmp_path: Path) -> None:

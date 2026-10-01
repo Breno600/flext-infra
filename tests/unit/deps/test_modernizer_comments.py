@@ -36,7 +36,7 @@ class TestsFlextInfraDepsModernizerComments:
         """[project] comments list preserve/overwrite keys from the managed file."""
         spec = tm.ok(u.Infra.pyproject_managed_file())
         result, _changes = FlextInfraInjectCommentsPhase().apply(
-            "[project]\nname = 'test'\n",
+            "[project]\nname = 'test'\n"
         )
         custom_line = next(
             line for line in result.splitlines() if line.startswith("# [CUSTOM]")
@@ -49,7 +49,7 @@ class TestsFlextInfraDepsModernizerComments:
     def test_inject_comments_marks_unlisted_tool_table_custom(self) -> None:
         """A [tool.*] table absent from conflict_sections is CUSTOM."""
         result, _changes = FlextInfraInjectCommentsPhase().apply(
-            "[tool.bandit]\nskips = []\n",
+            "[tool.bandit]\nskips = []\n"
         )
         tm.that(result, has="# [CUSTOM] tool.bandit")
 
@@ -135,7 +135,7 @@ class TestsFlextInfraDepsModernizerComments:
         )
         first_result, first_changes = FlextInfraInjectCommentsPhase().apply(rendered)
         second_result, second_changes = FlextInfraInjectCommentsPhase().apply(
-            first_result,
+            first_result
         )
         tm.that(first_changes, len=(1, 20))
         tm.that(second_result, eq=first_result)

@@ -30,9 +30,7 @@ class FlextInfraCodemodSnapshotRefresh(FlextInfraServiceBase[t.Cli.ResultValue])
             return r[t.Cli.ResultValue].from_failure(planned)
         rules = tuple(dict.fromkeys(rule.resource for rule in planned.value.rules))
         refreshed = FlextInfraModGateEngine.refresh_rule_snapshots(
-            self.repository_root,
-            rules,
-            apply=not self.effective_dry_run,
+            self.repository_root, rules, apply=not self.effective_dry_run
         )
         if refreshed.failure:
             return r[t.Cli.ResultValue].from_failure(refreshed)
@@ -41,11 +39,11 @@ class FlextInfraCodemodSnapshotRefresh(FlextInfraServiceBase[t.Cli.ResultValue])
         if self.effective_dry_run and refreshed.value:
             return r[t.Cli.ResultValue].fail(
                 f"{len(refreshed.value)} ast-grep snapshot projection(s) differ "
-                "from their rule tests",
+                "from their rule tests"
             )
         cli.display_text(
             f"mod-snapshots: {len(refreshed.value)} snapshot projection(s) "
-            "changed; review the diff and commit it",
+            "changed; review the diff and commit it"
         )
         return r[t.Cli.ResultValue].ok(True)
 

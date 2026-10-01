@@ -30,8 +30,7 @@ class TestsFlextInfraReleasePublicationLane:
 
     @contextmanager
     def _lane(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> Generator[t.Triple[Path, m.Infra.GitLaneRequest, Path]]:
         """Yield a clean integration checkout, its lane request and the ``gh`` log."""
         repo = u.Tests.git_repository(tmp_path)
@@ -53,8 +52,7 @@ class TestsFlextInfraReleasePublicationLane:
 
     @staticmethod
     def _produce(
-        repo: Path,
-        content: str = "produced\n",
+        repo: Path, content: str = "produced\n"
     ) -> Callable[[], p.Result[bool]]:
         """Return a producing step that writes one file."""
         return lambda: u.Cli.files_write_text(repo / "produced.txt", content)
@@ -62,10 +60,7 @@ class TestsFlextInfraReleasePublicationLane:
     def _published(self, tmp_path: Path) -> str:
         """Return the lane branch the bare origin carries, or an empty string."""
         return u.Tests.git_capture(
-            tmp_path / "remote" / "origin.git",
-            "branch",
-            "--list",
-            self.LANE,
+            tmp_path / "remote" / "origin.git", "branch", "--list", self.LANE
         ).strip()
 
     def test_produced_paths_reach_the_pull_request(self, tmp_path: Path) -> None:
@@ -83,11 +78,7 @@ class TestsFlextInfraReleasePublicationLane:
             )
             tm.that(
                 u.Tests.git_capture(
-                    repo,
-                    "show",
-                    "--name-only",
-                    "--format=",
-                    "HEAD",
+                    repo, "show", "--name-only", "--format=", "HEAD"
                 ).split(),
                 eq=["produced.txt"],
             )
@@ -98,8 +89,7 @@ class TestsFlextInfraReleasePublicationLane:
             tm.that(recorded, has=f"--body-file {request.body_file}")
 
     def test_rerun_continues_the_lane_without_a_second_commit(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         """Reproducing identical bytes on the open lane commits nothing."""
         with self._lane(tmp_path) as (repo, request, _):
@@ -109,10 +99,7 @@ class TestsFlextInfraReleasePublicationLane:
             tm.ok(u.Infra.git_publish_lane(request, self._produce(repo)))
 
             count = u.Tests.git_capture(
-                repo,
-                "rev-list",
-                "--count",
-                f"{request.base}..{self.LANE}",
+                repo, "rev-list", "--count", f"{request.base}..{self.LANE}"
             )
             tm.that(count.strip(), eq="1")
 
@@ -139,8 +126,7 @@ class TestsFlextInfraReleasePublicationLane:
         """The first failure of the producing step ends the lane unpushed."""
         with self._lane(tmp_path) as (_repo, request, gh_log):
             result = u.Infra.git_publish_lane(
-                request,
-                lambda: r[bool].fail("production failed"),
+                request, lambda: r[bool].fail("production failed")
             )
 
             tm.fail(result)

@@ -26,14 +26,12 @@ class FlextInfraModelsCheck:
         """
 
         fail_fast: Annotated[
-            bool,
-            m.Field(description="Stop check gates after the first failure"),
+            bool, m.Field(description="Stop check gates after the first failure")
         ] = c.Infra.CHECK_FAIL_FAST_DEFAULT
         reports_dir: Annotated[
             str,
             m.Field(
-                alias="reports-dir",
-                description="Directory used to write check reports",
+                alias="reports-dir", description="Directory used to write check reports"
             ),
         ] = f"{c.Infra.REPORTS_DIR_NAME}/check"
         check_only: Annotated[
@@ -60,8 +58,7 @@ class FlextInfraModelsCheck:
         pyright_args: Annotated[
             str | None,
             m.Field(
-                alias="pyright-args",
-                description="Extra arguments forwarded to Pyright",
+                alias="pyright-args", description="Extra arguments forwarded to Pyright"
             ),
         ] = None
 
@@ -77,8 +74,7 @@ class FlextInfraModelsCheck:
         """Resolved project target for workspace gate execution."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-            frozen=True,
-            validate_default=False,
+            frozen=True, validate_default=False
         )
 
         name: Annotated[str, m.Field(description="Display/project name")]
@@ -124,21 +120,17 @@ class FlextInfraModelsCheck:
             m.Field(min_length=1, description="Files or directories to check"),
         ]
         workspace: Annotated[
-            Path | None,
-            m.Field(description="Workspace owning the checker environment"),
+            Path | None, m.Field(description="Workspace owning the checker environment")
         ] = None
         config_file: Annotated[
-            Path | None,
-            m.Field(description="Owned Mypy configuration"),
+            Path | None, m.Field(description="Owned Mypy configuration")
         ] = None
         report_json: Annotated[
-            bool,
-            m.Field(description="Emit native JSON diagnostics"),
+            bool, m.Field(description="Emit native JSON diagnostics")
         ] = False
         verbose: Annotated[bool, m.Field(description="Emit Mypy progress")] = False
         profile_output: Annotated[
-            Path | None,
-            m.Field(description="Optional cProfile output destination"),
+            Path | None, m.Field(description="Optional cProfile output destination")
         ] = None
 
     class FixPyreflyConfigCommand(mm.WriteMixin, m.ContractModel):
@@ -171,29 +163,23 @@ class FlextInfraModelsCheck:
         gate: Annotated[str, m.Field(description="Gate name")]
         passed: Annotated[bool, m.Field(description="Gate execution status")]
         errors: t.StrSequence = m.Field(
-            default_factory=tuple,
-            description="Gate error messages",
+            default_factory=tuple, description="Gate error messages"
         )
         duration: float = m.Field(
-            0.0,
-            description="Duration in seconds",
-            validate_default=True,
+            0.0, description="Duration in seconds", validate_default=True
         )
 
     class GateExecution(m.ArbitraryTypesModel):
         """Execution result for a single quality gate."""
 
         result: FlextInfraModelsCheck.GateResult = m.Field(
-            description="Gate result model",
+            description="Gate result model"
         )
         issues: t.VariadicTuple[FlextInfraModelsCheck.Issue] = m.Field(
-            default_factory=tuple,
-            description="Blocking gate diagnostics",
+            default_factory=tuple, description="Blocking gate diagnostics"
         )
         raw_output: str = m.Field(
-            "",
-            description="Raw tool output",
-            validate_default=True,
+            "", description="Raw tool output", validate_default=True
         )
 
         @m.computed_field
@@ -211,8 +197,7 @@ class FlextInfraModelsCheck:
         """
 
         gates: MutableMapping[str, FlextInfraModelsCheck.GateExecution] = m.Field(
-            default_factory=dict,
-            description="Gate name to execution mapping",
+            default_factory=dict, description="Gate name to execution mapping"
         )
 
         @m.computed_field
@@ -289,9 +274,7 @@ class FlextInfraModelsCheck:
             str,
             m.Field(
                 validation_alias=m.AliasPath(
-                    "physicalLocation",
-                    "artifactLocation",
-                    "uri",
+                    "physicalLocation", "artifactLocation", "uri"
                 ),
                 description="Artifact URI",
             ),
@@ -307,9 +290,7 @@ class FlextInfraModelsCheck:
             int,
             m.Field(
                 validation_alias=m.AliasPath(
-                    "physicalLocation",
-                    "region",
-                    "startColumn",
+                    "physicalLocation", "region", "startColumn"
                 ),
                 description="Start column (1-based)",
             ),
@@ -317,9 +298,7 @@ class FlextInfraModelsCheck:
         uri_base_id: str = m.Field(
             "%SRCROOT%",
             validation_alias=m.AliasPath(
-                "physicalLocation",
-                "artifactLocation",
-                "uriBaseId",
+                "physicalLocation", "artifactLocation", "uriBaseId"
             ),
             description="URI base identifier",
             validate_default=True,
@@ -338,7 +317,7 @@ class FlextInfraModelsCheck:
                         "startLine": self.start_line,
                         "startColumn": self.start_column,
                     },
-                },
+                }
             }
 
     class SarifResult(m.ContractModel):
@@ -347,8 +326,7 @@ class FlextInfraModelsCheck:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(validate_by_name=True)
 
         rule_id: Annotated[
-            str,
-            m.Field(validation_alias="ruleId", description="Rule identifier"),
+            str, m.Field(validation_alias="ruleId", description="Rule identifier")
         ]
         level: Annotated[str, m.Field(description="Result level (error/warning/note)")]
         message: Annotated[
@@ -359,7 +337,7 @@ class FlextInfraModelsCheck:
             ),
         ]
         locations: list[FlextInfraModelsCheck.SarifLocation] = m.Field(
-            description="Result locations",
+            description="Result locations"
         )
 
         @u.model_serializer
@@ -398,8 +376,7 @@ class FlextInfraModelsCheck:
             description="Rule descriptors",
         )
         results: t.VariadicTuple[FlextInfraModelsCheck.SarifResult] = m.Field(
-            default_factory=tuple,
-            description="Run results",
+            default_factory=tuple, description="Run results"
         )
 
         @u.model_serializer
@@ -413,7 +390,7 @@ class FlextInfraModelsCheck:
                         "rules": [
                             rule.model_dump(by_alias=True) for rule in self.rules
                         ],
-                    },
+                    }
                 },
                 "results": [
                     result.model_dump(by_alias=True) for result in self.results
@@ -424,8 +401,7 @@ class FlextInfraModelsCheck:
         """Complete SARIF 2.1.0 report; serializes and validates the same JSON."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-            validate_by_name=True,
-            serialize_by_alias=True,
+            validate_by_name=True, serialize_by_alias=True
         )
 
         schema_uri: c.Infra.SarifSchema = m.Field(
@@ -440,8 +416,7 @@ class FlextInfraModelsCheck:
             validate_default=True,
         )
         runs: t.VariadicTuple[FlextInfraModelsCheck.SarifRun] = m.Field(
-            default_factory=tuple,
-            description="SARIF runs",
+            default_factory=tuple, description="SARIF runs"
         )
 
 

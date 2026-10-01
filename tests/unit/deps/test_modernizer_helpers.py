@@ -98,9 +98,7 @@ class TestsFlextInfraDepsModernizerHelpers:
         [("test", "test"), (None, None), ({"key": "value"}, {"key": "value"})],
     )
     def test_unwrap_item(
-        self,
-        value: t.Cli.TomlMappingSource | None,
-        expected: t.JsonValue,
+        self, value: t.Cli.TomlMappingSource | None, expected: t.JsonValue
     ) -> None:
         """Verify unwrap item."""
         actual = None if value is None else u.Cli.toml_unwrap_item(value)
@@ -122,9 +120,7 @@ class TestsFlextInfraDepsModernizerHelpers:
         ],
     )
     def test_as_string_list(
-        self,
-        value: t.Cli.TomlItem | None,
-        expected: t.StrSequence,
+        self, value: t.Cli.TomlItem | None, expected: t.StrSequence
     ) -> None:
         """Verify as string list."""
         actual: t.StrSequence = (
@@ -142,8 +138,7 @@ class TestsFlextInfraDepsModernizerHelpers:
         tm.that(u.Cli.toml_as_string_list(int_val), eq=[])
 
     @pytest.mark.parametrize(
-        ("items", "expected"),
-        [(["a", "b", "c"], 3), ([], 0), (["single"], 1)],
+        ("items", "expected"), [(["a", "b", "c"], 3), ([], 0), (["single"], 1)]
     )
     def test_array(self, items: t.StrSequence, expected: int) -> None:
         """Verify TOML array construction preserves item count."""
@@ -209,7 +204,7 @@ class TestsFlextInfraDepsModernizerHelpers:
     ) -> None:
         """Verify canonical dev dependencies."""
         result = u.Infra.canonical_dev_dependencies(
-            self._doc_with_optional_deps(optional_deps),
+            self._doc_with_optional_deps(optional_deps)
         )
         tm.that(result, length=expected_length)
         if expect_pytest:
@@ -228,8 +223,8 @@ class TestsFlextInfraDepsModernizerHelpers:
         doc["dependency-groups"] = {"test": ["flext-tests", "coverage>=7.0"]}
         doc["tool"] = {
             "poetry": {
-                "dependencies": {"python": ">=3.13,<3.14", "flext-api": "^0.1.0"},
-            },
+                "dependencies": {"python": ">=3.13,<3.14", "flext-api": "^0.1.0"}
+            }
         }
 
         result = u.Infra.declared_dependency_names(doc)

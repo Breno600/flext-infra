@@ -66,7 +66,7 @@ class TestsFlextInfraGenUsesLockedTaploIdentity:
         root = Path(flext_infra.__file__).resolve().parents[2]
 
         formatted = tm.ok(
-            self._format(root, config.Infra.codegen.toolchain.taplo_version),
+            self._format(root, config.Infra.codegen.toolchain.taplo_version)
         )
         payload = u.Cli.toml_mapping_from_text(formatted)
 

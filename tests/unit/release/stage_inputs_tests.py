@@ -29,8 +29,7 @@ class TestsFlextInfraReleaseStageInputs:
         prepared.mkdir(parents=True)
         (prepared / "pylock.example.toml").write_text("lock = 1\n", encoding="utf-8")
         (prepared / "source-receipt.json").write_text(
-            '{"head": "a"}\n',
-            encoding="utf-8",
+            '{"head": "a"}\n', encoding="utf-8"
         )
         stage.mkdir()
 

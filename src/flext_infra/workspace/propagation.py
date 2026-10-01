@@ -46,9 +46,7 @@ class FlextInfraWorkspacePropagation(s[bool]):
             ):
                 continue
             propagated = self._propagate_member(
-                workspace,
-                member,
-                revision.value.strip(),
+                workspace, member, revision.value.strip()
             )
             if propagated.failure:
                 return propagated
@@ -89,9 +87,7 @@ class FlextInfraWorkspacePropagation(s[bool]):
         if published.failure:
             return published
         self.logger.info(
-            "propagation_member",
-            member=member.name,
-            published=published.value,
+            "propagation_member", member=member.name, published=published.value
         )
         if not published.value:
             return published
@@ -106,10 +102,8 @@ class FlextInfraWorkspacePropagation(s[bool]):
         """Write the member's pull-request body under the workspace reports."""
         directory = u.Cli.ensure_dir(
             u.Cli.resolve_report_dir(
-                self.root,
-                c.Infra.PROJECT,
-                c.Infra.PROPAGATION_REPORT_KEY,
-            ),
+                self.root, c.Infra.PROJECT, c.Infra.PROPAGATION_REPORT_KEY
+            )
         )
         if directory.failure:
             return directory

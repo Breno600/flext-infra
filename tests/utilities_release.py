@@ -46,8 +46,7 @@ class TestsFlextInfraUtilitiesReleaseMixin:
         # The governed tree above the workspace carries the committed Taplo pin.
         TestsFlextInfraUtilitiesTomlMixin.seed_locked_taplo(root)
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
-            workspace,
-            "workspace",
+            workspace, "workspace"
         )
         source = TestsFlextInfraUtilitiesProjectFixtureMixin.flext_source
         (workspace / "pyproject.toml").write_text(
@@ -84,7 +83,7 @@ class TestsFlextInfraUtilitiesReleaseMixin:
         rendered_gitleaks = u.Cli.template_render(gitleaks_source, config.Infra.release)
         if rendered_gitleaks.failure:
             raise RuntimeError(
-                rendered_gitleaks.error or "release policy render failed: gitleaks",
+                rendered_gitleaks.error or "release policy render failed: gitleaks"
             )
         gitleaks_target = workspace / c.Infra.RELEASE_GITLEAKS_CONFIG_PATH
         gitleaks_target.parent.mkdir(parents=True, exist_ok=True)
@@ -138,20 +137,17 @@ class TestsFlextInfraUtilitiesReleaseMixin:
                 encoding="utf-8",
             )
             (project / "LICENSE").write_text(
-                "MIT License\n\nCopyright (c) FLEXT Tests\n",
-                encoding="utf-8",
+                "MIT License\n\nCopyright (c) FLEXT Tests\n", encoding="utf-8"
             )
             src_dir = project / "src" / package_name
             src_dir.mkdir(parents=True, exist_ok=True)
             (src_dir / "__init__.py").write_text("", encoding="utf-8")
             TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
-                project,
-                name,
+                project, name
             )
         if project_names:
             TestsFlextInfraUtilitiesProjectFixtureMixin.declare_workspace_projects(
-                workspace,
-                project_names,
+                workspace, project_names
             )
         if initialize_root_git:
             TestsFlextInfraUtilitiesGitMixin.initialize_git_repo(workspace)
@@ -175,10 +171,7 @@ class TestsFlextInfraUtilitiesReleaseMixin:
 
     @staticmethod
     def run_release_build(
-        repository_root: Path,
-        project_name: str,
-        *,
-        dry_run: bool = False,
+        repository_root: Path, project_name: str, *, dry_run: bool = False
     ) -> int:
         """Run the release build phase for one project through the public CLI."""
         return TestsFlextInfraUtilitiesReleaseMixin.run_release_main(
@@ -192,10 +185,7 @@ class TestsFlextInfraUtilitiesReleaseMixin:
 
     @staticmethod
     def release_internal_workspace(
-        root: Path,
-        project_name: str,
-        *,
-        initialize_project_git: bool = True,
+        root: Path, project_name: str, *, initialize_project_git: bool = True
     ) -> Path:
         """Create a release workspace carrying one project and its internal deps."""
         return TestsFlextInfraUtilitiesReleaseMixin.create_release_workspace(
@@ -209,22 +199,19 @@ class TestsFlextInfraUtilitiesReleaseMixin:
         """Read the strict build report the last build phase wrote."""
         report_path = (
             TestsFlextInfraUtilitiesReleaseMixin.release_report_dir(
-                repository_root,
-                c.Tests.RELEASE_VERSION_BASE,
+                repository_root, c.Tests.RELEASE_VERSION_BASE
             )
             / "build-report.json"
         )
         return m.Infra.BuildReport.model_validate_json(
-            report_path.read_text(encoding="utf-8"),
+            report_path.read_text(encoding="utf-8")
         )
 
     @staticmethod
     def release_build_log_text(repository_root: Path, project_name: str) -> str:
         """Read one release project's build log at the base release version."""
         return TestsFlextInfraUtilitiesReleaseMixin.release_build_log(
-            repository_root,
-            c.Tests.RELEASE_VERSION_BASE,
-            project_name,
+            repository_root, c.Tests.RELEASE_VERSION_BASE, project_name
         ).read_text(encoding="utf-8")
 
     @staticmethod
@@ -234,30 +221,24 @@ class TestsFlextInfraUtilitiesReleaseMixin:
 
     @staticmethod
     def release_build_log(
-        repository_root: Path,
-        version: str,
-        project_name: str,
+        repository_root: Path, version: str, project_name: str
     ) -> Path:
         """Return one release project's observable build log path."""
         return (
             TestsFlextInfraUtilitiesReleaseMixin.release_report_dir(
-                repository_root,
-                version,
+                repository_root, version
             )
             / f"build-{project_name}.log"
         )
 
     @staticmethod
     def release_artifact_dir(
-        repository_root: Path,
-        version: str,
-        project_name: str,
+        repository_root: Path, version: str, project_name: str
     ) -> Path:
         """Return one release project's immutable artifact-set directory."""
         return (
             TestsFlextInfraUtilitiesReleaseMixin.release_report_dir(
-                repository_root,
-                version,
+                repository_root, version
             )
             / "artifacts"
             / project_name

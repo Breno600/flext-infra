@@ -37,16 +37,14 @@ class FlextInfraUtilitiesCompatibilityAliasValidation:
 
     @staticmethod
     def require_static_compatibility_alias_exports(
-        tree: ast.Module,
-        file_path: Path,
-        aliases: frozenset[str],
+        tree: ast.Module, file_path: Path, aliases: frozenset[str]
     ) -> None:
         """Reject dynamic export ownership before changing an alias owner."""
         if not aliases:
             return
         for node in tree.body:
             value = FlextInfraUtilitiesCompatibilityAliasValidation._dunder_all_value(
-                node,
+                node
             )
             if value is not None and not (
                 isinstance(value, ast.List | ast.Tuple)
@@ -70,7 +68,7 @@ class FlextInfraUtilitiesCompatibilityAliasValidation:
         tree = ast.parse(source, filename=str(file_path))
         for node in tree.body:
             value = FlextInfraUtilitiesCompatibilityAliasValidation._dunder_all_value(
-                node,
+                node
             )
             if isinstance(value, ast.List | ast.Tuple) and any(
                 isinstance(element, ast.Constant) and element.value in exported_aliases
@@ -80,9 +78,8 @@ class FlextInfraUtilitiesCompatibilityAliasValidation:
                 raise ValueError(msg)
         residue = sorted(
             FlextInfraUtilitiesQualifiedNames.qualified_name_residue(
-                source,
-                qualified_aliases,
-            ),
+                source, qualified_aliases
+            )
         )
         if residue:
             msg = f"qualified alias residue {residue[0]} in {file_path}"

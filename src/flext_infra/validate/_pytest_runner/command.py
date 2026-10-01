@@ -298,10 +298,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         )
 
     def build_coverage_command(
-        self,
-        report_dir: Path,
-        *,
-        serialize: bool = False,
+        self, report_dir: Path, *, serialize: bool = False
     ) -> t.VariadicTuple[str]:
         """Build the whole-suite coverage argv (never the testmon plugin).
 
@@ -319,7 +316,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             workers=workers,
             trailing=(
                 *self._plugin_policy_args(
-                    execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
+                    execution_mode=c.Infra.PytestExecutionMode.COVERAGE
                 ),
                 f"--cov={self.root / c.Infra.DEFAULT_SRC_DIR}",
                 f"--cov-report=xml:{report_dir / 'coverage.xml'}",

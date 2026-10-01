@@ -27,18 +27,18 @@ class TestsFlextInfraReleaseCheckoutCredentials:
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch=repository_branch,
             ci_trigger_branches=CodegenTestSupport.Ci.ci_trigger_branches(
-                repository_branch,
+                repository_branch
             ),
         ).model_copy(
             update={
                 "private_submodules": (
                     CodegenTestSupport.Ci.synthetic_private_submodules()
-                ),
-            },
+                )
+            }
         )
         rendered = tm.ok(u.Cli.template_render(cls.release_template, spec))
         return t.Cli.JSON_MAPPING_ADAPTER.validate_python(
-            tm.ok(u.Cli.yaml_parse(rendered)),
+            tm.ok(u.Cli.yaml_parse(rendered))
         )
 
     @staticmethod

@@ -53,8 +53,7 @@ class TestsFlextInfraWorkflowCommentSpacing:
 
     @pytest.mark.slow
     def test_rendered_workflows_keep_two_spaces_before_inline_comments(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         """Render the governed workflow surface and lint its inline comments."""
         root = tmp_path / "project"
@@ -69,7 +68,7 @@ class TestsFlextInfraWorkflowCommentSpacing:
         plan = u.Tests.governed_project_plan(root)
         workflows = {
             item.path.relative_to(root).as_posix(): tm.not_none(
-                item.desired_content,
+                item.desired_content
             ).decode("utf-8")
             for item in plan.files
             if item.path.relative_to(root).as_posix().startswith(self._WORKFLOW_PREFIX)

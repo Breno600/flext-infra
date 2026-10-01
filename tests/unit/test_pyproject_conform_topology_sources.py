@@ -25,16 +25,13 @@ class TestsFlextInfraPyprojectConformTopologySources:
     def _member_ref(self, distribution: str, path: str) -> m.Infra.RepositoryRef:
         """Declare one standalone-capable member through the provider contract."""
         return test_u.Tests.repository_ref(
-            distribution,
-            role=self._ROLE.STANDALONE,
-            path=Path(path),
+            distribution, role=self._ROLE.STANDALONE, path=Path(path)
         )
 
     def _workspace(self, *members: m.Infra.RepositoryRef) -> m.Infra.WorkspaceSpec:
         """Compose one workspace fixture from its declared member references."""
         return test_u.Tests.workspace_spec(
-            test_u.Tests.repository_ref("workspace"),
-            subprojects=tuple(members),
+            test_u.Tests.repository_ref("workspace"), subprojects=tuple(members)
         )
 
     def _inline_requirement(self, ref: m.Infra.RepositoryRef) -> str:
@@ -66,10 +63,9 @@ class TestsFlextInfraPyprojectConformTopologySources:
         workspace = self._workspace(flext_member, other_member).model_copy(
             update={
                 "integration": m.Infra.WorkspaceIntegrationSpec(
-                    provider=test_u.Tests.integration().provider,
-                    branch=workspace_line,
-                ),
-            },
+                    provider=test_u.Tests.integration().provider, branch=workspace_line
+                )
+            }
         )
         infra = test_u.Tests.repository_ref("flext-infra")
         infra_requirement = self._inline_requirement(infra)
@@ -85,7 +81,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
                 family_line=test_u.Tests.provider_branch(),
-            ),
+            )
         )
         expected = {
             f"{ref.distribution} @ git+{ref.url}@{workspace_line}"
@@ -96,9 +92,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
             eq=expected,
         )
         workspace_group = tu.Tests.toml_strings_at(
-            rendered,
-            "dependency-groups",
-            "workspace",
+            rendered, "dependency-groups", "workspace"
         )
         tm.that(
             set(workspace_group),
@@ -114,7 +108,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
                 family_line=test_u.Tests.provider_branch(),
-            ),
+            )
         )
         tm.that(second, eq=rendered)
 
@@ -131,8 +125,8 @@ class TestsFlextInfraPyprojectConformTopologySources:
                         url=cli.url,
                         commit=candidate_commit,
                     ),
-                ),
-            },
+                )
+            }
         )
         source = (
             '[project]\nname = "workspace"\nversion = "0.1.0"\n'
@@ -145,10 +139,10 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
                 family_line=test_u.Tests.provider_branch(),
-            ),
+            )
         )
         dependencies = set(
-            tu.Tests.toml_strings_at(rendered, "project", "dependencies"),
+            tu.Tests.toml_strings_at(rendered, "project", "dependencies")
         )
         tm.that(
             dependencies,
@@ -169,7 +163,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                     required_dev_dependencies=(),
                     uv_resolution=self._toolchain_resolution(),
                     family_line=test_u.Tests.provider_branch(),
-                ),
+                )
             ),
             eq=rendered,
         )
@@ -182,12 +176,10 @@ class TestsFlextInfraPyprojectConformTopologySources:
             update={
                 "candidate_dependencies": (
                     m.Infra.CandidateDependencySourceSpec(
-                        distribution=cli.distribution,
-                        url=foreign.url,
-                        commit="b" * 40,
+                        distribution=cli.distribution, url=foreign.url, commit="b" * 40
                     ),
-                ),
-            },
+                )
+            }
         )
         source = (
             '[project]\nname = "workspace"\nversion = "0.1.0"\n'
@@ -210,12 +202,10 @@ class TestsFlextInfraPyprojectConformTopologySources:
             update={
                 "candidate_dependencies": (
                     m.Infra.CandidateDependencySourceSpec(
-                        distribution=cli.distribution,
-                        url=cli.url,
-                        commit="c" * 40,
+                        distribution=cli.distribution, url=cli.url, commit="c" * 40
                     ),
-                ),
-            },
+                )
+            }
         )
         result = u.Infra.pyproject_conform(
             (
@@ -237,12 +227,10 @@ class TestsFlextInfraPyprojectConformTopologySources:
             update={
                 "candidate_dependencies": (
                     m.Infra.CandidateDependencySourceSpec(
-                        distribution=cli.distribution,
-                        url=cli.url,
-                        commit="d" * 40,
+                        distribution=cli.distribution, url=cli.url, commit="d" * 40
                     ),
-                ),
-            },
+                )
+            }
         )
         result = u.Infra.pyproject_conform(
             '[project]\nname = "workspace"\nversion = "0.1.0"\n',
@@ -307,7 +295,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 workspace=workspace,
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
-            ),
+            )
         )
 
         self._assert_direct_source(rendered, core)
@@ -330,7 +318,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 workspace=workspace,
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
-            ),
+            )
         )
 
         self._assert_direct_source(rendered, provider)
@@ -355,7 +343,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 workspace=workspace,
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
-            ),
+            )
         )
 
         dependencies = tu.Tests.toml_strings_at(rendered, "project", "dependencies")
@@ -389,7 +377,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 workspace=workspace,
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
-            ),
+            )
         )
 
         group = tu.Tests.toml_strings_at(rendered, "dependency-groups", "dev")

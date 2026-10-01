@@ -43,7 +43,7 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
 
                 constants_file = project_layout.package_dir / c.Infra.CONSTANTS_PY
                 value_map_result = self._build_value_map_from_constants_file(
-                    constants_file,
+                    constants_file
                 )
                 if value_map_result.failure:
                     return r[str].from_failure(value_map_result)
@@ -82,7 +82,7 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
                             file=str(rel_path),
                             status="applied" if ok else "reverted",
                             changes=tuple(changes),
-                        ),
+                        )
                     )
                     if ok:
                         applied += len(changes)
@@ -106,14 +106,12 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
         return r[str].ok("\n".join(output_lines))
 
     def _project_python_files(
-        self,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
-        project_root: Path,
+        self, rope_workspace: p.Infra.RopeWorkspaceDsl, project_root: Path
     ) -> p.Result[t.SequenceOf[Path]]:
         """Return indexed Python wrapper files for one consolidation pass."""
         resolved_root = project_root.resolve()
         constants_directory = u.Infra.facade_family_declared_by(
-            c.Infra.CONSTANTS_PY,
+            c.Infra.CONSTANTS_PY
         ).directory
         indexed_files: t.MutableSequenceOf[Path] = []
         for module in rope_workspace.modules():
@@ -137,8 +135,7 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
         return r[t.SequenceOf[Path]].ok(tuple(sorted(indexed_files)))
 
     def _selected_projects(
-        self,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
+        self, rope_workspace: p.Infra.RopeWorkspaceDsl
     ) -> p.Result[t.SequenceOf[p.Infra.ProjectInfo]]:
         """Return the selected projects."""
         _ = rope_workspace

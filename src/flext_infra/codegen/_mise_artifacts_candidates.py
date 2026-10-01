@@ -32,18 +32,16 @@ class FlextInfraMiseArtifactsCandidates:
                 project.artifacts.version_pin,
             )
             for before, (name, mode) in zip(
-                before_states,
-                c.Infra.PUBLICATION_SPECS,
-                strict=True,
+                before_states, c.Infra.PUBLICATION_SPECS, strict=True
             ):
                 replacement = files.read_state(stage / name, required=True)
                 if replacement.failure or replacement.value.content is None:
                     return r[tuple[m.Infra.CodegenStagedFile, ...]].from_failure(
-                        replacement,
+                        replacement
                     )
                 if replacement.value.mode != mode:
                     return r[tuple[m.Infra.CodegenStagedFile, ...]].fail(
-                        f"staged Mise artifact mode differs: {stage / name}",
+                        f"staged Mise artifact mode differs: {stage / name}"
                     )
                 publications.append(
                     m.Infra.CodegenStagedFile(
@@ -51,7 +49,7 @@ class FlextInfraMiseArtifactsCandidates:
                         project=project.layout.root,
                         before=before,
                         replacement=replacement.value,
-                    ),
+                    )
                 )
         return r[tuple[m.Infra.CodegenStagedFile, ...]].ok(tuple(publications))
 

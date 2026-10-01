@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesRefactorNamespaceFlext(
-    FlextInfraUtilitiesRefactorNamespaceCommon,
+    FlextInfraUtilitiesRefactorNamespaceCommon
 ):
     """Helpers for future-import rewrites."""
 
@@ -28,7 +28,7 @@ class FlextInfraUtilitiesRefactorNamespaceFlext(
             project_root = FlextInfraUtilitiesDiscovery.project_root(file_path)
             resolved_file = file_path.resolve()
             if project_root is None or not resolved_file.is_relative_to(
-                project_root.resolve(),
+                project_root.resolve()
             ):
                 msg = (
                     f"refusing future-annotations rewrite outside project: {file_path}"
@@ -43,12 +43,10 @@ class FlextInfraUtilitiesRefactorNamespaceFlext(
             if not lines:
                 continue
             rewritten = FlextInfraUtilitiesRefactorNamespaceFlext.insert_import_lines(
-                lines=lines,
-                imports=["", c.Infra.FUTURE_ANNOTATIONS, ""],
+                lines=lines, imports=["", c.Infra.FUTURE_ANNOTATIONS, ""]
             )
             write_result = u.Cli.files_write_text(
-                resolved_file,
-                "\n".join(rewritten).rstrip() + "\n",
+                resolved_file, "\n".join(rewritten).rstrip() + "\n"
             )
             if write_result.failure:
                 msg = write_result.error or f"failed to rewrite {resolved_file}"

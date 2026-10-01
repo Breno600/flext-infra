@@ -26,8 +26,7 @@ class FlextInfraUtilitiesPromotedCommands(FlextInfraUtilitiesPromotedWorkspace):
 
         header = c.Infra.PromotedHeader
         headers: t.MutableMappingKV[
-            Path,
-            t.JsonMapping | c.Infra.PromotedRegistryError,
+            Path, t.JsonMapping | c.Infra.PromotedRegistryError
         ] = {}
         for path in verb_dir.iterdir():
             if (
@@ -49,27 +48,24 @@ class FlextInfraUtilitiesPromotedCommands(FlextInfraUtilitiesPromotedWorkspace):
                     payload.append(content)
             if not payload:
                 headers[path] = c.Infra.PromotedMissingHeaderError(
-                    c.Infra.PromotedMessage.MISSING_HEADER.format(path=path),
+                    c.Infra.PromotedMessage.MISSING_HEADER.format(path=path)
                 )
                 continue
             parsed = u.Cli.toml_mapping_from_text(
-                c.Infra.PromotedJoin.LINES.join(payload),
+                c.Infra.PromotedJoin.LINES.join(payload)
             )
             headers[path] = (
                 parsed
                 if parsed is not None
                 else c.Infra.PromotedRegistryError(
-                    c.Infra.PromotedMessage.INVALID_HEADER_TOML.format(path=path),
+                    c.Infra.PromotedMessage.INVALID_HEADER_TOML.format(path=path)
                 )
             )
         return headers
 
     @classmethod
     def promoted_load_command(
-        cls,
-        path: Path,
-        expected_verb: str,
-        data: t.JsonMapping,
+        cls, path: Path, expected_verb: str, data: t.JsonMapping
     ) -> p.Infra.PromotedCommand:
         """Validate one header against its directory and file, once at ingress."""
         from flext_infra import m
@@ -84,11 +80,7 @@ class FlextInfraUtilitiesPromotedCommands(FlextInfraUtilitiesPromotedWorkspace):
         ):
             if actual != expected:
                 cls.promoted_fail(
-                    mismatch,
-                    path=path,
-                    verb=verb,
-                    what=what,
-                    expected=expected,
+                    mismatch, path=path, verb=verb, what=what, expected=expected
                 )
         params_raw = data.get(key.PARAMS, [])
         if not isinstance(params_raw, list):
@@ -110,11 +102,9 @@ class FlextInfraUtilitiesPromotedCommands(FlextInfraUtilitiesPromotedWorkspace):
                     required=required,
                     default=default,
                     choices=cls._promoted_texts(
-                        item.get(key.CHOICES, []),
-                        key.PARAMS_CHOICES,
-                        path,
+                        item.get(key.CHOICES, []), key.PARAMS_CHOICES, path
                     ),
-                ),
+                )
             )
         domain = cls._promoted_text(data, key.DOMAIN, path)
         summary = cls._promoted_text(data, key.SUMMARY, path)
@@ -139,42 +129,30 @@ class FlextInfraUtilitiesPromotedCommands(FlextInfraUtilitiesPromotedWorkspace):
 
     @classmethod
     def _promoted_text(
-        cls,
-        data: t.MappingKV[str, t.JsonValue],
-        key: str,
-        path: Path,
+        cls, data: t.MappingKV[str, t.JsonValue], key: str, path: Path
     ) -> str:
         """Return one required non-blank stripped header string."""
         value = data.get(key)
         if not isinstance(value, str) or not value.strip():
             cls.promoted_fail(
-                c.Infra.PromotedMessage.REQUIRED_STRING,
-                path=path,
-                key=key,
+                c.Infra.PromotedMessage.REQUIRED_STRING, path=path, key=key
             )
         return value.strip()
 
     @classmethod
     def _promoted_texts(
-        cls,
-        values: t.JsonValue,
-        key: str,
-        path: Path,
+        cls, values: t.JsonValue, key: str, path: Path
     ) -> t.VariadicTuple[str]:
         """Return one optional header list of non-blank stripped strings."""
         if not isinstance(values, list):
             cls.promoted_fail(
-                c.Infra.PromotedMessage.STRING_LIST_TYPE,
-                path=path,
-                key=key,
+                c.Infra.PromotedMessage.STRING_LIST_TYPE, path=path, key=key
             )
         texts: list[str] = []
         for item in values:
             if not isinstance(item, str) or not item.strip():
                 cls.promoted_fail(
-                    c.Infra.PromotedMessage.STRING_LIST_ITEM,
-                    path=path,
-                    key=key,
+                    c.Infra.PromotedMessage.STRING_LIST_ITEM, path=path, key=key
                 )
             texts.append(item.strip())
         return tuple(texts)

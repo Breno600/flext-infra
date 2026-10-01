@@ -21,8 +21,7 @@ class TestsFlextInfraRuffProjectExemptions:
         fleet = config.Infra.tooling.tools.ruff.lint.per_file_ignores
 
         scoped = FlextInfraEnsureRuffConfigPhase.compose_per_file_ignores(
-            tmp_path,
-            global_ignores=fleet,
+            tmp_path, global_ignores=fleet
         )
 
         tm.that(

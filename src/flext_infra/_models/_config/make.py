@@ -361,7 +361,8 @@ class FlextInfraConfigModelsMake:
             """External-cache path pair every tool cache spec owns identically."""
 
             home_cache_directory: Annotated[
-                Path, m.Field(description="Standard cache directory below the user home")
+                Path,
+                m.Field(description="Standard cache directory below the user home"),
             ]
             external_storage_directory: Annotated[
                 Path, m.Field(description="FLEXT-owned directory below the cache home")
@@ -391,7 +392,9 @@ class FlextInfraConfigModelsMake:
             ]
             database_environment_variable: Annotated[
                 FlextInfraConstantsMake.PytestCacheEnvironment,
-                m.Field(description="pytest-testmon's supported database-path variable"),
+                m.Field(
+                    description="pytest-testmon's supported database-path variable"
+                ),
             ]
             data_home_environment_variable: Annotated[
                 FlextInfraConstantsMake.PytestCacheEnvironment,
@@ -437,8 +440,7 @@ class FlextInfraConfigModelsMake:
                 return self
 
         class MypyCacheSpec(
-            ExternalCacheDirectorySpec,
-            FlextInfraConfigModelsContract.ConfigContract,
+            ExternalCacheDirectorySpec, FlextInfraConfigModelsContract.ConfigContract
         ):
             """Project-keyed shared Mypy cache: one analysis per project, reused across relocks."""
 

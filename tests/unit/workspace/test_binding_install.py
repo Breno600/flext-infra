@@ -30,9 +30,7 @@ class TestsFlextInfraBindingInstall:
         ],
     )
     def test_binding_uses_consumer_contract(
-        self,
-        tmp_path: Path,
-        scenario: str,
+        self, tmp_path: Path, scenario: str
     ) -> None:
         """Install extras or reject incompatible, inactive, and borrowed candidates."""
         supplier, consumer, extra, workspace = (
@@ -54,11 +52,7 @@ class TestsFlextInfraBindingInstall:
             (consumer, "binding-consumer"),
         ):
             u.Tests.WorktreeFixture.initialize_governed_project(
-                root,
-                name,
-                workspace=name,
-                database=name,
-                issue_prefix=name,
+                root, name, workspace=name, database=name, issue_prefix=name
             )
         extra.mkdir()
         for root, name, optional in (
@@ -76,8 +70,7 @@ class TestsFlextInfraBindingInstall:
                 encoding=c.Cli.ENCODING_DEFAULT,
             )
             (root / f"{name.replace('-', '_')}.py").write_text(
-                'VALUE = "installed"\n',
-                encoding=c.Cli.ENCODING_DEFAULT,
+                'VALUE = "installed"\n', encoding=c.Cli.ENCODING_DEFAULT
             )
         inactive = "; python_version < '0'"
         marker = inactive if scenario == "inactive" else ""
@@ -110,8 +103,7 @@ class TestsFlextInfraBindingInstall:
             )
             tm.ok(u.Tests.create_python_environment(workspace))
             (consumer / c.Infra.ENVIRONMENT_DIRECTORY).symlink_to(
-                u.Infra.runtime_environment_dir(consumer),
-                target_is_directory=True,
+                u.Infra.runtime_environment_dir(consumer), target_is_directory=True
             )
         else:
             tm.ok(u.Tests.create_python_environment(consumer))
@@ -126,7 +118,7 @@ class TestsFlextInfraBindingInstall:
                     "scripts",
                     scheme="venv",
                     vars={"base": str(environment), "platbase": str(environment)},
-                ),
+                )
             )
             / c.Infra.PromotedSelector.VENV_PYTHON
         )
@@ -147,7 +139,7 @@ class TestsFlextInfraBindingInstall:
                     str(python),
                 ),
                 env={ci.variable: ci.local_value},
-            ),
+            )
         )
         output = f"{outcome.stdout}{outcome.stderr}"
         tm.that(declaration.read_bytes(), eq=original)
@@ -166,6 +158,6 @@ class TestsFlextInfraBindingInstall:
                 str(python),
                 "-c",
                 "import binding_candidate, binding_extra; print(binding_candidate.VALUE, binding_extra.VALUE)",
-            )),
+            ))
         )
         tm.that(installed.stdout.strip(), eq="installed installed")

@@ -19,25 +19,23 @@ class TestsFlextInfraCliRepositoryRootContract:
         """Use the conform owner and typed fixtures, not a copied Make recipe."""
         repository = u.Tests.repository_ref("scope-contract-fixture")
         request = u.Tests.conform_request(
-            tmp_path,
-            what=c.Infra.CodegenConformSurface.MAKEFILE,
+            tmp_path, what=c.Infra.CodegenConformSurface.MAKEFILE
         )
         plan = tm.ok(
             FlextInfraCodegenConform(
                 repository_root=tmp_path,
                 request=request,
                 initial_workspace=u.Tests.workspace_spec(
-                    repository,
-                    project=u.Tests.project_spec(repository.name),
+                    repository, project=u.Tests.project_spec(repository.name)
                 ),
-            ).plan(request),
+            ).plan(request)
         )
         return u.Tests.codegen_file_text(
             next(
                 file
                 for file in plan.files
                 if file.path.name == c.Infra.MAKEFILE_FILENAME
-            ),
+            )
         )
 
     @pytest.mark.parametrize(
@@ -53,11 +51,7 @@ class TestsFlextInfraCliRepositoryRootContract:
         ],
     )
     def test_generated_scope_matches_route_and_help(
-        self,
-        rendered_makefile: str,
-        group: str,
-        command: str,
-        generated_command: str,
+        self, rendered_makefile: str, group: str, command: str, generated_command: str
     ) -> None:
         """Reject stale recipes and hidden service aliases as well as CLI drift."""
         route = next(

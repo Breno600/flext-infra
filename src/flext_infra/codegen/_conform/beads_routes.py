@@ -15,8 +15,7 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
     """Beads ledger route reconciliation for composed repositories."""
 
     def conform_workspace_beads_routes(
-        self,
-        request: m.Infra.CodegenConformRequest,
+        self, request: m.Infra.CodegenConformRequest
     ) -> p.Result[bool]:
         """Reconcile private metadata directories without cross-project links.
 
@@ -39,14 +38,14 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
         if workspace.beads is None:
             if owner.exists() or owner.is_symlink():
                 return r[bool].fail(
-                    f"Beads-disabled repository still has Beads state: {owner}",
+                    f"Beads-disabled repository still has Beads state: {owner}"
                 )
             return r[bool].ok(True)
         # The ledger directory is a conform projection: absent before the
         # first render is normal; a link, or a non-directory, is not physical.
         if owner.is_symlink() or (owner.exists() and not owner.is_dir()):
             return r[bool].fail(
-                f"workspace Beads ledger owner is not physical: {owner}",
+                f"workspace Beads ledger owner is not physical: {owner}"
             )
         if owner.is_dir():
             owner.chmod(c.Infra.BEADS_DIRECTORY_MODE)
@@ -87,24 +86,22 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
         if route.is_symlink():
             return r[bool].fail(
                 "composed project reaches the workspace ledger through a "
-                f"cross-project symbolic link: {route}",
+                f"cross-project symbolic link: {route}"
             )
         if not route.exists():
             route.mkdir(mode=c.Infra.BEADS_DIRECTORY_MODE, parents=True)
             return r[bool].ok(True)
         if not route.is_dir():
             return r[bool].fail(
-                f"composed project Beads route is not a directory: {route}",
+                f"composed project Beads route is not a directory: {route}"
             )
         unexpected = sorted(
-            entry.name
-            for entry in route.iterdir()
-            if entry.name not in allowed_entries
+            entry.name for entry in route.iterdir() if entry.name not in allowed_entries
         )
         if unexpected:
             return r[bool].fail(
                 f"composed project has unmerged Beads state at {route}: "
-                + ", ".join(unexpected),
+                + ", ".join(unexpected)
             )
         route.chmod(c.Infra.BEADS_DIRECTORY_MODE)
         return r[bool].ok(True)

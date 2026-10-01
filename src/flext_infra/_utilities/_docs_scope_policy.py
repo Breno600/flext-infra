@@ -67,7 +67,7 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
         loud.
         """
         manifest_path = FlextInfraUtilitiesWorkspaceManifest.workspace_manifest_path(
-            repository_root,
+            repository_root
         )
         if not manifest_path.is_file():
             return set()
@@ -76,7 +76,7 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
             # A present-but-unreadable manifest must never read as "no
             # exclusions": that would silently widen the docs scope.
             raise ValueError(
-                loaded.error or f"cannot load workspace manifest: {manifest_path}",
+                loaded.error or f"cannot load workspace manifest: {manifest_path}"
             )
         data = loaded.value.data
         if not isinstance(data, dict):
@@ -123,14 +123,14 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
     def project_docs_meta(project_root: Path) -> t.JsonMapping:
         """Return optional ``tool.flext.docs`` metadata from a project pyproject."""
         return FlextInfraUtilitiesDocsScopePolicyMixin.project_state(
-            project_root,
+            project_root
         ).docs_meta
 
     @staticmethod
     def docs_meta_list(project_root: Path, key: str) -> t.StrSequence:
         """Return one normalized string-list value from ``tool.flext.docs``."""
         docs_meta = FlextInfraUtilitiesDocsScopePolicyMixin.project_docs_meta(
-            project_root,
+            project_root
         )
         raw = docs_meta.get(key)
         if not isinstance(raw, list):
@@ -142,8 +142,7 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
         """Return whether a relative docs path is excluded by ``tool.flext.docs``."""
         candidate = relative_path.as_posix()
         for pattern in FlextInfraUtilitiesDocsScopePolicyMixin.docs_meta_list(
-            project_root,
-            "exclude_docs",
+            project_root, "exclude_docs"
         ):
             if fnmatch(candidate, pattern):
                 return True
@@ -154,16 +153,16 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
         """Return whether a project belongs to the governed FLEXT docs scope."""
         project_root = repository_root / project_name
         docs_meta = FlextInfraUtilitiesDocsScopePolicyMixin.project_docs_meta(
-            project_root,
+            project_root
         )
         is_enabled = FlextInfraUtilitiesDocsScopePolicyMixin.docs_scope_enabled(
-            docs_meta,
+            docs_meta
         )
         return (
             project_name.startswith(c.Infra.PKG_PREFIX_HYPHEN)
             and project_name
             not in FlextInfraUtilitiesDocsScopePolicyMixin.excluded_roots(
-                repository_root,
+                repository_root
             )
             and is_enabled
         )

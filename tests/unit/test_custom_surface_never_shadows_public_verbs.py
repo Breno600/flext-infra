@@ -41,7 +41,7 @@ class TestsFlextInfraCustomSurfaceNeverShadowsPublicVerbs:
                 path
                 for path in (root / name, *root.glob(f"*/{name}"))
                 if path.is_file()
-            ),
+            )
         )
 
     def _shadowed_verbs(self, surface: Path) -> t.VariadicTuple[str]:

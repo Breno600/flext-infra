@@ -34,8 +34,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
     """Post-import runtime enforcement census across workspace projects."""
 
     project_filter: Annotated[
-        str | None,
-        m.Field(description="Project filter (comma-separated)"),
+        str | None, m.Field(description="Project filter (comma-separated)")
     ] = None
     census_gate: Annotated[
         str,
@@ -108,9 +107,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         prefix = package.__name__ + "."
         modules: list[str] = [package.__name__]
         for _, modname, _ in pkgutil.walk_packages(
-            package.__path__,
-            prefix=prefix,
-            onerror=cls._raise_package_walk_error,
+            package.__path__, prefix=prefix, onerror=cls._raise_package_walk_error
         ):
             modules.append(modname)
         return modules
@@ -138,7 +135,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
                 rule_part = f" [{violation.rule_id}]" if violation.rule_id else ""
                 violations.append(
                     f"{file_part}{line_part}{obj.__qualname__}{rule_part}: "
-                    f"{violation.message}",
+                    f"{violation.message}"
                 )
         return [
             m.Infra.ValidationReport(
@@ -149,12 +146,11 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
                     if violations
                     else f"{module_name}: clean"
                 ),
-            ),
+            )
         ]
 
     def _project_report(
-        self,
-        project: p.Infra.ProjectInfo,
+        self, project: p.Infra.ProjectInfo
     ) -> p.Result[m.Infra.ValidationReport]:
         """Run the runtime census for one project and return a merged report.
 
@@ -164,7 +160,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         layout = u.Infra.layout(project.path, project=project)
         if layout is None:
             return r[m.Infra.ValidationReport].fail(
-                f"runtime census: {project.name} has no importable package",
+                f"runtime census: {project.name} has no importable package"
             )
         real_modules = list(self._walk_modules(layout.package_name))
         if self.target_module is not None:
@@ -178,7 +174,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
             name
             for name in real_modules
             if not frozenset(config.Infra.codegen.source_scan_ignored).intersection(
-                name.split("."),
+                name.split(".")
             )
         ]
         all_reports: list[m.Infra.ValidationReport] = []
@@ -195,10 +191,8 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         )
         return r[m.Infra.ValidationReport].ok(
             m.Infra.ValidationReport(
-                passed=passed,
-                violations=merged_violations,
-                summary=summary,
-            ),
+                passed=passed, violations=merged_violations, summary=summary
+            )
         )
 
     @staticmethod
@@ -277,7 +271,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         if not projects:
             return r[m.Infra.ValidationReport].fail(
                 f"runtime census selected no projects: root={self.repository_root}, "
-                f"filter={self.project_filter!r}",
+                f"filter={self.project_filter!r}"
             )
         merged_violations: list[str] = []
         for project in projects:
@@ -302,10 +296,8 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         )
         return r[m.Infra.ValidationReport].ok(
             m.Infra.ValidationReport(
-                passed=passed,
-                violations=tuple(merged_violations),
-                summary=summary,
-            ),
+                passed=passed, violations=tuple(merged_violations), summary=summary
+            )
         )
 
     @override

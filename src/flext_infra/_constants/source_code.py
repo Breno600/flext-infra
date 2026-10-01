@@ -24,7 +24,7 @@ class FlextInfraConstantsSourceCode:
     )
     "Git merge-control kinds and their immutable protocol tokens."
     TOML_SECTION_HEADER_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\s*\[([^\[\]]+)\]\s*(?:#.*)?$",
+        r"^\s*\[([^\[\]]+)\]\s*(?:#.*)?$"
     )
     "Regex: one complete TOML table header with an optional comment."
 
@@ -49,7 +49,7 @@ class FlextInfraConstantsSourceCode:
     })
     "Common directories to exclude from analysis across all scripts."
     PYTHON_DISCOVERY_SKIP_DIRS: ClassVar[frozenset[str]] = COMMON_EXCLUDED_DIRS | {
-        "vendor",
+        "vendor"
     }
     "Non-productive roots excluded while discovering Python analyzer surfaces."
     DOC_EXCLUDED_DIRS: ClassVar[frozenset[str]] = COMMON_EXCLUDED_DIRS | {
@@ -146,26 +146,23 @@ class FlextInfraConstantsSourceCode:
     })
     "Pydantic bases that resolve class-body annotations at runtime, not only for a type checker."
     ENCODING_COOKIE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^[ \t\f]*#.*?coding[:=][ \t]*[-\w.]+",
+        r"^[ \t\f]*#.*?coding[:=][ \t]*[-\w.]+"
     )
     "Regex: Python source encoding cookie on a header line."
     CLASS_WITH_BASES_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^class\s+(\w+)\s*\(([^)]*)\)\s*:",
-        re.MULTILINE,
+        r"^class\s+(\w+)\s*\(([^)]*)\)\s*:", re.MULTILINE
     )
     "Regex: ``class <name>(<bases>):`` — requires parentheses, captures bases."
     FROM_IMPORT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\s*from\s+([\w.]+)\s+import\s+(.+?)(?:\s*#.*)?$",
-        re.MULTILINE,
+        r"^\s*from\s+([\w.]+)\s+import\s+(.+?)(?:\s*#.*)?$", re.MULTILINE
     )
     "Regex: from-import with optional trailing comment."
     FROM_IMPORT_BLOCK_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\s*from\s+([\w.]+)\s+import\s*\((.*?)\)",
-        re.MULTILINE | re.DOTALL,
+        r"^\s*from\s+([\w.]+)\s+import\s*\((.*?)\)", re.MULTILINE | re.DOTALL
     )
     "Regex: multiline from-import block."
     REQUIRES_PYTHON_RE: ClassVar[t.RegexPattern] = re.compile(
-        r'requires-python\s*=\s*"[>!=]*(\d+)\.(\d+)',
+        r'requires-python\s*=\s*"[>!=]*(\d+)\.(\d+)'
     )
     'Regex: ``requires-python = ">=3.X"`` — captures major and minor.'
     DEPENDENCY_VERSION_OP_RE: ClassVar[t.RegexPattern] = re.compile(r"[<>=!~]")
@@ -175,8 +172,7 @@ class FlextInfraConstantsSourceCode:
     "Centralized alias for ``re.error`` so consumers needn't import ``re``."
 
     TOC_BLOCK_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"<!-- TOC START -->.*?<!-- TOC END -->",
-        re.DOTALL,
+        r"<!-- TOC START -->.*?<!-- TOC END -->", re.DOTALL
     )
     "Regex: TOC marker block (start..end), DOTALL."
     DUNDER_ALL_SINGLE_LINE_RE: ClassVar[t.RegexPattern] = re.compile(
@@ -192,8 +188,7 @@ class FlextInfraConstantsSourceCode:
     BLANK_LINE_RUN_RE: ClassVar[t.RegexPattern] = re.compile(r"\n{4,}")
     "Regex: 4+ consecutive newlines — collapsed to triple newline."
     LEGACY_TYPEALIAS_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(\w+)\s*:\s*TypeAlias\s*=\s*(.+)$",
-        re.MULTILINE,
+        r"^(\w+)\s*:\s*TypeAlias\s*=\s*(.+)$", re.MULTILINE
     )
     "Regex: legacy ``X: TypeAlias = expr`` (rewritten to PEP 695 ``type X = ...``)."
 
@@ -226,8 +221,7 @@ class FlextInfraConstantsSourceCode:
     def compile_from_module_import_line(module_name: str) -> t.RegexPattern:
         """Compile ``^from <module_name> import .+$`` (MULTILINE) for whole-line replace."""
         return re.compile(
-            rf"^from\s+{re.escape(module_name)}\s+import\s+.+$",
-            re.MULTILINE,
+            rf"^from\s+{re.escape(module_name)}\s+import\s+.+$", re.MULTILINE
         )
 
     GITHUB_REPO_URL: ClassVar[str] = "https://github.com/flext-sh/flext"
@@ -247,11 +241,11 @@ class FlextInfraConstantsSourceCode:
     CODE_FRAME_BODY_RE: ClassVar[t.RegexPattern] = re.compile(r"^\s*\|")
     "Regex: code frame continuation lines."
     UNUSED_IMPORT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"`([^`]+)` imported but unused",
+        r"`([^`]+)` imported but unused"
     )
     "Regex: ruff F401 unused import message, capturing the import name."
     LINT_SUMMARY_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(Found \d+ errors?\.|\[\*\] \d+ fixable .*)$",
+        r"^(Found \d+ errors?\.|\[\*\] \d+ fixable .*)$"
     )
     "Regex: ruff summary line (Found N errors / N fixable)."
 

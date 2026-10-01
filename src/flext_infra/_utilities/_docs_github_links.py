@@ -40,13 +40,12 @@ class FlextInfraUtilitiesDocsGithubLinks:
     def docs_stale_github_organizations() -> frozenset[str]:
         """Placeholder organizations that must not appear in doc URLs."""
         return frozenset(
-            FlextInfraUtilitiesDocsGithubLinks._config().Infra.codegen.make.docs.stale_github_organizations,
+            FlextInfraUtilitiesDocsGithubLinks._config().Infra.codegen.make.docs.stale_github_organizations
         )
 
     @staticmethod
     def docs_github_repo_lookup(
-        organization: str,
-        repository: str,
+        organization: str, repository: str
     ) -> m.Infra.DocsGithubRepoSpec | None:
         """Find one governed repo by organization and repository name."""
         for repo in FlextInfraUtilitiesDocsGithubLinks.docs_github_repos():
@@ -92,16 +91,11 @@ class FlextInfraUtilitiesDocsGithubLinks:
 
     @staticmethod
     def docs_canonical_github_url(
-        organization: str,
-        repository: str,
-        path: str,
-        *,
-        is_dir: bool = False,
+        organization: str, repository: str, path: str, *, is_dir: bool = False
     ) -> str | None:
         """Build a canonical GitHub URL for a governed repository path."""
         repo = FlextInfraUtilitiesDocsGithubLinks.docs_github_repo_lookup(
-            organization,
-            repository,
+            organization, repository
         )
         if repo is None:
             return None
@@ -142,8 +136,7 @@ class FlextInfraUtilitiesDocsGithubLinks:
             else:
                 return None
         repo = FlextInfraUtilitiesDocsGithubLinks.docs_github_repo_lookup(
-            lookup_org,
-            repository,
+            lookup_org, repository
         )
         if repo is None:
             return None
@@ -170,8 +163,7 @@ class FlextInfraUtilitiesDocsGithubLinks:
         if org in FlextInfraUtilitiesDocsGithubLinks.docs_stale_github_organizations():
             return None
         repo = FlextInfraUtilitiesDocsGithubLinks.docs_github_repo_lookup(
-            org,
-            repository,
+            org, repository
         )
         if repo is None:
             return None
@@ -181,7 +173,7 @@ class FlextInfraUtilitiesDocsGithubLinks:
         if path is None:
             return None
         root = FlextInfraUtilitiesDocsGithubLinks.docs_expand_local_checkout(
-            repo.local_checkout,
+            repo.local_checkout
         )
         if root is None:
             return None
@@ -200,11 +192,7 @@ class FlextInfraUtilitiesDocsGithubLinks:
 
     @staticmethod
     def docs_github_link_issues(
-        *,
-        file: str,
-        line_number: int,
-        raw: str,
-        target: str,
+        *, file: str, line_number: int, raw: str, target: str
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
         """Emit audit issues for stale or locally-missing GitHub doc URLs."""
         issues: list[m.Infra.AuditIssue] = []
@@ -222,13 +210,12 @@ class FlextInfraUtilitiesDocsGithubLinks:
                         f"line {line_number}: placeholder GitHub organization "
                         f"must be rewritten -> {raw}"
                     ),
-                ),
+                )
             )
             return issues
         repository = match.group("repo")
         repo = FlextInfraUtilitiesDocsGithubLinks.docs_github_repo_lookup(
-            org,
-            repository,
+            org, repository
         )
         if (
             repo is not None
@@ -246,7 +233,7 @@ class FlextInfraUtilitiesDocsGithubLinks:
                         f"line {line_number}: GitHub branch must be "
                         f"{repo.branch} -> {raw}"
                     ),
-                ),
+                )
             )
         local = FlextInfraUtilitiesDocsGithubLinks.docs_github_local_path(target)
         if local is not None and not local.exists():
@@ -259,7 +246,7 @@ class FlextInfraUtilitiesDocsGithubLinks:
                         f"line {line_number}: governed GitHub path missing locally "
                         f"({local}) -> {raw}"
                     ),
-                ),
+                )
             )
         return issues
 

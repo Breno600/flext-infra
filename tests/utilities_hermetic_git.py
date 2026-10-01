@@ -48,13 +48,12 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
             sources[url] = (url, unquote(rev), parts.fragment)
         fixture = TestsFlextInfraUtilitiesProjectFixtureMixin
         infra = fixture.repository_ref(
-            config.Infra.codegen.infra_repository.distribution,
+            config.Infra.codegen.infra_repository.distribution
         ).url
         head = tm.ok(
             u.Cli.capture(
-                [c.Infra.GIT, "rev-parse", c.Infra.GIT_HEAD],
-                cwd=project_root,
-            ),
+                [c.Infra.GIT, "rev-parse", c.Infra.GIT_HEAD], cwd=project_root
+            )
         ).strip()
         sources[infra] = (infra, fixture.provider_branch(), head)
         return tuple(sources.values())
@@ -94,8 +93,8 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
                             u.Cli.run_raw(
                                 [c.Infra.GIT, "cat-file", "-e", f"{sha}^{{commit}}"],
                                 cwd=database,
-                            ),
-                        ).outcome,
+                            )
+                        ).outcome
                     )
                 ),
                 None,
@@ -112,7 +111,7 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
                     "--quiet",
                     "--bare",
                     str(mirror),
-                ]),
+                ])
             )
             common = tm.ok(
                 u.Cli.capture(
@@ -123,19 +122,18 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
                         "--git-common-dir",
                     ],
                     cwd=origin,
-                ),
+                )
             ).strip()
             tm.ok(
                 u.Cli.atomic_write_text_file(
                     mirror / "objects" / "info" / "alternates",
                     f"{Path(common) / 'objects'}\n",
-                ),
+                )
             )
             tm.ok(
                 u.Cli.run_checked(
-                    [c.Infra.GIT, "update-ref", f"refs/heads/{rev}", sha],
-                    cwd=mirror,
-                ),
+                    [c.Infra.GIT, "update-ref", f"refs/heads/{rev}", sha], cwd=mirror
+                )
             )
             mirrored.append(f"{url}@{rev}#{sha}")
         return tuple(mirrored)

@@ -21,8 +21,8 @@ class TestsFlextInfraGovernanceAuthority:
                 u.Cli.capture(
                     ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
                     cwd=self.ROOT,
-                ),
-            ),
+                )
+            )
         )
 
     def _repository_root(self) -> Path:
@@ -42,8 +42,8 @@ class TestsFlextInfraGovernanceAuthority:
                 u.Cli.capture(
                     ["git", "rev-parse", "--path-format=absolute", "--show-toplevel"],
                     cwd=resolve_root,
-                ),
-            ),
+                )
+            )
         )
 
     def test_prompt_skills_resolve_to_existing_paths(self) -> None:
@@ -63,7 +63,7 @@ class TestsFlextInfraGovernanceAuthority:
 
     def test_markdownlint_does_not_suppress_strict_rules(self) -> None:
         config = u.Tests.json_payload(
-            (self.ROOT / ".markdownlint.json").read_text(encoding="utf-8"),
+            (self.ROOT / ".markdownlint.json").read_text(encoding="utf-8")
         )
         assert config.get("MD012") is not False
         assert config.get("MD050") is not False
@@ -81,7 +81,7 @@ class TestsFlextInfraGovernanceAuthority:
         law = " ".join(
             (self._repository_root() / ".agents/skills/flext-law/SKILL.md")
             .read_text(encoding="utf-8")
-            .split(),
+            .split()
         )
 
         for required in (

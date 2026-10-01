@@ -96,8 +96,7 @@ class TestRuntimeCensusSelection:
 
     def test_empty_checkout_fails_the_gate(self, tmp_path: Path) -> None:
         context = m.Infra.GateContext(
-            repository_root=tmp_path,
-            reports_dir=tmp_path / ".reports",
+            repository_root=tmp_path, reports_dir=tmp_path / ".reports"
         )
         gate = FlextInfraRuntimeCensusGate(repository_root=tmp_path)
         result = gate.check(tmp_path, context).result
@@ -109,9 +108,7 @@ class TestsRuntimeCensusBlocking:
     """Every census violation blocks; no rule family is set aside."""
 
     def test_every_rule_family_in_the_project_blocks(
-        self,
-        mixed_project: Path,
-        genuine_project: Path,
+        self, mixed_project: Path, genuine_project: Path
     ) -> None:
         """Prefix and constant violations count against the check census run.
 
@@ -121,13 +118,13 @@ class TestsRuntimeCensusBlocking:
         """
         mixed = tm.ok(
             FlextInfraRuntimeCensusValidator(
-                repository_root=mixed_project,
-            ).build_report(),
+                repository_root=mixed_project
+            ).build_report()
         )
         genuine = tm.ok(
             FlextInfraRuntimeCensusValidator(
-                repository_root=genuine_project,
-            ).build_report(),
+                repository_root=genuine_project
+            ).build_report()
         )
         tm.that(mixed.passed, eq=False)
         tm.that("\n".join(mixed.violations), has="[ENFORCE-079]")
@@ -139,15 +136,13 @@ class TestsRuntimeCensusBlocking:
         )
 
     def test_single_violation_reports_verbatim(
-        self,
-        genuine_project: Path,
-        capsys: pytest.CaptureFixture[str],
+        self, genuine_project: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """One genuine finding is one violation, reported exactly once."""
         report = tm.ok(
             FlextInfraRuntimeCensusValidator(
-                repository_root=genuine_project,
-            ).build_report(),
+                repository_root=genuine_project
+            ).build_report()
         )
         output = capsys.readouterr().out
         tm.that(report.passed, eq=False)

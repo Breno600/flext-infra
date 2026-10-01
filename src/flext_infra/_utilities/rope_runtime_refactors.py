@@ -16,8 +16,7 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
 
     @staticmethod
     def unwrap_class_rewrites(
-        source: str,
-        layout: m.Infra.ClassBlockLayout,
+        source: str, layout: m.Infra.ClassBlockLayout
     ) -> t.VariadicTuple[m.Infra.SourceRewrite]:
         """Remove one Rope-resolved header without changing literal payloads.
 
@@ -42,7 +41,7 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
                 start=start,
                 end=end,
                 text="".join(prefix + line for line in comments.splitlines(True)),
-            ),
+            )
         ]
         for number in range(layout.header_end + 1, layout.body_end + 1):
             offset = lines.get_line_start(number)
@@ -62,21 +61,18 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
                 raise ValueError(msg)
             edits.append(
                 m.Infra.SourceRewrite(
-                    start=offset,
-                    end=offset + layout.indentation,
-                    text="",
-                ),
+                    start=offset, end=offset + layout.indentation, text=""
+                )
             )
         if layout.docstring_span is not None:
             edits.append(
                 m.Infra.SourceRewrite(
                     start=lines.get_line_start(layout.docstring_span[0]),
                     end=min(
-                        lines.get_line_end(layout.docstring_span[1]) + 1,
-                        len(source),
+                        lines.get_line_end(layout.docstring_span[1]) + 1, len(source)
                     ),
                     text="",
-                ),
+                )
             )
         return tuple(edits)
 
@@ -89,7 +85,7 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
     ) -> p.Infra.RopeChangeContents:
         """Preview checked, disjoint edits through Rope's change machinery."""
         collector = cls._runtime_callable("rope.base.codeanalyze", "ChangeCollector")(
-            source,
+            source
         )
         add = getattr(collector, "add_change", None)
         changed = getattr(collector, "get_changed", None)
@@ -99,7 +95,7 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
         end = 0
         for rewrite in sorted(rewrites, key=lambda item: (item.start, item.end)):
             if rewrite.start < end or not 0 <= rewrite.start <= rewrite.end <= len(
-                source,
+                source
             ):
                 msg = "Rope source edits overlap or escape their snapshot"
                 raise ValueError(msg)
@@ -112,8 +108,7 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
             msg = "Rope ChangeCollector returned a non-source result"
             raise TypeError(msg)
         change = cls._runtime_callable("rope.base.change", "ChangeContents")(
-            resource,
-            updated,
+            resource, updated
         )
         if not isinstance(change, p.Infra.RopeChangeContents):
             msg = "Rope ChangeContents returned an invalid content plan"
@@ -185,15 +180,10 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
         in_hierarchy: bool,
     ) -> t.Infra.RopeOccurrenceFinder:
         create_finder = cls._runtime_callable(
-            "rope.refactor.occurrences",
-            "create_finder",
+            "rope.refactor.occurrences", "create_finder"
         )
         finder = create_finder(
-            rope_project,
-            name,
-            pyname,
-            imports=imports,
-            in_hierarchy=in_hierarchy,
+            rope_project, name, pyname, imports=imports, in_hierarchy=in_hierarchy
         )
         if not isinstance(finder, p.Infra.RopeOccurrenceFinder):
             msg = "rope occurrence finder does not satisfy p.Infra.RopeOccurrenceFinder"

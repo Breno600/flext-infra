@@ -15,7 +15,7 @@ from .worktree_io import FlextInfraUtilitiesGitWorktreeIO
 
 
 class FlextInfraUtilitiesGitStateFilesMixin(
-    FlextInfraUtilitiesGitStatePublicationMixin,
+    FlextInfraUtilitiesGitStatePublicationMixin
 ):
     """Consume CLI physical-state primitives under the shared writer lease."""
 
@@ -36,9 +36,7 @@ class FlextInfraUtilitiesGitStateFilesMixin(
 
     @staticmethod
     def _state_require_directory_scope(
-        root: Path,
-        path: Path,
-        owned: t.SequenceOf[Path],
+        root: Path, path: Path, owned: t.SequenceOf[Path]
     ) -> None:
         manifest = u.Cli.atomic_inventory_physical_tree(root / path).unwrap()
         for entry in manifest.entries:
@@ -124,8 +122,7 @@ class FlextInfraUtilitiesGitStateFilesMixin(
                 destination.unlink()
         else:
             before_file = u.Cli.atomic_read_binary_file_state(
-                destination,
-                required=False,
+                destination, required=False
             ).unwrap()
             permissions = before_file.mode if before_file.mode is not None else 0
             cls._state_require_payload(
@@ -141,9 +138,7 @@ class FlextInfraUtilitiesGitStateFilesMixin(
             if desired is not None and desired.mode != "120000":
                 payload = cls._state_blob_payload(root, desired.oid)
                 u.Cli.atomic_write_binary_file_guarded(
-                    before_file,
-                    payload,
-                    permission_mode=desired.permissions,
+                    before_file, payload, permission_mode=desired.permissions
                 ).unwrap()
                 return
             if before_file.content is not None:

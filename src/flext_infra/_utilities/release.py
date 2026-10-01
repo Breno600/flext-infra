@@ -35,8 +35,7 @@ class FlextInfraUtilitiesRelease:
 
     @staticmethod
     def materialize_tar_tree(
-        archive: tarfile.TarFile,
-        destination: Path,
+        archive: tarfile.TarFile, destination: Path
     ) -> p.Result[bool]:
         """Materialize one trusted tar tree without path traversal."""
         try:
@@ -50,42 +49,37 @@ class FlextInfraUtilitiesRelease:
                 return r[bool].from_failure(path_result)
             if member.issym() or member.islnk():
                 return r[bool].fail(
-                    f"release archive contains symbolic or hard link: {member.name}",
+                    f"release archive contains symbolic or hard link: {member.name}"
                 )
             if not member.isdir() and not member.isfile():
                 return r[bool].fail(
-                    f"release archive contains unsupported member: {member.name}",
+                    f"release archive contains unsupported member: {member.name}"
                 )
             validated_members.append((member, path_result.value))
         if destination.exists():
             return r[bool].fail(
-                f"release stage directory already exists: {destination}",
+                f"release stage directory already exists: {destination}"
             )
         try:
             destination.parent.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
             return r[bool].fail_op(
-                f"create release stage parent {destination.parent}",
-                exc,
+                f"create release stage parent {destination.parent}", exc
             )
         try:
             with TemporaryDirectory(
-                dir=destination.parent,
-                prefix=f".{destination.name}.",
+                dir=destination.parent, prefix=f".{destination.name}."
             ) as staging_dir:
                 staging = Path(staging_dir)
                 written = FlextInfraUtilitiesRelease._write_validated_tar_tree(
-                    archive,
-                    staging,
-                    validated_members,
+                    archive, staging, validated_members
                 )
                 if written.failure:
                     return written
                 staging.rename(destination)
         except OSError as exc:
             return r[bool].fail_op(
-                f"materialize release archive into {destination}",
-                exc,
+                f"materialize release archive into {destination}", exc
             )
         return r[bool].ok(True)
 
@@ -103,28 +97,25 @@ class FlextInfraUtilitiesRelease:
                     member_path.mkdir(parents=True, exist_ok=True)
                 except OSError as exc:
                     return r[bool].fail_op(
-                        f"create release archive directory {member_path}",
-                        exc,
+                        f"create release archive directory {member_path}", exc
                     )
                 continue
             try:
                 member_path.parent.mkdir(parents=True, exist_ok=True)
             except OSError as exc:
                 return r[bool].fail_op(
-                    f"create release archive parent {member_path.parent}",
-                    exc,
+                    f"create release archive parent {member_path.parent}", exc
                 )
             extracted = archive.extractfile(member)
             if extracted is None:
                 return r[bool].fail(
-                    f"release archive could not open member: {member.name}",
+                    f"release archive could not open member: {member.name}"
                 )
             try:
                 member_path.write_bytes(extracted.read())
             except OSError as exc:
                 return r[bool].fail_op(
-                    f"write release archive member {member_path}",
-                    exc,
+                    f"write release archive member {member_path}", exc
                 )
             finally:
                 extracted.close()
@@ -132,8 +123,7 @@ class FlextInfraUtilitiesRelease:
 
     @staticmethod
     def plan_bump(
-        subjects: t.StrSequence,
-        bump_types: Mapping[str, c.Infra.VersionBump],
+        subjects: t.StrSequence, bump_types: Mapping[str, c.Infra.VersionBump]
     ) -> p.Result[c.Infra.VersionBump]:
         """Derive the release bump from the merged pull-request subjects.
 
@@ -150,7 +140,7 @@ class FlextInfraUtilitiesRelease:
             if c.Infra.PULL_REQUEST_MERGE_SUBJECT_RE.match(subject):
                 return r[c.Infra.VersionBump].fail(
                     "merged pull request without a Conventional Commits title: "
-                    f"{subject!r}",
+                    f"{subject!r}"
                 )
             match = c.Infra.CONVENTIONAL_SUBJECT_RE.match(subject)
             if match is None:
@@ -201,7 +191,7 @@ class FlextInfraUtilitiesRelease:
             "## Pull requests since last release",
             "",
             FlextInfraUtilitiesRelease._markdown_changelog(
-                changes or "- Initial tagged release",
+                changes or "- Initial tagged release"
             ),
         ])
         try:
@@ -212,8 +202,7 @@ class FlextInfraUtilitiesRelease:
                 encoding=c.Cli.ENCODING_DEFAULT,
             )
             u.fetch_logger(__name__).info(
-                "release_notes_written",
-                path=str(output_path),
+                "release_notes_written", path=str(output_path)
             )
             return r[bool].ok(True)
         except OSError as exc:
@@ -249,16 +238,13 @@ class FlextInfraUtilitiesRelease:
                     ),
                     break_long_words=False,
                     break_on_hyphens=False,
-                ),
+                )
             )
         return "\n".join(rendered)
 
     @staticmethod
     def update_changelog(
-        repository_root: Path,
-        version: str,
-        tag: str,
-        notes_path: Path,
+        repository_root: Path, version: str, tag: str, notes_path: Path
     ) -> p.Result[bool]:
         """Update docs/changelog and docs/releases entries."""
         try:
@@ -274,11 +260,7 @@ class FlextInfraUtilitiesRelease:
 
     @staticmethod
     def _write_changelog_files(
-        *,
-        repository_root: Path,
-        version: str,
-        tag: str,
-        notes_path: Path,
+        *, repository_root: Path, version: str, tag: str, notes_path: Path
     ) -> None:
         """Write the docs changelog plus the latest and tagged release notes."""
         docs = repository_root / c.Infra.DIR_DOCS
@@ -292,9 +274,7 @@ class FlextInfraUtilitiesRelease:
             else "# Changelog\n\n"
         )
         updated = FlextInfraUtilitiesRelease._updated_changelog(
-            existing=existing,
-            version=version,
-            tag=tag,
+            existing=existing, version=version, tag=tag
         )
         changelog_path.parent.mkdir(parents=True, exist_ok=True)
         u.write_file(changelog_path, updated, encoding=c.Cli.ENCODING_DEFAULT)
@@ -302,12 +282,10 @@ class FlextInfraUtilitiesRelease:
         u.write_file(latest_path, notes_text, encoding=c.Cli.ENCODING_DEFAULT)
         u.write_file(tagged_path, notes_text, encoding=c.Cli.ENCODING_DEFAULT)
         u.fetch_logger(__name__).info(
-            "release_changelog_written",
-            path=str(changelog_path),
+            "release_changelog_written", path=str(changelog_path)
         )
         u.fetch_logger(__name__).info(
-            "release_tagged_notes_written",
-            path=str(tagged_path),
+            "release_tagged_notes_written", path=str(tagged_path)
         )
 
     @staticmethod
@@ -333,8 +311,7 @@ class FlextInfraUtilitiesRelease:
 
     @classmethod
     def release_publish_waves(
-        cls,
-        targets: t.SequenceOf[t.Pair[str, Path]],
+        cls, targets: t.SequenceOf[t.Pair[str, Path]]
     ) -> p.Result[t.SequenceOf[t.StrSequence]]:
         """Group selected release projects into dependency-respecting waves.
 
@@ -359,7 +336,7 @@ class FlextInfraUtilitiesRelease:
                     dependency
                     for dependency in declared.value
                     if dependency in selected and dependency != name
-                ),
+                )
             )
         return FlextInfraUtilitiesDependencies.dependency_waves(edges)
 
@@ -375,7 +352,7 @@ class FlextInfraUtilitiesRelease:
         pyproject = path / c.PYPROJECT_FILENAME
         if not pyproject.is_file():
             return r[t.StrSequence].fail(
-                f"release project has no {c.PYPROJECT_FILENAME}: {path}",
+                f"release project has no {c.PYPROJECT_FILENAME}: {path}"
             )
         document = u.Cli.toml_read_document(pyproject)
         if document.failure:
@@ -395,8 +372,8 @@ class FlextInfraUtilitiesRelease:
                     if isinstance(requirement, str)
                     and (name := FlextInfraUtilitiesDependencies.dep_name(requirement))
                     is not None
-                }),
-            ),
+                })
+            )
         )
 
 

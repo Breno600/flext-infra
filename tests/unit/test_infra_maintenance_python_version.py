@@ -76,8 +76,7 @@ class TestsFlextInfraInfraMaintenancePythonVersion:
     def test_check_only_success(self, tmp_path: Path) -> None:
         tm.ok(
             self._svc(self._ws(tmp_path / "ws")).execute(
-                check_only=True,
-                verbose=False,
+                check_only=True, verbose=False
             ),
             eq=0,
         )
@@ -85,8 +84,7 @@ class TestsFlextInfraInfraMaintenancePythonVersion:
     def test_enforce_mode(self, tmp_path: Path) -> None:
         tm.ok(
             self._svc(self._ws(tmp_path / "ws")).execute(
-                check_only=False,
-                verbose=False,
+                check_only=False, verbose=False
             ),
             eq=0,
         )
@@ -99,8 +97,8 @@ class TestsFlextInfraInfraMaintenancePythonVersion:
     def test_failure_on_workspace_mismatch(self, tmp_path: Path) -> None:
         tm.fail(
             self._svc(self._ws(tmp_path / "ws", minor=self._BAD)).execute(
-                check_only=True,
-            ),
+                check_only=True
+            )
         )
 
     def test_failure_on_project_mismatch(self, tmp_path: Path) -> None:
@@ -113,8 +111,7 @@ class TestsFlextInfraInfraMaintenancePythonVersion:
         tm.ok(self._svc(self._ws(tmp_path / "ws")).execute(check_only=True))
 
     def test_check_only_fails_when_python_version_file_is_missing(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         ws = self._ws(tmp_path / "ws")
         (ws / ".python-version").unlink()
@@ -122,8 +119,7 @@ class TestsFlextInfraInfraMaintenancePythonVersion:
         tm.fail(self._svc(ws).execute(check_only=True, verbose=False))
 
     def test_check_only_fails_when_python_version_file_is_stale(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         ws = self._ws(tmp_path / "ws")
         (ws / ".python-version").write_text(f"3.{self._BAD}\n", encoding="utf-8")
@@ -131,8 +127,7 @@ class TestsFlextInfraInfraMaintenancePythonVersion:
         tm.fail(self._svc(ws).execute(check_only=True, verbose=False))
 
     def test_apply_mode_conforms_python_version_file_and_is_idempotent(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         ws = self._ws(tmp_path / "ws")
         version_file = ws / ".python-version"

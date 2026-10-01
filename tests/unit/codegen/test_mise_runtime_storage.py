@@ -55,9 +55,7 @@ class TestsFlextInfraMiseRuntimeStorage:
         candidate = tmp_path / contract.storage_root_variable.lower()
 
         result = u.Infra.prepare_mise_runtime_storage(
-            tmp_path,
-            {contract.storage_root_variable: str(candidate)},
-            contract,
+            tmp_path, {contract.storage_root_variable: str(candidate)}, contract
         )
 
         tm.fail(result)

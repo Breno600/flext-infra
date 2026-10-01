@@ -26,45 +26,30 @@ class TestsFlextInfraLazyInitWorkspaceElection:
         )
 
     def test_workspace_plan_uses_declared_sibling_without_installing_it(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         """A workspace resolves siblings, while a standalone child stays isolated."""
         workspace = tmp_path / "workspace"
         _owner_repo, owner = u.Tests.create_lazy_init_workspace(
-            workspace,
-            project_name="flext-ws-owner",
-            package_name="flext_ws_owner",
+            workspace, project_name="flext-ws-owner", package_name="flext_ws_owner"
         )
         _middle_repo, middle = u.Tests.create_lazy_init_workspace(
-            workspace,
-            project_name="flext-ws-middle",
-            package_name="flext_ws_middle",
+            workspace, project_name="flext-ws-middle", package_name="flext_ws_middle"
         )
         child_repo, child = u.Tests.create_lazy_init_workspace(
-            workspace,
-            project_name="flext-ws-child",
-            package_name="flext_ws_child",
+            workspace, project_name="flext-ws-child", package_name="flext_ws_child"
         )
         u.Tests.write_lazy_init_namespace_module(
-            owner / c.Infra.CONSTANTS_PY,
-            class_name="FlextWsOwnerConstants",
-            alias="c",
+            owner / c.Infra.CONSTANTS_PY, class_name="FlextWsOwnerConstants", alias="c"
         )
         u.Tests.write_lazy_init_namespace_module(
-            owner / "result.py",
-            class_name="FlextWsOwnerResult",
-            alias="r",
+            owner / "result.py", class_name="FlextWsOwnerResult", alias="r"
         )
         self._write_constants(
-            middle,
-            parent="flext_ws_owner",
-            class_name="FlextWsMiddleConstants",
+            middle, parent="flext_ws_owner", class_name="FlextWsMiddleConstants"
         )
         self._write_constants(
-            child,
-            parent="flext_ws_middle",
-            class_name="FlextWsChildConstants",
+            child, parent="flext_ws_middle", class_name="FlextWsChildConstants"
         )
 
         child_init = child / c.Infra.INIT_PY

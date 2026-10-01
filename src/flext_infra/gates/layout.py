@@ -27,9 +27,7 @@ class FlextInfraLayoutGate(FlextInfraGate):
 
     @override
     def check(
-        self,
-        project_dir: Path,
-        ctx: m.Infra.GateContext,
+        self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> m.Infra.GateExecution:
         """Report layout violations for ``project_dir`` from the layout SSOT."""
         started = time.monotonic()

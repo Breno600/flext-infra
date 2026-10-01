@@ -36,24 +36,21 @@ class FlextInfraCodemodAstScan(FlextInfraServiceBase[t.Cli.ResultValue]):
         if self.apply_changes:
             return self._execute_apply(self.repository_root, rules)
         ast_report = FlextInfraModGateEngine.scan(
-            self.repository_root,
-            fix=False,
+            self.repository_root, fix=False
         ).unwrap()
         text_report = FlextInfraModTextGateEngine.scan(
-            self.repository_root,
-            fix=False,
-            validate_receipts=True,
+            self.repository_root, fix=False, validate_receipts=True
         ).unwrap()
         for entry in ast_report.entries:
             cli.display_text(
                 f"ast: {entry.rule_id} {entry.file.as_posix()} "
                 f"[{entry.text!r}] "
-                f"{'actionable' if entry.actionable else 'detection-only'}",
+                f"{'actionable' if entry.actionable else 'detection-only'}"
             )
         for entry in text_report.entries:
             cli.display_text(
                 f"sed: {entry.rule_id} {entry.file.as_posix()}:{entry.line} "
-                f"[{entry.text!r}]",
+                f"[{entry.text!r}]"
             )
         cli.display_text(
             f"ast: scanned {len(rules)} rule file(s) from "
@@ -61,7 +58,7 @@ class FlextInfraCodemodAstScan(FlextInfraServiceBase[t.Cli.ResultValue]):
             f"{ast_report.findings} ast-grep finding(s) "
             f"({ast_report.actionable} actionable), "
             f"{text_report.findings} sed-by-list finding(s) "
-            f"({text_report.actionable} actionable)",
+            f"({text_report.actionable} actionable)"
         )
         if ast_report.findings or text_report.findings:
             return r[t.Cli.ResultValue].fail(
@@ -69,16 +66,14 @@ class FlextInfraCodemodAstScan(FlextInfraServiceBase[t.Cli.ResultValue]):
                 f"({ast_report.actionable} actionable, "
                 f"{ast_report.detection_only} detection-only) plus "
                 f"{text_report.findings} sed-by-list finding(s) "
-                f"({text_report.actionable} actionable)",
+                f"({text_report.actionable} actionable)"
             )
         cli.display_text("ast: zero findings in both cascades")
         return r[t.Cli.ResultValue].ok(True)
 
     @classmethod
     def _execute_apply(
-        cls,
-        root: Path,
-        rules: t.SequenceOf[Path],
+        cls, root: Path, rules: t.SequenceOf[Path]
     ) -> p.Result[t.Cli.ResultValue]:
         """Drive both mechanical cascades to a fixed point, retaining failures."""
         cli.display_text("ast: validate ast-grep rule fixtures")
@@ -98,29 +93,25 @@ class FlextInfraCodemodAstScan(FlextInfraServiceBase[t.Cli.ResultValue]):
                     )
                     for finding in current.entries
                     if finding.actionable
-                ),
+                )
             )
             if fingerprint in seen:
                 return r[t.Cli.ResultValue].fail(
                     f"ast apply iteration {iteration} made no progress; "
-                    "changes retained for mandatory owner repair",
+                    "changes retained for mandatory owner repair"
                 )
             seen.add(fingerprint)
             cli.display_text(f"ast: apply iteration {iteration}")
             FlextInfraModGateEngine.scan(root, fix=True).unwrap()
             current = FlextInfraModGateEngine.scan(root, fix=False).unwrap()
         text = FlextInfraModTextGateEngine.scan(
-            root,
-            fix=False,
-            validate_receipts=True,
+            root, fix=False, validate_receipts=True
         ).unwrap()
         while text.actionable:
             cli.display_text("ast: apply sed-by-list cascade")
             FlextInfraModTextGateEngine.scan(root, fix=True).unwrap()
             text = FlextInfraModTextGateEngine.scan(
-                root,
-                fix=False,
-                validate_receipts=True,
+                root, fix=False, validate_receipts=True
             ).unwrap()
         remaining_ast = FlextInfraModGateEngine.scan(root, fix=False).unwrap()
         if remaining_ast.actionable or text.findings:
@@ -128,7 +119,7 @@ class FlextInfraCodemodAstScan(FlextInfraServiceBase[t.Cli.ResultValue]):
                 f"ast fixed point retains findings: {remaining_ast.findings} "
                 f"ast-grep ({remaining_ast.actionable} actionable), "
                 f"{text.findings} sed-by-list; run make mod for the "
-                "semantic phases",
+                "semantic phases"
             )
         cli.display_text("ast: mechanical fixed point verified")
         return r[t.Cli.ResultValue].ok(True)

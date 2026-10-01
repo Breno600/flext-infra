@@ -33,11 +33,11 @@ class TestsFlextInfraAuditorContract:
     def test_default_and_scope_budgets_are_rejected(self, budget: float) -> None:
         with pytest.raises(c.ValidationError, match="budgets"):
             m.Infra.AuditScopeParams.model_validate({
-                "budgets": (budget, {"test-project": budget}),
+                "budgets": (budget, {"test-project": budget})
             })
 
     def test_scope_budget_without_default_is_rejected(self) -> None:
         with pytest.raises(c.ValidationError, match="budgets"):
             m.Infra.AuditScopeParams.model_validate({
-                "budgets": (None, {"test-project": 3}),
+                "budgets": (None, {"test-project": 3})
             })

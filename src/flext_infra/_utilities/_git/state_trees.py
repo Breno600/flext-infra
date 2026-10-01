@@ -16,10 +16,7 @@ class FlextInfraUtilitiesGitStateTreesMixin(FlextInfraUtilitiesGitStateSnapshotM
 
     @classmethod
     def _state_tree_entries(
-        cls,
-        root: Path,
-        commit: str,
-        paths: t.SequenceOf[Path],
+        cls, root: Path, commit: str, paths: t.SequenceOf[Path]
     ) -> t.VariadicTuple[m.Infra.GitWorktreeIndexEntry]:
         if not paths:
             return ()
@@ -36,7 +33,7 @@ class FlextInfraUtilitiesGitStateTreesMixin(FlextInfraUtilitiesGitStateSnapshotM
                 metadata, path = row.split("\t", 1)
                 mode, oid, _stage = metadata.split()
                 entries.append(
-                    m.Infra.GitWorktreeIndexEntry(path=Path(path), mode=mode, oid=oid),
+                    m.Infra.GitWorktreeIndexEntry(path=Path(path), mode=mode, oid=oid)
                 )
         return tuple(entries)
 
@@ -51,7 +48,7 @@ class FlextInfraUtilitiesGitStateTreesMixin(FlextInfraUtilitiesGitStateSnapshotM
     ) -> None:
         repo = cls._repo(root)
         with repo.git.custom_environment(
-            GIT_INDEX_FILE=str(index_file) if index_file else None,
+            GIT_INDEX_FILE=str(index_file) if index_file else None
         ):
             if removed or entries:
                 absent_oid = "0" * len(repo.head.commit.hexsha)
@@ -81,9 +78,7 @@ class FlextInfraUtilitiesGitStateTreesMixin(FlextInfraUtilitiesGitStateSnapshotM
                     tuple(
                         Path(path)
                         for path in repo.git.ls_files(
-                            "-z",
-                            "--",
-                            *cls._state_pathspecs(snapshot.paths),
+                            "-z", "--", *cls._state_pathspecs(snapshot.paths)
                         ).split("\0")
                         if path
                     )
@@ -91,17 +86,13 @@ class FlextInfraUtilitiesGitStateTreesMixin(FlextInfraUtilitiesGitStateSnapshotM
                     else ()
                 )
                 cls._state_index_update(
-                    snapshot.repo_root,
-                    removed,
-                    entries,
-                    index_file=Path(index_path),
+                    snapshot.repo_root, removed, entries, index_file=Path(index_path)
                 )
                 return repo.git.write_tree()
 
     @classmethod
     def _state_working_entries(
-        cls,
-        snapshot: m.Infra.GitWorktreeStateSnapshot,
+        cls, snapshot: m.Infra.GitWorktreeStateSnapshot
     ) -> t.VariadicTuple[m.Infra.GitWorktreeIndexEntry]:
         return tuple(
             m.Infra.GitWorktreeIndexEntry(path=file.path, mode=file.mode, oid=file.oid)
@@ -110,8 +101,7 @@ class FlextInfraUtilitiesGitStateTreesMixin(FlextInfraUtilitiesGitStateSnapshotM
 
     @classmethod
     def _state_validate_checkpoint(
-        cls,
-        checkpoint: m.Infra.GitWorktreeStateCheckpoint,
+        cls, checkpoint: m.Infra.GitWorktreeStateCheckpoint
     ) -> None:
         snapshot = checkpoint.snapshot
         repo = cls._repo(snapshot.repo_root)

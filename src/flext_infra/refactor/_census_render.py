@@ -57,7 +57,7 @@ class FlextInfraRefactorCensusRenderMixin:
                     f"{candidate.reason} "
                     f"{candidate.object_name} "
                     f"@ {candidate.file_path}:{candidate.line}"
-                    + (f" refs={reference_preview}" if reference_preview else ""),
+                    + (f" refs={reference_preview}" if reference_preview else "")
                 )
         return "\n".join(lines)
 

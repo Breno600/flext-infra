@@ -23,9 +23,7 @@ class FlextInfraEnsurePackagingPhase:
 
     @staticmethod
     def _validate_data_tree(
-        root: Path,
-        source: Path,
-        ancestors: frozenset[Path],
+        root: Path, source: Path, ancestors: frozenset[Path]
     ) -> None:
         """Follow every link Hatch follows while rejecting cycles and escape."""
         resolved = source.resolve(strict=True)
@@ -38,9 +36,7 @@ class FlextInfraEnsurePackagingPhase:
         if source.is_dir():
             for child in source.iterdir():
                 FlextInfraEnsurePackagingPhase._validate_data_tree(
-                    root,
-                    child,
-                    ancestors | {resolved},
+                    root, child, ancestors | {resolved}
                 )
         elif not source.is_file():
             msg = f"packaged data path is not a file or directory: {source}"
@@ -75,9 +71,7 @@ class FlextInfraEnsurePackagingPhase:
                 raise ValueError(msg)
             if source.exists() or source.is_symlink():
                 FlextInfraEnsurePackagingPhase._validate_data_tree(
-                    root,
-                    source,
-                    frozenset(),
+                    root, source, frozenset()
                 )
             elif not any(
                 Path(planned).is_relative_to(relative) for planned in planned_files
@@ -109,8 +103,7 @@ class FlextInfraEnsurePackagingPhase:
             else:
                 directories.append(declaration)
         return m.Infra.PackagedDataSelection(
-            files=tuple(files),
-            directories=tuple(directories),
+            files=tuple(files), directories=tuple(directories)
         )
 
     @staticmethod
@@ -204,7 +197,7 @@ class FlextInfraEnsurePackagingPhase:
                                         package_paths,
                                         (package_name, *root_packages),
                                         strict=True,
-                                    ),
+                                    )
                                 ),
                                 **{
                                     directory: f"{package_name}/{directory}"
@@ -304,9 +297,7 @@ class FlextInfraEnsurePackagingPhase:
         project_dir = path.parent
         docs_meta = u.Infra.docs_meta_from_payload(payload)
         package_name = u.Infra.package_name_from_payload(
-            project_dir,
-            payload,
-            docs_meta,
+            project_dir, payload, docs_meta
         )
         if not package_name:
             if (

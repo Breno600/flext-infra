@@ -22,8 +22,7 @@ class FlextInfraModelsBase:
         """Structured process outcome propagated through a Result failure."""
 
         exit_code: Annotated[
-            int,
-            m.Field(description="Exact subprocess return code without remapping"),
+            int, m.Field(description="Exact subprocess return code without remapping")
         ]
         classification: Annotated[
             t.NonEmptyStr,
@@ -74,12 +73,10 @@ class FlextInfraModelsBase:
         }
 
         workspace: Annotated[
-            Path,
-            m.Field(description="Repository root used for lint and pytest checks"),
+            Path, m.Field(description="Repository root used for lint and pytest checks")
         ]
         updated_source: Annotated[
-            str,
-            m.Field(description="Replacement source content to write"),
+            str, m.Field(description="Replacement source content to write")
         ]
         gates: Annotated[
             t.StrSequence | None,
@@ -90,8 +87,7 @@ class FlextInfraModelsBase:
         """Validated options for transactionally writing multiple sources."""
 
         workspace: Annotated[
-            Path,
-            m.Field(description="Repository root used for lint and pytest checks"),
+            Path, m.Field(description="Repository root used for lint and pytest checks")
         ]
         expected_sources: Annotated[
             t.MappingKV[Path, str | None],
@@ -99,7 +95,7 @@ class FlextInfraModelsBase:
                 description=(
                     "Expected current source bytes keyed by updated path; None "
                     "requires the path to be absent"
-                ),
+                )
             ),
         ]
         gates: Annotated[
@@ -111,20 +107,17 @@ class FlextInfraModelsBase:
             m.Field(description="Optional callback invoked after writes land"),
         ] = None
         skip_pytest: Annotated[
-            bool,
-            m.Field(description="Whether to bypass per-file pytest validation"),
+            bool, m.Field(description="Whether to bypass per-file pytest validation")
         ] = False
 
     class ProtectedFileEditRequest(m.ArbitraryTypesModel):
         """Validated options for a protected single-file edit pipeline."""
 
         workspace: Annotated[
-            Path,
-            m.Field(description="Repository root used for lint and pytest checks"),
+            Path, m.Field(description="Repository root used for lint and pytest checks")
         ]
         before_source: Annotated[
-            str,
-            m.Field(description="Original source text used for diff and restore"),
+            str, m.Field(description="Original source text used for diff and restore")
         ]
         edit_fn: Annotated[
             Callable[[], None],
@@ -143,12 +136,10 @@ class FlextInfraModelsBase:
         """Validated result from one protected-edit lint gate."""
 
         tool_name: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Canonical lint tool name"),
+            t.NonEmptyStr, m.Field(description="Canonical lint tool name")
         ]
         errors: Annotated[
-            t.StrSequence,
-            m.Field(description="Error lines reported by the lint tool"),
+            t.StrSequence, m.Field(description="Error lines reported by the lint tool")
         ] = m.Field(default_factory=tuple)
 
     class TransformStep(m.ContractModel):
@@ -156,8 +147,7 @@ class FlextInfraModelsBase:
 
         detector: Annotated[str, m.Field(description="Detector rule_id to run")]
         transformer: Annotated[
-            str,
-            m.Field(description="Transformer class name to apply"),
+            str, m.Field(description="Transformer class name to apply")
         ]
         gates: Annotated[
             str,
@@ -165,6 +155,6 @@ class FlextInfraModelsBase:
                 description=(
                     "Comma-separated gate names for post-validation; empty selects"
                     " the SSOT snapshot gates (make.check_gates_ci)."
-                ),
+                )
             ),
         ] = ""

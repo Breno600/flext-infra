@@ -58,13 +58,11 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
         )
 
     def test_standalone_pyproject_does_not_declare_empty_workspace(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         """Keep standalone projects eligible for a real parent uv workspace."""
         rendered = u.Tests.scaffold_text(
-            tmp_path / "fixture-project",
-            c.PYPROJECT_FILENAME,
+            tmp_path / "fixture-project", c.PYPROJECT_FILENAME
         )
 
         tm.that(rendered, has="[project]")
@@ -75,17 +73,16 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
             u.Cli.template_render(
                 self._TEMPLATES / ".github/dependabot.yml.j2",
                 self._workflow_spec(workspace_repositories=(), has_devcontainer=False),
-            ),
+            )
         )
         repository = u.Tests.repository_ref("member", path=Path("member"))
         populated = tm.ok(
             u.Cli.template_render(
                 self._TEMPLATES / ".github/dependabot.yml.j2",
                 self._workflow_spec(
-                    workspace_repositories=(repository,),
-                    has_devcontainer=False,
+                    workspace_repositories=(repository,), has_devcontainer=False
                 ),
-            ),
+            )
         )
 
         for rendered in (empty, populated):
@@ -96,13 +93,13 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
             u.Cli.template_render(
                 self._TEMPLATES / ".github/dependabot.yml.j2",
                 self._workflow_spec(workspace_repositories=(), has_devcontainer=False),
-            ),
+            )
         )
         with_devcontainer = tm.ok(
             u.Cli.template_render(
                 self._TEMPLATES / ".github/dependabot.yml.j2",
                 self._workflow_spec(workspace_repositories=(), has_devcontainer=True),
-            ),
+            )
         )
 
         tm.that(without, lacks="devcontainers")
@@ -110,9 +107,7 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
         for rendered in (without, with_devcontainer):
             tm.that(rendered, has="package-ecosystem: pip")
 
-    def test_lazy_root_renders_one_argument_per_line_with_trailing_commas(
-        self,
-    ) -> None:
+    def test_lazy_root_renders_one_argument_per_line_with_trailing_commas(self) -> None:
         """Render the formatter fixed point under magic trailing commas.
 
         Ruff respects magic trailing commas and COM812 demands one on every
@@ -120,7 +115,7 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
         with a trailing comma after each argument and after the inner call.
         """
         rendered = tm.ok(
-            u.Cli.template_render(self._ROOT_TEMPLATE, self._empty_root_render()),
+            u.Cli.template_render(self._ROOT_TEMPLATE, self._empty_root_render())
         )
 
         tm.that(rendered, has="        sort_keys=False,\n    ),\n)")

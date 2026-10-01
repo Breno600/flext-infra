@@ -77,8 +77,7 @@ class FlextInfraUtilitiesVersioning:
 
     @staticmethod
     def bump_version(
-        version: str,
-        bump_type: str | c.Infra.VersionBump,
+        version: str, bump_type: str | c.Infra.VersionBump
     ) -> p.Result[str]:
         """Return the next release version for one bump kind.
 
@@ -136,7 +135,7 @@ class FlextInfraUtilitiesVersioning:
         except OSError as exc:
             return r[str].fail_op("read", exc)
         version = FlextInfraUtilitiesVersioning._extract_project_version_from_text(
-            content,
+            content
         )
         if version is None or not version.strip():
             return r[str].fail("version not found in pyproject.toml")
@@ -222,8 +221,7 @@ class FlextInfraUtilitiesVersioning:
         if not FlextInfraUtilitiesVersioning._has_project_table(content):
             return r[str].fail("missing [project] table")
         updated = FlextInfraUtilitiesVersioning._replace_project_version_in_text(
-            content,
-            version,
+            content, version
         )
         if updated is None:
             return r[str].fail("missing [project] version")
@@ -247,8 +245,7 @@ class FlextInfraUtilitiesVersioning:
         except OSError as exc:
             return r[bool].fail_op("read", exc)
         rendered = FlextInfraUtilitiesVersioning.render_project_version(
-            content,
-            version,
+            content, version
         )
         if rendered.failure:
             return r[bool].from_failure(rendered)

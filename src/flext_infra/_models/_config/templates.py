@@ -36,8 +36,7 @@ class FlextInfraConfigModelsTemplates:
             m.Field(description="Canonical rendering delegate"),
         ]
         overwrite: Annotated[
-            bool,
-            m.Field(description="Whether the template owns existing content"),
+            bool, m.Field(description="Whether the template owns existing content")
         ] = False
         requires_release_protocol: Annotated[
             bool,
@@ -89,7 +88,7 @@ class FlextInfraConfigModelsTemplates:
                 description=(
                     "Conform mutation policy: full renders the whole file; merge "
                     "dispatches to the owner merge that keeps CUSTOM content"
-                ),
+                )
             ),
         ]
         mode: Annotated[
@@ -111,7 +110,7 @@ class FlextInfraConfigModelsTemplates:
                     "dead-ends the merge: absorbing an integration base that "
                     "still carries the previous projection leaves a conflict "
                     "the canonical surface cannot resolve."
-                ),
+                )
             ),
         ] = ()
         preserve_project_keys: Annotated[
@@ -120,7 +119,7 @@ class FlextInfraConfigModelsTemplates:
                 description=(
                     "CUSTOM PEP 621 [project] keys kept from the live file when "
                     "policy is merge."
-                ),
+                )
             ),
         ] = ()
         overwrite_project_keys: Annotated[
@@ -129,7 +128,7 @@ class FlextInfraConfigModelsTemplates:
                 description=(
                     "MANAGED PEP 621 [project] keys the template overwrites. "
                     "Must be disjoint from preserve_project_keys."
-                ),
+                )
             ),
         ] = ()
 
@@ -142,7 +141,7 @@ class FlextInfraConfigModelsTemplates:
                     section.split(".", 1)[1].split(".", 1)[0]
                     for section in self.conflict_sections
                     if section.startswith("tool.") and "." in section
-                ),
+                )
             )
 
     class GitignoreRenderContext(FlextInfraConfigModelsContract.ConfigContract):

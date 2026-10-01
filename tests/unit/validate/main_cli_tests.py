@@ -72,8 +72,7 @@ class TestsFlextInfraValidateCli:
         tm.that(exit_code, eq=0)
 
     def test_namespace_validate_exits_nonzero_for_rule_findings(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         project = self._rule_project(tmp_path, "first(1)\n")
 

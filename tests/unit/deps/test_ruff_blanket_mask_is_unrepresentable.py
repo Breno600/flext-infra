@@ -26,8 +26,7 @@ class TestsFlextInfraRuffBlanketMaskIsUnrepresentable:
     def _lint_policy(per_file_ignores: t.JsonDict) -> t.JsonDict:
         """Return the shipped fleet lint policy with one replaced exemption map."""
         policy = config.Infra.tooling.tools.ruff.lint.model_dump(
-            mode="json",
-            by_alias=True,
+            mode="json", by_alias=True
         )
         return {**policy, "per-file-ignores": per_file_ignores}
 

@@ -20,8 +20,7 @@ type _DocsScopePlan = t.Pair[m.Infra.DocScope, t.VariadicTuple[m.Infra.CodegenFi
 
 
 class FlextInfraDocGenerator(
-    FlextInfraDocServiceBase,
-    FlextInfraDocGeneratorBundleMixin,
+    FlextInfraDocServiceBase, FlextInfraDocGeneratorBundleMixin
 ):
     """Generate managed docs artifacts from package exports and docstrings."""
 
@@ -29,8 +28,7 @@ class FlextInfraDocGenerator(
     # default; codegen conform overrides this per plan (DECLARED scope
     # excludes the root repository from the render entirely).
     include_root: Annotated[
-        bool,
-        m.Field(description="Render the workspace root as a docs output scope"),
+        bool, m.Field(description="Render the workspace root as a docs output scope")
     ] = True
 
     @classmethod
@@ -44,8 +42,7 @@ class FlextInfraDocGenerator(
         )
 
     def generate(
-        self,
-        request: m.Infra.DocsGenerateRequest,
+        self, request: m.Infra.DocsGenerateRequest
     ) -> p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]:
         """Publish generated docs through the existing durable file lifecycle."""
         prepared = self._prepare_request(request)
@@ -54,13 +51,13 @@ class FlextInfraDocGenerator(
         roots = {
             f"@docs-{index}": path
             for index, path in enumerate(
-                sorted({item.scope.path for item in prepared.value.scopes}),
+                sorted({item.scope.path for item in prepared.value.scopes})
             )
         }
         transaction = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(
-                repository_root=prepared.value.repository_root,
-            ),
+                repository_root=prepared.value.repository_root
+            )
         )
 
         def publish(
@@ -70,10 +67,10 @@ class FlextInfraDocGenerator(
             if current.failure:
                 return r[t.SequenceOf[m.Infra.DocsPhaseReport]].from_failure(current)
             if {item.scope.path for item in current.value.scopes} != set(
-                roots.values(),
+                roots.values()
             ):
                 return r[t.SequenceOf[m.Infra.DocsPhaseReport]].fail(
-                    "docs scope inventory changed before publication",
+                    "docs scope inventory changed before publication"
                 )
             plans = self.plan_files(current.value)
             if plans.failure:
@@ -81,12 +78,10 @@ class FlextInfraDocGenerator(
             directories = self.required_directories(current.value)
             if directories.failure:
                 return r[t.SequenceOf[m.Infra.DocsPhaseReport]].from_failure(
-                    directories,
+                    directories
                 )
             analysis = m.Infra.CodegenPhaseAnalysis(
-                phase="docs",
-                files=plans.value,
-                inputs=current.value.source_states,
+                phase="docs", files=plans.value, inputs=current.value.source_states
             )
             written = transaction.publish_file_phase_locked(
                 scope_root,
@@ -98,9 +93,7 @@ class FlextInfraDocGenerator(
             if written.failure:
                 return r[t.SequenceOf[m.Infra.DocsPhaseReport]].from_failure(written)
             return self._generation_reports(
-                current.value,
-                plans.value,
-                frozenset(written.value),
+                current.value, plans.value, frozenset(written.value)
             )
 
         return transaction.run_files_locked(roots, publish)
@@ -121,7 +114,7 @@ class FlextInfraDocGenerator(
                 return r[bool].from_failure(observed)
             if observed.value != expected:
                 return r[bool].fail(
-                    f"docs source changed during publication: {expected.path}",
+                    f"docs source changed during publication: {expected.path}"
                 )
         prepared = self._prepare_request(request)
         if prepared.failure:
@@ -154,8 +147,7 @@ class FlextInfraDocGenerator(
             offset += len(scoped.artifacts)
             changed = tuple(plan for plan in plans if plan.path in written)
             collocated = self._is_collocated_workspace_project(
-                scope,
-                root_scope=root_scope,
+                scope, root_scope=root_scope
             )
             report = m.Infra.DocsPhaseReport(
                 phase="generate",
@@ -189,15 +181,13 @@ class FlextInfraDocGenerator(
         return r[t.SequenceOf[m.Infra.DocsPhaseReport]].ok(tuple(reports))
 
     def plan_files(
-        self,
-        bundle: m.Infra.DocsGenerationBundle,
+        self, bundle: m.Infra.DocsGenerationBundle
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]:
         """Bind one prepared render bundle to exact live destination states."""
         return u.Infra.docs_file_plans(bundle)
 
     def required_directories(
-        self,
-        bundle: m.Infra.DocsGenerationBundle,
+        self, bundle: m.Infra.DocsGenerationBundle
     ) -> p.Result[t.VariadicTuple[Path]]:
         """Derive target parent chains from the exact prepared render bundle.
 
@@ -223,7 +213,7 @@ class FlextInfraDocGenerator(
                     projects=self.selected_projects,
                     output_dir=self.output_dir,
                     include_root=self.include_root,
-                ),
+                )
             ),
             failure_predicate=lambda report: not report.passed,
         )

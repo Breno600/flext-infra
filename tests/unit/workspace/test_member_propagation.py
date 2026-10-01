@@ -74,9 +74,7 @@ class TestsFlextInfraWorkspaceMemberPropagation:
                 u.Tests.WorktreeFixture.write_gitmodules(root, self.MEMBERS)
                 for name in self.MEMBERS:
                     head = u.Tests.git_capture(
-                        root / name,
-                        "rev-parse",
-                        c.Infra.GIT_HEAD,
+                        root / name, "rev-parse", c.Infra.GIT_HEAD
                     )
                     u.Tests.git_run(
                         root,
@@ -94,11 +92,7 @@ class TestsFlextInfraWorkspaceMemberPropagation:
 
     @contextmanager
     def _workspace(
-        self,
-        tmp_path: Path,
-        *,
-        settled: t.StrSequence,
-        hermetic: t.StrMapping,
+        self, tmp_path: Path, *, settled: t.StrSequence, hermetic: t.StrMapping
     ) -> Generator[t.Pair[Path, Path]]:
         """Yield a clone of the workspace whose ``settled`` members are propagated."""
         # Every settle and propagation locks against the run's local mirrors.
@@ -143,10 +137,7 @@ class TestsFlextInfraWorkspaceMemberPropagation:
         """Count the lane's commits beyond the member's integration branch."""
         base = u.Tests.integration_branch(member)
         return u.Tests.git_capture(
-            member,
-            "rev-list",
-            "--count",
-            f"{base}..{c.Infra.PROPAGATION_BRANCH}",
+            member, "rev-list", "--count", f"{base}..{c.Infra.PROPAGATION_BRANCH}"
         ).strip()
 
     @staticmethod
@@ -167,34 +158,25 @@ class TestsFlextInfraWorkspaceMemberPropagation:
         return current == u.Tests.integration_branch(member) and not status
 
     def test_changed_member_gets_one_lane_and_settled_member_nothing(
-        self,
-        tmp_path: Path,
-        hermetic_git_environment: t.StrMapping,
+        self, tmp_path: Path, hermetic_git_environment: t.StrMapping
     ) -> None:
         """Only the member whose projections change is proposed, exactly once."""
         with self._workspace(
-            tmp_path,
-            settled=(self.SETTLED,),
-            hermetic=hermetic_git_environment,
+            tmp_path, settled=(self.SETTLED,), hermetic=hermetic_git_environment
         ) as (root, gh_log):
             tm.that(self._propagate(root), eq=0)
 
             changed, settled = root / self.CHANGED, root / self.SETTLED
             tm.that(self._lane_commits(changed), eq="1")
             subject = u.Tests.git_capture(
-                changed,
-                "log",
-                "-1",
-                "--format=%s",
-                c.Infra.PROPAGATION_BRANCH,
+                changed, "log", "-1", "--format=%s", c.Infra.PROPAGATION_BRANCH
             ).strip()
             tm.that(subject, eq=c.Infra.PROPAGATION_COMMIT_SUBJECT)
             tm.that(self._published(tmp_path, self.CHANGED), ne="")
             tm.that(self._on_clean_base(changed), eq=True)
             tm.that(
                 u.Tests.git_ref_exists(
-                    settled,
-                    f"refs/heads/{c.Infra.PROPAGATION_BRANCH}",
+                    settled, f"refs/heads/{c.Infra.PROPAGATION_BRANCH}"
                 ),
                 eq=False,
             )
@@ -221,15 +203,11 @@ class TestsFlextInfraWorkspaceMemberPropagation:
             )
 
     def test_rerun_commits_nothing_new(
-        self,
-        tmp_path: Path,
-        hermetic_git_environment: t.StrMapping,
+        self, tmp_path: Path, hermetic_git_environment: t.StrMapping
     ) -> None:
         """A second run continues the open lane and changes no published tip."""
         with self._workspace(
-            tmp_path,
-            settled=(self.SETTLED,),
-            hermetic=hermetic_git_environment,
+            tmp_path, settled=(self.SETTLED,), hermetic=hermetic_git_environment
         ) as (root, _):
             tm.that(self._propagate(root), eq=0)
             first = self._published(tmp_path, self.CHANGED)
@@ -242,15 +220,11 @@ class TestsFlextInfraWorkspaceMemberPropagation:
             tm.that(self._on_clean_base(root / self.CHANGED), eq=True)
 
     def test_failing_member_stops_the_run(
-        self,
-        tmp_path: Path,
-        hermetic_git_environment: t.StrMapping,
+        self, tmp_path: Path, hermetic_git_environment: t.StrMapping
     ) -> None:
         """The first member failure ends the run before any later member."""
         with self._workspace(
-            tmp_path,
-            settled=(),
-            hermetic=hermetic_git_environment,
+            tmp_path, settled=(), hermetic=hermetic_git_environment
         ) as (root, gh_log):
             (root / self.CHANGED / "stray.txt").write_text("wip\n", encoding="utf-8")
 
@@ -259,8 +233,7 @@ class TestsFlextInfraWorkspaceMemberPropagation:
             for name in self.MEMBERS:
                 tm.that(
                     u.Tests.git_ref_exists(
-                        root / name,
-                        f"refs/heads/{c.Infra.PROPAGATION_BRANCH}",
+                        root / name, f"refs/heads/{c.Infra.PROPAGATION_BRANCH}"
                     ),
                     eq=False,
                 )

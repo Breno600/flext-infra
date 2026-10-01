@@ -17,10 +17,7 @@ class FlextInfraUtilitiesDocsCommandContractMixin:
 
     @staticmethod
     def _docs_command_candidates(
-        line: str,
-        *,
-        fence_marker: str,
-        fence_language: str,
+        line: str, *, fence_marker: str, fence_language: str
     ) -> t.StrSequence:
         """Return executable shell snippets, excluding surrounding prose."""
         if fence_marker:
@@ -66,9 +63,7 @@ class FlextInfraUtilitiesDocsCommandContractMixin:
             for (
                 candidate
             ) in FlextInfraUtilitiesDocsCommandContractMixin._docs_command_candidates(
-                line,
-                fence_marker=fence_marker,
-                fence_language=fence_language,
+                line, fence_marker=fence_marker, fence_language=fence_language
             ):
                 make_match = c.Infra.DOCS_MAKE_COMMAND_RE.match(candidate)
                 if c.Infra.DOCS_RAW_PYTEST_COMMAND_RE.match(candidate):
@@ -77,12 +72,11 @@ class FlextInfraUtilitiesDocsCommandContractMixin:
                     issue = "direct tool command bypasses the root Make dispatcher"
                 elif make_match is not None:
                     selector = c.Infra.DOCS_FORBIDDEN_MAKE_SELECTOR_RE.search(
-                        make_match.group("args"),
+                        make_match.group("args")
                     )
                     verb = make_match.group("verb").lower()
                     verb_spec = next(
-                        (spec for spec in effective_verbs if spec.name == verb),
-                        None,
+                        (spec for spec in effective_verbs if spec.name == verb), None
                     )
                     legacy_apply = (
                         c.Infra.DOCS_APPLY_RE.search(make_match.group("args"))
@@ -118,7 +112,7 @@ class FlextInfraUtilitiesDocsCommandContractMixin:
                         issue_type="command_contract",
                         severity="high",
                         message=f"line {number}: {issue}",
-                    ),
+                    )
                 )
         return issues
 
@@ -158,15 +152,14 @@ class FlextInfraUtilitiesDocsCommandContractMixin:
             ):
                 continue
             content = path.read_text(
-                encoding=c.Cli.ENCODING_DEFAULT,
-                errors=c.Infra.IGNORE,
+                encoding=c.Cli.ENCODING_DEFAULT, errors=c.Infra.IGNORE
             )
             issues.extend(
                 FlextInfraUtilitiesDocsCommandContractMixin.docs_command_contract_content_issues(
                     content,
                     relative_path=relative_path,
                     effective_verbs=effective_verbs,
-                ),
+                )
             )
         return issues
 

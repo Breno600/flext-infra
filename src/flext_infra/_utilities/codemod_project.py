@@ -112,8 +112,13 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         graph, modules = cls.project_import_graph(root)
         source = modules.get(file_path.resolve())
         if source is None:
-            msg = f"file is not a module of the project import graph: {file_path}"
-            raise ValueError(msg)
+            layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
+            if layout is not None and file_path.is_relative_to(layout.src_dir):
+                msg = f"source module is absent from the project import graph: {file_path}"
+                raise ValueError(msg)
+            # Project-level files are scanned by ast-grep but have no package
+            # import graph node, so none of their imports can close a cycle.
+            return False
         package = (
             source if file_path.name == c.Infra.INIT_PY else source.rpartition(".")[0]
         )
@@ -162,7 +167,9 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                     source
                 )
             )
-            for info in FlextInfraUtilitiesRopeAnalysisAstHelpers.class_info_from_source(
+            for (
+                info
+            ) in FlextInfraUtilitiesRopeAnalysisAstHelpers.class_info_from_source(
                 source
             ):
                 bases_by_class[info.name] = tuple(info.bases)
@@ -192,7 +199,12 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                 return tuple(
                     name
                     for base in getattr(node, "bases", ()) or ()
-                    if (name := FlextInfraUtilitiesRopeAnalysisAstHelpers.class_base_name(base))
+                    if (
+                        name
+                        := FlextInfraUtilitiesRopeAnalysisAstHelpers.class_base_name(
+                            base
+                        )
+                    )
                 )
         msg = f"class {namespace} is not declared in {facade_file}"
         raise ValueError(msg)
@@ -313,7 +325,9 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
     @lru_cache(maxsize=8)
     def _runtime_modules(cls, root: Path) -> frozenset[str]:
         """Top-level import names provided by the project's runtime closure."""
-        project = FlextInfraUtilitiesCodemodRules.codemod_project_requirements(root).unwrap()
+        project = FlextInfraUtilitiesCodemodRules.codemod_project_requirements(
+            root
+        ).unwrap()
         closure = FlextInfraUtilitiesCodemodRules.codemod_runtime_closure(
             project[1], FlextInfraUtilitiesCodemodRules.codemod_distributions()
         )
@@ -498,9 +512,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
 
     @classmethod
     def parse_namespace_validation(
-        cls,
-        validation: p.Result[m.Infra.ValidationReport],
-        root: Path,
+        cls, validation: p.Result[m.Infra.ValidationReport], root: Path
     ) -> p.Result[t.VariadicTuple[m.Infra.CensusViolation]]:
         """Convert the engine-backed namespace report into census violations.
 
@@ -530,7 +542,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                     line=int(match.group("line")),
                     message=match.group("message"),
                     fixable=match.group("rule") in repairable,
-                ),
+                )
             )
         return r[t.VariadicTuple[m.Infra.CensusViolation]].ok(tuple(parsed))
 

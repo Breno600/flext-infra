@@ -57,14 +57,12 @@ class TestsFlextInfraCodegenCensus:
             encoding="utf-8",
         )
         (project / "src" / "subject.py").write_text(
-            "first(1)\nthird(2)\n",
-            encoding="utf-8",
+            "first(1)\nthird(2)\n", encoding="utf-8"
         )
         return project
 
     def test_report_violations_carry_rule_location_and_fixability(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         project = self._project(tmp_path)
         report = FlextInfraNamespaceValidator(repository_root=project).build_report()
@@ -96,14 +94,10 @@ class TestsFlextInfraCodegenCensus:
         ],
         ids=["empty", "no-brackets", "wrong-dash", "missing-rule", "non-numeric"],
     )
-    def test_malformed_report_line_raises(
-        self,
-        tmp_path: Path,
-        violation: str,
-    ) -> None:
+    def test_malformed_report_line_raises(self, tmp_path: Path, violation: str) -> None:
         project = self._project(tmp_path)
         report = r[m.Infra.ValidationReport].ok(
-            m.Infra.ValidationReport(passed=False, violations=[violation]),
+            m.Infra.ValidationReport(passed=False, violations=[violation])
         )
 
         with pytest.raises(ValueError, match="report format"):
@@ -113,18 +107,13 @@ class TestsFlextInfraCodegenCensus:
         project = self._project(tmp_path)
         report = r[m.Infra.ValidationReport].fail("scan failed")
 
-        tm.fail(
-            u.Infra.parse_namespace_validation(report, project),
-            has="scan failed",
-        )
+        tm.fail(u.Infra.parse_namespace_validation(report, project), has="scan failed")
 
     def test_execute_fails_when_apply_changes_requested(self, tmp_path: Path) -> None:
         result = FlextInfraCodegenCensus(
-            repository_root=tmp_path,
-            apply_changes=True,
+            repository_root=tmp_path, apply_changes=True
         ).execute()
 
         tm.fail(
-            result,
-            has="census is read-only; use flext-infra codegen auto-fix --apply",
+            result, has="census is read-only; use flext-infra codegen auto-fix --apply"
         )

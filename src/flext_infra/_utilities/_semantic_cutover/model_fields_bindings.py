@@ -8,7 +8,7 @@ from .bindings import FlextInfraUtilitiesSemanticCutoverBindings
 
 
 class FlextInfraUtilitiesSemanticCutoverModelFieldsBindings(
-    FlextInfraUtilitiesSemanticCutoverBindings,
+    FlextInfraUtilitiesSemanticCutoverBindings
 ):
     """Reject shadowed builtins and guard facades instead of guessing identity."""
 
@@ -18,7 +18,7 @@ class FlextInfraUtilitiesSemanticCutoverModelFieldsBindings(
         required = {"u", "isinstance", "type", "getattr", "object", "dict"}
         for node in ast.walk(tree):
             if not isinstance(node, ast.ImportFrom) and required.intersection(
-                cls._bound_identifiers(node),
+                cls._bound_identifiers(node)
             ):
                 msg = "model-class narrowing conflicts with a local binding"
                 raise ValueError(msg)

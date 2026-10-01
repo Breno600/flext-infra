@@ -33,19 +33,13 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
 
     def _run_setup(self, workspace: Path, env: dict[str, str]) -> p.Cli.CommandOutput:
         return tm.ok(
-            u.Cli.run_raw(
-                ["make", "_builtin_setup_submodules"],
-                cwd=workspace,
-                env=env,
-            ),
+            u.Cli.run_raw(["make", "_builtin_setup_submodules"], cwd=workspace, env=env)
         )
 
     def _render_repository_root_makefile(self, tmp_path: Path) -> str:
         root_repository = test_u.Tests.repository_ref("flext")
         member = test_u.Tests.repository_ref(
-            "flext-core",
-            path=Path("flext-core"),
-            role=c.Infra.MakeProfile.STANDALONE,
+            "flext-core", path=Path("flext-core"), role=c.Infra.MakeProfile.STANDALONE
         )
         workspace = test_u.Tests.workspace_spec(
             root_repository,
@@ -61,9 +55,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
             mode=c.Infra.CodegenConformMode.CHECK,
         )
         planned = FlextInfraCodegenConform(
-            repository_root=root,
-            request=request,
-            initial_workspace=workspace,
+            repository_root=root, request=request, initial_workspace=workspace
         ).plan(request)
         plan = tm.ok(planned)
         makefile: m.Infra.CodegenFilePlan = next(
@@ -87,10 +79,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
         )
         test_u.Tests.initialize_git_repo(member)
         tm.ok(
-            u.Cli.run_checked(
-                [c.Infra.GIT, "checkout", "-b", "0.12.0-dev"],
-                cwd=member,
-            ),
+            u.Cli.run_checked([c.Infra.GIT, "checkout", "-b", "0.12.0-dev"], cwd=member)
         )
         tm.ok(u.Cli.run_checked([c.Infra.GIT, "checkout", "main"], cwd=member))
         remote_root = tmp_path / "member-remote"
@@ -100,13 +89,13 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
             u.Cli.run_checked(
                 [c.Infra.GIT, "push", "-u", c.Infra.GIT_ORIGIN, "0.12.0-dev"],
                 cwd=member,
-            ),
+            )
         )
         tm.ok(
             u.Cli.run_checked(
                 [c.Infra.GIT, "symbolic-ref", "HEAD", "refs/heads/0.12.0-dev"],
                 cwd=origin,
-            ),
+            )
         )
         return origin
 
@@ -136,14 +125,11 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
                     "flext-core",
                 ],
                 cwd=source,
-            ),
+            )
         )
         test_u.Tests.commit_git_changes(source, "Declare workspace project")
         tm.ok(
-            u.Cli.run_checked(
-                [c.Infra.GIT, "checkout", "-b", "0.12.0-dev"],
-                cwd=source,
-            ),
+            u.Cli.run_checked([c.Infra.GIT, "checkout", "-b", "0.12.0-dev"], cwd=source)
         )
         tm.ok(u.Cli.run_checked([c.Infra.GIT, "checkout", "main"], cwd=source))
         remote_root = tmp_path / "workspace-remote"
@@ -153,13 +139,13 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
             u.Cli.run_checked(
                 [c.Infra.GIT, "push", "-u", c.Infra.GIT_ORIGIN, "0.12.0-dev"],
                 cwd=source,
-            ),
+            )
         )
         tm.ok(
             u.Cli.run_checked(
                 [c.Infra.GIT, "symbolic-ref", "HEAD", "refs/heads/0.12.0-dev"],
                 cwd=workspace_origin,
-            ),
+            )
         )
         checkout = tmp_path / "workspace-checkout"
         tm.ok(
@@ -169,13 +155,12 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
                 "-q",
                 str(workspace_origin),
                 str(checkout),
-            ]),
+            ])
         )
         return checkout
 
     def test_generated_setup_orders_submodules_before_first_uv(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         rendered = self._render_repository_root_makefile(tmp_path)
 
@@ -186,8 +171,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
         tm.that(rendered, lacks="submodule update --init --recursive")
 
     def test_make_setup_initializes_once_then_only_validates_present_checkout(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         """Initialize the exact gitlink once; never repair a present checkout."""
         rendered = self._render_repository_root_makefile(tmp_path)
@@ -226,8 +210,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
         tm.that(self._git_state(child), eq=("conflict", state[1]))
 
     def test_missing_submodule_origin_fails_without_materializing_checkout(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         """A failed real Git clone stays red and leaves its gitlink uninitialized."""
         rendered = self._render_repository_root_makefile(tmp_path)
@@ -244,7 +227,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
                     str(missing_origin),
                 ],
                 cwd=workspace,
-            ),
+            )
         )
         credential = "test-submodule-credential-never-log"
         env = {**os.environ, "GIT_ALLOW_PROTOCOL": "file", "GITHUB_TOKEN": credential}
@@ -257,8 +240,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
         tm.that((workspace / "flext-core" / ".git").exists(), eq=False)
 
     def test_setup_environment_provisions_members_before_the_environment(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         """Setup provisions governed gitlinks before the environment recipe.
 
@@ -281,7 +263,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
                 ["make", "--no-print-directory", "_builtin_setup_environment"],
                 cwd=workspace,
                 env=env,
-            ),
+            )
         )
 
         output = process.stdout + process.stderr
@@ -294,8 +276,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
     def test_unexpected_git_probe_failure_preserves_cause(self, tmp_path: Path) -> None:
         """A Git probe error is never reclassified as a missing remote ref."""
         workspace = self._create_uninitialized_workspace(
-            tmp_path,
-            self._render_repository_root_makefile(tmp_path),
+            tmp_path, self._render_repository_root_makefile(tmp_path)
         )
         real_git = tm.not_none(shutil.which("git"))
         fake_bin = tmp_path / "failing-git-bin"

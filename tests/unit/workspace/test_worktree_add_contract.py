@@ -14,8 +14,7 @@ class TestsFlextInfraWorktreeAddContract(u.Tests.WorktreeFixture):
     """Group cohesive worktree behavior."""
 
     def test_invalid_lane_metadata_fails_precisely_and_rolls_back(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         """The typed lane ingress rejects a non-string PEP 621 description."""
         repository = self._repository(tmp_path)
@@ -43,17 +42,15 @@ class TestsFlextInfraWorktreeAddContract(u.Tests.WorktreeFixture):
             tm.ok(
                 u.Infra.git_ref_exists(
                     m.Infra.GitRefRequest(
-                        repo_root=repository,
-                        reference=f"refs/heads/{branch}",
-                    ),
-                ),
+                        repo_root=repository, reference=f"refs/heads/{branch}"
+                    )
+                )
             ).value,
             eq=False,
         )
 
     def test_private_add_does_not_execute_clean_failing_setup(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         """Raw ADD leaves setup execution to the public work-start saga."""
         repository = self._repository(tmp_path)
@@ -71,8 +68,7 @@ class TestsFlextInfraWorktreeAddContract(u.Tests.WorktreeFixture):
         tm.that(lane.is_dir(), eq=True)
 
     def test_private_add_does_not_execute_dirty_failing_setup(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         """Raw ADD cannot create setup work before saga provisioning."""
         repository = self._repository(tmp_path)

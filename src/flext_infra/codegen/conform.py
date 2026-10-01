@@ -34,7 +34,7 @@ class FlextInfraCodegenConform(FlextInfraCodegenConformExecute):
                 root=root,
                 scope=c.Infra.CodegenConformScope.ALL,
                 mode=c.Infra.CodegenConformMode.APPLY,
-            ),
+            )
         )
         if conformed.failure:
             return r[bool].from_failure(conformed)

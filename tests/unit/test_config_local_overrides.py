@@ -26,9 +26,7 @@ class TestsFlextInfraConfigLocalOverrides:
             shutil.copy(tracked, target / tracked.name)
 
     def test_tracked_configs_keep_fleet_defaults(
-        self,
-        tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Without a local file the tracked scalar survives untouched.
 
@@ -49,9 +47,7 @@ class TestsFlextInfraConfigLocalOverrides:
             FlextInfraConfig.reset_for_testing()
 
     def test_local_file_scalar_wins_despite_sorted_glob_position(
-        self,
-        tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """The local override wins scalars although its name sorts first.
 
@@ -61,8 +57,7 @@ class TestsFlextInfraConfigLocalOverrides:
         """
         self._copy_tracked_configs(tmp_path)
         (tmp_path / c.Infra.CODEGEN_LOCAL_OVERRIDES_FILENAME).write_text(
-            "Infra:\n  codegen:\n    loc_cap:\n      max_lines: 500\n",
-            encoding="utf-8",
+            "Infra:\n  codegen:\n    loc_cap:\n      max_lines: 500\n", encoding="utf-8"
         )
         monkeypatch.setenv("FLEXT_INFRA_CONFIG_DIR", str(tmp_path))
         FlextInfraConfig.reset_for_testing()
@@ -73,9 +68,7 @@ class TestsFlextInfraConfigLocalOverrides:
             FlextInfraConfig.reset_for_testing()
 
     def test_local_file_dict_entries_add_beside_tracked_ones(
-        self,
-        tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A dict-typed registry gains the local entry and keeps tracked ones."""
         self._copy_tracked_configs(tmp_path)
@@ -100,9 +93,7 @@ class TestsFlextInfraConfigLocalOverrides:
             FlextInfraConfig.reset_for_testing()
 
     def test_org_layer_from_governed_repository_resolves(
-        self,
-        tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """The governed repository's tracked org layer merges last in its cwd.
 
@@ -147,9 +138,7 @@ class TestsFlextInfraConfigLocalOverrides:
             FlextInfraConfig.reset_for_testing()
 
     def test_provider_registry_declaration_fails_validation(
-        self,
-        tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """The exterminated provider registry cannot come back through a merge."""
         self._copy_tracked_configs(tmp_path)

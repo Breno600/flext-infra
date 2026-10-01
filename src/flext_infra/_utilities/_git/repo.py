@@ -67,7 +67,7 @@ class FlextInfraUtilitiesGitRepo:
                         detached=detached,
                         bare=bare,
                         locked=locked,
-                    ),
+                    )
                 )
                 path = None
                 head = None
@@ -138,23 +138,16 @@ class FlextInfraUtilitiesGitRepo:
         try:
             repo = cls._repo(repository_path)
             common_dir = Path(
-                repo.git.rev_parse(
-                    "--path-format=absolute",
-                    "--git-common-dir",
-                ).strip(),
+                repo.git.rev_parse("--path-format=absolute", "--git-common-dir").strip()
             ).resolve()
             configured_output = repo.git.config(
-                "--path",
-                "--get",
-                "core.worktree",
-                with_exceptions=False,
+                "--path", "--get", "core.worktree", with_exceptions=False
             ).strip()
         except GitCommandError as exc:
             return r[Path].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[Path].fail(
-                f"failed to resolve primary worktree: {exc}",
-                exception=exc,
+                f"failed to resolve primary worktree: {exc}", exception=exc
             )
 
         if configured_output:
@@ -167,16 +160,16 @@ class FlextInfraUtilitiesGitRepo:
         else:
             try:
                 git_dir = Path(
-                    repo.git.rev_parse("--path-format=absolute", "--git-dir").strip(),
+                    repo.git.rev_parse("--path-format=absolute", "--git-dir").strip()
                 ).resolve()
                 caller_root = Path(
-                    repo.git.rev_parse("--show-toplevel").strip(),
+                    repo.git.rev_parse("--show-toplevel").strip()
                 ).resolve()
                 entries = (
                     ()
                     if git_dir == common_dir
                     else cls._registered_worktree_entries(
-                        repo.git.worktree("list", "--porcelain"),
+                        repo.git.worktree("list", "--porcelain")
                     )
                 )
             except GitCommandError as exc:
@@ -187,7 +180,7 @@ class FlextInfraUtilitiesGitRepo:
                 primary_root = caller_root
             elif not entries:
                 return r[Path].fail(
-                    f"Git worktree registry is empty for {repository_path}",
+                    f"Git worktree registry is empty for {repository_path}"
                 )
             elif not entries[0].bare:
                 primary_root = entries[0].path
@@ -196,26 +189,25 @@ class FlextInfraUtilitiesGitRepo:
             else:
                 return r[Path].fail(
                     "current worktree is absent from Git's canonical registry: "
-                    f"{caller_root}",
+                    f"{caller_root}"
                 )
 
         primary_repo = cls._open_repo(primary_root)
         if primary_repo.failure:
             return r[Path].fail(
-                f"invalid primary worktree: {primary_root}: {primary_repo.error}",
+                f"invalid primary worktree: {primary_root}: {primary_repo.error}"
             )
         try:
             resolved_top = Path(
-                primary_repo.value.git.rev_parse("--show-toplevel").strip(),
+                primary_repo.value.git.rev_parse("--show-toplevel").strip()
             ).resolve()
         except GitCommandError as exc:
             return r[Path].fail(
-                f"invalid primary worktree: {primary_root}: {exc}",
-                exception=exc,
+                f"invalid primary worktree: {primary_root}: {exc}", exception=exc
             )
         if resolved_top != primary_root:
             return r[Path].fail(
-                f"Git primary worktree mismatch: {primary_root} != {resolved_top}",
+                f"Git primary worktree mismatch: {primary_root} != {resolved_top}"
             )
         return r[Path].ok(primary_root)
 

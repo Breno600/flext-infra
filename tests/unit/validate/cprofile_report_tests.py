@@ -59,8 +59,7 @@ class TestsFlextInfraCProfileReport:
         tm.that(routes["cprofile-report"], eq=FlextInfraCProfileReport)
 
     def test_profile_artifacts_cannot_escape_workspace_reports(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         policy = config.Infra.tooling.tools.pytest
 

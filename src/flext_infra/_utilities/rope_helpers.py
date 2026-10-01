@@ -18,8 +18,7 @@ class FlextInfraUtilitiesRopeHelpers(FlextInfraUtilitiesRopeMethodOrderMixin):
         decorators: t.SequenceOf[ast.expr] = (
             statement.decorator_list
             if isinstance(
-                statement,
-                ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
+                statement, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
             )
             else ()
         )
@@ -28,10 +27,7 @@ class FlextInfraUtilitiesRopeHelpers(FlextInfraUtilitiesRopeMethodOrderMixin):
 
     @staticmethod
     def top_level_definition_span(
-        source: str,
-        name: str,
-        *,
-        kind: str,
+        source: str, name: str, *, kind: str
     ) -> t.IntPair | None:
         """Return the line span of the top-level ``kind`` definition named ``name``."""
         if kind == "function":
@@ -47,8 +43,7 @@ class FlextInfraUtilitiesRopeHelpers(FlextInfraUtilitiesRopeMethodOrderMixin):
         for statement in ast.parse(source).body:
             if (
                 isinstance(
-                    statement,
-                    ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
+                    statement, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
                 )
                 and isinstance(statement, node_types)
                 and statement.name == name
@@ -58,16 +53,11 @@ class FlextInfraUtilitiesRopeHelpers(FlextInfraUtilitiesRopeMethodOrderMixin):
 
     @staticmethod
     def extract_definition(
-        source: str,
-        name: str,
-        *,
-        kind: str = "function",
+        source: str, name: str, *, kind: str = "function"
     ) -> str | None:
         """Return the full top-level def/class block named ``name``, decorators included."""
         span = FlextInfraUtilitiesRopeHelpers.top_level_definition_span(
-            source,
-            name,
-            kind=kind,
+            source, name, kind=kind
         )
         if span is None:
             return None

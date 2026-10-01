@@ -242,8 +242,7 @@ class TestsFlextInfraModTextGateEngine:
         return first, second
 
     def test_generated_destination_rejects_the_entire_text_batch(
-        self,
-        mod_workspace: Path,
+        self, mod_workspace: Path
     ) -> None:
         """An authored earlier file stays unchanged when a generator owns a target."""
         first, second = self._publication_inputs(mod_workspace)
@@ -260,8 +259,7 @@ class TestsFlextInfraModTextGateEngine:
         tm.that(second.read_text(encoding="utf-8"), eq=generated)
 
     def test_invalid_later_source_never_publishes_an_earlier_rewrite(
-        self,
-        mod_workspace: Path,
+        self, mod_workspace: Path
     ) -> None:
         """Decoding failure escapes before any file in the prepared batch is written."""
         first, second = self._publication_inputs(mod_workspace)
@@ -305,8 +303,7 @@ class TestsFlextInfraModTextGateEngine:
         tm.that(second.read_bytes(), eq=original_second)
 
     def test_linked_destination_identity_never_publishes_the_batch(
-        self,
-        mod_workspace: Path,
+        self, mod_workspace: Path
     ) -> None:
         """A symlink cannot impersonate an authenticated physical destination."""
         first, second = self._publication_inputs(mod_workspace)
@@ -324,10 +321,7 @@ class TestsFlextInfraModTextGateEngine:
 
     @pytest.mark.parametrize("raise_failure", [False, True])
     def test_text_phase_validation_failure_recovers_published_files(
-        self,
-        mod_workspace: Path,
-        *,
-        raise_failure: bool,
+        self, mod_workspace: Path, *, raise_failure: bool
     ) -> None:
         """The public transaction owner restores its batch after validator failure."""
         paths = self._publication_inputs(mod_workspace)
@@ -348,12 +342,10 @@ class TestsFlextInfraModTextGateEngine:
             for state in states
         )
         analysis = m.Infra.CodegenPhaseAnalysis(
-            phase="mod-text",
-            files=plans,
-            inputs=states,
+            phase="mod-text", files=plans, inputs=states
         )
         transaction = FlextInfraCodegenTransaction(
-            FlextInfraCodegenMiseArtifacts(repository_root=mod_workspace),
+            FlextInfraCodegenMiseArtifacts(repository_root=mod_workspace)
         )
         roots = {"@mod-text": mod_workspace}
         failure = RuntimeError("text publication acceptance rejected")
@@ -372,9 +364,7 @@ class TestsFlextInfraModTextGateEngine:
                 active: m.Infra.CodegenTransactionSession,
             ) -> p.Result[t.VariadicTuple[Path]]:
                 updated = transaction.append_phase_locked(
-                    active,
-                    analysis.phase,
-                    plans,
+                    active, analysis.phase, plans
                 ).unwrap()
                 return transaction.commit_locked(updated, reject_published)
 
@@ -392,8 +382,7 @@ class TestsFlextInfraModTextGateEngine:
         tm.that(tuple(mod_workspace.rglob("*.semantic-staging")), empty=True)
 
     def test_scan_proves_rewrite_receipt_and_fixed_point(
-        self,
-        mod_workspace: Path,
+        self, mod_workspace: Path
     ) -> None:
         """One list entry rewrites its match once and reaches a fixed point."""
         tm.ok(
@@ -407,7 +396,7 @@ class TestsFlextInfraModTextGateEngine:
                     "    replace: 'serialization_lock_execute(chunks, deadline)'\n"
                     "    expected: 1\n"
                 ),
-            ),
+            )
         )
         sample = mod_workspace / "sample.py"
         # Derived, never frozen: the fixture owns the module's shape, so the
@@ -416,18 +405,15 @@ class TestsFlextInfraModTextGateEngine:
         expected_line = next(
             index
             for index, text in enumerate(
-                sample.read_text(encoding="utf-8").splitlines(),
-                start=1,
+                sample.read_text(encoding="utf-8").splitlines(), start=1
             )
             if "paths, timeout" in text
         )
 
         first = tm.ok(
             FlextInfraModTextGateEngine.scan(
-                mod_workspace,
-                fix=False,
-                validate_receipts=True,
-            ),
+                mod_workspace, fix=False, validate_receipts=True
+            )
         )
         tm.that(first.findings, eq=1)
         tm.that(first.actionable, eq=1)
@@ -444,13 +430,10 @@ class TestsFlextInfraModTextGateEngine:
         # This optional migration precondition deliberately does not promise
         # idempotence once the invocation has consumed its exact matches.
         with pytest.raises(
-            RuntimeError,
-            match="expected 1 finding\\(s\\), scan produced 0",
+            RuntimeError, match="expected 1 finding\\(s\\), scan produced 0"
         ):
             FlextInfraModTextGateEngine.scan(
-                mod_workspace,
-                fix=True,
-                validate_receipts=True,
+                mod_workspace, fix=True, validate_receipts=True
             )
         # The rewrite is proven by what changed, not by freezing the fixture's
         # whole text: the elected call carries the replacement and the original
@@ -461,10 +444,7 @@ class TestsFlextInfraModTextGateEngine:
 
     @pytest.mark.parametrize("fix", [False, True])
     def test_scan_requires_declared_receipt_to_match_exactly(
-        self,
-        mod_workspace: Path,
-        *,
-        fix: bool,
+        self, mod_workspace: Path, *, fix: bool
     ) -> None:
         """A wrong expected-count receipt fails the scan loudly."""
         tm.ok(
@@ -477,20 +457,17 @@ class TestsFlextInfraModTextGateEngine:
                     "    replace: 'serialization_lock_execute(chunks, deadline)'\n"
                     "    expected: 2\n"
                 ),
-            ),
+            )
         )
         original = (mod_workspace / "sample.py").read_bytes()
         with pytest.raises(RuntimeError, match="expected 2 finding\\(s\\), scan"):
             FlextInfraModTextGateEngine.scan(
-                mod_workspace,
-                fix=fix,
-                validate_receipts=True,
+                mod_workspace, fix=fix, validate_receipts=True
             )
         tm.that((mod_workspace / "sample.py").read_bytes(), eq=original)
 
     def test_load_rules_rejects_unknown_keys_and_duplicate_ids(
-        self,
-        mod_workspace: Path,
+        self, mod_workspace: Path
     ) -> None:
         """Declarative list entries must be exact and unique."""
         tm.ok(
@@ -504,7 +481,7 @@ class TestsFlextInfraModTextGateEngine:
                     "    find: 'beta'\n"
                     "    unsupported: true\n"
                 ),
-            ),
+            )
         )
         unknown = FlextInfraModTextGateEngine.load_rules(mod_workspace)
         tm.that(unknown.failure)
@@ -514,7 +491,7 @@ class TestsFlextInfraModTextGateEngine:
             u.Cli.atomic_write_text_file(
                 mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
                 "rules:\n  - id: first\n    find: 'alpha'\n  - id: first\n    find: 'beta'\n",
-            ),
+            )
         )
         duplicate = FlextInfraModTextGateEngine.load_rules(mod_workspace)
         tm.that(duplicate.failure)
@@ -524,23 +501,21 @@ class TestsFlextInfraModTextGateEngine:
             u.Cli.atomic_write_text_file(
                 mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
                 "rules:\n  - id: first\n    find: 'alpha'\n  - id: second\n    find: 'beta'\n",
-            ),
+            )
         )
         valid = tm.ok(FlextInfraModTextGateEngine.load_rules(mod_workspace))
         tm.that({"first", "second"} <= {rule.rule_id for rule in valid}, eq=True)
 
     def test_include_and_exclude_globs_elect_exact_targets(
-        self,
-        mod_workspace: Path,
+        self, mod_workspace: Path
     ) -> None:
         """Glob election scopes the rewrite to the declared surfaces only."""
         package_dir = mod_workspace / "src" / "mod_workspace"
         tm.ok(u.Cli.ensure_dir(package_dir))
         tm.ok(
             u.Cli.atomic_write_text_file(
-                package_dir / "frozen.py",
-                "LEGACY_PIN = '2026.9.17'\n",
-            ),
+                package_dir / "frozen.py", "LEGACY_PIN = '2026.9.17'\n"
+            )
         )
         tm.ok(
             u.Cli.atomic_write_text_file(
@@ -554,14 +529,12 @@ class TestsFlextInfraModTextGateEngine:
                     "    replace: 'LEGACY_PIN = values.pin()'\n"
                     "    expected: 1\n"
                 ),
-            ),
+            )
         )
         first = tm.ok(
             FlextInfraModTextGateEngine.scan(
-                mod_workspace,
-                fix=False,
-                validate_receipts=True,
-            ),
+                mod_workspace, fix=False, validate_receipts=True
+            )
         )
         tm.that(first.findings, eq=1)
         tm.that(first.entries[0].file.as_posix(), eq="src/mod_workspace/frozen.py")
@@ -578,13 +551,11 @@ class TestsFlextInfraModTextGateEngine:
                     "    replace: 'LEGACY_PIN = values.pin()'\n"
                     "    expected: 0\n"
                 ),
-            ),
+            )
         )
         excluded = tm.ok(
             FlextInfraModTextGateEngine.scan(
-                mod_workspace,
-                fix=False,
-                validate_receipts=True,
-            ),
+                mod_workspace, fix=False, validate_receipts=True
+            )
         )
         tm.that(excluded.findings, eq=0)

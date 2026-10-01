@@ -15,12 +15,10 @@ if TYPE_CHECKING:
 
 class TestsFlextInfraExtraPathsSearchPaths:
     def test_pyrefly_search_paths_include_declared_generated_roots(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         manager = FlextInfraExtraPathsManager(
-            repository_root=tmp_path,
-            generated_python_roots=("src", "tests"),
+            repository_root=tmp_path, generated_python_roots=("src", "tests")
         )
 
         result = manager.pyrefly_search_paths(project_dir=tmp_path, is_root=True)
@@ -30,8 +28,7 @@ class TestsFlextInfraExtraPathsSearchPaths:
     """Verify productive, existing Pyrefly search roots."""
 
     def test_pyrefly_search_paths_only_use_local_project_dirs(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         """Keep project-local roots when dependencies are development-only."""
         consumer = tmp_path / "flext-core"
@@ -59,8 +56,7 @@ class TestsFlextInfraExtraPathsSearchPaths:
             dep_src = dep_root / "src" / package_name
             dep_src.mkdir(parents=True)
             (dep_root / "pyproject.toml").write_text(
-                f"[project]\nname = '{dep_name}'\n",
-                encoding="utf-8",
+                f"[project]\nname = '{dep_name}'\n", encoding="utf-8"
             )
             (dep_src / "__init__.py").write_text("", encoding="utf-8")
 
@@ -70,8 +66,7 @@ class TestsFlextInfraExtraPathsSearchPaths:
         tm.that(result, eq=("src", "."))
 
     def test_pyrefly_search_paths_include_project_root_for_tests_package(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         """Include the project root when the tests package is importable."""
         consumer = tmp_path / "flext-infra"
@@ -81,8 +76,7 @@ class TestsFlextInfraExtraPathsSearchPaths:
         (consumer / "tests").mkdir()
         (consumer / "Makefile").write_text("", encoding="utf-8")
         (consumer / "pyproject.toml").write_text(
-            "[project]\nname = 'flext-infra'\n",
-            encoding="utf-8",
+            "[project]\nname = 'flext-infra'\n", encoding="utf-8"
         )
         (consumer / "tests" / "__init__.py").write_text("", encoding="utf-8")
 
@@ -92,13 +86,11 @@ class TestsFlextInfraExtraPathsSearchPaths:
         tm.that(result, eq=("src", "."))
 
     def test_pyrefly_search_paths_ignore_non_path_dependencies_at_root(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         """Ignore undeclared local roots for ordinary dependencies."""
         _ = ExtraPathsTestSupport.workspace_with_dependency(
-            tmp_path,
-            uv_workspace=False,
+            tmp_path, uv_workspace=False
         )
 
         manager = ExtraPathsTestSupport.manager(tmp_path)
@@ -107,8 +99,7 @@ class TestsFlextInfraExtraPathsSearchPaths:
         tm.that(result, eq=("src", "."))
 
     def test_pyrefly_search_paths_omit_workspace_dependency_src_dirs_at_root(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         """Keep declared workspace projects out of the root's search path."""
         (tmp_path / ".git").mkdir()
@@ -134,8 +125,7 @@ class TestsFlextInfraExtraPathsSearchPaths:
             (dep_root / ".git").mkdir()
             (dep_root / "Makefile").write_text("", encoding="utf-8")
             (dep_root / "pyproject.toml").write_text(
-                f"[project]\nname = '{dep_name}'\n",
-                encoding="utf-8",
+                f"[project]\nname = '{dep_name}'\n", encoding="utf-8"
             )
             dep_src = dep_root / "src" / package_name
             dep_src.mkdir(parents=True)
@@ -147,8 +137,7 @@ class TestsFlextInfraExtraPathsSearchPaths:
         tm.that(result, eq=("src", "."))
 
     def test_pyrefly_search_paths_exclude_dependency_dirs_at_root(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         """Exclude every dependency directory, environments included."""
         _, dep_root = ExtraPathsTestSupport.workspace_with_dependency(tmp_path)

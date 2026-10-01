@@ -68,18 +68,12 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
         if params.output_format == c.Cli.OutputFormats.JSON:
             return r[bool].ok(True)
         write_result = self._write_workspace_report(
-            params,
-            root,
-            report_model,
-            projects_report,
+            params, root, report_model, projects_report
         )
         if write_result.failure:
             return r[bool].from_failure(write_result)
         return self._summarize_run(
-            projects,
-            projects_report,
-            pip_ok=pip_ok,
-            params=params,
+            projects, projects_report, pip_ok=pip_ok, params=params
         )
 
     def _write_workspace_report(
@@ -125,8 +119,7 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
         """Aggregate deptry counts, log the summary, decide overall pass/fail."""
         total_issues = sum(
             u.Cli.json_pick_int(
-                u.Cli.json_as_mapping(payload.get(c.Infra.DEPTRY)),
-                "raw_count",
+                u.Cli.json_as_mapping(payload.get(c.Infra.DEPTRY)), "raw_count"
             )
             for payload in projects_report.values()
         )

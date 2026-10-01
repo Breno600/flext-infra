@@ -24,11 +24,7 @@ class TestsFlextInfraDepsModernizerPackaging:
         return f"{package_name}_entry", f"{package_name}_client"
 
     def _prepare_project(
-        self,
-        root: Path,
-        *,
-        materialize_module: bool,
-        materialize_package: bool,
+        self, root: Path, *, materialize_module: bool, materialize_package: bool
     ) -> t.Pair[t.NonEmptyStr, t.NonEmptyStr]:
         """Materialize one provider-governed project through shared typed fixtures."""
         _ = u.Tests.standalone_workspace(root, "flext-packaging-fixture")
@@ -37,9 +33,8 @@ class TestsFlextInfraDepsModernizerPackaging:
         if materialize_module:
             tm.ok(
                 u.Cli.atomic_write_text_file(
-                    source_root / f"{root_module}.py",
-                    "VALUE = 1\n",
-                ),
+                    source_root / f"{root_module}.py", "VALUE = 1\n"
+                )
             )
         if materialize_package:
             # The declared root keeps its initializer, and the distribution
@@ -49,22 +44,20 @@ class TestsFlextInfraDepsModernizerPackaging:
             # least one local module.
             tm.ok(
                 u.Cli.atomic_write_text_file(
-                    source_root / root_package / c.Infra.INIT_PY,
-                    '"""Fixture."""\n',
-                ),
+                    source_root / root_package / c.Infra.INIT_PY, '"""Fixture."""\n'
+                )
             )
             module_root = source_root / "flext_packaging_fixture"
             tm.ok(
                 u.Cli.atomic_write_text_file(
                     module_root / "core.py",
                     'VALUE = 1\n\n__all__: list[str] = ["VALUE"]\n',
-                ),
+                )
             )
             tm.ok(
                 u.Cli.atomic_write_text_file(
-                    module_root / c.Infra.INIT_PY,
-                    '"""Fixture package."""\n',
-                ),
+                    module_root / c.Infra.INIT_PY, '"""Fixture package."""\n'
+                )
             )
         _ = u.Tests.write_standalone_workspace_manifest(
             root,
@@ -102,14 +95,11 @@ class TestsFlextInfraDepsModernizerPackaging:
 
     @pytest.mark.slow
     def test_conform_packages_every_declared_python_root(
-        self,
-        infra_git_repo: Path,
+        self, infra_git_repo: Path
     ) -> None:
         """The public generator emits matching bounded wheel and sdist targets."""
         root_module, root_package = self._prepare_project(
-            infra_git_repo,
-            materialize_module=True,
-            materialize_package=True,
+            infra_git_repo, materialize_module=True, materialize_package=True
         )
 
         applied = self._conform_self(infra_git_repo)
@@ -117,20 +107,10 @@ class TestsFlextInfraDepsModernizerPackaging:
         tm.that(applied, eq=0)
         manifest = (infra_git_repo / c.PYPROJECT_FILENAME).read_text(encoding="utf-8")
         wheel = u.Tests.toml_table_at(
-            manifest,
-            c.Infra.TOOL,
-            "hatch",
-            "build",
-            "targets",
-            "wheel",
+            manifest, c.Infra.TOOL, "hatch", "build", "targets", "wheel"
         )
         sdist = u.Tests.toml_table_at(
-            manifest,
-            c.Infra.TOOL,
-            "hatch",
-            "build",
-            "targets",
-            "sdist",
+            manifest, c.Infra.TOOL, "hatch", "build", "targets", "sdist"
         )
         primary_package = u.Tests.project_spec("flext-packaging-fixture").package_name
         package_paths = {
@@ -143,9 +123,7 @@ class TestsFlextInfraDepsModernizerPackaging:
             eq={f"/{path}/**" for path in package_paths},
         )
         tm.that(
-            u.Tests.toml_mapping(wheel["force-include"]),
-            has=module_path,
-            msg=manifest,
+            u.Tests.toml_mapping(wheel["force-include"]), has=module_path, msg=manifest
         )
         tm.that(
             u.Tests.toml_mapping(wheel["force-include"])[module_path],
@@ -195,9 +173,7 @@ class TestsFlextInfraDepsModernizerPackaging:
     @pytest.mark.slow
     @pytest.mark.parametrize("missing_kind", ["module", "package"])
     def test_conform_rejects_missing_declared_python_root(
-        self,
-        infra_git_repo: Path,
-        missing_kind: Literal["module", "package"],
+        self, infra_git_repo: Path, missing_kind: Literal["module", "package"]
     ) -> None:
         """A declaration never produces a phantom wheel or sdist path."""
         _ = self._prepare_project(

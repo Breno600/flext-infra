@@ -32,8 +32,7 @@ class FlextInfraCodemodSnapshotReconciler:
         declared: MutableMapping[str, Sequence[t.JsonValue]] = {}
         for key in (c.Infra.CODEMOD_RULE_DIRS_KEY, c.Infra.CODEMOD_UTIL_DIRS_KEY):
             raw_value = payload.get(
-                key,
-                () if key == c.Infra.CODEMOD_UTIL_DIRS_KEY else None,
+                key, () if key == c.Infra.CODEMOD_UTIL_DIRS_KEY else None
             )
             if not isinstance(raw_value, Sequence) or isinstance(raw_value, str):
                 msg = f"invalid ast-grep {key} contract: {config_path}"
@@ -41,8 +40,7 @@ class FlextInfraCodemodSnapshotReconciler:
             declared[key] = raw_value
         raw_test_configs = payload.get(c.Infra.CODEMOD_TEST_CONFIGS_KEY)
         if not isinstance(raw_test_configs, Sequence) or isinstance(
-            raw_test_configs,
-            str,
+            raw_test_configs, str
         ):
             msg = f"invalid ast-grep testConfigs contract: {config_path}"
             raise TypeError(msg)
@@ -89,9 +87,7 @@ class FlextInfraCodemodSnapshotReconciler:
 
     @classmethod
     def stale_snapshots(
-        cls,
-        config_root: Path,
-        active_rule_ids: frozenset[str],
+        cls, config_root: Path, active_rule_ids: frozenset[str]
     ) -> t.StrSequence:
         """Describe every committed snapshot projection no current test produces.
 
@@ -108,7 +104,7 @@ class FlextInfraCodemodSnapshotReconciler:
                 continue
             invalid_cases = cls._invalid_cases(test_dir)
             for snapshot in sorted(
-                snapshot_dir.glob(f"*{c.Infra.CODEMOD_SNAPSHOT_SUFFIX}"),
+                snapshot_dir.glob(f"*{c.Infra.CODEMOD_SNAPSHOT_SUFFIX}")
             ):
                 rule_id = snapshot.name.removesuffix(c.Infra.CODEMOD_SNAPSHOT_SUFFIX)
                 if rule_id not in active_rule_ids:

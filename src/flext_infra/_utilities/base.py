@@ -171,7 +171,7 @@ class FlextInfraUtilitiesBase:
             tuple(rule_ids)
             if rule_ids
             else tuple(
-                sorted(FlextInfraUtilitiesBase.ast_grep_rule_contract(rule_path)[0]),
+                sorted(FlextInfraUtilitiesBase.ast_grep_rule_contract(rule_path)[0])
             )
         )
         if any(not rule_id or "|" in rule_id for rule_id in selected_rule_ids):
@@ -200,7 +200,7 @@ class FlextInfraUtilitiesBase:
         rule_ids: set[str] = set()
         fixable_ids: set[str] = set()
         for raw_document in rule_path.read_text(encoding=c.Cli.ENCODING_DEFAULT).split(
-            "\n---",
+            "\n---"
         ):
             if not any(
                 line.strip() and not line.lstrip().startswith("#")

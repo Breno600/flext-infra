@@ -41,7 +41,7 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
                 desired_content=rendered.encode(c.Cli.ENCODING_DEFAULT),
                 desired_mode=mode,
                 source_states=source_states,
-            ),
+            )
         )
 
     @staticmethod
@@ -60,10 +60,10 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
             or len(by_path) != len(expected)
         ):
             return r[t.VariadicTuple[m.Infra.CodegenFilePlan]].fail(
-                "conform plan must contain one Mise configuration per repository",
+                "conform plan must contain one Mise configuration per repository"
             )
         return r[t.VariadicTuple[m.Infra.CodegenFilePlan]].ok(
-            tuple(by_path[path] for path in expected),
+            tuple(by_path[path] for path in expected)
         )
 
     @staticmethod
@@ -107,14 +107,12 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
                 before=before.value,
                 desired_content=None,
                 desired_mode=None,
-            ),
+            )
         )
 
     @classmethod
     def retired_projection_plans(
-        cls,
-        root: Path,
-        profile: c.Infra.MakeProfile,
+        cls, root: Path, profile: c.Infra.MakeProfile
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
         """Plan removal of generated projections this profile no longer renders.
 
@@ -133,7 +131,7 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
             relative = Path(retired)
             if relative.is_absolute() or ".." in relative.parts:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
-                    f"retired projection must be a normalized relative path: {retired}",
+                    f"retired projection must be a normalized relative path: {retired}"
                 )
             destinations.append(retired)
         for destination in destinations:
@@ -150,7 +148,7 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
             absent_plan = cls._absent_file_plan(root, path)
             if absent_plan.failure:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
-                    absent_plan,
+                    absent_plan
                 )
             planned.append(absent_plan.value)
         return r[t.SequenceOf[m.Infra.CodegenFilePlan]].ok(tuple(planned))

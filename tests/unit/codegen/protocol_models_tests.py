@@ -137,8 +137,7 @@ def _write_member(root: Path) -> None:
     (package / "typings.py").write_text(TYPINGS, encoding="utf-8")
     (package / "consumer.py").write_text(CONSUMER, encoding="utf-8")
     (package / "_protocols" / "manual_ports.py").write_text(
-        MANUAL_PORTS,
-        encoding="utf-8",
+        MANUAL_PORTS, encoding="utf-8"
     )
 
 
@@ -192,7 +191,7 @@ def test_apply_generates_runtime_checkable_contracts(member_root: Path) -> None:
     assert "ManualPort" not in content
     aggregate = generated_dir / "generated_models.py"
     assert "class DemoMemberProtocolsGeneratedModels:" in aggregate.read_text(
-        encoding="utf-8",
+        encoding="utf-8"
     )
     module = _load_module(part)
     models = importlib.import_module("demo_member.models")
@@ -214,9 +213,7 @@ def test_apply_generates_runtime_checkable_contracts(member_root: Path) -> None:
     ],
 )
 def test_generated_annotations_resolve_specialized_aliases(
-    member_root: Path,
-    field_name: str,
-    expected: t.TypeHintSpecifier,
+    member_root: Path, field_name: str, expected: t.TypeHintSpecifier
 ) -> None:
     """Real consumers resolve specialized aliases without free parameters."""
     result = _service(member_root, apply=True).execute()

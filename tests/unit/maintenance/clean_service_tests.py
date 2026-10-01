@@ -23,8 +23,7 @@ class TestsFlextInfraCleanService:
         broken.symlink_to(tmp_path / "missing-lane", target_is_directory=True)
 
         result = FlextInfraCleanService(
-            repository_root=tmp_path,
-            apply_changes=True,
+            repository_root=tmp_path, apply_changes=True
         ).execute()
 
         tm.that(result.success, eq=True)

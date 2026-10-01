@@ -22,8 +22,7 @@ class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
 
     @classmethod
     def from_import_info(
-        cls,
-        value: p.AttributeProbe,
+        cls, value: p.AttributeProbe
     ) -> TypeGuard[t.Infra.RopeFromImport]:
         return isinstance(
             value,
@@ -32,8 +31,7 @@ class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
 
     @classmethod
     def normal_import_info(
-        cls,
-        value: p.AttributeProbe,
+        cls, value: p.AttributeProbe
     ) -> TypeGuard[t.Infra.RopeNormalImport]:
         return isinstance(
             value,
@@ -42,28 +40,24 @@ class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
 
     @classmethod
     def assigned_name(
-        cls,
-        value: p.AttributeProbe,
+        cls, value: p.AttributeProbe
     ) -> TypeGuard[t.Infra.RopeAssignedName]:
         return isinstance(
-            value,
-            cls.runtime_type("rope.base.pynamesdef", "AssignedName"),
+            value, cls.runtime_type("rope.base.pynamesdef", "AssignedName")
         )
 
     @classmethod
     def abstract_class(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopePyObject]:
         """Return whether ``value`` is a Rope abstract class object."""
         return isinstance(
-            value,
-            cls.runtime_type("rope.base.pyobjects", "AbstractClass"),
+            value, cls.runtime_type("rope.base.pyobjects", "AbstractClass")
         )
 
     @classmethod
     def py_function(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopePyObject]:
         """Return whether ``value`` is a Rope Python function object."""
         return isinstance(
-            value,
-            cls.runtime_type("rope.base.pyobjectsdef", "PyFunction"),
+            value, cls.runtime_type("rope.base.pyobjectsdef", "PyFunction")
         )
 
     @classmethod
@@ -80,8 +74,7 @@ class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
     def parameter_name(cls, value: p.AttributeProbe) -> bool:
         """Return whether ``value`` is a Rope parameter name."""
         return isinstance(
-            value,
-            cls.runtime_type("rope.base.pynamesdef", "ParameterName"),
+            value, cls.runtime_type("rope.base.pynamesdef", "ParameterName")
         )
 
     @classmethod

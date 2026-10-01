@@ -25,8 +25,7 @@ class TestsFlextInfraAuditorCommandContract:
         u.Tests.write_project_beads_config(infra_test_workspace, name)
         u.Tests.write_standalone_workspace_manifest(infra_test_workspace, name)
         u.Tests.initialize_git_repo(
-            infra_test_workspace,
-            origin_url=u.Tests.repository_ref(name).url,
+            infra_test_workspace, origin_url=u.Tests.repository_ref(name).url
         )
         return m.Infra.DocScope(
             name=name,
@@ -247,13 +246,10 @@ ruff check src
     ) -> None:
         scope = command_contract_scope
         spec = m.Infra.MakeVerbSpec(
-            name=verb_name,
-            description="Repository-owned operation",
+            name=verb_name, description="Repository-owned operation"
         )
         u.Tests.write_standalone_workspace_manifest(
-            scope.path,
-            scope.name,
-            extra_verbs=(spec,) if declared else (),
+            scope.path, scope.name, extra_verbs=(spec,) if declared else ()
         )
         guide = scope.path / "docs/guides/commands.md"
         guide.parent.mkdir(parents=True)
@@ -274,16 +270,13 @@ ruff check src
     ) -> None:
         scope = command_contract_scope
         spec = m.Infra.MakeVerbSpec(
-            name="publish-preview",
-            description="Repository-owned operation",
+            name="publish-preview", description="Repository-owned operation"
         )
         guide = scope.path / "docs/guides/commands.md"
         guide.parent.mkdir(parents=True)
         u.write_file(guide, f"```bash\nmake {spec.name}\n```\n")
         u.Tests.write_standalone_workspace_manifest(
-            scope.path,
-            scope.name,
-            extra_verbs=(spec,),
+            scope.path, scope.name, extra_verbs=(spec,)
         )
         tm.that(u.Infra.docs_command_contract_issues(scope), eq=[])
 
@@ -293,13 +286,10 @@ ruff check src
         tm.that(legacy[0].message, has="legacy `APPLY` flag is exterminated")
 
         renamed = m.Infra.MakeVerbSpec(
-            name="archive-assets",
-            description="Repository-owned operation",
+            name="archive-assets", description="Repository-owned operation"
         )
         u.Tests.write_standalone_workspace_manifest(
-            scope.path,
-            scope.name,
-            extra_verbs=(renamed,),
+            scope.path, scope.name, extra_verbs=(renamed,)
         )
         u.write_file(guide, f"```bash\nmake {renamed.name}\n```\n")
         tm.that(u.Infra.docs_command_contract_issues(scope), eq=[])
@@ -307,9 +297,7 @@ ruff check src
     @staticmethod
     @pytest.mark.parametrize("with_guide", [False, True])
     def test_malformed_selected_topology_blocks_with_exact_cause(
-        command_contract_scope: m.Infra.DocScope,
-        *,
-        with_guide: bool,
+        command_contract_scope: m.Infra.DocScope, *, with_guide: bool
     ) -> None:
         scope = command_contract_scope
         if with_guide:
@@ -334,13 +322,10 @@ ruff check src
     ) -> None:
         source_scope = command_contract_scope
         spec = m.Infra.MakeVerbSpec(
-            name="publish-preview",
-            description="Source repository operation",
+            name="publish-preview", description="Source repository operation"
         )
         manifest = u.Tests.write_standalone_workspace_manifest(
-            source_scope.path,
-            source_scope.name,
-            extra_verbs=(spec,),
+            source_scope.path, source_scope.name, extra_verbs=(spec,)
         )
         guide = source_scope.path / "docs/guides/commands.md"
         guide.parent.mkdir(parents=True)
@@ -350,15 +335,11 @@ ruff check src
         destination = source_scope.path / "member"
         destination.mkdir()
         scope = m.Infra.DocScope(
-            name="member",
-            path=destination,
-            report_dir=destination / ".reports/docs",
+            name="member", path=destination, report_dir=destination / ".reports/docs"
         )
 
         projected = u.Infra.docs_project_guides_artifacts(
-            scope,
-            repository_root=source_scope.path,
-            source_states=(state.value,),
+            scope, repository_root=source_scope.path, source_states=(state.value,)
         )
 
         tm.ok(projected)
@@ -370,9 +351,7 @@ ruff check src
         loaded = u.Infra.load_workspace_manifest(source_scope.path)
         tm.fail(loaded)
         blocked = u.Infra.docs_project_guides_artifacts(
-            scope,
-            repository_root=source_scope.path,
-            source_states=(state.value,),
+            scope, repository_root=source_scope.path, source_states=(state.value,)
         )
         tm.fail(blocked)
         tm.that(blocked.error, eq=loaded.error)

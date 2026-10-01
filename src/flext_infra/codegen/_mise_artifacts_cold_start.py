@@ -76,7 +76,7 @@ class FlextInfraMiseColdStart:
         ] != (c.Infra.DEFAULT_SRC_DIR,):
             return result_type.ok(())
         planner = FlextInfraMiseWorkspacePlanner(
-            FlextInfraCodegenMiseArtifacts(repository_root=project),
+            FlextInfraCodegenMiseArtifacts(repository_root=project)
         )
         scope_root = planner.scope_root()
         if scope_root.failure:
@@ -99,7 +99,7 @@ class FlextInfraMiseColdStart:
                     desired_content=source.content,
                     desired_mode=mode,
                     source_states=(source,),
-                ),
+                )
             )
         return result_type.ok(tuple(plans))
 

@@ -17,18 +17,14 @@ class TestsFlextInfraBuilderScope:
     """Public build-workflow tests for docs services."""
 
     def test_build_returns_root_and_selected_project_reports(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         workspace = u.Tests.create_docs_workspace(
-            tmp_path,
-            project_names=("flext-a", "flext-b"),
+            tmp_path, project_names=("flext-a", "flext-b")
         )
 
         result = FlextInfraDocBuilder().build(
-            workspace,
-            projects=["flext-a"],
-            output_dir=c.Infra.DEFAULT_DOCS_OUTPUT_DIR,
+            workspace, projects=["flext-a"], output_dir=c.Infra.DEFAULT_DOCS_OUTPUT_DIR
         )
 
         tm.ok(result)
@@ -43,9 +39,7 @@ class TestsFlextInfraBuilderScope:
         workspace = u.Tests.create_docs_workspace(tmp_path, project_names=("flext-a",))
 
         result = FlextInfraDocBuilder().build(
-            workspace,
-            projects=["flext-a"],
-            output_dir=".custom-docs",
+            workspace, projects=["flext-a"], output_dir=".custom-docs"
         )
 
         tm.ok(result)
@@ -53,8 +47,7 @@ class TestsFlextInfraBuilderScope:
         tm.that((workspace / "flext-a/.custom-docs/build-report.md").exists(), eq=True)
 
     def test_build_missing_settings_failure_has_empty_site_dir(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         workspace = u.Tests.create_docs_workspace(tmp_path)
 

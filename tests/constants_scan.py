@@ -35,7 +35,7 @@ class TestsFlextInfraConstantsScanMixin:
         ("Success: 5 passed", 0),
     )
     LOG_ERROR_PREFIX_RE: ClassVar[t.RegexPattern] = _re.compile(
-        r"^(ERROR|FAIL|error|E\s+AssertionError|FAILED)",
+        r"^(ERROR|FAIL|error|E\s+AssertionError|FAILED)"
     )
     LOG_MIXED_SCENARIO_LINES: ClassVar[t.StrSequence] = (
         "make[1]: running",

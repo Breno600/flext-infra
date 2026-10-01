@@ -48,13 +48,11 @@ class FlextInfraCodegenLazyInitProjectionManifest:
                 continue
             if relative.name == c.Infra.PROJECTIONS_LOCK_FILENAME:
                 continue
-            projected.setdefault(plan.project, []).append(
-                {
-                    "path": relative.as_posix(),
-                    "sha256": hashlib.sha256(plan.desired_content).hexdigest(),
-                    "bytes": len(plan.desired_content),
-                }
-            )
+            projected.setdefault(plan.project, []).append({
+                "path": relative.as_posix(),
+                "sha256": hashlib.sha256(plan.desired_content).hexdigest(),
+                "bytes": len(plan.desired_content),
+            })
         plans: t.MutableSequenceOf[m.Infra.CodegenFilePlan] = []
         for project in sorted(projected):
             payload: t.JsonDict = {

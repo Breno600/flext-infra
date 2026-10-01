@@ -36,10 +36,8 @@ class FlextInfraValidateTestImportDag(FlextInfraProjectSelectionServiceBase[bool
         )
         return r[m.Infra.ValidationReport].ok(
             m.Infra.ValidationReport(
-                passed=not violations,
-                violations=violations,
-                summary=summary,
-            ),
+                passed=not violations, violations=violations, summary=summary
+            )
         )
 
     def _project_violations(self, project_root: Path) -> t.StrSequence:
@@ -84,7 +82,7 @@ class FlextInfraValidateTestImportDag(FlextInfraProjectSelectionServiceBase[bool
                 for part in parts[1:]
                 if (
                     family := u.Infra.facade_family_of_file(
-                        f"{part}{c.Infra.EXT_PYTHON}",
+                        f"{part}{c.Infra.EXT_PYTHON}"
                     )
                 )
                 is not None
@@ -137,7 +135,7 @@ class FlextInfraValidateTestImportDag(FlextInfraProjectSelectionServiceBase[bool
                 return "test facets cannot import fixtures, conftest, or test modules"
             facade_order = tuple(u.Infra.facade_families())
             if imported_facet is not None and facade_order.index(
-                imported_facet,
+                imported_facet
             ) < facade_order.index(source_facet):
                 return "reverse canonical test-facet edge"
         if (

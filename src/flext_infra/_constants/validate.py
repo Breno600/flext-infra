@@ -61,10 +61,10 @@ class FlextInfraConstantsSharedInfra:
     CPROFILE_RECEIPT_ARGUMENT_COUNT: ClassVar[int] = 3
     "``argv`` length when an explicit run receipt accompanies the profile path."
     PYTHON_IMPORT_NAME_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$",
+        r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$"
     )
     MISSING_IMPORT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"Cannot find module `([^`]+)` \[missing-import\]",
+        r"Cannot find module `([^`]+)` \[missing-import\]"
     )
     MYPY_HINT_RE: ClassVar[t.RegexPattern] = re.compile(
         r'note:\s+(?:hint|note):\s+(?:["`].*?\bpip\s+install\s+|install\s+stub\s+package\s+["`]?)'
@@ -72,7 +72,7 @@ class FlextInfraConstantsSharedInfra:
         re.IGNORECASE,
     )
     MYPY_STUB_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"Library stubs not installed for ['\"](\S+?)['\"]",
+        r"Library stubs not installed for ['\"](\S+?)['\"]"
     )
     INTERNAL_PREFIXES: ClassVar[t.VariadicTuple[str]] = ("flext_", "flext-")
 

@@ -37,13 +37,13 @@ class FlextInfraConstantsMake:
         USER_HOME = "HOME"
 
     MAKE_ASSIGNMENT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^[A-Za-z_][A-Za-z0-9_]*\s*(?::?:|\?|\+)?=",
+        r"^[A-Za-z_][A-Za-z0-9_]*\s*(?::?:|\?|\+)?="
     )
     MAKE_DIRECTIVE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?:export|unexport|override|include|-include|sinclude|vpath)\b",
+        r"^(?:export|unexport|override|include|-include|sinclude|vpath)\b"
     )
     MAKE_CONDITIONAL_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?:else\b|endif\b|ifeq\b|ifneq\b|ifdef\b|ifndef\b)",
+        r"^(?:else\b|endif\b|ifeq\b|ifneq\b|ifdef\b|ifndef\b)"
     )
     MAKE_REPOSITORY_ROOT: ClassVar[str] = "REPOSITORY_ROOT"
     "Make variable the workspace orchestrator passes to attached members."

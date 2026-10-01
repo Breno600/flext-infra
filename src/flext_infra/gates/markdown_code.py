@@ -40,8 +40,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
 
     @staticmethod
     def _ignore_filtered(
-        project_dir: Path,
-        markdown_files: t.SequenceOf[Path],
+        project_dir: Path, markdown_files: t.SequenceOf[Path]
     ) -> t.SequenceOf[Path]:
         """Drop files the generated ignore projection excludes, like the rumdl gate.
 
@@ -51,8 +50,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         collected list here — all markdown gates share one ignore SSOT.
         """
         patterns = markdown.read_ignore_patterns(
-            project_dir,
-            c.Infra.MARKDOWNLINT_IGNORE_FILENAME,
+            project_dir, c.Infra.MARKDOWNLINT_IGNORE_FILENAME
         )
         if not patterns:
             return markdown_files
@@ -68,11 +66,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         return tuple(path for path in markdown_files if not _excluded(path))
 
     def _format_command(
-        self,
-        project_dir: Path,
-        sources_dir: Path,
-        *,
-        write: bool,
+        self, project_dir: Path, sources_dir: Path, *, write: bool
     ) -> t.StrSequence:
         """Build one ruff format invocation (verdict with ``--check``, write otherwise).
 
@@ -88,10 +82,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
             ["--config", str(config_path)] if config_path.is_file() else ["--isolated"]
         )
         return self._python_console_script_command(
-            c.Infra.RUFF,
-            *args,
-            *(("--check",) if not write else ()),
-            str(sources_dir),
+            c.Infra.RUFF, *args, *(("--check",) if not write else ()), str(sources_dir)
         )
 
     def _origin_issue(
@@ -147,23 +138,17 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         if not u.Cli.process_succeeded(result.outcome) and not issues:
             issues.append(
                 self._command_error_issue(
-                    result,
-                    tool=c.Infra.RUFF,
-                    file=str(project_dir),
-                    line=1,
-                    column=1,
-                ),
+                    result, tool=c.Infra.RUFF, file=str(project_dir), line=1, column=1
+                )
             )
         return issues
 
     def _embedded_sources(
-        self,
-        project_dir: Path,
+        self, project_dir: Path
     ) -> t.MappingKV[str, t.Pair[str, t.Pair[str, int]]]:
         """Name every embedded source with its text and documentation origin."""
         markdown_files = self._ignore_filtered(
-            project_dir,
-            markdown.collect_markdown_files(project_dir),
+            project_dir, markdown.collect_markdown_files(project_dir)
         )
         return {
             name: (text, origin)
@@ -179,10 +164,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         return bool(self._embedded_sources(project_dir))
 
     def _run_extracted(
-        self,
-        project_dir: Path,
-        *,
-        fix: bool,
+        self, project_dir: Path, *, fix: bool
     ) -> t.Triple[bool, bool, t.SequenceOf[m.Infra.Issue]]:
         """Run the single format operation over extracted sources.
 
@@ -204,8 +186,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                 origin[name] = located
             ran = True
             formatted = self._run(
-                self._format_command(project_dir, sources_dir, write=fix),
-                project_dir,
+                self._format_command(project_dir, sources_dir, write=fix), project_dir
             )
             format_ok = u.Cli.process_succeeded(formatted.outcome)
             if fix:
@@ -218,7 +199,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                             "embedded block does not survive the format round-trip"
                         ),
                         file_pattern=c.Infra.MARKDOWN_CODE_FORMAT_ERROR_RE,
-                    ),
+                    )
                 )
                 if format_ok:
                     self._splice_formatted_blocks(project_dir, sources_dir)
@@ -232,15 +213,13 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                             "embedded code is not ruff-formatted (repair belongs to `make fix`)"
                         ),
                         file_pattern=c.Infra.MARKDOWN_CODE_FORMAT_FILE_RE,
-                    ),
+                    )
                 )
             passed = format_ok
         return ran, passed, findings
 
     def _splice_formatted_blocks(
-        self,
-        project_dir: Path,
-        sources_dir: Path,
+        self, project_dir: Path, sources_dir: Path
     ) -> t.SequenceOf[Path]:
         """Write formatted blocks back into docs whose round-trip recompiles cleanly.
 
@@ -250,8 +229,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         """
         rewritten: t.MutableSequenceOf[Path] = []
         for md_path in self._ignore_filtered(
-            project_dir,
-            markdown.collect_markdown_files(project_dir),
+            project_dir, markdown.collect_markdown_files(project_dir)
         ):
             content = md_path.read_text(c.Cli.ENCODING_DEFAULT)
             relative_posix = md_path.relative_to(project_dir).as_posix()
@@ -292,7 +270,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
             ) -> str:
                 """Splice formatted code; prose fragments stay byte-identical."""
                 keep = c.Infra.MARKDOWN_CODE_SKIP_MARKER in match.group(
-                    "info",
+                    "info"
                 ) or sources.syntax_broken(match.group("code"), origin_path)
                 if keep:
                     return match.group(0)
@@ -306,9 +284,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
 
     @override
     def check(
-        self,
-        project_dir: Path,
-        ctx: m.Infra.GateContext,
+        self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> m.Infra.GateExecution:
         """Validate embedded sources read-only when documentation code exists."""
         _ = ctx

@@ -37,31 +37,25 @@ class TestsFlextInfraCodegenMakeLintFixSafety:
 
     @pytest.mark.slow
     def test_scaffold_pyproject_renders_the_fix_safety_policy(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         """The rendered Ruff lint table carries the SSOT fix-safety lists."""
         policy = config.Infra.tooling.tools.ruff.lint
         pyproject = u.Tests.scaffold_text(
-            tmp_path / "fixture-project",
-            c.PYPROJECT_FILENAME,
+            tmp_path / "fixture-project", c.PYPROJECT_FILENAME
         )
 
         tm.that(
             list(
-                u.Tests.toml_strings_at(pyproject, "tool", "ruff", "lint", "unfixable"),
+                u.Tests.toml_strings_at(pyproject, "tool", "ruff", "lint", "unfixable")
             ),
             eq=sorted(policy.unfixable),
         )
         tm.that(
             list(
                 u.Tests.toml_strings_at(
-                    pyproject,
-                    "tool",
-                    "ruff",
-                    "lint",
-                    "extend-safe-fixes",
-                ),
+                    pyproject, "tool", "ruff", "lint", "extend-safe-fixes"
+                )
             ),
             eq=sorted(policy.extend_safe_fixes),
         )

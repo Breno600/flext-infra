@@ -28,7 +28,7 @@ class FlextInfraLockIntegrityVerifier(FlextInfraServiceBase[bool]):
     """
 
     _TABLE_HEADER: ClassVar[re.Pattern[str]] = re.compile(
-        r"(?m)^[ \t]*(?:\[([^\][]+)\]|\[\[([^\][]+)\]\])[ \t]*(?:#.*)?$",
+        r"(?m)^[ \t]*(?:\[([^\][]+)\]|\[\[([^\][]+)\]\])[ \t]*(?:#.*)?$"
     )
 
     @classmethod

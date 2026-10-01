@@ -31,8 +31,7 @@ class TestsFlextInfraRopeStructure:
     )
 
     def test_first_party_namespaces_require_live_python_sources(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         src = tmp_path / c.Infra.DEFAULT_SRC_DIR
         for name in ("empty", "cache_only", "regular", "namespace", "stubs"):

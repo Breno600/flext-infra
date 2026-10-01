@@ -30,14 +30,10 @@ class TestsFlextInfraPyprojectConformPreservesLintScope:
     def _live_per_file_ignores(self) -> frozenset[str]:
         """Return the per-file-ignore globs the governed pyproject declares."""
         content = (self._repository_root() / "pyproject.toml").read_text(
-            encoding="utf-8",
+            encoding="utf-8"
         )
         ignores = tu.Tests.toml_table_at(
-            content,
-            "tool",
-            "ruff",
-            "lint",
-            "per-file-ignores",
+            content, "tool", "ruff", "lint", "per-file-ignores"
         )
         return frozenset(ignores)
 
@@ -60,7 +56,7 @@ class TestsFlextInfraPyprojectConformPreservesLintScope:
             managed = u.Tests.toml_mapping(payload.get("ManagedArtifacts") or {})
             ruff_section = u.Tests.toml_mapping(managed.get("Ruff") or {})
             project.update(
-                u.Tests.toml_mapping(ruff_section.get("per_file_ignores") or {}),
+                u.Tests.toml_mapping(ruff_section.get("per_file_ignores") or {})
             )
         return fleet | frozenset(project)
 

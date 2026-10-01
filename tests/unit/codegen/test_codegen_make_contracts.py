@@ -24,8 +24,7 @@ class TestsFlextInfraCodegenMakeContracts:
     """Generated Make behavior and custom dispatch contracts."""
 
     def test_invalid_public_custom_make_fails_without_side_effects(
-        self,
-        infra_git_repo: Path,
+        self, infra_git_repo: Path
     ) -> None:
         root = infra_git_repo
         custom = root / "custom.mk"
@@ -37,23 +36,19 @@ class TestsFlextInfraCodegenMakeContracts:
             ]
         )
         result = FlextInfraCodegenConform.validate_custom_make(
-            tm.ok(u.Cli.files_read_text(custom)),
-            policy,
+            tm.ok(u.Cli.files_read_text(custom)), policy
         )
         tm.fail(result)
         rejection = Path(f"{custom}.rej")
         tm.that(
-            result.error or "",
-            has="custom.mk line 1 is not a private custom handler",
+            result.error or "", has="custom.mk line 1 is not a private custom handler"
         )
         tm.that(rejection.exists(), eq=False)
         tm.that(custom.read_text(encoding="utf-8"), eq=content)
 
     @pytest.mark.slow
     def test_valid_private_custom_make_has_no_rejection(
-        self,
-        infra_git_repo: Path,
-        capsys: pytest.CaptureFixture[str],
+        self, infra_git_repo: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         root = infra_git_repo
         workspace = TestsFlextInfraConformSupport.standalone_workspace(root)
@@ -68,15 +63,17 @@ class TestsFlextInfraCodegenMakeContracts:
                     "_custom_check_demo:\n\t@true\n"
                     "_custom_run_demo:\n\t@true\n"
                 ),
-            ),
+            )
         )
-        result = infra.codegen_conform(u.Tests.conform_request(
-            root,
-            what=c.Infra.CodegenConformSurface.MAKEFILE,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.APPLY,
-        ),
-        initial_workspace=workspace,)
+        result = infra.codegen_conform(
+            u.Tests.conform_request(
+                root,
+                what=c.Infra.CodegenConformSurface.MAKEFILE,
+                scope=c.Infra.CodegenConformScope.SELF,
+                mode=c.Infra.CodegenConformMode.APPLY,
+            ),
+            initial_workspace=workspace,
+        )
         tm.ok(result)
         tm.that("WARN:" in capsys.readouterr().out, eq=False)
         tm.that(Path(f"{custom}.rej").exists(), eq=False)
@@ -90,24 +87,20 @@ class TestsFlextInfraCodegenMakeContracts:
         )
 
         result = FlextInfraCodegenConform.validate_custom_make(
-            ".PHONY: \\\n\t_custom_check_demo \\",
-            policy,
+            ".PHONY: \\\n\t_custom_check_demo \\", policy
         )
 
         tm.fail(result, has="unterminated .PHONY continuation")
 
     @pytest.mark.slow
     def test_scaffold_make_help_documents_and_lists_custom_hooks(
-        self,
-        infra_git_repo: Path,
+        self, infra_git_repo: Path
     ) -> None:
         """Scaffold help lists the selector-free interface; hooks stay lifecycle-only."""
         root = infra_git_repo
         workspace = TestsFlextInfraConformSupport.standalone_workspace(root)
         TestsFlextInfraConformSupport.apply_conform_surface(
-            root,
-            workspace,
-            c.Infra.CodegenConformSurface.MAKEFILE,
+            root, workspace, c.Infra.CodegenConformSurface.MAKEFILE
         )
         tm.ok(
             u.Cli.atomic_write_text_file(
@@ -116,11 +109,10 @@ class TestsFlextInfraCodegenMakeContracts:
                 "pre-check:\n\t@true\n"
                 "post-test-all:\n\t@true\n"
                 "_custom-check-myscan:\n\t@true\n",
-            ),
+            )
         )
         outcome = u.Cli.run_raw(
-            ["make", "-C", str(root), "help"],
-            remove_env_keys=("MAKEFLAGS",),
+            ["make", "-C", str(root), "help"], remove_env_keys=("MAKEFLAGS",)
         )
         output = tm.ok(outcome)
         tm.that(output.stderr, eq="")
@@ -131,16 +123,13 @@ class TestsFlextInfraCodegenMakeContracts:
 
     @pytest.mark.slow
     def test_scaffold_make_runs_pre_and_post_verb_hooks_in_order(
-        self,
-        infra_git_repo: Path,
+        self, infra_git_repo: Path
     ) -> None:
         """Generated dispatch runs pre-<verb>, custom handler, post-<verb> in order."""
         root = infra_git_repo
         workspace = TestsFlextInfraConformSupport.standalone_workspace(root)
         TestsFlextInfraConformSupport.apply_conform_surface(
-            root,
-            workspace,
-            c.Infra.CodegenConformSurface.MAKEFILE,
+            root, workspace, c.Infra.CodegenConformSurface.MAKEFILE
         )
         tm.ok(
             u.Cli.atomic_write_text_file(
@@ -149,7 +138,7 @@ class TestsFlextInfraCodegenMakeContracts:
                 "pre-check:\n\t@echo HOOK_PRE\n"
                 "_custom-check:\n\t@echo HANDLER_BODY\n"
                 "post-check:\n\t@echo HOOK_POST\n",
-            ),
+            )
         )
         # `check` requires a provisioned interpreter, which `make setup` would
         # build. Stub it so this test stays about hook ordering.
@@ -172,9 +161,7 @@ class TestsFlextInfraCodegenMakeContracts:
         tm.that(body_at < post_at, eq=True)
 
     def test_custom_make_accepts_pre_post_verb_hooks(
-        self,
-        infra_git_repo: Path,
-        capsys: pytest.CaptureFixture[str],
+        self, infra_git_repo: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """custom.mk may append pre/post verb hooks (verb-wide and WHAT-scoped)."""
         root = infra_git_repo
@@ -188,15 +175,17 @@ class TestsFlextInfraCodegenMakeContracts:
                 "post-check:\n\t@true\n"
                 "pre-test-all:\n\t@true\n"
                 "post-test-all:\n\t@true\n",
-            ),
+            )
         )
-        result = infra.codegen_conform(u.Tests.conform_request(
-            root,
-            what=c.Infra.CodegenConformSurface.MAKEFILE,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.APPLY,
-        ),
-        initial_workspace=workspace,)
+        result = infra.codegen_conform(
+            u.Tests.conform_request(
+                root,
+                what=c.Infra.CodegenConformSurface.MAKEFILE,
+                scope=c.Infra.CodegenConformScope.SELF,
+                mode=c.Infra.CodegenConformMode.APPLY,
+            ),
+            initial_workspace=workspace,
+        )
         tm.ok(result)
         tm.that("WARN:" in capsys.readouterr().out, eq=False)
         tm.that(Path(f"{custom}.rej").exists(), eq=False)
@@ -206,18 +195,18 @@ class TestsFlextInfraCodegenMakeContracts:
         root = infra_git_repo
         workspace = TestsFlextInfraConformSupport.standalone_workspace(root)
         TestsFlextInfraConformSupport.apply_conform_surface(
-            root,
-            workspace,
-            c.Infra.CodegenConformSurface.MAKEFILE,
+            root, workspace, c.Infra.CodegenConformSurface.MAKEFILE
         )
         tm.ok(u.Cli.files_delete(root / "custom.mk"))
         (root / "custom.mk").mkdir()
-        result = infra.codegen_conform(u.Tests.conform_request(
-            root,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.CHECK,
-        ),
-        initial_workspace=workspace,)
+        result = infra.codegen_conform(
+            u.Tests.conform_request(
+                root,
+                scope=c.Infra.CodegenConformScope.SELF,
+                mode=c.Infra.CodegenConformMode.CHECK,
+            ),
+            initial_workspace=workspace,
+        )
         tm.fail(result)
         tm.that(result.error, has="not a regular file")
         tm.that(result.error, has=str(root / "custom.mk"))

@@ -14,10 +14,7 @@ from .tool_tables import FlextInfraToolTablesPhase
 class FlextInfraEnsureRuffConfigPhase:
     """Ensure standard Ruff configuration inline with known-first-party overlay."""
 
-    def __init__(
-        self,
-        tool_config: m.Infra.ToolConfigDocument,
-    ) -> None:
+    def __init__(self, tool_config: m.Infra.ToolConfigDocument) -> None:
         """Store tool configuration used to build canonical Ruff settings."""
         self._tool_config = tool_config
 
@@ -33,7 +30,7 @@ class FlextInfraEnsureRuffConfigPhase:
             # list — that conformed artifact would drift from the workspace
             # with no signal. Mirrors _workspace_exclusion_globs fail-loud.
             raise ValueError(
-                discovered.error or "workspace project discovery is unavailable",
+                discovered.error or "workspace project discovery is unavailable"
             )
         return sorted({
             project.package_name
@@ -78,7 +75,7 @@ class FlextInfraEnsureRuffConfigPhase:
         paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
         if paths.failure:
             raise ValueError(
-                paths.error or "workspace analysis exclusions are unavailable",
+                paths.error or "workspace analysis exclusions are unavailable"
             )
         return frozenset(p.parts[0] for p in paths.value if Path(p).parts)
 
@@ -114,10 +111,7 @@ class FlextInfraEnsureRuffConfigPhase:
         return scoped_global
 
     def _phase(
-        self,
-        *,
-        path: Path,
-        facts: m.Infra.RuffProjectFacts,
+        self, *, path: Path, facts: m.Infra.RuffProjectFacts
     ) -> m.Infra.DepsToml.PhaseConfig:
         """Build the canonical Ruff phase for one project path."""
         ruff_cfg = self._tool_config.tools.ruff
@@ -166,13 +160,9 @@ class FlextInfraEnsureRuffConfigPhase:
             table_path=(c.Infra.RUFF,),
             operations=(
                 toml.RemoveOp(key=c.Infra.EXTEND),
+                toml.ListOp(key="extend-exclude", values=sorted(workspace_exclusions)),
                 toml.ListOp(
-                    key="extend-exclude",
-                    values=sorted(workspace_exclusions),
-                ),
-                toml.ListOp(
-                    key="namespace-packages",
-                    values=sorted(existing_namespace_packages),
+                    key="namespace-packages", values=sorted(existing_namespace_packages)
                 ),
                 toml.SetOp(key="fix", value=ruff_cfg.fix),
                 toml.SetOp(key="line-length", value=ruff_cfg.line_length),
@@ -212,7 +202,7 @@ class FlextInfraEnsureRuffConfigPhase:
                         toml.SetOp(
                             key="select",
                             value=u.normalize_to_json_value(
-                                sorted(ruff_cfg.lint.select),
+                                sorted(ruff_cfg.lint.select)
                             ),
                         ),
                         # make fix never deletes information: the fix-safety
@@ -220,13 +210,13 @@ class FlextInfraEnsureRuffConfigPhase:
                         toml.SetOp(
                             key="unfixable",
                             value=u.normalize_to_json_value(
-                                sorted(ruff_cfg.lint.unfixable),
+                                sorted(ruff_cfg.lint.unfixable)
                             ),
                         ),
                         toml.SetOp(
                             key="extend-safe-fixes",
                             value=u.normalize_to_json_value(
-                                sorted(ruff_cfg.lint.extend_safe_fixes),
+                                sorted(ruff_cfg.lint.extend_safe_fixes)
                             ),
                         ),
                     ),
@@ -241,8 +231,7 @@ class FlextInfraEnsureRuffConfigPhase:
                     ),
                     operations=tuple(
                         toml.SetOp(
-                            key=name,
-                            value=u.normalize_to_json_value({"msg": message}),
+                            key=name, value=u.normalize_to_json_value({"msg": message})
                         )
                         for name, message in ruff_cfg.lint.banned_api.items()
                     ),
@@ -271,7 +260,10 @@ class FlextInfraEnsureRuffConfigPhase:
                             toml.RemoveOp(key=pattern)
                             for pattern in facts.stale_patterns
                         ),
-                        *(toml.RemoveOp(key=pattern) for pattern in facts.stale_patterns),
+                        *(
+                            toml.RemoveOp(key=pattern)
+                            for pattern in facts.stale_patterns
+                        ),
                     ),
                 ),
             ),
@@ -301,8 +293,7 @@ class FlextInfraEnsureRuffConfigPhase:
                     path=path,
                     facts=m.Infra.RuffProjectFacts(
                         first_party=FlextInfraToolTablesPhase.first_party_namespaces(
-                            payload,
-                            path=path,
+                            payload, path=path
                         ),
                         stale_patterns=[
                             pattern
@@ -314,7 +305,7 @@ class FlextInfraEnsureRuffConfigPhase:
                         analysis_exclusions=analysis_exclusions,
                     ),
                 ),
-            ),
+            )
         )
         if u.Cli.toml_mapping_remove_key_if_present(payload, c.Infra.LINT_SECTION):
             changes.append("removed stale top-level [lint] section")

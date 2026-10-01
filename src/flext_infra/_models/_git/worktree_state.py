@@ -21,7 +21,7 @@ class FlextInfraModelsGitWorktreeState:
         git_dir: Annotated[
             Path | None,
             m.Field(
-                description="Validated worktree Git directory, absent only for file scopes",
+                description="Validated worktree Git directory, absent only for file scopes"
             ),
         ]
 
@@ -30,20 +30,17 @@ class FlextInfraModelsGitWorktreeState:
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
         remote_name: Annotated[
-            str,
-            m.Field(description="Configured remote used for publication"),
+            str, m.Field(description="Configured remote used for publication")
         ]
         remote_url: Annotated[
             str,
             m.Field(description="Exact verified credential-free fetch and push URL"),
         ]
         checkpoint_ref: Annotated[
-            str,
-            m.Field(description="Published dedicated checkpoint reference"),
+            str, m.Field(description="Published dedicated checkpoint reference")
         ]
         checkpoint_oid: Annotated[
-            str,
-            m.Field(description="Exact advertised checkpoint commit"),
+            str, m.Field(description="Exact advertised checkpoint commit")
         ]
 
     class GitWorktreeStateRequest(m.ContractModel):
@@ -53,12 +50,11 @@ class FlextInfraModelsGitWorktreeState:
         retained_commits: Annotated[
             t.VariadicTuple[str],
             m.Field(
-                description="Additional child commits referenced by owning gitlinks",
+                description="Additional child commits referenced by owning gitlinks"
             ),
         ] = ()
         repo_root: Annotated[
-            Path,
-            m.Field(description="Source repository worktree root"),
+            Path, m.Field(description="Source repository worktree root")
         ]
         paths: Annotated[
             t.VariadicTuple[Path],
@@ -72,8 +68,7 @@ class FlextInfraModelsGitWorktreeState:
         path: Annotated[Path, m.Field(description="Repository-relative index path")]
         mode: Annotated[str, m.Field(description="Git octal index entry mode")]
         oid: Annotated[
-            str,
-            m.Field(description="Index blob or gitlink object identifier"),
+            str, m.Field(description="Index blob or gitlink object identifier")
         ]
 
     class GitWorktreeObservedFile(m.ContractModel):
@@ -89,13 +84,12 @@ class FlextInfraModelsGitWorktreeState:
         content: Annotated[
             bytes | None,
             m.Field(
-                description="Raw working bytes; link text for symlinks, None when absent",
+                description="Raw working bytes; link text for symlinks, None when absent"
             ),
         ]
         mode: Annotated[str, m.Field(description="Git mode for raw bytes or symlink")]
         permissions: Annotated[
-            int,
-            m.Field(description="Exact filesystem permission bits"),
+            int, m.Field(description="Exact filesystem permission bits")
         ]
 
     class GitWorktreeFileState(m.ContractModel):
@@ -104,8 +98,7 @@ class FlextInfraModelsGitWorktreeState:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
         path: Annotated[Path, m.Field(description="Repository-relative working path")]
         mode: Annotated[
-            str,
-            m.Field(description="Git mode for raw bytes, symlink or gitlink"),
+            str, m.Field(description="Git mode for raw bytes, symlink or gitlink")
         ]
         permissions: Annotated[
             int,
@@ -114,7 +107,7 @@ class FlextInfraModelsGitWorktreeState:
         oid: Annotated[
             str,
             m.Field(
-                description="Object identifier for raw bytes or current gitlink HEAD",
+                description="Object identifier for raw bytes or current gitlink HEAD"
             ),
         ]
 
@@ -128,8 +121,7 @@ class FlextInfraModelsGitWorktreeState:
             m.Field(description="Observed working bytes; absent means no file"),
         ]
         mode: Annotated[
-            str,
-            m.Field(description="Git mode the observed bytes classify as"),
+            str, m.Field(description="Git mode the observed bytes classify as")
         ]
         permissions: Annotated[
             int,
@@ -143,27 +135,24 @@ class FlextInfraModelsGitWorktreeState:
         retained_commits: Annotated[
             t.VariadicTuple[str],
             m.Field(
-                description="Additional resolved commits retained by checkpoint ancestry",
+                description="Additional resolved commits retained by checkpoint ancestry"
             ),
         ] = ()
         head_entries: Annotated[
             t.VariadicTuple[FlextInfraModelsGitWorktreeState.GitWorktreeIndexEntry],
             m.Field(
-                description="Original HEAD entries including deleted gitlink preimages",
+                description="Original HEAD entries including deleted gitlink preimages"
             ),
         ]
         repo_root: Annotated[Path, m.Field(description="Original source worktree root")]
         common_dir: Annotated[
-            Path,
-            m.Field(description="Shared Git object storage identity"),
+            Path, m.Field(description="Shared Git object storage identity")
         ]
         head: Annotated[
-            str,
-            m.Field(description="Original HEAD commit object identifier"),
+            str, m.Field(description="Original HEAD commit object identifier")
         ]
         paths: Annotated[
-            t.VariadicTuple[Path],
-            m.Field(description="Exact literal ownership scope"),
+            t.VariadicTuple[Path], m.Field(description="Exact literal ownership scope")
         ]
         index_entries: Annotated[
             t.VariadicTuple[FlextInfraModelsGitWorktreeState.GitWorktreeIndexEntry],
@@ -183,8 +172,7 @@ class FlextInfraModelsGitWorktreeState:
             m.Field(description="Original immutable ownership and state evidence"),
         ]
         checkpoint_ref: Annotated[
-            str,
-            m.Field(description="Durable dedicated Git reference"),
+            str, m.Field(description="Durable dedicated Git reference")
         ]
         index_commit: Annotated[
             str,
@@ -193,7 +181,7 @@ class FlextInfraModelsGitWorktreeState:
         worktree_commit: Annotated[
             str,
             m.Field(
-                description="Reachable commit retaining raw working bytes and snapshot metadata",
+                description="Reachable commit retaining raw working bytes and snapshot metadata"
             ),
         ]
 

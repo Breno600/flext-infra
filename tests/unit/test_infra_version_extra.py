@@ -19,7 +19,7 @@ class TestsFlextInfraInfraVersionExtra:
 
     def test_public_package_metadata_matches_project_metadata(self) -> None:
         metadata = tm.ok(
-            u.Infra.read_project_metadata_result(Path(__file__).resolve().parents[2]),
+            u.Infra.read_project_metadata_result(Path(__file__).resolve().parents[2])
         )
 
         tm.that(infra_pkg.__title__, eq=metadata.project.name)
@@ -29,7 +29,7 @@ class TestsFlextInfraInfraVersionExtra:
 
     def test_public_package_author_matches_project_authors(self) -> None:
         metadata = tm.ok(
-            u.Infra.read_project_metadata_result(Path(__file__).resolve().parents[2]),
+            u.Infra.read_project_metadata_result(Path(__file__).resolve().parents[2])
         )
 
         tm.that(metadata.project.authors, empty=False)

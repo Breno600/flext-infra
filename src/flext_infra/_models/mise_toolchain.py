@@ -14,10 +14,7 @@ class FlextInfraModelsMiseToolchain:
         """Private declarative base for schema-loaded codegen records."""
 
         model_config = m.ConfigDict(
-            strict=False,
-            frozen=True,
-            extra="forbid",
-            str_strip_whitespace=False,
+            strict=False, frozen=True, extra="forbid", str_strip_whitespace=False
         )
 
     class BeadsToolSpec(_ConfigContract):
@@ -44,7 +41,7 @@ class FlextInfraModelsMiseToolchain:
                 description=(
                     "Rendered as dolt.mode in .beads/config.yaml. Change "
                     "toolchain.beads.dolt_mode; never the projection."
-                ),
+                )
             ),
         ]
         export_auto: Annotated[
@@ -52,7 +49,7 @@ class FlextInfraModelsMiseToolchain:
             m.Field(
                 description=(
                     "Rendered as export.auto. Override toolchain.beads.export_auto."
-                ),
+                )
             ),
         ]
         backup_enabled: Annotated[
@@ -61,7 +58,7 @@ class FlextInfraModelsMiseToolchain:
                 description=(
                     "Rendered as backup.enabled. Override "
                     "toolchain.beads.backup_enabled."
-                ),
+                )
             ),
         ]
         dolt_disable_event_flush: Annotated[
@@ -70,7 +67,7 @@ class FlextInfraModelsMiseToolchain:
                 description=(
                     "Rendered as dolt.disable-event-flush. Override "
                     "toolchain.beads.dolt_disable_event_flush."
-                ),
+                )
             ),
         ]
 
@@ -132,8 +129,7 @@ class FlextInfraModelsMiseToolchain:
             ),
         ]
         uv_link_mode: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Portable uv installation link mode"),
+            t.NonEmptyStr, m.Field(description="Portable uv installation link mode")
         ]
         uv_environments: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
@@ -141,7 +137,7 @@ class FlextInfraModelsMiseToolchain:
                 description=(
                     "Marker expressions limiting the environments uv resolves "
                     "for the generated lock. Empty resolves every environment."
-                ),
+                )
             ),
         ] = ()
         uv_constraint_dependencies: Annotated[
@@ -154,24 +150,20 @@ class FlextInfraModelsMiseToolchain:
                     "removes the key so no orphan cap survives without an "
                     "owner (operator directive 2026-09-08: artificial pins "
                     "are exterminated, never retained)."
-                ),
+                )
             ),
         ] = ()
         kubectl_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Exact kubectl version, e.g. '1.32.0'"),
+            t.NonEmptyStr, m.Field(description="Exact kubectl version, e.g. '1.32.0'")
         ]
         helm_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Exact Helm version, e.g. '3.19.4'"),
+            t.NonEmptyStr, m.Field(description="Exact Helm version, e.g. '3.19.4'")
         ]
         kind_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Exact kind version, e.g. '0.31.0'"),
+            t.NonEmptyStr, m.Field(description="Exact kind version, e.g. '0.31.0'")
         ]
         direnv_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Compatible direnv major.minor line"),
+            t.NonEmptyStr, m.Field(description="Compatible direnv major.minor line")
         ]
         environment_path_prepends: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
@@ -186,8 +178,7 @@ class FlextInfraModelsMiseToolchain:
             ),
         ] = ()
         uv_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Compatible uv major.minor line"),
+            t.NonEmptyStr, m.Field(description="Compatible uv major.minor line")
         ]
         mise_lockfile: Annotated[
             bool,
@@ -197,7 +188,7 @@ class FlextInfraModelsMiseToolchain:
                     "Keep true: "
                     "make upg writes the committed mise.lock. "
                     "Override toolchain.mise_lockfile; never edit the projection."
-                ),
+                )
             ),
         ] = True
         mise_locked: Annotated[
@@ -208,7 +199,7 @@ class FlextInfraModelsMiseToolchain:
                     "and bootstrap MISE_LOCKED. "
                     "Keep true so setup installs only what mise.lock pins. "
                     "Override toolchain.mise_locked."
-                ),
+                )
             ),
         ] = True
         mise_lockfile_platforms: Annotated[
@@ -244,7 +235,7 @@ class FlextInfraModelsMiseToolchain:
                 description=(
                     "Mise selector for qlty. Override toolchain.qlty_selector; "
                     "never the .mise.toml key."
-                ),
+                )
             ),
         ]
         qlty_version: Annotated[
@@ -252,8 +243,7 @@ class FlextInfraModelsMiseToolchain:
             m.Field(description="Moving qlty release selector, e.g. 'latest'"),
         ]
         node_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Compatible Node.js major.minor line"),
+            t.NonEmptyStr, m.Field(description="Compatible Node.js major.minor line")
         ]
         jscpd_selector: Annotated[
             t.NonEmptyStr,
@@ -261,7 +251,7 @@ class FlextInfraModelsMiseToolchain:
                 description=(
                     "Mise selector for jscpd. Override toolchain.jscpd_selector; "
                     "never the .mise.toml key."
-                ),
+                )
             ),
         ]
         jscpd_version: Annotated[
@@ -287,7 +277,7 @@ class FlextInfraModelsMiseToolchain:
                 description=(
                     "Mise selector for Waza. Override toolchain.waza_selector; "
                     "never the .mise.toml key."
-                ),
+                )
             ),
         ]
         waza_version: Annotated[
@@ -301,7 +291,7 @@ class FlextInfraModelsMiseToolchain:
                     "Release tag prefix of the Waza tool. The repository also "
                     "publishes azd-extension tags that GitHub marks latest; the "
                     "prefix keeps them out of resolution."
-                ),
+                )
             ),
         ]
         taplo_version: Annotated[
@@ -314,16 +304,13 @@ class FlextInfraModelsMiseToolchain:
             ),
         ]
         ast_grep_selector: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Mise selector for the ast-grep CLI"),
+            t.NonEmptyStr, m.Field(description="Mise selector for the ast-grep CLI")
         ]
         ast_grep_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Exact ast-grep analyzer version"),
+            t.NonEmptyStr, m.Field(description="Exact ast-grep analyzer version")
         ]
         gitleaks_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Exact Gitleaks scanner version"),
+            t.NonEmptyStr, m.Field(description="Exact Gitleaks scanner version")
         ]
         scc_selector: Annotated[
             t.NonEmptyStr,
@@ -331,23 +318,21 @@ class FlextInfraModelsMiseToolchain:
                 description=(
                     "Mise selector for scc. Override toolchain.scc_selector; "
                     "never the .mise.toml key."
-                ),
+                )
             ),
         ]
         scc_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="scc release selector (latest)"),
+            t.NonEmptyStr, m.Field(description="scc release selector (latest)")
         ]
         kubeconform_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Compatible kubeconform minor line"),
+            t.NonEmptyStr, m.Field(description="Compatible kubeconform minor line")
         ]
         go_version: Annotated[
             t.NonEmptyStr,
             m.Field(
                 description=(
                     "Go runtime selector; mise resolves the go backend through it"
-                ),
+                )
             ),
         ]
         make_version: Annotated[
@@ -357,7 +342,7 @@ class FlextInfraModelsMiseToolchain:
                     "Moving Make release selector (latest); mise provisions make "
                     "so direnv always resolves a real binary rather than a stale "
                     "host shim. Override toolchain.make_version; never pin."
-                ),
+                )
             ),
         ]
         beads: Annotated[

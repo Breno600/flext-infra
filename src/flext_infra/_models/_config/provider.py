@@ -38,12 +38,10 @@ class FlextInfraConfigModelsProvider:
         """Portable repository identity derived through one declared provider."""
 
         distribution: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Repository distribution name"),
+            t.NonEmptyStr, m.Field(description="Repository distribution name")
         ]
         provider: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Provider key owning URL and branch"),
+            t.NonEmptyStr, m.Field(description="Provider key owning URL and branch")
         ]
 
         @m.computed_field
@@ -87,8 +85,7 @@ class FlextInfraConfigModelsProvider:
         """One GitHub Action reference from the codegen catalog."""
 
         repository: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="GitHub owner/repository action name"),
+            t.NonEmptyStr, m.Field(description="GitHub owner/repository action name")
         ]
         version: Annotated[
             t.NonEmptyStr,
@@ -96,25 +93,24 @@ class FlextInfraConfigModelsProvider:
         ]
 
     class CiPrivateSubmoduleDeployKeySpec(
-        FlextInfraConfigModelsContract.ConfigContract,
+        FlextInfraConfigModelsContract.ConfigContract
     ):
         """One read-only deploy key that unlocks a private workspace subproject in CI."""
 
         secret: Annotated[
             t.NonEmptyStr,
             m.Field(
-                description="GitHub Actions secret name holding the deploy key PEM",
+                description="GitHub Actions secret name holding the deploy key PEM"
             ),
         ]
         submodule: Annotated[
             t.NonEmptyStr,
             m.Field(
-                description="gitmodules submodule name (git config submodule.<name>.url)",
+                description="gitmodules submodule name (git config submodule.<name>.url)"
             ),
         ]
         path: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Checkout-relative submodule path"),
+            t.NonEmptyStr, m.Field(description="Checkout-relative submodule path")
         ]
         remote: Annotated[
             t.NonEmptyStr,
@@ -158,8 +154,7 @@ class FlextInfraConfigModelsProvider:
         paths: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                min_length=1,
-                description="Submodule paths to init before make setup",
+                min_length=1, description="Submodule paths to init before make setup"
             ),
         ]
         deploy_keys: Annotated[

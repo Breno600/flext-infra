@@ -69,42 +69,45 @@ class FlextInfraConstantsCheck:
     RUNTIME_CENSUS: ClassVar[str] = "runtime-census"
     SILENT_FAILURE: ClassVar[str] = "silent-failure"
     "Gate id whose census rule families no other gate owns."
-    GATE_TOOLS_BY_KIND: ClassVar[
-        t.MappingKV[GateKind, t.MappingKV[str, t.StrPair]]
-    ] = MappingProxyType({
-        GateKind.EXTERNAL: MappingProxyType({
-            "lint": ("Ruff Linter", "https://docs.astral.sh/ruff/"),
-            "format": ("Ruff Formatter", "https://docs.astral.sh/ruff/formatter/"),
-            "security": ("Bandit", "https://bandit.readthedocs.io/"),
-            "markdown": ("rumdl", "https://rumdl.dev/"),
-            "markdown-format": ("Prettier", "https://prettier.io/"),
-            "markdown-code": ("Ruff", "https://docs.astral.sh/ruff/"),
-            "duplication": ("jscpd", "https://github.com/kucherenko/jscpd"),
-        }),
-        GateKind.TYPE_CHECKER: MappingProxyType({
-            "pyrefly": ("Pyrefly", "https://github.com/facebook/pyrefly"),
-            "mypy": ("Mypy", "https://mypy.readthedocs.io/"),
-            "pyright": ("Pyright", "https://github.com/microsoft/pyright"),
-        }),
-        GateKind.INFRA: MappingProxyType({
-            "loc-cap": ("scc", "https://github.com/boyter/scc"),
-            "runtime-census": (
-                "Flext Runtime Enforcement Census",
-                "internal://flext-infra/runtime-census",
-            ),
-            "index-declarations": (
-                "Flext Index Declarations Gate",
-                "internal://flext-infra/index-declarations",
-            ),
-            SMELLS: ("Flext Code Smell Detector", "internal://flext-infra/smells"),
-            "codemod": ("ast-grep", AST_GREP_DOCS_URL),
-            "layout": ("Flext Project Layout Gate", "internal://flext-infra/layout"),
-            "direnv": (
-                "Flext Direnv Environment Contract Gate",
-                "internal://flext-infra/direnv",
-            ),
-        }),
-    })
+    GATE_TOOLS_BY_KIND: ClassVar[t.MappingKV[GateKind, t.MappingKV[str, t.StrPair]]] = (
+        MappingProxyType({
+            GateKind.EXTERNAL: MappingProxyType({
+                "lint": ("Ruff Linter", "https://docs.astral.sh/ruff/"),
+                "format": ("Ruff Formatter", "https://docs.astral.sh/ruff/formatter/"),
+                "security": ("Bandit", "https://bandit.readthedocs.io/"),
+                "markdown": ("rumdl", "https://rumdl.dev/"),
+                "markdown-format": ("Prettier", "https://prettier.io/"),
+                "markdown-code": ("Ruff", "https://docs.astral.sh/ruff/"),
+                "duplication": ("jscpd", "https://github.com/kucherenko/jscpd"),
+            }),
+            GateKind.TYPE_CHECKER: MappingProxyType({
+                "pyrefly": ("Pyrefly", "https://github.com/facebook/pyrefly"),
+                "mypy": ("Mypy", "https://mypy.readthedocs.io/"),
+                "pyright": ("Pyright", "https://github.com/microsoft/pyright"),
+            }),
+            GateKind.INFRA: MappingProxyType({
+                "loc-cap": ("scc", "https://github.com/boyter/scc"),
+                "runtime-census": (
+                    "Flext Runtime Enforcement Census",
+                    "internal://flext-infra/runtime-census",
+                ),
+                "index-declarations": (
+                    "Flext Index Declarations Gate",
+                    "internal://flext-infra/index-declarations",
+                ),
+                SMELLS: ("Flext Code Smell Detector", "internal://flext-infra/smells"),
+                "codemod": ("ast-grep", AST_GREP_DOCS_URL),
+                "layout": (
+                    "Flext Project Layout Gate",
+                    "internal://flext-infra/layout",
+                ),
+                "direnv": (
+                    "Flext Direnv Environment Contract Gate",
+                    "internal://flext-infra/direnv",
+                ),
+            }),
+        })
+    )
     """The gate registry: each gate is declared once, under its kind.
 
     ``loc-cap`` and ``codemod`` drive an external engine (scc, ast-grep) over a
@@ -120,7 +123,9 @@ class FlextInfraConstantsCheck:
     )
     "Native type-checker gates, derived from the registry declaration."
     SARIF_TOOL_INFO: ClassVar[t.MappingKV[str, t.StrPair]] = MappingProxyType({
-        gate: tool for tools in GATE_TOOLS_BY_KIND.values() for gate, tool in tools.items()
+        gate: tool
+        for tools in GATE_TOOLS_BY_KIND.values()
+        for gate, tool in tools.items()
     })
     "Gate id -> (tool name, tool url), derived from the registry declaration."
     TYPE_CHECKER_GATES: ClassVar[frozenset[str]] = frozenset(
@@ -137,14 +142,13 @@ class FlextInfraConstantsCheck:
     "Gates that rewrite files: owned by `fmt`/`fix`, never a read-only `check` vocabulary."
 
     RUFF_FORMAT_FILE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\s*-->\s*(.+?):\d+:\d+\s*$",
+        r"^\s*-->\s*(.+?):\d+:\d+\s*$"
     )
     MARKDOWN_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?P<file>.*?):(?P<line>\d+):(?P<col>\d+):\s+\[(?P<code>MD\d+)\]\s+(?P<msg>.*)$",
+        r"^(?P<file>.*?):(?P<line>\d+):(?P<col>\d+):\s+\[(?P<code>MD\d+)\]\s+(?P<msg>.*)$"
     )
     MARKDOWN_FORMAT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\[warn\]\s+(?P<file>\S+\.md)\s*$",
-        re.MULTILINE,
+        r"^\[warn\]\s+(?P<file>\S+\.md)\s*$", re.MULTILINE
     )
     "Prettier ``--check`` unformatted-file line (``[warn] <file.md>``); config warns never match."
     MARKDOWN_PY_FENCE_RE: ClassVar[t.RegexPattern] = re.compile(
@@ -157,12 +161,11 @@ class FlextInfraConstantsCheck:
     MARKDOWN_CODE_SKIP_MARKER: ClassVar[str] = "notest"
     "Existing fence marker (pytest-markdown-docs) opting a block out of code validation."
     MARKDOWN_CODE_FORMAT_FILE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?P<file>\S+):\d+:\d+:\s+unformatted:\s+",
+        r"^(?P<file>\S+):\d+:\d+:\s+unformatted:\s+"
     )
     "Ruff format ``--check`` concise verdict line over extracted sources."
     MARKDOWN_CODE_FORMAT_ERROR_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^error: Failed to format (?P<file>\S+):",
-        re.MULTILINE,
+        r"^error: Failed to format (?P<file>\S+):", re.MULTILINE
     )
     "Ruff format hard-failure line over extracted sources (parse errors)."
     VALID_GATE_SEVERITIES: ClassVar[frozenset[str]] = frozenset(GateSeverity)
@@ -322,7 +325,7 @@ class FlextInfraConstantsCheck:
         "--update-all",
     })
     MANUAL_CMD_SEGMENT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"&&|\|\||;|\||\n|`|\$\(",
+        r"&&|\|\||;|\||\n|`|\$\("
     )
 
     # --- Net-LOC-delta validator (§3.5) SSOT ---

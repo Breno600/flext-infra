@@ -21,8 +21,7 @@ class FlextInfraModelsCodegenTransactionModels:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True, extra="forbid")
 
         version: Annotated[
-            Literal[8],
-            m.Field(description="Exact journal schema version"),
+            Literal[8], m.Field(description="Exact journal schema version")
         ]
         transaction_id: Annotated[
             str,
@@ -32,12 +31,10 @@ class FlextInfraModelsCodegenTransactionModels:
             ),
         ]
         scope_device: Annotated[
-            int,
-            m.Field(ge=0, strict=True, description="Scope directory device"),
+            int, m.Field(ge=0, strict=True, description="Scope directory device")
         ]
         scope_inode: Annotated[
-            int,
-            m.Field(gt=0, strict=True, description="Scope directory inode"),
+            int, m.Field(gt=0, strict=True, description="Scope directory inode")
         ]
         state: Annotated[
             Literal["staging", "prepared", "recovering", "committed"],

@@ -35,25 +35,25 @@ class FlextInfraSemanticPublication:
         """
         files: list[m.Infra.CodegenFilePlan] = []
         template_sources = u.Infra.codegen_template_sources(
-            config.Infra.codegen if codegen is None else codegen,
+            config.Infra.codegen if codegen is None else codegen
         )
         for plan in plans:
             if plan.desired_content is None:
                 continue
             if plan.desired_mode is None:
                 return r[tuple[Path, ...]].fail(
-                    f"semantic desired mode is absent: {plan.path}",
+                    f"semantic desired mode is absent: {plan.path}"
                 )
             if (
                 plan.path.resolve() not in template_sources
                 and plan.before.content is not None
                 and plan.before.content.decode(c.Cli.ENCODING_DEFAULT).startswith(
-                    c.Infra.AUTOGEN_HEADERS,
+                    c.Infra.AUTOGEN_HEADERS
                 )
             ):
                 return r[tuple[Path, ...]].fail(
                     "generated findings require canonical generator repair: "
-                    f"{plan.path}",
+                    f"{plan.path}"
                 )
             files.append(
                 m.Infra.CodegenFilePlan(
@@ -64,7 +64,7 @@ class FlextInfraSemanticPublication:
                     desired_mode=plan.desired_mode,
                     source_states=(plan.before,),
                     owner="semantic",
-                ),
+                )
             )
         if not files:
             return r[tuple[Path, ...]].ok(())
@@ -78,7 +78,7 @@ class FlextInfraSemanticPublication:
             for index, project in enumerate(sorted({plan.project for plan in files}))
         }
         transaction = FlextInfraCodegenTransaction(
-            FlextInfraCodegenMiseArtifacts(repository_root=repository_root),
+            FlextInfraCodegenMiseArtifacts(repository_root=repository_root)
         )
 
         def validate_published() -> p.Result[bool]:
@@ -96,9 +96,7 @@ class FlextInfraSemanticPublication:
                 session: m.Infra.CodegenTransactionSession,
             ) -> p.Result[t.VariadicTuple[Path]]:
                 published = transaction.append_phase_locked(
-                    session,
-                    analysis.phase,
-                    analysis.files,
+                    session, analysis.phase, analysis.files
                 )
                 if published.failure:
                     return r[tuple[Path, ...]].from_failure(published)

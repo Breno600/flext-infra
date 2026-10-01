@@ -63,7 +63,7 @@ class TestsFlextInfraUtilitiesWorkspaceEnvMixin:
 
         """
         return TestsFlextInfraUtilitiesWorkspaceEnvMixin.ignore_patterns_for_profile(
-            TestsFlextInfraUtilitiesWorkspaceEnvMixin.repository_profile(root),
+            TestsFlextInfraUtilitiesWorkspaceEnvMixin.repository_profile(root)
         )
 
     @staticmethod
@@ -89,9 +89,8 @@ class TestsFlextInfraUtilitiesWorkspaceEnvMixin:
             # failed run is the success case for a tracked artifact.
             probe: p.Cli.CommandOutput = tm.ok(
                 u.Cli.run_raw(
-                    ["git", "check-ignore", "-q", relative_path],
-                    cwd=probe_root,
-                ),
+                    ["git", "check-ignore", "-q", relative_path], cwd=probe_root
+                )
             )
         code = probe.outcome.raw_return_code
         tm.that(code in {0, 1}, eq=True)

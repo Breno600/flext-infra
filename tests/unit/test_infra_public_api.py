@@ -15,8 +15,8 @@ class TestsFlextInfraPublicApi:
     def test_public_runtime_metadata_matches_public_constants(self) -> None:
         metadata = tm.ok(
             flext_infra.u.Infra.read_project_metadata_result(
-                Path(__file__).resolve().parents[2],
-            ),
+                Path(__file__).resolve().parents[2]
+            )
         )
 
         tm.that(flext_infra.__title__, eq=metadata.project.name)

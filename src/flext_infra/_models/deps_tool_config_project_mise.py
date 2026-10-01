@@ -25,8 +25,7 @@ class FlextInfraModelsDepsToolConfigProjectMise:
 
         tools: Annotated[
             t.MappingKV[
-                t.NonEmptyStr,
-                FlextInfraModelsDepsToolConfigProjectMise.ProjectMiseTool,
+                t.NonEmptyStr, FlextInfraModelsDepsToolConfigProjectMise.ProjectMiseTool
             ],
             m.Field(description="Project-local Mise tools added to generated config."),
         ]

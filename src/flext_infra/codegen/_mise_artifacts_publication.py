@@ -29,9 +29,7 @@ class FlextInfraMisePublication:
 
     @staticmethod
     def publish_file_plan(
-        plan: m.Infra.CodegenFilePlan,
-        *,
-        phase: str,
+        plan: m.Infra.CodegenFilePlan, *, phase: str
     ) -> p.Result[bool]:
         """Publish one FilePlan through write_publication without a journal."""
         if not u.Infra.codegen_file_requires_effect(plan):
@@ -46,15 +44,12 @@ class FlextInfraMisePublication:
                 return r[bool].fail(f"codegen desired mode is absent: {plan.path}")
             staging_path = plan.path.with_name(f".{plan.path.name}.codegen-staging")
             staged_before = u.Cli.atomic_read_binary_file_state(
-                staging_path,
-                required=False,
+                staging_path, required=False
             )
             if staged_before.failure:
                 return r[bool].from_failure(staged_before)
             written = u.Cli.atomic_write_binary_file_guarded(
-                staged_before.value,
-                plan.desired_content,
-                permission_mode=mode,
+                staged_before.value, plan.desired_content, permission_mode=mode
             )
             if written.failure:
                 return r[bool].from_failure(written)
@@ -68,7 +63,7 @@ class FlextInfraMisePublication:
                 project=plan.project,
                 before=before.value,
                 replacement=replacement,
-            ),
+            )
         )
         FlextInfraMisePublication._invalidate_project_document(plan.path)
         return published
@@ -86,7 +81,7 @@ class FlextInfraMisePublication:
             if changed.failure:
                 return r[t.VariadicTuple[Path]].from_failure(changed)
             FlextInfraMisePublication._invalidate_project_document(
-                publication.before.path,
+                publication.before.path
             )
             written.append(publication.before.path)
         return r[t.VariadicTuple[Path]].ok(tuple(written))

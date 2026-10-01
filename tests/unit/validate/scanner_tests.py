@@ -47,10 +47,7 @@ class TestsFlextInfraScanner:
         (tmp_path / "included.txt").write_text("hello")
         (tmp_path / "excluded.log").write_text("hello")
         result = scanner.scan(
-            tmp_path,
-            pattern="hello",
-            includes=["*.txt"],
-            excludes=["*.log"],
+            tmp_path, pattern="hello", includes=["*.txt"], excludes=["*.log"]
         )
         tm.ok(result)
         tm.that(result.value["files_scanned"], eq=1)

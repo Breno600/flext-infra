@@ -43,7 +43,7 @@ class TestsFlextInfraRootMakefileSingleOwner:
         """The sole template injects the one custom-include directive from SSOT."""
         templates_root = Path(flext_infra.__file__).resolve().parent / "templates"
         generic = (templates_root / "project" / "base" / "Makefile.j2").read_text(
-            encoding="utf-8",
+            encoding="utf-8"
         )
 
         tm.that(generic, has="{{ makefile_custom_include }}")

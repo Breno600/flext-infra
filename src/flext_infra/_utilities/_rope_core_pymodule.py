@@ -22,10 +22,7 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
 
     @staticmethod
     def find_identifier_offset_in_lines(
-        lines: t.SequenceOf[str],
-        *,
-        line: int,
-        symbol: str,
+        lines: t.SequenceOf[str], *, line: int, symbol: str
     ) -> int | None:
         """Return the absolute offset of one exact identifier token on a line.
 
@@ -42,7 +39,7 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
         for (
             match
         ) in FlextInfraUtilitiesRopeCorePyModuleMixin._IDENTIFIER_PATTERN.finditer(
-            source_line,
+            source_line
         ):
             if match.group(0) == symbol:
                 offset: int = line_start + match.start()
@@ -51,8 +48,7 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
 
     @staticmethod
     def resolve_pymodule(
-        rope_project: t.Infra.RopeProject,
-        resource: t.Infra.RopeResource,
+        rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
     ) -> t.Infra.RopePyModule:
         """Resolve one concrete rope PyModule through the validated API boundary."""
         pymodule = rope_project.get_pymodule(resource)
@@ -64,16 +60,14 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
 
     @staticmethod
     def resolve_module_imports(
-        rope_project: t.Infra.RopeProject,
-        resource: t.Infra.RopeResource,
+        rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
     ) -> t.Infra.RopeModuleImports:
         """Resolve the module import table, raising when rope cannot build it."""
         try:
             module_imports = FlextInfraUtilitiesRopeRuntime.module_imports_for_pymodule(
                 rope_project,
                 FlextInfraUtilitiesRopeCorePyModuleMixin.resolve_pymodule(
-                    rope_project,
-                    resource,
+                    rope_project, resource
                 ),
             )
         except (

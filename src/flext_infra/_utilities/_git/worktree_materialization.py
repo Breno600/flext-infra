@@ -20,15 +20,13 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
-    FlextInfraUtilitiesGitWorktreeDiscoveryMixin,
+    FlextInfraUtilitiesGitWorktreeDiscoveryMixin
 ):
     """Own worktree materialization operations."""
 
     @classmethod
     def git_add_detached_worktree(
-        cls,
-        source_root: Path,
-        worktree_root: Path,
+        cls, source_root: Path, worktree_root: Path
     ) -> p.Result[str]:
         """Create a detached worktree at the source repository HEAD."""
         ensure_parent = u.Cli.ensure_dir(worktree_root.parent)
@@ -39,8 +37,7 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
                 worktree_root.rmdir()
             except OSError as exc:
                 return r[str].fail(
-                    f"worktree target is not empty: {exc}",
-                    exception=exc,
+                    f"worktree target is not empty: {exc}", exception=exc
                 )
         head_result = cls._git_head_oid(source_root)
         if head_result.failure:
@@ -74,10 +71,7 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
 
     @classmethod
     def _git_copy_untracked(
-        cls,
-        source_root: Path,
-        worktree_root: Path,
-        excluded: t.SequenceOf[Path],
+        cls, source_root: Path, worktree_root: Path, excluded: t.SequenceOf[Path]
     ) -> p.Result[bool]:
         """Copy non-ignored untracked files into an isolated worktree."""
         try:
@@ -96,7 +90,7 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
             source_path = source_root / relative_path
             if source_path.is_dir() and not source_path.is_symlink():
                 return r[bool].fail(
-                    f"nested repository requires separate capture: {relative_path}",
+                    f"nested repository requires separate capture: {relative_path}"
                 )
             destination_path = worktree_root / relative_path
             ensure_parent = u.Cli.ensure_dir(destination_path.parent)
@@ -107,7 +101,7 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
                     destination_path.symlink_to(source_path.readlink())
                 except OSError as exc:
                     return r[bool].fail(
-                        f"failed to copy symlink {relative_path}: {exc}",
+                        f"failed to copy symlink {relative_path}: {exc}"
                     )
                 continue
             copy_result = u.Cli.files_copy(source_path, destination_path)
@@ -138,10 +132,7 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
         )
         try:
             return cls._git_copy_worktree_layers(
-                source_root,
-                worktree_root,
-                excluded,
-                pathspecs,
+                source_root, worktree_root, excluded, pathspecs
             )
         except GitCommandError as exc:
             return r[bool].fail(str(exc), exception=exc)
@@ -206,7 +197,7 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
             if name
         }
         for raw_path in repo.git.ls_files("--others", "--exclude-standard", "-z").split(
-            "\0",
+            "\0"
         ):
             relative = Path(raw_path)
             if not raw_path or cls._git_path_is_excluded(relative, excluded):
@@ -214,7 +205,7 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
             source_path = source_root / relative
             if source_path.is_dir() and not source_path.is_symlink():
                 return r[bool].fail(
-                    f"nested repository requires separate capture: {relative}",
+                    f"nested repository requires separate capture: {relative}"
                 )
             destination = worktree_root / relative
             if (
@@ -228,7 +219,7 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
                     or (candidate.exists() and not candidate.is_dir())
                 ):
                     return r[bool].fail(
-                        f"unsafe untracked destination parent: {parent}",
+                        f"unsafe untracked destination parent: {parent}"
                     )
         for check in (True, False):
             for patch_bytes, layer in zip(patches, ((), ("--cached",)), strict=True):
@@ -236,15 +227,12 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
                     continue
                 with FlextInfraUtilitiesGitWorktreeIO.git_stdin(patch_bytes) as istream:
                     worktree_repo.git.apply(
-                        *layer,
-                        *(("--check",) if check else ()),
-                        "-",
-                        istream=istream,
+                        *layer, *(("--check",) if check else ()), "-", istream=istream
                     )
         # Git records only executable bits; apply creates files through the
         # process umask. Preserve the physical source permissions separately.
         for raw_path in repo.git.ls_files("-z", strip_newline_in_stdout=False).split(
-            "\0",
+            "\0"
         ):
             relative = Path(raw_path)
             if not raw_path or cls._git_path_is_excluded(relative, excluded):

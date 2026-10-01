@@ -82,7 +82,7 @@ class FlextInfraRefactorCensusRemovalMixin(
                             file_path=candidate.file_path,
                             line=candidate.line,
                             description=msg,
-                        ),
+                        )
                     )
                     continue
                 if preview_result.unwrap():

@@ -16,12 +16,10 @@ class TestsFlextInfraCodegenMakeRuntimeIdentity:
     """Host Mise configuration cannot replace a project's resolved executable."""
 
     def test_status_uses_locked_uv_without_loading_host_configuration(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         root, _ = u.Tests.render_make_environment(
-            tmp_path,
-            c.Infra.MakeProfile.STANDALONE,
+            tmp_path, c.Infra.MakeProfile.STANDALONE
         )
         tm.ok(u.Tests.create_python_environment(root))
         host_config = tmp_path / "host-mise.toml"
@@ -29,9 +27,7 @@ class TestsFlextInfraCodegenMakeRuntimeIdentity:
         lock = root / c.Infra.MISE_LOCK_FILENAME
         lock_before = lock.read_bytes()
         locked_uv = u.Tests.toml_tables_at(
-            lock.read_text(encoding="utf-8"),
-            "tools",
-            "uv",
+            lock.read_text(encoding="utf-8"), "tools", "uv"
         )
         tm.that(len(locked_uv), eq=1)
         version = locked_uv[0]["version"]
@@ -51,7 +47,7 @@ class TestsFlextInfraCodegenMakeRuntimeIdentity:
                     "MISE_GLOBAL_CONFIG_FILE": str(host_config),
                     "APPLICATION_STATE": str(root),
                 },
-            ),
+            )
         )
 
         tm.that(

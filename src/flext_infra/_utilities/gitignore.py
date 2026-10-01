@@ -58,11 +58,11 @@ class FlextInfraUtilitiesGitignore:
         )
         if entry is None:
             return r[str].fail(
-                "gitignore template is missing from codegen configuration",
+                "gitignore template is missing from codegen configuration"
             )
         if entry.source is None:
             return r[str].fail(
-                "gitignore codegen entry must declare a render template source",
+                "gitignore codegen entry must declare a render template source"
             )
         templates_root = FlextInfraUtilitiesGitignore.codegen_templates_root(codegen)
         project_patterns: t.StrSequence = ()
@@ -78,7 +78,7 @@ class FlextInfraUtilitiesGitignore:
                 project_name=project_name,
                 workspace=workspace,
                 project_patterns=project_patterns,
-            ),
+            )
         )
         return u.Cli.template_render(templates_root / entry.source, context)
 
@@ -131,7 +131,7 @@ class FlextInfraUtilitiesGitignore:
                 m.Infra.ScaffoldGitignoreSectionSpec(
                     name="WHITELIST: governed workspace subprojects (derived)",
                     patterns=tuple(member_patterns),
-                ),
+                )
             )
         if project_name is not None:
             override = codegen.layout.project_overrides.get(project_name)
@@ -140,7 +140,7 @@ class FlextInfraUtilitiesGitignore:
                     m.Infra.ScaffoldGitignoreSectionSpec(
                         name=c.Infra.GITIGNORE_LAYOUT_SECTION_NAME,
                         patterns=override.gitignore_additions,
-                    ),
+                    )
                 )
         if project_patterns:
             # The repository owns the ignore patterns the fleet scaffold cannot
@@ -150,7 +150,7 @@ class FlextInfraUtilitiesGitignore:
                 m.Infra.ScaffoldGitignoreSectionSpec(
                     name=c.Infra.GITIGNORE_PROJECT_SECTION_NAME,
                     patterns=tuple(project_patterns),
-                ),
+                )
             )
         return tuple(sections)
 

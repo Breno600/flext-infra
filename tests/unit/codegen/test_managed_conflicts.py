@@ -44,7 +44,7 @@ class TestsFlextInfraManagedConflictRecovery:
         tm.that(pyproject.overwrite_project_keys, empty=False)
         tm.that(
             set(pyproject.overwrite_project_keys).isdisjoint(
-                pyproject.preserve_project_keys,
+                pyproject.preserve_project_keys
             ),
             eq=True,
         )
@@ -62,9 +62,8 @@ class TestsFlextInfraManagedConflictRecovery:
 
         recovered = tm.ok(
             u.Infra.recover_managed_toml(
-                content,
-                conflict_sections=("tool.ruff.lint.per-file-ignores",),
-            ),
+                content, conflict_sections=("tool.ruff.lint.per-file-ignores",)
+            )
         )
 
         tm.that(
@@ -94,7 +93,7 @@ class TestsFlextInfraManagedConflictRecovery:
         )
 
         recovered: str = tm.ok(
-            u.Infra.recover_managed_toml(content, conflict_sections=("tool.uv",)),
+            u.Infra.recover_managed_toml(content, conflict_sections=("tool.uv",))
         )
 
         tm.that(
@@ -131,7 +130,7 @@ class TestsFlextInfraManagedConflictRecovery:
         content = '[tool.uv]\nlink-mode = "copy"\n'
 
         recovered: str = tm.ok(
-            u.Infra.recover_managed_toml(content, conflict_sections=("tool.uv",)),
+            u.Infra.recover_managed_toml(content, conflict_sections=("tool.uv",))
         )
 
         tm.that(recovered, eq=content)

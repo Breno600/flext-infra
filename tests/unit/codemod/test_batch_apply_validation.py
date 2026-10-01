@@ -40,8 +40,7 @@ class TestsFlextInfraCodemodBatchApplyValidation:
         )
 
     def test_allows_a_later_rule_enabled_by_a_prior_rewrite(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         """A staged rule becomes work for the next fixed-point iteration."""
         before = self._report(tmp_path / "subject.py", "bind-test-utility-alias")
@@ -50,8 +49,7 @@ class TestsFlextInfraCodemodBatchApplyValidation:
         FlextInfraCodemodBatchApply.validate_fix_match(before, after)
 
     def test_rejects_a_rewrite_that_introduces_its_own_rule_again(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         """A still-active rule proves that its own fix did not converge."""
         before = self._report(tmp_path / "subject.py", "rewrite-test-utility-receiver")

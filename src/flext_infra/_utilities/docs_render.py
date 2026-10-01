@@ -139,10 +139,7 @@ class FlextInfraUtilitiesDocsRender:
 
     @staticmethod
     def _resolve_governance_link(
-        prefix: str,
-        path: str,
-        *,
-        is_dir: bool = False,
+        prefix: str, path: str, *, is_dir: bool = False
     ) -> str:
         """Return a resolvable governance link for README or project docs.
 
@@ -156,7 +153,7 @@ class FlextInfraUtilitiesDocsRender:
                 repo.branch
                 for repo in config.Infra.codegen.make.docs.github_repos
                 if prefix.rstrip("/").endswith(
-                    f"/{repo.organization}/{repo.repository}",
+                    f"/{repo.organization}/{repo.repository}"
                 )
             )
             if len(branches) != 1:
@@ -170,8 +167,7 @@ class FlextInfraUtilitiesDocsRender:
     def _exclude_plugin_lines(data: t.JsonMapping) -> t.SequenceOf[str]:
         """Render optional ``mkdocs-exclude`` plugin lines."""
         patterns = FlextInfraUtilitiesDocsRender.as_string_sequence(
-            data,
-            "exclude_docs",
+            data, "exclude_docs"
         )
         if not patterns:
             return []
@@ -202,7 +198,7 @@ class FlextInfraUtilitiesDocsRender:
                 *FlextInfraUtilitiesDocsRender.as_string_sequence(data, "exclude_docs"),
                 "/README.md",
                 "/API/**",
-            ]),
+            ])
         )
         return ["exclude_docs: |", *[f"  {pattern}" for pattern in patterns], ""]
 
@@ -254,9 +250,7 @@ class FlextInfraUtilitiesDocsRender:
 
     @staticmethod
     def _collection_rules_lines(
-        scope: m.Infra.DocScope,
-        *,
-        link_prefix: str,
+        scope: m.Infra.DocScope, *, link_prefix: str
     ) -> t.SequenceOf[str]:
         """Return a thin pointer to the canonical Collection Rules.
 
@@ -269,8 +263,7 @@ class FlextInfraUtilitiesDocsRender:
         """
         _ = scope
         agents_link = FlextInfraUtilitiesDocsRender._resolve_governance_link(
-            link_prefix,
-            "AGENTS.md",
+            link_prefix, "AGENTS.md"
         )
         return [
             "## Collection Rules",
@@ -286,8 +279,7 @@ class FlextInfraUtilitiesDocsRender:
         make-check and AGENTS.md Make contract instead.
         """
         agents_link = FlextInfraUtilitiesDocsRender._resolve_governance_link(
-            link_prefix,
-            "AGENTS.md",
+            link_prefix, "AGENTS.md"
         )
         return [
             "## Quality Gates",
@@ -304,21 +296,16 @@ class FlextInfraUtilitiesDocsRender:
     def _governance_pointer_lines(*, link_prefix: str) -> t.SequenceOf[str]:
         """Return a thin pointer to the canonical governance surface."""
         agents_link = FlextInfraUtilitiesDocsRender._resolve_governance_link(
-            link_prefix,
-            "AGENTS.md",
+            link_prefix, "AGENTS.md"
         )
         skills_link = FlextInfraUtilitiesDocsRender._resolve_governance_link(
-            link_prefix,
-            ".agents/skills/",
-            is_dir=True,
+            link_prefix, ".agents/skills/", is_dir=True
         )
         onboarding_link = FlextInfraUtilitiesDocsRender._resolve_governance_link(
-            link_prefix,
-            "docs/guides/onboarding.md",
+            link_prefix, "docs/guides/onboarding.md"
         )
         governance_link = FlextInfraUtilitiesDocsRender._resolve_governance_link(
-            link_prefix,
-            "docs/GOVERNANCE.md",
+            link_prefix, "docs/GOVERNANCE.md"
         )
         return [
             "## Governance Pointer",
@@ -358,16 +345,15 @@ class FlextInfraUtilitiesDocsRender:
                 *FlextInfraUtilitiesDocsRender._public_surface_lines(scope),
                 "",
                 *FlextInfraUtilitiesDocsRender._collection_rules_lines(
-                    scope,
-                    link_prefix=link_prefix,
+                    scope, link_prefix=link_prefix
                 ),
                 "",
                 *FlextInfraUtilitiesDocsRender._quality_gates_lines(
-                    link_prefix=link_prefix,
+                    link_prefix=link_prefix
                 ),
                 "",
                 *FlextInfraUtilitiesDocsRender._governance_pointer_lines(
-                    link_prefix=link_prefix,
+                    link_prefix=link_prefix
                 ),
             ],
         )
@@ -410,8 +396,7 @@ class FlextInfraUtilitiesDocsRender:
             *FlextInfraUtilitiesDocsRender._public_surface_lines(scope),
             "",
             *FlextInfraUtilitiesDocsRender._collection_rules_lines(
-                scope,
-                link_prefix=link_prefix,
+                scope, link_prefix=link_prefix
             ),
             "",
             "## Operation Flow",
@@ -427,11 +412,11 @@ class FlextInfraUtilitiesDocsRender:
             "- Library abstraction boundaries: see AGENTS.md §2.7.",
             "",
             *FlextInfraUtilitiesDocsRender._quality_gates_lines(
-                link_prefix=link_prefix,
+                link_prefix=link_prefix
             ),
             "",
             *FlextInfraUtilitiesDocsRender._governance_pointer_lines(
-                link_prefix=link_prefix,
+                link_prefix=link_prefix
             ),
             "- Full project portal: [`docs/index.md`](docs/index.md).",
             "",
@@ -439,9 +424,7 @@ class FlextInfraUtilitiesDocsRender:
 
     @staticmethod
     def docs_guides_index(
-        scope: m.Infra.DocScope,
-        *,
-        guide_paths: t.SequenceOf[Path],
+        scope: m.Infra.DocScope, *, guide_paths: t.SequenceOf[Path]
     ) -> str:
         """Index the planned guide inventory, including retained custom guides."""
         entries = [
@@ -539,9 +522,7 @@ class FlextInfraUtilitiesDocsRender:
 
     @staticmethod
     def docs_project_mkdocs(
-        scope: m.Infra.DocScope,
-        contract: t.JsonMapping,
-        modules: t.SequenceOf[str],
+        scope: m.Infra.DocScope, contract: t.JsonMapping, modules: t.SequenceOf[str]
     ) -> str:
         """Return the managed mkdocs.yml for a project scope.
 
@@ -558,14 +539,14 @@ class FlextInfraUtilitiesDocsRender:
             site_url=str(data.get("site_url", "")).strip() or c.Infra.GITHUB_REPO_URL,
             repo_url=str(data.get("repo_url", "")).strip() or c.Infra.GITHUB_REPO_URL,
             repo_name=FlextInfraUtilitiesDocsRender._repository_name(
-                str(data.get("repo_url", "")).strip() or c.Infra.GITHUB_REPO_URL,
+                str(data.get("repo_url", "")).strip() or c.Infra.GITHUB_REPO_URL
             ),
             scope_name=scope.name,
             exclude_docs_block=FlextInfraUtilitiesDocsRender._render_block(
-                FlextInfraUtilitiesDocsRender._exclude_docs_lines(data),
+                FlextInfraUtilitiesDocsRender._exclude_docs_lines(data)
             ),
             exclude_plugin_block=FlextInfraUtilitiesDocsRender._render_block(
-                FlextInfraUtilitiesDocsRender._exclude_plugin_lines(data),
+                FlextInfraUtilitiesDocsRender._exclude_plugin_lines(data)
             ),
             mkdocstrings_paths_block=FlextInfraUtilitiesDocsRender._mkdocstrings_paths_block((
                 "src",
@@ -577,7 +558,7 @@ class FlextInfraUtilitiesDocsRender:
             / c.Infra.TEMPLATE_MKDOCS_PROJECT
         )
         rendered: str = t.Infra.STR_ADAPTER.validate_python(
-            u.Cli.template_render(template_path, context).unwrap(),
+            u.Cli.template_render(template_path, context).unwrap()
         )
         return rendered
 
@@ -607,7 +588,7 @@ class FlextInfraUtilitiesDocsRender:
         )
         classifiers = (
             ", ".join(
-                FlextInfraUtilitiesDocsRender.as_string_sequence(data, "classifiers"),
+                FlextInfraUtilitiesDocsRender.as_string_sequence(data, "classifiers")
             )
             or "_none_"
         )
@@ -652,8 +633,7 @@ class FlextInfraUtilitiesDocsRender:
             return FlextInfraUtilitiesDocsRender._render_markdown(lines)
         for module_name in modules:
             relative_path = FlextInfraUtilitiesDocsRender._module_relative_doc_path(
-                scope.package_name,
-                module_name,
+                scope.package_name, module_name
             )
             lines.append(f"- [{module_name}]({relative_path})")
         lines.append("")
@@ -675,8 +655,7 @@ class FlextInfraUtilitiesDocsRender:
 
     @staticmethod
     def docs_root_mkdocs(
-        contract: t.JsonMapping,
-        src_paths: t.SequenceOf[str] = (),
+        contract: t.JsonMapping, src_paths: t.SequenceOf[str] = ()
     ) -> str:
         """Return the managed mkdocs.yml for the repository root.
 
@@ -693,16 +672,16 @@ class FlextInfraUtilitiesDocsRender:
             site_url=str(data.get("site_url", "")).strip() or c.Infra.GITHUB_REPO_URL,
             repo_url=str(data.get("repo_url", "")).strip() or c.Infra.GITHUB_REPO_URL,
             repo_name=FlextInfraUtilitiesDocsRender._repository_name(
-                str(data.get("repo_url", "")).strip() or c.Infra.GITHUB_REPO_URL,
+                str(data.get("repo_url", "")).strip() or c.Infra.GITHUB_REPO_URL
             ),
             exclude_docs_block=FlextInfraUtilitiesDocsRender._render_block(
-                FlextInfraUtilitiesDocsRender._exclude_docs_lines(data),
+                FlextInfraUtilitiesDocsRender._exclude_docs_lines(data)
             ),
             exclude_plugin_block=FlextInfraUtilitiesDocsRender._render_block(
-                FlextInfraUtilitiesDocsRender._exclude_plugin_lines(data),
+                FlextInfraUtilitiesDocsRender._exclude_plugin_lines(data)
             ),
             mkdocstrings_paths_block=FlextInfraUtilitiesDocsRender._mkdocstrings_paths_block(
-                src_paths,
+                src_paths
             ),
         )
         template_path = (
@@ -711,7 +690,7 @@ class FlextInfraUtilitiesDocsRender:
             / c.Infra.TEMPLATE_MKDOCS_ROOT
         )
         rendered: str = t.Infra.STR_ADAPTER.validate_python(
-            u.Cli.template_render(template_path, context).unwrap(),
+            u.Cli.template_render(template_path, context).unwrap()
         )
         return rendered
 
@@ -768,7 +747,7 @@ class FlextInfraUtilitiesDocsRender:
         for entry in entries:
             lines.append(
                 f"- [{entry.name}]({entry.name}/modules/index.md)"
-                f" — `{entry.module_count}` modules",
+                f" — `{entry.module_count}` modules"
             )
         lines.append("")
         return FlextInfraUtilitiesDocsRender._render_markdown(lines)
@@ -788,7 +767,7 @@ class FlextInfraUtilitiesDocsRender:
                 FlextInfraUtilitiesDocsRender._escape_table_cell(entry.project_class),
                 f"`{entry.package_name}`",
                 FlextInfraUtilitiesDocsRender._escape_table_cell(
-                    entry.description or "_not declared_",
+                    entry.description or "_not declared_"
                 ),
             ])
             + " |"

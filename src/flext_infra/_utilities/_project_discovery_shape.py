@@ -41,8 +41,8 @@ class FlextInfraUtilitiesProjectDiscoveryShapeMixin:
             return False
         dependency_names: set[str] = set(
             FlextInfraUtilitiesDependencies.declared_dependency_names_from_payload(
-                payload,
-            ),
+                payload
+            )
         )
         if c.Infra.PKG_CORE in dependency_names:
             return True

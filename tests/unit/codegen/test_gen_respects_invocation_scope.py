@@ -44,9 +44,7 @@ class TestsFlextInfraGenRespectsInvocationScope:
     def rendered_makefile(self, tmp_path: Path) -> str:
         """Render the workspace Makefile through the conform owner."""
         return u.Tests.scaffold_text(
-            tmp_path / "fixture-project",
-            c.Infra.MAKEFILE_FILENAME,
-            members=(_MEMBER,),
+            tmp_path / "fixture-project", c.Infra.MAKEFILE_FILENAME, members=(_MEMBER,)
         )
 
     @staticmethod
@@ -69,8 +67,7 @@ class TestsFlextInfraGenRespectsInvocationScope:
         return bodies
 
     def test_no_recipe_mixes_project_and_repository_roots(
-        self,
-        rendered_makefile: str,
+        self, rendered_makefile: str
     ) -> None:
         """One rendered recipe never writes to two different roots.
 
@@ -112,8 +109,7 @@ class TestsFlextInfraGenRespectsInvocationScope:
         tm.that(any("deps extra-paths" in line for line in body), eq=False)
 
     def test_gen_init_uses_the_provisioned_owner_route(
-        self,
-        rendered_makefile: str,
+        self, rendered_makefile: str
     ) -> None:
         """Initialize uses its declared interpreter and one initializer owner."""
         init_lines = self._recipe_bodies(rendered_makefile)["_builtin_gen_init"]
@@ -151,8 +147,7 @@ class TestsFlextInfraGenRespectsInvocationScope:
         tm.that(rendered_makefile, lacks="INIT_FLEXT_INFRA")
 
     def test_project_selector_resolves_members_from_repository_root(
-        self,
-        rendered_makefile: str,
+        self, rendered_makefile: str
     ) -> None:
         """Workspace members are projected as declared gitlinks, not a WORKSPACE var.
 

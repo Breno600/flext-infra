@@ -26,12 +26,9 @@ class TestsFlextInfraExtendedProjectRunners:
     # beyond the default case timeout while the nested checker publishes reports.
     @pytest.mark.slow
     def test_run_projects_records_requested_gates(
-        self,
-        real_python_package: Path,
+        self, real_python_package: Path
     ) -> None:
-        checker = FlextInfraWorkspaceChecker(
-            repository_root=real_python_package.parent,
-        )
+        checker = FlextInfraWorkspaceChecker(repository_root=real_python_package.parent)
         result = checker.run_projects(
             [real_python_package.name],
             ["lint", "pyrefly"],
@@ -47,13 +44,9 @@ class TestsFlextInfraExtendedProjectRunners:
 
     @pytest.mark.parametrize("gate_method", ["lint", "format"])
     def test_public_method_returns_gate_result(
-        self,
-        gate_method: str,
-        real_python_package: Path,
+        self, gate_method: str, real_python_package: Path
     ) -> None:
-        checker = FlextInfraWorkspaceChecker(
-            repository_root=real_python_package.parent,
-        )
+        checker = FlextInfraWorkspaceChecker(repository_root=real_python_package.parent)
         result = (
             checker.lint(real_python_package)
             if gate_method == "lint"

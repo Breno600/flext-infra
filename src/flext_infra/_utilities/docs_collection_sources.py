@@ -16,8 +16,7 @@ class FlextInfraUtilitiesDocsCollectionSources:
 
     @staticmethod
     def collection_source_root(
-        root: Path,
-        source: m.Infra.PlanCollectionSource,
+        root: Path, source: m.Infra.PlanCollectionSource
     ) -> Path:
         """Resolve a declared source without allowing lexical parent traversal."""
         selected = source.root.expanduser()
@@ -64,7 +63,7 @@ class FlextInfraUtilitiesDocsCollectionSources:
                     entry.path.relative_to(selected).full_match(pattern)
                     for pattern in source.exclude_globs
                 )
-            ),
+            )
         )
         if not source.companion_directory or source.adapter != "files":
             return candidates
@@ -88,8 +87,7 @@ class FlextInfraUtilitiesDocsCollectionSources:
 
     @staticmethod
     def collection_capture(
-        path: Path,
-        states: t.MutableMappingKV[Path, m.Cli.AtomicFileState],
+        path: Path, states: t.MutableMappingKV[Path, m.Cli.AtomicFileState]
     ) -> m.Cli.AtomicFileState:
         """Bind every influential read, including absence, to its first state."""
         state = cli_u.Cli.atomic_read_binary_file_state(path, required=False).unwrap()
@@ -127,16 +125,14 @@ class FlextInfraUtilitiesDocsCollectionSources:
 
     @staticmethod
     def collection_source_updated(
-        content: bytes,
-        fields: t.VariadicTuple[str],
+        content: bytes, fields: t.VariadicTuple[str]
     ) -> t.Pair[str | None, str | None]:
         """Retain explicit source precision; never promote filesystem time."""
         lines = content.decode("utf-8-sig", errors="strict").splitlines()
         if not lines or lines[0] != "---":
             return None, None
         closing = next(
-            (index for index, line in enumerate(lines[1:], 1) if line == "---"),
-            None,
+            (index for index, line in enumerate(lines[1:], 1) if line == "---"), None
         )
         if closing is None:
             msg = "plan frontmatter has no closing delimiter"

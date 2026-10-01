@@ -25,9 +25,7 @@ class TestsFlextInfraModCliRoute:
     """
 
     def test_receipt_is_complete_and_replaced_by_zero_scan(
-        self,
-        mod_workspace: Path,
-        capsys: pytest.CaptureFixture[str],
+        self, mod_workspace: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         report_path = mod_workspace / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH
         sample_path = mod_workspace / "sample.py"
@@ -43,7 +41,7 @@ class TestsFlextInfraModCliRoute:
         ])
         first_console_capture = capsys.readouterr()
         first_state = tm.ok(
-            u.Cli.atomic_read_binary_file_state(report_path, required=True),
+            u.Cli.atomic_read_binary_file_state(report_path, required=True)
         )
         first_bytes = tm.not_none(first_state.content)
         first_evidence = m.Infra.ModScanEvidence.model_validate_json(first_bytes)
@@ -52,8 +50,7 @@ class TestsFlextInfraModCliRoute:
 
         tm.that(first_exit, ne=0)
         tm.that(
-            first_evidence.schema_version,
-            eq=c.Infra.MOD_SCAN_REPORT_SCHEMA_VERSION,
+            first_evidence.schema_version, eq=c.Infra.MOD_SCAN_REPORT_SCHEMA_VERSION
         )
         tm.that(first_evidence.command, eq=c.Infra.ModScanCommand.SCAN)
         tm.that(first_evidence.root, eq=mod_workspace.resolve())
@@ -85,9 +82,8 @@ class TestsFlextInfraModCliRoute:
 
         tm.ok(
             u.Cli.atomic_write_text_file(
-                sample_path,
-                "from __future__ import annotations\n\nvalue = 1\n",
-            ),
+                sample_path, "from __future__ import annotations\n\nvalue = 1\n"
+            )
         )
         second_exit = infra_main([
             "refactor",
@@ -97,7 +93,7 @@ class TestsFlextInfraModCliRoute:
         ])
         second_console_capture = capsys.readouterr()
         second_state = tm.ok(
-            u.Cli.atomic_read_binary_file_state(report_path, required=True),
+            u.Cli.atomic_read_binary_file_state(report_path, required=True)
         )
         second_bytes = tm.not_none(second_state.content)
         second_evidence = m.Infra.ModScanEvidence.model_validate_json(second_bytes)
@@ -118,9 +114,7 @@ class TestsFlextInfraModCliRoute:
         tm.that(second_console, lacks=first_digest)
 
     def test_apply_reports_detection_only_residue_and_still_succeeds(
-        self,
-        mod_workspace: Path,
-        capsys: pytest.CaptureFixture[str],
+        self, mod_workspace: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """Repair applies every rewrite, reports what it cannot act on, exits zero.
 
@@ -135,7 +129,7 @@ class TestsFlextInfraModCliRoute:
             u.Cli.atomic_write_text_file(
                 actionable_path,
                 "from flext_core import r\npublication=p.Result[int].ok(1)\n",
-            ),
+            )
         )
 
         exit_code = infra_main([
@@ -149,8 +143,8 @@ class TestsFlextInfraModCliRoute:
         console = console_capture.out + console_capture.err
         updated = tm.not_none(
             tm.ok(
-                u.Cli.atomic_read_binary_file_state(actionable_path, required=True),
-            ).content,
+                u.Cli.atomic_read_binary_file_state(actionable_path, required=True)
+            ).content
         ).decode(c.Cli.ENCODING_DEFAULT)
 
         tm.that(exit_code, eq=0)
@@ -161,8 +155,7 @@ class TestsFlextInfraModCliRoute:
         tm.that(console, has="ban-make-serialization")
 
     def test_apply_repeats_new_actionable_rule_cascades_until_fixed_point(
-        self,
-        mod_workspace: Path,
+        self, mod_workspace: Path
     ) -> None:
         """Carry findings exposed by one rewrite into the next apply iteration."""
         config_path = mod_workspace / c.Infra.CODEMOD_CONFIG_RELPATH
@@ -184,7 +177,7 @@ class TestsFlextInfraModCliRoute:
                     "fix: value = list()\n"
                     "severity: warning\n"
                 ),
-            ),
+            )
         )
         tm.ok(
             u.Cli.atomic_write_text_file(
@@ -197,7 +190,7 @@ class TestsFlextInfraModCliRoute:
                     "fix: value = tuple()\n"
                     "severity: warning\n"
                 ),
-            ),
+            )
         )
         sample_path = mod_workspace / "sample.py"
         tm.ok(u.Cli.atomic_write_text_file(sample_path, "value = dict()\n"))
@@ -211,8 +204,8 @@ class TestsFlextInfraModCliRoute:
         ])
         updated = tm.not_none(
             tm.ok(
-                u.Cli.atomic_read_binary_file_state(sample_path, required=True),
-            ).content,
+                u.Cli.atomic_read_binary_file_state(sample_path, required=True)
+            ).content
         ).decode(c.Cli.ENCODING_DEFAULT)
 
         tm.that(exit_code, eq=0)
@@ -253,7 +246,7 @@ class TestsFlextInfraModCliRoute:
                     "  }\n"
                     "severity: warning\n"
                 ),
-            ),
+            )
         )
         tm.ok(
             u.Cli.atomic_write_text_file(
@@ -268,13 +261,13 @@ class TestsFlextInfraModCliRoute:
                     "    )\n"
                     "severity: warning\n"
                 ),
-            ),
+            )
         )
         tm.ok(
             u.Cli.atomic_write_text_file(
                 mod_workspace / "sample.py",
                 "from __future__ import annotations\n\nvalue = dict(\n    a=1,\n)\n",
-            ),
+            )
         )
 
         exit_code = infra_main([
@@ -285,12 +278,11 @@ class TestsFlextInfraModCliRoute:
         ])
         report_state = tm.ok(
             u.Cli.atomic_read_binary_file_state(
-                mod_workspace / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH,
-                required=True,
-            ),
+                mod_workspace / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH, required=True
+            )
         )
         report = m.Infra.ModScanEvidence.model_validate_json(
-            tm.not_none(report_state.content),
+            tm.not_none(report_state.content)
         )
 
         tm.that(exit_code, ne=0)
@@ -336,15 +328,14 @@ class TestsFlextInfraModCliRoute:
                         "rule:\n"
                         f"  pattern: {statement}\n"
                     ),
-                ),
+                )
             )
             expected_rule_files[rule_id] = str(rule_path.resolve())
             source_lines.append(statement)
         tm.ok(
             u.Cli.atomic_write_text_file(
-                mod_workspace / "sample.py",
-                "\n".join(source_lines) + "\n",
-            ),
+                mod_workspace / "sample.py", "\n".join(source_lines) + "\n"
+            )
         )
 
         exit_code = infra_main([
@@ -355,12 +346,11 @@ class TestsFlextInfraModCliRoute:
         ])
         report_state = tm.ok(
             u.Cli.atomic_read_binary_file_state(
-                mod_workspace / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH,
-                required=True,
-            ),
+                mod_workspace / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH, required=True
+            )
         )
         report = m.Infra.ModScanEvidence.model_validate_json(
-            tm.not_none(report_state.content),
+            tm.not_none(report_state.content)
         )
         provider_entries = {
             entry.rule_id: entry
@@ -379,8 +369,7 @@ class TestsFlextInfraModCliRoute:
         )
 
     def test_scan_rejects_byte_identical_declared_fix(
-        self,
-        mod_workspace: Path,
+        self, mod_workspace: Path
     ) -> None:
         """Keep a declared fix that changes no bytes in the fixed-point residue."""
         config_path = mod_workspace / c.Infra.CODEMOD_CONFIG_RELPATH
@@ -405,10 +394,10 @@ class TestsFlextInfraModCliRoute:
                     f"  pattern: {statement}\n"
                     f"fix: {statement}\n"
                 ),
-            ),
+            )
         )
         tm.ok(
-            u.Cli.atomic_write_text_file(mod_workspace / "sample.py", f"{statement}\n"),
+            u.Cli.atomic_write_text_file(mod_workspace / "sample.py", f"{statement}\n")
         )
 
         exit_code = infra_main([
@@ -419,12 +408,11 @@ class TestsFlextInfraModCliRoute:
         ])
         report_state = tm.ok(
             u.Cli.atomic_read_binary_file_state(
-                mod_workspace / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH,
-                required=True,
-            ),
+                mod_workspace / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH, required=True
+            )
         )
         report = m.Infra.ModScanEvidence.model_validate_json(
-            tm.not_none(report_state.content),
+            tm.not_none(report_state.content)
         )
         matches = [entry for entry in report.entries if entry.rule_id == "identity-fix"]
         tm.that(matches, len=1)

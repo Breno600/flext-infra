@@ -101,9 +101,7 @@ class FlextInfraProtocolsBase(Protocol):
             ...
 
         def validate_artifacts(
-            self,
-            project_root: Path,
-            runtime_root: Path,
+            self, project_root: Path, runtime_root: Path
         ) -> p.Result[bool]:
             """Validate one project's Mise declaration, pin, and launchers."""
             ...
@@ -119,8 +117,7 @@ class FlextInfraProtocolsBase(Protocol):
             ...
 
         def plan(
-            self,
-            request: m.Infra.CodegenConformRequest,
+            self, request: m.Infra.CodegenConformRequest
         ) -> p.Result[m.Infra.CodegenPlan]:
             """Plan one declared target without publishing it."""
             ...
@@ -134,15 +131,13 @@ class FlextInfraProtocolsBase(Protocol):
             ...
 
         def required_directories(
-            self,
-            bundle: m.Infra.DocsGenerationBundle,
+            self, bundle: m.Infra.DocsGenerationBundle
         ) -> p.Result[t.VariadicTuple[Path]]:
             """Derive the parent directories the render needs."""
             ...
 
         def plan_files(
-            self,
-            bundle: m.Infra.DocsGenerationBundle,
+            self, bundle: m.Infra.DocsGenerationBundle
         ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]:
             """Bind the render to exact live destination states."""
             ...
@@ -152,11 +147,7 @@ class FlextInfraProtocolsBase(Protocol):
         """Build the docs planner for one conform scope."""
 
         def __call__(
-            self,
-            *,
-            repository_root: Path,
-            projects: t.StrSequence,
-            include_root: bool,
+            self, *, repository_root: Path, projects: t.StrSequence, include_root: bool
         ) -> FlextInfraProtocolsBase.DocsArtifactPlanner:
             """Bind the planner to the repositories conform publishes."""
             ...
@@ -180,9 +171,7 @@ class FlextInfraProtocolsBase(Protocol):
         """Build the fresh-import probe for one repository root."""
 
         def __call__(
-            self,
-            *,
-            repository_root: Path,
+            self, *, repository_root: Path
         ) -> FlextInfraProtocolsBase.FreshImportProbe:
             """Bind the probe to the conformed repository."""
             ...
@@ -192,17 +181,13 @@ class FlextInfraProtocolsBase(Protocol):
         """Markdown formatting gate the docs formatter delegates to."""
 
         def check(
-            self,
-            project_dir: Path,
-            ctx: m.Infra.GateContext,
+            self, project_dir: Path, ctx: m.Infra.GateContext
         ) -> m.Infra.GateExecution:
             """Report pending formatting without writing."""
             ...
 
         def fix(
-            self,
-            project_dir: Path,
-            ctx: m.Infra.GateContext,
+            self, project_dir: Path, ctx: m.Infra.GateContext
         ) -> m.Infra.GateExecution:
             """Apply formatting."""
             ...
@@ -212,8 +197,7 @@ class FlextInfraProtocolsBase(Protocol):
         """Build the markdown format gate for one docs scope."""
 
         def __call__(
-            self,
-            repository_root: Path,
+            self, repository_root: Path
         ) -> FlextInfraProtocolsBase.MarkdownFormatGate:
             """Bind the gate to the scope root."""
             ...
@@ -412,19 +396,14 @@ class FlextInfraProtocolsBase(Protocol):
 
         @classmethod
         def envrc_contract_violations(
-            cls,
-            content: str,
-            *,
-            root: Path,
-            resolve_home: bool = True,
+            cls, content: str, *, root: Path, resolve_home: bool = True
         ) -> t.VariadicTuple[m.Infra.EnvironmentContractViolation]:
             """Return one typed violation per direnv contract issue."""
             ...
 
         @classmethod
         def envrc_local_contract_violations(
-            cls,
-            content: str,
+            cls, content: str
         ) -> t.VariadicTuple[m.Infra.EnvironmentContractViolation]:
             """Return one typed violation per activation residue in overrides."""
             ...
@@ -438,26 +417,21 @@ class FlextInfraProtocolsBase(Protocol):
         initial_workspace: m.Infra.WorkspaceSpec | None
 
         def plan(
-            self,
-            request: m.Infra.CodegenConformRequest,
+            self, request: m.Infra.CodegenConformRequest
         ) -> p.Result[m.Infra.CodegenPlan]: ...
 
         def conform_workspace_beads_routes(
-            self,
-            request: m.Infra.CodegenConformRequest,
+            self, request: m.Infra.CodegenConformRequest
         ) -> p.Result[bool]: ...
 
         @classmethod
         def surface_contract(
-            cls,
-            surface: c.Infra.CodegenConformSurface,
+            cls, surface: c.Infra.CodegenConformSurface
         ) -> m.Infra.CodegenConformSurfaceContract: ...
 
         @classmethod
         def retired_projection_plans(
-            cls,
-            root: Path,
-            profile: c.Infra.MakeProfile,
+            cls, root: Path, profile: c.Infra.MakeProfile
         ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]: ...
 
         @staticmethod
@@ -496,8 +470,7 @@ class FlextInfraProtocolsBase(Protocol):
         ) -> t.VariadicTuple[Path]: ...
 
         def _project_render_context(
-            self,
-            render_inputs: m.Infra.CodegenRenderInputs,
+            self, render_inputs: m.Infra.CodegenRenderInputs
         ) -> p.Result[m.Infra.ProjectRenderContext]: ...
 
         def _rendered_artifact_source(
@@ -522,14 +495,12 @@ class FlextInfraProtocolsBase(Protocol):
 
         @staticmethod
         def validate_custom_make(
-            content: str,
-            policy: m.Infra.CustomHandlerPolicy,
+            content: str, policy: m.Infra.CustomHandlerPolicy
         ) -> p.Result[bool]: ...
 
         @staticmethod
         def _absent_file_plan(
-            root: Path,
-            path: Path,
+            root: Path, path: Path
         ) -> p.Result[m.Infra.CodegenFilePlan]: ...
 
         @staticmethod
@@ -695,9 +666,7 @@ class FlextInfraProtocolsBase(Protocol):
         """Contract for project and workspace quality checking services."""
 
         def run(
-            self,
-            project: str,
-            gates: t.StrSequence,
+            self, project: str, gates: t.StrSequence
         ) -> p.Result[t.SequenceOf[m.Infra.ProjectResult]]:
             """Run quality gates for one project."""
             ...
@@ -707,8 +676,7 @@ class FlextInfraProtocolsBase(Protocol):
         """Contract for artifact and documentation generation services."""
 
         def generate(
-            self,
-            request: m.Infra.DocsGenerateRequest,
+            self, request: m.Infra.DocsGenerateRequest
         ) -> p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]:
             """Generate project-scoped artifacts for the workspace."""
             ...
@@ -718,8 +686,7 @@ class FlextInfraProtocolsBase(Protocol):
         """Contract for project discovery services."""
 
         def discover_projects(
-            self,
-            repository_root: Path,
+            self, repository_root: Path
         ) -> p.Result[t.SequenceOf[m.Infra.ProjectInfo]]:
             """Discover projects in a workspace root."""
             ...
@@ -770,9 +737,7 @@ class FlextInfraProtocolsBase(Protocol):
         """Service for JSON serialization and persistence."""
 
         def write_json(
-            self,
-            path: Path,
-            payload: t.MappingKV[str, t.JsonValue],
+            self, path: Path, payload: t.MappingKV[str, t.JsonValue]
         ) -> p.Result[bool]:
             """Write payload to JSON file."""
             ...
@@ -790,57 +755,43 @@ class FlextInfraProtocolsBase(Protocol):
         """Service for dependency detection across projects."""
 
         def discover_project_paths(
-            self,
-            repository_root: Path,
-            *,
-            projects_filter: t.StrSequence | None = None,
+            self, repository_root: Path, *, projects_filter: t.StrSequence | None = None
         ) -> p.Result[t.SequenceOf[Path]]:
             """Discover project paths in workspace root."""
             ...
 
         def run_deptry(
-            self,
-            project_path: Path,
-            venv_bin: Path,
+            self, project_path: Path, venv_bin: Path
         ) -> p.Result[t.Pair[t.SequenceOf[t.JsonMapping], int]]:
             """Run deptry on a project and return issues."""
             ...
 
         def govern_deptry_issues(
-            self,
-            project_path: Path,
-            issues: t.SequenceOf[t.JsonMapping],
+            self, project_path: Path, issues: t.SequenceOf[t.JsonMapping]
         ) -> p.Result[t.SequenceOf[t.JsonMapping]]:
             """Drop findings the governed dependency profile makes policy."""
             ...
 
         def build_project_report(
-            self,
-            project_name: str,
-            deptry_issues: t.SequenceOf[t.JsonMapping],
+            self, project_name: str, deptry_issues: t.SequenceOf[t.JsonMapping]
         ) -> FlextInfraProtocolsBase.ProjectReportLike:
             """Build project report from deptry issues."""
             ...
 
         def load_dependency_limits(
-            self,
-            limits_path: Path | None = None,
+            self, limits_path: Path | None = None
         ) -> t.MappingKV[str, t.JsonValue]:
             """Load dependency limits from TOML file."""
             ...
 
         def analyze_required_typings(
-            self,
-            project_path: Path,
-            limits_path: Path | None = None,
+            self, project_path: Path, limits_path: Path | None = None
         ) -> p.Result[m.Infra.TypingsReport]:
             """Get required typing libraries for a project."""
             ...
 
         def run_pip_check(
-            self,
-            repository_root: Path,
-            venv_bin: Path,
+            self, repository_root: Path, venv_bin: Path
         ) -> p.Result[t.Pair[t.StrSequence, int]]:
             """Run pip check on workspace and return results."""
             ...
@@ -933,8 +884,7 @@ class FlextInfraProtocolsBase(Protocol):
             ...
 
         def iter(
-            self,
-            tag: str | None = None,
+            self, tag: str | None = None
         ) -> Iterator[FlextInfraProtocolsBase.XmlElementLike]:
             """Iterate over matching elements."""
             ...

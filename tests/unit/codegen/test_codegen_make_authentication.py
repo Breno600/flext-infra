@@ -17,14 +17,11 @@ class TestsFlextInfraCodegenMakeAuthentication:
 
     @pytest.mark.parametrize("credential_source", ["GH_TOKEN", "GITHUB_TOKEN"])
     def test_make_exports_explicit_credential_to_real_mise(
-        self,
-        tmp_path: Path,
-        credential_source: str,
+        self, tmp_path: Path, credential_source: str
     ) -> None:
         """A generated public verb passes only the selected process credential."""
         project_root, _ = u.Tests.render_make_environment(
-            tmp_path,
-            c.Infra.MakeProfile.STANDALONE,
+            tmp_path, c.Infra.MakeProfile.STANDALONE
         )
         tm.ok(u.Tests.create_python_environment(project_root))
         (project_root / "auth_probe.py").write_text(
@@ -59,7 +56,7 @@ class TestsFlextInfraCodegenMakeAuthentication:
                     "EXPECTED_CREDENTIAL": selected,
                     "MISE_GITHUB_TOKEN": "stale-token-must-not-reach-mise",
                 },
-            ),
+            )
         )
         tm.that(
             u.Cli.process_succeeded(process.outcome),
@@ -73,8 +70,7 @@ class TestsFlextInfraCodegenMakeAuthentication:
     def test_local_verbs_need_no_credential(self, tmp_path: Path, verb: str) -> None:
         """Local public verbs complete without a GitHub credential."""
         project_root, _ = u.Tests.render_make_environment(
-            tmp_path,
-            c.Infra.MakeProfile.STANDALONE,
+            tmp_path, c.Infra.MakeProfile.STANDALONE
         )
         if verb == "status":
             tm.ok(u.Tests.create_python_environment(project_root))
@@ -91,12 +87,11 @@ class TestsFlextInfraCodegenMakeAuthentication:
                     "GITHUB_TOKEN": "",
                     "MISE_GITHUB_TOKEN": "must-not-be-a-fallback",
                 },
-            ),
+            )
         )
         tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
         tm.that(
-            u.Infra.runtime_environment_dir(project_root).exists(),
-            eq=verb == "status",
+            u.Infra.runtime_environment_dir(project_root).exists(), eq=verb == "status"
         )
 
     @pytest.mark.remote
@@ -108,9 +103,7 @@ class TestsFlextInfraCodegenMakeAuthentication:
         """A locked checkout provisions its own environment without authentication."""
         profile = c.Infra.MakeProfile.STANDALONE
         project_root = u.Tests.resolved_make_checkout(
-            resolved_make_templates[profile],
-            tmp_path,
-            profile,
+            resolved_make_templates[profile], tmp_path, profile
         )
         process = tm.ok(
             u.Tests.run_isolated_make(
@@ -121,7 +114,7 @@ class TestsFlextInfraCodegenMakeAuthentication:
                     "GITHUB_TOKEN": "",
                     "MISE_GITHUB_TOKEN": "must-not-be-a-fallback",
                 },
-            ),
+            )
         )
         tm.that(
             u.Cli.process_succeeded(process.outcome),
@@ -132,13 +125,11 @@ class TestsFlextInfraCodegenMakeAuthentication:
 
     @pytest.mark.remote
     def test_invalid_explicit_token_fails_at_the_native_mise_backend(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         """A selected invalid credential fails at the backend without a retry."""
         project_root, _ = u.Tests.render_make_environment(
-            tmp_path,
-            c.Infra.MakeProfile.STANDALONE,
+            tmp_path, c.Infra.MakeProfile.STANDALONE
         )
         # The credential proves itself only where mise actually consults it:
         # the GitHub artifact-attestation verification of a cold install. A
@@ -153,10 +144,10 @@ class TestsFlextInfraCodegenMakeAuthentication:
                     "GH_TOKEN": "invalid-test-credential",
                     "GITHUB_TOKEN": "",
                     u.Infra.mise_bootstrap_environment().storage_root_variable: str(
-                        u.Tests.isolated_mise_bootstrap_storage(project_root),
+                        u.Tests.isolated_mise_bootstrap_storage(project_root)
                     ),
                 },
-            ),
+            )
         )
 
         tm.that(process.outcome.raw_return_code, ne=0)

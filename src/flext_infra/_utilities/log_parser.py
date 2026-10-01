@@ -24,9 +24,7 @@ class FlextInfraUtilitiesLogParser:
 
     @staticmethod
     def check_report_findings(
-        repository_root: Path,
-        *,
-        reports_dir: Path | None = None,
+        repository_root: Path, *, reports_dir: Path | None = None
     ) -> p.Result[t.VariadicTuple[m.Infra.SarifResult]]:
         """Read the SARIF report ``check run`` wrote into typed findings.
 
@@ -36,9 +34,7 @@ class FlextInfraUtilitiesLogParser:
         """
         report_dir = (
             u.Cli.resolve_report_dir(
-                repository_root,
-                c.Infra.PROJECT,
-                c.Infra.VERB_CHECK,
+                repository_root, c.Infra.PROJECT, c.Infra.VERB_CHECK
             )
             if reports_dir is None
             else (repository_root / reports_dir).resolve()
@@ -46,7 +42,7 @@ class FlextInfraUtilitiesLogParser:
         sarif_path = report_dir / c.Infra.CHECK_REPORT_SARIF_FILENAME
         if not sarif_path.is_file():
             return r[t.VariadicTuple[m.Infra.SarifResult]].fail(
-                f"check report not found: {sarif_path}",
+                f"check report not found: {sarif_path}"
             )
         return u.validate_value(
             m.Infra.SarifReport,

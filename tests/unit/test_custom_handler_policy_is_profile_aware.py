@@ -101,7 +101,7 @@ class TestsFlextInfraCustomHandlerPolicyIsProfileAware:
         reject the repository root's own custom surface.
         """
         policies: t.MutableMappingKV[str, m.Infra.CustomHandlerPolicy] = dict(
-            config.Infra.codegen.make.custom_handler_policies,
+            config.Infra.codegen.make.custom_handler_policies
         )
         profile: c.Infra.MakeProfile = c.Infra.MakeProfile.WORKSPACE
 

@@ -37,10 +37,7 @@ class FlextInfraPyprojectModernizerRun:
         def project_names(self) -> t.StrSequence | None: ...
 
         def _read_document_state(
-            self,
-            path: Path,
-            *,
-            source: str | None = None,
+            self, path: Path, *, source: str | None = None
         ) -> p.Result[m.Infra.PyprojectDocumentState]: ...
 
         def _process_document_state(
@@ -67,7 +64,7 @@ class FlextInfraPyprojectModernizerRun:
         )
         if outside:
             return result_type.fail(
-                f"workspace subprojects outside root: {', '.join(outside)}",
+                f"workspace subprojects outside root: {', '.join(outside)}"
             )
         aliases: MutableMapping[str, t.MutableSequenceOf[Path]] = {}
         for path in declared.values():
@@ -85,11 +82,10 @@ class FlextInfraPyprojectModernizerRun:
                 _ = u.Infra.project_state(path)
                 return result_type.fail(
                     f"workspace subproject {path} has an unreadable pyproject: "
-                    f"{state.error}",
+                    f"{state.error}"
                 )
             name = u.Infra.project_name_from_payload(
-                state.value.pyproject_path,
-                state.value.payload,
+                state.value.pyproject_path, state.value.payload
             )
             if path not in aliases.setdefault(name, []):
                 aliases[name].append(path)
@@ -107,7 +103,7 @@ class FlextInfraPyprojectModernizerRun:
                 paths.append(matches[0])
         if ambiguous:
             return result_type.fail(
-                f"ambiguous projects: {', '.join(sorted(ambiguous))}",
+                f"ambiguous projects: {', '.join(sorted(ambiguous))}"
             )
         if missing:
             return result_type.fail(f"unknown projects: {', '.join(sorted(missing))}")
@@ -133,8 +129,7 @@ class FlextInfraPyprojectModernizerRun:
         if include_root:
             try:
                 _ = u.Infra.project_name_from_payload(
-                    root_pyproject,
-                    root_state.value.payload,
+                    root_pyproject, root_state.value.payload
                 )
             except c.EXC_TYPE_VALIDATION as exc:
                 u.Cli.error(str(exc))
@@ -148,7 +143,7 @@ class FlextInfraPyprojectModernizerRun:
         if include_root and root_pyproject.is_file():
             files.add(root_pyproject)
         canonical_dev: t.StrSequence = t.Infra.STR_SEQ_ADAPTER.validate_python(
-            u.Infra.canonical_dev_dependencies_from_payload(root_state.value.payload),
+            u.Infra.canonical_dev_dependencies_from_payload(root_state.value.payload)
         )
         violations: MutableMapping[str, t.StrSequence] = {}
         states: t.MutableSequenceOf[m.Infra.PyprojectDocumentState] = []
@@ -186,7 +181,7 @@ class FlextInfraPyprojectModernizerRun:
                         max_lines=c.Infra.EDIT_DIFF_PREVIEW_MAX_LINES,
                     )
                     u.Cli.info(
-                        "deps: first rendered drift\n" + "".join(diff_lines).rstrip(),
+                        "deps: first rendered drift\n" + "".join(diff_lines).rstrip()
                     )
                 states.append(state.value)
             if changes:
@@ -212,16 +207,12 @@ class FlextInfraPyprojectModernizerRun:
         return self._run_build_check(states, invalid_paths=invalid_paths)
 
     def _rewrite_constraints(
-        self,
-        root_state: m.Infra.PyprojectDocumentState,
-        *,
-        dry_run: bool,
+        self, root_state: m.Infra.PyprojectDocumentState, *, dry_run: bool
     ) -> int:
         """Write runtime-resolved floors to the codegen SSOT."""
         try:
             root_project_name = u.Infra.project_name_from_payload(
-                root_state.pyproject_path,
-                root_state.payload,
+                root_state.pyproject_path, root_state.payload
             )
         except c.EXC_TYPE_VALIDATION as exc:
             u.Cli.error(str(exc))
@@ -236,13 +227,13 @@ class FlextInfraPyprojectModernizerRun:
                     sorted({
                         *u.Infra.workspace_project_paths(self.root),
                         root_project_name,
-                    }),
+                    })
                 ),
             )
         )
         if profile_changes:
             u.Cli.info(
-                "deps: dependency_profiles floors updated from the provisioned runtime",
+                "deps: dependency_profiles floors updated from the provisioned runtime"
             )
             for change in profile_changes:
                 u.Cli.info(f"  - {change}")
@@ -267,7 +258,7 @@ class FlextInfraPyprojectModernizerRun:
                 warnings.append(f"{state.pyproject_path}: missing [build-system]")
             elif backend != "hatchling.build":
                 warnings.append(
-                    f"{state.pyproject_path}: expected hatchling.build, got {backend}",
+                    f"{state.pyproject_path}: expected hatchling.build, got {backend}"
                 )
         for warning in warnings:
             u.Cli.info(warning)

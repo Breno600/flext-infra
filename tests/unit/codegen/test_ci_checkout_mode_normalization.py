@@ -18,8 +18,8 @@ class TestsFlextInfraCiCheckoutModeNormalization:
     def test_ci_job_normalizes_checkout_modes_before_gates(self) -> None:
         steps = CodegenTestSupport.Ci.ci_job_steps(
             TestsFlextInfraCiIntegrationBranchTriggers.render_ci(
-                repository_branch="0.12.0-dev",
-            ),
+                repository_branch="0.12.0-dev"
+            )
         )
         commands: list[str] = []
         for step in steps:

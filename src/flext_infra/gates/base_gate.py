@@ -50,14 +50,11 @@ class FlextInfraGate:
                 workspace_excluded_top_dirs=FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
                     project_dir
                 ).unwrap(),
-            ),
+            )
         )
 
     def __init__(
-        self,
-        repository_root: Path,
-        *,
-        runner: p.Cli.CommandRunner | None = None,
+        self, repository_root: Path, *, runner: p.Cli.CommandRunner | None = None
     ) -> None:
         """Bind repository root and optional command runner override."""
         self._repository_root = repository_root
@@ -85,9 +82,7 @@ class FlextInfraGate:
     # ------------------------------------------------------------------
 
     def check(
-        self,
-        project_dir: Path,
-        ctx: m.Infra.GateContext,
+        self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> m.Infra.GateExecution:
         """Template method: timing + dirs + skip + run + parse + result."""
         started = time.monotonic()
@@ -99,10 +94,7 @@ class FlextInfraGate:
         return self._execute_check_command(project_dir, ctx, check_dirs, started)
 
     def check_files(
-        self,
-        files: t.SequenceOf[Path],
-        project_dir: Path,
-        ctx: m.Infra.GateContext,
+        self, files: t.SequenceOf[Path], project_dir: Path, ctx: m.Infra.GateContext
     ) -> m.Infra.GateExecution:
         """Check specific files instead of whole directory.
 
@@ -158,12 +150,7 @@ class FlextInfraGate:
 
     @staticmethod
     def _command_error_issue(
-        result: p.Cli.CommandOutput,
-        *,
-        tool: str,
-        file: str,
-        line: int,
-        column: int,
+        result: p.Cli.CommandOutput, *, tool: str, file: str, line: int, column: int
     ) -> m.Infra.Issue:
         """Report an unsuccessful command that supplied no structured issues."""
         detail = (result.stderr or result.stdout).strip() or "no diagnostics"
@@ -192,11 +179,7 @@ class FlextInfraGate:
             issues = (
                 *issues,
                 self._command_error_issue(
-                    result,
-                    tool=tool,
-                    file=str(project_dir),
-                    line=1,
-                    column=1,
+                    result, tool=tool, file=str(project_dir), line=1, column=1
                 ),
             )
         return u.Cli.process_succeeded(result.outcome), issues
@@ -214,9 +197,7 @@ class FlextInfraGate:
         )
 
     def _checker_stderr_issues(
-        self,
-        result: p.Cli.CommandOutput,
-        project_dir: Path,
+        self, result: p.Cli.CommandOutput, project_dir: Path
     ) -> t.SequenceOf[m.Infra.Issue]:
         """Retain checker failures while accounting for native informational logs."""
         return tuple(
@@ -251,11 +232,7 @@ class FlextInfraGate:
         )
 
     def _detected_gate_execution(
-        self,
-        project_dir: Path,
-        *,
-        issues: t.SequenceOf[m.Infra.Issue],
-        started: float,
+        self, project_dir: Path, *, issues: t.SequenceOf[m.Infra.Issue], started: float
     ) -> m.Infra.GateExecution:
         """Assemble one gate execution from detector-produced issues."""
         return self._build_check_gate_execution(
@@ -267,12 +244,7 @@ class FlextInfraGate:
         )
 
     def _gate_result(
-        self,
-        project_dir: Path,
-        *,
-        passed: bool,
-        errors: t.StrSequence,
-        started: float,
+        self, project_dir: Path, *, passed: bool, errors: t.StrSequence, started: float
     ) -> m.Infra.GateResult:
         """Summarize one gate run: identity, verdict, report lines and duration."""
         return m.Infra.GateResult(
@@ -391,19 +363,14 @@ class FlextInfraGate:
     # ------------------------------------------------------------------
 
     def _get_check_dirs(
-        self,
-        project_dir: Path,
-        ctx: m.Infra.GateContext,
+        self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> t.StrSequence:
         """Return directories to check. Default: discover + filter for .py files."""
         _ = ctx
         return self._dirs_with_py(project_dir, self._existing_check_dirs(project_dir))
 
     def _build_check_command(
-        self,
-        project_dir: Path,
-        ctx: m.Infra.GateContext,
-        check_dirs: t.StrSequence,
+        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
     ) -> t.StrSequence:
         """Build the tool CLI command from the declared module invocation.
 
@@ -420,10 +387,7 @@ class FlextInfraGate:
         )
 
     def _parse_check_output(
-        self,
-        result: p.Cli.CommandOutput,
-        project_dir: Path,
-        ctx: m.Infra.GateContext,
+        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
         """Parse tool output into (passed, issues). Default: no-op (check overridden)."""
         _ = result, project_dir, ctx
@@ -436,9 +400,7 @@ class FlextInfraGate:
         return timeout
 
     def _check_report_path(
-        self,
-        project_dir: Path,
-        ctx: m.Infra.GateContext,
+        self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> Path | None:
         """Name the native output replaced by this invocation, when required."""
         _ = project_dir, ctx
@@ -455,18 +417,14 @@ class FlextInfraGate:
         _ = result, project_dir, ctx, targets
 
     def _check_env(
-        self,
-        project_dir: Path,
-        ctx: m.Infra.GateContext,
+        self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> t.StrMapping | None:
         """Return a custom environment for the check command. Default: None (inherit)."""
         _ = project_dir, ctx
         return None
 
     def _check_remove_env_keys(
-        self,
-        project_dir: Path,
-        ctx: m.Infra.GateContext,
+        self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> t.StrSequence:
         """Return inherited environment keys removed for this tool invocation.
 
@@ -533,18 +491,13 @@ class FlextInfraGate:
     # ------------------------------------------------------------------
 
     def _get_fix_targets(
-        self,
-        project_dir: Path,
-        ctx: m.Infra.GateContext,
+        self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> t.StrSequence:
         """Targets for fix. Default: same as check dirs."""
         return self._get_check_dirs(project_dir, ctx)
 
     def _build_fix_command(
-        self,
-        project_dir: Path,
-        ctx: m.Infra.GateContext,
-        targets: t.StrSequence,
+        self, project_dir: Path, ctx: m.Infra.GateContext, targets: t.StrSequence
     ) -> t.StrSequence:
         """Build the fix CLI command. Must override if can_fix is True."""
         _ = project_dir, ctx, targets
@@ -572,11 +525,7 @@ class FlextInfraGate:
         """Run."""
         runner = self._runner or u.Cli
         result = runner.run_raw(
-            cmd,
-            cwd=cwd,
-            timeout=timeout,
-            env=env,
-            remove_env_keys=remove_env_keys,
+            cmd, cwd=cwd, timeout=timeout, env=env, remove_env_keys=remove_env_keys
         )
         if result.failure:
             # A failed Result here means the tool never ran -- it could not be
@@ -604,8 +553,7 @@ class FlextInfraGate:
             if not path.is_dir():
                 continue
             if next(path.rglob(c.Infra.EXT_PYTHON_GLOB), None) or next(
-                path.rglob("*.pyi"),
-                None,
+                path.rglob("*.pyi"), None
             ):
                 out.append(directory)
         return out
@@ -615,10 +563,7 @@ class FlextInfraGate:
         message = f"{self.gate_id}: no check targets were collected"
         return m.Infra.GateExecution(
             result=self._gate_result(
-                project_dir,
-                passed=False,
-                errors=(message,),
-                started=started,
+                project_dir, passed=False, errors=(message,), started=started
             ),
             raw_output=message,
         )

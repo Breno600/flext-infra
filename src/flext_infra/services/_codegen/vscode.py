@@ -63,7 +63,7 @@ class FlextInfraCodegenVscodeMixin:
         if not isinstance(parsed.value, Mapping):
             return r[t.JsonMapping].fail("VS Code settings root must be an object")
         return r[t.JsonMapping].ok(
-            t.Cli.JSON_MAPPING_ADAPTER.validate_python(parsed.value),
+            t.Cli.JSON_MAPPING_ADAPTER.validate_python(parsed.value)
         )
 
     @classmethod
@@ -119,9 +119,7 @@ class FlextInfraCodegenVscodeMixin:
                 continue
             if char == '"':
                 index = FlextInfraCodegenVscodeMixin._copy_string_literal(
-                    content,
-                    index,
-                    output,
+                    content, index, output
                 )
                 continue
             if char == "/" and next_char == "/":
@@ -145,9 +143,7 @@ class FlextInfraCodegenVscodeMixin:
             char = content[index]
             if char == '"':
                 index = FlextInfraCodegenVscodeMixin._copy_string_literal(
-                    content,
-                    index,
-                    output,
+                    content, index, output
                 )
                 continue
             if char == ",":
@@ -163,9 +159,7 @@ class FlextInfraCodegenVscodeMixin:
 
     @classmethod
     def _apply_canonical_settings(
-        cls,
-        settings: t.MutableJsonMapping,
-        repository_root: Path,
+        cls, settings: t.MutableJsonMapping, repository_root: Path
     ) -> p.Result[bool]:
         """Merge canonical codegen VS Code settings into one settings mapping."""
         spec = config.Infra.codegen.vscode
@@ -206,13 +200,12 @@ class FlextInfraCodegenVscodeMixin:
             cls._apply_union_settings(settings, spec.map_union_settings)
             or artifacts_changed
             or stripped_changed
-            or changed.value,
+            or changed.value
         )
 
     @staticmethod
     def _strip_retired_keys(
-        settings: t.MutableJsonMapping,
-        stripped_keys: t.StrSequence,
+        settings: t.MutableJsonMapping, stripped_keys: t.StrSequence
     ) -> bool:
         """Delete every key listed in ``stripped_keys`` from the settings mapping."""
         changed = False
@@ -241,9 +234,7 @@ class FlextInfraCodegenVscodeMixin:
             changed = True
         for key, list_value in list_settings.items():
             entries = cls._resolve_list_setting(
-                key,
-                list_value,
-                repository_root=repository_root,
+                key, list_value, repository_root=repository_root
             )
             if entries.failure:
                 return r[bool].from_failure(entries)
@@ -306,10 +297,7 @@ class FlextInfraCodegenVscodeMixin:
 
     @staticmethod
     def _resolve_list_setting(
-        key: str,
-        base_entries: t.VariadicTuple[str],
-        *,
-        repository_root: Path,
+        key: str, base_entries: t.VariadicTuple[str], *, repository_root: Path
     ) -> p.Result[t.VariadicTuple[str]]:
         """Return one canonical list without consulting repository topology."""
         del key, repository_root
