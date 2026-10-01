@@ -13,7 +13,7 @@ import pytest
 from flext_tests import tm
 
 from flext_core import r
-from flext_infra import c, config, m, p, u
+from flext_infra import c, config, infra, m, p, u
 from flext_infra.codegen import (
     FlextInfraCodegenMiseArtifacts,
     FlextInfraCodegenTransaction,
@@ -61,6 +61,48 @@ class TestsFlextInfraModTextGateEngine:
         tm.that(sample.read_text(encoding="utf-8"), eq='value = "after"\n')
         fixed_point = tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=False))
         tm.that(fixed_point.actionable, eq=0)
+
+    @staticmethod
+    def test_distribution_selects_rules_before_required_markdown_inventory(
+        mod_workspace: Path,
+    ) -> None:
+        """Only a rule selected by [project].name may require its source."""
+        catalogue = mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH
+        project_document = mod_workspace / c.PYPROJECT_FILENAME
+        distribution = u.Infra.project_name_from_payload(
+            project_document,
+            u.Infra.pyproject_payload(project_document),
+        )
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                catalogue,
+                (
+                    "rules:\n"
+                    "  - id: selected-markdown-rule\n"
+                    f"    distributions: [not-{distribution}]\n"
+                    "    include: [docs/required.md]\n"
+                    "    find: 'before'\n"
+                    "    replace: 'after'\n"
+                ),
+            ),
+        )
+        tm.ok(infra.mod_text(m.Infra.ModTextCommand(repository_root=mod_workspace)))
+
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                catalogue,
+                (
+                    "rules:\n"
+                    "  - id: selected-markdown-rule\n"
+                    f"    distributions: [{distribution}]\n"
+                    "    include: [docs/required.md]\n"
+                    "    find: 'before'\n"
+                    "    replace: 'after'\n"
+                ),
+            ),
+        )
+        selected = infra.mod_text(m.Infra.ModTextCommand(repository_root=mod_workspace))
+        tm.fail(selected, has="text Markdown include has no source")
 
     def test_external_catalogue_id_collision_fails_before_publication(
         self,
