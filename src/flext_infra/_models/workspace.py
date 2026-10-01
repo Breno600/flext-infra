@@ -21,30 +21,38 @@ class FlextInfraModelsWorkspace:
     - ``ContractModel`` reserved for immutable workspace settings contracts.
     """
 
-    class SubprojectLoadPolicy(m.ContractModel):
-        """Workspace policy and declared identity for one Git subproject."""
-
-        integration_branch: Annotated[
-            str | None, m.Field(description="Detected workspace integration branch")
-        ] = None
-        workspace_beads: Annotated[
-            FlextInfraConfigModels.BeadsProjectSpec | None,
-            m.Field(description="Inherited workspace Beads contract"),
-        ] = None
-        declared_member: Annotated[
-            FlextInfraConfigModels.RepositoryRef | None,
-            m.Field(description="Manifest-declared member identity"),
-        ] = None
-        allow_unprovisioned_members: Annotated[
-            bool, m.Field(description="Accept manifest identity before checkout setup")
-        ] = False
-
     class WorkspaceEnvironmentRequest(m.ContractModel):
         """Read-only request for validating the active workspace environment."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(populate_by_name=True)
 
         repository_root: Annotated[Path, m.Field(description="Repository root path")]
+
+    class SubprojectLoadContext(m.ContractModel):
+        """Workspace governance scope shared by every declared subproject entry."""
+
+        integration_branch: Annotated[
+            str | None,
+            m.Field(
+                description=(
+                    "Resolved workspace integration line; absent defers to the "
+                    "provider's conventional branch fallback"
+                )
+            ),
+        ] = None
+        workspace_beads: Annotated[
+            FlextInfraConfigModels.BeadsProjectSpec | None,
+            m.Field(description="Workspace Beads ledger spec; absent disables routing"),
+        ] = None
+        allow_unprovisioned_members: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Whether declared Python members may stay unprovisioned "
+                    "checkouts while CI omits them deliberately"
+                )
+            ),
+        ] = False
 
     class EnvironmentContractViolation(mm.PositiveLineMixin, m.ContractModel):
         """One static ``.envrc``/``.envrc.local`` contract violation.

@@ -456,7 +456,7 @@ class FlextInfraWorkspaceDetector(
             loaded = cls._load_subproject(
                 repository_root,
                 path,
-                policy=m.Infra.SubprojectLoadPolicy(
+                m.Infra.SubprojectPolicy(
                     integration_branch=integration_branch,
                     workspace_beads=workspace_beads,
                     declared_member=members.value.get(path),
@@ -487,7 +487,10 @@ class FlextInfraWorkspaceDetector(
 
     @classmethod
     def _load_subproject(
-        cls, repository_root: Path, path: Path, *, policy: m.Infra.SubprojectLoadPolicy
+        cls,
+        repository_root: Path,
+        path: Path,
+        policy: m.Infra.SubprojectPolicy,
     ) -> p.Result[m.Infra.RepositoryRef | Path]:
         """Load one governed entry, or its declared path for external entries.
 
@@ -699,7 +702,7 @@ class FlextInfraWorkspaceDetector(
             loaded_member = cls._load_subproject(
                 superproject_root,
                 member_path,
-                policy=m.Infra.SubprojectLoadPolicy(
+                m.Infra.SubprojectPolicy(
                     integration_branch=baseline.value if baseline.success else None,
                     workspace_beads=inherited_beads.value,
                     declared_member=superproject_members.value.get(member_path),
@@ -759,11 +762,6 @@ class FlextInfraWorkspaceDetector(
         return r[m.Infra.WorkspaceSpec].ok(
             m.Infra.WorkspaceSpec(
                 name=workspace_name,
-                docs_audit=(
-                    declared_manifest.value[0].docs_audit
-                    if declared_manifest.value
-                    else m.Infra.DocsAuditOverridesSpec()
-                ),
                 beads=beads,
                 gascity_enabled=gascity_enabled,
                 repository=repository_ref,

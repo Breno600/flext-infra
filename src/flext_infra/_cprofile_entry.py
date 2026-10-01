@@ -1,42 +1,39 @@
-"""Render parent and child profiles from the canonical pytest operation."""
+"""Render the canonical focused pytest cProfile artifact."""
 
 from __future__ import annotations
 
 import sys
 from pathlib import Path
 
-from flext_infra import config, u
-from flext_infra.validate.cprofile_report import FlextInfraCProfileReport
+from flext_infra import c, config
+
+from .validate.cprofile_report import FlextInfraCProfileReport
 
 
 class FlextInfraCProfileEntry:
-    """Delegate profile rendering to the typed report owner."""
-
-    _REPORT_ARGUMENT_COUNT = 3
+    """Thin transport for the canonical cProfile report service."""
 
     @staticmethod
     def main() -> int:
-        """Render the explicit parent profile and latest child profile."""
-        if len(sys.argv) != FlextInfraCProfileEntry._REPORT_ARGUMENT_COUNT:
-            msg = "profile report requires parent profile and pytest report directory"
-            raise ValueError(msg)
-        root = Path.cwd().resolve()
-        parent = Path(sys.argv[1]).resolve()
-        reports = Path(sys.argv[2]).resolve()
-        latest = u.Cli.files_read_text(reports / "latest.txt").unwrap().strip()
-        child = reports / latest / "pytest.pstats"
+        """Dispatch focused or explicitly receipted profiles to the report owner."""
+        report_root = Path.cwd().resolve() / ".reports" / "cprofile"
+        profile_path = (
+            Path(sys.argv[1]) if len(sys.argv) > 1 else report_root / "pytest.pstats"
+        )
+        output_path = profile_path.with_suffix(".txt")
         policy = config.Infra.tooling.tools.pytest
-        for profile in (parent, child):
-            output = profile.with_suffix(".txt")
-            FlextInfraCProfileReport(
-                repository_root=root,
-                profile=profile,
-                output=output,
-                sort=policy.profile_sort,
-                limit=policy.profile_limit,
-            ).execute().unwrap()
-            sys.stdout.write(f"Profile: {profile}\n")
-            sys.stdout.write(u.Cli.files_read_text(output).unwrap())
+        FlextInfraCProfileReport(
+            repository_root=Path.cwd().resolve(),
+            profile=profile_path,
+            output=output_path,
+            sort=policy.profile_sort,
+            limit=policy.profile_limit,
+            run_receipt=(
+                Path(sys.argv[2])
+                if len(sys.argv) >= c.Infra.CPROFILE_RECEIPT_ARGUMENT_COUNT
+                else None
+            ),
+        ).execute().unwrap()
         return 0
 
 

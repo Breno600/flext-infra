@@ -189,6 +189,32 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             m.Field(description="Data directories selected with VCS filters"),
         ] = ()
 
+    class RuffProjectFacts(m.ContractModel):
+        """Measured per-project facts the canonical Ruff phase derives from."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+        first_party: Annotated[
+            t.StrSequence, m.Field(description="Detected first-party namespaces")
+        ]
+        stale_patterns: Annotated[
+            t.StrSequence,
+            m.Field(description="Legacy per-file ignore patterns to retire"),
+        ]
+        per_file_ignores: Annotated[
+            t.MappingKV[str, t.StrSequence],
+            m.Field(description="Effective managed per-file ignores"),
+        ]
+        analysis_exclusions: Annotated[
+            t.StrSequence | None,
+            m.Field(
+                default=None,
+                description="Declared analysis exclusions; None derives workspace globs",
+            ),
+        ]
+        generated_python_roots: Annotated[
+            t.StrSequence, m.Field(description="Generated python roots to exclude")
+        ]
+
     class PyprojectDeclaredTopology(m.ContractModel):
         """Project topology a caller declares instead of discovering it on disk.
 
@@ -238,28 +264,6 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
                 )
             ),
         ] = None
-
-    class RuffPhaseInputs(m.ContractModel):
-        """Validated project facts consumed by one Ruff config phase."""
-
-        path: Annotated[Path, m.Field(description="Project pyproject path")]
-        first_party: Annotated[
-            t.StrTuple, m.Field(description="First-party namespaces")
-        ]
-        stale_patterns: Annotated[
-            t.StrTuple, m.Field(description="Retired ignore patterns")
-        ]
-        per_file_ignores: Annotated[
-            t.MappingKV[str, t.StrTuple],
-            m.Field(description="Resolved per-file ignore policy"),
-        ]
-        analysis_exclusions: Annotated[
-            t.StrTuple | None,
-            m.Field(description="Explicit analysis exclusions, if declared"),
-        ]
-        generated_python_roots: Annotated[
-            t.StrTuple, m.Field(description="Python roots planned by generation")
-        ]
 
     class PyprojectAnalyzerContext(m.ContractModel):
         """Placement and Python roots of one pyproject the analyzer phases conform.

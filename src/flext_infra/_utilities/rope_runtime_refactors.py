@@ -18,19 +18,19 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
 
     @staticmethod
     def unwrap_class_rewrites(
-        source: str, *, span: m.Infra.WrapperSourceSpan
+        source: str, layout: m.Infra.ClassBlockLayout
     ) -> t.VariadicTuple[m.Infra.SourceRewrite]:
         """Remove one Rope-resolved header without changing literal payloads."""
         lines = codeanalyze.SourceLinesAdapter(source)
         regions = tuple(simplify.ignored_regions(source))
-        start = lines.get_line_start(span.header_start)
-        end = min(lines.get_line_end(span.header_end) + 1, len(source))
+        start = lines.get_line_start(layout.header_start)
+        end = min(lines.get_line_end(layout.header_end) + 1, len(source))
         comments = "".join(
             source[begin:finish] + "\n"
             for begin, finish, _metadata in regions
             if start <= begin < end and source[begin:finish].startswith("#")
         )
-        prefix = lines.get_line(span.header_start)
+        prefix = lines.get_line(layout.header_start)
         prefix = prefix[: len(prefix) - len(prefix.lstrip())]
         edits = [
             m.Infra.SourceRewrite(
@@ -39,11 +39,11 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
                 text="".join(prefix + line for line in comments.splitlines(True)),
             )
         ]
-        for number in range(span.header_end + 1, span.body_end + 1):
+        for number in range(layout.header_end + 1, layout.body_end + 1):
             offset = lines.get_line_start(number)
             line = lines.get_line(number)
-            if span.docstring_span is not None and (
-                span.docstring_span[0] <= number <= span.docstring_span[1]
+            if layout.docstring_span is not None and (
+                layout.docstring_span[0] <= number <= layout.docstring_span[1]
             ):
                 continue
             if not line.strip() or any(
@@ -52,20 +52,20 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
                 if not source[begin:finish].startswith("#")
             ):
                 continue
-            if len(line) - len(line.lstrip()) < span.indentation:
+            if len(line) - len(line.lstrip()) < layout.indentation:
                 msg = "Rope wrapper body has inconsistent indentation"
                 raise ValueError(msg)
             edits.append(
                 m.Infra.SourceRewrite(
-                    start=offset, end=offset + span.indentation, text=""
+                    start=offset, end=offset + layout.indentation, text=""
                 )
             )
-        if span.docstring_span is not None:
+        if layout.docstring_span is not None:
             edits.append(
                 m.Infra.SourceRewrite(
-                    start=lines.get_line_start(span.docstring_span[0]),
+                    start=lines.get_line_start(layout.docstring_span[0]),
                     end=min(
-                        lines.get_line_end(span.docstring_span[1]) + 1, len(source)
+                        lines.get_line_end(layout.docstring_span[1]) + 1, len(source)
                     ),
                     text="",
                 )
