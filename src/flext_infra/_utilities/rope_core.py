@@ -64,9 +64,22 @@ class FlextInfraUtilitiesRopeCore(
 
     @staticmethod
     @contextmanager
-    def open_project(repository_root: Path) -> Generator[t.Infra.RopeProject]:
+    def open_project(
+        repository_root: Path, *, project_roots: t.SequenceOf[Path] | None = None
+    ) -> Generator[t.Infra.RopeProject]:
         """Open one Rope project and always close it through the core boundary."""
-        rope_project = FlextInfraUtilitiesRopeCore.init_rope_project(repository_root)
+        resolved = repository_root.resolve()
+        roots = (
+            (resolved,)
+            if project_roots is None
+            else tuple(path.resolve() for path in project_roots)
+        )
+        if not roots or any(not path.is_relative_to(resolved) for path in roots):
+            msg = "Rope project roots must be nonempty and remain inside the declared workspace"
+            raise ValueError(msg)
+        rope_project = FlextInfraUtilitiesRopeCore._new_project(
+            resolved, project_roots=roots
+        )
         try:
             yield rope_project
         finally:

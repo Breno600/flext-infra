@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, m
+from flext_infra import c, config, m, u
 from flext_infra.codegen import (
     FlextInfraCodegenMiseArtifacts,
     FlextInfraCodegenTransaction,
@@ -31,6 +31,7 @@ def publish_semantic_file_plans(
     *,
     repository_root: Path,
     validator: Callable[[], p.Result[bool]] | None = None,
+    codegen: m.Infra.CodegenConfigSpec | None = None,
 ) -> p.Result[t.VariadicTuple[Path]]:
     """Preflight every plan and commit only after byte and caller acceptance.
 
@@ -38,6 +39,9 @@ def publish_semantic_file_plans(
     transaction owns identity checks, staging, durable recovery and rollback.
     """
     files: list[m.Infra.CodegenFilePlan] = []
+    template_sources = u.Infra.codegen_template_sources(
+        config.Infra.codegen if codegen is None else codegen
+    )
     for plan in plans:
         if plan.desired_content is None:
             continue
@@ -45,9 +49,13 @@ def publish_semantic_file_plans(
             return r[tuple[Path, ...]].fail(
                 f"semantic desired mode is absent: {plan.path}"
             )
-        if plan.before.content is not None and plan.before.content.decode(
-            c.Cli.ENCODING_DEFAULT
-        ).startswith(c.Infra.AUTOGEN_HEADERS):
+        if (
+            plan.path.resolve() not in template_sources
+            and plan.before.content is not None
+            and plan.before.content.decode(c.Cli.ENCODING_DEFAULT).startswith(
+                c.Infra.AUTOGEN_HEADERS
+            )
+        ):
             return r[tuple[Path, ...]].fail(
                 f"generated findings require canonical generator repair: {plan.path}"
             )
