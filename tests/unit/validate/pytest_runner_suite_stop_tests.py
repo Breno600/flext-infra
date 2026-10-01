@@ -26,27 +26,32 @@ class TestsFlextInfraPytestRunnerSuiteStop:
     def _spent_runner(project: Path, *, serial: bool = False) -> FlextInfraPytestRunner:
         """Build the real runner whose derived stop instant has already passed.
 
-        The entrypoint clock is placed so pytest must stop dispatch gracefully
-        at the first completed item, never through the deadline SIGTERM. The
+        The entrypoint clock is placed so pytest stops dispatch at a durable
+        testmon batch checkpoint, never through the deadline SIGTERM. The
         reserve matches the runner's own serial decision for the selection.
         """
         cache = config.Infra.codegen.make.testmon_cache
         policy = config.Infra.tooling.tools.pytest
-        reserve = (
-            policy.serial_suite_stop_reserve_seconds
-            if serial
-            else policy.suite_stop_reserve_seconds
-        )
         testmon_db = project.parent / ".testmon-cache" / cache.database_filename
         testmon_db.parent.mkdir(parents=True)
-        return FlextInfraPytestRunner(
+        runner = FlextInfraPytestRunner(
             repository_root=project,
-            started_at_monotonic=time.monotonic()
-            - policy.run_timeout_seconds
-            + reserve,
+            started_at_monotonic=time.monotonic(),
             target=cache.target_directory,
             reports=cache.reports_directory,
             testmon_db=testmon_db,
+        )
+        reserve = (
+            policy.serial_suite_stop_reserve_seconds
+            if serial or runner.parallel_worker_budget(policy) <= 1
+            else policy.suite_stop_reserve_seconds
+        )
+        return runner.model_copy(
+            update={
+                "started_at_monotonic": time.monotonic()
+                - policy.run_timeout_seconds
+                + reserve
+            }
         )
 
     def _published_run(
@@ -148,9 +153,10 @@ class TestsFlextInfraPytestRunnerSuiteStop:
         """
         target = config.Infra.codegen.make.testmon_cache.target_directory
         (cached_runner_project / target / "test_budget.py").write_text(
-            "".join(
-                f"def test_budget_{index}() -> None:\n    assert {index} >= 0\n\n"
-                for index in range(12)
+            "from runner_sample import answer\n\n"
+            + "".join(
+                f"def test_budget_{index}() -> None:\n    assert answer() == 42\n\n"
+                for index in range(260)
             ),
             encoding="utf-8",
         )

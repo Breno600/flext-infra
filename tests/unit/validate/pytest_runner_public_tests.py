@@ -142,10 +142,10 @@ class TestsFlextInfraPytestRunner:
 
     @pytest.mark.slow
     @pytest.mark.parametrize("omit_case", [False, True], ids=["order", "membership"])
-    def test_warm_workers_follow_the_central_selection_order(
+    def test_warm_dispatch_follows_the_central_selection_order(
         self, cached_runner_project: Path, *, omit_case: bool
     ) -> None:
-        """Real workers must agree even when a consumer hook reorders per worker."""
+        """Real dispatch detects membership drift and restores ordering."""
         cache = config.Infra.codegen.make.testmon_cache
         sample = cached_runner_project / cache.target_directory / "test_runtime.py"
         sample.write_text(
@@ -157,13 +157,12 @@ class TestsFlextInfraPytestRunner:
         )
         assert tm.ok(runner_for(cached_runner_project).execute()) == 0
         worker_action = (
-            "    if get_xdist_worker_id(session) == 'gw0':\n        items.pop()\n"
+            "    items.pop()\n"
             if omit_case
-            else "    items.sort(key=lambda item: item.nodeid,\n"
-            "               reverse=get_xdist_worker_id(session) == 'gw0')\n"
+            else "    items.sort(key=lambda item: item.nodeid, reverse=True)\n"
         )
         (cached_runner_project / "conftest.py").write_text(
-            "import pytest\nfrom xdist import get_xdist_worker_id\n\n"
+            "import pytest\n\n"
             "@pytest.hookimpl(trylast=True)\n"
             "def pytest_collection_modifyitems(session, items):\n"
             f"{worker_action}",
