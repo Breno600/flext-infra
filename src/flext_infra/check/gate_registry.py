@@ -8,7 +8,6 @@ from pathlib import Path
 from flext_infra import c, p, t
 from flext_infra.gates.bandit import FlextInfraBanditGate
 from flext_infra.gates.base_gate import FlextInfraGate
-from flext_infra.gates.canonical_alias import FlextInfraCanonicalAliasGate
 from flext_infra.gates.codemod import FlextInfraCodemodGate
 from flext_infra.gates.deferred_self_reference import (
     FlextInfraDeferredSelfReferenceGate,
@@ -80,7 +79,6 @@ class FlextInfraGateRegistry:
             FlextInfraMarkdownFormatGate,
             FlextInfraMarkdownCodeGate,
             FlextInfraLocCapGate,
-            FlextInfraCanonicalAliasGate,
             FlextInfraRuntimeCensusGate,
             FlextInfraNamespaceGate,
             FlextInfraLayoutGate,

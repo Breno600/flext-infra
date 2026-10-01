@@ -164,7 +164,7 @@ class FlextInfraCodemodGate(FlextInfraGate):
                     project_dir,
                     rules_by_id[finding.rule_id],
                     Path(finding.file),
-                    finding.captures,
+                    {**finding.captures, **finding.transformed},
                 )
             )
 

@@ -35,10 +35,7 @@ class FlextInfraRefactorCensusProjectMixin:
         def _object_key(item: m.Infra.Object) -> str: ...
         @staticmethod
         def _violation(
-            item: m.Infra.Object,
-            *,
-            kind: str,
-            description: str,
+            item: m.Infra.Object, *, kind: str, description: str
         ) -> m.Infra.Violation: ...
         @classmethod
         def _removal_candidate(

@@ -90,28 +90,6 @@ class FlextInfraUtilitiesRopeSource:
         )
 
     @staticmethod
-    def looks_like_facade_file(*, file_path: Path, source: str) -> bool:
-        """Check if a file looks like a namespace facade."""
-        family = c.Infra.NAMESPACE_FILE_TO_FAMILY.get(file_path.name)
-        if family is None:
-            return False
-        for line in source.splitlines():
-            stripped = line.strip()
-            match = c.Infra.FACADE_ALIAS_RE.match(stripped)
-            if match is not None and match.group(1) == family:
-                return True
-        return False
-
-    @staticmethod
-    def find_import_line(*, lines: t.StrSequence, module_name: str) -> int:
-        """Find the 1-based line number of ``from <module> import ...``."""
-        prefix = f"from {module_name} import "
-        for index, line in enumerate(lines, start=1):
-            if line.strip().startswith(prefix):
-                return index
-        return 1
-
-    @staticmethod
     def parse_import_names(names_str: str) -> t.StrPairSequence:
         """Parse ``A, B as C`` into ``[(name, bound), ...]``."""
         result: t.MutableSequenceOf[t.StrPair] = []
