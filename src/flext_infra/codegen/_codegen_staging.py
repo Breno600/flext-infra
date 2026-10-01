@@ -138,9 +138,9 @@ class FlextInfraCodegenStaging:
         # Reject every invalid destination before creating any phase artifact.
         # Recovery cannot authorize partial staging absent from the durable
         # journal.
-        for phase_root_before in phase_roots.values():
+        for phase_root_state in phase_roots.values():
             created = u.Cli.atomic_create_empty_directory_guarded(
-                phase_root_before, permission_mode=0o700
+                phase_root_state, permission_mode=0o700
             )
             if created.failure:
                 return result_type.from_failure(created)
