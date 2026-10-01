@@ -103,7 +103,7 @@ Infra:
       # Held at 5.3.3 (#1303): the 5.4.0 release ships no assets for the
       # fleet's six platforms, so mise cannot lock it and make upg fails
       # fleet-wide. Move to latest once a 5.4.x release publishes them.
-      jscpd_version: "5.3.3"
+      jscpd_version: "5.3.2"
       # Prettier is the markdown formatter (markdown-format gate): provisioned
       # through npm so the fleet binary version is owned by this SSOT alone.
       prettier_selector: npm:prettier
