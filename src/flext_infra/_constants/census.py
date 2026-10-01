@@ -12,6 +12,11 @@ if TYPE_CHECKING:
 class FlextInfraConstantsCensus:
     """Census pipeline constants for object detection and classification."""
 
+    CENSUS_UNSUPPORTED_SIMPLE_REMOVAL_CODE: ClassVar[str] = (
+        "CENSUS_UNSUPPORTED_SIMPLE_REMOVAL"
+    )
+    "Error code marking a candidate outside the simple-removal contract (not a failure)."
+
     """Regex patterns for violation census detection."""
 
     CAST_RE: ClassVar[t.RegexPattern] = re.compile(r"\bcast\s*\(")

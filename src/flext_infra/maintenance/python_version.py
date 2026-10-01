@@ -27,8 +27,6 @@ from ..base import s
 if TYPE_CHECKING:
     from flext_infra import p, t
 
-logger = u.fetch_logger(__name__)
-
 
 class FlextInfraPythonVersionEnforcer(s[int]):
     """Service for enforcing Python version constraints across workspace.
@@ -70,14 +68,14 @@ class FlextInfraPythonVersionEnforcer(s[int]):
                 if (project.path / c.PYPROJECT_FILENAME).exists()
             )
         mode = "Checking" if self.check_only else "Enforcing"
-        logger.info(
+        self.logger.info(
             "python_version_enforcement_started",
             mode=mode,
             required_minor=required_minor,
             project_count=len(projects),
         )
         if not self._ensure_python_version_file(root, required_minor):
-            logger.error(
+            self.logger.error(
                 "python_version_enforcement_failed",
                 reason="missing_enforcement",
                 required_minor=required_minor,
@@ -85,14 +83,14 @@ class FlextInfraPythonVersionEnforcer(s[int]):
             return r[int].fail("enforcement failed")
         for project in projects:
             if not self._ensure_python_version_file(project, required_minor):
-                logger.error(
+                self.logger.error(
                     "python_version_enforcement_failed",
                     reason="missing_enforcement",
                     required_minor=required_minor,
                     project=project.name,
                 )
                 return r[int].fail("enforcement failed")
-        logger.info(
+        self.logger.info(
             "python_version_enforcement_completed",
             project_count=len(projects),
             required_minor=required_minor,
@@ -111,19 +109,19 @@ class FlextInfraPythonVersionEnforcer(s[int]):
         local_minor = self._read_required_minor(project)
         if local_minor != required_minor:
             if self.check_only:
-                logger.error(
+                self.logger.error(
                     "python_version_pyproject_wrong",
                     local_minor=local_minor,
                     project=project.name,
                 )
             else:
-                logger.error(
+                self.logger.error(
                     "python_version_pyproject_mismatch",
                     local_minor=local_minor,
                     required_minor=required_minor,
                     project=project.name,
                 )
-                logger.error(
+                self.logger.error(
                     "python_version_manual_update_required",
                     project=project.name,
                     file=f"{project.name}/pyproject.toml",
@@ -131,7 +129,7 @@ class FlextInfraPythonVersionEnforcer(s[int]):
             return False
         runtime_minor = sys.version_info.minor
         if runtime_minor != required_minor:
-            logger.error(
+            self.logger.error(
                 "python_runtime_minor_mismatch",
                 runtime_minor=runtime_minor,
                 required_minor=required_minor,
@@ -141,7 +139,7 @@ class FlextInfraPythonVersionEnforcer(s[int]):
         if not self._conform_python_version_file(project, required_minor):
             return False
         if self.verbose:
-            logger.info(
+            self.logger.info(
                 "python_version_validated",
                 required_minor=required_minor,
                 project=project.name,
@@ -165,7 +163,7 @@ class FlextInfraPythonVersionEnforcer(s[int]):
         if current == desired:
             return True
         if self.check_only:
-            logger.error(
+            self.logger.error(
                 "python_version_file_out_of_sync",
                 project=project.name,
                 file=c.Infra.PYTHON_VERSION_FILENAME,
@@ -175,7 +173,7 @@ class FlextInfraPythonVersionEnforcer(s[int]):
         if write_result.failure:
             msg = f"failed to write {version_file}: {write_result.error}"
             raise RuntimeError(msg)
-        logger.info(
+        self.logger.info(
             "python_version_file_conformed",
             project=project.name,
             version=desired.strip(),

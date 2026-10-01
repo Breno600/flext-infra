@@ -169,6 +169,16 @@ class FlextInfraConstantsDocs:
         r"\[[^\]]+\]\(([^)]+)\)"
     )
     """Match markdown links capturing only the URL (group 1)."""
+    DOCS_GITHUB_BLOB_TREE_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"^https://github\.com/"
+        r"(?P<org>[^/]+)/(?P<repo>[^/]+)/"
+        r"(?P<kind>blob|tree)/"
+        r"(?P<branch>[^/]+)/"
+        r"(?P<path>.*)$"
+    )
+    """Match a github.com blob/tree documentation URL by its named parts."""
+    DOCS_OWNED_HEADER_LINES: ClassVar[int] = 2
+    """Lines an owned member guide carries before its body: marker + source."""
     HEADING_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^#{1,6}\s+(.+?)\s*$", re.MULTILINE
     )

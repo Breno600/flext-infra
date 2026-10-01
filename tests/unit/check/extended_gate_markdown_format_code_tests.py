@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import pytest
 from flext_tests import tm, tv
 
 from flext_infra import c, m
@@ -113,22 +112,23 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         tm.that(len(result.issues), eq=1)
         tm.that("make setup" in result.issues[0].message, eq=True)
 
-    @pytest.mark.parametrize(
-        ("markdown_text", "passed", "issues_len"),
-        [(FORMATTED, True, 0), (NOTEST_PSEUDO, True, 0)],
-    )
-    def test_code_gate_clean_and_notest_blocks(
-        self, *, tmp_path: Path, markdown_text: str, passed: bool, issues_len: int
-    ) -> None:
+    def test_code_gate_clean_block_passes(self, tmp_path: Path) -> None:
         project_dir = u.Tests.mk_project(tmp_path, "markdown-code-clean")
-        (project_dir / "README.md").write_text(markdown_text, encoding="utf-8")
+        (project_dir / "README.md").write_text(self.FORMATTED, encoding="utf-8")
 
         _ = u.Tests.check_gate_asserting(
-            FlextInfraMarkdownCodeGate,
-            tmp_path,
-            project_dir,
-            passed=passed,
-            issues_len=issues_len,
+            FlextInfraMarkdownCodeGate, tmp_path, project_dir, passed=True, issues_len=0
+        )
+
+    def test_code_gate_notest_only_blocks_do_not_select_the_gate(
+        self, tmp_path: Path
+    ) -> None:
+        """A ``notest`` fence is not embedded code to check (#1223 selection)."""
+        project_dir = u.Tests.mk_project(tmp_path, "markdown-code-notest")
+        (project_dir / "README.md").write_text(self.NOTEST_PSEUDO, encoding="utf-8")
+
+        tm.that(
+            FlextInfraMarkdownCodeGate(tmp_path).selected_for(project_dir), eq=False
         )
 
     def test_code_gate_fix_splices_formatted_block_back(self, tmp_path: Path) -> None:
@@ -205,14 +205,23 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
 
         tm.that(result.issues[0].file, eq="src/widget.py")
 
-    def test_code_gate_skips_neutrally_without_embedded_code(
+    def test_code_gate_is_not_selected_without_embedded_code(
         self, tmp_path: Path
     ) -> None:
+        """Prose-only documentation never selects the embedded-code gate."""
         project_dir = u.Tests.mk_project(tmp_path, "markdown-code-empty")
         (project_dir / "README.md").write_text("# Prose only\n", encoding="utf-8")
+        gate = FlextInfraMarkdownCodeGate(tmp_path)
 
-        result = u.Tests.check_gate_asserting(
-            FlextInfraMarkdownCodeGate, tmp_path, project_dir, passed=True, issues_len=0
+        tm.that(gate.selected_for(project_dir), eq=False)
+        tm.that(
+            gate.check(project_dir, u.Tests.gate_context(tmp_path)).result.passed,
+            eq=False,
         )
 
-        tm.that(result.result.passed, eq=True)
+    def test_code_gate_is_selected_with_embedded_code(self, tmp_path: Path) -> None:
+        """A parseable fenced Python block selects the embedded-code gate."""
+        project_dir = u.Tests.mk_project(tmp_path, "markdown-code-present")
+        (project_dir / "README.md").write_text(self.FORMATTED, encoding="utf-8")
+
+        tm.that(FlextInfraMarkdownCodeGate(tmp_path).selected_for(project_dir), eq=True)

@@ -15,7 +15,7 @@ from flext_core import r
 
 from .. import c, m, u
 from ._execution import FlextInfraCodegenExecutionBase
-from ._mise_artifacts_publication import publish_file_plan
+from ._mise_artifacts_publication import FlextInfraMisePublication
 
 if TYPE_CHECKING:
     from .. import p, t
@@ -225,7 +225,9 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
                 desired_mode=0o644,
                 owner="codegen",
             )
-            written = publish_file_plan(planned, phase="scaffold")
+            written = FlextInfraMisePublication.publish_file_plan(
+                planned, phase="scaffold"
+            )
             if written.failure:
                 message = f"writing scaffold {filepath}: {written.error}"
                 raise OSError(message)
