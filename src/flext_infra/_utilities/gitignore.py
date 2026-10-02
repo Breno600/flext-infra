@@ -151,8 +151,7 @@ class FlextInfraUtilitiesGitignore:
                 found[text].append(index)
             elif any(text.startswith(marker) for marker in markers):
                 return r[str].fail(
-                    f"malformed gitignore preserved marker: {destination}: "
-                    f"{text!r}",
+                    f"malformed gitignore preserved marker: {destination}: {text!r}",
                 )
         sections: list[tuple[int, int, str]] = []
         for block in blocks:

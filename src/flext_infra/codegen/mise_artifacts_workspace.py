@@ -21,7 +21,7 @@ from flext_infra.codegen._mise_artifacts_files import (
 from flext_infra.workspace import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
-    from .. import p, t
+    from flext_infra import p, t
 
 
 class FlextInfraMiseWorkspacePlanner:

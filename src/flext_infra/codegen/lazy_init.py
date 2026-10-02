@@ -26,7 +26,7 @@ from flext_infra.codegen.lazy_init_planner import FlextInfraCodegenLazyInitPlann
 from flext_infra.workspace.rope import FlextInfraRopeWorkspace
 
 if TYPE_CHECKING:
-    from .. import p
+    from flext_infra import p
 
 
 class FlextInfraCodegenLazyInit(
