@@ -62,21 +62,12 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             t.Triple[Path, Path, t.VariadicTuple[str]]
         ] = []
         for source_file, protocol_names in names_by_file.items():
-            try:
-                move = FlextInfraUtilitiesRefactorNamespaceMoves._move_named_blocks(
-                    project_root=project_root,
-                    source_file=source_file,
-                    target_filename=c.Infra.PROTOCOLS_PY,
-                    names=protocol_names,
-                    header_prefix="class ",
-                    gates=gates,
-                )
-            except RuntimeError:
-                # One unmovable block must not abort the remaining violation
-                # families: the failed move keeps its violations in place and
-                # the post-rewrite re-detection reports them, so the command
-                # still exits nonzero until the owner repairs the site.
-                continue
+            move = FlextInfraUtilitiesRefactorNamespaceMoves._move_protocol_blocks(
+                project_root=project_root,
+                source_file=source_file,
+                names=protocol_names,
+                gates=gates,
+            )
             if move is not None:
                 protocol_moves.append(move)
         if protocol_moves:

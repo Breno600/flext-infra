@@ -159,11 +159,24 @@ class TestsFlextInfraRootArtifactOwnership:
         tm.ok(infra.codegen_conform(request))
         manual = {"custom.mk": b"# manual project extension\n"}
         (root / "custom.mk").write_bytes(manual["custom.mk"])
+<<<<<<< HEAD
         configured_policies = {
             item.path: item.policy
             for item in config.Infra.codegen.managed_files
             if item.path
             in (Path(c.Infra.MAKEFILE_FILENAME), Path("bin/mise-lock-transaction.py"))
+=======
+        # The makefile recovery surface publishes the Makefile and the lock
+        # publisher its bootstrap recipe executes; each keeps its own policy.
+        surface = (
+            Path(c.Infra.MAKEFILE_FILENAME),
+            Path(c.Infra.MISE_LOCK_TRANSACTION_SCRIPT),
+        )
+        configured_policies = {
+            item.path: item.policy
+            for item in config.Infra.codegen.managed_files
+            if item.path in surface
+>>>>>>> origin/0.12.0-dev
         }
         before = tuple(
             sorted(
@@ -177,6 +190,7 @@ class TestsFlextInfraRootArtifactOwnership:
         result = tm.ok(first)
         governed = tuple(file for file in result.plan.files if file.policy is not None)
         tm.that(
+<<<<<<< HEAD
             tuple(file.path for file in governed),
             eq=(root / "Makefile", root / "bin" / "mise-lock-transaction.py"),
         )
@@ -184,6 +198,13 @@ class TestsFlextInfraRootArtifactOwnership:
             tuple(file.policy for file in governed),
             eq=tuple(configured_policies[Path(relative)] for relative in ("Makefile", "bin/mise-lock-transaction.py")),
         )
+=======
+            sorted(file.path for file in governed),
+            eq=sorted(root / path for path in surface),
+        )
+        for file in governed:
+            tm.that(file.policy, eq=configured_policies[file.path.relative_to(root)])
+>>>>>>> origin/0.12.0-dev
         tm.that(result.written_files, eq=())
         after = tuple(
             sorted(

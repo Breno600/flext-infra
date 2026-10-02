@@ -33,10 +33,6 @@ _MIXED_SOURCES: t.MappingKV[str, str] = {
         "class Plain:\n"
         '    """Missing the project class prefix."""\n'
         "\n"
-        "    def run(self, a, b, c, d, e, f, g):\n"
-        '        """Too many parameters for one function."""\n'
-        "        return a + b + c + d + e + f + g\n"
-        "\n"
         "\n"
         "class Holder:\n"
         '    """Missing prefix plus a constant outside _constants."""\n'
@@ -139,12 +135,11 @@ class TestsRuntimeCensusBlocking:
         mixed_project: Path,
         genuine_project: Path,
     ) -> None:
-        """Prefix and constant violations both belong to runtime census.
+        """Prefix and constant violations belong to runtime census.
 
-        Parameter-count findings are ``code_smell`` rules: the runtime census
-        imports classes and runs the core enforcement, which never emits
-        smell tags — those belong to the smells gate suite.
-
+        The parameter-count smell belongs to the smell owner (qlty through
+        make smells, flext-core ea8d16d26), so the census never reports it:
+        each finding has exactly one gate.
         """
         mixed = tm.ok(
             FlextInfraRuntimeCensusValidator(
@@ -159,6 +154,7 @@ class TestsRuntimeCensusBlocking:
         tm.that(mixed.passed, eq=False)
         tm.that("\n".join(mixed.violations), has="[ENFORCE-079]")
         tm.that("\n".join(mixed.violations), has="[class_prefix]")
+        tm.that("\n".join(mixed.violations), lacks="[smell_function_parameters]")
         tm.that(len(mixed.violations) > len(genuine.violations), eq=True)
         tm.that(
             mixed.summary,

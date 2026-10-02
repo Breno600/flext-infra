@@ -133,6 +133,7 @@ class TestsRenameCampaignMod:
             tm.that(second.occurrences, eq=0)
             tm.that(guide.read_bytes(), eq=first)
 
+    @pytest.mark.slow
     @pytest.mark.parametrize(
         ("csv", "roots"),
         [
@@ -184,6 +185,7 @@ class TestsRenameCampaignMod:
         )
         tm.that(guide.read_text(encoding="utf-8"), eq="A campaign_token paragraph.\n")
 
+    @pytest.mark.slow
     @pytest.mark.parametrize("escape", ["driver", "root"])
     def test_public_mod_rejects_symlink_escape_before_publication(
         self,
@@ -230,5 +232,8 @@ class TestsRenameCampaignMod:
             ),
         )
         tm.that(u.Cli.process_succeeded(result.outcome), eq=False)
-        tm.that(result.stderr, has=expected)
+        # The preflight refusal is a typed command failure, which the CLI
+        # renders on stdout; config-validation errors escape on stderr.
+        tm.that(result.stdout, has=expected)
+        tm.that(guide.read_text(encoding="utf-8"), eq="A campaign_token paragraph.\n")
         tm.that(guide.read_text(encoding="utf-8"), eq="A campaign_token paragraph.\n")

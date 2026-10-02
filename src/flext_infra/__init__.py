@@ -10,9 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core.lazy import build_lazy_import_map, install_lazy_exports
-
-
+from flext_core import build_lazy_import_map, install_lazy_exports
 from flext_infra.__version__ import (
     __author__,
     __author_email__,
@@ -26,7 +24,6 @@ from flext_infra.__version__ import (
 
 if TYPE_CHECKING:
     from flext_cli import d, e, h, r, x
-
     from flext_infra import (
         check,
         codegen,
@@ -130,6 +127,7 @@ if TYPE_CHECKING:
     from flext_infra.gates.base_gate import FlextInfraGate
     from flext_infra.gates.direnv import FlextInfraDirenvGate
     from flext_infra.gates.duplication import FlextInfraDuplicationGate
+    from flext_infra.gates.fresh_import import FlextInfraFreshImportGate
     from flext_infra.gates.index_declarations import FlextInfraIndexDeclarationsGate
     from flext_infra.gates.layout import FlextInfraLayoutGate
     from flext_infra.gates.loc_cap import FlextInfraLocCapGate
@@ -209,6 +207,7 @@ if TYPE_CHECKING:
     from flext_infra.workspace.rope import FlextInfraRopeWorkspace
     from flext_infra.worktree import FlextInfraWorktreeService
 
+
 __all__: tuple[str, ...] = (
     "FlextInfra",
     "FlextInfraAccessorMigrationOrchestrator",
@@ -274,6 +273,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraEnsureRuffConfigPhase",
     "FlextInfraExtraPathsManager",
     "FlextInfraFlextBindingService",
+    "FlextInfraFreshImportGate",
     "FlextInfraGate",
     "FlextInfraGateRegistry",
     "FlextInfraGitService",
@@ -468,6 +468,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".gates.base_gate": ("FlextInfraGate",),
             ".gates.direnv": ("FlextInfraDirenvGate",),
             ".gates.duplication": ("FlextInfraDuplicationGate",),
+            ".gates.fresh_import": ("FlextInfraFreshImportGate",),
             ".gates.index_declarations": ("FlextInfraIndexDeclarationsGate",),
             ".gates.layout": ("FlextInfraLayoutGate",),
             ".gates.loc_cap": ("FlextInfraLocCapGate",),

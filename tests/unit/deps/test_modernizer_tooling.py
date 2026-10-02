@@ -94,9 +94,9 @@ class TestsFlextInfraDepsModernizerTooling:
         )
 
         tm.that(payload, lacks="lint")
-        # A project without workspace declarations writes no exclusions: the
-        # list sync never introduces an empty key, so Ruff keeps its own
-        # default excludes (never a replacement list).
+        # A project without workspace declarations adds no exclusions (the
+        # empty list leaves the key absent), and Ruff keeps its own default
+        # excludes (never a replacement list).
         tm.that(ruff, lacks="extend-exclude")
         tm.that(ruff, lacks="exclude")
         tm.that(ruff["line-length"], eq=ruff_policy.line_length)

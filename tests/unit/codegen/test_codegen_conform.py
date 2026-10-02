@@ -262,7 +262,11 @@ class TestsFlextInfraCodegenConform:
         )
 
         with pytest.raises(OSError, match="raised after begin") as raised:
-            _FlextInfraCodegenConformLifecycleProbe.execute_request(request, workspace)
+            _FlextInfraCodegenConformLifecycleProbe.execute_request(
+                request,
+                workspace,
+                ports=infra.codegen_conform_collaborators(),
+            )
 
         tm.that(raised.value is _LIFECYCLE_EXCEPTION, eq=True)
         tm.that(root.exists(), eq=False)

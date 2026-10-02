@@ -1265,8 +1265,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, lacks="fix-enforcement")
         tm.that(makefile, has="_builtin-fix-namespace: _builtin_fix_namespace")
         tm.that(makefile, has="_builtin-fix-accessors: _builtin_fix_accessors")
-        tm.that(makefile, has="_builtin-self-fix-namespace: _builtin_fix_namespace")
-        tm.that(makefile, has="_builtin-self-fix-accessors: _builtin_fix_accessors")
+        # Each repository evaluates only itself: no _builtin-self-* fan-out.
+        tm.that(makefile, lacks="_builtin-self-")
         tm.that(makefile, has="_builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all")
         tm.that(
             makefile,

@@ -55,6 +55,8 @@ class FlextInfraConstantsBase(
     "Top-level [project] section key."
     DEPENDENCIES: ClassVar[str] = "dependencies"
     "Dependencies key within project or poetry sections."
+    DYNAMIC: ClassVar[str] = "dynamic"
+    "PEP 621 [project] key listing fields a build backend supplies."
     DEPENDENCY_GROUPS: ClassVar[str] = "dependency-groups"
     "PEP 735 dependency-groups table key."
     OPTIONAL_DEPENDENCIES: ClassVar[str] = "optional-dependencies"
