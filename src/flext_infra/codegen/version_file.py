@@ -86,7 +86,9 @@ class FlextInfraCodegenVersionFile(FlextInfraCodegenExecutionBase[bool]):
         rendered = u.Cli.template_render(template_path, meta)
         if rendered.failure:
             return r[str].from_failure(rendered)
-        return self._publish_version(project, src_pkg / "__version__.py", rendered.value)
+        return self._publish_version(
+            project, src_pkg / "__version__.py", rendered.value
+        )
 
     def _publish_version(
         self, project: Path, target: Path, content: str
