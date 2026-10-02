@@ -29,19 +29,20 @@ class FlextInfraToolTablesPhase:
         *,
         path: Path,
     ) -> t.StrSequence:
-        """Prefer live package names over a distribution-derived fallback.
+        """Derive the project's first-party namespaces from one source each.
+
+        The live packages under ``src/`` (never a name invented from the
+        distribution), the config-owned base namespaces, and the declared
+        flext dependencies. Ruff's projected table and the lazy-init renderer
+        both read this owner.
 
         Returns:
-            The resulting ``t.StrSequence``.
+            The sorted first-party namespaces.
 
         """
-        discovered = u.Infra.discover_first_party_namespaces(path.parent)
-        own = discovered or [
-            u.Infra.project_name_from_payload(path, payload).replace("-", "_"),
-        ]
         return sorted({
             *config.Infra.tooling.tools.deptry.known_first_party,
-            *own,
+            *u.Infra.discover_first_party_namespaces(path.parent),
             *u.Infra.flext_dependency_namespaces_from_payload(payload),
         })
 

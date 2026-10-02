@@ -699,7 +699,6 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 owned_lazy_analysis,
                 docs_analysis,
                 verified_plan,
-                ports,
             ),
         )
         if published.failure:
@@ -869,7 +868,6 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         lazy_analysis: m.Infra.CodegenPhaseAnalysis,
         docs_analysis: m.Infra.CodegenPhaseAnalysis,
         verified_plan: list[m.Infra.CodegenPlan],
-        ports: m.Infra.CodegenConformPorts,
     ) -> p.Result[bool]:
         """Replan conform against live bytes before the journal can commit.
 
@@ -923,45 +921,10 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             )
             if validated.failure:
                 return r[bool].from_failure(validated)
-        u.Cli.info("stage=verify-fresh-imports")
-        imported = ports.fresh_import(
-            repository_root=request.root,
-            runtime_root=None,
-        ).build_report(
-            publications=lazy_analysis.publications,
-            repository_roots=self.fresh_import_repository_roots(
-                request.root,
-                verified.value.repositories,
-            ),
-        )
-        if imported.failure:
-            return r[bool].from_failure(imported)
-        if not imported.value.passed:
-            return r[bool].fail(
-                "\n".join((imported.value.summary, *imported.value.violations)),
-            )
+        # The fresh-process import proof needs the runtime make setup
+        # provisions, so it belongs to make check (the fresh-import gate):
+        # generation must publish a project that has no runtime yet.
         return r[bool].ok(True)
-
-    @staticmethod
-    def fresh_import_repository_roots(
-        root: Path,
-        repositories: t.VariadicTuple[m.Infra.RepositoryRef],
-    ) -> t.VariadicTuple[Path]:
-        """Resolve the fresh-import probe scope from declared repositories.
-
-        Fresh-import probes validate Python publications, so only declared
-        Python packages enter the scope: a repository whose manifest carries
-        ``package: false`` (a workspace umbrella root, for example) owns no
-        importable layout, and requiring one there made ``make gen`` fail on
-        every such checkout regardless of what conform actually published.
-
-        Returns:
-            The resulting ``t.VariadicTuple[Path]``.
-
-        """
-        return tuple(
-            root / repository.path for repository in repositories if repository.package
-        )
 
 
 __all__: list[str] = ["FlextInfraCodegenConformExecute"]

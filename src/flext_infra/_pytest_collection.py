@@ -175,19 +175,24 @@ class FlextInfraPytestCollection:
         """Preserve the real class identity of every recorded warning."""
 
         def __init__(self, report_log: Path) -> None:
-            from flext_infra import c
+            # Owner modules, never the root facades: this plugin loads in every
+            # consumer test process, and ``m.Infra`` builds the whole model
+            # family (seconds of class construction) to write one JSON line.
+            from flext_infra._constants.make import FlextInfraConstantsMake
 
-            self.report = report_log.with_suffix(c.Infra.PYTEST_WARNING_EVENTS_SUFFIX)
+            self.report = report_log.with_suffix(
+                FlextInfraConstantsMake.PYTEST_WARNING_EVENTS_SUFFIX,
+            )
             self.report.parent.mkdir(parents=True, exist_ok=True)
             self.report.write_text("", encoding="utf-8")
 
         @pytest.hookimpl(tryfirst=True)
         def pytest_warning_recorded(self, warning_message: WarningMessage) -> None:
             """Record the real warning once before report-log serializes it."""
-            from flext_infra import m
+            from flext_infra._models.validate import FlextInfraModelsCore
 
             category = warning_message.category
-            event = m.Infra.PytestWarningEvent(
+            event = FlextInfraModelsCore.PytestWarningEvent(
                 category=category.__name__,
                 category_module=category.__module__,
                 category_qualname=category.__qualname__,

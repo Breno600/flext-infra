@@ -1,6 +1,7 @@
 """Verify published exports and real entrypoints in fresh child processes.
 
-The conformance transaction runs this guard before committing its journal.
+The ``fresh-import`` check gate runs this guard in the checkout's provisioned
+runtime; generation never depends on it.
 Each entrypoint loads before any package smoke so cached imports cannot hide
 consumer-order defects. Imported workspace modules must belong to this checkout.
 

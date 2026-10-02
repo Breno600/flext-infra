@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from flext_infra.gates.base_gate import FlextInfraGate
     from flext_infra.gates.direnv import FlextInfraDirenvGate
     from flext_infra.gates.duplication import FlextInfraDuplicationGate
+    from flext_infra.gates.fresh_import import FlextInfraFreshImportGate
     from flext_infra.gates.index_declarations import FlextInfraIndexDeclarationsGate
     from flext_infra.gates.layout import FlextInfraLayoutGate
     from flext_infra.gates.loc_cap import FlextInfraLocCapGate
@@ -39,6 +40,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraBanditGate",
     "FlextInfraDirenvGate",
     "FlextInfraDuplicationGate",
+    "FlextInfraFreshImportGate",
     "FlextInfraGate",
     "FlextInfraIndexDeclarationsGate",
     "FlextInfraLayoutGate",
@@ -65,6 +67,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".base_gate": ("FlextInfraGate",),
             ".direnv": ("FlextInfraDirenvGate",),
             ".duplication": ("FlextInfraDuplicationGate",),
+            ".fresh_import": ("FlextInfraFreshImportGate",),
             ".index_declarations": ("FlextInfraIndexDeclarationsGate",),
             ".layout": ("FlextInfraLayoutGate",),
             ".loc_cap": ("FlextInfraLocCapGate",),
