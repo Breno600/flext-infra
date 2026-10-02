@@ -62,12 +62,10 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             t.Triple[Path, Path, t.VariadicTuple[str]]
         ] = []
         for source_file, protocol_names in names_by_file.items():
-            move = FlextInfraUtilitiesRefactorNamespaceMoves._move_named_blocks(
+            move = FlextInfraUtilitiesRefactorNamespaceMoves._move_protocol_blocks(
                 project_root=project_root,
                 source_file=source_file,
-                target_filename=c.Infra.PROTOCOLS_PY,
                 names=protocol_names,
-                header_prefix="class ",
                 gates=gates,
             )
             if move is not None:
