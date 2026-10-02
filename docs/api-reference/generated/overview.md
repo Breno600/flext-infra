@@ -31,7 +31,7 @@
   `FlextInfraCliDispatchService`, `FlextInfraCliRouteBase` (+132 more)
 - Exported module shortcuts: `check`, `codegen`, `codemod`, `deps`, `docs`, `gates`,
   `maintenance`, `refactor` (+5 more)
-- Generated module pages: `12`
+- Generated module pages: `13`
 
 ## Next Pages
 
