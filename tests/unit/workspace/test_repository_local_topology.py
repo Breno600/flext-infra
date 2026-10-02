@@ -514,18 +514,6 @@ class TestsFlextInfraRepositoryLocalTopology:
             ),
         )
         relative = member.relative_to(root).as_posix()
-        # The opt-out key lives in the section that declares the path; the
-        # section is named by the attaching distribution, never by the path,
-        # so resolve it the same way the production reader does.
-        section_name = next(
-            section.removeprefix('submodule "').removesuffix('"')
-            for declared, section in tm.ok(
-                u.Infra.git_submodule_sections(
-                    m.Infra.GitRepoRequest(repo_root=root),
-                ),
-            ).items()
-            if declared == relative
-        )
         tm.ok(
             u.Cli.run_checked(
                 (
@@ -533,12 +521,8 @@ class TestsFlextInfraRepositoryLocalTopology:
                     "config",
                     "-f",
                     c.Infra.GITMODULES,
-<<<<<<< HEAD
-                    f"submodule.{section_name}.flext-managed",
-=======
                     # The fixture names the section after the distribution.
                     "submodule.fixture-member.flext-managed",
->>>>>>> origin/0.12.0-dev
                     "false",
                 ),
                 cwd=root,
