@@ -19,9 +19,9 @@ import subprocess
 import sys
 import time
 import tomllib
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
-from typing import Iterator
 
 
 class MiseLockTransaction:
@@ -241,7 +241,7 @@ class MiseLockTransaction:
             json.dump(journal, stream, sort_keys=True)
             stream.flush()
             os.fsync(stream.fileno())
-        os.replace(candidate, stage / cls.JOURNAL)
+        candidate.replace(stage / cls.JOURNAL)
         cls._sync_directory(stage)
 
     @classmethod
@@ -313,14 +313,14 @@ class MiseLockTransaction:
             pending = stage / "pending-artifacts" / relative
             cls._ensure_parent(stage, pending)
             shutil.copyfile(source, pending)
-            os.chmod(pending, mode)
+            pending.chmod(mode)
             descriptor = os.open(pending, os.O_RDONLY)
             try:
                 os.fsync(descriptor)
             finally:
                 os.close(descriptor)
             cls._ensure_parent(project, target)
-            os.replace(pending, target)
+            pending.replace(target)
             cls._sync_directory(target.parent)
 
     @classmethod
@@ -367,7 +367,7 @@ class MiseLockTransaction:
         )
         if retired.exists() or retired.is_symlink():
             raise ValueError(f"Mise cleanup target already exists: {retired}")
-        os.rename(stage, retired)
+        stage.rename(retired)
         cls._sync_directory(stage.parent)
         shutil.rmtree(retired)
 
@@ -375,7 +375,7 @@ class MiseLockTransaction:
     def _move(cls, source: Path, destination: Path, root: Path) -> None:
         """Rename one physical entry under ``root`` and persist both directories."""
         cls._ensure_parent(root, destination)
-        os.rename(source, destination)
+        source.rename(destination)
         cls._sync_directory(destination.parent)
         cls._sync_directory(source.parent)
 
@@ -575,7 +575,7 @@ class MiseLockTransaction:
             journal["new_artifacts"] = json.dumps(new_artifacts, sort_keys=True)
         cls._write_journal(stage, journal)
         cls._place_sidecars(project, stage, new_refs)
-        os.replace(stage / cls.LOCK, project / cls.LOCK)
+        (stage / cls.LOCK).replace(project / cls.LOCK)
         cls._sync_directory(project)
         cls.recover(project, stage)
 
