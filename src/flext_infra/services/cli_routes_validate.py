@@ -132,6 +132,13 @@ class FlextInfraValidationRoutes(FlextInfraValidationCommandRoutes):
                 handler=FlextInfraSonarcloudSettingsSync.execute_command,
                 success_message="SonarCloud issue exclusions match the SSOT",
             ),
+            m.Cli.ResultCommandRoute(
+                name=c.Infra.VERB_SONARCLOUD_ISSUES,
+                help_text="Read unresolved new-code SonarCloud issues (requires SONAR_TOKEN)",
+                model_cls=FlextInfraSonarcloudIssues,
+                handler=FlextInfraSonarcloudIssues.execute_command,
+                success_message="SonarCloud issue search completed",
+            ),
         ),
         c.Infra.CLI_GROUP_VALIDATE: FlextInfraValidationCommandRoutes.validate_command_routes,
     }

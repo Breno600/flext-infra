@@ -81,19 +81,24 @@ class FlextInfraUtilitiesDocsFix:
                 rel = source_file.relative_to(scope.path).as_posix()
                 # Ruff via running interpreter (venv SSOT);
                 # bare "ruff" breaks when .venv/bin is not on PATH (CI docs fix).
-                common = [
-                    sys.executable,
-                    "-m",
-                    c.Infra.RUFF,
-                    c.Infra.VERB_CHECK,
-                    "--extend-ignore",
-                    ",".join(c.Infra.PYTHON_FENCE_RUFF_EXTEND_IGNORE),
-                    "--stdin-filename",
-                    f"{rel}#block.py",
-                    "-",
-                ]
-                fix_outcome = u.Cli.run_raw(
-                    (*common, *config.Infra.codegen.make.ruff.lint_fix),
+                outcome = u.Cli.run_raw(
+                    [
+                        sys.executable,
+                        "-m",
+                        c.Infra.RUFF,
+                        c.Infra.VERB_CHECK,
+                        *config.Infra.codegen.make.ruff.lint_fix,
+                        # Diagnostics only: the stdin fix summary and the
+                        # show-fixes enumeration are not findings, so any
+                        # stderr left is a remaining finding.
+                        "--quiet",
+                        "--no-show-fixes",
+                        "--extend-ignore",
+                        ",".join(c.Infra.PYTHON_FENCE_RUFF_EXTEND_IGNORE),
+                        "--stdin-filename",
+                        f"{rel}#block.py",
+                        "-",
+                    ],
                     input_data=body.encode(),
                 )
                 if fix_outcome.failure:

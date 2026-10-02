@@ -11,7 +11,6 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from flext_tests import tm
-from packaging.utils import canonicalize_name
 
 from flext_infra import config, infra, u
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
@@ -276,7 +275,7 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         spec = TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name)
         python_required = config.Infra.codegen.toolchain.python_required_version
         upstream_source = TestsFlextInfraUtilitiesProjectFixtureMixin.flext_source(
-            canonicalize_name(spec.upstream),
+            spec.upstream,
         )
         package_root = project_dir / "src" / name.replace("-", "_")
         package_root.mkdir(parents=True, exist_ok=True)
