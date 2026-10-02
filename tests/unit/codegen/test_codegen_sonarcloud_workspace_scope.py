@@ -67,34 +67,9 @@ class TestsFlextInfraCodegenSonarcloudWorkspaceScope:
         self,
         tmp_path: Path,
     ) -> None:
-        """The root render excludes every declared member; a member render is unchanged."""
+        """The root render excludes each declared member; a member render does not."""
         root = tmp_path / "workspace"
-        u.Tests.WorktreeFixture.initialize_governed_project(
-            root,
-            "sample-workspace",
-            workspace="sample-workspace",
-            database="sample_workspace",
-            issue_prefix="sample",
-        )
-        member = root / "sample-member"
-        u.Tests.WorktreeFixture.initialize_governed_project(
-            member,
-            "sample-member",
-            workspace="sample-workspace",
-            database="sample_workspace",
-            issue_prefix="sample",
-        )
-        u.Tests.WorktreeFixture.attach_submodule(
-            root,
-            member,
-            distribution="sample-member",
-            relative_path="sample-member",
-        )
-        u.Tests.write_standalone_workspace_manifest(
-            root,
-            "sample-workspace",
-            role=c.Infra.MakeProfile.WORKSPACE,
-        )
+        member = u.Tests.WorktreeFixture.governed_workspace_with_member(root)
         tm.that((root / c.Infra.GITMODULES).is_file(), eq=True)
         sonarcloud = config.Infra.codegen.sonarcloud
         tests_scope = f"{c.Infra.DIR_TESTS}/**"
