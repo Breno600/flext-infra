@@ -59,6 +59,59 @@ class TestsMiseLockTransaction:
         )
         return u.Cli.process_succeeded(outcome.outcome), outcome.stderr
 
+    def test_release_change_publishes_pin_when_lock_bytes_are_unchanged(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A new Mise release reaches the pin even when the bumped lock is identical.
+
+        ``make upg`` may resolve a different Mise release (the rolling cooldown
+        can select an older one) while ``mise lock --bump`` reproduces the
+        committed lock byte for byte. The pin and launchers must still move to
+        the resolved release, or every later Mise call rejects the lifecycle's
+        ``MISE_VERSION`` against the stale pin. The publisher runs isolated
+        from every installed package (``-I -S``), exactly as the bootstrap runs
+        it before any project environment exists.
+        """
+        root, _ = u.Tests.render_make_environment(
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
+        )
+        lock_bytes = b"lockfile_version = 3\n[tools]\n"
+        (root / "mise.lock").write_bytes(lock_bytes)
+        stage = root.parent / f".{root.name}.mise-lock-stage.release"
+        stage.mkdir()
+        (stage / "mise.lock").write_bytes(lock_bytes)
+        bootstrap = u.Infra.mise_bootstrap_environment()
+        for relative, _mode in bootstrap.artifact_specs:
+            staged = stage / "artifacts" / relative
+            staged.parent.mkdir(parents=True, exist_ok=True)
+            staged.write_bytes(f"resolved {relative}\n".encode())
+
+        outcome = tm.ok(
+            u.Cli.run_raw(
+                [
+                    sys.executable,
+                    "-I",
+                    "-S",
+                    str(root / "bin/mise-lock-transaction.py"),
+                    "publish",
+                    str(root),
+                    str(stage),
+                ],
+                cwd=root,
+            ),
+        )
+
+        tm.that(u.Cli.process_succeeded(outcome.outcome), eq=True, msg=outcome.stderr)
+        tm.that((root / "mise.lock").read_bytes(), eq=lock_bytes)
+        tm.that(stage.exists(), eq=False)
+        for relative, _mode in bootstrap.artifact_specs:
+            tm.that(
+                (root / relative).read_bytes(),
+                eq=f"resolved {relative}\n".encode(),
+            )
+
     def test_interrupted_sidecar_publication_recovers_then_commits(
         self,
         tmp_path: Path,
