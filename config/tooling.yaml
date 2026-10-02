@@ -507,6 +507,12 @@ Infra:
           # This measurement ceiling permits a complete cold profile before
           # tightening the limit to the observed full-suite runtime.
           flext-infra: 1200
+          # cosmos-charts cold suite measured on a 12-core local runner:
+          # the 120s entry clock SIGTERM'd the suite at 51% (~235s projected
+          # full runtime; the member CI completes inside the fleet default on
+          # its runners). This measurement ceiling permits a complete cold
+          # local run of the 241-case suite.
+          cosmos-charts: 600
         termination-grace-seconds: 2
         # One failure stops the invocation. The next run starts from the
         # corrected owner instead of accumulating a backlog of unrelated
