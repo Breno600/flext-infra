@@ -188,28 +188,25 @@ class FlextInfraModelsRefactorGrep:
         import_graph: Annotated[
             t.MappingKV[str, frozenset[str]],
             m.Field(
-                default_factory=dict,
                 description="Runtime import edges of each project module",
             ),
         ]
         import_modules: Annotated[
             t.MappingKV[Path, str],
             m.Field(
-                default_factory=dict,
                 description="Module name of each project source file",
             ),
         ]
         import_cycles: Annotated[
             t.MappingKV[str, frozenset[str]],
             m.Field(
-                default_factory=dict,
                 description="Members of the runtime import cycle of each module",
             ),
         ]
         runtime_modules: Annotated[
             frozenset[str],
             m.Field(description="Import packages of the runtime dependency closure"),
-        ] = frozenset()
+        ]
 
     class MethodOrderRule(m.ContractModel):
         """A declarative method ordering rule for class reconstruction.
