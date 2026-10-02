@@ -323,7 +323,10 @@ class FlextInfraBootstrap:
 
     @classmethod
     def _recover_artifacts(
-        cls, project: Path, stage: Path, journal: dict[str, str],
+        cls,
+        project: Path,
+        stage: Path,
+        journal: dict[str, str],
     ) -> None:
         old_refs = cls._journal_artifacts(journal, "old_artifacts")
         new_refs = cls._journal_artifacts(journal, "new_artifacts")
@@ -801,7 +804,9 @@ class FlextInfraBootstrap:
 
     @staticmethod
     def _staged_lock_satisfies(
-        runtime: Path, stage: Path, environment: dict[str, str],
+        runtime: Path,
+        stage: Path,
+        environment: dict[str, str],
     ) -> bool:
         """Prove the staged lock satisfies the manifest without mutating tools.
 
@@ -853,7 +858,8 @@ class FlextInfraBootstrap:
         for name, payload in seeds:
             stage = Path(
                 tempfile.mkdtemp(
-                    prefix=f".{project.name}.mise-lock-stage.", dir=project.parent,
+                    prefix=f".{project.name}.mise-lock-stage.",
+                    dir=project.parent,
                 ),
             )
             scratch = Path(tempfile.mkdtemp(prefix="mise-reconcile."))
@@ -862,7 +868,11 @@ class FlextInfraBootstrap:
                 if payload is not None:
                     (stage / "mise.lock").write_bytes(payload)
                 environment = cls._mise_environment(
-                    storage, stage, scratch, cooldown, platforms,
+                    storage,
+                    stage,
+                    scratch,
+                    cooldown,
+                    platforms,
                 )
                 try:
                     cls._run(runtime, ["-C", str(stage), "lock"], environment)
