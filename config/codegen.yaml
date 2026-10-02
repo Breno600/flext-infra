@@ -28,6 +28,10 @@ Infra:
       # writes the committed uv.lock and mise.lock; setup, gen, and fmt install
       # frozen from those locks.
       python_version: "3.13"
+      # The runtime tool is pinned to the newest Python patch whose lock
+      # resolves on every declared platform; the language floor above stays a
+      # minor line.
+      python_tool_version: "3.13.15"
       # Supply-chain cooldown (operator 2026-10-01): ONE value for every
       # resolver — the generated mise `minimum_release_age` (so `make upg`
       # never selects a release younger than this, e.g. a Python patch with
@@ -478,6 +482,12 @@ Infra:
         actions: [generate, fix, fmt, validate, audit]
         mutable_actions: [fix, fmt]
         reports_dir: .reports/docs
+        overview_preview_limits:
+          aliases: 11
+          public_symbols: 10
+          facades: 8
+          module_exports: 8
+          keywords: 8
         cross_project_relative_link_pattern: '^(?:\.\./)+flext-[a-z0-9-]+(?:/|$)'
         stale_github_organizations:
           - organization
