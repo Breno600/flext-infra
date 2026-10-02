@@ -52,6 +52,32 @@ class FlextInfraUtilitiesSemanticCutoverNestingOwner:
         return ""
 
     @classmethod
+    def _is_typing_declaration(
+        cls,
+        value: ast.expr,
+        annotation: ast.expr | None,
+    ) -> bool:
+        """Whether a binding is a typing declaration, not a module value.
+
+        Typing declarations belong to ban-manual-typing-alias-outside-typings:
+        an explicit ``TypeAlias`` binding, or a binding constructed by a class
+        the ``typing`` module exports (TypeVar, ParamSpec, NewType...).
+
+        Returns:
+            The resulting ``bool``.
+
+        """
+        if (
+            annotation is not None
+            and getattr(typing, cls._tail_name(annotation), None) is typing.TypeAlias
+        ):
+            return True
+        return isinstance(value, ast.Call) and isinstance(
+            getattr(typing, cls._tail_name(value.func), None),
+            type,
+        )
+
+    @classmethod
     def _loose_value_name(cls, node: ast.stmt) -> str | None:
         """Return the bound name when ``node`` is a loose module value binding.
 
@@ -59,34 +85,19 @@ class FlextInfraUtilitiesSemanticCutoverNestingOwner:
             The bound identifier, or ``None`` for an allowed or foreign shape.
 
         """
-        if isinstance(node, ast.Assign):
-            if len(node.targets) != 1:
-                return None
+        if isinstance(node, ast.Assign) and len(node.targets) == 1:
             target, value, annotation = node.targets[0], node.value, None
         elif isinstance(node, ast.AnnAssign) and node.value is not None:
             target, value, annotation = node.target, node.value, node.annotation
         else:
             return None
-        if not isinstance(target, ast.Name) or (
-            target.id.startswith("__") and target.id.endswith("__")
-        ):
-            return None
-        if isinstance(value, ast.Name):
-            return None
-        # Typing declarations belong to ban-manual-typing-alias-outside-typings:
-        # an explicit ``TypeAlias`` binding, or a binding constructed by a
-        # class the ``typing`` module exports (TypeVar, ParamSpec, NewType...).
-        if (
-            annotation is not None
-            and getattr(typing, cls._tail_name(annotation), None) is typing.TypeAlias
-        ):
-            return None
-        if isinstance(value, ast.Call) and isinstance(
-            getattr(typing, cls._tail_name(value.func), None),
-            type,
-        ):
-            return None
-        return target.id
+        loose = (
+            isinstance(target, ast.Name)
+            and not (target.id.startswith("__") and target.id.endswith("__"))
+            and not isinstance(value, ast.Name)
+            and not cls._is_typing_declaration(value, annotation)
+        )
+        return target.id if loose and isinstance(target, ast.Name) else None
 
     @classmethod
     def _loose_members(

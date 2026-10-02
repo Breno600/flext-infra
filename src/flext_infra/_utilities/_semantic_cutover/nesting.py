@@ -134,7 +134,7 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         )
         if movable.failure:
             return planned.from_failure(movable)
-        bound = (
+        bound: frozenset[str] = (
             cls._inheritance_bound_to_owner(classes, owner)
             if owner in classes
             else frozenset()

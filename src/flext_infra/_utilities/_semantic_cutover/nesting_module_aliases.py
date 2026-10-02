@@ -114,7 +114,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
         )
         bindings = bindings_by_module.get(base, {})
         known = frozenset(bindings) | frozenset(bindings.values())
-        aliases: dict[str, str] = {}
+        aliases: t.MutableStrMapping = {}
         owner_imports: set[str] = set()
         for imported in node.names:
             name = FlextInfraUtilitiesQualifiedNames.dotted_name(imported.name) or ""
@@ -137,13 +137,12 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
             Local name to nested module.
 
         """
-        return {
-            cls._bound_name(imported): full
-            for imported in node.names
-            if imported.asname is not None
-            and (full := FlextInfraUtilitiesQualifiedNames.dotted_name(imported.name))
-            in bindings_by_module
-        }
+        bound: t.MutableStrMapping = {}
+        for imported in node.names:
+            full = FlextInfraUtilitiesQualifiedNames.dotted_name(imported.name) or ""
+            if imported.asname is not None and full in bindings_by_module:
+                bound[cls._bound_name(imported)] = full
+        return bound
 
     @staticmethod
     def _reads_moved_member(
@@ -192,19 +191,21 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
         import libcst as cst
         from libcst.metadata import MetadataWrapper, ParentNodeProvider
 
-        resolver = cls
+        from_import_bindings = cls._from_import_bindings
+        import_bindings = cls._import_bindings
+        reads_moved_member = cls._reads_moved_member
 
         class _ModuleAliasScan(cst.CSTVisitor):
             METADATA_DEPENDENCIES = (ParentNodeProvider,)
 
             def __init__(self) -> None:
-                self.aliases: dict[str, str] = {}
-                self.uses: dict[str, set[bool]] = {}
+                self.aliases: t.MutableStrMapping = {}
+                self.uses: t.MutableMappingKV[str, set[bool]] = {}
                 self.owner_imports: set[str] = set()
 
             @override
             def visit_ImportFrom(self, node: cst.ImportFrom) -> None:
-                aliases, owner_imports = resolver._from_import_bindings(
+                aliases, owner_imports = from_import_bindings(
                     node,
                     module_name=module_name,
                     is_package_init=is_package_init,
@@ -216,7 +217,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
             @override
             def visit_Import(self, node: cst.Import) -> None:
                 self.aliases.update(
-                    resolver._import_bindings(node, bindings_by_module),
+                    import_bindings(node, bindings_by_module),
                 )
 
             @override
@@ -224,7 +225,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
                 module = self.aliases.get(node.value)
                 if module is None:
                     return
-                use = resolver._reads_moved_member(
+                use = reads_moved_member(
                     node,
                     self.get_metadata(ParentNodeProvider, node, None),
                     bindings_by_module[module],

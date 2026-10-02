@@ -51,7 +51,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
 
     @staticmethod
     def _annotation_tail(annotation: cst.BaseExpression) -> str:
-        """Return the qualifier name of an annotation (``ClassVar[int]`` -> ``ClassVar``).
+        """Return an annotation's qualifier name (``ClassVar[int]``: ``ClassVar``).
 
         Returns:
             The trailing identifier of the annotation's qualifier, or ``""``.
@@ -116,9 +116,12 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
         """
         import libcst as cst
 
+        if not isinstance(node, cst.ClassDef | cst.FunctionDef | cst.SimpleStatementLine):
+            msg = f"class-nesting cannot move {type(node).__name__} members"
+            raise TypeError(msg)
         # Comments that documented the member move with it; the blank
         # separator carries no indentation (W293).
-        leading = (
+        leading: tuple[cst.EmptyLine, ...] = (
             cst.EmptyLine(indent=False),
             *(line for line in node.leading_lines if line.comment is not None),
         )
@@ -149,6 +152,113 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
         )
         return node.with_changes(leading_lines=leading, body=(classvar,)), True
 
+    @staticmethod
+    def _module_with_owner(
+        module: cst.Module,
+        owner_name: str,
+        moved: t.VariadicTuple[cst.BaseStatement],
+    ) -> t.Pair[cst.Module, t.VariadicTuple[cst.ClassDef]]:
+        """Return the module holding its owner class, creating it before the moves.
+
+        Returns:
+            The module and every top-level class named as the owner.
+
+        Raises:
+            TypeError: If the owner declaration cannot be built.
+
+        """
+        import libcst as cst
+
+        owner_nodes = tuple(
+            node
+            for node in module.body
+            if isinstance(node, cst.ClassDef) and node.name.value == owner_name
+        )
+        if owner_nodes:
+            return module, owner_nodes
+        owner = cst.parse_statement(
+            f'class {owner_name}:\n    """Canonical namespace owner."""\n',
+        )
+        if not isinstance(owner, cst.ClassDef):
+            msg = f"class-nesting could not create owner {owner_name}"
+            raise TypeError(msg)
+        index = next(index for index, node in enumerate(module.body) if node in moved)
+        body = (*module.body[:index], owner, *module.body[index:])
+        return module.with_changes(body=body), (owner,)
+
+    @classmethod
+    def _owner_holding(
+        cls,
+        owner: cst.ClassDef,
+        nested: t.VariadicTuple[cst.BaseStatement],
+    ) -> cst.ClassDef:
+        """Return the owner class whose body leads with the moved members.
+
+        A moved class was defined before the owner at module level, so a class
+        body member may already use it as a definition-time base. Appending
+        would place the definition after that use and break import; the
+        docstring keeps position and the moves lead the rest.
+
+        Returns:
+            The owner class with the moved members in its body.
+
+        Raises:
+            TypeError: If the owner body shape is unsupported.
+
+        """
+        import libcst as cst
+
+        if isinstance(owner.body, cst.IndentedBlock):
+            existing = owner.body.body
+            if (
+                len(existing) == 1
+                and isinstance(existing[0], cst.SimpleStatementLine)
+                and len(existing[0].body) == 1
+                and isinstance(existing[0].body[0], cst.Pass)
+            ):
+                existing = ()
+            docstring, remainder = cls._split_docstring(existing)
+            return owner.with_changes(
+                body=owner.body.with_changes(body=(*docstring, *nested, *remainder)),
+            )
+        if isinstance(owner.body, cst.SimpleStatementSuite):
+            # A simple suite can only hold small statements; narrow before
+            # promoting the remaining ones into an IndentedBlock line.
+            statements = tuple(
+                statement
+                for statement in owner.body.body
+                if not isinstance(statement, cst.Pass)
+            )
+            existing_lines = (
+                (cst.SimpleStatementLine(body=statements),) if statements else ()
+            )
+            docstring, remainder = cls._split_docstring(existing_lines)
+            return owner.with_changes(
+                body=cst.IndentedBlock(body=(*docstring, *nested, *remainder)),
+            )
+        msg = (
+            f"unsupported class body for {owner.name.value}: "
+            f"{type(owner.body).__name__}"
+        )
+        raise TypeError(msg)
+
+    @classmethod
+    def _module_statement(
+        cls,
+        node: cst.BaseStatement,
+        owner: cst.ClassDef,
+        nested_owner: cst.ClassDef,
+    ) -> cst.BaseStatement:
+        """Return one kept module statement after the owner absorbed its members.
+
+        Returns:
+            The rewritten export list, the nested owner, or the node itself.
+
+        """
+        if cls._declares_exports(node):
+            return cls._rewritten_exports(node, owner.name.value)
+        return nested_owner if node is owner else node
+
     @classmethod
     def _nest_definitions(cls, source: str, definitions: t.StrMapping) -> str:
         import libcst as cst
@@ -163,29 +273,11 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
             raise ValueError(msg)
         owner_name = next(iter(owners))
         module = cst.parse_module(source)
-        owner_nodes = tuple(
-            node
-            for node in module.body
-            if isinstance(node, cst.ClassDef) and node.name.value == owner_name
-        )
         moved = tuple(
             node for node in module.body if cls._member_name(node) in definitions
         )
         moved_names = {cls._member_name(node) for node in moved}
-        if not owner_nodes:
-            owner = cst.parse_statement(
-                f'class {owner_name}:\n    """Canonical namespace owner."""\n',
-            )
-            if not isinstance(owner, cst.ClassDef):
-                msg_0 = f"class-nesting could not create owner {owner_name}"
-                raise TypeError(msg_0)
-            index = next(
-                index for index, node in enumerate(module.body) if node in moved
-            )
-            module = module.with_changes(
-                body=(*module.body[:index], owner, *module.body[index:]),
-            )
-            owner_nodes = (owner,)
+        module, owner_nodes = cls._module_with_owner(module, owner_name, moved)
         if len(owner_nodes) != 1 or moved_names != set(definitions):
             msg = (
                 f"class-nesting structure mismatch for {owner_name}: "
@@ -197,55 +289,16 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
         # literals or docstrings carried by the original declaration; members
         # keep their module order, so a binding still follows what it reads.
         members = tuple(cls._class_member(node) for node in moved)
-        nested = tuple(member for member, _ in members)
-        if isinstance(owner.body, cst.IndentedBlock):
-            existing = owner.body.body
-            if (
-                len(existing) == 1
-                and isinstance(existing[0], cst.SimpleStatementLine)
-                and len(existing[0].body) == 1
-                and isinstance(existing[0].body[0], cst.Pass)
-            ):
-                existing = ()
-            # A moved class was defined before the owner at module level, so a
-            # class body member may already use it as a definition-time base.
-            # Appending would place the definition after that use and break
-            # import; the docstring keeps position and the moves lead the rest.
-            docstring, remainder = cls._split_docstring(existing)
-            body = owner.body.with_changes(body=(*docstring, *nested, *remainder))
-        elif isinstance(owner.body, cst.SimpleStatementSuite):
-            # A simple suite can only hold small statements; narrow before
-            # promoting the remaining ones into an IndentedBlock line.
-            statements = tuple(
-                statement
-                for statement in owner.body.body
-                if not isinstance(statement, cst.Pass)
-            )
-            existing_lines = (
-                (cst.SimpleStatementLine(body=statements),) if statements else ()
-            )
-            docstring, remainder = cls._split_docstring(existing_lines)
-            body = cst.IndentedBlock(body=(*docstring, *nested, *remainder))
-        else:
-            msg = (
-                f"unsupported class body for {owner_name}: {type(owner.body).__name__}"
-            )
-            raise TypeError(msg)
-        nested_owner = owner.with_changes(body=body)
-        declares_exports = any(cls._declares_exports(node) for node in module.body)
+        nested_owner = cls._owner_holding(owner, tuple(member for member, _ in members))
         exports = (
             ()
-            if declares_exports
+            if any(cls._declares_exports(node) for node in module.body)
             else (cst.parse_statement(f'__all__: list[str] = ["{owner_name}"]\n'),)
         )
         module = module.with_changes(
             body=(
                 *(
-                    cls._rewritten_exports(node, owner_name)
-                    if cls._declares_exports(node)
-                    else nested_owner
-                    if node is owner
-                    else node
+                    cls._module_statement(node, owner, nested_owner)
                     for node in module.body
                     if node not in moved
                 ),
@@ -321,7 +374,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
                 body.append(statement)
                 continue
             declared = ast.literal_eval(
-                cst.Module(body=()).code_for_node(statement.value)
+                cst.Module(body=()).code_for_node(statement.value),
             )
             names = list(dict.fromkeys((owner_name, *declared)))
             rendered = ", ".join(f'"{name}"' for name in names)

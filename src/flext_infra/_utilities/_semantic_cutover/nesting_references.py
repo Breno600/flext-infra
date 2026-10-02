@@ -90,6 +90,10 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
             QualifiedNameProvider,
         )
 
+        imported_module = cls._imported_module
+        resolved_relative = cls._resolved_relative
+        member_name = cls._member_name
+
         class _NestingTransformer(cst.CSTTransformer):
             METADATA_DEPENDENCIES = (ParentNodeProvider, QualifiedNameProvider)
 
@@ -156,7 +160,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
                 return asname.name.value
 
             def _import_module(self, node: cst.ImportFrom) -> str:
-                return FlextInfraUtilitiesSemanticCutoverNestingReferences._imported_module(
+                return imported_module(
                     node,
                     module_name=self.module_name,
                     is_package_init=self.is_package_init,
@@ -172,7 +176,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
                 relative = name.removeprefix(name.lstrip("."))
                 if not relative:
                     return name
-                return FlextInfraUtilitiesSemanticCutoverNestingReferences._resolved_relative(
+                return resolved_relative(
                     len(relative),
                     name[len(relative) :],
                     module_name=self.module_name,
@@ -239,10 +243,8 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
                     elif isinstance(current, cst.Module):
                         # A moved module binding executes in the owner body.
                         return (
-                            FlextInfraUtilitiesSemanticCutoverNestingReferences._member_name(
-                                child,
-                            )
-                            in self.definitions
+                            isinstance(child, cst.BaseStatement)
+                            and member_name(child) in self.definitions
                         )
                     child = current
                     current = self.get_metadata(ParentNodeProvider, current, None)
@@ -441,6 +443,32 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
                     ),
                 )
 
+            def _bound_locals(
+                self,
+                statement: cst.BaseSmallStatement,
+            ) -> t.VariadicTuple[str]:
+                """Return the local names one import statement binds.
+
+                Returns:
+                    The bound names, or an empty tuple for other statements.
+
+                """
+                if isinstance(statement, cst.ImportFrom) and isinstance(
+                    statement.names,
+                    cst.ImportStar,
+                ):
+                    return ()
+                if not isinstance(statement, cst.Import | cst.ImportFrom):
+                    return ()
+                names: t.SequenceOf[cst.ImportAlias] = statement.names
+                return tuple(
+                    self._alias_name(imported.asname)
+                    if imported.asname
+                    else FlextInfraUtilitiesQualifiedNames.dotted_name(imported.name)
+                    or ""
+                    for imported in names
+                )
+
             @override
             def leave_SimpleStatementLine(
                 self,
@@ -451,21 +479,11 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
                 | cst.FlattenSentinel[cst.BaseStatement]
                 | cst.RemovalSentinel
             ):
-                bound: list[str] = []
-                for statement in original_node.body:
-                    if isinstance(statement, cst.Import) or (
-                        isinstance(statement, cst.ImportFrom)
-                        and not isinstance(statement.names, cst.ImportStar)
-                    ):
-                        bound.extend(
-                            self._alias_name(imported.asname)
-                            if imported.asname
-                            else FlextInfraUtilitiesQualifiedNames.dotted_name(
-                                imported.name,
-                            )
-                            or ""
-                            for imported in statement.names
-                        )
+                bound = tuple(
+                    local
+                    for statement in original_node.body
+                    for local in self._bound_locals(statement)
+                )
                 modules = tuple(
                     dict.fromkeys(
                         self.module_aliases[local]
