@@ -30,7 +30,8 @@ class TestsFlextInfraSemanticPhaseContract:
         # Publication runs through the codegen transaction, which coordinates
         # only inside an exact Git worktree root, exactly as in production.
         u.Tests.initialize_git_repo(root)
-        owner = f"{u.derive_class_stem(root.name)}{u.Infra.facade_family_declared_by(c.Infra.CONSTANTS_PY).suffix}"
+        family = u.Infra.facade_family_declared_by(c.Infra.CONSTANTS_PY)
+        owner = f"{u.derive_class_stem(root.name)}{family.suffix}"
         path = package / "constants.py"
         u.Tests.write_lazy_init_namespace_module(
             path,
@@ -80,7 +81,8 @@ class TestsFlextInfraSemanticPhaseContract:
     ) -> None:
         """Test nesting replans proposed sources without publishing."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
-        owner = f"{u.derive_class_stem(root.name)}{u.Infra.facade_family_declared_by(c.Infra.CONSTANTS_PY).suffix}"
+        family = u.Infra.facade_family_declared_by(c.Infra.CONSTANTS_PY)
+        owner = f"{u.derive_class_stem(root.name)}{family.suffix}"
         path = package / "constants.py"
         u.Tests.write_lazy_init_namespace_module(
             path,

@@ -6,14 +6,16 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import TYPE_CHECKING, override
+
+import libcst as cst
+from libcst.metadata import MetadataWrapper, ParentNodeProvider
 
 from flext_infra import m
 from flext_infra._utilities.qualified_names import FlextInfraUtilitiesQualifiedNames
 
 if TYPE_CHECKING:
-    import libcst as cst
-
     from flext_infra import t
 
 
@@ -25,6 +27,83 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
     reads ``Owner.member``; the module binding survives only while another
     use still needs the module object.
     """
+
+    class _ModuleAliasScan(cst.CSTVisitor):
+        """Record nested-module bindings and how one consumer uses them."""
+
+        METADATA_DEPENDENCIES = (ParentNodeProvider,)
+
+        def __init__(
+            self,
+            *,
+            module_name: str,
+            is_package_init: bool,
+            bindings_by_module: t.MappingKV[str, t.StrMapping],
+            classifiers: t.Triple[
+                Callable[..., t.Pair[t.StrMapping, frozenset[str]]],
+                Callable[..., t.StrMapping],
+                Callable[..., bool | None],
+            ],
+        ) -> None:
+            self.module_name = module_name
+            self.is_package_init = is_package_init
+            self.bindings_by_module = bindings_by_module
+            (
+                self.from_import_bindings,
+                self.import_bindings,
+                self.reads_moved_member,
+            ) = classifiers
+            self.aliases: t.MutableStrMapping = {}
+            self.uses: t.MutableMappingKV[str, set[bool]] = {}
+            self.owner_imports: set[str] = set()
+            self.type_checking_depth = 0
+
+        @staticmethod
+        def _guards_type_checking(node: cst.If) -> bool:
+            test = node.test
+            name = test.attr if isinstance(test, cst.Attribute) else test
+            return isinstance(name, cst.Name) and name.value == "TYPE_CHECKING"
+
+        @override
+        def visit_If(self, node: cst.If) -> None:
+            self.type_checking_depth += self._guards_type_checking(node)
+
+        @override
+        def leave_If(self, original_node: cst.If) -> None:
+            self.type_checking_depth -= self._guards_type_checking(original_node)
+
+        @override
+        def visit_ImportFrom(self, node: cst.ImportFrom) -> None:
+            aliases, owner_imports = self.from_import_bindings(
+                node,
+                module_name=self.module_name,
+                is_package_init=self.is_package_init,
+                bindings_by_module=self.bindings_by_module,
+            )
+            self.aliases.update(aliases)
+            # An import that exists only for type checking binds nothing at
+            # runtime, so it never stands in for the owner import.
+            if not self.type_checking_depth:
+                self.owner_imports.update(owner_imports)
+
+        @override
+        def visit_Import(self, node: cst.Import) -> None:
+            self.aliases.update(
+                self.import_bindings(node, self.bindings_by_module),
+            )
+
+        @override
+        def visit_Name(self, node: cst.Name) -> None:
+            module = self.aliases.get(node.value)
+            if module is None:
+                return
+            use = self.reads_moved_member(
+                node,
+                self.get_metadata(ParentNodeProvider, node, None),
+                self.bindings_by_module[module],
+            )
+            if use is not None:
+                self.uses.setdefault(node.value, set()).add(use)
 
     @staticmethod
     def _resolved_relative(
@@ -81,8 +160,6 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
             The ``as`` name, else the imported dotted name.
 
         """
-        import libcst as cst
-
         if imported.asname is not None and isinstance(imported.asname.name, cst.Name):
             return imported.asname.name.value
         return FlextInfraUtilitiesQualifiedNames.dotted_name(imported.name) or ""
@@ -103,8 +180,6 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
             nested modules whose members or owner it already imports.
 
         """
-        import libcst as cst
-
         if isinstance(node.names, cst.ImportStar):
             return {}, frozenset()
         base = cls._imported_module(
@@ -158,8 +233,6 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
             use that still needs the module object.
 
         """
-        import libcst as cst
-
         if FlextInfraUtilitiesQualifiedNames.rebinds_name_in_place(
             parent,
             node,
@@ -188,70 +261,16 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
             their owner.
 
         """
-        import libcst as cst
-        from libcst.metadata import MetadataWrapper, ParentNodeProvider
-
-        from_import_bindings = cls._from_import_bindings
-        import_bindings = cls._import_bindings
-        reads_moved_member = cls._reads_moved_member
-
-        class _ModuleAliasScan(cst.CSTVisitor):
-            METADATA_DEPENDENCIES = (ParentNodeProvider,)
-
-            def __init__(self) -> None:
-                self.aliases: t.MutableStrMapping = {}
-                self.uses: t.MutableMappingKV[str, set[bool]] = {}
-                self.owner_imports: set[str] = set()
-                self.type_checking_depth = 0
-
-            @staticmethod
-            def _guards_type_checking(node: cst.If) -> bool:
-                test = node.test
-                name = test.attr if isinstance(test, cst.Attribute) else test
-                return isinstance(name, cst.Name) and name.value == "TYPE_CHECKING"
-
-            @override
-            def visit_If(self, node: cst.If) -> None:
-                self.type_checking_depth += self._guards_type_checking(node)
-
-            @override
-            def leave_If(self, original_node: cst.If) -> None:
-                self.type_checking_depth -= self._guards_type_checking(original_node)
-
-            @override
-            def visit_ImportFrom(self, node: cst.ImportFrom) -> None:
-                aliases, owner_imports = from_import_bindings(
-                    node,
-                    module_name=module_name,
-                    is_package_init=is_package_init,
-                    bindings_by_module=bindings_by_module,
-                )
-                self.aliases.update(aliases)
-                # An import that exists only for type checking binds nothing at
-                # runtime, so it never stands in for the owner import.
-                if not self.type_checking_depth:
-                    self.owner_imports.update(owner_imports)
-
-            @override
-            def visit_Import(self, node: cst.Import) -> None:
-                self.aliases.update(
-                    import_bindings(node, bindings_by_module),
-                )
-
-            @override
-            def visit_Name(self, node: cst.Name) -> None:
-                module = self.aliases.get(node.value)
-                if module is None:
-                    return
-                use = reads_moved_member(
-                    node,
-                    self.get_metadata(ParentNodeProvider, node, None),
-                    bindings_by_module[module],
-                )
-                if use is not None:
-                    self.uses.setdefault(node.value, set()).add(use)
-
-        scan = _ModuleAliasScan()
+        scan = cls._ModuleAliasScan(
+            module_name=module_name,
+            is_package_init=is_package_init,
+            bindings_by_module=bindings_by_module,
+            classifiers=(
+                cls._from_import_bindings,
+                cls._import_bindings,
+                cls._reads_moved_member,
+            ),
+        )
         MetadataWrapper(cst.parse_module(source)).visit(scan)
         return m.Infra.NestingModuleAliasScan(
             aliases=scan.aliases,

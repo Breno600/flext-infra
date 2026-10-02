@@ -42,7 +42,9 @@ class FlextInfraModelsTransformers:
             bytes | None,
             m.Field(
                 strict=True,
-                description="Exact desired bytes after migration, or None for no change",
+                description=(
+                    "Exact desired bytes after migration, or None for no change"
+                ),
             ),
         ]
         desired_mode: Annotated[
@@ -153,7 +155,8 @@ class FlextInfraModelsTransformers:
     class Tier0ImportAnalysis(m.Value):
         """Detection results for a single Python file self-import patterns."""
 
-        # Why: value contract owned by m.Infra transformers facet, not nested in the fixer service.
+        # Why: value contract owned by m.Infra transformers facet, not nested
+        # in the fixer service.
         package_name: Annotated[
             str,
             m.Field(description="Resolved package name for the analyzed file"),
@@ -169,21 +172,21 @@ class FlextInfraModelsTransformers:
         category_a: Annotated[
             frozenset[str],
             m.Field(description="Top-level aliases that are informational only"),
-        ] = m.Field(default_factory=frozenset)
+        ] = m.Field(default_factory=frozenset[str])
         category_b: Annotated[
             frozenset[str],
             m.Field(description="Core aliases to redirect to the core package"),
-        ] = m.Field(default_factory=frozenset)
+        ] = m.Field(default_factory=frozenset[str])
         category_c: Annotated[
             frozenset[str],
             m.Field(description="Aliases to move into a TYPE_CHECKING block"),
-        ] = m.Field(default_factory=frozenset)
+        ] = m.Field(default_factory=frozenset[str])
         category_d: Annotated[
             frozenset[str],
             m.Field(
                 description="Runtime-used aliases requiring direct import handling",
             ),
-        ] = m.Field(default_factory=frozenset)
+        ] = m.Field(default_factory=frozenset[str])
 
         @m.computed_field
         @property
