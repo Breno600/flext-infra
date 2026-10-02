@@ -24,8 +24,8 @@ from tests.unit.validate.pytest_runner_support import (
 class TestsFlextInfraPytestRunner:
     """Exercise the real pytest, testmon, coverage, and report lifecycle."""
 
-    @pytest.mark.parametrize("ci_context", [True, False])
     @staticmethod
+    @pytest.mark.parametrize("ci_context", [True, False])
     def test_marker_selection_is_shared_by_collection_execution_and_coverage(
         cached_runner_project: Path,
         *,
@@ -127,8 +127,8 @@ class TestsFlextInfraPytestRunner:
             == names[-1]
         )
 
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
     def test_config_only_changes_invalidate_the_persistent_cache(
         cached_runner_project: Path,
     ) -> None:
@@ -286,8 +286,8 @@ class TestsFlextInfraPytestRunner:
             has=["executed=1", "failed=0", "errors=0", "exit=0"],
         )
 
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
     def test_failed_slow_item_stays_red_across_budgeted_runs(
         cached_runner_project: Path,
     ) -> None:
@@ -331,9 +331,9 @@ class TestsFlextInfraPytestRunner:
             ne=0,
         )
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("omit_case", [False, True], ids=["order", "membership"])
-    @staticmethod
     def test_warm_workers_follow_the_central_selection_order(
         cached_runner_project: Path,
         *,
@@ -383,8 +383,8 @@ class TestsFlextInfraPytestRunner:
             has=["executed=3", "cache_restored=True", "errors=0", "exit=0"],
         )
 
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
     def test_first_failure_stops_remaining_cases(
         cached_runner_project: Path,
     ) -> None:
@@ -431,12 +431,12 @@ class TestsFlextInfraPytestRunner:
         tm.that(outcome.forwarded_signal, none=True)
         tm.that(summary(reports_root), has=f"failed={failed}")
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize(
         "finding",
         ["skip", "warning", "mro-warning", "homonymous-warning"],
     )
-    @staticmethod
     def test_runtime_findings_keep_complete_accounting(
         cached_runner_project: Path,
         finding: str,
@@ -500,8 +500,8 @@ class TestsFlextInfraPytestRunner:
         warning_evidence = (outcome_path.parent / "warnings.txt").read_text()
         tm.that(warning_evidence.count("repeated runtime evidence"), eq=warnings_count)
 
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
     def test_setup_failure_is_accounted_without_a_call_phase(
         cached_runner_project: Path,
     ) -> None:
@@ -527,8 +527,8 @@ class TestsFlextInfraPytestRunner:
             has=["executed=2", "errors=1", "accounting_complete=True"],
         )
 
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
     def test_external_gate_markers_are_not_executed_offline(
         cached_runner_project: Path,
     ) -> None:
@@ -578,17 +578,26 @@ class TestsFlextInfraPytestRunner:
         command = tm.ok(
             u.Cli.files_read_text(reports_root / latest_name / "command.txt"),
         )
-        tm.that(command, has=pytest_policy.external_gate_deselection)
+        # The recorded deselection names every external marker; the phase may
+        # deselect further markers of its own scope (the budgeted phase also
+        # deselects slow items, which run in their own phase).
+        deselection = command.split("-m ", maxsplit=2)[-1]
+        tm.that(deselection, has=["not (", *markers])
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("ci_context", [False, True])
-    @staticmethod
     def test_full_includes_external_and_ci_markers_after_incremental_scope(
         cached_runner_project: Path,
         *,
         ci_context: bool,
     ) -> None:
-        """The real full phase executes harmless consumers of every excluded marker."""
+        """The real full phase executes harmless consumers of every excluded marker.
+
+        The budgeted runner never carries slow items, in the incremental and
+        the full operation alike: the slow phase is its own process on its own
+        clock, so slow consumers are absent from both budgeted inventories.
+        """
         policy = config.Infra.tooling.tools.pytest
         markers = tuple(
             sorted({*policy.external_gate_markers, *policy.ci_excluded_markers}),
@@ -621,9 +630,10 @@ class TestsFlextInfraPytestRunner:
         excluded = set(policy.external_gate_markers)
         if ci_context:
             excluded.update(policy.ci_excluded_markers)
+        budgeted = set(markers) - {policy.slow_marker}
         for report_dir, expected in (
-            (incremental, 1 + len(set(markers) - excluded)),
-            (full, 1 + len(markers)),
+            (incremental, 1 + len(budgeted - excluded)),
+            (full, 1 + len(budgeted)),
         ):
             accounting = m.Infra.TestmonRunAccounting.model_validate_json(
                 (report_dir / "run-accounting.json").read_text(),
@@ -659,8 +669,8 @@ class TestsFlextInfraPytestRunner:
             eq=config.Infra.tooling.tools.pytest.slow_marker,
         )
 
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
     def test_full_runs_after_warm_cache_and_ignores_node_like_diagnostics(
         cached_runner_project: Path,
     ) -> None:
@@ -747,8 +757,8 @@ class TestsFlextInfraPytestRunner:
             has=["diagnostic::not-a-node", "stderr::not-a-node"],
         )
 
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
     def test_warm_partial_selection_accounts_for_every_stable_test(
         cached_runner_project: Path,
     ) -> None:
@@ -797,8 +807,8 @@ class TestsFlextInfraPytestRunner:
             has=["outcome=executed", "executed=1", "deselected=1", "inventory=2"],
         )
 
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
     def test_full_stops_at_the_first_incremental_failure(
         cached_runner_project: Path,
     ) -> None:
@@ -844,8 +854,8 @@ class TestsFlextInfraPytestRunner:
             eq=[],
         )
 
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
     def test_full_rejects_an_empty_complete_collection(
         cached_runner_project: Path,
     ) -> None:

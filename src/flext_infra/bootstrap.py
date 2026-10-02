@@ -430,7 +430,10 @@ class FlextInfraBootstrap:
         cls._require_roots(project, stage)
         journal = cls._read_journal(stage)
         if journal is None:
-            raise ValueError(f"uncommitted Mise stage has no recovery journal: {stage}")
+            # An unjournaled stage never reached its commit point: it is a
+            # killed run's orphan, safe to retire without touching the project.
+            cls._retire_stage(stage)
+            return
         if journal.get("project") != str(project):
             raise ValueError(f"Mise lock journal belongs to another project: {stage}")
         old = cls._bytes(stage / cls.OLD_LOCK)

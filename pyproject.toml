@@ -156,7 +156,7 @@ omit = [
 ]
 
 [tool.deptry]
-known_first_party = ["flext_core", "flext_infra"]
+known_first_party = ["flext", "flext_core", "flext_infra"]
 pep621_dev_dependency_groups = ["dev"]
 
 [tool.flext.docs]
@@ -460,7 +460,7 @@ msg = "Use cli.create_app_with_common_params / cli.register_command from flext_c
 [tool.ruff.lint.isort]
 combine-as-imports = true
 force-single-line = false
-known-first-party = ["flext_core", "flext_infra"]
+known-first-party = ["flext", "flext_core", "flext_infra"]
 split-on-trailing-comma = false
 
 [tool.ruff.lint.per-file-ignores]
@@ -469,6 +469,65 @@ split-on-trailing-comma = false
   "runtime-import-in-type-checking-block",
   "typing-only-first-party-import",
   "unused-import",
+]
+"scripts/**" = [
+  "any-type",
+  "avoidable-escaped-quote",
+  "banned-api",
+  "blank-line-after-function",
+  "boolean-default-value-positional-argument",
+  "boolean-type-hint-positional-argument",
+  "builtin-open",
+  "commented-out-code",
+  "error-instead-of-exception",
+  "f-string-in-exception",
+  "if-exp-instead-of-or-operator",
+  "import-private-name",
+  "invalid-module-name",
+  "literal-membership",
+  "logging-string-concat",
+  "magic-value-comparison",
+  "manual-list-comprehension",
+  "manual-list-copy",
+  "missing-blank-line-after-summary",
+  "missing-maxsplit-arg",
+  "multi-line-summary-first-line",
+  "multiple-starts-ends-with",
+  "non-lowercase-variable-in-function",
+  "noqa-comments",
+  "os-path-abspath",
+  "os-path-dirname",
+  "os-path-exists",
+  "os-path-join",
+  "path-constructor-current-directory",
+  "print",
+  "raise-vanilla-args",
+  "raw-string-in-exception",
+  "read-whole-file",
+  "relative-imports",
+  "repeated-append",
+  "runtime-cast-value",
+  "shebang-not-executable",
+  "start-process-with-partial-path",
+  "subprocess-without-shell-equals-true",
+  "suspicious-subprocess-import",
+  "undocumented-public-class",
+  "undocumented-public-function",
+  "undocumented-public-init",
+  "undocumented-public-method",
+  "unnecessary-multiline-docstring",
+  "unsorted-dunder-all",
+  "unspecified-encoding",
+  "unused-function-argument",
+  "unused-noqa",
+  "used-dummy-variable",
+  "verbose-raise",
+  "write-whole-file",
+]
+"scripts/**/*.py" = [
+  "commented-out-code",
+  "line-too-long",
+  "typing-only-first-party-import",
 ]
 "tests/**/*.py" = ["assert"]
 

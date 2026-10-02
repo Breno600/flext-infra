@@ -27,6 +27,7 @@ class TestsFlextInfraPytestTimeoutConfig:
 
         tm.that(round_tripped, eq=policy)
 
+    @staticmethod
     @pytest.mark.parametrize(
         (
             "case_timeout_seconds",
@@ -36,7 +37,6 @@ class TestsFlextInfraPytestTimeoutConfig:
         ),
         [(1, 6, 1, 1), (7, 20, 2, 8)],
     )
-    @staticmethod
     def test_arbitrary_valid_execution_policy_round_trips(
         case_timeout_seconds: int,
         run_timeout_seconds: int,
@@ -68,11 +68,11 @@ class TestsFlextInfraPytestTimeoutConfig:
 
         tm.that(round_tripped, eq=arbitrary_policy)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "field",
         ["case-timeout-seconds", "run-timeout-seconds", "termination-grace-seconds"],
     )
-    @staticmethod
     def test_operator_caps_are_hard_typed_boundaries(field: str) -> None:
         """Test operator caps are hard typed boundaries."""
         policy = config.Infra.tooling.tools.pytest
@@ -82,11 +82,11 @@ class TestsFlextInfraPytestTimeoutConfig:
         with pytest.raises(c.ValidationError, match="greater than"):
             type(policy).model_validate(payload)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "override",
         ["-o", "-o=addopts=", "--override-ini", "--override-ini=addopts="],
     )
-    @staticmethod
     def test_pytest_ini_override_is_forbidden(override: str) -> None:
         """Test pytest ini override is forbidden."""
         policy = config.Infra.tooling.tools.pytest
@@ -125,6 +125,7 @@ class TestsFlextInfraPytestTimeoutConfig:
         tm.that(policy.slow_timeout_seconds > policy.case_timeout_seconds, eq=True)
         tm.that(policy.slow_timeout_seconds < policy.run_timeout_seconds, eq=True)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "expected",
         [
@@ -132,7 +133,6 @@ class TestsFlextInfraPytestTimeoutConfig:
             "pytest slow timeout must be less than run timeout",
         ],
     )
-    @staticmethod
     def test_slow_budget_is_a_hard_typed_boundary(expected: str) -> None:
         """A slow budget outside the case/run walls is unrepresentable."""
         policy = config.Infra.tooling.tools.pytest
@@ -182,6 +182,7 @@ class TestsFlextInfraPytestTimeoutConfig:
         ):
             type(policy).model_validate(payload)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "argument",
         [
@@ -197,7 +198,6 @@ class TestsFlextInfraPytestTimeoutConfig:
             "--tb=short\n-o=addopts=",
         ],
     )
-    @staticmethod
     def test_reporting_policy_cannot_override_runner_owned_argv(
         argument: str,
     ) -> None:

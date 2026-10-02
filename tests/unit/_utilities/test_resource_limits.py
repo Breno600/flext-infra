@@ -139,6 +139,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         tm.that(result.value.outcome.raw_return_code, eq=1)
         tm.that(result.value.stderr, has="Extra inputs are not permitted")
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("scenario", "expected"),
         [
@@ -151,7 +152,6 @@ class TestsFlextInfraUtilitiesResourceLimits:
             ("memory", None),
         ],
     )
-    @staticmethod
     def test_resource_limit_enforces_exit_deadline_and_memory(
         tmp_path: Path,
         scenario: str,
@@ -200,11 +200,16 @@ class TestsFlextInfraUtilitiesResourceLimits:
         else:
             tm.that(result.value.outcome.raw_return_code, eq=expected)
 
-    @pytest.mark.slow
-    @pytest.mark.parametrize("expected", [7, 124])
     @staticmethod
+    @pytest.mark.slow
+    @pytest.mark.parametrize(
+        ("leader_exits", "expected"),
+        [(True, 7), (False, c.Infra.PROCESS_TIMEOUT_EXIT_CODE)],
+    )
     def test_resource_limit_stops_resistant_descendant_group(
         tmp_path: Path,
+        *,
+        leader_exits: bool,
         expected: int,
         request: pytest.FixtureRequest,
     ) -> None:
@@ -220,7 +225,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
             ),
         )
         sleep = f"time.sleep({u.Infra.mypy_runner_timeout(limit) + policy.slow_timeout_seconds})"
-        tail = "sys.exit(7)" if expected == 7 else sleep
+        tail = f"sys.exit({expected})" if leader_exits else sleep
         descendant = (
             "import signal,time; signal.signal(signal.SIGTERM, signal.SIG_IGN); "
             f"print('ready', flush=True); {sleep}"
@@ -262,7 +267,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         # GNU timeout reaps the resistant group when it stops the leader at
         # the deadline; on a clean leader exit the group outlives the
         # wrapper, so pytest teardown reaps its own descendant instead.
-        elif expected == 124:
+        elif not leader_exits:
             tm.that(not state, eq=True)
 
     @staticmethod
@@ -315,6 +320,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
             eq=config.Infra.tooling.tools.mypy.timeout_seconds,
         )
 
+    @staticmethod
     @pytest.mark.parametrize(
         "invalid_value",
         [
@@ -328,7 +334,6 @@ class TestsFlextInfraUtilitiesResourceLimits:
             pytest.param(" 1024", marks=pytest.mark.slow),
         ],
     )
-    @staticmethod
     def test_mypy_resource_limit_rejects_non_integer_environment(
         invalid_value: str,
     ) -> None:

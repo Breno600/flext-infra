@@ -592,8 +592,8 @@ class TestsFlextInfraModTextGateEngine:
         tm.that(rewritten, has="serialization_lock_execute(chunks, deadline)")
         tm.that(rewritten, lacks="serialization_lock_execute(paths, timeout)")
 
-    @pytest.mark.parametrize("fix", [False, True])
     @staticmethod
+    @pytest.mark.parametrize("fix", [False, True])
     def test_scan_requires_declared_receipt_to_match_exactly(
         mod_workspace: Path,
         *,

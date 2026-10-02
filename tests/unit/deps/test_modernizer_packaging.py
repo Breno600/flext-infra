@@ -100,8 +100,8 @@ class TestsFlextInfraDepsModernizerPackaging:
         u.Tests.copy_tracked_mise_seeds(root)
         return root_module, root_package
 
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
     def _conform_self(infra_git_repo: Path) -> int:
         """Run codegen conform self-apply through the public CLI entrypoint.
 

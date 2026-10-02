@@ -89,7 +89,7 @@ class FlextInfraConstantsCheck:
         RAISES_SECTION = "raises-section"
         SUMMARY_DOCSTRING = "summary-docstring"
         COPYRIGHT_NOTICE = "copyright-notice"
-        NO_SELF_USE = "no-self-use"
+        STATIC_METHOD = "static-method"
 
     AST_GREP_DOCS_URL: ClassVar[str] = "https://ast-grep.github.io/"
     "Canonical ast-grep documentation URL for gate metadata."
@@ -233,7 +233,7 @@ class FlextInfraConstantsCheck:
         "--quiet",
         "--no-upgrade-check",
     )
-    "Full-workspace scan: default qlty scope is changed-files-only; --all overrides."
+    "Smells scan arguments; the gate appends explicit targets, scanned in full."
     SMELLS_RULE_PREFIX: ClassVar[str] = "qlty:"
     SMELLS_RULE_TAGS: ClassVar[t.MappingKV[str, str]] = MappingProxyType({
         "boolean-logic": "smell_boolean_logic",

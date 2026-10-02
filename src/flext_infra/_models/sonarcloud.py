@@ -114,5 +114,54 @@ class FlextInfraModelsSonarcloud:
             m.Field(min_length=2, description="Ordered form fields for the endpoint"),
         ]
 
+    class SonarcloudIssue(m.ContractModel):
+        """One issue in a SonarCloud issue-search response."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore", frozen=True)
+
+        key: Annotated[t.NonEmptyStr, m.Field(description="Stable issue key")]
+        rule: Annotated[t.NonEmptyStr, m.Field(description="Rule key")]
+        component: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Project and file key"),
+        ]
+        line: Annotated[
+            int | None,
+            m.Field(description="Source line, when assigned"),
+        ] = None
+        message: Annotated[t.NonEmptyStr, m.Field(description="Observed finding")]
+
+    class SonarcloudIssuePaging(m.ContractModel):
+        """Server-side page accounting required before reporting completeness."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore", frozen=True)
+
+        page_index: Annotated[
+            t.PositiveInt,
+            m.Field(validation_alias="pageIndex", description="One-based page index"),
+        ]
+        page_size: Annotated[
+            t.PositiveInt,
+            m.Field(validation_alias="pageSize", description="Issues per page"),
+        ]
+        total: Annotated[
+            int,
+            m.Field(ge=0, description="Total issues matching the server query"),
+        ]
+
+    class SonarcloudIssueSearch(m.ContractModel):
+        """A complete typed page returned by ``api/issues/search``."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore", frozen=True)
+
+        paging: Annotated[
+            FlextInfraModelsSonarcloud.SonarcloudIssuePaging,
+            m.Field(description="Server-side page accounting of this page"),
+        ]
+        issues: Annotated[
+            t.VariadicTuple[FlextInfraModelsSonarcloud.SonarcloudIssue],
+            m.Field(description="Issues returned on this page"),
+        ]
+
 
 __all__: list[str] = ["FlextInfraModelsSonarcloud"]

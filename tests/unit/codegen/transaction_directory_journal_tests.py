@@ -53,9 +53,9 @@ class TestsFlextInfraTransactionDirectoryJournal:
         recorded = tm.ok(journal)
         tm.that(recorded.sources[0].link_count, eq=2)
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("change_config", [False, True])
-    @staticmethod
     def test_mise_commit_preserves_unchanged_publications(
         tmp_path: Path,
         *,
@@ -133,9 +133,9 @@ class TestsFlextInfraTransactionDirectoryJournal:
         tm.that(layout.journal_path.exists(), eq=False)
         tm.that(layout.state_root.exists(), eq=False)
 
+    @staticmethod
     @pytest.mark.parametrize("foreign_change", [False, True])
     @pytest.mark.parametrize("missing_launcher_parent", [False, True])
-    @staticmethod
     def test_duplicate_phase_recovers_only_its_new_generated_files(
         tmp_path: Path,
         *,
@@ -229,9 +229,9 @@ class TestsFlextInfraTransactionDirectoryJournal:
         tm.that(journal.with_name(f"{journal.name}.lock").is_file(), eq=True)
         tm.that(artifacts.unix_launcher.parent.exists(), eq=not missing_launcher_parent)
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("raises", [False, True])
-    @staticmethod
     def test_failed_phase_after_begin_leaves_no_prepared_journal(
         tmp_path: Path,
         *,
@@ -439,8 +439,8 @@ class TestsFlextInfraTransactionDirectoryJournal:
             eq=before,
         )
 
-    @pytest.mark.parametrize("with_foreign_file", [False, True])
     @staticmethod
+    @pytest.mark.parametrize("with_foreign_file", [False, True])
     def test_phase_failure_preserves_preexisting_staging_root(
         tmp_path: Path,
         *,
@@ -484,8 +484,8 @@ class TestsFlextInfraTransactionDirectoryJournal:
         tm.fail(owner.run_files_locked(roots, stage))
         tm.that(target.exists(), eq=False)
 
-    @pytest.mark.parametrize("operation", ["append", "commit"])
     @staticmethod
+    @pytest.mark.parametrize("operation", ["append", "commit"])
     def test_same_content_journal_replacement_is_not_adopted(
         tmp_path: Path,
         operation: str,

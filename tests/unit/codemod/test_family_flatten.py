@@ -21,8 +21,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraFamilyFlatten:
     """Exercise the real module graph, not mocked semantic identities."""
 
-    @pytest.mark.parametrize("collision", [False, True])
     @staticmethod
+    @pytest.mark.parametrize("collision", [False, True])
     def test_snapshot_rewrites_alias_and_inherited_consumers_without_effects(
         tmp_path: Path,
         *,
@@ -99,6 +99,7 @@ class TestsFlextInfraFamilyFlatten:
         }.items():
             tm.that(file_path.read_text(encoding="utf-8"), eq=original)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "entity",
         [
@@ -106,7 +107,6 @@ class TestsFlextInfraFamilyFlatten:
             "class Entity:\n        def value(self) -> int:\n            return 1",
         ],
     )
-    @staticmethod
     def test_entity_classes_are_not_namespace_wrappers(
         tmp_path: Path,
         entity: str,
@@ -131,11 +131,11 @@ class TestsFlextInfraFamilyFlatten:
         tm.ok(planned)
         tm.that(planned.value, empty=True)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "reference",
         ["ALIAS = {owner}.Wrapper", 'alias: "{owner}.Wrapper"'],
     )
-    @staticmethod
     def test_wrapper_used_as_an_entity_is_preserved_without_edits(
         tmp_path: Path,
         reference: str,

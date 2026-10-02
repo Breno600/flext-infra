@@ -84,6 +84,7 @@ class TestsFlextInfraLocCapGate:
         ):
             u.Tests.run_gate_check(FlextInfraLocCapGate, tmp_path, project)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "payload",
         [
@@ -104,7 +105,6 @@ class TestsFlextInfraLocCapGate:
             '[{"Name":"Python","Files":[{"Location":"sample.py","Code":true}]}]',
         ],
     )
-    @staticmethod
     def test_scc_boundary_rejects_incomplete_or_malformed_output(
         payload: str,
     ) -> None:
@@ -112,8 +112,8 @@ class TestsFlextInfraLocCapGate:
         with pytest.raises(c.ValidationError):
             m.Infra.SccReport.model_validate_json(payload, strict=True)
 
-    @pytest.mark.parametrize("payload", ["[]", '[{"Name":"Python","Files":[]}]'])
     @staticmethod
+    @pytest.mark.parametrize("payload", ["[]", '[{"Name":"Python","Files":[]}]'])
     def test_scc_boundary_accepts_valid_empty_collections(payload: str) -> None:
         """Empty scanner collections differ from absent or malformed output."""
         report = m.Infra.SccReport.model_validate_json(payload, strict=True)

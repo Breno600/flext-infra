@@ -941,7 +941,14 @@ class FlextInfraWorkspaceDetector(
         # exclusions are none.
         if not u.Infra.workspace_manifest_path(resolved_root).is_file():
             return r[t.VariadicTuple[Path]].ok(())
-        workspace = cls.load_workspace_spec(resolved_root)
+        # Analysis scope reads declared topology, so it tolerates members a
+        # provisioning surface has not materialized yet (conform renders the
+        # setup Makefile before a member's pyproject exists); a strict load
+        # here re-imposed governance on a declaration-only read.
+        workspace = cls.load_workspace_spec(
+            resolved_root,
+            allow_unprovisioned_members=True,
+        )
         if workspace.failure:
             return r[t.VariadicTuple[Path]].from_failure(workspace)
         return r[t.VariadicTuple[Path]].ok(

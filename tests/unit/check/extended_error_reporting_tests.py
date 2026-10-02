@@ -85,8 +85,8 @@ class TestsFlextInfraGateErrorReporting:
             eq=[f"{c.Infra.DEFAULT_SRC_DIR}/{name}" for name in ("one.py", "two.py")],
         )
 
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
     def test_workspace_checker_emits_ruff_stderr_without_findings(
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
@@ -123,8 +123,8 @@ class TestsFlextInfraGateErrorReporting:
             has=["TOML parse error", "invalid-line-length"],
         )
 
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
     def test_workspace_checker_emits_mypy_plugin_traceback(
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
@@ -173,6 +173,7 @@ class TestsFlextInfraGateErrorReporting:
             ],
         )
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("readme", "config_text", "expected"),
         [
@@ -180,7 +181,6 @@ class TestsFlextInfraGateErrorReporting:
             ("# Project\n\n[Missing](missing.md)\n", None, ["[MD057]", "missing.md"]),
         ],
     )
-    @staticmethod
     def test_workspace_checker_emits_real_markdown_failure(
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],

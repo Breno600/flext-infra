@@ -25,7 +25,9 @@ class FlextInfraToolTablesPhase:
 
     @staticmethod
     def first_party_namespaces(
-        project_dir: Path,
+        payload: t.MutableJsonMapping | None = None,
+        *,
+        path: Path,
         planned_sources: t.SequenceOf[Path] = (),
     ) -> t.StrSequence:
         """Derive the project's first-party namespaces from one source each.
@@ -370,7 +372,7 @@ class FlextInfraToolTablesPhase:
         return u.Infra.apply_toml_phases(
             payload,
             *self._phases(
-                first_party=self.first_party_namespaces(path.parent),
+                first_party=self.first_party_namespaces(payload, path=path.parent),
                 path=path.parent,
             ),
         )

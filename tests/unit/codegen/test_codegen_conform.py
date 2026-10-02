@@ -101,8 +101,8 @@ class _FlextInfraCodegenConformLifecycleProbe(FlextInfraCodegenConform):
 class TestsFlextInfraCodegenConform:
     """Prove one SSOT for project creation and existing-tree conformance."""
 
-    @pytest.fixture(scope="module")
     @staticmethod
+    @pytest.fixture(scope="module")
     def conformed_template(tmp_path_factory: pytest.TempPathFactory) -> Path:
         """Conform one real seed tree once per module; each scenario clones it.
 
@@ -367,6 +367,7 @@ class TestsFlextInfraCodegenConform:
             lacks="[tool.hatch.build.hooks.custom]",
         )
 
+    @staticmethod
     @pytest.mark.parametrize(
         "unsafe_path",
         [
@@ -380,7 +381,6 @@ class TestsFlextInfraCodegenConform:
             r"\\server\share\hatch_build.py",
         ],
     )
-    @staticmethod
     def test_hatch_build_hook_rejects_unsafe_paths(unsafe_path: str) -> None:
         """Test hatch build hook rejects unsafe paths."""
         payload = u.Tests.project_spec("unsafe-hook").model_dump()
@@ -517,8 +517,8 @@ class TestsFlextInfraCodegenConform:
                 verb=canonical,
             )
 
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
     def test_apply_recovers_declared_managed_pyproject_conflict(
         infra_git_repo: Path,
     ) -> None:
@@ -562,9 +562,9 @@ class TestsFlextInfraCodegenConform:
     # This end-to-end scenario scaffolds a project and runs its console entry
     # point in a fresh interpreter. The slow marker opts into the single
     # config-owned slow-item budget; tests must not restate that policy locally.
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("name", ["flext-demo", "flext-member"])
-    @staticmethod
     def test_new_project_is_complete_and_idempotent(
         tmp_path: Path,
         name: str,
@@ -657,8 +657,8 @@ class TestsFlextInfraCodegenConform:
         tm.ok(process)
         tm.that(process.value, eq="✅ pong")
 
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
     def test_generated_make_uses_unpinned_environment_uv(
         infra_git_repo: Path,
     ) -> None:
@@ -682,8 +682,8 @@ class TestsFlextInfraCodegenConform:
         tm.that(selected_output, lacks="uv@")
         tm.that(selected_output, lacks="UV_VERSION")
 
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
     def test_existing_manifest_converges_to_identical_tree(
         infra_git_repo: Path,
     ) -> None:
@@ -739,8 +739,8 @@ class TestsFlextInfraCodegenConform:
             TestsFlextInfraConformSupport.project_tree_diff(expected_tree, actual_tree)
         )
 
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
     def test_python_root_outside_env_dirs_still_reaches_a_fixed_point(
         infra_git_repo: Path,
     ) -> None:
@@ -803,8 +803,8 @@ class TestsFlextInfraCodegenConform:
         tm.ok(fixed_point)
         tm.that(fixed_point.value.written_files, eq=())
 
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
     def test_empty_rendered_directory_is_not_a_python_root(
         infra_git_repo: Path,
     ) -> None:
@@ -841,8 +841,8 @@ class TestsFlextInfraCodegenConform:
 
     # Why (suite budget): two conform apply cycles plus a check over a full
     # managed tree on a real git repo; the per-case wall only holds idle.
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
     def test_manifestless_existing_root_plans_artifacts_without_project_spec(
         infra_git_repo: Path,
     ) -> None:
@@ -911,8 +911,8 @@ class TestsFlextInfraCodegenConform:
 
     # Why (suite budget): one conform apply plus a check over a full managed
     # tree on a real git repo; the per-case wall only holds idle.
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
     def test_pre_bake_launcher_projection_converges_to_packaged_triple(
         infra_git_repo: Path,
     ) -> None:
@@ -1003,8 +1003,8 @@ class TestsFlextInfraCodegenConform:
             eq=("flext-core",),
         )
 
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
     def test_repository_root_catalog_profile_projects_no_coverage_floor(
         tmp_path: Path,
     ) -> None:
@@ -1066,8 +1066,8 @@ class TestsFlextInfraCodegenConform:
         tm.that(set(addopts) >= set(pytest_policy.standard_addopts), eq=True)
         tm.that(report, lacks="fail_under")
 
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
     def test_project_root_inherits_declared_upstream_facets(
         tmp_path: Path,
     ) -> None:
@@ -1117,8 +1117,8 @@ class TestsFlextInfraCodegenConform:
         projection = docs_dir / c.Infra.DOCS_CONFIG_FILENAME
         tm.ok(u.Cli.json_loads(projection.read_bytes()))
 
-    @pytest.mark.parametrize("mode", tuple(c.Infra.CodegenConformMode))
     @staticmethod
+    @pytest.mark.parametrize("mode", tuple(c.Infra.CodegenConformMode))
     def test_public_cli_routes_check_and_apply_to_one_handler(
         infra_git_repo: Path,
         mode: c.Infra.CodegenConformMode,
@@ -1151,8 +1151,8 @@ class TestsFlextInfraCodegenConform:
 
     # Why (suite budget): dependencies-only apply+check runs two full conform
     # cycles on a real git repo; the per-case wall only holds on an idle CPU.
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
     def test_dependency_surface_excludes_unowned_managed_files(
         infra_git_repo: Path,
     ) -> None:

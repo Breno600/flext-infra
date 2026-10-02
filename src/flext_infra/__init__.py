@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core import build_lazy_import_map, install_lazy_exports
+from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 from flext_infra.__version__ import (
     __author__,
     __author_email__,
@@ -149,6 +149,8 @@ if TYPE_CHECKING:
     from flext_infra.maintenance.clean import FlextInfraCleanService
     from flext_infra.maintenance.python_version import FlextInfraPythonVersionEnforcer
     from flext_infra.maintenance.sonarcloud import FlextInfraSonarcloudSettingsSync
+    from flext_infra.maintenance.sonarcloud_client import FlextInfraSonarcloudClient
+    from flext_infra.maintenance.sonarcloud_issues import FlextInfraSonarcloudIssues
     from flext_infra.models import FlextInfraModels, m
     from flext_infra.promoted import FlextInfraPromoted
     from flext_infra.protocols import FlextInfraProtocols, FlextInfraProtocolsBase, p
@@ -327,6 +329,8 @@ __all__: tuple[str, ...] = (
     "FlextInfraSettings",
     "FlextInfraSkillValidator",
     "FlextInfraSmellsGate",
+    "FlextInfraSonarcloudClient",
+    "FlextInfraSonarcloudIssues",
     "FlextInfraSonarcloudSettingsSync",
     "FlextInfraStubSupplyChain",
     "FlextInfraTestmonDbInspector",
@@ -491,6 +495,8 @@ _LAZY_IMPORTS = MappingProxyType(
             ".maintenance.clean": ("FlextInfraCleanService",),
             ".maintenance.python_version": ("FlextInfraPythonVersionEnforcer",),
             ".maintenance.sonarcloud": ("FlextInfraSonarcloudSettingsSync",),
+            ".maintenance.sonarcloud_client": ("FlextInfraSonarcloudClient",),
+            ".maintenance.sonarcloud_issues": ("FlextInfraSonarcloudIssues",),
             ".models": ("FlextInfraModels", "m"),
             ".promoted": ("FlextInfraPromoted",),
             ".protocols": ("FlextInfraProtocols", "FlextInfraProtocolsBase", "p"),

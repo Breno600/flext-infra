@@ -104,12 +104,7 @@ class FlextInfraCodegenGenerationStandardMixin(
                     cls._type_checking_sort_key(rendered_module, root_names),
                     cls._format_import("", rendered_module, parts),
                 ))
-        lazy_module = (
-            c.Infra.LAZY_BOOTSTRAP_MODULE
-            if current_pkg.split(".", maxsplit=1)[0]
-            == c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
-            else c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
-        )
+        lazy_module = c.Infra.LAZY_BOOTSTRAP_MODULE
         statements.append((
             cls._type_checking_sort_key(lazy_module, root_names),
             cls._format_import("", lazy_module, c.Infra.LAZY_BOOTSTRAP_HELPERS),
@@ -327,7 +322,7 @@ class FlextInfraCodegenGenerationStandardMixin(
         )
         first_party_names = {
             current_pkg,
-            *FlextInfraToolTablesPhase.first_party_namespaces(project_root),
+            *FlextInfraToolTablesPhase.first_party_namespaces(path=project_root),
         }
         type_checking_root_names = frozenset(first_party_names)
         type_checking_lines = "\n".join(

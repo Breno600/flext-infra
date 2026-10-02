@@ -88,10 +88,11 @@ class FlextInfraUtilitiesDocsFix:
                         c.Infra.RUFF,
                         c.Infra.VERB_CHECK,
                         *config.Infra.codegen.make.ruff.lint_fix,
-                        # Ruff writes its fix summary to stderr even when every
-                        # finding was fixed; the stderr-silent form leaves the
-                        # exit code as the verdict (nonzero: unfixable remains).
-                        "--silent",
+                        # Diagnostics only: the stdin fix summary and the
+                        # show-fixes enumeration are not findings, so any
+                        # stderr left is a remaining finding.
+                        "--quiet",
+                        "--no-show-fixes",
                         "--extend-ignore",
                         ",".join(c.Infra.PYTHON_FENCE_RUFF_EXTEND_IGNORE),
                         "--stdin-filename",
@@ -100,17 +101,32 @@ class FlextInfraUtilitiesDocsFix:
                     ],
                     input_data=body.encode(),
                 )
-                if outcome.failure:
-                    raise RuntimeError(outcome.error or f"Ruff could not inspect {rel}")
-                if outcome.value.stderr or not u.Cli.process_succeeded(
-                    outcome.value.outcome,
-                ):
+                if fix_outcome.failure:
+                    raise RuntimeError(
+                        fix_outcome.error or f"Ruff could not inspect {rel}",
+                    )
+                # ``ruff check --fix`` exits non-zero when it DETECTED
+                # violations even after fixing every one of them; the fence
+                # is accepted only when a second, fix-free check comes back
+                # clean, never on the fix pass's own exit code.
+                fixed_body = fix_outcome.value.stdout
+                verify_outcome = u.Cli.run_raw(common, input_data=fixed_body.encode())
+                if verify_outcome.failure:
+                    raise RuntimeError(
+                        verify_outcome.error or f"Ruff could not verify {rel}",
+                    )
+                if not u.Cli.process_succeeded(verify_outcome.value.outcome):
                     msg = (
                         f"Ruff could not fix {rel}: "
-                        f"{outcome.value.stdout}\n{outcome.value.stderr}"
+                        f"{verify_outcome.value.stdout}\n{verify_outcome.value.stderr}"
                     )
                     raise RuntimeError(msg)
-                fixed_body = outcome.value.stdout
+                if verify_outcome.value.stderr:
+                    msg = (
+                        f"Ruff emitted diagnostics while fixing {rel}: "
+                        f"{verify_outcome.value.stderr}"
+                    )
+                    raise RuntimeError(msg)
                 if fixed_body == body:
                     return match.group(0)
                 # A closing fence only closes the block when it starts its own

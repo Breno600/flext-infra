@@ -58,6 +58,7 @@ class TestsFlextInfraExtraPathsManager:
         tm.that(result.success, eq=True)
         tm.that(result.value, eq=False)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "tool_doc",
         [
@@ -66,7 +67,6 @@ class TestsFlextInfraExtraPathsManager:
             {"pyright": {"extraPaths": []}, "pyrefly": {"search-path": ["."]}},
         ],
     )
-    @staticmethod
     def test_sync_one_success_cases(
         tmp_path: Path,
         tool_doc: t.MappingKV[str, t.JsonValue],

@@ -22,8 +22,9 @@ if TYPE_CHECKING:
 class TestsFlextInfraAuditor:
     """Tests for the docs auditor and its static helpers."""
 
+    @staticmethod
     @pytest.fixture
-    def auditor(self) -> FlextInfraDocAuditor:
+    def auditor() -> FlextInfraDocAuditor:
         """Provide ``auditor``.
 
         Returns:
@@ -32,8 +33,9 @@ class TestsFlextInfraAuditor:
         """
         return FlextInfraDocAuditor()
 
+    @staticmethod
     @pytest.fixture
-    def normalize_link(self) -> Callable[[str], str]:
+    def normalize_link() -> Callable[[str], str]:
         """Provide ``normalize_link``.
 
         Returns:
@@ -47,8 +49,9 @@ class TestsFlextInfraAuditor:
 
         return _normalize
 
+    @staticmethod
     @pytest.fixture
-    def should_skip_target(self) -> Callable[[str, str], bool]:
+    def should_skip_target() -> Callable[[str, str], bool]:
         """Provide ``should_skip_target``.
 
         Returns:
@@ -62,8 +65,9 @@ class TestsFlextInfraAuditor:
 
         return _should_skip
 
+    @staticmethod
     @pytest.fixture
-    def is_external(self) -> Callable[[str], bool]:
+    def is_external() -> Callable[[str], bool]:
         """Provide ``is_external``.
 
         Returns:
@@ -100,6 +104,7 @@ class TestsFlextInfraAuditor:
         tm.that(issue.issue_type, eq="broken_link")
         tm.that(issue.severity, eq="high")
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("projects", "check", "output_dir"),
         [
@@ -111,7 +116,6 @@ class TestsFlextInfraAuditor:
             (None, "all", "custom_output"),
         ],
     )
-    @staticmethod
     def test_audit_option_variants(
         *,
         auditor: FlextInfraDocAuditor,
@@ -156,6 +160,7 @@ class TestsFlextInfraAuditor:
         """Test issue frozen."""
         tm.that(m.Infra.AuditIssue.model_config.get("frozen"), eq=True)
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("raw", "expected"),
         [
@@ -166,7 +171,6 @@ class TestsFlextInfraAuditor:
             ("<path/to/file.md#section?param=value>", "path/to/file.md"),
         ],
     )
-    @staticmethod
     def test_normalize_link(
         normalize_link: Callable[[str], str],
         raw: str,
@@ -175,6 +179,7 @@ class TestsFlextInfraAuditor:
         """Test normalize link."""
         tm.that(normalize_link(raw), eq=expected)
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("text", "target", "expected"),
         [
@@ -185,7 +190,6 @@ class TestsFlextInfraAuditor:
             ("[a/b]", "a/b", False),
         ],
     )
-    @staticmethod
     def test_should_skip_target(
         *,
         should_skip_target: Callable[[str, str], bool],
@@ -196,8 +200,8 @@ class TestsFlextInfraAuditor:
         """Test should skip target."""
         tm.that(should_skip_target(text, target), eq=expected)
 
-    @pytest.mark.parametrize("scheme", sorted(c.Infra.DOCS_EXTERNAL_SCHEMES))
     @staticmethod
+    @pytest.mark.parametrize("scheme", sorted(c.Infra.DOCS_EXTERNAL_SCHEMES))
     def test_permitted_external_schemes_are_preserved(
         *,
         is_external: Callable[[str], bool],
@@ -212,6 +216,7 @@ class TestsFlextInfraAuditor:
 
         tm.that(is_external(target), eq=True)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "target",
         [
@@ -220,7 +225,6 @@ class TestsFlextInfraAuditor:
             f"{c.Infra.DOCS_INSECURE_WEB_SCHEME.upper()}://example.invalid",
         ],
     )
-    @staticmethod
     def test_insecure_documentation_urls_fail_fast(
         *,
         is_external: Callable[[str], bool],

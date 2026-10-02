@@ -60,12 +60,12 @@ class TestsFlextInfraDepsDetectorMain:
     # declares, so the scenario uses untyped libraries whose stubs it lacks.
     # The governed mypy policy decides whether those stubs are findings: when
     # untyped imports are followed, applying typings adds nothing.
+    @staticmethod
     @pytest.mark.parametrize(
         "real_detector_project",
         [("requests", "pytz"), ("requests", "pytz", "six")],
         indirect=True,
     )
-    @staticmethod
     def test_apply_typings_follows_governed_policy_and_preserves_source(
         real_detector_project: Path,
     ) -> None:

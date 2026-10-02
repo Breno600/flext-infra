@@ -779,6 +779,7 @@ class TestsFlextInfraRepositoryLocalTopology:
 
         tm.fail(result, has="No item found with id origin")
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("missing_key", "expected_error"),
         [
@@ -786,7 +787,6 @@ class TestsFlextInfraRepositoryLocalTopology:
             ("branch", "Git submodule branch is missing"),
         ],
     )
-    @staticmethod
     def test_gitmodule_requires_complete_contract(
         tmp_path: Path,
         missing_key: str,
@@ -855,8 +855,8 @@ class TestsFlextInfraRepositoryLocalTopology:
 
         tm.fail(result, has="failed to read Git submodule declarations")
 
-    @pytest.mark.parametrize("declared_path", ["../escape", "/absolute/escape"])
     @staticmethod
+    @pytest.mark.parametrize("declared_path", ["../escape", "/absolute/escape"])
     def test_gitmodule_rejects_escaping_path(
         tmp_path: Path,
         declared_path: str,

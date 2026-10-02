@@ -40,6 +40,7 @@ class TestsFlextInfraDepsModernizerMainExtra:
         tm.that(modernizer.run(), eq=0)
         return (modernizer_workspace / c.PYPROJECT_FILENAME).read_text(encoding="utf-8")
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("content", "expected"),
         [
@@ -48,7 +49,6 @@ class TestsFlextInfraDepsModernizerMainExtra:
             pytest.param("[invalid toml {", 2, id="invalid-root-pyproject"),
         ],
     )
-    @staticmethod
     def test_run_handles_root_edge_cases(
         tmp_path: Path,
         content: str | None,

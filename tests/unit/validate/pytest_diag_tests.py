@@ -429,6 +429,7 @@ class TestsFlextInfraPytestDiag:
         with pytest.raises(ValueError, match="zip"):
             extractor.extract(junit, log, report_log=extractor.report_log)
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("phases", "expected"),
         [
@@ -438,7 +439,6 @@ class TestsFlextInfraPytestDiag:
         ],
         ids=["missing-call", "missing-teardown", "duplicate-setup"],
     )
-    @staticmethod
     def test_report_log_rejects_incomplete_or_repeated_lifecycles(
         tmp_path: Path,
         phases: t.StrTuple,

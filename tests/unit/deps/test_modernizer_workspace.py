@@ -166,6 +166,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
         error = tm.fail(formatted)
         tm.that(error, has=["no mise.lock", "run make upg"])
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("content", "exists", "expected"),
         [
@@ -174,7 +175,6 @@ class TestsFlextInfraDepsModernizerWorkspace:
             pytest.param("", False, False, id="missing"),
         ],
     )
-    @staticmethod
     def test_toml_read_handles_public_file_cases(
         tmp_path: Path,
         content: str,
@@ -213,6 +213,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
         result = u.Infra.resolve_repository_root_or_cwd(deep_path)
         tm.that(str(result), ne="")
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("description", "sort_first"),
         [
@@ -229,7 +230,6 @@ class TestsFlextInfraDepsModernizerWorkspace:
             ),
         ],
     )
-    @staticmethod
     def test_conform_preserves_explicit_project_table_boundary(
         tmp_path: Path,
         description: str,
@@ -439,8 +439,8 @@ class TestsFlextInfraDepsModernizerWorkspace:
         tm.that(ambiguous.run(), eq=2)
         tm.that(exact.run(), eq=0)
 
-    @pytest.mark.parametrize("member_kind", ["absolute", "parent-relative", "symlink"])
     @staticmethod
+    @pytest.mark.parametrize("member_kind", ["absolute", "parent-relative", "symlink"])
     def test_modernizer_rejects_configured_members_outside_workspace(
         modernizer_workspace: Path,
         member_kind: str,
@@ -474,8 +474,8 @@ class TestsFlextInfraDepsModernizerWorkspace:
             original,
         )
 
-    @pytest.mark.parametrize("selector_kind", ["absolute", "parent-relative"])
     @staticmethod
+    @pytest.mark.parametrize("selector_kind", ["absolute", "parent-relative"])
     def test_modernizer_rejects_undeclared_project_paths(
         modernizer_workspace: Path,
         selector_kind: str,

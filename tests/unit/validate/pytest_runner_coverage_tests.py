@@ -18,8 +18,8 @@ from tests.unit.validate.pytest_runner_support import runner_for, summary
 class TestsFlextInfraPytestRunnerCoverage:
     """Exercise the real coverage pass and its published accounting."""
 
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
     def test_coverage_verb_publishes_artifact_without_testmon(
         cached_runner_project: Path,
     ) -> None:
@@ -59,8 +59,8 @@ class TestsFlextInfraPytestRunnerCoverage:
         )
         tm.that(runner.testmon_db.exists(), eq=False)
 
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
     def test_failed_coverage_suite_preserves_original_failure_and_accounting(
         cached_runner_project: Path,
     ) -> None:

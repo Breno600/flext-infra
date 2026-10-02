@@ -16,11 +16,15 @@ if TYPE_CHECKING:
     from flext_infra.maintenance.clean import FlextInfraCleanService
     from flext_infra.maintenance.python_version import FlextInfraPythonVersionEnforcer
     from flext_infra.maintenance.sonarcloud import FlextInfraSonarcloudSettingsSync
+    from flext_infra.maintenance.sonarcloud_client import FlextInfraSonarcloudClient
+    from flext_infra.maintenance.sonarcloud_issues import FlextInfraSonarcloudIssues
 
 
 __all__: tuple[str, ...] = (
     "FlextInfraCleanService",
     "FlextInfraPythonVersionEnforcer",
+    "FlextInfraSonarcloudClient",
+    "FlextInfraSonarcloudIssues",
     "FlextInfraSonarcloudSettingsSync",
 )
 
@@ -30,6 +34,8 @@ _LAZY_IMPORTS = MappingProxyType(
             ".clean": ("FlextInfraCleanService",),
             ".python_version": ("FlextInfraPythonVersionEnforcer",),
             ".sonarcloud": ("FlextInfraSonarcloudSettingsSync",),
+            ".sonarcloud_client": ("FlextInfraSonarcloudClient",),
+            ".sonarcloud_issues": ("FlextInfraSonarcloudIssues",),
         }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,

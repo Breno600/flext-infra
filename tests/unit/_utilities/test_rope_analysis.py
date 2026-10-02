@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 class TestsFlextInfraRopeAnalysis:
     """Behavior contract for Rope-backed semantic analysis."""
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("statement", "suffix"),
         [
@@ -31,7 +32,6 @@ class TestsFlextInfraRopeAnalysis:
             ("from ..leaf import Owner as Local", ".inner.leaf.Owner"),
         ],
     )
-    @staticmethod
     def test_declared_imports_preserve_relative_levels(
         tmp_path: Path,
         statement: str,

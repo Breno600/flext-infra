@@ -90,11 +90,12 @@ class TestsFlextInfraWorktreeFacts(u.Tests.WorktreeFixture):
         self._register(repo, "old-lane", stale, branch="feature/old")
         self._touch(stale / "src.py", age_days=120)
         self._touch(stale / ".venv" / "lib.py", size=8, age_days=120)
+        query = self._query(repo)
 
-        facts, actions = u.Infra.collect_worktree_facts(self._query(repo))
+        facts, actions = u.Infra.collect_worktree_facts(query)
 
         tm.that(len(facts), eq=1)
-        tm.that(facts[0].stale_days > 90, eq=True)
+        tm.that(facts[0].stale_days, gt=query.activity_window_days)
         tm.that(facts[0].deps_bytes, eq=8)
         tm.that(facts[0].retire_candidate, eq=True)
         tm.that(facts[0].branch, eq="feature/old")

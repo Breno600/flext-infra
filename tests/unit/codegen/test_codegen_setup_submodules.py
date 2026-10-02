@@ -25,8 +25,8 @@ pytestmark = [pytest.mark.slow, pytest.mark.remote]
 class TestsFlextInfraCodegenSetupSubmodules:
     """Tests for ``FlextInfraCodegenSetupSubmodules``."""
 
-    @pytest.fixture
     @staticmethod
+    @pytest.fixture
     def generated_project_template(
         resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
     ) -> Path:

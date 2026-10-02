@@ -53,8 +53,8 @@ class TestsFlextInfraFixerInternals:
             has="No sections found",
         )
 
-    @pytest.mark.parametrize("separator", ["\n", "\n\n", "\n\n\n"])
     @staticmethod
+    @pytest.mark.parametrize("separator", ["\n", "\n\n", "\n\n\n"])
     def test_fix_keeps_closing_fence_on_its_own_line(
         tmp_path: Path,
         separator: str,

@@ -21,6 +21,9 @@ from flext_infra._utilities._semantic_cutover.family_flatten import (
 from flext_infra._utilities._semantic_cutover.nesting_cst import (
     FlextInfraUtilitiesSemanticCutoverNestingCst,
 )
+from flext_infra._utilities._semantic_cutover.nesting_owner import (
+    FlextInfraUtilitiesSemanticCutoverNestingOwner,
+)
 from flext_infra._utilities._semantic_cutover.test_helpers import (
     FlextInfraUtilitiesSemanticTestHelpers,
 )
@@ -39,6 +42,7 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
     FlextInfraUtilitiesSemanticTestHelpers,
     FlextInfraUtilitiesSemanticFamilyFlatten,
     FlextInfraUtilitiesSemanticCutoverNestingCst,
+    FlextInfraUtilitiesSemanticCutoverNestingOwner,
     FlextInfraUtilitiesSemanticCutoverEdits,
 ):
     """Plan class nesting from semantic module ownership instead of record lists."""
@@ -103,24 +107,48 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         ) or FlextInfraUtilitiesCodegenNamespace.facade_family_of_directory(
             file_path.parent.name,
         )
-        classes = {
-            node.name: node
-            for node in ast.parse(source, filename=str(file_path)).body
-            if isinstance(node, ast.ClassDef)
-        }
-        if family is None or len(classes) <= 1:
+        # A dunder module (``__main__``, ``__version__``, a package init) is
+        # never a facade module, whatever family directory holds it.
+        if family is None or file_path.stem.startswith("__"):
             return planned.ok({})
+        tree = ast.parse(source, filename=str(file_path))
+        classes = {
+            node.name: node for node in tree.body if isinstance(node, ast.ClassDef)
+        }
         convention = rope_workspace.convention(file_path)
-        owner = convention.module_policy.expected_family
-        if owner is None or owner not in classes:
-            return planned.fail(
-                "class-nesting requires exactly one declared module owner "
-                f"for {convention.module_name}; discovered: {', '.join(classes)}",
-            )
-        bound = cls._inheritance_bound_to_owner(classes, owner)
-        return planned.ok({
+        loose = cls._loose_members(
+            tree,
+            values=not convention.module_policy.allow_type_alias,
+        )
+        if len(classes) <= 1 and not loose:
+            return planned.ok({})
+        owned = cls._module_owner(
+            convention,
+            file_path,
+            classes,
+            cls._declared_names(tree),
+        )
+        if owned.failure:
+            return planned.from_failure(owned)
+        owner = owned.value
+        movable = cls._movable_members(
+            tree,
+            loose,
+            owner=owner,
+            module_name=convention.module_name,
+        )
+        if movable.failure:
+            return planned.from_failure(movable)
+        bound: frozenset[str] = (
+            cls._inheritance_bound_to_owner(classes, owner)
+            if owner in classes
+            else frozenset()
+        )
+        definitions = {
             name: owner for name in classes if name != owner and name not in bound
-        })
+        }
+        definitions.update((name, owner) for name in movable.value)
+        return planned.ok(definitions)
 
     @classmethod
     def _plan_class_nesting(

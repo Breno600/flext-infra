@@ -75,6 +75,7 @@ class TestsFlextInfraPytestRunnerZeroTest:
             slow_phase=slow_phase,
         )
 
+    @pytest.mark.slow
     def test_plural_module_form_still_owns_its_tests(
         self,
         tmp_path: Path,
@@ -94,8 +95,14 @@ class TestsFlextInfraPytestRunnerZeroTest:
             "    tm_value = VALUE == 41\n    assert tm_value\n",
             encoding="utf-8",
         )
-        runner = self._runner(project_root, tmp_path)
-        tm.that(runner._owns_no_tests(), eq=False)
+        outcome = tm.ok(self._runner(project_root, tmp_path).execute())
+
+        tm.that(outcome, eq=pytest.ExitCode.OK.value)
+        summary = self._latest_summary(project_root / cache.reports_directory)
+        plan = m.Infra.PytestSelectionPlan.model_validate_json(
+            self._read(summary.parent / "selection-plan.json"),
+        )
+        tm.that(plan.owns_no_tests, eq=False)
 
     def test_held_testmon_database_lease_refuses_a_concurrent_run(
         self,

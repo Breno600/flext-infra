@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 class TestsPyrightPublicContract:
     """Exercise the configured semantic owner with real source and type stubs."""
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize(
         ("consumer", "private"),
@@ -58,7 +59,6 @@ class TestsPyrightPublicContract:
             ),
         ],
     )
-    @staticmethod
     def test_publicness_uses_resolved_owner(
         tmp_path: Path,
         tool_config_document: m.Infra.ToolConfigDocument,

@@ -181,8 +181,8 @@ class TestsFlextInfraCodegenFilePlanState:
         assert "mode-only drift" in report
         assert "desired=0o755" in report
 
-    @pytest.mark.parametrize("limit", [0, -1])
     @staticmethod
+    @pytest.mark.parametrize("limit", [0, -1])
     def test_drift_report_rejects_non_positive_limit(limit: int) -> None:
         """Test drift report rejects non positive limit."""
         with pytest.raises(ValueError, match="limit must be positive"):

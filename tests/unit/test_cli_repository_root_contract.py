@@ -20,8 +20,8 @@ from tests import u
 class TestsFlextInfraCliRepositoryRootContract:
     """Tests for ``FlextInfraCliRepositoryRootContract``."""
 
-    @pytest.fixture
     @staticmethod
+    @pytest.fixture
     def rendered_makefile(tmp_path: Path) -> str:
         """Use the conform owner and typed fixtures, not a copied Make recipe.
 
@@ -52,6 +52,7 @@ class TestsFlextInfraCliRepositoryRootContract:
             ),
         )
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("group", "command", "generated_command"),
         [
@@ -64,7 +65,6 @@ class TestsFlextInfraCliRepositoryRootContract:
             ],
         ],
     )
-    @staticmethod
     def test_generated_scope_matches_route_and_help(
         rendered_makefile: str,
         group: str,

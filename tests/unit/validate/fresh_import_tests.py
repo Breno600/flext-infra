@@ -25,8 +25,9 @@ if TYPE_CHECKING:
 class TestsFlextInfraFreshImport:
     """Fresh-process import smoke test suite."""
 
+    @staticmethod
     @pytest.fixture
-    def v(self) -> FlextInfraValidateFreshImport:
+    def v() -> FlextInfraValidateFreshImport:
         """Shared validator instance.
 
         Returns:
@@ -137,8 +138,8 @@ class TestsFlextInfraFreshImport:
         )
         tm.that(report.passed, eq=True, msg=str(report.violations))
 
-    @pytest.mark.parametrize("missing_export", [False, True])
     @staticmethod
+    @pytest.mark.parametrize("missing_export", [False, True])
     def test_preserved_initializer_uses_real_publication_contract(
         tmp_path: Path,
         *,
@@ -244,9 +245,9 @@ class TestsFlextInfraFreshImport:
         tm.that(report.violations[0], has="missing_export")
         tm.that(report.violations[0], has="Traceback")
 
+    @staticmethod
     @pytest.mark.parametrize("script_group", ["scripts", "gui-scripts"])
     @pytest.mark.parametrize("target_exists", [False, True])
-    @staticmethod
     def test_declared_script_failure_blocks_publication(
         tmp_path: Path,
         script_group: str,
@@ -356,8 +357,8 @@ class TestsFlextInfraFreshImport:
         tm.that(report.violations[0], has="missing_export")
         tm.that(report.violations[0], has="Traceback")
 
-    @pytest.mark.parametrize("dependency_present", [False, True])
     @staticmethod
+    @pytest.mark.parametrize("dependency_present", [False, True])
     def test_declared_consumer_catches_exports_omitted_from_plan(
         tmp_path: Path,
         *,

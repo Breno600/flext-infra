@@ -122,6 +122,7 @@ class TestsFlextInfraInfraRopeService:
                 for item in rope.objects(module_path, include_local_scopes=False)
             }
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("source", "symbol", "documented"),
         [
@@ -130,7 +131,6 @@ class TestsFlextInfraInfraRopeService:
             ("class Public:\n    pass\n", "Public", False),
         ],
     )
-    @staticmethod
     def test_source_docstrings_only_resolve_local_definitions(
         source: str,
         symbol: str,
@@ -308,8 +308,8 @@ class TestsFlextInfraInfraRopeService:
                 eq=True,
             )
 
-    @pytest.mark.parametrize("family_alias", sorted(u.Infra.facade_families()))
     @staticmethod
+    @pytest.mark.parametrize("family_alias", sorted(u.Infra.facade_families()))
     def test_class_nesting_cutover_uses_declared_family_owner(
         tmp_path: Path,
         family_alias: str,

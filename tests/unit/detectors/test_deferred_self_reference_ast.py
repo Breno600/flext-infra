@@ -100,6 +100,7 @@ class TestsFlextInfraDeferredSelfReferenceNormalizer:
         )
         tm.that(u.Infra.normalize_deferred_self_references(source), eq=source)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "declaration",
         [
@@ -108,7 +109,6 @@ class TestsFlextInfraDeferredSelfReferenceNormalizer:
             'type _Kind = Literal["one", "two"]',
         ],
     )
-    @staticmethod
     def test_public_normalizer_accepts_declared_owner_aliases(
         declaration: str,
     ) -> None:
@@ -148,11 +148,11 @@ class TestsFlextInfraDeferredSelfReferenceNormalizer:
 
         tm.that(u.Infra.normalize_deferred_self_references(source), eq=source)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "declaration",
         ["_Kind: object", "class Other:\n        _Kind = str"],
     )
-    @staticmethod
     def test_public_normalizer_rejects_unbound_or_foreign_owner_members(
         declaration: str,
     ) -> None:

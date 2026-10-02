@@ -17,9 +17,9 @@ from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
 class TestsFlextInfraModRuleFixtureStaging:
     """Fixture staging follows sgconfig declarations, never the owning checkout."""
 
+    @staticmethod
     @pytest.mark.parametrize("with_utils", [False, True])
     @pytest.mark.parametrize("regenerate_snapshots", [False, True])
-    @staticmethod
     def test_staging_copies_declared_trees_without_traversing_checkout(
         tmp_path: Path,
         *,
@@ -74,8 +74,8 @@ class TestsFlextInfraModRuleFixtureStaging:
         assert not (staged / ".agents").is_symlink()
         assert not (staged / ".git").exists()
 
-    @pytest.mark.parametrize("declaration", [".", "../outside", "/outside"])
     @staticmethod
+    @pytest.mark.parametrize("declaration", [".", "../outside", "/outside"])
     def test_staging_rejects_owner_wide_or_escaping_declarations(
         tmp_path: Path,
         declaration: str,
@@ -98,8 +98,8 @@ class TestsFlextInfraModRuleFixtureStaging:
 
         assert not staged.exists()
 
-    @pytest.mark.parametrize("linked_directory", [False, True])
     @staticmethod
+    @pytest.mark.parametrize("linked_directory", [False, True])
     def test_staging_rejects_declared_symlinks_before_copying(
         tmp_path: Path,
         *,

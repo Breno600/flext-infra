@@ -23,8 +23,9 @@ if TYPE_CHECKING:
 class TestsFlextInfraDiscoveryInfraDiscovery:
     """Tests for ``FlextInfraDiscoveryInfraDiscovery``."""
 
+    @staticmethod
     @pytest.fixture
-    def service(self) -> u.Infra:
+    def service() -> u.Infra:
         """Provide ``service``.
 
         Returns:
@@ -33,8 +34,8 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         """
         return u.Infra()
 
-    @pytest.fixture
     @staticmethod
+    @pytest.fixture
     def workspace_with_projects(tmp_path: Path) -> Path:
         """Provide ``workspace_with_projects``.
 
