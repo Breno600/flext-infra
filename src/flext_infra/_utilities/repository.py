@@ -412,8 +412,9 @@ class FlextInfraUtilitiesRepository:
 
         """
         from flext_infra import u
-
-        from .pyproject_conform import FlextInfraUtilitiesPyprojectConform
+        from flext_infra._utilities.pyproject_conform import (
+            FlextInfraUtilitiesPyprojectConform,
+        )
 
         # Identity detection consumes the same owner-recovered declaration as
         # metadata and template composition. Raw projection bytes may still

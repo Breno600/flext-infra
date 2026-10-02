@@ -208,7 +208,9 @@ class FlextInfraMiseArtifactsJournal:
             The resulting ``p.Result[m.Infra.CodegenTransactionJournal]``.
 
         """
-        from ._mise_artifacts_verification import FlextInfraMiseArtifactsVerification
+        from flext_infra.codegen._mise_artifacts_verification import (
+            FlextInfraMiseArtifactsVerification,
+        )
 
         registered = FlextInfraMiseArtifactsVerification.register_transaction_manifests(
             layout,
@@ -990,7 +992,9 @@ class FlextInfraMiseArtifactsJournal:
             The resulting ``p.Result[bool]``.
 
         """
-        from ._mise_artifacts_verification import FlextInfraMiseArtifactsVerification
+        from flext_infra.codegen._mise_artifacts_verification import (
+            FlextInfraMiseArtifactsVerification,
+        )
 
         return FlextInfraMiseArtifactsVerification.journal_topology(
             plan.layout,
