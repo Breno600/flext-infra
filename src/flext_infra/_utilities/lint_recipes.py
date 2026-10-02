@@ -79,6 +79,9 @@ class FlextInfraUtilitiesLintRecipes:
     ) -> str:
         """Return ``source`` with the declared recipe of every issue applied.
 
+        A static-method finding on a hook a subclass overrides is filtered
+        out by the caller (``overridden_findings``) and never reaches here.
+
         ``path`` names the module in every refusal; a module without a
         docstring receives one, summarized from its name, to carry the notice.
 
@@ -102,11 +105,7 @@ class FlextInfraUtilitiesLintRecipes:
         ] = {}
         wants_notice = False
         for issue in issues:
-            recipe = recipes.get(issue.code)
-            if recipe is None:
-                msg = f"{path}: lint finding {issue.code} has no declared fix recipe"
-                raise ValueError(msg)
-            match recipe:
+            match cls._recipe_for(issue, recipes, path):
                 case c.Infra.LintFixRecipe.RETURNS_SECTION:
                     function = cls._documented_at(tree, issue.line, path)
                     sections.setdefault(function, {}).setdefault("Returns", []).append(
@@ -127,6 +126,9 @@ class FlextInfraUtilitiesLintRecipes:
                     summaries[definition] = cls._summary_for(definition)
                 case c.Infra.LintFixRecipe.COPYRIGHT_NOTICE:
                     wants_notice = True
+                case c.Infra.LintFixRecipe.STATIC_METHOD:
+                    # Planned per method below, after duplicates collapse.
+                    continue
         edits = list(cls._static_method_plan(source, tree, issues, path, recipes))
         for function, wanted in sections.items():
             docstring = cls._docstring_expr(function)
@@ -284,7 +286,7 @@ class FlextInfraUtilitiesLintRecipes:
         """
         lines = source.splitlines(keepends=True)
         methods = dict.fromkeys(
-            cls._receiver_method_at(tree, issue, path)
+            cls._receiver_method_at(tree, issue, path)[1]
             for issue in issues
             if recipes.get(issue.code) is c.Infra.LintFixRecipe.STATIC_METHOD
         )
@@ -295,18 +297,110 @@ class FlextInfraUtilitiesLintRecipes:
         )
 
     @staticmethod
+    def _recipe_for(
+        issue: m.Infra.Issue,
+        recipes: t.MappingKV[str, c.Infra.LintFixRecipe],
+        path: Path,
+    ) -> c.Infra.LintFixRecipe:
+        """Return the declared recipe of one finding.
+
+        Returns:
+            The recipe the tooling owner maps the finding's rule to.
+
+        Raises:
+            ValueError: If the finding's rule has no declared recipe.
+
+        """
+        recipe = recipes.get(issue.code)
+        if recipe is None:
+            msg = f"{path}: lint finding {issue.code} has no declared fix recipe"
+            raise ValueError(msg)
+        return recipe
+
+    @staticmethod
+    def overridden_methods(
+        sources: t.SequenceOf[str],
+    ) -> frozenset[t.Pair[str, str]]:
+        """Return each ``(class, method)`` a subclass in ``sources`` redefines.
+
+        Ruff judges a method alone and cannot see that a subclass overrides
+        it; declaring such a hook static would break every override. Bases
+        are matched by their declared name, transitively, so an ambiguous
+        name only keeps more methods with their owner.
+
+        Returns:
+            The overridden ``(class name, method name)`` pairs.
+
+        """
+        bases: MutableMapping[str, set[str]] = {}
+        methods: MutableMapping[str, set[str]] = {}
+        for source in sources:
+            for node in ast.walk(ast.parse(source)):
+                if not isinstance(node, ast.ClassDef):
+                    continue
+                bases.setdefault(node.name, set()).update(
+                    ast.unparse(base).rsplit(".", maxsplit=1)[-1] for base in node.bases
+                )
+                methods.setdefault(node.name, set()).update(
+                    item.name
+                    for item in node.body
+                    if isinstance(item, ast.FunctionDef | ast.AsyncFunctionDef)
+                )
+        ancestors: MutableMapping[str, set[str]] = {}
+        for name in bases:
+            seen: set[str] = set()
+            pending = list(bases[name])
+            while pending:
+                base = pending.pop()
+                if base not in seen:
+                    seen.add(base)
+                    pending.extend(bases.get(base, ()))
+            ancestors[name] = seen
+        return frozenset(
+            (ancestor, method)
+            for name, found in ancestors.items()
+            for ancestor in found
+            for method in methods[name] & methods.get(ancestor, set())
+        )
+
+    @classmethod
+    def overridden_findings(
+        cls,
+        source: str,
+        issues: t.SequenceOf[m.Infra.Issue],
+        *,
+        path: Path,
+        recipes: t.MappingKV[str, c.Infra.LintFixRecipe],
+        overridden: frozenset[t.Pair[str, str]],
+    ) -> t.VariadicTuple[m.Infra.Issue]:
+        """Return the static-method findings whose method a subclass overrides.
+
+        Returns:
+            The findings the static-method recipe leaves to their owner.
+
+        """
+        tree = ast.parse(source)
+        return tuple(
+            issue
+            for issue in issues
+            if recipes.get(issue.code) is c.Infra.LintFixRecipe.STATIC_METHOD
+            for owner, method in (cls._receiver_method_at(tree, issue, path),)
+            if (owner.name, method.name) in overridden
+        )
+
+    @staticmethod
     def _receiver_method_at(
         tree: ast.Module,
         issue: m.Infra.Issue,
         path: Path,
-    ) -> ast.FunctionDef | ast.AsyncFunctionDef:
+    ) -> t.Pair[ast.ClassDef, ast.FunctionDef | ast.AsyncFunctionDef]:
         """Return the class method Ruff reports as never reading its receiver.
 
         Ruff reports the finding at the method's name on its ``def`` line and
         names the method in its message, so line and name select one method.
 
         Returns:
-            The method the finding names.
+            The owning class and the method the finding names.
 
         Raises:
             ValueError: If no class method with a receiver matches the finding.
@@ -322,7 +416,7 @@ class FlextInfraUtilitiesLintRecipes:
                     and f"`{method.name}`" in issue.message
                     and (*method.args.posonlyargs, *method.args.args)
                 ):
-                    return method
+                    return owner, method
         msg = f"{path}: no class method with a receiver matches line {issue.line}"
         raise ValueError(msg)
 

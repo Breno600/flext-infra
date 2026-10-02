@@ -98,6 +98,15 @@ class FlextInfraRuffLintGate(FlextInfraGate):
         """
         execution = super().fix(project_dir, ctx)
         recipes = config.Infra.tooling.tools.ruff.lint.fix_recipes
+        overridden = u.Infra.overridden_methods(
+            tuple(
+                path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+                for directory in self._existing_check_dirs(project_dir)
+                for path in u.Infra.iter_directory_python_files(
+                    project_dir / directory,
+                )
+            ),
+        )
         for phase in (
             frozenset({
                 c.Infra.LintFixRecipe.SUMMARY_DOCSTRING,
@@ -110,9 +119,13 @@ class FlextInfraRuffLintGate(FlextInfraGate):
                 c.Infra.LintFixRecipe.RAISES_SECTION,
             }),
         ):
+            hooks = self._overridden_hooks(execution.issues, recipes, overridden)
             by_file: MutableMapping[Path, list[m.Infra.Issue]] = {}
             for issue in execution.issues:
-                if recipes.get(issue.code) in phase:
+                if (
+                    recipes.get(issue.code) in phase
+                    and f"{issue.file}:{issue.line}:{issue.code}" not in hooks
+                ):
                     by_file.setdefault(Path(issue.file), []).append(issue)
             if not by_file:
                 continue
@@ -138,15 +151,50 @@ class FlextInfraRuffLintGate(FlextInfraGate):
                 for before, repaired in planned:
                     u.Cli.atomic_write_text_file_guarded(before, repaired).unwrap()
             execution = super().fix(project_dir, ctx)
+        hooks = self._overridden_hooks(execution.issues, recipes, overridden)
+        if hooks:
+            u.Cli.info(
+                f"lint: {len(hooks)} no-self-use finding(s) are hooks a subclass "
+                f"overrides, left to their owner: {', '.join(hooks)}",
+            )
         left = sorted(
-            f"{issue.file}:{issue.line}:{issue.code}"
+            located
             for issue in execution.issues
             if issue.code in recipes
+            and (located := f"{issue.file}:{issue.line}:{issue.code}") not in hooks
         )
         if left:
             msg = f"lint recipes left their own findings: {', '.join(left)}"
             raise ValueError(msg)
         return execution
+
+    @staticmethod
+    def _overridden_hooks(
+        issues: t.SequenceOf[m.Infra.Issue],
+        recipes: t.MappingKV[str, c.Infra.LintFixRecipe],
+        overridden: frozenset[t.Pair[str, str]],
+    ) -> t.StrSequence:
+        """Locate the static-method findings the recipe leaves to their owner.
+
+        Returns:
+            ``file:line:code`` of each finding on a method a subclass overrides.
+
+        """
+        by_file: MutableMapping[Path, list[m.Infra.Issue]] = {}
+        for issue in issues:
+            if recipes.get(issue.code) is c.Infra.LintFixRecipe.STATIC_METHOD:
+                by_file.setdefault(Path(issue.file), []).append(issue)
+        return sorted(
+            f"{issue.file}:{issue.line}:{issue.code}"
+            for path, found in by_file.items()
+            for issue in u.Infra.overridden_findings(
+                path.read_text(encoding=c.Cli.ENCODING_DEFAULT),
+                found,
+                path=path,
+                recipes=recipes,
+                overridden=overridden,
+            )
+        )
 
     def _lint_command(
         self,

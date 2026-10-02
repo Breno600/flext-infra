@@ -16,20 +16,29 @@ class TestsFlextInfraLintRecipes:
 
     @staticmethod
     def _apply(source: str, *issues: t.Triple[str, int, str]) -> str:
+        recipes = config.Infra.tooling.tools.ruff.lint.fix_recipes
+        findings = tuple(
+            m.Infra.Issue(
+                file="sample.py",
+                line=line,
+                column=1,
+                code=code,
+                message=message,
+            )
+            for code, line, message in issues
+        )
+        hooks = u.Infra.overridden_findings(
+            source,
+            findings,
+            path=Path("sample.py"),
+            recipes=recipes,
+            overridden=u.Infra.overridden_methods((source,)),
+        )
         return u.Infra.apply_lint_recipes(
             source,
-            tuple(
-                m.Infra.Issue(
-                    file="sample.py",
-                    line=line,
-                    column=1,
-                    code=code,
-                    message=message,
-                )
-                for code, line, message in issues
-            ),
+            tuple(finding for finding in findings if finding not in hooks),
             path=Path("sample.py"),
-            recipes=config.Infra.tooling.tools.ruff.lint.fix_recipes,
+            recipes=recipes,
             notice="Copyright (c) 2026 Sample. All rights reserved.\nSPDX: MIT",
         )
 
@@ -317,3 +326,24 @@ class TestsFlextInfraLintRecipes:
 
         with pytest.raises(ValueError, match="comment or continuation"):
             TestsFlextInfraLintRecipes._unused_receiver(source, "test_note")
+
+    @staticmethod
+    def test_static_method_leaves_a_hook_a_subclass_overrides() -> None:
+        """A base method a subclass redefines keeps its receiver."""
+        source = (
+            "class Base:\n"
+            "    def hook(self) -> int:\n"
+            "        return 1\n"
+            "\n"
+            "\n"
+            "class Child(Base):\n"
+            "    def hook(self) -> int:\n"
+            "        return id(self)\n"
+        )
+
+        repaired = TestsFlextInfraLintRecipes._apply(
+            source,
+            ("no-self-use", 2, "Method `hook` could be a function"),
+        )
+
+        tm.that(repaired, eq=source)
