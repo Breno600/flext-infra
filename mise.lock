@@ -131,10 +131,7 @@ url_api = "https://api.github.com/repos/direnv/direnv/releases/assets/274610569"
 [[tools."github:kucherenko/jscpd"]]
 version = "5.3.2"
 backend = "github:kucherenko/jscpd"
-specifiers = [
-    "5.3.2",
-    "latest",
-]
+specifiers = ["latest"]
 
 [tools."github:kucherenko/jscpd"."platforms.linux-arm64"]
 checksum = "sha256:ddf336de86eb7e26632062a01e751417f6579b4422e9156aa3836fdab1d0265d"
@@ -532,10 +529,7 @@ url = "https://nodejs.org/dist/v26.10.0/node-v26.10.0-win-x64.zip"
 version = "0.45.3"
 aube = { path = ".mise/locks/npm-ast-grep-cli/0.45.3~7a027ead", digest = "sha256:e59172c3ac91ac960cc8cae85e3f4106f868ad3010777268d01e944064bad306" }
 backend = "npm:@ast-grep/cli"
-specifiers = [
-    "0.45.3",
-    "latest",
-]
+specifiers = ["latest"]
 
 [tools."npm:@ast-grep/cli".options]
 allow_builds = '["@ast-grep/cli"]'

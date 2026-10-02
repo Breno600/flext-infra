@@ -131,6 +131,7 @@ class TestsFlextInfraRootArtifactOwnership:
     def test_conform_uses_one_fixed_point_plan(infra_git_repo: Path) -> None:
         """Test conform uses one fixed point plan."""
         root = infra_git_repo
+        project = u.Tests.project_spec("flext-demo")
         u.Tests.write_project_beads_config(root, "flext-demo")
         package_root = root / "src" / "flext_demo"
         tm.ok(u.Cli.ensure_dir(package_root))
@@ -142,8 +143,9 @@ class TestsFlextInfraRootArtifactOwnership:
                     "[project]\n"
                     'name = "flext-demo"\n'
                     'version = "0.1.0"\n'
+                    f'authors = [{{name = "{project.author_name}", email = "{project.author_email}"}}]\n'
                     f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
-                    "dependencies = []\n"
+                    f'dependencies = ["{u.Tests.flext_source(project.upstream)}"]\n'
                     "[project.urls]\n"
                     'Repository = "https://github.com/flext-sh/flext-demo"\n'
                 ),
