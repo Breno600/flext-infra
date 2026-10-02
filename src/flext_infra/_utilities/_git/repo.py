@@ -210,15 +210,17 @@ class FlextInfraUtilitiesGitRepo:
                 )
             except GitCommandError as exc:
                 return r[Path].fail(str(exc), exception=exc)
-            # Git lists the main worktree first. Bare shared storage has no main
-            # checkout, so each registered worktree is its own primary.
+            # Git lists the main worktree first. Bare shared storage, or a main
+            # entry that is the common git dir itself (a submodule module dir
+            # without core.worktree), has no main checkout, so each registered
+            # worktree is its own primary.
             if git_dir == common_dir:
                 primary_root = caller_root
             elif not entries:
                 return r[Path].fail(
                     f"Git worktree registry is empty for {repository_path}",
                 )
-            elif not entries[0].bare:
+            elif not entries[0].bare and entries[0].path != common_dir:
                 primary_root = entries[0].path
             elif caller_root in {entry.path for entry in entries}:
                 primary_root = caller_root
