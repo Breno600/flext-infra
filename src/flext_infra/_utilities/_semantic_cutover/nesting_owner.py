@@ -13,12 +13,13 @@ from typing import TYPE_CHECKING
 from flext_cli import u
 
 from flext_core import r
+from flext_infra import t
 from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import m, p, t
+    from flext_infra import m, p
 
 
 class FlextInfraUtilitiesSemanticCutoverNestingOwner:
@@ -136,26 +137,30 @@ class FlextInfraUtilitiesSemanticCutoverNestingOwner:
         )
 
     @classmethod
-    def _require_movable_members(
+    def _movable_members(
         cls,
         tree: ast.Module,
         members: t.VariadicTuple[str],
         *,
         owner: str,
         module_name: str,
-    ) -> p.Result[bool]:
-        """Reject a loose member whose move would change its meaning.
+    ) -> p.Result[t.VariadicTuple[str]]:
+        """Return the loose members the owner body can hold, in module order.
 
-        A member that reads the owner while it is being defined cannot live in
-        the owner's body, and a function rebinding module state through
-        ``global`` loses that state once it becomes a static method.
+        A member that reads the owner while it is being defined (an alias of
+        an owner member, a decorator or default built from it) cannot live in
+        the owner's body, exactly like a class bound to the owner by
+        inheritance: it stays at module level. A function rebinding module
+        state through ``global`` would lose that state as a static method, so
+        it fails the plan naming the module and the member.
 
         Returns:
-            Success, or a failure naming the module and the member.
+            The movable members, or a failure naming the module and member.
 
         """
-        checked = r[bool]
+        checked = r[t.VariadicTuple[str]]
         selected = frozenset(members)
+        bound: set[str] = set()
         for node in tree.body:
             name = (
                 node.name
@@ -165,16 +170,14 @@ class FlextInfraUtilitiesSemanticCutoverNestingOwner:
             if name is None or name not in selected:
                 continue
             if owner in cls._definition_time_names(node):
-                return checked.fail(
-                    f"class-nesting cannot move {module_name}.{name} under "
-                    f"{owner}: it reads the owner while it is defined",
-                )
+                bound.add(name)
+                continue
             if any(isinstance(inner, ast.Global) for inner in ast.walk(node)):
                 return checked.fail(
                     f"class-nesting cannot move {module_name}.{name} under "
                     f"{owner}: it rebinds module state through global",
                 )
-        return checked.ok(True)
+        return checked.ok(tuple(name for name in members if name not in bound))
 
     @staticmethod
     def _module_owner(

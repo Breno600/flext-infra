@@ -126,7 +126,7 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         if owned.failure:
             return planned.from_failure(owned)
         owner = owned.value
-        movable = cls._require_movable_members(
+        movable = cls._movable_members(
             tree,
             loose,
             owner=owner,
@@ -142,7 +142,7 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         definitions = {
             name: owner for name in classes if name != owner and name not in bound
         }
-        definitions.update((name, owner) for name in loose)
+        definitions.update((name, owner) for name in movable.value)
         return planned.ok(definitions)
 
     @classmethod
