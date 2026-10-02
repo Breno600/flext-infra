@@ -63,11 +63,13 @@ class FlextInfraConstantsDocs:
         "undocumented-public-module",
         "missing-copyright-notice",
         "implicit-namespace-package",
+        "print",
     )
     """Only module-header (docstring, copyright notice) and package rules are
-    inapplicable to a standalone Markdown fence, which is not a module file.
-    All names, behavior, types, docstring, and security rules remain active
-    and require correction in the authored source."""
+    inapplicable to a standalone Markdown fence, which is not a module file;
+    ``print`` is the fence demonstrating its output. All names, behavior,
+    types, docstring, and security rules remain active and require correction
+    in the authored source."""
     MACHINE_PATH_RE: ClassVar[t.RegexPattern] = re.compile(
         r"(?<![\w./-])/(?:home|Users)/(?P<user>[A-Za-z0-9_.-]+)(?=/|\b)",
     )
