@@ -83,7 +83,9 @@ class FlextInfraRuffLintGate(FlextInfraGate):
         """Apply Ruff's own fixes, then the declared recipe of each finding left.
 
         A recipe that creates a docstring runs before the recipes that extend
-        one, since a new summary exposes the sections its function needs.
+        one, since a new summary exposes the sections its function needs; the
+        static-method recipe edits only signatures and decorators, so it runs
+        in that first phase.
         Ruff re-reads the tree after each phase; a recipe-owned finding that
         survives both phases is a recipe defect and raises.
 
@@ -100,6 +102,7 @@ class FlextInfraRuffLintGate(FlextInfraGate):
             frozenset({
                 c.Infra.LintFixRecipe.SUMMARY_DOCSTRING,
                 c.Infra.LintFixRecipe.COPYRIGHT_NOTICE,
+                c.Infra.LintFixRecipe.STATIC_METHOD,
             }),
             frozenset({
                 c.Infra.LintFixRecipe.RETURNS_SECTION,
