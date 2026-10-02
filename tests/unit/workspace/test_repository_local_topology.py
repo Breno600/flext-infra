@@ -521,7 +521,8 @@ class TestsFlextInfraRepositoryLocalTopology:
                     "config",
                     "-f",
                     c.Infra.GITMODULES,
-                    "submodule.apps/member.flext-managed",
+                    # The fixture names the section after the distribution.
+                    "submodule.fixture-member.flext-managed",
                     "false",
                 ),
                 cwd=root,
