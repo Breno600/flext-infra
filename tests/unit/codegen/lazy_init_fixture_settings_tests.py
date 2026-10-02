@@ -68,7 +68,8 @@ class TestsFlextInfraLazyInitFixtureSettingsCollision:
         # Explicit identity aliases declare static reexports without eagerly
         # loading the runtime singleton modules.
         tm.that(
-            init_content, contains=f"from {package_root.name}._config import config"
+            init_content,
+            contains=f"from {package_root.name}._config import config",
         )
         tm.that(
             init_content,

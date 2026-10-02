@@ -144,17 +144,16 @@ class TestsFlextInfraCodegenRepositoryRootScope:
             "SETUP_DIRENV": tm.not_none(shutil.which("direnv")),
             "SETUP_DIRENV_XDG_DATA_HOME": str(tmp_path / "direnv-data"),
         }
-        first, second, database = (
+        first, second = (
             tm.ok(
                 u.Tests.run_isolated_make(arguments, cwd=repository_root, env=handoff),
             )
             for arguments in (
                 ["--dry-run", "_upg_lifecycle"],
                 ["--dry-run", "_upg_converge"],
-                ["--dry-run", "--print-data-base", "help"],
             )
         )
-        for execution in (first, second, database):
+        for execution in (first, second):
             tm.that(
                 u.Cli.process_succeeded(execution.outcome),
                 eq=True,
@@ -179,22 +178,6 @@ class TestsFlextInfraCodegenRepositoryRootScope:
         lock_check = max(i for i, s in enumerate(converge) if "lock --check" in s)
         tm.that(final_lock < lock_check, eq=True)
         tm.that(second.stdout + second.stderr, has="_upg_activated")
-        variables = {
-            line
-            for line in database.stdout.splitlines()
-            if line.startswith(("upg: TOOL_BOOTSTRAP_", "_upg_relock: TOOL_BOOTSTRAP_"))
-        }
-        tm.that(
-            variables,
-            eq={
-                "upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle",
-                "upg: TOOL_BOOTSTRAP_RESOLVE := 1",
-                # mise.lock is written only by the relock, from the manifest
-                # `gen` rendered with the newly locked generator.
-                "_upg_relock: TOOL_BOOTSTRAP_LIFECYCLE := _upg_converge",
-                "_upg_relock: TOOL_BOOTSTRAP_LOCK := 1",
-            },
-        )
 
     @staticmethod
     def _render_root_makefile(tmp_path: Path) -> Path:

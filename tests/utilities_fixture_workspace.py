@@ -281,10 +281,11 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         (project_dir / "pyproject.toml").write_text(
             "[project]\n"
             f'name = "{name}"\n'
+            f'authors = [{{name = "{TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name).author_name}", email = "{TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name).author_email}"}}]\n'
             'version = "0.1.0"\n'
             f'authors = [{{name = "{spec.author_name}", email = "{spec.author_email}"}}]\n'
             f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
-            "dependencies = []\n"
+            f'dependencies = ["{TestsFlextInfraUtilitiesProjectFixtureMixin.flext_source(TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name).upstream)}"]\n'
             "[dependency-groups]\n"
             f"dev = [{dev}]\n",
             encoding="utf-8",

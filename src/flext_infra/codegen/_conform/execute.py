@@ -218,6 +218,12 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         if surface is c.Infra.CodegenConformSurface.ALL:
             return self._execute_managed(request)
         if c.Infra.CodegenConformMode(request.mode) is c.Infra.CodegenConformMode.APPLY:
+            if surface in {
+                c.Infra.CodegenConformSurface.MAKEFILE,
+                c.Infra.CodegenConformSurface.DOCS_CONFIG,
+                c.Infra.CodegenConformSurface.PYPROJECT,
+            }:
+                return self._execute_plan(request)
             mise_owner = FlextInfraCodegenMiseArtifacts(repository_root=request.root)
             transaction = FlextInfraCodegenTransaction(mise_owner)
             return transaction.run_locked(
@@ -263,63 +269,85 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             return r[m.Infra.CodegenResult].fail(
                 "partial codegen apply is prohibited; use the complete all surface",
             )
+        mise_owner = FlextInfraCodegenMiseArtifacts(repository_root=request.root)
+        transaction = FlextInfraCodegenTransaction(mise_owner)
+        root = request.root.expanduser().resolve()
+        roots = {"@bootstrap-0": root}
+        return transaction.run_files_locked(
+            roots,
+            lambda scope_root: self._publish_bootstrap_locked(
+                request,
+                transaction,
+                roots,
+                scope_root,
+            ),
+        )
+
+    def _publish_bootstrap_locked(
+        self,
+        request: m.Infra.CodegenConformRequest,
+        transaction: FlextInfraCodegenTransaction,
+        roots: t.MappingKV[str, Path],
+        scope_root: Path,
+    ) -> p.Result[m.Infra.CodegenResult]:
+        """Publish the entire declared bootstrap surface in one journaled phase.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenResult]``.
+        """
+        planned = self.plan(request)
+        if planned.failure:
+            return r[m.Infra.CodegenResult].from_failure(planned)
+        plan = planned.value
+        surface = c.Infra.CodegenConformSurface(request.what)
         destinations = self.surface_contract(surface).destinations
-        if destinations is None or len(destinations) != 1:
+        if not destinations:
             return r[m.Infra.CodegenResult].fail(
-                f"bootstrap requires one destination for {surface}",
+                f"bootstrap requires declared destinations for {surface}",
             )
-        destination = Path(next(iter(destinations)))
-        expected_path = request.root.expanduser().resolve() / destination
-        if (
-            any(file.path != expected_path for file in plan.files)
-            or len(plan.files) != 1
+        expected_paths = {
+            request.root.expanduser().resolve() / path for path in destinations
+        }
+        if {file.path for file in plan.files} != expected_paths:
+            return r[m.Infra.CodegenResult].fail(
+                f"bootstrap plan does not own the declared destinations for {surface}",
+            )
+        changed = tuple(
+            file for file in plan.files if u.Infra.codegen_file_requires_effect(file)
+        )
+        if any(
+            file.desired_content is None or file.desired_mode is None
+            for file in changed
         ):
             return r[m.Infra.CodegenResult].fail(
-                "Makefile bootstrap plan must own exactly the root dispatcher",
+                f"bootstrap cannot delete a declared destination for {surface}",
             )
         written: t.VariadicTuple[Path] = ()
         if changed:
-            (file,) = changed
-            if file.desired_content is None or file.desired_mode is None:
-                return r[m.Infra.CodegenResult].fail(
-                    "Makefile bootstrap cannot delete its dispatcher",
-                )
-            # A bootstrap destination under an absent parent (``docs/`` on a
-            # fresh candidate) materializes that chain first, the same guarded
-            # primitive the managed scaffold uses, and removes only what this
-            # attempt created when publication fails.
-            created: t.VariadicTuple[m.Cli.AtomicDirectoryState] = ()
-            if not file.path.parent.is_dir():
-                chain = u.Cli.atomic_plan_directory_chain(file.path.parent)
-                if chain.failure:
-                    return r[m.Infra.CodegenResult].from_failure(chain)
-                materialized = u.Cli.atomic_create_directory_chain_guarded(
-                    chain.value,
-                    permission_mode=0o755,
-                )
-                if materialized.failure:
-                    return r[m.Infra.CodegenResult].from_failure(materialized)
-                created = tuple(materialized.value)
-                replanned = self.plan(request)
-                if replanned.failure:
-                    return self._bootstrap_rollback(created, replanned)
-                (file,) = replanned.value.files
-            before = u.Infra.codegen_file_before_state(file)
-            if before.failure:
-                return self._bootstrap_rollback(created, before)
-            if file.desired_content is None or file.desired_mode is None:
-                return self._bootstrap_rollback(
-                    created,
-                    r[bool].fail(f"bootstrap cannot delete {destination}"),
-                )
-            published = u.Cli.atomic_write_binary_file_guarded(
-                before.value,
-                file.desired_content,
-                permission_mode=file.desired_mode,
+            inputs = {
+                state.path: state for file in plan.files for state in file.source_states
+            }
+            analysis = m.Infra.CodegenPhaseAnalysis(
+                phase="conform-bootstrap",
+                files=plan.files,
+                inputs=tuple(inputs.values()),
+            )
+            published = transaction.publish_file_phase_locked(
+                scope_root,
+                roots,
+                analysis,
+                tuple(
+                    sorted({
+                        file.path.parent
+                        for file in changed
+                        if not file.path.parent.is_dir()
+                    }),
+                ),
+                lambda: self._verify_bootstrap(request),
             )
             if published.failure:
-                return self._bootstrap_rollback(created, published)
-            written = (file.path,)
+                return r[m.Infra.CodegenResult].from_failure(published)
+            written = published.value
         verified = self.plan(request)
         if verified.failure:
             return r[m.Infra.CodegenResult].from_failure(verified)
@@ -335,6 +363,29 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         return r[m.Infra.CodegenResult].ok(
             m.Infra.CodegenResult(plan=verified.value, written_files=written),
         )
+
+    def _verify_bootstrap(
+        self,
+        request: m.Infra.CodegenConformRequest,
+    ) -> p.Result[bool]:
+        """Validate the public conform plan reaches a fixed point before commit.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+        """
+        planned = self.plan(request)
+        if planned.failure:
+            return r[bool].from_failure(planned)
+        residual = tuple(
+            file
+            for file in planned.value.files
+            if u.Infra.codegen_file_requires_effect(file)
+        )
+        if residual:
+            return r[bool].fail(
+                f"bootstrap did not reach a fixed point: {residual[0].path}",
+            )
+        return r[bool].ok(True)
 
     def _execute_managed(
         self,
@@ -748,26 +799,6 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 )
             created.extend(materialized.value)
         return r[t.VariadicTuple[m.Cli.AtomicDirectoryState]].ok(tuple(created))
-
-    @classmethod
-    def _bootstrap_rollback(
-        cls,
-        created: t.VariadicTuple[m.Cli.AtomicDirectoryState],
-        failure: p.FailureLike,
-    ) -> p.Result[m.Infra.CodegenResult]:
-        """Return the original bootstrap failure after removing its own parents.
-
-        Returns:
-            The original bootstrap failure after removing its own parents.
-
-        """
-        rollback = cls._rollback_scaffold_directories(created)
-        if rollback.failure:
-            return r[m.Infra.CodegenResult].fail(
-                f"{failure.error}; bootstrap directory rollback failed: "
-                f"{rollback.error}",
-            )
-        return r[m.Infra.CodegenResult].from_failure(failure)
 
     @staticmethod
     def _rollback_scaffold_directories(

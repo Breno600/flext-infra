@@ -834,7 +834,7 @@ class FlextInfraModGateEngine:
             return r[m.Infra.ModScanReport].from_failure(receipt)
         cls._report_evidence(receipt.value)
         if fix:
-            from .batch_replacements import FlextInfraModReplacements
+            from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
 
             published = FlextInfraModReplacements.publish(root, complete_report)
             if published.failure:

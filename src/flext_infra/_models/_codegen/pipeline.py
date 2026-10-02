@@ -65,7 +65,14 @@ class FlextInfraModelsCodegenPipelineModels:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True, extra="forbid")
 
         phase: Annotated[
-            Literal["docs", "lazy-init", "mod-text", "semantic", "candidate-bootstrap"],
+            Literal[
+                "docs",
+                "lazy-init",
+                "mod-text",
+                "semantic",
+                "candidate-bootstrap",
+                "conform-bootstrap",
+            ],
             m.Field(description="Generation phase that produced this receipt"),
         ]
         files: Annotated[
