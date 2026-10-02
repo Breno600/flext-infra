@@ -11,6 +11,7 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from flext_tests import tm
+from packaging.utils import canonicalize_name
 
 from flext_infra import config, infra, u
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
@@ -281,11 +282,11 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         (project_dir / "pyproject.toml").write_text(
             "[project]\n"
             f'name = "{name}"\n'
-            f'authors = [{{name = "{TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name).author_name}", email = "{TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name).author_email}"}}]\n'
             'version = "0.1.0"\n'
             f'authors = [{{name = "{spec.author_name}", email = "{spec.author_email}"}}]\n'
             f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
-            f'dependencies = ["{TestsFlextInfraUtilitiesProjectFixtureMixin.flext_source(TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name).upstream)}"]\n'
+            "dependencies = "
+            f'["{TestsFlextInfraUtilitiesProjectFixtureMixin.flext_source(canonicalize_name(spec.upstream))}"]\n'
             "[dependency-groups]\n"
             f"dev = [{dev}]\n",
             encoding="utf-8",

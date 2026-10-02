@@ -140,25 +140,35 @@ class FlextInfraUtilitiesCodemodRules:
         ))
 
     @staticmethod
-    @lru_cache(maxsize=1)
     def codemod_distributions() -> t.MappingKV[str, Distribution]:
-        """Index the interpreter's installed distributions by canonical name.
-
-        Installed metadata is a fact of the interpreter environment, fixed for
-        the life of the process, so it is read once per process.
+        """Index the installed distributions the import search path exposes.
 
         Returns:
-            The read-only index of installed distributions.
+            The read-only index of installed distributions by canonical name.
+
+        """
+        # Import search paths may repeat the same physical directory. Query each
+        # directory once; distinct installations with the same name still fail.
+        return FlextInfraUtilitiesCodemodRules._distributions_on(
+            tuple(dict.fromkeys(str(Path(path).resolve()) for path in sys.path)),
+        )
+
+    @staticmethod
+    @lru_cache(maxsize=8)
+    def _distributions_on(
+        search_path: t.VariadicTuple[str],
+    ) -> t.MappingKV[str, Distribution]:
+        """Read installed metadata once per distinct import search path.
+
+        Returns:
+            The read-only index of installed distributions by canonical name.
 
         Raises:
             ValueError: If two installed distributions share a canonical name.
 
         """
         indexed: MutableMapping[str, Distribution] = {}
-        # Import search paths may repeat the same physical directory. Query each
-        # directory once; distinct installations with the same name still fail.
-        paths = list(dict.fromkeys(str(Path(path).resolve()) for path in sys.path))
-        for installed in distributions(path=paths):
+        for installed in distributions(path=list(search_path)):
             raw_name = installed.metadata.get("Name")
             if not isinstance(raw_name, str) or not raw_name.strip():
                 continue

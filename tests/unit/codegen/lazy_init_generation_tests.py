@@ -694,19 +694,22 @@ class TestsFlextInfraCodegenGeneration:
         )
 
     def test_expanded_single_entry_mapping_keeps_its_trailing_comma(self) -> None:
-        """An exploded one-entry mapping carries the comma COM812 requires."""
-        module = "demo_pkg._generated_parts.flextdemogeneratedfacadeparts_part_04"
+        """An exploded one-entry mapping carries the comma COM812 requires.
+
+        The entry fits one line while the inline mapping does not, which is
+        the shape whose comma-less rendering ``make fix`` rewrote.
+        """
         plan = self._plan(
             "demo_pkg",
-            ("FlextDemoGeneratedFacadeParts",),
+            ("FlextDemoGeneratedFacade",),
             MappingProxyType({
-                "FlextDemoGeneratedFacadeParts": (
-                    module,
-                    "FlextDemoGeneratedFacadeParts",
+                "FlextDemoGeneratedFacade": (
+                    "demo_pkg._generated_parts.facade_part_04",
+                    "FlextDemoGeneratedFacade",
                 ),
             }),
         )
 
         content = FlextInfraCodegenGeneration.render_init(plan)
 
-        tm.that(content, contains='("FlextDemoGeneratedFacadeParts",),\n        }),')
+        tm.that(content, contains='("FlextDemoGeneratedFacade",),\n        }),')
