@@ -68,12 +68,16 @@ class FlextInfraCodegenVersionFile(FlextInfraCodegenExecutionBase[bool]):
         verb = "would generate" if (self.check_only or self.dry_run) else "generated"
         u.Cli.info(
             f"version-file: {verb} {outcomes['generated']}, "
-            f"skipped {outcomes['skipped']}"
+            f"skipped {outcomes['skipped']}",
         )
         return r[bool].ok(True)
 
     def _sync_project(self, project: Path, template_path: Path) -> p.Result[str]:
-        """Render one project's ``__version__.py`` and name the outcome."""
+        """Render one project's ``__version__.py`` and name the outcome.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+        """
         metadata_result = u.Infra.read_project_metadata_result(project)
         if metadata_result.failure:
             return r[str].from_failure(metadata_result)
@@ -87,13 +91,22 @@ class FlextInfraCodegenVersionFile(FlextInfraCodegenExecutionBase[bool]):
         if rendered.failure:
             return r[str].from_failure(rendered)
         return self._publish_version(
-            project, src_pkg / "__version__.py", rendered.value
+            project,
+            src_pkg / "__version__.py",
+            rendered.value,
         )
 
     def _publish_version(
-        self, project: Path, target: Path, content: str
+        self,
+        project: Path,
+        target: Path,
+        content: str,
     ) -> p.Result[str]:
-        """Publish ``content`` to ``target`` unless it is already current."""
+        """Publish ``content`` to ``target`` unless it is already current.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+        """
         if target.is_file():
             current = u.Cli.files_read_text(target)
             if current.failure:
