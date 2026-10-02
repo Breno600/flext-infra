@@ -98,7 +98,8 @@ class FlextInfraMypyGate(FlextInfraGate):
             return [*discovered_dirs, *root_files]
         return []
 
-    def _resolve_config(self, project_dir: Path, ctx: m.Infra.GateContext) -> Path:
+    @staticmethod
+    def _resolve_config(project_dir: Path, ctx: m.Infra.GateContext) -> Path:
         """Resolve Mypy settings from the project, then the workspace.
 
         Returns:

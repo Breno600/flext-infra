@@ -28,8 +28,9 @@ class TestsFlextInfraDepsModernizerHelpers:
         "typings": ["mypy"],
     }
 
+    @staticmethod
     @pytest.fixture
-    def doc(self) -> t.Cli.TomlDocument:
+    def doc() -> t.Cli.TomlDocument:
         """Provide a mutable TOML document fixture.
 
         Returns:
@@ -52,6 +53,7 @@ class TestsFlextInfraDepsModernizerHelpers:
         doc["project"] = {"optional-dependencies": optional_deps}
         return doc
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("raw", "expected"),
         [
@@ -65,10 +67,11 @@ class TestsFlextInfraDepsModernizerHelpers:
             ("Django>=3.0,<4.0", "django"),
         ],
     )
-    def test_dep_name(self, raw: str, expected: str | None) -> None:
+    def test_dep_name(raw: str, expected: str | None) -> None:
         """Verify dep name."""
         tm.that(u.Infra.dep_name(raw), eq=expected)
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("specs", "expected_length", "expected_names", "check_sorted"),
         [
@@ -80,7 +83,6 @@ class TestsFlextInfraDepsModernizerHelpers:
         ],
     )
     def test_dedupe_specs(
-        self,
         specs: t.StrSequence,
         expected_length: int,
         expected_names: t.StrSequence,
@@ -102,12 +104,12 @@ class TestsFlextInfraDepsModernizerHelpers:
                 pytest.fail("deduplicated dependency names must be present")
             tm.that(left < right, eq=True)
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("value", "expected"),
         [("test", "test"), (None, None), ({"key": "value"}, {"key": "value"})],
     )
     def test_unwrap_item(
-        self,
         value: t.Cli.TomlMappingSource | None,
         expected: t.JsonValue,
     ) -> None:
@@ -121,6 +123,7 @@ class TestsFlextInfraDepsModernizerHelpers:
         doc["key"] = "value"
         tm.that(u.Cli.toml_unwrap_item(doc["key"]), eq="value")
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("value", "expected"),
         [
@@ -132,7 +135,6 @@ class TestsFlextInfraDepsModernizerHelpers:
         ],
     )
     def test_as_string_list(
-        self,
         value: t.Cli.TomlItem | None,
         expected: t.StrSequence,
     ) -> None:
@@ -152,16 +154,18 @@ class TestsFlextInfraDepsModernizerHelpers:
         int_val = u.Cli.toml_item_from_json_value(42)
         tm.that(u.Cli.toml_as_string_list(int_val), eq=[])
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("items", "expected"),
         [(["a", "b", "c"], 3), ([], 0), (["single"], 1)],
     )
-    def test_array(self, items: t.StrSequence, expected: int) -> None:
+    def test_array(items: t.StrSequence, expected: int) -> None:
         """Verify TOML array construction preserves item count."""
         tm.that(len(u.Cli.toml_array(items)), eq=expected)
 
+    @staticmethod
     @pytest.mark.parametrize("mode", ["new", "existing", "replace-non-table"])
-    def test_ensure_table(self, mode: str) -> None:
+    def test_ensure_table(mode: str) -> None:
         """Verify ensure table."""
         parent = u.Cli.toml_table()
         if mode == "existing":

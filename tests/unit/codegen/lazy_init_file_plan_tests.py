@@ -21,10 +21,10 @@ from tests import c, m, u
 class TestsFlextInfraCodegenLazyInitFilePlans:
     """Prove lazy-init describes effects without owning publication."""
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("scope", tuple(c.Infra.CodegenConformScope))
     def test_lazy_publication_owns_exact_conform_repositories(
-        self,
         tmp_path: Path,
         scope: c.Infra.CodegenConformScope,
     ) -> None:

@@ -530,8 +530,8 @@ class TestsFlextInfraCodegenGeneration:
             ),
         )
 
+    @staticmethod
     def test_project_package_name_reads_manifest_not_directory_name(
-        self,
         tmp_path: Path,
     ) -> None:
         """Worktree checkouts keep the manifest's package name.

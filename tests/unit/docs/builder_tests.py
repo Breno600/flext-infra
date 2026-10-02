@@ -23,8 +23,9 @@ if TYPE_CHECKING:
 class TestsFlextInfraBuilder:
     """Core build invocation tests."""
 
+    @staticmethod
     @pytest.fixture
-    def builder(self) -> FlextInfraDocBuilder:
+    def builder() -> FlextInfraDocBuilder:
         """Provide the public documentation builder service.
 
         Returns:
@@ -47,6 +48,7 @@ class TestsFlextInfraBuilder:
         """Test BuildReport is frozen (immutable)."""
         tm.that(m.Infra.DocsPhaseReport.model_config.get("frozen"), eq=True)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "kwargs",
         [
@@ -56,7 +58,6 @@ class TestsFlextInfraBuilder:
         ],
     )
     def test_build_with_option_variants(
-        self,
         builder: FlextInfraDocBuilder,
         tmp_path: Path,
         kwargs: t.MappingKV[str, str | t.SequenceOf[str]],
@@ -77,9 +78,9 @@ class TestsFlextInfraBuilder:
                 case invalid:
                     pytest.fail(f"invalid projects test case: {invalid!r}")
 
+    @staticmethod
     @pytest.mark.parametrize("status", ["OK", "FAIL", "SKIP"])
     def test_build_report_result_field_values(
-        self,
         status: str,
         tmp_path: Path,
     ) -> None:
