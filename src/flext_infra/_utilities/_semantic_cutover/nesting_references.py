@@ -37,11 +37,12 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
         """
         import libcst as cst
 
+        targets: t.SequenceOf[cst.BaseAssignTargetExpression] = ()
         if isinstance(statement, cst.AnnAssign):
-            return (statement.target,)
-        if isinstance(statement, cst.Assign):
-            return tuple(item.target for item in statement.targets)
-        return ()
+            targets = [statement.target]
+        elif isinstance(statement, cst.Assign):
+            targets = [item.target for item in statement.targets]
+        return tuple(targets)
 
     @classmethod
     def _member_name(cls, node: cst.BaseStatement) -> str | None:

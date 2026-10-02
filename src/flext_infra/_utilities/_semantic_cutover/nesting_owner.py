@@ -259,7 +259,9 @@ class FlextInfraUtilitiesSemanticCutoverNestingOwner:
         if (
             declared is not None
             and declared in classes
-            and (policy.expected_alias is not None or declared.startswith(family_prefix))
+            and (
+                policy.expected_alias is not None or declared.startswith(family_prefix)
+            )
         ):
             return derived.ok(declared)
         owner = f"{prefix}{suffix}"

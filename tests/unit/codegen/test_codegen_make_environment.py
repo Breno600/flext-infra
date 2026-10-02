@@ -533,7 +533,9 @@ class TestsFlextInfraCodegenMakeEnvironment:
         # A manifest the committed mise.lock does not satisfy stops setup with
         # the upg hint; setup never relocks and leaves every lock untouched.
         drifted = u.Tests.resolved_make_checkout(
-            template, tmp_path / "drifted", profile
+            template,
+            tmp_path / "drifted",
+            profile,
         )
         manifest = drifted / c.Infra.MISE_TOML_FILENAME
         manifest.write_text(

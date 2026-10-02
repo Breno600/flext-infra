@@ -113,10 +113,14 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
         Returns:
             The member statement for the owner body and its ``ClassVar`` flag.
 
+        Raises:
+            TypeError: If class-nesting cannot move.
         """
         import libcst as cst
 
-        if not isinstance(node, cst.ClassDef | cst.FunctionDef | cst.SimpleStatementLine):
+        if not isinstance(
+            node, cst.ClassDef | cst.FunctionDef | cst.SimpleStatementLine
+        ):
             msg = f"class-nesting cannot move {type(node).__name__} members"
             raise TypeError(msg)
         # Comments that documented the member move with it; the blank
