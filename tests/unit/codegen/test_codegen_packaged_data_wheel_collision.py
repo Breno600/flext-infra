@@ -226,7 +226,8 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             eq=False,
         )
         tm.that(
-            FIXTURE_DISTRIBUTION_DATA_DIR in self._sdist_only_include(infra_git_repo),
+            f"/{FIXTURE_DISTRIBUTION_DATA_DIR}/**"
+            in self._sdist_include(infra_git_repo),
             eq=False,
         )
 
@@ -370,8 +371,13 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             self._wheel_force_include(infra_git_repo),
             eq={catalog: f"{package_name}/{catalog}"},
         )
-        tm.that(catalog in self._sdist_only_include(infra_git_repo), eq=True)
-        tm.that("config" in self._sdist_only_include(infra_git_repo), eq=False)
+        # A declared data file ships through the sdist force-include, never
+        # by widening the source include to its whole directory.
+        tm.that(
+            self._sdist_force_include(infra_git_repo).get(catalog),
+            eq=catalog,
+        )
+        tm.that("/config/**" in self._sdist_include(infra_git_repo), eq=False)
 
     @pytest.mark.slow
     @pytest.mark.parametrize(
