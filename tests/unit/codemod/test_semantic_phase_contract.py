@@ -115,10 +115,18 @@ class TestsFlextInfraSemanticPhaseContract:
     def test_nesting_reports_every_module_without_an_owner_as_a_failure(
         tmp_path: Path,
     ) -> None:
-        """A module without its declared owner fails the plan instead of raising."""
+        """Rival stem-carrying classes leave the owner undecidable: the plan fails."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "models.py"
-        source = "class FirstCandidate:\n    pass\n\nclass SecondCandidate:\n    pass\n"
+        stem = (
+            f"{u.derive_class_stem(root.name)}"
+            f"{u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).suffix}"
+        )
+        source = (
+            f"class {stem}FirstCandidate:\n    pass\n\n"
+            f"class {stem}SecondCandidate:\n    pass\n\n"
+            f'__all__ = ["{stem}FirstCandidate", "{stem}SecondCandidate"]\n'
+        )
         path.write_text(source, encoding="utf-8")
         with infra.rope_workspace(root) as rope:
             planned = u.Infra.plan_semantic_cutover(
