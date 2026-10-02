@@ -42,7 +42,7 @@ class TestsFlextInfraCodegenGeneration:
             if (candidate / c.PYPROJECT_FILENAME).is_file()
         ).resolve()
         first_party = frozenset(
-            FlextInfraToolTablesPhase.first_party_namespaces(pyproject.parent),
+            FlextInfraToolTablesPhase.first_party_namespaces(path=pyproject.parent),
         )
 
         def block(*, owned: bool) -> str:

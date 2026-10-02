@@ -62,8 +62,7 @@ class FlextInfraValidationRoutes(FlextInfraValidationCommandRoutes):
             m.Cli.ResultCommandRoute(
                 name="fmt",
                 help_text=(
-                    "Format documentation through "
-                    "the canonical markdown-format gate"
+                    "Format documentation through the canonical markdown-format gate"
                 ),
                 model_cls=FlextInfraDocFormatter,
                 handler=FlextInfraValidationCommandRoutes.result_handler(
@@ -143,8 +142,7 @@ class FlextInfraValidationRoutes(FlextInfraValidationCommandRoutes):
             m.Cli.ResultCommandRoute(
                 name=c.Infra.VERB_SONARCLOUD_ISSUES,
                 help_text=(
-                    "Read unresolved new-code "
-                    "SonarCloud issues (requires SONAR_TOKEN)"
+                    "Read unresolved new-code SonarCloud issues (requires SONAR_TOKEN)"
                 ),
                 model_cls=FlextInfraSonarcloudIssues,
                 handler=FlextInfraSonarcloudIssues.execute_command,
