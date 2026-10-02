@@ -146,6 +146,16 @@ sidecars. It still derives the replacement lock from `.mise.toml` through `make 
 and publishes that replacement transactionally. A malformed lock without a Git
 conflict, or sidecars that no longer match stage 2, fails without changing the lock.
 
+Mise reaches GitHub only to install a tool missing from the persistent cache and inside
+`make upg`. `make setup` never locks: every Mise call except `install --yes` runs with
+the offline settings declared once in `MISE_BOOTSTRAP_OFFLINE_ENVIRONMENT`, an offline
+`install --dry-run` proves the committed lock satisfies `.mise.toml`, and a lock that
+does not stops setup with `run make upg` and stays untouched. `make upg` resolves once
+per manifest: when the `.mise.toml` that its `gen` renders is byte-identical to the
+manifest its first half locked, the relock half installs from the published lock instead
+of resolving again. Wherever a lock runs, the bootstrap forwards the GitHub credential
+it selected (`GITHUB_TOKEN`, else the declared `github_credential_commands`) to Mise.
+
 The platforms declared by `toolchain.mise_lockfile_platforms` compose the lock together
 with the platform of the machine running the upgrade, which Mise always includes.
 Because `MISE_SAFE` ignores local settings, bootstrap forwards `MISE_LOCKFILE`,
