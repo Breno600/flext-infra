@@ -13,6 +13,7 @@ from functools import lru_cache
 from importlib.metadata import Distribution, distributions
 from importlib.util import find_spec
 from pathlib import Path
+from types import MappingProxyType
 
 from flext_cli import u
 from packaging.requirements import Requirement
@@ -139,7 +140,20 @@ class FlextInfraUtilitiesCodemodRules:
         ))
 
     @staticmethod
-    def codemod_distributions() -> MutableMapping[str, Distribution]:
+    @lru_cache(maxsize=1)
+    def codemod_distributions() -> t.MappingKV[str, Distribution]:
+        """Index the interpreter's installed distributions by canonical name.
+
+        Installed metadata is a fact of the interpreter environment, fixed for
+        the life of the process, so it is read once per process.
+
+        Returns:
+            The read-only index of installed distributions.
+
+        Raises:
+            ValueError: If two installed distributions share a canonical name.
+
+        """
         indexed: MutableMapping[str, Distribution] = {}
         # Import search paths may repeat the same physical directory. Query each
         # directory once; distinct installations with the same name still fail.
@@ -153,7 +167,7 @@ class FlextInfraUtilitiesCodemodRules:
                 msg = f"duplicate installed distribution metadata: {name}"
                 raise ValueError(msg)
             indexed[name] = installed
-        return indexed
+        return MappingProxyType(indexed)
 
     @classmethod
     def codemod_runtime_closure(
