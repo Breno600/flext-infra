@@ -249,6 +249,14 @@ class TestsFlextInfraModernizerPyrefly:
                 project_name="flext-consumer",
                 package_name="flext_consumer",
                 path=project_dir / c.PYPROJECT_FILENAME,
+                scaffold_project=config.Infra.codegen.scaffold.project,
+                upstream=next(
+                    profile.upstream
+                    for profile in config.Infra.codegen.scaffold.project.dependency_profiles
+                    if profile.project is None
+                ),
+                runtime_dependency_overlay=(),
+                declared_project_dependencies=(),
                 topology=m.Infra.PyprojectDeclaredTopology(
                     declared_python_dirs=(source_dir,),
                     declared_python_dirs_are_complete=True,

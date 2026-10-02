@@ -23,12 +23,12 @@ from flext_core import r
 # Why: dependency_waves subscripts r[t.SequenceOf[t.StrSequence]] at runtime, so
 # the typings facade cannot be TYPE_CHECKING-only here. c -> t is a forward
 # facade import and stays cycle-free.
-from flext_infra import c, t
+from flext_infra import c, m, t
 
 from .pyproject import FlextInfraUtilitiesPyproject
 
 if TYPE_CHECKING:
-    from flext_infra import m, p
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesDependencies:
@@ -662,6 +662,49 @@ class FlextInfraUtilitiesDependencies:
         if base is None:
             return ()
         return (base, *(item for item in profiles if item.project == distribution))
+
+    @classmethod
+    def composed_dependency_profile(
+        cls,
+        profiles: t.SequenceOf[m.Infra.ScaffoldDependencyProfileSpec],
+        *,
+        upstream: str,
+        distribution: str,
+    ) -> m.Infra.ScaffoldDependencyProfileSpec | None:
+        """Compose the shared upstream and project-specific dependency rows once."""
+        rows = cls.dependency_profile_rows(
+            profiles, upstream=upstream, distribution=distribution
+        )
+        if not rows:
+            return None
+        profile, *additions = rows
+        if not additions:
+            return profile
+        return m.Infra.ScaffoldDependencyProfileSpec.model_validate(
+            {
+                **profile.model_dump(),
+                "runtime": tuple(
+                    dict.fromkeys((
+                        *profile.runtime,
+                        *(
+                            requirement
+                            for item in additions
+                            for requirement in item.runtime
+                        ),
+                    ))
+                ),
+                "codegen": tuple(
+                    dict.fromkeys((
+                        *profile.codegen,
+                        *(
+                            requirement
+                            for item in additions
+                            for requirement in item.codegen
+                        ),
+                    ))
+                ),
+            }
+        )
 
 
 __all__: list[str] = ["FlextInfraUtilitiesDependencies"]

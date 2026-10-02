@@ -236,40 +236,15 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
             project = project.model_copy(
                 update={"namespace_scan_dirs": workspace.namespace_scan_dirs}
             )
-        rows = u.Infra.dependency_profile_rows(
+        dependency_profile = u.Infra.composed_dependency_profile(
             codegen.scaffold.project.dependency_profiles,
             upstream=project.upstream,
             distribution=repository.distribution,
         )
-        if not rows:
+        if dependency_profile is None:
             return r[m.Infra.ProjectRenderContext].fail(
                 f"unsupported scaffold upstream: {project.upstream}"
             )
-        dependency_profile, *additions = rows
-        if additions:
-            dependency_profile = m.Infra.ScaffoldDependencyProfileSpec.model_validate({
-                **dependency_profile.model_dump(),
-                "runtime": tuple(
-                    dict.fromkeys((
-                        *dependency_profile.runtime,
-                        *(
-                            requirement
-                            for item in additions
-                            for requirement in item.runtime
-                        ),
-                    ))
-                ),
-                "codegen": tuple(
-                    dict.fromkeys((
-                        *dependency_profile.codegen,
-                        *(
-                            requirement
-                            for item in additions
-                            for requirement in item.codegen
-                        ),
-                    ))
-                ),
-            })
         if project.license not in codegen.scaffold.project.supported_licenses:
             supported = ", ".join(codegen.scaffold.project.supported_licenses)
             return r[m.Infra.ProjectRenderContext].fail(

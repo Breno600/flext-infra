@@ -49,6 +49,9 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             )
         if contract.destinations == frozenset({c.Infra.MAKEFILE_FILENAME}):
             return self._plan_existing_makefile(target, workspace, codegen)
+        project = self._project_spec_from_existing(repository, root, codegen)
+        if project.failure:
+            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(project)
         managed_artifacts = u.Infra.snapshot_committed_project_managed_artifacts(root)
         if managed_artifacts.failure:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
@@ -68,6 +71,10 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             project_name=repository.distribution,
             package_name=metadata.value.package_name,
             path=pyproject,
+            scaffold_project=codegen.scaffold.project,
+            upstream=project.value.upstream,
+            runtime_dependency_overlay=project.value.runtime_dependency_overlay,
+            declared_project_dependencies=metadata.value.project.dependencies,
             topology=m.Infra.PyprojectDeclaredTopology(
                 root_modules=(
                     target.project.root_modules if target.project is not None else ()
