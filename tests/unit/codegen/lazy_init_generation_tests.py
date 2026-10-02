@@ -15,8 +15,8 @@ from flext_tests import tm
 
 import flext_core
 from flext_infra import c, m, t, u
-from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
 from flext_infra.codegen.codegen_generation import FlextInfraCodegenGeneration
+from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
 
 
 class TestsFlextInfraCodegenGeneration:

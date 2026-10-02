@@ -123,7 +123,7 @@ class FlextInfraModelsSonarcloud:
         rule: Annotated[t.NonEmptyStr, m.Field(description="Rule key")]
         component: Annotated[t.NonEmptyStr, m.Field(description="Project and file key")]
         line: Annotated[
-            int | None, m.Field(description="Source line, when assigned")
+            int | None, m.Field(description="Source line, when assigned"),
         ] = None
         message: Annotated[t.NonEmptyStr, m.Field(description="Observed finding")]
 
@@ -132,17 +132,31 @@ class FlextInfraModelsSonarcloud:
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore", frozen=True)
 
-        page_index: Annotated[t.PositiveInt, m.Field(validation_alias="pageIndex")]
-        page_size: Annotated[t.PositiveInt, m.Field(validation_alias="pageSize")]
-        total: Annotated[int, m.Field(ge=0)]
+        page_index: Annotated[
+            t.PositiveInt,
+            m.Field(validation_alias="pageIndex", description="Returned page number"),
+        ]
+        page_size: Annotated[
+            t.PositiveInt,
+            m.Field(validation_alias="pageSize", description="Issues per page"),
+        ]
+        total: Annotated[
+            int, m.Field(ge=0, description="Server-side total of matching issues"),
+        ]
 
     class SonarcloudIssueSearch(m.ContractModel):
         """A complete typed page returned by ``api/issues/search``."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore", frozen=True)
 
-        paging: FlextInfraModelsSonarcloud.SonarcloudIssuePaging
-        issues: t.VariadicTuple[FlextInfraModelsSonarcloud.SonarcloudIssue]
+        paging: Annotated[
+            FlextInfraModelsSonarcloud.SonarcloudIssuePaging,
+            m.Field(description="Server-side page accounting"),
+        ]
+        issues: Annotated[
+            t.VariadicTuple[FlextInfraModelsSonarcloud.SonarcloudIssue],
+            m.Field(description="Issues on this page"),
+        ]
 
 
 __all__: list[str] = ["FlextInfraModelsSonarcloud"]

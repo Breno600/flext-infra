@@ -1,4 +1,8 @@
-"""Read unresolved new-code issues from the published SonarCloud branch."""
+"""Read unresolved new-code issues from the published SonarCloud branch.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,8 +10,7 @@ from typing import TYPE_CHECKING, override
 
 from flext_core import r
 from flext_infra import c, config, m, u
-
-from .sonarcloud_client import FlextInfraSonarcloudClient
+from flext_infra.maintenance.sonarcloud_client import FlextInfraSonarcloudClient
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -18,9 +21,13 @@ class FlextInfraSonarcloudIssues(FlextInfraSonarcloudClient[bool]):
 
     @staticmethod
     def search_form(
-        project_key: str, branch: str, page: int
+        project_key: str, branch: str, page: int,
     ) -> t.VariadicTuple[t.Pair[str, str]]:
-        """Constrain the search to one project and its integration branch."""
+        """Constrain the search to one project and its integration branch.
+
+        Returns:
+            The resulting ``t.VariadicTuple[t.Pair[str, str]]``.
+        """
         return (
             ("componentKeys", project_key),
             ("branch", branch),
@@ -31,7 +38,11 @@ class FlextInfraSonarcloudIssues(FlextInfraSonarcloudClient[bool]):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Read every page, then print findings only after complete accounting."""
+        """Read every page, then print findings only after complete accounting.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+        """
         token = self.required_token()
         if token.failure:
             return r[bool].from_failure(token)
@@ -61,32 +72,32 @@ class FlextInfraSonarcloudIssues(FlextInfraSonarcloudClient[bool]):
             if body.failure:
                 return r[bool].from_failure(body)
             parsed = u.validate_value(
-                m.Infra.SonarcloudIssueSearch, body.value, from_json=True
+                m.Infra.SonarcloudIssueSearch, body.value, from_json=True,
             )
             if parsed.failure:
                 return r[bool].from_failure(parsed)
             response = parsed.value
             if response.paging.page_index != page:
                 return r[bool].fail(
-                    f"SonarCloud returned page {response.paging.page_index}; requested {page}"
+                    f"SonarCloud returned page {response.paging.page_index}; requested {page}",
                 )
             if total is not None and response.paging.total != total:
                 return r[bool].fail(
-                    "SonarCloud issue total changed while reading pages"
+                    "SonarCloud issue total changed while reading pages",
                 )
             total = response.paging.total
             if total >= c.Infra.SONARCLOUD_ISSUES_SEARCH_LIMIT:
                 return r[bool].fail(
                     "SonarCloud issue search reached its result-window limit; "
-                    "the issue set cannot be reported as complete"
+                    "the issue set cannot be reported as complete",
                 )
             if len(response.issues) > response.paging.page_size:
                 return r[bool].fail(
-                    "SonarCloud returned more issues than its page size"
+                    "SonarCloud returned more issues than its page size",
                 )
             if not response.issues and len(findings) < total:
                 return r[bool].fail(
-                    "SonarCloud returned an empty page before its total"
+                    "SonarCloud returned an empty page before its total",
                 )
             for issue in response.issues:
                 if issue.key in seen:
@@ -98,7 +109,7 @@ class FlextInfraSonarcloudIssues(FlextInfraSonarcloudClient[bool]):
             page += 1
         u.Cli.info(
             f"sonarcloud-issues: {key.value} branch={branch.value} "
-            f"unresolved-new-code={total}"
+            f"unresolved-new-code={total}",
         )
         for issue in findings:
             u.Cli.info(issue.model_dump_json())
