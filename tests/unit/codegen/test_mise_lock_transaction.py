@@ -116,6 +116,43 @@ class TestsMiseLockTransaction:
                 eq=f"name: {package}\r\n".encode(),
             )
 
+    def test_publish_regenerates_an_unmerged_generated_lock(
+        self, tmp_path: Path
+    ) -> None:
+        """The public publisher consumes Git's prior lock without editing a projection."""
+        root, _ = u.Tests.render_make_environment(
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
+        )
+
+        def git(*arguments: str, succeeds: bool = True) -> None:
+            outcome = tm.ok(u.Cli.run_raw(["git", *arguments], cwd=root))
+            tm.that(u.Cli.process_succeeded(outcome.outcome), eq=succeeds)
+
+        lock = root / "mise.lock"
+        git("init", "-b", "main")
+        git("config", "user.name", "FLEXT Test")
+        git("config", "user.email", "test@flext.invalid")
+        lock.write_text('version = "base"\n[tools]\n', encoding="utf-8")
+        git("add", "mise.lock")
+        git("commit", "-m", "base lock")
+        git("switch", "-c", "incoming")
+        lock.write_text('version = "incoming"\n[tools]\n', encoding="utf-8")
+        git("commit", "-am", "incoming lock")
+        git("switch", "main")
+        lock.write_text('version = "current"\n[tools]\n', encoding="utf-8")
+        git("commit", "-am", "current lock")
+        git("merge", "--no-ff", "incoming", succeeds=False)
+        tm.that(lock.read_bytes(), has=b"<<<<<<< ")
+
+        stage = self._stage(root, "merge")
+        expected = (stage / "mise.lock").read_bytes()
+        passed, error = self._publish(root, stage)
+
+        tm.that(passed, eq=True, msg=error)
+        tm.that(lock.read_bytes(), eq=expected)
+        tm.that(stage.exists(), eq=False)
+
     def test_publish_preserves_another_stage_without_a_journal(
         self,
         tmp_path: Path,

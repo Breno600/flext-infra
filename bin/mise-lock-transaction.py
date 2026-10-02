@@ -15,6 +15,7 @@ import json
 import os
 import shutil
 import stat
+import subprocess
 import sys
 import tomllib
 from contextlib import contextmanager
@@ -139,6 +140,31 @@ class MiseLockTransaction:
                         raise ValueError(f"mise.lock sidecar digest differs: {sidecar / filename}")
                     result[relative] = cls._tree_digest(sidecar)
         return result
+
+    @classmethod
+    def _previous_sidecars(cls, content: bytes | None, project: Path) -> dict[str, str]:
+        """Read the owned graph from Git stage 2 during a lock merge conflict.
+
+        A generated lock with conflict markers is not a TOML declaration. Git's
+        unmerged index retains the exact prior lock; its sidecars must still
+        validate against the physical checkout before publication can replace
+        them. Ordinary malformed locks continue to fail at the TOML parser.
+        """
+        if content is None or b"<<<<<<< " not in content:
+            return cls._sidecars(content, project)
+        index = subprocess.run(
+            ["git", "-C", str(project), "ls-files", "-u", "--", "mise.lock"],
+            check=True,
+            capture_output=True,
+        ).stdout
+        if not any(line.split(b"\t", 1)[0].endswith(b" 2") for line in index.splitlines()):
+            raise ValueError("conflicted mise.lock has no Git stage-2 source")
+        prior = subprocess.run(
+            ["git", "-C", str(project), "show", ":2:mise.lock"],
+            check=True,
+            capture_output=True,
+        ).stdout
+        return cls._sidecars(prior, project)
 
     @classmethod
     def _tree_digest(cls, root: Path) -> str:
@@ -411,7 +437,7 @@ class MiseLockTransaction:
         new = cls._bytes(stage / "mise.lock")
         if new is None:
             raise ValueError(f"staged mise.lock is absent: {stage}")
-        old_refs = cls._sidecars(old, project)
+        old_refs = cls._previous_sidecars(old, project)
         new_refs = cls._sidecars(new, stage)
         artifact_stage = stage / "artifacts"
         new_artifacts: dict[str, str] = {}
