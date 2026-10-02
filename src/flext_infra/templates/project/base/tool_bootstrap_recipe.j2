@@ -283,9 +283,24 @@
 		mise_trusted_config_paths="$$project_root"; \
 	else \
 		# ``locked`` mode converges every tool on exactly the version the \
-		# committed mise.lock pins, upgrading or downgrading what is installed; \
-		# only ``make upg`` resolves and writes the lock (operator law \
-		# 2026-09-24), so a manifest ahead of its lock fails here and upg heals it. \
+		# committed mise.lock pins. Resilience (operator 2026-10-02): a dirty \
+		# tree (mixed-generation merge, interrupted ``upg``, or a mise.lock \
+		# written by a different Mise release) recovers HERE through the \
+		# generated reconcile subcommand — staged retain relock, stage proof, \
+		# atomic publish — never by hand and never as inline recipe shell \
+		# (Makefile simplicity law). \
+		if mise_exec project "$$pinned_mise" -C "$$project_root" install --dry-run >"$$scratch/install-probe.log" 2>&1; then \
+			:; \
+		else \
+			probe_status=$$?; \
+			cat "$$scratch/install-probe.log" >&2; \
+			printf 'setup reconcile: committed mise.lock does not satisfy .mise.toml under pinned Mise %s (probe exit %s); running the generated bin reconcile\n' "$$runtime_release" "$$probe_status" >&2; \
+			reconcile_python=$$(command -v python3 || true); \
+			if [ -z "$$reconcile_python" ]; then \
+				printf 'ERROR: reconcile needs a host python3 (stdlib only); provision one and retry\n' >&2; exit 2; \
+			fi; \
+			mise_checked "$$scratch/reconcile.log" "$$reconcile_python" "$$project_root/{{ bootstrap.lock_transaction_script }}" reconcile "$$project_root" "$$runtime_release"; \
+		fi; \
 		mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$project_root" install --yes; \
 	fi; \
 	mise_checked_stdout "$$scratch/ast-grep-version.stdout" "$$scratch/ast-grep-version.stderr" mise_exec project "$$pinned_mise" -C "$$project_root" exec -- ast-grep --version; \
