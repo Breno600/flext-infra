@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from flext_tests import tm
 
 from flext_infra import main as infra_main
-from tests import u
+from tests import c, u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -53,17 +53,14 @@ class TestsFlextInfraDocsMain:
         workspace = u.Tests.create_docs_workspace(tmp_path, project_names=("flext-a",))
 
         tm.that(
-            (
-                infra_main([
-                    "docs",
-                    "generate",
-                    "--repository-root",
-                    str(workspace),
-                    "--apply",
-                    "--projects",
-                    "flext-a",
-                ])
-                == 2
-            ),
-            eq=True,
+            infra_main([
+                "docs",
+                "generate",
+                "--repository-root",
+                str(workspace),
+                "--apply",
+                "--projects",
+                "flext-a",
+            ]),
+            eq=c.Infra.ScriptExitCode.USAGE,
         )

@@ -24,9 +24,9 @@ from tests.unit.validate.pytest_runner_support import (
 class TestsFlextInfraPytestRunner:
     """Exercise the real pytest, testmon, coverage, and report lifecycle."""
 
+    @staticmethod
     @pytest.mark.parametrize("ci_context", [True, False])
     def test_marker_selection_is_shared_by_collection_execution_and_coverage(
-        self,
         cached_runner_project: Path,
         *,
         ci_context: bool,
@@ -127,9 +127,9 @@ class TestsFlextInfraPytestRunner:
             == names[-1]
         )
 
+    @staticmethod
     @pytest.mark.slow
     def test_config_only_changes_invalidate_the_persistent_cache(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """A governed YAML change executes again using the same Testmon database."""
@@ -286,9 +286,9 @@ class TestsFlextInfraPytestRunner:
             has=["executed=1", "failed=0", "errors=0", "exit=0"],
         )
 
+    @staticmethod
     @pytest.mark.slow
     def test_failed_slow_item_stays_red_across_budgeted_runs(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """A budgeted xdist run never erases the slow phase's failure.
@@ -331,10 +331,10 @@ class TestsFlextInfraPytestRunner:
             ne=0,
         )
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("omit_case", [False, True], ids=["order", "membership"])
     def test_warm_workers_follow_the_central_selection_order(
-        self,
         cached_runner_project: Path,
         *,
         omit_case: bool,
@@ -383,9 +383,9 @@ class TestsFlextInfraPytestRunner:
             has=["executed=3", "cache_restored=True", "errors=0", "exit=0"],
         )
 
+    @staticmethod
     @pytest.mark.slow
     def test_first_failure_stops_remaining_cases(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """The first failure stops dispatch; only in-flight cases still finish.
@@ -431,13 +431,13 @@ class TestsFlextInfraPytestRunner:
         tm.that(outcome.forwarded_signal, none=True)
         tm.that(summary(reports_root), has=f"failed={failed}")
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize(
         "finding",
         ["skip", "warning", "mro-warning", "homonymous-warning"],
     )
     def test_runtime_findings_keep_complete_accounting(
-        self,
         cached_runner_project: Path,
         finding: str,
     ) -> None:
@@ -500,9 +500,9 @@ class TestsFlextInfraPytestRunner:
         warning_evidence = (outcome_path.parent / "warnings.txt").read_text()
         tm.that(warning_evidence.count("repeated runtime evidence"), eq=warnings_count)
 
+    @staticmethod
     @pytest.mark.slow
     def test_setup_failure_is_accounted_without_a_call_phase(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """A failed fixture is one complete lifecycle: setup and teardown, no call."""
@@ -527,9 +527,9 @@ class TestsFlextInfraPytestRunner:
             has=["executed=2", "errors=1", "accounting_complete=True"],
         )
 
+    @staticmethod
     @pytest.mark.slow
     def test_external_gate_markers_are_not_executed_offline(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """An external-token gate is deselected, never a KeyError, and reported.
@@ -584,10 +584,10 @@ class TestsFlextInfraPytestRunner:
         deselection = command.split("-m ", maxsplit=2)[-1]
         tm.that(deselection, has=["not (", *markers])
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("ci_context", [False, True])
     def test_full_includes_external_and_ci_markers_after_incremental_scope(
-        self,
         cached_runner_project: Path,
         *,
         ci_context: bool,
@@ -669,9 +669,9 @@ class TestsFlextInfraPytestRunner:
             eq=config.Infra.tooling.tools.pytest.slow_marker,
         )
 
+    @staticmethod
     @pytest.mark.slow
     def test_full_runs_after_warm_cache_and_ignores_node_like_diagnostics(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """Cold, warm, and full collection use final items and one physical DB."""
@@ -757,9 +757,9 @@ class TestsFlextInfraPytestRunner:
             has=["diagnostic::not-a-node", "stderr::not-a-node"],
         )
 
+    @staticmethod
     @pytest.mark.slow
     def test_warm_partial_selection_accounts_for_every_stable_test(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """A changed dependency executes its consumer and accounts for stable IDs."""
@@ -807,9 +807,9 @@ class TestsFlextInfraPytestRunner:
             has=["outcome=executed", "executed=1", "deselected=1", "inventory=2"],
         )
 
+    @staticmethod
     @pytest.mark.slow
     def test_full_stops_at_the_first_incremental_failure(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """Test full stops at the first incremental failure."""
@@ -854,9 +854,9 @@ class TestsFlextInfraPytestRunner:
             eq=[],
         )
 
+    @staticmethod
     @pytest.mark.slow
     def test_full_rejects_an_empty_complete_collection(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """Test full rejects an empty complete collection."""

@@ -108,11 +108,11 @@ class TestsFlextInfraLazyInitBootstrapPackage:
         tm.that(rendered, lacks=f"from {c.Infra.LAZY_BOOTSTRAP_MODULE} import")
         tm.that(rendered, lacks="install_lazy_exports")
 
-    def test_other_distributions_import_the_helpers_from_the_bootstrap_root(
+    def test_other_distributions_import_the_helpers_from_the_defining_module(
         self,
         tmp_path: Path,
     ) -> None:
-        """Packages outside the bootstrap owner import the published helpers."""
+        """Packages outside the bootstrap owner import the defining module."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         consumer_facet = self._write_bootstrap_owner(package_root, "_models")
 
@@ -125,11 +125,17 @@ class TestsFlextInfraLazyInitBootstrapPackage:
         tm.that(
             init_content,
             contains=(
+                f"from {c.Infra.LAZY_BOOTSTRAP_MODULE} import "
+                f"{', '.join(c.Infra.LAZY_BOOTSTRAP_HELPERS)}"
+            ),
+        )
+        tm.that(
+            init_content,
+            lacks=(
                 f"from {c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE} import "
                 f"{', '.join(c.Infra.LAZY_BOOTSTRAP_HELPERS)}"
             ),
         )
-        tm.that(init_content, lacks=f"from {c.Infra.LAZY_BOOTSTRAP_MODULE} import")
         tm.that(init_content, contains="FlextModelsPart")
 
     @staticmethod

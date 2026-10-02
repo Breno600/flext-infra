@@ -104,10 +104,10 @@ class TestsFlextInfraCodegenLayoutGitignore:
         )
         tm.that(tracked.failure, eq=True)
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("directory_suffix", ["", "-lane"])
     def test_rendered_gitignore_satisfies_layout_additions(
-        self,
         tmp_path: Path,
         directory_suffix: str,
     ) -> None:

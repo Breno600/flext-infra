@@ -86,8 +86,8 @@ class FlextInfraCodegenFixerResultsMixin:
             return ()
         return initial_violations_result.unwrap()
 
+    @staticmethod
     def _classify_remaining_violations(
-        self,
         ctx: m.Infra.FixContext,
         project_path: Path,
         initial_violations: t.SequenceOf[m.Infra.CensusViolation],

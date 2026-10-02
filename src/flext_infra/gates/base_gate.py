@@ -764,7 +764,8 @@ class FlextInfraGate:
         msg = f"Gate {self.gate_id} set can_fix=True but did not implement _build_fix_command"
         raise NotImplementedError(msg)
 
-    def _fix_raw_output(self, result: p.Cli.CommandOutput) -> str:
+    @staticmethod
+    def _fix_raw_output(result: p.Cli.CommandOutput) -> str:
         """Assemble raw output from fix result. Default: stderr only.
 
         Returns:

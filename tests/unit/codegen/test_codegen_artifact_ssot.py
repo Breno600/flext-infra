@@ -22,8 +22,9 @@ CodegenSpec = type(config.Infra.codegen)
 class TestsFlextInfraCodegenArtifactSsot:
     """Property contracts that remain valid for arbitrary configured artifacts."""
 
+    @staticmethod
     @pytest.fixture(scope="module")
-    def codegen(self) -> CodegenSpec:
+    def codegen() -> CodegenSpec:
         """Return the production configuration consumed by every projection.
 
         Returns:
@@ -103,12 +104,12 @@ class TestsFlextInfraCodegenArtifactSsot:
         )
         tm.that(unaccounted, eq=())
 
+    @staticmethod
     @pytest.mark.parametrize(
         "profile",
         [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE],
     )
     def test_gitignore_tracks_governed_provider_projections(
-        self,
         codegen: CodegenSpec,
         profile: c.Infra.MakeProfile,
     ) -> None:

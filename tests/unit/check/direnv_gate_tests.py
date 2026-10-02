@@ -114,9 +114,9 @@ class TestsFlextInfraDirenvGate:
             )
             tm.that(violations, eq=())
 
+        @staticmethod
         @pytest.mark.parametrize("prefix", ["${HOME}", "$HOME", "~"])
         def test_home_targets_validated_only_when_resolving(
-            self,
             tmp_path: Path,
             prefix: str,
         ) -> None:
@@ -128,9 +128,9 @@ class TestsFlextInfraDirenvGate:
             )
             tm.that(violations, eq=())
 
+        @staticmethod
         @pytest.mark.parametrize("prefix", ["${HOME}", "$HOME", "~"])
         def test_home_targets_resolve_against_the_real_home(
-            self,
             tmp_path: Path,
             prefix: str,
         ) -> None:

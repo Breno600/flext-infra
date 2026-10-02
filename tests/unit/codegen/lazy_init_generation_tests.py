@@ -302,7 +302,7 @@ class TestsFlextInfraCodegenGeneration:
         tm.that(
             init_content,
             contains=(
-                f"from {c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE} import "
+                f"from {c.Infra.LAZY_BOOTSTRAP_MODULE} import "
                 f"{', '.join(c.Infra.LAZY_BOOTSTRAP_HELPERS)}"
             ),
         )
@@ -425,7 +425,7 @@ class TestsFlextInfraCodegenGeneration:
         tm.that(init_content, contains='".utilities": ("TestsDemoUtilities", "u"),')
         import_block = init_content.split(
             (
-                f"from {c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE} import "
+                f"from {c.Infra.LAZY_BOOTSTRAP_MODULE} import "
                 f"{', '.join(c.Infra.LAZY_BOOTSTRAP_HELPERS)}\n"
             ),
             maxsplit=1,
@@ -541,14 +541,9 @@ class TestsFlextInfraCodegenGeneration:
         compile(init_content, "__init__.py", "exec")
         tm.that(init_content, contains=self._owner_sections(plan, imports))
 
-    @pytest.mark.parametrize(
-        "isort_table",
-        ["", "[tool.ruff.lint.isort]\nknown-first-party = []\n"],
-    )
+    @staticmethod
     def test_project_package_name_reads_manifest_not_directory_name(
-        self,
         tmp_path: Path,
-        isort_table: str,
     ) -> None:
         """Worktree checkouts keep the project's own package first-party.
 
@@ -565,7 +560,8 @@ class TestsFlextInfraCodegenGeneration:
         project_package.mkdir(parents=True)
         (project_package / c.Infra.INIT_PY).write_text("", encoding="utf-8")
         (project_root / c.PYPROJECT_FILENAME).write_text(
-            f'[project]\nname = "demo-worktree-pkg"\nversion = "1.0.0"\nauthors = [{{ name = "Fixture Author" }}]\n{isort_table}',
+            '[project]\nname = "demo-worktree-pkg"\nversion = "1.0.0"\n'
+            'authors = [{ name = "Fixture Author" }]\n',
             encoding="utf-8",
         )
         plan = m.Infra.LazyInitPlan(

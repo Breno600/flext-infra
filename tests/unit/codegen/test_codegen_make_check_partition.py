@@ -87,10 +87,10 @@ class TestsFlextInfraCodegenMakeCheckPartition:
         tm.that(sum(fast in command for command in commands), eq=1)
         tm.that(any(local in command for command in commands), eq=False)
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("context", ["ci", "local", "all"])
     def test_make_check_keeps_a_missing_runtime_fatal(
-        self,
         tmp_path: Path,
         context: str,
     ) -> None:

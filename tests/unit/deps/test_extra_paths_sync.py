@@ -21,8 +21,9 @@ _TEST_REPOSITORY_ROOT = Path(__file__).resolve().parent
 class TestsFlextInfraDepsExtraPathsSync:
     """Behavior contract for test_extra_paths_sync."""
 
+    @staticmethod
     @pytest.fixture
-    def pyright_content(self) -> str:
+    def pyright_content() -> str:
         """Provide minimal Pyright configuration content.
 
         Returns:
