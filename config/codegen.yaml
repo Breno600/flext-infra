@@ -27,9 +27,11 @@ Infra:
       # moving selectors and dependency floors to the newest releases and
       # writes the committed uv.lock and mise.lock; setup, gen, and fmt install
       # frozen from those locks.
-      # Patch resolvível: o 3.13.16 perdeu os assets macos-x64 no python-build-
-      # standalone e o mise recusa substituir o 3.13.15 funcional do lock.
-      python_version: "3.13.15"
+      # The minor line only: the frozen patch is mise.lock's ownership
+      # (cooldown 2026-10-01 keeps the asset-less 20260929 python-build-
+      # standalone out of every resolution, so 3.13.15 stays the resolved
+      # patch without a config value the FlextInfraConfig model forbids).
+      python_version: "3.13"
       # Supply-chain cooldown (operator 2026-10-01): ONE value for every
       # resolver — the generated mise `minimum_release_age` (so `make upg`
       # never selects a release younger than this, e.g. a Python patch with
@@ -113,11 +115,7 @@ Infra:
       qlty_version: latest
       node_version: latest
       jscpd_selector: github:kucherenko/jscpd
-      # Held at 5.3.2 (#1315): 5.3.3 ships no macos-arm64 asset and 5.4.0
-      # ships none for the fleet's six platforms, so mise cannot lock either
-      # and make upg fails fleet-wide. Move to latest once a newer release
-      # publishes assets for all six declared platforms.
-      jscpd_version: "5.3.3"
+      jscpd_version: latest
       # Prettier is the markdown formatter (markdown-format gate): provisioned
       # through npm so the fleet binary version is owned by this SSOT alone.
       prettier_selector: npm:prettier
