@@ -151,14 +151,15 @@ class TestsFlextInfraPytestRunnerSuiteStop:
         workers_index = list(multi_command).index("-n") + 1
         budget = runner.parallel_worker_budget(policy)
         tm.that(budget > 1, eq=True)
-        tm.that(list(multi_command)[workers_index], eq=str(min(budget, len(multi))))
+        dispatched_workers = str(list(multi_command)[workers_index])
+        tm.that(dispatched_workers, eq=str(min(budget, len(multi))))
         tm.that(
             stop_value(multi_command),
             eq=runner.started_at_monotonic
             + runner.run_timeout_seconds(policy)
             - (
                 policy.serial_suite_stop_reserve_seconds
-                if multi_workers == "0"
+                if dispatched_workers == "0"
                 else policy.suite_stop_reserve_seconds
             ),
         )
