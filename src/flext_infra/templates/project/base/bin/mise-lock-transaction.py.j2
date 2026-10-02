@@ -310,9 +310,12 @@ class MiseLockTransaction:
             cls._reject_symlink_path(project, relative)
         for relative, expected in new_refs.items():
             destination = project / relative
-            if destination.exists():
-                if relative not in old_refs:
-                    raise ValueError(f"unowned Mise sidecar occupies target: {destination}")
+            if destination.exists() and relative in old_refs:
+                # A sidecar the old lock referenced must match its recorded
+                # digest unless this transaction staged the change; a path
+                # the new lock redeclares outright (e.g. a committed sidecar
+                # whose lock was removed by the relock bootstrap) is owned by
+                # the new lock by declaration and is replaced from the stage.
                 actual = cls._tree_digest(destination)
                 if actual != expected and actual != old_refs.get(relative):
                     raise ValueError(f"Mise sidecar changed outside transaction: {destination}")
