@@ -279,6 +279,17 @@ Infra:
                 Generated lazy-init package initializers must execute the lazy
                 installation, which is not a re-export.
 
+
+            - files: "scripts/**"
+              rules: [ANN401, ARG001, D101, D102, D103, D107, D200, D202, D205, D212, EM101, EM102, ERA001, EXE001, FBT001, FBT002, FURB101, FURB103, FURB110, FURB113, G003, N806, N999, PERF401, PERF402, PIE810, PLC0207, PLC2701, PLR2004, PLR6201, PLW1514, PTH100, PTH110, PTH118, PTH120, PTH123, PTH201, Q003, RUF022, RUF052, RUF100, RUF105, S404, S603, S607, T201, TC006, TID251, TID252, TRY003, TRY400, TRY401]
+              authority: operator-ruling-2026-10-02-mcb-scripts-automation
+              reason: >-
+                Repository automation helpers (mcb scripts/**, migrated from
+                mcb config/managed-artifacts.yaml when the project per-file
+                declaration surface retired): CLI entrypoints print to stdout,
+                drive subprocesses and use os.path; the sys.path bootstrap
+                forces module-level imports after executable code. Scoped to
+                scripts/** so shipped source keeps every rule.
       mypy:
         # Wall-time bound for the bounded Mypy execution (SSOT). A project
         # config/tooling.yaml overlay may only lower it; no environment
