@@ -719,8 +719,13 @@ caller_mise_version=; \
 		# backup copy exists. \
 		lock_stage="$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-lock-stage.XXXXXX")"; \
 		cp "$$project_root/.mise.toml" "$$lock_stage/.mise.toml"; \
-		if [ -f "$$project_root/mise.lock" ]; then cp "$$project_root/mise.lock" "$$lock_stage/mise.lock"; fi; \
-		if [ -d "$$project_root/.mise/locks" ]; then mkdir -p "$$lock_stage/.mise"; cp -R "$$project_root/.mise/locks" "$$lock_stage/.mise/locks"; fi; \
+		# The resolver (TOOL_BOOTSTRAP_RESOLVE, the first half of upg) locks \
+		# from the declared manifest alone; every other lock pass bumps the \
+		# committed lock and its sidecars. \
+		if [ "$(TOOL_BOOTSTRAP_RESOLVE)" != "1" ]; then \
+			if [ -f "$$project_root/mise.lock" ]; then cp "$$project_root/mise.lock" "$$lock_stage/mise.lock"; fi; \
+			if [ -d "$$project_root/.mise/locks" ]; then mkdir -p "$$lock_stage/.mise"; cp -R "$$project_root/.mise/locks" "$$lock_stage/.mise/locks"; fi; \
+		fi; \
 		mise_trusted_config_paths="$$lock_stage"; \
 		mise_checked "$$scratch/lock.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" lock --bump; \
 		mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" install --yes; \
@@ -1225,14 +1230,17 @@ _activated-sonarcloud-sync: _builtin_require_environment
 setup: _bootstrap_setup_tools
 
 # `upg` builds the environment from the locks it writes, so like `setup` it
-# must not require an existing environment. Its first half resolves the Mise
-# release and installs from the committed mise.lock only: locking here would
-# resolve against the manifest the old generator rendered, before the uv lock
-# brings the new generator, so a toolchain policy change (for example the
-# fleet cooldown) could never reach a consumer. mise.lock is written once, in
-# `_upg_relock`, from the .mise.toml `gen` just rendered.
+# must not require an existing environment, and as the only resolver it must
+# not require a readable committed mise.lock either. A lock written by a newer
+# Mise than the pinned release ("unsupported lockfile version 3") or one that
+# no longer covers the manifest would otherwise stop the very verb that
+# rewrites it. Its first half therefore resolves the toolchain afresh, in a
+# private stage that never reads the committed lock. `_upg_relock` then bumps
+# that lock against the .mise.toml `gen` just rendered, so toolchain policy
+# changes (for example the fleet cooldown) still reach every consumer.
 upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle
 upg: TOOL_BOOTSTRAP_RESOLVE := 1
+upg: TOOL_BOOTSTRAP_LOCK := 1
 upg: _builtin_require_runtime_root _bootstrap_setup_tools
 
 # Only the runtime root resolves the Mise release. An attached member's pin and
