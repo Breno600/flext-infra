@@ -67,6 +67,12 @@ class FlextInfraConfigModelsContexts:
             t.NonEmptyStr,
             m.Field(description="Runtime-root-local development environment"),
         ] = FlextInfraConstantsWorkspace.ENVIRONMENT_DIRECTORY
+        worktree_environment_directory: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description="Declared sibling directory for linked worktree environments",
+            ),
+        ]
 
     class MakefileRenderSpec(MakeCommandContext):
         """Field-only render input for an existing repository Makefile."""

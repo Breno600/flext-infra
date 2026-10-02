@@ -28,6 +28,11 @@ Infra:
       # writes the committed uv.lock and mise.lock; setup, gen, and fmt install
       # frozen from those locks.
       python_version: "3.13"
+      # Linked Git worktrees keep their physical Python environments beside
+      # the checkout, grouped under this sibling directory. The worktree's
+      # physical basename selects one isolated child; primary checkouts keep
+      # their local .venv.
+      worktree_environment_directory: .flext-venvs
       # Supply-chain cooldown (operator 2026-10-01): ONE value for every
       # resolver — the generated mise `minimum_release_age` (so `make upg`
       # never selects a release younger than this, e.g. a Python patch with

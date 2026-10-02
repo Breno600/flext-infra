@@ -90,19 +90,18 @@ overlay.
 
 Code in a checkout runs in the environment of its `RUNTIME_ROOT`. The generated Makefile
 exports `RUNTIME_ROOT`, and flext-infra reads it as a typed declaration: the
-`fresh-import` validation runs its probes with the platform-specific Python interpreter in `<RUNTIME_ROOT>/.venv`, never
+`fresh-import` validation runs its probes with the platform-specific Python interpreter in the derived `RUNTIME_VENV`, never
 with the interpreter hosting the tool. Without a declaration, the owner derives the
 checkout's Git root; a declaration without an interpreter fails.
 
-The `.venv` belongs to the `RUNTIME_ROOT`. A member attached as a submodule uses the
-`.venv` of its containing Git superproject; a standalone checkout or linked worktree has
-its own. In development there is no other option: the environment is always
-`<RUNTIME_ROOT>/.venv`, rendered from its constant owner, and that location is law,
-never configuration. The generated Makefile, the generated `.envrc`, and
-`runtime_environment_dir` resolve that root through the same physical path, so entering
-the checkout through a symlink does not change the selected environment. No environment
-lives outside the checkout that owns it, and none is borrowed from another checkout
-through a symlink.
+The environment belongs to the `RUNTIME_ROOT`. A member attached as a submodule uses
+its containing Git superproject's environment. A primary standalone checkout keeps
+`<RUNTIME_ROOT>/.venv`. A linked Git worktree owns a physical sibling environment at
+`<RUNTIME_ROOT>/../<toolchain.worktree_environment_directory>/<worktree-name>`.
+The directory component is declared in `config/codegen.yaml`; Git's distinct worktree
+and common directories identify the linked checkout. The generated Makefile, generated
+`.envrc`, and `runtime_environment_dir` derive the same path. Neither a caller
+variable nor a checkout-local symlink may redirect the environment.
 
 ## Mise launchers
 

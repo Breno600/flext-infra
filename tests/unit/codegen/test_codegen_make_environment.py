@@ -24,6 +24,54 @@ pytestmark = pytest.mark.slow
 class TestsFlextInfraCodegenMakeEnvironment:
     """Prove generated operations ignore the caller shell environment."""
 
+    def test_linked_worktree_uses_declared_physical_sibling_environment(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """The generated Make and Python owner agree on a linked lane's path."""
+        project_root, _ = u.Tests.render_make_environment(
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
+        )
+        (project_root / "custom.mk").write_text(
+            "post-help:\n\t@printf '%s\\n' 'RUNTIME_VENV=$(RUNTIME_VENV)'\n",
+            encoding="utf-8",
+        )
+        tm.ok(
+            u.Cli.run_checked(
+                ["git", "add", "Makefile", ".envrc", "custom.mk"],
+                cwd=project_root,
+            ),
+        )
+        tm.ok(
+            u.Cli.run_checked(
+                ["git", "commit", "-m", "test: retain generated runtime surface"],
+                cwd=project_root,
+            ),
+        )
+        lane = Path(
+            u.Tests.WorktreeFixture.add_worktree(
+                project_root,
+                "test/external-venv",
+            ),
+        )
+        expected = (
+            lane.parent
+            / config.Infra.codegen.toolchain.worktree_environment_directory
+            / lane.name
+        )
+        tm.that(u.Infra.runtime_environment_dir(lane), eq=expected)
+        tm.that(expected.is_relative_to(lane), eq=False)
+        tm.that(expected.is_symlink(), eq=False)
+        process = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "help"],
+                cwd=lane,
+            ),
+        )
+        tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
+        tm.that(process.stdout, has=f"RUNTIME_VENV={expected}\n")
+
     @pytest.mark.parametrize("failure_return", [None, 37])
     def test_public_dispatch_activates_once_before_hooks(
         self,
@@ -564,10 +612,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
             ),
         )
         tm.that(u.Cli.process_succeeded(environment.outcome), eq=True)
-        # Law (operator 2026-10-01, flext-h2a9h): in development the
-        # environment is the checkout's own .venv, never a configurable
-        # location outside it. Anchor to the checkout, not to the resolver,
-        # so relocating the resolver and the templates together still fails.
+        # Primary standalone checkouts retain their local environment;
+        # linked Git worktrees are exercised separately above.
         checkout_venv = project_root.resolve() / c.Infra.ENVIRONMENT_DIRECTORY
         tm.that(u.Infra.runtime_environment_dir(project_root), eq=checkout_venv)
         tm.that(environment.stdout, has=f"RUNTIME_VENV={checkout_venv}\n")

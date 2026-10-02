@@ -88,6 +88,7 @@ class FlextInfraUtilitiesCodegen(
         """
         toolchain = config.Infra.codegen.toolchain
         return m.Infra.EnvrcRenderSpec(
+            worktree_environment_directory=toolchain.worktree_environment_directory,
             environment_path_prepends=toolchain.environment_path_prepends,
             mise_bootstrap=FlextInfraUtilitiesCodegen.mise_bootstrap_environment(),
         )

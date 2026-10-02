@@ -126,6 +126,15 @@ class FlextInfraModelsMiseToolchain:
                 description="Python major.minor line, e.g. '3.13'",
             ),
         ]
+        worktree_environment_directory: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                pattern=r"^\.[A-Za-z][A-Za-z0-9._-]*$",
+                description=(
+                    "Sibling directory for physical linked-worktree environments"
+                ),
+            ),
+        ]
         dependency_cooldown_days: Annotated[
             int,
             m.Field(

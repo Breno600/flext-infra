@@ -566,6 +566,11 @@ class FlextInfraProtocolsBase(Protocol):
             ...
 
         @property
+        def worktree_environment_directory(self) -> str:
+            """Declared sibling directory for linked-worktree environments."""
+            ...
+
+        @property
         def dependency_cooldown_days(self) -> int:
             """Supply-chain cooldown in days honoured by every resolver."""
             ...
