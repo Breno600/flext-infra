@@ -195,7 +195,11 @@ Infra:
     # really exercise their subprojects in CI opt in through
     # config/codegen-overrides.yaml.
     checkout_submodules: "false"
-    checkout_submodules_overrides: {}
+    # The root workspace checkout exercises its flext-infra subproject in CI:
+    # the bootstrap library (post-#1361) is read from the submodule src, so
+    # the root's generated workflows must materialize it before make setup.
+    checkout_submodules_overrides:
+      flext: "true"
 
     # Runner packages a distribution's own tests need (Ubuntu apt names),
     # installed by the generated CI before the gates run. A test that drives
