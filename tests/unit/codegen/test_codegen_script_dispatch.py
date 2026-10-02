@@ -340,14 +340,17 @@ class TestsFlextInfraScriptDispatchMakefile:
         tm.that(report, has="$(PROFILE_REPORTS_DIR)/pytest.pstats")
         tm.that(report, has="$(PROFILE_REPORTS_DIR)/pytest.pstats.json")
 
-    def test_test_verbs_split_testmon_budget_from_unbounded_full(
+    def test_test_verbs_share_the_persistent_testmon_database(
         self,
         tmp_path: Path,
     ) -> None:
-        """Make test is bounded and testmon-backed; make test-full is neither.
+        """Both test verbs run on the one persistent testmon database.
 
         The persistent database is keyed by the declared distribution, so
-        every checkout of a project shares one testmon history.
+        every checkout of a project shares one testmon history. The full verb
+        runs against that same database (canonical-commands law: incremental
+        first, then the no-selection pass on the same database), never a
+        cache-less bypass.
         """
         rendered = self._render_root_makefile(
             tmp_path,
@@ -378,13 +381,11 @@ class TestsFlextInfraScriptDispatchMakefile:
                 f'{cache.database_environment_variable}="$$database"',
             ],
         )
-        tm.that(full, has="-m flext_infra._pytest_entry full")
         tm.that(
             full,
-            lacks=[
-                "PYTEST_BOUNDED",
-                "FLEXT_PYTEST_TESTMON_DATABASE",
-                cache.database_environment_variable,
+            has=[
+                "-m flext_infra._pytest_entry full",
+                f'{cache.database_environment_variable}="$$database"',
             ],
         )
 
