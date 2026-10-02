@@ -218,8 +218,8 @@ class TestsMiseLockTransaction:
         for relative, _mode in bootstrap.artifact_specs:
             tm.that((root / relative).read_bytes(), eq=old_artifacts[relative])
 
+    @staticmethod
     def test_setup_recovers_committed_lock_before_selecting_mise_runtime(
-        self,
         tmp_path: Path,
     ) -> None:
         """A killed publication finishes its pin and launchers on next setup."""

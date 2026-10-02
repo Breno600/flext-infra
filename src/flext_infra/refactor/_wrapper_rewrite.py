@@ -101,8 +101,8 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
             line_offsets.append(line_offsets[-1] + len(line_text))
         return line_offsets
 
+    @staticmethod
     def _collect_core_test_rewrites(
-        self,
         module_ast: t.Infra.RopeAstNode,
         *,
         line_offsets: list[int],

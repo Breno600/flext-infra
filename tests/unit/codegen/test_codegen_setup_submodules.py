@@ -25,9 +25,9 @@ pytestmark = [pytest.mark.slow, pytest.mark.remote]
 class TestsFlextInfraCodegenSetupSubmodules:
     """Tests for ``FlextInfraCodegenSetupSubmodules``."""
 
+    @staticmethod
     @pytest.fixture
     def generated_project_template(
-        self,
         resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
     ) -> Path:
         """Return the run's standalone consumer, resolved once by ``make upg``.

@@ -59,9 +59,9 @@ class TestsFlextInfraAuditorCli:
             eq=True,
         )
 
+    @staticmethod
     @pytest.mark.parametrize("package_entrypoint", [False, True])
     def test_auditor_main_finding_exits_nonzero(
-        self,
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
         *,
@@ -88,9 +88,9 @@ class TestsFlextInfraAuditorCli:
             has="missing.md",
         )
 
+    @staticmethod
     @pytest.mark.parametrize("option", ["--strict", "--strict-mode", "--no-strict"])
     def test_auditor_cli_rejects_removed_modes(
-        self,
         tmp_path: Path,
         option: str,
     ) -> None:

@@ -17,6 +17,7 @@ from tests import u
 class TestsFlextInfraLockfilePolicyProjection:
     """Every profile commits the locks `make upg` writes (operator 2026-09-24)."""
 
+    @staticmethod
     @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
     @pytest.mark.parametrize(
         "lock_filename",
@@ -31,7 +32,6 @@ class TestsFlextInfraLockfilePolicyProjection:
         ],
     )
     def test_rendered_gitignore_tracks_dependency_locks(
-        self,
         profile: c.Infra.MakeProfile,
         lock_filename: str,
     ) -> None:
@@ -46,6 +46,7 @@ class TestsFlextInfraLockfilePolicyProjection:
 
         tm.that(u.Tests.is_tracked_under(rendered, lock_filename), eq=True)
 
+    @staticmethod
     @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
     @pytest.mark.parametrize(
         "relative_path",
@@ -59,7 +60,6 @@ class TestsFlextInfraLockfilePolicyProjection:
         ],
     )
     def test_rendered_gitignore_keeps_local_mise_state_untracked(
-        self,
         profile: c.Infra.MakeProfile,
         relative_path: str,
     ) -> None:

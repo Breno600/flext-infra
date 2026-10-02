@@ -84,8 +84,8 @@ class FlextInfraCodegenCensus(s[str]):
         workspace = repository_root or self.repository_root
         return self._run_project_census(workspace, projects=projects)
 
+    @staticmethod
     def _run_project_census(
-        self,
         workspace: Path,
         *,
         projects: t.SequenceOf[p.Infra.ProjectInfo] | None = None,

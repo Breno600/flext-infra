@@ -206,7 +206,8 @@ class FlextInfraPythonVersionEnforcer(s[int]):
         )
         return True
 
-    def _read_required_minor(self, repository_root: Path) -> int:
+    @staticmethod
+    def _read_required_minor(repository_root: Path) -> int:
         """Read requires-python minor from pyproject; default 13 when absent.
 
         Returns:
@@ -222,7 +223,8 @@ class FlextInfraPythonVersionEnforcer(s[int]):
             return 13
         return int(match.group(2))
 
-    def _repository_root_from_file(self, file: str | Path) -> Path:
+    @staticmethod
+    def _repository_root_from_file(file: str | Path) -> Path:
         """Walk up from ``file`` to the first dir with .git+Makefile+pyproject.
 
         Raises RuntimeError when no such repository root exists (fail-loud).

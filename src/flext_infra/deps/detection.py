@@ -94,8 +94,8 @@ class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis
             ),
         )
 
+    @staticmethod
     def discover_project_paths(
-        self,
         repository_root: Path,
         projects_filter: t.StrSequence | None = None,
     ) -> p.Result[t.SequenceOf[Path]]:
