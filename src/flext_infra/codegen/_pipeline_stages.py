@@ -22,7 +22,7 @@ from flext_infra.deps import FlextInfraRuntimeDevDependencyDetector
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from .. import p
+    from flext_infra import p
 
 
 class FlextInfraCodegenPipelineStagesMixin:

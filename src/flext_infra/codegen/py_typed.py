@@ -20,7 +20,7 @@ from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from .. import p, t
+    from flext_infra import p, t
 
 
 class FlextInfraCodegenPyTyped(FlextInfraCodegenExecutionBase[bool]):

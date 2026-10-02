@@ -34,7 +34,7 @@ class FlextInfraPytestEntry:
         """
         mode = sys.argv[1] if len(sys.argv) > 1 else ""
         if mode in {"profile", "profile-collection"}:
-            from ._pytest_profile import FlextInfraPytestProfile
+            from flext_infra._pytest_profile import FlextInfraPytestProfile
 
             adapter = FlextInfraPytestProfile(Path(sys.argv[2]))
             if mode == "profile-collection":
