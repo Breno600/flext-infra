@@ -27,7 +27,6 @@ from flext_infra.docs.formatter import FlextInfraDocFormatter
 from flext_infra.docs.generator import FlextInfraDocGenerator
 from flext_infra.gates.markdown_format import FlextInfraMarkdownFormatGate
 from flext_infra.services.candidate_bootstrap import FlextInfraCandidateBootstrapService
-from flext_infra.validate.fresh_import import FlextInfraValidateFreshImport
 from flext_infra.validate.namespace_validator import FlextInfraNamespaceValidator
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 from flext_infra.workspace.environment import FlextInfraWorkspaceEnvironmentMixin
@@ -172,21 +171,6 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         )
 
     @staticmethod
-    def fresh_import_probe(
-        *, repository_root: Path, runtime_root: Path | None = None
-    ) -> p.Infra.FreshImportProbe:
-        """Build the fresh-import probe complete conform validates with.
-
-        Returns:
-            The resulting ``p.Infra.FreshImportProbe``.
-
-        """
-        return FlextInfraValidateFreshImport(
-            repository_root=repository_root,
-            runtime_root=runtime_root,
-        )
-
-    @staticmethod
     def markdown_format_gate(repository_root: Path) -> p.Infra.MarkdownFormatGate:
         """Build the markdown format gate the docs formatter delegates to.
 
@@ -197,7 +181,7 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         return FlextInfraMarkdownFormatGate(repository_root)
 
     def codegen_conform_collaborators(self) -> m.Infra.CodegenConformPorts:
-        """Bind the docs and fresh-import families complete conform crosses into.
+        """Bind the docs family complete conform crosses into.
 
         Returns:
             The resulting ``m.Infra.CodegenConformPorts``.
@@ -205,7 +189,6 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         """
         return m.Infra.CodegenConformPorts(
             docs_planner=self.docs_artifact_planner,
-            fresh_import=self.fresh_import_probe,
         )
 
     def codegen_conform(
