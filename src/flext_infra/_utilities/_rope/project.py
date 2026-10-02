@@ -54,8 +54,18 @@ class FlextInfraRopeProject(Project):
         root: str,
         sources: Mapping[Path, str],
         source_folders: t.SequenceOf[str],
+        ignored_resources: t.SequenceOf[str] = (),
     ) -> Self:
         """Construct a fresh Rope identity graph without persistent state.
+
+        Args:
+            root: The snapshot root directory.
+            sources: The closed source inventory Rope may read.
+            source_folders: The declared importable source folders.
+            ignored_resources: The scan-ignore SSOT patterns; without them
+                Rope enumerates real disk files the closed inventory does not
+                hold (tool hooks under ignored resources) and every such
+                read dies in the snapshot mapping.
 
         Returns:
             The resulting ``Self``.
@@ -73,6 +83,7 @@ class FlextInfraRopeProject(Project):
             ropefolder=None,
             save_objectdb=False,
             save_history=False,
+            ignored_resources=list(ignored_resources),
             source_folders=source_folders,
         )
 
