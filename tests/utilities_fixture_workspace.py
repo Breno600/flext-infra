@@ -272,6 +272,9 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
 
         fixture = TestsFlextInfraUtilitiesWorkspaceFixtureMixin
         dev = ", ".join(f'"{item}"' for item in fixture.declared_requirements(name))
+        # The governed notice names the manifest's first author, so the
+        # minimal project declares the fixture's own scaffold identity.
+        spec = TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name)
         package_root = project_dir / "src" / name.replace("-", "_")
         package_root.mkdir(parents=True, exist_ok=True)
         (package_root / "__init__.py").write_text("", encoding="utf-8")
@@ -279,6 +282,7 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             "[project]\n"
             f'name = "{name}"\n'
             'version = "0.1.0"\n'
+            f'authors = [{{name = "{spec.author_name}", email = "{spec.author_email}"}}]\n'
             f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
             "dependencies = []\n"
             "[dependency-groups]\n"
