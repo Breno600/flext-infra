@@ -63,15 +63,13 @@ class TestsFlextInfraWorktreeSecurityBoundaries:
         result = self._add(repository, "feature/option-base", base)
 
         tm.fail(result, has="invalid base commitish")
-        assert (
-            len(
-                tm.ok(
-                    u.Infra.git_list_worktrees(
-                        m.Infra.GitRepoRequest(repo_root=repository),
-                    ),
-                ).porcelain.split("worktree "),
-            )
-            == 2
+        tm.that(
+            tm.ok(
+                u.Infra.git_list_worktrees(
+                    m.Infra.GitRepoRequest(repo_root=repository),
+                ),
+            ).porcelain.count("worktree "),
+            eq=1,
         )
 
     def test_unresolved_base_fails_before_lane_mutation(self, tmp_path: Path) -> None:

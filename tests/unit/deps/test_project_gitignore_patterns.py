@@ -72,7 +72,6 @@ class TestsFlextInfraProjectGitignorePatterns:
 
         patterns = tm.ok(resolved).artifacts.Gitignore.patterns
         assert sorted(patterns) == [".dmypy/", ".serena/", "logs/"]
-        assert len(patterns) == 3
 
     def test_absent_declaration_adds_no_section(self, tmp_path: Path) -> None:
         """Test absent declaration adds no section."""

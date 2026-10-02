@@ -7,7 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, Literal
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -149,6 +149,8 @@ class FlextInfraConstantsDocs:
     branch a consumer knows. ``suffix`` keeps a ``?query`` or ``#fragment``
     (for example ``#L10``) out of the filesystem path.
     """
+    DOCS_ARTIFACT_MODE: ClassVar[Literal[0o644]] = 0o644
+    """File mode every rendered documentation artifact is published with."""
     DOCS_OWNED_HEADER_LINES: ClassVar[int] = 2
     """Lines an owned member guide carries before its body: marker + source."""
     HEADING_RE: ClassVar[t.RegexPattern] = re.compile(
