@@ -22,10 +22,6 @@ class TestsFlextInfraRuleCatalogCache:
 
     @staticmethod
     def _project(tmp_path: Path, message: str) -> tuple[Path, Path]:
-        # The catalog cache is host state shared by every run: a rule whose
-        # text repeats across runs is already published, so each scenario's
-        # rule carries its own test identity to start from unpublished content.
-        message = f"{message} {tmp_path.name}"
         project = tmp_path / "catalog-cache"
         config_path = project / c.Infra.CODEMOD_CONFIG_RELPATH
         rules = config_path.parent / c.Cli.RULES_DIR_NAME
