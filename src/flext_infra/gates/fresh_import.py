@@ -68,22 +68,12 @@ class FlextInfraFreshImportGate(FlextInfraGate):
         # process that runs the gate. ``build_report`` keeps violations
         # structured so a broken invocation (missing runtime, unreadable
         # manifest) grades apart from failed probes.
-        report_result = FlextInfraValidateFreshImport(
-            repository_root=project_dir,
-            runtime_root=None,
-        ).build_report(repository_roots=(project_dir,))
-        if report_result.failure:
-            return self._build_project_error_gate_result(
-                project_dir,
-                passed=False,
-                errors=[report_result.error or "fresh-import failed"],
-                started=started,
-            )
-        report = report_result.value
-        return self._build_project_error_gate_result(
+        return self._build_validation_report_result(
             project_dir,
-            passed=report.passed,
-            errors=list(report.violations),
+            FlextInfraValidateFreshImport(
+                repository_root=project_dir,
+                runtime_root=None,
+            ).build_report(repository_roots=(project_dir,)),
             started=started,
         )
 

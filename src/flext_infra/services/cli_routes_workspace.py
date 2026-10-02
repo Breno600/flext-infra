@@ -9,8 +9,7 @@ from __future__ import annotations
 from collections.abc import MutableMapping
 from typing import ClassVar
 
-from flext_infra import c, m, p, t, u
-from flext_infra.api import infra
+from flext_infra import c, infra, m, p, t, u
 from flext_infra.git import FlextInfraGitService
 from flext_infra.release.orchestrator import FlextInfraReleaseOrchestrator
 from flext_infra.services.cli_route_base import FlextInfraCliRouteBase

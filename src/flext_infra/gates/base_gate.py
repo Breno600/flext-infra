@@ -460,6 +460,35 @@ class FlextInfraGate:
             started=started,
         )
 
+    def _build_validation_report_result(
+        self,
+        project_dir: Path,
+        report_result: p.Result[m.Infra.ValidationReport],
+        *,
+        started: float,
+    ) -> m.Infra.GateExecution:
+        """Grade a validator report: a broken run apart from found violations.
+
+        Returns:
+            The gate execution carrying the report's violations, or the
+            validator's own failure as the single blocking diagnostic.
+
+        """
+        if report_result.failure:
+            return self._build_project_error_gate_result(
+                project_dir,
+                passed=False,
+                errors=[report_result.error or f"{self.gate_id} failed"],
+                started=started,
+            )
+        report = report_result.value
+        return self._build_project_error_gate_result(
+            project_dir,
+            passed=report.passed,
+            errors=list(report.violations),
+            started=started,
+        )
+
     def _build_single_issue_result(
         self,
         project_dir: Path,
