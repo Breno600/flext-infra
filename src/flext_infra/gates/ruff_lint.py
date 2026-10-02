@@ -95,7 +95,7 @@ class FlextInfraRuffLintGate(FlextInfraGate):
         """
         execution = super().fix(project_dir, ctx)
         recipes = config.Infra.tooling.tools.ruff.lint.fix_recipes
-        overridden = self._project_overrides(project_dir)
+        overridden = self._project_overrides(project_dir, execution.issues, recipes)
         for phase in (
             frozenset({
                 c.Infra.LintFixRecipe.SUMMARY_DOCSTRING,
@@ -120,13 +120,33 @@ class FlextInfraRuffLintGate(FlextInfraGate):
         )
         return execution
 
-    def _project_overrides(self, project_dir: Path) -> frozenset[t.Pair[str, str]]:
+    def _project_overrides(
+        self,
+        project_dir: Path,
+        issues: t.SequenceOf[m.Infra.Issue],
+        recipes: t.MappingKV[str, c.Infra.LintFixRecipe],
+    ) -> frozenset[t.Pair[str, str]]:
         """Index the methods a subclass of this project redefines.
+
+        The index exists only for the static-method recipe, so a run without
+        its findings builds none. A module Ruff reports as ``invalid-syntax``
+        declares no class Ruff could judge and stays out of the index; its
+        finding remains for its owner.
 
         Returns:
             The overridden ``(class name, method name)`` pairs.
 
         """
+        if not any(
+            recipes.get(issue.code) is c.Infra.LintFixRecipe.STATIC_METHOD
+            for issue in issues
+        ):
+            return frozenset()
+        unparsable = {
+            Path(issue.file).resolve()
+            for issue in issues
+            if issue.code == c.Infra.RUFF_INVALID_SYNTAX
+        }
         return u.Infra.overridden_methods(
             tuple(
                 path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
@@ -134,6 +154,7 @@ class FlextInfraRuffLintGate(FlextInfraGate):
                 for path in u.Infra.iter_directory_python_files(
                     project_dir / directory,
                 )
+                if path.resolve() not in unparsable
             ),
         )
 
