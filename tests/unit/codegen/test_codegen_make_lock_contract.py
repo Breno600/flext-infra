@@ -311,11 +311,11 @@ class TestsFlextInfraCodegenMakeLockContract:
 
         tm.that(process.stderr, lacks=str(pin))
         if verb == "upg":
+            # Without its generated launcher upg still stops before resolving:
+            # the cold-start repair of a deleted launcher is owned by the upg
+            # self-heal slice (flext-gz7oj), which turns this into a success.
             tm.that(process.outcome.raw_return_code, ne=0)
-            tm.that(
-                process.stderr,
-                has="GitHub credential is absent for network bootstrap",
-            )
+            tm.that(process.stderr, has="missing generated mise launcher")
         else:
             tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
         tm.that(pin.exists(), eq=False)

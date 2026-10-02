@@ -131,6 +131,7 @@ class TestsFlextInfraRootArtifactOwnership:
     def test_conform_uses_one_fixed_point_plan(infra_git_repo: Path) -> None:
         """Test conform uses one fixed point plan."""
         root = infra_git_repo
+        project = u.Tests.project_spec("flext-demo")
         u.Tests.write_project_beads_config(root, "flext-demo")
         package_root = root / "src" / "flext_demo"
         tm.ok(u.Cli.ensure_dir(package_root))
@@ -142,8 +143,9 @@ class TestsFlextInfraRootArtifactOwnership:
                     "[project]\n"
                     'name = "flext-demo"\n'
                     'version = "0.1.0"\n'
+                    f'authors = [{{name = "{project.author_name}", email = "{project.author_email}"}}]\n'
                     f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
-                    "dependencies = []\n"
+                    f'dependencies = ["{u.Tests.flext_source(project.upstream)}"]\n'
                     "[project.urls]\n"
                     'Repository = "https://github.com/flext-sh/flext-demo"\n'
                 ),
@@ -157,11 +159,17 @@ class TestsFlextInfraRootArtifactOwnership:
         tm.ok(infra.codegen_conform(request))
         manual = {"custom.mk": b"# manual project extension\n"}
         (root / "custom.mk").write_bytes(manual["custom.mk"])
-        configured_policy = next(
-            item.policy
-            for item in config.Infra.codegen.managed_files
-            if item.path == Path(c.Infra.MAKEFILE_FILENAME)
+        # The makefile recovery surface publishes the Makefile and the lock
+        # publisher its bootstrap recipe executes; each keeps its own policy.
+        surface = (
+            Path(c.Infra.MAKEFILE_FILENAME),
+            Path(c.Infra.MISE_LOCK_TRANSACTION_SCRIPT),
         )
+        configured_policies = {
+            item.path: item.policy
+            for item in config.Infra.codegen.managed_files
+            if item.path in surface
+        }
         before = tuple(
             sorted(
                 (path.relative_to(root).as_posix(), path.read_bytes())
@@ -173,8 +181,14 @@ class TestsFlextInfraRootArtifactOwnership:
         first = infra.codegen_conform(request)
         result = tm.ok(first)
         governed = tuple(file for file in result.plan.files if file.policy is not None)
-        tm.that(tuple(file.path for file in governed), eq=(root / "Makefile",))
-        tm.that(governed[0].policy, eq=configured_policy)
+        tm.that(
+            sorted(file.path for file in governed),
+            eq=sorted(root / path for path in surface),
+        )
+        for file in governed:
+            tm.that(
+                file.policy, eq=configured_policies[file.path.relative_to(root)]
+            )
         tm.that(result.written_files, eq=())
         after = tuple(
             sorted(

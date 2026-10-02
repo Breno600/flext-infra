@@ -88,6 +88,15 @@ class FlextInfraUtilitiesDocsFix:
                         c.Infra.RUFF,
                         c.Infra.VERB_CHECK,
                         *config.Infra.codegen.make.ruff.lint_fix,
+                        # Ruff writes its fix summary to stderr even when every
+                        # finding was fixed; the stderr-silent form leaves the
+                        # exit code as the verdict (nonzero: unfixable remains).
+                        "--silent",
+                        # Diagnostics only: the stdin fix summary and the
+                        # show-fixes enumeration are not findings, so any
+                        # stderr left is a remaining finding.
+                        "--quiet",
+                        "--no-show-fixes",
                         "--extend-ignore",
                         ",".join(c.Infra.PYTHON_FENCE_RUFF_EXTEND_IGNORE),
                         "--stdin-filename",

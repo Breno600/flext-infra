@@ -462,7 +462,8 @@ class FlextInfraUtilitiesLintRecipes:
             # The literal prefix of an f-string stops at its first placeholder,
             # which can leave the opener or quote that wrapped it dangling.
             stated = (
-                cls._static_text(message)
+                cls
+                ._static_text(message)
                 .split(":", maxsplit=1)[0]
                 .rstrip(" .([{'\"`")
                 .strip()

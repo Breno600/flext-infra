@@ -173,8 +173,17 @@ Infra:
             - unused-variable
           # The only channel that promotes an unsafe Ruff fix into make fix:
           # a rule enters here with evidence that its fix preserves code,
-          # comments and diagnostics. None does today.
-          extend-safe-fixes: []
+          # comments and diagnostics. Evidence declared per entry:
+          # - relative-imports (TID252): the fleet contract is absolute-only
+          #   (ban-relative-imports: all, and make mod rewrites relative
+          #   imports) — the fix enforces the declared contract, no semantics.
+          # - camelcase-imported-as-lowercase (N813): pure alias rename, the
+          #   bound object is unchanged. TC001 stays OUT of this list: its fix
+          #   moves first-party imports into TYPE_CHECKING, which breaks the
+          #   eager-by-law lazy roots (see the scoped __init__.py exception).
+          extend-safe-fixes:
+            - relative-imports
+            - camelcase-imported-as-lowercase
           # Every import is absolute: make mod rewrites relative imports and
           # the lazy-init generator renders absolute import statements.
           ban-relative-imports: all
@@ -221,6 +230,13 @@ Infra:
           # and the scoped ones as `per-file-ignores`. Repositories declare no
           # exception of their own.
           authorized-exceptions:
+            - files: "tests/**/*.py"
+              rules: [assert]
+              authority: universal-core-2026-07-20-test-idiom-s101
+              reason: >-
+                Pytest assertions are the test contract. Ruff's S101 assert
+                restriction applies to runtime code, while tests intentionally
+                use Python assert statements to report failed expectations.
             - rules:
                 - typing-only-third-party-import
                 - typing-only-standard-library-import
@@ -242,6 +258,14 @@ Infra:
                 Generated lazy-init package initializers declare their exports
                 under TYPE_CHECKING and resolve them lazily at runtime, which
                 TC004 reads as runtime use.
+            - files: "**/__init__.py"
+              rules: [typing-only-first-party-import]
+              authority: operator-ruling-2026-10-01-tc001-lazy-root-eager
+              reason: >-
+                Generated lazy-init package initializers import the facade
+                namespaces eagerly by law: the namespace machinery resolves
+                them at runtime (PEP 562), so first-party imports stay eager
+                in every __init__.py.
             - files: "**/__init__.py"
               rules: [unused-import]
               authority: operator-ruling-2026-10-01-init-declared-letter-f401
@@ -507,6 +531,12 @@ Infra:
           # This measurement ceiling permits a complete cold profile before
           # tightening the limit to the observed full-suite runtime.
           flext-infra: 1200
+          # cosmos-charts cold suite measured on a 12-core local runner:
+          # the 120s entry clock SIGTERM'd the suite at 51% (~235s projected
+          # full runtime; the member CI completes inside the fleet default on
+          # its runners). This measurement ceiling permits a complete cold
+          # local run of the 241-case suite.
+          cosmos-charts: 600
         termination-grace-seconds: 2
         # One failure stops the invocation. The next run starts from the
         # corrected owner instead of accumulating a backlog of unrelated
@@ -531,6 +561,13 @@ Infra:
           # The measured ceiling for this suite; higher ceilings regressed the
           # cold run because per-window dispatch overhead dominates.
           flext-infra:
+            workers: 4
+          # flext-tests slow phase measured 2026-10-02 (load ~7, 20 cores):
+          # 34 slow items, 89.4s of call time across 32 of them; every item
+          # passes, but each pytester case boots a child pytest with the full
+          # facade stack, so the serial phase reached the 120s entry clock at
+          # its 33rd item. The cases are host-lock and namespace isolated.
+          flext-tests:
             workers: 4
           # CPU-fraction ceilings (cpu_fraction: "n/d") resolve at runtime
           # against the process CPU count.

@@ -1,4 +1,4 @@
-"""Hermetic Makefile-only bootstrap for stale generated dispatchers.
+"""Hermetic declared Make bootstrap surface for stale generated dispatchers.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -16,15 +16,15 @@ from flext_infra.codegen.conform import FlextInfraCodegenConform
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from .. import p
+    from flext_infra import p
 
 
 class FlextInfraCodegenMakeBootstrap(FlextInfraCodegenExecutionBase[bool]):
-    """Delegate one Makefile projection exclusively to codegen conform."""
+    """Delegate declared Make bootstrap surface exclusively to codegen conform."""
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Apply or check only this checkout's canonical Makefile projection.
+        """Apply or check only this checkout's canonical declared Make bootstrap surface.
 
         Returns:
             The resulting ``p.Result[bool]``.

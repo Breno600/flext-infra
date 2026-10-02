@@ -19,7 +19,7 @@ from flext_infra.codegen.conform import FlextInfraCodegenConform
 # accessor typing/config+settings symmetry fixed in templates in the same lane.
 
 if TYPE_CHECKING:
-    from .. import p
+    from flext_infra import p
 
 
 class FlextInfraCodegenProjectNew(
@@ -132,8 +132,8 @@ class FlextInfraCodegenProjectNew(
             default=None,
             exclude=True,
             description=(
-                "Docs and fresh-import ports bound by FlextInfra.codegen_new; the "
-                "scaffold conform fails before any effect without them"
+                "Docs port bound by FlextInfra.codegen_new; the scaffold "
+                "conform fails before any effect without it"
             ),
         ),
     ]

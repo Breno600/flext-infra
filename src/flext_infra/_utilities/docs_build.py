@@ -48,13 +48,16 @@ class FlextInfraUtilitiesDocsBuild:
         settings: Path,
         site_dir: Path,
     ) -> MutableMapping[str, p.AttributeProbe]:
-        """Load and validate a MkDocs config mapping.
+        """Load and validate the scope's own MkDocs config file.
+
+        ``config_file`` selects the file MkDocs reads; without it MkDocs reads
+        ``mkdocs.yml`` from the process working directory instead.
 
         Returns:
             The resulting ``MutableMapping[str, p.AttributeProbe]``.
 
         """
-        return load(config_file_path=str(settings), site_dir=str(site_dir))
+        return load(str(settings), site_dir=str(site_dir))
 
     @staticmethod
     def docs_mkdocs_config_files(scope: m.Infra.DocScope) -> t.VariadicTuple[Path]:

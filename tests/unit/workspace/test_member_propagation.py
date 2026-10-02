@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import main
+from flext_infra import infra, main
 from flext_infra.codegen import FlextInfraCodegenConform
 from tests import TestsFlextInfraUtilities as u, c, t
 
@@ -94,7 +94,12 @@ class TestsFlextInfraWorkspaceMemberPropagation:
                     )
                 u.Tests.commit_git_changes(root, "declare members")
                 for name in settled:
-                    tm.ok(FlextInfraCodegenConform.settle_repository(root / name))
+                    tm.ok(
+                        FlextInfraCodegenConform.settle_repository(
+                            root / name,
+                            ports=infra.codegen_conform_collaborators(),
+                        ),
+                    )
                     u.Tests.commit_git_changes(root / name, "settle projections")
                 tm.ok(u.Cli.atomic_write_text_file(parent / self.RECEIPT, key + "\n"))
         return parent / "workspace"

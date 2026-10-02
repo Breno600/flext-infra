@@ -393,7 +393,6 @@ class FlextInfraUtilitiesPyproject:
         return r[Path].ok(binary)
 
     @staticmethod
-    @cache
     def pyproject_payload(pyproject_path: Path) -> t.JsonMapping:
         """Return one parsed ``pyproject.toml`` payload validated against ``t.Infra``.
 
@@ -414,7 +413,26 @@ class FlextInfraUtilitiesPyproject:
         if live.failure:
             msg = f"failed to read pyproject payload at {pyproject_path}: {live.error}"
             raise RuntimeError(msg)
-        payload = u.Cli.toml_mapping_from_text(live.value)
+        # The parse is memoized by the live text, never by the path alone: a
+        # process that rewrites a manifest (gen, mod, a test) reads its new
+        # content on the next call instead of a stale parse.
+        return FlextInfraUtilitiesPyproject._parsed_pyproject_payload(
+            pyproject_path, live.value
+        )
+
+    @staticmethod
+    @cache
+    def _parsed_pyproject_payload(pyproject_path: Path, text: str) -> t.JsonMapping:
+        """Parse and validate one manifest text (memoized per exact content).
+
+        Returns:
+            The validated ``t.Infra`` payload of ``text``.
+
+        Raises:
+            RuntimeError: If ``text`` is not valid TOML.
+
+        """
+        payload = u.Cli.toml_mapping_from_text(text)
         if payload is None:
             msg = f"pyproject payload at {pyproject_path} is not valid TOML"
             raise RuntimeError(msg)

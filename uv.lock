@@ -405,7 +405,7 @@ wheels = [
 [[package]]
 name = "flext-cli"
 version = "0.12.0"
-source = { git = "https://github.com/flext-sh/flext-cli.git?rev=0.12.0-dev#173d2710f856320ac93fdd634adac50788d7b91b" }
+source = { git = "https://github.com/flext-sh/flext-cli.git?rev=0.12.0-dev#565d7e8e18ea837d3cfc6694aa398f8e7cabd922" }
 dependencies = [
     { name = "annotated-types" },
     { name = "beartype" },
@@ -432,7 +432,7 @@ dependencies = [
 [[package]]
 name = "flext-core"
 version = "0.12.0"
-source = { git = "https://github.com/flext-sh/flext-core.git?rev=0.12.0-dev#de397fe799a5aaca8b0568ea658d292e0f05c7ed" }
+source = { git = "https://github.com/flext-sh/flext-core.git?rev=0.12.0-dev#bc64aa522b6d2a728c839ee26ec8473d89a577b0" }
 dependencies = [
     { name = "annotated-types" },
     { name = "beartype" },
@@ -625,7 +625,7 @@ dev = [
 [[package]]
 name = "flext-tests"
 version = "0.12.0"
-source = { git = "https://github.com/flext-sh/flext-tests.git?rev=0.12.0-dev#72fd44914f28844a5a53af282343ade811b3a8fd" }
+source = { git = "https://github.com/flext-sh/flext-tests.git?rev=0.12.0-dev#df7b7fbb21fcef0f47eddfb689e0f85efbb9bf26" }
 dependencies = [
     { name = "annotated-types" },
     { name = "beartype" },

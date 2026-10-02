@@ -53,6 +53,9 @@ class TestsFlextInfraCodegenLazyInitFilePlans:
                 alias="m",
             )
             u.Tests.commit_git_changes(repository, "Seed scope fixture")
+            # Conform's fresh-import stage runs in the checkout's own runtime,
+            # which a real checkout gets from make setup.
+            u.Tests.provision_checkout(repository)
         if scope is c.Infra.CodegenConformScope.DECLARED:
             # A members-only run meets a root that already carries its runtime
             # Mise declaration, launchers and pin: each member's launchers are

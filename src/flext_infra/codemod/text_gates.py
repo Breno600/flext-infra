@@ -77,7 +77,11 @@ class FlextInfraModTextGateEngine:
         identity: m.Cli.AtomicFileState,
         rules: t.VariadicTuple[m.Infra.ModTextRule],
     ) -> p.Result[t.VariadicTuple[m.Infra.ModTextRule]]:
-        """Select rules from the exact project bytes authenticated for publication."""
+        """Select rules from the exact project bytes authenticated for publication.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.ModTextRule]]``.
+        """
         if identity.content is None:
             return r[t.VariadicTuple[m.Infra.ModTextRule]].fail(
                 f"text rule project identity is absent: {identity.path}",
@@ -112,9 +116,10 @@ class FlextInfraModTextGateEngine:
             The resulting ``p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]``.
 
         """
-        provider = (
-            FlextInfraConfig.ssot_config_dir().parent
-            / c.Infra.CODEMOD_TEXT_RULES_RELPATH
+        # The packaged rules live at the same sub-path of whichever SSOT
+        # config directory is active, including a declared relocation.
+        provider = FlextInfraConfig.ssot_config_dir() / (
+            c.Infra.CODEMOD_TEXT_RULES_RELPATH.relative_to(c.CONFIG_DIR_NAME)
         )
         consumer = root / c.Infra.CODEMOD_TEXT_RULES_RELPATH
         snapshots: list[m.Cli.AtomicFileState] = []
