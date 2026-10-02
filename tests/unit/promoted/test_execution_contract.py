@@ -1,80 +1,60 @@
-"""Promoted commands execute their declared operation through the public API."""
+"""Promoted commands execute their declared operation through the public API.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
 from flext_tests import tm
 
 from flext_infra import m
-from flext_infra.promoted.dispatcher import dispatch
-from flext_infra.promoted.invocation import validate_command_contract
-from flext_infra.promoted.registry import Registry
-from tests import t, u
+from tests import c, u
 
 
 class TestsFlextInfraPromotedExecutionContract:
     """Promoted contracts always execute without an effect selector."""
 
+    @staticmethod
+    def test_workspace_configuration_and_promoted_facts_preserve_their_domains(
+        tmp_path: Path,
+    ) -> None:
+        """Facade composition exposes both schemas without a name collision."""
+        repository = u.Tests.repository_ref("semantic-spec")
+        workspace = u.Tests.workspace_spec(repository)
+        u.Tests.initialize_git_repo(tmp_path)
+        facts = u.Infra.promoted_workspace_spec(tmp_path)
+        tm.that(workspace.repository, eq=repository)
+        tm.that(facts.root, eq=tmp_path)
+        tm.that(facts.scripts, eq=tmp_path / c.Infra.DIR_SCRIPTS)
+
     class TestsFlextInfraPromotedAlwaysExecutes:
         """Validate commands with and without declared domain parameters."""
 
+        @staticmethod
         def test_command_contract_accepts_mutating_command_without_parameters(
-            self, tmp_path: Path
+            tmp_path: Path,
         ) -> None:
             """A mutating command can declare an operation without parameters."""
             command = u.Tests.promoted_command(
-                path=tmp_path / "scripts" / "probe" / "all.py"
+                path=tmp_path / "scripts" / "probe" / "all.py",
             )
-            validate_command_contract(command)
-
-        def test_command_contract_accepts_declared_domain_parameter(
-            self, tmp_path: Path
-        ) -> None:
-            """A domain parameter remains part of the command's input contract."""
-            param = m.Infra.Promoted.Param(
-                name="TARGET", help="Destination", choices=("alpha", "beta")
-            )
-            command = u.Tests.promoted_command(
-                path=tmp_path / "scripts" / "probe" / "all.py", params=(param,)
-            )
-            validate_command_contract(command)
-
-    class TestsFlextInfraPromotedDispatchAlwaysExecutes:
-        """Exercise dispatch()'s unconditional execution through a real command."""
+            u.Infra.promoted_validate_command_contract(command)
 
         @staticmethod
-        def _write_registry(tmp_path: Path) -> t.Pair[Registry, Path]:
-            (tmp_path / "pyproject.toml").write_text(
-                "[project]\nname = 'probe'\n", encoding="utf-8"
-            )
-            command_path = tmp_path / "scripts" / "probe" / "all.py"
-            command_path.parent.mkdir(parents=True)
-            marker = tmp_path / "EXECUTED"
-            command_path.write_text(
-                f"from pathlib import Path\nPath({str(marker)!r}).write_text('1')\n",
-                encoding="utf-8",
-            )
-            registry = Registry()
-            registry.add(u.Tests.promoted_command(path=command_path))
-            return registry, marker
-
-        @pytest.mark.parametrize("ambient_value", [None, "arbitrary"])
-        def test_dispatch_executes_declared_operation(
-            self, tmp_path: Path, ambient_value: str | None
+        def test_command_contract_accepts_declared_domain_parameter(
+            tmp_path: Path,
         ) -> None:
-            """Unrelated ambient input never changes the declared operation."""
-            registry, marker = self._write_registry(tmp_path)
-            environment = {"WHAT": "all"}
-            if ambient_value is not None:
-                environment["UNDECLARED_INPUT"] = ambient_value
-            with tm.scope(
-                env=environment, remove_env_keys=("HELP", "OPTIONS", "UNDECLARED_INPUT")
-            ):
-                exit_code = dispatch(registry, "probe")
-                assert exit_code == 0
-                assert marker.exists()
-
-
-__all__: list[str] = ["TestsFlextInfraPromotedExecutionContract"]
+            """A domain parameter remains part of the command's input contract."""
+            param = m.Infra.PromotedParam(
+                name="TARGET",
+                help="Destination",
+                choices=("alpha", "beta"),
+            )
+            command = u.Tests.promoted_command(
+                path=tmp_path / "scripts" / "probe" / "all.py",
+                params=(param,),
+            )
+            u.Infra.promoted_validate_command_contract(command)

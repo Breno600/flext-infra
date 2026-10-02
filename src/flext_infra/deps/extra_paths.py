@@ -8,7 +8,10 @@ distribution in the environment the project runs against, never through a
 filesystem hop out of the project root: a generated surface that encodes
 ``../<sibling>/src`` describes one host layout, so it is wrong in any checkout
 whose siblings sit elsewhere and it makes one generator emit different content
-per clone (flext-c6di).
+per clone.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -16,14 +19,16 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, override
 
-from flext_infra import c, config, m, p, r, t, u
+from flext_core import r
+from flext_infra import c, config, m, p, t, u
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
-
-from ._extra_paths_sync import FlextInfraExtraPathsSyncMixin
+from flext_infra.deps._extra_paths_sync import FlextInfraExtraPathsSyncMixin
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 
 class FlextInfraExtraPathsManager(
-    FlextInfraExtraPathsSyncMixin, FlextInfraProjectSelectionServiceBase[bool]
+    FlextInfraExtraPathsSyncMixin,
+    FlextInfraProjectSelectionServiceBase[bool],
 ):
     """Manager for synchronizing type-checker search paths from dependencies."""
 
@@ -51,7 +56,7 @@ class FlextInfraExtraPathsManager(
     def model_post_init(self, __context: t.MappingKV[str, p.AttributeProbe], /) -> None:
         """Initialize workspace metadata after validation."""
         self._workspace_project_names = set(
-            u.Infra.workspace_project_paths(self.repository_root)
+            u.Infra.workspace_project_paths(self.repository_root),
         )
 
     @property
@@ -68,9 +73,15 @@ class FlextInfraExtraPathsManager(
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Synchronize extra paths for the configured project slice."""
+        """Synchronize extra paths for the configured project slice.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         result = self.sync_extra_paths(
-            dry_run=self.effective_dry_run, project_dirs=self.project_dirs
+            dry_run=self.effective_dry_run,
+            project_dirs=self.project_dirs,
         )
         if result.failure:
             return r[bool].from_failure(result)
@@ -78,9 +89,17 @@ class FlextInfraExtraPathsManager(
 
     @staticmethod
     def _existing_typings_paths(
-        rules: p.Infra.TypeCheckerPathRules, *, project_dir: Path, is_root: bool
+        rules: p.Infra.TypeCheckerPathRules,
+        *,
+        project_dir: Path,
+        is_root: bool,
     ) -> t.StrSequence:
-        """Return the configured typings roots that exist under ``project_dir``."""
+        """Return the configured typings roots that exist under ``project_dir``.
+
+        Returns:
+            The configured typings roots that exist under ``project_dir``.
+
+        """
         configured_typings = (
             rules.root_typings_paths if is_root else rules.project_typings_paths
         )
@@ -104,6 +123,10 @@ class FlextInfraExtraPathsManager(
         ``include_generated_roots`` carries the only difference between the two
         callers: pyrefly also accepts a shared root the active codegen plan is
         about to materialize, mypy accepts only roots already on disk.
+
+        Returns:
+            The unordered search roots a checker shares, minus ordered ones.
+
         """
         shared_paths = [
             relative_path
@@ -115,7 +138,9 @@ class FlextInfraExtraPathsManager(
         ]
         paths: t.Infra.StrSet = {
             *self._existing_typings_paths(
-                rules, project_dir=project_dir, is_root=is_root
+                rules,
+                project_dir=project_dir,
+                is_root=is_root,
             ),
             *shared_paths,
         }
@@ -125,11 +150,18 @@ class FlextInfraExtraPathsManager(
 
     @override
     def pyright_extra_paths(self, *, project_dir: Path, is_root: bool) -> t.StrSequence:
-        """Compute pyright extra paths for a project."""
+        """Compute pyright extra paths for a project.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         rules = config.Infra.tooling.tools.pyright.path_rules
         source_root = rules.source_dir
         typings_paths = self._existing_typings_paths(
-            rules, project_dir=project_dir, is_root=is_root
+            rules,
+            project_dir=project_dir,
+            is_root=is_root,
         )
         # Why: naive sorted({".", "src"}) puts "." first and diverges from the
         # declared scaffold roots and pyrefly search-path ordering, so conform
@@ -141,24 +173,31 @@ class FlextInfraExtraPathsManager(
 
     @override
     def pyrefly_search_paths(
-        self, *, project_dir: Path, is_root: bool
+        self,
+        *,
+        project_dir: Path,
+        is_root: bool,
     ) -> t.StrSequence:
         """Compute pyrefly search paths for a project.
 
         Only roots inside ``project_dir`` are emitted. Path dependencies and uv
         workspace projects are importable through their installed distributions,
         so they need no search-path entry and must never be described by a path
-        that leaves the project (flext-c6di).
+        that leaves the project.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
         """
         rules = config.Infra.tooling.tools.pyrefly.path_rules
         source_root = rules.source_dir
-        # Why (cosmos-45hiv, 2026-08-31): the project root closes the chain for
+        # Why: the project root closes the chain for
         # cross-tree imports. `scripts/` is a checked env dir and owns
         # `scripts/__init__.py`, so `tests/` and `scripts/` import its modules
         # as `scripts.*`; resolving them needs the repo root on the search
         # path. It must come LAST: pyrefly resolves the FIRST matching entry,
         # so `source_dir` ahead of "." keeps `src.x` from also resolving as
-        # `x` (the ai-hub-qwoc duplicate-class failure below). mypy cannot
+        # `x` (the duplicate-class failure). mypy cannot
         # share this value — it enumerates every search-path root and reports
         # the same file under two module names as source-file-found-twice —
         # which is why the two tools now derive separately.
@@ -194,6 +233,10 @@ class FlextInfraExtraPathsManager(
         pyrefly does not have that failure mode: it resolves imports
         first-match-wins, so the project root is a safe resolution aid there
         and stays one (see :meth:`pyrefly_search_paths`).
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
         """
         rules = config.Infra.tooling.tools.pyrefly.path_rules
         source_root = rules.source_dir
@@ -209,16 +252,25 @@ class FlextInfraExtraPathsManager(
         return tuple(sorted(paths))
 
     def pyrefly_project_includes(
-        self, *, project_dir: Path, is_root: bool
+        self,
+        *,
+        project_dir: Path,
+        is_root: bool,
     ) -> t.StrSequence:
-        """Build Pyrefly includes from configured productive directories."""
+        """Build Pyrefly includes from configured productive directories.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         rules = config.Infra.tooling.tools.pyrefly.path_rules
-        # flext-j47u (codex): never reread an on-disk Pyright table while its
+        # Never reread an on-disk Pyright table while its
         # in-memory payload is being conformed; include only real production roots.
         discovered_python_roots = set(
             u.Infra.discover_python_dirs(
-                project_dir, workspace_excluded_top_dirs=self.analysis_excluded_top_dirs
-            )
+                project_dir,
+                workspace_excluded_top_dirs=self.analysis_excluded_top_dirs,
+            ),
         )
         includes: t.Infra.StrSet = set(
             self.pyrefly_include_globs(
@@ -227,15 +279,22 @@ class FlextInfraExtraPathsManager(
                     for directory in rules.env_dirs
                     if directory in discovered_python_roots
                     or directory in self.generated_python_roots
-                )
-            )
+                ),
+            ),
         )
         if not is_root or (not rules.workspace_include_children):
             return sorted(includes)
         for child in sorted(project_dir.iterdir()):
-            if not child.is_dir() or not (child / c.Infra.PYPROJECT_FILENAME).exists():
+            if not child.is_dir() or not (child / c.PYPROJECT_FILENAME).exists():
                 continue
-            child_dirs = u.Infra.discover_python_dirs(child)
+            child_dirs = u.Infra.discover_python_dirs(
+                child,
+                workspace_excluded_top_dirs=(
+                    FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
+                        child,
+                    ).unwrap()
+                ),
+            )
             includes.update(
                 f"{child.name}/{directory}/**/*.py*" for directory in child_dirs
             )
@@ -243,7 +302,12 @@ class FlextInfraExtraPathsManager(
 
     @staticmethod
     def pyrefly_include_globs(env_dirs: t.StrSequence) -> t.StrSequence:
-        """Render Pyrefly include globs for already validated Python roots."""
+        """Render Pyrefly include globs for already validated Python roots.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         return tuple(f"{directory}/**/*.py*" for directory in env_dirs)
 
 

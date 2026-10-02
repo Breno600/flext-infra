@@ -1,13 +1,16 @@
-"""Cohesive external-tool-runner mixin (deptry, mypy stubs, pip-check) for detection."""
+"""Cohesive external-tool-runner mixin (deptry, mypy stubs, pip-check) for detection.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
-import sys
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, t, u
+from flext_infra import c, m, t, u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -22,27 +25,9 @@ class FlextInfraDependencyDetectionRunnersMixin:
         # Conversion helper provided by the concrete analyzer; declared for static
         # resolution only (runtime impl lives on the concrete via FLEXT).
         def _to_toml_config(
-            self, payload: t.MappingKV[str, t.Infra.InfraValue]
+            self,
+            payload: t.MappingKV[str, t.JsonValue],
         ) -> t.JsonMapping: ...
-
-    def _read_plain(self, path: Path) -> p.Result[t.JsonMapping]:
-        """Read plain; concrete analyzer supplies the real reader."""
-        _ = path
-        msg = "_read_plain must be implemented by the concrete analyzer"
-        raise NotImplementedError(msg)
-
-    def _run_raw(
-        self,
-        cmd: t.StrSequence,
-        *,
-        cwd: Path | None = None,
-        timeout: int | None = None,
-        env: t.StrMapping | None = None,
-    ) -> p.Result[p.Cli.CommandOutput]:
-        """Run raw command; concrete analyzer supplies the real runner."""
-        _ = cmd, cwd, timeout, env
-        msg = "_run_raw must be implemented by the concrete analyzer"
-        raise NotImplementedError(msg)
 
     def run_deptry(
         self,
@@ -53,8 +38,13 @@ class FlextInfraDependencyDetectionRunnersMixin:
         json_output_path: Path | None = None,
         extend_exclude: t.StrSequence | None = None,
     ) -> p.Result[t.Pair[t.SequenceOf[t.JsonMapping], int]]:
-        """Run deptry analysis on a project and parse JSON output."""
-        settings = config_path or project_path / c.Infra.PYPROJECT_FILENAME
+        """Run deptry analysis on a project and parse JSON output.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[t.SequenceOf[t.JsonMapping], int]]``.
+
+        """
+        settings = config_path or project_path / c.PYPROJECT_FILENAME
         if not settings.exists():
             return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].ok(([], 0))
         out_file = json_output_path or project_path / ".deptry-report.json"
@@ -70,7 +60,7 @@ class FlextInfraDependencyDetectionRunnersMixin:
         if extend_exclude:
             for excluded in extend_exclude:
                 cmd.extend(["--extend-exclude", excluded])
-        result = self._run_raw(cmd, cwd=project_path, timeout=c.Infra.TIMEOUT_MEDIUM)
+        result = u.Cli.run_raw(cmd, cwd=project_path, timeout=c.Infra.TIMEOUT_MEDIUM)
         if result.failure:
             return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].from_failure(result)
         issues: t.SequenceOf[t.JsonMapping] = []
@@ -78,17 +68,25 @@ class FlextInfraDependencyDetectionRunnersMixin:
             loaded_result = u.Cli.files_read_json(out_file)
             if loaded_result.failure:
                 return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].from_failure(
-                    loaded_result
+                    loaded_result,
                 )
+            validation_failure: (
+                p.Result[t.Pair[t.SequenceOf[t.JsonMapping], int]] | None
+            ) = None
             if isinstance(loaded_result.value, list):
                 normalized_issues: t.MutableSequenceOf[t.JsonMapping] = []
-                for item in loaded_result.value:
+                for index, item in enumerate(loaded_result.value):
                     if not isinstance(item, Mapping):
-                        continue
+                        return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].fail(
+                            f"deptry JSON issue {index} must be a mapping",
+                        )
                     try:
                         typed_item = t.Infra.INFRA_MAPPING_ADAPTER.validate_python(item)
-                    except c.ValidationError:
-                        continue
+                    except c.ValidationError as exc:
+                        return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].fail_op(
+                            "validate deptry issue",
+                            exc,
+                        )
                     converted_issue = self._to_toml_config(typed_item)
                     if len(converted_issue) == len(typed_item):
                         normalized_issues.append(converted_issue)
@@ -98,8 +96,11 @@ class FlextInfraDependencyDetectionRunnersMixin:
                     out_file.unlink()
                 except OSError as exc:
                     return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].fail(
-                        f"failed to cleanup deptry temp output: {exc}", exception=exc
+                        f"failed to cleanup deptry temp output: {exc}",
+                        exception=exc,
                     )
+            if validation_failure is not None:
+                return validation_failure
         cmd_result: p.Cli.CommandOutput = result.value
         return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].ok((
             issues,
@@ -107,33 +108,37 @@ class FlextInfraDependencyDetectionRunnersMixin:
         ))
 
     def run_mypy_stub_hints(
-        self, project_path: Path
+        self,
+        project_path: Path,
     ) -> p.Result[t.Pair[t.StrSequence, t.StrSequence]]:
-        """Run mypy via the command runner to detect missing stubs and hint packages."""
+        """Run mypy via the command runner to detect missing stubs and hint packages.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[t.StrSequence, t.StrSequence]]``.
+
+        """
         # Why: current mypy emits ANSI color codes around quoted module/package
         # names even when stdout is a pipe, splicing escape sequences inside
         # the literal `for "name"` text that MYPY_STUB_RE/MYPY_HINT_RE match —
         # silently zeroing every detected stub hint. `--no-color-output`
         # matches the plain-text contract the regexes already assume (see
         # gates/mypy.py, which disables color for the same reason).
-        cmd = u.Infra.mypy_limited_command((
-            sys.executable,
-            "-m",
-            c.Infra.MYPY,
-            c.Infra.DEFAULT_SRC_DIR,
-            "--config-file",
-            c.Infra.PYPROJECT_FILENAME,
-            "--no-error-summary",
-            "--no-color-output",
-        ))
-        result = self._run_raw(
-            cmd, cwd=project_path, timeout=u.Infra.mypy_runner_timeout()
+        cmd = u.Infra.mypy_limited_command(
+            m.Infra.MypyInvocation(
+                targets=(project_path / c.Infra.DEFAULT_SRC_DIR,),
+                config_file=project_path / c.PYPROJECT_FILENAME,
+            ),
+        )
+        result = u.Cli.run_raw(
+            cmd,
+            cwd=project_path,
+            timeout=u.Infra.mypy_runner_timeout(),
         )
         if result.failure:
             return r[t.Pair[t.StrSequence, t.StrSequence]].fail(
                 u.Infra.mypy_launch_failure_diagnostic(
-                    result.error or "Mypy process launch failed"
-                )
+                    result.error or "Mypy process launch failed",
+                ),
             )
         command_output: p.Cli.CommandOutput = result.value
         if resource_diagnostic := u.Infra.mypy_failure_diagnostic(command_output):
@@ -155,14 +160,21 @@ class FlextInfraDependencyDetectionRunnersMixin:
         ))
 
     def run_pip_check(
-        self, repository_root: Path, venv_bin: Path
+        self,
+        repository_root: Path,
+        venv_bin: Path,
     ) -> p.Result[t.Pair[t.StrSequence, int]]:
-        """Run pip check to detect dependency conflicts in workspace."""
+        """Run pip check to detect dependency conflicts in workspace.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[t.StrSequence, int]]``.
+
+        """
         pip = venv_bin / "pip"
         if not pip.exists():
             return r[t.Pair[t.StrSequence, int]].ok(([], 0))
         env = {"VIRTUAL_ENV": str(venv_bin.parent)}
-        result = self._run_raw(
+        result = u.Cli.run_raw(
             [str(pip), c.Infra.VERB_CHECK],
             cwd=repository_root,
             timeout=c.Infra.TIMEOUT_SHORT,

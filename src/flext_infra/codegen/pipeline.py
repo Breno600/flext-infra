@@ -1,4 +1,8 @@
-"""Direct codegen pipeline command service."""
+"""Direct codegen pipeline command service.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,43 +10,57 @@ from typing import TYPE_CHECKING, override
 
 from flext_cli import cli
 
-from .. import FlextInfraServiceBase, c, m, p, r, t, u
-from ._lazy_init_generation import FlextInfraCodegenLazyInitGenerationMixin
-from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles
-from ._mise_artifacts_publication import publish_file_plan
-from ._pipeline_stages import FlextInfraCodegenPipelineStagesMixin
-from .lazy_init_planner import FlextInfraCodegenLazyInitPlanner
+from flext_core import r
+from flext_infra import c, m, p, t, u
+from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
+from flext_infra.codegen._lazy_init_generation import (
+    FlextInfraCodegenLazyInitGenerationMixin,
+)
+from flext_infra.codegen._mise_artifacts_files import FlextInfraMiseArtifactsFiles
+from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
+from flext_infra.codegen._pipeline_stages import FlextInfraCodegenPipelineStagesMixin
+from flext_infra.codegen.lazy_init_planner import FlextInfraCodegenLazyInitPlanner
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-_log = u.fetch_logger(__name__)
-
 
 class FlextInfraCodegenPipeline(
-    FlextInfraCodegenPipelineStagesMixin, FlextInfraServiceBase[str]
+    FlextInfraCodegenPipelineStagesMixin,
+    FlextInfraCodegenExecutionBase[str],
 ):
     """Run the full codegen pipeline directly from the validated CLI model."""
 
+    conform_collaborators: m.Infra.CodegenConformPorts = m.Field(
+        exclude=True,
+        description="Docs and fresh-import ports the toolchain conform crosses into",
+    )
+
     _state: m.Infra.CodegenPipelineState = u.PrivateAttr(
-        default_factory=m.Infra.CodegenPipelineState
+        default_factory=m.Infra.CodegenPipelineState,
     )
 
     @override
     def execute(self) -> p.Result[str]:
-        """Execute the end-to-end codegen pipeline via DAG runner."""
+        """Execute the end-to-end codegen pipeline via DAG runner.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         self._state = m.Infra.CodegenPipelineState()
         stages = self._build_codegen_stages()
 
         pipeline_result = cli.pipeline(
             stages,
-            context=cli.stage_context(
-                self.repository_root,
+            context=m.Cli.PipelineStageContext(
+                repository_root=self.repository_root,
                 settings={
-                    c.Infra.PIPELINE_KEY_DRY_RUN: self.dry_run or not self.apply_changes
+                    c.Infra.PIPELINE_KEY_DRY_RUN: self.dry_run
+                    or not self.apply_changes,
                 },
             ),
-            logger=_log,
+            logger=self.logger,
         )
         if pipeline_result.failure:
             return r[str].from_failure(pipeline_result)
@@ -54,7 +72,12 @@ class FlextInfraCodegenPipeline(
     # ------------------------------------------------------------------
 
     def _build_codegen_stages(self) -> t.SequenceOf[m.Cli.PipelineStageSpec]:
-        """Build DAG stage specs with linear dependency chain."""
+        """Build DAG stage specs with linear dependency chain.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Cli.PipelineStageSpec]``.
+
+        """
         handlers: t.MappingKV[str, p.Cli.PipelineStage] = {
             c.Infra.PipelineStage.DISCOVER: self._stage_discover,
             c.Infra.PipelineStage.TOOLCHAIN: self._stage_toolchain,
@@ -74,15 +97,26 @@ class FlextInfraCodegenPipeline(
 
     @override
     def _run_stage[V](
-        self, stage_id: str, action: Callable[[], V], emit: Callable[[V], t.JsonMapping]
+        self,
+        stage_id: str,
+        action: Callable[[], V],
+        emit: Callable[[V], t.JsonMapping],
     ) -> p.Result[m.Cli.PipelineStageResult]:
         """Run one pipeline stage and preserve the first exception.
 
         ``action`` performs the work and may mutate ``self._state``; ``emit``
         builds the output payload from the action's return value.
+
+        Returns:
+            The resulting ``p.Result[m.Cli.PipelineStageResult]``.
+
         """
         return r[m.Cli.PipelineStageResult].ok(
-            cli.stage_result(stage_id, output=emit(action()))
+            m.Cli.PipelineStageResult(
+                stage_id=stage_id,
+                status=c.Cli.PipelineStageStatus.OK,
+                output=emit(action()),
+            ),
         )
 
     # ------------------------------------------------------------------
@@ -90,7 +124,12 @@ class FlextInfraCodegenPipeline(
     # ------------------------------------------------------------------
 
     def _collect_pipeline_output(self) -> p.Result[str]:
-        """Convert typed pipeline state into the original output format."""
+        """Convert typed pipeline state into the original output format.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         reports_before = self._state.reports_before
         reports_after = self._state.reports_after
         scaffold_results = self._state.scaffold_results
@@ -106,7 +145,7 @@ class FlextInfraCodegenPipeline(
         skipped = sum(len(result.violations_skipped) for result in fix_results)
 
         if self.output_format == c.Cli.OutputFormats.JSON:
-            payload: t.Infra.MutableInfraMapping = {
+            payload: t.MutableJsonMapping = {
                 "census_before": {
                     "total_violations": before_violations,
                     "total_fixable": before_fixable,
@@ -129,7 +168,7 @@ class FlextInfraCodegenPipeline(
                 f"Auto-fix: {fixed} violations fixed",
                 f"Census after: {after_violations} violations",
                 f"Improvement: {before_violations - after_violations} violations resolved",
-            ])
+            ]),
         )
 
 
@@ -139,5 +178,5 @@ __all__: list[str] = [
     "FlextInfraCodegenPipeline",
     "FlextInfraCodegenPipelineStagesMixin",
     "FlextInfraMiseArtifactsFiles",
-    "publish_file_plan",
+    "FlextInfraMisePublication",
 ]

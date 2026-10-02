@@ -13,7 +13,7 @@ from flext_tests import tm
 
 from flext_infra import config
 from flext_infra.codegen import FlextInfraCodegenConform
-from tests import c, m, u
+from tests import c, m, t, u
 
 pytestmark = [pytest.mark.slow]
 
@@ -25,7 +25,7 @@ class TestsFlextInfraScriptDispatchMakefile:
     def _render_root_makefile(
         tmp_path: Path,
         *,
-        extra_verbs: tuple[m.Infra.MakeVerbSpec, ...],
+        extra_verbs: t.VariadicTuple[m.Infra.MakeVerbSpec],
         script_dispatch: m.Infra.ScriptDispatchSpec | None,
     ) -> str:
         # The engine is consumer-agnostic, so this fixture models a
@@ -48,12 +48,9 @@ class TestsFlextInfraScriptDispatchMakefile:
             extra_verbs=extra_verbs,
             script_dispatch=script_dispatch,
         )
-        workspace = m.Infra.WorkspaceSpec(
-            name="demo-root",
-            beads=u.Tests.beads_project("demo-root"),
-            repository=root_repository,
+        workspace = u.Tests.workspace_spec(
+            root_repository,
             project=u.Tests.project_spec("demo-root"),
-            subprojects=(),
         )
         root = tmp_path / "demo-root"
         request = u.Tests.conform_request(
@@ -63,7 +60,9 @@ class TestsFlextInfraScriptDispatchMakefile:
             mode=c.Infra.CodegenConformMode.CHECK,
         )
         planned = FlextInfraCodegenConform(
-            repository_root=root, request=request, initial_workspace=workspace
+            repository_root=root,
+            request=request,
+            initial_workspace=workspace,
         ).plan(request)
         plan = tm.ok(planned)
         makefile = next(
@@ -73,7 +72,8 @@ class TestsFlextInfraScriptDispatchMakefile:
         return rendered
 
     def test_script_dispatch_repo_routes_extra_verbs_and_normalizes_what(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Extra verbs join PUBLIC_VERBS and dispatch through the declared dispatcher."""
         rendered = self._render_root_makefile(
@@ -106,7 +106,8 @@ class TestsFlextInfraScriptDispatchMakefile:
         tm.that("apps/demo-app/scripts" in rendered, eq=True)
 
     def test_extra_verb_dispatch_target_is_emitted_exactly_once(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Every extra verb owns one public recipe; a second one is a Make warning.
 
@@ -121,7 +122,15 @@ class TestsFlextInfraScriptDispatchMakefile:
             ),
             script_dispatch=None,
         )
-        tm.that(rendered.count("\ndeploy: _builtin_require_environment\n"), eq=1)
+        # The verb target may carry prerequisites (the workspace guard).
+        deploy_targets = [
+            line for line in rendered.splitlines() if line.startswith("deploy:")
+        ]
+        tm.that(len(deploy_targets), eq=1)
+        tm.that(
+            rendered.count("\n_activated-deploy: _builtin_require_environment\n"),
+            eq=1,
+        )
 
     def test_dispatch_routes_custom_what_before_allowlist(self, tmp_path: Path) -> None:
         """Custom ``_custom_<verb>`` handlers bypass the builtin allowlist.
@@ -131,7 +140,9 @@ class TestsFlextInfraScriptDispatchMakefile:
         dispatches them instead of falling through to _builtin-<verb>.
         """
         rendered = self._render_root_makefile(
-            tmp_path, extra_verbs=(), script_dispatch=None
+            tmp_path,
+            extra_verbs=(),
+            script_dispatch=None,
         )
         # RUN_PUBLIC checks CUSTOM_DECLARED_TARGETS first and calls _custom-$(1)
         # when it exists, falling back to _builtin-$(1).
@@ -140,18 +151,22 @@ class TestsFlextInfraScriptDispatchMakefile:
         tm.that("_builtin-$(1)" in rendered, eq=True)
 
     def test_repo_without_script_dispatch_omits_script_routing(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A repo with no script dispatch omits every script-routing projection."""
         rendered = self._render_root_makefile(
-            tmp_path, extra_verbs=(), script_dispatch=None
+            tmp_path,
+            extra_verbs=(),
+            script_dispatch=None,
         )
         # No script routing leaks into non-opted-in repositories.
         tm.that("tr '-' '_'" in rendered, eq=False)
         tm.that("scripts/dispatch.py" in rendered, eq=False)
 
     def test_gen_replaces_codegen_as_the_single_conform_verb(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """``make gen`` is THE conform verb; ``codegen`` no longer exists.
 
@@ -166,12 +181,15 @@ class TestsFlextInfraScriptDispatchMakefile:
         tm.that("codegen" in verb_names, eq=False)
         gen = next(verb for verb in make_config.verbs if verb.name == "gen")
         # WHAT selectors were exterminated: one verb, one meaning, declared once.
-        tm.that(hasattr(gen, "default_what"), eq=False)
-        tm.that(hasattr(gen, "_apply_flag_exterminated"), eq=False)
+        gen_fields = type(gen).model_fields
+        tm.that("default_what" in gen_fields, eq=False)
+        tm.that("_apply_flag_exterminated" in gen_fields, eq=False)
         tm.that("initialize" in verb_names, eq=True)
-        tm.that(hasattr(make_config, "serialization"), eq=False)
+        tm.that("serialization" in type(make_config).model_fields, eq=False)
         rendered = self._render_root_makefile(
-            tmp_path, extra_verbs=(), script_dispatch=None
+            tmp_path,
+            extra_verbs=(),
+            script_dispatch=None,
         )
         public_line = next(
             line for line in rendered.splitlines() if line.startswith("PUBLIC_VERBS :=")
@@ -200,7 +218,7 @@ class TestsFlextInfraScriptDispatchMakefile:
         phony_line = next(
             line
             for line in rendered.splitlines()
-            if line.startswith(".PHONY:") and "_builtin_" in line
+            if line.startswith(".PHONY:") and "_builtin_gen_" in line
         )
         tm.that(phony_line, eq=".PHONY: _builtin_gen_init _builtin_gen_all")
         # The one handler drives the conform engine (CLI namespace is unchanged).
@@ -218,7 +236,6 @@ class TestsFlextInfraScriptDispatchMakefile:
                 "deps modernize",
             ],
         )
-        tm.that(gen_all_body, lacks="MISE_GITHUB_CREDENTIAL_COMMAND")
         tm.that(
             gen_all_body,
             lacks=["codegen lazy-init", "docs generate", "_generated_docs"],
@@ -231,31 +248,41 @@ class TestsFlextInfraScriptDispatchMakefile:
         tm.that("# @flext-regenerate: make gen" in rendered, eq=True)
         # The custom-surface policy names gen (not codegen) for hooks/handlers.
         handler_policies: dict[str, m.Infra.CustomHandlerPolicy] = dict(
-            config.Infra.codegen.make.custom_handler_policies
+            config.Infra.codegen.make.custom_handler_policies,
         )
         for policy in handler_policies.values():
             tm.that("|gen|" in policy.target_pattern, eq=True)
             tm.that("|codegen|" in policy.target_pattern, eq=False)
 
     def test_make_initialize_requires_its_provisioned_interpreter(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
-        """The public initializer fails before effects when its runtime is absent."""
+        """The public initializer validates the pinned toolchain before effects."""
         rendered = self._render_root_makefile(
-            tmp_path, extra_verbs=(), script_dispatch=None
+            tmp_path,
+            extra_verbs=(),
+            script_dispatch=None,
         )
         root = tmp_path / "declared-target"
         package = root / "src" / "demo_root"
         package.mkdir(parents=True)
         makefile = root / c.Infra.MAKEFILE_FILENAME
         makefile.write_text(rendered, encoding="utf-8")
+        # Every public verb except help/clean/upg requires the Mise pin
+        # (db516968e); seed it so the run reaches the interpreter check.
+        u.Tests.copy_tracked_mise_seeds(root)
         invoked = u.Tests.run_isolated_make(
-            ["--no-print-directory", "-f", str(makefile), "initialize"], cwd=root
+            ["--no-print-directory", "-f", str(makefile), "initialize"],
+            cwd=root,
         )
 
         tm.ok(invoked)
         tm.that(u.Cli.process_succeeded(invoked.value.outcome), eq=False)
-        tm.that(invoked.value.stderr, has="missing environment interpreter")
+        tm.that(
+            invoked.value.stderr,
+            has=["missing environment interpreter", "make setup creates it"],
+        )
         tm.that((package / c.Infra.INIT_PY).exists(), eq=False)
 
     def test_work_lifecycle_is_not_projected(self, tmp_path: Path) -> None:
@@ -264,7 +291,9 @@ class TestsFlextInfraScriptDispatchMakefile:
         verb_names = {verb.name for verb in make_config.verbs}
         tm.that("work" in verb_names, eq=False)
         rendered = self._render_root_makefile(
-            tmp_path, extra_verbs=(), script_dispatch=None
+            tmp_path,
+            extra_verbs=(),
+            script_dispatch=None,
         )
         public_line = next(
             line for line in rendered.splitlines() if line.startswith("PUBLIC_VERBS :=")
@@ -273,12 +302,99 @@ class TestsFlextInfraScriptDispatchMakefile:
         tm.that(rendered, lacks="_builtin_work_")
         tm.that(rendered, lacks="workspace work")
 
+    def test_profile_test_verb_profiles_the_canonical_pytest_entry(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """profile-test profiles the entry and its central collection children.
+
+        Cold-run diagnosis (flext-itpd1.3.7) needs the same persistent testmon
+        database guard and environment as the bounded gate, but the diagnostic
+        omits the outer PYTEST_BOUNDED wrapper, not the runner's own deadline.
+        """
+        rendered = self._render_root_makefile(
+            tmp_path,
+            extra_verbs=(),
+            script_dispatch=None,
+        )
+        tm.that(
+            rendered,
+            has=[".PHONY: profile-test\n", ".PHONY: profile-test-report\n"],
+        )
+        profile_test = rendered.split("profile-test:", 1)[1].split("\n\n", 1)[0]
+        gate_runner = rendered.split("_builtin_test_all:", 1)[1].split("\n\n", 1)[0]
+        datafile = config.Infra.codegen.make.testmon_cache.database_environment_variable
+        # The diagnostic reuses the canonical runner's testmon database guard
+        # and exports the same database environment.
+        tm.that(profile_test, has='database="$(FLEXT_PYTEST_TESTMON_DATABASE)";')
+        tm.that(profile_test, has=f'{datafile}="$$database"')
+        # The thin entry delegates profiling to the execution adapter.
+        tm.that(profile_test, has="-m flext_infra._pytest_entry profile")
+        tm.that(profile_test, lacks="import cProfile")
+        tm.that(profile_test, has="$(PROFILE_REPORTS_DIR)/pytest.pstats")
+        # Only the bounded gate adds the outer hard wall clock wrapper.
+        tm.that(profile_test, lacks="PYTEST_BOUNDED")
+        tm.that(gate_runner, has="PYTEST_BOUNDED")
+        report = rendered.split("profile-test-report:", 1)[1].split("\n\n", 1)[0]
+        tm.that(report, has="flext_infra._cprofile_entry")
+        tm.that(report, has="$(PROFILE_REPORTS_DIR)/pytest.pstats")
+        tm.that(report, has="$(PROFILE_REPORTS_DIR)/pytest.pstats.json")
+
+    def test_test_verbs_split_testmon_budget_from_unbounded_full(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Make test is bounded and testmon-backed; make test-full is neither.
+
+        The persistent database is keyed by the declared distribution, so
+        every checkout of a project shares one testmon history.
+        """
+        rendered = self._render_root_makefile(
+            tmp_path,
+            extra_verbs=(),
+            script_dispatch=None,
+        )
+        cache = config.Infra.codegen.make.testmon_cache
+        database_line = next(
+            line
+            for line in rendered.splitlines()
+            if line.startswith("override FLEXT_PYTEST_TESTMON_DATABASE")
+        )
+        tm.that(rendered, has="PROJECT_NAME := demo-root\n")
+        tm.that(
+            database_line,
+            has=(
+                f"/{cache.external_storage_directory}/$(PROJECT_NAME)/"
+                f"{cache.database_filename}"
+            ),
+        )
+        tm.that(database_line, lacks="PROJECT_ROOT")
+        incremental = rendered.split("_builtin_test_all:", 1)[1].split("\n\n", 1)[0]
+        full = rendered.split("_builtin_test_full_all:", 1)[1].split("\n\n", 1)[0]
+        tm.that(
+            incremental,
+            has=[
+                "PYTEST_BOUNDED",
+                f'{cache.database_environment_variable}="$$database"',
+            ],
+        )
+        tm.that(full, has="-m flext_infra._pytest_entry full")
+        tm.that(
+            full,
+            lacks=[
+                "PYTEST_BOUNDED",
+                "FLEXT_PYTEST_TESTMON_DATABASE",
+                cache.database_environment_variable,
+            ],
+        )
+
     # A test asserting a downstream consumer's verbs from this
     # engine's catalog was removed. The engine is consumer-agnostic: a consumer
     # declares extra_verbs/script_dispatch in its own typed repository input. The
     # generic capability stays covered by the fixture-driven cases below.
     def test_script_dispatch_adds_scripts_to_lint_and_type_paths(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Opted-in repos scan scripts alongside src and tests."""
         rendered = self._render_root_makefile(
@@ -298,7 +414,8 @@ class TestsFlextInfraScriptDispatchMakefile:
                 ),
             ),
             script_dispatch=m.Infra.ScriptDispatchSpec(
-                dispatcher="scripts/dispatch.py", roots=("scripts",)
+                dispatcher="scripts/dispatch.py",
+                roots=("scripts",),
             ),
         )
         tm.that(
@@ -315,11 +432,14 @@ class TestsFlextInfraScriptDispatchMakefile:
         )
 
     def test_repo_without_script_dispatch_retains_canonical_lint_and_type_paths(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A repo without script dispatch keeps src/tests/scripts paths and excludes scripts."""
         rendered = self._render_root_makefile(
-            tmp_path, extra_verbs=(), script_dispatch=None
+            tmp_path,
+            extra_verbs=(),
+            script_dispatch=None,
         )
         tm.that(
             "RUFF_PATHS := $(strip $(foreach d,src tests examples,"

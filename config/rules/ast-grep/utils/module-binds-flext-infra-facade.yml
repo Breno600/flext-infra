@@ -1,0 +1,10 @@
+# The module already reaches flext-infra's own facades, so it is inside the
+# flext-infra package and its canonical facade is flext_infra's, never the
+# upstream flext-cli one it extends.
+id: module-binds-flext-infra-facade
+language: python
+rule:
+  kind: import_from_statement
+  has:
+    field: module_name
+    regex: "^flext_infra$"

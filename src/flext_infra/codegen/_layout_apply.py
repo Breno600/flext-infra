@@ -1,4 +1,4 @@
-"""Apply orchestration for the project-layout engine (flext-0wuz).
+"""Apply orchestration for the project-layout engine.
 
 Executes the typed findings produced by the planning mixin, composing the
 file/archive primitives and the gitignore owner through FLEXT.
@@ -11,21 +11,29 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flext_infra import m, p, r, t
-
-from ._layout_files import FlextInfraCodegenLayoutFilesMixin
-from ._layout_gitignore import FlextInfraCodegenLayoutGitignoreMixin
+from flext_core import r
+from flext_infra import m, p, t
+from flext_infra.codegen._layout_files import FlextInfraCodegenLayoutFilesMixin
+from flext_infra.codegen._layout_gitignore import FlextInfraCodegenLayoutGitignoreMixin
 
 
 class FlextInfraCodegenLayoutApplyMixin(
-    FlextInfraCodegenLayoutFilesMixin, FlextInfraCodegenLayoutGitignoreMixin
+    FlextInfraCodegenLayoutFilesMixin,
+    FlextInfraCodegenLayoutGitignoreMixin,
 ):
     """Execute layout findings idempotently against one project directory."""
 
     def apply_project(
-        self, project_dir: Path, report: m.Infra.LayoutProjectReport
+        self,
+        project_dir: Path,
+        report: m.Infra.LayoutProjectReport,
     ) -> p.Result[m.Infra.LayoutProjectReport]:
-        """Execute every planned finding and return the updated report."""
+        """Execute every planned finding and return the updated report.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.LayoutProjectReport]``.
+
+        """
         findings: list[m.Infra.LayoutFinding] = []
         gitignore_status: t.Infra.LayoutStatus = "noop"
         actionable: t.VariadicTuple[m.Infra.LayoutFinding] = report.actionable
@@ -49,26 +57,41 @@ class FlextInfraCodegenLayoutApplyMixin(
                 return r[m.Infra.LayoutProjectReport].from_failure(executed)
             findings.append(executed.value)
         return r[m.Infra.LayoutProjectReport].ok(
-            report.model_copy(update={"findings": tuple(findings)})
+            report.model_copy(update={"findings": tuple(findings)}),
         )
 
     def _execute_path_finding(
-        self, project_dir: Path, finding: m.Infra.LayoutFinding
+        self,
+        project_dir: Path,
+        finding: m.Infra.LayoutFinding,
     ) -> p.Result[m.Infra.LayoutFinding]:
-        """Execute one move/archive finding; missing sources are no-ops."""
+        """Execute one move/archive finding; missing sources are no-ops.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.LayoutFinding]``.
+
+        """
         source = project_dir / finding.path
         if not source.exists():
             return r[m.Infra.LayoutFinding].ok(
-                finding.model_copy(update={"status": "noop"})
+                finding.model_copy(update={"status": "noop"}),
             )
         if finding.rule == "move":
             return self._apply_move(project_dir, finding, source)
         return self._apply_archive(project_dir, finding, source)
 
     def _apply_move(
-        self, project_dir: Path, finding: m.Infra.LayoutFinding, source: Path
+        self,
+        project_dir: Path,
+        finding: m.Infra.LayoutFinding,
+        source: Path,
     ) -> p.Result[m.Infra.LayoutFinding]:
-        """Move one file/dir to its canonical target, merging dir collisions."""
+        """Move one file/dir to its canonical target, merging dir collisions.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.LayoutFinding]``.
+
+        """
         target = project_dir / finding.target
         if source.is_dir() and target.exists():
             merge = self._merge_directory(project_dir, source, target, finding.path)
@@ -80,41 +103,61 @@ class FlextInfraCodegenLayoutApplyMixin(
                         update={
                             "status": "skipped",
                             "message": f"{finding.message} (merge incomplete: review)",
-                        }
-                    )
+                        },
+                    ),
                 )
             return r[m.Infra.LayoutFinding].ok(
-                finding.model_copy(update={"status": "applied"})
+                finding.model_copy(update={"status": "applied"}),
             )
         moved = self._move_entry(project_dir, source, target, finding.path)
         if moved.failure:
             return r[m.Infra.LayoutFinding].from_failure(moved)
         status: t.Infra.LayoutStatus = "applied"
         return r[m.Infra.LayoutFinding].ok(
-            finding.model_copy(update={"status": status, "message": moved.value})
+            finding.model_copy(update={"status": status, "message": moved.value}),
         )
 
     def _apply_archive(
-        self, project_dir: Path, finding: m.Infra.LayoutFinding, source: Path
+        self,
+        project_dir: Path,
+        finding: m.Infra.LayoutFinding,
+        source: Path,
     ) -> p.Result[m.Infra.LayoutFinding]:
-        """Archive one entry into the archive root, preserving content."""
+        """Archive one entry into the archive root, preserving content.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.LayoutFinding]``.
+
+        """
         archived = self._archive_path(project_dir, source, finding.path, finding)
         if archived.failure:
             return r[m.Infra.LayoutFinding].from_failure(archived)
         status, message = archived.value
         return r[m.Infra.LayoutFinding].ok(
-            finding.model_copy(update={"status": status, "message": message})
+            finding.model_copy(update={"status": status, "message": message}),
         )
 
     def _merge_directory(
-        self, project_dir: Path, source: Path, target: Path, source_rel: str
+        self,
+        project_dir: Path,
+        source: Path,
+        target: Path,
+        source_rel: str,
     ) -> p.Result[bool]:
-        """Merge a docs dir into an existing target dir file-by-file."""
+        """Merge a docs dir into an existing target dir file-by-file.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         files = sorted(path for path in source.rglob("*") if path.is_file())
         for file_path in files:
             rel = file_path.relative_to(source).as_posix()
             moved = self._move_entry(
-                project_dir, file_path, target / rel, f"{source_rel}/{rel}"
+                project_dir,
+                file_path,
+                target / rel,
+                f"{source_rel}/{rel}",
             )
             if moved.failure:
                 return r[bool].from_failure(moved)

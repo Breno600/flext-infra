@@ -11,8 +11,7 @@ from typing import Annotated, ClassVar
 
 from flext_cli import m
 
-from .. import t
-from . import ImmutableEmptyMapping
+from flext_infra import t
 
 
 class FlextInfraModelsTransformers:
@@ -26,7 +25,8 @@ class FlextInfraModelsTransformers:
             m.Field(description="Project package that owns the canonical alias policy"),
         ]
         import_root: Annotated[
-            str, m.Field(description="Public facade root from which consumers import")
+            str,
+            m.Field(description="Public facade root from which consumers import"),
         ]
 
     class SemanticFilePlan(m.ContractModel):
@@ -62,27 +62,79 @@ class FlextInfraModelsTransformers:
     class SemanticMigrationEdit(m.ContractModel):
         """One validated in-memory semantic source rewrite."""
 
-        # Why (flext-ygc2k): source bytes must survive validation byte-exact;
+        # Why: source bytes must survive validation byte-exact;
         # the strict base strips whitespace, which corrupts CAS comparisons.
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(str_strip_whitespace=False)
 
         file_path: Annotated[Path, m.Field(description="Source file to rewrite")]
         original_source: Annotated[
-            str, m.Field(description="Source bytes before migration")
+            str,
+            m.Field(description="Source bytes before migration"),
         ]
         updated_source: Annotated[
-            str, m.Field(description="Prospective source bytes after migration")
+            str,
+            m.Field(description="Prospective source bytes after migration"),
         ]
         changes: Annotated[
-            t.VariadicTuple[str], m.Field(description="Recorded migration operations")
+            t.VariadicTuple[str],
+            m.Field(description="Recorded migration operations"),
         ] = ()
+
+    class CompatibilityAliasRewritePlan(m.ArbitraryTypesModel):
+        """Binding-proven rewrites planned for one compatibility-alias cutover file."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        local_aliases: Annotated[
+            t.StrMapping,
+            m.Field(description="Aliases the file declares, mapped to their targets"),
+        ]
+        import_aliases: Annotated[
+            t.MappingKV[str, t.StrMapping],
+            m.Field(description="Imported aliases per source module and their targets"),
+        ]
+        attribute_aliases: Annotated[
+            t.MappingKV[t.Pair[str, str], str],
+            m.Field(description="Module attribute alias accesses and their targets"),
+        ]
+        qualified_aliases: Annotated[
+            t.StrMapping,
+            m.Field(description="Qualified alias identities mapped to their targets"),
+        ]
+        target_bindings: Annotated[
+            frozenset[str],
+            m.Field(description="Module-level names the file already binds"),
+        ]
+
+    class PrivateImportRewritePlan(m.ArbitraryTypesModel):
+        """Binding-proven import rewrites planned for one private-import file."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        removals: Annotated[
+            t.MappingKV[str, frozenset[str]],
+            m.Field(description="Private symbols removed per source module"),
+        ]
+        obsolete_imports: Annotated[
+            t.MappingKV[str, frozenset[str]],
+            m.Field(description="Public roots superseded by their facade alias"),
+        ]
+        replacements: Annotated[
+            t.StrMapping,
+            m.Field(description="Private qualified identities and public references"),
+        ]
+        public_imports: Annotated[
+            t.StrMapping,
+            m.Field(description="Facade aliases mapped to their publishing package"),
+        ]
 
     class Tier0ImportAnalysis(m.Value):
         """Detection results for a single Python file self-import patterns."""
 
         # Why: value contract owned by m.Infra transformers facet, not nested in the fixer service.
         package_name: Annotated[
-            str, m.Field(description="Resolved package name for the analyzed file")
+            str,
+            m.Field(description="Resolved package name for the analyzed file"),
         ]
         file_path: Annotated[
             Path,
@@ -91,7 +143,7 @@ class FlextInfraModelsTransformers:
         alias_to_module: Annotated[
             t.StrMapping,
             m.Field(description="Alias names mapped to their source modules"),
-        ] = m.Field(default_factory=ImmutableEmptyMapping)
+        ]
         category_a: Annotated[
             frozenset[str],
             m.Field(description="Top-level aliases that are informational only"),
@@ -107,7 +159,7 @@ class FlextInfraModelsTransformers:
         category_d: Annotated[
             frozenset[str],
             m.Field(
-                description="Runtime-used aliases requiring direct import handling"
+                description="Runtime-used aliases requiring direct import handling",
             ),
         ] = m.Field(default_factory=frozenset)
 
@@ -135,20 +187,47 @@ class FlextInfraModelsTransformers:
         """
 
         shebang_end: Annotated[
-            int, m.Field(description="Byte offset just after the shebang line")
+            int,
+            m.Field(description="Byte offset just after the shebang line"),
         ] = 0
         encoding_end: Annotated[
-            int, m.Field(description="Byte offset just after the encoding cookie")
+            int,
+            m.Field(description="Byte offset just after the encoding cookie"),
         ] = 0
         comments_end: Annotated[
-            int, m.Field(description="Byte offset after the leading comment block")
+            int,
+            m.Field(description="Byte offset after the leading comment block"),
         ] = 0
         docstring_end: Annotated[
-            int, m.Field(description="Byte offset after the module docstring")
+            int,
+            m.Field(description="Byte offset after the module docstring"),
         ] = 0
         last_import_end: Annotated[
-            int, m.Field(description="Byte offset after the last import statement")
+            int,
+            m.Field(description="Byte offset after the last import statement"),
         ] = 0
+
+    class ClassBlockLayout(m.ArbitraryTypesModel):
+        """Measured layout of one wrapper class block to unwrap.
+
+        Line coordinates are Rope's one-based lines; ``indentation`` is the
+        body column width to strip, and ``docstring_span`` excludes the
+        wrapper's own docstring lines from the strip when present.
+        """
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        header_start: Annotated[int, m.Field(description="First header line")]
+        header_end: Annotated[int, m.Field(description="Last header line")]
+        body_end: Annotated[int, m.Field(description="Last body line")]
+        indentation: Annotated[
+            int,
+            m.Field(description="Body indent width stripped per line"),
+        ]
+        docstring_span: Annotated[
+            tuple[int, int] | None,
+            m.Field(default=None, description="Wrapper docstring line span"),
+        ]
 
     class HeaderInfo(m.ArbitraryTypesModel):
         """Structural summary of a module header."""
@@ -156,7 +235,8 @@ class FlextInfraModelsTransformers:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         has_future_annotations: Annotated[
-            bool, m.Field(description="Whether the module already imports annotations")
+            bool,
+            m.Field(description="Whether the module already imports annotations"),
         ]
         aliases: Annotated[
             frozenset[str],

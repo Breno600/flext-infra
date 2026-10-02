@@ -1,11 +1,18 @@
-"""Structural documentation contracts for exact model transport."""
+"""Structural documentation contracts for exact model transport.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from collections.abc import MutableMapping
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from flext_cli import p as cli_p
+
+if TYPE_CHECKING:
+    from flext_core import t
 
 
 # NOTE (multi-agent, flext-wkii.17.23 / agent: uv_overlay_owner): protocols mirror
@@ -31,22 +38,6 @@ class FlextInfraProtocolsDocs(Protocol):
         def provider(self) -> str: ...
 
     @runtime_checkable
-    class DocsProviderSpec(Protocol):
-        """Git provider fields consumed by documentation."""
-
-        @property
-        def name(self) -> str: ...
-
-        @property
-        def organization(self) -> str: ...
-
-        @property
-        def base_url(self) -> str: ...
-
-        @property
-        def branch(self) -> str: ...
-
-    @runtime_checkable
     class DocsExportBinding(Protocol):
         """Public export binding fields."""
 
@@ -67,9 +58,6 @@ class FlextInfraProtocolsDocs(Protocol):
         def repository(self) -> FlextInfraProtocolsDocs.DocsRepositoryRef | None: ...
 
         @property
-        def provider(self) -> FlextInfraProtocolsDocs.DocsProviderSpec | None: ...
-
-        @property
         def package_name(self) -> str: ...
 
         @property
@@ -85,19 +73,19 @@ class FlextInfraProtocolsDocs(Protocol):
         def repo_url(self) -> str: ...
 
         @property
-        def exports(self) -> tuple[str, ...]: ...
+        def exports(self) -> t.VariadicTuple[str]: ...
 
         @property
-        def aliases(self) -> tuple[str, ...]: ...
+        def aliases(self) -> t.VariadicTuple[str]: ...
 
         @property
-        def facades(self) -> tuple[str, ...]: ...
+        def facades(self) -> t.VariadicTuple[str]: ...
 
         @property
-        def module_exports(self) -> tuple[str, ...]: ...
+        def module_exports(self) -> t.VariadicTuple[str]: ...
 
         @property
-        def public_symbols(self) -> tuple[str, ...]: ...
+        def public_symbols(self) -> t.VariadicTuple[str]: ...
 
         @property
         def export_bindings(
@@ -105,17 +93,19 @@ class FlextInfraProtocolsDocs(Protocol):
         ) -> tuple[FlextInfraProtocolsDocs.DocsExportBinding, ...]: ...
 
         @property
-        def modules(self) -> tuple[str, ...]: ...
+        def modules(self) -> t.VariadicTuple[str]: ...
 
         @property
-        def source_paths(self) -> tuple[str, ...]: ...
+        def source_paths(self) -> t.VariadicTuple[str]: ...
 
     @runtime_checkable
     class MkDocsAnyCallable(Protocol):
         """Generic lazily-loaded MkDocs callable without loose top types."""
 
         def __call__(
-            self, *args: cli_p.AttributeProbe, **kwargs: cli_p.AttributeProbe
+            self,
+            *args: cli_p.AttributeProbe,
+            **kwargs: cli_p.AttributeProbe,
         ) -> cli_p.AttributeProbe: ...
 
     @runtime_checkable
@@ -123,7 +113,10 @@ class FlextInfraProtocolsDocs(Protocol):
         """Contract for ``mkdocs.config.load_config``."""
 
         def __call__(
-            self, *, config_file_path: str, site_dir: str
+            self,
+            *,
+            config_file_path: str,
+            site_dir: str,
         ) -> MutableMapping[str, cli_p.AttributeProbe]: ...
 
     @runtime_checkable

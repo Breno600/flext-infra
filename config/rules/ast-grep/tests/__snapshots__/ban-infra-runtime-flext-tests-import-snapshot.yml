@@ -1,0 +1,54 @@
+id: ban-infra-runtime-flext-tests-import
+snapshots:
+  from flext_tests import u:
+    labels:
+    - source: from flext_tests import u
+      style: primary
+      start: 0
+      end: 25
+  from flext_tests.validator import FlextTestsValidator:
+    labels:
+    - source: from flext_tests.validator import FlextTestsValidator
+      style: primary
+      start: 0
+      end: 53
+  import flext_tests:
+    labels:
+    - source: import flext_tests
+      style: primary
+      start: 0
+      end: 18
+  import flext_tests.validator:
+    labels:
+    - source: import flext_tests.validator
+      style: primary
+      start: 0
+      end: 28
+  module = __import__("flext_tests"):
+    labels:
+    - source: __import__("flext_tests")
+      style: primary
+      start: 9
+      end: 34
+    - source: __import__
+      style: secondary
+      start: 9
+      end: 19
+    - source: '"flext_tests"'
+      style: secondary
+      start: 20
+      end: 33
+  module = importlib.import_module("flext_tests.validator"):
+    labels:
+    - source: importlib.import_module("flext_tests.validator")
+      style: primary
+      start: 9
+      end: 57
+    - source: importlib.import_module
+      style: secondary
+      start: 9
+      end: 32
+    - source: '"flext_tests.validator"'
+      style: secondary
+      start: 33
+      end: 56

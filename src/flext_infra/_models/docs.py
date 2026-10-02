@@ -1,21 +1,29 @@
-"""Domain models for the docs subpackage."""
+"""Domain models for the docs subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Annotated, ClassVar
 
-from flext_core import m
+from flext_cli import m
+
 from flext_infra import c, t
+from flext_infra._models._config import FlextInfraConfigModels
+from flext_infra._models.docs_collection import FlextInfraModelsDocsCollection
+from flext_infra._models.docs_generation import FlextInfraModelsDocsGeneration
 
-from .config import FlextInfraConfigModels
-from .docs_generation import FlextInfraModelsDocsGeneration
 
-
-# NOTE (multi-agent, flext-wkii.17.23 / agent: uv_overlay_owner): docs transport
+# Docs transport
 # retains the exact metadata/config models and declares only analysis deltas.
-class _FlextInfraDocsContracts:
-    """Field-only source and rendering contracts for documentation."""
+class FlextInfraModelsDocs(
+    FlextInfraModelsDocsGeneration,
+    FlextInfraModelsDocsCollection,
+):
+    """Models for documentation services."""
 
     class DocsTocToken(m.ContractModel):
         """One rendered heading and its nested headings from Python-Markdown."""
@@ -25,10 +33,11 @@ class _FlextInfraDocsContracts:
         name: Annotated[str, m.Field(description="Sanitized heading label")]
         html: Annotated[str, m.Field(description="Rendered inline heading HTML")]
         data_toc_label: Annotated[
-            str, m.Field(alias="data-toc-label", description="Explicit TOC label")
+            str,
+            m.Field(alias="data-toc-label", description="Explicit TOC label"),
         ]
         children: Annotated[
-            t.SequenceOf[_FlextInfraDocsContracts.DocsTocToken],
+            t.SequenceOf[FlextInfraModelsDocs.DocsTocToken],
             m.Field(description="Nested heading tokens"),
         ]
 
@@ -36,7 +45,7 @@ class _FlextInfraDocsContracts:
         """Validated output of Python-Markdown's registered TOC extension."""
 
         toc_tokens: Annotated[
-            t.SequenceOf[_FlextInfraDocsContracts.DocsTocToken],
+            t.SequenceOf[FlextInfraModelsDocs.DocsTocToken],
             m.Field(description="Rendered table of contents tokens"),
         ]
 
@@ -60,7 +69,8 @@ class _FlextInfraDocsContracts:
 
         name: Annotated[str, m.Field(description="Project name")]
         module_count: Annotated[
-            t.NonNegativeInt, m.Field(description="Generated module page count")
+            t.NonNegativeInt,
+            m.Field(description="Generated module page count"),
         ]
 
     class DocsClassCount(m.ContractModel):
@@ -69,9 +79,17 @@ class _FlextInfraDocsContracts:
         project_class: Annotated[str, m.Field(description="Project class")]
         count: Annotated[t.NonNegativeInt, m.Field(description="Project count")]
 
+    class DocsCollectRequest(m.ContractModel):
+        """Fixed-effect collection command with repository-owned configuration."""
 
-class FlextInfraModelsDocs(FlextInfraModelsDocsGeneration, _FlextInfraDocsContracts):
-    """Models for documentation services."""
+        repository_root: Annotated[
+            Path,
+            m.Field(description="Repository owning the plans"),
+        ]
+        configuration: Annotated[
+            Path,
+            m.Field(description="Versioned collection source associations"),
+        ]
 
     class DocsGenerateRequest(m.ContractModel):
         """Canonical docs generation request payload.
@@ -81,16 +99,17 @@ class FlextInfraModelsDocs(FlextInfraModelsDocsGeneration, _FlextInfraDocsContra
         """
 
         repository_root: Annotated[
-            Path, m.Field(description="Repository root for docs generation")
+            Path,
+            m.Field(description="Repository root for docs generation"),
         ]
         projects: Annotated[
-            t.StrSequence | None, m.Field(description="Optional selected project names")
+            t.StrSequence | None,
+            m.Field(description="Optional selected project names"),
         ] = None
         output_dir: Annotated[
             Path | str | None,
             m.Field(description="Optional docs output directory override"),
         ] = Path(c.Infra.DEFAULT_DOCS_OUTPUT_DIR)
-        apply: Annotated[bool, m.Field(description="Apply writes to disk")] = False
         # Why (X-47): conform's DECLARED scope excludes the workspace root
         # repository, so the docs generator must not render root as an output
         # scope either; standalone docs commands keep including it.
@@ -100,7 +119,7 @@ class FlextInfraModelsDocs(FlextInfraModelsDocsGeneration, _FlextInfraDocsContra
                 description=(
                     "Render the workspace root as a docs output scope (root "
                     "guides remain readable sources regardless of this flag)"
-                )
+                ),
             ),
         ] = True
 
@@ -116,11 +135,13 @@ class FlextInfraModelsDocs(FlextInfraModelsDocsGeneration, _FlextInfraDocsContra
         severity: Annotated[str, m.Field(description="Audit issue severity")] = ""
         message: Annotated[str, m.Field(description="Item detail message")] = ""
         links: Annotated[
-            t.NonNegativeInt, m.Field(description="Applied link fixes")
+            t.NonNegativeInt,
+            m.Field(description="Applied link fixes"),
         ] = 0
         toc: Annotated[t.NonNegativeInt, m.Field(description="Applied TOC updates")] = 0
         codeblocks: Annotated[
-            t.NonNegativeInt, m.Field(description="Applied python codeblock fixes")
+            t.NonNegativeInt,
+            m.Field(description="Applied python codeblock fixes"),
         ] = 0
         path: Annotated[str, m.Field(description="Generated file path")] = ""
         written: Annotated[bool, m.Field(description="Generated file write flag")] = (
@@ -137,10 +158,12 @@ class FlextInfraModelsDocs(FlextInfraModelsDocsGeneration, _FlextInfraDocsContra
         """
 
         checked: Annotated[
-            t.NonNegativeInt, m.Field(description="Public docstring targets evaluated")
+            t.NonNegativeInt,
+            m.Field(description="Public docstring targets evaluated"),
         ]
         documented: Annotated[
-            t.NonNegativeInt, m.Field(description="Targets carrying a docstring")
+            t.NonNegativeInt,
+            m.Field(description="Targets carrying a docstring"),
         ]
         percent: Annotated[
             float,
@@ -159,7 +182,9 @@ class FlextInfraModelsDocs(FlextInfraModelsDocsGeneration, _FlextInfraDocsContra
         """Exact project/config objects plus derived public API analysis."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-            arbitrary_types_allowed=True, extra="forbid", frozen=True
+            arbitrary_types_allowed=True,
+            extra="forbid",
+            frozen=True,
         )
 
         metadata: Annotated[
@@ -170,10 +195,6 @@ class FlextInfraModelsDocs(FlextInfraModelsDocsGeneration, _FlextInfraDocsContra
             FlextInfraConfigModels.RepositoryRef | None,
             m.Field(description="Exact repository catalog model"),
         ] = None
-        provider: Annotated[
-            FlextInfraConfigModels.ProviderSpec | None,
-            m.Field(description="Exact Git provider model"),
-        ] = None
         package_name: Annotated[str, m.Field(description="Documented package name")]
         doc_summary: Annotated[str, m.Field(description="Package docstring summary")]
         site_title: Annotated[str, m.Field(description="Resolved site title")]
@@ -181,26 +202,32 @@ class FlextInfraModelsDocs(FlextInfraModelsDocsGeneration, _FlextInfraDocsContra
         repo_url: Annotated[str, m.Field(description="Resolved repository URL")]
         exports: Annotated[t.StrTuple, m.Field(default=(), description="Exports")] = ()
         aliases: Annotated[
-            t.StrTuple, m.Field(default=(), description="One-letter alias exports")
+            t.StrTuple,
+            m.Field(default=(), description="One-letter alias exports"),
         ] = ()
         facades: Annotated[
-            t.StrTuple, m.Field(default=(), description="Public facade exports")
+            t.StrTuple,
+            m.Field(default=(), description="Public facade exports"),
         ] = ()
         module_exports: Annotated[
-            t.StrTuple, m.Field(default=(), description="Exported module shortcuts")
+            t.StrTuple,
+            m.Field(default=(), description="Exported module shortcuts"),
         ] = ()
         public_symbols: Annotated[
-            t.StrTuple, m.Field(default=(), description="Rope-resolved public symbols")
+            t.StrTuple,
+            m.Field(default=(), description="Rope-resolved public symbols"),
         ] = ()
         export_bindings: Annotated[
-            t.VariadicTuple[_FlextInfraDocsContracts.DocsExportBinding],
+            t.VariadicTuple[FlextInfraModelsDocs.DocsExportBinding],
             m.Field(default=(), description="Export-to-module bindings"),
         ] = ()
         modules: Annotated[
-            t.StrTuple, m.Field(default=(), description="Generated public module pages")
+            t.StrTuple,
+            m.Field(default=(), description="Generated public module pages"),
         ] = ()
         source_paths: Annotated[
-            t.StrTuple, m.Field(default=(), description="Mkdocstrings source roots")
+            t.StrTuple,
+            m.Field(default=(), description="Mkdocstrings source roots"),
         ] = ()
 
     class GeneratedFile(m.ContractModel):
@@ -208,7 +235,8 @@ class FlextInfraModelsDocs(FlextInfraModelsDocsGeneration, _FlextInfraDocsContra
 
         path: Annotated[str, m.Field(description="File path")]
         changed: Annotated[
-            bool, m.Field(description="Whether generated content differs on disk")
+            bool,
+            m.Field(description="Whether generated content differs on disk"),
         ]
         written: Annotated[bool, m.Field(description="Whether file was written")] = (
             False
@@ -221,7 +249,7 @@ class FlextInfraModelsDocs(FlextInfraModelsDocsGeneration, _FlextInfraDocsContra
         docstring_min: Annotated[
             float | None,
             m.Field(
-                description="Minimum docstring coverage percent; breach fails the scope"
+                description="Minimum docstring coverage percent; breach fails the scope",
             ),
         ] = None
 
@@ -236,7 +264,8 @@ class FlextInfraModelsDocs(FlextInfraModelsDocsGeneration, _FlextInfraDocsContra
         result: Annotated[str, m.Field(description="Result status")] = ""
         reason: Annotated[str, m.Field(description="Result reason")] = ""
         message: Annotated[
-            str, m.Field(description="Human-readable summary message")
+            str,
+            m.Field(description="Human-readable summary message"),
         ] = ""
         site_dir: Annotated[str, m.Field(description="Built site directory path")] = ""
         checks: Annotated[t.StrSequence, m.Field(description="Executed checks")] = (
@@ -245,20 +274,25 @@ class FlextInfraModelsDocs(FlextInfraModelsDocsGeneration, _FlextInfraDocsContra
         strict: Annotated[bool, m.Field(description="Strict-mode flag")] = False
         passed: Annotated[bool, m.Field(description="Whether phase passed")] = False
         changed_files: Annotated[
-            t.NonNegativeInt, m.Field(description="Changed files count")
+            t.NonNegativeInt,
+            m.Field(description="Changed files count"),
         ] = 0
         applied: Annotated[bool, m.Field(description="Apply mode flag")] = False
         generated: Annotated[
-            t.NonNegativeInt, m.Field(description="Generated files count")
+            t.NonNegativeInt,
+            m.Field(description="Generated files count"),
         ] = 0
         source: Annotated[
-            str, m.Field(description="Source marker for generated content")
+            str,
+            m.Field(description="Source marker for generated content"),
         ] = ""
         missing_adr_skills: Annotated[
-            t.StrSequence, m.Field(description="Missing ADR skill references")
+            t.StrSequence,
+            m.Field(description="Missing ADR skill references"),
         ] = m.Field(default_factory=tuple)
         todo_written: Annotated[
-            bool, m.Field(description="Whether TODOS.md was written")
+            bool,
+            m.Field(description="Whether TODOS.md was written"),
         ] = False
         items: Annotated[
             t.SequenceOf[FlextInfraModelsDocs.DocsPhaseItemModel],

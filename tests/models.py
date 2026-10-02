@@ -11,10 +11,10 @@ from __future__ import annotations
 
 from flext_tests import FlextTestsModels
 
-from flext_infra import m
+from flext_infra import FlextInfraModels
 
 
-class TestsFlextInfraModels(FlextTestsModels, m):
+class TestsFlextInfraModels(FlextTestsModels, FlextInfraModels):
     """Infra test models extending flext-tests and production models."""
 
     class Tests(FlextTestsModels.Tests):

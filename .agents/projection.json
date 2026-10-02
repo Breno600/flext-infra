@@ -2,7 +2,5 @@
   "version": 1,
   "agents": [],
   "opt_ins": [],
-  "selected_tags": [
-    "flext"
-  ]
+  "selected_tags": ["flext"]
 }

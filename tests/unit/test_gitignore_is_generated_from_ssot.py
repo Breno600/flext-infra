@@ -16,18 +16,32 @@ from pathlib import Path
 from flext_tests import tm
 
 import flext_infra
-from flext_infra import c, config, m
+from flext_infra import c, config
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from tests import u as test_u
 
 
 class TestsFlextInfraGitignoreIsGeneratedFromSsot:
-    def _repository_root(self) -> Path:
-        """Return the workspace root that owns this checkout."""
+    """Tests for ``FlextInfraGitignoreIsGeneratedFromSsot``."""
+
+    @staticmethod
+    def _repository_root() -> Path:
+        """Return the workspace root that owns this checkout.
+
+        Returns:
+            The workspace root that owns this checkout.
+
+        """
         return Path(flext_infra.__file__).resolve().parents[2]
 
-    def _is_allowed_by_policy(self, rendered: str, relative_path: str) -> bool:
-        """Return whether one policy snapshot keeps *relative_path* trackable."""
+    @staticmethod
+    def _is_allowed_by_policy(rendered: str, relative_path: str) -> bool:
+        """Return whether one policy snapshot keeps *relative_path* trackable.
+
+        Returns:
+            Whether one policy snapshot keeps *relative_path* trackable.
+
+        """
         return test_u.Tests.is_tracked_under(rendered, relative_path)
 
     def test_every_managed_file_survives_the_ignore_policy(self) -> None:
@@ -50,7 +64,8 @@ class TestsFlextInfraGitignoreIsGeneratedFromSsot:
 
         tm.that(blocked, eq=())
 
-    def test_vendored_package_directory_is_trackable(self) -> None:
+    @staticmethod
+    def test_vendored_package_directory_is_trackable() -> None:
         """A vendored tree inside the package stays tracked and therefore packaged.
 
         Why (flext-f6gqq): hatchling honours .gitignore, so an unanchored
@@ -62,18 +77,20 @@ class TestsFlextInfraGitignoreIsGeneratedFromSsot:
                 config.Infra.codegen,
                 profile=c.Infra.MakeProfile.STANDALONE,
                 project_name="probe-project",
-            )
+            ),
         )
 
         tm.that(
             test_u.Tests.is_tracked_under(
-                rendered, "src/probe_project/vendor/docx/document.py"
+                rendered,
+                "src/probe_project/vendor/docx/document.py",
             ),
             eq=True,
         )
         tm.that(test_u.Tests.is_tracked_under(rendered, "vendor/module.go"), eq=False)
 
-    def test_declared_projects_are_trackable_under_the_rendered_policy(self) -> None:
+    @staticmethod
+    def test_declared_projects_are_trackable_under_the_rendered_policy() -> None:
         """A project declared in the manifest is trackable in the rendered body.
 
         The workspace policy denies every top-level directory (``/*`` and
@@ -83,10 +100,8 @@ class TestsFlextInfraGitignoreIsGeneratedFromSsot:
         contract holds for any manifest instead of freezing today's projects.
         """
         projects = ("probe-project", "nested/probe-project")
-        workspace = m.Infra.WorkspaceSpec(
-            name="probe-root",
-            beads=test_u.Tests.beads_project("probe-root"),
-            repository=test_u.Tests.repository_ref("probe-root"),
+        workspace = test_u.Tests.workspace_spec(
+            test_u.Tests.repository_ref("probe-root"),
             subprojects=tuple(
                 test_u.Tests.repository_ref(
                     Path(item).name,
@@ -103,7 +118,7 @@ class TestsFlextInfraGitignoreIsGeneratedFromSsot:
                 profile=c.Infra.MakeProfile.WORKSPACE,
                 project_name="probe-root",
                 workspace=workspace,
-            )
+            ),
         )
 
         blocked = tuple(
@@ -113,6 +128,3 @@ class TestsFlextInfraGitignoreIsGeneratedFromSsot:
         )
 
         tm.that(blocked, eq=())
-
-
-__all__: list[str] = ["TestsFlextInfraGitignoreIsGeneratedFromSsot"]

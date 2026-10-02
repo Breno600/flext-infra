@@ -1,11 +1,12 @@
 <!-- AUTO-GENERATED FILE — regenerate through `make gen` from the workspace root. -->
-<!-- Source of truth: `docs/guides/using-flext-cli.md`; adjust that source, never this projection. -->
+<!-- Source of truth: `<workspace-root>/docs/guides/using-flext-cli.md`; adjust that workspace source, never this member projection. -->
 
 # flext-infra - Using flext-cli
 
 > Project profile: `flext-infra`
 
 <!-- TOC START -->
+
 - [Aliases](#aliases)
 - [Purpose](#purpose)
 - [Settings](#settings)
@@ -14,6 +15,7 @@
 - [Good practices](#good-practices)
 - [Bad practices](#bad-practices)
 - [Related](#related)
+
 <!-- TOC END -->
 
 `flext_cli` provides a unified Typer abstraction for model-driven CLI applications.
@@ -24,17 +26,18 @@ Import the aliases used by each example from the public `flext_cli` package root
 
 `flext_cli` reexports `d`, `e`, `h`, `r`, `x` from `flext_core`.
 
-| Alias | Purpose |
-| ------- | --------- |
-| `c` | constants |
-| `m` | models |
-| `p` | protocols |
-| `r` | result (reexported from `flext_core`) |
-| `s` | service / runtime (`FlextCliServiceBase`) |
-| `t` | typings |
-| `u` | utilities |
+| Alias | Purpose                                   |
+| ----- | ----------------------------------------- |
+| `c`   | constants                                 |
+| `m`   | models                                    |
+| `p`   | protocols                                 |
+| `r`   | result (reexported from `flext_core`)     |
+| `s`   | service / runtime (`FlextCliServiceBase`) |
+| `t`   | typings                                   |
+| `u`   | utilities                                 |
 
-**Important:** `s` is the service/runtime alias. CLI settings are accessed via `FlextCliSettings` (no short alias).
+**Important:** `s` is the service/runtime alias. CLI settings are accessed via
+`FlextCliSettings` (no short alias).
 
 ## Purpose
 
@@ -53,7 +56,8 @@ settings = FlextCliSettings.fetch_global()
 assert settings is FlextCliSettings.fetch_global()
 ```
 
-If you need a project-specific subclass, extend `FlextSettings` (or `FlextCliSettings`) with `m.SettingsConfigDict`:
+If you need a project-specific subclass, extend `FlextSettings` (or `FlextCliSettings`)
+with `m.SettingsConfigDict`:
 
 ```python
 from flext_core import FlextSettings, m
@@ -95,14 +99,15 @@ cli.register_command(app, name="greet", help_text="Build a greeting", command=co
 
 **Common mistakes to avoid:**
 
-- `FlextCliCli.build_model_command(...)` does not exist; use `FlextCliCli.model_command(...)`.
+- `FlextCliCli.build_model_command(...)` does not exist; use
+  `FlextCliCli.model_command(...)`.
 - `m.CliInput` / `m.CliOutput` do not exist; use plain `m.BaseModel` subclasses.
 
 ## Testing a command
 
-Use `FlextCliCli.invoke_app` with the adapter-owned application, not Typer's
-`CliRunner` directly. This independent example constructs and invokes a real
-model-backed command; handlers return their value but do not automatically print it.
+Use `FlextCliCli.invoke_app` with the adapter-owned application, not Typer's `CliRunner`
+directly. This independent example constructs and invokes a real model-backed command;
+handlers return their value but do not automatically print it.
 
 ```python
 from flext_cli import FlextCliCli, m
@@ -139,10 +144,10 @@ def test_greet_command() -> None:
 
 ## Bad practices
 
-Do not replace the model command with an untyped ad-hoc handler or bypass the
-adapter with direct printing and process termination. Register the model-backed
-command through the public facade as shown above. A corrected handler consumes
-its declared input model and returns its value:
+Do not replace the model command with an untyped ad-hoc handler or bypass the adapter
+with direct printing and process termination. Register the model-backed command through
+the public facade as shown above. A corrected handler consumes its declared input model
+and returns its value:
 
 ```python
 from flext_cli import m
@@ -161,6 +166,5 @@ assert greet_handler(GreetInput(name="Ada")) == "Hello, Ada!"
 
 ## Related
 
-- `.agents/skills/using-flext-cli/SKILL.md`
-- `.agents/skills/coding-standards/SKILL.md`
 - `flext-cli/src/flext_cli/services/cli.py`
+- Generated flext-core API reference

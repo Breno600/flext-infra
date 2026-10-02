@@ -1,0 +1,36 @@
+id: tests-governance-mixin-public-base
+snapshots:
+  ? |
+    from flext_tests.utilities import ModuleGovernanceMixin
+    class TestsGov(ModuleGovernanceMixin):
+        pass
+  : fixed: |
+      from flext_tests.utilities import ModuleGovernanceMixin
+      class TestsGov(FlextTestsModuleGovernanceMixin):
+          pass
+    labels:
+    - source: ModuleGovernanceMixin
+      style: primary
+      start: 71
+      end: 92
+    - source: |-
+        class TestsGov(ModuleGovernanceMixin):
+            pass
+      style: secondary
+      start: 56
+      end: 103
+    - source: (ModuleGovernanceMixin)
+      style: secondary
+      start: 70
+      end: 93
+    - source: from flext_tests.utilities import ModuleGovernanceMixin
+      style: secondary
+      start: 0
+      end: 55
+    - source: |
+        from flext_tests.utilities import ModuleGovernanceMixin
+        class TestsGov(ModuleGovernanceMixin):
+            pass
+      style: secondary
+      start: 0
+      end: 104

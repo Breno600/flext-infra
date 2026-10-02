@@ -1,4 +1,8 @@
-"""Regression tests for stale-symbol docs auditing."""
+"""Regression tests for stale-symbol docs auditing.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -15,7 +19,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraAuditorStaleSymbols:
     """Regression tests for stale-symbol docs auditing."""
 
-    def _write(self, path: Path, content: str) -> None:
+    @staticmethod
+    def _write(path: Path, content: str) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
 
@@ -94,8 +99,10 @@ class TestsFlextInfraAuditorStaleSymbols:
         )
 
     def test_generated_api_reference_accepts_live_public_symbol(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test generated api reference accepts live public symbol."""
         scope = self._stale_symbol_scope(tmp_path)
         self._write(
             scope.path / "docs" / "api-reference" / "generated" / "overview.md",
@@ -107,8 +114,10 @@ class TestsFlextInfraAuditorStaleSymbols:
         tm.that(issues, eq=[])
 
     def test_generated_api_reference_reports_missing_public_symbol(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test generated api reference reports missing public symbol."""
         scope = self._stale_symbol_scope(tmp_path)
         self._write(
             scope.path / "docs" / "api-reference" / "generated" / "overview.md",
@@ -122,6 +131,7 @@ class TestsFlextInfraAuditorStaleSymbols:
         tm.that(issues[0].message, eq="contains `DeadSymbol`")
 
     def test_manual_docs_report_live_symbol_mentions(self, tmp_path: Path) -> None:
+        """Test manual docs report live symbol mentions."""
         scope = self._stale_symbol_scope(tmp_path)
         self._write(
             scope.path / "docs" / "guides" / "manual.md",
@@ -135,7 +145,8 @@ class TestsFlextInfraAuditorStaleSymbols:
         tm.that(issues[0].message, eq="contains `LiveSymbol`")
 
     def test_public_contract_resolves_local_tuple_public_exports(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Generated ABI ``__all__ = tuple(_PUBLIC_EXPORTS)`` must yield a contract."""
         package_root = tmp_path / "src" / "demo_pkg"
@@ -156,12 +167,12 @@ class TestsFlextInfraAuditorStaleSymbols:
                 "from flext_core.lazy import build_lazy_import_map, install_lazy_exports\n\n"
                 "if TYPE_CHECKING:\n"
                 "    from demo_pkg.facade import LiveSymbol as LiveSymbol\n\n"
-                "_LAZY_MODULES: dict[str, tuple[str, ...]] = {\n"
+                "_LAZY_MODULES: dict[str, t.VariadicTuple[str]] = {\n"
                 '    ".facade": ("LiveSymbol",),\n'
                 "}\n\n"
                 "_LAZY_IMPORTS = build_lazy_import_map(_LAZY_MODULES, sort_keys=False)\n\n"
-                '_PUBLIC_EXPORTS: tuple[str, ...] = ("LiveSymbol",)\n'
-                "__all__: tuple[str, ...] = tuple(_PUBLIC_EXPORTS)\n\n"
+                '_PUBLIC_EXPORTS: t.VariadicTuple[str] = ("LiveSymbol",)\n'
+                "__all__: t.VariadicTuple[str] = tuple(_PUBLIC_EXPORTS)\n\n"
                 "install_lazy_exports(\n"
                 "    __name__,\n"
                 "    globals(),\n"
@@ -186,8 +197,10 @@ class TestsFlextInfraAuditorStaleSymbols:
         tm.that(bool(exports), eq=True)
 
     def test_public_contract_resolves_imported_lazy_public_exports(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test public contract resolves imported lazy public exports."""
         package_root = tmp_path / "src" / "demo_pkg"
         self._write_demo_pyproject(tmp_path)
         self._write(
@@ -219,7 +232,7 @@ class TestsFlextInfraAuditorStaleSymbols:
             package_root / "_exports_parts" / "all_names.py",
             (
                 '"""Demo public export names."""\n\n'
-                'DEMO_PUBLIC_EXPORTS: tuple[str, ...] = ("LiveSymbol",)\n'
+                'DEMO_PUBLIC_EXPORTS: t.VariadicTuple[str] = ("LiveSymbol",)\n'
             ),
         )
 
@@ -237,8 +250,10 @@ class TestsFlextInfraAuditorStaleSymbols:
         tm.that(issues, eq=[])
 
     def test_public_contract_resolves_imported_lazy_import_map(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test public contract resolves imported lazy import map."""
         package_root = tmp_path / "src" / "demo_pkg"
         self._write_demo_pyproject(tmp_path)
         self._write(
@@ -261,7 +276,7 @@ class TestsFlextInfraAuditorStaleSymbols:
                 '"""Demo export registry."""\n\n'
                 "from demo_pkg._exports_part import DEMO_LAZY_IMPORTS_PART\n\n"
                 "DEMO_LAZY_IMPORTS = {**DEMO_LAZY_IMPORTS_PART}\n"
-                'DEMO_PUBLIC_EXPORTS: tuple[str, ...] = ("LiveSymbol",)\n'
+                'DEMO_PUBLIC_EXPORTS: t.VariadicTuple[str] = ("LiveSymbol",)\n'
             ),
         )
         self._write(
@@ -282,8 +297,10 @@ class TestsFlextInfraAuditorStaleSymbols:
         tm.that(u.Infra.docstring_issues(tmp_path, contract), eq=[])
 
     def test_docstring_issues_accepts_direct_part_flext_docstring(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test docstring issues accepts direct part flext docstring."""
         package_root = tmp_path / "src" / "demo_pkg"
         self._write_demo_pyproject(tmp_path)
         self._write(
@@ -316,6 +333,3 @@ class TestsFlextInfraAuditorStaleSymbols:
         issues = u.Infra.docstring_issues(tmp_path, contract)
 
         tm.that(issues, eq=[])
-
-
-__all__: list[str] = ["TestsFlextInfraAuditorStaleSymbols"]

@@ -24,16 +24,24 @@ if TYPE_CHECKING:
 class TestsFlextInfraValidateMain:
     """Test inventory, scan, and CLI routing subcommands with real services."""
 
-    def _cli(self, *args: str) -> int:
-        """Run validate routing through the canonical infra CLI."""
+    @staticmethod
+    def _cli(*args: str) -> int:
+        """Run validate routing through the canonical infra CLI.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         return infra_main(["validate", *args])
 
-    def test_success(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_success(tmp_path: Path) -> None:
         """Inventory succeeds with empty workspace."""
         result = FlextInfraInventoryService(repository_root=tmp_path).execute()
         tm.that(result.success, eq=True)
 
-    def test_with_output_dir(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_with_output_dir(tmp_path: Path) -> None:
         """Inventory succeeds with output directory."""
         output = tmp_path / "output"
         output.mkdir()
@@ -41,7 +49,8 @@ class TestsFlextInfraValidateMain:
         result = result.execute()
         tm.that(result.success, eq=True)
 
-    def test_no_violations(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_no_violations(tmp_path: Path) -> None:
         """Scan returns success when no violations found."""
         (tmp_path / "test.txt").write_text("hello world")
         result = FlextInfraTextPatternScanner(
@@ -54,7 +63,8 @@ class TestsFlextInfraValidateMain:
         result = result.execute()
         tm.that(result.success, eq=True)
 
-    def test_with_violations(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_with_violations(tmp_path: Path) -> None:
         """Scan returns failure when violations found."""
         (tmp_path / "test.txt").write_text("TODO fix this")
         result = FlextInfraTextPatternScanner(
@@ -113,6 +123,3 @@ class TestsFlextInfraValidateMain:
         """stub-validate subcommand routes correctly."""
         result = self._cli("stub-validate", "--repository-root", str(tmp_path))
         tm.that({0, 1}, has=result)
-
-
-__all__: list[str] = ["TestsFlextInfraValidateMain"]

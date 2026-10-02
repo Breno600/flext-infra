@@ -1,0 +1,15 @@
+# A statement or call that propagates a failure: a raise, or a call to a
+# failure factory (`.fail`, `.fail_op`, `.fail_validation`, ...).
+id: failure-propagation
+language: python
+rule:
+  any:
+    - kind: raise_statement
+    - all:
+        - kind: call
+        - has:
+            field: function
+            kind: attribute
+            has:
+              field: attribute
+              regex: "^fail"

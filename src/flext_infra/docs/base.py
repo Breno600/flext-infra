@@ -4,6 +4,9 @@ Single source of truth for the docs-specific ``output_dir`` default and for
 the canonical phase-outcome propagation pattern. Phase services inherit
 this base and call :meth:`_propagate_phase_outcome` instead of repeating
 the same five-line ``execute()`` skeleton.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -26,7 +29,7 @@ class FlextInfraDocServiceBase(FlextInfraProjectSelectionServiceBase[bool], ABC)
     """Shared abstract base for ``audit``, ``build``, ``fix``, ``generate``, ``validate``."""
 
     output_dir: Annotated[Path | None, m.Field(description="Docs output dir")] = Path(
-        c.Infra.DEFAULT_DOCS_OUTPUT_DIR
+        c.Infra.DEFAULT_DOCS_OUTPUT_DIR,
     )
 
     @staticmethod
@@ -42,6 +45,10 @@ class FlextInfraDocServiceBase(FlextInfraProjectSelectionServiceBase[bool], ABC)
         surfaced as one ``e.fail_operation`` failure. Phases whose reports carry
         a ``passed`` contract must provide a predicate so drift cannot be
         accepted as successful execution.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         if result.failure:
             return e.fail_operation(label, result.error)

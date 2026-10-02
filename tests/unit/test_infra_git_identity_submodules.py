@@ -26,14 +26,24 @@ class TestsFlextInfraGitIdentitySubmodules:
 
     @staticmethod
     def _repo(root: Path) -> Path:
-        """Initialize one real Git repository carrying a single commit."""
+        """Initialize one real Git repository carrying a single commit.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         root.mkdir(parents=True, exist_ok=True)
         test_u.Tests.initialize_git_repo(root)
         return root
 
     @classmethod
     def _superproject(cls, tmp_path: Path) -> Path:
-        """Build a real superproject whose index carries a gitlink entry."""
+        """Build a real superproject whose index carries a gitlink entry.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         child = cls._repo(tmp_path / "child")
         parent = cls._repo(tmp_path / "parent")
         tm.ok(
@@ -48,7 +58,7 @@ class TestsFlextInfraGitIdentitySubmodules:
                 "--quiet",
                 str(child),
                 "vendored",
-            ])
+            ]),
         )
         tm.ok(
             u.Cli.run_checked([
@@ -59,7 +69,7 @@ class TestsFlextInfraGitIdentitySubmodules:
                 "--quiet",
                 "-m",
                 "add submodule",
-            ])
+            ]),
         )
         return parent
 
@@ -89,7 +99,7 @@ class TestsFlextInfraGitIdentitySubmodules:
                 "set-url",
                 "origin",
                 origin,
-            ])
+            ]),
         )
         tm.ok(
             u.Cli.run_checked([
@@ -100,7 +110,7 @@ class TestsFlextInfraGitIdentitySubmodules:
                 "set-url",
                 "origin",
                 origin,
-            ])
+            ]),
         )
         tm.ok(
             u.Cli.run_checked([
@@ -111,7 +121,7 @@ class TestsFlextInfraGitIdentitySubmodules:
                 "add",
                 "upstream",
                 upstream,
-            ])
+            ]),
         )
 
         identity = tm.ok(u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=plain)))
@@ -120,7 +130,8 @@ class TestsFlextInfraGitIdentitySubmodules:
         tm.that(identity.origin_remote, eq=origin)
         tm.that(identity.upstream_remote, eq=upstream)
 
-    def test_unborn_repository_returns_typed_failure(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_unborn_repository_returns_typed_failure(tmp_path: Path) -> None:
         """Discovery can reject an initialized repository with no committed HEAD."""
         unborn = tmp_path / "unborn"
         unborn.mkdir()
@@ -135,14 +146,15 @@ class TestsFlextInfraGitIdentitySubmodules:
         """The nested checkout is a submodule, and owns none of its own."""
         parent = self._superproject(tmp_path)
         identity = tm.ok(
-            u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=parent / "vendored"))
+            u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=parent / "vendored")),
         )
         tm.that(identity.has_submodules, eq=False)
         tm.that(identity.is_submodule, eq=True)
         tm.that(identity.is_attached_submodule, eq=True)
 
     def test_linked_worktree_of_submodule_keeps_primary_identity(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A linked submodule lane resolves facts through its shared Git config."""
         parent = self._superproject(tmp_path)
@@ -159,7 +171,7 @@ class TestsFlextInfraGitIdentitySubmodules:
                 "-b",
                 "identity-lane",
                 str(lane),
-            ])
+            ]),
         )
 
         identity = tm.ok(u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=lane)))
@@ -172,7 +184,8 @@ class TestsFlextInfraGitIdentitySubmodules:
         tm.that(identity.is_attached_submodule, eq=False)
 
     def test_absorbed_submodule_with_git_dir_is_still_a_submodule(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Nested checkout with a real .git directory still reports is_submodule.
 
@@ -205,7 +218,7 @@ class TestsFlextInfraGitIdentitySubmodules:
                 "--add",
                 "--cacheinfo",
                 f"160000,{oid},apps/member",
-            ])
+            ]),
         )
         tm.ok(
             u.Cli.run_checked([
@@ -216,7 +229,7 @@ class TestsFlextInfraGitIdentitySubmodules:
                 "--quiet",
                 "-m",
                 "absorb member",
-            ])
+            ]),
         )
         tm.that((member / ".git").is_dir(), eq=True)
         identity = tm.ok(u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=member)))
@@ -235,10 +248,9 @@ class TestsFlextInfraGitIdentitySubmodules:
         nested.mkdir(parents=True)
         (nested / "module.py").write_text("x = 1\n", encoding="utf-8")
         identity = tm.ok(
-            u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=nested / "module.py"))
+            u.Infra.git_identity(
+                m.Infra.GitRepoRequest(repo_root=nested / "module.py"),
+            ),
         )
         tm.that(identity.repo_root, eq=root.resolve())
         tm.that(identity.requested_path, eq=(nested / "module.py").resolve())
-
-
-__all__: list[str] = ["TestsFlextInfraGitIdentitySubmodules"]

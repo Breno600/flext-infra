@@ -1,0 +1,22 @@
+# Why: hardcoded error-code literals bypass the c.ErrorCode SSOT and drift from
+# the constant used by the parallel failure branch of the same decorator
+# (recomposition of audit findings on _decorators/_runtime.py and _railway.py;
+# ENFORCE-097 companion). Recomposed onto make mod per ADR-017 Decision 5.
+# Detection-only: the constant rewrite is import-unsafe (the c-binding guard
+# family is per-module), so each site is repaired by its owner.
+id: ban-hardcoded-error-code-literal
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+ignores:
+  - "**/_constants/**"
+  - "**/constants.py"
+rule:
+  any:
+    - pattern: '"OPERATION_ERROR"'
+    - pattern: '"OPERATION_TIMEOUT"'
+message: >-
+  Hardcoded error-code literal bypassing the c.ErrorCode SSOT: import c and
+  use c.ErrorCode.OPERATION_ERROR.value / c.ErrorCode.TIMEOUT_ERROR.value.

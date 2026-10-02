@@ -17,21 +17,24 @@ RUN dnf install -y \
 
 # === SECTION: managed tool bootstrap (managed) ===
 # Source: generated bin/mise + .mise.toml
-# The canonical make setup verb below owns the official newest-Mise bootstrap
-# and every latest tool installation as the same unprivileged runtime user.
-# The setup RUN receives Mise's credential only through a BuildKit secret.
+# The canonical make setup verb below owns the committed Mise bootstrap
+# and the frozen installation of every tool the committed mise.lock pins, as
+# the same unprivileged runtime user.
+# The setup RUN receives GitHub's credential only through a BuildKit secret.
 # Never persist build credentials in ARG, ENV, layers, or image configuration.
-ENV HOME=/home/runner \
-    XDG_DATA_HOME=/home/runner/.local/share \
-    XDG_CACHE_HOME=/home/runner/.cache \
-    XDG_STATE_HOME=/home/runner/.local/state \
-    MISE_DATA_DIR=/home/runner/.local/share/mise
+ARG RUNNER_USER=runner
+ENV HOME=/home/${RUNNER_USER}
+ENV XDG_DATA_HOME=${HOME}/.local/share \
+    XDG_CACHE_HOME=${HOME}/.cache \
+    XDG_STATE_HOME=${HOME}/.local/state \
+    MISE_DATA_DIR=${HOME}/.local/share/mise
 WORKDIR /workspace
 RUN --mount=type=bind,source=.,target=/source,ro \
     cp -R /source/. /workspace/ \
     && chown -R runner:runner /workspace
+COPY --from=git --chown=runner:runner . /workspace/.git/
 USER runner
-ENV PATH="/home/runner/.local/share/mise/shims:${PATH}"
+ENV PATH="$MISE_DATA_DIR/shims:${PATH}"
 # End SECTION: managed tool bootstrap
 
 # === SECTION: bootstrap proof (managed) ===
@@ -43,7 +46,7 @@ ENV PATH="/home/runner/.local/share/mise/shims:${PATH}"
 # mentioned uv.lock/flext-core, which turned the proof into a bypass -- a
 # broken bootstrap still produced a green image.
 ENV CI=Y
-RUN --mount=type=secret,id=github_token,env=MISE_GITHUB_TOKEN,required=true \
+RUN --mount=type=secret,id=github_token,env=GITHUB_TOKEN,required=true \
     make setup
 # End SECTION: bootstrap proof
 

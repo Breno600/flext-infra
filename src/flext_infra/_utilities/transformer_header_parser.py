@@ -1,4 +1,8 @@
-"""Fail-fast structural parsing for Python module headers."""
+"""Fail-fast structural parsing for Python module headers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,8 +11,7 @@ import token
 import tokenize
 from typing import TYPE_CHECKING
 
-from flext_infra.constants import c
-from flext_infra.models import m
+from flext_infra import c, m
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -19,7 +22,12 @@ class FlextInfraUtilitiesTransformerHeaderParser:
 
     @classmethod
     def _parse_header(cls, source: str) -> m.Infra.HeaderInfo:
-        """Parse a module header and let the first tokenizer exception escape."""
+        """Parse a module header and let the first tokenizer exception escape.
+
+        Returns:
+            The resulting ``m.Infra.HeaderInfo``.
+
+        """
         tokens = tuple(tokenize.tokenize(io.BytesIO(source.encode()).readline))
         span = m.Infra.HeaderSpan(shebang_end=cls._shebang_end(source))
         span.encoding_end = cls._encoding_end(source, span.shebang_end)
@@ -64,7 +72,8 @@ class FlextInfraUtilitiesTransformerHeaderParser:
             ):
                 continue
             span.last_import_end = max(
-                span.last_import_end, cls._find_import_line_end(source, tokens, index)
+                span.last_import_end,
+                cls._find_import_line_end(source, tokens, index),
             )
             imported_aliases = cls._extract_imported_aliases(tokens, index)
             if module_token.string == "__future__":
@@ -79,7 +88,12 @@ class FlextInfraUtilitiesTransformerHeaderParser:
 
     @staticmethod
     def _shebang_end(source: str) -> int:
-        """Return the offset after a shebang line."""
+        """Return the offset after a shebang line.
+
+        Returns:
+            The offset after a shebang line.
+
+        """
         if not source.startswith("#!"):
             return 0
         newline = source.find("\n")
@@ -87,7 +101,12 @@ class FlextInfraUtilitiesTransformerHeaderParser:
 
     @staticmethod
     def _encoding_end(source: str, start: int) -> int:
-        """Return the offset after an encoding cookie."""
+        """Return the offset after an encoding cookie.
+
+        Returns:
+            The offset after an encoding cookie.
+
+        """
         if start >= len(source):
             return start
         head = source[start:]
@@ -98,7 +117,12 @@ class FlextInfraUtilitiesTransformerHeaderParser:
 
     @staticmethod
     def _leading_comments_end(source: str, start: int) -> int:
-        """Return the offset after leading comments and their blank separator."""
+        """Return the offset after leading comments and their blank separator.
+
+        Returns:
+            The offset after leading comments and their blank separator.
+
+        """
         index = start
         saw_comment = False
         while index < len(source):
@@ -114,9 +138,17 @@ class FlextInfraUtilitiesTransformerHeaderParser:
 
     @classmethod
     def _find_import_line_end(
-        cls, source: str, tokens: t.SequenceOf[tokenize.TokenInfo], from_index: int
+        cls,
+        source: str,
+        tokens: t.SequenceOf[tokenize.TokenInfo],
+        from_index: int,
     ) -> int:
-        """Return the offset after the selected import statement."""
+        """Return the offset after the selected import statement.
+
+        Returns:
+            The offset after the selected import statement.
+
+        """
         for current in tokens[from_index:]:
             if current.type in {token.NEWLINE, token.ENDMARKER}:
                 return cls._position_offset(source, current.end)
@@ -124,14 +156,24 @@ class FlextInfraUtilitiesTransformerHeaderParser:
 
     @classmethod
     def _line_end_offset(cls, source: str, position: t.Pair[int, int]) -> int:
-        """Return the offset after the line containing a token position."""
+        """Return the offset after the line containing a token position.
+
+        Returns:
+            The offset after the line containing a token position.
+
+        """
         offset = cls._position_offset(source, position)
         newline = source.find("\n", offset)
         return len(source) if newline == -1 else newline + 1
 
     @staticmethod
     def _position_offset(source: str, position: t.Pair[int, int]) -> int:
-        """Convert a tokenizer line and column into a source offset."""
+        """Convert a tokenizer line and column into a source offset.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         line, column = position
         if line <= 1:
             return min(column, len(source))
@@ -145,9 +187,15 @@ class FlextInfraUtilitiesTransformerHeaderParser:
 
     @staticmethod
     def _extract_imported_aliases(
-        tokens: t.SequenceOf[tokenize.TokenInfo], from_index: int
+        tokens: t.SequenceOf[tokenize.TokenInfo],
+        from_index: int,
     ) -> frozenset[str]:
-        """Return local names bound by a from-import statement."""
+        """Return local names bound by a from-import statement.
+
+        Returns:
+            Local names bound by a from-import statement.
+
+        """
         aliases: set[str] = set()
         index = from_index + 3
         while index < len(tokens):

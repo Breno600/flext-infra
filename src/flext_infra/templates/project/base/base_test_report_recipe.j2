@@ -1,13 +1,6 @@
 {% macro test_report_recipe(
 	runner,
-	invocation_namespace,
 	command_prefix="@"
-) %}
-	{{ command_prefix }}set -eu; \
-		test_tmp_parent="$(PROJECT_SCRATCH_ROOT)/{{ invocation_namespace }}"; \
-		mkdir -p "$$test_tmp_parent"; \
-		test_tmp=$$(mktemp -d "$$test_tmp_parent/invocation.XXXXXX"); \
-		cleanup_test_tmp() { rm -rf "$$test_tmp"; }; \
-		trap cleanup_test_tmp EXIT INT TERM; \
-		TMPDIR="$$test_tmp" GOTMPDIR="$$test_tmp" {{ runner }}
+) -%}
+{{ "\t" }}{{ command_prefix }}{{ runner }}
 {%- endmacro %}

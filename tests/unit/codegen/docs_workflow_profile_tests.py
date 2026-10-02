@@ -1,4 +1,8 @@
-"""Contract tests for the generated documentation workflow projection."""
+"""Contract tests for the generated documentation workflow projection.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,8 +23,17 @@ class TestsFlextInfraCodegenDocsWorkflowProfile:
     _DOCS_DESTINATION = ".github/workflows/docs.yml"
     _CI_DESTINATION = ".github/workflows/ci.yml"
 
-    def _artifact(self, destination: str) -> m.Infra.TemplateEntrySpec:
-        """Return the declared render artifact for one destination."""
+    @staticmethod
+    def _artifact(destination: str) -> m.Infra.TemplateEntrySpec:
+        """Return the declared render artifact for one destination.
+
+        Returns:
+            The declared render artifact for one destination.
+
+        Raises:
+            AssertionError: If artifact is not declared.
+
+        """
         for entry in config.Infra.codegen.templates.entries:
             if entry.destination == destination:
                 return entry
@@ -39,6 +52,3 @@ class TestsFlextInfraCodegenDocsWorkflowProfile:
         docs = self._artifact(self._DOCS_DESTINATION)
 
         tm.that("standalone" in docs.profiles, eq=True)
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenDocsWorkflowProfile"]

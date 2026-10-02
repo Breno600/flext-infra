@@ -1,0 +1,20 @@
+id: ban-hardcoded-error-code-literal
+snapshots:
+  assert outcome.error_code == "OPERATION_ERROR":
+    labels:
+    - source: '"OPERATION_ERROR"'
+      style: primary
+      start: 29
+      end: 46
+  d.timeout(error_code="OPERATION_TIMEOUT"):
+    labels:
+    - source: '"OPERATION_TIMEOUT"'
+      style: primary
+      start: 21
+      end: 40
+  result = r[TValue].fail(msg, error_code="OPERATION_ERROR"):
+    labels:
+    - source: '"OPERATION_ERROR"'
+      style: primary
+      start: 40
+      end: 57

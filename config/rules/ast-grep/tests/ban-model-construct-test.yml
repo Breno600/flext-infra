@@ -1,0 +1,8 @@
+id: ban-model-construct
+valid:
+  - note = "call User.model_construct() only behind owner justification"
+  - user = User.model_validate(payload)
+  - user = User(name="x", slug="s")
+invalid:
+  - user = User.model_construct(name="x")
+  - user = self._model.model_construct()

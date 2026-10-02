@@ -1,4 +1,8 @@
-"""Worktree child containment and removal behavior."""
+"""Worktree child containment and removal behavior.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,14 +11,15 @@ from pathlib import Path
 from flext_tests import tm
 
 from flext_infra import FlextInfraWorktreeService, c
-from tests import t, u
+from tests import u
 
 
 class TestsFlextInfraWorktreeRemoval(u.Tests.WorktreeFixture):
     """Group cohesive worktree behavior."""
 
     def test_remove_refuses_an_epic_lane_with_registered_children(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A registered child keeps its epic lane alive until the child is gone."""
         repository = self._repository(tmp_path)
@@ -30,8 +35,8 @@ class TestsFlextInfraWorktreeRemoval(u.Tests.WorktreeFixture):
                     base=epic_branch,
                     epic_lane=epic,
                     apply_changes=True,
-                ).execute()
-            )
+                ).execute(),
+            ),
         )
 
         refused = FlextInfraWorktreeService(
@@ -52,7 +57,7 @@ class TestsFlextInfraWorktreeRemoval(u.Tests.WorktreeFixture):
                     operation=c.Infra.WorktreeOperation.REMOVE,
                     branch=child_branch,
                     apply_changes=True,
-                ).execute()
+                ).execute(),
             ),
             eq=str(child),
         )
@@ -63,7 +68,7 @@ class TestsFlextInfraWorktreeRemoval(u.Tests.WorktreeFixture):
                     operation=c.Infra.WorktreeOperation.REMOVE,
                     branch=epic_branch,
                     apply_changes=True,
-                ).execute()
+                ).execute(),
             ),
             eq=str(epic),
         )
@@ -85,6 +90,3 @@ class TestsFlextInfraWorktreeRemoval(u.Tests.WorktreeFixture):
 
         tm.fail(result, has=f"epic lane worktree does not exist: {missing}")
         tm.that(not missing.exists(), where=bool)
-
-
-__all__: t.VariadicTuple[str] = ()

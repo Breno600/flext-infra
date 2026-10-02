@@ -1,0 +1,27 @@
+# Shape only: the engine admits a finding when the captured alias is a
+# runtime alias of the own package (and, for an undeclared binding, not in
+# the module's __all__) — so every module-level binding is a syntactic match.
+id: ban-runtime-alias-rebind
+valid:
+  - |
+    from flext_core import c
+    __all__ = ["c"]
+  - |
+    class FlextFooConstants:
+        LIMIT = 3
+invalid:
+  - |
+    class FlextFooConstants:
+        pass
+    c = FlextFooConstants
+    __all__ = ["FlextFooConstants"]
+  - |
+    class FlextFooConstants:
+        pass
+    c = FlextFooConstants
+    c = FlextFooConstants
+    __all__ = ["FlextFooConstants", "c"]
+  - |
+    from flext_core import FlextConstants
+    c = FlextConstants
+    __all__ = ["c"]

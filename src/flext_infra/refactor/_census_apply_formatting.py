@@ -1,10 +1,14 @@
-"""Post-apply formatting helpers for refactor census fixes."""
+"""Post-apply formatting helpers for refactor census fixes.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_infra import c, config, u
+from flext_infra import c, config, p, u
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -15,12 +19,65 @@ class FlextInfraRefactorCensusApplyFormattingMixin:
     """Mixin for normalizing files touched by census apply operations."""
 
     @staticmethod
-    def _ruff_fix_touched_files(paths: Iterable[Path]) -> None:
-        """Normalize trailing newlines + import sort on touched files."""
+    def normalize_source(
+        repository_root: Path,
+        path: Path,
+        source: str,
+    ) -> p.Result[str]:
+        """Normalize staged source with the destination's real Ruff configuration.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
+        checked = u.Cli.run(
+            [
+                "ruff",
+                "check",
+                *config.Infra.codegen.make.ruff.lint_fix,
+                "--select",
+                "I,W",
+                "--stdin-filename",
+                str(path),
+                "-",
+            ],
+            cwd=repository_root,
+            input_data=source,
+            timeout=c.Infra.TIMEOUT_SHORT,
+        )
+        return checked.flat_map(
+            lambda output: u.Cli.run(
+                [
+                    "ruff",
+                    "format",
+                    *config.Infra.codegen.make.ruff.format_apply,
+                    "--stdin-filename",
+                    str(path),
+                    "-",
+                ],
+                cwd=repository_root,
+                input_data=output.stdout,
+                timeout=c.Infra.TIMEOUT_SHORT,
+            ).map(lambda formatted: formatted.stdout),
+        )
+
+    @staticmethod
+    def normalize_touched_files(paths: Iterable[Path]) -> None:
+        """Normalize import order and whitespace on files an apply touched.
+
+        Two apply paths need this and there is one owner: the census apply
+        cascade and the semantic cutover publication. It is public because
+        it is consumed across surfaces, not because it is a helper.
+
+        Raises:
+            RuntimeError: If ruff check --fix failed after refactor apply; or if ruff
+                format failed after refactor apply.
+
+        """
         existing = sorted({str(path) for path in paths if path.is_file()})
         if not existing:
             return
-        check_result = u.Cli.run_raw(
+        check_result = u.Cli.run_checked(
             [
                 "ruff",
                 "check",
@@ -37,7 +94,7 @@ class FlextInfraRefactorCensusApplyFormattingMixin:
                 f"{check_result.error or 'unknown error'}; files={existing!r}"
             )
             raise RuntimeError(msg)
-        format_result = u.Cli.run_raw(
+        format_result = u.Cli.run_checked(
             ["ruff", "format", *config.Infra.codegen.make.ruff.format_apply, *existing],
             timeout=c.Infra.TIMEOUT_SHORT,
         )

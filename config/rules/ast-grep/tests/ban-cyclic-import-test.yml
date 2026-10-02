@@ -1,0 +1,14 @@
+# Shape only: the engine admits the finding when the import is an edge of a
+# runtime import cycle.
+id: ban-cyclic-import
+valid:
+  - |
+    if TYPE_CHECKING:
+        from pkg.b import value
+  - |
+    def run():
+        from pkg.b import value
+invalid:
+  - from pkg.b import value
+  - from . import sibling
+  - import pkg.b

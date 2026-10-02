@@ -1,0 +1,11 @@
+id: ban-compat-alias
+valid:
+  - "c = FlextConstants"
+  - "u = FlextUtilities"
+  - "config = FlextInfraConfig.fetch_global()"
+invalid:
+  - "OldService = NewService"
+  - "LegacyClient = CanonicalClient"
+  # Syntactic match; the engine admits it only when `tm` is absent from the
+  # module's __all__.
+  - "tm = FlextTestsMatchers"
