@@ -13,7 +13,7 @@ from importlib.metadata import distributions
 from pathlib import Path
 from typing import ClassVar
 
-from flext_infra import c, config, m, t
+from flext_infra import c, config, m, t, u
 from flext_infra._pytest_collection import FlextInfraPytestCollection
 from flext_infra.validate._pytest_runner.base import FlextInfraPytestRunnerBase
 
@@ -146,7 +146,35 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         scope = hashlib.sha256(
             self._marker_expression(execution_mode).encode(),
         ).hexdigest()[:8]
-        return f"{self._toolchain_testmon_environment()}-{scope}"
+        return (
+            f"{self._toolchain_testmon_environment()}-"
+            f"{self._config_testmon_digest()}-{scope}"
+        )
+
+    def _config_testmon_digest(self) -> str:
+        """Fingerprint the project's current ``config/*.yaml`` behavior inputs.
+
+        testmon tracks Python sources only, while a FLEXT project's behavior
+        is declared in its config: an edited YAML must select a fresh
+        environment in the same external database instead of a cache hit.
+        Read on every command construction, never memoized.
+
+        Returns:
+            The digest of every config source path and content.
+
+        Raises:
+            ValueError: If a required config source disappears mid-read.
+
+        """
+        digest = hashlib.sha256()
+        for state in u.Infra.snapshot_config_sources(self.root).unwrap():
+            if state.content is None:
+                msg = f"required test configuration disappeared: {state.path}"
+                raise ValueError(msg)
+            digest.update(state.path.relative_to(self.root).as_posix().encode())
+            digest.update(b"\0")
+            digest.update(hashlib.sha256(state.content).digest())
+        return digest.hexdigest()[:8]
 
     def _marker_expression(self, execution_mode: c.Infra.PytestExecutionMode) -> str:
         """Return the native pytest marker expression of one execution scope.
