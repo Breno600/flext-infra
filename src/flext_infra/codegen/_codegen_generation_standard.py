@@ -490,9 +490,7 @@ class FlextInfraCodegenGenerationStandardMixin(
             ),
             lazy_helpers=c.Infra.LAZY_BOOTSTRAP_HELPERS,
             runtime_import_lines=runtime_import_lines,
-            blank_lines_before_exports=(
-                "\n" if not (runtime_import_lines or type_checking_lines) else "\n\n"
-            ),
+            blank_lines_before_exports="\n",
             type_checking_lines=type_checking_lines,
             exports_tuple=cls._format_exports_tuple(
                 cls._build_published_exports(
