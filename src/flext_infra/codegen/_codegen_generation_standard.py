@@ -8,15 +8,12 @@ from __future__ import annotations
 
 from collections.abc import MutableMapping
 from sys import stdlib_module_names
-from typing import TYPE_CHECKING
 
 from flext_infra import c, config, m, t, u
 from flext_infra.codegen._codegen_generation_renderers import (
     FlextInfraCodegenGenerationRenderersMixin,
 )
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
 
 
 # Keep lazy loading only at the public package root and
@@ -307,61 +304,6 @@ class FlextInfraCodegenGenerationStandardMixin(
         lines.append("        }),")
         return "\n".join(lines)
 
-    @staticmethod
-    def _project_package_name(pkg_dir: Path) -> str | None:
-        """Return the distribution package that owns ``pkg_dir``.
-
-        The nearest ancestor carrying the project manifest is the project
-        root, and the distribution package is its manifest-declared name
-        (``u.Infra.read_project_metadata_result``). The root directory
-        name was the historical proxy; it broke every checkout whose root
-        directory is not named after the package — a git worktree named
-        after its branch (``0.12.0-dev``) rendered wrapper roots
-        (``examples/``, ``scripts/``, ``tests/``) whose TYPE_CHECKING
-        block sorted the project package as third-party, diverging from
-        CI renders and failing ruff I001 at the generated fixed point.
-        Return ``None`` when no manifest is reachable; an unreadable manifest
-        raises with the metadata reader's diagnostic.
-
-        Returns:
-            The distribution package that owns ``pkg_dir``.
-
-        """
-        for candidate in (pkg_dir, *pkg_dir.parents):
-            if not (candidate / c.PYPROJECT_FILENAME).is_file():
-                continue
-            return u.Infra.read_project_metadata_result(candidate).unwrap().package_name
-        return None
-
-    @staticmethod
-    def _project_first_party_names(project_root: Path) -> t.StrSequence:
-        """Read strict Ruff policy, deriving namespaces only when it is absent.
-
-        Returns:
-            The resulting ``t.StrSequence``.
-
-        Raises:
-            TypeError: If Ruff configuration before.
-
-        """
-        project_payload = u.Infra.pyproject_payload(
-            (project_root / c.PYPROJECT_FILENAME).resolve(),
-        )
-        projected: t.JsonValue | None = project_payload.get("tool")
-        for section in ("ruff", "lint", "isort", "known-first-party"):
-            if projected is None:
-                break
-            if not isinstance(projected, dict):
-                msg = f"Ruff configuration before {section!r} must be a table"
-                raise TypeError(msg)
-            projected = projected.get(section)
-        if projected is not None:
-            return t.str_sequence_adapter().validate_python(projected, strict=True)
-        return (
-            *u.Infra.discover_first_party_namespaces(project_root),
-            *u.Infra.flext_dependency_namespaces_from_payload(project_payload),
-        )
-
     @classmethod
     def _root_context(cls, plan: m.Infra.LazyInitPlan) -> m.Infra.LazyInitRootRender:
         """Build one lazy context for a public package root.
@@ -373,41 +315,24 @@ class FlextInfraCodegenGenerationStandardMixin(
         lazy_module_groups, lazy_alias_groups, lazy_map = cls._lazy_groups(plan)
         current_pkg = plan.context.current_pkg
         public_type_checking_imports = cls._type_checking_filtered(plan)
-        # The generated TYPE_CHECKING block must mirror the project's ruff
-        # isort sections exactly: every namespace the project's
-        # known-first-party declares must be emitted in the first-party
-        # section. That set is the config-owned base namespaces (e.g.
-        # flext_core, the shared upstream), this package root, and the
-        # project's own package. The last matters for roots outside the
-        # source tree (tests, examples, scripts, pulumi): their initializers
-        # import the distribution package absolutely, and ruff lists it as
-        # first-party. Without the full set the block lands in the wrong
-        # section, omitting or inserting the blank line ruff expects and
-        # violating I001.
+        # The generated blocks rank imports by the project's ruff isort
+        # sections, so they read the one owner that projects known-first-party
+        # into the same pyproject (FlextInfraToolTablesPhase); the package
+        # being rendered is first-party to ruff through its declared ``src``
+        # roots (tests, examples, scripts).
+        project_root = next(
+            candidate
+            for candidate in (plan.context.pkg_dir, *plan.context.pkg_dir.parents)
+            if (candidate / c.PYPROJECT_FILENAME).is_file()
+        )
+        pyproject = project_root / c.PYPROJECT_FILENAME
         first_party_names = {
             current_pkg,
-            *config.Infra.tooling.tools.deptry.known_first_party,
-        }
-        project_pkg = cls._project_package_name(plan.context.pkg_dir)
-        if project_pkg is not None:
-            first_party_names.add(project_pkg)
-        # I001 parity is judged by THIS project's ruff table, so the render
-        # reads the same projected ``known-first-party`` list the linter reads
-        # Deriving the set from declared dependencies races
-        # the deps projection: a pyproject whose tool tables predate a
-        # dependency wave renders one order while ruff enforces another, and
-        # the generated block fails I001 on every cycle. The derived set stays
-        # only as the fallback for projects without a projected table.
-        project_root = next(
-            (
-                candidate
-                for candidate in (plan.context.pkg_dir, *plan.context.pkg_dir.parents)
-                if (candidate / c.PYPROJECT_FILENAME).is_file()
+            *FlextInfraToolTablesPhase.first_party_namespaces(
+                u.Infra.pyproject_payload(pyproject.resolve()),
+                path=pyproject,
             ),
-            None,
-        )
-        if project_root is not None:
-            first_party_names.update(cls._project_first_party_names(project_root))
+        }
         type_checking_root_names = frozenset(first_party_names)
         type_checking_lines = "\n".join(
             cls.generate_type_checking(
