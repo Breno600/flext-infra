@@ -230,12 +230,8 @@ override export MISE_CEILING_PATHS := $(abspath $(RUNTIME_ROOT)/..)
 # Attached members retain their own lock inputs for standalone consumption.
 # The pin is `make upg` output: a generated header, then its release line.
 override MISE_VERSION_PIN := $(RUNTIME_ROOT)/{{ mise_bootstrap.version_pin_file }}
-ifneq ($(wildcard $(MISE_VERSION_PIN)),)
-override export MISE_VERSION := $(strip $(shell awk '{{ mise_bootstrap.version_pin_reader | replace('$', '$$') }}' "$(MISE_VERSION_PIN)"))
-ifneq ($(.SHELLSTATUS),0)
-$(error Cannot read the pinned Mise release from $(MISE_VERSION_PIN))
-endif
-endif
+# The pin is read by the bootstrap recipe after any interrupted lock journal
+# has been recovered. Parsing it here would freeze a torn pre-recovery value.
 # End SECTION: profile routing
 
 override RUNTIME_VENV := $(RUNTIME_ROOT)/{{ environment_directory }}
@@ -474,7 +470,7 @@ setup: _bootstrap_setup_tools
 upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle
 upg: TOOL_BOOTSTRAP_RESOLVE := 1
 upg: TOOL_BOOTSTRAP_LOCK := 1
-upg: _builtin_require_runtime_root _bootstrap_setup_tools
+upg: _bootstrap_setup_tools
 
 # Only the runtime root resolves the Mise release. An attached member's pin and
 # launchers are projections of that root, published by the root's `make gen`.
@@ -517,20 +513,36 @@ _builtin-help:
 # A provisioned local setup needs no GitHub credential. Mise and Git receive
 # only the explicit process credential above; an operation that actually needs
 # network access reports its own failure without a preflight or fallback.
-_bootstrap_setup_tools: $(if $(filter upg,$(MAKECMDGOALS)),,_builtin_require_mise_pin)
+_bootstrap_setup_tools: _builtin_recover_mise $(if $(filter upg,$(MAKECMDGOALS)),,_builtin_require_mise_pin)
+
+.PHONY: _builtin_recover_mise
+_builtin_recover_mise: _builtin_require_runtime_root
+	@set -eu; \
+	project_root=$$(cd "$(RUNTIME_ROOT)" && pwd -P); \
+	project_parent=$${project_root%/*}; \
+	if [ -z "$$project_parent" ]; then project_parent=/; fi; \
+	for prior in "$$project_parent/.$${project_root##*/}.mise-lock-stage."*; do \
+		if [ ! -d "$$prior" ]; then continue; fi; \
+		if [ ! -f "$$prior/transaction.json" ]; then printf 'ERROR: uncommitted Mise stage has no recovery journal: %s\n' "$$prior" >&2; exit 2; fi; \
+		if [ ! -f "$$prior/python-path" ]; then printf 'ERROR: Mise transaction lacks its Python receipt: %s\n' "$$prior" >&2; exit 2; fi; \
+		IFS= read -r recovery_python < "$$prior/python-path"; \
+		if [ ! -x "$$recovery_python" ]; then printf 'ERROR: Mise transaction Python is unavailable: %s\n' "$$recovery_python" >&2; exit 2; fi; \
+		"$$recovery_python" "$$project_root/{{ mise_bootstrap.lock_transaction_script }}" recover "$$project_root" "$$prior"; \
+	done
 
 .PHONY: _builtin_require_mise_pin
-_builtin_require_mise_pin:
+_builtin_require_mise_pin: _builtin_recover_mise
 	@set -eu; \
 	if [ ! -s "$(MISE_VERSION_PIN)" ]; then \
 		printf 'ERROR: missing or empty %s; make upg records the Mise release\n' "$(MISE_VERSION_PIN)" >&2; \
 		exit 2; \
 	fi; \
-	if ! printf '%s\n' "$(MISE_VERSION)" | grep -Eq '^{{ mise_bootstrap.resolved_release_pattern }}$$'; then \
+	mise_pin=$$(awk '{{ mise_bootstrap.version_pin_reader | replace('$', '$$') }}' "$(MISE_VERSION_PIN)"); \
+	if ! printf '%s\n' "$$mise_pin" | grep -Eq '^{{ mise_bootstrap.resolved_release_pattern }}$$'; then \
 		printf 'ERROR: %s must contain a resolved Mise release; make upg writes it\n' "$(MISE_VERSION_PIN)" >&2; \
 		exit 2; \
 	fi; \
-	if [ "$(MISE_VERSION)" != "$$(awk '{{ mise_bootstrap.version_pin_reader | replace('$', '$$') }}' "$(MISE_VERSION_PIN)")" ]; then \
+	if [ -n "$${MISE_VERSION:-}" ] && [ "$${MISE_VERSION#v}" != "$$mise_pin" ]; then \
 		printf 'ERROR: MISE_VERSION conflicts with %s\n' "$(MISE_VERSION_PIN)" >&2; \
 		exit 2; \
 	fi

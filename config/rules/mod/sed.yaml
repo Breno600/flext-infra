@@ -17,6 +17,13 @@
 #     expected: 3                  # optional exact finding count receipt
 
 rules:
+  - id: config-retire-shadowed-sed-model-pair
+    distributions: [flext-infra]
+    description: Remove the earlier SedPatternSpec and SedPatternsSpec declarations shadowed by the strict canonical pair.
+    include: [src/flext_infra/_models/_config/artifact.py]
+    find: '(?s)^    class SedPatternSpec\(FlextInfraConfigModelsContract\.ConfigContract\):\n.*?(?=^    class RefactorCsvCampaignsSpec\()'
+    replace: ''
+    flags: [MULTILINE]
   - id: codegen-test-ci-branches-from-config
     distributions: [flext-infra]
     description: Derive CI trigger branches from the same branch policy as the renderer.

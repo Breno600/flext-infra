@@ -75,6 +75,7 @@ class FlextInfraUtilitiesCodegen(
             artifact_specs=c.Infra.ARTIFACT_SPECS,
             lock_file=c.Infra.MISE_LOCK_FILENAME,
             lock_transaction_script=c.Infra.MISE_LOCK_TRANSACTION_SCRIPT,
+            transaction_lock_file=toolchain.mise_transaction_lock_file,
             runtime_install_relative_template=c.Infra.MISE_RUNTIME_INSTALL_RELATIVE_TEMPLATE,
             resolved_release_pattern=c.Infra.MISE_RELEASE_PATTERN,
         )

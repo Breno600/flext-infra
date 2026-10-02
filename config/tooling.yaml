@@ -221,6 +221,13 @@ Infra:
           # and the scoped ones as `per-file-ignores`. Repositories declare no
           # exception of their own.
           authorized-exceptions:
+            - files: "tests/**/*.py"
+              rules: [assert]
+              authority: universal-core-2026-07-20-test-idiom-s101
+              reason: >-
+                Pytest assertions are the test contract. Ruff's S101 assert
+                restriction applies to runtime code, while tests intentionally
+                use Python assert statements to report failed expectations.
             - rules:
                 - typing-only-third-party-import
                 - typing-only-standard-library-import

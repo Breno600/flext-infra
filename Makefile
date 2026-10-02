@@ -174,12 +174,8 @@ override export MISE_CEILING_PATHS := $(abspath $(RUNTIME_ROOT)/..)
 # Attached members retain their own lock inputs for standalone consumption.
 # The pin is `make upg` output: a generated header, then its release line.
 override MISE_VERSION_PIN := $(RUNTIME_ROOT)/mise.version
-ifneq ($(wildcard $(MISE_VERSION_PIN)),)
-override export MISE_VERSION := $(strip $(shell awk '!/^[[:space:]]*(#|$$)/ { lines++; release = $$0 } END { if (lines == 1) print release }' "$(MISE_VERSION_PIN)"))
-ifneq ($(.SHELLSTATUS),0)
-$(error Cannot read the pinned Mise release from $(MISE_VERSION_PIN))
-endif
-endif
+# The pin is read by the bootstrap recipe after any interrupted lock journal
+# has been recovered. Parsing it here would freeze a torn pre-recovery value.
 # End SECTION: profile routing
 
 override RUNTIME_VENV := $(RUNTIME_ROOT)/.venv
@@ -284,9 +280,6 @@ mise_pin_file="$(MISE_VERSION_PIN)"; \
 	case "$$mise_storage_root/" in \
 		*'/../'*|*'/./'*|*'//'*) printf 'ERROR: MISE_DATA_DIR must be normalized: %s\n' "$$mise_storage_root" >&2; exit 2 ;; \
 	esac; \
-	project_root=$$(cd "$$project_root" && pwd -P); \
-	project_parent=$${project_root%/*}; \
-	if [ -z "$$project_parent" ]; then project_parent=/; fi; \
 	if [ -L "$$mise_storage_root" ]; then \
 		printf 'ERROR: MISE_DATA_DIR must not be a symlink: %s\n' "$$mise_storage_root" >&2; \
 		exit 2; \
@@ -301,6 +294,9 @@ mise_pin_file="$(MISE_VERSION_PIN)"; \
 	case "$$mise_storage_root/" in \
 		/tmp/|/tmp/*) printf 'ERROR: persistent Mise storage must not live under /tmp: %s\n' "$$mise_storage_root" >&2; exit 2 ;; \
 	esac; \
+	project_root=$$(cd "$$project_root" && pwd -P); \
+	project_parent=$${project_root%/*}; \
+	if [ -z "$$project_parent" ]; then project_parent=/; fi; \
 	case "$$mise_storage_root/" in \
 		"$$project_root/"*) printf 'ERROR: persistent Mise storage must be outside the checkout: %s\n' "$$mise_storage_root" >&2; exit 2 ;; \
 	esac; \
@@ -322,7 +318,7 @@ mise_pin_file="$(MISE_VERSION_PIN)"; \
 		esac; \
 	done; \
 	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
-	trap 'find "$$scratch" -depth -delete' EXIT; \
+	trap 'if [ -n "$${lock_stage:-}" ] && [ -d "$$lock_stage" ] && [ ! -f "$$lock_stage/transaction.json" ]; then find "$$lock_stage" -depth -delete; fi; find "$$scratch" -depth -delete' EXIT; \
 	mkdir -p "$$scratch/home" "$$scratch/home" "$$scratch/appdata" "$$scratch/appdata" "$$scratch/xdg-config" "$$scratch/xdg-data" "$$scratch/xdg-cache" "$$scratch/xdg-state" "$$scratch/config" "$$scratch/tmp" "$$scratch/." "$$scratch/system-config" "$$scratch/system-data" "$$scratch/system-installs" "$$scratch/system-shims" "$$scratch/tmp" "$$scratch/tmp" "$$scratch/tmp"; \
 : > "$$scratch/global-config.toml"; chmod 600 "$$scratch/global-config.toml"; \
 : > "$$scratch/system-config/config.toml"; chmod 600 "$$scratch/system-config/config.toml"; \
@@ -515,9 +511,6 @@ mise_pin_file="$(MISE_VERSION_PIN)"; \
 	case "$$mise_storage_root/" in \
 		*'/../'*|*'/./'*|*'//'*) printf 'ERROR: MISE_DATA_DIR must be normalized: %s\n' "$$mise_storage_root" >&2; exit 2 ;; \
 	esac; \
-	project_root=$$(cd "$$project_root" && pwd -P); \
-	project_parent=$${project_root%/*}; \
-	if [ -z "$$project_parent" ]; then project_parent=/; fi; \
 	if [ -L "$$mise_storage_root" ]; then \
 		printf 'ERROR: MISE_DATA_DIR must not be a symlink: %s\n' "$$mise_storage_root" >&2; \
 		exit 2; \
@@ -532,6 +525,9 @@ mise_pin_file="$(MISE_VERSION_PIN)"; \
 	case "$$mise_storage_root/" in \
 		/tmp/|/tmp/*) printf 'ERROR: persistent Mise storage must not live under /tmp: %s\n' "$$mise_storage_root" >&2; exit 2 ;; \
 	esac; \
+	project_root=$$(cd "$$project_root" && pwd -P); \
+	project_parent=$${project_root%/*}; \
+	if [ -z "$$project_parent" ]; then project_parent=/; fi; \
 	case "$$mise_storage_root/" in \
 		"$$project_root/"*) printf 'ERROR: persistent Mise storage must be outside the checkout: %s\n' "$$mise_storage_root" >&2; exit 2 ;; \
 	esac; \
@@ -553,7 +549,7 @@ mise_pin_file="$(MISE_VERSION_PIN)"; \
 		esac; \
 	done; \
 	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
-	trap 'find "$$scratch" -depth -delete' EXIT; \
+	trap 'if [ -n "$${lock_stage:-}" ] && [ -d "$$lock_stage" ] && [ ! -f "$$lock_stage/transaction.json" ]; then find "$$lock_stage" -depth -delete; fi; find "$$scratch" -depth -delete' EXIT; \
 	mkdir -p "$$scratch/home" "$$scratch/home" "$$scratch/appdata" "$$scratch/appdata" "$$scratch/xdg-config" "$$scratch/xdg-data" "$$scratch/xdg-cache" "$$scratch/xdg-state" "$$scratch/config" "$$scratch/tmp" "$$scratch/." "$$scratch/system-config" "$$scratch/system-data" "$$scratch/system-installs" "$$scratch/system-shims" "$$scratch/tmp" "$$scratch/tmp" "$$scratch/tmp"; \
 : > "$$scratch/global-config.toml"; chmod 600 "$$scratch/global-config.toml"; \
 : > "$$scratch/system-config/config.toml"; chmod 600 "$$scratch/system-config/config.toml"; \
@@ -692,16 +688,6 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 		if [ "$$receipt_release" != "$$resolved_release" ]; then \
 			printf 'ERROR: MISE_VERSION=%s launched Mise %s\n' "$$resolved_release" "$$receipt_release" >&2; exit 2; \
 		fi; \
-		mise_checked "$$scratch/install-script.log" mise_exec no-config "$$pinned_mise" generate install-script --version "$$resolved_release" --write "$$project_root/bin/mise" --windows; \
-chmod 755 "$$project_root/bin/mise"; \
-chmod 644 "$$project_root/bin/mise.cmd"; \
-caller_mise_version=; \
-		mise_receipt launcher-version "$$pinned_mise"; \
-		if [ "$$receipt_release" != "$$resolved_release" ]; then \
-			printf 'ERROR: generated %s runs Mise %s, not %s\n' "$$pinned_mise" "$$receipt_release" "$$resolved_release" >&2; exit 2; \
-		fi; \
-		printf '%s\n' '# @flext-generated: upg' '# @flext-owner: flext-infra/src/flext_infra/templates/project/base/tool_bootstrap_recipe.j2 (toolchain.mise_selector and toolchain.mise_version in flext-infra/config/codegen.yaml)' '# @flext-adjust: never hand-edit; bin/mise and bin/mise.cmd are generated by mise for exactly this release' '# @flext-regenerate: make upg' "$$resolved_release" > "$$mise_pin_file"; \
-		chmod 644 "$$mise_pin_file"; \
 		runtime_release="$$resolved_release"; \
 	elif [ "$$runtime_release" != "$$mise_pin" ]; then \
 		printf 'ERROR: launched Mise %s differs from the pinned %s\n' "$$runtime_release" "$$mise_pin" >&2; \
@@ -732,6 +718,21 @@ caller_mise_version=; \
 		mise_checked "$$scratch/staged-python.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" which python; \
 		staged_python=$$(cat "$$scratch/staged-python.log"); \
 		if [ ! -x "$$staged_python" ]; then printf 'ERROR: staged Mise Python is not executable: %s\n' "$$staged_python" >&2; exit 2; fi; \
+		printf '%s\n' "$$staged_python" > "$$lock_stage/python-path"; \
+		if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then \
+			# Prepare and verify the new launchers while the old pin and launchers \
+			# still match the committed lock. No failed stage may strand an older \
+			# Mise release beside a newer lockfile revision. \
+			mkdir -p "$$lock_stage/artifacts/bin"; \
+			mise_checked "$$scratch/install-script.log" mise_exec no-config "$$pinned_mise" generate install-script --version "$$runtime_release" --write "$$lock_stage/artifacts/bin/mise" --windows; \
+chmod 755 "$$lock_stage/artifacts/bin/mise"; \
+chmod 644 "$$lock_stage/artifacts/bin/mise.cmd"; \
+mise_receipt launcher-version "$$lock_stage/artifacts/bin/mise"; \
+			if [ "$$receipt_release" != "$$runtime_release" ]; then \
+				printf 'ERROR: staged Mise launcher runs %s, not %s\n' "$$receipt_release" "$$runtime_release" >&2; exit 2; \
+			fi; \
+			printf '%s\n' '# @flext-generated: upg' '# @flext-owner: flext-infra/src/flext_infra/templates/project/base/tool_bootstrap_recipe.j2 (toolchain.mise_selector and toolchain.mise_version in flext-infra/config/codegen.yaml)' '# @flext-adjust: never hand-edit; bin/mise and bin/mise.cmd are generated by mise for exactly this release' '# @flext-regenerate: make upg' "$$runtime_release" > "$$lock_stage/artifacts/mise.version"; \
+		fi; \
 		mise_checked "$$scratch/publish-lock.log" "$$staged_python" "$$project_root/bin/mise-lock-transaction.py" publish "$$project_root" "$$lock_stage"; \
 		mise_trusted_config_paths="$$project_root"; \
 	else \
@@ -1241,7 +1242,7 @@ setup: _bootstrap_setup_tools
 upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle
 upg: TOOL_BOOTSTRAP_RESOLVE := 1
 upg: TOOL_BOOTSTRAP_LOCK := 1
-upg: _builtin_require_runtime_root _bootstrap_setup_tools
+upg: _bootstrap_setup_tools
 
 # Only the runtime root resolves the Mise release. An attached member's pin and
 # launchers are projections of that root, published by the root's `make gen`.
@@ -1490,20 +1491,36 @@ _builtin_setup_submodules:
 # A provisioned local setup needs no GitHub credential. Mise and Git receive
 # only the explicit process credential above; an operation that actually needs
 # network access reports its own failure without a preflight or fallback.
-_bootstrap_setup_tools: $(if $(filter upg,$(MAKECMDGOALS)),,_builtin_require_mise_pin)
+_bootstrap_setup_tools: _builtin_recover_mise $(if $(filter upg,$(MAKECMDGOALS)),,_builtin_require_mise_pin)
+
+.PHONY: _builtin_recover_mise
+_builtin_recover_mise: _builtin_require_runtime_root
+	@set -eu; \
+	project_root=$$(cd "$(RUNTIME_ROOT)" && pwd -P); \
+	project_parent=$${project_root%/*}; \
+	if [ -z "$$project_parent" ]; then project_parent=/; fi; \
+	for prior in "$$project_parent/.$${project_root##*/}.mise-lock-stage."*; do \
+		if [ ! -d "$$prior" ]; then continue; fi; \
+		if [ ! -f "$$prior/transaction.json" ]; then printf 'ERROR: uncommitted Mise stage has no recovery journal: %s\n' "$$prior" >&2; exit 2; fi; \
+		if [ ! -f "$$prior/python-path" ]; then printf 'ERROR: Mise transaction lacks its Python receipt: %s\n' "$$prior" >&2; exit 2; fi; \
+		IFS= read -r recovery_python < "$$prior/python-path"; \
+		if [ ! -x "$$recovery_python" ]; then printf 'ERROR: Mise transaction Python is unavailable: %s\n' "$$recovery_python" >&2; exit 2; fi; \
+		"$$recovery_python" "$$project_root/bin/mise-lock-transaction.py" recover "$$project_root" "$$prior"; \
+	done
 
 .PHONY: _builtin_require_mise_pin
-_builtin_require_mise_pin:
+_builtin_require_mise_pin: _builtin_recover_mise
 	@set -eu; \
 	if [ ! -s "$(MISE_VERSION_PIN)" ]; then \
 		printf 'ERROR: missing or empty %s; make upg records the Mise release\n' "$(MISE_VERSION_PIN)" >&2; \
 		exit 2; \
 	fi; \
-	if ! printf '%s\n' "$(MISE_VERSION)" | grep -Eq '^[0-9]+(\.[0-9]+){2}$$'; then \
+	mise_pin=$$(awk '!/^[[:space:]]*(#|$$)/ { lines++; release = $$0 } END { if (lines == 1) print release }' "$(MISE_VERSION_PIN)"); \
+	if ! printf '%s\n' "$$mise_pin" | grep -Eq '^[0-9]+(\.[0-9]+){2}$$'; then \
 		printf 'ERROR: %s must contain a resolved Mise release; make upg writes it\n' "$(MISE_VERSION_PIN)" >&2; \
 		exit 2; \
 	fi; \
-	if [ "$(MISE_VERSION)" != "$$(awk '!/^[[:space:]]*(#|$$)/ { lines++; release = $$0 } END { if (lines == 1) print release }' "$(MISE_VERSION_PIN)")" ]; then \
+	if [ -n "$${MISE_VERSION:-}" ] && [ "$${MISE_VERSION#v}" != "$$mise_pin" ]; then \
 		printf 'ERROR: MISE_VERSION conflicts with %s\n' "$(MISE_VERSION_PIN)" >&2; \
 		exit 2; \
 	fi

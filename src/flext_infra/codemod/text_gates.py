@@ -77,7 +77,11 @@ class FlextInfraModTextGateEngine:
         identity: m.Cli.AtomicFileState,
         rules: t.VariadicTuple[m.Infra.ModTextRule],
     ) -> p.Result[t.VariadicTuple[m.Infra.ModTextRule]]:
-        """Select rules from the exact project bytes authenticated for publication."""
+        """Select rules from the exact project bytes authenticated for publication.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.ModTextRule]]``.
+        """
         if identity.content is None:
             return r[t.VariadicTuple[m.Infra.ModTextRule]].fail(
                 f"text rule project identity is absent: {identity.path}",

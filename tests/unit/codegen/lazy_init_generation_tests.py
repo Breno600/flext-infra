@@ -122,7 +122,10 @@ class TestsFlextInfraCodegenGeneration:
         content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(content, "__init__.py", "exec")
-        tm.that(content, has="from demo_pkg.servers._base.constants import BaseConstants")
+        tm.that(
+            content,
+            has="from demo_pkg.servers._base.constants import BaseConstants",
+        )
         tm.that(content, has='".._base.constants": ("BaseConstants",)')
         tm.that(content, lacks="from .._base.constants import")
 
@@ -217,7 +220,10 @@ class TestsFlextInfraCodegenGeneration:
         content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(content, "__init__.py", "exec")
-        tm.that(content, lacks="from demo_pkg._utilities.conversion import DemoConversion")
+        tm.that(
+            content,
+            lacks="from demo_pkg._utilities.conversion import DemoConversion",
+        )
         tm.that(content, lacks="DemoConversion")
         tm.that(content, contains='__all__: tuple[str, ...] = ("Demo",)')
 
@@ -235,7 +241,10 @@ class TestsFlextInfraCodegenGeneration:
         content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(content, "__init__.py", "exec")
-        tm.that(content, contains="from flext_cli._settings import FlextCliSettings, settings")
+        tm.that(
+            content,
+            contains="from flext_cli._settings import FlextCliSettings, settings",
+        )
         tm.that(content, lacks="from ._settings import")
         tm.that(content, lacks="    _ = (")
 
@@ -276,7 +285,10 @@ class TestsFlextInfraCodegenGeneration:
         init_content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(init_content, "__init__.py", "exec")
-        tm.that(init_content, contains="from demo_pkg._fixtures.settings import DemoFixture")
+        tm.that(
+            init_content,
+            contains="from demo_pkg._fixtures.settings import DemoFixture",
+        )
         tm.that(init_content, contains='__all__: tuple[str, ...] = ("DemoFixture",)')
         tm.that(init_content, contains="install_lazy_exports")
 
@@ -418,7 +430,10 @@ class TestsFlextInfraCodegenGeneration:
         content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(content, "__init__.py", "exec")
-        tm.that(content, contains="from demo_pkg.protocols import FlextDemoProtocols, p")
+        tm.that(
+            content,
+            contains="from demo_pkg.protocols import FlextDemoProtocols, p",
+        )
         tm.that(content, lacks="FlextDemoProtocols as p")
 
     def test_root_service_letter_is_the_declared_service_letter(self) -> None:

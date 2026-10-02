@@ -218,6 +218,13 @@ class FlextInfraModelsMiseToolchain:
                 ),
             ),
         ] = True
+        mise_transaction_lock_file: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                pattern=r"^\.[A-Za-z0-9._-]+\.lock$",
+                description="Ignored project-root mutex for Mise lock publication/recovery",
+            ),
+        ]
         mise_lockfile_platforms: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
@@ -549,6 +556,13 @@ class FlextInfraModelsMiseToolchain:
             m.Field(
                 pattern=r"^[A-Za-z0-9._/-]+\.py$",
                 description="Project-relative generated publisher of a staged mise.lock",
+            ),
+        ]
+        transaction_lock_file: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                pattern=r"^\.[A-Za-z0-9._-]+\.lock$",
+                description="Project-root physical mutex declared by toolchain config",
             ),
         ]
         runtime_install_relative_template: Annotated[
