@@ -62,7 +62,9 @@ __all__: list[str] = ["LIMIT", "write"]
 
         """
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
-        family = package / u.Infra.facade_family_declared_by(c.Infra.UTILITIES_PY).directory
+        family = (
+            package / u.Infra.facade_family_declared_by(c.Infra.UTILITIES_PY).directory
+        )
         tm.ok(u.Cli.ensure_dir(family))
         tm.ok(u.Cli.atomic_write_text_file(family / "__init__.py", ""))
         module = family / f"{stem}.py"
@@ -130,7 +132,9 @@ __all__: list[str] = ["LIMIT", "write"]
             if isinstance(node, ast.ClassDef | ast.FunctionDef):
                 names.append(node.name)
             elif isinstance(node, ast.Assign | ast.AnnAssign):
-                targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+                targets = (
+                    node.targets if isinstance(node, ast.Assign) else [node.target]
+                )
                 names.extend(
                     target.id for target in targets if isinstance(target, ast.Name)
                 )

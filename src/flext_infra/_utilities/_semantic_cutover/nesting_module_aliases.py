@@ -73,6 +73,105 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
             is_package_init=is_package_init,
         )
 
+    @staticmethod
+    def _bound_name(imported: cst.ImportAlias) -> str:
+        """Return the local name one import alias binds.
+
+        Returns:
+            The ``as`` name, else the imported dotted name.
+
+        """
+        import libcst as cst
+
+        if imported.asname is not None and isinstance(imported.asname.name, cst.Name):
+            return imported.asname.name.value
+        return FlextInfraUtilitiesQualifiedNames.dotted_name(imported.name) or ""
+
+    @classmethod
+    def _from_import_bindings(
+        cls,
+        node: cst.ImportFrom,
+        *,
+        module_name: str,
+        is_package_init: bool,
+        bindings_by_module: t.MappingKV[str, t.StrMapping],
+    ) -> t.Pair[t.StrMapping, frozenset[str]]:
+        """Classify one ``from`` import against the nested modules.
+
+        Returns:
+            Module bindings it creates (local name to nested module), and the
+            nested modules whose members or owner it already imports.
+
+        """
+        import libcst as cst
+
+        if isinstance(node.names, cst.ImportStar):
+            return {}, frozenset()
+        base = cls._imported_module(
+            node,
+            module_name=module_name,
+            is_package_init=is_package_init,
+        )
+        bindings = bindings_by_module.get(base, {})
+        known = frozenset(bindings) | frozenset(bindings.values())
+        aliases: dict[str, str] = {}
+        owner_imports: set[str] = set()
+        for imported in node.names:
+            name = FlextInfraUtilitiesQualifiedNames.dotted_name(imported.name) or ""
+            if name in known:
+                owner_imports.add(base)
+            full = f"{base}.{name}" if base else name
+            if full in bindings_by_module:
+                aliases[cls._bound_name(imported)] = full
+        return aliases, frozenset(owner_imports)
+
+    @classmethod
+    def _import_bindings(
+        cls,
+        node: cst.Import,
+        bindings_by_module: t.MappingKV[str, t.StrMapping],
+    ) -> t.StrMapping:
+        """Return the ``import a.b as x`` bindings of nested modules.
+
+        Returns:
+            Local name to nested module.
+
+        """
+        return {
+            cls._bound_name(imported): full
+            for imported in node.names
+            if imported.asname is not None
+            and (full := FlextInfraUtilitiesQualifiedNames.dotted_name(imported.name))
+            in bindings_by_module
+        }
+
+    @staticmethod
+    def _reads_moved_member(
+        node: cst.Name,
+        parent: cst.CSTNode | None,
+        members: t.StrMapping,
+    ) -> bool | None:
+        """Classify one use of a module binding.
+
+        Returns:
+            ``True`` for ``binding.<moved member>``, ``None`` for the binding's
+            own spelling (import, ``as`` name, attribute name), ``False`` for a
+            use that still needs the module object.
+
+        """
+        import libcst as cst
+
+        if FlextInfraUtilitiesQualifiedNames.rebinds_name_in_place(
+            parent,
+            node,
+        ) or isinstance(parent, cst.AsName):
+            return None
+        return (
+            isinstance(parent, cst.Attribute)
+            and parent.value is node
+            and parent.attr.value in members
+        )
+
     @classmethod
     def _module_alias_scan(
         cls,
@@ -100,76 +199,47 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
 
             def __init__(self) -> None:
                 self.aliases: dict[str, str] = {}
-                self.residual: set[str] = set()
-                self.read: set[str] = set()
+                self.uses: dict[str, set[bool]] = {}
                 self.owner_imports: set[str] = set()
-
-            @staticmethod
-            def _local(imported: cst.ImportAlias) -> str:
-                if imported.asname is not None and isinstance(
-                    imported.asname.name,
-                    cst.Name,
-                ):
-                    return imported.asname.name.value
-                return FlextInfraUtilitiesQualifiedNames.dotted_name(imported.name) or ""
 
             @override
             def visit_ImportFrom(self, node: cst.ImportFrom) -> None:
-                if isinstance(node.names, cst.ImportStar):
-                    return
-                base = resolver._imported_module(
+                aliases, owner_imports = resolver._from_import_bindings(
                     node,
                     module_name=module_name,
                     is_package_init=is_package_init,
+                    bindings_by_module=bindings_by_module,
                 )
-                bindings = bindings_by_module.get(base, {})
-                for imported in node.names:
-                    name = (
-                        FlextInfraUtilitiesQualifiedNames.dotted_name(imported.name)
-                        or ""
-                    )
-                    if name in bindings or name in set(bindings.values()):
-                        self.owner_imports.add(base)
-                    full = f"{base}.{name}" if base else name
-                    if full in bindings_by_module:
-                        self.aliases[self._local(imported)] = full
+                self.aliases.update(aliases)
+                self.owner_imports.update(owner_imports)
 
             @override
             def visit_Import(self, node: cst.Import) -> None:
-                for imported in node.names:
-                    full = (
-                        FlextInfraUtilitiesQualifiedNames.dotted_name(imported.name)
-                        or ""
-                    )
-                    if imported.asname is not None and full in bindings_by_module:
-                        self.aliases[self._local(imported)] = full
+                self.aliases.update(
+                    resolver._import_bindings(node, bindings_by_module),
+                )
 
             @override
             def visit_Name(self, node: cst.Name) -> None:
                 module = self.aliases.get(node.value)
                 if module is None:
                     return
-                parent = self.get_metadata(ParentNodeProvider, node, None)
-                if FlextInfraUtilitiesQualifiedNames.rebinds_name_in_place(
-                    parent,
+                use = resolver._reads_moved_member(
                     node,
-                ) or isinstance(parent, cst.AsName):
-                    return
-                if (
-                    isinstance(parent, cst.Attribute)
-                    and parent.value is node
-                    and parent.attr.value in bindings_by_module[module]
-                ):
-                    self.read.add(node.value)
-                    return
-                self.residual.add(node.value)
+                    self.get_metadata(ParentNodeProvider, node, None),
+                    bindings_by_module[module],
+                )
+                if use is not None:
+                    self.uses.setdefault(node.value, set()).add(use)
 
         scan = _ModuleAliasScan()
         MetadataWrapper(cst.parse_module(source)).visit(scan)
         return m.Infra.NestingModuleAliasScan(
             aliases=scan.aliases,
-            residual=frozenset(scan.residual),
-            read=frozenset(scan.read),
+            residual=frozenset(
+                name for name, uses in scan.uses.items() if False in uses
+            ),
+            read=frozenset(name for name, uses in scan.uses.items() if True in uses),
             owner_imports=frozenset(scan.owner_imports),
         )
 

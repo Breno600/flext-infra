@@ -26,7 +26,25 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
     """Rewrite imports and usages of classes moved below a module owner."""
 
     @staticmethod
-    def _member_name(node: cst.BaseStatement) -> str | None:
+    def _assignment_targets(
+        statement: cst.BaseSmallStatement,
+    ) -> t.VariadicTuple[cst.BaseAssignTargetExpression]:
+        """Return the targets one assignment statement binds.
+
+        Returns:
+            The bound targets, or an empty tuple for other statements.
+
+        """
+        import libcst as cst
+
+        if isinstance(statement, cst.AnnAssign):
+            return (statement.target,)
+        if isinstance(statement, cst.Assign):
+            return tuple(item.target for item in statement.targets)
+        return ()
+
+    @classmethod
+    def _member_name(cls, node: cst.BaseStatement) -> str | None:
         """Return the name one module-level member statement defines.
 
         Returns:
@@ -40,13 +58,14 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
         if not isinstance(node, cst.SimpleStatementLine) or len(node.body) != 1:
             return None
         statement = node.body[0]
-        if isinstance(statement, cst.Assign) and len(statement.targets) == 1:
-            target = statement.targets[0].target
-        elif isinstance(statement, cst.AnnAssign) and statement.value is not None:
-            target = statement.target
-        else:
+        targets = cls._assignment_targets(statement)
+        if (
+            len(targets) != 1
+            or not isinstance(targets[0], cst.Name)
+            or (isinstance(statement, cst.AnnAssign) and statement.value is None)
+        ):
             return None
-        return target.value if isinstance(target, cst.Name) else None
+        return targets[0].value
 
     @classmethod
     def _rewrite_class_nesting_references(
@@ -398,9 +417,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
                     else FlextInfraUtilitiesQualifiedNames.dotted_name(imported.name)
                     or ""
                 )
-                return (
-                    local in self.module_aliases and local not in self.scan.residual
-                )
+                return local in self.module_aliases and local not in self.scan.residual
 
             @override
             def leave_Import(

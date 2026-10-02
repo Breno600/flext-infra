@@ -50,7 +50,57 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
         return cls._nest_definitions(rewritten, definitions)
 
     @staticmethod
+    def _annotation_tail(annotation: cst.BaseExpression) -> str:
+        """Return the qualifier name of an annotation (``ClassVar[int]`` -> ``ClassVar``).
+
+        Returns:
+            The trailing identifier of the annotation's qualifier, or ``""``.
+
+        """
+        import libcst as cst
+
+        qualifier = (
+            annotation.value if isinstance(annotation, cst.Subscript) else annotation
+        )
+        if isinstance(qualifier, cst.Attribute):
+            return qualifier.attr.value
+        if isinstance(qualifier, cst.Name):
+            return qualifier.value
+        return ""
+
+    @classmethod
+    def _class_variable_type(
+        cls,
+        statement: cst.BaseSmallStatement,
+    ) -> cst.BaseExpression | None:
+        """Return the type a moved binding declares as its ``ClassVar``.
+
+        An annotated binding keeps its annotation (unless it already is a
+        ``ClassVar`` or ``Final``); a plain binding of a number or string
+        literal declares the literal's builtin type. Anything else stays a
+        plain class attribute.
+
+        Returns:
+            The type expression to wrap in ``ClassVar``, or ``None``.
+
+        """
+        import libcst as cst
+
+        if isinstance(statement, cst.AnnAssign):
+            annotation = statement.annotation.annotation
+            if cls._annotation_tail(annotation) in {"ClassVar", "Final"}:
+                return None
+            return annotation
+        if isinstance(statement, cst.Assign) and isinstance(
+            statement.value,
+            cst.Integer | cst.Float | cst.SimpleString,
+        ):
+            return cst.Name(type(ast.literal_eval(statement.value.value)).__name__)
+        return None
+
+    @classmethod
     def _class_member(
+        cls,
         node: cst.BaseStatement,
     ) -> t.Pair[cst.BaseStatement, bool]:
         """Return a module member in its owner-body form.
@@ -81,45 +131,21 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
                 ),
                 False,
             )
-        if not isinstance(node, cst.SimpleStatementLine):
-            return node.with_changes(leading_lines=leading), False
-        statement = node.body[0]
-        annotation: cst.BaseExpression | None = None
-        if isinstance(statement, cst.AnnAssign):
-            annotation = statement.annotation.annotation
-            qualifier = annotation.value if isinstance(annotation, cst.Subscript) else annotation
-            tail = qualifier.attr.value if isinstance(qualifier, cst.Attribute) else (
-                qualifier.value if isinstance(qualifier, cst.Name) else ""
-            )
-            if tail in {"ClassVar", "Final"}:
-                return node.with_changes(leading_lines=leading), False
-            value = statement.value
-            target = statement.target
-        elif isinstance(statement, cst.Assign):
-            value = statement.value
-            target = statement.targets[0].target
-            literal = (
-                type(ast.literal_eval(value.value)).__name__
-                if isinstance(
-                    value,
-                    cst.Integer | cst.Float | cst.SimpleString,
-                )
-                else None
-            )
-            if literal is None:
-                return node.with_changes(leading_lines=leading), False
-            annotation = cst.Name(literal)
-        else:
+        statement = node.body[0] if isinstance(node, cst.SimpleStatementLine) else None
+        declared = (
+            cls._class_variable_type(statement) if statement is not None else None
+        )
+        if not isinstance(statement, cst.AnnAssign | cst.Assign) or declared is None:
             return node.with_changes(leading_lines=leading), False
         classvar = cst.AnnAssign(
-            target=target,
+            target=cls._assignment_targets(statement)[0],
             annotation=cst.Annotation(
                 annotation=cst.Subscript(
                     value=cst.Name("ClassVar"),
-                    slice=(cst.SubscriptElement(slice=cst.Index(value=annotation)),),
+                    slice=(cst.SubscriptElement(slice=cst.Index(value=declared)),),
                 ),
             ),
-            value=value,
+            value=statement.value,
         )
         return node.with_changes(leading_lines=leading, body=(classvar,)), True
 
@@ -210,9 +236,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
         exports = (
             ()
             if declares_exports
-            else (
-                cst.parse_statement(f'__all__: list[str] = ["{owner_name}"]\n'),
-            )
+            else (cst.parse_statement(f'__all__: list[str] = ["{owner_name}"]\n'),)
         )
         module = module.with_changes(
             body=(
@@ -234,8 +258,23 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
             module = AddImportsVisitor(context).transform_module(module)
         return module.code
 
-    @staticmethod
-    def _declares_exports(node: cst.BaseStatement) -> bool:
+    @classmethod
+    def _binds_exports(cls, statement: cst.BaseSmallStatement) -> bool:
+        """Whether one small statement assigns the module ``__all__``.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
+        import libcst as cst
+
+        return any(
+            isinstance(target, cst.Name) and target.value == "__all__"
+            for target in cls._assignment_targets(statement)
+        )
+
+    @classmethod
+    def _declares_exports(cls, node: cst.BaseStatement) -> bool:
         """Whether one module-level statement declares ``__all__``.
 
         Returns:
@@ -245,19 +284,12 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
         import libcst as cst
 
         return isinstance(node, cst.SimpleStatementLine) and any(
-            isinstance(target, cst.Name) and target.value == "__all__"
-            for statement in node.body
-            for target in (
-                (statement.target,)
-                if isinstance(statement, cst.AnnAssign)
-                else tuple(item.target for item in statement.targets)
-                if isinstance(statement, cst.Assign)
-                else ()
-            )
+            cls._binds_exports(statement) for statement in node.body
         )
 
-    @staticmethod
+    @classmethod
     def _rewritten_exports(
+        cls,
         node: cst.BaseStatement,
         owner_name: str,
     ) -> cst.BaseStatement:
@@ -281,24 +313,16 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
             return node
         body: list[cst.BaseSmallStatement] = []
         for statement in node.body:
-            targets = (
-                (statement.target,)
-                if isinstance(statement, cst.AnnAssign)
-                else tuple(item.target for item in statement.targets)
-                if isinstance(statement, cst.Assign)
-                else ()
-            )
-            if (
-                not isinstance(statement, cst.AnnAssign | cst.Assign)
-                or statement.value is None
-                or not any(
-                    isinstance(target, cst.Name) and target.value == "__all__"
-                    for target in targets
-                )
+            if not (
+                isinstance(statement, cst.AnnAssign | cst.Assign)
+                and statement.value is not None
+                and cls._binds_exports(statement)
             ):
                 body.append(statement)
                 continue
-            declared = ast.literal_eval(cst.Module(body=()).code_for_node(statement.value))
+            declared = ast.literal_eval(
+                cst.Module(body=()).code_for_node(statement.value)
+            )
             names = list(dict.fromkeys((owner_name, *declared)))
             rendered = ", ".join(f'"{name}"' for name in names)
             value = cst.parse_expression(
