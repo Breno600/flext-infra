@@ -10,8 +10,9 @@ from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
-from flext_infra import c, config, t, u
+from flext_infra import c, config, t
 from flext_infra.deps.phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
+from tests import u
 
 if TYPE_CHECKING:
     from pathlib import Path

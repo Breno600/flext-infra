@@ -256,13 +256,11 @@ class TestsFlextInfraDepsModernizerToolTables:
         package_dir = project_dir / "src" / "dc_backup"
         package_dir.mkdir(parents=True)
         (package_dir / "__init__.py").write_text('"""Package."""\n', encoding="utf-8")
-        payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
-            u.Tests.toml_payload('[project]\nname = "datacosmos-backup"\n'),
+        (project_dir / "pyproject.toml").write_text(
+            '[project]\nname = "datacosmos-backup"\n',
+            encoding="utf-8",
         )
-        namespaces = FlextInfraToolTablesPhase.first_party_namespaces(
-            payload,
-            path=project_dir / "pyproject.toml",
-        )
+        namespaces = FlextInfraToolTablesPhase.first_party_namespaces(project_dir)
         tm.that(namespaces, has="dc_backup", lacks="datacosmos_backup")
 
     def test_tables_are_idempotent(self, tmp_path: Path) -> None:

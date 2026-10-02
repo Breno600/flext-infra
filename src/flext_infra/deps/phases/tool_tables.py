@@ -24,17 +24,13 @@ class FlextInfraToolTablesPhase:
         self._tool_config = tool_config
 
     @staticmethod
-    def first_party_namespaces(
-        payload: t.MutableJsonMapping,
-        *,
-        path: Path,
-    ) -> t.StrSequence:
+    def first_party_namespaces(project_dir: Path) -> t.StrSequence:
         """Derive the project's first-party namespaces from one source each.
 
-        The live packages under ``src/`` (never a name invented from the
-        distribution), the config-owned base namespaces, and the declared
-        flext dependencies. Ruff's projected table and the lazy-init renderer
-        both read this owner.
+        The config-owned base namespaces, the live packages under ``src/``
+        (never a name invented from the distribution), and, for a workspace
+        root, the packages of the subprojects it declares. Ruff's projected
+        known-first-party and the lazy-init renderer both read this owner.
 
         Returns:
             The sorted first-party namespaces.
@@ -42,8 +38,40 @@ class FlextInfraToolTablesPhase:
         """
         return sorted({
             *config.Infra.tooling.tools.deptry.known_first_party,
-            *u.Infra.discover_first_party_namespaces(path.parent),
-            *u.Infra.flext_dependency_namespaces_from_payload(payload),
+            *u.Infra.discover_first_party_namespaces(project_dir),
+            *FlextInfraToolTablesPhase._workspace_project_namespaces(project_dir),
+        })
+
+    @staticmethod
+    def _workspace_project_namespaces(project_dir: Path) -> t.StrSequence:
+        """Discover child project packages when generating repository root settings.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            ValueError: If ``discovered.failure``.
+
+        """
+        if not (project_dir / c.PYPROJECT_FILENAME).is_file():
+            return ()
+        discovered = u.Infra.discover_projects(project_dir)
+        if discovered.failure:
+            # A real discovery error (malformed pyproject, IO) must never
+            # silently generate root Ruff settings with an empty child-package
+            # list — that conformed artifact would drift from the workspace
+            # with no signal. Mirrors _workspace_exclusion_globs fail-loud.
+            raise ValueError(
+                discovered.error or "workspace project discovery is unavailable",
+            )
+        return sorted({
+            project.package_name
+            for project in discovered.value
+            if (
+                project.package_name
+                and project.package_name.isidentifier()
+                and project.declared_subproject
+            )
         })
 
     def _mypy_phase(self) -> m.Infra.DepsToml.PhaseConfig:
@@ -324,7 +352,7 @@ class FlextInfraToolTablesPhase:
         return u.Infra.apply_toml_phases(
             payload,
             *self._phases(
-                first_party=self.first_party_namespaces(payload, path=path),
+                first_party=self.first_party_namespaces(path.parent),
                 path=path.parent,
             ),
         )
