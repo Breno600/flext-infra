@@ -57,6 +57,7 @@ class FlextInfraUtilitiesCodegen(
                 ),
                 ("MISE_MINIMUM_RELEASE_AGE", f"{toolchain.dependency_cooldown_days}d"),
             ),
+            offline_environment=tuple(c.Infra.MISE_BOOTSTRAP_OFFLINE_ENVIRONMENT),
             transient_environment=tuple(c.Infra.MISE_BOOTSTRAP_TRANSIENT_ENVIRONMENT),
             persistent_environment=tuple(c.Infra.MISE_BOOTSTRAP_PERSISTENT_ENVIRONMENT),
             empty_files=tuple(c.Infra.MISE_BOOTSTRAP_EMPTY_FILES),
