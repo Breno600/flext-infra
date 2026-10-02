@@ -43,6 +43,7 @@ if TYPE_CHECKING:
     from flext_infra.validate.stub_chain import FlextInfraStubSupplyChain
     from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
 
+
 __all__: tuple[str, ...] = (
     "FlextInfraCProfileReport",
     "FlextInfraInventoryService",

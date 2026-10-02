@@ -105,6 +105,7 @@ if TYPE_CHECKING:
     from flext_infra._models.workspace import FlextInfraModelsWorkspace
     from flext_infra._models.worktree import FlextInfraModelsWorktree
 
+
 __all__: tuple[str, ...] = (
     "FlextInfraCodegen",
     "FlextInfraConfigModels",

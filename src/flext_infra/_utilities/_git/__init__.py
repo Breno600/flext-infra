@@ -97,6 +97,7 @@ if TYPE_CHECKING:
         FlextInfraUtilitiesGitWorktreeStatusMixin,
     )
 
+
 __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesGitAttestationMixin",
     "FlextInfraUtilitiesGitMutationScopeMixin",
