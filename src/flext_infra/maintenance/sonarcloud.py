@@ -16,8 +16,7 @@ from typing import TYPE_CHECKING, override
 
 from flext_core import r
 from flext_infra import c, config, m, t, u
-
-from .sonarcloud_client import FlextInfraSonarcloudClient
+from flext_infra.maintenance.sonarcloud_client import FlextInfraSonarcloudClient
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -133,7 +132,11 @@ class FlextInfraSonarcloudSettingsSync(FlextInfraSonarcloudClient[bool]):
         plan: m.Infra.SonarcloudSettingsPlan,
         token: t.SecretStr,
     ) -> p.Result[m.Infra.SonarcloudSettingsValues]:
-        """Read the project's current value of the plan's setting."""
+        """Read the project's current value of the plan's setting.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.SonarcloudSettingsValues]``.
+        """
         body = cls.call(
             plan.api_url,
             plan.timeout_seconds,

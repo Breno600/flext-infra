@@ -44,6 +44,7 @@ class FlextInfraToolTablesPhase:
             The sorted first-party namespaces.
 
         """
+        project_dir = path
         src_dir = project_dir / c.Infra.DEFAULT_SRC_DIR
         planned_parts = (
             source.relative_to(src_dir).parts
