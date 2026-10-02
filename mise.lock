@@ -541,10 +541,10 @@ specifiers = [
 allow_builds = '["@ast-grep/cli"]'
 
 [[tools."npm:prettier"]]
-version = "3.9.9"
-aube = { path = ".mise/locks/npm-prettier/3.9.9", digest = "sha256:815f6667505e41ac2d03ecbac86b79f1beb78d45783879428193c9adc80760a3" }
+version = "3.5.3"
+aube = { path = ".mise/locks/npm-prettier/3.5.3", digest = "sha256:6d0a982291c7b0df742d82eeb58af64bc255d35cfc9238567e0438e647363113" }
 backend = "npm:prettier"
-specifiers = ["latest"]
+specifiers = ["3.5.3"]
 
 [[tools.python]]
 version = "3.13.15"
