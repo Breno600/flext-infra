@@ -544,6 +544,13 @@ class FlextInfraModelsMiseToolchain:
                 description="Committed native graph watched by runtime activation",
             ),
         ]
+        lock_transaction_script: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                pattern=r"^[A-Za-z0-9._/-]+\.py$",
+                description="Project-relative generated publisher of a staged mise.lock",
+            ),
+        ]
         runtime_install_relative_template: Annotated[
             t.NonEmptyStr,
             m.Field(
