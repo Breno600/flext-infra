@@ -30,7 +30,7 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
         workspace = u.Tests.mk_project(
             tmp_path,
             "workspace",
-            pyproject="[project]\nname='sample'\n",
+            pyproject="[project]\nname='sample'\ndependencies = []\n",
             with_src=True,
         )
         module_dir = workspace / "src" / "sample_pkg"
@@ -61,7 +61,7 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
         workspace = u.Tests.mk_project(
             tmp_path,
             "workspace",
-            pyproject="[project]\nname='sample'\n",
+            pyproject="[project]\nname='sample'\ndependencies = []\n",
             with_src=True,
         )
         scripts_dir = workspace / "scripts"
@@ -96,7 +96,7 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
         workspace = u.Tests.mk_project(
             tmp_path,
             "workspace",
-            pyproject="[project]\nname='sample'\n",
+            pyproject="[project]\nname='sample'\ndependencies = []\n",
             with_src=True,
         )
         scripts_dir = workspace / "scripts"
@@ -128,7 +128,7 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
         workspace = u.Tests.mk_project(
             tmp_path,
             "workspace",
-            pyproject="[project]\nname='sample'\n",
+            pyproject="[project]\nname='sample'\ndependencies = []\n",
             with_src=True,
         )
         scripts_dir = workspace / "scripts"

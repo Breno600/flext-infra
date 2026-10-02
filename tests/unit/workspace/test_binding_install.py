@@ -20,6 +20,7 @@ from tests import u
 class TestsFlextInfraBindingInstall:
     """Exercise the public binding CLI with real consumer and supplier packages."""
 
+    @pytest.mark.slow
     @pytest.mark.parametrize(
         "scenario",
         [

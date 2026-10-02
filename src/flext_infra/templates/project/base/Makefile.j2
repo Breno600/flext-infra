@@ -136,7 +136,7 @@ override FLEXT_PYTEST_TESTMON_DATABASE = $(if $(strip $(PYTEST_CACHE_HOME)),$(PY
 # Profiles sit beside the other reports of this checkout (.reports is ignored).
 PROFILE_REPORTS_DIR = $(PROJECT_ROOT)/$(dir $(PYTEST_REPORTS_DIR))profiles
 override PYTEST_CASE_TIMEOUT_SECONDS := {{ pytest.case_timeout_seconds }}
-override PYTEST_RUN_TIMEOUT_SECONDS := {{ pytest.run_timeout_seconds }}
+override PYTEST_RUN_TIMEOUT_SECONDS := {{ pytest.run_timeout_overrides.get(dist, pytest.run_timeout_seconds) }}
 override PYTEST_TERMINATION_GRACE_SECONDS := {{ pytest.termination_grace_seconds }}
 override PYTEST_TIMEOUT_EXIT_CODE := {{ mypy_timeout_exit_code }}
 override PYTEST_ENFORCEMENT_PLUGIN := {{ pytest.enforcement_plugin }}
