@@ -708,6 +708,11 @@ _builtin_fix_all: _builtin_require_environment
 _builtin_sonarcloud_sync_all: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) maintenance sonarcloud-sync --repository-root "$(PROJECT_ROOT)"
 
+# Read the complete unresolved new-code issue set on the published integration
+# branch. This diagnostic never writes SonarCloud settings or issue state.
+_builtin_sonarcloud_issues_all: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) maintenance sonarcloud-issues --repository-root "$(PROJECT_ROOT)"
+
 {% if make_profile == "workspace" %}
 # Member propagation exists only where members exist: this workspace's
 # flext-infra conforms and relocks each declared member and publishes one
@@ -934,6 +939,8 @@ _builtin-{{ verb }}:
 _builtin-duplication:
 	@{{ check_run("duplication") }}
 _builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all
+_builtin-sonarcloud-issues: _builtin_sonarcloud_issues_all
+
 {% if script_dispatch %}
 # Repository-owned script verbs route through the promoted command framework:
 # custom.mk handlers override via RUN_PUBLIC; otherwise the dispatcher resolves
