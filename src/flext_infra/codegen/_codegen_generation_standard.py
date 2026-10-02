@@ -123,14 +123,7 @@ class FlextInfraCodegenGenerationStandardMixin(
 
         """
         current_pkg = plan.context.current_pkg
-        bootstrap_owner = (
-            current_pkg.split(".", maxsplit=1)[0] == c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
-        )
-        lazy_module = (
-            c.Infra.LAZY_BOOTSTRAP_MODULE
-            if bootstrap_owner
-            else c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
-        )
+        lazy_module = c.Infra.LAZY_BOOTSTRAP_MODULE
         lazy_line = (
             f"from {lazy_module} import {', '.join(c.Infra.LAZY_BOOTSTRAP_HELPERS)}"
         )
@@ -466,12 +459,9 @@ class FlextInfraCodegenGenerationStandardMixin(
             ),
         )
         runtime_import_lines = cls._runtime_import_lines(plan)
-        # The bootstrap owner's packages import the helpers from the module
-        # that defines them; every other distribution imports them from the
-        # bootstrap root, which therefore publishes them in its __all__.
-        bootstrap_owner = (
-            current_pkg.split(".", maxsplit=1)[0] == c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
-        )
+        # Every package — the bootstrap owner's and the consumers' alike —
+        # imports the helpers from the module that defines them; the bootstrap
+        # root does not re-export them (its __all__ stays facade-only).
         published_helpers = (
             c.Infra.LAZY_BOOTSTRAP_HELPERS
             if current_pkg == c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
@@ -483,11 +473,7 @@ class FlextInfraCodegenGenerationStandardMixin(
                 current_pkg,
                 u.Infra.copyright_notice(plan.context.pkg_dir),
             ),
-            lazy_helpers_module=(
-                c.Infra.LAZY_BOOTSTRAP_MODULE
-                if bootstrap_owner
-                else c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
-            ),
+            lazy_helpers_module=c.Infra.LAZY_BOOTSTRAP_MODULE,
             lazy_helpers=c.Infra.LAZY_BOOTSTRAP_HELPERS,
             runtime_import_lines=runtime_import_lines,
             blank_lines_before_exports=(
