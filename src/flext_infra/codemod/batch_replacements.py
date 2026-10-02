@@ -23,24 +23,42 @@ class FlextInfraModReplacements:
     """Preserve exact engine rewrites without granting it filesystem effects."""
 
     @staticmethod
+    def generator_owned(
+        entries: t.SequenceOf[m.Infra.ModScanFinding],
+    ) -> t.StrTuple:
+        """Name the findings whose file the canonical generator owns.
+
+        One entry per file and rule; the per-finding detail stays in the mod
+        findings report.
+
+        Returns:
+            Sorted ``generator:<file>:<rule>`` identities.
+
+        """
+        return tuple(
+            sorted({
+                f"generator:{item.file}:{item.rule_id}"
+                for item in entries
+                if item.source_owner == "generator"
+            }),
+        )
+
+    @classmethod
     def require_authored(
+        cls,
         entries: t.SequenceOf[m.Infra.ModScanFinding],
     ) -> p.Result[bool]:
-        """Retain generator findings as blocking evidence, never writable targets.
+        """Refuse to write generated files: their findings are generator repairs.
 
         Returns:
             The resulting ``p.Result[bool]``.
 
         """
-        generated = tuple(item for item in entries if item.source_owner == "generator")
+        generated = cls.generator_owned(entries)
         if generated:
-            # One entry per file and rule: the per-finding detail is in the
-            # mod findings report, the verdict names the generator owners.
-            details = ", ".join(
-                sorted({f"generator:{item.file}:{item.rule_id}" for item in generated}),
-            )
             return r[bool].fail(
-                f"generated findings require canonical generator repair: {details}",
+                "generated findings require canonical generator repair: "
+                + ", ".join(generated),
             )
         return r[bool].ok(True)
 
