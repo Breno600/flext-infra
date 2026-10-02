@@ -76,60 +76,96 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
         return f"{package_name}.{file_path.stem}" if package_name else ""
 
     @classmethod
-    def facade_rebind_modules(cls, project_root: Path) -> t.StrTuple:
-        """Return the modules written in the canonical facade-rebind form.
+    def facade_rebind_module(
+        cls,
+        file_path: Path,
+        source: str,
+        *,
+        project_root: Path,
+    ) -> str:
+        """Return the module of one source written in the facade-rebind form.
 
         The form imports the parent letter, subclasses it and rebinds the
         letter to the subclass (``from flext_core import u`` /
         ``class FlextCliUtilities(u)`` / ``u = FlextCliUtilities``). Mypy
         rejects that rebind, so the checker configuration the operator
         authorized for it applies to exactly these modules
-        (operator-ruling-2026-10-01-facade-rebind-mypy-scope). A project that
-        is not on disk yet has no module in that form.
+        (operator-ruling-2026-10-01-facade-rebind-mypy-scope).
+
+        Returns:
+            The module name, or the empty string when the source is not in
+            that form or names no module.
+
+        """
+        tree = ast.parse(source)
+        imported = {
+            alias.asname or alias.name
+            for node in tree.body
+            if isinstance(node, ast.ImportFrom)
+            for alias in node.names
+        }
+        bases_by_class = {
+            node.name: {base.id for base in node.bases if isinstance(base, ast.Name)}
+            for node in tree.body
+            if isinstance(node, ast.ClassDef)
+        }
+        rebinds = any(
+            isinstance(node, ast.Assign)
+            and isinstance(node.value, ast.Name)
+            and any(
+                isinstance(target, ast.Name)
+                and target.id in imported
+                and target.id in bases_by_class.get(node.value.id, set())
+                for target in node.targets
+            )
+            for node in tree.body
+        )
+        if not rebinds:
+            return ""
+        return cls.module_name_for_file(file_path, project_root=project_root)
+
+    @classmethod
+    def facade_rebind_modules(
+        cls,
+        project_root: Path,
+        planned_sources: t.MappingKV[Path, str],
+    ) -> t.StrTuple:
+        """Return the modules of a project written in the facade-rebind form.
+
+        ``planned_sources`` maps each Python file the active plan publishes to
+        its planned content: a scaffold renders the facades its own
+        configuration must cover, so the planned bytes, not the tree before
+        publication, decide those files. Every other source is read from disk.
 
         Returns:
             The modules written in the canonical facade-rebind form.
 
         """
-        if not project_root.is_dir():
-            return ()
-        files = FlextInfraUtilitiesIterationWorkspace.iter_python_files(
-            m.Infra.SourceScanRequest(project_roots=(project_root,)),
-        ).unwrap()
-        modules: set[str] = set()
-        for file_path in files:
-            tree = ast.parse(file_path.read_text(encoding=c.Cli.ENCODING_DEFAULT))
-            imported = {
-                alias.asname or alias.name
-                for node in tree.body
-                if isinstance(node, ast.ImportFrom)
-                for alias in node.names
-            }
-            bases_by_class = {
-                node.name: {
-                    base.id for base in node.bases if isinstance(base, ast.Name)
-                }
-                for node in tree.body
-                if isinstance(node, ast.ClassDef)
-            }
-            if any(
-                isinstance(node, ast.Assign)
-                and isinstance(node.value, ast.Name)
-                and any(
-                    isinstance(target, ast.Name)
-                    and target.id in imported
-                    and target.id in bases_by_class.get(node.value.id, set())
-                    for target in node.targets
+        root = project_root.resolve()
+        sources: MutableMapping[Path, str] = {}
+        if root.is_dir():
+            files = FlextInfraUtilitiesIterationWorkspace.iter_python_files(
+                m.Infra.SourceScanRequest(project_roots=(root,)),
+            ).unwrap()
+            for file_path in files:
+                sources[file_path.resolve()] = file_path.read_text(
+                    encoding=c.Cli.ENCODING_DEFAULT,
                 )
-                for node in tree.body
-            ) and (
-                module := cls.module_name_for_file(
-                    file_path,
-                    project_root=project_root,
+        for file_path, source in planned_sources.items():
+            sources[file_path.resolve()] = source
+        return tuple(
+            sorted({
+                module
+                for file_path, source in sources.items()
+                if (
+                    module := cls.facade_rebind_module(
+                        file_path,
+                        source,
+                        project_root=root,
+                    )
                 )
-            ):
-                modules.add(module)
-        return tuple(sorted(modules))
+            }),
+        )
 
     @staticmethod
     def _is_generated_init_stub(file_path: Path) -> bool:
