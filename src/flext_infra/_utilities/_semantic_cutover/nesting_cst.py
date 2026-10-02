@@ -9,13 +9,15 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING
 
+import libcst as cst
+from libcst.codemod import CodemodContext
+from libcst.codemod.visitors import AddImportsVisitor
+
 from flext_infra._utilities._semantic_cutover.nesting_references import (
     FlextInfraUtilitiesSemanticCutoverNestingReferences,
 )
 
 if TYPE_CHECKING:
-    import libcst as cst
-
     from flext_infra import t
 
 
@@ -57,8 +59,6 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
             The trailing identifier of the annotation's qualifier, or ``""``.
 
         """
-        import libcst as cst
-
         qualifier = (
             annotation.value if isinstance(annotation, cst.Subscript) else annotation
         )
@@ -84,8 +84,6 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
             The type expression to wrap in ``ClassVar``, or ``None``.
 
         """
-        import libcst as cst
-
         if isinstance(statement, cst.AnnAssign):
             annotation = statement.annotation.annotation
             if cls._annotation_tail(annotation) in {"ClassVar", "Final"}:
@@ -116,8 +114,6 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
         Raises:
             TypeError: If class-nesting cannot move.
         """
-        import libcst as cst
-
         if not isinstance(
             node,
             cst.ClassDef | cst.FunctionDef | cst.SimpleStatementLine,
@@ -172,8 +168,6 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
             TypeError: If the owner declaration cannot be built.
 
         """
-        import libcst as cst
-
         owner_nodes = tuple(
             node
             for node in module.body
@@ -211,8 +205,6 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
             TypeError: If the owner body shape is unsupported.
 
         """
-        import libcst as cst
-
         if isinstance(owner.body, cst.IndentedBlock):
             existing = owner.body.body
             if (
@@ -266,10 +258,6 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
 
     @classmethod
     def _nest_definitions(cls, source: str, definitions: t.StrMapping) -> str:
-        import libcst as cst
-        from libcst.codemod import CodemodContext
-        from libcst.codemod.visitors import AddImportsVisitor
-
         if not definitions:
             return source
         owners = frozenset(definitions.values())
@@ -324,8 +312,6 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
             The resulting ``bool``.
 
         """
-        import libcst as cst
-
         return any(
             isinstance(target, cst.Name) and target.value == "__all__"
             for target in cls._assignment_targets(statement)
@@ -339,8 +325,6 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
             The resulting ``bool``.
 
         """
-        import libcst as cst
-
         return isinstance(node, cst.SimpleStatementLine) and any(
             cls._binds_exports(statement) for statement in node.body
         )
@@ -365,8 +349,6 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
             The resulting ``cst.BaseStatement``.
 
         """
-        import libcst as cst
-
         if not isinstance(node, cst.SimpleStatementLine):
             return node
         body: list[cst.BaseSmallStatement] = []
@@ -400,8 +382,6 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
                 t.VariadicTuple[cst.BaseStatement]]``.
 
         """
-        import libcst as cst
-
         if not body:
             return ((), ())
         head = body[0]
