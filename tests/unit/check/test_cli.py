@@ -231,7 +231,7 @@ class TestsFlextInfraWorkspaceCheckCli:
             "lint",
             "--apply",
             "--ruff-args",
-            "--select no-self-use --preview",
+            "--select no-self-use",
             "--projects",
             "flext-core",
         ])

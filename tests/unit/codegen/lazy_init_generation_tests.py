@@ -15,8 +15,8 @@ from flext_tests import tm
 
 import flext_core
 from flext_infra import c, m, t, u
-from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
 from flext_infra.codegen.codegen_generation import FlextInfraCodegenGeneration
+from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
 
 
 class TestsFlextInfraCodegenGeneration:
@@ -42,10 +42,7 @@ class TestsFlextInfraCodegenGeneration:
             if (candidate / c.PYPROJECT_FILENAME).is_file()
         ).resolve()
         first_party = frozenset(
-            FlextInfraToolTablesPhase.first_party_namespaces(
-                u.Infra.pyproject_payload(pyproject),
-                path=pyproject,
-            ),
+            FlextInfraToolTablesPhase.first_party_namespaces(pyproject.parent),
         )
 
         def block(*, owned: bool) -> str:
