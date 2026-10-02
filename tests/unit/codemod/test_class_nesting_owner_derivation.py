@@ -235,6 +235,28 @@ __all__: list[str] = ["LIMIT", "write"]
         )
         tm.that(residue, eq={})
 
+    def test_published_record_class_is_a_member(self, tmp_path: Path) -> None:
+        """A published record class that is no family owner is a member."""
+        root, module = self._family_module(tmp_path, "mode_helpers", "")
+        owner = self._derived_owner(root, "mode_helpers")
+        helper = f"{u.derive_class_stem(root.name)}NoPrecondition"
+        source = (
+            '"""Sentinel and helper."""\n\n'
+            "from __future__ import annotations\n\n\n"
+            f"class {helper}:\n    pass\n\n\n"
+            f"NO_PRECONDITION = {helper}()\n\n\n"
+            "def check(value: int) -> int:\n    return value\n\n\n"
+            f'__all__: list[str] = ["{helper}", "NO_PRECONDITION", "check"]\n'
+        )
+        tm.ok(u.Cli.atomic_write_text_file(module, source))
+
+        updated, residue = self._plan(root, {module: source})
+
+        nested = updated[module.resolve()]
+        tm.that(self._top_level(nested), eq=(owner, "__all__"))
+        tm.that(nested, has=f"    class {helper}:")
+        tm.that(residue, eq={})
+
     def test_rival_stem_classes_fail_naming_the_module(self, tmp_path: Path) -> None:
         """Two classes carrying the project stem leave the owner undecidable."""
         root, module = self._family_module(tmp_path, "rival_owners", "")
@@ -243,7 +265,8 @@ __all__: list[str] = ["LIMIT", "write"]
             '"""Two candidate owners."""\n\n'
             "from __future__ import annotations\n\n\n"
             f"class {owner}Alpha:\n    pass\n\n\n"
-            f"class {owner}Beta:\n    pass\n"
+            f"class {owner}Beta:\n    pass\n\n\n"
+            f'__all__: list[str] = ["{owner}Alpha", "{owner}Beta"]\n'
         )
         tm.ok(u.Cli.atomic_write_text_file(module, source))
 

@@ -118,10 +118,14 @@ class TestsFlextInfraSemanticPhaseContract:
         """Rival stem-carrying classes leave the owner undecidable: the plan fails."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "models.py"
-        stem = u.derive_class_stem(root.name)
+        stem = (
+            f"{u.derive_class_stem(root.name)}"
+            f"{u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).suffix}"
+        )
         source = (
             f"class {stem}FirstCandidate:\n    pass\n\n"
-            f"class {stem}SecondCandidate:\n    pass\n"
+            f"class {stem}SecondCandidate:\n    pass\n\n"
+            f'__all__ = ["{stem}FirstCandidate", "{stem}SecondCandidate"]\n'
         )
         path.write_text(source, encoding="utf-8")
         with infra.rope_workspace(root) as rope:

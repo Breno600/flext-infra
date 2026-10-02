@@ -122,7 +122,12 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         )
         if len(classes) <= 1 and not loose:
             return planned.ok({})
-        owned = cls._module_owner(convention, file_path, classes)
+        owned = cls._module_owner(
+            convention,
+            file_path,
+            classes,
+            cls._declared_names(tree),
+        )
         if owned.failure:
             return planned.from_failure(owned)
         owner = owned.value

@@ -124,6 +124,33 @@ class FlextInfraUtilitiesSemanticCutoverNestingOwner:
         return tuple(dict.fromkeys(names))
 
     @staticmethod
+    def _declared_names(tree: ast.Module) -> frozenset[str]:
+        """Return the names the module declares in a literal ``__all__``.
+
+        Returns:
+            The declared export names, empty without a literal declaration.
+
+        """
+        for node in tree.body:
+            if isinstance(node, ast.Assign) and len(node.targets) == 1:
+                target, value = node.targets[0], node.value
+            elif isinstance(node, ast.AnnAssign):
+                target, value = node.target, node.value
+            else:
+                continue
+            if (
+                isinstance(target, ast.Name)
+                and target.id == "__all__"
+                and isinstance(value, ast.List | ast.Tuple)
+            ):
+                return frozenset(
+                    item.value
+                    for item in value.elts
+                    if isinstance(item, ast.Constant) and isinstance(item.value, str)
+                )
+        return frozenset()
+
+    @staticmethod
     def _definition_time_names(node: ast.stmt) -> frozenset[str]:
         """Names a member reads while its own definition executes.
 
@@ -195,6 +222,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingOwner:
         convention: m.Infra.RopeModuleConvention,
         file_path: Path,
         classes: t.MappingKV[str, ast.ClassDef],
+        exports: frozenset[str],
     ) -> p.Result[str]:
         """Return the declared owner, or the owner the family derivation names.
 
@@ -204,19 +232,15 @@ class FlextInfraUtilitiesSemanticCutoverNestingOwner:
         """
         derived = r[str]
         policy = convention.module_policy
-        declared = policy.expected_family
-        if declared is not None and declared in classes:
-            return derived.ok(declared)
         namespace = FlextInfraUtilitiesCodegenNamespace
         families = namespace.facade_families()
         directory_family = namespace.facade_family_of_directory(file_path.parent.name)
         file_family = namespace.facade_family_of_file(file_path.name)
         if directory_family is not None:
-            suffix = families[directory_family].suffix + u.derive_class_stem(
-                file_path.stem.strip("_"),
-            )
+            suffix_root = families[directory_family].suffix
+            suffix = suffix_root + u.derive_class_stem(file_path.stem.strip("_"))
         elif file_family is not None:
-            suffix = families[file_family].suffix
+            suffix_root = suffix = families[file_family].suffix
         else:
             return derived.fail(
                 f"class-nesting found no facade family for {convention.module_name}",
@@ -227,10 +251,29 @@ class FlextInfraUtilitiesSemanticCutoverNestingOwner:
                 "class-nesting cannot derive a module owner without a project "
                 f"class stem for {convention.module_name}",
             )
+        family_prefix = f"{prefix}{suffix_root}"
+        declared = policy.expected_family
+        # The declared owner is the published facade class, or a class the
+        # module declares that carries the family name; a record or sentinel
+        # the module happens to export alone is never the module's owner.
+        if (
+            declared is not None
+            and declared in classes
+            and (policy.expected_alias is not None or declared.startswith(family_prefix))
+        ):
+            return derived.ok(declared)
         owner = f"{prefix}{suffix}"
         if owner in classes:
             return derived.ok(owner)
-        rivals = sorted(name for name in classes if name.startswith(prefix))
+        # A rival is a class the module itself publishes as a family owner:
+        # declared in ``__all__`` and named by the project stem plus the family
+        # suffix. Any other class (a record, a sentinel, an unpublished
+        # helper) is a member, whatever its name.
+        rivals = sorted(
+            name
+            for name in classes
+            if name.startswith(family_prefix) and name in exports
+        )
         if rivals:
             return derived.fail(
                 "class-nesting requires exactly one declared module owner for "

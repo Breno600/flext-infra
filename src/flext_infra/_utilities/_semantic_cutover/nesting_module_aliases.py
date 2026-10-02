@@ -202,6 +202,21 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
                 self.aliases: t.MutableStrMapping = {}
                 self.uses: t.MutableMappingKV[str, set[bool]] = {}
                 self.owner_imports: set[str] = set()
+                self.type_checking_depth = 0
+
+            @staticmethod
+            def _guards_type_checking(node: cst.If) -> bool:
+                test = node.test
+                name = test.attr if isinstance(test, cst.Attribute) else test
+                return isinstance(name, cst.Name) and name.value == "TYPE_CHECKING"
+
+            @override
+            def visit_If(self, node: cst.If) -> None:
+                self.type_checking_depth += self._guards_type_checking(node)
+
+            @override
+            def leave_If(self, original_node: cst.If) -> None:
+                self.type_checking_depth -= self._guards_type_checking(original_node)
 
             @override
             def visit_ImportFrom(self, node: cst.ImportFrom) -> None:
@@ -212,7 +227,10 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
                     bindings_by_module=bindings_by_module,
                 )
                 self.aliases.update(aliases)
-                self.owner_imports.update(owner_imports)
+                # An import that exists only for type checking binds nothing at
+                # runtime, so it never stands in for the owner import.
+                if not self.type_checking_depth:
+                    self.owner_imports.update(owner_imports)
 
             @override
             def visit_Import(self, node: cst.Import) -> None:
