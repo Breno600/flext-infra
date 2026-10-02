@@ -659,3 +659,57 @@ class TestsFlextInfraCodegenGeneration:
 
         with pytest.raises(m.ValidationError):
             FlextInfraCodegenGeneration.render_init(plan)
+
+    def test_runtime_imports_are_one_isort_section_with_the_lazy_helpers(
+        self,
+    ) -> None:
+        """The helpers import sorts inside the first-party block it belongs to.
+
+        In the bootstrap root the helpers live in a sibling module of the
+        ``__version__`` import; both are first-party, so Ruff isort keeps them
+        in one block ordered by module. A separate helpers block was rewritten
+        by ``make fix`` after every ``make gen``.
+        """
+        root = c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
+        plan = self._plan(
+            root,
+            ("FlextLazy", "__version__"),
+            MappingProxyType({
+                "FlextLazy": (c.Infra.LAZY_BOOTSTRAP_MODULE, "FlextLazy"),
+            }),
+            eager_dunders=MappingProxyType({
+                "__version__": (f"{root}.__version__", "__version__"),
+            }),
+        )
+
+        content = FlextInfraCodegenGeneration.render_init(plan)
+
+        helpers = ", ".join(c.Infra.LAZY_BOOTSTRAP_HELPERS)
+        tm.that(
+            content,
+            contains=(
+                f"from {root}.__version__ import __version__\n"
+                f"from {c.Infra.LAZY_BOOTSTRAP_MODULE} import {helpers}\n"
+            ),
+        )
+
+    def test_expanded_single_entry_mapping_keeps_its_trailing_comma(self) -> None:
+        """An exploded one-entry mapping carries the comma COM812 requires.
+
+        The entry fits one line while the inline mapping does not, which is
+        the shape whose comma-less rendering ``make fix`` rewrote.
+        """
+        plan = self._plan(
+            "demo_pkg",
+            ("FlextDemoGeneratedFacade",),
+            MappingProxyType({
+                "FlextDemoGeneratedFacade": (
+                    "demo_pkg._generated_parts.facade_part_04",
+                    "FlextDemoGeneratedFacade",
+                ),
+            }),
+        )
+
+        content = FlextInfraCodegenGeneration.render_init(plan)
+
+        tm.that(content, contains='("FlextDemoGeneratedFacade",),\n        }),')

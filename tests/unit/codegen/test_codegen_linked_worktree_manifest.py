@@ -72,7 +72,12 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
             ),
         )
 
-        (makefile_plan,) = plan.files
+        planned = {item.path: item for item in plan.files}
+        tm.that(
+            set(planned),
+            eq={lane / item for item in c.Infra.MAKEFILE_BOOTSTRAP_DESTINATIONS},
+        )
+        makefile_plan = planned[lane / c.Infra.MAKEFILE_FILENAME]
         tm.that(
             u.Tests.codegen_file_text(makefile_plan),
             has="MAKE_PROFILE := standalone",

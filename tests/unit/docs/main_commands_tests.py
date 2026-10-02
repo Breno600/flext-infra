@@ -124,10 +124,10 @@ class TestsFlextInfraDocsMainCommands:
     def test_builder_execute_fails_with_invalid_mkdocs_config(
         tmp_path: Path,
     ) -> None:
-        """An invalid scope mkdocs.yml stops the build with MkDocs' own error.
+        """An invalid scope config escapes with the MkDocs failure itself.
 
-        The builder reads the scope's own config (never the process cwd's) and
-        a MkDocs failure escapes unchanged with its traceback (fail loud).
+        The builder loads the scope's own ``mkdocs.yml`` and never translates
+        a MkDocs failure into a result: the exception and traceback escape.
         """
         workspace = u.Tests.create_docs_workspace(tmp_path)
         (workspace / "mkdocs.yml").write_text("site_name: [", encoding="utf-8")

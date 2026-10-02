@@ -33,10 +33,6 @@ _MIXED_SOURCES: t.MappingKV[str, str] = {
         "class Plain:\n"
         '    """Missing the project class prefix."""\n'
         "\n"
-        "    def run(self, a, b, c, d, e, f, g):\n"
-        '        """Too many parameters for one function."""\n'
-        "        return a + b + c + d + e + f + g\n"
-        "\n"
         "\n"
         "class Holder:\n"
         '    """Missing prefix plus a constant outside _constants."""\n'
@@ -172,6 +168,7 @@ class TestsRuntimeCensusBlocking:
         result = gate.check(mixed_project, context).result
         tm.that(result.passed, eq=False)
         tm.that("\n".join(result.errors), has="[ENFORCE-079]")
+        tm.that("\n".join(result.errors), has="[class_prefix]")
 
     @staticmethod
     def test_single_violation_reports_verbatim(
