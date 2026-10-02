@@ -29,14 +29,13 @@ class TestsFlextInfraModRuleFixtureSnapshots:
     ) -> Path:
         """Declare one governed rule with its test under ``root``; return the rule.
 
-        Snapshot verification reads the Git tracked status of the rule tests,
-        so the root is a repository.
+        Git decides which provider the repository governs, so the root is a
+        repository whose initial commit tracks the declared catalog.
 
         Returns:
             The resulting ``Path``.
 
         """
-        u.Tests.initialize_git_repo(root)
         for directory in ("src", f"{fixtures}/rules", f"{fixtures}/tests"):
             tm.ok(u.Cli.ensure_dir(root / directory))
         tm.ok(
@@ -61,6 +60,7 @@ class TestsFlextInfraModRuleFixtureSnapshots:
                 f"id: demo\nvalid:\n  - baz(1)\ninvalid:\n{cases}",
             ),
         )
+        u.Tests.initialize_git_repo(root)
         return rule
 
     @staticmethod
