@@ -243,13 +243,6 @@ caller_github_token="$${GITHUB_TOKEN:-}"; \
 caller_mise_http_timeout="$${MISE_HTTP_TIMEOUT:-}"; \
 caller_flext_mypy_profile_output="$${FLEXT_MYPY_PROFILE_OUTPUT:-}"; \
 caller_mise_version="$${MISE_VERSION:-}"; \
-if [ -z "$$caller_github_token" ] && command -v gh >/dev/null 2>&1; then \
-		caller_github_token="$$(gh auth token)" \
-			|| { printf 'ERROR: the selected GitHub credential source failed: %s\n' 'gh auth token' >&2; exit 2; }; \
-		if [ -z "$$caller_github_token" ]; then \
-			printf 'ERROR: the selected GitHub credential source printed nothing: %s\n' 'gh auth token' >&2; exit 2; \
-		fi; \
-	fi; \
 mise_pin_file="$(MISE_VERSION_PIN)"; \
 	mise_pin=; \
 	if [ -f "$$mise_pin_file" ]; then \
@@ -474,13 +467,6 @@ caller_github_token="$${GITHUB_TOKEN:-}"; \
 caller_mise_http_timeout="$${MISE_HTTP_TIMEOUT:-}"; \
 caller_flext_mypy_profile_output="$${FLEXT_MYPY_PROFILE_OUTPUT:-}"; \
 caller_mise_version="$${MISE_VERSION:-}"; \
-if [ -z "$$caller_github_token" ] && command -v gh >/dev/null 2>&1; then \
-		caller_github_token="$$(gh auth token)" \
-			|| { printf 'ERROR: the selected GitHub credential source failed: %s\n' 'gh auth token' >&2; exit 2; }; \
-		if [ -z "$$caller_github_token" ]; then \
-			printf 'ERROR: the selected GitHub credential source printed nothing: %s\n' 'gh auth token' >&2; exit 2; \
-		fi; \
-	fi; \
 mise_pin_file="$(MISE_VERSION_PIN)"; \
 	mise_pin=; \
 	if [ -f "$$mise_pin_file" ]; then \
@@ -646,7 +632,14 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 			$${mise_runtime_path:+"MISE_INSTALL_PATH=$$mise_runtime_path"} \
 			"$$@"; \
 	}; \
-	mise_checked() { \
+if [ -z "$$caller_github_token" ] && command -v gh >/dev/null 2>&1; then \
+		caller_github_token="$$(gh auth token)" \
+			|| { printf 'ERROR: the selected GitHub credential source failed: %s\n' 'gh auth token' >&2; exit 2; }; \
+		if [ -z "$$caller_github_token" ]; then \
+			printf 'ERROR: the selected GitHub credential source printed nothing: %s\n' 'gh auth token' >&2; exit 2; \
+		fi; \
+	fi; \
+mise_checked() { \
 		mise_log="$$1"; shift; \
 		printf 'setup probe: begin stage=%s log=%s\n' "$${mise_log##*/}" "$$mise_log" >&2; \
 		if "$$@" >"$$mise_log" 2>&1; then :; \
