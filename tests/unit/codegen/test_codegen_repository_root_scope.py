@@ -183,8 +183,9 @@ class TestsFlextInfraCodegenRepositoryRootScope:
             eq={
                 "upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle",
                 "upg: TOOL_BOOTSTRAP_RESOLVE := 1",
-                # mise.lock is written only by the relock, from the manifest
-                # `gen` rendered with the newly locked generator.
+                # The first half locks (repairs a split manifest/lock pair);
+                # the relock locks again from the freshly rendered manifest.
+                "upg: TOOL_BOOTSTRAP_LOCK := 1",
                 "_upg_relock: TOOL_BOOTSTRAP_LIFECYCLE := _upg_converge",
                 "_upg_relock: TOOL_BOOTSTRAP_LOCK := 1",
             },

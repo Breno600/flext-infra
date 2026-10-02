@@ -462,14 +462,15 @@ _activated-{{ verb.name }}: _builtin_require_environment
 setup: _bootstrap_setup_tools
 
 # `upg` builds the environment from the locks it writes, so like `setup` it
-# must not require an existing environment. Its first half resolves the Mise
-# release and installs from the committed mise.lock only: locking here would
-# resolve against the manifest the old generator rendered, before the uv lock
-# brings the new generator, so a toolchain policy change (for example the
-# fleet cooldown) could never reach a consumer. mise.lock is written once, in
-# `_upg_relock`, from the .mise.toml `gen` just rendered.
+# must not require an existing environment. Its first half locks mise.lock
+# from the committed manifest: that is what repairs a manifest/lock pair a
+# regeneration left apart (an install-only first half cannot start then). The
+# fleet cooldown reaches this lock through the safe-mode environment
+# (MISE_MINIMUM_RELEASE_AGE), and `_upg_relock` locks again from the
+# .mise.toml `gen` renders with the newly locked generator.
 upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle
 upg: TOOL_BOOTSTRAP_RESOLVE := 1
+upg: TOOL_BOOTSTRAP_LOCK := 1
 upg: _builtin_require_runtime_root _bootstrap_setup_tools
 
 # Only the runtime root resolves the Mise release. An attached member's pin and
