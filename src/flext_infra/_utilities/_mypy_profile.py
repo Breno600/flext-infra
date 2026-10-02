@@ -7,7 +7,7 @@ import sys
 
 from mypy import api
 
-from flext_infra import m, u
+from flext_infra import m
 
 
 class FlextInfraMypyProfiler:
@@ -16,6 +16,8 @@ class FlextInfraMypyProfiler:
     @staticmethod
     def run(invocation: m.Infra.MypyInvocation) -> int:
         """Run the public checker API, whose clean exit lets cProfile save data."""
+        from flext_infra import u
+
         destination = invocation.profile_output
         if destination is None:
             msg = "Mypy profiling requires an output destination"

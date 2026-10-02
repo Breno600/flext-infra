@@ -109,10 +109,10 @@ class TestsFlextInfraApplyRenames:
             encoding="utf-8",
         )
         tm.ok(FlextInfraApplyRenames.run(self._request(mod_workspace, apply=True)))
-        output = tm.ok(u.Cli.run_checked((sys.executable, str(consumer))))
+        output = tm.ok(u.Cli.run((sys.executable, str(consumer))))
         tm.that(output.stdout.strip(), eq="campaign_token")
         namespace = tm.ok(
-            u.Cli.run_checked(
+            u.Cli.run(
                 (
                     sys.executable,
                     "-c",
@@ -153,7 +153,7 @@ class TestsFlextInfraApplyRenames:
         )
         first = tm.ok(FlextInfraApplyRenames.run(request))
         tm.that(first.files_changed, eq=1)
-        output = tm.ok(u.Cli.run_checked((sys.executable, str(consumer))))
+        output = tm.ok(u.Cli.run((sys.executable, str(consumer))))
         tm.that(output.stdout, eq="37 37 11 19\n")
         second = tm.ok(FlextInfraApplyRenames.run(request))
         tm.that(second.files_changed, eq=0)
@@ -247,7 +247,7 @@ class TestsFlextInfraApplyRenames:
         tm.that(report.files_changed, eq=len(roots))
         for directory in roots:
             output = tm.ok(
-                u.Cli.run_checked(
+                u.Cli.run(
                     (sys.executable, "-m", f"{directory.name}.consumer"),
                     cwd=directory / "src",
                 )

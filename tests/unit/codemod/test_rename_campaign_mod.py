@@ -69,7 +69,7 @@ class TestsRenameCampaignMod:
             else "A campaign_token paragraph.\n",
         )
         consumer = tm.ok(
-            u.Cli.run_checked(
+            u.Cli.run(
                 (sys.executable, "-c", "import sample; print(sample.PAYLOAD)"),
                 cwd=mod_workspace,
             )
