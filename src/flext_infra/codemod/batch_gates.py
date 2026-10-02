@@ -469,6 +469,10 @@ class FlextInfraModGateEngine:
             The resulting ``m.Infra.ModScanReport``.
 
         """
+        facts = u.Infra.codemod_project_facts(
+            root,
+            tuple(rules_by_id[entry.rule_id] for entry in report.entries),
+        )
         entries = tuple(
             entry
             for entry in report.entries
@@ -477,6 +481,7 @@ class FlextInfraModGateEngine:
                 rules_by_id[entry.rule_id],
                 entry.file,
                 FlextInfraModGateEngine._captures(entry.payload),
+                facts,
             )
         )
         if len(entries) == len(report.entries):
