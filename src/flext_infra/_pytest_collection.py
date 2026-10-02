@@ -143,18 +143,22 @@ class FlextInfraPytestCollection:
             being interrupted after its own final result (flext-xqw3w).
             """
             session = self.session
-            if (
-                session is None
-                or report.when != "teardown"
-                or time.monotonic() < self.stop_at_monotonic
-            ):
+            if session is None or report.when != "teardown":
                 return
             self.completed_items.add(report.nodeid)
-            total_items = len(getattr(session, "items", ()) or ())
+            if time.monotonic() < self.stop_at_monotonic:
+                return
+            # xdist collects in workers, leaving controller session.items empty.
+            # Its controller session receives the worker collection count.
+            controller = session.config.pluginmanager.getplugin("dsession")
+            total_items = (
+                session.testscollected
+                if isinstance(controller, DSession)
+                else len(session.items)
+            )
             if total_items and len(self.completed_items) >= total_items:
                 return
             reason = f"suite stop instant {self.stop_at_monotonic:.3f} reached"
-            controller = session.config.pluginmanager.getplugin("dsession")
             if isinstance(controller, DSession):
                 if not controller.shouldstop:
                     controller.shouldstop = reason

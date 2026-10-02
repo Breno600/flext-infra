@@ -14,7 +14,7 @@ from flext_infra import FlextInfraPytestRunner, config, m, t, u
 
 
 class TestsFlextInfraPytestRunnerSuiteStop:
-    """Exercise the real runner when the entrypoint budget is already spent."""
+    """Exercise the real runner around its graceful-stop boundary."""
 
     @staticmethod
     def _read(path: Path) -> str:
@@ -22,37 +22,36 @@ class TestsFlextInfraPytestRunnerSuiteStop:
         return tm.ok(u.Cli.files_read_text(path))
 
     @staticmethod
-    def _spent_runner(project: Path) -> FlextInfraPytestRunner:
-        """Build the real runner whose derived stop instant has already passed.
-
-        The entrypoint clock is placed so pytest must stop dispatch gracefully
-        at the first completed item, never through the deadline SIGTERM.
-        """
+    def _runner_stopping_at(
+        project: Path, stop_at_monotonic: float
+    ) -> FlextInfraPytestRunner:
+        """Build a real runner for an absolute graceful-stop instant."""
         cache = config.Infra.codegen.make.testmon_cache
         policy = config.Infra.tooling.tools.pytest
         testmon_db = project.parent / ".testmon-cache" / cache.database_filename
         testmon_db.parent.mkdir(parents=True)
         return FlextInfraPytestRunner(
             repository_root=project,
-            started_at_monotonic=time.monotonic()
-            - policy.run_timeout_seconds
-            + policy.suite_stop_reserve_seconds,
+            started_at_monotonic=(
+                stop_at_monotonic
+                - policy.run_timeout_seconds
+                + policy.suite_stop_reserve_seconds
+            ),
             target=cache.target_directory,
             reports=cache.reports_directory,
             testmon_db=testmon_db,
         )
 
-    def _interrupted_run(self, project: Path) -> tuple[Path, t.StrTuple, int]:
-        """Return the published run, its selection and its executed count.
-
-        Both scenarios end with pytest's own interrupt from the stop instant.
-        """
+    def _run_receipt(
+        self, project: Path, *, expected_raw_return_code: int
+    ) -> tuple[Path, t.StrTuple, int]:
+        """Read pytest's raw exit and the runner's published accounting."""
         reports = config.Infra.codegen.make.testmon_cache.reports_directory
         (bounded,) = (path.parent for path in (project / reports).glob("*/summary.txt"))
         outcome = m.Cli.ProcessOutcome.model_validate_json(
             self._read(bounded / "suite-outcome.json")
         )
-        tm.that(outcome.raw_return_code, eq=pytest.ExitCode.INTERRUPTED.value)
+        tm.that(outcome.raw_return_code, eq=expected_raw_return_code)
         tm.that(outcome.timed_out, eq=False)
         tm.that(outcome.forwarded_signal, none=True)
         selected = m.Infra.PytestCollectionManifest.model_validate_json(
@@ -80,11 +79,14 @@ class TestsFlextInfraPytestRunnerSuiteStop:
             ),
             encoding="utf-8",
         )
-        runner = self._spent_runner(cached_runner_project)
+        runner = self._runner_stopping_at(cached_runner_project, time.monotonic())
 
         tm.that(tm.ok(runner.execute()), eq=pytest.ExitCode.INTERRUPTED.value)
 
-        bounded, selected, executed = self._interrupted_run(cached_runner_project)
+        bounded, selected, executed = self._run_receipt(
+            cached_runner_project,
+            expected_raw_return_code=pytest.ExitCode.INTERRUPTED.value,
+        )
         tm.that(executed, gt=0)
         tm.that(executed, lt=len(selected))
         tm.that(
@@ -119,15 +121,45 @@ class TestsFlextInfraPytestRunnerSuiteStop:
     ) -> None:
         """A stop requested on the last selected test's teardown ends nothing.
 
-        The fixture project owns one test, so the stop request lands after the
-        whole selection executed and passed: the accounting is complete and the
-        run is green although pytest still reports its interrupt.
+        One item finishes before the instant and another crosses it. The raw
+        pytest exit and the runner outcome must both remain green.
         """
-        runner = self._spent_runner(cached_runner_project)
+        policy = config.Infra.tooling.tools.pytest
+        stop_at = time.monotonic() + policy.slow_timeout_seconds / 2
+        target = config.Infra.codegen.make.testmon_cache.target_directory
+        before_done = cached_runner_project.parent / "before-teardown.txt"
+        crossed = cached_runner_project.parent / "crossed-stop.txt"
+        (cached_runner_project / target / "test_zfinal_boundary.py").write_text(
+            "import time\n"
+            "from collections.abc import Generator\n"
+            "from pathlib import Path\n"
+            "import pytest\n\n"
+            "@pytest.fixture\n"
+            "def record_teardown() -> Generator[None]:\n"
+            "    yield\n"
+            f"    Path({str(before_done)!r}).write_text(str(time.monotonic()))\n\n"
+            "def test_before_stop(record_teardown: None) -> None:\n"
+            "    assert True\n\n"
+            "@pytest.mark.slow\n"
+            "def test_cross_stop() -> None:\n"
+            f"    while not Path({str(before_done)!r}).exists() "
+            f"and time.monotonic() < {stop_at!r}:\n"
+            "        time.sleep(0.01)\n"
+            f"    assert Path({str(before_done)!r}).exists()\n"
+            f"    time.sleep(max(0.0, {stop_at!r} - time.monotonic() + 0.05))\n"
+            f"    Path({str(crossed)!r}).write_text(str(time.monotonic()))\n",
+            encoding="utf-8",
+        )
+        runner = self._runner_stopping_at(cached_runner_project, stop_at)
 
         tm.that(tm.ok(runner.execute()), eq=pytest.ExitCode.OK.value)
 
-        bounded, selected, executed = self._interrupted_run(cached_runner_project)
+        bounded, selected, executed = self._run_receipt(
+            cached_runner_project, expected_raw_return_code=pytest.ExitCode.OK.value
+        )
+        tm.that(float(before_done.read_text()), lt=stop_at)
+        tm.that(float(crossed.read_text()), gte=stop_at)
+        tm.that(len(selected), gt=1)
         tm.that(executed, eq=len(selected))
         tm.that(
             self._read(bounded / "summary.txt"),
