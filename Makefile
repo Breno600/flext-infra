@@ -745,7 +745,14 @@ caller_mise_version=; \
 			if [ -f "$$project_root/mise.lock" ]; then cp "$$project_root/mise.lock" "$$lock_stage/mise.lock"; fi; \
 			if [ -d "$$project_root/.mise/locks" ]; then mkdir -p "$$lock_stage/.mise"; cp -R "$$project_root/.mise/locks" "$$lock_stage/.mise/locks"; fi; \
 			mise_trusted_config_paths="$$lock_stage"; \
-			mise_checked "$$scratch/adopt-lock.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" lock --bump; \
+			if ! mise_checked "$$scratch/adopt-lock.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" lock --bump; then \
+				# A committed lock written by a newer Mise (higher lockfile \
+				# revision) is unreadable by the pinned release; the rendered \
+				# manifest is the SSOT, so the adoption re-resolves from it \
+				# alone and republishes a lock the pinned release owns. \
+				rm -f "$$lock_stage/mise.lock"; \
+				mise_checked "$$scratch/adopt-lock.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" lock --bump; \
+			fi; \
 			mise_checked "$$scratch/adopt-install.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" install --yes; \
 			mise_checked "$$scratch/staged-python.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" which python; \
 			staged_python=$$(cat "$$scratch/staged-python.log"); \
