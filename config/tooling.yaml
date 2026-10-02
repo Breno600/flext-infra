@@ -197,9 +197,9 @@ Infra:
             "**/__init__.py": [TC004]
 
       mypy:
-        # Project wall-time budget for the bounded Mypy execution (SSOT;
-        # MYPY_TIMEOUT_SECONDS env overrides at the ingress boundary). The
-        # infra's own whole-program cold run fits the default.
+        # Wall-time bound for the bounded Mypy execution (SSOT). A project
+        # config/tooling.yaml overlay may only lower it; no environment
+        # variable changes it.
         timeout_seconds: 120
         plugins: [pydantic.mypy]
         boolean-settings:
@@ -426,15 +426,11 @@ Infra:
         # aggregate run-timeout-seconds independently terminates an incomplete
         # full suite.
         case-timeout-seconds: 10
-        # Slow marks cover nested public runner executions, including a cold
-        # cache seed and a warm replay under parallel suite load, inside the
-        # aggregate run budget the typed model enforces (slow < run).
-        slow-timeout-seconds: 100
+        # Slow marks are a narrow integration-harness budget, not permission
+        # for an unbounded test. Cases that exceed it require owner repair.
+        slow-timeout-seconds: 30
+        # The marker whose items run in their own phase under the slow budget.
         slow-marker: slow
-        # The complete inventory exceeds 3300 cases. A 189-case incremental
-        # execution took 127 seconds, projecting over 2200 seconds for the
-        # inventory before the slowest integration cases. Keep a bounded wall
-        # that permits complete accounting instead of truncating the suite.
         # A local suite that cannot finish within run-timeout-seconds is a
         # performance defect. The generated process wall is derived from this
         # value and the termination grace by the typed model; no second timeout
@@ -470,12 +466,6 @@ Infra:
           # The measured ceiling for this suite; higher ceilings regressed the
           # cold run because per-window dispatch overhead dominates.
           flext-infra:
-            workers: 4
-          # algar-oud-mig measurement 2026-10-01: a cold run of 401 items on
-          # one worker executed 2 (each < 1 s) before the suite stop instant;
-          # worker start-up and collection consumed the window. Same measured
-          # ceiling as flext-infra.
-          algar-oud-mig:
             workers: 4
           # CPU-fraction ceilings (cpu_fraction: "n/d") resolve at runtime
           # against the process CPU count.

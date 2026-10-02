@@ -293,8 +293,8 @@ class FlextInfraEnsureRuffConfigPhase:
         payload: t.MutableJsonMapping,
         *,
         path: Path,
-        generated_python_roots: t.StrSequence = (),
         analysis_exclusions: t.StrSequence | None = None,
+        generated_python_roots: t.StrSequence = (),
     ) -> t.StrSequence:
         """Apply canonical Ruff settings directly to one normalized payload.
 
@@ -325,7 +325,7 @@ class FlextInfraEnsureRuffConfigPhase:
                             if pattern not in effective_ignores
                         ],
                         per_file_ignores=effective_ignores,
-                        analysis_exclusions=analysis_exclusions,
+                        analysis_exclusions=None,
                         generated_python_roots=generated_python_roots,
                     ),
                 ),

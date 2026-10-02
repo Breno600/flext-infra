@@ -706,21 +706,11 @@ class FlextInfraConfigModelsArtifact:
             ),
         ]
 
-    class RefactorCsvCampaignsSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Declared CSV-driven rename campaigns for the mod verb's rename phase."""
-
-        campaigns: Annotated[
-            t.VariadicTuple[FlextInfraConfigModelsArtifact.RenameCampaignSpec],
-            m.Field(default=(), description="Ordered rename campaigns"),
-        ] = ()
-
     class SedPatternSpec(FlextInfraConfigModelsContract.ConfigContract):
         """One declared literal regex substitution applied across the mod scope."""
 
         pattern: Annotated[t.NonEmptyStr, m.Field(description="Regex source to match")]
-        replacement: Annotated[
-            str, m.Field(description="Literal replacement text")
-        ]
+        replacement: Annotated[str, m.Field(description="Literal replacement text")]
         file_glob: Annotated[
             t.NonEmptyStr | None,
             m.Field(default=None, description="Optional file glob filter"),
@@ -729,9 +719,7 @@ class FlextInfraConfigModelsArtifact:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 default=(),
-                description=(
-                    "Regex flags by name (IGNORECASE, MULTILINE, DOTALL)"
-                ),
+                description=("Regex flags by name (IGNORECASE, MULTILINE, DOTALL)"),
             ),
         ] = ()
         description: Annotated[
@@ -743,6 +731,14 @@ class FlextInfraConfigModelsArtifact:
         """Declared sed-by-list substitution set with optional per-pattern filters."""
 
         patterns: Annotated[
-            t.VariadicTuple[SedPatternSpec],
+            t.VariadicTuple[FlextInfraConfigModelsArtifact.SedPatternSpec],
             m.Field(default=(), description="Ordered substitution patterns"),
+        ] = ()
+
+    class RefactorCsvCampaignsSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """Declared CSV-driven rename campaigns for the mod verb's rename phase."""
+
+        campaigns: Annotated[
+            t.VariadicTuple[FlextInfraConfigModelsArtifact.RenameCampaignSpec],
+            m.Field(default=(), description="Ordered rename campaigns"),
         ] = ()

@@ -39,17 +39,14 @@ class FlextInfraUtilitiesCodegen(
             fixed_environment=(
                 *c.Infra.MISE_BOOTSTRAP_FIXED_ENVIRONMENT,
                 # Safe mode ignores project settings. Preserve the lock policy
-                # in the isolated runtime, including the global write guard.
+                # and the supply-chain cooldown in the isolated runtime,
+                # including the global write guard.
                 ("MISE_LOCKFILE", str(toolchain.mise_lockfile).lower()),
                 ("MISE_LOCKED", str(toolchain.mise_locked).lower()),
                 (
                     "MISE_LOCKFILE_PLATFORMS",
                     ",".join(toolchain.mise_lockfile_platforms),
                 ),
-                ("MISE_PYTHON_COMPILE", str(toolchain.python_compile).lower()),
-                # The fleet supply-chain cooldown (one SSOT, operator
-                # 2026-10-01): safe mode would ignore the .mise.toml setting,
-                # so `make upg` could resolve a release younger than it.
                 (
                     "MISE_MINIMUM_RELEASE_AGE",
                     f"{toolchain.dependency_cooldown_days}d",

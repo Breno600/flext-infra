@@ -10,12 +10,9 @@ from collections.abc import MutableMapping
 from inspect import getattr_static
 from types import FunctionType
 
-from flext_infra import config, m, t
+from flext_infra import c, config, m, t
 
 from ._protocol_model_annotations import FlextInfraCodegenProtocolModelAnnotations
-
-Target = FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget
-MinimalBodyLines = 3
 
 
 class FlextInfraCodegenProtocolModelRender:
