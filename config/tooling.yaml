@@ -158,7 +158,7 @@ Infra:
           # --unsafe-fixes), and these rules are never auto-fixed at all,
           # because their fixes delete a diagnostic print, an assignment, a
           # redefinition, a duplicated key/value/test case or a version block
-          # (T201 once deleted print(..., file=sys.stderr) from a consumer
+          # (print once deleted print(..., file=sys.stderr) from a consumer
           # script and turned its failures silent). Ruff keeps reporting them;
           # the author decides. Also guards direct and IDE Ruff runs.
           unfixable:
@@ -174,7 +174,7 @@ Infra:
           # The only channel that promotes an unsafe Ruff fix into make fix:
           # a rule enters here with evidence that its fix preserves code,
           # comments and diagnostics. Evidence declared per entry:
-          # - relative-imports (TID252): the fleet contract is absolute-only
+          # - relative-imports (relative-imports): the fleet contract is absolute-only
           #   (ban-relative-imports: all, and make mod rewrites relative
           #   imports) — the fix enforces the declared contract, no semantics.
           # - camelcase-imported-as-lowercase (N813): pure alias rename, the
@@ -222,7 +222,7 @@ Infra:
           # the Google convention, the shape the docstring fix recipes render.
           # Ruff then disables the docstring rules that convention does not
           # use, one of each mutually exclusive pair select ALL enables
-          # (D203/D211, D212/D213) included, so no run warns about them.
+          # (D203/D211, multi-line-summary-first-line/D213) included, so no run warns about them.
           pydocstyle:
             convention: google
           # Each exception exists only with the operator ruling that authorized
@@ -281,7 +281,11 @@ Infra:
 
 
             - files: "scripts/**"
-              rules: [ANN401, ARG001, D101, D102, D103, D107, D200, D202, D205, D212, EM101, EM102, ERA001, EXE001, FBT001, FBT002, FURB101, FURB103, FURB110, FURB113, G003, N806, N999, PERF401, PERF402, PIE810, PLC0207, PLC2701, PLR2004, PLR6201, PLW1514, PTH100, PTH110, PTH118, PTH120, PTH123, PTH201, Q003, RUF022, RUF052, RUF100, RUF105, S404, S603, S607, T201, TC006, TID251, TID252, TRY003, TRY400, verbose-raise]
+<<<<<<< HEAD
+              rules: [any-type, unused-function-argument, undocumented-public-class, undocumented-public-method, undocumented-public-function, undocumented-public-init, unnecessary-multiline-docstring, blank-line-after-function, missing-blank-line-after-summary, multi-line-summary-first-line, raw-string-in-exception, f-string-in-exception, commented-out-code, shebang-not-executable, boolean-type-hint-positional-argument, boolean-default-value-positional-argument, read-whole-file, write-whole-file, if-exp-instead-of-or-operator, repeated-append, logging-string-concat, non-lowercase-variable-in-function, invalid-module-name, manual-list-comprehension, manual-list-copy, multiple-starts-ends-with, missing-maxsplit-arg, import-private-name, magic-value-comparison, literal-membership, unspecified-encoding, os-path-abspath, os-path-exists, os-path-join, os-path-dirname, builtin-open, path-constructor-current-directory, avoidable-escaped-quote, unsorted-dunder-all, used-dummy-variable, unused-noqa, noqa-comments, suspicious-subprocess-import, subprocess-without-shell-equals-true, start-process-with-partial-path, print, runtime-cast-value, banned-api, relative-imports, raise-vanilla-args, error-instead-of-exception, verbose-raise]
+=======
+              rules: [any-type, unused-function-argument, undocumented-public-class, undocumented-public-method, undocumented-public-function, undocumented-public-init, unnecessary-multiline-docstring, blank-line-after-function, missing-blank-line-after-summary, multi-line-summary-first-line, raw-string-in-exception, f-string-in-exception, commented-out-code, shebang-not-executable, boolean-type-hint-positional-argument, boolean-default-value-positional-argument, read-whole-file, write-whole-file, if-exp-instead-of-or-operator, repeated-append, logging-string-concat, non-lowercase-variable-in-function, invalid-module-name, manual-list-comprehension, manual-list-copy, multiple-starts-ends-with, missing-maxsplit-arg, import-private-name, magic-value-comparison, literal-membership, unspecified-encoding, os-path-abspath, os-path-exists, os-path-join, os-path-dirname, builtin-open, path-constructor-current-directory, avoidable-escaped-quote, unsorted-dunder-all, used-dummy-variable, unused-noqa, noqa-comments, suspicious-subprocess-import, subprocess-without-shell-equals-true, start-process-with-partial-path, print, runtime-cast-value, banned-api, relative-imports, raise-vanilla-args, error-instead-of-exception, verbose-log-message]
+>>>>>>> c70297fd1 (fix(config): scripts/** exemptions in kebab rule names (schema rejects codes))
               authority: operator-ruling-2026-10-02-mcb-scripts-automation
               reason: >-
                 Repository automation helpers (mcb scripts/**, migrated from
