@@ -16,6 +16,7 @@ from ..codegen.file_leases import FlextInfraCodegenFileLeases
 
 if TYPE_CHECKING:
     from flext_infra import p, t
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 
 class FlextInfraGate:
@@ -44,7 +45,14 @@ class FlextInfraGate:
         runs, never passes, and is never listed.
         """
         return not self.requires_python_targets or bool(
-            u.Infra.discover_python_targets(project_dir),
+            u.Infra.discover_python_targets(
+                project_dir,
+                workspace_excluded_top_dirs=(
+                    FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
+                        project_dir
+                    ).unwrap()
+                ),
+            ),
         )
 
     def __init__(
