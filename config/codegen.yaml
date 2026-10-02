@@ -83,6 +83,9 @@ Infra:
       # never parses a newer lockfile format.
       mise_lockfile: true
       mise_locked: true
+      # Stable, ignored runtime mutex for the generated Mise lock publisher.
+      # It survives a concurrent make gen replacing the publisher script.
+      mise_transaction_lock_file: .mise-lock-transaction.lock
       # Projection: .mise.toml [settings] lockfile_platforms. The platforms the
       # CI matrix runs on (ubuntu, macos, windows runners, x64 and arm64);
       # `make upg` resolves these plus the current host, which mise always adds.
@@ -1479,6 +1482,7 @@ Infra:
         - name: "mise native dependency graphs"
           profiles: [workspace, standalone]
           patterns:
+            - "/.mise-lock-transaction.lock"
             - "!/.mise/"
             - "/.mise/*"
             - "!/.mise/locks/"

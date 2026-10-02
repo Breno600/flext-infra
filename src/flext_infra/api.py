@@ -173,7 +173,9 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
 
     @staticmethod
     def fresh_import_probe(
-        *, repository_root: Path, runtime_root: Path | None = None
+        *,
+        repository_root: Path,
+        runtime_root: Path | None = None,
     ) -> p.Infra.FreshImportProbe:
         """Build the fresh-import probe complete conform validates with.
 

@@ -61,6 +61,7 @@ class TestsFlextInfraModRuleFixtureSnapshots:
                 f"id: demo\nvalid:\n  - baz(1)\ninvalid:\n{cases}",
             ),
         )
+        u.Tests.git_bootstrap(root, ("add", c.Infra.CODEMOD_CONFIG_FILENAME))
         return rule
 
     @staticmethod

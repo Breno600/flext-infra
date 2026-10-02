@@ -43,6 +43,9 @@ database, whose location the flext-infra generated configuration owns. Its colle
 inventory uses the same marker scope as execution. The runner accounts for every
 selected and deselected test; it never infers selection from console output. Never clear
 or bypass the database, or invoke the underlying runner directly.
+Concurrent worktrees serialize on the database lease within the same declared suite
+deadline. If the lease cannot be acquired before that deadline's cleanup reserve,
+the invocation fails without reading or writing another run's database state.
 
 The supported Testmon environment combines installed toolchain provenance with current
 `config/*.yaml` content. Declare additional template and resource directories in the

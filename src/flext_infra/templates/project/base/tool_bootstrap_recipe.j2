@@ -58,9 +58,6 @@
 	case "$$mise_storage_root/" in \
 		*'/../'*|*'/./'*|*'//'*) printf 'ERROR: {{ bootstrap.storage_root_variable }} must be normalized: %s\n' "$$mise_storage_root" >&2; exit 2 ;; \
 	esac; \
-	project_root=$$(cd "$$project_root" && pwd -P); \
-	project_parent=$${project_root%/*}; \
-	if [ -z "$$project_parent" ]; then project_parent=/; fi; \
 	if [ -L "$$mise_storage_root" ]; then \
 		printf 'ERROR: {{ bootstrap.storage_root_variable }} must not be a symlink: %s\n' "$$mise_storage_root" >&2; \
 		exit 2; \
@@ -75,6 +72,9 @@
 	case "$$mise_storage_root/" in \
 		/tmp/|/tmp/*) printf 'ERROR: persistent Mise storage must not live under /tmp: %s\n' "$$mise_storage_root" >&2; exit 2 ;; \
 	esac; \
+	project_root=$$(cd "$$project_root" && pwd -P); \
+	project_parent=$${project_root%/*}; \
+	if [ -z "$$project_parent" ]; then project_parent=/; fi; \
 	case "$$mise_storage_root/" in \
 		"$$project_root/"*) printf 'ERROR: persistent Mise storage must be outside the checkout: %s\n' "$$mise_storage_root" >&2; exit 2 ;; \
 	esac; \
@@ -96,7 +96,7 @@
 		esac; \
 	done; \
 	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
-	trap 'find "$$scratch" -depth -delete' EXIT; \
+	trap 'if [ -n "$${lock_stage:-}" ] && [ -d "$$lock_stage" ] && [ ! -f "$$lock_stage/transaction.json" ]; then find "$$lock_stage" -depth -delete; fi; find "$$scratch" -depth -delete' EXIT; \
 	mkdir -p{% for _name, relative in bootstrap.transient_environment if relative not in bootstrap.empty_files %} "$$scratch/{{ relative }}"{% endfor %}; \
 {% for relative in bootstrap.empty_files -%}
 	: > "$$scratch/{{ relative }}"; chmod 600 "$$scratch/{{ relative }}"; \
@@ -210,17 +210,6 @@
 		if [ "$$receipt_release" != "$$resolved_release" ]; then \
 			printf 'ERROR: MISE_VERSION=%s launched Mise %s\n' "$$resolved_release" "$$receipt_release" >&2; exit 2; \
 		fi; \
-		mise_checked "$$scratch/install-script.log" mise_exec no-config "$$pinned_mise" generate install-script --version "$$resolved_release" --write "$$project_root/{{ bootstrap.artifact_specs[0][0] }}" --windows; \
-{% for relative, mode in bootstrap.artifact_specs[:2] -%}
-		chmod {{ '%o' | format(mode) }} "$$project_root/{{ relative }}"; \
-{% endfor -%}
-		caller_mise_version=; \
-		mise_receipt launcher-version "$$pinned_mise"; \
-		if [ "$$receipt_release" != "$$resolved_release" ]; then \
-			printf 'ERROR: generated %s runs Mise %s, not %s\n' "$$pinned_mise" "$$receipt_release" "$$resolved_release" >&2; exit 2; \
-		fi; \
-		printf '%s\n'{% for line in bootstrap.version_pin_header %} '{{ line }}'{% endfor %} "$$resolved_release" > "$$mise_pin_file"; \
-		chmod {{ '%o' | format(bootstrap.artifact_specs[2][1]) }} "$$mise_pin_file"; \
 		runtime_release="$$resolved_release"; \
 	elif [ "$$runtime_release" != "$$mise_pin" ]; then \
 		printf 'ERROR: launched Mise %s differs from the pinned %s\n' "$$runtime_release" "$$mise_pin" >&2; \
@@ -272,6 +261,22 @@
 		mise_checked "$$scratch/staged-python.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" which python; \
 		staged_python=$$(cat "$$scratch/staged-python.log"); \
 		if [ ! -x "$$staged_python" ]; then printf 'ERROR: staged Mise Python is not executable: %s\n' "$$staged_python" >&2; exit 2; fi; \
+		printf '%s\n' "$$staged_python" > "$$lock_stage/python-path"; \
+		if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then \
+			# Prepare and verify the new launchers while the old pin and launchers \
+			# still match the committed lock. No failed stage may strand an older \
+			# Mise release beside a newer lockfile revision. \
+			mkdir -p "$$lock_stage/artifacts/bin"; \
+			mise_checked "$$scratch/install-script.log" mise_exec no-config "$$pinned_mise" generate install-script --version "$$runtime_release" --write "$$lock_stage/artifacts/{{ bootstrap.artifact_specs[0][0] }}" --windows; \
+{% for relative, mode in bootstrap.artifact_specs[:2] -%}
+			chmod {{ '%o' | format(mode) }} "$$lock_stage/artifacts/{{ relative }}"; \
+{% endfor -%}
+			mise_receipt launcher-version "$$lock_stage/artifacts/{{ bootstrap.artifact_specs[0][0] }}"; \
+			if [ "$$receipt_release" != "$$runtime_release" ]; then \
+				printf 'ERROR: staged Mise launcher runs %s, not %s\n' "$$receipt_release" "$$runtime_release" >&2; exit 2; \
+			fi; \
+			printf '%s\n'{% for line in bootstrap.version_pin_header %} '{{ line }}'{% endfor %} "$$runtime_release" > "$$lock_stage/artifacts/{{ bootstrap.artifact_specs[2][0] }}"; \
+		fi; \
 		mise_checked "$$scratch/publish-lock.log" "$$staged_python" "$$project_root/{{ bootstrap.lock_transaction_script }}" publish "$$project_root" "$$lock_stage"; \
 		mise_trusted_config_paths="$$project_root"; \
 	else \

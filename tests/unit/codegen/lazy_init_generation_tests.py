@@ -123,7 +123,8 @@ class TestsFlextInfraCodegenGeneration:
 
         compile(content, "__init__.py", "exec")
         tm.that(
-            content, has="from demo_pkg.servers._base.constants import BaseConstants"
+            content,
+            has="from demo_pkg.servers._base.constants import BaseConstants",
         )
         tm.that(content, has='".._base.constants": ("BaseConstants",)')
         tm.that(content, lacks="from .._base.constants import")
@@ -220,7 +221,8 @@ class TestsFlextInfraCodegenGeneration:
 
         compile(content, "__init__.py", "exec")
         tm.that(
-            content, lacks="from demo_pkg._utilities.conversion import DemoConversion"
+            content,
+            lacks="from demo_pkg._utilities.conversion import DemoConversion",
         )
         tm.that(content, lacks="DemoConversion")
         tm.that(content, contains='__all__: tuple[str, ...] = ("Demo",)')
@@ -284,7 +286,8 @@ class TestsFlextInfraCodegenGeneration:
 
         compile(init_content, "__init__.py", "exec")
         tm.that(
-            init_content, contains="from demo_pkg._fixtures.settings import DemoFixture"
+            init_content,
+            contains="from demo_pkg._fixtures.settings import DemoFixture",
         )
         tm.that(init_content, contains='__all__: tuple[str, ...] = ("DemoFixture",)')
         tm.that(init_content, contains="install_lazy_exports")
@@ -428,7 +431,8 @@ class TestsFlextInfraCodegenGeneration:
 
         compile(content, "__init__.py", "exec")
         tm.that(
-            content, contains="from demo_pkg.protocols import FlextDemoProtocols, p"
+            content,
+            contains="from demo_pkg.protocols import FlextDemoProtocols, p",
         )
         tm.that(content, lacks="FlextDemoProtocols as p")
 
@@ -547,9 +551,7 @@ class TestsFlextInfraCodegenGeneration:
         wrapper_root = project_root / "examples"
         wrapper_root.mkdir(parents=True)
         (project_root / c.PYPROJECT_FILENAME).write_text(
-            f'[project]\nname = "demo-worktree-pkg"\nversion = "1.0.0"\n'
-            'authors = [{ name = "Scenario Author" }]\n'
-            f'{isort_table}',
+            f'[project]\nname = "demo-worktree-pkg"\nversion = "1.0.0"\nauthors = [{{ name = "Fixture Author" }}]\n{isort_table}',
             encoding="utf-8",
         )
         plan = m.Infra.LazyInitPlan(
@@ -602,9 +604,7 @@ class TestsFlextInfraCodegenGeneration:
             "[tool.ruff.lint.isort]\nknown-first-party = []\n" if declared_empty else ""
         )
         (tmp_path / c.PYPROJECT_FILENAME).write_text(
-            f'[project]\nname = "configured-workspace"\nversion = "1.0.0"\n'
-            'authors = [{ name = "Scenario Author" }]\n'
-            f'{table}',
+            f'[project]\nname = "configured-workspace"\nversion = "1.0.0"\nauthors = [{{ name = "Fixture Author" }}]\n{table}',
             encoding="utf-8",
         )
         plan = self._plan(
