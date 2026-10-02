@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import c, infra, m
 from flext_infra.docs.auditor import FlextInfraDocAuditor
-from flext_infra.maintenance import FlextInfraSonarcloudIssues
 from flext_infra.docs.builder import FlextInfraDocBuilder
 from flext_infra.docs.collector import FlextInfraDocCollector
 from flext_infra.docs.fixer import FlextInfraDocFixer
@@ -19,9 +18,11 @@ from flext_infra.docs.formatter import FlextInfraDocFormatter
 from flext_infra.docs.generator import FlextInfraDocGenerator
 from flext_infra.docs.server import FlextInfraDocServer
 from flext_infra.docs.validator import FlextInfraDocValidator
+from flext_infra.maintenance import FlextInfraSonarcloudIssues
 from flext_infra.maintenance.clean import FlextInfraCleanService
 from flext_infra.maintenance.python_version import FlextInfraPythonVersionEnforcer
 from flext_infra.maintenance.sonarcloud import FlextInfraSonarcloudSettingsSync
+from flext_infra.maintenance.sonarcloud_issues import FlextInfraSonarcloudIssues
 from flext_infra.services.cli_routes_validate_commands import (
     FlextInfraValidationCommandRoutes,
 )
@@ -39,7 +40,10 @@ class FlextInfraValidationRoutes(FlextInfraValidationCommandRoutes):
         c.Infra.CLI_GROUP_DOCS: (
             m.Cli.ResultCommandRoute(
                 name="collect",
-                help_text="Collect associated plan sources and publish authenticated projections",
+                help_text=(
+                    "Collect associated plan sources "
+                    "and publish authenticated projections"
+                ),
                 model_cls=m.Infra.DocsCollectRequest,
                 handler=FlextInfraValidationCommandRoutes.result_handler(
                     FlextInfraDocCollector.collect,
@@ -57,7 +61,10 @@ class FlextInfraValidationRoutes(FlextInfraValidationCommandRoutes):
             ),
             m.Cli.ResultCommandRoute(
                 name="fmt",
-                help_text="Format documentation through the canonical markdown-format gate",
+                help_text=(
+                    "Format documentation through "
+                    "the canonical markdown-format gate"
+                ),
                 model_cls=FlextInfraDocFormatter,
                 handler=FlextInfraValidationCommandRoutes.result_handler(
                     infra.docs_format,
@@ -135,13 +142,18 @@ class FlextInfraValidationRoutes(FlextInfraValidationCommandRoutes):
             ),
             m.Cli.ResultCommandRoute(
                 name=c.Infra.VERB_SONARCLOUD_ISSUES,
-                help_text="Read unresolved new-code SonarCloud issues (requires SONAR_TOKEN)",
+                help_text=(
+                    "Read unresolved new-code "
+                    "SonarCloud issues (requires SONAR_TOKEN)"
+                ),
                 model_cls=FlextInfraSonarcloudIssues,
                 handler=FlextInfraSonarcloudIssues.execute_command,
                 success_message="SonarCloud issue search completed",
             ),
         ),
-        c.Infra.CLI_GROUP_VALIDATE: FlextInfraValidationCommandRoutes.validate_command_routes,
+        c.Infra.CLI_GROUP_VALIDATE: (
+            FlextInfraValidationCommandRoutes.validate_command_routes
+        ),
     }
 
 
