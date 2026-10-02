@@ -131,7 +131,7 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
             root,
             scope=c.Infra.CodegenConformScope.SELF,
             mode=c.Infra.CodegenConformMode.APPLY,
-        ),)
+        ))
 
         tm.fail(result, has=expected_error)
         tm.that(u.Tests.WorktreeFixture.repository_snapshot(root), eq=before)
@@ -184,7 +184,7 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
                 root,
                 scope=c.Infra.CodegenConformScope.DECLARED,
                 mode=c.Infra.CodegenConformMode.APPLY,
-            ),),
+            )),
         )
 
         tm.that(bool(applied.written_files), eq=True)
@@ -236,7 +236,7 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
             what=c.Infra.CodegenConformSurface.MAKEFILE,
             scope=c.Infra.CodegenConformScope.DECLARED,
             mode=c.Infra.CodegenConformMode.CHECK,
-        ),)
+        ))
 
         tm.fail(result, has="escapes workspace root")
         tm.that(

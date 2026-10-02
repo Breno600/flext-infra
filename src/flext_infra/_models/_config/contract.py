@@ -42,7 +42,7 @@ class FlextInfraConfigModelsContract:
         historical_evidence_files: Annotated[
             t.VariadicTuple[Path],
             m.Field(
-                description="Exact dated Markdown records preserving observed paths"
+                description="Exact dated Markdown records preserving observed paths",
             ),
         ] = ()
 

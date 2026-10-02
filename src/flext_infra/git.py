@@ -33,7 +33,7 @@ class FlextInfraGitService(s[m.Infra.GitStatusReport]):
 
     @classmethod
     def verify_clean(
-        cls, request: m.Infra.GitStatusRequest
+        cls, request: m.Infra.GitStatusRequest,
     ) -> p.Result[m.Infra.GitStatusReport]:
         """Fail when the selected repository has staged, unstaged, or untracked work."""
         report = cls(repository_root=request.repo_root).execute()
@@ -41,7 +41,7 @@ class FlextInfraGitService(s[m.Infra.GitStatusReport]):
             return report
         if report.value.dirty:
             return r[m.Infra.GitStatusReport].fail(
-                f"dirty repository: {report.value.repo_root}\n{report.value.porcelain}"
+                f"dirty repository: {report.value.repo_root}\n{report.value.porcelain}",
             )
         return report
 

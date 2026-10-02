@@ -16,8 +16,6 @@ from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p
-
 
 class TestsFlextInfraExtendedProjectRunners:
     """Exercise runner behavior through the public checker API only."""

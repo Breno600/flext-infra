@@ -116,7 +116,7 @@ class FlextInfraDependencyDetectionRunnersMixin:
             ),
         )
         result = u.Cli.run_raw(
-            cmd, cwd=project_path, timeout=u.Infra.mypy_runner_timeout()
+            cmd, cwd=project_path, timeout=u.Infra.mypy_runner_timeout(),
         )
         if result.failure:
             return r[t.Pair[t.StrSequence, t.StrSequence]].fail(

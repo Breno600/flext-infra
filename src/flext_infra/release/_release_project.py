@@ -113,7 +113,7 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         hatch = u.Cli.toml_table_child(tool, "hatch") if tool is not None else None
         if hatch is None:
             return r[m.Infra.BuildRecord].fail(
-                "rendered release metadata lost Hatch build targets"
+                "rendered release metadata lost Hatch build targets",
             )
         boundary = self._sdist_boundary(hatch)
         if boundary.failure:
@@ -190,7 +190,7 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
 
     @classmethod
     def _persist_artifacts(
-        cls, dist: Path, destination: Path, expectation: m.Infra.ArtifactExpectation
+        cls, dist: Path, destination: Path, expectation: m.Infra.ArtifactExpectation,
     ) -> p.Result[t.VariadicTuple[m.Infra.BuildArtifact]]:
         """Validate exactly one wheel and one sdist, then persist the set atomically.
 
@@ -216,12 +216,7 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
             )
         built: t.MutableSequenceOf[m.Infra.BuildArtifact] = []
         for source in sources:
-            validated = cls._validate_artifact(
-                source,
-                identity,
-                license_sha256,
-                versions,
-            )
+            validated = cls._validate_artifact(source, expectation)
             if validated.failure:
                 return result_type.from_failure(validated)
             kind, digest = validated.value

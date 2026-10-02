@@ -167,9 +167,9 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             project = project.model_copy(
                 update={
                     "repository_namespace_packages": tuple(
-                        repository_namespace_packages
-                    )
-                }
+                        repository_namespace_packages,
+                    ),
+                },
             )
         if packaged_data_paths:
             project = project.model_copy(
@@ -177,7 +177,7 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             )
         if packaged_data_excludes:
             project = project.model_copy(
-                update={"packaged_data_excludes": tuple(packaged_data_excludes)}
+                update={"packaged_data_excludes": tuple(packaged_data_excludes)},
             )
         manifest = m.Infra.WorkspaceManifestSpec(
             version=c.Infra.WORKSPACE_MANIFEST_VERSION,
@@ -516,7 +516,7 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                     root,
                     scope=c.Infra.CodegenConformScope.SELF,
                     mode=c.Infra.CodegenConformMode.APPLY,
-                ),),
+                )),
             )
             return root
 

@@ -89,7 +89,7 @@ class FlextInfraModelsRelease:
             m.Field(description="Validated public source roots in the sdist"),
         ]
         versions: Annotated[
-            t.StrMapping, m.Field(description="Resolved internal dependency versions")
+            t.StrMapping, m.Field(description="Resolved internal dependency versions"),
         ]
 
     class BuildRecord(mm.ProjectNameMixin, m.StrictBoundaryModel):

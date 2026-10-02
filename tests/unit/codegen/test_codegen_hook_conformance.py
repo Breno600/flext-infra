@@ -63,7 +63,7 @@ class TestsFlextInfraCodegenHookConformance:
             scope=c.Infra.CodegenConformScope.SELF,
             mode=c.Infra.CodegenConformMode.CHECK,
         ),
-        initial_workspace=workspace,)
+        initial_workspace=workspace)
 
     def test_check_never_requires_runtime_hook_installation(
         self,
@@ -91,7 +91,7 @@ class TestsFlextInfraCodegenHookConformance:
             scope=c.Infra.CodegenConformScope.SELF,
             mode=c.Infra.CodegenConformMode.APPLY,
         ),
-        initial_workspace=workspace,)
+        initial_workspace=workspace)
 
         for stage in ("pre-commit", "pre-push"):
             hook = hooks_dir / stage
@@ -219,7 +219,7 @@ class TestsFlextInfraCodegenHookConformance:
             scope=c.Infra.CodegenConformScope.SELF,
             mode=c.Infra.CodegenConformMode.APPLY,
         ),
-        initial_workspace=workspace,)
+        initial_workspace=workspace)
 
         for stage in ("pre-commit", "pre-push"):
             tm.that((hooks_dir / stage).read_text(encoding="utf-8"), eq=foreign)

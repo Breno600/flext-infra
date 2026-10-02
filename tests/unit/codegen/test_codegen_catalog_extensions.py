@@ -63,7 +63,7 @@ class TestsFlextInfraCodegenCatalogExtensions:
             scope=c.Infra.CodegenConformScope.SELF,
             mode=c.Infra.CodegenConformMode.APPLY,
         ),
-        initial_workspace=workspace,)
+        initial_workspace=workspace)
         tm.that(result.failure, eq=True)
         tm.that(
             result.error,
@@ -277,7 +277,7 @@ class TestsFlextInfraCodegenCatalogExtensions:
         tm.that(mise, has=f'make = "{toolchain.make_version}"')
         tm.that(mise, lacks="credential_command")
         tm.that(
-            mise, has=f'minimum_release_age = "{toolchain.dependency_cooldown_days}d"'
+            mise, has=f'minimum_release_age = "{toolchain.dependency_cooldown_days}d"',
         )
         # S1 (operator law 2026-09-14): gen has one always-apply recipe; the
         # CHECK_ONLY-selected check/apply pair no longer exists.

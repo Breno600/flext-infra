@@ -106,8 +106,8 @@ class TestsFlextInfraUtilitiesDocsGithubLinks:
                 tm.that(match.group("org"), eq="flext-sh")
                 tm.that(match.group("repo"), eq="flext")
                 tm.that(match.group("kind"), eq="blob")
-                tm.that(match.group("branch"), eq="main")
-                tm.that(match.group("path"), eq="README.md")
+                tm.that(match.group("refpath"), eq="main/README.md")
+                tm.that(match.group("suffix"), none=True)
 
         def test_parse_valid_tree_url(self) -> None:
             match = u.Infra.docs_parse_github_doc_url(
@@ -116,7 +116,24 @@ class TestsFlextInfraUtilitiesDocsGithubLinks:
             tm.that(match is not None, eq=True)
             if match is not None:
                 tm.that(match.group("kind"), eq="tree")
-                tm.that(match.group("branch"), eq="feature-line")
+                tm.that(match.group("refpath"), eq="feature-line/src/")
+
+        def test_parse_keeps_fragment_out_of_refpath(self) -> None:
+            match = tm.not_none(
+                u.Infra.docs_parse_github_doc_url(
+                    "https://github.com/flext-sh/flext/blob/main/README.md#L10",
+                ),
+            )
+            tm.that(match.group("refpath"), eq="main/README.md")
+            tm.that(match.group("suffix"), eq="#L10")
+
+        def test_parse_keeps_slash_ref_in_refpath(self) -> None:
+            match = tm.not_none(
+                u.Infra.docs_parse_github_doc_url(
+                    "https://github.com/flext-sh/flext/blob/feature/fix/README.md",
+                ),
+            )
+            tm.that(match.group("refpath"), eq="feature/fix/README.md")
 
         def test_parse_non_github_url_returns_none(self) -> None:
             tm.that(
@@ -185,26 +202,44 @@ class TestsFlextInfraUtilitiesDocsGithubLinks:
         """Verify stale placeholder and wrong-branch URL rewriting."""
 
         def test_rewrite_stale_org_to_governed(self) -> None:
+            branch = tm.not_none(
+                u.Infra.docs_github_repo_lookup("flext-sh", "flext"),
+            ).branch
             rewritten = u.Infra.docs_rewrite_github_url(
-                "https://github.com/organization/flext/blob/main/README.md",
+                f"https://github.com/organization/flext/blob/{branch}/README.md",
             )
-            tm.that(rewritten is not None, eq=True)
-            if rewritten is not None:
-                tm.that(
-                    rewritten,
-                    eq="https://github.com/flext-sh/flext/blob/0.12.0-dev/README.md",
-                )
+            tm.that(
+                rewritten,
+                eq=f"https://github.com/flext-sh/flext/blob/{branch}/README.md",
+            )
 
-        def test_rewrite_wrong_branch(self) -> None:
+        def test_rewrite_stale_org_keeps_fragment(self) -> None:
+            branch = tm.not_none(
+                u.Infra.docs_github_repo_lookup("flext-sh", "flext"),
+            ).branch
             rewritten = u.Infra.docs_rewrite_github_url(
-                "https://github.com/flext-sh/flext/blob/main/README.md",
+                f"https://github.com/organization/flext/blob/{branch}/README.md#L10",
             )
-            tm.that(rewritten is not None, eq=True)
-            if rewritten is not None:
-                tm.that(
-                    rewritten,
-                    eq="https://github.com/flext-sh/flext/blob/0.12.0-dev/README.md",
-                )
+            tm.that(
+                rewritten,
+                eq=f"https://github.com/flext-sh/flext/blob/{branch}/README.md#L10",
+            )
+
+        def test_rewrite_foreign_ref_is_not_guessed(self) -> None:
+            tm.that(
+                u.Infra.docs_rewrite_github_url(
+                    "https://github.com/flext-sh/flext/blob/main/README.md",
+                ),
+                none=True,
+            )
+
+        def test_rewrite_slash_ref_is_not_split(self) -> None:
+            tm.that(
+                u.Infra.docs_rewrite_github_url(
+                    "https://github.com/organization/flext/blob/feature/fix/README.md",
+                ),
+                none=True,
+            )
 
         def test_rewrite_already_correct_returns_none(self) -> None:
             tm.that(
@@ -215,18 +250,16 @@ class TestsFlextInfraUtilitiesDocsGithubLinks:
             )
 
         def test_rewrite_member_repo_stale_org(self) -> None:
+            branch = tm.not_none(
+                u.Infra.docs_github_repo_lookup("flext-sh", "flext-core"),
+            ).branch
             rewritten = u.Infra.docs_rewrite_github_url(
-                "https://github.com/organization/flext-core/blob/main/README.md",
+                f"https://github.com/organization/flext-core/blob/{branch}/README.md",
             )
-            tm.that(rewritten is not None, eq=True)
-            if rewritten is not None:
-                tm.that(
-                    rewritten,
-                    eq=(
-                        "https://github.com/flext-sh/flext-core/"
-                        "blob/0.12.0-dev/README.md"
-                    ),
-                )
+            tm.that(
+                rewritten,
+                eq=f"https://github.com/flext-sh/flext-core/blob/{branch}/README.md",
+            )
 
         def test_rewrite_stale_org_non_flext_returns_none(self) -> None:
             tm.that(
@@ -329,6 +362,26 @@ class TestsFlextInfraUtilitiesDocsGithubLinks:
             for issue in issues:
                 if issue.issue_type == "wrong_github_branch":
                     tm.that("0.12.0-dev" in issue.message, eq=True)
+
+        def test_slash_ref_is_wrong_branch(self) -> None:
+            target = "https://github.com/flext-sh/flext/blob/feature/fix/README.md"
+            issues = u.Infra.docs_github_link_issues(
+                file="test.md", line_number=2, raw=f"[x]({target})", target=target,
+            )
+            tm.that({issue.issue_type for issue in issues}, eq={"wrong_github_branch"})
+
+        def test_fragment_link_on_governed_branch_has_no_issue(self) -> None:
+            target = tm.not_none(
+                u.Infra.docs_canonical_github_url("flext-sh", "flext", "README.md"),
+            )
+            fragment_target = f"{target}#L10"
+            issues = u.Infra.docs_github_link_issues(
+                file="test.md",
+                line_number=4,
+                raw=f"[x]({fragment_target})",
+                target=fragment_target,
+            )
+            tm.that(len(issues), eq=0)
 
         def test_non_url_returns_empty(self) -> None:
             issues = u.Infra.docs_github_link_issues(

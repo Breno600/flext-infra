@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraRefactorCensusRemovalMixin(
-    FlextInfraRefactorCensusApplyFormattingMixin
+    FlextInfraRefactorCensusApplyFormattingMixin,
 ):
     """Preview and apply the inventory's removal candidates through gates.
 
@@ -24,8 +24,6 @@ class FlextInfraRefactorCensusRemovalMixin(
     what the workspace object inventory proved unused, which no code-shape
     rule can see.
     """
-
-    _census_validate_log: ClassVar[p.Logger] = u.fetch_logger(__name__)
 
     if TYPE_CHECKING:
         dry_run: bool
@@ -96,13 +94,13 @@ class FlextInfraRefactorCensusRemovalMixin(
                         "violations_total": len(validated_violations),
                         "removal_candidate_count": len(validated_candidates),
                         "removal_candidates": tuple(validated_candidates),
-                    }
-                )
+                    },
+                ),
             )
         return tuple(validated_reports)
 
     def _apply_removal_candidates(
-        self, rope: p.Infra.RopeWorkspaceDsl, report: m.Infra.WorkspaceReport
+        self, rope: p.Infra.RopeWorkspaceDsl, report: m.Infra.WorkspaceReport,
     ) -> bool:
         """Remove every candidate through its gates; a failed removal escapes.
 
@@ -112,7 +110,7 @@ class FlextInfraRefactorCensusRemovalMixin(
         touched_paths: set[Path] = set()
         for candidate in report.removal_candidates:
             apply_result = u.Infra.apply_simple_removal_candidate(
-                rope, self.root, candidate, gates=self.dry_run_gate_names
+                rope, self.root, candidate, gates=self.dry_run_gate_names,
             )
             if apply_result.failure:
                 msg = (

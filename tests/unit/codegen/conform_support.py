@@ -55,7 +55,7 @@ class TestsFlextInfraConformSupport:
                 scope=c.Infra.CodegenConformScope.SELF,
                 mode=c.Infra.CodegenConformMode.APPLY,
             ),
-            initial_workspace=workspace,),
+            initial_workspace=workspace),
         )
 
     @staticmethod

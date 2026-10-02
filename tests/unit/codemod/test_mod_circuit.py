@@ -170,8 +170,8 @@ class TestsFlextInfraModCliRoute:
         tm.ok(u.Cli.ensure_dir(rules_root))
         tm.ok(
             u.Cli.atomic_write_text_file(
-                config_path, f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\ntestConfigs: []\n"
-            )
+                config_path, f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\ntestConfigs: []\n",
+            ),
         )
         tm.ok(
             u.Cli.atomic_write_text_file(
@@ -233,8 +233,8 @@ class TestsFlextInfraModCliRoute:
         tm.ok(u.Cli.ensure_dir(rules_root))
         tm.ok(
             u.Cli.atomic_write_text_file(
-                config_path, f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\n"
-            )
+                config_path, f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\n",
+            ),
         )
         tm.ok(
             u.Cli.atomic_write_text_file(
@@ -306,7 +306,7 @@ class TestsFlextInfraModCliRoute:
         )
 
     def test_scan_aggregates_every_local_rule_and_accepts_hint(
-        self, mod_workspace: Path
+        self, mod_workspace: Path,
     ) -> None:
         """Execute every rule of the local catalog and retain its exact rule file."""
         expected_rule_files: t.MutableMappingKV[str, str] = {}
@@ -318,7 +318,7 @@ class TestsFlextInfraModCliRoute:
             u.Cli.atomic_write_text_file(
                 config_path,
                 f"{c.Infra.CODEMOD_RULE_DIRS_KEY}:\n  - {c.Cli.RULES_DIR_NAME}\n",
-            )
+            ),
         )
         for package, rule_id, severity in (
             ("first_provider", "first-provider-finding", "warning"),
@@ -392,7 +392,7 @@ class TestsFlextInfraModCliRoute:
             u.Cli.atomic_write_text_file(
                 config_path,
                 f"{c.Infra.CODEMOD_RULE_DIRS_KEY}:\n  - {c.Cli.RULES_DIR_NAME}\n",
-            )
+            ),
         )
         tm.ok(
             u.Cli.atomic_write_text_file(

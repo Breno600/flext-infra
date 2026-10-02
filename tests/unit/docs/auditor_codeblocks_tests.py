@@ -37,16 +37,16 @@ class TestsFlextInfraAuditorCodeblocks:
         tm.that(issues, eq=[])
 
     def test_docs_python_codeblock_issues_report_unbound_name(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """Executable snippets cannot rely on an unseen surrounding import."""
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir(parents=True, exist_ok=True)
         (docs_dir / "snippet.md").write_text(
-            "```python\nresult = unavailable_name()\n```\n", encoding="utf-8"
+            "```python\nresult = unavailable_name()\n```\n", encoding="utf-8",
         )
         scope = m.Infra.DocScope(
-            name="test", path=tmp_path, report_dir=tmp_path / "reports"
+            name="test", path=tmp_path, report_dir=tmp_path / "reports",
         )
         issues = u.Infra.docs_python_codeblock_issues(scope)
         tm.that(len(issues), eq=1)

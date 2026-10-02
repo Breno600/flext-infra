@@ -144,7 +144,7 @@ class TestsFlextInfraCodegenLayoutGitignore:
             author_email=project.author_email,
             upstream=project.upstream,
             year=project.year,
-            apply_changes=True,)),
+            apply_changes=True)),
         )
         tm.that(
             (root / c.CONFIG_DIR_NAME / c.Infra.WORKSPACE_MANIFEST_FILENAME).is_file(),

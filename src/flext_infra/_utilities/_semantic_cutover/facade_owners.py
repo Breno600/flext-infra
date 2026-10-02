@@ -224,7 +224,7 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         for (
             node
         ) in FlextInfraUtilitiesSemanticCutoverFacadeOwners._facade_module_statements(
-            source, module
+            source, module,
         ):
             if not (
                 isinstance(node, ast.Assign | ast.AnnAssign)
@@ -250,7 +250,7 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
                         continue
                     for element in value.elts:
                         if isinstance(element, ast.Constant) and isinstance(
-                            element.value, str
+                            element.value, str,
                         ):
                             bindings.setdefault(element.value, key.value)
         return MappingProxyType(bindings)

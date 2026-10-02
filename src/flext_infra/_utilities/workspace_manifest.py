@@ -11,6 +11,7 @@ from functools import lru_cache
 from typing import TYPE_CHECKING
 
 from flext_cli import u
+
 from flext_core import r
 
 from .. import c, m, t
@@ -31,7 +32,7 @@ class FlextInfraUtilitiesWorkspaceManifest:
 
     @classmethod
     def load_workspace_manifest(
-        cls, repository_root: Path
+        cls, repository_root: Path,
     ) -> p.Result[t.SequenceOf[m.Infra.WorkspaceManifestSpec]]:
         """Load the checkout's own workspace manifest as a 0-or-1 sequence.
 
@@ -43,14 +44,14 @@ class FlextInfraUtilitiesWorkspaceManifest:
         text = u.Cli.files_read_text(manifest_path)
         if text.failure:
             return r[t.SequenceOf[m.Infra.WorkspaceManifestSpec]].fail(
-                f"invalid workspace manifest ({manifest_path}): {text.error}"
+                f"invalid workspace manifest ({manifest_path}): {text.error}",
             )
         return cls._parsed_workspace_manifest(text.value, str(manifest_path))
 
     @staticmethod
     @lru_cache(maxsize=c.Infra.CONTENT_CACHE_MAXSIZE)
     def _parsed_workspace_manifest(
-        text: str, manifest_path: str
+        text: str, manifest_path: str,
     ) -> p.Result[t.SequenceOf[m.Infra.WorkspaceManifestSpec]]:
         """Parse and validate one manifest text once per exact content.
 
@@ -60,10 +61,10 @@ class FlextInfraUtilitiesWorkspaceManifest:
         loaded = u.Cli.yaml_parse(text)
         if loaded.failure:
             return r[t.SequenceOf[m.Infra.WorkspaceManifestSpec]].fail(
-                f"invalid workspace manifest ({manifest_path}): {loaded.error}"
+                f"invalid workspace manifest ({manifest_path}): {loaded.error}",
             )
         validated: p.Result[m.Infra.WorkspaceManifestSpec] = u.validate_value(
-            m.Infra.WorkspaceManifestSpec, loaded.value
+            m.Infra.WorkspaceManifestSpec, loaded.value,
         )
         if validated.failure:
             return r[t.SequenceOf[m.Infra.WorkspaceManifestSpec]].fail_op(

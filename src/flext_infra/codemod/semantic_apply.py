@@ -346,7 +346,7 @@ class FlextInfraCodemodSemanticApply:
             if source.startswith("# AUTO-GENERATED FILE"):
                 continue
             if path.name not in models.file_names and not models.directories.intersection(
-                path.parts
+                path.parts,
             ):
                 continue
             updated = u.Infra.normalize_deferred_self_references(source)

@@ -54,7 +54,7 @@ class TestsFlextInfraPrivateImportCutover:
             # flext-core's result factory catches broad runtime errors only
             # ("no IO, no import"): an invalid reachable import escapes raw.
             with pytest.raises(
-                ImportError, match="attempted relative import beyond top-level"
+                ImportError, match="attempted relative import beyond top-level",
             ):
                 self._plan(tmp_path, sources, consumer, statement)
             return
@@ -275,7 +275,7 @@ class TestsFlextInfraPrivateImportCutover:
             tm.that(edits[0].updated_source, lacks=statement)
         else:
             with pytest.raises(
-                ValueError, match=expected or "no public facade exposes"
+                ValueError, match=expected or "no public facade exposes",
             ):
                 self._plan(tmp_path, sources, consumer, statement)
         for path, source in dependency_sources.items():

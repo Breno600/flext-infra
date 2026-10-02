@@ -49,13 +49,13 @@ class FlextInfraConfigModelsScaffold:
         """One upstream config base a generated ``_config.py`` may compose."""
 
         distribution: Annotated[
-            t.NonEmptyStr, m.Field(description="Distribution owning the base")
+            t.NonEmptyStr, m.Field(description="Distribution owning the base"),
         ]
         module: Annotated[
-            t.NonEmptyStr, m.Field(description="Import module exposing the base")
+            t.NonEmptyStr, m.Field(description="Import module exposing the base"),
         ]
         class_name: Annotated[
-            t.NonEmptyStr, m.Field(description="Config base class name")
+            t.NonEmptyStr, m.Field(description="Config base class name"),
         ]
 
     class ScaffoldProjectSpec(FlextInfraConfigModelsContract.ConfigContract):

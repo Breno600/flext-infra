@@ -142,7 +142,7 @@ class FlextInfraModelsCensus:
             m.Field(description="Object kind (constant/type/protocol/model/utility)"),
         ]
         kind: Annotated[
-            str, m.Field(description="Analysis kind (duplicate/unused/wrong_tier)")
+            str, m.Field(description="Analysis kind (duplicate/unused/wrong_tier)"),
         ]
         severity: Annotated[str, m.Field(description="Severity level")] = (
             c.Infra.GateSeverity.WARNING.value

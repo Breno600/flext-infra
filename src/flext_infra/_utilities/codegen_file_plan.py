@@ -41,7 +41,9 @@ class FlextInfraUtilitiesCodegenFilePlan:
 
     @staticmethod
     @contextmanager
-    def codegen_transaction_lease(journal_path: Path) -> Generator[None]:
+    def codegen_transaction_lease(
+        journal_path: Path, *, wait_seconds: float = c.Infra.JOURNAL_LEASE_WAIT_SECONDS,
+    ) -> Generator[None]:
         """Hold native ownership without unlinking the journal's lock identity.
 
         The lease holds an OS-native exclusive lock on a persistent lock file.
@@ -53,7 +55,9 @@ class FlextInfraUtilitiesCodegenFilePlan:
         ``make gen`` holds the lease for minutes, so an immediate non-blocking
         refusal manufactured spurious ``JournalLeaseTimeoutError`` failures
         under ordinary concurrent traffic. The wait stays bounded, so a truly
-        wedged holder still fails loud rather than hanging forever.
+        wedged holder still fails loud rather than hanging forever. A caller
+        whose own deadline already runs (the testmon database owner) passes
+        ``wait_seconds=0``: one attempt, then the loud refusal.
         Only native contention (EACCES, EAGAIN or EWOULDBLOCK) enters this wait;
         every other acquisition error escapes unchanged.
         """
@@ -62,7 +66,7 @@ class FlextInfraUtilitiesCodegenFilePlan:
         descriptor = os.open(lock_path, os.O_RDWR | os.O_CREAT, 0o600)
         acquired = False
         try:
-            deadline = time.monotonic() + c.Infra.JOURNAL_LEASE_WAIT_SECONDS
+            deadline = time.monotonic() + wait_seconds
             while True:
                 try:
                     if os.name == "nt":

@@ -131,9 +131,6 @@ class FlextInfraModelsRope:
             m.Field(description="Rope-owned source slice for the statement"),
         ] = ""
 
-
-
-
     class FamilyWrapperFlatten(m.ArbitraryTypesModel):
         """Rope identity of one namespace wrapper flattened into its family owner."""
 

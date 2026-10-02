@@ -284,6 +284,7 @@ def _provision_infra_checkout(run_root: Path, scenario: str) -> None:
 
 
 def _ensure_provisioned(
+    run_root: Path,
     parent: Path,
     receipt: str,
     key: c.Infra.MakeProfile | str | t.StrSequence,
@@ -360,7 +361,7 @@ def resolved_make_templates(
 
 @pytest.fixture(params=_INFRA_CHECKOUT_SCENARIOS)
 def provisioned_infra_checkout(
-    request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory
+    request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory,
 ) -> t.Pair[str, Path]:
     """Return one scenario's candidate checkout, set up from committed locks."""
     scenario = str(request.param)
@@ -581,7 +582,7 @@ def mod_workspace(tmp_path: Path) -> Path:
         u.Cli.atomic_write_text_file(
             package_dir / c.Infra.INIT_PY,
             '"""Public refactor-mod fixture package."""\n\nfrom __future__ import annotations\n',
-        )
+        ),
     )
     tm.ok(
         u.Cli.atomic_write_text_file(

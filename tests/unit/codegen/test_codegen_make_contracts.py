@@ -76,7 +76,7 @@ class TestsFlextInfraCodegenMakeContracts:
             scope=c.Infra.CodegenConformScope.SELF,
             mode=c.Infra.CodegenConformMode.APPLY,
         ),
-        initial_workspace=workspace,)
+        initial_workspace=workspace)
         tm.ok(result)
         tm.that("WARN:" in capsys.readouterr().out, eq=False)
         tm.that(Path(f"{custom}.rej").exists(), eq=False)
@@ -196,7 +196,7 @@ class TestsFlextInfraCodegenMakeContracts:
             scope=c.Infra.CodegenConformScope.SELF,
             mode=c.Infra.CodegenConformMode.APPLY,
         ),
-        initial_workspace=workspace,)
+        initial_workspace=workspace)
         tm.ok(result)
         tm.that("WARN:" in capsys.readouterr().out, eq=False)
         tm.that(Path(f"{custom}.rej").exists(), eq=False)
@@ -217,7 +217,7 @@ class TestsFlextInfraCodegenMakeContracts:
             scope=c.Infra.CodegenConformScope.SELF,
             mode=c.Infra.CodegenConformMode.CHECK,
         ),
-        initial_workspace=workspace,)
+        initial_workspace=workspace)
         tm.fail(result)
         tm.that(result.error, has="not a regular file")
         tm.that(result.error, has=str(root / "custom.mk"))

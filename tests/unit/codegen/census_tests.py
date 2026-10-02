@@ -43,7 +43,7 @@ class TestsFlextInfraCodegenCensus:
             encoding="utf-8",
         )
         config_path.write_text(
-            f"ruleDirs: [{c.Cli.RULES_DIR_NAME}]\n", encoding="utf-8"
+            f"ruleDirs: [{c.Cli.RULES_DIR_NAME}]\n", encoding="utf-8",
         )
         (rules / "fixable.yml").write_text(
             f"id: {cls._FIXABLE_RULE}\nlanguage: Python\nseverity: error\n"

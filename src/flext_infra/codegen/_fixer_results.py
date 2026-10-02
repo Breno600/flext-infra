@@ -18,8 +18,6 @@ class FlextInfraCodegenFixerResultsMixin:
 
     _fixer_log: ClassVar[p.Logger] = u.fetch_logger(__name__)
 
-    if TYPE_CHECKING:
-
     @staticmethod
     def _empty_result(project_name: str) -> m.Infra.AutoFixResult:
         """Empty result."""

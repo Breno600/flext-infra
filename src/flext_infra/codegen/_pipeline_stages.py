@@ -32,6 +32,7 @@ class FlextInfraCodegenPipelineStagesMixin:
         # Provided by the composed facade (FlextInfraCodegenPipeline); declared
         # here so the handlers type-resolve against the facade state + harness.
         _state: m.Infra.CodegenPipelineState
+        conform_ports: m.Infra.CodegenConformPorts
 
         def _run_stage[V](
             self,

@@ -119,7 +119,7 @@ class FlextInfraConstantsCheck:
     })
     "Gate id -> (tool name, tool url), derived from the registry declaration."
     TYPE_CHECKER_GATES: ClassVar[frozenset[str]] = frozenset(
-        GATE_TOOLS_BY_KIND[GateKind.TYPE_CHECKER]
+        GATE_TOOLS_BY_KIND[GateKind.TYPE_CHECKER],
     )
     "Native type-checker gates: independent read-only analyzers of one tree."
     ALLOWED_GATES: ClassVar[frozenset[str]] = frozenset(SARIF_TOOL_INFO)

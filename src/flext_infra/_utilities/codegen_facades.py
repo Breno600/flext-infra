@@ -35,7 +35,7 @@ class FlextInfraUtilitiesCodegenFacades:
             if module.name != c.Infra.INIT_PY
             and family
             in FlextInfraUtilitiesRopeModulePatch.facade_letter_names_source(
-                module.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+                module.read_text(encoding=c.Cli.ENCODING_DEFAULT),
             )
         )
         if len(owners) > 1:

@@ -26,7 +26,7 @@ class FlextInfraProtocolsBase(Protocol):
         """Apply or inspect one validated CSV rename campaign."""
 
         def run(
-            self, params: m.Infra.ApplyRenamesInput
+            self, params: m.Infra.ApplyRenamesInput,
         ) -> p.Result[m.Infra.ApplyRenamesReport]: ...
 
     @runtime_checkable
@@ -113,7 +113,7 @@ class FlextInfraProtocolsBase(Protocol):
         """Conform plan boundary consumed by the candidate campaign."""
 
         def surface_contract(
-            self, surface: c.Infra.CodegenConformSurface
+            self, surface: c.Infra.CodegenConformSurface,
         ) -> m.Infra.CodegenConformSurfaceContract:
             """Resolve the declared output set for a recovery surface."""
             ...

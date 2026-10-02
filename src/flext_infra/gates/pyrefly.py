@@ -37,7 +37,7 @@ class FlextInfraPyreflyGate(FlextInfraGate):
             project_dir,
             workspace_excluded_top_dirs=(
                 FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
-                    project_dir
+                    project_dir,
                 ).unwrap()
             ),
         )

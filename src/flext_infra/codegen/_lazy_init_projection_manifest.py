@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import MutableMapping
-from operator import itemgetter
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -30,7 +29,7 @@ class FlextInfraCodegenLazyInitProjectionManifest:
 
     @staticmethod
     def projection_manifest_plans(
-        *, files: t.VariadicTuple[m.Infra.CodegenFilePlan]
+        *, files: t.VariadicTuple[m.Infra.CodegenFilePlan],
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]:
         """Append one manifest plan per project that owns projected files.
 
@@ -38,40 +37,39 @@ class FlextInfraCodegenLazyInitProjectionManifest:
         manifest bytes are a pure function of the phase plan: stable order,
         stable digests, no self-reference.
         """
-        projected: MutableMapping[Path, list[t.JsonDict]] = {}
+        projected: MutableMapping[Path, list[m.Infra.ProjectionLockEntry]] = {}
         for plan in files:
             if plan.desired_content is None:
                 continue
             relative = plan.path.relative_to(plan.project)
-            if relative.parts[0] not in c.Infra.PROJECTED_ROOTS:
+            if relative.parts[0] not in c.Infra.PROJECTIONS_LOCK_ROOTS:
                 continue
-            if relative.name == c.Infra.MANIFEST_FILENAME:
+            if relative.name == c.Infra.PROJECTIONS_LOCK_FILENAME:
                 continue
-            projected.setdefault(plan.project, []).append({
-                "path": relative.as_posix(),
-                "sha256": hashlib.sha256(plan.desired_content).hexdigest(),
-                "bytes": len(plan.desired_content),
-            })
+            projected.setdefault(plan.project, []).append(
+                m.Infra.ProjectionLockEntry(
+                    path=relative.as_posix(),
+                    sha256=hashlib.sha256(plan.desired_content).hexdigest(),
+                    bytes=len(plan.desired_content),
+                ),
+            )
         plans: list[m.Infra.CodegenFilePlan] = []
         for project in sorted(projected):
-            payload: t.JsonDict = {
-                "apiVersion": c.Infra.MANIFEST_API_VERSION,
-                "entries": [
-                    {
-                        "path": entry["path"],
-                        "sha256": entry["sha256"],
-                        "bytes": entry["bytes"],
-                    }
-                    for entry in sorted(projected[project], key=itemgetter("path"))
-                ],
-            }
-            serialized = u.Cli.json_dumps(payload, indent=2)
+            payload = m.Infra.ProjectionLockPayload.model_validate(
+                {
+                    "apiVersion": c.Infra.PROJECTIONS_LOCK_API_VERSION,
+                    "entries": tuple(
+                        sorted(projected[project], key=lambda entry: entry.path),
+                    ),
+                },
+            )
+            serialized = u.Cli.json_dumps(payload.model_dump(by_alias=True), indent=2)
             if serialized.failure:
                 return r[t.VariadicTuple[m.Infra.CodegenFilePlan]].from_failure(
-                    serialized
+                    serialized,
                 )
             content = f"{serialized.value}\n".encode(c.Cli.ENCODING_DEFAULT)
-            manifest_path = project / ".agents" / c.Infra.MANIFEST_FILENAME
+            manifest_path = project / ".agents" / c.Infra.PROJECTIONS_LOCK_FILENAME
             state = u.Cli.atomic_read_binary_file_state(manifest_path, required=False)
             if state.failure:
                 return r[t.VariadicTuple[m.Infra.CodegenFilePlan]].from_failure(state)
@@ -82,7 +80,7 @@ class FlextInfraCodegenLazyInitProjectionManifest:
                     before=state.value,
                     desired_content=content,
                     desired_mode=0o644,
-                )
+                ),
             )
         return r[t.VariadicTuple[m.Infra.CodegenFilePlan]].ok(tuple(plans))
 

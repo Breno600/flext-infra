@@ -17,8 +17,6 @@ from tests import c, u
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p
-
 
 class TestsFlextInfraRunProjects:
     """Verify project execution through the public checker methods."""

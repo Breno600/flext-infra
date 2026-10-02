@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
 from flext_tests import tm
 
 from flext_infra.refactor.namespace_enforcer import FlextInfraNamespaceEnforcer
@@ -224,7 +225,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         tm.that(module_source, has="SHARED = FlextInfraConstantsSharedInfra")
 
     def test_namespace_enforcer_apply_hoists_function_local_stdlib_import(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """Hoist a function-local standard-library import to the module block."""
         workspace, _project, pkg = u.Tests.namespace_workspace(tmp_path)

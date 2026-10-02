@@ -68,16 +68,26 @@ class FlextInfraSmellsGate(FlextInfraGate):
         _ = ctx
         started = time.monotonic()
         scan = self._scan(project_dir)
-        issues = (
-            *self._scanned_issues(scan, project_dir),
-            *self._census_issues(project_dir),
-        )
+        issues = self._owned_issues(scan, project_dir)
         return self._build_check_gate_execution(
             project_dir,
             passed=not issues,
             issues=issues,
             raw_output=self._raw_output(scan),
             started=started,
+        )
+
+    def _owned_issues(
+        self, scan: p.Cli.CommandOutput, project_dir: Path,
+    ) -> t.VariadicTuple[m.Infra.Issue]:
+        """Every smell this gate owns: the qlty scan and the census families.
+
+        The single composition behind both entry points, so ``check`` and the
+        ``check_files`` path can never grade different finding sets.
+        """
+        return (
+            *self._scanned_issues(scan, project_dir),
+            *self._census_issues(project_dir),
         )
 
     def _census_issues(self, project_dir: Path) -> t.SequenceOf[m.Infra.Issue]:
@@ -87,14 +97,20 @@ class FlextInfraSmellsGate(FlextInfraGate):
         ``make smells`` and never ``make check``. A census that cannot run
         is a blocking issue, never a clean pass.
         """
-        report = FlextInfraRuntimeCensusValidator.for_project(
-            project_dir, census_gate=self.gate_id
-        ).build_report()
-        messages = (
-            report.value.violations
-            if report.success
-            else (report.error or "runtime census failed",)
+        validator = FlextInfraRuntimeCensusValidator.for_project(
+            project_dir, census_gate=self.gate_id,
         )
+        if validator.failure:
+            messages: t.StrSequence = (
+                validator.error or "runtime census scoping failed",
+            )
+        else:
+            report = validator.value.build_report()
+            messages = (
+                report.value.violations
+                if report.success
+                else (report.error or "runtime census failed",)
+            )
         return tuple(
             m.Infra.Issue(
                 file=str(project_dir),
@@ -130,7 +146,7 @@ class FlextInfraSmellsGate(FlextInfraGate):
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
         """Parse SARIF stdout into per-project issues (check_files path)."""
         _ = ctx
-        issues = self._scanned_issues(result, project_dir)
+        issues = self._owned_issues(result, project_dir)
         return not issues, issues
 
     def _scan_command(self, binary: str, project_dir: Path) -> t.StrSequence:

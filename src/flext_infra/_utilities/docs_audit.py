@@ -70,12 +70,8 @@ class FlextInfraUtilitiesDocsAudit(
         return targets
 
     @staticmethod
-    def docs_policy_list(
-        scope: m.Infra.DocScope,
-        section: str,
-        key: str,
-    ) -> t.StrSequence:
-        """Read one list of policy tokens from the minimal root docs settings."""
+    def docs_audit_policy(scope: m.Infra.DocScope) -> m.Infra.DocsAuditPolicySpec:
+        """Parse the scope's authenticated audit declaration once into its contract."""
         # Why: the scope's own declared `repository_root` (not a `.parent`
         # heuristic) owns docs policy resolution — a workspace-root project
         # scope IS its own repository root, and only a genuine member-project
@@ -96,8 +92,7 @@ class FlextInfraUtilitiesDocsAudit(
         if not scope.package_name:
             return set()
         contract = FlextInfraUtilitiesDocsApi.public_contract(
-            scope.path,
-            scope.package_name,
+            scope.path, scope.package_name,
         )
         names: set[str] = set()
         for key in ("exports", "public_symbols"):
@@ -116,8 +111,7 @@ class FlextInfraUtilitiesDocsAudit(
         for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
             rel = md_file.relative_to(scope.path).as_posix()
             content = md_file.read_text(
-                encoding=c.Cli.ENCODING_DEFAULT,
-                errors=c.Infra.IGNORE,
+                encoding=c.Cli.ENCODING_DEFAULT, errors=c.Infra.IGNORE,
             )
             in_fenced_code = False
             for number, line in enumerate(content.splitlines(), start=1):
@@ -153,16 +147,12 @@ class FlextInfraUtilitiesDocsAudit(
                     if FlextInfraUtilitiesDocs.docs_is_external(target):
                         issues.extend(
                             FlextInfraUtilitiesDocsGithubLinks.docs_github_link_issues(
-                                file=rel,
-                                line_number=number,
-                                raw=raw,
-                                target=target,
+                                file=rel, line_number=number, raw=raw, target=target,
                             ),
                         )
                         continue
                     if FlextInfraUtilitiesDocsAudit.docs_should_skip_target(
-                        raw,
-                        target,
+                        raw, target,
                     ):
                         continue
                     if not (md_file.parent / target).resolve().exists():
@@ -181,18 +171,9 @@ class FlextInfraUtilitiesDocsAudit(
         scope: m.Infra.DocScope,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
         """Collect stale-symbol issues outside the explicit migration docs."""
-        tokens = FlextInfraUtilitiesDocsAudit.docs_policy_list(
-            scope,
-            section="audit",
-            key="stale_symbols",
-        )
-        exempt_paths = set(
-            FlextInfraUtilitiesDocsAudit.docs_policy_list(
-                scope,
-                section="audit",
-                key="stale_symbol_exempt_paths",
-            ),
-        )
+        policy = FlextInfraUtilitiesDocsAudit.docs_audit_policy(scope)
+        tokens = policy.stale_symbols
+        exempt_paths = set(policy.stale_symbol_exempt_paths)
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         if not tokens:
             return issues
@@ -207,8 +188,7 @@ class FlextInfraUtilitiesDocsAudit(
                 FlextInfraUtilitiesDocsAudit.docs_generated_api_reference_path(rel)
             )
             text = md_file.read_text(
-                encoding=c.Cli.ENCODING_DEFAULT,
-                errors=c.Infra.IGNORE,
+                encoding=c.Cli.ENCODING_DEFAULT, errors=c.Infra.IGNORE,
             )
             for token in tokens:
                 if token not in text:

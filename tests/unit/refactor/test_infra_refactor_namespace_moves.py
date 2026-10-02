@@ -32,7 +32,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
                 path.name
                 for path in package_root.iterdir()
                 if path.is_file() and path.suffix != ".py"
-            )
+            ),
         )
 
     @classmethod
@@ -126,7 +126,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         )
 
         u.Infra.rewrite_manual_typing_alias_violations(
-            project_root=project_root, names_by_file={source_file: {"PayloadMap"}}
+            project_root=project_root, names_by_file={source_file: {"PayloadMap"}},
         )
 
         source_text = source_file.read_text(encoding="utf-8")

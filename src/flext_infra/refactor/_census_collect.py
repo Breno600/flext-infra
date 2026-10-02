@@ -120,7 +120,7 @@ class FlextInfraRefactorCensusCollectMixin:
                 scan_config=scan_config,
             )
             for project in sorted(
-                findings.report_projects | set(findings.project_objects)
+                findings.report_projects | set(findings.project_objects),
             )
         )
         if self.effective_dry_run:

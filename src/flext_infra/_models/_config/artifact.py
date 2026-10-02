@@ -529,7 +529,7 @@ class FlextInfraConfigModelsArtifact:
                     "Planners compose the pyproject first and record them; "
                     "None means this plan composes no pyproject, so the "
                     "committed one is the source"
-                )
+                ),
             ),
         ] = None
 
@@ -748,7 +748,7 @@ class FlextInfraConfigModelsArtifact:
 
         pattern: Annotated[t.NonEmptyStr, m.Field(description="Regex source to match")]
         replacement: Annotated[
-            str, m.Field(description="Literal replacement text")
+            str, m.Field(description="Literal replacement text"),
         ]
         file_glob: Annotated[
             t.NonEmptyStr | None,

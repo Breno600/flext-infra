@@ -15,8 +15,6 @@ from tests import u
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p
-
 
 class TestsFlextInfraCodemodGate:
     """Block on every policy finding and on every native scanner failure."""
@@ -34,7 +32,7 @@ class TestsFlextInfraCodemodGate:
             encoding="utf-8",
         )
         config_path.write_text(
-            f"ruleDirs: [{c.Cli.RULES_DIR_NAME}]\n", encoding="utf-8"
+            f"ruleDirs: [{c.Cli.RULES_DIR_NAME}]\n", encoding="utf-8",
         )
         for name in ("first", "second"):
             (rules / f"{name}.yml").write_text(

@@ -8,9 +8,8 @@ import pytest
 from flext_tests import tm
 
 import flext_infra
-from flext_core import r
 from flext_infra.workspace.rope import FlextInfraRopeWorkspace
-from tests import c, m, p, t, u
+from tests import c, m, t, u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -284,7 +283,7 @@ class TestsFlextInfraInfraRopeService:
 
     @pytest.mark.parametrize("family_alias", sorted(u.Infra.facade_families()))
     def test_class_nesting_cutover_uses_declared_family_owner(
-        self, tmp_path: Path, family_alias: str
+        self, tmp_path: Path, family_alias: str,
     ) -> None:
         """Plan every facade family from semantic objects and its declared owner."""
         module_name = u.Tests.family_public_module(family_alias)

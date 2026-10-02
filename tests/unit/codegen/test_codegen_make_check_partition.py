@@ -72,8 +72,8 @@ class TestsFlextInfraCodegenMakeCheckPartition:
         make = config.Infra.codegen.make
         steps = CodegenTestSupport.Ci.ci_job_steps(
             TestsFlextInfraCiIntegrationBranchTriggers.render_ci(
-                repository_branch="0.12.0-dev"
-            )
+                repository_branch="0.12.0-dev",
+            ),
         )
         commands = [str(step.get("run", "")) for step in steps]
         fast = f"{make.ci.variable}={make.ci.value} make {c.Infra.VERB_CHECK}"

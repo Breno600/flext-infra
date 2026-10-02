@@ -15,7 +15,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
 
     @staticmethod
     def with_planned_pyproject(
-        render_inputs: m.Infra.CodegenRenderInputs, composed: str
+        render_inputs: m.Infra.CodegenRenderInputs, composed: str,
     ) -> p.Result[m.Infra.CodegenRenderInputs]:
         """Record the direct-reference requirements of the pyproject just planned.
 
@@ -26,13 +26,13 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         document = u.Cli.toml_parse_text(composed)
         if document is None:
             return r[m.Infra.CodegenRenderInputs].fail(
-                "planned pyproject is not valid TOML"
+                "planned pyproject is not valid TOML",
             )
         names = u.Infra.direct_source_names(document)
         if names.failure:
             return r[m.Infra.CodegenRenderInputs].from_failure(names)
         return r[m.Infra.CodegenRenderInputs].ok(
-            render_inputs.model_copy(update={"planned_direct_sources": names.value})
+            render_inputs.model_copy(update={"planned_direct_sources": names.value}),
         )
 
     @staticmethod
@@ -43,7 +43,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         if render_inputs.planned_direct_sources is not None:
             return r[t.VariadicTuple[str]].ok(render_inputs.planned_direct_sources)
         document = u.Cli.toml_read_document(
-            render_inputs.target.root / c.Infra.PYPROJECT_FILENAME
+            render_inputs.target.root / c.Infra.PYPROJECT_FILENAME,
         )
         if document.failure:
             return r[t.VariadicTuple[str]].from_failure(document)
@@ -405,7 +405,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             return r[m.Infra.MakefileRenderSpec].from_failure(gitlinks)
         pytest = config.Infra.tooling.tools.pytest
         run_timeout_seconds = pytest.run_timeout_overrides.get(
-            target.canonical_project_name, pytest.run_timeout_seconds
+            target.canonical_project_name, pytest.run_timeout_seconds,
         )
         return r[m.Infra.MakefileRenderSpec].ok(
             m.Infra.MakefileRenderSpec(

@@ -101,7 +101,7 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
         return bool(parts) and (parts[0] in config.Infra.source_scan.roots)
 
     def _collect_report(
-        self, rope: p.Infra.RopeWorkspaceDsl
+        self, rope: p.Infra.RopeWorkspaceDsl,
     ) -> m.Infra.WorkspaceReport:
         """Inventory the selected modules then assemble the census report."""
         kind_names = self.kind_names

@@ -105,7 +105,8 @@ class TestsFlextInfraDocsGenerator:
             '"""Workspace fixture package."""\n',
             encoding="utf-8",
         )
-        for module in ("api", "models"):
+        declared = ("api", "models")
+        for module in declared:
             source = package / f"{module.replace('.', '/')}.py"
             source.parent.mkdir(parents=True, exist_ok=True)
             source.write_text('"""Public fixture module."""\n', encoding="utf-8")
@@ -339,7 +340,7 @@ class TestsFlextInfraDocsGenerator:
         tm.that((project / "README.md").read_text(encoding="utf-8"), eq=first_readme)
 
     def test_public_top_level_modules_own_generated_module_pages(
-        self, tmp_path: Path
+        self, tmp_path: Path,
     ) -> None:
         """Every public top-level module gets a page; private modules never do."""
         project_name = "flext-a"
@@ -352,7 +353,7 @@ class TestsFlextInfraDocsGenerator:
         public = ("api", "models")
         for module in (*public, "_internal"):
             (package / f"{module}.py").write_text(
-                f'"""Fixture module {module}."""\n', encoding="utf-8"
+                f'"""Fixture module {module}."""\n', encoding="utf-8",
             )
 
         generator = FlextInfraDocGenerator(

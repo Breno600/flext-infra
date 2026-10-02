@@ -402,6 +402,19 @@ class FlextInfraModelsDepsToolConfig(
             return self.case_timeout_seconds + self.termination_grace_seconds
 
         @property
+        def slow_suite_stop_reserve_seconds(self) -> int:
+            """Derive the slow-phase reserve: in-flight items bounded by the slow ceiling."""
+            return (
+                self.xdist_items_per_worker * self.slow_timeout_seconds
+                + self.termination_grace_seconds
+            )
+
+        @property
+        def slow_serial_suite_stop_reserve_seconds(self) -> int:
+            """Derive the slow-phase serial reserve: one slow item plus grace."""
+            return self.slow_timeout_seconds + self.termination_grace_seconds
+
+        @property
         def xdist_items_per_worker(self) -> int:
             """Xdist depth per worker: the running item plus one queued, or a chunk."""
             return max(2, self.parallel_schedule_chunk)
@@ -415,20 +428,22 @@ class FlextInfraModelsDepsToolConfig(
             if self.termination_grace_seconds >= self.run_timeout_seconds:
                 msg = "pytest termination grace must be less than run timeout"
                 raise ValueError(msg)
-            if (
-                self.case_timeout_seconds + self.termination_grace_seconds
-                > self.run_timeout_seconds
-            ):
-                msg = "pytest run timeout must include item and termination budgets"
-                raise ValueError(msg)
             if self.slow_timeout_seconds <= self.case_timeout_seconds:
                 msg = "pytest slow timeout must exceed the per-case timeout"
                 raise ValueError(msg)
             if self.slow_timeout_seconds >= self.run_timeout_seconds:
                 msg = "pytest slow timeout must be less than run timeout"
                 raise ValueError(msg)
+            # Every reserve includes one item bound plus the grace, so this
+            # also keeps a single item and the termination inside each run; a
+            # reserve at or past a run budget would place the stop before the
+            # suite. The single-bound checks above report first: they name the
+            # field. Both phases' reserves bind every declared run budget.
+            reserve = max(
+                self.suite_stop_reserve_seconds, self.slow_suite_stop_reserve_seconds,
+            )
             if any(
-                timeout <= self.suite_stop_reserve_seconds
+                timeout <= reserve
                 for timeout in (
                     self.run_timeout_seconds,
                     *self.run_timeout_overrides.values(),
@@ -557,7 +572,7 @@ class FlextInfraModelsDepsToolConfig(
             ),
         ]
         precision: Annotated[
-            int, m.Field(description="Decimal precision for coverage percentages.")
+            int, m.Field(description="Decimal precision for coverage percentages."),
         ]
         exclude_also: Annotated[
             t.StrSequence,

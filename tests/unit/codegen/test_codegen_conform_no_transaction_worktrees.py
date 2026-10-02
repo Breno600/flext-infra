@@ -59,7 +59,7 @@ class TestsFlextInfraCodegenConformNoTransactionWorktrees:
             root,
             scope=c.Infra.CodegenConformScope.SELF,
             mode=c.Infra.CodegenConformMode.CHECK,
-        ),)
+        ))
 
         tm.fail(result, has="codegen drift detected")
         tm.that(self._transaction_worktree_siblings(root), eq=before)
@@ -80,13 +80,13 @@ class TestsFlextInfraCodegenConformNoTransactionWorktrees:
             root,
             scope=c.Infra.CodegenConformScope.SELF,
             mode=c.Infra.CodegenConformMode.APPLY,
-        ),)
+        ))
         tm.that(drifted.read_text(encoding="utf-8"), lacks="# managed drift")
         converged_bytes = drifted.read_bytes()
         infra.codegen_conform(u.Tests.conform_request(
             root,
             scope=c.Infra.CodegenConformScope.SELF,
             mode=c.Infra.CodegenConformMode.APPLY,
-        ),)
+        ))
         tm.that(drifted.read_bytes(), eq=converged_bytes)
         tm.that(self._transaction_worktree_siblings(root), eq=before)

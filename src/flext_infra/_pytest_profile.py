@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import cProfile
+import os
 import runpy
 import sys
 import time
@@ -75,21 +76,47 @@ class FlextInfraPytestProfile:
         )
         # The runner publishes its run context before any child can fail; the
         # parent binds the profile to the receipt THIS invocation wrote, also
-        # when the run fails (a blocked collection is a profiled run too), and
-        # never to a receipt that predates it.
+        # when the run fails (a blocked collection is a profiled run too). The
+        # runner executes in this process and names its report directory with
+        # this pid, so a concurrent run under the shared reports root (another
+        # pid) and a receipt that predates this run are both excluded.
         from flext_infra import m
 
         reports_root = runner.root / runner.reports
-        latest = max(
-            reports_root.glob("*/run-context.json"),
-            key=lambda receipt: receipt.stat().st_mtime,
-        )
-        self._record_context(
-            m.Infra.PytestRunContext.model_validate_json(
-                latest.read_text(encoding="utf-8"),
-            ),
-        )
-        return exit_code
+        preexisting = frozenset(reports_root.glob("*/run-context.json"))
+
+        def owned_receipts() -> list[Path]:
+            return [
+                receipt
+                for receipt in reports_root.glob(f"*-{os.getpid()}/run-context.json")
+                if receipt not in preexisting
+            ]
+
+        def bind(owned: list[Path]) -> None:
+            if owned:
+                self._record_context(
+                    m.Infra.PytestRunContext.model_validate_json(
+                        owned[0].read_text(encoding="utf-8"),
+                    ),
+                )
+
+        try:
+            outcome = runner.execute().unwrap()
+        except BaseException as failure:
+            owned = owned_receipts()
+            if len(owned) > 1:
+                # The original failure stays the one raised; the ambiguity
+                # travels with it instead of replacing it.
+                failure.add_note(f"profile left unbound: run contexts {owned}")
+            else:
+                bind(owned)
+            raise
+        owned = owned_receipts()
+        if len(owned) > 1:
+            msg = f"profiled run published more than one run context: {owned}"
+            raise RuntimeError(msg)
+        bind(owned)
+        return outcome
 
     def _run_collection(self, receipt_path: Path) -> int:
         from flext_infra import m
@@ -122,7 +149,7 @@ class FlextInfraPytestProfile:
             process_dir = self.output.parent / policy.profile_process_directory
             process_dir.mkdir(parents=True, exist_ok=True)
             (process_dir / f"{os.getpid()}{self.output.suffix}").hardlink_to(
-                self.output
+                self.output,
             )
         if self.context is not None:
             from flext_infra import u
