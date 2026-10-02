@@ -233,7 +233,7 @@ class FlextInfraConstantsCheck:
         "--quiet",
         "--no-upgrade-check",
     )
-    "Full-workspace scan: default qlty scope is changed-files-only; --all overrides."
+    "Smells scan arguments; the gate appends explicit targets, scanned in full."
     SMELLS_RULE_PREFIX: ClassVar[str] = "qlty:"
     SMELLS_RULE_TAGS: ClassVar[t.MappingKV[str, str]] = MappingProxyType({
         "boolean-logic": "smell_boolean_logic",
