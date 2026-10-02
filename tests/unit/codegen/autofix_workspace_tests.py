@@ -37,7 +37,8 @@ class TestsFlextInfraCodegenAutofixWorkspace:
         )
 
     @pytest.mark.slow
-    def test_project_without_pyproject_excluded_from_run(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_project_without_pyproject_excluded_from_run(tmp_path: Path) -> None:
         """Test project without pyproject excluded from run."""
         external_project = tmp_path / "external-project"
         external_project.mkdir()

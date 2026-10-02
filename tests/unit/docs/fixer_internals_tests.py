@@ -54,8 +54,8 @@ class TestsFlextInfraFixerInternals:
         )
 
     @pytest.mark.parametrize("separator", ["\n", "\n\n", "\n\n\n"])
+    @staticmethod
     def test_fix_keeps_closing_fence_on_its_own_line(
-        self,
         tmp_path: Path,
         separator: str,
     ) -> None:

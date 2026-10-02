@@ -786,8 +786,8 @@ class TestsFlextInfraRepositoryLocalTopology:
             ("branch", "Git submodule branch is missing"),
         ],
     )
+    @staticmethod
     def test_gitmodule_requires_complete_contract(
-        self,
         tmp_path: Path,
         missing_key: str,
         expected_error: str,
@@ -856,8 +856,8 @@ class TestsFlextInfraRepositoryLocalTopology:
         tm.fail(result, has="failed to read Git submodule declarations")
 
     @pytest.mark.parametrize("declared_path", ["../escape", "/absolute/escape"])
+    @staticmethod
     def test_gitmodule_rejects_escaping_path(
-        self,
         tmp_path: Path,
         declared_path: str,
     ) -> None:

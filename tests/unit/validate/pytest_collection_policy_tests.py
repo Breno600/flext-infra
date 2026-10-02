@@ -20,8 +20,8 @@ class TestsFlextInfraPytestCollectionPolicy:
     """Keep collection findings loud, accounted, and identity-preserving."""
 
     @pytest.mark.slow
+    @staticmethod
     def test_collection_policy_error_fails_loud_and_names_the_offender(
-        self,
         policy_violation_project: Path,
     ) -> None:
         """A collection-time policy error rejects the run and names the offender."""
@@ -35,8 +35,8 @@ class TestsFlextInfraPytestCollectionPolicy:
     @pytest.mark.slow
     @pytest.mark.parametrize("profile_collection", [False, True])
     @pytest.mark.parametrize("finding", ["warning", "module-skip", "module-error"])
+    @staticmethod
     def test_collection_findings_block_before_suite_execution(
-        self,
         cached_runner_project: Path,
         finding: str,
         *,
@@ -110,8 +110,8 @@ class TestsFlextInfraPytestCollectionPolicy:
 
     @pytest.mark.slow
     @pytest.mark.parametrize("homonym", [False, True])
+    @staticmethod
     def test_serial_collection_warning_blocks_and_preserves_identity(
-        self,
         cached_runner_project: Path,
         *,
         homonym: bool,
@@ -158,8 +158,8 @@ class TestsFlextInfraPytestCollectionPolicy:
         tm.that(identity.category_module, eq="runner_sample.notices")
 
     @pytest.mark.slow
+    @staticmethod
     def test_warm_inventory_captures_warnings_from_stable_modules(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """A file omitted by testmon remains covered by complete collection policy."""
@@ -194,8 +194,8 @@ class TestsFlextInfraPytestCollectionPolicy:
         tm.that((context.parent / "suite-outcome.json").exists(), eq=False)
 
     @pytest.mark.slow
+    @staticmethod
     def test_coverage_pass_fails_loud_on_collection_policy_error(
-        self,
         policy_violation_project: Path,
     ) -> None:
         """The coverage inventory rejects the same collection policy violation."""

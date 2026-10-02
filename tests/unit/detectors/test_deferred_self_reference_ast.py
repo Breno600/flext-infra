@@ -108,8 +108,8 @@ class TestsFlextInfraDeferredSelfReferenceNormalizer:
             'type _Kind = Literal["one", "two"]',
         ],
     )
+    @staticmethod
     def test_public_normalizer_accepts_declared_owner_aliases(
-        self,
         declaration: str,
     ) -> None:
         """An existing qualified alias must not block unrelated sibling repairs."""
@@ -152,8 +152,8 @@ class TestsFlextInfraDeferredSelfReferenceNormalizer:
         "declaration",
         ["_Kind: object", "class Other:\n        _Kind = str"],
     )
+    @staticmethod
     def test_public_normalizer_rejects_unbound_or_foreign_owner_members(
-        self,
         declaration: str,
     ) -> None:
         """An annotation-only slot or another class's member is not an owner binding."""

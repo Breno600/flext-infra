@@ -106,8 +106,8 @@ class TestsFlextInfraCodegenLayoutGitignore:
 
     @pytest.mark.slow
     @pytest.mark.parametrize("directory_suffix", ["", "-lane"])
+    @staticmethod
     def test_rendered_gitignore_satisfies_layout_additions(
-        self,
         tmp_path: Path,
         directory_suffix: str,
     ) -> None:

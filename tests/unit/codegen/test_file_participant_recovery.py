@@ -26,8 +26,8 @@ class TestsFlextInfraFileParticipantRecovery:
     """Recover prepared file-only journals through their physical owners."""
 
     @pytest.mark.parametrize("invalid_later_plan", ["participant", "destination"])
+    @staticmethod
     def test_later_invalid_plan_leaves_no_partial_staging(
-        self,
         tmp_path: Path,
         invalid_later_plan: str,
     ) -> None:
@@ -163,8 +163,8 @@ class TestsFlextInfraFileParticipantRecovery:
         tm.that(recovered.value, eq=True)
 
     @pytest.mark.parametrize("foreign_change", ["none", "extra", "replaced"])
+    @staticmethod
     def test_prepared_publication_recovery_requires_original_tree(
-        self,
         tmp_path: Path,
         foreign_change: str,
     ) -> None:
@@ -214,8 +214,8 @@ class TestsFlextInfraFileParticipantRecovery:
 
     @pytest.mark.parametrize("with_foreign_file", [False, True])
     @pytest.mark.parametrize("journal_state", ["staging", "prepared"])
+    @staticmethod
     def test_unmanifested_created_directory_owns_no_descendants(
-        self,
         tmp_path: Path,
         journal_state: str,
         *,
@@ -265,8 +265,8 @@ class TestsFlextInfraFileParticipantRecovery:
 
     @pytest.mark.parametrize("journal_change", ["unchanged", "replaced", "missing"])
     @pytest.mark.parametrize("failure_kind", ["validator", "exception", "abort"])
+    @staticmethod
     def test_session_failure_never_recovers_changed_journal(
-        self,
         tmp_path: Path,
         failure_kind: str,
         journal_change: str,

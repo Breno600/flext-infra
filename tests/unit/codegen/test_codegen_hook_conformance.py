@@ -146,8 +146,8 @@ class TestsFlextInfraCodegenHookConformance:
         tm.that(rendered, lacks=".local")
 
     @pytest.mark.parametrize("inherited", ["ci", "local"])
+    @staticmethod
     def test_pre_push_check_unsets_inherited_ci_before_the_real_make_runtime(
-        self,
         tmp_path: Path,
         inherited: str,
     ) -> None:

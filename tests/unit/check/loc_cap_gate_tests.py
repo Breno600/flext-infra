@@ -104,8 +104,8 @@ class TestsFlextInfraLocCapGate:
             '[{"Name":"Python","Files":[{"Location":"sample.py","Code":true}]}]',
         ],
     )
+    @staticmethod
     def test_scc_boundary_rejects_incomplete_or_malformed_output(
-        self,
         payload: str,
     ) -> None:
         """Invalid native reports cannot become an empty successful scan."""
@@ -113,7 +113,8 @@ class TestsFlextInfraLocCapGate:
             m.Infra.SccReport.model_validate_json(payload, strict=True)
 
     @pytest.mark.parametrize("payload", ["[]", '[{"Name":"Python","Files":[]}]'])
-    def test_scc_boundary_accepts_valid_empty_collections(self, payload: str) -> None:
+    @staticmethod
+    def test_scc_boundary_accepts_valid_empty_collections(payload: str) -> None:
         """Empty scanner collections differ from absent or malformed output."""
         report = m.Infra.SccReport.model_validate_json(payload, strict=True)
 

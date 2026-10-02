@@ -98,6 +98,8 @@ class FlextInfraUtilitiesLintRecipes:
             ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
             str,
         ] = {}
+        static_methods: list[ast.FunctionDef | ast.AsyncFunctionDef] = []
+        left: list[m.Infra.Issue] = []
         wants_notice = False
         for issue in issues:
             recipe = recipes.get(issue.code)
@@ -123,6 +125,19 @@ class FlextInfraUtilitiesLintRecipes:
                 case c.Infra.LintFixRecipe.SUMMARY_DOCSTRING:
                     definition = cls._defined_at(tree, issue.line, path)
                     summaries[definition] = cls._summary_for(definition)
+                case c.Infra.LintFixRecipe.NO_SELF_USE:
+                    function = cls._defined_at(tree, issue.line, path)
+                    if not isinstance(
+                        function,
+                        ast.FunctionDef | ast.AsyncFunctionDef,
+                    ):
+                        msg = f"{path}: no-self-use finding at line {issue.line} is not a function"
+                        raise ValueError(msg)
+                    removal = cls._staticmethod_removal(source, function)
+                    if removal is None:
+                        left.append(issue)
+                    else:
+                        static_methods.append((function, removal))
                 case c.Infra.LintFixRecipe.COPYRIGHT_NOTICE:
                     wants_notice = True
         edits: list[t.Triple[int, int, str]] = []
@@ -150,6 +165,14 @@ class FlextInfraUtilitiesLintRecipes:
             first_line = min((first.lineno, *(item.lineno for item in decorators)))
             offset = cls._offset(lines, first_line, 0)
             edits.append((offset, offset, f'{" " * first.col_offset}"""{text}"""\n'))
+        for function, removal in static_methods:
+            def_start = cls._offset(lines, function.lineno, 0)
+            indent = " " * function.col_offset
+            # TWO well-separated edits: the decorator above the def, and the
+            # byte-precise removal of the self parameter span. Editing the
+            # same offset twice clobbered the function.
+            edits.append((def_start, def_start, f"{indent}@staticmethod\n"))
+            edits.append(removal)
         if wants_notice:
             module_docstring = cls._docstring_expr(tree)
             if module_docstring is None:
@@ -167,7 +190,7 @@ class FlextInfraUtilitiesLintRecipes:
         rewritten = source
         for start, end, text in sorted(edits, key=lambda edit: edit[0], reverse=True):
             rewritten = f"{rewritten[:start]}{text}{rewritten[end:]}"
-        return rewritten
+        return rewritten, left
 
     @staticmethod
     def _docstring_expr(
@@ -237,6 +260,74 @@ class FlextInfraUtilitiesLintRecipes:
             msg = f"{path}: no function encloses line {line}"
             raise ValueError(msg)
         return max(enclosing, key=lambda node: node.lineno)
+
+    @staticmethod
+    def _require_staticmethod_candidate(
+        function: ast.FunctionDef | ast.AsyncFunctionDef,
+    ) -> bool:
+        """Return whether the staticmethod rewrite mechanically holds.
+
+        Only dunders (protocol hooks whose static form changes meaning) and
+        non-trivial decorators need the author's judgment; kwonly params,
+        defaults, and vararg/kwarg stay intact — only the self token and its
+        trailing comma leave.
+
+        """
+        if function.name.startswith("__") and function.name.endswith("__"):
+            return False
+        for decorator in function.decorator_list:
+            if ast.unparse(decorator) not in {
+                "override",
+                "abstractmethod",
+                "typing.override",
+            }:
+                return False
+        return bool(function.args.args) and function.args.args[0].arg == "self"
+
+    @classmethod
+    def _staticmethod_removal(
+        cls,
+        source: str,
+        function: ast.FunctionDef | ast.AsyncFunctionDef,
+    ) -> t.Triple[int, int, str] | None:
+        """Return the ``(start, end, "")`` edit removing the self parameter.
+
+        The self span is byte-precise from the AST; the removal consumes the
+        trailing comma and the rest of self's own line when that line carries
+        nothing else, keeping single- and multiline signatures intact.
+        ``None`` when self's line shape is not mechanically removable (the
+        finding stays reported for manual repair).
+
+        """
+        lines = source.splitlines(keepends=True)
+        self_arg = function.args.args[0]
+        line = lines[self_arg.lineno - 1]
+        line_start = cls._offset(lines, self_arg.lineno, 0)
+        after_self = line[self_arg.col_offset + len("self") :]
+        if after_self.strip() == ",":
+            # `self,` alone on its own line: remove the whole line.
+            return line_start, line_start + len(line), ""
+        if after_self.startswith(","):
+            # Same line: drop `self, ` (or `self,` before `)`).
+            comma = after_self.index(",")
+            rest = after_self[comma + 1 :]
+            if rest.strip():
+                return (
+                    line_start + self_arg.col_offset,
+                    line_start
+                    + self_arg.col_offset
+                    + len("self")
+                    + 1
+                    + (len(rest) - len(rest.lstrip())),
+                    "",
+                )
+            # self is the last param on the line: remove `, self` instead.
+            before = line[: self_arg.col_offset]
+            if before.rstrip().endswith(","):
+                cut = line_start + len(before.rstrip()) - 1
+                return cut, line_start + self_arg.col_offset + len("self"), ""
+            return None
+        return None
 
     @staticmethod
     def _defined_at(

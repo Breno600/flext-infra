@@ -111,8 +111,8 @@ class TestsFlextInfraAuditor:
             (None, "all", "custom_output"),
         ],
     )
+    @staticmethod
     def test_audit_option_variants(
-        self,
         *,
         auditor: FlextInfraDocAuditor,
         tmp_path: Path,
@@ -166,8 +166,8 @@ class TestsFlextInfraAuditor:
             ("<path/to/file.md#section?param=value>", "path/to/file.md"),
         ],
     )
+    @staticmethod
     def test_normalize_link(
-        self,
         normalize_link: Callable[[str], str],
         raw: str,
         expected: str,
@@ -185,8 +185,8 @@ class TestsFlextInfraAuditor:
             ("[a/b]", "a/b", False),
         ],
     )
+    @staticmethod
     def test_should_skip_target(
-        self,
         *,
         should_skip_target: Callable[[str, str], bool],
         text: str,
@@ -197,8 +197,8 @@ class TestsFlextInfraAuditor:
         tm.that(should_skip_target(text, target), eq=expected)
 
     @pytest.mark.parametrize("scheme", sorted(c.Infra.DOCS_EXTERNAL_SCHEMES))
+    @staticmethod
     def test_permitted_external_schemes_are_preserved(
-        self,
         *,
         is_external: Callable[[str], bool],
         scheme: str,
@@ -220,8 +220,8 @@ class TestsFlextInfraAuditor:
             f"{c.Infra.DOCS_INSECURE_WEB_SCHEME.upper()}://example.invalid",
         ],
     )
+    @staticmethod
     def test_insecure_documentation_urls_fail_fast(
-        self,
         *,
         is_external: Callable[[str], bool],
         target: str,

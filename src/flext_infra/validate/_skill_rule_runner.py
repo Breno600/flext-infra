@@ -62,8 +62,8 @@ class FlextInfraSkillRuleRunnerMixin:
             )
             violations.append(f"[{rule_id}] {count} {label}")
 
+    @staticmethod
     def _run_ast_grep_count(
-        self,
         rule: t.MappingKV[str, t.JsonValue],
         skill_dir: Path,
         project_path: Path,

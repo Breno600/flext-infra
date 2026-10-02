@@ -188,8 +188,8 @@ class TestsFlextInfraAuditorScope:
             ("machine-paths", "Run from /home/someone/flext\n"),
         ],
     )
+    @staticmethod
     def test_audit_findings_fail(
-        self,
         tmp_path: Path,
         check: str,
         markdown: str,
@@ -212,8 +212,8 @@ class TestsFlextInfraAuditorScope:
         tm.that(report.items, empty=False)
 
     @pytest.mark.parametrize("scope_name", ["root", "flext-demo", "test"])
+    @staticmethod
     def test_audit_report_scope_cannot_permit_findings(
-        self,
         tmp_path: Path,
         scope_name: str,
     ) -> None:

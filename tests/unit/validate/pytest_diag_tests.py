@@ -438,8 +438,8 @@ class TestsFlextInfraPytestDiag:
         ],
         ids=["missing-call", "missing-teardown", "duplicate-setup"],
     )
+    @staticmethod
     def test_report_log_rejects_incomplete_or_repeated_lifecycles(
-        self,
         tmp_path: Path,
         phases: t.StrTuple,
         expected: str,

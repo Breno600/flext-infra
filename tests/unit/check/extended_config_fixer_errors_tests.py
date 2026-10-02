@@ -28,8 +28,8 @@ class TestsFlextInfraExtendedConfigFixerErrors:
             ("[build-system]\n", "no-tool-pyrefly"),
         ],
     )
+    @staticmethod
     def test_process_file_returns_empty_for_non_fixable_documents(
-        self,
         tmp_path: Path,
         pyproject: str,
         name: str,

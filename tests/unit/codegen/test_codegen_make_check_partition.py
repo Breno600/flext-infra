@@ -89,8 +89,8 @@ class TestsFlextInfraCodegenMakeCheckPartition:
 
     @pytest.mark.slow
     @pytest.mark.parametrize("context", ["ci", "local", "all"])
+    @staticmethod
     def test_make_check_keeps_a_missing_runtime_fatal(
-        self,
         tmp_path: Path,
         context: str,
     ) -> None:

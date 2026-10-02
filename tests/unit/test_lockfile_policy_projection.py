@@ -30,8 +30,8 @@ class TestsFlextInfraLockfilePolicyProjection:
             ".mise/locks/pypi-fixture/1.0.0/uv.lock",
         ],
     )
+    @staticmethod
     def test_rendered_gitignore_tracks_dependency_locks(
-        self,
         profile: c.Infra.MakeProfile,
         lock_filename: str,
     ) -> None:
@@ -58,8 +58,8 @@ class TestsFlextInfraLockfilePolicyProjection:
             ".mise/locks/mise.test.local/npm-fixture/1.0.0/aube-lock.yaml",
         ],
     )
+    @staticmethod
     def test_rendered_gitignore_keeps_local_mise_state_untracked(
-        self,
         profile: c.Infra.MakeProfile,
         relative_path: str,
     ) -> None:

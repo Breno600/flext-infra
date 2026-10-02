@@ -174,8 +174,8 @@ class TestsFlextInfraDepsModernizerWorkspace:
             pytest.param("", False, False, id="missing"),
         ],
     )
+    @staticmethod
     def test_toml_read_handles_public_file_cases(
-        self,
         tmp_path: Path,
         content: str,
         *,
@@ -229,8 +229,8 @@ class TestsFlextInfraDepsModernizerWorkspace:
             ),
         ],
     )
+    @staticmethod
     def test_conform_preserves_explicit_project_table_boundary(
-        self,
         tmp_path: Path,
         description: str,
         sort_first: t.StrSequence | None,
@@ -440,8 +440,8 @@ class TestsFlextInfraDepsModernizerWorkspace:
         tm.that(exact.run(), eq=0)
 
     @pytest.mark.parametrize("member_kind", ["absolute", "parent-relative", "symlink"])
+    @staticmethod
     def test_modernizer_rejects_configured_members_outside_workspace(
-        self,
         modernizer_workspace: Path,
         member_kind: str,
     ) -> None:
@@ -475,8 +475,8 @@ class TestsFlextInfraDepsModernizerWorkspace:
         )
 
     @pytest.mark.parametrize("selector_kind", ["absolute", "parent-relative"])
+    @staticmethod
     def test_modernizer_rejects_undeclared_project_paths(
-        self,
         modernizer_workspace: Path,
         selector_kind: str,
     ) -> None:

@@ -50,8 +50,8 @@ class TestsFlextInfraCodegenMakeContracts:
         tm.that(custom.read_text(encoding="utf-8"), eq=content)
 
     @pytest.mark.slow
+    @staticmethod
     def test_valid_private_custom_make_has_no_rejection(
-        self,
         infra_git_repo: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -101,8 +101,8 @@ class TestsFlextInfraCodegenMakeContracts:
         tm.fail(result, has="unterminated .PHONY continuation")
 
     @pytest.mark.slow
+    @staticmethod
     def test_scaffold_make_help_documents_and_lists_custom_hooks(
-        self,
         infra_git_repo: Path,
     ) -> None:
         """Scaffold help lists the selector-free interface; hooks stay lifecycle-only."""
@@ -134,8 +134,8 @@ class TestsFlextInfraCodegenMakeContracts:
         tm.that(output.stdout, lacks="WHAT")
 
     @pytest.mark.slow
+    @staticmethod
     def test_scaffold_make_runs_pre_and_post_verb_hooks_in_order(
-        self,
         infra_git_repo: Path,
     ) -> None:
         """Generated dispatch runs pre-<verb>, custom handler, post-<verb> in order."""
@@ -208,7 +208,8 @@ class TestsFlextInfraCodegenMakeContracts:
         tm.that(Path(f"{custom}.rej").exists(), eq=False)
 
     @pytest.mark.slow
-    def test_non_regular_custom_make_remains_fatal(self, infra_git_repo: Path) -> None:
+    @staticmethod
+    def test_non_regular_custom_make_remains_fatal(infra_git_repo: Path) -> None:
         """Test non regular custom make remains fatal."""
         root = infra_git_repo
         workspace = TestsFlextInfraConformSupport.standalone_workspace(root)

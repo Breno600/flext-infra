@@ -101,7 +101,8 @@ class TestsFlextInfraDepsModernizerPackaging:
         return root_module, root_package
 
     @pytest.mark.slow
-    def _conform_self(self, infra_git_repo: Path) -> int:
+    @staticmethod
+    def _conform_self(infra_git_repo: Path) -> int:
         """Run codegen conform self-apply through the public CLI entrypoint.
 
         Returns:

@@ -27,8 +27,8 @@ class TestsFlextInfraTypeGates:
     """The selected project's actual findings determine acceptance."""
 
     @pytest.mark.slow
+    @staticmethod
     def test_mypy_cache_is_project_keyed_across_checkouts_and_relocks(
-        self,
         tmp_path: Path,
     ) -> None:
         """Real gate runs populate one external cache per declared project name."""
@@ -79,7 +79,8 @@ class TestsFlextInfraTypeGates:
             )
 
     @pytest.fixture
-    def checker_context(self, real_python_package: Path) -> m.Infra.GateContext:
+    @staticmethod
+    def checker_context(real_python_package: Path) -> m.Infra.GateContext:
         """Configure the existing real package for native checker execution.
 
         Returns:
@@ -101,8 +102,8 @@ class TestsFlextInfraTypeGates:
         )
 
     @pytest.mark.slow
+    @staticmethod
     def test_mypy_preserves_protocol_member_diagnostics(
-        self,
         checker_context: m.Infra.GateContext,
     ) -> None:
         """Native protocol conflict details remain visible in reported issues."""
@@ -126,8 +127,8 @@ class TestsFlextInfraTypeGates:
         tm.that(messages, has=["Expected", "Actual", "def size", "int", "str"])
 
     @pytest.mark.slow
+    @staticmethod
     def test_mypy_preserves_malformed_native_output(
-        self,
         checker_context: m.Infra.GateContext,
     ) -> None:
         """Unexpected plugin output remains a causal, visible tool failure."""
@@ -166,8 +167,8 @@ class TestsFlextInfraTypeGates:
         "gate_class",
         [FlextInfraMypyGate, FlextInfraPyrightGate, FlextInfraPyreflyGate],
     )
+    @staticmethod
     def test_real_check_and_repair(
-        self,
         checker_context: m.Infra.GateContext,
         gate_class: type[FlextInfraGate],
     ) -> None:
@@ -206,8 +207,8 @@ class TestsFlextInfraTypeGates:
             ),
         ],
     )
+    @staticmethod
     def test_real_warning_is_red(
-        self,
         real_python_package: Path,
         gate_class: type[FlextInfraGate],
         config_text: str,
@@ -233,8 +234,8 @@ class TestsFlextInfraTypeGates:
         assert any(issue.severity in {"warn", "warning"} for issue in result.issues)
 
     @pytest.mark.slow
+    @staticmethod
     def test_failed_pyrefly_cannot_reuse_previous_report(
-        self,
         checker_context: m.Infra.GateContext,
     ) -> None:
         """Test failed pyrefly cannot reuse previous report."""
@@ -260,8 +261,8 @@ class TestsFlextInfraTypeGates:
         "gate_class",
         [FlextInfraMypyGate, FlextInfraPyrightGate, FlextInfraPyreflyGate],
     )
+    @staticmethod
     def test_explicit_files_keep_selected_scope(
-        self,
         checker_context: m.Infra.GateContext,
         gate_class: type[FlextInfraGate],
     ) -> None:
@@ -291,8 +292,8 @@ class TestsFlextInfraTypeGates:
         "gate_class",
         [FlextInfraMypyGate, FlextInfraPyrightGate, FlextInfraPyreflyGate],
     )
+    @staticmethod
     def test_empty_source_is_not_passed(
-        self,
         tmp_path: Path,
         gate_class: type[FlextInfraGate],
     ) -> None:
@@ -310,8 +311,8 @@ class TestsFlextInfraTypeGates:
         "gate_class",
         [FlextInfraPyrightGate, FlextInfraPyreflyGate],
     )
+    @staticmethod
     def test_python_analysis_gates_follow_detected_content(
-        self,
         tmp_path: Path,
         real_python_package: Path,
         gate_class: type[FlextInfraGate],
@@ -328,8 +329,8 @@ class TestsFlextInfraTypeGates:
         "report_model",
         [m.Infra.MypyDiagnostic, m.Infra.PyrightReport, m.Infra.PyreflyReport],
     )
+    @staticmethod
     def test_invalid_native_report(
-        self,
         report_model: type[
             m.Infra.MypyDiagnostic | m.Infra.PyrightReport | m.Infra.PyreflyReport
         ],

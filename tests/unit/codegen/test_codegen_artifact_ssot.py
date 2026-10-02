@@ -107,8 +107,8 @@ class TestsFlextInfraCodegenArtifactSsot:
         "profile",
         [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE],
     )
+    @staticmethod
     def test_gitignore_tracks_governed_provider_projections(
-        self,
         codegen: CodegenSpec,
         profile: c.Infra.MakeProfile,
     ) -> None:

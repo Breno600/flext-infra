@@ -58,8 +58,8 @@ class TestsPyrightPublicContract:
             ),
         ],
     )
+    @staticmethod
     def test_publicness_uses_resolved_owner(
-        self,
         tmp_path: Path,
         tool_config_document: m.Infra.ToolConfigDocument,
         consumer: str,

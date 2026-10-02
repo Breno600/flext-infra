@@ -66,8 +66,8 @@ class TestsFlextInfraExtraPathsManager:
             {"pyright": {"extraPaths": []}, "pyrefly": {"search-path": ["."]}},
         ],
     )
+    @staticmethod
     def test_sync_one_success_cases(
-        self,
         tmp_path: Path,
         tool_doc: t.MappingKV[str, t.JsonValue],
     ) -> None:

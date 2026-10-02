@@ -55,8 +55,8 @@ class TestsFlextInfraTransactionDirectoryJournal:
 
     @pytest.mark.slow
     @pytest.mark.parametrize("change_config", [False, True])
+    @staticmethod
     def test_mise_commit_preserves_unchanged_publications(
-        self,
         tmp_path: Path,
         *,
         change_config: bool,
@@ -135,8 +135,8 @@ class TestsFlextInfraTransactionDirectoryJournal:
 
     @pytest.mark.parametrize("foreign_change", [False, True])
     @pytest.mark.parametrize("missing_launcher_parent", [False, True])
+    @staticmethod
     def test_duplicate_phase_recovers_only_its_new_generated_files(
-        self,
         tmp_path: Path,
         *,
         foreign_change: bool,
@@ -231,8 +231,8 @@ class TestsFlextInfraTransactionDirectoryJournal:
 
     @pytest.mark.slow
     @pytest.mark.parametrize("raises", [False, True])
+    @staticmethod
     def test_failed_phase_after_begin_leaves_no_prepared_journal(
-        self,
         tmp_path: Path,
         *,
         raises: bool,
@@ -440,8 +440,8 @@ class TestsFlextInfraTransactionDirectoryJournal:
         )
 
     @pytest.mark.parametrize("with_foreign_file", [False, True])
+    @staticmethod
     def test_phase_failure_preserves_preexisting_staging_root(
-        self,
         tmp_path: Path,
         *,
         with_foreign_file: bool,
@@ -485,8 +485,8 @@ class TestsFlextInfraTransactionDirectoryJournal:
         tm.that(target.exists(), eq=False)
 
     @pytest.mark.parametrize("operation", ["append", "commit"])
+    @staticmethod
     def test_same_content_journal_replacement_is_not_adopted(
-        self,
         tmp_path: Path,
         operation: str,
     ) -> None:

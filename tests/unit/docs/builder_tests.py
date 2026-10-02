@@ -55,8 +55,8 @@ class TestsFlextInfraBuilder:
             {"output_dir": "custom_output"},
         ],
     )
+    @staticmethod
     def test_build_with_option_variants(
-        self,
         builder: FlextInfraDocBuilder,
         tmp_path: Path,
         kwargs: t.MappingKV[str, str | t.SequenceOf[str]],
@@ -78,8 +78,8 @@ class TestsFlextInfraBuilder:
                     pytest.fail(f"invalid projects test case: {invalid!r}")
 
     @pytest.mark.parametrize("status", ["OK", "FAIL", "SKIP"])
+    @staticmethod
     def test_build_report_result_field_values(
-        self,
         status: str,
         tmp_path: Path,
     ) -> None:

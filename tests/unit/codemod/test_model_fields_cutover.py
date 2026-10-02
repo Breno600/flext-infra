@@ -31,8 +31,8 @@ class TestsModelFieldsCutover:
             "candidate.model_fields",
         ],
     )
+    @staticmethod
     def test_public_boundary_rejects_non_models_without_attribute_access(
-        self,
         tmp_path: Path,
         access: str,
     ) -> None:
@@ -138,8 +138,8 @@ class TestsModelFieldsCutover:
             "match None:\n    case type:\n        pass\n",
         ],
     )
+    @staticmethod
     def test_shadowed_contract_is_rejected(
-        self,
         tmp_path: Path,
         declaration: str,
     ) -> None:
@@ -175,8 +175,8 @@ class TestsModelFieldsCutover:
             ),
         ],
     )
+    @staticmethod
     def test_unsafe_statement_layout_or_receiver_rebinding_fails(
-        self,
         tmp_path: Path,
         body: str,
     ) -> None:

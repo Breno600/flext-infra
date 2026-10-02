@@ -21,8 +21,8 @@ class TestsFlextInfraDepsDetectorReport:
     """Tests for ``FlextInfraDepsDetectorReport``."""
 
     @pytest.mark.parametrize("custom", [False, True])
+    @staticmethod
     def test_report_path_and_real_project_identity(
-        self,
         real_detector_project: Path,
         *,
         custom: bool,

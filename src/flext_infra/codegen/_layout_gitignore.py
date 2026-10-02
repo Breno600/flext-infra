@@ -41,8 +41,8 @@ class FlextInfraCodegenLayoutGitignoreMixin:
             return self._apply_gitignore_managed(project_dir, profile)
         return self._apply_gitignore_append(project_dir, patterns)
 
+    @staticmethod
     def _apply_gitignore_managed(
-        self,
         project_dir: Path,
         profile: c.Infra.MakeProfile,
     ) -> p.Result[t.Infra.LayoutStatus]:
@@ -90,8 +90,8 @@ class FlextInfraCodegenLayoutGitignoreMixin:
         applied_status: t.Infra.LayoutStatus = "applied"
         return r[t.Infra.LayoutStatus].ok(applied_status)
 
+    @staticmethod
     def _apply_gitignore_append(
-        self,
         project_dir: Path,
         patterns: t.StrSequence,
     ) -> p.Result[t.Infra.LayoutStatus]:

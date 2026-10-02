@@ -68,8 +68,8 @@ class TestsFlextInfraLazyMapFreshness:
     # Why (suite budget): full-suite xdist can stall durable atomic writes
     # beyond the default case timeout while the lazy-init harness publishes files.
     @pytest.mark.slow
+    @staticmethod
     def test_stale_generated_lazy_map_fails_report(
-        self,
         tmp_path: Path,
         v: FlextInfraValidateLazyMapFreshness,
     ) -> None:

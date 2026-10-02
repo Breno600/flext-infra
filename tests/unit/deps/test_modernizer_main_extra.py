@@ -48,8 +48,8 @@ class TestsFlextInfraDepsModernizerMainExtra:
             pytest.param("[invalid toml {", 2, id="invalid-root-pyproject"),
         ],
     )
+    @staticmethod
     def test_run_handles_root_edge_cases(
-        self,
         tmp_path: Path,
         content: str | None,
         expected: int,

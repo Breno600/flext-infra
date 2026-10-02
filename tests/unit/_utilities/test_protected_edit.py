@@ -19,13 +19,14 @@ if TYPE_CHECKING:
 
 class TestsFlextInfraUtilitiesProtectedEdit:
     @pytest.fixture(autouse=True)
-    def provisioned_workspace(self, tmp_path: Path) -> None:
+    @staticmethod
+    def provisioned_workspace(tmp_path: Path) -> None:
         """The edited workspace is a checkout whose environment owns the tools."""
         u.Tests.provision_checkout(tmp_path)
 
     @pytest.mark.parametrize("batch", [False, True])
+    @staticmethod
     def test_invalid_ruff_configuration_propagates_and_restores_source(
-        self,
         tmp_path: Path,
         *,
         batch: bool,
@@ -83,8 +84,8 @@ class TestsFlextInfraUtilitiesProtectedEdit:
         ("introduced", "nonfixable"),
         [(False, False), (True, False), (True, True)],
     )
+    @staticmethod
     def test_normalization_repairs_only_files_with_new_findings(
-        self,
         tmp_path: Path,
         *,
         batch: bool,

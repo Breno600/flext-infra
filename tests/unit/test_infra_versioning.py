@@ -35,8 +35,8 @@ class TestsFlextInfraInfraVersioning:
         ],
         ids=["standard", "development", "release-candidate", "zero", "large"],
     )
+    @staticmethod
     def test_parse_semver_valid(
-        self,
         version: str,
         expected: t.Triple[int, int, int],
     ) -> None:
@@ -54,7 +54,8 @@ class TestsFlextInfraInfraVersioning:
             "legacy-release-candidate",
         ],
     )
-    def test_parse_semver_invalid(self, version: str) -> None:
+    @staticmethod
+    def test_parse_semver_invalid(version: str) -> None:
         """Reject malformed and legacy release spellings."""
         tm.fail(u.Infra.parse_semver(version), has="invalid semver")
 
@@ -73,8 +74,8 @@ class TestsFlextInfraInfraVersioning:
         ],
         ids=["major", "minor", "patch", "from-zero"],
     )
+    @staticmethod
     def test_bump_version_valid(
-        self,
         version: str,
         bump_type: str,
         expected: str,
@@ -90,8 +91,8 @@ class TestsFlextInfraInfraVersioning:
         ],
         ids=["invalid-bump-type", "invalid-version"],
     )
+    @staticmethod
     def test_bump_version_invalid(
-        self,
         version: str,
         bump_type: str,
         error: str,
@@ -121,8 +122,8 @@ class TestsFlextInfraInfraVersioning:
             "empty-version",
         ],
     )
+    @staticmethod
     def test_current_workspace_version(
-        self,
         tmp_path: Path,
         content: str | None,
         expected: str,
@@ -149,8 +150,8 @@ class TestsFlextInfraInfraVersioning:
         ],
         ids=["success", "missing-file", "missing-project-table"],
     )
+    @staticmethod
     def test_replace_project_version(
-        self,
         tmp_path: Path,
         content: str | None,
         expected: str,

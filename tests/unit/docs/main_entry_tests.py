@@ -49,7 +49,8 @@ class TestsFlextInfraDocsMainEntry:
             ["docs", "validate", "--help"],
         ],
     )
-    def test_help_routes(self, argv: t.SequenceOf[str]) -> None:
+    @staticmethod
+    def test_help_routes(argv: t.SequenceOf[str]) -> None:
         """Expose help successfully for every public docs route."""
         tm.that(infra_main(argv), eq=0)
 

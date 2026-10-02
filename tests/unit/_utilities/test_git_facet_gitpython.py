@@ -256,8 +256,8 @@ class TestsFlextInfraGitFacet:
         assert "dirty.txt" in dirty.value.porcelain
 
     @pytest.mark.parametrize("change", ["tracked", "staged", "untracked"])
+    @staticmethod
     def test_verify_clean_cli_rejects_real_worktree_changes(
-        self,
         real_git_repo: Path,
         capsys: pytest.CaptureFixture[str],
         change: str,
@@ -285,8 +285,8 @@ class TestsFlextInfraGitFacet:
         output = capsys.readouterr()
         tm.that(output.out + output.err, has=changed_path.name)
 
+    @staticmethod
     def test_changed_paths_reports_tracked_and_untracked_files(
-        self,
         real_git_repo: Path,
         capsys: pytest.CaptureFixture[str],
         change: str,

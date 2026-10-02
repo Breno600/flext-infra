@@ -71,8 +71,8 @@ class TestsFlextInfraRunProjects:
         "report_name",
         [c.Infra.CHECK_REPORT_MARKDOWN_FILENAME, c.Infra.CHECK_REPORT_SARIF_FILENAME],
     )
+    @staticmethod
     def test_run_projects_creates_reports(
-        self,
         tmp_path: Path,
         report_name: str,
     ) -> None:

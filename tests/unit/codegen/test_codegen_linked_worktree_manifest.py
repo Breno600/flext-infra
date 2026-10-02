@@ -114,8 +114,8 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
             ),
         ],
     )
+    @staticmethod
     def test_invalid_local_beads_identity_fails_before_any_write(
-        self,
         tmp_path: Path,
         beads_content: str | None,
         expected_error: str,

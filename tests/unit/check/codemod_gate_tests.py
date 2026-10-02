@@ -219,7 +219,8 @@ class TestsFlextInfraCodemodGate:
         tm.that(execution.raw_output, has="error(s) found in code")
 
     @pytest.mark.parametrize("payload", ["", "[", "{}", "[{}]", "[null]"])
-    def test_native_json_contract_rejects_malformed_output(self, payload: str) -> None:
+    @staticmethod
+    def test_native_json_contract_rejects_malformed_output(payload: str) -> None:
         """An empty stream or malformed finding cannot be a clean native scan."""
         with pytest.raises(m.ValidationError):
             m.Infra.AstGrepReport.model_validate_json(payload)

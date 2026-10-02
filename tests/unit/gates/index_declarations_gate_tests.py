@@ -27,7 +27,8 @@ class TestsFlextInfraIndexDeclarationsGate:
     """Every indexed gitlink must be declared in `.gitmodules`."""
 
     @pytest.fixture
-    def gate_result(self, tmp_path: Path) -> Callable[..., m.Infra.GateResult]:
+    @staticmethod
+    def gate_result(tmp_path: Path) -> Callable[..., m.Infra.GateResult]:
         """Build a repository with the requested defects and run the gate over it.
 
         One owner for the whole arrange-act pair: the tests differ only in which

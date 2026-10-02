@@ -165,7 +165,8 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
             return generated
         return u.Infra.update_changelog(root, plan.next, plan.tag, notes)
 
-    def phase_tag(self, ctx: m.Infra.ReleasePhaseDispatchConfig) -> p.Result[bool]:
+    @staticmethod
+    def phase_tag(ctx: m.Infra.ReleasePhaseDispatchConfig) -> p.Result[bool]:
         """Tag the merged release commit; idempotent when the tag already points here.
 
         Returns:

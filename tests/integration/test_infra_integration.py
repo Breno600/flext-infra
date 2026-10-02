@@ -29,7 +29,8 @@ class TestsFlextInfraIntegrationInfraIntegration:
     """Integration tests for the public FlextInfra surface."""
 
     @pytest.mark.integration
-    def test_markdown_fix_reports_residual_after_repair(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_markdown_fix_reports_residual_after_repair(tmp_path: Path) -> None:
         """A fixable finding is repaired; an unfixable one stays reported for check."""
         project_dir = tu.Tests.mk_project(tmp_path, "markdown-fmt-contract")
         document = project_dir / "README.md"
@@ -50,7 +51,8 @@ class TestsFlextInfraIntegrationInfraIntegration:
         tm.that(execution.issues[0].code, eq="MD041")
 
     @pytest.mark.integration
-    def test_markdown_check_retains_normalization_finding(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_markdown_check_retains_normalization_finding(tmp_path: Path) -> None:
         """A native MD013 normalization diagnostic remains visible to callers."""
         project_dir = tu.Tests.mk_project(tmp_path, "markdown-normalization")
         (project_dir / ".markdownlint.json").write_text(
@@ -83,7 +85,8 @@ class TestsFlextInfraIntegrationInfraIntegration:
         tm.that(execution.issues[0].code, eq="MD013")
 
     @pytest.mark.integration
-    def test_cli_capture_git_current_branch_in_real_repo(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_cli_capture_git_current_branch_in_real_repo(tmp_path: Path) -> None:
         """Test git branch detection through the canonical CLI runtime surface."""
         repo_root = tmp_path / "repo"
         repo_root.mkdir()

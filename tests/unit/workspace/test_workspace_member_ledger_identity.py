@@ -22,8 +22,8 @@ class TestsFlextInfraWorkspaceMemberLedgerIdentity:
 
     @pytest.mark.parametrize("root_produces_activation", [False, True])
     @pytest.mark.parametrize("member_produces_activation", [False, True])
+    @staticmethod
     def test_manifest_load_preserves_each_activation_producer(
-        self,
         tmp_path: Path,
         *,
         root_produces_activation: bool,

@@ -32,7 +32,8 @@ class TestsFlextInfraDocsGeneratorInternals:
         "heading",
         ["Contrato público", "Composição de serviços", "Žlutý kůň", "Test--Case"],
     )
-    def test_anchorize_matches_rendered_markdown(self, heading: str) -> None:
+    @staticmethod
+    def test_anchorize_matches_rendered_markdown(heading: str) -> None:
         """Generated links target the renderer's real Unicode-normalized heading ID."""
         rendered = Markdown(extensions=["toc"]).convert(f"## {heading}")
         anchor = u.Infra.anchorize(heading)

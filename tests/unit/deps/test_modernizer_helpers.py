@@ -65,7 +65,8 @@ class TestsFlextInfraDepsModernizerHelpers:
             ("Django>=3.0,<4.0", "django"),
         ],
     )
-    def test_dep_name(self, raw: str, expected: str | None) -> None:
+    @staticmethod
+    def test_dep_name(raw: str, expected: str | None) -> None:
         """Verify dep name."""
         tm.that(u.Infra.dep_name(raw), eq=expected)
 
@@ -79,8 +80,8 @@ class TestsFlextInfraDepsModernizerHelpers:
             (["Requests>=2.0", "requests>=2.1"], 1, ["requests"], False),
         ],
     )
+    @staticmethod
     def test_dedupe_specs(
-        self,
         specs: t.StrSequence,
         expected_length: int,
         expected_names: t.StrSequence,
@@ -106,8 +107,8 @@ class TestsFlextInfraDepsModernizerHelpers:
         ("value", "expected"),
         [("test", "test"), (None, None), ({"key": "value"}, {"key": "value"})],
     )
+    @staticmethod
     def test_unwrap_item(
-        self,
         value: t.Cli.TomlMappingSource | None,
         expected: t.JsonValue,
     ) -> None:
@@ -131,8 +132,8 @@ class TestsFlextInfraDepsModernizerHelpers:
             (u.Cli.toml_item_from_json_value(42), []),
         ],
     )
+    @staticmethod
     def test_as_string_list(
-        self,
         value: t.Cli.TomlItem | None,
         expected: t.StrSequence,
     ) -> None:
@@ -156,12 +157,14 @@ class TestsFlextInfraDepsModernizerHelpers:
         ("items", "expected"),
         [(["a", "b", "c"], 3), ([], 0), (["single"], 1)],
     )
-    def test_array(self, items: t.StrSequence, expected: int) -> None:
+    @staticmethod
+    def test_array(items: t.StrSequence, expected: int) -> None:
         """Verify TOML array construction preserves item count."""
         tm.that(len(u.Cli.toml_array(items)), eq=expected)
 
     @pytest.mark.parametrize("mode", ["new", "existing", "replace-non-table"])
-    def test_ensure_table(self, mode: str) -> None:
+    @staticmethod
+    def test_ensure_table(mode: str) -> None:
         """Verify ensure table."""
         parent = u.Cli.toml_table()
         if mode == "existing":

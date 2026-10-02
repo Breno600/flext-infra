@@ -65,8 +65,8 @@ class TestsFlextInfraDepsDetectorMain:
         [("requests", "pytz"), ("requests", "pytz", "six")],
         indirect=True,
     )
+    @staticmethod
     def test_apply_typings_follows_governed_policy_and_preserves_source(
-        self,
         real_detector_project: Path,
     ) -> None:
         """Test apply typings follows governed policy and preserves source."""

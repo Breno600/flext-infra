@@ -36,8 +36,8 @@ class TestsFlextInfraPytestTimeoutConfig:
         ),
         [(1, 6, 1, 1), (7, 20, 2, 8)],
     )
+    @staticmethod
     def test_arbitrary_valid_execution_policy_round_trips(
-        self,
         case_timeout_seconds: int,
         run_timeout_seconds: int,
         termination_grace_seconds: int,
@@ -72,7 +72,8 @@ class TestsFlextInfraPytestTimeoutConfig:
         "field",
         ["case-timeout-seconds", "run-timeout-seconds", "termination-grace-seconds"],
     )
-    def test_operator_caps_are_hard_typed_boundaries(self, field: str) -> None:
+    @staticmethod
+    def test_operator_caps_are_hard_typed_boundaries(field: str) -> None:
         """Test operator caps are hard typed boundaries."""
         policy = config.Infra.tooling.tools.pytest
         payload = policy.model_dump(by_alias=True, exclude_computed_fields=True)
@@ -85,7 +86,8 @@ class TestsFlextInfraPytestTimeoutConfig:
         "override",
         ["-o", "-o=addopts=", "--override-ini", "--override-ini=addopts="],
     )
-    def test_pytest_ini_override_is_forbidden(self, override: str) -> None:
+    @staticmethod
+    def test_pytest_ini_override_is_forbidden(override: str) -> None:
         """Test pytest ini override is forbidden."""
         policy = config.Infra.tooling.tools.pytest
         payload = policy.model_dump(by_alias=True, exclude_computed_fields=True)
@@ -130,7 +132,8 @@ class TestsFlextInfraPytestTimeoutConfig:
             "pytest slow timeout must be less than run timeout",
         ],
     )
-    def test_slow_budget_is_a_hard_typed_boundary(self, expected: str) -> None:
+    @staticmethod
+    def test_slow_budget_is_a_hard_typed_boundary(expected: str) -> None:
         """A slow budget outside the case/run walls is unrepresentable."""
         policy = config.Infra.tooling.tools.pytest
         payload = policy.model_dump(by_alias=True, exclude_computed_fields=True)
@@ -194,8 +197,8 @@ class TestsFlextInfraPytestTimeoutConfig:
             "--tb=short\n-o=addopts=",
         ],
     )
+    @staticmethod
     def test_reporting_policy_cannot_override_runner_owned_argv(
-        self,
         argument: str,
     ) -> None:
         """Test reporting policy cannot override runner owned argv."""

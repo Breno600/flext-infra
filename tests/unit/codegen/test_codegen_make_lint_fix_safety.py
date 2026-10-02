@@ -40,8 +40,8 @@ class TestsFlextInfraCodegenMakeLintFixSafety:
         tm.that(str(failure.value), has=c.Infra.RUFF_UNSAFE_FIXES_FLAG)
 
     @pytest.mark.slow
+    @staticmethod
     def test_scaffold_pyproject_renders_the_fix_safety_policy(
-        self,
         tmp_path: Path,
     ) -> None:
         """The rendered Ruff lint table carries the SSOT fix-safety lists."""

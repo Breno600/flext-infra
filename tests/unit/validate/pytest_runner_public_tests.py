@@ -25,8 +25,8 @@ class TestsFlextInfraPytestRunner:
     """Exercise the real pytest, testmon, coverage, and report lifecycle."""
 
     @pytest.mark.parametrize("ci_context", [True, False])
+    @staticmethod
     def test_marker_selection_is_shared_by_collection_execution_and_coverage(
-        self,
         cached_runner_project: Path,
         *,
         ci_context: bool,
@@ -128,8 +128,8 @@ class TestsFlextInfraPytestRunner:
         )
 
     @pytest.mark.slow
+    @staticmethod
     def test_config_only_changes_invalidate_the_persistent_cache(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """A governed YAML change executes again using the same Testmon database."""
@@ -287,8 +287,8 @@ class TestsFlextInfraPytestRunner:
         )
 
     @pytest.mark.slow
+    @staticmethod
     def test_failed_slow_item_stays_red_across_budgeted_runs(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """A budgeted xdist run never erases the slow phase's failure.
@@ -333,8 +333,8 @@ class TestsFlextInfraPytestRunner:
 
     @pytest.mark.slow
     @pytest.mark.parametrize("omit_case", [False, True], ids=["order", "membership"])
+    @staticmethod
     def test_warm_workers_follow_the_central_selection_order(
-        self,
         cached_runner_project: Path,
         *,
         omit_case: bool,
@@ -384,8 +384,8 @@ class TestsFlextInfraPytestRunner:
         )
 
     @pytest.mark.slow
+    @staticmethod
     def test_first_failure_stops_remaining_cases(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """The first failure stops dispatch; only in-flight cases still finish.
@@ -436,8 +436,8 @@ class TestsFlextInfraPytestRunner:
         "finding",
         ["skip", "warning", "mro-warning", "homonymous-warning"],
     )
+    @staticmethod
     def test_runtime_findings_keep_complete_accounting(
-        self,
         cached_runner_project: Path,
         finding: str,
     ) -> None:
@@ -501,8 +501,8 @@ class TestsFlextInfraPytestRunner:
         tm.that(warning_evidence.count("repeated runtime evidence"), eq=warnings_count)
 
     @pytest.mark.slow
+    @staticmethod
     def test_setup_failure_is_accounted_without_a_call_phase(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """A failed fixture is one complete lifecycle: setup and teardown, no call."""
@@ -528,8 +528,8 @@ class TestsFlextInfraPytestRunner:
         )
 
     @pytest.mark.slow
+    @staticmethod
     def test_external_gate_markers_are_not_executed_offline(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """An external-token gate is deselected, never a KeyError, and reported.
@@ -582,8 +582,8 @@ class TestsFlextInfraPytestRunner:
 
     @pytest.mark.slow
     @pytest.mark.parametrize("ci_context", [False, True])
+    @staticmethod
     def test_full_includes_external_and_ci_markers_after_incremental_scope(
-        self,
         cached_runner_project: Path,
         *,
         ci_context: bool,
@@ -660,8 +660,8 @@ class TestsFlextInfraPytestRunner:
         )
 
     @pytest.mark.slow
+    @staticmethod
     def test_full_runs_after_warm_cache_and_ignores_node_like_diagnostics(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """Cold, warm, and full collection use final items and one physical DB."""
@@ -748,8 +748,8 @@ class TestsFlextInfraPytestRunner:
         )
 
     @pytest.mark.slow
+    @staticmethod
     def test_warm_partial_selection_accounts_for_every_stable_test(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """A changed dependency executes its consumer and accounts for stable IDs."""
@@ -798,8 +798,8 @@ class TestsFlextInfraPytestRunner:
         )
 
     @pytest.mark.slow
+    @staticmethod
     def test_full_stops_at_the_first_incremental_failure(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """Test full stops at the first incremental failure."""
@@ -845,8 +845,8 @@ class TestsFlextInfraPytestRunner:
         )
 
     @pytest.mark.slow
+    @staticmethod
     def test_full_rejects_an_empty_complete_collection(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """Test full rejects an empty complete collection."""

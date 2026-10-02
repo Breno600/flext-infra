@@ -23,8 +23,8 @@ class TestsFlextInfraCodegenLazyInitFilePlans:
 
     @pytest.mark.slow
     @pytest.mark.parametrize("scope", tuple(c.Infra.CodegenConformScope))
+    @staticmethod
     def test_lazy_publication_owns_exact_conform_repositories(
-        self,
         tmp_path: Path,
         scope: c.Infra.CodegenConformScope,
     ) -> None:

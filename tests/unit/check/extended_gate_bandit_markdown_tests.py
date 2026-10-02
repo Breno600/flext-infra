@@ -122,8 +122,8 @@ class TestsFlextInfraBanditAndMarkdownGates:
             (REFLOW_HINT, CANONICAL_MARKDOWNLINT_CONFIG, False, []),
         ],
     )
+    @staticmethod
     def test_markdown_check(
-        self,
         *,
         tmp_path: Path,
         markdown_text: str,

@@ -34,8 +34,8 @@ class TestsFlextInfraBindingInstall:
             "inactive-override",
         ],
     )
+    @staticmethod
     def test_binding_uses_consumer_contract(
-        self,
         tmp_path: Path,
         scenario: str,
     ) -> None:

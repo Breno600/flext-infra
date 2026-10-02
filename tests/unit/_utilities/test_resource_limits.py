@@ -151,8 +151,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
             ("memory", None),
         ],
     )
+    @staticmethod
     def test_resource_limit_enforces_exit_deadline_and_memory(
-        self,
         tmp_path: Path,
         scenario: str,
         expected: int | None,
@@ -202,8 +202,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
 
     @pytest.mark.slow
     @pytest.mark.parametrize("expected", [7, 124])
+    @staticmethod
     def test_resource_limit_stops_resistant_descendant_group(
-        self,
         tmp_path: Path,
         expected: int,
         request: pytest.FixtureRequest,
@@ -328,8 +328,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
             pytest.param(" 1024", marks=pytest.mark.slow),
         ],
     )
+    @staticmethod
     def test_mypy_resource_limit_rejects_non_integer_environment(
-        self,
         invalid_value: str,
     ) -> None:
         """Reject non-integer process text before constructing the strict model.

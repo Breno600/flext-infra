@@ -21,7 +21,8 @@ class TestsFlextInfraCliRepositoryRootContract:
     """Tests for ``FlextInfraCliRepositoryRootContract``."""
 
     @pytest.fixture
-    def rendered_makefile(self, tmp_path: Path) -> str:
+    @staticmethod
+    def rendered_makefile(tmp_path: Path) -> str:
         """Use the conform owner and typed fixtures, not a copied Make recipe.
 
         Returns:
@@ -63,8 +64,8 @@ class TestsFlextInfraCliRepositoryRootContract:
             ],
         ],
     )
+    @staticmethod
     def test_generated_scope_matches_route_and_help(
-        self,
         rendered_makefile: str,
         group: str,
         command: str,

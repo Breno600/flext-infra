@@ -29,8 +29,8 @@ class TestsFlextInfraCodegenRuntimeProfiles:
         ),
     )
     @pytest.mark.parametrize("composed", [False, True])
+    @staticmethod
     def test_declared_profile_restores_runtime_and_preserves_custom_specs(
-        self,
         tmp_path: Path,
         upstream: str,
         *,
@@ -204,7 +204,8 @@ class TestsFlextInfraCodegenRuntimeProfiles:
         )
 
     @pytest.mark.parametrize("invalid", ['["external>=1", 42]', '"external>=1"'])
-    def test_invalid_custom_requirements_are_not_discarded(self, invalid: str) -> None:
+    @staticmethod
+    def test_invalid_custom_requirements_are_not_discarded(invalid: str) -> None:
         """Composition rejects malformed arrays rather than filtering their entries."""
         rendered = '[project]\nname = "sample"\ndependencies = ["owned>=2"]\n'
         live = f'[project]\nname = "sample"\ndependencies = {invalid}\n'

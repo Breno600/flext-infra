@@ -25,8 +25,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
     """Prove generated operations ignore the caller shell environment."""
 
     @pytest.mark.remote
+    @staticmethod
     def test_upg_replaces_newer_lock_revision_before_older_mise_reads_it(
-        self,
         tmp_path: Path,
         resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
     ) -> None:
@@ -61,8 +61,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(upgraded.stdout, has="setup probe: end stage=publish-lock.log exit=0")
 
     @pytest.mark.remote
+    @staticmethod
     def test_failed_upg_lock_preserves_runtime_and_retires_own_stage(
-        self,
         tmp_path: Path,
         resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
     ) -> None:
@@ -103,8 +103,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         )
 
     @pytest.mark.parametrize("failure_return", [None, 37])
+    @staticmethod
     def test_public_dispatch_activates_once_before_hooks(
-        self,
         tmp_path: Path,
         *,
         failure_return: int | None,
@@ -170,8 +170,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         "environment_part",
         ["runtime", "runtime-bin", ".venv", ".venv/bin"],
     )
+    @staticmethod
     def test_foreign_environment_is_rejected_before_effects(
-        self,
         tmp_path: Path,
         verb: str,
         environment_part: str,
@@ -215,8 +215,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
             tm.that(foreign.exists(), eq=False)
 
     @pytest.mark.parametrize("command_line", [False, True])
+    @staticmethod
     def test_derived_workspace_paths_ignore_foreign_redirection(
-        self,
         tmp_path: Path,
         *,
         command_line: bool,
@@ -282,8 +282,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
     # index and GitHub sources (an external gate); `make test-full` selects
     # it after the incremental test phase.
     @pytest.mark.remote
+    @staticmethod
     def test_generated_make_uses_profile_runtime_venv_under_hostile_env(
-        self,
         tmp_path: Path,
         resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
         profile: c.Infra.MakeProfile,
@@ -702,8 +702,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         "profile",
         [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE],
     )
+    @staticmethod
     def test_build_verb_renders_uv_build_for_packaged_repositories(
-        self,
         tmp_path: Path,
         profile: c.Infra.MakeProfile,
     ) -> None:
@@ -726,8 +726,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         "profile",
         [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE],
     )
+    @staticmethod
     def test_build_verb_renders_typed_noop_for_package_false_roots(
-        self,
         tmp_path: Path,
         profile: c.Infra.MakeProfile,
     ) -> None:
@@ -755,8 +755,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         "profile",
         [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE],
     )
+    @staticmethod
     def test_every_declared_check_gate_reaches_the_runtime(
-        self,
         tmp_path: Path,
         profile: c.Infra.MakeProfile,
     ) -> None:
@@ -954,8 +954,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(waza.get("version_prefix"), eq=toolchain.waza_version_prefix)
 
     @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
+    @staticmethod
     def test_upg_hands_the_staged_lock_to_the_transaction_publisher(
-        self,
         tmp_path: Path,
         profile: c.Infra.MakeProfile,
     ) -> None:
@@ -979,8 +979,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, lacks=["gen > /dev/null", "could not be staged"])
 
     @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
+    @staticmethod
     def test_bootstrap_selects_the_github_credential_from_declared_sources(
-        self,
         tmp_path: Path,
         profile: c.Infra.MakeProfile,
     ) -> None:
@@ -1107,8 +1107,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
             assert ref == u.Tests.provider_branch()
 
     @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
+    @staticmethod
     def test_help_prints_description_as_literal_data(
-        self,
         tmp_path: Path,
         profile: c.Infra.MakeProfile,
     ) -> None:

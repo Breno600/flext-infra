@@ -31,8 +31,8 @@ class TestsFlextInfraRopeAnalysis:
             ("from ..leaf import Owner as Local", ".inner.leaf.Owner"),
         ],
     )
+    @staticmethod
     def test_declared_imports_preserve_relative_levels(
-        self,
         tmp_path: Path,
         statement: str,
         suffix: str,

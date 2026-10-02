@@ -86,8 +86,8 @@ class TestsFlextInfraGateErrorReporting:
         )
 
     @pytest.mark.slow
+    @staticmethod
     def test_workspace_checker_emits_ruff_stderr_without_findings(
-        self,
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -124,8 +124,8 @@ class TestsFlextInfraGateErrorReporting:
         )
 
     @pytest.mark.slow
+    @staticmethod
     def test_workspace_checker_emits_mypy_plugin_traceback(
-        self,
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -180,8 +180,8 @@ class TestsFlextInfraGateErrorReporting:
             ("# Project\n\n[Missing](missing.md)\n", None, ["[MD057]", "missing.md"]),
         ],
     )
+    @staticmethod
     def test_workspace_checker_emits_real_markdown_failure(
-        self,
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
         readme: str,

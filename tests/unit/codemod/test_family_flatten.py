@@ -22,8 +22,8 @@ class TestsFlextInfraFamilyFlatten:
     """Exercise the real module graph, not mocked semantic identities."""
 
     @pytest.mark.parametrize("collision", [False, True])
+    @staticmethod
     def test_snapshot_rewrites_alias_and_inherited_consumers_without_effects(
-        self,
         tmp_path: Path,
         *,
         collision: bool,
@@ -106,8 +106,8 @@ class TestsFlextInfraFamilyFlatten:
             "class Entity:\n        def value(self) -> int:\n            return 1",
         ],
     )
+    @staticmethod
     def test_entity_classes_are_not_namespace_wrappers(
-        self,
         tmp_path: Path,
         entity: str,
     ) -> None:
@@ -135,8 +135,8 @@ class TestsFlextInfraFamilyFlatten:
         "reference",
         ["ALIAS = {owner}.Wrapper", 'alias: "{owner}.Wrapper"'],
     )
+    @staticmethod
     def test_wrapper_used_as_an_entity_is_preserved_without_edits(
-        self,
         tmp_path: Path,
         reference: str,
     ) -> None:

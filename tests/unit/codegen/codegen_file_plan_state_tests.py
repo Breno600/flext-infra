@@ -182,7 +182,8 @@ class TestsFlextInfraCodegenFilePlanState:
         assert "desired=0o755" in report
 
     @pytest.mark.parametrize("limit", [0, -1])
-    def test_drift_report_rejects_non_positive_limit(self, limit: int) -> None:
+    @staticmethod
+    def test_drift_report_rejects_non_positive_limit(limit: int) -> None:
         """Test drift report rejects non positive limit."""
         with pytest.raises(ValueError, match="limit must be positive"):
             FlextInfraUtilitiesCodegenFilePlan.codegen_file_drift_report(

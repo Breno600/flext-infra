@@ -44,7 +44,8 @@ class TestsFlextInfraGenRespectsInvocationScope:
     """`gen` recipes write to exactly one root per invocation."""
 
     @pytest.fixture
-    def rendered_makefile(self, tmp_path: Path) -> str:
+    @staticmethod
+    def rendered_makefile(tmp_path: Path) -> str:
         """Render the workspace Makefile through the conform owner.
 
         Returns:

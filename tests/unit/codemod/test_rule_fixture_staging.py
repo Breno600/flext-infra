@@ -19,8 +19,8 @@ class TestsFlextInfraModRuleFixtureStaging:
 
     @pytest.mark.parametrize("with_utils", [False, True])
     @pytest.mark.parametrize("regenerate_snapshots", [False, True])
+    @staticmethod
     def test_staging_copies_declared_trees_without_traversing_checkout(
-        self,
         tmp_path: Path,
         *,
         with_utils: bool,
@@ -75,8 +75,8 @@ class TestsFlextInfraModRuleFixtureStaging:
         assert not (staged / ".git").exists()
 
     @pytest.mark.parametrize("declaration", [".", "../outside", "/outside"])
+    @staticmethod
     def test_staging_rejects_owner_wide_or_escaping_declarations(
-        self,
         tmp_path: Path,
         declaration: str,
     ) -> None:
@@ -99,8 +99,8 @@ class TestsFlextInfraModRuleFixtureStaging:
         assert not staged.exists()
 
     @pytest.mark.parametrize("linked_directory", [False, True])
+    @staticmethod
     def test_staging_rejects_declared_symlinks_before_copying(
-        self,
         tmp_path: Path,
         *,
         linked_directory: bool,

@@ -205,6 +205,7 @@ Infra:
             docstring-missing-returns: returns-section
             docstring-missing-yields: yields-section
             docstring-missing-exception: raises-section
+            no-self-use: no-self-use
           # Banned API messages are policy data, never template literals.
           banned-api:
             argparse: "Use cli.register_result_command + Pydantic model from flext_cli."
