@@ -352,6 +352,7 @@ def hermetic_git_environment(tmp_path_factory: pytest.TempPathFactory) -> t.StrM
         "@".join(source) for source in u.Tests.locked_git_sources(_PROJECT_ROOT)
     )
     parent = _run_scoped(
+        _run_root(tmp_path_factory),
         "git-mirrors",
         hashlib.sha256(sources.encode()).hexdigest()[:16],
     )
