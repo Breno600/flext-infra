@@ -17,10 +17,11 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Mapping, MutableMapping
-from functools import lru_cache
+from functools import cache, lru_cache
 from importlib.metadata import packages_distributions
 from importlib.util import find_spec
 from pathlib import Path
+from types import MappingProxyType
 
 from flext_cli import u
 from packaging.utils import canonicalize_name
@@ -494,9 +495,27 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         )
         return frozenset(
             module
-            for module, providers in packages_distributions().items()
-            if any(canonicalize_name(name) in closure for name in providers)
+            for module, providers in cls._installed_import_packages().items()
+            if providers & closure
         )
+
+    @staticmethod
+    @cache
+    def _installed_import_packages() -> t.MappingKV[str, frozenset[str]]:
+        """Map each installed import package to its canonical distributions.
+
+        Installed metadata is a fact of the interpreter environment, fixed for
+        the life of the process, so it is read once; a project's runtime
+        closure over it is still computed per admission pass.
+
+        Returns:
+            The resulting ``t.MappingKV[str, frozenset[str]]``.
+
+        """
+        return MappingProxyType({
+            module: frozenset(canonicalize_name(name) for name in providers)
+            for module, providers in packages_distributions().items()
+        })
 
     @staticmethod
     def _module_exports(file_path: Path) -> frozenset[str]:
