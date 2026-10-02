@@ -96,9 +96,8 @@ class TestsFlextInfraDepsModernizerTooling:
         tm.that(payload, lacks="lint")
         # A project without workspace declarations adds no exclusions, and
         # Ruff keeps its own default excludes (never a replacement list). The
-        # TOML owner writes no key for an empty list, so absence and [] are the
-        # same observable contract: nothing is excluded.
-        tm.that(list(u.Tests.toml_strings(ruff.get("extend-exclude", []))), eq=[])
+        # TOML owner writes no key for an empty list.
+        tm.that(ruff, lacks="extend-exclude")
         tm.that(ruff, lacks="exclude")
         tm.that(ruff["line-length"], eq=ruff_policy.line_length)
         tm.that(ruff["target-version"], eq=ruff_policy.target_version)

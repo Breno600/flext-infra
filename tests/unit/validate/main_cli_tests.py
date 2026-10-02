@@ -74,8 +74,12 @@ class TestsFlextInfraValidateCli:
         return project
 
     def test_namespace_validate_passes_without_findings(self, tmp_path: Path) -> None:
-        """Test namespace validate passes without findings."""
-        project = self._rule_project(tmp_path, "")
+        """A scanned file without rule findings passes.
+
+        The subject holds real code the rule does not match: an empty scan is
+        a broken invocation (it fails loud), never evidence of conformance.
+        """
+        project = self._rule_project(tmp_path, "value = 1\n")
 
         exit_code = infra_main([
             "validate",
