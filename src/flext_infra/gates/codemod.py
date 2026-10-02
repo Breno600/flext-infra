@@ -173,6 +173,10 @@ class FlextInfraCodemodGate(FlextInfraGate):
                     ),
                 )
                 break
+            facts = u.Infra.codemod_project_facts(
+                project_dir,
+                tuple(rules_by_id[finding.rule_id] for finding in report.root),
+            )
             findings.extend(
                 m.Infra.Issue(
                     file=finding.file,
@@ -188,6 +192,7 @@ class FlextInfraCodemodGate(FlextInfraGate):
                     rules_by_id[finding.rule_id],
                     Path(finding.file),
                     {**finding.captures, **finding.transformed},
+                    facts,
                 )
             )
 

@@ -230,5 +230,8 @@ class TestsRenameCampaignMod:
             ),
         )
         tm.that(u.Cli.process_succeeded(result.outcome), eq=False)
-        tm.that(result.stderr, has=expected)
+        # The preflight refusal is a typed command failure, which the CLI
+        # renders on stdout; config-validation errors escape on stderr.
+        tm.that(result.stdout, has=expected)
+        tm.that(guide.read_text(encoding="utf-8"), eq="A campaign_token paragraph.\n")
         tm.that(guide.read_text(encoding="utf-8"), eq="A campaign_token paragraph.\n")

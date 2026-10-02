@@ -470,6 +470,7 @@ split-on-trailing-comma = false
   "typing-only-first-party-import",
   "unused-import",
 ]
+"tests/**/*.py" = ["assert"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

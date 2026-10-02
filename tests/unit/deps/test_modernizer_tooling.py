@@ -94,9 +94,10 @@ class TestsFlextInfraDepsModernizerTooling:
         )
 
         tm.that(payload, lacks="lint")
-        # A project without workspace declarations adds no exclusions, and
-        # Ruff keeps its own default excludes (never a replacement list).
-        tm.that(list(u.Tests.toml_strings(ruff["extend-exclude"])), eq=[])
+        # A project without workspace declarations adds no exclusions (the
+        # empty list leaves the key absent), and Ruff keeps its own default
+        # excludes (never a replacement list).
+        tm.that(ruff, lacks="extend-exclude")
         tm.that(ruff, lacks="exclude")
         tm.that(ruff["line-length"], eq=ruff_policy.line_length)
         tm.that(ruff["target-version"], eq=ruff_policy.target_version)

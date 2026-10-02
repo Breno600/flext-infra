@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import MutableMapping
 from typing import ClassVar
 
-from flext_infra import c, m, p, t, u
+from flext_infra import c, infra, m, p, t, u
 from flext_infra.git import FlextInfraGitService
 from flext_infra.release.orchestrator import FlextInfraReleaseOrchestrator
 from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
@@ -68,9 +68,7 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
                 name=c.Infra.VERB_RUN,
                 help_text="Run release orchestration CLI flow",
                 model_cls=FlextInfraReleaseOrchestrator,
-                handler=FlextInfraCliRouteBase.result_handler(
-                    FlextInfraReleaseOrchestrator.execute_command,
-                ),
+                handler=FlextInfraCliRouteBase.result_handler(infra.release_run),
                 success_message="Release completed successfully",
             ),
         ),
@@ -128,7 +126,7 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
                         "Publish this workspace's flext-infra to every member",
                         FlextInfraWorkspacePropagation,
                         FlextInfraCliRouteBase.result_handler(
-                            FlextInfraWorkspacePropagation.execute_command,
+                            infra.workspace_propagate,
                         ),
                     ),
                     (

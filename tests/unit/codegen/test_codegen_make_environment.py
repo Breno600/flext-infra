@@ -24,6 +24,84 @@ pytestmark = pytest.mark.slow
 class TestsFlextInfraCodegenMakeEnvironment:
     """Prove generated operations ignore the caller shell environment."""
 
+    @pytest.mark.remote
+    def test_upg_replaces_newer_lock_revision_before_older_mise_reads_it(
+        self,
+        tmp_path: Path,
+        resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
+    ) -> None:
+        """The public upgrade recovers a v3 lock with a v2 Mise release."""
+        profile = c.Infra.MakeProfile.STANDALONE
+        project_root = u.Tests.resolved_make_checkout(
+            resolved_make_templates[profile],
+            tmp_path / "lock-revision",
+            profile,
+        )
+        lock = project_root / c.Infra.MISE_LOCK_FILENAME
+        previous = lock.read_text(encoding="utf-8")
+        tm.that(previous, has="lockfile_version = 2")
+        lock.write_text(
+            previous.replace("lockfile_version = 2", "lockfile_version = 3", 1),
+            encoding="utf-8",
+        )
+
+        upgraded = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "upg"],
+                cwd=project_root,
+            ),
+        )
+
+        tm.that(
+            u.Cli.process_succeeded(upgraded.outcome),
+            eq=True,
+            msg=upgraded.stdout + upgraded.stderr,
+        )
+        tm.that(lock.read_text(encoding="utf-8"), has="lockfile_version = 2")
+        tm.that(upgraded.stdout, has="setup probe: end stage=publish-lock.log exit=0")
+
+    @pytest.mark.remote
+    def test_failed_upg_lock_preserves_runtime_and_retires_own_stage(
+        self,
+        tmp_path: Path,
+        resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
+    ) -> None:
+        """A failed real Mise lock cannot strand a downgraded launcher/pin."""
+        profile = c.Infra.MakeProfile.STANDALONE
+        project_root = u.Tests.resolved_make_checkout(
+            resolved_make_templates[profile],
+            tmp_path / "lock-failure",
+            profile,
+        )
+        bootstrap = u.Infra.mise_bootstrap_environment()
+        artifacts = {
+            relative: (project_root / relative).read_bytes()
+            for relative, _mode in bootstrap.artifact_specs
+        }
+        lock = project_root / c.Infra.MISE_LOCK_FILENAME
+        previous_lock = lock.read_bytes()
+        (project_root / c.Infra.MISE_TOML_FILENAME).write_text(
+            "[tools\n",
+            encoding="utf-8",
+        )
+
+        upgraded = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "upg"],
+                cwd=project_root,
+            ),
+        )
+
+        tm.that(u.Cli.process_succeeded(upgraded.outcome), eq=False)
+        tm.that(upgraded.stderr, has="setup probe: failed stage=lock.log")
+        tm.that(lock.read_bytes(), eq=previous_lock)
+        for relative, _mode in bootstrap.artifact_specs:
+            tm.that((project_root / relative).read_bytes(), eq=artifacts[relative])
+        tm.that(
+            list(project_root.parent.glob(f".{project_root.name}.mise-lock-stage.*")),
+            eq=[],
+        )
+
     @pytest.mark.parametrize("failure_return", [None, 37])
     def test_public_dispatch_activates_once_before_hooks(
         self,
@@ -1187,8 +1265,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, lacks="fix-enforcement")
         tm.that(makefile, has="_builtin-fix-namespace: _builtin_fix_namespace")
         tm.that(makefile, has="_builtin-fix-accessors: _builtin_fix_accessors")
-        tm.that(makefile, has="_builtin-self-fix-namespace: _builtin_fix_namespace")
-        tm.that(makefile, has="_builtin-self-fix-accessors: _builtin_fix_accessors")
+        # Each repository evaluates only itself: no _builtin-self-* fan-out.
+        tm.that(makefile, lacks="_builtin-self-")
         tm.that(makefile, has="_builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all")
         tm.that(
             makefile,

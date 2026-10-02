@@ -35,11 +35,16 @@ class TestsFlextInfraCodegenMain:
 
         """
         repository = u.Tests.repository_ref(repo.name)
+        infra = u.Tests.repository_ref("flext-infra")
+        integration = config.Infra.codegen.branch_policy.integration_branch_preference[
+            0
+        ]
         (repo / "pyproject.toml").write_text(
             f'[project]\nname = "{repository.distribution}"\nversion = "0.1.0"\n'
             f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
             'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
-            'dependencies = ["flext-core>=0.1.0"]\n\n'
+            f'dependencies = ["flext-core>=0.1.0", '
+            f'"flext-infra @ git+{infra.url}@{integration}"]\n\n'
             f'[project.urls]\nRepository = "{repository.url}"\n',
             encoding="utf-8",
         )

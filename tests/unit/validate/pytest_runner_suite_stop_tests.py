@@ -156,11 +156,7 @@ class TestsFlextInfraPytestRunnerSuiteStop:
             stop_value(multi_command),
             eq=runner.started_at_monotonic
             + runner.run_timeout_seconds(policy)
-            - (
-                policy.serial_suite_stop_reserve_seconds
-                if multi_workers == "0"
-                else policy.suite_stop_reserve_seconds
-            ),
+            - policy.suite_stop_reserve_seconds,
         )
         serial_workers_index = list(serial_command).index("-n") + 1
         tm.that(list(serial_command)[serial_workers_index], eq="0")

@@ -521,7 +521,8 @@ class TestsFlextInfraRepositoryLocalTopology:
                     "config",
                     "-f",
                     c.Infra.GITMODULES,
-                    "submodule.apps/member.flext-managed",
+                    # The fixture names the section after the distribution.
+                    "submodule.fixture-member.flext-managed",
                     "false",
                 ),
                 cwd=root,
@@ -590,10 +591,9 @@ class TestsFlextInfraRepositoryLocalTopology:
             ),
         )
 
-        tm.that(
-            tuple(item.path for item in plan.files),
-            has=root / c.Infra.MAKEFILE_FILENAME,
-        )
+        planned = tuple(item.path for item in plan.files)
+        for destination in c.Infra.MAKEFILE_BOOTSTRAP_DESTINATIONS:
+            tm.that(planned, has=root / destination)
         tm.fail(
             FlextInfraWorkspaceDetector.load_workspace_spec(root),
             has="no pyproject",

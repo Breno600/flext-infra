@@ -101,6 +101,8 @@ class FlextInfraConstantsCheck:
     SMELLS: ClassVar[str] = "smells"
     RUNTIME_CENSUS: ClassVar[str] = "runtime-census"
     "Gate id whose census rule families no other gate owns."
+    FRESH_IMPORT: ClassVar[str] = "fresh-import"
+    "Gate id of the fresh-process import proof over the provisioned runtime."
     GATE_TOOLS_BY_KIND: ClassVar[t.MappingKV[GateKind, t.MappingKV[str, t.StrPair]]] = (
         MappingProxyType({
             GateKind.EXTERNAL: MappingProxyType({
@@ -122,6 +124,10 @@ class FlextInfraConstantsCheck:
                 "runtime-census": (
                     "Flext Runtime Enforcement Census",
                     "internal://flext-infra/runtime-census",
+                ),
+                FRESH_IMPORT: (
+                    "Flext Fresh-Process Import Gate",
+                    "internal://flext-infra/fresh-import",
                 ),
                 "index-declarations": (
                     "Flext Index Declarations Gate",

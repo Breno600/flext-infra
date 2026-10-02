@@ -53,18 +53,6 @@ class FlextInfraConfigModelsTemplates:
             bool,
             m.Field(description="Whether the projection requires Beads participation"),
         ] = False
-        overwrite: Annotated[
-            bool,
-            m.Field(
-                default=False,
-                description=(
-                    "Whether publication replaces a destination that already "
-                    "exists with different content; the generation transaction "
-                    "journals the replacement so it stays recoverable. Absent "
-                    "or false preserves any existing destination"
-                ),
-            ),
-        ] = False
 
         @m.model_validator(mode="after")
         def validate_delegate_source(self) -> Self:

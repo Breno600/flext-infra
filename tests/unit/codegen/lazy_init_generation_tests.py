@@ -123,7 +123,8 @@ class TestsFlextInfraCodegenGeneration:
 
         compile(content, "__init__.py", "exec")
         tm.that(
-            content, has="from demo_pkg.servers._base.constants import BaseConstants"
+            content,
+            has="from demo_pkg.servers._base.constants import BaseConstants",
         )
         tm.that(content, has='".._base.constants": ("BaseConstants",)')
         tm.that(content, lacks="from .._base.constants import")
@@ -220,7 +221,8 @@ class TestsFlextInfraCodegenGeneration:
 
         compile(content, "__init__.py", "exec")
         tm.that(
-            content, lacks="from demo_pkg._utilities.conversion import DemoConversion"
+            content,
+            lacks="from demo_pkg._utilities.conversion import DemoConversion",
         )
         tm.that(content, lacks="DemoConversion")
         tm.that(content, contains='__all__: tuple[str, ...] = ("Demo",)')
@@ -284,7 +286,8 @@ class TestsFlextInfraCodegenGeneration:
 
         compile(init_content, "__init__.py", "exec")
         tm.that(
-            init_content, contains="from demo_pkg._fixtures.settings import DemoFixture"
+            init_content,
+            contains="from demo_pkg._fixtures.settings import DemoFixture",
         )
         tm.that(init_content, contains='__all__: tuple[str, ...] = ("DemoFixture",)')
         tm.that(init_content, contains="install_lazy_exports")
@@ -428,7 +431,8 @@ class TestsFlextInfraCodegenGeneration:
 
         compile(content, "__init__.py", "exec")
         tm.that(
-            content, contains="from demo_pkg.protocols import FlextDemoProtocols, p"
+            content,
+            contains="from demo_pkg.protocols import FlextDemoProtocols, p",
         )
         tm.that(content, lacks="FlextDemoProtocols as p")
 
@@ -547,7 +551,7 @@ class TestsFlextInfraCodegenGeneration:
         wrapper_root = project_root / "examples"
         wrapper_root.mkdir(parents=True)
         (project_root / c.PYPROJECT_FILENAME).write_text(
-            f'[project]\nname = "demo-worktree-pkg"\nversion = "1.0.0"\n{isort_table}',
+            f'[project]\nname = "demo-worktree-pkg"\nversion = "1.0.0"\nauthors = [{{ name = "Fixture Author" }}]\n{isort_table}',
             encoding="utf-8",
         )
         plan = m.Infra.LazyInitPlan(
@@ -600,7 +604,7 @@ class TestsFlextInfraCodegenGeneration:
             "[tool.ruff.lint.isort]\nknown-first-party = []\n" if declared_empty else ""
         )
         (tmp_path / c.PYPROJECT_FILENAME).write_text(
-            f'[project]\nname = "configured-workspace"\nversion = "1.0.0"\n{table}',
+            f'[project]\nname = "configured-workspace"\nversion = "1.0.0"\nauthors = [{{ name = "Fixture Author" }}]\n{table}',
             encoding="utf-8",
         )
         plan = self._plan(
@@ -655,3 +659,57 @@ class TestsFlextInfraCodegenGeneration:
 
         with pytest.raises(m.ValidationError):
             FlextInfraCodegenGeneration.render_init(plan)
+
+    def test_runtime_imports_are_one_isort_section_with_the_lazy_helpers(
+        self,
+    ) -> None:
+        """The helpers import sorts inside the first-party block it belongs to.
+
+        In the bootstrap root the helpers live in a sibling module of the
+        ``__version__`` import; both are first-party, so Ruff isort keeps them
+        in one block ordered by module. A separate helpers block was rewritten
+        by ``make fix`` after every ``make gen``.
+        """
+        root = c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
+        plan = self._plan(
+            root,
+            ("FlextLazy", "__version__"),
+            MappingProxyType({
+                "FlextLazy": (c.Infra.LAZY_BOOTSTRAP_MODULE, "FlextLazy"),
+            }),
+            eager_dunders=MappingProxyType({
+                "__version__": (f"{root}.__version__", "__version__"),
+            }),
+        )
+
+        content = FlextInfraCodegenGeneration.render_init(plan)
+
+        helpers = ", ".join(c.Infra.LAZY_BOOTSTRAP_HELPERS)
+        tm.that(
+            content,
+            contains=(
+                f"from {root}.__version__ import __version__\n"
+                f"from {c.Infra.LAZY_BOOTSTRAP_MODULE} import {helpers}\n"
+            ),
+        )
+
+    def test_expanded_single_entry_mapping_keeps_its_trailing_comma(self) -> None:
+        """An exploded one-entry mapping carries the comma COM812 requires.
+
+        The entry fits one line while the inline mapping does not, which is
+        the shape whose comma-less rendering ``make fix`` rewrote.
+        """
+        plan = self._plan(
+            "demo_pkg",
+            ("FlextDemoGeneratedFacade",),
+            MappingProxyType({
+                "FlextDemoGeneratedFacade": (
+                    "demo_pkg._generated_parts.facade_part_04",
+                    "FlextDemoGeneratedFacade",
+                ),
+            }),
+        )
+
+        content = FlextInfraCodegenGeneration.render_init(plan)
+
+        tm.that(content, contains='("FlextDemoGeneratedFacade",),\n        }),')
