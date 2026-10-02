@@ -25,7 +25,9 @@ class FlextInfraToolTablesPhase:
 
     @staticmethod
     def first_party_namespaces(
-        project_dir: Path,
+        payload: t.MutableJsonMapping | None = None,
+        *,
+        path: Path,
         planned_sources: t.SequenceOf[Path] = (),
     ) -> t.StrSequence:
         """Derive the project's first-party namespaces from one source each.
@@ -42,13 +44,26 @@ class FlextInfraToolTablesPhase:
             The sorted first-party namespaces.
 
         """
-        docs = u.Cli.toml_mapping_path(payload, (c.Infra.TOOL, "flext", "docs"))
+        docs = (
+            u.Cli.toml_mapping_path(payload, (c.Infra.TOOL, "flext", "docs"))
+            if payload is not None
+            else None
+        )
         declared_package = None if docs is None else docs.get("package_name")
         return sorted({
             *config.Infra.tooling.tools.deptry.known_first_party,
             *u.Infra.discover_first_party_namespaces(path.parent),
+            *(
+                source.relative_to(path.parent).parts[0]
+                for source in planned_sources
+                if source.is_relative_to(path.parent) and len(source.relative_to(path.parent).parts) > 1
+            ),
             *((declared_package,) if isinstance(declared_package, str) else ()),
-            *u.Infra.flext_dependency_namespaces_from_payload(payload),
+            *(
+                u.Infra.flext_dependency_namespaces_from_payload(payload)
+                if payload is not None
+                else ()
+            ),
         })
 
     def _mypy_phase(self) -> m.Infra.DepsToml.PhaseConfig:
@@ -329,7 +344,7 @@ class FlextInfraToolTablesPhase:
         return u.Infra.apply_toml_phases(
             payload,
             *self._phases(
-                first_party=self.first_party_namespaces(path.parent),
+                first_party=self.first_party_namespaces(payload, path=path.parent),
                 path=path.parent,
             ),
         )

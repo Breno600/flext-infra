@@ -232,8 +232,8 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
         rebinds = u.Infra.facade_rebind_modules(root, planned_sources)
         first_party = tuple(
             FlextInfraToolTablesPhase.first_party_namespaces(
-                root,
-                tuple(planned_sources),
+                path=root,
+                planned_sources=tuple(planned_sources),
             ),
         )
         if rebinds == tuple(tooling.mypy_facade_rebind_modules) and (
