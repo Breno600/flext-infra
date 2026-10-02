@@ -26,10 +26,12 @@ from flext_infra.codemod.text_gates import FlextInfraModTextGateEngine
 from flext_infra.docs.formatter import FlextInfraDocFormatter
 from flext_infra.docs.generator import FlextInfraDocGenerator
 from flext_infra.gates.markdown_format import FlextInfraMarkdownFormatGate
+from flext_infra.release.orchestrator import FlextInfraReleaseOrchestrator
 from flext_infra.services.candidate_bootstrap import FlextInfraCandidateBootstrapService
 from flext_infra.validate.namespace_validator import FlextInfraNamespaceValidator
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 from flext_infra.workspace.environment import FlextInfraWorkspaceEnvironmentMixin
+from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
 from flext_infra.workspace.rope import FlextInfraRopeWorkspace
 
 if TYPE_CHECKING:
@@ -216,6 +218,31 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
 
         Returns:
             The resulting ``p.Result[m.Infra.CodegenResult]``.
+
+        """
+        return command.model_copy(
+            update={"conform_collaborators": self.codegen_conform_collaborators()},
+        ).execute()
+
+    def release_run(self, command: FlextInfraReleaseOrchestrator) -> p.Result[bool]:
+        """Run one release phase with the facade-wired conform ports.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        return command.model_copy(
+            update={"conform_collaborators": self.codegen_conform_collaborators()},
+        ).execute()
+
+    def workspace_propagate(
+        self,
+        command: FlextInfraWorkspacePropagation,
+    ) -> p.Result[bool]:
+        """Propagate to every member with the facade-wired conform ports.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
 
         """
         return command.model_copy(

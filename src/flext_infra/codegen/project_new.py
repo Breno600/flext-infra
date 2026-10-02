@@ -132,8 +132,8 @@ class FlextInfraCodegenProjectNew(
             default=None,
             exclude=True,
             description=(
-                "Docs and fresh-import ports bound by FlextInfra.codegen_new; the "
-                "scaffold conform fails before any effect without them"
+                "Docs port bound by FlextInfra.codegen_new; the scaffold "
+                "conform fails before any effect without it"
             ),
         ),
     ]
