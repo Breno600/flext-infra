@@ -105,14 +105,15 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
             "The violation is still reported; only the automatic rewrite is off."
         ),
         "typing_unifier": (
-            "fix deactivated: typing unification is owned by the rated rope phase "
-            "of `make mod` (the approved rewriting surface), not by the "
-            "enforcement fix run. Its rewrite must prove runtime availability of "
-            "the owning package facade before introducing a self import, which "
-            "the whole-file fix path cannot establish; refusing there is correct "
-            "for `make mod` but must never turn the enforcement run into an "
-            "unhandled failure. The violation is still reported; only the "
-            "automatic rewrite is off."
+            "fix deactivated: the typing unifier rewrote annotation text inside "
+            "`fix-enforcement`, whose contract is to keep every byte of the "
+            "module, its docstrings, comments and string literals included (the "
+            "documented ENFORCE-030 expectation). Typing modernization is owned "
+            "by the ast-grep codemod rules of `make mod` and by rope, not by this "
+            "adapter, and the transformer requires runtime parameters "
+            "(symbols_to_replace) that the enforcement action does not declare, "
+            "so constructing it here crashed the whole fix run. The violation is "
+            "still reported; only the automatic rewrite is off."
         ),
     }
 

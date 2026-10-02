@@ -806,21 +806,21 @@ class FlextInfraModelsDepsToolConfig(
                 validation_alias=m.AliasPath("ruff", "src"),
                 description="Conformed Ruff source roots",
             ),
-        ] = m.Field(default_factory=tuple)
+        ] = ()
         ruff_exclude: Annotated[
             t.StrTuple,
             m.Field(
                 validation_alias=m.AliasPath("ruff", "exclude"),
                 description="Conformed Ruff exclusions",
             ),
-        ]
+        ] = ()
         ruff_ignore: Annotated[
             t.StrTuple,
             m.Field(
                 validation_alias=m.AliasPath("ruff", "lint", "ignore"),
                 description="Conformed Ruff ignores",
             ),
-        ]
+        ] = ()
 
     # flext-j47u (codex): explicit runtime-only values keep the Jinja structure full.
     class ToolingRuntimeContext(m.ArbitraryTypesModel):
