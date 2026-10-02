@@ -30,7 +30,6 @@ if TYPE_CHECKING:
     from flext_infra.services.cli_routes_workspace import FlextInfraWorkspaceRoutes
     from flext_infra.services.codegen import FlextInfraCodegen
 
-
 __all__: tuple[str, ...] = (
     "FlextInfraCandidateBootstrapService",
     "FlextInfraCliDispatchService",

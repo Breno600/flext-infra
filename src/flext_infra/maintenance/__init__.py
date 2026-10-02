@@ -17,7 +17,6 @@ if TYPE_CHECKING:
     from flext_infra.maintenance.python_version import FlextInfraPythonVersionEnforcer
     from flext_infra.maintenance.sonarcloud import FlextInfraSonarcloudSettingsSync
 
-
 __all__: tuple[str, ...] = (
     "FlextInfraCleanService",
     "FlextInfraPythonVersionEnforcer",

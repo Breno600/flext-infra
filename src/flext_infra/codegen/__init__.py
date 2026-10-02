@@ -145,7 +145,6 @@ if TYPE_CHECKING:
     from flext_infra.codegen.scaffolder import FlextInfraCodegenScaffolder
     from flext_infra.codegen.version_file import FlextInfraCodegenVersionFile
 
-
 __all__: tuple[str, ...] = (
     "FlextInfraCodegenCensus",
     "FlextInfraCodegenConform",

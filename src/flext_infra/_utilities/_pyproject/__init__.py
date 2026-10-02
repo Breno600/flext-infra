@@ -35,7 +35,6 @@ if TYPE_CHECKING:
         FlextInfraUtilitiesPyprojectUvSources,
     )
 
-
 __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesPyprojectConformBase",
     "FlextInfraUtilitiesPyprojectDocument",

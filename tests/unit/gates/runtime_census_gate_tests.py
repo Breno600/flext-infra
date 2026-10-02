@@ -139,7 +139,13 @@ class TestsRuntimeCensusBlocking:
         mixed_project: Path,
         genuine_project: Path,
     ) -> None:
-        """Prefix, constant, and parameter violations belong to runtime census."""
+        """Prefix and constant violations both belong to runtime census.
+
+        Parameter-count findings are ``code_smell`` rules: the runtime census
+        imports classes and runs the core enforcement, which never emits
+        smell tags — those belong to the smells gate suite.
+
+        """
         mixed = tm.ok(
             FlextInfraRuntimeCensusValidator(
                 repository_root=mixed_project,
@@ -152,7 +158,7 @@ class TestsRuntimeCensusBlocking:
         )
         tm.that(mixed.passed, eq=False)
         tm.that("\n".join(mixed.violations), has="[ENFORCE-079]")
-        tm.that("\n".join(mixed.violations), has="[smell_function_parameters]")
+        tm.that("\n".join(mixed.violations), has="[class_prefix]")
         tm.that(len(mixed.violations) > len(genuine.violations), eq=True)
         tm.that(
             mixed.summary,
@@ -165,7 +171,8 @@ class TestsRuntimeCensusBlocking:
         gate = FlextInfraRuntimeCensusGate(repository_root=mixed_project)
         result = gate.check(mixed_project, context).result
         tm.that(result.passed, eq=False)
-        tm.that("\n".join(result.errors), has="[smell_function_parameters]")
+        tm.that("\n".join(result.errors), has="[ENFORCE-079]")
+        tm.that("\n".join(result.errors), has="[class_prefix]")
 
     @staticmethod
     def test_single_violation_reports_verbatim(

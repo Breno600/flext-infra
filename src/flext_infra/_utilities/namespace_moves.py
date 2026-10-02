@@ -61,7 +61,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         protocol_moves: t.MutableSequenceOf[
             t.Triple[Path, Path, t.VariadicTuple[str]]
         ] = []
-        for source_file, protocol_names in grouped.items():
+        for source_file, protocol_names in names_by_file.items():
             try:
                 move = FlextInfraUtilitiesRefactorNamespaceMoves._move_named_blocks(
                     project_root=project_root,

@@ -393,12 +393,47 @@ class FlextInfraUtilitiesPyproject:
         return r[Path].ok(binary)
 
     @staticmethod
-    @cache
-    def pyproject_payload(pyproject_path: Path) -> t.JsonMapping:
+    @lru_cache(maxsize=c.Infra.CONTENT_CACHE_MAXSIZE)
+    def _pyproject_payload_cached(
+        pyproject_path: Path,
+        *,
+        mtime_ns: int,
+        size: int,
+    ) -> t.JsonMapping:
+        """Parse one pyproject payload keyed by the file's content identity.
+
+        The identity (``mtime_ns``, ``size``) comes from the caller's live
+        stat, so an edited file is always reparsed and a fixed-point loop
+        never re-parses an unchanged one.
+
+        Returns:
+            One parsed ``pyproject.toml`` payload validated against ``t.Infra``.
+
+        Raises:
+            RuntimeError: If failed to read pyproject payload at; or if pyproject
+                payload at.
+
+        """
+        live = FlextInfraUtilitiesPyproject.live_pyproject_text(pyproject_path)
+        if live.failure:
+            msg = f"failed to read pyproject payload at {pyproject_path}: {live.error}"
+            raise RuntimeError(msg)
+        payload = u.Cli.toml_mapping_from_text(live.value)
+        if payload is None:
+            msg = f"pyproject payload at {pyproject_path} is not valid TOML"
+            raise RuntimeError(msg)
+        return FlextInfraUtilitiesPyproject.validate_infra_payload(payload)
+
+    @classmethod
+    def pyproject_payload(cls, pyproject_path: Path) -> t.JsonMapping:
         """Return one parsed ``pyproject.toml`` payload validated against ``t.Infra``.
 
         The payload is parsed from the live text with managed merge
-        conflicts resolved (``live_pyproject_text``).
+        conflicts resolved (``live_pyproject_text``). The parse is memoized
+        per content identity (mtime + size): a plain ``functools.cache`` made
+        every later reader in the process see the file as it was on the first
+        read, so a pyproject edited after one read (the declared-project
+        resolution, the modernizer) silently resolved against stale content.
 
         Returns:
             One parsed ``pyproject.toml`` payload validated against ``t.Infra``.
@@ -410,15 +445,12 @@ class FlextInfraUtilitiesPyproject:
         """
         if not pyproject_path.is_file():
             return {}
-        live = FlextInfraUtilitiesPyproject.live_pyproject_text(pyproject_path)
-        if live.failure:
-            msg = f"failed to read pyproject payload at {pyproject_path}: {live.error}"
-            raise RuntimeError(msg)
-        payload = u.Cli.toml_mapping_from_text(live.value)
-        if payload is None:
-            msg = f"pyproject payload at {pyproject_path} is not valid TOML"
-            raise RuntimeError(msg)
-        return FlextInfraUtilitiesPyproject.validate_infra_payload(payload)
+        stat = pyproject_path.stat()
+        return cls._pyproject_payload_cached(
+            pyproject_path,
+            mtime_ns=stat.st_mtime_ns,
+            size=stat.st_size,
+        )
 
     @staticmethod
     def normalized_toml_payload(document: t.Cli.TomlDocument) -> t.JsonMapping:

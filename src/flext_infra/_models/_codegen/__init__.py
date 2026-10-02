@@ -31,7 +31,6 @@ if TYPE_CHECKING:
         FlextInfraModelsCodegenTransactionModels,
     )
 
-
 __all__: tuple[str, ...] = (
     "FlextInfraCodegen",
     "FlextInfraModelsCodegenFixModels",

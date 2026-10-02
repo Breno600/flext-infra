@@ -22,7 +22,6 @@ if TYPE_CHECKING:
         FlextInfraWorkspaceCheckGatesMixin,
     )
 
-
 __all__: tuple[str, ...] = (
     "FlextInfraGateRegistry",
     "FlextInfraWorkspaceCheckGatesMixin",

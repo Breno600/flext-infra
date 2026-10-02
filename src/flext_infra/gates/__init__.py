@@ -34,7 +34,6 @@ if TYPE_CHECKING:
     from flext_infra.gates.scanner_gate import FlextInfraScannerGateMixin
     from flext_infra.gates.smells import FlextInfraSmellsGate
 
-
 __all__: tuple[str, ...] = (
     "FlextInfraBanditGate",
     "FlextInfraDirenvGate",

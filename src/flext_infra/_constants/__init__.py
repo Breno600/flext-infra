@@ -42,7 +42,6 @@ if TYPE_CHECKING:
     from flext_infra._constants.validate import FlextInfraConstantsSharedInfra
     from flext_infra._constants.workspace import FlextInfraConstantsWorkspace
 
-
 __all__: tuple[str, ...] = (
     "FlextInfraConstantsBase",
     "FlextInfraConstantsCensus",

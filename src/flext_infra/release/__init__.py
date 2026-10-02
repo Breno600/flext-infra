@@ -23,7 +23,6 @@ if TYPE_CHECKING:
     from flext_infra.release._release_source import FlextInfraReleaseSourceMixin
     from flext_infra.release.orchestrator import FlextInfraReleaseOrchestrator
 
-
 __all__: tuple[str, ...] = (
     "FlextInfraReleaseArtifactMixin",
     "FlextInfraReleaseBoundaryMixin",

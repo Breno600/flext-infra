@@ -110,6 +110,11 @@ class FlextInfraUtilitiesCodemodRules:
                 f"missing project.name: {pyproject}",
             )
         raw_dependencies = project.get(c.Infra.DEPENDENCIES)
+        if raw_dependencies is None:
+            # ``project.dependencies`` is spec-optional: a project with no
+            # declared runtime dependency has an empty runtime closure, not a
+            # malformed manifest.
+            raw_dependencies = ()
         if not isinstance(raw_dependencies, Sequence) or isinstance(
             raw_dependencies,
             str,
