@@ -106,6 +106,28 @@ class FlextInfraModelsTransformers:
             m.Field(description="Module-level names the file already binds"),
         ]
 
+    class NestingModuleAliasScan(m.ArbitraryTypesModel):
+        """Module bindings one consumer holds on modules whose members nest."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        aliases: Annotated[
+            t.StrMapping,
+            m.Field(description="Local module binding mapped to its nested module"),
+        ]
+        residual: Annotated[
+            frozenset[str],
+            m.Field(description="Bindings still used as the module object"),
+        ]
+        read: Annotated[
+            frozenset[str],
+            m.Field(description="Bindings read through a member the owner holds"),
+        ]
+        owner_imports: Annotated[
+            frozenset[str],
+            m.Field(description="Nested modules whose owner the file imports"),
+        ]
+
     class PrivateImportRewritePlan(m.ArbitraryTypesModel):
         """Binding-proven import rewrites planned for one private-import file."""
 

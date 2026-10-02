@@ -1,0 +1,229 @@
+"""Module-owner derivation for class nesting of loose modules.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
+
+from __future__ import annotations
+
+import ast
+import typing
+from typing import TYPE_CHECKING
+
+from flext_cli import u
+
+from flext_core import r
+from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from flext_infra import m, p, t
+
+
+class FlextInfraUtilitiesSemanticCutoverNestingOwner:
+    """Derive one module owner and the loose members it absorbs.
+
+    A family module holds exactly one class, its facade-family owner. The
+    owner's name is never listed: it is the declared owner when the module
+    declares one, otherwise the project class stem (the source of
+    ``require-project-class-stem``) followed by the family suffix and, for a
+    module of a private family package, the module stem. Everything else at
+    module level that ``ban-loose-module-object`` reports — a function other
+    than ``main``, a value binding that is not a name alias or a typing
+    declaration, any further class — is a member of that owner.
+    """
+
+    @staticmethod
+    def _tail_name(node: ast.expr) -> str:
+        """Return the last dotted segment of a name or attribute expression.
+
+        Returns:
+            The trailing identifier, or an empty string for other shapes.
+
+        """
+        if isinstance(node, ast.Subscript):
+            node = node.value
+        if isinstance(node, ast.Attribute):
+            return node.attr
+        if isinstance(node, ast.Name):
+            return node.id
+        return ""
+
+    @classmethod
+    def _loose_value_name(cls, node: ast.stmt) -> str | None:
+        """Return the bound name when ``node`` is a loose module value binding.
+
+        Returns:
+            The bound identifier, or ``None`` for an allowed or foreign shape.
+
+        """
+        if isinstance(node, ast.Assign):
+            if len(node.targets) != 1:
+                return None
+            target, value, annotation = node.targets[0], node.value, None
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            target, value, annotation = node.target, node.value, node.annotation
+        else:
+            return None
+        if not isinstance(target, ast.Name) or (
+            target.id.startswith("__") and target.id.endswith("__")
+        ):
+            return None
+        if isinstance(value, ast.Name):
+            return None
+        # Typing declarations belong to ban-manual-typing-alias-outside-typings:
+        # an explicit ``TypeAlias`` binding, or a binding constructed by a
+        # class the ``typing`` module exports (TypeVar, ParamSpec, NewType...).
+        if (
+            annotation is not None
+            and getattr(typing, cls._tail_name(annotation), None) is typing.TypeAlias
+        ):
+            return None
+        if isinstance(value, ast.Call) and isinstance(
+            getattr(typing, cls._tail_name(value.func), None),
+            type,
+        ):
+            return None
+        return target.id
+
+    @classmethod
+    def _loose_members(
+        cls,
+        tree: ast.Module,
+        *,
+        values: bool,
+    ) -> t.VariadicTuple[str]:
+        """Return loose functions and value bindings in module order.
+
+        Returns:
+            Every loose member name, in source order.
+
+        """
+        names: list[str] = []
+        for node in tree.body:
+            if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                if node.name != "main" and not (
+                    node.name.startswith("__") and node.name.endswith("__")
+                ):
+                    names.append(node.name)
+            elif values and (name := cls._loose_value_name(node)) is not None:
+                names.append(name)
+        return tuple(dict.fromkeys(names))
+
+    @staticmethod
+    def _definition_time_names(node: ast.stmt) -> frozenset[str]:
+        """Names a member reads while its own definition executes.
+
+        Returns:
+            The identifiers loaded by decorators, defaults and bound values.
+
+        """
+        roots: list[ast.AST] = []
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+            roots.extend(node.decorator_list)
+            roots.extend(node.args.defaults)
+            roots.extend(
+                default for default in node.args.kw_defaults if default is not None
+            )
+        elif isinstance(node, ast.Assign | ast.AnnAssign) and node.value is not None:
+            roots.append(node.value)
+        return frozenset(
+            name.id
+            for root in roots
+            for name in ast.walk(root)
+            if isinstance(name, ast.Name)
+        )
+
+    @classmethod
+    def _require_movable_members(
+        cls,
+        tree: ast.Module,
+        members: t.VariadicTuple[str],
+        *,
+        owner: str,
+        module_name: str,
+    ) -> p.Result[bool]:
+        """Reject a loose member whose move would change its meaning.
+
+        A member that reads the owner while it is being defined cannot live in
+        the owner's body, and a function rebinding module state through
+        ``global`` loses that state once it becomes a static method.
+
+        Returns:
+            Success, or a failure naming the module and the member.
+
+        """
+        checked = r[bool]
+        selected = frozenset(members)
+        for node in tree.body:
+            name = (
+                node.name
+                if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+                else cls._loose_value_name(node)
+            )
+            if name is None or name not in selected:
+                continue
+            if owner in cls._definition_time_names(node):
+                return checked.fail(
+                    f"class-nesting cannot move {module_name}.{name} under "
+                    f"{owner}: it reads the owner while it is defined",
+                )
+            if any(isinstance(inner, ast.Global) for inner in ast.walk(node)):
+                return checked.fail(
+                    f"class-nesting cannot move {module_name}.{name} under "
+                    f"{owner}: it rebinds module state through global",
+                )
+        return checked.ok(True)
+
+    @staticmethod
+    def _module_owner(
+        convention: m.Infra.RopeModuleConvention,
+        file_path: Path,
+        classes: t.MappingKV[str, ast.ClassDef],
+    ) -> p.Result[str]:
+        """Return the declared owner, or the owner the family derivation names.
+
+        Returns:
+            The owner class name, or a failure when the derivation is ambiguous.
+
+        """
+        derived = r[str]
+        policy = convention.module_policy
+        declared = policy.expected_family
+        if declared is not None and declared in classes:
+            return derived.ok(declared)
+        namespace = FlextInfraUtilitiesCodegenNamespace
+        families = namespace.facade_families()
+        directory_family = namespace.facade_family_of_directory(file_path.parent.name)
+        file_family = namespace.facade_family_of_file(file_path.name)
+        if directory_family is not None:
+            suffix = families[directory_family].suffix + u.derive_class_stem(
+                file_path.stem.strip("_"),
+            )
+        elif file_family is not None:
+            suffix = families[file_family].suffix
+        else:
+            return derived.fail(
+                f"class-nesting found no facade family for {convention.module_name}",
+            )
+        prefix = policy.project_prefix
+        if not prefix:
+            return derived.fail(
+                "class-nesting cannot derive a module owner without a project "
+                f"class stem for {convention.module_name}",
+            )
+        owner = f"{prefix}{suffix}"
+        if owner in classes:
+            return derived.ok(owner)
+        rivals = sorted(name for name in classes if name.startswith(prefix))
+        if rivals:
+            return derived.fail(
+                "class-nesting requires exactly one declared module owner for "
+                f"{convention.module_name}; discovered: {', '.join(rivals)} "
+                f"(derived owner {owner})",
+            )
+        return derived.ok(owner)
+
+
+__all__: list[str] = ["FlextInfraUtilitiesSemanticCutoverNestingOwner"]
