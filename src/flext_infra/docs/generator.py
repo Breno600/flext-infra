@@ -211,8 +211,8 @@ class FlextInfraDocGenerator(
             reports.append(report)
         return r[t.SequenceOf[m.Infra.DocsPhaseReport]].ok(tuple(reports))
 
+    @staticmethod
     def plan_files(
-        self,
         bundle: m.Infra.DocsGenerationBundle,
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]:
         """Bind one prepared render bundle to exact live destination states.
@@ -223,8 +223,8 @@ class FlextInfraDocGenerator(
         """
         return u.Infra.docs_file_plans(bundle)
 
+    @staticmethod
     def required_directories(
-        self,
         bundle: m.Infra.DocsGenerationBundle,
     ) -> p.Result[t.VariadicTuple[Path]]:
         """Derive target parent chains from the exact prepared render bundle.

@@ -106,8 +106,8 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
             str(sources_dir),
         )
 
+    @staticmethod
     def _origin_issue(
-        self,
         origin: Mapping[str, t.Pair[str, int]],
         source: str,
         *,

@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+import pytest
 from flext_tests import tm
 
 from flext_infra import config, m, t, u
@@ -15,20 +16,29 @@ class TestsFlextInfraLintRecipes:
 
     @staticmethod
     def _apply(source: str, *issues: t.Triple[str, int, str]) -> str:
+        recipes = config.Infra.tooling.tools.ruff.lint.fix_recipes
+        findings = tuple(
+            m.Infra.Issue(
+                file="sample.py",
+                line=line,
+                column=1,
+                code=code,
+                message=message,
+            )
+            for code, line, message in issues
+        )
+        hooks = u.Infra.overridden_findings(
+            source,
+            findings,
+            path=Path("sample.py"),
+            recipes=recipes,
+            overridden=u.Infra.overridden_methods((source,)),
+        )
         return u.Infra.apply_lint_recipes(
             source,
-            tuple(
-                m.Infra.Issue(
-                    file="sample.py",
-                    line=line,
-                    column=1,
-                    code=code,
-                    message=message,
-                )
-                for code, line, message in issues
-            ),
+            tuple(finding for finding in findings if finding not in hooks),
             path=Path("sample.py"),
-            recipes=config.Infra.tooling.tools.ruff.lint.fix_recipes,
+            recipes=recipes,
             notice="Copyright (c) 2026 Sample. All rights reserved.\nSPDX: MIT",
         )
 
@@ -199,3 +209,141 @@ class TestsFlextInfraLintRecipes:
                 "VALUE = 1\n"
             ),
         )
+
+    @staticmethod
+    def _unused_receiver(source: str, *names: str) -> str:
+        """Apply the static-method recipe to each named method as Ruff reports it.
+
+        Returns:
+            The repaired source.
+
+        """
+        tree = ast.parse(source)
+        lines = {
+            node.name: node.lineno
+            for node in ast.walk(tree)
+            if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+        }
+        return TestsFlextInfraLintRecipes._apply(
+            source,
+            *(
+                (
+                    "no-self-use",
+                    lines[name],
+                    (
+                        f"Method `{name}` could be a function, class method, "
+                        "or static method"
+                    ),
+                )
+                for name in names
+            ),
+        )
+
+    @staticmethod
+    def test_static_method_keeps_every_body_byte() -> None:
+        """Only the receiver and the decorator list change; the body is verbatim."""
+        source = (
+            "class TestsSample:\n"
+            '    @pytest.mark.parametrize("value", [1, 2])\n'
+            "    def test_value(self, value: int) -> None:\n"
+            "        # a comment stays\n"
+            "\n"
+            '        text = "  spaced  "\n'
+            "        assert value, text\n"
+            "\n"
+            "    def keyword(self, *, flag: bool) -> bool:\n"
+            "        return flag\n"
+            "\n"
+            "    class Inner:\n"
+            "        async def coro(self, /, value: int) -> int:\n"
+            "            return value\n"
+        )
+
+        repaired = TestsFlextInfraLintRecipes._unused_receiver(
+            source,
+            "test_value",
+            "keyword",
+            "coro",
+        )
+
+        tm.that(
+            repaired,
+            eq=(
+                "class TestsSample:\n"
+                "    @staticmethod\n"
+                '    @pytest.mark.parametrize("value", [1, 2])\n'
+                "    def test_value(value: int) -> None:\n"
+                "        # a comment stays\n"
+                "\n"
+                '        text = "  spaced  "\n'
+                "        assert value, text\n"
+                "\n"
+                "    @staticmethod\n"
+                "    def keyword(*, flag: bool) -> bool:\n"
+                "        return flag\n"
+                "\n"
+                "    class Inner:\n"
+                "        @staticmethod\n"
+                "        async def coro(value: int) -> int:\n"
+                "            return value\n"
+            ),
+        )
+
+    @staticmethod
+    def test_static_method_collapses_a_sole_receiver() -> None:
+        """A receiver that was the only parameter leaves empty parentheses."""
+        source = (
+            "class TestsSample:\n"
+            "    def test_sole(\n"
+            "        self,\n"
+            "    ) -> None:\n"
+            "        assert True\n"
+        )
+
+        repaired = TestsFlextInfraLintRecipes._unused_receiver(source, "test_sole")
+
+        tm.that(
+            repaired,
+            eq=(
+                "class TestsSample:\n"
+                "    @staticmethod\n"
+                "    def test_sole() -> None:\n"
+                "        assert True\n"
+            ),
+        )
+
+    @staticmethod
+    def test_static_method_refuses_a_comment_beside_the_receiver() -> None:
+        """A comment the removal would drop stops the recipe with nothing written."""
+        source = (
+            "class TestsSample:\n"
+            "    def test_note(\n"
+            "        self,  # the receiver\n"
+            "        value: int,\n"
+            "    ) -> None:\n"
+            "        assert value\n"
+        )
+
+        with pytest.raises(ValueError, match="comment or continuation"):
+            TestsFlextInfraLintRecipes._unused_receiver(source, "test_note")
+
+    @staticmethod
+    def test_static_method_leaves_a_hook_a_subclass_overrides() -> None:
+        """A base method a subclass redefines keeps its receiver."""
+        source = (
+            "class Base:\n"
+            "    def hook(self) -> int:\n"
+            "        return 1\n"
+            "\n"
+            "\n"
+            "class Child(Base):\n"
+            "    def hook(self) -> int:\n"
+            "        return id(self)\n"
+        )
+
+        repaired = TestsFlextInfraLintRecipes._apply(
+            source,
+            ("no-self-use", 2, "Method `hook` could be a function"),
+        )
+
+        tm.that(repaired, eq=source)

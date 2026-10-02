@@ -32,6 +32,7 @@ from tests.unit.validate.pytest_runner_support import (
 class TestsFlextInfraPytestProfile:
     """Exercise the real profiling child transport and its receipt binding."""
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize(
         ("arguments", "expected_exit"),
@@ -41,7 +42,6 @@ class TestsFlextInfraPytestProfile:
         ],
     )
     def test_profile_child_preserves_exit_status_and_arguments(
-        self,
         tmp_path: Path,
         arguments: t.StrTuple,
         expected_exit: int,
@@ -71,10 +71,10 @@ class TestsFlextInfraPytestProfile:
         assert recorded.model_copy(update={"profile_sha256": None}) == context
         assert recorded.profile_sha256 is not None
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("expired", [False, True])
     def test_profile_child_rejects_invalid_run_receipt(
-        self,
         tmp_path: Path,
         *,
         expired: bool,
@@ -108,8 +108,9 @@ class TestsFlextInfraPytestProfile:
         assert pstats.Stats(str(profile)).get_stats_profile().func_profiles
         assert not profile.with_suffix(".pstats.json").exists()
 
+    @staticmethod
     @pytest.mark.slow
-    def test_profile_failure_exposes_the_write_error(self, tmp_path: Path) -> None:
+    def test_profile_failure_exposes_the_write_error(tmp_path: Path) -> None:
         """A real profile I/O failure remains visible rather than becoming success."""
         context = m.Infra.PytestRunContext(
             execution_mode=c.Infra.PytestExecutionMode.INCREMENTAL,
@@ -130,9 +131,9 @@ class TestsFlextInfraPytestProfile:
         assert "IsADirectoryError" in result.stderr
         assert not output.with_suffix(".pstats.json").exists()
 
+    @staticmethod
     @pytest.mark.parametrize("complete", [False, True])
     def test_collection_profile_preserves_pytest_arguments(
-        self,
         cached_runner_project: Path,
         *,
         complete: bool,
@@ -160,10 +161,10 @@ class TestsFlextInfraPytestProfile:
         )
         assert "profile-collection" not in profiled.build_command(report)
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("profile_collection", [False, True])
     def test_complete_suite_persists_cache_and_zero_diagnostic_evidence(
-        self,
         cached_runner_project: Path,
         *,
         profile_collection: bool,

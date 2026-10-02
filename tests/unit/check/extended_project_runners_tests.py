@@ -22,9 +22,9 @@ class TestsFlextInfraExtendedProjectRunners:
 
     # Why (suite budget): full-suite xdist can stall durable atomic report writes
     # beyond the default case timeout while the nested checker publishes reports.
+    @staticmethod
     @pytest.mark.slow
     def test_run_projects_records_requested_gates(
-        self,
         real_python_package: Path,
     ) -> None:
         """Test run projects records requested gates."""
@@ -42,9 +42,9 @@ class TestsFlextInfraExtendedProjectRunners:
         tm.that({"lint", "pyrefly"} <= set(result.value[0].gates), eq=True)
         tm.that("format" in set(result.value[0].gates), eq=False)
 
+    @staticmethod
     @pytest.mark.parametrize("gate_method", ["lint", "format"])
     def test_public_method_returns_gate_result(
-        self,
         gate_method: str,
         real_python_package: Path,
     ) -> None:

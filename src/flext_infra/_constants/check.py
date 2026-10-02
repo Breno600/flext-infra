@@ -89,6 +89,7 @@ class FlextInfraConstantsCheck:
         RAISES_SECTION = "raises-section"
         SUMMARY_DOCSTRING = "summary-docstring"
         COPYRIGHT_NOTICE = "copyright-notice"
+        STATIC_METHOD = "static-method"
 
     AST_GREP_DOCS_URL: ClassVar[str] = "https://ast-grep.github.io/"
     "Canonical ast-grep documentation URL for gate metadata."

@@ -68,8 +68,8 @@ class FlextInfraEnsurePyrightConfigPhase:
             extra_paths=[*extra_paths],
         )
 
+    @staticmethod
     def _extra_paths_for_env(
-        self,
         *,
         env_dir: str,
         source_path: str,
@@ -265,8 +265,8 @@ class FlextInfraEnsurePyrightConfigPhase:
             if env_dir not in c.Infra.PYTHON_DISCOVERY_SKIP_DIRS
         )
 
+    @staticmethod
     def _environment_payload(
-        self,
         environment: m.Infra.PyrightConfig.ExecutionEnvironment,
     ) -> t.JsonDict:
         """Render one execution environment.
@@ -305,8 +305,8 @@ class FlextInfraEnsurePyrightConfigPhase:
             *provided_exclusions,
         })
 
+    @staticmethod
     def _existing_paths(
-        self,
         base_dir: Path | None,
         configured_paths: t.StrSequence,
     ) -> t.StrSequence:
