@@ -9,8 +9,7 @@ from __future__ import annotations
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_infra import c, m
-from flext_infra.api import infra
+from flext_infra import c, infra, m
 from flext_infra.codegen.consolidator import FlextInfraCodegenConsolidator
 from flext_infra.codegen.constants_quality_gate import FlextInfraCodegenQualityGate
 from flext_infra.codegen.layout import FlextInfraCodegenLayout

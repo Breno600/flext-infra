@@ -393,7 +393,6 @@ class FlextInfraUtilitiesPyproject:
         return r[Path].ok(binary)
 
     @staticmethod
-    @cache
     def pyproject_payload(pyproject_path: Path) -> t.JsonMapping:
         """Return one parsed ``pyproject.toml`` payload validated against ``t.Infra``.
 

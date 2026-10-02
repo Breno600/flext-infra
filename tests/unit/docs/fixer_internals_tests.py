@@ -59,7 +59,12 @@ class TestsFlextInfraFixerInternals:
         tmp_path: Path,
         separator: str,
     ) -> None:
-        """Test fix keeps closing fence on its own line."""
+        """Test fix keeps closing fence on its own line.
+
+        The fence carries one auto-fixable defect (the unused ``os`` import);
+        every other line is rule-clean, because behavior rules stay active
+        inside fences and an unfixable finding fails the fixer.
+        """
         workspace = u.Tests.create_docs_workspace(tmp_path, include_fixable_link=True)
         sample = workspace / "docs/fenced.md"
         sample.write_text(
@@ -68,7 +73,7 @@ class TestsFlextInfraFixerInternals:
             "```python\n"
             "import os\n"
             "import sys\n\n"
-            "print(sys.version)\n"
+            "VERSION = sys.version\n"
             f"```{separator}"
             "## After The Block\n",
             encoding="utf-8",

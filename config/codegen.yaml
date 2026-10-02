@@ -416,6 +416,15 @@ Infra:
       # revalidates changed modules by source hash, so a warm cache never masks
       # a finding. Distinct project names keep their module namespaces in
       # separate directories.
+      # Parsed codemod rule catalogs (u.Infra.codemod_rule_plan). Each entry is
+      # keyed by the sha256 of the provider, its rule files' paths and text, and
+      # the parser's own source, so a catalog is parsed once and re-parsed only
+      # when a rule or the parser changes.
+      codemod_rules_cache:
+        data_home_environment_variable: XDG_CACHE_HOME
+        user_home_environment_variable: HOME
+        home_cache_directory: .cache
+        external_storage_directory: flext/infra/codemod-rules
       mypy_cache:
         cache_environment_variable: MYPY_CACHE_DIR
         data_home_environment_variable: XDG_CACHE_HOME

@@ -799,7 +799,6 @@ class TestsFlextInfraCodegenCiMatrix:
 
     @staticmethod
     def test_docs_failure_upload_keeps_audit_failure_and_scopes_hidden_reports(
-        self,
         rendered_project: Path,
     ) -> None:
         """A generated Docs job fails on audit findings and retains safe reports.

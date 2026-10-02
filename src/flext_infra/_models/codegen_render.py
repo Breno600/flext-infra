@@ -104,28 +104,15 @@ class FlextInfraModelsCodegenRender:
 
         autogen_header: t.NonEmptyStr = m.Field(description="Generated file header.")
         docstring: t.NonEmptyStr = m.Field(description="Generated module docstring.")
-        lazy_helpers_module: t.NonEmptyStr = m.Field(
-            description="Module the initializer imports the lazy helpers from.",
-        )
-        lazy_helpers: t.VariadicTuple[t.NonEmptyStr] = m.Field(
-            min_length=1,
-            description="Lazy helper names the initializer imports.",
-        )
-        runtime_import_lines: str = m.Field(
-            default_factory=str,
-            description="Eager runtime imports for explicit reexports.",
+        runtime_import_lines: t.NonEmptyStr = m.Field(
+            description=(
+                "Isort-ordered runtime imports: the lazy helpers plus any "
+                "eager or wildcard reexports."
+            ),
         )
         type_checking_lines: str = m.Field(
             default_factory=str,
             description="Static declarations for public lazy exports.",
-        )
-        blank_lines_before_exports: str = m.Field(
-            default="\n\n",
-            description=(
-                "Newlines separating the import section from the exports tuple; "
-                "roots without eager or static import blocks emit one blank line, "
-                "roots with them emit the two-line separation the formatter wants"
-            ),
         )
         exports_tuple: t.NonEmptyStr = m.Field(
             description="Canonical rendered root ``__all__`` tuple.",

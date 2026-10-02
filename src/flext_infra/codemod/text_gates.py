@@ -116,9 +116,10 @@ class FlextInfraModTextGateEngine:
             The resulting ``p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]``.
 
         """
-        provider = (
-            FlextInfraConfig.ssot_config_dir().parent
-            / c.Infra.CODEMOD_TEXT_RULES_RELPATH
+        # The packaged rules live at the same sub-path of whichever SSOT
+        # config directory is active, including a declared relocation.
+        provider = FlextInfraConfig.ssot_config_dir() / (
+            c.Infra.CODEMOD_TEXT_RULES_RELPATH.relative_to(c.CONFIG_DIR_NAME)
         )
         consumer = root / c.Infra.CODEMOD_TEXT_RULES_RELPATH
         snapshots: list[m.Cli.AtomicFileState] = []

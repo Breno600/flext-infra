@@ -3,7 +3,8 @@
 ast-grep matches one file's syntax. Some laws are verdicts over the whole
 project: whether a module takes part in an import cycle, whether a facade's
 namespace composes every class its family package declares. The engine owns
-building those project facts (once per project root and process); rule
+building those project facts once per admission pass, from the tree as it is
+then (a pass after a rewrite reads the rewritten project); rule
 documents name the verdict they need through ``metadata.context`` predicates.
 No rule lives here: the rule data decides where a fact is asked and what it
 means.
@@ -16,10 +17,11 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Mapping, MutableMapping
-from functools import lru_cache
+from functools import cache, lru_cache
 from importlib.metadata import packages_distributions
 from importlib.util import find_spec
 from pathlib import Path
+from types import MappingProxyType
 
 from flext_cli import u
 from packaging.utils import canonicalize_name
@@ -46,7 +48,6 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
     """Evaluate rule context over project facts: packages, layers, graphs."""
 
     @classmethod
-    @lru_cache(maxsize=8)
     def project_import_graph(
         cls,
         root: Path,
@@ -103,16 +104,16 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         }
         return graph, modules
 
-    @classmethod
-    @lru_cache(maxsize=8)
-    def project_import_cycles(cls, root: Path) -> t.MappingKV[str, frozenset[str]]:
+    @staticmethod
+    def project_import_cycles(
+        graph: t.MappingKV[str, frozenset[str]],
+    ) -> t.MappingKV[str, frozenset[str]]:
         """Map each module in a runtime import cycle to its cycle's members.
 
         Returns:
             The resulting ``t.MappingKV[str, frozenset[str]]``.
 
         """
-        graph, _ = cls.project_import_graph(root)
         cycles: MutableMapping[str, frozenset[str]] = {}
         for component in FlextInfraUtilitiesBase.strongly_connected_components({
             name: set(targets) for name, targets in graph.items()
@@ -129,6 +130,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         file_path: Path,
         imported: str,
         name: str | None,
+        facts: m.Infra.CodemodProjectFacts,
     ) -> bool:
         """Return whether one import of ``file_path`` is an edge of a cycle.
 
@@ -143,7 +145,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             ValueError: If source module is absent from the project import graph.
 
         """
-        graph, modules = cls.project_import_graph(root)
+        graph, modules = facts.import_graph, facts.import_modules
         source = modules.get(file_path.resolve())
         if source is None:
             layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
@@ -176,7 +178,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             ),
             None,
         )
-        members = cls.project_import_cycles(root).get(source, frozenset())
+        members = facts.import_cycles.get(source, frozenset())
         return target is not None and target != source and target in members
 
     @classmethod
@@ -258,12 +260,49 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         raise ValueError(msg)
 
     @classmethod
+    def codemod_project_facts(
+        cls,
+        root: Path,
+        rules: t.SequenceOf[m.Infra.CodemodRule],
+    ) -> m.Infra.CodemodProjectFacts:
+        """Build the project facts one admission pass needs, from the tree now.
+
+        Only the facts the rules' predicates ask for are built: the import
+        graph and cycles for ``import-cycle``, the runtime closure for the
+        runtime and facade package predicates.
+
+        Returns:
+            The project facts for the predicates of ``rules``.
+
+        """
+        predicates = frozenset(
+            condition.predicate for rule in rules for condition in rule.context
+        )
+        resolved = root.resolve()
+        graph: t.MappingKV[str, frozenset[str]] = {}
+        modules: t.MappingKV[Path, str] = {}
+        if c.Infra.CodemodContextPredicate.IMPORT_CYCLE in predicates:
+            graph, modules = cls.project_import_graph(resolved)
+        return m.Infra.CodemodProjectFacts(
+            predicates=predicates,
+            import_graph=graph,
+            import_modules=modules,
+            import_cycles=cls.project_import_cycles(graph),
+            runtime_modules=(
+                cls._runtime_modules(resolved)
+                if predicates & c.Infra.CODEMOD_RUNTIME_CLOSURE_PREDICATES
+                else frozenset()
+            ),
+        )
+
+    @classmethod
     def codemod_context_admits(
         cls,
         root: Path,
         rule: m.Infra.CodemodRule,
         file_path: Path,
         captures: t.JsonMapping,
+        facts: m.Infra.CodemodProjectFacts,
     ) -> bool:
         """Return whether one finding satisfies its rule's project context.
 
@@ -272,10 +311,23 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         declared variable the finding did not capture is a rule defect and
         raises; the syntactic match alone never stands in for it.
 
+        ``facts`` is the admission pass's project snapshot; it must have been
+        built for every predicate the rule names.
+
         Returns:
             Whether one finding satisfies its rule's project context.
 
+        Raises:
+            ValueError: If the facts were not built for a predicate of the rule.
+
         """
+        missing = {condition.predicate for condition in rule.context} - facts.predicates
+        if missing:
+            msg = (
+                f"{rule.id}: project facts were not built for predicates "
+                f"{sorted(missing)}"
+            )
+            raise ValueError(msg)
         source = (file_path if file_path.is_absolute() else root / file_path).resolve()
         for condition in rule.context:
             # A condition binds the capture of the branch that matched: a rule
@@ -289,7 +341,13 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                 if condition.of is not None and condition.of in captures
                 else None
             )
-            holds = cls._context_holds(root.resolve(), condition, (value, of), source)
+            holds = cls._context_holds(
+                root.resolve(),
+                condition,
+                (value, of),
+                source,
+                facts,
+            )
             if holds is not condition.holds:
                 return False
         return True
@@ -336,6 +394,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         condition: m.Infra.CodemodContextCondition,
         captured: t.Pair[str, str | None],
         file_path: Path,
+        facts: m.Infra.CodemodProjectFacts,
     ) -> bool:
         """Evaluate one predicate against the project SSOT it names.
 
@@ -359,9 +418,9 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                 # never crosses a package boundary.
                 return module == own or module in c.Infra.NON_PUBLIC_LAZY_ROOTS
             case c.Infra.CodemodContextPredicate.RUNTIME_PACKAGE:
-                return module in cls._runtime_modules(root)
+                return module in facts.runtime_modules
             case c.Infra.CodemodContextPredicate.FACADE_PACKAGE:
-                return module in cls._runtime_modules(root) and bool(
+                return module in facts.runtime_modules and bool(
                     cls._codemod_runtime_aliases(root, module, own),
                 )
             case c.Infra.CodemodContextPredicate.RUNTIME_ALIAS:
@@ -405,7 +464,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             case c.Infra.CodemodContextPredicate.FAMILY_BASE:
                 return cls._family_package_has_base(file_path)
             case c.Infra.CodemodContextPredicate.IMPORT_CYCLE:
-                return cls.import_closes_cycle(root, file_path, value, of)
+                return cls.import_closes_cycle(root, file_path, value, of, facts)
             case c.Infra.CodemodContextPredicate.COMPOSES_FAMILY:
                 return cls.composes_family_package(file_path, value)
 
@@ -420,7 +479,6 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         return value.split(maxsplit=1)[0].split(".", maxsplit=1)[0]
 
     @classmethod
-    @lru_cache(maxsize=8)
     def _runtime_modules(cls, root: Path) -> frozenset[str]:
         """Top-level import names provided by the project's runtime closure.
 
@@ -437,9 +495,27 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         )
         return frozenset(
             module
-            for module, providers in packages_distributions().items()
-            if any(canonicalize_name(name) in closure for name in providers)
+            for module, providers in cls._installed_import_packages().items()
+            if providers & closure
         )
+
+    @staticmethod
+    @cache
+    def _installed_import_packages() -> t.MappingKV[str, frozenset[str]]:
+        """Map each installed import package to its canonical distributions.
+
+        Installed metadata is a fact of the interpreter environment, fixed for
+        the life of the process, so it is read once; a project's runtime
+        closure over it is still computed per admission pass.
+
+        Returns:
+            The resulting ``t.MappingKV[str, frozenset[str]]``.
+
+        """
+        return MappingProxyType({
+            module: frozenset(canonicalize_name(name) for name in providers)
+            for module, providers in packages_distributions().items()
+        })
 
     @staticmethod
     def _module_exports(file_path: Path) -> frozenset[str]:

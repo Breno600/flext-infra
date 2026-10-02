@@ -155,6 +155,14 @@ class FlextInfraConstantsRefactor:
         PACKAGE_ROOT_INIT = "package-root-init"
         FAMILY_BASE = "family-base"
 
+    CODEMOD_RUNTIME_CLOSURE_PREDICATES: ClassVar[frozenset[CodemodContextPredicate]] = (
+        frozenset({
+            CodemodContextPredicate.RUNTIME_PACKAGE,
+            CodemodContextPredicate.FACADE_PACKAGE,
+        })
+    )
+    "Predicates evaluated against the project's runtime dependency closure."
+
     @unique
     class SemanticCutoverPhase(StrEnum):
         """Semantic ``make mod`` cutovers planned by ``u.Infra.plan_semantic_cutover``."""

@@ -199,6 +199,7 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         )
 
     @staticmethod
+    @pytest.mark.slow
     def test_pyproject_bootstrap_uses_declared_candidate_surface(
         tmp_path: Path,
     ) -> None:

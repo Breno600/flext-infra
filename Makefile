@@ -239,13 +239,6 @@ caller_github_token="$${GITHUB_TOKEN:-}"; \
 caller_mise_http_timeout="$${MISE_HTTP_TIMEOUT:-}"; \
 caller_flext_mypy_profile_output="$${FLEXT_MYPY_PROFILE_OUTPUT:-}"; \
 caller_mise_version="$${MISE_VERSION:-}"; \
-if [ -z "$$caller_github_token" ] && command -v gh >/dev/null 2>&1; then \
-		caller_github_token="$$(gh auth token)" \
-			|| { printf 'ERROR: the selected GitHub credential source failed: %s\n' 'gh auth token' >&2; exit 2; }; \
-		if [ -z "$$caller_github_token" ]; then \
-			printf 'ERROR: the selected GitHub credential source printed nothing: %s\n' 'gh auth token' >&2; exit 2; \
-		fi; \
-	fi; \
 mise_pin_file="$(MISE_VERSION_PIN)"; \
 	mise_pin=; \
 	if [ -f "$$mise_pin_file" ]; then \
@@ -470,13 +463,6 @@ caller_github_token="$${GITHUB_TOKEN:-}"; \
 caller_mise_http_timeout="$${MISE_HTTP_TIMEOUT:-}"; \
 caller_flext_mypy_profile_output="$${FLEXT_MYPY_PROFILE_OUTPUT:-}"; \
 caller_mise_version="$${MISE_VERSION:-}"; \
-if [ -z "$$caller_github_token" ] && command -v gh >/dev/null 2>&1; then \
-		caller_github_token="$$(gh auth token)" \
-			|| { printf 'ERROR: the selected GitHub credential source failed: %s\n' 'gh auth token' >&2; exit 2; }; \
-		if [ -z "$$caller_github_token" ]; then \
-			printf 'ERROR: the selected GitHub credential source printed nothing: %s\n' 'gh auth token' >&2; exit 2; \
-		fi; \
-	fi; \
 mise_pin_file="$(MISE_VERSION_PIN)"; \
 	mise_pin=; \
 	if [ -f "$$mise_pin_file" ]; then \
@@ -642,7 +628,14 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 			$${mise_runtime_path:+"MISE_INSTALL_PATH=$$mise_runtime_path"} \
 			"$$@"; \
 	}; \
-	mise_checked() { \
+if [ -z "$$caller_github_token" ] && command -v gh >/dev/null 2>&1; then \
+		caller_github_token="$$(gh auth token)" \
+			|| { printf 'ERROR: the selected GitHub credential source failed: %s\n' 'gh auth token' >&2; exit 2; }; \
+		if [ -z "$$caller_github_token" ]; then \
+			printf 'ERROR: the selected GitHub credential source printed nothing: %s\n' 'gh auth token' >&2; exit 2; \
+		fi; \
+	fi; \
+mise_checked() { \
 		mise_log="$$1"; shift; \
 		printf 'setup probe: begin stage=%s log=%s\n' "$${mise_log##*/}" "$$mise_log" >&2; \
 		if "$$@" >"$$mise_log" 2>&1; then :; \
@@ -743,32 +736,11 @@ mise_receipt launcher-version "$$lock_stage/artifacts/bin/mise"; \
 		mise_checked "$$scratch/publish-lock.log" "$$staged_python" "$$project_root/bin/mise-lock-transaction.py" publish "$$project_root" "$$lock_stage"; \
 		mise_trusted_config_paths="$$project_root"; \
 	else \
-		# ``locked`` mode installs exactly what the committed mise.lock pins. \
-		# A manifest ahead of the lock (a previous upg committed the rendered \
-		# .mise.toml and died before its lock transaction) self-heals here \
-		# through the same staged transaction upg uses: adopt, install, and \
-		# publish by one rename. A manifest that cannot still resolve fails \
-		# loud inside that transaction; every other install failure escapes \
-		# unchanged. \
-		if mise_exec project "$$pinned_mise" -C "$$project_root" install --yes >"$$scratch/install.log" 2>&1; then \
-			:; \
-		elif grep -q "not in the lockfile" "$$scratch/install.log"; then \
-			lock_stage="$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-lock-stage.XXXXXX")"; \
-			cp "$$project_root/.mise.toml" "$$lock_stage/.mise.toml"; \
-			if [ -f "$$project_root/mise.lock" ]; then cp "$$project_root/mise.lock" "$$lock_stage/mise.lock"; fi; \
-			if [ -d "$$project_root/.mise/locks" ]; then mkdir -p "$$lock_stage/.mise"; cp -R "$$project_root/.mise/locks" "$$lock_stage/.mise/locks"; fi; \
-			mise_trusted_config_paths="$$lock_stage"; \
-			mise_checked "$$scratch/adopt-lock.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" lock --bump; \
-			mise_checked "$$scratch/adopt-install.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" install --yes; \
-			mise_checked "$$scratch/staged-python.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" which python; \
-			staged_python=$$(cat "$$scratch/staged-python.log"); \
-			if [ ! -x "$$staged_python" ]; then printf 'ERROR: staged Mise Python is not executable: %s\n' "$$staged_python" >&2; exit 2; fi; \
-			mise_checked "$$scratch/publish-lock.log" "$$staged_python" "$$project_root/bin/mise-lock-transaction.py" publish "$$project_root" "$$lock_stage"; \
-			mise_trusted_config_paths="$$project_root"; \
-		else \
-			cat "$$scratch/install.log" >&2; \
-			exit 2; \
-		fi; \
+		# ``locked`` mode converges every tool on exactly the version the \
+		# committed mise.lock pins, upgrading or downgrading what is installed; \
+		# only ``make upg`` resolves and writes the lock (operator law \
+		# 2026-09-24), so a manifest ahead of its lock fails here and upg heals it. \
+		mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$project_root" install --yes; \
 	fi; \
 	mise_checked_stdout "$$scratch/ast-grep-version.stdout" "$$scratch/ast-grep-version.stderr" mise_exec project "$$pinned_mise" -C "$$project_root" exec -- ast-grep --version; \
 	if [ -s "$$scratch/ast-grep-version.stderr" ]; then \
@@ -1273,7 +1245,7 @@ setup: _bootstrap_setup_tools
 upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle
 upg: TOOL_BOOTSTRAP_RESOLVE := 1
 upg: TOOL_BOOTSTRAP_LOCK := 1
-upg: _bootstrap_setup_tools
+upg: _builtin_require_runtime_root _bootstrap_setup_tools
 
 # Only the runtime root resolves the Mise release. An attached member's pin and
 # launchers are projections of that root, published by the root's `make gen`.
@@ -1525,7 +1497,7 @@ _builtin_setup_submodules:
 _bootstrap_setup_tools: _builtin_recover_mise $(if $(filter upg,$(MAKECMDGOALS)),,_builtin_require_mise_pin)
 
 .PHONY: _builtin_recover_mise
-_builtin_recover_mise: _builtin_require_runtime_root
+_builtin_recover_mise:
 	@set -eu; \
 	project_root=$$(cd "$(RUNTIME_ROOT)" && pwd -P); \
 	project_parent=$${project_root%/*}; \
@@ -1677,15 +1649,15 @@ _builtin_build_artifacts:
 # An absent CI token runs every active default gate.
 _builtin_check_all: _builtin_require_environment
 	@set -eu; \
-		gates="lint,security,markdown,duplication,pyrefly,mypy,pyright,loc-cap,runtime-census,index-declarations,codemod,layout,direnv"; \
+		gates="lint,security,markdown,duplication,pyrefly,mypy,pyright,loc-cap,runtime-census,fresh-import,index-declarations,codemod,layout,direnv"; \
 		if [ "$(strip $(CI))" = "Y" ]; then \
 			gates="lint,security,markdown,duplication"; \
 			printf 'INFO: CI=Y runs check gates: lint security markdown duplication\n'; \
 		elif [ "$(strip $(CI))" = "N" ]; then \
-			gates="pyrefly,mypy,pyright,loc-cap,runtime-census,index-declarations,codemod,layout,direnv"; \
-			printf 'INFO: CI=N runs check gates: pyrefly mypy pyright loc-cap runtime-census index-declarations codemod layout direnv\n'; \
+			gates="pyrefly,mypy,pyright,loc-cap,runtime-census,fresh-import,index-declarations,codemod,layout,direnv"; \
+			printf 'INFO: CI=N runs check gates: pyrefly mypy pyright loc-cap runtime-census fresh-import index-declarations codemod layout direnv\n'; \
 		else \
-			printf 'INFO: default context runs check gates: lint security markdown duplication pyrefly mypy pyright loc-cap runtime-census index-declarations codemod layout direnv\n'; \
+			printf 'INFO: default context runs check gates: lint security markdown duplication pyrefly mypy pyright loc-cap runtime-census fresh-import index-declarations codemod layout direnv\n'; \
 		fi; \
 		if [ -z "$$gates" ]; then \
 			printf 'ERROR: no active check gates remain in the selected context\n' >&2; \
@@ -1700,8 +1672,8 @@ case "$$database" in /*) ;; *) printf 'ERROR: persistent testmon database requir
 case "$$database" in "$(PROJECT_ROOT)"/*) printf 'ERROR: persistent testmon database must be outside the checkout: %s\n' "$$database" >&2; exit 2 ;; esac; \
 case "$$database" in "$${TMPDIR:-/tmp}"/*|/tmp/*) printf 'ERROR: persistent testmon database must not live under the temporary directory: %s\n' "$$database" >&2; exit 2 ;; esac; \
 mkdir -p "$$(dirname "$$database")"; \
-TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry; \
-TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry slow
+TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry; \
+TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry slow
 
 _builtin_test_full_all: _builtin_require_environment
 	@set -eu; \
@@ -1710,8 +1682,8 @@ case "$$database" in /*) ;; *) printf 'ERROR: persistent testmon database requir
 case "$$database" in "$(PROJECT_ROOT)"/*) printf 'ERROR: persistent testmon database must be outside the checkout: %s\n' "$$database" >&2; exit 2 ;; esac; \
 case "$$database" in "$${TMPDIR:-/tmp}"/*|/tmp/*) printf 'ERROR: persistent testmon database must not live under the temporary directory: %s\n' "$$database" >&2; exit 2 ;; esac; \
 mkdir -p "$$(dirname "$$database")"; \
-TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry full; \
-TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry full-slow
+TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry full; \
+TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry full-slow
 
 # fmt is format-only (single-pass verb law): ruff formats Python, the
 # fmt_gates formatters run once through the checker's apply mode, and every

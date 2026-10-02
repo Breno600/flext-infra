@@ -59,6 +59,26 @@ def rope_workspace(tmp_path: Path) -> Iterator[p.Infra.RopeWorkspaceDsl]:
 
 
 @pytest.fixture(scope="session", autouse=True)
+def _isolated_cache_home(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Iterator[None]:
+    """Keep every declared FLEXT cache of the suite inside fixture storage.
+
+    Gates resolve their persistent caches (codemod rule catalogs, Mypy) below
+    ``XDG_CACHE_HOME``; a unit test writes only inside fixture-owned storage,
+    so the session scopes that home to one directory per worker and restores
+    the environment on exit.
+    """
+    spec = config.Infra.codegen.make.codemod_rules_cache
+    with u.Tests.env_vars_context({
+        str(spec.data_home_environment_variable): str(
+            tmp_path_factory.mktemp("xdg-cache"),
+        ),
+    }):
+        yield
+
+
+@pytest.fixture(scope="session", autouse=True)
 def _guard_tracked_codegen_config_untouched() -> Iterator[None]:
     """Fail loud if the suite writes to the real, tracked ``config/codegen.yaml``.
 

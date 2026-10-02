@@ -44,10 +44,12 @@ mkdir -p "$$(dirname "$$database")"; \
 {#- Each phase is its own bounded runner process with its own entrypoint clock:
     the budgeted phase never carries slow-marked items, which run afterwards in
     their own phase, each within the per-item slow bound (gate-budget rule). -#}
+{#- Tests run on the pinned toolchain (PROJECT_TOOL_EXEC), the same one every
+    verb's tools resolve from, so a test observes the runtime's tool versions. -#}
 {%- macro pytest_test_runner(operations=("",)) -%}
 {{ pytest_testmon_guard() }}
 {%- for operation in operations %}
-{{ make.testmon_cache.database_environment_variable }}="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry{% if operation %} {{ operation }}{% endif %}{% if not loop.last %}; \{% endif %}
+{{ make.testmon_cache.database_environment_variable }}="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry{% if operation %} {{ operation }}{% endif %}{% if not loop.last %}; \{% endif %}
 {%- endfor %}
 {%- endmacro -%}
 # @flext-generated: continuous
@@ -470,7 +472,7 @@ setup: _bootstrap_setup_tools
 upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle
 upg: TOOL_BOOTSTRAP_RESOLVE := 1
 upg: TOOL_BOOTSTRAP_LOCK := 1
-upg: _bootstrap_setup_tools
+upg: _builtin_require_runtime_root _bootstrap_setup_tools
 
 # Only the runtime root resolves the Mise release. An attached member's pin and
 # launchers are projections of that root, published by the root's `make gen`.
@@ -516,7 +518,7 @@ _builtin-help:
 _bootstrap_setup_tools: _builtin_recover_mise $(if $(filter upg,$(MAKECMDGOALS)),,_builtin_require_mise_pin)
 
 .PHONY: _builtin_recover_mise
-_builtin_recover_mise: _builtin_require_runtime_root
+_builtin_recover_mise:
 	@set -eu; \
 	project_root=$$(cd "$(RUNTIME_ROOT)" && pwd -P); \
 	project_parent=$${project_root%/*}; \

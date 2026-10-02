@@ -64,108 +64,67 @@ class FlextInfraCodegenGenerationStandardMixin(
         return filtered
 
     @classmethod
-    def _runtime_import_lines(cls, plan: m.Infra.LazyInitPlan) -> str:
-        """Render explicit eager and wildcard runtime imports.
+    def _runtime_import_lines(
+        cls,
+        plan: m.Infra.LazyInitPlan,
+        root_names: frozenset[str],
+    ) -> str:
+        """Render the runtime imports as one Ruff-isort-ordered block.
+
+        Wildcard, eager and lazy-helper imports are statements of the same
+        kind: each is ranked by the project's isort section (``root_names``
+        is the project's ``known-first-party``) and then by module, with a
+        blank line only where the section changes. Ranking them apart made
+        the helpers import a block of its own whenever its module sorted next
+        to the package's ``__version__`` import, and ``make fix`` rewrote
+        every generated root that ``make gen`` produced.
 
         Returns:
-            The resulting ``str``.
+            The import block, or the lazy-helpers import alone.
 
         """
         current_pkg = plan.context.current_pkg
-        lines: t.MutableSequenceOf[str] = [
-            f"from {cls._absolute_import_module(current_pkg, module)} import *"
-            for module in sorted(set(plan.wildcard_runtime_modules))
-        ]
-        eager_lines: t.MutableSequenceOf[str] = []
+        statements: t.MutableSequenceOf[tuple[t.StrPair, t.StrSequence]] = []
+        for module in sorted(set(plan.wildcard_runtime_modules)):
+            rendered_module = cls._absolute_import_module(current_pkg, module)
+            statements.append((
+                cls._type_checking_sort_key(rendered_module, root_names),
+                (f"from {rendered_module} import *",),
+            ))
         eager_groups = cls._group_imports(plan.eager_dunders)
-        previous_top: str | None = None
-        for module in sorted(eager_groups, key=str.lower):
+        for module in eager_groups:
             rendered_module = cls._absolute_import_module(
                 current_pkg,
                 cls._compact_lazy_module_path(current_pkg, module),
             )
-            top = rendered_module.split(".", maxsplit=1)[0]
-            if previous_top is not None and top != previous_top:
-                eager_lines.append("")
             parts = tuple(
                 cls._format_import_part(imported_name, export_name)
                 for export_name, imported_name in sorted(eager_groups[module])
                 if imported_name
             )
             if parts:
-                # One statement per module group: member-per-statement rendering
-                # diverged from the formatter's canonical single (parenthesized)
-                # import and every generation re-diverged after the autofix.
-                eager_lines.extend(cls._format_import("", rendered_module, parts))
-            previous_top = top
-        if lines and eager_lines:
-            lines.append("")
-        lines.extend(eager_lines)
-        return cls._merge_lazy_import_line(lines, plan)
-
-    @classmethod
-    def _merge_lazy_import_line(
-        cls,
-        lines: t.MutableSequenceOf[str],
-        plan: m.Infra.LazyInitPlan,
-    ) -> str:
-        """Merge the lazy-helpers import into the block at its sorted spot.
-
-        The helpers import is a first-party statement like any other: emitting
-        it as a separate leading line diverged from the formatter's canonical
-        alphabetical order for every package whose own name sorts before (or
-        after) the bootstrap root, and each generation re-diverged after the
-        autofix. Merging it into the group stream here is the single owner of
-        the ordering.
-
-        Returns:
-            The resulting ``str``.
-
-        """
-        current_pkg = plan.context.current_pkg
-        bootstrap_owner = (
-            current_pkg.split(".", maxsplit=1)[0] == c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
-        )
+                statements.append((
+                    cls._type_checking_sort_key(rendered_module, root_names),
+                    cls._format_import("", rendered_module, parts),
+                ))
         lazy_module = (
             c.Infra.LAZY_BOOTSTRAP_MODULE
-            if bootstrap_owner
+            if current_pkg.split(".", maxsplit=1)[0]
+            == c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
             else c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
         )
-        lazy_line = (
-            f"from {lazy_module} import {', '.join(c.Infra.LAZY_BOOTSTRAP_HELPERS)}"
-        )
-        if not lines:
-            return lazy_line
-        # Split the rendered block into blank-line-separated groups and insert
-        # the lazy group by its first-party module name.
-        groups: list[list[str]] = [[]]
-        for line in lines:
-            if line:
-                groups[-1].append(line)
-            elif groups[-1]:
-                groups.append([])
-        if groups and not groups[-1]:
-            groups.pop()
-        lazy_top = lazy_module.split(".", maxsplit=1)[0]
-
-        def _group_key(group: list[str]) -> str:
-            first = group[0]
-            if first.startswith("from "):
-                return first.split(maxsplit=1)[1].split(maxsplit=1)[0]
-            return first
-
-        inserted = False
-        merged: list[str] = []
-        for group in groups:
-            if not inserted and _group_key(group).lower() > lazy_top:
-                merged.extend([lazy_line, ""])
-                inserted = True
-            if merged:
-                merged.append("")
-            merged.extend(group)
-        if not inserted:
-            merged.extend(["", lazy_line])
-        return "\n".join(merged)
+        statements.append((
+            cls._type_checking_sort_key(lazy_module, root_names),
+            cls._format_import("", lazy_module, c.Infra.LAZY_BOOTSTRAP_HELPERS),
+        ))
+        lines: t.MutableSequenceOf[str] = []
+        previous_section: str | None = None
+        for (section, _), statement in sorted(statements, key=lambda item: item[0]):
+            if previous_section is not None and section != previous_section:
+                lines.append("")
+            lines.extend(statement)
+            previous_section = section
+        return "\n".join(lines)
 
     @classmethod
     def _lazy_groups(
@@ -206,34 +165,30 @@ class FlextInfraCodegenGenerationStandardMixin(
         module: str,
         values: t.StrSequence,
         *,
-        trailing: bool,
         indent: str = "            ",
     ) -> t.StrSequence:
         """Format one mapping entry exactly as Ruff formats a tuple value.
 
-        Why (charts gen↔fmt churn): the compact form previously hardcoded the
-        item-ending comma, while Ruff's magic-trailing-comma rule removes it on
-        a single-entry mapping that stays expanded — the next ``make fmt``
-        rewrote the projection and the following ``make gen`` restored it,
-        looping forever. The item comma belongs to the ``trailing`` decision
-        (multi-entry mapping), exactly like the expanded form below.
+        An expanded mapping always ends each entry with a comma: Ruff's format
+        keeps the magic trailing comma and its ``missing-trailing-comma`` fix
+        (``make fix``) adds it, so the comma-less single-entry form made
+        ``make gen`` and ``make fix`` rewrite each other forever.
 
         Returns:
-            The resulting ``t.StrSequence``.
+            The entry lines, compact when they fit the configured width.
 
         """
         inner = ", ".join(values)
         if len(values) == 1:
             inner = f"{inner},"
-        separator = "," if trailing else ""
-        compact = f'{indent}"{module}": ({inner}){separator}'
+        compact = f'{indent}"{module}": ({inner}),'
         if len(compact) <= config.Infra.tooling.tools.ruff.line_length:
             return (compact,)
         value_indent = f"{indent}    "
         return (
             f'{indent}"{module}": (',
             *(f"{value_indent}{value}," for value in values),
-            f"{indent}){separator}",
+            f"{indent}),",
         )
 
     @classmethod
@@ -319,7 +274,6 @@ class FlextInfraCodegenGenerationStandardMixin(
                 cls._format_lazy_group_entry(
                     module,
                     tuple(f'"{name}"' for name in names),
-                    trailing=len(groups) > 1,
                 ),
             )
         lines.append("        }),")
@@ -348,7 +302,6 @@ class FlextInfraCodegenGenerationStandardMixin(
                         f'("{export_name}", "{attr_name}")'
                         for export_name, attr_name in pairs
                     ),
-                    trailing=len(groups) > 1,
                 ),
             )
         lines.append("        }),")
@@ -465,13 +418,10 @@ class FlextInfraCodegenGenerationStandardMixin(
                 root_names=type_checking_root_names,
             ),
         )
-        runtime_import_lines = cls._runtime_import_lines(plan)
+        runtime_import_lines = cls._runtime_import_lines(plan, type_checking_root_names)
         # The bootstrap owner's packages import the helpers from the module
         # that defines them; every other distribution imports them from the
         # bootstrap root, which therefore publishes them in its __all__.
-        bootstrap_owner = (
-            current_pkg.split(".", maxsplit=1)[0] == c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
-        )
         published_helpers = (
             c.Infra.LAZY_BOOTSTRAP_HELPERS
             if current_pkg == c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
@@ -483,14 +433,7 @@ class FlextInfraCodegenGenerationStandardMixin(
                 current_pkg,
                 u.Infra.copyright_notice(plan.context.pkg_dir),
             ),
-            lazy_helpers_module=(
-                c.Infra.LAZY_BOOTSTRAP_MODULE
-                if bootstrap_owner
-                else c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
-            ),
-            lazy_helpers=c.Infra.LAZY_BOOTSTRAP_HELPERS,
             runtime_import_lines=runtime_import_lines,
-            blank_lines_before_exports="\n",
             type_checking_lines=type_checking_lines,
             exports_tuple=cls._format_exports_tuple(
                 cls._build_published_exports(
