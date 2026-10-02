@@ -140,6 +140,11 @@ graphs, publishes them before replacing `mise.lock`, and records a durable journ
 If publication stops after a graph moves, the next upgrade restores the committed
 graph before starting its own publication. The lock rename is the commit point; a
 failed upgrade leaves the previous lock usable without a live `.bak` copy.
+When Git leaves the generated `mise.lock` unmerged, the publisher reads the exact
+stage-2 lock from that repository's index solely to authenticate the existing
+sidecars. It still derives the replacement lock from `.mise.toml` through `make upg`
+and publishes that replacement transactionally. A malformed lock without a Git
+conflict, or sidecars that no longer match stage 2, fails without changing the lock.
 
 The platforms declared by `toolchain.mise_lockfile_platforms` compose the lock together
 with the platform of the machine running the upgrade, which Mise always includes.

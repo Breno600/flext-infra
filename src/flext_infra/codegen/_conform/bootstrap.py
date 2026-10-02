@@ -145,8 +145,13 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
                     custom=False,
                 )
             case c.Infra.CodegenConformSurface.MAKEFILE:
+                # The Makefile's bootstrap runs the generated lock publisher, so
+                # a recovered Makefile without it could never finish make upg.
                 return m.Infra.CodegenConformSurfaceContract(
-                    destinations=frozenset({c.Infra.MAKEFILE_FILENAME}),
+                    destinations=frozenset({
+                        c.Infra.MAKEFILE_FILENAME,
+                        c.Infra.MISE_LOCK_TRANSACTION_SCRIPT,
+                    }),
                     pyproject=False,
                     custom=False,
                 )
