@@ -53,7 +53,7 @@ class TestsFlextInfraCodegenLazyInitService:
             project_name="flext-test-selected",
             package_name="flext_test_selected",
         )
-        _unrelated_repository, unrelated_root = u.Tests.create_lazy_init_workspace(
+        _, unrelated_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
             project_name="flext-test-unrelated",
             package_name="flext_test_unrelated",

@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from tests import c, u
+from tests import c, t, u
 
 pytestmark = pytest.mark.slow
 
@@ -66,11 +66,9 @@ class TestsFlextInfraCodegenMakeAuthentication:
         tm.that(process.stdout, has="environment-authenticated")
         tm.that(process.stdout + process.stderr, lacks=selected)
 
-    @pytest.mark.parametrize("verb", ["setup", "upg", "status", "help", "clean"])
-    def test_make_defers_missing_credential_to_the_network_operation(
-        self, tmp_path: Path, verb: str
-    ) -> None:
-        """Missing credentials never stop bootstrap before the selected tool runs."""
+    @pytest.mark.parametrize("verb", ["status", "help", "clean"])
+    def test_local_verbs_need_no_credential(self, tmp_path: Path, verb: str) -> None:
+        """Local public verbs complete without a GitHub credential."""
         project_root, _ = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
@@ -91,18 +89,39 @@ class TestsFlextInfraCodegenMakeAuthentication:
                 },
             )
         )
-        if verb in {"setup", "upg"}:
-            tm.that(
-                process.stdout + process.stderr, lacks="GitHub credential is absent"
+        tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
+        tm.that(
+            u.Infra.runtime_environment_dir(project_root).exists(), eq=verb == "status"
+        )
+
+    @pytest.mark.remote
+    def test_setup_reuses_provisioned_tools_without_credential(
+        self,
+        tmp_path: Path,
+        resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
+    ) -> None:
+        """A locked checkout provisions its own environment without authentication."""
+        profile = c.Infra.MakeProfile.STANDALONE
+        project_root = u.Tests.resolved_make_checkout(
+            resolved_make_templates[profile], tmp_path, profile
+        )
+        process = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "setup"],
+                cwd=project_root,
+                env={
+                    "GH_TOKEN": "",
+                    "GITHUB_TOKEN": "",
+                    "MISE_GITHUB_TOKEN": "must-not-be-a-fallback",
+                },
             )
-            tm.that(process.stdout + process.stderr, has="mise setup receipt=")
-        else:
-            tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
-        if verb not in {"setup", "upg"}:
-            tm.that(
-                u.Infra.runtime_environment_dir(project_root).exists(),
-                eq=verb == "status",
-            )
+        )
+        tm.that(
+            u.Cli.process_succeeded(process.outcome),
+            eq=True,
+            msg=process.stdout + process.stderr,
+        )
+        tm.that(u.Infra.runtime_environment_dir(project_root).exists(), eq=True)
 
     @pytest.mark.remote
     def test_invalid_explicit_token_fails_at_the_native_mise_backend(

@@ -479,6 +479,9 @@ class FlextInfraPytestRunnerExecution(
             return r.ok(outcome.raw_return_code)
         state = self._inspect_cache(digest=pre_digest).unwrap()
         self._record_cache_state(report_dir, "cache-after", state)
+        policy = config.Infra.codegen.make.testmon_cache_policy
+        if not policy.save_enabled:
+            self._record_cache_state(report_dir, "cache-policy", state)
         if not state.restored_accepted and not state.saveable:
             msg = f"testmon cache is unusable: {state.reason}"
             raise RuntimeError(msg)

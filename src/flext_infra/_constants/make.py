@@ -87,8 +87,8 @@ class FlextInfraConstantsMake:
     TIMEOUT_KILL_AFTER_SECONDS: ClassVar[int] = 5
 
     # Every read-only gate this package implements, derived from the gate SSOT
-    # (c.Infra.SARIF_TOOL_INFO) so registering a gate makes it reachable
-    # through `make check` in the same edit and no second list can drift.
+    # (c.Infra.SARIF_TOOL_INFO) so registering a gate makes it available to
+    # the generated Make command surface without a second vocabulary.
     # Mutating gates (`format`) are excluded: they rewrite files, so they are
     # owned by `make fmt` / `make fix` and a read-only verb
     # must never invoke them.

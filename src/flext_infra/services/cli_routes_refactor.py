@@ -79,9 +79,18 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
         return infra.mod(request, FlextInfraCliModProgress())
 
     @staticmethod
-    def execute_mod_text(request: m.Infra.ModCommand) -> p.Result[t.Cli.ResultValue]:
+    def execute_mod_text(
+        request: m.Infra.ModTextCommand,
+    ) -> p.Result[t.Cli.ResultValue]:
         """Replay the declared text rules without entering Rope or AST phases."""
         return infra.mod_text(request)
+
+    @staticmethod
+    def execute_mod_text_candidate(
+        request: m.Infra.ModTextCommand,
+    ) -> p.Result[t.Cli.ResultValue]:
+        """Replay a manifest-declared candidate with the healthy provider."""
+        return infra.mod_text_candidate(request)
 
     refactor_routes: ClassVar[t.VariadicTuple[m.Cli.ResultCommandRoute]] = (
         m.Cli.ResultCommandRoute(
@@ -176,8 +185,14 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
         m.Cli.ResultCommandRoute(
             name="mod-text",
             help_text="Replay only authenticated declarative text rules",
-            model_cls=m.Infra.ModCommand,
+            model_cls=m.Infra.ModTextCommand,
             handler=execute_mod_text,
+        ),
+        m.Cli.ResultCommandRoute(
+            name="mod-text-candidate",
+            help_text="Replay text rules in the declared candidate worktree",
+            model_cls=m.Infra.ModTextCommand,
+            handler=execute_mod_text_candidate,
         ),
         m.Cli.ResultCommandRoute(
             name="mod-snapshots",

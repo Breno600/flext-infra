@@ -32,6 +32,12 @@ class FlextInfraConfigModelsWorkspace:
             if self.path.is_absolute() or not self.path.parts:
                 msg = "candidate bootstrap path must be relative"
                 raise ValueError(msg)
+            if (
+                self.what
+                != FlextInfraConstantsCodegenProject.CodegenConformSurface.MAKEFILE
+            ):
+                msg = "candidate bootstrap owns only the Makefile surface"
+                raise ValueError(msg)
             return self
 
     class CandidateDependencySourceSpec(FlextInfraConfigModelsContract.ConfigContract):
@@ -56,6 +62,9 @@ class FlextInfraConfigModelsWorkspace:
                 msg = "candidate dependency commit must be a full Git OID"
                 raise ValueError(msg)
             return self
+
+    type CandidateBootstrapTargets = t.VariadicTuple[CandidateBootstrapTargetSpec]
+    """Shared declaration type for repeated candidate worktree target fields."""
 
     class WorkspaceBeadsServerSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Optional Dolt connection declared by a versioned workspace manifest."""
@@ -205,9 +214,7 @@ class FlextInfraConfigModelsWorkspace:
             m.Field(description="Candidate-only exact dependency Git sources"),
         ] = ()
         candidate_bootstrap_targets: Annotated[
-            t.VariadicTuple[
-                FlextInfraConfigModelsWorkspace.CandidateBootstrapTargetSpec
-            ],
+            FlextInfraConfigModelsWorkspace.CandidateBootstrapTargets,
             m.Field(description="Declared candidate worktrees conformed by Infra"),
         ] = ()
         repository_policy_overlays: Annotated[
@@ -335,9 +342,7 @@ class FlextInfraConfigModelsWorkspace:
             m.Field(description="Candidate-only exact dependency Git sources"),
         ] = ()
         candidate_bootstrap_targets: Annotated[
-            t.VariadicTuple[
-                FlextInfraConfigModelsWorkspace.CandidateBootstrapTargetSpec
-            ],
+            FlextInfraConfigModelsWorkspace.CandidateBootstrapTargets,
             m.Field(description="Declared candidate worktrees for bootstrap"),
         ] = ()
         subprojects: Annotated[

@@ -1,5 +1,11 @@
 # Model-class boundary migration
 
+<!-- TOC START -->
+
+- No sections found
+
+<!-- TOC END -->
+
 `make mod` owns model-field access migration. The ast-grep rule reports dynamic
 `model_fields` lookup; its semantic phase narrows an untrusted class argument using the
 public `flext-core` model-class guard before accessing required fields.

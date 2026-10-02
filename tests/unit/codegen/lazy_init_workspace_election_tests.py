@@ -1,4 +1,4 @@
-"""Repository-local projects retain their nearest facade re-export boundary."""
+"""Workspace-mode lazy-init elects the same nearest parent as standalone mode."""
 
 from __future__ import annotations
 

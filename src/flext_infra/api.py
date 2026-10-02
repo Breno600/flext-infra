@@ -11,12 +11,17 @@ from flext_infra import FlextInfraConfig, m, t, u
 from .base import s
 from .check.workspace_check import FlextInfraWorkspaceChecker
 from .codegen.census import FlextInfraCodegenCensus
+from .codegen.codegen_transaction import FlextInfraCodegenTransaction
+from .codegen.conform import FlextInfraCodegenConform
 from .codegen.fixer import FlextInfraCodegenFixer
+from .codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
 from .codegen.pipeline import FlextInfraCodegenPipeline
 from .codemod.apply_renames import FlextInfraApplyRenames
 from .codemod.batch_apply import FlextInfraCodemodBatchApply
 from .codemod.text_gates import FlextInfraModTextGateEngine
+from .services.candidate_bootstrap import FlextInfraCandidateBootstrapService
 from .validate.namespace_validator import FlextInfraNamespaceValidator
+from .workspace.detector import FlextInfraWorkspaceDetector
 from .workspace.environment import FlextInfraWorkspaceEnvironmentMixin
 from .workspace.rope import FlextInfraRopeWorkspace
 
@@ -28,6 +33,31 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
     """Thin public FLEXT facade over infra services."""
 
     app_name: ClassVar[str] = "flext-infra"
+
+    def bootstrap_candidate(
+        self, request: m.Infra.CandidateBootstrapCommand
+    ) -> p.Result[bool]:
+        """Compose typed declarations, conform planner and one atomic publisher."""
+        identity = u.Infra.exact_worktree_root(
+            request.repository_root.expanduser().absolute()
+        )
+        if identity.failure:
+            return r[bool].from_failure(identity)
+        source_root = identity.value.repo_root
+        manifest = u.Cli.atomic_read_binary_file_state(
+            u.Infra.workspace_manifest_path(source_root), required=True
+        )
+        if manifest.failure:
+            return r[bool].from_failure(manifest)
+        workspace = FlextInfraWorkspaceDetector.load_workspace_spec(source_root)
+        if workspace.failure:
+            return r[bool].from_failure(workspace)
+        return FlextInfraCandidateBootstrapService(
+            planner=FlextInfraCodegenConform(repository_root=source_root),
+            transaction=FlextInfraCodegenTransaction(
+                FlextInfraCodegenMiseArtifacts(repository_root=source_root)
+            ),
+        ).execute(source_root, workspace.value, request, manifest.value)
 
     def rope_workspace(
         self, repository_root: Path | None = None
@@ -130,13 +160,6 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
                 rename_inputs=tuple(campaigns),
             ).execute()
 
-    def mod_text(self, request: m.Infra.ModCommand) -> p.Result[t.Cli.ResultValue]:
-        """Compose the standalone authenticated text-rule replay."""
-        root = u.Infra.resolve_repository_root_or_cwd(request.repository_root)
-        return FlextInfraModTextGateEngine.run(
-            root, apply=request.apply and not request.check and not request.dry_run_mode
-        )
-
     def validate_namespace(
         self, request: m.Infra.NamespaceValidateCommand
     ) -> p.Result[m.Infra.ValidationReport]:
@@ -145,6 +168,33 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
             return FlextInfraNamespaceValidator(
                 repository_root=request.repository_root, rope=rope
             ).build_report()
+
+    def mod_text(self, request: m.Infra.ModTextCommand) -> p.Result[t.Cli.ResultValue]:
+        """Compose the standalone authenticated text-rule replay."""
+        root = u.Infra.resolve_repository_root_or_cwd(request.repository_root)
+        return FlextInfraModTextGateEngine.run(root, apply=request.apply)
+
+    def mod_text_candidate(
+        self, request: m.Infra.ModTextCommand
+    ) -> p.Result[t.Cli.ResultValue]:
+        """Replay one manifest-declared candidate using this healthy provider."""
+        source_root = u.Infra.resolve_repository_root_or_cwd(request.repository_root)
+        workspace = FlextInfraWorkspaceDetector.load_workspace_spec(source_root)
+        if workspace.failure:
+            return r[t.Cli.ResultValue].from_failure(workspace)
+        targets = workspace.value.candidate_bootstrap_targets
+        if len(targets) != 1:
+            return r[t.Cli.ResultValue].fail(
+                "mod-text-candidate requires exactly one candidate_bootstrap_target"
+            )
+        identity = u.Infra.exact_worktree_root(
+            (source_root / targets[0].path).resolve(strict=True)
+        )
+        if identity.failure:
+            return r[t.Cli.ResultValue].from_failure(identity)
+        return FlextInfraModTextGateEngine.run(
+            identity.value.repo_root, apply=request.apply
+        )
 
     @staticmethod
     def project_context(cwd: Path) -> p.Result[m.Infra.WorkspaceProjectContext]:

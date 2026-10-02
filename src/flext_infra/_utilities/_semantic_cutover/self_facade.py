@@ -154,9 +154,6 @@ class FlextInfraUtilitiesSemanticCutoverSelfFacade(
                     or node.level
                 ):
                     continue
-                if node.module is None:
-                    msg = "elected self-facade import has no absolute module"
-                    raise ValueError(msg)
                 for alias in node.names:
                     if alias.name != "u":
                         continue

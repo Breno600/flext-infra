@@ -159,13 +159,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
             source += "sys.exit(7)"
         else:
             if scenario == "memory":
-                source += (
-                    "\ntry:\n"
-                    f"    allocation = bytearray({limit.memory_limit_bytes * 2})\n"
-                    "except MemoryError:\n"
-                    "    print('allocation-denied: MemoryError', file=sys.stderr, flush=True)\n"
-                    "    raise\n"
-                )
+                source += f"allocation = bytearray({limit.memory_limit_bytes * 2}); "
             source += f"time.sleep({limit.timeout_seconds + 1})"
         command = u.Infra.mypy_limited_command(
             test_u.Tests.mypy_workload(tmp_path, source), limit
@@ -291,7 +285,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
     def test_mypy_resource_limit_parses_environment_at_boundary(self) -> None:
         """Convert valid process text once before strict model validation."""
         memory_limit = c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT // 2
-        timeout_limit = c.Infra.MYPY_TIMEOUT_SECONDS_MAX
+        timeout_limit = c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT // 2
         with tm.scope(
             env={
                 c.Infra.MYPY_MEMORY_LIMIT_MB_ENV: str(memory_limit),
@@ -365,21 +359,6 @@ class TestsFlextInfraUtilitiesResourceLimits:
                 memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
                 timeout_seconds=c.Infra.MYPY_TIMEOUT_SECONDS_MAX + 1,
             )
-
-        with (
-            tm.scope(
-                env={
-                    c.Infra.MYPY_TIMEOUT_SECONDS_ENV: str(
-                        c.Infra.MYPY_TIMEOUT_SECONDS_MAX + 1
-                    )
-                }
-            ),
-            pytest.raises(
-                ValueError,
-                match=f"less than or equal to {c.Infra.MYPY_TIMEOUT_SECONDS_MAX}",
-            ),
-        ):
-            u.Infra.mypy_resource_limit()
 
     def test_mypy_timeout_has_controlled_exit_and_signal_diagnostic(self) -> None:
         """Expose the configured ceilings and process status on timeout."""

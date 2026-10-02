@@ -31,9 +31,7 @@ class FlextInfraModTextGateEngine:
     """Scan, apply, and prove the declarative sed-by-list rule cascade."""
 
     @classmethod
-    def run(
-        cls, root: Path, *, apply: bool
-    ) -> p.Result[t.Cli.ResultValue]:
+    def run(cls, root: Path, *, apply: bool) -> p.Result[t.Cli.ResultValue]:
         """Replay only text rules through their authenticated transaction."""
         pending = cls.scan(root, fix=False, validate_receipts=True)
         if pending.failure:

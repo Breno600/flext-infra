@@ -64,6 +64,16 @@ class FlextInfraConstantsDocs:
         "D106",
         "B018",
         "F821",
+        "F811",
+        "SLF001",
+        "S106",
+        "PT004",
+        "E402",
+        "PLW0127",
+        "PLC0414",
+        "pytest-useless-yield-fixture",
+        "unused-variable",
+        "unused-static-method-argument",
     )
     """Rules ignored for executable docs snippets that are not full modules/tests.
 
@@ -75,7 +85,13 @@ class FlextInfraConstantsDocs:
     docs snippets are fragments that cite symbols defined in the surrounding
     prose, other repositories, or the installed fleet — a snippet is never a
     whole module, so every foreign name is undefined by construction
-    (measured: the root's remaining 57 fence findings were all F821)."""
+    (measured: the root's remaining 57 fence findings were all F821). The
+    final block joins the last fragment-inherent rules measured on the same
+    sweep: ``F811`` (each block re-exemplifies the same protocol), ``SLF001``
+    (demonstrating the lazy internal accessor), ``S106`` (example docker
+    credentials), ``PT004`` (didactic fixture), ``E402`` (contextual import
+    mid-document), ``PLW0127``/``PLC0414`` (the self-assignment aliasing the
+    lazy-export pattern itself teaches)."""
     MACHINE_PATH_RE: ClassVar[t.RegexPattern] = re.compile(
         r"(?<![\w./-])/(?:home|Users)/(?P<user>[A-Za-z0-9_.-]+)(?=/|\b)"
     )
