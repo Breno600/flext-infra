@@ -1,0 +1,95 @@
+id: ban-silent-suppress
+snapshots:
+  ? |
+    from contextlib import nullcontext, suppress
+    with suppress(KeyError):
+        run()
+  : labels:
+    - source: suppress(KeyError)
+      style: primary
+      start: 50
+      end: 68
+    - source: contextlib
+      style: secondary
+      start: 5
+      end: 15
+    - source: suppress
+      style: secondary
+      start: 36
+      end: 44
+    - source: from contextlib import nullcontext, suppress
+      style: secondary
+      start: 0
+      end: 44
+    - source: |
+        from contextlib import nullcontext, suppress
+        with suppress(KeyError):
+            run()
+      style: secondary
+      start: 0
+      end: 80
+  ? |
+    from contextlib import suppress as quiet
+    with quiet(KeyError):
+        run()
+  : labels:
+    - source: quiet(KeyError)
+      style: primary
+      start: 46
+      end: 61
+    - source: contextlib
+      style: secondary
+      start: 5
+      end: 15
+    - source: suppress
+      style: secondary
+      start: 23
+      end: 31
+    - source: quiet
+      style: secondary
+      start: 35
+      end: 40
+    - source: suppress as quiet
+      style: secondary
+      start: 23
+      end: 40
+    - source: from contextlib import suppress as quiet
+      style: secondary
+      start: 0
+      end: 40
+    - source: |
+        from contextlib import suppress as quiet
+        with quiet(KeyError):
+            run()
+      style: secondary
+      start: 0
+      end: 73
+  ? |
+    import contextlib
+    with contextlib.suppress(KeyError):
+        run()
+  : labels:
+    - source: contextlib.suppress(KeyError)
+      style: primary
+      start: 23
+      end: 52
+  ? |
+    import contextlib as cl
+    with cl.suppress(OSError):
+        run()
+  : labels:
+    - source: cl.suppress(OSError)
+      style: primary
+      start: 29
+      end: 49
+    - source: import contextlib as cl
+      style: secondary
+      start: 0
+      end: 23
+    - source: |
+        import contextlib as cl
+        with cl.suppress(OSError):
+            run()
+      style: secondary
+      start: 0
+      end: 61

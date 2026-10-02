@@ -1,4 +1,8 @@
-"""Projection-only contract for repository-owned Beads configuration."""
+"""Projection-only contract for repository-owned Beads configuration.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -27,8 +31,10 @@ class TestsFlextInfraCodegenBeadsProjection:
         return root
 
     def test_local_identity_renders_declarative_beads_routing(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test local identity renders declarative beads routing."""
         root = self._project(
             tmp_path / "project",
             database="project_database",
@@ -42,10 +48,21 @@ class TestsFlextInfraCodegenBeadsProjection:
         if rendered_config is None:
             pytest.fail("local identity must produce the declarative Beads config")
         # `issue_prefix` is the key bd itself resolves (`bd config get
-        # issue_prefix`); the hyphenated spelling reads as unset, so bd appended
-        # its own key on first write and left every governed checkout dirty.
-        tm.that(rendered_config, has='issue_prefix: "project-prefix"')
-        tm.that(rendered_config, lacks="issue-prefix:")
+        # issue_prefix`); a hyphen-only prefix reads as unset, so bd appended its
+        # own key on first write. A Gas City rig also carries gc's canonical
+        # mirror keys: gc rewrites a managed rig's config into exactly that key
+        # set on every adopt and start, so a projection in any other form left
+        # every governed checkout dirty after each gc pass.
+        beads = config.Infra.codegen.toolchain.beads
+        parsed = u.Tests.toml_mapping(tm.ok(u.Cli.yaml_parse(rendered_config)))
+        tm.that(parsed["issue_prefix"], eq="project-prefix")
+        tm.that(parsed["issue-prefix"], eq="project-prefix")
+        tm.that(parsed["dolt.mode"], eq=beads.dolt_mode)
+        tm.that(
+            parsed["dolt"],
+            eq={"disable-event-flush": beads.dolt_disable_event_flush},
+        )
+        tm.that("dolt.disable-event-flush" in parsed, eq=False)
         # A checkout with no workspace manifest declares city participation by
         # fleet default (True): the endpoint keys mirror the inherited city and
         # `types.custom` stays generator-owned.
@@ -60,15 +77,20 @@ class TestsFlextInfraCodegenBeadsProjection:
         tm.that(metadata["database"], eq="dolt")
         tm.that(metadata["dolt_database"], eq="project_database")
         tm.that(
-            metadata["dolt_mode"], eq=config.Infra.codegen.toolchain.beads.dolt_mode
+            metadata["dolt_mode"],
+            eq=config.Infra.codegen.toolchain.beads.dolt_mode,
         )
         # A fresh checkout has no checkout-owned identity.toml. Conform owns
         # the portable routing marker but never mints the ledger identity.
         tm.that("project_id" in metadata, eq=False)
         tm.that(set(metadata), eq={"backend", "database", "dolt_mode", "dolt_database"})
+        # gc writes this marker as a sorted-key JSON object; the projection uses
+        # the same order so gc's first write after adoption is byte-identical.
+        tm.that(list(metadata), eq=sorted(metadata))
 
     def test_gascity_disabled_renders_standalone_beads_config(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A disabled city never moves runtime ownership into generated config."""
         root = self._project(
@@ -77,7 +99,9 @@ class TestsFlextInfraCodegenBeadsProjection:
             issue_prefix="project-prefix",
         )
         u.Tests.write_standalone_workspace_manifest(
-            root, "fixture-project", gascity_enabled=False
+            root,
+            "fixture-project",
+            gascity_enabled=False,
         )
 
         plan = u.Tests.governed_project_plan(root)
@@ -89,6 +113,11 @@ class TestsFlextInfraCodegenBeadsProjection:
         tm.that(rendered_config, has='issue_prefix: "project-prefix"')
         tm.that(rendered_config, lacks="issue-prefix:")
         tm.that(rendered_config, lacks="dolt.auto-start:")
+        # The mode mirror and the event-flush switch are read only by gc; a
+        # standalone ledger carries neither (bd takes the flush switch from its
+        # environment and the mode from metadata.json).
+        tm.that(rendered_config, lacks="dolt.mode:")
+        tm.that(rendered_config, lacks="disable-event-flush")
         tm.that(rendered_config, lacks="gc.endpoint_origin")
         tm.that(rendered_config, lacks="gc.endpoint_status")
         tm.that(rendered_config, lacks="Gas City contract")
@@ -119,7 +148,8 @@ class TestsFlextInfraCodegenBeadsProjection:
         if rendered_mise is None:
             pytest.fail("conform must produce the managed .mise.toml")
         tm.that(
-            rendered_mise, has=f'make = "{config.Infra.codegen.toolchain.make_version}"'
+            rendered_mise,
+            has=f'make = "{config.Infra.codegen.toolchain.make_version}"',
         )
         tm.that(rendered_mise, lacks="conda")
         tm.that(rendered_mise, lacks="stale")
@@ -132,7 +162,9 @@ class TestsFlextInfraCodegenBeadsProjection:
             issue_prefix="project-prefix",
         )
         u.Tests.write_standalone_workspace_manifest(
-            root, "fixture-project", gascity_enabled=False
+            root,
+            "fixture-project",
+            gascity_enabled=False,
         )
 
         plan = u.Tests.governed_project_plan(root)
@@ -187,7 +219,8 @@ class TestsFlextInfraCodegenBeadsProjection:
         tm.that(desired, lacks="GT_ROOT")
 
     def test_envrc_local_without_custom_content_is_removed(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A .envrc.local carrying only generated residue is deleted."""
         root = self._project(
@@ -219,7 +252,10 @@ class TestsFlextInfraCodegenBeadsProjection:
     @pytest.mark.slow
     @pytest.mark.parametrize("gascity_enabled", [True, False])
     def test_envrc_is_storage_neutral_in_both_workspace_modes(
-        self, tmp_path: Path, *, gascity_enabled: bool
+        self,
+        tmp_path: Path,
+        *,
+        gascity_enabled: bool,
     ) -> None:
         """Workspace association never changes the storage-neutral activation."""
         root = self._project(
@@ -228,11 +264,14 @@ class TestsFlextInfraCodegenBeadsProjection:
             issue_prefix="project-prefix",
         )
         u.Tests.write_standalone_workspace_manifest(
-            root, "fixture-project", gascity_enabled=gascity_enabled
+            root,
+            "fixture-project",
+            gascity_enabled=gascity_enabled,
         )
 
         rendered_envrc = u.Tests.planned_text(
-            u.Tests.governed_project_plan(root), ".envrc"
+            u.Tests.governed_project_plan(root),
+            ".envrc",
         )
 
         if rendered_envrc is None:
@@ -241,7 +280,8 @@ class TestsFlextInfraCodegenBeadsProjection:
         tm.that(rendered_envrc, lacks="BEADS_DOLT_")
 
     def test_metadata_projection_preserves_a_minted_ledger_identity(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Regenerating must not strip the checkout's own ledger identity.
 
@@ -259,11 +299,13 @@ class TestsFlextInfraCodegenBeadsProjection:
         identity.parent.mkdir(parents=True, exist_ok=True)
         identity.write_text(f'[project]\nid = "{minted}"\n')
         (root / c.Infra.BEADS_METADATA_RELPATH).write_text(
-            '{"backend":"dolt"}\n', encoding="utf-8"
+            '{"backend":"dolt"}\n',
+            encoding="utf-8",
         )
 
         rendered = u.Tests.planned_text(
-            u.Tests.governed_project_plan(root), c.Infra.BEADS_METADATA_RELPATH
+            u.Tests.governed_project_plan(root),
+            c.Infra.BEADS_METADATA_RELPATH,
         )
         if rendered is None:
             pytest.fail("local identity must produce the Beads marker")
@@ -273,10 +315,13 @@ class TestsFlextInfraCodegenBeadsProjection:
             set(metadata),
             eq={"database", "backend", "dolt_mode", "dolt_database", "project_id"},
         )
+        tm.that(list(metadata), eq=sorted(metadata))
 
     def test_projection_preserves_the_manual_identity_input(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test projection preserves the manual identity input."""
         root = self._project(
             tmp_path / "project",
             database="project_database",
@@ -289,9 +334,8 @@ class TestsFlextInfraCodegenBeadsProjection:
 
         tm.that(identity.read_bytes(), eq=before)
 
-    def test_beads_gate_lock_is_tolerated_runtime_state(
-        self, tmp_path: Path
-    ) -> None:
+    @staticmethod
+    def test_beads_gate_lock_is_tolerated_runtime_state(tmp_path: Path) -> None:
         """The bd gate serialization marker never fails composed verification.
 
         The bd client writes ``dolt.gate.lock`` beside the ledger on every gate
@@ -302,7 +346,8 @@ class TestsFlextInfraCodegenBeadsProjection:
         route = tmp_path / c.Infra.BEADS_DIRNAME
         route.mkdir(mode=0o700)
         (route / Path(c.Infra.BEADS_CONFIG_RELPATH).name).write_text(
-            "{}\n", encoding="utf-8"
+            "{}\n",
+            encoding="utf-8",
         )
         (route / "dolt.gate.lock").write_text("", encoding="utf-8")
 

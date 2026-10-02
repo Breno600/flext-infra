@@ -1,4 +1,8 @@
-"""Public pyproject conformer over the requirement and uv-source owners."""
+"""Public pyproject conformer over the requirement and uv-source owners.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,9 +12,10 @@ from typing import TYPE_CHECKING
 from flext_cli import r, u
 
 from flext_infra import c, m, t
-
-from ..dependencies import FlextInfraUtilitiesDependencies
-from .uv_sources import FlextInfraUtilitiesPyprojectUvSources
+from flext_infra._utilities._pyproject.uv_sources import (
+    FlextInfraUtilitiesPyprojectUvSources,
+)
+from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -21,23 +26,29 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
 
     @classmethod
     def _parsed_pyproject(
-        cls, pyproject_content: str
+        cls,
+        pyproject_content: str,
     ) -> p.Result[t.Pair[t.Cli.TomlDocument, str]]:
-        """Parse one pyproject source and return it with its declared project name."""
+        """Parse one pyproject source and return it with its declared project name.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[t.Cli.TomlDocument, str]]``.
+
+        """
         source = u.Cli.toml_parse_text(pyproject_content)
         if source is None:
             return r[t.Pair[t.Cli.TomlDocument, str]].fail(
-                "pyproject content is not valid TOML"
+                "pyproject content is not valid TOML",
             )
         project = u.Cli.toml_table_child(source, c.Infra.PROJECT)
         if project is None:
             return r[t.Pair[t.Cli.TomlDocument, str]].fail(
-                "pyproject content must define [project]"
+                "pyproject content must define [project]",
             )
         project_name_raw = u.Cli.toml_value(project, c.Infra.NAME)
         if not isinstance(project_name_raw, str) or not project_name_raw.strip():
             return r[t.Pair[t.Cli.TomlDocument, str]].fail(
-                "[project].name must be a non-empty string"
+                "[project].name must be a non-empty string",
             )
         return r[t.Pair[t.Cli.TomlDocument, str]].ok((source, project_name_raw.strip()))
 
@@ -59,6 +70,10 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         render on the workspace's declared integration line; ``family_line``
         is the detected FLEXT integration branch that re-renders commit residue
         in the other internal requirements. Without a line, both fail loudly.
+
+        Returns:
+            Canonical TOML with autonomous dependencies and uv policy.
+
         """
         parsed = cls._parsed_pyproject(pyproject_content)
         if parsed.failure:
@@ -90,12 +105,12 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         }
         unused_candidates = sorted(
             candidate_sources.keys()
-            - set(FlextInfraUtilitiesDependencies.declared_dependency_names(source))
+            - set(FlextInfraUtilitiesDependencies.declared_dependency_names(source)),
         )
         if unused_candidates:
             return r[str].fail(
                 "candidate dependencies are not declared requirements: "
-                + ", ".join(unused_candidates)
+                + ", ".join(unused_candidates),
             )
         normalized = cls._normalize_requirements(
             source,
@@ -117,11 +132,16 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         )
         if namespace_scope.failure:
             return r[str].from_failure(namespace_scope)
-        sources_result = cls._sync_uv_sources(source, resolution=uv_resolution)
+        sources_result = cls._sync_uv_sources(
+            source,
+            resolution=uv_resolution,
+            candidate_sources=candidate_sources,
+        )
         if sources_result.failure:
             return r[str].from_failure(sources_result)
         provenance_result = cls._validate_dependency_provenance(
-            source, workspace=workspace
+            source,
+            workspace=workspace,
         )
         if provenance_result.failure:
             return r[str].from_failure(provenance_result)
@@ -144,14 +164,18 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
 
     @staticmethod
     def _sync_namespace_scope(
-        document: t.Cli.TomlDocument, namespace_scan_dirs: t.StrSequence | None
+        document: t.Cli.TomlDocument,
+        namespace_scan_dirs: t.StrSequence | None,
     ) -> p.Result[bool]:
         """Sync ``[tool.flext.namespace].scan_dirs`` from the project SSOT.
 
         ``None`` or an empty sequence leaves the section untouched: projects
         without a declared scope keep the dynamic every-root behavior. A
-        non-empty sequence is the workspace manifest's production scope
-        (cosmos-3flk9 decision A).
+        non-empty sequence is the workspace manifest's production scope.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         if not namespace_scan_dirs:
             return r[bool].ok(True)
@@ -166,6 +190,10 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         Search paths belong to FlextInfraExtraPathsManager. Top-level
         ``venv`` / ``venvPath`` belong to deps modernize (root vs child
         runtime). Conform must not strip those or gen oscillates.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
         if tool is None:
@@ -184,13 +212,13 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         for key in interpreter_keys:
             u.Cli.toml_remove_key_if_present(pyright, key)
         raw_environments = u.Cli.json_as_sequence(
-            u.Cli.toml_value(pyright, "executionEnvironments")
+            u.Cli.toml_value(pyright, "executionEnvironments"),
         )
         normalized_environments: t.JsonValueList = []
         for index, environment in enumerate(raw_environments):
             if not isinstance(environment, Mapping):
                 return r[bool].fail(
-                    f"tool.pyright.executionEnvironments[{index}] must be a mapping"
+                    f"tool.pyright.executionEnvironments[{index}] must be a mapping",
                 )
             mapping = t.Cli.JSON_MAPPING_ADAPTER.validate_python(environment)
             normalized: t.JsonDict = dict(mapping)
@@ -201,7 +229,9 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             normalized_environments.append(normalized)
         if raw_environments:
             u.Cli.toml_sync_value(
-                pyright, "executionEnvironments", normalized_environments
+                pyright,
+                "executionEnvironments",
+                normalized_environments,
             )
         return r[bool].ok(True)
 

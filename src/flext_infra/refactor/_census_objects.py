@@ -1,4 +1,8 @@
-"""Census object classification, violation building, and impact map — extracted concern."""
+"""Census object classification, violation building, and impact map — extracted concern.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -22,11 +26,18 @@ class FlextInfraRefactorCensusObjectsMixin:
 
     @staticmethod
     def _selected_families(family_names: t.StrSequence | None) -> frozenset[str]:
-        """Return the selected families."""
+        """Return the selected families.
+
+        Returns:
+            The selected families.
+
+        """
         if not family_names:
             return frozenset()
+        families = u.Infra.facade_families()
         resolved = {
-            c.Infra.FAMILY_SUFFIXES.get(name, name).lower() for name in family_names
+            (families[name].suffix if name in families else name).lower()
+            for name in family_names
         }
         return frozenset(resolved)
 
@@ -36,10 +47,13 @@ class FlextInfraRefactorCensusObjectsMixin:
         *,
         kind: str,
         description: str,
-        fixable: bool = False,
-        fix_action: str = "",
     ) -> m.Infra.Violation:
-        """Violation."""
+        """Violation.
+
+        Returns:
+            The resulting ``m.Infra.Violation``.
+
+        """
         return m.Infra.Violation(
             project=item.project,
             object_name=item.name,
@@ -48,13 +62,16 @@ class FlextInfraRefactorCensusObjectsMixin:
             file_path=item.file_path,
             line=item.line,
             description=description,
-            fixable=fixable,
-            fix_action=fix_action,
         )
 
     @staticmethod
     def _is_unused(item: m.Infra.Object) -> bool:
-        """Is unused."""
+        """Is unused.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         return (
             not item.is_facade_member
             and item.references_count == 0
@@ -65,7 +82,12 @@ class FlextInfraRefactorCensusObjectsMixin:
 
     @staticmethod
     def _is_published_export(item: m.Infra.Object) -> bool:
-        """Keep package ABI bindings even when Rope sees only typing imports."""
+        """Keep package ABI bindings even when Rope sees only typing imports.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         if item.scope_path != item.name:
             return False
         package_name = item.module_name.rpartition(".")[0]
@@ -95,6 +117,10 @@ class FlextInfraRefactorCensusObjectsMixin:
         them without any in-repository reference, so a zero reference count
         never makes one a removal candidate: census apply would otherwise
         delete the tests it is asked to validate.
+
+        Returns:
+            Whether the object is a pytest entry point in a test module.
+
         """
         return (
             item.kind in {"class", "function", "method"}
@@ -104,9 +130,17 @@ class FlextInfraRefactorCensusObjectsMixin:
 
     @classmethod
     def _removal_candidate(
-        cls, item: m.Infra.Object, *, include_unused: bool
+        cls,
+        item: m.Infra.Object,
+        *,
+        include_unused: bool,
     ) -> m.Infra.RemovalCandidate | None:
-        """Build a removal candidate for an object."""
+        """Build a removal candidate for an object.
+
+        Returns:
+            The resulting ``m.Infra.RemovalCandidate | None``.
+
+        """
         if include_unused and cls._is_unused(item):
             reason, suggested_action = "unused", "delete_object_definition"
         else:
@@ -126,20 +160,25 @@ class FlextInfraRefactorCensusObjectsMixin:
 
     @staticmethod
     def _object_key(item: m.Infra.Object) -> str:
-        """Object key."""
-        return f"{item.file_path}:{item.line}:{item.scope_path}:{item.kind}"
+        """Object key.
 
-    @staticmethod
-    def _fix_key(file_path: Path, object_name: str, action: str = "") -> str:
-        """Fix key."""
-        suffix = f"::{action}" if action else ""
-        return f"{file_path.resolve()}::{object_name}{suffix}"
+        Returns:
+            The resulting ``str``.
+
+        """
+        return f"{item.file_path}:{item.line}:{item.scope_path}:{item.kind}"
 
     @classmethod
     def _impact_map_results(
-        cls, report: m.Infra.WorkspaceReport
+        cls,
+        report: m.Infra.WorkspaceReport,
     ) -> t.VariadicTuple[m.Infra.Result]:
-        """Impact map results."""
+        """Impact map results.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.Result]``.
+
+        """
         changes_by_file: MutableMapping[Path, list[str]] = defaultdict(list)
         for candidate in report.removal_candidates:
             source_path = Path(candidate.file_path)
@@ -179,7 +218,12 @@ class FlextInfraRefactorCensusObjectsMixin:
     def _reference_sites(
         candidate: m.Infra.RemovalCandidate,
     ) -> t.VariadicTuple[m.Infra.ReferenceSite]:
-        """Return all reference sites for a removal candidate."""
+        """Return all reference sites for a removal candidate.
+
+        Returns:
+            All reference sites for a removal candidate.
+
+        """
         return (*candidate.runtime_reference_sites, *candidate.script_reference_sites)
 
     @staticmethod
@@ -189,6 +233,10 @@ class FlextInfraRefactorCensusObjectsMixin:
         Used to filter the parent inventory so that builtin attributes
         inherited by str/int/dict/list constants do not pollute collision
         candidates with names like `count`, `index`, `replace`, etc.
+
+        Returns:
+            True iff `value`'s defining module is in the flext package tree.
+
         """
         module_name = getattr(value, "__module__", "")
         if not isinstance(module_name, str):

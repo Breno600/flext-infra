@@ -1,4 +1,8 @@
-"""Provider, repository source, and CI private-submodule models."""
+"""Provider, repository source, and CI private-submodule models.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,9 +10,9 @@ from typing import Annotated, ClassVar, Self
 
 from flext_cli import m, u
 
-from ... import t
-from ..._constants import FlextInfraConstantsSharedInfra
-from .contract import FlextInfraConfigModelsContract
+from flext_infra import t
+from flext_infra._constants import FlextInfraConstantsSharedInfra
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
 
 
 class FlextInfraConfigModelsProvider:
@@ -38,10 +42,12 @@ class FlextInfraConfigModelsProvider:
         """Portable repository identity derived through one declared provider."""
 
         distribution: Annotated[
-            t.NonEmptyStr, m.Field(description="Repository distribution name")
+            t.NonEmptyStr,
+            m.Field(description="Repository distribution name"),
         ]
         provider: Annotated[
-            t.NonEmptyStr, m.Field(description="Provider key owning URL and branch")
+            t.NonEmptyStr,
+            m.Field(description="Provider key owning URL and branch"),
         ]
 
         @m.computed_field
@@ -85,7 +91,8 @@ class FlextInfraConfigModelsProvider:
         """One GitHub Action reference from the codegen catalog."""
 
         repository: Annotated[
-            t.NonEmptyStr, m.Field(description="GitHub owner/repository action name")
+            t.NonEmptyStr,
+            m.Field(description="GitHub owner/repository action name"),
         ]
         version: Annotated[
             t.NonEmptyStr,
@@ -93,24 +100,25 @@ class FlextInfraConfigModelsProvider:
         ]
 
     class CiPrivateSubmoduleDeployKeySpec(
-        FlextInfraConfigModelsContract.ConfigContract
+        FlextInfraConfigModelsContract.ConfigContract,
     ):
         """One read-only deploy key that unlocks a private workspace subproject in CI."""
 
         secret: Annotated[
             t.NonEmptyStr,
             m.Field(
-                description="GitHub Actions secret name holding the deploy key PEM"
+                description="GitHub Actions secret name holding the deploy key PEM",
             ),
         ]
         submodule: Annotated[
             t.NonEmptyStr,
             m.Field(
-                description="gitmodules submodule name (git config submodule.<name>.url)"
+                description="gitmodules submodule name (git config submodule.<name>.url)",
             ),
         ]
         path: Annotated[
-            t.NonEmptyStr, m.Field(description="Checkout-relative submodule path")
+            t.NonEmptyStr,
+            m.Field(description="Checkout-relative submodule path"),
         ]
         remote: Annotated[
             t.NonEmptyStr,
@@ -154,7 +162,8 @@ class FlextInfraConfigModelsProvider:
         paths: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                min_length=1, description="Submodule paths to init before make setup"
+                min_length=1,
+                description="Submodule paths to init before make setup",
             ),
         ]
         deploy_keys: Annotated[
@@ -166,7 +175,17 @@ class FlextInfraConfigModelsProvider:
 
         @u.model_validator(mode="after")
         def _validate_private_submodule_identity(self) -> Self:
-            """Keep path, key, and host identities complete and unambiguous."""
+            """Keep path, key, and host identities complete and unambiguous.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If private submodule deploy-key paths must exactly match
+                    paths; or if private submodule; or if private submodule known_hosts
+                    must pin github.com ssh-ed25519.
+
+            """
             key_paths = tuple(key.path for key in self.deploy_keys)
             if key_paths != self.paths:
                 msg = "private submodule deploy-key paths must exactly match paths"

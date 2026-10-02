@@ -1,4 +1,8 @@
-"""Public CLI tests for workspace quality checks."""
+"""Public CLI tests for workspace quality checks.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -22,7 +26,9 @@ class TestsFlextInfraWorkspaceCheckCli:
 
     @staticmethod
     def _create_workspace(
-        tmp_path: Path, *, project_names: t.StrSequence = ("flext-core",)
+        tmp_path: Path,
+        *,
+        project_names: t.StrSequence = ("flext-core",),
     ) -> Path:
         workspace = tmp_path / "workspace"
         workspace.mkdir(parents=True, exist_ok=True)
@@ -35,7 +41,8 @@ class TestsFlextInfraWorkspaceCheckCli:
             )
             package = project / "src" / project_name.replace("-", "_")
             package.joinpath("__init__.py").write_text(
-                f'"""{project_name} fixture package."""\n', encoding="utf-8"
+                f'"""{project_name} fixture package."""\n',
+                encoding="utf-8",
             )
         return workspace
 
@@ -51,7 +58,9 @@ class TestsFlextInfraWorkspaceCheckCli:
         module_path.write_text(f'"""Fixture module."""\n\n{content}', encoding="utf-8")
         return module_path
 
-    def test_resolve_gates_rejects_duplicate_explicit_gate(self) -> None:
+    @staticmethod
+    def test_resolve_gates_rejects_duplicate_explicit_gate() -> None:
+        """Test resolve gates rejects duplicate explicit gate."""
         result = FlextInfraWorkspaceChecker.resolve_gates([
             c.Infra.LINT,
             c.Infra.PYREFLY,
@@ -65,8 +74,12 @@ class TestsFlextInfraWorkspaceCheckCli:
         ids=["passing_project", "failing_project"],
     )
     def test_run_cli_lint_exit_code_matches_source_validity(
-        self, tmp_path: Path, source: str, expected_exit: int
+        self,
+        tmp_path: Path,
+        source: str,
+        expected_exit: int,
     ) -> None:
+        """Test run cli lint exit code matches source validity."""
         workspace = self._create_workspace(tmp_path)
         _ = self._write_module(workspace, "flext-core", source)
 
@@ -84,8 +97,10 @@ class TestsFlextInfraWorkspaceCheckCli:
         tm.that(exit_code, eq=expected_exit)
 
     def test_run_cli_returns_one_for_report_directory_error(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test run cli returns one for report directory error."""
         workspace = self._create_workspace(tmp_path)
         _ = self._write_module(workspace, "flext-core", "value = 1\n")
         blocked = tmp_path / "blocked"
@@ -108,8 +123,11 @@ class TestsFlextInfraWorkspaceCheckCli:
 
     @pytest.mark.parametrize("reports_directory", [None, "artifacts/check"])
     def test_run_cli_handles_multiple_projects(
-        self, tmp_path: Path, reports_directory: str | None
+        self,
+        tmp_path: Path,
+        reports_directory: str | None,
     ) -> None:
+        """Test run cli handles multiple projects."""
         workspace = self._create_workspace(tmp_path, project_names=("proj1", "proj2"))
         _ = self._write_module(workspace, "proj1", "value = 1\n")
         _ = self._write_module(workspace, "proj2", "other = 2\n")
@@ -141,7 +159,7 @@ class TestsFlextInfraWorkspaceCheckCli:
 
         tm.that(exit_code, eq=0)
         report = (workspace / relative_reports / report_name).read_text(
-            encoding="utf-8"
+            encoding="utf-8",
         )
         tm.that(report, has=["proj1", "proj2"])
         tm.that(
@@ -149,39 +167,11 @@ class TestsFlextInfraWorkspaceCheckCli:
             eq="Caller report must survive.\n",
         )
 
-    def test_run_cli_fix_contract_preserves_failure_when_reporting(
-        self, tmp_path: Path
+    def test_run_cli_fix_completes_and_keeps_remaining_findings(
+        self,
+        tmp_path: Path,
     ) -> None:
-        workspace = self._create_workspace(tmp_path)
-        module_path = self._write_module(workspace, "flext-core", "def broken(:\n")
-
-        exit_code = main([
-            "check",
-            "run",
-            "--repository-root",
-            str(workspace),
-            "--gates",
-            "lint",
-            "--apply",
-            "--report-findings",
-            "--ruff-args",
-            "--select F401",
-            "--projects",
-            "flext-core",
-        ])
-
-        # Reporting cannot turn remaining gate failures into success;
-        # an unparsable module is never rewritten.
-        tm.that(exit_code, eq=1)
-        tm.that(
-            module_path.read_text(encoding="utf-8"),
-            eq='"""Fixture module."""\n\ndef broken(:\n',
-        )
-
-    def test_run_cli_check_contract_fails_on_remaining_findings(
-        self, tmp_path: Path
-    ) -> None:
-        """Apply without ``--report-findings`` still fails on remaining findings."""
+        """A repair run completes; what it cannot repair stays for check."""
         workspace = self._create_workspace(tmp_path)
         module_path = self._write_module(workspace, "flext-core", "def broken(:\n")
 
@@ -194,23 +184,96 @@ class TestsFlextInfraWorkspaceCheckCli:
             "lint",
             "--apply",
             "--ruff-args",
-            "--select F401",
+            "--select unused-import",
             "--projects",
             "flext-core",
         ])
 
-        # No --report-findings: apply mode still fails while findings remain,
-        # and the unparsable module is never rewritten.
-        tm.that(exit_code, eq=1)
+        # Ruff completes and reports the syntax error as a finding of the
+        # code: the verb does not break, and the module is never rewritten.
+        tm.that(exit_code, eq=0)
         tm.that(
             module_path.read_text(encoding="utf-8"),
             eq='"""Fixture module."""\n\ndef broken(:\n',
         )
+
+    @staticmethod
+    def test_run_cli_fix_declares_static_methods_beside_an_unparsable_module(
+        tmp_path: Path,
+    ) -> None:
+        """A no-self-use repair completes when another module cannot parse."""
+        workspace = TestsFlextInfraWorkspaceCheckCli._create_workspace(tmp_path)
+        broken = TestsFlextInfraWorkspaceCheckCli._write_module(
+            workspace,
+            "flext-core",
+            "def broken(:\n",
+        )
+        sample = broken.with_name("sample.py")
+        sample.write_text(
+            '"""Fixture sample."""\n'
+            "\n"
+            "\n"
+            "class Sample:\n"
+            '    """Sample owner."""\n'
+            "\n"
+            "    def value(self) -> int:\n"
+            '        """Return one."""\n'
+            "        return 1\n",
+            encoding="utf-8",
+        )
+
+        exit_code = main([
+            "check",
+            "run",
+            "--repository-root",
+            str(workspace),
+            "--gates",
+            "lint",
+            "--apply",
+            "--ruff-args",
+            "--select no-self-use --preview",
+            "--projects",
+            "flext-core",
+        ])
+
+        tm.that(exit_code, eq=0)
+        tm.that(
+            sample.read_text(encoding="utf-8"),
+            has="    @staticmethod\n    def value() -> int:\n",
+        )
+        tm.that(
+            broken.read_text(encoding="utf-8"),
+            eq='"""Fixture module."""\n\ndef broken(:\n',
+        )
+
+    def test_run_cli_fix_fails_on_a_tool_error(self, tmp_path: Path) -> None:
+        """A status the tool does not declare breaks the repair verb."""
+        workspace = self._create_workspace(tmp_path)
+        self._write_module(workspace, "flext-core", "VALUE = 1\n")
+
+        exit_code = main([
+            "check",
+            "run",
+            "--repository-root",
+            str(workspace),
+            "--gates",
+            "lint",
+            "--apply",
+            "--ruff-args",
+            "--line-length not-a-number",
+            "--projects",
+            "flext-core",
+        ])
+
+        tm.that(exit_code, eq=1)
 
     def test_run_cli_check_only_preserves_source(self, tmp_path: Path) -> None:
+        """Test run cli check only preserves source."""
         workspace = self._create_workspace(tmp_path)
         module_path = self._write_module(
-            workspace, "flext-core", "import os\n\nvalue = 1\n"
+            workspace,
+            "flext-core",
+            "import os\n\nvalue = 1\n",
         )
 
         exit_code = main([
@@ -235,6 +298,7 @@ class TestsFlextInfraWorkspaceCheckCli:
         )
 
     def test_run_cli_accepts_shared_dry_run_flag(self, tmp_path: Path) -> None:
+        """Test run cli accepts shared dry run flag."""
         workspace = self._create_workspace(tmp_path)
         _ = self._write_module(workspace, "flext-core", "value = 1\n")
 

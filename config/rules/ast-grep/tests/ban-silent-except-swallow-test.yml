@@ -1,0 +1,42 @@
+id: ban-silent-except-swallow
+valid:
+  - |
+    try:
+        run()
+    except ValueError as exc:
+        raise RuntimeError("operation context") from exc
+  - |
+    try:
+        run()
+    except ValueError:
+        logger.warning("handled failure", exc_info=True)
+  - |
+    try:
+        run()
+    except KeyError:
+        log()
+        pass
+invalid:
+  - |
+    try:
+        run()
+    except ValueError:
+        pass
+  - |
+    for item in items:
+        try:
+            parse(item)
+        except ParseError:
+            continue
+  - |
+    try:
+        run()
+    except Exception:
+        """Ignored."""
+        pass
+  - |
+    try:
+        run()
+    except:
+        # nothing
+        pass

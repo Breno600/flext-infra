@@ -1,4 +1,8 @@
-"""Public contract tests for canonical lazy-init artifact rendering."""
+"""Public contract tests for canonical lazy-init artifact rendering.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -25,9 +29,13 @@ class TestsFlextInfraCodegenGeneration:
         *,
         eager_dunders: t.LazyAliasMap | None = None,
         child_packages: t.StrSequence = (),
-        type_checking_map: t.LazyAliasMap | None = None,
     ) -> m.Infra.LazyInitPlan:
-        """Build one validated render plan for a synthetic package path."""
+        """Build one validated render plan for a synthetic package path.
+
+        Returns:
+            The resulting ``m.Infra.LazyInitPlan``.
+
+        """
         package_dir = Path.cwd() / current_pkg.replace(".", "/")
         return m.Infra.LazyInitPlan(
             context=m.Infra.LazyInitPackageContext(
@@ -40,9 +48,6 @@ class TestsFlextInfraCodegenGeneration:
             action=c.Infra.LazyInitAction.WRITE,
             exports=exports,
             lazy_map=MappingProxyType(dict(lazy_map)),
-            type_checking_map=MappingProxyType(
-                dict(lazy_map if type_checking_map is None else type_checking_map)
-            ),
             eager_dunders=MappingProxyType(dict(eager_dunders or {})),
             inline_constants=MappingProxyType({}),
             child_packages_for_lazy=child_packages,
@@ -59,7 +64,7 @@ class TestsFlextInfraCodegenGeneration:
                 "r": ("flext_core", "r"),
             }),
             eager_dunders=MappingProxyType({
-                "__version__": ("demo_pkg.__version__", "__version__")
+                "__version__": ("demo_pkg.__version__", "__version__"),
             }),
             child_packages=("demo_pkg.services",),
         )
@@ -75,12 +80,13 @@ class TestsFlextInfraCodegenGeneration:
         tm.that(content, contains="MappingProxyType(")
         tm.that(content, contains="build_lazy_import_map(")
         tm.that(content, contains='".api": ("Demo",)')
-        tm.that(content, contains="from .__version__ import __version__ as __version__")
+        tm.that(content, contains="from demo_pkg.__version__ import __version__\n")
         tm.that(
-            content, contains='__all__: tuple[str, ...] = ("Demo", "__version__", "r")'
+            content,
+            contains='__all__: tuple[str, ...] = ("Demo", "__version__", "r")',
         )
         tm.that(content, contains="if TYPE_CHECKING:")
-        tm.that(content, contains="    from .api import Demo")
+        tm.that(content, contains="    from demo_pkg.api import Demo")
         tm.that(content, contains="install_lazy_exports(")
         tm.that(content, lacks="__unit__")
 
@@ -88,7 +94,9 @@ class TestsFlextInfraCodegenGeneration:
         """The rendered tuple annotation owns the compact-line width budget."""
         names = ("FlextInfraCleanService", "FlextInfraPythonVersionEnforcer")
         plan = self._plan(
-            "demo_pkg", names, {name: ("demo_pkg.owner", name) for name in names}
+            "demo_pkg",
+            names,
+            {name: ("demo_pkg.owner", name) for name in names},
         )
         rendered = FlextInfraCodegenGeneration.render_init(plan)
         target = tmp_path / "__init__.py"
@@ -103,8 +111,8 @@ class TestsFlextInfraCodegenGeneration:
         assert formatted.success, formatted.error
         assert target.read_text(encoding="utf-8") == rendered
 
-    def test_sibling_private_exports_use_relative_owners(self) -> None:
-        """Static and lazy imports resolve the same private sibling module."""
+    def test_sibling_private_exports_import_their_absolute_owner(self) -> None:
+        """The static import names the absolute owner; the lazy key stays compact."""
         plan = self._plan(
             "demo_pkg.servers._rfc",
             ("BaseConstants",),
@@ -114,11 +122,16 @@ class TestsFlextInfraCodegenGeneration:
         content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(content, "__init__.py", "exec")
-        tm.that(content, has="from .._base.constants import BaseConstants")
+        tm.that(
+            content,
+            has="from demo_pkg.servers._base.constants import BaseConstants",
+        )
         tm.that(content, has='".._base.constants": ("BaseConstants",)')
-        tm.that(content, lacks="from demo_pkg.servers._base.constants import")
+        tm.that(content, lacks="from .._base.constants import")
 
-    def test_generated_runtime_surfaces_import_without_bootstrap_cycles(self) -> None:
+    @staticmethod
+    def test_generated_runtime_surfaces_import_without_bootstrap_cycles() -> None:
+        """Test generated runtime surfaces import without bootstrap cycles."""
         tm.that(flext_core.__all__, has="c")
         tm.that(dir(flext_core), has="c")
         tm.that(flext_core.c.__name__, eq="FlextConstants")
@@ -138,44 +151,52 @@ class TestsFlextInfraCodegenGeneration:
         ],
     )
     def test_generated_imports_preserve_owner_resolution(
-        self, owner: str, rendered_owner: str
+        self,
+        owner: str,
+        rendered_owner: str,
     ) -> None:
-        """Static imports and lazy targets resolve to the same declared owner."""
+        """The static import names the absolute owner the compact lazy key resolves to."""
         package = "demo_pkg.servers._rfc"
         plan = self._plan(
-            package, ("Demo",), MappingProxyType({"Demo": (owner, "Demo")})
+            package,
+            ("Demo",),
+            MappingProxyType({"Demo": (owner, "Demo")}),
         )
+        absolute_owner = resolve_name(owner, package)
 
         content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(content, "__init__.py", "exec")
-        tm.that(content, contains=f"from {rendered_owner} import Demo")
+        tm.that(content, contains=f"from {absolute_owner} import Demo")
         tm.that(content, contains=f'"{rendered_owner}": ("Demo",)')
-        tm.that(resolve_name(rendered_owner, package), eq=resolve_name(owner, package))
+        tm.that(resolve_name(rendered_owner, package), eq=absolute_owner)
 
     def test_root_initializer_contains_static_and_lazy_contracts(self) -> None:
         """Public root initializer keeps typing and runtime targets aligned."""
         plan = self._plan(
-            "demo_pkg", ("Demo",), MappingProxyType({"Demo": ("demo_pkg.api", "Demo")})
+            "demo_pkg",
+            ("Demo",),
+            MappingProxyType({"Demo": ("demo_pkg.api", "Demo")}),
         )
 
         content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(content, "__init__.py", "exec")
         tm.that(content, contains="if TYPE_CHECKING:")
-        tm.that(content, contains="    from .api import Demo")
+        tm.that(content, contains="    from demo_pkg.api import Demo")
         runtime_prefix = content.split("if TYPE_CHECKING:", maxsplit=1)[0]
-        tm.that(runtime_prefix, lacks="from .api import Demo")
+        tm.that(runtime_prefix, lacks="from demo_pkg.api import Demo")
         tm.that(content, contains='".api": ("Demo",)')
         tm.that(content, contains="install_lazy_exports(")
         tm.that(content, lacks="__unit__")
 
     def test_nested_package_initializer_is_static(self) -> None:
+        """Test nested package initializer is static."""
         plan = self._plan(
             "flext_core._lazy_parts",
             ("FlextLazy",),
             MappingProxyType({
-                "FlextLazy": ("flext_core._lazy_parts.flextlazy_part_02", "FlextLazy")
+                "FlextLazy": ("flext_core._lazy_parts.flextlazy_part_02", "FlextLazy"),
             }),
         )
 
@@ -199,12 +220,15 @@ class TestsFlextInfraCodegenGeneration:
         content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(content, "__init__.py", "exec")
-        tm.that(content, lacks="from ._utilities.conversion import DemoConversion")
+        tm.that(
+            content,
+            lacks="from demo_pkg._utilities.conversion import DemoConversion",
+        )
         tm.that(content, lacks="DemoConversion")
         tm.that(content, contains='__all__: tuple[str, ...] = ("Demo",)')
 
-    def test_root_type_checking_uses_compact_relative_local_imports(self) -> None:
-        """Emit relative declarations as explicit public re-exports."""
+    def test_root_type_checking_imports_local_declarations_absolutely(self) -> None:
+        """Emit local declarations as absolute public re-exports."""
         plan = self._plan(
             "flext_cli",
             ("FlextCliSettings", "settings"),
@@ -217,11 +241,15 @@ class TestsFlextInfraCodegenGeneration:
         content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(content, "__init__.py", "exec")
-        tm.that(content, contains="from ._settings import FlextCliSettings, settings")
-        tm.that(content, lacks="from flext_cli._settings import")
+        tm.that(
+            content,
+            contains="from flext_cli._settings import FlextCliSettings, settings",
+        )
+        tm.that(content, lacks="from ._settings import")
         tm.that(content, lacks="    _ = (")
 
     def test_public_nested_package_preserves_lazy_exports(self) -> None:
+        """Test public nested package preserves lazy exports."""
         plan = self._plan(
             "demo_pkg.services",
             ("Demo", "Nested"),
@@ -234,7 +262,13 @@ class TestsFlextInfraCodegenGeneration:
         init_content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(init_content, "__init__.py", "exec")
-        tm.that(init_content, contains="from flext_core.lazy import")
+        tm.that(
+            init_content,
+            contains=(
+                f"from {c.Infra.LAZY_BOOTSTRAP_MODULE} import "
+                f"{', '.join(c.Infra.LAZY_BOOTSTRAP_HELPERS)}"
+            ),
+        )
         tm.that(init_content, contains='__all__: tuple[str, ...] = ("Demo", "Nested")')
         tm.that(init_content, contains="install_lazy_exports")
 
@@ -244,14 +278,17 @@ class TestsFlextInfraCodegenGeneration:
             "demo_pkg._fixtures",
             ("DemoFixture",),
             MappingProxyType({
-                "DemoFixture": ("demo_pkg._fixtures.settings", "DemoFixture")
+                "DemoFixture": ("demo_pkg._fixtures.settings", "DemoFixture"),
             }),
         )
 
         init_content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(init_content, "__init__.py", "exec")
-        tm.that(init_content, contains="from .settings import DemoFixture")
+        tm.that(
+            init_content,
+            contains="from demo_pkg._fixtures.settings import DemoFixture",
+        )
         tm.that(init_content, contains='__all__: tuple[str, ...] = ("DemoFixture",)')
         tm.that(init_content, contains="install_lazy_exports")
 
@@ -261,7 +298,7 @@ class TestsFlextInfraCodegenGeneration:
             "flext_core._lazy_parts",
             ("FlextLazy",),
             MappingProxyType({
-                "FlextLazy": ("flext_core._lazy_parts.flextlazy_part_02", "FlextLazy")
+                "FlextLazy": ("flext_core._lazy_parts.flextlazy_part_02", "FlextLazy"),
             }),
         )
 
@@ -278,7 +315,7 @@ class TestsFlextInfraCodegenGeneration:
             "flext_core._typings",
             ("FlextTypesLazy",),
             MappingProxyType({
-                "FlextTypesLazy": ("flext_core._typings.lazy", "FlextTypesLazy")
+                "FlextTypesLazy": ("flext_core._typings.lazy", "FlextTypesLazy"),
             }),
         )
 
@@ -350,7 +387,10 @@ class TestsFlextInfraCodegenGeneration:
         tm.that(init_content, contains='".constants": ("TestsDemoConstants", "c"),')
         tm.that(init_content, contains='".utilities": ("TestsDemoUtilities", "u"),')
         import_block = init_content.split(
-            "from flext_core.lazy import build_lazy_import_map, install_lazy_exports\n",
+            (
+                f"from {c.Infra.LAZY_BOOTSTRAP_MODULE} import "
+                f"{', '.join(c.Infra.LAZY_BOOTSTRAP_HELPERS)}\n"
+            ),
             maxsplit=1,
         )[1]
         import_block = import_block.split("install_lazy_exports(", maxsplit=1)[0]
@@ -358,13 +398,13 @@ class TestsFlextInfraCodegenGeneration:
             import_block.index(module)
             for module in (
                 "from flext_tests import tm",
-                "from .base import",
-                "from .constants import",
-                "from .models import",
-                "from .protocols import",
-                "from .settings import",
-                "from .typings import",
-                "from .utilities import",
+                "from tests.base import",
+                "from tests.constants import",
+                "from tests.models import",
+                "from tests.protocols import",
+                "from tests.settings import",
+                "from tests.typings import",
+                "from tests.utilities import",
             )
         )
         tm.that(module_offsets, eq=tuple(sorted(module_offsets)))
@@ -376,8 +416,8 @@ class TestsFlextInfraCodegenGeneration:
         tm.that(init_content, lacks="TestsDemoCase")
         tm.that(init_content, lacks=".unit.test_demo")
 
-    def test_root_type_checking_alias_uses_named_local_facade(self) -> None:
-        """Static analyzers receive the local facade class behind short aliases."""
+    def test_root_type_checking_imports_the_declared_letter(self) -> None:
+        """Static imports name the letter the facade module declares."""
         plan = self._plan(
             "demo_pkg",
             ("FlextDemoProtocols", "p"),
@@ -385,10 +425,6 @@ class TestsFlextInfraCodegenGeneration:
                 "FlextDemoProtocols": ("demo_pkg.protocols", "FlextDemoProtocols"),
                 "p": ("demo_pkg.protocols", "p"),
             }),
-            type_checking_map={
-                "FlextDemoProtocols": ("demo_pkg.protocols", "FlextDemoProtocols"),
-                "p": ("demo_pkg.protocols", "FlextDemoProtocols"),
-            },
         )
 
         content = FlextInfraCodegenGeneration.render_init(plan)
@@ -396,12 +432,12 @@ class TestsFlextInfraCodegenGeneration:
         compile(content, "__init__.py", "exec")
         tm.that(
             content,
-            contains="from .protocols import FlextDemoProtocols, FlextDemoProtocols as p",
+            contains="from demo_pkg.protocols import FlextDemoProtocols, p",
         )
-        tm.that(content, contains="FlextDemoProtocols as p")
+        tm.that(content, lacks="FlextDemoProtocols as p")
 
-    def test_root_service_alias_uses_typed_service_base(self) -> None:
-        """Bind ``s`` to the concrete project service base for static analysis."""
+    def test_root_service_letter_is_the_declared_service_letter(self) -> None:
+        """The service letter is imported as the base module declares it."""
         plan = self._plan(
             "demo_pkg",
             ("FlextDemoServiceBase", "s"),
@@ -409,25 +445,19 @@ class TestsFlextInfraCodegenGeneration:
                 "FlextDemoServiceBase": ("demo_pkg.base", "FlextDemoServiceBase"),
                 "s": ("demo_pkg.base", "s"),
             }),
-            type_checking_map={
-                "FlextDemoServiceBase": ("demo_pkg.base", "FlextDemoServiceBase"),
-                "s": ("demo_pkg.base", "FlextDemoServiceBase"),
-            },
         )
 
         content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(content, "__init__.py", "exec")
-        tm.that(
-            content,
-            contains="from .base import FlextDemoServiceBase, FlextDemoServiceBase as s",
-        )
-        tm.that(content, contains="FlextDemoServiceBase as s")
+        tm.that(content, contains="from demo_pkg.base import FlextDemoServiceBase, s")
+        tm.that(content, lacks="FlextDemoServiceBase as s")
 
-    def test_type_checking_renderer_keeps_explicit_aliases(self) -> None:
-        """Static imports bind aliases to their facade types explicitly."""
+    @staticmethod
+    def test_type_checking_renderer_keeps_declared_letters() -> None:
+        """Static imports keep each letter under the name its module declares."""
         lines = FlextInfraCodegenGeneration.generate_type_checking({
-            "module": [("c", "FlextConstants"), ("m", "FlextModels")]
+            "module": [("c", "c"), ("m", "m")],
         })
 
         tm.that(
@@ -435,7 +465,7 @@ class TestsFlextInfraCodegenGeneration:
             contains=(
                 "if TYPE_CHECKING:\n"
                 "    from flext_core import FlextTypes\n"
-                "    from module import FlextConstants as c, FlextModels as m"
+                "    from module import c, m"
             ),
         )
 
@@ -500,11 +530,9 @@ class TestsFlextInfraCodegenGeneration:
             ),
         )
 
-    @pytest.mark.parametrize(
-        "isort_table", ["", "[tool.ruff.lint.isort]\nknown-first-party = []\n"]
-    )
+    @staticmethod
     def test_project_package_name_reads_manifest_not_directory_name(
-        self, tmp_path: Path, isort_table: str
+        tmp_path: Path,
     ) -> None:
         """Worktree checkouts keep the manifest's package name.
 
@@ -517,8 +545,12 @@ class TestsFlextInfraCodegenGeneration:
         project_root = tmp_path / "0.12.0-dev"
         wrapper_root = project_root / "examples"
         wrapper_root.mkdir(parents=True)
+        package_root = project_root / "src" / "demo_worktree_pkg"
+        package_root.mkdir(parents=True)
+        (package_root / c.Infra.INIT_PY).write_text("", encoding="utf-8")
         (project_root / c.PYPROJECT_FILENAME).write_text(
-            f'[project]\nname = "demo-worktree-pkg"\nversion = "1.0.0"\n{isort_table}',
+            '[project]\nname = "demo-worktree-pkg"\nversion = "1.0.0"\n'
+            'authors = [{ name = "Fixture Author" }]\n',
             encoding="utf-8",
         )
         plan = m.Infra.LazyInitPlan(
@@ -532,10 +564,6 @@ class TestsFlextInfraCodegenGeneration:
             action=c.Infra.LazyInitAction.WRITE,
             exports=("cli_c", "project_p"),
             lazy_map=MappingProxyType({
-                "cli_c": ("flext_cli", "c"),
-                "project_p": ("demo_worktree_pkg", "p"),
-            }),
-            type_checking_map=MappingProxyType({
                 "cli_c": ("flext_cli", "c"),
                 "project_p": ("demo_worktree_pkg", "p"),
             }),
@@ -558,70 +586,56 @@ class TestsFlextInfraCodegenGeneration:
             ),
         )
 
-    @pytest.mark.parametrize("declared_empty", [False, True])
-    def test_empty_first_party_policy_does_not_discover_extra_namespaces(
-        self, tmp_path: Path, *, declared_empty: bool
+    def test_runtime_imports_are_one_isort_section_with_the_lazy_helpers(
+        self,
     ) -> None:
-        """An explicit empty list and an absent table remain distinct inputs."""
-        additional = tmp_path / "src" / "fixture_extra_namespace"
-        additional.mkdir(parents=True)
-        (additional / c.Infra.INIT_PY).write_text("", encoding="utf-8")
-        wrapper = tmp_path / "examples"
-        wrapper.mkdir()
-        table = (
-            "[tool.ruff.lint.isort]\nknown-first-party = []\n" if declared_empty else ""
-        )
-        (tmp_path / c.PYPROJECT_FILENAME).write_text(
-            f'[project]\nname = "configured-workspace"\nversion = "1.0.0"\n{table}',
-            encoding="utf-8",
-        )
+        """The helpers import sorts inside the first-party block it belongs to.
+
+        In the bootstrap root the helpers live in a sibling module of the
+        ``__version__`` import; both are first-party, so Ruff isort keeps them
+        in one block ordered by module. A separate helpers block was rewritten
+        by ``make fix`` after every ``make gen``.
+        """
+        root = c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
         plan = self._plan(
-            "examples",
-            ("extra", "external"),
+            root,
+            ("FlextLazy", "__version__"),
             MappingProxyType({
-                "extra": ("fixture_extra_namespace", "value"),
-                "external": ("zz_external_fixture", "value"),
+                "FlextLazy": (c.Infra.LAZY_BOOTSTRAP_MODULE, "FlextLazy"),
+            }),
+            eager_dunders=MappingProxyType({
+                "__version__": (f"{root}.__version__", "__version__"),
             }),
         )
-        plan = plan.model_copy(
-            update={
-                "context": plan.context.model_copy(
-                    update={"pkg_dir": wrapper, "init_path": wrapper / c.Infra.INIT_PY}
-                )
-            }
-        )
-        rendered = FlextInfraCodegenGeneration.render_init(plan)
-        expected = (
-            "    from fixture_extra_namespace import value as extra\n"
-            "    from zz_external_fixture import value as external\n"
-            if declared_empty
-            else (
-                "    from zz_external_fixture import value as external\n\n"
-                "    from fixture_extra_namespace import value as extra\n"
-            )
-        )
-        tm.that(rendered, has=expected)
 
-    @pytest.mark.parametrize("projected", ['"namespace"', '["valid", 3]', "false"])
-    def test_malformed_first_party_names_fail_at_the_render_boundary(
-        self, tmp_path: Path, projected: str
-    ) -> None:
-        """Invalid Ruff configuration cannot become a derived namespace list."""
-        package = tmp_path / "src" / "sample"
-        package.mkdir(parents=True)
-        (tmp_path / c.PYPROJECT_FILENAME).write_text(
-            '[project]\nname = "sample"\nversion = "1.0.0"\n'
-            f"[tool.ruff.lint.isort]\nknown-first-party = {projected}\n",
-            encoding="utf-8",
-        )
-        plan = self._plan("sample", (), MappingProxyType({}))
-        plan = plan.model_copy(
-            update={
-                "context": plan.context.model_copy(
-                    update={"pkg_dir": package, "init_path": package / c.Infra.INIT_PY}
-                )
-            }
+        content = FlextInfraCodegenGeneration.render_init(plan)
+
+        helpers = ", ".join(c.Infra.LAZY_BOOTSTRAP_HELPERS)
+        tm.that(
+            content,
+            contains=(
+                f"from {root}.__version__ import __version__\n"
+                f"from {c.Infra.LAZY_BOOTSTRAP_MODULE} import {helpers}\n"
+            ),
         )
 
-        with pytest.raises(m.ValidationError):
-            FlextInfraCodegenGeneration.render_init(plan)
+    def test_expanded_single_entry_mapping_keeps_its_trailing_comma(self) -> None:
+        """An exploded one-entry mapping carries the comma COM812 requires.
+
+        The entry fits one line while the inline mapping does not, which is
+        the shape whose comma-less rendering ``make fix`` rewrote.
+        """
+        plan = self._plan(
+            "demo_pkg",
+            ("FlextDemoGeneratedFacade",),
+            MappingProxyType({
+                "FlextDemoGeneratedFacade": (
+                    "demo_pkg._generated_parts.facade_part_04",
+                    "FlextDemoGeneratedFacade",
+                ),
+            }),
+        )
+
+        content = FlextInfraCodegenGeneration.render_init(plan)
+
+        tm.that(content, contains='("FlextDemoGeneratedFacade",),\n        }),')

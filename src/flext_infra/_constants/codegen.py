@@ -15,10 +15,12 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, ClassVar
 
-from .._constants.codegen_detection import FlextInfraConstantsCodegenDetection
-from .._constants.codegen_lazy import FlextInfraConstantsCodegenLazy
-from .._constants.codegen_render_names import FlextInfraConstantsCodegenRenderNames
-from .workspace import FlextInfraConstantsWorkspace
+from flext_infra._constants.codegen_detection import FlextInfraConstantsCodegenDetection
+from flext_infra._constants.codegen_lazy import FlextInfraConstantsCodegenLazy
+from flext_infra._constants.codegen_render_names import (
+    FlextInfraConstantsCodegenRenderNames,
+)
+from flext_infra._constants.workspace import FlextInfraConstantsWorkspace
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -65,8 +67,8 @@ class FlextInfraConstantsCodegen(
     """Bounded polite wait for a held lease before failing loud.
 
     A legitimate fleet ``make gen`` holds the lease for minutes; an immediate
-    non-blocking refusal turned ordinary multi-agent traffic into a spurious
-    ``JournalLeaseTimeoutError`` (flext-c2kp3). The wait is bounded so a truly
+    non-blocking refusal turned ordinary concurrent traffic into a spurious
+    ``JournalLeaseTimeoutError``. The wait is bounded so a truly
     wedged holder still fails loud instead of hanging forever.
     """
 
@@ -93,19 +95,23 @@ class FlextInfraConstantsCodegen(
         ("utilities.py", "Utilities", "FlextTestsUtilities", "Test utilities"),
     )
     "Base module definitions for tests/: (filename, class_suffix, base_class, docstring)."
-    # flext-wkii.14 (agent: codegen) — canonical root config/settings pair: a
+    # Canonical root config/settings pair: a
     # private `_config.py`/`_settings.py` module exporting the singleton.
-    # Consumed by the scaffold generator (flext-wkii.10).
+    # Consumed by the scaffold generator.
     RUNTIME_MODULES: ClassVar[t.VariadicTuple[t.Quad[str, str, str, str]]] = (
         ("_config.py", "Config", "FlextConfig", "Runtime config"),
         ("_settings.py", "Settings", "FlextSettings", "Runtime settings"),
     )
     "Runtime singleton modules for src/: (filename, class_suffix, base_class, docstring)."
     VIOLATION_PATTERN: ClassVar[t.RegexPattern] = re.compile(
-        r"\[(?P<rule>NS-(?:[A-Z]+|\d{3}))-\d{3}\]\s+"
-        r"(?P<module>[^:]+):(?P<line>\d+)\s+\u2014\s+(?P<message>.+)"
+        r"\[(?P<rule>[a-z0-9][a-z0-9-]*)\]\s+"
+        r"(?P<module>[^:]+):(?P<line>\d+)\s+\u2014\s+(?P<message>.+)",
     )
-    "Regex to parse violation strings: [NS-RULE-NNN] path:line — message."
+    "Regex to parse violation strings: [rule-id] path:line — message."
+    PROTOCOL_MODEL_MINIMAL_BODY_LINES: ClassVar[int] = 3
+    "Header lines of a generated protocol class; at or below it the body is empty."
+    LAZY_IMPORTS_BINDING: ClassVar[str] = "_LAZY_IMPORTS"
+    "Module binding the flext-core lazy engine writes and resolves exports from."
     MISE_RELEASE_COMPONENT_COUNT: ClassVar[int] = 3
     "Number of numeric components in a generated Mise release version."
     MISE_RELEASE_PATTERN: ClassVar[str] = (
@@ -118,7 +124,6 @@ class FlextInfraConstantsCodegen(
     "Canonical Unix Mise launcher filename."
     MISE_WINDOWS_LAUNCHER_FILENAME: ClassVar[str] = "mise.cmd"
     "Canonical Windows Mise launcher filename."
-    "UTC basic stamp for `{filename}.{stamp}.bak` written before gen apply."
     CODEGEN_TRANSACTION_LOCK_FILENAME: ClassVar[str] = "flext-infra-codegen.lock"
     "Worktree-specific administrative lock for complete generation."
     CODEGEN_TRANSACTION_LOCK_MODE: ClassVar[int] = 0o600
@@ -126,13 +131,6 @@ class FlextInfraConstantsCodegen(
     MISE_COLD_START_DIRECTORY: ClassVar[str] = "templates/bootstrap"
     "Package-local byte copy of flext-infra's own upg-written triple (cold start)."
 
-    # 2026.9.17 crashes during the launcher generation (unwrap-on-None in its
-    # script builder); the fleet bootstrap stays on the last known good
-    # release until upstream ships a fixed one. Revert to the bare selector
-    # ("github:jdx/mise") when that release lands.
-    MISE_KNOWN_GOOD_RELEASE: ClassVar[str] = "2026.9.16"
-    MISE_RELEASE_SELECTOR: ClassVar[str] = f"github:jdx/mise@{MISE_KNOWN_GOOD_RELEASE}"
-    "Tool selector `make upg` resolves through the pinned mise (`mise latest`)."
     MISE_LATEST_RESOLUTION_MARKER: ClassVar[str] = "releases/latest"
     "Live-resolution endpoint a pinned, offline launcher must never contain."
     MISE_LAUNCHER_BAKED_RELEASE_PATTERNS: ClassVar[t.StrMapping] = MappingProxyType({
@@ -144,7 +142,8 @@ class FlextInfraConstantsCodegen(
         "# @flext-generated: upg",
         (
             "# @flext-owner: flext-infra/src/flext_infra/templates/project/base/"
-            f"tool_bootstrap_recipe.j2 (mise latest {MISE_RELEASE_SELECTOR})"
+            "tool_bootstrap_recipe.j2 (toolchain.mise_selector and"
+            " toolchain.mise_version in flext-infra/config/codegen.yaml)"
         ),
         (
             "# @flext-adjust: never hand-edit; bin/mise and bin/mise.cmd are"
@@ -175,7 +174,6 @@ class FlextInfraConstantsCodegen(
         ("MISE_EXEC_AUTO_INSTALL", "false"),
         ("MISE_TASK_RUN_AUTO_INSTALL", "false"),
         ("MISE_AUTO_UPDATE", "false"),
-        ("MISE_MINIMUM_RELEASE_AGE", "0s"),
         ("MISE_HTTP_RETRIES", "0"),
         ("MISE_NETRC", "false"),
         ("MISE_NOT_FOUND_AUTO_INSTALL", "false"),
@@ -189,6 +187,13 @@ class FlextInfraConstantsCodegen(
         ("MISE_GITHUB_OAUTH_OPEN_BROWSER", "false"),
     )
     "Fixed fail-closed settings shared by every generated Mise invocation."
+    MISE_BOOTSTRAP_OFFLINE_ENVIRONMENT: ClassVar[t.VariadicTuple[t.Pair[str, str]]] = (
+        ("MISE_OFFLINE", "true"),
+    )
+    (
+        "Network policy of every generated Mise call except a missing-tool "
+        "install and the `make upg` resolution: cached state answers it, or it fails."
+    )
     MISE_BOOTSTRAP_TRANSIENT_ENVIRONMENT: ClassVar[
         t.VariadicTuple[t.Pair[str, str]]
     ] = (
@@ -241,12 +246,9 @@ class FlextInfraConstantsCodegen(
         "PATHEXT",
         "SYSTEMROOT",
         "WINDIR",
-        # Credential and network-policy keys the lock-time provenance fetch
-        # requires: without them the shared-host GitHub rate limit fails the
-        # lock generation closed. Reinjection stays explicit (allowlist).
+        # The one GitHub credential variable (optional) and the network
+        # policy key the lock-time provenance fetch reads.
         "GITHUB_TOKEN",
-        "GH_TOKEN",
-        "MISE_GITHUB_CREDENTIAL_COMMAND",
         "MISE_HTTP_TIMEOUT",
         "FLEXT_MYPY_PROFILE_OUTPUT",
         # The generated launchers bake their release; the bootstrap passes the
@@ -291,9 +293,6 @@ class FlextInfraConstantsCodegen(
     QG_REPORT_DIR: ClassVar[str] = ".reports/codegen/constants-quality-gate"
     "Report directory for constants quality gate."
     QG_CHECK_NAMESPACE_COMPLIANCE: ClassVar[str] = "namespace_compliance"
-    QG_CHECK_FLEXT_VALIDITY: ClassVar[str] = "flext_validity"
-    QG_CHECK_IMPORT_RESOLUTION: ClassVar[str] = "import_resolution"
-    QG_CHECK_LAYER_COMPLIANCE: ClassVar[str] = "layer_compliance"
     QG_CHECK_DUPLICATION_REDUCTION: ClassVar[str] = "duplication_reduction"
     QG_CHECK_TYPE_SAFETY: ClassVar[str] = "type_safety"
     QG_CHECK_LINT_CLEAN: ClassVar[str] = "lint_clean"

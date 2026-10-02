@@ -33,9 +33,15 @@ class FlextInfraSonarcloudSettingsSync(FlextInfraSonarcloudClient[bool]):
 
     @staticmethod
     def settings_plan(
-        sonarcloud: m.Infra.SonarcloudSpec, project_key: str
+        sonarcloud: m.Infra.SonarcloudSpec,
+        project_key: str,
     ) -> p.Result[m.Infra.SonarcloudSettingsPlan]:
-        """Build the complete server state one project must carry."""
+        """Build the complete server state one project must carry.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.SonarcloudSettingsPlan]``.
+
+        """
         # model_validate by field name: the constructor signature type checkers
         # synthesize speaks the wire aliases, which only the API boundary uses.
         values = tuple(
@@ -47,7 +53,7 @@ class FlextInfraSonarcloudSettingsSync(FlextInfraSonarcloudClient[bool]):
         )
         if len(frozenset(values)) != len(values):
             return r[m.Infra.SonarcloudSettingsPlan].fail(
-                "codegen.sonarcloud.issue_exclusions repeats a rule/resource pair"
+                "codegen.sonarcloud.issue_exclusions repeats a rule/resource pair",
             )
         return r[m.Infra.SonarcloudSettingsPlan].ok(
             m.Infra.SonarcloudSettingsPlan(
@@ -56,14 +62,19 @@ class FlextInfraSonarcloudSettingsSync(FlextInfraSonarcloudClient[bool]):
                 project_key=project_key,
                 setting_key=c.Infra.SONARCLOUD_ISSUE_IGNORE_KEY,
                 field_values=values,
-            )
+            ),
         )
 
     @staticmethod
     def settings_write_request(
         plan: m.Infra.SonarcloudSettingsPlan,
     ) -> m.Infra.SonarcloudSettingsWriteRequest:
-        """Select reset for an empty SSOT or set for its complete property set."""
+        """Select reset for an empty SSOT or set for its complete property set.
+
+        Returns:
+            The resulting ``m.Infra.SonarcloudSettingsWriteRequest``.
+
+        """
         if not plan.field_values:
             return m.Infra.SonarcloudSettingsWriteRequest(
                 api_path=c.Infra.SONARCLOUD_API_SETTINGS_RESET_PATH,
@@ -83,9 +94,15 @@ class FlextInfraSonarcloudSettingsSync(FlextInfraSonarcloudClient[bool]):
 
     @staticmethod
     def current_field_values(
-        plan: m.Infra.SonarcloudSettingsPlan, current: m.Infra.SonarcloudSettingsValues
+        plan: m.Infra.SonarcloudSettingsPlan,
+        current: m.Infra.SonarcloudSettingsValues,
     ) -> t.VariadicTuple[m.Infra.SonarcloudIssueFieldValue]:
-        """Read effective entries without excluding values inherited from a parent."""
+        """Read effective entries without excluding values inherited from a parent.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.SonarcloudIssueFieldValue]``.
+
+        """
         return tuple(
             value
             for setting in current.settings
@@ -99,15 +116,22 @@ class FlextInfraSonarcloudSettingsSync(FlextInfraSonarcloudClient[bool]):
         plan: m.Infra.SonarcloudSettingsPlan,
         current: m.Infra.SonarcloudSettingsValues,
     ) -> bool:
-        """Require every SSOT entry exactly once, regardless of server ordering."""
+        """Require every SSOT entry exactly once, regardless of server ordering.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         values = cls.current_field_values(plan, current)
         return len(values) == len(plan.field_values) and frozenset(values) == frozenset(
-            plan.field_values
+            plan.field_values,
         )
 
     @classmethod
     def _server_values(
-        cls, plan: m.Infra.SonarcloudSettingsPlan, token: t.SecretStr
+        cls,
+        plan: m.Infra.SonarcloudSettingsPlan,
+        token: t.SecretStr,
     ) -> p.Result[m.Infra.SonarcloudSettingsValues]:
         """Read the project's current value of the plan's setting."""
         body = cls.call(
@@ -121,12 +145,19 @@ class FlextInfraSonarcloudSettingsSync(FlextInfraSonarcloudClient[bool]):
         if body.failure:
             return r[m.Infra.SonarcloudSettingsValues].from_failure(body)
         return u.validate_value(
-            m.Infra.SonarcloudSettingsValues, body.value, from_json=True
+            m.Infra.SonarcloudSettingsValues,
+            body.value,
+            from_json=True,
         )
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Converge the server value; the payload is whether a write happened."""
+        """Converge the server value; the payload is whether a write happened.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         token = self.required_token()
         if token.failure:
             return r[bool].from_failure(token)
@@ -148,7 +179,9 @@ class FlextInfraSonarcloudSettingsSync(FlextInfraSonarcloudClient[bool]):
         if auth_body.failure:
             return r[bool].from_failure(auth_body)
         auth = u.validate_value(
-            m.Infra.SonarcloudAuthentication, auth_body.value, from_json=True
+            m.Infra.SonarcloudAuthentication,
+            auth_body.value,
+            from_json=True,
         )
         if auth.failure:
             return r[bool].from_failure(auth)
@@ -181,11 +214,11 @@ class FlextInfraSonarcloudSettingsSync(FlextInfraSonarcloudClient[bool]):
             )
             return r[bool].fail(
                 f"sonarcloud-sync: {plan.project_key} readback differs from the "
-                f"SSOT; server holds [{held}]"
+                f"SSOT; server holds [{held}]",
             )
         u.Cli.info(
             f"sonarcloud-sync: {plan.project_key} now holds "
-            f"{len(plan.field_values)} SSOT issue exclusion(s)"
+            f"{len(plan.field_values)} SSOT issue exclusion(s)",
         )
         self.log.info(
             "sonarcloud_settings_synced",

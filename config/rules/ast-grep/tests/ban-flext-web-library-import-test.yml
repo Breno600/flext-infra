@@ -1,0 +1,6 @@
+id: ban-flext-web-library-import
+valid:
+  - from flext_web import FlextWeb
+invalid:
+  - import fastapi
+  - from fastapi import FastAPI

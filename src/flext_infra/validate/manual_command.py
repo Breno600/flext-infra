@@ -11,6 +11,9 @@ The former pre-commit-config drift half of this module is retired: the
 detector, ``codegen conform --mode check`` (wired into ``make check``). A
 second detector diffing the live file against a hand-copied constant was
 permanently red on any conforming repository.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -19,8 +22,7 @@ import shlex
 from pathlib import Path
 
 from flext_infra import c, t
-
-from ..base import s
+from flext_infra.base import s
 
 
 class FlextInfraManualCommandValidator(s[bool]):
@@ -28,7 +30,12 @@ class FlextInfraManualCommandValidator(s[bool]):
 
     @classmethod
     def command_blocked(cls, command: str) -> bool:
-        """Check whether any shell segment runs a managed tool outside make/flext_infra."""
+        """Check whether any shell segment runs a managed tool outside make/flext_infra.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         stripped = command.strip()
         if not stripped:
             return False
@@ -39,13 +46,15 @@ class FlextInfraManualCommandValidator(s[bool]):
 
     @classmethod
     def _segment_blocked(cls, segment: str) -> bool:
-        """Apply deny rules to a single shell segment after normalisation."""
+        """Apply deny rules to a single shell segment after normalisation.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         if not segment:
             return False
-        try:
-            tokens = cls._strip_wrappers(shlex.split(segment))
-        except ValueError:
-            tokens = cls._strip_wrappers(segment.split())
+        tokens = cls._strip_wrappers(shlex.split(segment))
         if not tokens:
             return False
         head = Path(tokens[0]).name
@@ -69,8 +78,13 @@ class FlextInfraManualCommandValidator(s[bool]):
 
     @classmethod
     def _strip_wrappers(cls, tokens: t.StrSequence) -> t.MutableSequenceOf[str]:
-        """Drop leading wrapper commands and ``env VAR=val`` assignments."""
-        out = list(tokens)
+        """Drop leading wrapper commands and ``env VAR=val`` assignments.
+
+        Returns:
+            The resulting ``t.MutableSequenceOf[str]``.
+
+        """
+        out: t.MutableSequenceOf[str] = list(tokens)
         while out:
             name = Path(out[0]).name
             if name == "env":
@@ -89,7 +103,12 @@ class FlextInfraManualCommandValidator(s[bool]):
 
     @classmethod
     def _strip_uv_run_options(cls, tokens: t.StrSequence) -> t.MutableSequenceOf[str]:
-        """Return the real command after ``uv run`` and its options."""
+        """Return the real command after ``uv run`` and its options.
+
+        Returns:
+            The real command after ``uv run`` and its options.
+
+        """
         out = list(tokens)
         while out:
             arg = out[0]
@@ -109,7 +128,12 @@ class FlextInfraManualCommandValidator(s[bool]):
 
     @staticmethod
     def _module_after_m(rest: t.StrSequence) -> str:
-        """Return the module name following ``-m`` (``python -m <module>``)."""
+        """Return the module name following ``-m`` (``python -m <module>``).
+
+        Returns:
+            The module name following ``-m`` (``python -m <module>``).
+
+        """
         for index, arg in enumerate(rest):
             if arg == "-m" and index + 1 < len(rest):
                 module_name: str = t.Infra.STR_ADAPTER.validate_python(rest[index + 1])
@@ -118,7 +142,12 @@ class FlextInfraManualCommandValidator(s[bool]):
 
     @staticmethod
     def _is_sed_inplace(arg: str) -> bool:
-        """Check whether the argument is a GNU/BSD in-place edit flag (``-i``, ``-i.bak``, ``--in-place``)."""
+        """Check whether the argument is a GNU/BSD in-place edit flag (``-i``, ``-i.bak``, ``--in-place``).
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         return (
             arg == "--in-place"
             or arg.startswith("--in-place=")

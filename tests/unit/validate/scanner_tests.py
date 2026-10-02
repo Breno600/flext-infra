@@ -21,8 +21,14 @@ if TYPE_CHECKING:
 class TestsFlextInfraScanner:
     """Core, multi-file, and nested-directory scanning tests."""
 
-    def _scanner(self) -> FlextInfraTextPatternScanner:
-        """Return a scanner instance with a harmless default pattern for helper tests."""
+    @staticmethod
+    def _scanner() -> FlextInfraTextPatternScanner:
+        """Return a scanner instance with a harmless default pattern for helper tests.
+
+        Returns:
+            A scanner instance with a harmless default pattern for helper tests.
+
+        """
         return FlextInfraTextPatternScanner(pattern="")
 
     def test_scan_matching_pattern(self, tmp_path: Path) -> None:
@@ -47,7 +53,10 @@ class TestsFlextInfraScanner:
         (tmp_path / "included.txt").write_text("hello")
         (tmp_path / "excluded.log").write_text("hello")
         result = scanner.scan(
-            tmp_path, pattern="hello", includes=["*.txt"], excludes=["*.log"]
+            tmp_path,
+            pattern="hello",
+            includes=["*.txt"],
+            excludes=["*.log"],
         )
         tm.ok(result)
         tm.that(result.value["files_scanned"], eq=1)

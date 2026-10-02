@@ -1,4 +1,8 @@
-"""Domain models for quality gate execution."""
+"""Domain models for quality gate execution.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -11,10 +15,10 @@ from flext_cli import t, u
 
 from flext_core import m
 from flext_infra import c
+from flext_infra._models.duplication import FlextInfraModelsDuplication
 
 # Gate models use base type primitives; importing the composing project facade
 # here creates unresolved aliases while Pydantic analyzes nested root models.
-from .duplication import FlextInfraModelsDuplication
 
 
 class FlextInfraModelsGates(FlextInfraModelsDuplication):
@@ -64,22 +68,27 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
             c.Infra.CHECK_FAIL_FAST_DEFAULT
         )
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-            extra="forbid", arbitrary_types_allowed=True, populate_by_name=True
+            extra="forbid",
+            arbitrary_types_allowed=True,
+            populate_by_name=True,
         )
         repository_root: Path = m.Field(description="Repository root directory")
         reports_dir: Annotated[Path, m.Field(description="Reports output directory")]
         apply_fixes: Annotated[
-            bool, m.Field(description="Apply supported fixes before checking")
+            bool,
+            m.Field(description="Apply supported fixes before checking"),
         ] = False
         check_only: Annotated[
             bool,
             m.Field(description="Never write files even when fix mode is requested"),
         ] = False
         ruff_args: Annotated[
-            t.StrSequence, m.Field(description="Extra arguments for Ruff")
+            t.StrSequence,
+            m.Field(description="Extra arguments for Ruff"),
         ] = ()
         pyright_args: Annotated[
-            t.StrSequence, m.Field(description="Extra arguments for Pyright")
+            t.StrSequence,
+            m.Field(description="Extra arguments for Pyright"),
         ] = ()
 
     class MypyDiagnostic(m.ContractModel):
@@ -89,20 +98,25 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
         line: Annotated[int, m.Field(description="Diagnostic start line")]
         column: Annotated[int, m.Field(description="Diagnostic start column")]
         end_line: Annotated[
-            int | None, m.Field(default=None, description="Diagnostic end line")
+            int | None,
+            m.Field(default=None, description="Diagnostic end line"),
         ]
         end_column: Annotated[
-            int | None, m.Field(default=None, description="Diagnostic end column")
+            int | None,
+            m.Field(default=None, description="Diagnostic end column"),
         ]
         message: Annotated[t.NonEmptyStr, m.Field(description="Diagnostic message")]
         hint: Annotated[
-            str | None, m.Field(default=None, description="Diagnostic hint")
+            str | None,
+            m.Field(default=None, description="Diagnostic hint"),
         ]
         code: Annotated[
-            str | None, m.Field(default=None, description="Mypy diagnostic code")
+            str | None,
+            m.Field(default=None, description="Mypy diagnostic code"),
         ]
         severity: Annotated[
-            Literal["error", "note"], m.Field(description="Mypy diagnostic severity")
+            Literal["error", "note"],
+            m.Field(description="Mypy diagnostic severity"),
         ]
 
     class PyrightPosition(m.ContractModel):
@@ -110,7 +124,8 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
 
         line: Annotated[t.NonNegativeInt, m.Field(description="Zero-based line index")]
         character: Annotated[
-            t.NonNegativeInt, m.Field(description="Zero-based character index")
+            t.NonNegativeInt,
+            m.Field(description="Zero-based character index"),
         ]
 
     class PyrightRange(m.ContractModel):
@@ -139,16 +154,15 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
             m.Field(description="Diagnostic source range when available"),
         ] = None
         rule: Annotated[
-            str | None, m.Field(description="Pyright diagnostic rule when available")
+            str | None,
+            m.Field(description="Pyright diagnostic rule when available"),
         ] = None
 
     class PyrightSummary(m.ContractModel):
         """Native completed-analysis counters.
 
-        ``filesAnalyzed=0`` is a legitimate outcome for content-only project
-        topologies (package:false roots whose discovery yields no python): the
-        tool ran, analyzed nothing, and reported zero diagnostics. The gate
-        layer — not the model — turns that shape into a typed receipt.
+        The model accepts ``filesAnalyzed=0``; the gate layer decides that an
+        empty analysis of a project with Python targets is a failure.
         """
 
         files_analyzed: Annotated[
@@ -173,7 +187,9 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
         time_in_sec: Annotated[
             float,
             m.Field(
-                alias="timeInSec", ge=0, description="Analysis duration in seconds"
+                alias="timeInSec",
+                ge=0,
+                description="Analysis duration in seconds",
             ),
         ]
 
@@ -211,24 +227,30 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
 
         line: Annotated[t.NonNegativeInt, m.Field(description="Diagnostic start line")]
         column: Annotated[
-            t.NonNegativeInt, m.Field(description="Diagnostic start column")
+            t.NonNegativeInt,
+            m.Field(description="Diagnostic start column"),
         ]
         stop_line: Annotated[
-            t.NonNegativeInt, m.Field(description="Diagnostic end line")
+            t.NonNegativeInt,
+            m.Field(description="Diagnostic end line"),
         ]
         stop_column: Annotated[
-            t.NonNegativeInt, m.Field(description="Diagnostic end column")
+            t.NonNegativeInt,
+            m.Field(description="Diagnostic end column"),
         ]
         path: Annotated[
-            t.NonEmptyStr, m.Field(description="Diagnostic source file path")
+            t.NonEmptyStr,
+            m.Field(description="Diagnostic source file path"),
         ]
         code: Annotated[int, m.Field(description="Pyrefly diagnostic code")]
         name: Annotated[t.NonEmptyStr, m.Field(description="Pyrefly diagnostic name")]
         description: Annotated[
-            t.NonEmptyStr, m.Field(description="Full diagnostic description")
+            t.NonEmptyStr,
+            m.Field(description="Full diagnostic description"),
         ]
         concise_description: Annotated[
-            str, m.Field(description="Concise diagnostic description")
+            str,
+            m.Field(description="Concise diagnostic description"),
         ]
         severity: Annotated[
             Literal["error", "warn", "info"],
@@ -249,18 +271,21 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
         gate: Annotated[
             t.NonEmptyStr,
             m.Field(
-                pattern=r"^[a-z][a-z0-9-]*$", description="Canonical Make gate name"
+                pattern=r"^[a-z][a-z0-9-]*$",
+                description="Canonical Make gate name",
             ),
         ]
         command: Annotated[t.NonEmptyStr, m.Field(description="Exact Make command")]
         cwd: Annotated[t.NonEmptyStr, m.Field(description="Absolute working directory")]
         exit_code: Annotated[Literal[0], m.Field(description="Successful exit code")]
         result_digest: Annotated[
-            t.NonEmptyStr, m.Field(description="SHA-256 digest of the gate result")
+            t.NonEmptyStr,
+            m.Field(description="SHA-256 digest of the gate result"),
         ]
         started_at: Annotated[t.NonEmptyStr, m.Field(description="UTC start timestamp")]
         completed_at: Annotated[
-            t.NonEmptyStr, m.Field(description="UTC completion timestamp")
+            t.NonEmptyStr,
+            m.Field(description="UTC completion timestamp"),
         ]
 
         @u.model_validator(mode="after")
@@ -282,23 +307,29 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
         """Canonical signed statement for locally completed gates."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-            extra="forbid", frozen=True, strict=False
+            extra="forbid",
+            frozen=True,
+            strict=False,
         )
 
         schema_version: Annotated[
-            str, m.Field(description="Predicate schema identity")
+            str,
+            m.Field(description="Predicate schema identity"),
         ] = c.Infra.GATE_ATTESTATION_SCHEMA
         repository: Annotated[t.NonEmptyStr, m.Field(description="Origin repository")]
         commit_sha: Annotated[t.NonEmptyStr, m.Field(description="Full commit SHA")]
         tree_sha: Annotated[t.NonEmptyStr, m.Field(description="Full tree SHA")]
         signer: Annotated[
-            t.NonEmptyStr, m.Field(description="Allowed-signers principal")
+            t.NonEmptyStr,
+            m.Field(description="Allowed-signers principal"),
         ]
         toolchain_digest: Annotated[
-            t.NonEmptyStr, m.Field(description="SHA-256 toolchain digest")
+            t.NonEmptyStr,
+            m.Field(description="SHA-256 toolchain digest"),
         ]
         covered_gates: Annotated[
-            t.StrSequence, m.Field(min_length=1, description="Exactly covered gates")
+            t.StrSequence,
+            m.Field(min_length=1, description="Exactly covered gates"),
         ]
         commands: Annotated[
             t.VariadicTuple[FlextInfraModelsGates.GateCommandEvidence],
@@ -336,10 +367,12 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
 
         workspace: Annotated[str, m.Field(description="Git repository root")] = "."
         signer: Annotated[
-            t.NonEmptyStr, m.Field(description="Allowed-signers principal")
+            t.NonEmptyStr,
+            m.Field(description="Allowed-signers principal"),
         ]
         gates: Annotated[
-            t.StrSequence, m.Field(min_length=1, description="Canonical Make gates")
+            t.StrSequence,
+            m.Field(min_length=1, description="Canonical Make gates"),
         ]
 
         @u.model_validator(mode="after")
@@ -354,13 +387,16 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
 
         workspace: Annotated[str, m.Field(description="Git repository root")] = "."
         allowed_signers: Annotated[
-            t.NonEmptyStr, m.Field(description="OpenSSH allowed_signers file")
+            t.NonEmptyStr,
+            m.Field(description="OpenSSH allowed_signers file"),
         ]
         expected_gates: Annotated[
-            t.StrSequence, m.Field(min_length=1, description="Required gate coverage")
+            t.StrSequence,
+            m.Field(min_length=1, description="Required gate coverage"),
         ]
         commit_sha: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact attested commit SHA")
+            t.NonEmptyStr,
+            m.Field(description="Exact attested commit SHA"),
         ]
         output: Annotated[
             str | None,
@@ -384,7 +420,8 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
         commit_sha: Annotated[t.NonEmptyStr, m.Field(description="Attested commit SHA")]
         tree_sha: Annotated[t.NonEmptyStr, m.Field(description="Attested tree SHA")]
         signer: Annotated[
-            t.NonEmptyStr, m.Field(description="Verified signer principal")
+            t.NonEmptyStr,
+            m.Field(description="Verified signer principal"),
         ]
         covered_gates: Annotated[t.StrSequence, m.Field(description="Covered gates")]
 

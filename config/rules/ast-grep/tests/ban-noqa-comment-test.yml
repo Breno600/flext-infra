@@ -1,0 +1,7 @@
+id: ban-noqa-comment
+valid:
+  - "value = 1  # a plain comment"
+  - "text = '# noqa'"
+invalid:
+  - "import os  # noqa"
+  - "import os  # noqa: F401"

@@ -1,4 +1,8 @@
-"""Canonical publication lane for ``u.Infra``: produced paths to one pull request."""
+"""Canonical publication lane for ``u.Infra``: produced paths to one pull request.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,8 +12,9 @@ from flext_cli import u
 
 from flext_core import r
 from flext_infra import c, m
-
-from .semantic_worktree import FlextInfraUtilitiesGitSemanticWorktreeMixin
+from flext_infra._utilities._git.semantic_worktree import (
+    FlextInfraUtilitiesGitSemanticWorktreeMixin,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -18,13 +23,15 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesGitSemanticLaneMixin(
-    FlextInfraUtilitiesGitSemanticWorktreeMixin
+    FlextInfraUtilitiesGitSemanticWorktreeMixin,
 ):
     """Own the lane every repository publication shares (release, propagation)."""
 
     @classmethod
     def git_publish_lane(
-        cls, request: m.Infra.GitLaneRequest, produce: Callable[[], p.Result[bool]]
+        cls,
+        request: m.Infra.GitLaneRequest,
+        produce: Callable[[], p.Result[bool]],
     ) -> p.Result[bool]:
         """Carry what ``produce`` writes from ``base`` to a pull request on ``branch``.
 
@@ -36,6 +43,10 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
         that carries nothing beyond ``base`` publishes nothing: the checkout
         returns to ``base``, the empty lane branch is removed, and the result
         is ``False``.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         root = request.repo_root
         status = cls.git_status(m.Infra.GitStatusRequest(repo_root=root))
@@ -44,7 +55,7 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
         if status.value.dirty:
             return r[bool].fail(
                 f"lane {request.branch} requires a clean checkout: {root}\n"
-                f"{status.value.porcelain}"
+                f"{status.value.porcelain}",
             )
         current = cls.git_current_branch(m.Infra.GitRepoRequest(repo_root=root))
         if current.failure:
@@ -52,7 +63,7 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
         if current.value.text != request.base:
             return r[bool].fail(
                 f"lane {request.branch} starts from {request.base}, "
-                f"not {current.value.text}"
+                f"not {current.value.text}",
             )
         for step in (
             lambda: cls._git_enter_lane(request),
@@ -74,7 +85,12 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
 
     @classmethod
     def _git_discard_empty_lane(cls, request: m.Infra.GitLaneRequest) -> p.Result[bool]:
-        """Return to ``base`` and remove the lane branch that carries nothing."""
+        """Return to ``base`` and remove the lane branch that carries nothing.
+
+        Returns:
+            To ``base`` and remove the lane branch that carries nothing.
+
+        """
         root = request.repo_root
         for command in (
             [c.Infra.GIT, "switch", request.base],
@@ -87,14 +103,20 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
 
     @classmethod
     def _git_enter_lane(cls, request: m.Infra.GitLaneRequest) -> p.Result[bool]:
-        """Continue the lane where it exists (local, then remote), else start it at HEAD."""
+        """Continue the lane where it exists (local, then remote), else start it at HEAD.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         root, branch = request.repo_root, request.branch
         local = u.Cli.capture(
             [c.Infra.GIT, "rev-parse", "--verify", "--quiet", f"refs/heads/{branch}"],
             cwd=root,
         )
         fetched = u.Cli.run_checked(
-            [c.Infra.GIT, "fetch", c.Infra.GIT_ORIGIN, branch], cwd=root
+            [c.Infra.GIT, "fetch", c.Infra.GIT_ORIGIN, branch],
+            cwd=root,
         )
         if local.success:
             switched = u.Cli.run_checked([c.Infra.GIT, "switch", branch], cwd=root)
@@ -111,17 +133,23 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
             )
         else:
             return u.Cli.run_checked(
-                [c.Infra.GIT, "switch", "--create", branch], cwd=root
+                [c.Infra.GIT, "switch", "--create", branch],
+                cwd=root,
             )
         if switched.failure:
             return switched
         return cls.git_merge_no_edit(
-            m.Infra.GitCommitishRequest(repo_root=root, commitish=request.base)
+            m.Infra.GitCommitishRequest(repo_root=root, commitish=request.base),
         ).map(lambda _report: True)
 
     @classmethod
     def _git_commit_produced(cls, request: m.Infra.GitLaneRequest) -> p.Result[bool]:
-        """Commit exactly the paths the status lists; nothing produced commits nothing."""
+        """Commit exactly the paths the status lists; nothing produced commits nothing.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         root = request.repo_root
         status = cls.git_status(m.Infra.GitStatusRequest(repo_root=root))
         if status.failure:
@@ -136,25 +164,31 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
         if not produced:
             return r[bool].ok(True)
         staged = cls.git_add_paths(
-            m.Infra.GitPathsRequest(repo_root=root, paths=produced)
+            m.Infra.GitPathsRequest(repo_root=root, paths=produced),
         )
         if staged.failure:
             return r[bool].from_failure(staged)
         return cls.git_commit(
-            m.Infra.GitCommitRequest(repo_root=root, message=request.subject)
+            m.Infra.GitCommitRequest(repo_root=root, message=request.subject),
         ).map(lambda _report: True)
 
     @classmethod
     def _git_open_pull_request(cls, request: m.Infra.GitLaneRequest) -> p.Result[bool]:
-        """Push the lane, then open its pull request or refresh the open one."""
+        """Push the lane, then open its pull request or refresh the open one.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         root, branch = request.repo_root, request.branch
         pushed = cls.git_push_upstream(
-            m.Infra.GitPushRequest(repo_root=root, branch=branch)
+            m.Infra.GitPushRequest(repo_root=root, branch=branch),
         )
         if pushed.failure:
             return r[bool].from_failure(pushed)
         exists = u.Cli.capture(
-            [c.Infra.GH, "pr", "view", branch, "--json", "number"], cwd=root
+            [c.Infra.GH, "pr", "view", branch, "--json", "number"],
+            cwd=root,
         )
         command = (
             [c.Infra.GH, "pr", "edit", branch]

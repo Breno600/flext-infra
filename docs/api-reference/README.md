@@ -27,9 +27,9 @@ This section is generated from public exports and real docstrings.
 
 ## Surface Summary
 
-- Primary facades: `FlextInfra`, `FlextInfraAbstractionBoundaryGate`,
-  `FlextInfraAccessorMigrationOrchestrator`, `FlextInfraApplyRenames`,
-  `FlextInfraBanditGate`, `FlextInfraCProfileReport` (+187 more)
-- Generated module pages: `203`
+- Primary facades: `FlextInfra`, `FlextInfraAccessorMigrationOrchestrator`,
+  `FlextInfraApplyRenames`, `FlextInfraBanditGate`, `FlextInfraCProfileReport`,
+  `FlextInfraCandidateBootstrapService` (+132 more)
+- Generated module pages: `13`
 
 Back to [project docs](../index.md).

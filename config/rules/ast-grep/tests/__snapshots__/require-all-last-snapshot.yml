@@ -1,0 +1,62 @@
+id: require-all-last
+snapshots:
+  ? |
+    __all__ = ["value"]
+    value = 1
+  : labels:
+    - source: __all__ = ["value"]
+      style: primary
+      start: 0
+      end: 19
+    - source: |
+        __all__ = ["value"]
+        value = 1
+      style: secondary
+      start: 0
+      end: 30
+    - source: __all__
+      style: secondary
+      start: 0
+      end: 7
+    - source: __all__ = ["value"]
+      style: secondary
+      start: 0
+      end: 19
+    - source: value = 1
+      style: secondary
+      start: 20
+      end: 29
+  ? |
+    __all__: list[str] = ["Example"]
+
+
+    class Example:
+        """Example."""
+  : labels:
+    - source: '__all__: list[str] = ["Example"]'
+      style: primary
+      start: 0
+      end: 32
+    - source: |
+        __all__: list[str] = ["Example"]
+
+
+        class Example:
+            """Example."""
+      style: secondary
+      start: 0
+      end: 69
+    - source: __all__
+      style: secondary
+      start: 0
+      end: 7
+    - source: '__all__: list[str] = ["Example"]'
+      style: secondary
+      start: 0
+      end: 32
+    - source: |-
+        class Example:
+            """Example."""
+      style: secondary
+      start: 35
+      end: 68

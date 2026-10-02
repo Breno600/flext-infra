@@ -1,0 +1,43 @@
+id: rewire-type-adapter-construction
+valid:
+  - |
+    from flext_core import m, u
+
+    ADAPTER: m.TypeAdapter[int] = u.type_adapter(int)
+  - |
+    from flext_core import m
+
+    ADAPTER = m.TypeAdapter(int)
+  - |
+    """Docstring naming m.TypeAdapter(int) as prose."""
+
+    from flext_core import u
+
+    TABLE = (("m.TypeAdapter(int)", "u.type_adapter(int)"),)
+  - |
+    from flext_core import u
+    from project.adapters import TypeAdapter
+
+    ADAPTER = TypeAdapter(int)
+  - |
+    from pydantic import TypeAdapter as PydanticAdapter
+
+    from flext_core import u
+
+    ADAPTER = PydanticAdapter(int)
+invalid:
+  - |
+    from flext_core import m, u
+
+    ADAPTER = m.TypeAdapter(int)
+  - |
+    from flext_cli import t
+    from flext_core import u
+
+    ADAPTER = t.TypeAdapter(t.StrMapping)
+  - |
+    from pydantic import TypeAdapter
+
+    from flext_core import u
+
+    ADAPTER = TypeAdapter(int)

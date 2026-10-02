@@ -6,6 +6,9 @@ fixture resolves those sources. These helpers serve the exact locked revisions
 from local bare mirrors built out of objects this checkout already holds, and
 the environment they return makes any network transport fail instead of
 silently reaching a remote.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -33,6 +36,10 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
 
         The checkout itself is not in its lock; it joins as the infrastructure
         repository the fixture provider serves, at the checked-out commit.
+
+        Returns:
+            Every ``(url, rev, sha)`` Git source the checkout lock pins.
+
         """
         toml = TestsFlextInfraUtilitiesTomlMixin
         lock = (project_root / c.Infra.UV_LOCK_FILENAME).read_text(encoding="utf-8")
@@ -48,12 +55,13 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
             sources[url] = (url, unquote(rev), parts.fragment)
         fixture = TestsFlextInfraUtilitiesProjectFixtureMixin
         infra = fixture.repository_ref(
-            config.Infra.codegen.infra_repository.distribution
+            config.Infra.codegen.infra_repository.distribution,
         ).url
         head = tm.ok(
             u.Cli.capture(
-                [c.Infra.GIT, "rev-parse", c.Infra.GIT_HEAD], cwd=project_root
-            )
+                [c.Infra.GIT, "rev-parse", c.Infra.GIT_HEAD],
+                cwd=project_root,
+            ),
         ).strip()
         sources[infra] = (infra, fixture.provider_branch(), head)
         return tuple(sources.values())
@@ -71,6 +79,13 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
         and pins only the branch ref: full history at zero copy cost (git
         refuses to update shallow roots, so a shallow mirror cannot serve a
         client whose uv cache lacks the history).
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            FileNotFoundError: If locked Git source is not held locally.
+
         """
         storage_root = Path(os.environ[c.Infra.MISE_BOOTSTRAP_STORAGE_ROOT_VARIABLE])
         cache = (
@@ -93,8 +108,8 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
                             u.Cli.run_raw(
                                 [c.Infra.GIT, "cat-file", "-e", f"{sha}^{{commit}}"],
                                 cwd=database,
-                            )
-                        ).outcome
+                            ),
+                        ).outcome,
                     )
                 ),
                 None,
@@ -111,7 +126,7 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
                     "--quiet",
                     "--bare",
                     str(mirror),
-                ])
+                ]),
             )
             common = tm.ok(
                 u.Cli.capture(
@@ -122,18 +137,19 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
                         "--git-common-dir",
                     ],
                     cwd=origin,
-                )
+                ),
             ).strip()
             tm.ok(
                 u.Cli.atomic_write_text_file(
                     mirror / "objects" / "info" / "alternates",
                     f"{Path(common) / 'objects'}\n",
-                )
+                ),
             )
             tm.ok(
                 u.Cli.run_checked(
-                    [c.Infra.GIT, "update-ref", f"refs/heads/{rev}", sha], cwd=mirror
-                )
+                    [c.Infra.GIT, "update-ref", f"refs/heads/{rev}", sha],
+                    cwd=mirror,
+                ),
             )
             mirrored.append(f"{url}@{rev}#{sha}")
         return tuple(mirrored)
@@ -145,6 +161,10 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
         Git may speak only the ``file`` protocol, uv makes no network request
         and skips its GitHub API shortcut, so a fixture that still reaches a
         remote fails instead of passing on a live network.
+
+        Returns:
+            The resulting ``t.StrMapping``.
+
         """
         count = int(os.environ.get("GIT_CONFIG_COUNT", "0"))
         hosts = sorted(path.name for path in mirrors.iterdir() if path.is_dir())
