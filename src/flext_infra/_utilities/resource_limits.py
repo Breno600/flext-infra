@@ -175,11 +175,6 @@ class FlextInfraUtilitiesResourceLimits:
             ValueError: If ``metadata.failure``.
 
         """
-        spec = config.Infra.codegen.make.mypy_cache
-        home = settings.env_lookup(str(spec.data_home_environment_variable)) or str(
-            Path(settings.env_required(str(spec.user_home_environment_variable)))
-            / spec.home_cache_directory,
-        )
         metadata = FlextInfraUtilitiesPyproject.read_project_metadata_result(
             project_dir,
         )
@@ -187,8 +182,28 @@ class FlextInfraUtilitiesResourceLimits:
             msg = metadata.error or f"project metadata unreadable: {project_dir}"
             raise ValueError(msg)
         return (
-            Path(home) / spec.external_storage_directory / metadata.value.project.name
+            FlextInfraUtilitiesResourceLimits.external_cache_directory(
+                config.Infra.codegen.make.mypy_cache,
+            )
+            / metadata.value.project.name
         )
+
+    @staticmethod
+    def external_cache_directory(
+        spec: m.Infra.MakeSpec.MypyCacheSpec | m.Infra.MakeSpec.CodemodRulesCacheSpec,
+    ) -> Path:
+        """Resolve one declared FLEXT cache below the XDG cache home.
+
+        Returns:
+            ``$XDG_CACHE_HOME`` (or ``$HOME`` plus the home cache directory)
+            joined with the spec's FLEXT-owned storage directory.
+
+        """
+        home = settings.env_lookup(str(spec.data_home_environment_variable)) or str(
+            Path(settings.env_required(str(spec.user_home_environment_variable)))
+            / spec.home_cache_directory,
+        )
+        return Path(home) / spec.external_storage_directory
 
     @staticmethod
     def mypy_limited_command(
