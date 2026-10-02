@@ -66,13 +66,13 @@ UV_LINK_MODE := copy
 # End SECTION: project identity
 
 # === SECTION: public boundary (managed) ===
-# Operator law 2026-09-14: the Makefile validates no caller input. Every verb
+# The Makefile validates no caller input. Every verb
 # always applies; a mistyped variable fails where the verb consumes it, and an
 # unconsumed variable is ignored.
 PYTEST_DIAG_ARGS := -rA --durations=0 --tb=long --showlocals
 PYTEST_REPORT_ARGS := -ra --durations=25 --durations-min=0.001 --tb=short
 PYTEST_PROCESS_TIMEOUT_SECONDS := 124
-# mro-99ae: the pytest process inherits a hard wall-clock boundary, so a hung
+# The pytest process inherits a hard wall-clock boundary, so a hung
 # run is terminated even if the runner itself stalls.
 PYTEST_BOUNDED = timeout --signal=TERM --kill-after=5s "$(PYTEST_PROCESS_TIMEOUT_SECONDS)s"
 PYTEST_REPORTS_DIR := .reports/tests
@@ -119,7 +119,7 @@ override SETUP_MISE := $(TRACKED_MISE)
 override export FLEXT_PYTEST_TARGET_RAW := tests
 # === SECTION: REPOSITORY_ROOT isolation (managed) ===
 # Source: physical checkout topology; caller variables cannot select a workspace.
-# Operator law 2026-09-24 (flext-x8gn6): inside a workspace every make run, root
+# Inside a workspace every make run, root
 # or member, uses the workspace runtime. A member resolves the Git superproject
 # that checks it out as a submodule; a checkout without one (a standalone clone,
 # a linked worktree) owns its runtime.
@@ -135,8 +135,8 @@ endif
 # === SECTION: verb dispatch (managed) ===
 # Source: config:make.verbs and the canonical gate vocabulary. A verb exists
 # only in the profiles it declares (make.verbs[].profiles).
-PUBLIC_VERBS := help setup upg build check smells test test-full fmt fix fix-namespace fix-accessors audit status verify-clean docs clean bootstrap-candidate release-plan release-version release-tag release-build publication gen initialize mod mod-snapshots waza duplication sonarcloud-sync
-BUILTIN_VERBS := help setup upg build check smells test test-full fmt fix fix-namespace fix-accessors audit status verify-clean docs clean bootstrap-candidate release-plan release-version release-tag release-build publication gen initialize mod mod-snapshots waza duplication sonarcloud-sync
+PUBLIC_VERBS := help setup upg build check smells test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status verify-clean docs clean bootstrap-candidate release-plan release-version release-tag release-build publication gen initialize mod mod-snapshots waza duplication sonarcloud-sync
+BUILTIN_VERBS := help setup upg build check smells test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status verify-clean docs clean bootstrap-candidate release-plan release-version release-tag release-build publication gen initialize mod mod-snapshots waza duplication sonarcloud-sync
 SCRIPT_VERBS :=
 
 CUSTOM_MAKEFILE := $(MAKEFILE_ROOT)/custom.mk
@@ -362,6 +362,7 @@ mise_exec() { \
 'MISE_GITHUB_OAUTH_OPEN_BROWSER=false' \
 'MISE_LOCKFILE=true' \
 'MISE_LOCKED=true' \
+'MISE_PYTHON_COMPILE=false' \
 $${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
 "HOME=$$scratch/home" \
 "USERPROFILE=$$scratch/home" \
@@ -589,6 +590,7 @@ mise_exec() { \
 'MISE_GITHUB_OAUTH_OPEN_BROWSER=false' \
 'MISE_LOCKFILE=true' \
 'MISE_LOCKED=true' \
+'MISE_PYTHON_COMPILE=false' \
 $${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
 "HOME=$$scratch/home" \
 "USERPROFILE=$$scratch/home" \
@@ -779,8 +781,7 @@ fi; \
 
 # Every repository evaluates only itself, locally exactly as in CI: a workspace
 # root consumes its members as installed libraries and never fans a verb out
-# across them; each member runs its own lifecycle in its own repository
-# (operator ruling 2026-09-29).
+# across them; each member runs its own lifecycle in its own repository.
 # Provisioning is declared once and shared by every profile. A venv records the
 # exact base interpreter used to create it, so setup replaces it when Mise moves
 # the configured Python minor line to a newer patch.
@@ -834,8 +835,7 @@ PROJECT_FLEXT_INFRA := $(PROJECT_INFRA_RUN) -m flext_infra
 # Scaffold dev tools live in the validated optional dev
 # Setup installs frozen from the committed uv.lock and never re-resolves: it is
 # the CI path and must be stable. A missing or stale lock fails through uv's own
-# error; `make upg` is the only verb that resolves and rewrites it
-# (operator 2026-09-24).
+# error; `make upg` is the only verb that resolves and rewrites it.
 UV_SYNC_FLAGS := --all-extras --all-groups --locked
 
 ifeq ($(GEN_INIT_ONLY),)
@@ -858,7 +858,7 @@ endef
 # uv resolves the containing workspace and writes its single uv.lock. Invoking
 # it once per member re-resolves that same lock for every member.
 # uv truncates and rewrites uv.lock in place, so a run killed mid-write leaves
-# a partial lock (flext-idihq). The lock therefore resolves in a scratch mirror
+# a partial lock. The lock therefore resolves in a scratch mirror
 # of the manifests uv itself reports (`uv workspace dir|list`), must pass
 # `uv lock --check` against that mirror (every declared member present), and
 # only then replaces the committed lock by one rename inside its directory. An
@@ -972,6 +972,17 @@ fix: _builtin_require_workspace
 _activated-fix: _builtin_require_environment
 
 	$(call RUN_PUBLIC,fix)
+
+
+
+
+fix-enforcement: _builtin_require_workspace
+	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-fix-enforcement
+
+.PHONY: _activated-fix-enforcement
+_activated-fix-enforcement: _builtin_require_environment
+
+	$(call RUN_PUBLIC,fix-enforcement)
 
 
 
@@ -1252,6 +1263,8 @@ _builtin-help:
 
 	@printf '  %-16s %s\n' 'fix' 'Apply the safe fixes of ruff check --fix --preview plus every other configured safe correction; never deletes information. Ruff is the rule; change code, never ruff.';
 
+	@printf '  %-16s %s\n' 'fix-enforcement' 'Apply the safe fix actions declared by the enforcement catalog.';
+
 	@printf '  %-16s %s\n' 'fix-namespace' 'Apply the canonical namespace enforcer to the selected workspace.';
 
 	@printf '  %-16s %s\n' 'fix-accessors' 'Migrate forbidden accessor names and every resolved consumer.';
@@ -1314,7 +1327,7 @@ _builtin-help:
 #       Nested gitlinks belong to their own setup.
 # Free: no
 # End SECTION: submodule setup
-# Why (flext-mphw1): runners expose umask 002 and `submodule update --init`
+# Why: runners expose umask 002 and `submodule update --init`
 # materializes tracked files as 0664; canonical Mise artifact gates demand
 # exact modes, so provisioning normalizes the umask before checkout.
 _builtin_setup_submodules:
@@ -1466,7 +1479,7 @@ _builtin_require_mise_pin:
 
 _builtin_require_environment: _builtin_require_workspace _builtin_require_mise_pin
 # Documenting the interface (`make help`) must not require the interpreter it
-# tells the operator how to provision. Only `make help` with no other goal
+# tells the user how to provision. Only `make help` with no other goal
 # skips the check; any combined goal still demands the environment.
 ifneq ($(MAKECMDGOALS),help)
 	@if [ ! -x "$(RUNTIME_PYTHON)" ]; then \
@@ -1476,17 +1489,17 @@ ifneq ($(MAKECMDGOALS),help)
 endif
 
 # === SECTION: setup environment (managed) ===
-# Source: computed (MAKE_PROFILE routing) + operator contract (mro-e9j0.6 C7)
-# Operator contract: setup PROVISIONS tooling only — mise, venv, dependencies.
+# Source: computed (MAKE_PROFILE routing)
+# Setup PROVISIONS tooling only — mise, venv, dependencies.
 # It never generates, conforms, or mutates project code; `make gen` is the
-# is the single public conformance/generation surface.
+# single public conformance/generation surface.
 # Setup always reconciles directly from the lock. The venv is created when
 # missing and is never cleared while present, because a concurrent lane may be
 # running against it.
 # Governed gitlinks are provisioned in every context, GitHub Actions included:
 # the workspace projections (Makefile, pyproject, .gitignore, dependabot, docs)
 # derive from the member checkouts, so a member-less CI checkout would render a
-# different workspace and break the gen fixed point (flext-gdm8w). Provisioned
+# different workspace and break the gen fixed point. Provisioned
 # members are read as libraries; no verb gates them from here.
 _builtin_setup_environment: _builtin_setup_submodules
 ifeq ($(MAKE_PROFILE),workspace)
@@ -1506,8 +1519,8 @@ endif
 # manifests (.mise.toml) of the upgraded generator.
 # Branch-tracked git dependencies are moving sources by declaration
 # (workspace.yaml owns the branch): --refresh re-reads their metadata so a
-# stale cached requires-dist can never block or skew the resolution
-# (flext-62fbu). Like `setup`, it runs the declared pre-/post-upg lifecycle
+# stale cached requires-dist can never block or skew the resolution.
+# Like `setup`, it runs the declared pre-/post-upg lifecycle
 # hooks, post-upg inside the activated environment.
 .PHONY: _upg_lifecycle
 _upg_lifecycle: _builtin_setup_submodules
@@ -1589,15 +1602,15 @@ _builtin_build_artifacts:
 _builtin_check_all: _builtin_require_environment
 	@set -eu; \
 printf '%s\n' 'INFO: SUSPENDED check gate namespace; authority=flext-itpd1.3; operator decision 2026-09-27 (keep plan v12 suspension); flext-infra#913; reason=Fleet namespace backlog (141 findings here) is repaired after the fleet is green; the gate returns with its Rope single-cycle owner fix.'; \
-gates="lint,pyrefly,mypy,pyright,deferred-self-reference,security,markdown,loc-cap,runtime-census,index-declarations,codemod,layout,direnv,duplication"; \
+gates="lint,pyrefly,mypy,pyright,silent-failure,deferred-self-reference,security,markdown,loc-cap,boundary,runtime-census,tier-whitelist,index-declarations,codemod,layout,canonical-alias,direnv,duplication"; \
 		if [ "$(strip $(CI))" = "Y" ]; then \
-			gates="lint,mypy,pyright,deferred-self-reference,security,markdown,loc-cap,runtime-census,index-declarations,codemod,layout,direnv,duplication"; \
-			printf 'INFO: CI=Y runs check gates: lint mypy pyright deferred-self-reference security markdown loc-cap runtime-census index-declarations codemod layout direnv duplication\n'; \
+			gates="lint,mypy,pyright,silent-failure,deferred-self-reference,security,markdown,loc-cap,boundary,runtime-census,tier-whitelist,index-declarations,codemod,layout,canonical-alias,direnv,duplication"; \
+			printf 'INFO: CI=Y runs check gates: lint mypy pyright silent-failure deferred-self-reference security markdown loc-cap boundary runtime-census tier-whitelist index-declarations codemod layout canonical-alias direnv duplication\n'; \
 		elif [ "$(strip $(CI))" = "N" ]; then \
 			gates="pyrefly"; \
 			printf 'INFO: CI=N runs check gates: pyrefly\n'; \
 		else \
-			printf 'INFO: default context runs check gates: lint pyrefly mypy pyright deferred-self-reference security markdown loc-cap runtime-census index-declarations codemod layout direnv duplication\n'; \
+			printf 'INFO: default context runs check gates: lint pyrefly mypy pyright silent-failure deferred-self-reference security markdown loc-cap boundary runtime-census tier-whitelist index-declarations codemod layout canonical-alias direnv duplication\n'; \
 		fi; \
 		if [ -z "$$gates" ]; then \
 			printf 'ERROR: no active check gates remain in the selected context\n' >&2; \
@@ -1632,7 +1645,12 @@ _builtin_fmt_all: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "format,markdown-format" --apply
 
 _builtin_fix_all: _builtin_require_environment
-	@$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "lint,markdown,markdown-code" --apply --report-findings
+	@$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "lint,markdown,markdown-code,canonical-alias" --apply --report-findings
+
+# Catalog-driven enforcement fixes: every ENFORCE rule whose fix action is
+# declared safe, applied through its registered adapter.
+_builtin_fix_enforcement: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) check fix-enforcement --repository-root "$(PROJECT_ROOT)" --projects . --safe-only --apply
 
 # SonarCloud server-side issue exclusions (SSOT: codegen.sonarcloud). The verb
 # writes an external service with SONAR_TOKEN from the environment; it belongs
@@ -1690,7 +1708,7 @@ profile-gen-report: _builtin_require_environment
 		"$(PROFILE_REPORTS_DIR)/lazy-init.pstats"
 
 # Profile the cold canonical pytest execution through its thin entrypoint
-# for startup diagnosis (flext-itpd1.3.7): the same persistent testmon database
+# for startup diagnosis: the same persistent testmon database
 # guard and environment as the bounded gate, but deliberately NOT wrapped in
 # PYTEST_BOUNDED. The runner's own deadline still applies. Central collection
 # children also write profiles beside their manifests and print their paths.
@@ -1724,7 +1742,7 @@ _builtin_status_diagnostics: _builtin_require_environment
 	fi
 	@git -C "$(PROJECT_ROOT)" status --short
 
-# Operator law 2026-09-22: `docs` is a docs-only lifecycle (generate, fix,
+# `docs` is a docs-only lifecycle (generate, fix,
 # fmt, validate, audit); the actions render from make.docs.actions and never
 # depend on the workspace-wide codegen conform — docs actions render their
 # own outputs from the live configuration and sources.
@@ -1823,6 +1841,7 @@ _builtin-test: _builtin_test_all
 _builtin-test-full: _builtin_test_full_all
 _builtin-fmt: _builtin_fmt_all
 _builtin-fix: _builtin_fix_all
+_builtin-fix-enforcement: _builtin_fix_enforcement
 _builtin-fix-namespace: _builtin_fix_namespace
 _builtin-fix-accessors: _builtin_fix_accessors
 _builtin-audit:
