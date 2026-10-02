@@ -169,7 +169,7 @@ class FlextInfraBootstrap:
                     selector = cls._sidecar_selector(relative)
                     if not digest.startswith("sha256:"):
                         raise ValueError(
-                            f"invalid mise.lock sidecar digest: {relative}"
+                            f"invalid mise.lock sidecar digest: {relative}",
                         )
                     cls._reject_symlink_path(root, relative)
                     sidecar = root.joinpath(*selector.parts)
@@ -177,12 +177,12 @@ class FlextInfraBootstrap:
                     source = cls._bytes(sidecar / filename)
                     if source is None:
                         raise ValueError(
-                            f"mise.lock sidecar is absent: {sidecar / filename}"
+                            f"mise.lock sidecar is absent: {sidecar / filename}",
                         )
                     actual = hashlib.sha256(source.replace(b"\r\n", b"\n")).hexdigest()
                     if actual != digest.removeprefix("sha256:"):
                         raise ValueError(
-                            f"mise.lock sidecar digest differs: {sidecar / filename}"
+                            f"mise.lock sidecar digest differs: {sidecar / filename}",
                         )
                     result[relative] = cls._tree_digest(sidecar)
         return result
@@ -323,7 +323,10 @@ class FlextInfraBootstrap:
 
     @classmethod
     def _recover_artifacts(
-        cls, project: Path, stage: Path, journal: dict[str, str]
+        cls,
+        project: Path,
+        stage: Path,
+        journal: dict[str, str],
     ) -> None:
         old_refs = cls._journal_artifacts(journal, "old_artifacts")
         new_refs = cls._journal_artifacts(journal, "new_artifacts")
@@ -435,7 +438,7 @@ class FlextInfraBootstrap:
         if new is None:
             raise ValueError(f"Mise lock journal lost new lock: {stage}")
         if cls._digest(old) != (journal.get("old") or None) or cls._digest(
-            new
+            new,
         ) != journal.get("new"):
             raise ValueError(f"Mise lock journal digest changed: {stage}")
         old_refs = cls._journal_refs(journal, "old_refs")
@@ -463,7 +466,7 @@ class FlextInfraBootstrap:
                         or cls._tree_digest(backup) != old_refs[relative]
                     ):
                         raise ValueError(
-                            f"old Mise sidecar changed during recovery: {backup}"
+                            f"old Mise sidecar changed during recovery: {backup}",
                         )
                     cls._ensure_parent(project, destination)
                     Path(backup).rename(destination)
@@ -475,17 +478,17 @@ class FlextInfraBootstrap:
                         or cls._tree_digest(destination) != old_refs[relative]
                     ):
                         raise ValueError(
-                            f"old Mise sidecar missing during recovery: {destination}"
+                            f"old Mise sidecar missing during recovery: {destination}",
                         )
                 elif destination.exists():
                     raise ValueError(
-                        f"unowned Mise sidecar changed during recovery: {destination}"
+                        f"unowned Mise sidecar changed during recovery: {destination}",
                     )
             cls._retire_stage(stage)
             return
         if live != new:
             raise ValueError(
-                f"Mise lock changed outside transaction: {project / 'mise.lock'}"
+                f"Mise lock changed outside transaction: {project / 'mise.lock'}",
             )
         for relative, expected in new_refs.items():
             destination = project / relative
@@ -499,7 +502,7 @@ class FlextInfraBootstrap:
             if destination.exists():
                 if cls._tree_digest(destination) != expected:
                     raise ValueError(
-                        f"stale sidecar changed during recovery: {destination}"
+                        f"stale sidecar changed during recovery: {destination}",
                     )
                 cls._ensure_parent(stage, retired)
                 Path(destination).rename(retired)
@@ -507,7 +510,7 @@ class FlextInfraBootstrap:
                 cls._sync_directory(retired.parent)
             elif not retired.exists():
                 raise ValueError(
-                    f"stale sidecar disappeared during recovery: {destination}"
+                    f"stale sidecar disappeared during recovery: {destination}",
                 )
         if "new_artifacts" in journal:
             cls._recover_artifacts(project, stage, journal)
@@ -528,7 +531,7 @@ class FlextInfraBootstrap:
             if prior != stage:
                 cls.recover(project, prior)
         for retired in sorted(
-            project.parent.glob(f".{project.name}.mise-lock-cleanup.*")
+            project.parent.glob(f".{project.name}.mise-lock-cleanup.*"),
         ):
             cls._physical_directory(retired)
             journal = cls._read_journal(retired)
@@ -562,12 +565,12 @@ class FlextInfraBootstrap:
             if destination.exists():
                 if relative not in old_refs:
                     raise ValueError(
-                        f"unowned Mise sidecar occupies target: {destination}"
+                        f"unowned Mise sidecar occupies target: {destination}",
                     )
                 actual = cls._tree_digest(destination)
                 if actual != expected and actual != old_refs[relative]:
                     raise ValueError(
-                        f"Mise sidecar changed outside transaction: {destination}"
+                        f"Mise sidecar changed outside transaction: {destination}",
                     )
         if old is not None:
             with (stage / cls.OLD_LOCK).open("xb") as stream:
@@ -629,7 +632,7 @@ class FlextInfraBootstrap:
         if home:
             return Path(home) / ".local/share/mise"
         raise ValueError(
-            "MISE_DATA_DIR, XDG_DATA_HOME, or HOME must identify Mise storage"
+            "MISE_DATA_DIR, XDG_DATA_HOME, or HOME must identify Mise storage",
         )
 
     @classmethod
@@ -672,7 +675,7 @@ class FlextInfraBootstrap:
         platforms = settings.get("lockfile_platforms")
         if not isinstance(cooldown, str) or not isinstance(platforms, list):
             raise ValueError(
-                f"Mise manifest lacks cooldown or lockfile platforms: {manifest}"
+                f"Mise manifest lacks cooldown or lockfile platforms: {manifest}",
             )
         return cooldown, ",".join(str(platform) for platform in platforms)
 
@@ -771,7 +774,7 @@ class FlextInfraBootstrap:
         if "mise WARN" in completed.stdout or "mise WARN" in completed.stderr:
             sys.stderr.write(completed.stderr)
             raise ValueError(
-                f"Mise warned during {' '.join(arguments)}; reconcile stopped"
+                f"Mise warned during {' '.join(arguments)}; reconcile stopped",
             )
         if completed.stderr:
             sys.stderr.write(completed.stderr)
@@ -798,7 +801,9 @@ class FlextInfraBootstrap:
 
     @staticmethod
     def _staged_lock_satisfies(
-        runtime: Path, stage: Path, environment: dict[str, str]
+        runtime: Path,
+        stage: Path,
+        environment: dict[str, str],
     ) -> bool:
         """Prove the staged lock satisfies the manifest without mutating tools.
 
@@ -850,7 +855,8 @@ class FlextInfraBootstrap:
         for name, payload in seeds:
             stage = Path(
                 tempfile.mkdtemp(
-                    prefix=f".{project.name}.mise-lock-stage.", dir=project.parent
+                    prefix=f".{project.name}.mise-lock-stage.",
+                    dir=project.parent,
                 ),
             )
             scratch = Path(tempfile.mkdtemp(prefix="mise-reconcile."))
@@ -859,7 +865,11 @@ class FlextInfraBootstrap:
                 if payload is not None:
                     (stage / "mise.lock").write_bytes(payload)
                 environment = cls._mise_environment(
-                    storage, stage, scratch, cooldown, platforms
+                    storage,
+                    stage,
+                    scratch,
+                    cooldown,
+                    platforms,
                 )
                 try:
                     cls._run(runtime, ["-C", str(stage), "lock"], environment)
@@ -873,7 +883,7 @@ class FlextInfraBootstrap:
                     # same tolerance the upg lock stage ships).
                 if not cls._staged_lock_satisfies(runtime, stage, environment):
                     failures.append(
-                        f"{name}: staged lock does not satisfy the manifest"
+                        f"{name}: staged lock does not satisfy the manifest",
                     )
                     continue
                 staged_python = cls._run(
@@ -896,7 +906,7 @@ class FlextInfraBootstrap:
                         Path(locks).replace(parked / "locks")
                     cls.publish(project, stage)
                 print(
-                    f"reconcile: published the {name} mise.lock Mise {release} satisfies"
+                    f"reconcile: published the {name} mise.lock Mise {release} satisfies",
                 )
                 return
             finally:
@@ -970,7 +980,7 @@ class FlextInfraBootstrap:
         """
         cls._physical_directory(project)
         workspace = Path(
-            cls._uv_run(["workspace", "dir", "--project", str(project)]).strip()
+            cls._uv_run(["workspace", "dir", "--project", str(project)]).strip(),
         )
         stage = Path(tempfile.mkdtemp(prefix=".uv-relock."))
         candidate = workspace / f".uv.lock.{os.getpid()}"

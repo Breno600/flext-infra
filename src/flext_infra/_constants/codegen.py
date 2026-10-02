@@ -187,6 +187,13 @@ class FlextInfraConstantsCodegen(
         ("MISE_GITHUB_OAUTH_OPEN_BROWSER", "false"),
     )
     "Fixed fail-closed settings shared by every generated Mise invocation."
+    MISE_BOOTSTRAP_OFFLINE_ENVIRONMENT: ClassVar[t.VariadicTuple[t.Pair[str, str]]] = (
+        ("MISE_OFFLINE", "true"),
+    )
+    (
+        "Network policy of every generated Mise call except a missing-tool "
+        "install and the `make upg` resolution: cached state answers it, or it fails."
+    )
     MISE_BOOTSTRAP_TRANSIENT_ENVIRONMENT: ClassVar[
         t.VariadicTuple[t.Pair[str, str]]
     ] = (
