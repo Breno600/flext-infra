@@ -56,7 +56,8 @@ class FlextInfraToolTablesPhase:
             *(
                 source.relative_to(path.parent).parts[0]
                 for source in planned_sources
-                if source.is_relative_to(path.parent) and len(source.relative_to(path.parent).parts) > 1
+                if source.is_relative_to(path.parent)
+                and len(source.relative_to(path.parent).parts) > 1
             ),
             *((declared_package,) if isinstance(declared_package, str) else ()),
             *(

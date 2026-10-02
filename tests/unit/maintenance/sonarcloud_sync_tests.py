@@ -251,33 +251,33 @@ class TestsFlextInfraSonarcloudSettingsSync:
 
     def test_issue_search_requires_token_before_network(self, tmp_path: Path) -> None:
         """The read-only public route stops before Git or HTTP without a token."""
-        code, output = self._cli(
-            tmp_path, verb=c.Infra.VERB_SONARCLOUD_ISSUES
-        )
+        code, output = self._cli(tmp_path, verb=c.Infra.VERB_SONARCLOUD_ISSUES)
 
         tm.that(code, ne=0)
         tm.that(output, has="SONAR_TOKEN is required")
 
     def test_issue_search_response_parses_published_page_contract(self) -> None:
         """A missing line stays explicit while page accounting remains required."""
-        payload = tm.ok(u.Cli.json_dumps({
-            "paging": {"pageIndex": 1, "pageSize": 100, "total": 2},
-            "issues": [
-                {
-                    "key": "issue-1",
-                    "rule": "python:S1",
-                    "component": "org_repo:a.py",
-                    "line": 4,
-                    "message": "First",
-                },
-                {
-                    "key": "issue-2",
-                    "rule": "python:S2",
-                    "component": "org_repo:b.py",
-                    "message": "Second",
-                },
-            ],
-        }))
+        payload = tm.ok(
+            u.Cli.json_dumps({
+                "paging": {"pageIndex": 1, "pageSize": 100, "total": 2},
+                "issues": [
+                    {
+                        "key": "issue-1",
+                        "rule": "python:S1",
+                        "component": "org_repo:a.py",
+                        "line": 4,
+                        "message": "First",
+                    },
+                    {
+                        "key": "issue-2",
+                        "rule": "python:S2",
+                        "component": "org_repo:b.py",
+                        "message": "Second",
+                    },
+                ],
+            })
+        )
 
         response = m.Infra.SonarcloudIssueSearch.model_validate_json(payload)
 
