@@ -27,7 +27,6 @@ if TYPE_CHECKING:
     from flext_infra.deps.phases.inject_comments import FlextInfraInjectCommentsPhase
     from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
 
-
 __all__: tuple[str, ...] = (
     "FlextInfraConsolidateGroupsPhase",
     "FlextInfraEnsurePackagingPhase",

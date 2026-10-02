@@ -29,7 +29,6 @@ if TYPE_CHECKING:
         FlextInfraUtilitiesRopeAnalysisSourceScan,
     )
 
-
 __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesRopeAnalysisAstHelpers",
     "FlextInfraUtilitiesRopeAnalysisBase",
