@@ -32,17 +32,23 @@ class FlextInfraToolTablesPhase:
         """Derive the project's first-party namespaces from one source each.
 
         The live packages under ``src/`` (never a name invented from the
-        distribution), the config-owned base namespaces, and the declared
-        flext dependencies. Ruff's projected table and the lazy-init renderer
-        both read this owner.
+        distribution), the project's declared package
+        (``[tool.flext.docs].package_name``, which an atomic scaffold declares
+        before its tree exists, so the first write already reaches the fixed
+        point), the config-owned base namespaces, and the declared flext
+        dependencies. Ruff's projected table and the lazy-init renderer both
+        read this owner.
 
         Returns:
             The sorted first-party namespaces.
 
         """
+        docs = u.Cli.toml_mapping_path(payload, (c.Infra.TOOL, "flext", "docs"))
+        declared_package = None if docs is None else docs.get("package_name")
         return sorted({
             *config.Infra.tooling.tools.deptry.known_first_party,
             *u.Infra.discover_first_party_namespaces(path.parent),
+            *((declared_package,) if isinstance(declared_package, str) else ()),
             *u.Infra.flext_dependency_namespaces_from_payload(payload),
         })
 

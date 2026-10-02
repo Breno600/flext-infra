@@ -32,7 +32,10 @@ class TestsFlextInfraDepsModernizerToolTables:
 
         """
         project_dir = tmp_path / "flext-sample"
-        (project_dir / "src" / "flext_sample").mkdir(parents=True, exist_ok=True)
+        package_dir = project_dir / "src" / "flext_sample"
+        package_dir.mkdir(parents=True, exist_ok=True)
+        # A live package: the first-party owner derives importable packages.
+        (package_dir / c.Infra.INIT_PY).write_text('"""Package."""\n', encoding="utf-8")
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
             u.Tests.toml_payload(f'[project]\nname = "flext-sample"\n{source}'),
         )
