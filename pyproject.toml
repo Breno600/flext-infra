@@ -417,7 +417,7 @@ quote-style = "double"
 skip-magic-trailing-comma = false
 
 [tool.ruff.lint]
-extend-safe-fixes = []
+extend-safe-fixes = ["camelcase-imported-as-lowercase", "relative-imports"]
 ignore = [
   "camelcase-imported-as-lowercase",
   "typing-only-standard-library-import",
@@ -467,6 +467,7 @@ split-on-trailing-comma = false
 "**/__init__.py" = [
   "non-empty-init-module",
   "runtime-import-in-type-checking-block",
+  "typing-only-first-party-import",
   "unused-import",
 ]
 "tests/**/*.py" = ["assert"]

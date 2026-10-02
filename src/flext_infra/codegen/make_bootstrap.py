@@ -16,7 +16,7 @@ from flext_infra.codegen.conform import FlextInfraCodegenConform
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from .. import p
+    from flext_infra import p
 
 
 class FlextInfraCodegenMakeBootstrap(FlextInfraCodegenExecutionBase[bool]):

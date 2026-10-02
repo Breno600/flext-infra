@@ -357,6 +357,14 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
                 continue
             if not resolved_file_path.is_relative_to(resolved_root):
                 continue
+            if cls._excluded_parts().intersection(
+                resolved_file_path.relative_to(resolved_root).parts[:-1],
+            ):
+                # The scan-ignore SSOT owns source visibility everywhere: a
+                # tool hook under an ignored resource (e.g. .claude, .agents)
+                # is not a project module, and indexing it feeds the mod
+                # planners a file they then crash on while moving helpers.
+                continue
             resource_path = resolved_file_path.relative_to(resolved_root).as_posix()
             package_dir = resolved_file_path.parent
             is_package_init = resolved_file_path.name in {
