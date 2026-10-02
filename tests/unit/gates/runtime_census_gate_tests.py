@@ -137,7 +137,9 @@ class TestsRuntimeCensusBlocking:
     ) -> None:
         """Prefix and constant violations belong to runtime census.
 
-        Parameter-count smells belong to the qlty smells gate, never here.
+        The parameter-count smell belongs to the smell owner (qlty through
+        make smells, flext-core ea8d16d26), so the census never reports it:
+        each finding has exactly one gate.
         """
         mixed = tm.ok(
             FlextInfraRuntimeCensusValidator(
@@ -152,6 +154,7 @@ class TestsRuntimeCensusBlocking:
         tm.that(mixed.passed, eq=False)
         tm.that("\n".join(mixed.violations), has="[ENFORCE-079]")
         tm.that("\n".join(mixed.violations), has="[class_prefix]")
+        tm.that("\n".join(mixed.violations), lacks="[smell_function_parameters]")
         tm.that(len(mixed.violations) > len(genuine.violations), eq=True)
         tm.that(
             mixed.summary,
@@ -164,6 +167,7 @@ class TestsRuntimeCensusBlocking:
         gate = FlextInfraRuntimeCensusGate(repository_root=mixed_project)
         result = gate.check(mixed_project, context).result
         tm.that(result.passed, eq=False)
+        tm.that("\n".join(result.errors), has="[ENFORCE-079]")
         tm.that("\n".join(result.errors), has="[class_prefix]")
 
     @staticmethod

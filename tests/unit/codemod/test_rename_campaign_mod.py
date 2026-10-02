@@ -133,6 +133,7 @@ class TestsRenameCampaignMod:
             tm.that(second.occurrences, eq=0)
             tm.that(guide.read_bytes(), eq=first)
 
+    @pytest.mark.slow
     @pytest.mark.parametrize(
         ("csv", "roots"),
         [
@@ -184,6 +185,7 @@ class TestsRenameCampaignMod:
         )
         tm.that(guide.read_text(encoding="utf-8"), eq="A campaign_token paragraph.\n")
 
+    @pytest.mark.slow
     @pytest.mark.parametrize("escape", ["driver", "root"])
     def test_public_mod_rejects_symlink_escape_before_publication(
         self,

@@ -159,10 +159,16 @@ class TestsFlextInfraRootArtifactOwnership:
         tm.ok(infra.codegen_conform(request))
         manual = {"custom.mk": b"# manual project extension\n"}
         (root / "custom.mk").write_bytes(manual["custom.mk"])
+        # The makefile recovery surface publishes the Makefile and the lock
+        # publisher its bootstrap recipe executes; each keeps its own policy.
+        surface = (
+            Path(c.Infra.MAKEFILE_FILENAME),
+            Path(c.Infra.MISE_LOCK_TRANSACTION_SCRIPT),
+        )
         configured_policies = {
-            root / item.path: item.policy
+            item.path: item.policy
             for item in config.Infra.codegen.managed_files
-            if item.path.as_posix() in c.Infra.MAKEFILE_BOOTSTRAP_DESTINATIONS
+            if item.path in surface
         }
         before = tuple(
             sorted(
@@ -176,9 +182,13 @@ class TestsFlextInfraRootArtifactOwnership:
         result = tm.ok(first)
         governed = tuple(file for file in result.plan.files if file.policy is not None)
         tm.that(
-            {file.path: file.policy for file in governed},
-            eq=configured_policies,
+            sorted(file.path for file in governed),
+            eq=sorted(root / path for path in surface),
         )
+        for file in governed:
+            tm.that(
+                file.policy, eq=configured_policies[file.path.relative_to(root)]
+            )
         tm.that(result.written_files, eq=())
         after = tuple(
             sorted(
