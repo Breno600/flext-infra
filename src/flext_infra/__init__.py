@@ -128,6 +128,7 @@ if TYPE_CHECKING:
     from flext_infra.gates.base_gate import FlextInfraGate
     from flext_infra.gates.direnv import FlextInfraDirenvGate
     from flext_infra.gates.duplication import FlextInfraDuplicationGate
+    from flext_infra.gates.fresh_import import FlextInfraFreshImportGate
     from flext_infra.gates.index_declarations import FlextInfraIndexDeclarationsGate
     from flext_infra.gates.layout import FlextInfraLayoutGate
     from flext_infra.gates.loc_cap import FlextInfraLocCapGate
@@ -207,6 +208,7 @@ if TYPE_CHECKING:
     from flext_infra.workspace.rope import FlextInfraRopeWorkspace
     from flext_infra.worktree import FlextInfraWorktreeService
 
+
 __all__: tuple[str, ...] = (
     "FlextInfra",
     "FlextInfraAccessorMigrationOrchestrator",
@@ -272,6 +274,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraEnsureRuffConfigPhase",
     "FlextInfraExtraPathsManager",
     "FlextInfraFlextBindingService",
+    "FlextInfraFreshImportGate",
     "FlextInfraGate",
     "FlextInfraGateRegistry",
     "FlextInfraGitService",
@@ -466,6 +469,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".gates.base_gate": ("FlextInfraGate",),
             ".gates.direnv": ("FlextInfraDirenvGate",),
             ".gates.duplication": ("FlextInfraDuplicationGate",),
+            ".gates.fresh_import": ("FlextInfraFreshImportGate",),
             ".gates.index_declarations": ("FlextInfraIndexDeclarationsGate",),
             ".gates.layout": ("FlextInfraLayoutGate",),
             ".gates.loc_cap": ("FlextInfraLocCapGate",),
