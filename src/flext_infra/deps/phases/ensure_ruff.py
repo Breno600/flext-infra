@@ -104,35 +104,6 @@ class FlextInfraEnsureRuffConfigPhase:
             )
         return frozenset(p.parts[0] for p in paths.value if Path(p).parts)
 
-    @classmethod
-    def compose_per_file_ignores(
-        cls,
-        project_dir: Path,
-        global_ignores: t.MappingKV[str, t.StrSequence],
-    ) -> t.MappingKV[str, t.StrSequence]:
-        """Return the fleet Ruff exemption map scoped to one project.
-
-        The tooling owner declares every per-file exemption; a repository
-        declares none of its own. Both the in-place pyproject edit and the
-        full template render read this one map. A glob rooted on a directory
-        the workspace retired (declared as an analysis exclusion) is dropped,
-        because it names scope that no longer exists.
-
-        Returns:
-            The fleet Ruff exemption map scoped to one project.
-
-        """
-        excluded_roots = FlextInfraToolTablesPhase.excluded_roots(project_dir)
-        return {
-            pattern: tuple(sorted(rules))
-            for pattern, rules in global_ignores.items()
-            if (
-                (root := pattern.split("/")[0]).endswith("**")
-                or not root.isidentifier()
-                or root not in excluded_roots
-            )
-        }
-
     def _phase(
         self,
         *,
@@ -357,10 +328,9 @@ class FlextInfraEnsureRuffConfigPhase:
             The resulting ``t.StrSequence``.
 
         """
-        effective_ignores = FlextInfraEnsureRuffConfigPhase.compose_per_file_ignores(
-            path.parent,
-            self._tool_config.tools.ruff.lint.per_file_ignores,
-        )
+        # One fleet exemption map, declared with its authority at the tooling
+        # owner, reaches every project unchanged.
+        effective_ignores = self._tool_config.tools.ruff.lint.per_file_ignores
         current_ignores = u.Cli.toml_mapping_path(
             payload,
             (c.Infra.TOOL, c.Infra.RUFF, c.Infra.LINT_SECTION, "per-file-ignores"),
