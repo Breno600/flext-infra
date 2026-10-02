@@ -532,7 +532,11 @@ _builtin_recover_mise:
 	if [ -z "$$project_parent" ]; then project_parent=/; fi; \
 	for prior in "$$project_parent/.$${project_root##*/}.mise-lock-stage."*; do \
 		if [ ! -d "$$prior" ]; then continue; fi; \
-		if [ ! -f "$$prior/transaction.json" ]; then printf 'ERROR: uncommitted Mise stage has no recovery journal: %s\n' "$$prior" >&2; exit 2; fi; \
+		if [ ! -f "$$prior/transaction.json" ]; then \
+			printf 'INFO: removing the dead Mise stage (crashed before its lock commit point; nothing was published): %s\n' "$$prior" >&2; \
+			find "$$prior" -depth -delete; \
+			continue; \
+		fi; \
 		if [ ! -f "$$prior/python-path" ]; then printf 'ERROR: Mise transaction lacks its Python receipt: %s\n' "$$prior" >&2; exit 2; fi; \
 		IFS= read -r recovery_python < "$$prior/python-path"; \
 		if [ ! -x "$$recovery_python" ]; then printf 'ERROR: Mise transaction Python is unavailable: %s\n' "$$recovery_python" >&2; exit 2; fi; \
