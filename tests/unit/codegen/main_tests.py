@@ -39,8 +39,12 @@ class TestsFlextInfraCodegenMain:
             f'[project]\nname = "{repository.distribution}"\nversion = "0.1.0"\n'
             f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
             'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
-            'dependencies = ["flext-core>=0.1.0"]\n\n'
-            f'[project.urls]\nRepository = "{repository.url}"\n',
+            f'dependencies = ["{u.Tests.flext_source("flext-core")}"]\n\n'
+            f'[project.urls]\nRepository = "{repository.url}"\n\n'
+            # A governed checkout declares every internal requirement with its
+            # own direct Git source, the infrastructure distribution included.
+            f'[dependency-groups]\ndev = ["{u.Tests.flext_source()}"]\n\n'
+            "[tool.hatch.metadata]\nallow-direct-references = true\n",
             encoding="utf-8",
         )
         # Identity is not only PEP 621: a governed checkout also declares its own
