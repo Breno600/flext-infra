@@ -79,7 +79,7 @@ class FlextInfraPytestCollection:
             FlextInfraConstantsCheck.PYTEST_SELECTED_COLLECTION_OPTION,
         )
         if selected is not None:
-            from ._models.validate import FlextInfraModelsCore
+            from flext_infra._models.validate import FlextInfraModelsCore
 
             manifest = (
                 FlextInfraModelsCore.PytestCollectionManifest.model_validate_json(
@@ -111,7 +111,7 @@ class FlextInfraPytestCollection:
         """Publish final selected items after testmon and every collection hook."""
         from flext_cli import u
 
-        from ._models.validate import FlextInfraModelsCore
+        from flext_infra._models.validate import FlextInfraModelsCore
 
         manifest = FlextInfraModelsCore.PytestCollectionManifest(
             node_ids=tuple(item.nodeid for item in session.items),
