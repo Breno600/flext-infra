@@ -93,6 +93,8 @@ class FlextInfraConstantsBase(
     "Pytest tool section key."
     RUFF: ClassVar[str] = "ruff"
     "Ruff tool section key."
+    RUFF_INVALID_SYNTAX: ClassVar[str] = "invalid-syntax"
+    "Rule name Ruff gives a module it cannot parse."
     DEPTRY: ClassVar[str] = "deptry"
     "Deptry tool section key."
     ISORT: ClassVar[str] = "isort"

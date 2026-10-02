@@ -202,8 +202,9 @@ class TestsFlextInfraRootArtifactOwnership:
     class TestsConformPlanNetworkBoundary:
         """The conform plan is a repository-local, offline inventory."""
 
+        @staticmethod
         @pytest.mark.slow
-        def test_plan_never_fetches_origin(self, infra_git_repo: Path) -> None:
+        def test_plan_never_fetches_origin(infra_git_repo: Path) -> None:
             """Planning consumes the existing origin ref without network access."""
             root = infra_git_repo
             dist = u.Tests.repository_ref(config.Infra.name).distribution

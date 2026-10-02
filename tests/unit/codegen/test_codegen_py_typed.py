@@ -73,9 +73,9 @@ class TestsFlextInfraCodegenPyTyped:
         tm.that(count, eq=1)
         tm.that((pkg / c.Infra.PY_TYPED).exists(), eq=True)
 
+    @staticmethod
     @pytest.mark.parametrize("skip_dir", tuple(c.Tests.CODEGEN_SKIPPED_DIRS))
     def test_skips_known_excluded_directories(
-        self,
         tmp_path: Path,
         skip_dir: str,
     ) -> None:

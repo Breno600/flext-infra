@@ -26,8 +26,9 @@ class TestsFlextInfraAuditorContract:
         tm.that("strict" in params.model_dump(), eq=False)
         tm.that("strict_mode" in FlextInfraDocAuditor.model_fields, eq=False)
 
+    @staticmethod
     @pytest.mark.parametrize("strict", [False, True])
-    def test_retired_strict_control_is_rejected(self, *, strict: bool) -> None:
+    def test_retired_strict_control_is_rejected(*, strict: bool) -> None:
         """Test retired strict control is rejected."""
         with pytest.raises(c.ValidationError, match="strict"):
             m.Infra.AuditScopeParams.model_validate({"strict": strict})
@@ -38,8 +39,9 @@ class TestsFlextInfraAuditorContract:
         with pytest.raises(c.ValidationError, match="Invalid JSON"):
             m.Infra.AuditScopeParams.model_validate_json("{invalid json}")
 
+    @staticmethod
     @pytest.mark.parametrize("budget", [0, 5, 5.5])
-    def test_default_and_scope_budgets_are_rejected(self, budget: float) -> None:
+    def test_default_and_scope_budgets_are_rejected(budget: float) -> None:
         """Test default and scope budgets are rejected."""
         with pytest.raises(c.ValidationError, match="budgets"):
             m.Infra.AuditScopeParams.model_validate({

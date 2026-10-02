@@ -74,8 +74,8 @@ class FlextInfraScannerGateMixin(FlextInfraGate):
             started=started,
         )
 
+    @staticmethod
     def _detect_file_issues(
-        self,
         file_path: Path,
         project_dir: Path,
         rope_project: t.Infra.RopeProject,

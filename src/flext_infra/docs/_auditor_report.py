@@ -17,8 +17,8 @@ if TYPE_CHECKING:
 class FlextInfraDocAuditorReportMixin:
     """Mixin for documentation audit report construction."""
 
+    @staticmethod
     def _audit_report(
-        self,
         scope: m.Infra.DocScope,
         *,
         issues: t.SequenceOf[m.Infra.AuditIssue],

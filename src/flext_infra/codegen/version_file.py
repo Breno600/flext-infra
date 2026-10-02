@@ -58,66 +58,70 @@ class FlextInfraCodegenVersionFile(FlextInfraCodegenExecutionBase[bool]):
         if not discovered.success:
             return r[bool].fail("version-file: project discovery failed")
 
-        generated = 0
-        skipped = 0
-
+        outcomes: dict[str, int] = {"generated": 0, "skipped": 0}
         for project_info in self._filtered_projects(discovered.value):
-            metadata_result = u.Infra.read_project_metadata_result(project_info.path)
-            if metadata_result.failure:
-                return r[bool].from_failure(metadata_result)
-            meta = metadata_result.value
-            class_name = f"{meta.class_stem}Version"
-
-            if class_name == FlextVersion.__name__:
-                skipped += 1
-                continue
-
-            src_pkg = project_info.path / "src" / meta.package_name
-            if not src_pkg.is_dir():
-                continue
-
-            target = src_pkg / "__version__.py"
-            rendered = u.Cli.template_render(template_path, meta)
-            if rendered.failure:
-                return r[bool].from_failure(rendered)
-            content = rendered.value
-
-            if target.is_file():
-                current = u.Cli.files_read_text(target)
-                if current.failure:
-                    return r[bool].from_failure(current)
-                if current.value == content:
-                    continue
-
-            if self.check_only or self.dry_run:
-                u.Cli.info(f"  stale: {target.relative_to(self.repository_root)}")
-                generated += 1
-                continue
-
-            before = u.Cli.atomic_read_binary_file_state(target, required=False)
-            if before.failure:
-                return r[bool].from_failure(before)
-            planned = m.Infra.CodegenFilePlan(
-                project=project_info.path,
-                path=target,
-                before=before.value,
-                desired_content=content.encode(c.Cli.ENCODING_DEFAULT),
-                desired_mode=0o644,
-                owner="codegen",
-                policy="full",
-            )
-            write_result = FlextInfraMisePublication.publish_file_plan(
-                planned,
-                phase="version-file",
-            )
-            if write_result.failure:
-                return r[bool].from_failure(write_result)
-            generated += 1
-            u.Cli.info(f"  generated: {target.relative_to(self.repository_root)}")
+            outcome = self._sync_project(project_info.path, template_path)
+            if outcome.failure:
+                return r[bool].from_failure(outcome)
+            outcomes[outcome.value] = outcomes.get(outcome.value, 0) + 1
 
         verb = "would generate" if (self.check_only or self.dry_run) else "generated"
-        u.Cli.info(f"version-file: {verb} {generated}, skipped {skipped}")
+        u.Cli.info(
+            f"version-file: {verb} {outcomes['generated']}, "
+            f"skipped {outcomes['skipped']}"
+        )
         return r[bool].ok(True)
+
+    def _sync_project(self, project: Path, template_path: Path) -> p.Result[str]:
+        """Render one project's ``__version__.py`` and name the outcome."""
+        metadata_result = u.Infra.read_project_metadata_result(project)
+        if metadata_result.failure:
+            return r[str].from_failure(metadata_result)
+        meta = metadata_result.value
+        if f"{meta.class_stem}Version" == FlextVersion.__name__:
+            return r[str].ok("skipped")
+        src_pkg = project / "src" / meta.package_name
+        if not src_pkg.is_dir():
+            return r[str].ok("absent")
+        rendered = u.Cli.template_render(template_path, meta)
+        if rendered.failure:
+            return r[str].from_failure(rendered)
+        return self._publish_version(project, src_pkg / "__version__.py", rendered.value)
+
+    def _publish_version(
+        self, project: Path, target: Path, content: str
+    ) -> p.Result[str]:
+        """Publish ``content`` to ``target`` unless it is already current."""
+        if target.is_file():
+            current = u.Cli.files_read_text(target)
+            if current.failure:
+                return r[str].from_failure(current)
+            if current.value == content:
+                return r[str].ok("current")
+        relative = target.relative_to(self.repository_root)
+        if self.check_only or self.dry_run:
+            u.Cli.info(f"  stale: {relative}")
+            return r[str].ok("generated")
+        before = u.Cli.atomic_read_binary_file_state(target, required=False)
+        if before.failure:
+            return r[str].from_failure(before)
+        planned = m.Infra.CodegenFilePlan(
+            project=project,
+            path=target,
+            before=before.value,
+            desired_content=content.encode(c.Cli.ENCODING_DEFAULT),
+            desired_mode=0o644,
+            owner="codegen",
+            policy="full",
+        )
+        published = FlextInfraMisePublication.publish_file_plan(
+            planned,
+            phase="version-file",
+        )
+        if published.failure:
+            return r[str].from_failure(published)
+        u.Cli.info(f"  generated: {relative}")
+        return r[str].ok("generated")
 
 
 __all__: list[str] = ["FlextInfraCodegenVersionFile"]
