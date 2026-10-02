@@ -208,44 +208,44 @@ url = "https://github.com/microsoft/waza/releases/download/v0.38.7/waza-windows-
 url_api = "https://api.github.com/repos/microsoft/waza/releases/assets/520984898"
 
 [[tools."github:qltysh/qlty"]]
-version = "0.646.0"
+version = "0.648.0"
 backend = "github:qltysh/qlty"
 specifiers = ["latest"]
 
 [tools."github:qltysh/qlty"."platforms.linux-arm64"]
-checksum = "sha256:369cfe5e7b5b0157790e0e40524b9ac0a4fa616b90bb913d6cea844d8dabc48e"
-url = "https://github.com/qltysh/qlty/releases/download/v0.646.0/qlty-aarch64-unknown-linux-gnu.tar.xz"
-url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/589028320"
+checksum = "sha256:b71d10222979a502e083ca9ea1d3b9c86bcfbd65b8f619199fa1596ff95c629b"
+url = "https://github.com/qltysh/qlty/releases/download/v0.648.0/qlty-aarch64-unknown-linux-gnu.tar.xz"
+url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/589237548"
 provenance = "github-attestations"
 
 [tools."github:qltysh/qlty"."platforms.linux-x64"]
-checksum = "sha256:a30a5a99b878dbccd7c4cc03abe6f0c7e9b7ce4a92401a018e5273ef27b298b5"
-url = "https://github.com/qltysh/qlty/releases/download/v0.646.0/qlty-x86_64-unknown-linux-gnu.tar.xz"
-url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/589028392"
+checksum = "sha256:a297380d79bec2225f315fa45a05721faf9566a198306fa98ffd828a2afa2491"
+url = "https://github.com/qltysh/qlty/releases/download/v0.648.0/qlty-x86_64-unknown-linux-gnu.tar.xz"
+url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/589237606"
 provenance = "github-attestations"
 
 [tools."github:qltysh/qlty"."platforms.linux-x64-musl"]
-checksum = "sha256:c62857b8e5373d19391221f90ce49cbabe2920d1c3878b9cad40feb42d4a5627"
-url = "https://github.com/qltysh/qlty/releases/download/v0.646.0/qlty-x86_64-unknown-linux-musl.tar.xz"
-url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/589028398"
+checksum = "sha256:e5002df34f68495051970ad209b6ec34ceb68874e0a8c77ad0ac5752682cf284"
+url = "https://github.com/qltysh/qlty/releases/download/v0.648.0/qlty-x86_64-unknown-linux-musl.tar.xz"
+url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/589237613"
 provenance = "github-attestations"
 
 [tools."github:qltysh/qlty"."platforms.macos-arm64"]
-checksum = "sha256:90b1fabbf196fb0c362e0fcc2a407a1406de82abcab3ae3c454df0f9c22fbb92"
-url = "https://github.com/qltysh/qlty/releases/download/v0.646.0/qlty-aarch64-apple-darwin.tar.xz"
-url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/589028328"
+checksum = "sha256:7e595fe3a9cf1c68df992a3a9c9bc9ab2406cbe5b25b30ce936e0d189660e823"
+url = "https://github.com/qltysh/qlty/releases/download/v0.648.0/qlty-aarch64-apple-darwin.tar.xz"
+url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/589237552"
 provenance = "github-attestations"
 
 [tools."github:qltysh/qlty"."platforms.macos-x64"]
-checksum = "sha256:3ece87f9e8dc306f4a8dcdc945a57ae71cec22dbaf045a606c86f759c705d377"
-url = "https://github.com/qltysh/qlty/releases/download/v0.646.0/qlty-x86_64-apple-darwin.tar.xz"
-url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/589028349"
+checksum = "sha256:3b39eba6f90173f1e5d9fc04d05a01436481d3c49a0a7a327e308f0bc5cd142a"
+url = "https://github.com/qltysh/qlty/releases/download/v0.648.0/qlty-x86_64-apple-darwin.tar.xz"
+url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/589237569"
 provenance = "github-attestations"
 
 [tools."github:qltysh/qlty"."platforms.windows-x64"]
-checksum = "sha256:b4ab93df67dc30184907e46571b6bfcbeb7f8d3369488e8fd7ccbbdd7915803a"
-url = "https://github.com/qltysh/qlty/releases/download/v0.646.0/qlty-x86_64-pc-windows-msvc.zip"
-url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/589028373"
+checksum = "sha256:82cf57688294976af2a92bb0d3ebbaed2aa7441a942efa67a78395feddde73d9"
+url = "https://github.com/qltysh/qlty/releases/download/v0.648.0/qlty-x86_64-pc-windows-msvc.zip"
+url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/589237584"
 provenance = "github-attestations"
 
 [[tools.gitleaks]]
