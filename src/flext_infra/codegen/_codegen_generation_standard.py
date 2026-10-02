@@ -101,7 +101,71 @@ class FlextInfraCodegenGenerationStandardMixin(
         if lines and eager_lines:
             lines.append("")
         lines.extend(eager_lines)
-        return "\n".join(lines)
+        return cls._merge_lazy_import_line(lines, plan)
+
+    @classmethod
+    def _merge_lazy_import_line(
+        cls,
+        lines: t.MutableSequenceOf[str],
+        plan: m.Infra.LazyInitPlan,
+    ) -> str:
+        """Merge the lazy-helpers import into the block at its sorted spot.
+
+        The helpers import is a first-party statement like any other: emitting
+        it as a separate leading line diverged from the formatter's canonical
+        alphabetical order for every package whose own name sorts before (or
+        after) the bootstrap root, and each generation re-diverged after the
+        autofix. Merging it into the group stream here is the single owner of
+        the ordering.
+
+        Returns:
+            The resulting ``str``.
+
+        """
+        current_pkg = plan.context.current_pkg
+        bootstrap_owner = (
+            current_pkg.split(".", maxsplit=1)[0] == c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
+        )
+        lazy_module = (
+            c.Infra.LAZY_BOOTSTRAP_MODULE
+            if bootstrap_owner
+            else c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
+        )
+        lazy_line = (
+            f"from {lazy_module} import {', '.join(c.Infra.LAZY_BOOTSTRAP_HELPERS)}"
+        )
+        if not lines:
+            return lazy_line
+        # Split the rendered block into blank-line-separated groups and insert
+        # the lazy group by its first-party module name.
+        groups: list[list[str]] = [[]]
+        for line in lines:
+            if line:
+                groups[-1].append(line)
+            elif groups[-1]:
+                groups.append([])
+        if groups and not groups[-1]:
+            groups.pop()
+        lazy_top = lazy_module.split(".", maxsplit=1)[0]
+
+        def _group_key(group: list[str]) -> str:
+            first = group[0]
+            if first.startswith("from "):
+                return first.split(maxsplit=1)[1].split(maxsplit=1)[0]
+            return first
+
+        inserted = False
+        merged: list[str] = []
+        for group in groups:
+            if not inserted and _group_key(group).lower() > lazy_top:
+                merged.extend([lazy_line, ""])
+                inserted = True
+            if merged:
+                merged.append("")
+            merged.extend(group)
+        if not inserted:
+            merged.extend(["", lazy_line])
+        return "\n".join(merged)
 
     @classmethod
     def _lazy_groups(
