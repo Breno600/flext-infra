@@ -68,7 +68,7 @@ class TestsFlextInfraFixerInternals:
             "```python\n"
             "import os\n"
             "import sys\n\n"
-            "print(sys.version)\n"
+            "VERSION = sys.version\n"
             f"```{separator}"
             "## After The Block\n",
             encoding="utf-8",

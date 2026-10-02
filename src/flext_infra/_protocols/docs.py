@@ -115,7 +115,7 @@ class FlextInfraProtocolsDocs(Protocol):
         def __call__(
             self,
             *,
-            config_file_path: str,
+            config_file: str,
             site_dir: str,
         ) -> MutableMapping[str, cli_p.AttributeProbe]: ...
 

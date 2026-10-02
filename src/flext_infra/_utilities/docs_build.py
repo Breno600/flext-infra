@@ -54,7 +54,9 @@ class FlextInfraUtilitiesDocsBuild:
             The resulting ``MutableMapping[str, p.AttributeProbe]``.
 
         """
-        return load(config_file_path=str(settings), site_dir=str(site_dir))
+        # ``config_file`` selects the file MkDocs reads; ``config_file_path``
+        # only labels a stream and leaves MkDocs reading ./mkdocs.yml.
+        return load(config_file=str(settings), site_dir=str(site_dir))
 
     @staticmethod
     def docs_mkdocs_config_files(scope: m.Infra.DocScope) -> t.VariadicTuple[Path]:
