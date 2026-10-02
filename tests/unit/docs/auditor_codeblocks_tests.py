@@ -28,7 +28,14 @@ class TestsFlextInfraAuditorCodeblocks:
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir(parents=True, exist_ok=True)
         (docs_dir / "snippet.md").write_text(
-            '```python\ndef ready() -> bool:\n    """Report readiness."""\n    return True\n```\n',
+            "```python\n"
+            "def ready() -> bool:\n"
+            '    """Report readiness.\n\n'
+            "    Returns:\n"
+            "        Whether the service is ready.\n"
+            '    """\n'
+            "    return True\n"
+            "```\n",
             encoding="utf-8",
         )
         scope = m.Infra.DocScope(

@@ -470,6 +470,9 @@ split-on-trailing-comma = false
   "unused-import",
 ]
 
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
 [tool.tomlsort]
 all = true
 in_place = true

@@ -9,20 +9,16 @@ from __future__ import annotations
 import pstats
 import sqlite3
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, m, u
+from flext_infra import c, config, m, t, u
 from tests.unit.validate.pytest_runner_support import (
     declare_parallel_project,
     runner_for,
     summary,
 )
-
-if TYPE_CHECKING:
-    from flext_infra import t
 
 
 class TestsFlextInfraPytestRunner:
@@ -186,6 +182,9 @@ class TestsFlextInfraPytestRunner:
     ) -> None:
         """The suite argv and process policy share one declared project budget."""
         policy = config.Infra.tooling.tools.pytest
+        # A tree without ``[project].name`` takes the fleet-wide run wall.
+        undeclared = runner_for(cached_runner_project)
+        assert undeclared.run_timeout_seconds(policy) == policy.run_timeout_seconds
         declared_name = next(iter(policy.run_timeout_overrides), config.Infra.name)
         expected = policy.run_timeout_overrides.get(
             declared_name,
@@ -646,12 +645,7 @@ class TestsFlextInfraPytestRunner:
                 complete=True,
                 execution_mode=c.Infra.PytestExecutionMode.FULL,
             ),
-            runner.build_command(
-                full,
-                invocation=m.Infra.PytestInvocation(
-                    execution_mode=c.Infra.PytestExecutionMode.FULL,
-                ),
-            ),
+            runner.build_command(full, execution_mode=c.Infra.PytestExecutionMode.FULL),
         ):
             # The full budgeted phase keeps external and CI markers and leaves
             # slow items to the full slow phase, which runs on its own clock.
@@ -719,7 +713,7 @@ class TestsFlextInfraPytestRunner:
             {context.deadline_monotonic for context in parsed},
             eq={
                 runner.started_at_monotonic
-                + config.Infra.tooling.tools.pytest.run_timeout_seconds,
+                + runner.run_timeout_seconds(config.Infra.tooling.tools.pytest),
             },
         )
         incremental, full = (path.parent for path in contexts)

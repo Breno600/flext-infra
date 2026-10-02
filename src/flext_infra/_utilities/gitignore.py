@@ -129,6 +129,13 @@ class FlextInfraUtilitiesGitignore:
         from flext_infra import u
 
         destination = project_dir / c.Infra.GITIGNORE
+        markers = frozenset(
+            marker for block in blocks for marker in (block.begin, block.end)
+        )
+        if any(line in markers for line in rendered.splitlines()):
+            return r[str].fail(
+                f"generated gitignore claims a declared external block: {destination}",
+            )
         snapshot = u.Cli.atomic_read_binary_file_state(destination, required=False)
         if snapshot.failure:
             return r[str].from_failure(snapshot)
@@ -137,30 +144,18 @@ class FlextInfraUtilitiesGitignore:
             return r[str].ok(rendered)
         current = content.decode(c.Cli.ENCODING_DEFAULT)
         lines = current.splitlines(keepends=True)
-        rendered_lines = rendered.splitlines()
+        found: dict[str, list[int]] = {marker: [] for marker in markers}
+        for index, line in enumerate(lines):
+            text = line.rstrip("\r\n")
+            if text in found:
+                found[text].append(index)
+            elif any(text.startswith(marker) for marker in markers):
+                return r[str].fail(
+                    f"malformed gitignore preserved marker: {destination}: "
+                    f"{text!r}",
+                )
         sections: list[tuple[int, int, str]] = []
         for block in blocks:
-            if any(
-                marker in line
-                for marker in (block.begin, block.end)
-                for line in rendered_lines
-            ):
-                return r[str].fail(
-                    f"generated gitignore claims external block {block.begin!r}: "
-                    f"{destination}",
-                )
-            found: dict[str, list[int]] = {block.begin: [], block.end: []}
-            for index, line in enumerate(lines):
-                text = line.rstrip("\r\n")
-                for marker in (block.begin, block.end):
-                    if marker not in text:
-                        continue
-                    if text != marker:
-                        return r[str].fail(
-                            f"malformed gitignore preserved marker {marker!r}: "
-                            f"{destination}",
-                        )
-                    found[marker].append(index)
             begins = found[block.begin]
             ends = found[block.end]
             if not begins and not ends:

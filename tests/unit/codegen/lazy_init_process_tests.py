@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 from flext_tests import tm
@@ -123,7 +124,17 @@ class TestsFlextInfraLazyInitProcessing:
         for content in (level_two_content, level_three_content, level_four_content):
             tm.that(content, contains="install_lazy_exports(")
             tm.that(content, contains="__all__: tuple[str, ...]")
-        tm.that(level_four_content, contains="from .worker import FlextTestsWorker")
+        level_four_imports = {
+            (node.module, alias.name)
+            for node in ast.walk(ast.parse(level_four_content))
+            if isinstance(node, ast.ImportFrom)
+            for alias in node.names
+        }
+        worker_import = (
+            f"{package_root.name}.services._parts.runtime.worker",
+            "FlextTestsWorker",
+        )
+        tm.that(worker_import in level_four_imports, eq=True)
         tm.that(level_four_content, contains="FlextTestsWorker")
         tm.that(level_four_content, contains='"worker"')
         tm.that(level_two_content, contains="FlextTestsWorker")
@@ -156,7 +167,10 @@ class TestsFlextInfraLazyInitProcessing:
         tm.that(result, eq=0)
         generated = init_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         tm.that(generated, has='__all__: tuple[str, ...] = ("FlextTestsRuntime",)')
-        tm.that(generated, has="from .runtime import FlextTestsRuntime")
+        tm.that(
+            generated,
+            has=f"from {package_root.name}._facade.runtime import FlextTestsRuntime",
+        )
         tm.that(u.Tests.run_lazy_init(repository_root), eq=0)
         tm.that(init_path.read_text(encoding=c.Cli.ENCODING_DEFAULT), eq=generated)
 

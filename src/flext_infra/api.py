@@ -172,14 +172,19 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         )
 
     @staticmethod
-    def fresh_import_probe(*, repository_root: Path) -> p.Infra.FreshImportProbe:
+    def fresh_import_probe(
+        *, repository_root: Path, runtime_root: Path | None = None
+    ) -> p.Infra.FreshImportProbe:
         """Build the fresh-import probe complete conform validates with.
 
         Returns:
             The resulting ``p.Infra.FreshImportProbe``.
 
         """
-        return FlextInfraValidateFreshImport(repository_root=repository_root)
+        return FlextInfraValidateFreshImport(
+            repository_root=repository_root,
+            runtime_root=runtime_root,
+        )
 
     @staticmethod
     def markdown_format_gate(repository_root: Path) -> p.Infra.MarkdownFormatGate:

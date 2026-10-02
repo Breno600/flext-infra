@@ -54,7 +54,7 @@ class TestsFlextInfraCodegenBeadsProjection:
         # set on every adopt and start, so a projection in any other form left
         # every governed checkout dirty after each gc pass.
         beads = config.Infra.codegen.toolchain.beads
-        parsed = u.Tests.toml_mapping(tm.ok(u.Cli.yaml_safe_load(rendered_config)))
+        parsed = u.Tests.toml_mapping(tm.ok(u.Cli.yaml_parse(rendered_config)))
         tm.that(parsed["issue_prefix"], eq="project-prefix")
         tm.that(parsed["issue-prefix"], eq="project-prefix")
         tm.that(parsed["dolt.mode"], eq=beads.dolt_mode)

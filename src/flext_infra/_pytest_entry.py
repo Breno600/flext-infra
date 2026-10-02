@@ -51,12 +51,14 @@ class FlextInfraPytestEntry:
 
         from flext_infra.validate.pytest_runner import FlextInfraPytestRunner
 
+        slow_phase = mode in {"slow", "full-slow"}
         runner = FlextInfraPytestRunner.from_environment(
             started_at_monotonic=cls._STARTED_AT_MONOTONIC,
+            slow_phase=slow_phase,
         )
         if mode == "coverage":
             return runner.execute_coverage().unwrap()
-        if mode == "full":
+        if mode in {"full", "full-slow"}:
             return runner.execute_full().unwrap()
         if mode in {"", "slow"}:
             return runner.execute().unwrap()

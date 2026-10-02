@@ -352,19 +352,29 @@ class FlextInfraCodemodSemanticApply:
         project_roots = u.Infra.governed_project_roots(root)
         refactor_config = u.Infra.load_refactor_config(root)
         scan_dirs = refactor_config.project_scan_dirs
+        # The scan-ignore SSOT owns source visibility everywhere: preflight
+        # findings and ast-grep targets may name paths under an ignored
+        # resource (a tool hook scanned outside governed roots), and feeding
+        # those into the semantic planners crashes the phase on files that
+        # are declared non-source.
+        ignored = frozenset(config.Infra.codegen.source_scan_ignored)
         paths = {
             path.resolve()
             for project_root in project_roots
             for directory in scan_dirs
             for path in u.Infra.iter_directory_python_files(project_root / directory)
+            if not ignored.intersection(path.relative_to(root).parts[:-1])
         }
         paths.update(
             path
             for finding in preflight.entries
             if (path := (root / finding.file).resolve()).suffix == c.Infra.EXT_PYTHON
+            and not ignored.intersection(path.relative_to(root).parts[:-1])
         )
         for target in u.Infra.ast_grep_scan_targets(root):
             candidate = root / target
+            if ignored.intersection(candidate.relative_to(root).parts):
+                continue
             paths.update(
                 path.absolute()
                 for path in (

@@ -209,6 +209,13 @@ Infra:
             combine-as-imports: true
             force-single-line: false
             split-on-trailing-comma: false
+          # Operator ruling 2026-10-01 (docstring convention): docstrings follow
+          # the Google convention, the shape the docstring fix recipes render.
+          # Ruff then disables the docstring rules that convention does not
+          # use, one of each mutually exclusive pair select ALL enables
+          # (D203/D211, D212/D213) included, so no run warns about them.
+          pydocstyle:
+            convention: google
           # Each exception exists only with the operator ruling that authorized
           # it and its reason; Ruff receives the unscoped entries as `ignore`
           # and the scoped ones as `per-file-ignores`. Repositories declare no
@@ -484,6 +491,10 @@ Infra:
         # Slow marks are a narrow integration-harness budget, not permission
         # for an unbounded test. Cases that exceed it require owner repair.
         slow-timeout-seconds: 30
+        # The run budget covers the budgeted phase only; items carrying this
+        # native pytest marker run in their own phase, each within
+        # slow-timeout-seconds (pytest-timeout marker), selected with the
+        # native -m expression.
         slow-marker: slow
         # A local suite that cannot finish within run-timeout-seconds is a
         # performance defect. The generated process wall is derived from this
@@ -496,6 +507,12 @@ Infra:
           # This measurement ceiling permits a complete cold profile before
           # tightening the limit to the observed full-suite runtime.
           flext-infra: 1200
+          # cosmos-charts cold suite measured on a 12-core local runner:
+          # the 120s entry clock SIGTERM'd the suite at 51% (~235s projected
+          # full runtime; the member CI completes inside the fleet default on
+          # its runners). This measurement ceiling permits a complete cold
+          # local run of the 241-case suite.
+          cosmos-charts: 600
         termination-grace-seconds: 2
         # One failure stops the invocation. The next run starts from the
         # corrected owner instead of accumulating a backlog of unrelated

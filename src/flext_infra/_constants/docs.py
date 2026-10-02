@@ -61,11 +61,13 @@ class FlextInfraConstantsDocs:
     DOCS_FRAGMENT_PREFIX: ClassVar[str] = "#"
     PYTHON_FENCE_RUFF_EXTEND_IGNORE: ClassVar[t.StrSequence] = (
         "undocumented-public-module",
+        "missing-copyright-notice",
         "implicit-namespace-package",
     )
-    """Only module-docstring and package rules are inapplicable to a
-    standalone Markdown fence. All names, behavior, types, and security
-    rules remain active and require correction in the authored source."""
+    """Only module-header (docstring, copyright notice) and package rules are
+    inapplicable to a standalone Markdown fence, which is not a module file.
+    All names, behavior, types, docstring, and security rules remain active
+    and require correction in the authored source."""
     MACHINE_PATH_RE: ClassVar[t.RegexPattern] = re.compile(
         r"(?<![\w./-])/(?:home|Users)/(?P<user>[A-Za-z0-9_.-]+)(?=/|\b)",
     )

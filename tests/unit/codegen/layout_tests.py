@@ -239,8 +239,8 @@ class TestsFlextInfraCodegenLayout:
         )
 
     @staticmethod
-    def test_gate_reports_violations_and_fails_on_warning(tmp_path: Path) -> None:
-        """The shared gate contract rejects warnings without hiding their severity."""
+    def test_gate_reports_violations_as_blocking_errors(tmp_path: Path) -> None:
+        """Every layout finding fails the gate and is reported at error severity."""
         project = build_loose_project(tmp_path)
         gate = FlextInfraLayoutGate(tmp_path)
         ctx = m.Infra.GateContext(
@@ -252,7 +252,10 @@ class TestsFlextInfraCodegenLayout:
 
         tm.that(execution.result.passed, eq=False)
         tm.that(bool(execution.issues), eq=True)
-        tm.that(all(issue.severity == "WARNING" for issue in execution.issues), eq=True)
+        tm.that(
+            {issue.severity for issue in execution.issues},
+            eq={c.Infra.GateSeverity.ERROR.value},
+        )
 
     @pytest.mark.parametrize("keep_count", [0, 1, 3])
     def test_keep_root_files_override(self, tmp_path: Path, keep_count: int) -> None:

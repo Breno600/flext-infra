@@ -365,8 +365,8 @@ class FlextInfraDuplicationGate(FlextInfraGate):
         for duplicate in u.Cli.json_deep_mapping_list(data, "duplicates"):
             first = u.Cli.json_deep_mapping(duplicate, "firstFile")
             second = u.Cli.json_deep_mapping(duplicate, "secondFile")
-            first_name = u.Cli.json_pick_str(first, "name")
-            second_name = u.Cli.json_pick_str(second, "name")
+            first_name = cls._report_file_name(first)
+            second_name = cls._report_file_name(second)
             if not cls._is_semantic_clone(duplicate, first, second):
                 continue
             # Ownership is path containment, never a string prefix: a sibling
@@ -402,6 +402,36 @@ class FlextInfraDuplicationGate(FlextInfraGate):
                     ),
                 )
         return r[tuple[m.Infra.Issue, ...]].ok(tuple(issues))
+
+    @staticmethod
+    def _report_name_parts(side: t.JsonMapping) -> tuple[str, str | None]:
+        """Return one jscpd clone side's file name and virtual language.
+
+        jscpd names markdown-embedded code blocks ``<file>:<language>``; the
+        range belongs to that embedded block, not to a file of that literal
+        name. The parts feed ownership (the real file) and the behavioral
+        probe (the embedded language).
+
+        Returns:
+            The on-disk file name and the embedded language, or ``None``
+            when the side names a real file.
+
+        """
+        raw = u.Cli.json_pick_str(side, "name")
+        file_name, separator, language = raw.rpartition(":")
+        if separator and file_name and "." in file_name:
+            return file_name, language
+        return raw, None
+
+    @classmethod
+    def _report_file_name(cls, side: t.JsonMapping) -> str:
+        """Return one jscpd clone side's on-disk file name.
+
+        Returns:
+            The clone side's file name without any virtual suffix.
+
+        """
+        return cls._report_name_parts(side)[0]
 
     @classmethod
     def _issue_from_duplicate(
@@ -469,7 +499,12 @@ class FlextInfraDuplicationGate(FlextInfraGate):
             Whether one jscpd source range encloses executable behavior.
 
         """
-        file_name = u.Cli.json_pick_str(side, "name")
+        file_name, virtual_language = cls._report_name_parts(side)
+        if virtual_language is not None:
+            # An embedded markdown code block is executable exactly when it
+            # is the python block jscpd tokenized; other languages never
+            # enclose python behavior.
+            return virtual_language == "python"
         path = Path(file_name)
         identity = path.stat()
         key = (file_name, identity.st_mtime_ns, identity.st_size)
