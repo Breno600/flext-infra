@@ -59,8 +59,8 @@ class TestsMiseLockTransaction:
         )
         return u.Cli.process_succeeded(outcome.outcome), outcome.stderr
 
+    @staticmethod
     def test_release_change_publishes_pin_when_lock_bytes_are_unchanged(
-        self,
         tmp_path: Path,
     ) -> None:
         """A new Mise release reaches the pin even when the bumped lock is identical.
