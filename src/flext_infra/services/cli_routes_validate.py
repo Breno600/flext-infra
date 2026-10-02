@@ -20,6 +20,7 @@ from flext_infra.docs.validator import FlextInfraDocValidator
 from flext_infra.maintenance.clean import FlextInfraCleanService
 from flext_infra.maintenance.python_version import FlextInfraPythonVersionEnforcer
 from flext_infra.maintenance.sonarcloud import FlextInfraSonarcloudSettingsSync
+from flext_infra.maintenance.sonarcloud_issues import FlextInfraSonarcloudIssues
 
 from .cli_routes_validate_commands import FlextInfraValidationCommandRoutes
 
@@ -123,6 +124,13 @@ class FlextInfraValidationRoutes(FlextInfraValidationCommandRoutes):
                 model_cls=FlextInfraSonarcloudSettingsSync,
                 handler=FlextInfraSonarcloudSettingsSync.execute_command,
                 success_message="SonarCloud issue exclusions match the SSOT",
+            ),
+            m.Cli.ResultCommandRoute(
+                name=c.Infra.VERB_SONARCLOUD_ISSUES,
+                help_text="Read unresolved new-code SonarCloud issues (requires SONAR_TOKEN)",
+                model_cls=FlextInfraSonarcloudIssues,
+                handler=FlextInfraSonarcloudIssues.execute_command,
+                success_message="SonarCloud issue search completed",
             ),
         ),
         c.Infra.CLI_GROUP_VALIDATE: FlextInfraValidationCommandRoutes.validate_command_routes,

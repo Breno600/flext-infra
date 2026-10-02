@@ -179,6 +179,9 @@ class FlextInfraConstantsSharedInfra:
     SONARCLOUD_ISSUE_IGNORE_KEY: ClassVar[str] = "sonar.issue.ignore.multicriteria"
     "Server-side PROPERTY_SET that automatic analysis honors for issue exclusions."
     SONARCLOUD_API_AUTH_VALIDATE_PATH: ClassVar[str] = "/api/authentication/validate"
+    SONARCLOUD_API_ISSUES_SEARCH_PATH: ClassVar[str] = "/api/issues/search"
+    SONARCLOUD_ISSUES_SEARCH_LIMIT: ClassVar[int] = 10000
+    "Maximum result window documented by SonarSource for issue search."
     SONARCLOUD_API_SETTINGS_VALUES_PATH: ClassVar[str] = "/api/settings/values"
     SONARCLOUD_API_SETTINGS_SET_PATH: ClassVar[str] = "/api/settings/set"
     SONARCLOUD_API_SETTINGS_RESET_PATH: ClassVar[str] = "/api/settings/reset"

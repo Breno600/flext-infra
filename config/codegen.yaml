@@ -592,6 +592,8 @@ Infra:
           description: Run the canonical jscpd duplicate-code gate.
         - name: sonarcloud-sync
           description: Write the SSOT SonarCloud issue exclusions to the server-side project settings (requires SONAR_TOKEN).
+        - name: sonarcloud-issues
+          description: Read unresolved new-code SonarCloud issues on the published integration branch (requires SONAR_TOKEN).
       custom_handler_profile_overrides: {}
       custom_handler_policy:
         filename: custom.mk
