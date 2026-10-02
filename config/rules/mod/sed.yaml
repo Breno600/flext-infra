@@ -17,6 +17,12 @@
 #     expected: 3                  # optional exact finding count receipt
 
 rules:
+  - id: mise-lock-merge-test-signature-format
+    distributions: [flext-infra]
+    description: Render the merge-conflict regression test signature in the Qlty layout.
+    include: [tests/unit/codegen/test_mise_lock_transaction.py]
+    find: 'def test_publish_regenerates_an_unmerged_generated_lock\(\n        self, tmp_path: Path\n    \) -> None:'
+    replace: 'def test_publish_regenerates_an_unmerged_generated_lock(\n        self,\n        tmp_path: Path,\n    ) -> None:'
   - id: config-retire-shadowed-sed-model-pair
     distributions: [flext-infra]
     description: Remove the earlier SedPatternSpec and SedPatternsSpec declarations shadowed by the strict canonical pair.

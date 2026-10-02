@@ -117,7 +117,8 @@ class TestsMiseLockTransaction:
             )
 
     def test_publish_regenerates_an_unmerged_generated_lock(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """The public publisher consumes Git's prior lock without editing a projection."""
         root, _ = u.Tests.render_make_environment(
