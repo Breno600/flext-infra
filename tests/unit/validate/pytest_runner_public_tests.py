@@ -143,7 +143,7 @@ class TestsFlextInfraPytestRunner:
             "from flext_cli import u\n\n"
             "def test_runtime():\n"
             f"    payload = u.Cli.config_load(Path({str(source)!r})).unwrap()\n"
-            "    assert payload['value']\n",
+            "    assert payload.data['value']\n",
             encoding="utf-8",
         )
         runner = runner_for(cached_runner_project)
