@@ -1141,6 +1141,7 @@ Infra:
           - tool.pytest.ini_options
           - tool.uv
           - tool.ruff
+          - tool.ruff.lint.isort
           - tool.ruff.lint.per-file-ignores
           - tool.mypy
           - tool.pyright
