@@ -562,6 +562,13 @@ Infra:
           # cold run because per-window dispatch overhead dominates.
           flext-infra:
             workers: 4
+          # flext-tests slow phase measured 2026-10-02 (load ~7, 20 cores):
+          # 34 slow items, 89.4s of call time across 32 of them; every item
+          # passes, but each pytester case boots a child pytest with the full
+          # facade stack, so the serial phase reached the 120s entry clock at
+          # its 33rd item. The cases are host-lock and namespace isolated.
+          flext-tests:
+            workers: 4
           # CPU-fraction ceilings (cpu_fraction: "n/d") resolve at runtime
           # against the process CPU count.
         # Reserve physical memory for each xdist worker and its child process

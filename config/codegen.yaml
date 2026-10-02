@@ -27,10 +27,10 @@ Infra:
       # moving selectors and dependency floors to the newest releases and
       # writes the committed uv.lock and mise.lock; setup, gen, and fmt install
       # frozen from those locks.
-      # Seletor major.minor (contrato do schema). O patch exato é instrumento
-      # do mise.lock: quando a release mais nova perde assets de plataforma, o
-      # mise recusa a substituição e o estágio de lock mantém o lock vigente
-      # (fix-forward) até a release recuperar a cobertura.
+      # The selector is major.minor (the schema contract). The exact patch is
+      # mise.lock's instrument: when the newest release loses platform assets,
+      # mise refuses the replacement and the lock stage keeps the current lock
+      # (fix-forward) until the release regains coverage.
       # The minor line only: the frozen patch is mise.lock's ownership
       # (cooldown 2026-10-01 keeps the asset-less 20260929 python-build-
       # standalone out of every resolution, so 3.13.15 stays the resolved
