@@ -142,17 +142,9 @@ class FlextInfraCodegenGenerationStandardMixin(
         module: str,
         values: t.StrSequence,
         *,
-        trailing: bool,
         indent: str = "            ",
     ) -> t.StrSequence:
-        """Format one mapping entry exactly as Ruff formats a tuple value.
-
-        Why (charts gen↔fmt churn): the compact form previously hardcoded the
-        item-ending comma, while Ruff's magic-trailing-comma rule removes it on
-        a single-entry mapping that stays expanded — the next ``make fmt``
-        rewrote the projection and the following ``make gen`` restored it,
-        looping forever. The item comma belongs to the ``trailing`` decision
-        (multi-entry mapping), exactly like the expanded form below.
+        """Format one mapping entry with the declared trailing-comma policy.
 
         Returns:
             The resulting ``t.StrSequence``.
@@ -161,15 +153,14 @@ class FlextInfraCodegenGenerationStandardMixin(
         inner = ", ".join(values)
         if len(values) == 1:
             inner = f"{inner},"
-        separator = "," if trailing else ""
-        compact = f'{indent}"{module}": ({inner}){separator}'
+        compact = f'{indent}"{module}": ({inner}),'
         if len(compact) <= config.Infra.tooling.tools.ruff.line_length:
             return (compact,)
         value_indent = f"{indent}    "
         return (
             f'{indent}"{module}": (',
             *(f"{value_indent}{value}," for value in values),
-            f"{indent}){separator}",
+            f"{indent}),",
         )
 
     @classmethod
@@ -255,7 +246,6 @@ class FlextInfraCodegenGenerationStandardMixin(
                 cls._format_lazy_group_entry(
                     module,
                     tuple(f'"{name}"' for name in names),
-                    trailing=len(groups) > 1,
                 ),
             )
         lines.append("        }),")
@@ -284,7 +274,6 @@ class FlextInfraCodegenGenerationStandardMixin(
                         f'("{export_name}", "{attr_name}")'
                         for export_name, attr_name in pairs
                     ),
-                    trailing=len(groups) > 1,
                 ),
             )
         lines.append("        }),")
