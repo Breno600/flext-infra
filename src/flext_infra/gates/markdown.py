@@ -39,7 +39,8 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
         """
         return config.Infra.tooling.tools.markdown.findings_exit_codes
 
-    def _resolve_config_args(self, project_dir: Path) -> t.StrSequence:
+    @staticmethod
+    def _resolve_config_args(project_dir: Path) -> t.StrSequence:
         """Resolve only the repository-local markdown settings owner.
 
         Returns:

@@ -101,8 +101,9 @@ class _FlextInfraCodegenConformLifecycleProbe(FlextInfraCodegenConform):
 class TestsFlextInfraCodegenConform:
     """Prove one SSOT for project creation and existing-tree conformance."""
 
+    @staticmethod
     @pytest.fixture(scope="module")
-    def conformed_template(self, tmp_path_factory: pytest.TempPathFactory) -> Path:
+    def conformed_template(tmp_path_factory: pytest.TempPathFactory) -> Path:
         """Conform one real seed tree once per module; each scenario clones it.
 
         Every recovery scenario begins its own transaction on a fresh clone of
@@ -366,6 +367,7 @@ class TestsFlextInfraCodegenConform:
             lacks="[tool.hatch.build.hooks.custom]",
         )
 
+    @staticmethod
     @pytest.mark.parametrize(
         "unsafe_path",
         [
@@ -379,7 +381,7 @@ class TestsFlextInfraCodegenConform:
             r"\\server\share\hatch_build.py",
         ],
     )
-    def test_hatch_build_hook_rejects_unsafe_paths(self, unsafe_path: str) -> None:
+    def test_hatch_build_hook_rejects_unsafe_paths(unsafe_path: str) -> None:
         """Test hatch build hook rejects unsafe paths."""
         payload = u.Tests.project_spec("unsafe-hook").model_dump()
         payload["hatch_build_hook_path"] = unsafe_path
@@ -515,9 +517,9 @@ class TestsFlextInfraCodegenConform:
                 verb=canonical,
             )
 
+    @staticmethod
     @pytest.mark.slow
     def test_apply_recovers_declared_managed_pyproject_conflict(
-        self,
         infra_git_repo: Path,
     ) -> None:
         """Repair a committed managed block through the normal apply plan."""
@@ -560,10 +562,10 @@ class TestsFlextInfraCodegenConform:
     # This end-to-end scenario scaffolds a project and runs its console entry
     # point in a fresh interpreter. The slow marker opts into the single
     # config-owned slow-item budget; tests must not restate that policy locally.
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("name", ["flext-demo", "flext-member"])
     def test_new_project_is_complete_and_idempotent(
-        self,
         tmp_path: Path,
         name: str,
     ) -> None:
@@ -655,9 +657,9 @@ class TestsFlextInfraCodegenConform:
         tm.ok(process)
         tm.that(process.value, eq="✅ pong")
 
+    @staticmethod
     @pytest.mark.slow
     def test_generated_make_uses_unpinned_environment_uv(
-        self,
         infra_git_repo: Path,
     ) -> None:
         """Generated Make delegates uv selection to the caller environment."""
@@ -680,9 +682,9 @@ class TestsFlextInfraCodegenConform:
         tm.that(selected_output, lacks="uv@")
         tm.that(selected_output, lacks="UV_VERSION")
 
+    @staticmethod
     @pytest.mark.slow
     def test_existing_manifest_converges_to_identical_tree(
-        self,
         infra_git_repo: Path,
     ) -> None:
         """Test existing manifest converges to identical tree."""
@@ -737,9 +739,9 @@ class TestsFlextInfraCodegenConform:
             TestsFlextInfraConformSupport.project_tree_diff(expected_tree, actual_tree)
         )
 
+    @staticmethod
     @pytest.mark.slow
     def test_python_root_outside_env_dirs_still_reaches_a_fixed_point(
-        self,
         infra_git_repo: Path,
     ) -> None:
         """The gen verb converges for a Python root beyond declarative env_dirs.
@@ -801,9 +803,9 @@ class TestsFlextInfraCodegenConform:
         tm.ok(fixed_point)
         tm.that(fixed_point.value.written_files, eq=())
 
+    @staticmethod
     @pytest.mark.slow
     def test_empty_rendered_directory_is_not_a_python_root(
-        self,
         infra_git_repo: Path,
     ) -> None:
         """Test empty rendered directory is not a python root."""
@@ -839,9 +841,9 @@ class TestsFlextInfraCodegenConform:
 
     # Why (suite budget): two conform apply cycles plus a check over a full
     # managed tree on a real git repo; the per-case wall only holds idle.
+    @staticmethod
     @pytest.mark.slow
     def test_manifestless_existing_root_plans_artifacts_without_project_spec(
-        self,
         infra_git_repo: Path,
     ) -> None:
         """Test manifestless existing root plans artifacts without project spec."""
@@ -909,9 +911,9 @@ class TestsFlextInfraCodegenConform:
 
     # Why (suite budget): one conform apply plus a check over a full managed
     # tree on a real git repo; the per-case wall only holds idle.
+    @staticmethod
     @pytest.mark.slow
     def test_pre_bake_launcher_projection_converges_to_packaged_triple(
-        self,
         infra_git_repo: Path,
     ) -> None:
         """A consumer still carrying the pre-bake triple converges in one gen.
@@ -1001,9 +1003,9 @@ class TestsFlextInfraCodegenConform:
             eq=("flext-core",),
         )
 
+    @staticmethod
     @pytest.mark.slow
     def test_repository_root_catalog_profile_projects_no_coverage_floor(
-        self,
         tmp_path: Path,
     ) -> None:
         """Route an arbitrary workspace root through its typed catalog profile."""
@@ -1064,9 +1066,9 @@ class TestsFlextInfraCodegenConform:
         tm.that(set(addopts) >= set(pytest_policy.standard_addopts), eq=True)
         tm.that(report, lacks="fail_under")
 
+    @staticmethod
     @pytest.mark.slow
     def test_project_root_inherits_declared_upstream_facets(
-        self,
         tmp_path: Path,
     ) -> None:
         # A lone consumer tree composes no members, so Git derives standalone.
@@ -1115,9 +1117,9 @@ class TestsFlextInfraCodegenConform:
         projection = docs_dir / c.Infra.DOCS_CONFIG_FILENAME
         tm.ok(u.Cli.json_loads(projection.read_bytes()))
 
+    @staticmethod
     @pytest.mark.parametrize("mode", tuple(c.Infra.CodegenConformMode))
     def test_public_cli_routes_check_and_apply_to_one_handler(
-        self,
         infra_git_repo: Path,
         mode: c.Infra.CodegenConformMode,
     ) -> None:
@@ -1149,9 +1151,9 @@ class TestsFlextInfraCodegenConform:
 
     # Why (suite budget): dependencies-only apply+check runs two full conform
     # cycles on a real git repo; the per-case wall only holds on an idle CPU.
+    @staticmethod
     @pytest.mark.slow
     def test_dependency_surface_excludes_unowned_managed_files(
-        self,
         infra_git_repo: Path,
     ) -> None:
         """Plan only dependency metadata when another managed surface is invalid."""

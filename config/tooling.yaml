@@ -196,7 +196,9 @@ Infra:
           # lint gate derives from the source (docstring sections from the
           # signature, summary and raise statement; summaries from the declared
           # name; the notice from the project's declared author and copyright
-          # year).
+          # year; a method that never reads its instance becomes a static
+          # method, its signature and decorators edited and its body kept
+          # byte for byte).
           fix-recipes:
             missing-copyright-notice: copyright-notice
             undocumented-public-class: summary-docstring
@@ -205,6 +207,7 @@ Infra:
             docstring-missing-returns: returns-section
             docstring-missing-yields: yields-section
             docstring-missing-exception: raises-section
+            no-self-use: static-method
           # Banned API messages are policy data, never template literals.
           banned-api:
             argparse: "Use cli.register_result_command + Pydantic model from flext_cli."

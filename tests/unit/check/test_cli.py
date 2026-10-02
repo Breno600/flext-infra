@@ -197,6 +197,55 @@ class TestsFlextInfraWorkspaceCheckCli:
             eq='"""Fixture module."""\n\ndef broken(:\n',
         )
 
+    @staticmethod
+    def test_run_cli_fix_declares_static_methods_beside_an_unparsable_module(
+        tmp_path: Path,
+    ) -> None:
+        """A no-self-use repair completes when another module cannot parse."""
+        workspace = TestsFlextInfraWorkspaceCheckCli._create_workspace(tmp_path)
+        broken = TestsFlextInfraWorkspaceCheckCli._write_module(
+            workspace,
+            "flext-core",
+            "def broken(:\n",
+        )
+        sample = broken.with_name("sample.py")
+        sample.write_text(
+            '"""Fixture sample."""\n'
+            "\n"
+            "\n"
+            "class Sample:\n"
+            '    """Sample owner."""\n'
+            "\n"
+            "    def value(self) -> int:\n"
+            '        """Return one."""\n'
+            "        return 1\n",
+            encoding="utf-8",
+        )
+
+        exit_code = main([
+            "check",
+            "run",
+            "--repository-root",
+            str(workspace),
+            "--gates",
+            "lint",
+            "--apply",
+            "--ruff-args",
+            "--select no-self-use --preview",
+            "--projects",
+            "flext-core",
+        ])
+
+        tm.that(exit_code, eq=0)
+        tm.that(
+            sample.read_text(encoding="utf-8"),
+            has="    @staticmethod\n    def value() -> int:\n",
+        )
+        tm.that(
+            broken.read_text(encoding="utf-8"),
+            eq='"""Fixture module."""\n\ndef broken(:\n',
+        )
+
     def test_run_cli_fix_fails_on_a_tool_error(self, tmp_path: Path) -> None:
         """A status the tool does not declare breaks the repair verb."""
         workspace = self._create_workspace(tmp_path)

@@ -89,8 +89,8 @@ class FlextInfraMiseStaging:
             directories.extend(staged.value)
         return result_type.ok((tuple(publications), tuple(directories)))
 
+    @staticmethod
     def _stage_project(
-        self,
         project: m.Infra.MiseToolchainProjectState,
         *,
         stage_root: Path,

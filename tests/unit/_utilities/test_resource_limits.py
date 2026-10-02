@@ -139,6 +139,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         tm.that(result.value.outcome.raw_return_code, eq=1)
         tm.that(result.value.stderr, has="Extra inputs are not permitted")
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("scenario", "expected"),
         [
@@ -152,7 +153,6 @@ class TestsFlextInfraUtilitiesResourceLimits:
         ],
     )
     def test_resource_limit_enforces_exit_deadline_and_memory(
-        self,
         tmp_path: Path,
         scenario: str,
         expected: int | None,
@@ -200,10 +200,10 @@ class TestsFlextInfraUtilitiesResourceLimits:
         else:
             tm.that(result.value.outcome.raw_return_code, eq=expected)
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("expected", [7, 124])
     def test_resource_limit_stops_resistant_descendant_group(
-        self,
         tmp_path: Path,
         expected: int,
         request: pytest.FixtureRequest,
@@ -315,6 +315,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
             eq=config.Infra.tooling.tools.mypy.timeout_seconds,
         )
 
+    @staticmethod
     @pytest.mark.parametrize(
         "invalid_value",
         [
@@ -329,7 +330,6 @@ class TestsFlextInfraUtilitiesResourceLimits:
         ],
     )
     def test_mypy_resource_limit_rejects_non_integer_environment(
-        self,
         invalid_value: str,
     ) -> None:
         """Reject non-integer process text before constructing the strict model.

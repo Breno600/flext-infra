@@ -5,8 +5,10 @@ The tooling owner maps each Ruff rule code to one recipe
 then these recipes to the findings left. Every repair is derived from the
 source itself: a docstring section from the signature, the summary and the
 raise statement, a summary from the declared name, the notice from the
-project's declared author and copyright year. A finding the recipe cannot
-place raises; nothing is skipped.
+project's declared author and copyright year, and a static method from a
+method Ruff reports as never reading its instance: only its receiver
+parameter and its decorator list change, its body keeps every byte. A
+finding the recipe cannot place raises; nothing is skipped.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -77,6 +79,9 @@ class FlextInfraUtilitiesLintRecipes:
     ) -> str:
         """Return ``source`` with the declared recipe of every issue applied.
 
+        A static-method finding on a hook a subclass overrides is filtered
+        out by the caller (``overridden_findings``) and never reaches here.
+
         ``path`` names the module in every refusal; a module without a
         docstring receives one, summarized from its name, to carry the notice.
 
@@ -100,11 +105,7 @@ class FlextInfraUtilitiesLintRecipes:
         ] = {}
         wants_notice = False
         for issue in issues:
-            recipe = recipes.get(issue.code)
-            if recipe is None:
-                msg = f"{path}: lint finding {issue.code} has no declared fix recipe"
-                raise ValueError(msg)
-            match recipe:
+            match cls._recipe_for(issue, recipes, path):
                 case c.Infra.LintFixRecipe.RETURNS_SECTION:
                     function = cls._documented_at(tree, issue.line, path)
                     sections.setdefault(function, {}).setdefault("Returns", []).append(
@@ -125,7 +126,10 @@ class FlextInfraUtilitiesLintRecipes:
                     summaries[definition] = cls._summary_for(definition)
                 case c.Infra.LintFixRecipe.COPYRIGHT_NOTICE:
                     wants_notice = True
-        edits: list[t.Triple[int, int, str]] = []
+                case c.Infra.LintFixRecipe.STATIC_METHOD:
+                    # Planned per method below, after duplicates collapse.
+                    continue
+        edits = list(cls._static_method_plan(source, tree, issues, path, recipes))
         for function, wanted in sections.items():
             docstring = cls._docstring_expr(function)
             if docstring is None:
@@ -264,6 +268,240 @@ class FlextInfraUtilitiesLintRecipes:
                 return node
         msg = f"{path}: no class or function is defined at line {line}"
         raise ValueError(msg)
+
+    @classmethod
+    def _static_method_plan(
+        cls,
+        source: str,
+        tree: ast.Module,
+        issues: t.SequenceOf[m.Infra.Issue],
+        path: Path,
+        recipes: t.MappingKV[str, c.Infra.LintFixRecipe],
+    ) -> t.VariadicTuple[t.Triple[int, int, str]]:
+        """Plan the static-method edits of every finding that selects them.
+
+        Returns:
+            The decorator insertions and receiver removals, one pair per method.
+
+        """
+        lines = source.splitlines(keepends=True)
+        methods = dict.fromkeys(
+            cls._receiver_method_at(tree, issue, path)[1]
+            for issue in issues
+            if recipes.get(issue.code) is c.Infra.LintFixRecipe.STATIC_METHOD
+        )
+        return tuple(
+            edit
+            for method in methods
+            for edit in cls._static_method_edits(source, lines, method, path)
+        )
+
+    @staticmethod
+    def _recipe_for(
+        issue: m.Infra.Issue,
+        recipes: t.MappingKV[str, c.Infra.LintFixRecipe],
+        path: Path,
+    ) -> c.Infra.LintFixRecipe:
+        """Return the declared recipe of one finding.
+
+        Returns:
+            The recipe the tooling owner maps the finding's rule to.
+
+        Raises:
+            ValueError: If the finding's rule has no declared recipe.
+
+        """
+        recipe = recipes.get(issue.code)
+        if recipe is None:
+            msg = f"{path}: lint finding {issue.code} has no declared fix recipe"
+            raise ValueError(msg)
+        return recipe
+
+    @staticmethod
+    def overridden_methods(
+        sources: t.SequenceOf[str],
+    ) -> frozenset[t.Pair[str, str]]:
+        """Return each ``(class, method)`` a subclass in ``sources`` redefines.
+
+        Ruff judges a method alone and cannot see that a subclass overrides
+        it; declaring such a hook static would break every override. Bases
+        are matched by their declared name, transitively, so an ambiguous
+        name only keeps more methods with their owner.
+
+        Returns:
+            The overridden ``(class name, method name)`` pairs.
+
+        """
+        bases: MutableMapping[str, set[str]] = {}
+        methods: MutableMapping[str, set[str]] = {}
+        for source in sources:
+            for node in ast.walk(ast.parse(source)):
+                if not isinstance(node, ast.ClassDef):
+                    continue
+                bases.setdefault(node.name, set()).update(
+                    ast.unparse(base).rsplit(".", maxsplit=1)[-1] for base in node.bases
+                )
+                methods.setdefault(node.name, set()).update(
+                    item.name
+                    for item in node.body
+                    if isinstance(item, ast.FunctionDef | ast.AsyncFunctionDef)
+                )
+        ancestors: MutableMapping[str, set[str]] = {}
+        for name in bases:
+            seen: set[str] = set()
+            pending = list(bases[name])
+            while pending:
+                base = pending.pop()
+                if base not in seen:
+                    seen.add(base)
+                    pending.extend(bases.get(base, ()))
+            ancestors[name] = seen
+        return frozenset(
+            (ancestor, method)
+            for name, found in ancestors.items()
+            for ancestor in found
+            for method in methods[name] & methods.get(ancestor, set())
+        )
+
+    @classmethod
+    def overridden_findings(
+        cls,
+        source: str,
+        issues: t.SequenceOf[m.Infra.Issue],
+        *,
+        path: Path,
+        recipes: t.MappingKV[str, c.Infra.LintFixRecipe],
+        overridden: frozenset[t.Pair[str, str]],
+    ) -> t.VariadicTuple[m.Infra.Issue]:
+        """Return the static-method findings whose method a subclass overrides.
+
+        Returns:
+            The findings the static-method recipe leaves to their owner.
+
+        """
+        tree = ast.parse(source)
+        return tuple(
+            issue
+            for issue in issues
+            if recipes.get(issue.code) is c.Infra.LintFixRecipe.STATIC_METHOD
+            for owner, method in (cls._receiver_method_at(tree, issue, path),)
+            if (owner.name, method.name) in overridden
+        )
+
+    @staticmethod
+    def _receiver_method_at(
+        tree: ast.Module,
+        issue: m.Infra.Issue,
+        path: Path,
+    ) -> t.Pair[ast.ClassDef, ast.FunctionDef | ast.AsyncFunctionDef]:
+        """Return the class method Ruff reports as never reading its receiver.
+
+        Ruff reports the finding at the method's name on its ``def`` line and
+        names the method in its message, so line and name select one method.
+
+        Returns:
+            The owning class and the method the finding names.
+
+        Raises:
+            ValueError: If no class method with a receiver matches the finding.
+
+        """
+        for owner in ast.walk(tree):
+            if not isinstance(owner, ast.ClassDef):
+                continue
+            for method in owner.body:
+                if (
+                    isinstance(method, ast.FunctionDef | ast.AsyncFunctionDef)
+                    and method.lineno == issue.line
+                    and f"`{method.name}`" in issue.message
+                    and (*method.args.posonlyargs, *method.args.args)
+                ):
+                    return owner, method
+        msg = f"{path}: no class method with a receiver matches line {issue.line}"
+        raise ValueError(msg)
+
+    @classmethod
+    def _static_method_edits(
+        cls,
+        source: str,
+        lines: t.StrSequence,
+        method: ast.FunctionDef | ast.AsyncFunctionDef,
+        path: Path,
+    ) -> t.VariadicTuple[t.Triple[int, int, str]]:
+        """Declare ``method`` static: drop its receiver, add the decorator.
+
+        The receiver is removed with the separator that follows it; a receiver
+        that was the only parameter leaves empty parentheses. ``@staticmethod``
+        becomes the outermost decorator at the method's own indentation. No
+        other byte of the method changes.
+
+        Returns:
+            The decorator insertion and the receiver removal.
+
+        Raises:
+            ValueError: If a comment or a default sits beside the receiver, or
+                the method does not start its own line.
+
+        """
+        args = method.args
+        receiver = (*args.posonlyargs, *args.args)[0]
+        start = cls._offset(lines, receiver.lineno, receiver.col_offset)
+        cursor = cls._skip_blank(
+            source,
+            cls._offset(
+                lines,
+                receiver.end_lineno or receiver.lineno,
+                receiver.end_col_offset or 0,
+            ),
+            path,
+        )
+        if source[cursor] == ",":
+            cursor = cls._skip_blank(source, cursor + 1, path)
+            if args.posonlyargs == [receiver] and source[cursor] == "/":
+                cursor = cls._skip_blank(source, cursor + 1, path)
+                if source[cursor] == ",":
+                    cursor = cls._skip_blank(source, cursor + 1, path)
+        elif source[cursor] != ")":
+            msg = f"{path}: receiver of {method.name} is not a plain parameter"
+            raise ValueError(msg)
+        if source[cursor] == ")":
+            opening = source.rindex("(", 0, start) + 1
+            if source[opening:start].strip():
+                msg = f"{path}: signature of {method.name} holds more than its receiver"
+                raise ValueError(msg)
+            start = opening
+        first_line = min((
+            method.lineno,
+            *(decorator.lineno for decorator in method.decorator_list),
+        ))
+        head = lines[first_line - 1]
+        indent = head[: len(head) - len(head.lstrip(" \t"))]
+        if not head.lstrip(" \t").startswith(("@", "def ", "async ")):
+            msg = f"{path}: {method.name} does not start its own line"
+            raise ValueError(msg)
+        line_start = cls._offset(lines, first_line, 0)
+        return (
+            (line_start, line_start, f"{indent}@staticmethod\n"),
+            (start, cursor, ""),
+        )
+
+    @staticmethod
+    def _skip_blank(source: str, index: int, path: Path) -> int:
+        """Return the first index at or after ``index`` that is not blank.
+
+        Returns:
+            The index of the next signature token.
+
+        Raises:
+            ValueError: If a comment or line continuation sits in the span.
+
+        """
+        while source[index] in " \t\r\n":
+            index += 1
+        if source[index] in "#\\":
+            msg = f"{path}: comment or continuation beside a removed receiver"
+            raise ValueError(msg)
+        return index
 
     @staticmethod
     def _offset(lines: t.StrSequence, lineno: int, col_offset: int) -> int:

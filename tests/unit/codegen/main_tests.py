@@ -250,9 +250,9 @@ class TestsFlextInfraCodegenMain:
             )
             tm.that(" ".join(result.value.stdout.split()), contains=route.help_text)
 
+        @staticmethod
         @pytest.mark.slow
         def test_managed_conflict_is_planned_and_published_atomically(
-            self,
             infra_git_repo: Path,
         ) -> None:
             """Keep live bytes unchanged until the public transaction commits."""
