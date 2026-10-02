@@ -58,9 +58,7 @@ class TestsFlextInfraCodegenSonarcloudWorkspaceScope:
                 for item in properties.get("sonar.cpd.exclusions", "").split(",")
                 if item
             ),
-            tuple(
-                f"{item.path.as_posix()}/**" for item in plan.workspace.subprojects
-            ),
+            tuple(f"{item.path.as_posix()}/**" for item in plan.workspace.subprojects),
         )
 
     def test_workspace_root_excludes_members_and_standalone_does_not(
