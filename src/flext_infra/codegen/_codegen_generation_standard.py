@@ -325,13 +325,9 @@ class FlextInfraCodegenGenerationStandardMixin(
             for candidate in (plan.context.pkg_dir, *plan.context.pkg_dir.parents)
             if (candidate / c.PYPROJECT_FILENAME).is_file()
         )
-        pyproject = project_root / c.PYPROJECT_FILENAME
         first_party_names = {
             current_pkg,
-            *FlextInfraToolTablesPhase.first_party_namespaces(
-                u.Infra.pyproject_payload(pyproject.resolve()),
-                path=pyproject,
-            ),
+            *FlextInfraToolTablesPhase.first_party_namespaces(project_root),
         }
         type_checking_root_names = frozenset(first_party_names)
         type_checking_lines = "\n".join(

@@ -186,9 +186,7 @@ class TestsFlextInfraRootArtifactOwnership:
             eq=sorted(root / path for path in surface),
         )
         for file in governed:
-            tm.that(
-                file.policy, eq=configured_policies[file.path.relative_to(root)]
-            )
+            tm.that(file.policy, eq=configured_policies[file.path.relative_to(root)])
         tm.that(result.written_files, eq=())
         after = tuple(
             sorted(
