@@ -44,10 +44,12 @@ mkdir -p "$$(dirname "$$database")"; \
 {#- Each phase is its own bounded runner process with its own entrypoint clock:
     the budgeted phase never carries slow-marked items, which run afterwards in
     their own phase, each within the per-item slow bound (gate-budget rule). -#}
+{#- Tests run on the pinned toolchain (PROJECT_TOOL_EXEC), the same one every
+    verb's tools resolve from, so a test observes the runtime's tool versions. -#}
 {%- macro pytest_test_runner(operations=("",)) -%}
 {{ pytest_testmon_guard() }}
 {%- for operation in operations %}
-{{ make.testmon_cache.database_environment_variable }}="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry{% if operation %} {{ operation }}{% endif %}{% if not loop.last %}; \{% endif %}
+{{ make.testmon_cache.database_environment_variable }}="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry{% if operation %} {{ operation }}{% endif %}{% if not loop.last %}; \{% endif %}
 {%- endfor %}
 {%- endmacro -%}
 # @flext-generated: continuous
