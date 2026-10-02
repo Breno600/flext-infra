@@ -117,7 +117,10 @@ class FlextInfraUtilitiesDocsFix:
                     )
                     raise RuntimeError(msg)
                 if verify_outcome.value.stderr:
-                    msg = f"Ruff emitted diagnostics while fixing {rel}: {verify_outcome.value.stderr}"
+                    msg = (
+                        f"Ruff emitted diagnostics while fixing {rel}: "
+                        f"{verify_outcome.value.stderr}"
+                    )
                     raise RuntimeError(msg)
                 if fixed_body == body:
                     return match.group(0)
