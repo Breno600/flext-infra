@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import shlex
 import sys
+import time
 from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING, override
@@ -436,20 +437,9 @@ class FlextInfraPytestRunnerExecution(
             if accounting.inventory_count is None
             else accounting.inventory_count - accounting.deselected_count
         )
-        # The suite stop instant can land on the last selected test's teardown:
-        # pytest still reports the interrupt, but every selected test executed
-        # with complete accounting and nothing remains for the next selection.
-        # Coverage keeps the interrupt red: its artifact is validated only on a
-        # clean exit.
-        stopped_after_selection = (
-            raw_return_code == pytest.ExitCode.INTERRUPTED
-            and context.execution_mode != c.Infra.PytestExecutionMode.COVERAGE
-            and not rejected
-            and accounting.executed_count == selected_count
-        )
         final_exit = (
             0
-            if (accepted_cache_hit or accepted_zero_tests or stopped_after_selection)
+            if (accepted_cache_hit or accepted_zero_tests)
             else raw_return_code or int(rejected)
         )
         # A graceful stop at the suite stop instant publishes the executed
@@ -550,11 +540,19 @@ class FlextInfraPytestRunnerExecution(
             )
             return r.ok(0)
         u.Cli.ensure_dir(self.testmon_db.parent).unwrap()
-        # The digest, the run and the post-run integrity inspection read one
-        # shared database: a concurrent run on it would make the integrity
-        # verdict describe the other run's writes. One native lease serializes
-        # it; a held lease refuses at once instead of spending this deadline.
-        with u.Infra.codegen_transaction_lease(self.testmon_db, wait_seconds=0):
+        # Selection, execution, and integrity inspection share one database.
+        # Serialize competing worktrees within this invocation's typed deadline.
+        deadline = self._process_deadline()
+        wait_seconds = max(
+            0.0,
+            deadline.expires_at_monotonic
+            - deadline.termination_grace_seconds
+            - time.monotonic(),
+        )
+        with u.Infra.codegen_transaction_lease(
+            self.testmon_db,
+            wait_seconds=wait_seconds,
+        ):
             return self._execute_testmon_leased(
                 complete=complete,
                 execution_mode=execution_mode,

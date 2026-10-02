@@ -551,7 +551,7 @@ class TestsFlextInfraCodegenGeneration:
         wrapper_root = project_root / "examples"
         wrapper_root.mkdir(parents=True)
         (project_root / c.PYPROJECT_FILENAME).write_text(
-            f'[project]\nname = "demo-worktree-pkg"\nversion = "1.0.0"\n{isort_table}',
+            f'[project]\nname = "demo-worktree-pkg"\nversion = "1.0.0"\nauthors = [{{ name = "Fixture Author" }}]\n{isort_table}',
             encoding="utf-8",
         )
         plan = m.Infra.LazyInitPlan(
@@ -604,7 +604,7 @@ class TestsFlextInfraCodegenGeneration:
             "[tool.ruff.lint.isort]\nknown-first-party = []\n" if declared_empty else ""
         )
         (tmp_path / c.PYPROJECT_FILENAME).write_text(
-            f'[project]\nname = "configured-workspace"\nversion = "1.0.0"\n{table}',
+            f'[project]\nname = "configured-workspace"\nversion = "1.0.0"\nauthors = [{{ name = "Fixture Author" }}]\n{table}',
             encoding="utf-8",
         )
         plan = self._plan(

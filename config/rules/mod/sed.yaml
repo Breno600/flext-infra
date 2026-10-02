@@ -17,6 +17,78 @@
 #     expected: 3                  # optional exact finding count receipt
 
 rules:
+  - id: codegen-main-fixture-declare-infra-provenance
+    distributions: [flext-infra]
+    description: Derive the synthetic consumer's Infra Git source from the repository and branch policy.
+    include: [tests/unit/codegen/main_tests.py]
+    find: '        repository = u\.Tests\.repository_ref\(repo\.name\)\n        \(repo / "pyproject\.toml"\)\.write_text\('
+    replace: |2-
+              repository = u.Tests.repository_ref(repo.name)
+              infra = u.Tests.repository_ref("flext-infra")
+              integration = config.Infra.codegen.branch_policy.integration_branch_preference[0]
+              (repo / "pyproject.toml").write_text(
+  - id: codegen-main-fixture-add-infra-requirement
+    distributions: [flext-infra]
+    description: Give the synthetic consumer the direct Git dependency required by strict source detection.
+    include: [tests/unit/codegen/main_tests.py]
+    find: '''dependencies = \["flext-core>=0\.1\.0"\]\\n\\n'''
+    replace: 'f''dependencies = ["flext-core>=0.1.0", ''\n            f''"flext-infra @ git+{infra.url}@{integration}"]\\n\\n'''
+  - id: testmon-lease-test-tune-start-clock
+    distributions: [flext-infra]
+    description: Parameterize the real runner fixture clock for a deadline-exhaustion case.
+    include: [tests/unit/validate/pytest_runner_zero_test_tests.py]
+    find: '        slow_phase: bool = False,\n    \) -> FlextInfraPytestRunner:'
+    replace: '        slow_phase: bool = False,\n        elapsed_seconds: float = 0.0,\n    ) -> FlextInfraPytestRunner:'
+  - id: testmon-lease-test-use-fixture-clock
+    distributions: [flext-infra]
+    description: Apply the fixture clock to the public runner constructor.
+    include: [tests/unit/validate/pytest_runner_zero_test_tests.py]
+    find: 'started_at_monotonic=time\.monotonic\(\),'
+    replace: 'started_at_monotonic=time.monotonic() - elapsed_seconds,'
+  - id: testmon-lease-test-deadline-exhaustion
+    distributions: [flext-infra]
+    description: Keep the held-lease failure test bounded by the declared suite deadline.
+    include: [tests/unit/validate/pytest_runner_zero_test_tests.py]
+    find: '(?s)(def test_held_testmon_database_lease_refuses_a_concurrent_run\(\n        self,\n        tmp_path: Path,\n    \) -> None:\n        """A second run on one shared database fails loud before any effect\."""\n        project = self\._zero_test_project\(tmp_path\)\n)        runner = self\._runner\(project, tmp_path\)'
+    replace: '\g<1>        runner = self._runner(\n            project,\n            tmp_path,\n            elapsed_seconds=config.Infra.tooling.tools.pytest.run_timeout_seconds,\n        )'
+  - id: testmon-serialize-within-declared-suite-deadline
+    distributions: [flext-infra]
+    description: Wait for the shared testmon lease within the existing typed suite deadline.
+    include: [src/flext_infra/validate/_pytest_runner/execution.py]
+    find: '(?s)        # The digest, the run and the post-run integrity inspection read one\n        # shared database: a concurrent run on it would make the integrity\n        # verdict describe the other run.s writes\. One native lease serializes\n        # it; a held lease refuses at once instead of spending this deadline\.\n        with u\.Infra\.codegen_transaction_lease\(self\.testmon_db, wait_seconds=0\):'
+    replace: |2-
+              # Selection, execution, and integrity inspection share one database.
+              # Serialize competing worktrees within this invocation's typed deadline.
+              deadline = self._process_deadline()
+              wait_seconds = max(
+                  0.0,
+                  deadline.expires_at_monotonic
+                  - deadline.termination_grace_seconds
+                  - time.monotonic(),
+              )
+              with u.Infra.codegen_transaction_lease(
+                  self.testmon_db,
+                  wait_seconds=wait_seconds,
+              ):
+  - id: testmon-lease-monotonic-import
+    distributions: [flext-infra]
+    description: Import the monotonic clock used by the shared testmon lease budget.
+    include: [src/flext_infra/validate/_pytest_runner/execution.py]
+    find: '^import shlex\nimport sys\n(?!import time\n)'
+    replace: 'import shlex\nimport sys\nimport time\n'
+    flags: [MULTILINE]
+  - id: lazy-init-fixture-declare-author-isort
+    distributions: [flext-infra]
+    description: Keep synthetic project metadata complete for strict lazy-init copyright rendering.
+    include: [tests/unit/codegen/lazy_init_generation_tests.py]
+    find: 'version = "1\.0\.0"\\n\{isort_table\}'
+    replace: 'version = "1.0.0"\\nauthors = [{{ name = "Fixture Author" }}]\\n{isort_table}'
+  - id: lazy-init-fixture-declare-author-empty-policy
+    distributions: [flext-infra]
+    description: Keep synthetic project metadata complete for strict lazy-init copyright rendering.
+    include: [tests/unit/codegen/lazy_init_generation_tests.py]
+    find: 'version = "1\.0\.0"\\n\{table\}'
+    replace: 'version = "1.0.0"\\nauthors = [{{ name = "Fixture Author" }}]\\n{table}'
   - id: mise-lock-merge-test-signature-format
     distributions: [flext-infra]
     description: Render the merge-conflict regression test signature in the Qlty layout.
@@ -171,3 +243,75 @@ rules:
       derive from that policy. Use the profile and complete run receipts to repair
       a slow owner; an interrupted selection or suite remains a failed invocation.
     flags: [MULTILINE]
+  - id: pytest-interrupt-never-normalized
+    distributions: [flext-infra]
+    description: Preserve pytest interruption as a red suite receipt even after the last selected test.
+    include: [src/flext_infra/validate/_pytest_runner/execution.py]
+    find: '(?s)        # The suite stop instant can land on the last selected test.*?        # A graceful stop at the suite stop instant publishes the executed'
+    replace: |2-
+              final_exit = (
+                  0 if (accepted_cache_hit or accepted_zero_tests) else raw_return_code or int(rejected)
+              )
+              # A graceful stop at the suite stop instant publishes the executed
+  - id: standalone-fixture-author-projection
+    distributions: [flext-infra]
+    description: Render conform-required author metadata from the typed fixture project specification.
+    include: [tests/utilities_fixture_workspace.py]
+    find: '(?m)^(?P<indent>            )f''name = "\{name\}"\\n''$(?!\n            f''authors = )'
+    replace: |-
+      \g<indent>f'name = "{name}"\\n'
+      \g<indent>f'authors = [{{name = "{TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name).author_name}", email = "{TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name).author_email}"}}]\\n'
+  - id: standalone-fixture-author-owner
+    distributions: [flext-infra]
+    description: Route the fixture author through the imported typed project fixture owner.
+    include: [tests/utilities_fixture_workspace.py]
+    find: 'fixture\.project_spec\(name\)'
+    replace: 'TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name)'
+  - id: standalone-fixture-upstream-dependency
+    distributions: [flext-infra]
+    description: Derive the fixture runtime dependency from the typed scaffold upstream declaration.
+    include: [tests/utilities_fixture_workspace.py]
+    find: '"dependencies = \[\]\\n"'
+    replace: |-
+      f'dependencies = ["{TestsFlextInfraUtilitiesProjectFixtureMixin.flext_source(TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name).upstream)}"]\\n'
+  - id: root-artifact-fixture-project-owner
+    distributions: [flext-infra]
+    description: Resolve conform test metadata through the typed fixture project owner.
+    include: [tests/unit/codegen/test_root_artifact_ownership.py]
+    find: '(?m)^(        root = infra_git_repo)\n(        u\.Tests\.write_project_beads_config\(root, "flext-demo"\))$'
+    replace: '\g<1>\n        project = u.Tests.project_spec("flext-demo")\n\g<2>'
+  - id: root-artifact-fixture-author
+    distributions: [flext-infra]
+    description: Declare conform-required author metadata from the fixture project model.
+    include: [tests/unit/codegen/test_root_artifact_ownership.py]
+    find: '(?m)^(                    ''version = "0\.1\.0"\\n'')$(?!\n                    f''authors = )'
+    replace: |-
+      \g<1>
+                          f'authors = [{{name = "{project.author_name}", email = "{project.author_email}"}}]\\n'
+  - id: root-artifact-fixture-upstream
+    distributions: [flext-infra]
+    description: Preserve the fixture scaffold upstream as a direct Git runtime dependency.
+    include: [tests/unit/codegen/test_root_artifact_ownership.py]
+    find: '"dependencies = \[\]\\n"'
+    replace: |-
+      f'dependencies = ["{u.Tests.flext_source(project.upstream)}"]\\n'
+  - id: snapshot-fixture-track-owner
+    distributions: [flext-infra]
+    description: Register the ast-grep fixture config with Git so its public ownership contract is observable.
+    include: [tests/unit/codemod/test_rule_fixture_snapshots.py]
+    find: '(?m)(?<!        u\.Tests\.git_bootstrap\(root, \("add", c\.Infra\.CODEMOD_CONFIG_FILENAME\)\)\n)^        return rule$'
+    replace: |2-
+              u.Tests.git_bootstrap(root, ("add", c.Infra.CODEMOD_CONFIG_FILENAME))
+              return rule
+  - id: bootstrap-source-document-declared-surface
+    distributions: [flext-infra]
+    description: Describe the declared multi-file Make bootstrap instead of a retired single-file contract.
+    include: [src/flext_infra/codegen/make_bootstrap.py]
+    find: 'Makefile-only bootstrap|one Makefile projection|Makefile projection'
+    replace: 'declared Make bootstrap surface'
+  - id: candidate-bootstrap-destination-error
+    distributions: [flext-infra]
+    description: Report a missing declared bootstrap surface without asserting a single Makefile destination.
+    include: [src/flext_infra/services/candidate_bootstrap.py]
+    find: 'candidate bootstrap must plan exactly one Makefile:'
+    replace: 'candidate bootstrap has no declared destinations:'

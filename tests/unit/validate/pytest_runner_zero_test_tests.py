@@ -54,6 +54,7 @@ class TestsFlextInfraPytestRunnerZeroTest:
         tmp_path: Path,
         *,
         slow_phase: bool = False,
+        elapsed_seconds: float = 0.0,
     ) -> FlextInfraPytestRunner:
         """Build the public runner exactly as the make verbs do.
 
@@ -66,7 +67,7 @@ class TestsFlextInfraPytestRunnerZeroTest:
         testmon_db.parent.mkdir(parents=True, exist_ok=True)
         return FlextInfraPytestRunner(
             repository_root=project_root,
-            started_at_monotonic=time.monotonic(),
+            started_at_monotonic=time.monotonic() - elapsed_seconds,
             target=cache.target_directory,
             reports=cache.reports_directory,
             testmon_db=testmon_db,
@@ -102,7 +103,11 @@ class TestsFlextInfraPytestRunnerZeroTest:
     ) -> None:
         """A second run on one shared database fails loud before any effect."""
         project = self._zero_test_project(tmp_path)
-        runner = self._runner(project, tmp_path)
+        runner = self._runner(
+            project,
+            tmp_path,
+            elapsed_seconds=config.Infra.tooling.tools.pytest.run_timeout_seconds,
+        )
 
         with (
             u.Infra.codegen_transaction_lease(runner.testmon_db),
