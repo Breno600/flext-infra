@@ -979,17 +979,12 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, lacks=["gen > /dev/null", "could not be staged"])
 
     @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
-    def test_bootstrap_selects_the_github_credential_from_declared_sources(
+    def test_bootstrap_inherits_only_explicit_github_credential(
         self,
         tmp_path: Path,
         profile: c.Infra.MakeProfile,
     ) -> None:
-        """The credential source is selected once; a selected source must deliver.
-
-        The caller's ``GITHUB_TOKEN`` wins; otherwise each declared command whose
-        executable is on PATH is consulted in order, and its failure or empty
-        output stops the verb instead of degrading to anonymous access.
-        """
+        """Bootstrap forwards the caller token without consulting a keyring."""
         project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path,
             profile,
@@ -998,22 +993,9 @@ class TestsFlextInfraCodegenMakeEnvironment:
         makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
             encoding="utf-8",
         )
-        commands = config.Infra.codegen.toolchain.github_credential_commands
         tm.that(makefile, has="export GITHUB_TOKEN")
-        tm.that(bool(commands), eq=True)
-        for command in commands:
-            rendered = " ".join(command)
-            tm.that(
-                makefile,
-                has=[
-                    f"command -v {command[0]} >/dev/null 2>&1; then",
-                    f'caller_github_token="$$({rendered})"',
-                    "the selected GitHub credential source failed: %s\\n' "
-                    f"'{rendered}' >&2; exit 2;",
-                    "the selected GitHub credential source printed nothing",
-                ],
-            )
-            tm.that(makefile, lacks=f"$$({rendered} 2>/dev/null)")
+        tm.that(makefile, has="unexport GH_TOKEN MISE_GITHUB_TOKEN GITHUB_API_TOKEN")
+        tm.that(makefile, lacks=["gh auth token", "selected GitHub credential source"])
 
     @staticmethod
     def test_public_gate_fails_closed_before_managed_environment_exists(
