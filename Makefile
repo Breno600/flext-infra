@@ -737,9 +737,24 @@ mise_receipt launcher-version "$$lock_stage/artifacts/bin/mise"; \
 		mise_trusted_config_paths="$$project_root"; \
 	else \
 		# ``locked`` mode converges every tool on exactly the version the \
-		# committed mise.lock pins, upgrading or downgrading what is installed; \
-		# only ``make upg`` resolves and writes the lock (operator law \
-		# 2026-09-24), so a manifest ahead of its lock fails here and upg heals it. \
+		# committed mise.lock pins. Resilience (operator 2026-10-02): a dirty \
+		# tree (mixed-generation merge, interrupted ``upg``, or a mise.lock \
+		# written by a different Mise release) recovers HERE through the \
+		# generated reconcile subcommand — staged retain relock, stage proof, \
+		# atomic publish — never by hand and never as inline recipe shell \
+		# (Makefile simplicity law). \
+		if mise_exec project "$$pinned_mise" -C "$$project_root" install --dry-run >"$$scratch/install-probe.log" 2>&1; then \
+			:; \
+		else \
+			probe_status=$$?; \
+			cat "$$scratch/install-probe.log" >&2; \
+			printf 'setup reconcile: committed mise.lock does not satisfy .mise.toml under pinned Mise %s (probe exit %s); running the generated bin reconcile\n' "$$runtime_release" "$$probe_status" >&2; \
+			reconcile_python=$$(command -v python3 || true); \
+			if [ -z "$$reconcile_python" ]; then \
+				printf 'ERROR: reconcile needs a host python3 (stdlib only); provision one and retry\n' >&2; exit 2; \
+			fi; \
+			mise_checked "$$scratch/reconcile.log" "$$reconcile_python" "$$project_root/bin/mise-lock-transaction.py" reconcile "$$project_root" "$$runtime_release"; \
+		fi; \
 		mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$project_root" install --yes; \
 	fi; \
 	mise_checked_stdout "$$scratch/ast-grep-version.stdout" "$$scratch/ast-grep-version.stderr" mise_exec project "$$pinned_mise" -C "$$project_root" exec -- ast-grep --version; \
@@ -812,7 +827,11 @@ SETUP_ENVIRONMENT_RECIPE = set -eu; \
 			$(UV) venv --clear --python "$$desired_python" "$(RUNTIME_VENV)"; \
 		fi; \
 	fi; \
-	$(UV) sync --project "$(UV_PROJECT)" $(UV_SYNC_FLAGS) --link-mode "$(UV_LINK_MODE)"; \
+	if ! $(UV) sync --project "$(UV_PROJECT)" $(UV_SYNC_FLAGS) --link-mode "$(UV_LINK_MODE)"; then \
+		printf 'setup reconcile: uv sync --locked rejected the committed uv.lock; running the flext-infra library relock\n' >&2; \
+		$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" $(if $(FLEXT_INFRA_BOOTSTRAP),"$(FLEXT_INFRA_BOOTSTRAP)",-m flext_infra.bootstrap) relock "$(PROJECT_ROOT)"; \
+		$(UV) sync --project "$(UV_PROJECT)" $(UV_SYNC_FLAGS) --link-mode "$(UV_LINK_MODE)"; \
+	fi; \
 	XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" \
 		"$${SETUP_DIRENV:?missing Mise-resolved direnv executable}" allow "$(PROJECT_ROOT)"; \
 	for member in $(WORKSPACE_SUBPROJECTS); do \
@@ -842,7 +861,13 @@ _bootstrap_setup_tools: _builtin_require_workspace
 # Execute the interpreter provisioned by setup without discovering a project
 # workspace or creating a dependency-resolution file during a runtime command.
 UV_RUN := env -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT -u PROJECT_ROOT PYTHONPATH="$(PROJECT_ROOT)/src" $(UV) run --no-project --python "$(RUNTIME_PYTHON)"
-override PROJECT_INFRA_PYTHONPATH := $(MAKEFILE_ROOT)/src
+# The checked-out flext-infra lane owns every lifecycle verb: a workspace
+# runs the generator it carries (the submodule src), so a broken published
+# dependency tip can never block the local recovery cycle. A checkout without
+# the submodule (standalone member) keeps its own installed copy.
+FLEXT_INFRA_SUBMODULE_SRC := $(RUNTIME_ROOT)/flext-infra/src
+override PROJECT_INFRA_PYTHONPATH := $(if $(wildcard $(FLEXT_INFRA_SUBMODULE_SRC)/flext_infra/.),$(FLEXT_INFRA_SUBMODULE_SRC),$(MAKEFILE_ROOT)/src)
+FLEXT_INFRA_BOOTSTRAP := $(if $(wildcard $(FLEXT_INFRA_SUBMODULE_SRC)/flext_infra/bootstrap.py),$(FLEXT_INFRA_SUBMODULE_SRC)/flext_infra/bootstrap.py,)
 PROJECT_INFRA_RUN = if [ ! -x "$(FLEXT_INFRA_PYTHON)" ]; then printf 'ERROR: FLEXT_INFRA_PYTHON must name an executable managed Python\n' >&2; exit 2; fi; $(PROJECT_TOOL_EXEC) env -u PYTHONPATH -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT -u UV_PROJECT_ENVIRONMENT PYTHONPATH="$(PROJECT_INFRA_PYTHONPATH)" $(FLEXT_INFRA_PYTHON)
 PROJECT_FLEXT_INFRA := $(PROJECT_INFRA_RUN) -m flext_infra
 # Scaffold dev tools live in the validated optional dev

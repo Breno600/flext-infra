@@ -24,7 +24,6 @@ from flext_infra.__version__ import (
 
 if TYPE_CHECKING:
     from flext_cli import d, e, h, r, x
-
     from flext_infra import (
         check,
         codegen,
