@@ -193,6 +193,12 @@ class FlextInfraModelsScan:
             t.StrSequence,
             m.Field(description="fnmatch globs a target path must not match"),
         ] = ()
+        distributions: Annotated[
+            t.StrSequence,
+            m.Field(
+                description="Declared project distributions selected for this rule; empty selects all",
+            ),
+        ] = ()
         find: Annotated[
             t.NonEmptyStr,
             m.Field(description="Regex source pattern to locate"),
@@ -208,7 +214,7 @@ class FlextInfraModelsScan:
         capture_equals: Annotated[
             t.MappingKV[str, str],
             m.Field(description="Named regex captures and their required exact values"),
-        ] = MappingProxyType({})
+        ] = m.Field(default_factory=lambda: MappingProxyType({}))
         expected: Annotated[
             int | None,
             m.Field(

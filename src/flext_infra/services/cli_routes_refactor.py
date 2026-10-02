@@ -162,8 +162,8 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
         m.Cli.ResultCommandRoute(
             name="mod",
             help_text=(
-                "Apply ast-grep rules, prove fixed point, then require Ruff, "
-                "Pyrefly, and real LSP diagnostics"
+                "Apply ast-grep, semantic and text rules to a proven fixed point; "
+                "make check owns the lint and type verdicts"
             ),
             model_cls=m.Infra.ModCommand,
             handler=execute_mod,

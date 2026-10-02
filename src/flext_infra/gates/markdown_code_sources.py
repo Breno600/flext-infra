@@ -1,13 +1,13 @@
 """Embedded-Python source collection for the ``markdown-code`` gate.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 Fenced ``python``` blocks on the governed markdown surface and doctest
 examples inside tracked docstrings are collected once as named sources, each
 mapped back to its documentation origin. The gate writes them into one
 temporary tree so ruff validates and formats them in single invocations, and
 selects itself only for a project whose content yields at least one source.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

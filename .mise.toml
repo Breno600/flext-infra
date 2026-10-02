@@ -50,13 +50,13 @@ gitleaks = "latest"
 "aqua:boyter/scc" = "latest"
 kubeconform = "latest"
 node = "latest"
-"npm:prettier" = "latest"
+"npm:prettier" = "3.5.3"
 go = "latest"
 make = "latest"
 [tools."github:qltysh/qlty"]
 version = "latest"
 [tools."github:kucherenko/jscpd"]
-version = "5.3.3"
+version = "latest"
 [tools."github:microsoft/waza"]
 version = "latest"
 version_prefix = "v"

@@ -409,6 +409,7 @@ class TestsFlextInfraCodegenCiMatrix:
     def test_ci_workflow_stable_blank_line_without_private_submodules(
         self,
         tmp_path: Path,
+        rendered_project: Path,
     ) -> None:
         """Empty private_submodules include must not accumulate blank lines."""
         root = rendered_project
@@ -798,6 +799,7 @@ class TestsFlextInfraCodegenCiMatrix:
 
     @staticmethod
     def test_docs_failure_upload_keeps_audit_failure_and_scopes_hidden_reports(
+        self,
         rendered_project: Path,
     ) -> None:
         """A generated Docs job fails on audit findings and retains safe reports.
@@ -808,17 +810,16 @@ class TestsFlextInfraCodegenCiMatrix:
 
         """
         workflow = u.Cli.yaml_load_mapping(
-            rendered_project / ".github/workflows/docs.yml",
+            rendered_project / ".github" / "workflows" / "docs.yml",
         )
         jobs = t.Cli.JSON_MAPPING_ADAPTER.validate_python(workflow["jobs"])
         docs_job = t.Cli.JSON_MAPPING_ADAPTER.validate_python(jobs["docs-quality"])
-        raw_steps = docs_job["steps"]
-        if not isinstance(raw_steps, list):
-            msg = "Docs workflow steps must be a sequence"
-            raise TypeError(msg)
-        steps = [t.Cli.JSON_MAPPING_ADAPTER.validate_python(step) for step in raw_steps]
+        steps = [
+            t.Cli.JSON_MAPPING_ADAPTER.validate_python(step)
+            for step in t.Cli.JSON_LIST_ADAPTER.validate_python(docs_job["steps"])
+        ]
         docs_step = next(
-            step for step in steps if step["name"] == "Docs lifecycle (blocking)"
+            step for step in steps if step.get("name") == "Docs lifecycle (blocking)"
         )
         upload = next(
             step
@@ -831,19 +832,12 @@ class TestsFlextInfraCodegenCiMatrix:
         upload_with = t.Cli.JSON_MAPPING_ADAPTER.validate_python(upload["with"])
         tm.that(upload_with["include-hidden-files"], eq=True)
         tm.that(upload_with["if-no-files-found"], eq="error")
-        report_path_value = upload_with["path"]
-        if not isinstance(report_path_value, str):
-            msg = "Docs report paths must be text"
-            raise TypeError(msg)
-        report_paths = report_path_value.splitlines()
+        report_paths = str(upload_with["path"]).splitlines()
         tm.that(report_paths, empty=False)
-        permitted_names = {
-            "audit-summary.json",
-            "audit-report.md",
-            "validate-summary.json",
-            "validate-report.md",
-        }
-        tm.that({Path(path).name for path in report_paths}, eq=permitted_names)
+        tm.that(
+            {Path(path).name for path in report_paths},
+            eq=set(c.Infra.DOCS_STRUCTURED_REPORT_FILENAMES),
+        )
         for path in report_paths:
             tm.that(".reports" in Path(path).parts, eq=True)
 

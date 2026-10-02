@@ -101,6 +101,20 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
             ),
         ]
 
+    class RuffPydocstyleConfig(m.ArbitraryTypesModel):
+        """Ruff pydocstyle settings loaded from YAML."""
+
+        convention: Annotated[
+            Literal["google", "numpy", "pep257"],
+            m.Field(
+                description=(
+                    "Docstring convention; Ruff disables the docstring rules "
+                    "it does not use, one of each mutually exclusive pair "
+                    "included."
+                ),
+            ),
+        ]
+
     class RuffAuthorizedException(m.ArbitraryTypesModel):
         """One operator-authorized Ruff exception, recorded with its authority.
 
@@ -187,6 +201,9 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         ]
         isort: FlextInfraModelsDepsToolConfigLinters.RuffIsortConfig = m.Field(
             description="Ruff isort configuration",
+        )
+        pydocstyle: FlextInfraModelsDepsToolConfigLinters.RuffPydocstyleConfig = (
+            m.Field(description="Ruff pydocstyle configuration")
         )
         authorized_exceptions: Annotated[
             tuple[FlextInfraModelsDepsToolConfigLinters.RuffAuthorizedException, ...],

@@ -46,13 +46,19 @@ class TestsFlextInfraLazyInitWorkspaceElection:
         """Members self-scope; cross-repo parents refuse loud; the root plans zero."""
         workspace = tmp_path / "workspace"
         owner_repo, owner = u.Tests.create_lazy_init_workspace(
-            workspace, project_name="flext-ws-owner", package_name="flext_ws_owner"
+            workspace,
+            project_name="flext-ws-owner",
+            package_name="flext_ws_owner",
         )
         middle_repo, middle = u.Tests.create_lazy_init_workspace(
-            workspace, project_name="flext-ws-middle", package_name="flext_ws_middle"
+            workspace,
+            project_name="flext-ws-middle",
+            package_name="flext_ws_middle",
         )
         child_repo, child = u.Tests.create_lazy_init_workspace(
-            workspace, project_name="flext-ws-child", package_name="flext_ws_child"
+            workspace,
+            project_name="flext-ws-child",
+            package_name="flext_ws_child",
         )
         workspace.joinpath(c.Infra.GITMODULES).write_text(
             "".join(
@@ -77,7 +83,9 @@ class TestsFlextInfraLazyInitWorkspaceElection:
             class_name="FlextWsMiddleConstants",
         )
         self._write_constants(
-            child, parent="flext_ws_middle", class_name="FlextWsChildConstants"
+            child,
+            parent="flext_ws_middle",
+            class_name="FlextWsChildConstants",
         )
 
         # The owner has no cross-repository parent: two self-scoped planning
@@ -87,13 +95,14 @@ class TestsFlextInfraLazyInitWorkspaceElection:
         tm.that(u.Tests.run_lazy_init(owner_repo), eq=0)
         tm.that(u.Tests.run_lazy_init(owner_repo, check_only=True), eq=0)
         generated = owner.joinpath(c.Infra.INIT_PY).read_text(
-            encoding=c.Cli.ENCODING_DEFAULT
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
         entries, _refs = u.Infra.module_mapping_assignment_source(
-            generated, u.Infra.lazy_imports_name_source(generated)
+            generated,
+            u.Infra.lazy_imports_name_source(generated),
         )
 
-        tm.that(sources.get(".constants", ()), has="c")
+        tm.that(dict(entries).get(".constants", ()), has="c")
 
         # The middle declares its facade parent in ANOTHER repository. Self
         # scope never indexes a sibling: with the parent not installed in the

@@ -893,7 +893,10 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             if validated.failure:
                 return r[bool].from_failure(validated)
         u.Cli.info("stage=verify-fresh-imports")
-        imported = ports.fresh_import(repository_root=request.root).build_report(
+        imported = ports.fresh_import(
+            repository_root=request.root,
+            runtime_root=None,
+        ).build_report(
             publications=lazy_analysis.publications,
             repository_roots=self.fresh_import_repository_roots(
                 request.root,

@@ -1,8 +1,5 @@
 """Repairs for lint findings Ruff reports without a fix of its own.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 The tooling owner maps each Ruff rule code to one recipe
 (``tools.ruff.lint.fix-recipes``); ``make fix`` applies Ruff's own fixes and
 then these recipes to the findings left. Every repair is derived from the
@@ -10,6 +7,9 @@ source itself: a docstring section from the signature, the summary and the
 raise statement, a summary from the declared name, the notice from the
 project's declared author and copyright year. A finding the recipe cannot
 place raises; nothing is skipped.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -459,9 +459,16 @@ class FlextInfraUtilitiesLintRecipes:
                 ]
                 if assigned:
                     message = max(assigned, key=lambda value: value.lineno)
-            stated = cls._static_text(message).split(":", maxsplit=1)[0]
-            if stated.strip().rstrip("."):
-                return f"if {stated.strip().rstrip('.')}"
+            # The literal prefix of an f-string stops at its first placeholder,
+            # which can leave the opener or quote that wrapped it dangling.
+            stated = (
+                cls._static_text(message)
+                .split(":", maxsplit=1)[0]
+                .rstrip(" .([{'\"`")
+                .strip()
+            )
+            if stated:
+                return f"if {stated}"
         node: ast.AST = raised
         while (parent := parents.get(node)) is not None and parent is not function:
             if isinstance(parent, ast.If):

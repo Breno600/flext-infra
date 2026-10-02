@@ -73,6 +73,36 @@ class FlextInfraModTextGateEngine:
         return cls._rules_from_states(snapshots.value)
 
     @staticmethod
+    def _selected_rules(
+        identity: m.Cli.AtomicFileState,
+        rules: t.VariadicTuple[m.Infra.ModTextRule],
+    ) -> p.Result[t.VariadicTuple[m.Infra.ModTextRule]]:
+        """Select rules from the exact project bytes authenticated for publication."""
+        if identity.content is None:
+            return r[t.VariadicTuple[m.Infra.ModTextRule]].fail(
+                f"text rule project identity is absent: {identity.path}",
+            )
+        recovered = u.Infra.recover_live_pyproject_text(
+            identity.content.decode(c.Cli.ENCODING_DEFAULT),
+        )
+        if recovered.failure:
+            return r[t.VariadicTuple[m.Infra.ModTextRule]].from_failure(recovered)
+        payload = u.Cli.toml_mapping_from_text(recovered.value)
+        if payload is None:
+            return r[t.VariadicTuple[m.Infra.ModTextRule]].fail(
+                f"text rule project identity is invalid TOML: {identity.path}",
+            )
+        validated = u.Infra.validate_infra_payload(payload)
+        distribution = u.Infra.project_name_from_payload(identity.path, validated)
+        return r[t.VariadicTuple[m.Infra.ModTextRule]].ok(
+            tuple(
+                rule
+                for rule in rules
+                if not rule.distributions or distribution in rule.distributions
+            ),
+        )
+
+    @staticmethod
     def _catalogue_states(
         root: Path,
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
@@ -191,6 +221,7 @@ class FlextInfraModTextGateEngine:
             c.Infra.CODEMOD_TEXT_KEY_FLAGS,
             c.Infra.CODEMOD_TEXT_KEY_EXPECTED,
             c.Infra.CODEMOD_TEXT_KEY_CAPTURE_EQUALS,
+            c.Infra.CODEMOD_TEXT_KEY_DISTRIBUTIONS,
         ))
         if unknown:
             return r[m.Infra.ModTextRule].fail(
@@ -217,6 +248,18 @@ class FlextInfraModTextGateEngine:
                 f"text rule expected receipt must be a non-negative integer in {source}",
             )
         capture_equals = raw.get(c.Infra.CODEMOD_TEXT_KEY_CAPTURE_EQUALS, {})
+        distributions = raw.get(c.Infra.CODEMOD_TEXT_KEY_DISTRIBUTIONS, ())
+        if (
+            not isinstance(distributions, (list, tuple))
+            or any(
+                not isinstance(name, str) or not name.strip() or name != name.strip()
+                for name in distributions
+            )
+            or len(set(distributions)) != len(distributions)
+        ):
+            return r[m.Infra.ModTextRule].fail(
+                f"text rule distributions must be unique non-empty names in {source}",
+            )
         if not isinstance(capture_equals, dict) or any(
             not isinstance(name, str) or not isinstance(value, str)
             for name, value in capture_equals.items()
@@ -244,6 +287,7 @@ class FlextInfraModTextGateEngine:
             exclude=tuple(
                 str(glob) for glob in raw.get(c.Infra.CODEMOD_TEXT_KEY_EXCLUDE, ())
             ),
+            distributions=tuple(distributions),
             find=find,
             replace=str(raw.get(c.Infra.CODEMOD_TEXT_KEY_REPLACE, "")),
             flags=flag_names,
@@ -322,14 +366,23 @@ class FlextInfraModTextGateEngine:
         loaded = cls._rules_from_states(catalogues.value)
         if loaded.failure:
             return r[m.Infra.ModTextReport].from_failure(loaded)
-        rules = loaded.value
+        identity = u.Cli.atomic_read_binary_file_state(
+            root / c.PYPROJECT_FILENAME,
+            required=True,
+        )
+        if identity.failure:
+            return r[m.Infra.ModTextReport].from_failure(identity)
+        selected = cls._selected_rules(identity.value, loaded.value)
+        if selected.failure:
+            return r[m.Infra.ModTextReport].from_failure(selected)
+        rules = selected.value
         sources = cls._source_paths(root, rules)
         if sources.failure:
             return r[m.Infra.ModTextReport].from_failure(sources)
         entries: list[m.Infra.ModTextFinding] = []
         files: set[Path] = set()
         actionable = 0
-        inputs = list(catalogues.value)
+        inputs = [*catalogues.value, identity.value]
         plans: list[m.Infra.CodegenFilePlan] = []
         for path in sources.value:
             relative = path.relative_to(root).as_posix()
@@ -366,7 +419,7 @@ class FlextInfraModTextGateEngine:
                         before=before,
                         desired_content=updated.encode(c.Cli.ENCODING_DEFAULT),
                         desired_mode=before.mode,
-                        source_states=(*catalogues.value, before),
+                        source_states=(*catalogues.value, identity.value, before),
                         owner="mod-text",
                     ),
                 )
@@ -402,6 +455,7 @@ class FlextInfraModTextGateEngine:
             FlextInfraCodegenMiseArtifacts(repository_root=root),
         )
         roots = {"@mod-text": root}
+        identity_path = root / c.PYPROJECT_FILENAME
         analysis = m.Infra.CodegenPhaseAnalysis(
             phase="mod-text",
             files=plans,
@@ -413,7 +467,11 @@ class FlextInfraModTextGateEngine:
             if catalogue_states.failure:
                 return r[bool].from_failure(catalogue_states)
             catalogues = {state.path for state in catalogue_states.value}
-            expected = {state.path for state in inputs if state.path not in catalogues}
+            expected = {
+                state.path
+                for state in inputs
+                if state.path not in catalogues and state.path != identity_path
+            }
             observed = cls._source_paths(root, rules)
             if observed.failure:
                 return r[bool].from_failure(observed)

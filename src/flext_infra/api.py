@@ -172,14 +172,19 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         )
 
     @staticmethod
-    def fresh_import_probe(*, repository_root: Path) -> p.Infra.FreshImportProbe:
+    def fresh_import_probe(
+        *, repository_root: Path, runtime_root: Path | None = None
+    ) -> p.Infra.FreshImportProbe:
         """Build the fresh-import probe complete conform validates with.
 
         Returns:
             The resulting ``p.Infra.FreshImportProbe``.
 
         """
-        return FlextInfraValidateFreshImport(repository_root=repository_root)
+        return FlextInfraValidateFreshImport(
+            repository_root=repository_root,
+            runtime_root=runtime_root,
+        )
 
     @staticmethod
     def markdown_format_gate(repository_root: Path) -> p.Infra.MarkdownFormatGate:
@@ -278,15 +283,15 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
             csv = config_dir / declared.csv
             if not csv.resolve().is_relative_to(config_root):
                 return r[t.Cli.ResultValue].fail(
-                    f"CSV campaign driver escapes config directory: {csv}"
+                    f"CSV campaign driver escapes config directory: {csv}",
                 )
-            campaign_roots = (
-                tuple((root / value).resolve() for value in declared.roots) or (root,)
-            )
+            campaign_roots = tuple(
+                (root / value).resolve() for value in declared.roots
+            ) or (root,)
             for path in campaign_roots:
                 if not path.resolve().is_relative_to(repository_root):
                     return r[t.Cli.ResultValue].fail(
-                        f"CSV campaign scan root escapes repository: {path}"
+                        f"CSV campaign scan root escapes repository: {path}",
                     )
             campaigns.append(
                 m.Infra.ApplyRenamesInput(
