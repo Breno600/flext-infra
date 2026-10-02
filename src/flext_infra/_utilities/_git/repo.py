@@ -97,6 +97,10 @@ class FlextInfraUtilitiesGitRepo:
         resolved = shutil.which(c.Infra.GIT)
         if resolved is None:
             return r[bool].fail(f"git executable not found on PATH: {c.Infra.GIT}")
+        # GitPython's documented executable attribute already names this
+        # binary: re-pointing it would only respawn ``git version``.
+        if Git.GIT_PYTHON_GIT_EXECUTABLE == resolved:
+            return r[bool].ok(True)
         try:
             Git.refresh(resolved)
         except (FileNotFoundError, OSError) as exc:
