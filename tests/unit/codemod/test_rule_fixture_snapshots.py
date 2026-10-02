@@ -60,7 +60,12 @@ class TestsFlextInfraModRuleFixtureSnapshots:
                 f"id: demo\nvalid:\n  - baz(1)\ninvalid:\n{cases}",
             ),
         )
-        u.Tests.initialize_git_repo(root)
+        # Git must track the declared catalog: a bare root becomes a checkout
+        # through its initial commit, an existing checkout commits the catalog.
+        if (root / c.Infra.GIT_DIR).exists():
+            u.Tests.commit_git_changes(root, "Declare the demo rule catalog")
+        else:
+            u.Tests.initialize_git_repo(root)
         return rule
 
     @staticmethod
