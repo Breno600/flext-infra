@@ -49,6 +49,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         *,
         package_config: bool,
         packaged_data_paths: tuple[str, ...] = (),
+        packaged_data_excludes: tuple[str, ...] = (),
         repository_namespace_packages: tuple[str, ...] = (),
     ) -> None:
         """Materialize one governed project, optionally shipping in-package data."""
@@ -85,6 +86,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             FIXTURE_DISTRIBUTION,
             cli_module=False,
             packaged_data_paths=packaged_data_paths,
+            packaged_data_excludes=packaged_data_excludes,
             repository_namespace_packages=repository_namespace_packages,
         )
         u.Tests.git_bootstrap(
