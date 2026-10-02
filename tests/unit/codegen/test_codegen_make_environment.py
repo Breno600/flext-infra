@@ -449,6 +449,10 @@ class TestsFlextInfraCodegenMakeEnvironment:
         receipts = template.parent.parent
         upgraded = u.Tests.command_receipt(receipts / c.Tests.MAKE_TEMPLATE_UPG_RECEIPT)
         tm.that(upgraded.stdout, has="upg-hook-ran")
+        # One upg resolves the toolchain once: gen re-renders the manifest the
+        # resolve half locked, so the relock half installs from that lock.
+        tm.that(upgraded.stderr.count("setup probe: begin stage=lock.log"), eq=1)
+        tm.that(upgraded.stdout, has="upg relock: .mise.toml is byte-identical")
         tool_receipts = re.findall(
             r"uv setup selector=\S+ receipt=(\S+) selected=(\S+)",
             upgraded.stdout,
@@ -525,6 +529,33 @@ class TestsFlextInfraCodegenMakeEnvironment:
         )
         tm.that(u.Cli.process_succeeded(stale.outcome), eq=False)
         tm.that(self._locks(checkout), eq=resolved_locks)
+
+        # A manifest the committed mise.lock does not satisfy stops setup with
+        # the upg hint; setup never relocks and leaves every lock untouched.
+        drifted = u.Tests.resolved_make_checkout(
+            template, tmp_path / "drifted", profile
+        )
+        manifest = drifted / c.Infra.MISE_TOML_FILENAME
+        manifest.write_text(
+            manifest.read_text(encoding="utf-8")
+            + '[tools."github:example/absent-from-lock"]\nversion = "1.0.0"\n',
+            encoding="utf-8",
+        )
+        unsatisfied = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "setup"],
+                cwd=drifted,
+                env={
+                    **active_env,
+                    make.ci.variable: make.ci.value,
+                    bootstrap.storage_root_variable: str(cold_storage),
+                },
+            ),
+        )
+        tm.that(u.Cli.process_succeeded(unsatisfied.outcome), eq=False)
+        tm.that(unsatisfied.stderr, has="does not satisfy .mise.toml")
+        tm.that(unsatisfied.stderr, has="run make upg")
+        tm.that(self._locks(drifted), eq=resolved_locks)
 
     @staticmethod
     def _locks(root: Path) -> t.MappingKV[str, bytes]:
@@ -908,6 +939,37 @@ class TestsFlextInfraCodegenMakeEnvironment:
         toolchain = config.Infra.codegen.toolchain
         lock_invocations = re.findall(r"lock --bump([^;]*);", makefile)
         tm.that(tuple(arguments.strip() for arguments in lock_invocations), eq=("",))
+        # Setup never locks (operator 2026-10-02): no reconcile or relock path
+        # survives, and a lock that no longer satisfies the manifest stops.
+        tm.that(
+            makefile,
+            lacks=[
+                "setup reconcile",
+                ' reconcile "$$project_root"',
+                'relock "$(PROJECT_ROOT)"',
+            ],
+        )
+        tm.that(makefile, has="does not satisfy .mise.toml under Mise %s; run make upg")
+        # Only a missing-tool install and the upg resolution reach the network;
+        # every other Mise call runs through the declared offline wrapper.
+        offline = " ".join(
+            f"'{name}={value}'"
+            for name, value in u.Infra.mise_bootstrap_environment().offline_environment
+        )
+        tm.that(makefile, has=f'mise_exec "$$mise_offline_mode" env {offline} "$$@"')
+        networked = set(
+            re.findall(
+                r'mise_exec (?:project|no-config) .*?"\$\$pinned_mise" '
+                r'(?:-C "[^"]+" )?([a-z-]+)',
+                makefile,
+            ),
+        )
+        tm.that(networked, eq={"latest", "lock", "install", "generate"})
+        tm.that(makefile, has="install --yes")
+        tm.that(
+            makefile,
+            lacks='mise_exec project "$$pinned_mise" -C "$$project_root" install --dry-run',
+        )
         platform_matrix = ",".join(toolchain.mise_lockfile_platforms)
         tm.that(makefile, has=f'mise_lockfile_platforms="{platform_matrix}";')
         tm.that(
