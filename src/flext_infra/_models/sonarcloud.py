@@ -123,7 +123,8 @@ class FlextInfraModelsSonarcloud:
         rule: Annotated[t.NonEmptyStr, m.Field(description="Rule key")]
         component: Annotated[t.NonEmptyStr, m.Field(description="Project and file key")]
         line: Annotated[
-            int | None, m.Field(description="Source line, when assigned")
+            int | None,
+            m.Field(description="Source line, when assigned"),
         ] = None
         message: Annotated[t.NonEmptyStr, m.Field(description="Observed finding")]
 
