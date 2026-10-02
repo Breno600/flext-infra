@@ -11,7 +11,6 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from flext_tests import tm
-from packaging.utils import canonicalize_name
 
 from flext_infra import config, infra, u
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
@@ -286,7 +285,7 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             f'authors = [{{name = "{spec.author_name}", email = "{spec.author_email}"}}]\n'
             f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
             "dependencies = "
-            f'["{TestsFlextInfraUtilitiesProjectFixtureMixin.flext_source(canonicalize_name(spec.upstream))}"]\n'
+            f'["{TestsFlextInfraUtilitiesProjectFixtureMixin.flext_source(spec.upstream)}"]\n'
             "[dependency-groups]\n"
             f"dev = [{dev}]\n",
             encoding="utf-8",

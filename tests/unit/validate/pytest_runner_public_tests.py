@@ -578,7 +578,11 @@ class TestsFlextInfraPytestRunner:
         command = tm.ok(
             u.Cli.files_read_text(reports_root / latest_name / "command.txt"),
         )
-        tm.that(command, has=pytest_policy.external_gate_deselection)
+        # The recorded deselection names every external marker; the phase may
+        # deselect further markers of its own scope (the budgeted phase also
+        # deselects slow items, which run in their own phase).
+        deselection = command.split("-m ", maxsplit=2)[-1]
+        tm.that(deselection, has=["not (", *markers])
 
     @staticmethod
     @pytest.mark.slow
@@ -588,7 +592,12 @@ class TestsFlextInfraPytestRunner:
         *,
         ci_context: bool,
     ) -> None:
-        """The real full phase executes harmless consumers of every excluded marker."""
+        """The real full phase executes harmless consumers of every excluded marker.
+
+        The budgeted runner never carries slow items, in the incremental and
+        the full operation alike: the slow phase is its own process on its own
+        clock, so slow consumers are absent from both budgeted inventories.
+        """
         policy = config.Infra.tooling.tools.pytest
         markers = tuple(
             sorted({*policy.external_gate_markers, *policy.ci_excluded_markers}),
@@ -621,9 +630,10 @@ class TestsFlextInfraPytestRunner:
         excluded = set(policy.external_gate_markers)
         if ci_context:
             excluded.update(policy.ci_excluded_markers)
+        budgeted = set(markers) - {policy.slow_marker}
         for report_dir, expected in (
-            (incremental, 1 + len(set(markers) - excluded)),
-            (full, 1 + len(markers)),
+            (incremental, 1 + len(budgeted - excluded)),
+            (full, 1 + len(budgeted)),
         ):
             accounting = m.Infra.TestmonRunAccounting.model_validate_json(
                 (report_dir / "run-accounting.json").read_text(),
