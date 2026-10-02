@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import c, infra, m
 from flext_infra.docs.auditor import FlextInfraDocAuditor
+from flext_infra.maintenance import FlextInfraSonarcloudIssues
 from flext_infra.docs.builder import FlextInfraDocBuilder
 from flext_infra.docs.collector import FlextInfraDocCollector
 from flext_infra.docs.fixer import FlextInfraDocFixer

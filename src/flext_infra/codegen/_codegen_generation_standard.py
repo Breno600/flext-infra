@@ -322,7 +322,7 @@ class FlextInfraCodegenGenerationStandardMixin(
         )
         first_party_names = {
             current_pkg,
-            *FlextInfraToolTablesPhase.first_party_namespaces(project_root),
+            *FlextInfraToolTablesPhase.first_party_namespaces(path=project_root),
         }
         type_checking_root_names = frozenset(first_party_names)
         type_checking_lines = "\n".join(

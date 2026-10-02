@@ -60,7 +60,9 @@ class FlextInfraSonarcloudIssues(FlextInfraSonarcloudClient[bool]):
             )
             if body.failure:
                 return r[bool].from_failure(body)
-            parsed = u.validate_value(m.Infra.SonarcloudIssueSearch, body.value, from_json=True)
+            parsed = u.validate_value(
+                m.Infra.SonarcloudIssueSearch, body.value, from_json=True
+            )
             if parsed.failure:
                 return r[bool].from_failure(parsed)
             response = parsed.value
@@ -69,7 +71,9 @@ class FlextInfraSonarcloudIssues(FlextInfraSonarcloudClient[bool]):
                     f"SonarCloud returned page {response.paging.page_index}; requested {page}"
                 )
             if total is not None and response.paging.total != total:
-                return r[bool].fail("SonarCloud issue total changed while reading pages")
+                return r[bool].fail(
+                    "SonarCloud issue total changed while reading pages"
+                )
             total = response.paging.total
             if total >= c.Infra.SONARCLOUD_ISSUES_SEARCH_LIMIT:
                 return r[bool].fail(
@@ -77,9 +81,13 @@ class FlextInfraSonarcloudIssues(FlextInfraSonarcloudClient[bool]):
                     "the issue set cannot be reported as complete"
                 )
             if len(response.issues) > response.paging.page_size:
-                return r[bool].fail("SonarCloud returned more issues than its page size")
+                return r[bool].fail(
+                    "SonarCloud returned more issues than its page size"
+                )
             if not response.issues and len(findings) < total:
-                return r[bool].fail("SonarCloud returned an empty page before its total")
+                return r[bool].fail(
+                    "SonarCloud returned an empty page before its total"
+                )
             for issue in response.issues:
                 if issue.key in seen:
                     return r[bool].fail(f"SonarCloud repeated issue {issue.key}")

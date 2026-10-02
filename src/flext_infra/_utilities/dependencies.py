@@ -7,7 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, MutableMapping
-from importlib.metadata import distributions, requires
+from importlib.metadata import requires
 from importlib.resources import files
 from pathlib import Path
 from types import MappingProxyType
@@ -375,7 +375,7 @@ class FlextInfraUtilitiesDependencies:
 
         """
         versions: MutableMapping[str, str] = {}
-        for distribution in distributions():
+        for distribution in u.installed_distributions():
             if distribution.read_text("direct_url.json") is not None:
                 continue
             name = distribution.metadata.get("Name")

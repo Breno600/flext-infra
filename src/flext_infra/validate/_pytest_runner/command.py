@@ -9,7 +9,6 @@ from __future__ import annotations
 import hashlib
 import sys
 from functools import lru_cache
-from importlib.metadata import distributions
 from pathlib import Path
 from typing import ClassVar
 
@@ -45,7 +44,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
 
         """
         provenance: t.MutableSequenceOf[str] = []
-        for distribution in distributions():
+        for distribution in u.installed_distributions():
             receipt = distribution.read_text("direct_url.json")
             dir_info = (
                 None
