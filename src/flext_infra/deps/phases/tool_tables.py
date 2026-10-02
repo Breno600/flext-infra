@@ -24,21 +24,39 @@ class FlextInfraToolTablesPhase:
         self._tool_config = tool_config
 
     @staticmethod
-    def first_party_namespaces(project_dir: Path) -> t.StrSequence:
+    def first_party_namespaces(
+        project_dir: Path,
+        planned_sources: t.SequenceOf[Path] = (),
+    ) -> t.StrSequence:
         """Derive the project's first-party namespaces from one source each.
 
         The config-owned base namespaces, the live packages under ``src/``
         (never a name invented from the distribution), and, for a workspace
-        root, the packages of the subprojects it declares. Ruff's projected
-        known-first-party and the lazy-init renderer both read this owner.
+        root, the packages of the subprojects it declares. ``planned_sources``
+        are files a scaffold publishes with the rendered pyproject: their
+        packages under ``src/`` are live in the tree being produced. Ruff's
+        projected known-first-party, deptry's and the lazy-init renderer all
+        read this owner.
 
         Returns:
             The sorted first-party namespaces.
 
         """
+        src_dir = project_dir / c.Infra.DEFAULT_SRC_DIR
+        planned_parts = (
+            source.relative_to(src_dir).parts
+            for source in planned_sources
+            if source.is_relative_to(src_dir)
+        )
+        planned_packages = {
+            parts[0]
+            for parts in planned_parts
+            if len(parts) > 1 and parts[0].isidentifier()
+        }
         return sorted({
             *config.Infra.tooling.tools.deptry.known_first_party,
             *u.Infra.discover_first_party_namespaces(project_dir),
+            *planned_packages,
             *FlextInfraToolTablesPhase._workspace_project_namespaces(project_dir),
         })
 

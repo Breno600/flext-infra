@@ -14,6 +14,7 @@ from flext_infra.codegen._conform.existing_plan import (
     FlextInfraCodegenConformExistingPlan,
 )
 from flext_infra.deps import FlextInfraPyprojectModernizer
+from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
 
 
 class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan):
@@ -197,10 +198,10 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
         project: m.Infra.ProjectSpec,
         render_inputs: m.Infra.CodegenRenderInputs,
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
-        """Render the final pyproject over the facades the scaffold plans.
+        """Render the final pyproject over the sources the scaffold plans.
 
         The pyproject renders before the sources, but its facade-rebind Mypy
-        scope is a fact of those sources: derived from the tree before
+        scope and its first-party namespaces are facts of those sources: derived from the tree before
         publication it omits every facade the scaffold creates, and the next
         generation adds them. Once every source is planned, the scope is
         derived from the planned bytes and the pyproject is rendered once more
@@ -229,12 +230,23 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
         }
         tooling = render_inputs.tooling_runtime
         rebinds = u.Infra.facade_rebind_modules(root, planned_sources)
-        if rebinds == tuple(tooling.mypy_facade_rebind_modules):
+        first_party = tuple(
+            FlextInfraToolTablesPhase.first_party_namespaces(
+                root,
+                tuple(planned_sources),
+            ),
+        )
+        if rebinds == tuple(tooling.mypy_facade_rebind_modules) and (
+            first_party == tuple(tooling.first_party)
+        ):
             return result_type.ok(planned)
         final_inputs = render_inputs.model_copy(
             update={
                 "tooling_runtime": tooling.model_copy(
-                    update={"mypy_facade_rebind_modules": rebinds},
+                    update={
+                        "mypy_facade_rebind_modules": rebinds,
+                        "first_party": first_party,
+                    },
                 ),
             },
         )

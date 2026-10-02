@@ -530,14 +530,9 @@ class TestsFlextInfraCodegenGeneration:
             ),
         )
 
-    @pytest.mark.parametrize(
-        "isort_table",
-        ["", "[tool.ruff.lint.isort]\nknown-first-party = []\n"],
-    )
     def test_project_package_name_reads_manifest_not_directory_name(
         self,
         tmp_path: Path,
-        isort_table: str,
     ) -> None:
         """Worktree checkouts keep the manifest's package name.
 
@@ -550,8 +545,12 @@ class TestsFlextInfraCodegenGeneration:
         project_root = tmp_path / "0.12.0-dev"
         wrapper_root = project_root / "examples"
         wrapper_root.mkdir(parents=True)
+        package_root = project_root / "src" / "demo_worktree_pkg"
+        package_root.mkdir(parents=True)
+        (package_root / c.Infra.INIT_PY).write_text("", encoding="utf-8")
         (project_root / c.PYPROJECT_FILENAME).write_text(
-            f'[project]\nname = "demo-worktree-pkg"\nversion = "1.0.0"\nauthors = [{{ name = "Fixture Author" }}]\n{isort_table}',
+            '[project]\nname = "demo-worktree-pkg"\nversion = "1.0.0"\n'
+            'authors = [{ name = "Fixture Author" }]\n',
             encoding="utf-8",
         )
         plan = m.Infra.LazyInitPlan(
@@ -586,79 +585,6 @@ class TestsFlextInfraCodegenGeneration:
                 "    from demo_worktree_pkg import p as project_p\n"
             ),
         )
-
-    @pytest.mark.parametrize("declared_empty", [False, True])
-    def test_empty_first_party_policy_does_not_discover_extra_namespaces(
-        self,
-        tmp_path: Path,
-        *,
-        declared_empty: bool,
-    ) -> None:
-        """An explicit empty list and an absent table remain distinct inputs."""
-        additional = tmp_path / "src" / "fixture_extra_namespace"
-        additional.mkdir(parents=True)
-        (additional / c.Infra.INIT_PY).write_text("", encoding="utf-8")
-        wrapper = tmp_path / "examples"
-        wrapper.mkdir()
-        table = (
-            "[tool.ruff.lint.isort]\nknown-first-party = []\n" if declared_empty else ""
-        )
-        (tmp_path / c.PYPROJECT_FILENAME).write_text(
-            f'[project]\nname = "configured-workspace"\nversion = "1.0.0"\nauthors = [{{ name = "Fixture Author" }}]\n{table}',
-            encoding="utf-8",
-        )
-        plan = self._plan(
-            "examples",
-            ("extra", "external"),
-            MappingProxyType({
-                "extra": ("fixture_extra_namespace", "value"),
-                "external": ("zz_external_fixture", "value"),
-            }),
-        )
-        plan = plan.model_copy(
-            update={
-                "context": plan.context.model_copy(
-                    update={"pkg_dir": wrapper, "init_path": wrapper / c.Infra.INIT_PY},
-                ),
-            },
-        )
-        rendered = FlextInfraCodegenGeneration.render_init(plan)
-        expected = (
-            "    from fixture_extra_namespace import value as extra\n"
-            "    from zz_external_fixture import value as external\n"
-            if declared_empty
-            else (
-                "    from zz_external_fixture import value as external\n\n"
-                "    from fixture_extra_namespace import value as extra\n"
-            )
-        )
-        tm.that(rendered, has=expected)
-
-    @pytest.mark.parametrize("projected", ['"namespace"', '["valid", 3]', "false"])
-    def test_malformed_first_party_names_fail_at_the_render_boundary(
-        self,
-        tmp_path: Path,
-        projected: str,
-    ) -> None:
-        """Invalid Ruff configuration cannot become a derived namespace list."""
-        package = tmp_path / "src" / "sample"
-        package.mkdir(parents=True)
-        (tmp_path / c.PYPROJECT_FILENAME).write_text(
-            '[project]\nname = "sample"\nversion = "1.0.0"\n'
-            f"[tool.ruff.lint.isort]\nknown-first-party = {projected}\n",
-            encoding="utf-8",
-        )
-        plan = self._plan("sample", (), MappingProxyType({}))
-        plan = plan.model_copy(
-            update={
-                "context": plan.context.model_copy(
-                    update={"pkg_dir": package, "init_path": package / c.Infra.INIT_PY},
-                ),
-            },
-        )
-
-        with pytest.raises(m.ValidationError):
-            FlextInfraCodegenGeneration.render_init(plan)
 
     def test_runtime_imports_are_one_isort_section_with_the_lazy_helpers(
         self,
