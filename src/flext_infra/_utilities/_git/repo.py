@@ -99,7 +99,7 @@ class FlextInfraUtilitiesGitRepo:
             return r[bool].fail(f"git executable not found on PATH: {c.Infra.GIT}")
         # GitPython's documented executable attribute already names this
         # binary: re-pointing it would only respawn ``git version``.
-        if Git.GIT_PYTHON_GIT_EXECUTABLE == resolved:
+        if resolved == Git.GIT_PYTHON_GIT_EXECUTABLE:
             return r[bool].ok(True)
         try:
             Git.refresh(resolved)
