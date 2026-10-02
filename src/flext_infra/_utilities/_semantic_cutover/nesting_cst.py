@@ -119,7 +119,8 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
         import libcst as cst
 
         if not isinstance(
-            node, cst.ClassDef | cst.FunctionDef | cst.SimpleStatementLine
+            node,
+            cst.ClassDef | cst.FunctionDef | cst.SimpleStatementLine,
         ):
             msg = f"class-nesting cannot move {type(node).__name__} members"
             raise TypeError(msg)
