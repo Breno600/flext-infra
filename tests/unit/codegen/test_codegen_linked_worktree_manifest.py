@@ -72,7 +72,12 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
             ),
         )
 
-        (makefile_plan,) = plan.files
+        planned = {item.path: item for item in plan.files}
+        tm.that(
+            set(planned),
+            eq={lane / item for item in c.Infra.MAKEFILE_BOOTSTRAP_DESTINATIONS},
+        )
+        makefile_plan = planned[lane / c.Infra.MAKEFILE_FILENAME]
         tm.that(
             u.Tests.codegen_file_text(makefile_plan),
             has="MAKE_PROFILE := standalone",
@@ -94,6 +99,7 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
             eq=primary_snapshot,
         )
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("beads_content", "expected_error"),
         [
@@ -110,7 +116,6 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
         ],
     )
     def test_invalid_local_beads_identity_fails_before_any_write(
-        self,
         tmp_path: Path,
         beads_content: str | None,
         expected_error: str,

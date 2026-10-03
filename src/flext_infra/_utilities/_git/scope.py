@@ -86,7 +86,7 @@ class FlextInfraUtilitiesGitScopeMixin(FlextInfraUtilitiesGitSemanticIndexMixin)
 
     @classmethod
     def _git_tracked_scope_relative_paths(cls, scope_root: str) -> t.StrSequence | None:
-        """Return current tracked paths relative to ``scope_root`` or ``None`` outside Git.
+        """Return tracked paths relative to ``scope_root``; ``None`` outside Git.
 
         The Git index and porcelain status identify paths relative to the
         repository root. Callers join the result onto ``scope_root``, so this

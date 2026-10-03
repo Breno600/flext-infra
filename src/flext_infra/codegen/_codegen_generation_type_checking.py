@@ -204,7 +204,10 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
                 items,
                 key=FlextInfraCodegenGenerationTypeCheckingMixin._import_item_sort_key,
             )
-            if not FlextInfraCodegenGenerationTypeCheckingMixin._should_skip_type_checking_module_export(
+            if not (
+                FlextInfraCodegenGenerationTypeCheckingMixin
+                ._should_skip_type_checking_module_export
+            )(
                 mod,
                 item[0],
                 item[1],
@@ -268,7 +271,11 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
             return ("if TYPE_CHECKING:", "    from flext_core import FlextTypes")
         normalized_groups: MutableMapping[str, t.StrPairSequence] = {}
         for mod, items in groups.items():
-            resolved = FlextInfraCodegenGenerationTypeCheckingMixin._normalize_type_checking_module_path(
+            normalize_path = (
+                FlextInfraCodegenGenerationTypeCheckingMixin
+                ._normalize_type_checking_module_path
+            )
+            resolved = normalize_path(
                 mod,
                 local_package_root,
             )

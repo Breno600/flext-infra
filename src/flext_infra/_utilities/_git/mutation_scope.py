@@ -37,14 +37,20 @@ class FlextInfraUtilitiesGitMutationScopeMixin:
                         or repo.working_tree_dir is None
                         or Path(repo.working_tree_dir).resolve() != candidate
                     ):
-                        msg = f"declared Git marker does not own this worktree: {candidate}"
+                        msg = (
+                            f"declared Git marker does not own this worktree: "
+                            f"{candidate}"
+                        )
                         raise ValueError(msg)
                     return m.Infra.GitMutationScope(
                         root=resolved,
                         git_dir=Path(repo.git_dir).resolve(),
                     )
             if is_git_dir(candidate):
-                msg = f"mutation scope belongs to Git storage rather than a worktree: {root}"
+                msg = (
+                    f"mutation scope belongs to Git storage rather than a "
+                    f"worktree: {root}"
+                )
                 raise ValueError(msg)
         return m.Infra.GitMutationScope(root=resolved, git_dir=None)
 

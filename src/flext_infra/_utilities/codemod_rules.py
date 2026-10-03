@@ -10,7 +10,7 @@ import re
 import sys
 from collections.abc import Mapping, MutableMapping, Sequence
 from functools import lru_cache
-from importlib.metadata import Distribution, distributions
+from importlib.metadata import Distribution
 from importlib.util import find_spec
 from pathlib import Path
 
@@ -110,6 +110,11 @@ class FlextInfraUtilitiesCodemodRules:
                 f"missing project.name: {pyproject}",
             )
         raw_dependencies = project.get(c.Infra.DEPENDENCIES)
+        if raw_dependencies is None:
+            # ``project.dependencies`` is spec-optional: a project with no
+            # declared runtime dependency has an empty runtime closure, not a
+            # malformed manifest.
+            raw_dependencies = ()
         if not isinstance(raw_dependencies, Sequence) or isinstance(
             raw_dependencies,
             str,
@@ -137,13 +142,18 @@ class FlextInfraUtilitiesCodemodRules:
         # Import search paths may repeat the same physical directory. Query each
         # directory once; distinct installations with the same name still fail.
         paths = list(dict.fromkeys(str(Path(path).resolve()) for path in sys.path))
-        for installed in distributions(path=paths):
+        for installed in u.installed_distributions(path=paths):
             raw_name = installed.metadata.get("Name")
             if not isinstance(raw_name, str) or not raw_name.strip():
                 continue
             name = canonicalize_name(raw_name)
-            if name in indexed:
-                msg = f"duplicate installed distribution metadata: {name}"
+            previous = indexed.get(name)
+            if previous is not None:
+                msg = (
+                    f"duplicate installed distribution metadata: {name} "
+                    f"({previous.version} at {previous.locate_file('')}; "
+                    f"{installed.version} at {installed.locate_file('')})"
+                )
                 raise ValueError(msg)
             indexed[name] = installed
         return indexed

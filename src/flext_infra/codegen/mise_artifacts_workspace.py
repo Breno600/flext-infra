@@ -21,7 +21,7 @@ from flext_infra.codegen._mise_artifacts_files import (
 from flext_infra.workspace import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
-    from .. import p, t
+    from flext_infra import p, t
 
 
 class FlextInfraMiseWorkspacePlanner:
@@ -419,7 +419,8 @@ class FlextInfraMiseWorkspacePlanner:
         if config_plan is None:
             if config_state.value.content is None:
                 return r[m.Infra.MiseToolchainProjectState].fail(
-                    f"committed Mise configuration is absent: {layout.artifacts.config}",
+                    f"committed Mise configuration is absent: "
+                    f"{layout.artifacts.config}",
                 )
             replacement_content = config_state.value.content
         else:

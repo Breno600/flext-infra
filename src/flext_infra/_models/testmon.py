@@ -105,7 +105,10 @@ class FlextInfraModelsTestmon:
                     and self.deselected_count == self.inventory_count
                 )
             ):
-                msg = "zero execution requires a restored cache and complete deselection accounting"
+                msg = (
+                    "zero execution requires a restored cache "
+                    "and complete deselection accounting"
+                )
                 raise ValueError(msg)
             return self
 

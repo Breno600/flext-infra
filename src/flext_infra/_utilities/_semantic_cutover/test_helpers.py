@@ -104,7 +104,10 @@ class FlextInfraUtilitiesSemanticTestHelpers(
                         sources={path: working[path] for path in editable},
                     )
                     if not any(edit.file_path == path for edit in planned):
-                        msg = f"shared test helper move did not remove its declaration: {path}"
+                        msg = (
+                            f"shared test helper move did not remove "
+                            f"its declaration: {path}"
+                        )
                         raise ValueError(msg)
                     for edit in planned:
                         working[edit.file_path] = edit.updated_source
@@ -159,7 +162,11 @@ class FlextInfraUtilitiesSemanticTestHelpers(
                 if isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef))
             ):
                 continue
-            offset = FlextInfraUtilitiesRopeCorePyModuleMixin.find_identifier_offset_in_lines(
+            find_offset = (
+                FlextInfraUtilitiesRopeCorePyModuleMixin
+                .find_identifier_offset_in_lines
+            )
+            offset = find_offset(
                 sources[path].splitlines(keepends=True),
                 line=declaration.lineno,
                 symbol=name,
@@ -222,7 +229,10 @@ class FlextInfraUtilitiesSemanticTestHelpers(
             and policy.is_internal_namespace
         )
         if len(owners) != 1:
-            msg = f"shared test helper requires one utilities facade: {path}; owners={owners}"
+            msg = (
+                f"shared test helper requires one utilities facade: {path}; "
+                f"owners={owners}"
+            )
             raise ValueError(msg)
         return owners[0]
 

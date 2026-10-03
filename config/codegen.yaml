@@ -27,9 +27,15 @@ Infra:
       # moving selectors and dependency floors to the newest releases and
       # writes the committed uv.lock and mise.lock; setup, gen, and fmt install
       # frozen from those locks.
-      # Patch resolvível: o 3.13.16 perdeu os assets macos-x64 no python-build-
-      # standalone e o mise recusa substituir o 3.13.15 funcional do lock.
-      python_version: "3.13.15"
+      # The selector is major.minor (the schema contract). The exact patch is
+      # mise.lock's instrument: when the newest release loses platform assets,
+      # mise refuses the replacement and the lock stage keeps the current lock
+      # (fix-forward) until the release regains coverage.
+      # The minor line only: the frozen patch is mise.lock's ownership
+      # (cooldown 2026-10-01 keeps the asset-less 20260929 python-build-
+      # standalone out of every resolution, so 3.13.15 stays the resolved
+      # patch without a config value the FlextInfraConfig model forbids).
+      python_version: "3.13"
       # Supply-chain cooldown (operator 2026-10-01): ONE value for every
       # resolver — the generated mise `minimum_release_age` (so `make upg`
       # never selects a release younger than this, e.g. a Python patch with
@@ -45,7 +51,12 @@ Infra:
       # Keep reasons here; an empty list removes constraints from all projections.
       # Dependency compatibility is resolved from the declared project graph;
       # upstream packages own any bounds their public contracts require.
-      uv_constraint_dependencies: []
+      # mypy 2.4.0 crashes internally (AssertionError "Must not defer during
+      # final iteration", mypy semanal.py) on the fleet's nested ldif model
+      # inference — held below 2.4.0 until upstream fixes the deferral bug.
+      # Bead trail: flext-0ftd.3 family + flext-mlr2m root parser finding.
+      uv_constraint_dependencies:
+        - mypy<2.4.0
       # Moving selectors consumed by generated .mise.toml and CI. Only
       # `make upg` resolves them to the newest release and writes mise.lock;
       # setup installs exactly what the committed lock pins.
@@ -77,6 +88,9 @@ Infra:
       # never parses a newer lockfile format.
       mise_lockfile: true
       mise_locked: true
+      # Stable, ignored runtime mutex for the generated Mise lock publisher.
+      # It survives a concurrent make gen replacing the publisher script.
+      mise_transaction_lock_file: .mise-lock-transaction.lock
       # Projection: .mise.toml [settings] lockfile_platforms. The platforms the
       # CI matrix runs on (ubuntu, macos, windows runners, x64 and arm64);
       # `make upg` resolves these plus the current host, which mise always adds.
@@ -113,10 +127,11 @@ Infra:
       qlty_version: latest
       node_version: latest
       jscpd_selector: github:kucherenko/jscpd
-      # Held at 5.3.2 (#1315): 5.3.3 ships no macos-arm64 asset and 5.4.0
-      # ships none for the fleet's six platforms, so mise cannot lock either
-      # and make upg fails fleet-wide. Move to latest once a newer release
-      # publishes assets for all six declared platforms.
+      # Held at 5.4.0 (operator resilience lane 2026-10-02): under the 7-day
+      # cooldown, `latest` resolves to 5.3.2, whose release lacks platform
+      # assets, so Mise aborts every lock pass ("refusing to replace") and no
+      # lock the pinned Mise accepts can exist. Hold the asset-covered 5.4.0
+      # until a newer release regains full platform coverage.
       jscpd_version: "5.3.3"
       # Prettier is the markdown formatter (markdown-format gate): provisioned
       # through npm so the fleet binary version is owned by this SSOT alone.
@@ -185,7 +200,11 @@ Infra:
     # really exercise their subprojects in CI opt in through
     # config/codegen-overrides.yaml.
     checkout_submodules: "false"
-    checkout_submodules_overrides: {}
+    # The root workspace checkout exercises its flext-infra subproject in CI:
+    # the bootstrap library (post-#1361) is read from the submodule src, so
+    # the root's generated workflows must materialize it before make setup.
+    checkout_submodules_overrides:
+      flext: "true"
 
     # Runner packages a distribution's own tests need (Ubuntu apt names),
     # installed by the generated CI before the gates run. A test that drives
@@ -411,6 +430,15 @@ Infra:
       # revalidates changed modules by source hash, so a warm cache never masks
       # a finding. Distinct project names keep their module namespaces in
       # separate directories.
+      # Parsed codemod rule catalogs (u.Infra.codemod_rule_plan). Each entry is
+      # keyed by the sha256 of the provider, its rule files' paths and text, and
+      # the parser's own source, so a catalog is parsed once and re-parsed only
+      # when a rule or the parser changes.
+      codemod_rules_cache:
+        data_home_environment_variable: XDG_CACHE_HOME
+        user_home_environment_variable: HOME
+        home_cache_directory: .cache
+        external_storage_directory: flext/infra/codemod-rules
       mypy_cache:
         cache_environment_variable: MYPY_CACHE_DIR
         data_home_environment_variable: XDG_CACHE_HOME
@@ -603,6 +631,8 @@ Infra:
           description: Run the canonical jscpd duplicate-code gate.
         - name: sonarcloud-sync
           description: Write the SSOT SonarCloud issue exclusions to the server-side project settings (requires SONAR_TOKEN).
+        - name: sonarcloud-issues
+          description: Read unresolved new-code SonarCloud issues on the published integration branch (requires SONAR_TOKEN).
       custom_handler_profile_overrides: {}
       standalone_check_gates:
         smells: smells
@@ -1116,6 +1146,7 @@ Infra:
           - tool.pytest.ini_options
           - tool.uv
           - tool.ruff
+          - tool.ruff.lint.isort
           - tool.ruff.lint.per-file-ignores
           - tool.mypy
           - tool.pyright
@@ -1477,6 +1508,7 @@ Infra:
         - name: "mise native dependency graphs"
           profiles: [workspace, standalone]
           patterns:
+            - "/.mise-lock-transaction.lock"
             - "!/.mise/"
             - "/.mise/*"
             - "!/.mise/locks/"

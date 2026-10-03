@@ -444,7 +444,9 @@ class FlextInfraCodegenQualityGate(s[bool]):
             "Current:",
             f"- violations: {after.get('total_violations', 'n/a')}",
             f"- duplicates: {after.get('duplicate_groups', 'n/a')}",
-            f"- projects: {after.get('projects_total', 0)} total, {after.get('projects_passed', 0)} passed, {after.get('projects_failed', 0)} failed",
+            f"- projects: {after.get('projects_total', 0)} total, "
+            f"{after.get('projects_passed', 0)} passed, "
+            f"{after.get('projects_failed', 0)} failed",
         ])
         if duplicate_groups:
             lines.extend(["", "Duplicate Groups:"])

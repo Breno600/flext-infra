@@ -66,8 +66,9 @@ class TestsFlextInfraCodegenMakeAuthentication:
         tm.that(process.stdout, has="environment-authenticated")
         tm.that(process.stdout + process.stderr, lacks=selected)
 
+    @staticmethod
     @pytest.mark.parametrize("verb", ["status", "help", "clean"])
-    def test_local_verbs_need_no_credential(self, tmp_path: Path, verb: str) -> None:
+    def test_local_verbs_need_no_credential(tmp_path: Path, verb: str) -> None:
         """Local public verbs complete without a GitHub credential."""
         project_root, _ = u.Tests.render_make_environment(
             tmp_path,
@@ -92,9 +93,9 @@ class TestsFlextInfraCodegenMakeAuthentication:
             eq=verb == "status",
         )
 
+    @staticmethod
     @pytest.mark.remote
     def test_setup_reuses_provisioned_tools_without_credential(
-        self,
         tmp_path: Path,
         resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
     ) -> None:
@@ -123,9 +124,9 @@ class TestsFlextInfraCodegenMakeAuthentication:
         )
         tm.that(u.Infra.runtime_environment_dir(project_root).exists(), eq=True)
 
+    @staticmethod
     @pytest.mark.remote
     def test_invalid_explicit_token_fails_at_the_native_mise_backend(
-        self,
         tmp_path: Path,
     ) -> None:
         """A selected invalid credential fails at the backend without a retry."""

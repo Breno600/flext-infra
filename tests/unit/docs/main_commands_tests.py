@@ -8,7 +8,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
 from flext_tests import tm
+from mkdocs.exceptions import ConfigurationError
 
 from flext_infra.docs.auditor import FlextInfraDocAuditor
 from flext_infra.docs.builder import FlextInfraDocBuilder
@@ -122,13 +124,16 @@ class TestsFlextInfraDocsMainCommands:
     def test_builder_execute_fails_with_invalid_mkdocs_config(
         tmp_path: Path,
     ) -> None:
-        """Test builder execute fails with invalid mkdocs config."""
+        """An invalid scope config escapes with the MkDocs failure itself.
+
+        The builder loads the scope's own ``mkdocs.yml`` and never translates
+        a MkDocs failure into a result: the exception and traceback escape.
+        """
         workspace = u.Tests.create_docs_workspace(tmp_path)
         (workspace / "mkdocs.yml").write_text("site_name: [", encoding="utf-8")
 
-        result = FlextInfraDocBuilder(repository_root=workspace).execute()
-
-        tm.fail(result)
+        with pytest.raises(ConfigurationError, match="parsing the configuration"):
+            FlextInfraDocBuilder(repository_root=workspace).execute()
 
     @staticmethod
     def test_generate_fix_cycle_is_byte_identical_on_second_run(

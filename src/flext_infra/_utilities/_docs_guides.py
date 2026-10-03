@@ -142,8 +142,8 @@ class FlextInfraUtilitiesDocsGuidesMixin:
                     "adjust that source, never this projection. -->"
                 ),
                 (
-                    f"<!-- Source of truth: `<workspace-root>/docs/guides/{path.name}`; "
-                    "adjust that workspace source, never this member projection. -->"
+                    f"<!-- Source of truth: `<workspace-root>/docs/guides/{path.name}`"
+                    "; adjust that workspace source, never this member projection. -->"
                 ),
             }
             if (
@@ -190,10 +190,15 @@ class FlextInfraUtilitiesDocsGuidesMixin:
             destination = destination_root / source_path.name
             if destination in destinations and destination not in owned:
                 return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].fail(
-                    f"canonical guide collides with protected custom guide: {destination}",
+                    f"canonical guide collides with protected custom guide: "
+                    f"{destination}",
                 )
             relative_path = source_path.relative_to(repository_root).as_posix()
-            issues = FlextInfraUtilitiesDocsCommandContractMixin.docs_command_contract_content_issues(
+            contract_issues = (
+                FlextInfraUtilitiesDocsCommandContractMixin
+                .docs_command_contract_content_issues
+            )
+            issues = contract_issues(
                 source,
                 relative_path=relative_path,
                 effective_verbs=effective_verbs,

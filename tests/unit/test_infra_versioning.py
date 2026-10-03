@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 class TestsFlextInfraInfraVersioning:
     """Behavior contract for test_infra_versioning."""
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("version", "expected"),
         [
@@ -36,13 +37,13 @@ class TestsFlextInfraInfraVersioning:
         ids=["standard", "development", "release-candidate", "zero", "large"],
     )
     def test_parse_semver_valid(
-        self,
         version: str,
         expected: t.Triple[int, int, int],
     ) -> None:
         """Accept only supported canonical PEP 440 release spellings."""
         tm.ok(u.Infra.parse_semver(version), eq=expected)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "version",
         ["1.2", "a.b.c", "1.2.3-beta", "1.2.3-dev", "1.2.3.rc0"],
@@ -54,7 +55,7 @@ class TestsFlextInfraInfraVersioning:
             "legacy-release-candidate",
         ],
     )
-    def test_parse_semver_invalid(self, version: str) -> None:
+    def test_parse_semver_invalid(version: str) -> None:
         """Reject malformed and legacy release spellings."""
         tm.fail(u.Infra.parse_semver(version), has="invalid semver")
 
@@ -63,6 +64,7 @@ class TestsFlextInfraInfraVersioning:
         """Return the canonical three-integer release tuple."""
         tm.ok(u.Infra.parse_semver("1.2.3"), is_=tuple)
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("version", "bump_type", "expected"),
         [
@@ -74,7 +76,6 @@ class TestsFlextInfraInfraVersioning:
         ids=["major", "minor", "patch", "from-zero"],
     )
     def test_bump_version_valid(
-        self,
         version: str,
         bump_type: str,
         expected: str,
@@ -82,6 +83,7 @@ class TestsFlextInfraInfraVersioning:
         """Bump each supported semantic release component."""
         tm.ok(u.Infra.bump_version(version, bump_type), eq=expected)
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("version", "bump_type", "error"),
         [
@@ -91,7 +93,6 @@ class TestsFlextInfraInfraVersioning:
         ids=["invalid-bump-type", "invalid-version"],
     )
     def test_bump_version_invalid(
-        self,
         version: str,
         bump_type: str,
         error: str,
@@ -104,6 +105,7 @@ class TestsFlextInfraInfraVersioning:
         """Return canonical version text from a valid bump."""
         tm.ok(u.Infra.bump_version("1.2.3", "major"), is_=str)
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("content", "expected", "error"),
         [
@@ -122,7 +124,6 @@ class TestsFlextInfraInfraVersioning:
         ],
     )
     def test_current_workspace_version(
-        self,
         tmp_path: Path,
         content: str | None,
         expected: str,
@@ -140,6 +141,7 @@ class TestsFlextInfraInfraVersioning:
             return
         tm.fail(result)
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("content", "expected", "error"),
         [
@@ -150,7 +152,6 @@ class TestsFlextInfraInfraVersioning:
         ids=["success", "missing-file", "missing-project-table"],
     )
     def test_replace_project_version(
-        self,
         tmp_path: Path,
         content: str | None,
         expected: str,

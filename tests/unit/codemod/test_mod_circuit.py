@@ -88,10 +88,16 @@ class TestsFlextInfraModCliRoute:
         tm.that(first_console, has=first_digest)
         tm.that(first_console, lacks='"ruleId"')
 
+        # The repaired module obeys every catalog law: one class carrying the
+        # project's class stem, derived from the fixture's declared name.
+        stem = u.derive_class_stem(mod_workspace.name.replace("_", "-"))
         tm.ok(
             u.Cli.atomic_write_text_file(
                 sample_path,
-                "from __future__ import annotations\n\nvalue = 1\n",
+                '"""Public refactor-mod fixture module."""\n\n'
+                "from __future__ import annotations\n\n\n"
+                f"class {stem}Sample:\n"
+                '    """Fixture namespace."""\n',
             ),
         )
         second_exit = infra_main([
@@ -285,10 +291,17 @@ class TestsFlextInfraModCliRoute:
                 ),
             ),
         )
+        # The sample obeys every universal catalog law (one class carrying
+        # the project's class stem), so only the two local rules match.
+        stem = u.derive_class_stem(mod_workspace.name.replace("_", "-"))
         tm.ok(
             u.Cli.atomic_write_text_file(
                 mod_workspace / "sample.py",
-                "from __future__ import annotations\n\nvalue = dict(\n    a=1,\n)\n",
+                '"""Public refactor-mod fixture module."""\n\n'
+                "from __future__ import annotations\n\n\n"
+                f"class {stem}Sample:\n"
+                '    """Fixture namespace."""\n\n'
+                "    value = dict(\n        a=1,\n    )\n",
             ),
         )
 

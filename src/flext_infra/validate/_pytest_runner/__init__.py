@@ -24,7 +24,6 @@ if TYPE_CHECKING:
         FlextInfraPytestRunnerReports,
     )
 
-
 __all__: tuple[str, ...] = (
     "FlextInfraPytestRunnerBase",
     "FlextInfraPytestRunnerCommand",

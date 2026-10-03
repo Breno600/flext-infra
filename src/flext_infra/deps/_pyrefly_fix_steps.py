@@ -89,8 +89,8 @@ class FlextInfraConfigFixerSteps:
             ])
         return r[t.StrSequence].ok(())
 
+    @staticmethod
     def _strip_ignored_sub_configs(
-        self,
         pyrefly: MutableMapping[str, t.JsonValue],
     ) -> p.Result[t.Pair[t.StrSequence, bool]]:
         """Drop ignore=true entries from tool.pyrefly.sub-config.
@@ -144,8 +144,8 @@ class FlextInfraConfigFixerSteps:
             )
         return r[tuple[t.StrSequence, bool]].ok((fixes, removed_ignore))
 
+    @staticmethod
     def _sync_project_excludes(
-        self,
         pyrefly: MutableMapping[str, t.JsonValue],
     ) -> p.Result[t.StrSequence]:
         """Synchronize tool.pyrefly.project-excludes from YAML rules.

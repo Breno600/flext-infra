@@ -45,7 +45,7 @@ class FlextInfraUtilitiesPyprojectSession:
         uv = u.Cli.toml_table_child(tool, c.Infra.UV) if tool is not None else None
         if uv is not None and u.Cli.toml_table_child(uv, "sources") is not None:
             return r[m.Infra.BindingResolution].fail(
-                "session binding requires declared dependency URLs, not tool.uv.sources",
+                "session binding requires dependency URLs, not tool.uv.sources",
             )
         active = tuple(
             parsed

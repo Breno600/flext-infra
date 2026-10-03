@@ -127,7 +127,11 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         if cached is not None:
             return cached
         pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
-        state = FlextInfraUtilitiesRopeAnalysisImportState._module_semantic_state_from_pymodule(
+        state_from = (
+            FlextInfraUtilitiesRopeAnalysisImportState
+            ._module_semantic_state_from_pymodule
+        )
+        state = state_from(
             rope_project=rope_project,
             resource=resource,
             pymodule=pymodule,
@@ -203,7 +207,10 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         class_infos: t.MutableSequenceOf[m.Infra.ClassInfo] = []
         ast_bases_by_class = {
             class_info.name: class_info.bases
-            for class_info in FlextInfraUtilitiesRopeAnalysisAstHelpers.class_info_from_source(
+            for class_info in (
+                FlextInfraUtilitiesRopeAnalysisAstHelpers
+                .class_info_from_source
+            )(
                 resource.read(),
             )
         }
@@ -491,7 +498,10 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         """
         return tuple(
             class_info.name
-            for class_info in FlextInfraUtilitiesRopeAnalysisImportState.resolve_module_semantic_state(
+            for class_info in (
+                FlextInfraUtilitiesRopeAnalysisImportState
+                .resolve_module_semantic_state
+            )(
                 rope_project,
                 resource,
             ).class_infos

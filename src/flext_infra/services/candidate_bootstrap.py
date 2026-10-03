@@ -109,7 +109,7 @@ class FlextInfraCandidateBootstrapService:
             destinations = self._planner.surface_contract(target.what).destinations
             if not destinations:
                 return r[m.Infra.CodegenPhaseAnalysis].fail(
-                    f"candidate bootstrap must plan exactly one Makefile: {root}",
+                    f"candidate bootstrap has no declared destinations: {root}",
                 )
             for file in planned.value.files:
                 files.append(file)

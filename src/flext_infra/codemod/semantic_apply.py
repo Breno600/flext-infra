@@ -50,7 +50,7 @@ class FlextInfraCodemodSemanticApply:
 
         """
         original = cls._source_inventory(root, preflight)
-        from .._utilities.codegen_path_cutover import (
+        from flext_infra._utilities.codegen_path_cutover import (
             FlextInfraUtilitiesCodegenPathCutover,
         )
 
@@ -464,7 +464,7 @@ class FlextInfraCodemodSemanticApply:
             ValueError: If source changed after semantic preflight.
 
         """
-        from ..refactor._census_apply_formatting import (
+        from flext_infra.refactor._census_apply_formatting import (
             FlextInfraRefactorCensusApplyFormattingMixin,
         )
 

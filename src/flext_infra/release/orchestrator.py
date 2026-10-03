@@ -33,6 +33,17 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
         str,
         m.Field(description="Pull-request title to validate against the protocol"),
     ] = ""
+    conform_collaborators: Annotated[
+        m.Infra.CodegenConformPorts | None,
+        m.Field(
+            default=None,
+            exclude=True,
+            description=(
+                "Docs port bound by the FlextInfra facade; the settling "
+                "conform fails before any effect without it"
+            ),
+        ),
+    ]
 
     @override
     def execute(self) -> p.Result[bool]:
@@ -133,7 +144,10 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
         stamped = u.Infra.replace_project_version(root, plan.next)
         if stamped.failure:
             return stamped
-        settled = FlextInfraCodegenConform.settle_repository(root)
+        settled = FlextInfraCodegenConform.settle_repository(
+            root,
+            ports=self.conform_collaborators,
+        )
         if settled.failure:
             return settled
         projects = u.Infra.resolve_projects(root, ctx.project_names)
@@ -151,7 +165,8 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
             return generated
         return u.Infra.update_changelog(root, plan.next, plan.tag, notes)
 
-    def phase_tag(self, ctx: m.Infra.ReleasePhaseDispatchConfig) -> p.Result[bool]:
+    @staticmethod
+    def phase_tag(ctx: m.Infra.ReleasePhaseDispatchConfig) -> p.Result[bool]:
         """Tag the merged release commit; idempotent when the tag already points here.
 
         Returns:

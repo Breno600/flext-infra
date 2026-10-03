@@ -172,6 +172,42 @@ class FlextInfraModelsRefactorGrep:
             m.Field(description="Executable provider configs in precedence order"),
         ]
 
+    class CodemodProjectFacts(m.ArbitraryTypesModel):
+        """Project facts one admission pass reads, built from the current tree.
+
+        A pass builds only the facts its rules' predicates ask for, so a
+        project rewritten between passes is always read as it now is.
+        """
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        predicates: Annotated[
+            frozenset[c.Infra.CodemodContextPredicate],
+            m.Field(description="Context predicates these facts were built for"),
+        ]
+        import_graph: Annotated[
+            t.MappingKV[str, frozenset[str]],
+            m.Field(
+                description="Runtime import edges of each project module",
+            ),
+        ]
+        import_modules: Annotated[
+            t.MappingKV[Path, str],
+            m.Field(
+                description="Module name of each project source file",
+            ),
+        ]
+        import_cycles: Annotated[
+            t.MappingKV[str, frozenset[str]],
+            m.Field(
+                description="Members of the runtime import cycle of each module",
+            ),
+        ]
+        runtime_modules: Annotated[
+            frozenset[str],
+            m.Field(description="Import packages of the runtime dependency closure"),
+        ]
+
     class MethodOrderRule(m.ContractModel):
         """A declarative method ordering rule for class reconstruction.
 
