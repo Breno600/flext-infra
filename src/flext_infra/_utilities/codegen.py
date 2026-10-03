@@ -78,6 +78,10 @@ class FlextInfraUtilitiesCodegen(
             transaction_lock_file=toolchain.mise_transaction_lock_file,
             runtime_install_relative_template=c.Infra.MISE_RUNTIME_INSTALL_RELATIVE_TEMPLATE,
             resolved_release_pattern=c.Infra.MISE_RELEASE_PATTERN,
+            credential_commands=tuple(
+                tuple(cmd for cmd in command)
+                for command in c.Infra.MISE_BOOTSTRAP_CREDENTIAL_COMMANDS
+            ),
         )
 
     @staticmethod
