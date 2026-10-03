@@ -185,17 +185,17 @@ never authorizes broad exclusions or changes to the native payload.
 
 ## Bootstrap credentials
 
-The GitHub credential is optional and has one variable, `GITHUB_TOKEN`, which mise,
-gh, and uv all read. The caller supplies it directly; ai-hub may project it into a
-project through `.envrc.ai-hub`. The network bootstrap (`make setup`, `make upg`)
-never runs a credential command or reads a keyring. With no token, public GitHub
-requests use the upstream tool's native unauthenticated behavior. The value is never
-printed. Make
-unexports the tool-scoped aliases `GH_TOKEN`, `MISE_GITHUB_TOKEN`, and
-`GITHUB_API_TOKEN` from every recipe, because an alias of the same credential would
-shadow or outrank `GITHUB_TOKEN`. An invalid token preserves the backend's native
-error, without an anonymous retry or source switch. CI jobs inject `GITHUB_TOKEN`;
-containers receive the variable or a BuildKit secret explicitly.
+The GitHub credential is optional and is selected once, in the generated Makefile
+preamble, for every verb: the first non-empty of the caller's `GITHUB_TOKEN`,
+`GH_TOKEN`, `MISE_GITHUB_TOKEN`, then `gh auth token` when gh is installed and
+authenticated. Make exports that one value as `GITHUB_TOKEN`, `GH_TOKEN`, and
+`MISE_GITHUB_TOKEN`, so gh, uv, and mise read the same credential and no inherited
+alias can shadow it; `GITHUB_API_TOKEN` is unexported. The network bootstrap passes
+the three names into its isolated `env -i` Mise environment. With no token, public
+GitHub requests use the upstream tool's native unauthenticated behavior. The value
+is never printed. An invalid token preserves the backend's native error, without an
+anonymous retry or source switch. CI jobs inject `GITHUB_TOKEN`; containers receive
+the variable or a BuildKit secret explicitly.
 
 ## Evidence and checkpoints
 

@@ -93,13 +93,25 @@ export GEN_INIT_ONLY
 endif
 endif
 
-# GITHUB_TOKEN is the one GitHub credential variable every tool reads (mise,
-# gh, uv). The caller's environment supplies it (ai-hub propagates it through
-# .envrc.ai-hub). Bootstrap does not read a keyring or select a credential
-# command. A tool-scoped alias of the same credential never reaches a recipe,
-# where it would shadow or outrank it. The value is never printed.
-export GITHUB_TOKEN
-unexport GH_TOKEN MISE_GITHUB_TOKEN GITHUB_API_TOKEN
+# One GitHub credential for every verb (operator 2026-10-03): the first
+# non-empty of the caller's GITHUB_TOKEN, GH_TOKEN, MISE_GITHUB_TOKEN, then the
+# declared credential command when it is installed. Every name gh, uv and mise
+# read carries that same value, so no inherited alias can shadow it. The value
+# stays in the environment and is never printed.
+GITHUB_TOKEN := $(firstword $(GITHUB_TOKEN) $(GH_TOKEN) $(MISE_GITHUB_TOKEN))
+{% for command in mise_bootstrap.credential_commands -%}
+ifeq ($(GITHUB_TOKEN),)
+GITHUB_TOKEN := $(shell command -v {{ command[0] }} >/dev/null 2>&1 && {{ command | join(' ') }} 2>/dev/null)
+endif
+{% endfor -%}
+ifneq ($(GITHUB_TOKEN),)
+GH_TOKEN := $(GITHUB_TOKEN)
+MISE_GITHUB_TOKEN := $(GITHUB_TOKEN)
+export GITHUB_TOKEN GH_TOKEN MISE_GITHUB_TOKEN
+else
+unexport GITHUB_TOKEN GH_TOKEN MISE_GITHUB_TOKEN
+endif
+unexport GITHUB_API_TOKEN
 
 # === SECTION: project identity (managed) ===
 # Source: config:dist / config:make_profile / config:repository_root_rel / config:uv_link_mode

@@ -120,8 +120,8 @@ Infra:
       # invalid version") — keep it out.
       mise_selector: github:jdx/mise
       mise_version: "2026.9.16"
-      # The caller supplies GITHUB_TOKEN through the declared environment.
-      # Bootstrap never reads a keyring or runs a credential command.
+      # The generated Makefile preamble selects the one GitHub credential
+      # (caller variables, then gh auth token) for every verb.
       # Projection: .mise.toml [tools] keys. Override the selector here.
       qlty_selector: github:qltysh/qlty
       qlty_version: latest
