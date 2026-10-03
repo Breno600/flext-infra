@@ -1,4 +1,8 @@
-"""Runtime vs dev dependency detector CLI with deptry, pip-check, and typing analysis."""
+"""Runtime vs dev dependency detector CLI with deptry, pip-check, and typing analysis.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,9 +12,8 @@ from typing import Annotated, override
 
 from flext_infra import m, p, t
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
-
-from .detection import FlextInfraDependencyDetectionService
-from .detector_runtime import FlextInfraDependencyDetectorRuntime
+from flext_infra.deps.detection import FlextInfraDependencyDetectionService
+from flext_infra.deps.detector_runtime import FlextInfraDependencyDetectorRuntime
 
 
 class FlextInfraRuntimeDevDependencyDetector(
@@ -66,7 +69,12 @@ class FlextInfraRuntimeDevDependencyDetector(
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute dependency detection and generate workspace report."""
+        """Execute dependency detection and generate workspace report.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         payload: MutableMapping[str, t.JsonValue] = {
             "repository_root": str(self.root),
             "apply": self.apply_changes,

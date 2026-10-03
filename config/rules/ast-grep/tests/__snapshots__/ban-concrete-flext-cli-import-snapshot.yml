@@ -1,0 +1,30 @@
+id: ban-concrete-flext-cli-import
+snapshots:
+  from flext_cli import FlextCliConstants:
+    labels:
+    - source: from flext_cli import FlextCliConstants
+      style: primary
+      start: 0
+      end: 39
+    - source: flext_cli
+      style: secondary
+      start: 5
+      end: 14
+    - source: FlextCliConstants
+      style: secondary
+      start: 22
+      end: 39
+  from flext_cli import m, FlextCliModels as M:
+    labels:
+    - source: from flext_cli import m, FlextCliModels as M
+      style: primary
+      start: 0
+      end: 44
+    - source: flext_cli
+      style: secondary
+      start: 5
+      end: 14
+    - source: FlextCliModels
+      style: secondary
+      start: 25
+      end: 39

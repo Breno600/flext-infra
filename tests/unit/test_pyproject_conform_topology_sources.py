@@ -20,30 +20,54 @@ from tests import TestsFlextInfraUtilities as tu, u as test_u
 
 
 class TestsFlextInfraPyprojectConformTopologySources:
+    """Tests for ``FlextInfraPyprojectConformTopologySources``."""
+
     _ROLE = c.Infra.MakeProfile
 
     def _member_ref(self, distribution: str, path: str) -> m.Infra.RepositoryRef:
-        """Declare one standalone-capable member through the provider contract."""
+        """Declare one standalone-capable member through the provider contract.
+
+        Returns:
+            The resulting ``m.Infra.RepositoryRef``.
+
+        """
         return test_u.Tests.repository_ref(
             distribution,
             role=self._ROLE.STANDALONE,
             path=Path(path),
         )
 
-    def _workspace(self, *members: m.Infra.RepositoryRef) -> m.Infra.WorkspaceSpec:
-        """Compose one workspace fixture from its declared member references."""
+    @staticmethod
+    def _workspace(*members: m.Infra.RepositoryRef) -> m.Infra.WorkspaceSpec:
+        """Compose one workspace fixture from its declared member references.
+
+        Returns:
+            The resulting ``m.Infra.WorkspaceSpec``.
+
+        """
         return test_u.Tests.workspace_spec(
             test_u.Tests.repository_ref("workspace"),
             subprojects=tuple(members),
         )
 
-    def _inline_requirement(self, ref: m.Infra.RepositoryRef) -> str:
-        """Render the direct-source form derived from the declared fixture branch."""
+    @staticmethod
+    def _inline_requirement(ref: m.Infra.RepositoryRef) -> str:
+        """Render the direct-source form derived from the declared fixture branch.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return f"{ref.distribution} @ git+{ref.url}@{test_u.Tests.provider_branch()}"
 
     @staticmethod
     def _toolchain_resolution() -> m.Infra.UvResolutionSpec:
-        """Declare the fleet toolchain's uv resolver keys with no exclusions."""
+        """Declare the fleet toolchain's uv resolver keys with no exclusions.
+
+        Returns:
+            The resulting ``m.Infra.UvResolutionSpec``.
+
+        """
         toolchain = config.Infra.codegen.toolchain
         return m.Infra.UvResolutionSpec(
             link_mode=toolchain.uv_link_mode,
@@ -292,6 +316,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
         tm.that(not uv_sources, eq=True)
 
     def test_external_consumer_keeps_direct_git_requirement(self) -> None:
+        """Test external consumer keeps direct git requirement."""
         workspace = self._workspace(self._member_ref("flext-core", "flext-core"))
         core = workspace.subprojects[0]
         external = (
@@ -313,6 +338,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
         self._assert_direct_source(rendered, core)
 
     def test_publishable_project_keeps_catalog_git_provenance(self) -> None:
+        """Test publishable project keeps catalog git provenance."""
         workspace = self._workspace(
             self._member_ref("flext-core", "flext-core"),
             self._member_ref("flext-api", "flext-api"),

@@ -1,4 +1,8 @@
-"""Domain models for the core subpackage."""
+"""Domain models for the core subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,8 +11,8 @@ from typing import Annotated, ClassVar, Literal, Self
 
 from flext_cli import m, u
 
-from .. import c, t
-from . import FlextInfraModelsMixins as mm
+from flext_infra import c, t
+from flext_infra._models import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsCore:
@@ -110,7 +114,9 @@ class FlextInfraModelsCore:
         unresolved_missing: Annotated[
             t.MutableSequenceOf[str],
             m.Field(
-                description="Missing external imports without an installed typed dependency",
+                description=(
+                    "Missing external imports without an installed typed dependency"
+                ),
             ),
         ] = m.Field(default_factory=list)
         total_missing: Annotated[
@@ -125,7 +131,15 @@ class FlextInfraModelsCore:
 
         @u.model_validator(mode="after")
         def require_unique_node_ids(self) -> Self:
-            """Reject incomplete identifiers and ambiguous worker manifests."""
+            """Reject incomplete identifiers and ambiguous worker manifests.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If collection manifest requires nonempty unique node IDs.
+
+            """
             if any(not node_id for node_id in self.node_ids) or len(
                 self.node_ids,
             ) != len(set(self.node_ids)):
@@ -196,15 +210,6 @@ class FlextInfraModelsCore:
             pattern=r"^[0-9a-f]{64}$",
             description="Digest binding a profile sidecar to its exact pstats artifact",
         )
-        report_directory: Path | None = m.Field(
-            default=None,
-            description="Explicit directory binding profiled parent and children",
-        )
-        profile_sha256: str | None = m.Field(
-            default=None,
-            pattern=r"^[0-9a-f]{64}$",
-            description="Digest binding a profile sidecar to its exact pstats artifact",
-        )
 
     class PytestReportEvent(m.Value):
         """Common report-log envelope and the complete warning payload."""
@@ -241,7 +246,17 @@ class FlextInfraModelsCore:
 
         @u.model_validator(mode="after")
         def require_event_payload(self) -> Self:
-            """Reject incomplete runtime events instead of reporting zero findings."""
+            """Reject incomplete runtime events instead of reporting zero findings.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If WarningMessage requires category, filename, lineno and
+                    message; or if TestReport requires nodeid, a runtest phase and
+                    outcome; or if CollectReport requires nodeid and outcome.
+
+            """
             if self.report_type == "WarningMessage" and any(
                 value is None
                 for value in (self.category, self.filename, self.lineno, self.message)

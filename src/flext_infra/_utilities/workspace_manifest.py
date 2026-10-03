@@ -3,6 +3,9 @@
 Every consumer that needs the workspace manifest, or whether a checkout
 declares itself a fleet umbrella, asks here. The workspace detector service
 consumes this owner; no utility reaches back into the service.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -13,13 +16,12 @@ from typing import TYPE_CHECKING
 from flext_cli import u
 
 from flext_core import r
-
-from .. import c, m, t
+from flext_infra import c, m, t
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from .. import p
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesWorkspaceManifest:
@@ -27,7 +29,12 @@ class FlextInfraUtilitiesWorkspaceManifest:
 
     @staticmethod
     def workspace_manifest_path(repository_root: Path) -> Path:
-        """Return where the workspace manifest lives for one checkout."""
+        """Return where the workspace manifest lives for one checkout.
+
+        Returns:
+            Where the workspace manifest lives for one checkout.
+
+        """
         return repository_root / c.CONFIG_DIR_NAME / c.Infra.WORKSPACE_MANIFEST_FILENAME
 
     @classmethod
@@ -38,6 +45,10 @@ class FlextInfraUtilitiesWorkspaceManifest:
         """Load the checkout's own workspace manifest as a 0-or-1 sequence.
 
         Absence is an EMPTY sequence — success payloads are never ``None``.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.WorkspaceManifestSpec]]``.
+
         """
         manifest_path = cls.workspace_manifest_path(repository_root)
         if not manifest_path.is_file():
@@ -59,6 +70,10 @@ class FlextInfraUtilitiesWorkspaceManifest:
 
         The key is the exact file text, so an edited manifest is a new key,
         never a stale spec.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.WorkspaceManifestSpec]]``.
+
         """
         loaded = u.Cli.yaml_parse(text)
         if loaded.failure:
@@ -83,6 +98,10 @@ class FlextInfraUtilitiesWorkspaceManifest:
         The typed role in the handwritten workspace manifest is the only signal.
         Every governed standalone project also carries this manifest, so file
         existence alone would collapse its docs scope onto an aggregate root.
+
+        Returns:
+            The resulting ``bool``.
+
         """
         manifests = cls.load_workspace_manifest(repository_root).unwrap()
         return any(

@@ -1,11 +1,12 @@
-"""Fail-closed public behavior for the qlty smells gate."""
+"""Fail-closed public behavior for the qlty smells gate.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
-import importlib
-import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import pytest
 from flext_tests import tm
@@ -15,19 +16,14 @@ from flext_infra.check.gate_registry import FlextInfraGateRegistry
 from flext_infra.gates.smells import FlextInfraSmellsGate
 from tests import m, u
 
-if TYPE_CHECKING:
-    from collections.abc import Iterator
-
 
 @pytest.fixture
-def smells_project(tmp_path: Path) -> Iterator[Path]:
-    """One declared, importable project inside ``tmp_path``.
+def smells_project(tmp_path: Path) -> Path:
+    """One declared project inside ``tmp_path`` for qlty to scan.
 
-    The gate also runs the runtime census, which discovers projects through
-    their ``[project]`` table and imports their package, failing loud on
-    either gap — exactly as in a real lane, whose package is importable from
-    its environment. The package name is unique per test so no module cached
-    by another test stands in for this one.
+    Returns:
+        The resulting ``Path``.
+
     """
     name = f"smells-{tmp_path.name}"
     project = u.Tests.mk_project(
@@ -36,27 +32,23 @@ def smells_project(tmp_path: Path) -> Iterator[Path]:
         pyproject=f'[project]\nname = "{name}"\nversion = "0.1.0"\n',
         with_src=True,
     )
-    src = str(project / "src")
-    sys.path.insert(0, src)
-    importlib.invalidate_caches()
-    try:
-        yield project
-    finally:
-        sys.path.remove(src)
-        importlib.invalidate_caches()
+    return project
 
 
 class TestsFlextInfraSmellsGate:
     """Exercise observable gate behavior with the real setup-provisioned tool."""
 
-    def _ctx(self, root: Path) -> m.Infra.GateContext:
+    @staticmethod
+    def _ctx(root: Path) -> m.Infra.GateContext:
         return m.Infra.GateContext(repository_root=root, reports_dir=root / "reports")
 
     @staticmethod
     def _package(project: Path) -> Path:
         return project / "src" / project.name.replace("-", "_")
 
-    def test_registry_exposes_the_canonical_gate(self) -> None:
+    @staticmethod
+    def test_registry_exposes_the_canonical_gate() -> None:
+        """Test registry exposes the canonical gate."""
         gate = FlextInfraGateRegistry.default().get("smells")
         tm.that(gate is FlextInfraSmellsGate, eq=True)
 
@@ -65,6 +57,7 @@ class TestsFlextInfraSmellsGate:
         tmp_path: Path,
         smells_project: Path,
     ) -> None:
+        """Test missing project configuration is a blocking failure."""
         execution = FlextInfraSmellsGate(tmp_path).check(
             smells_project,
             self._ctx(tmp_path),
@@ -78,7 +71,8 @@ class TestsFlextInfraSmellsGate:
             eq=True,
         )
 
-    def _configure(self, root: Path) -> None:
+    @staticmethod
+    def _configure(root: Path) -> None:
         tm.ok(u.Cli.run_checked(["git", "init", "-q", str(root)]))
         config_dir = root / c.Infra.QLTY_CONFIG_DIRNAME
         config_dir.mkdir()
@@ -97,6 +91,7 @@ class TestsFlextInfraSmellsGate:
         tmp_path: Path,
         smells_project: Path,
     ) -> None:
+        """Test zero findings scan is a pass."""
         self._configure(tmp_path)
 
         execution = FlextInfraSmellsGate(tmp_path).check(
@@ -112,6 +107,7 @@ class TestsFlextInfraSmellsGate:
         tmp_path: Path,
         smells_project: Path,
     ) -> None:
+        """Test finding states the concrete problem and the fix."""
         self._configure(tmp_path)
         params = ", ".join(
             f"p{index}" for index in range(c.SMELL_THRESHOLDS["params"] * 2)
@@ -132,40 +128,19 @@ class TestsFlextInfraSmellsGate:
         tm.that(any("{" in message for message in messages), eq=False)
         tm.that(all(" Fix: " in message for message in messages), eq=True)
 
-    def test_runtime_census_smell_families_are_graded_here(
+    def test_qlty_scan_does_not_run_runtime_census(
         self,
         tmp_path: Path,
         smells_project: Path,
     ) -> None:
-        """Premise (operator 2026-10-01): make smells owns every smell family.
-
-        A class method over the parameter threshold trips the runtime-census
-        smell; the smells gate reports it as a blocking finding.
-        """
+        """Qlty owns this gate even when census project metadata is unavailable."""
         self._configure(tmp_path)
-        params = ", ".join(
-            f"p{index}" for index in range(c.SMELL_THRESHOLDS["params"] + 1)
-        )
-        (self._package(smells_project) / "__init__.py").write_text(
-            '"""Fixture package with one wide method."""\n\n\n'
-            "class Wide:\n"
-            '    """Holds one method over the parameter threshold."""\n\n'
-            f"    def run(self, {params}):\n"
-            '        """Too many parameters."""\n'
-            "        return p0\n",
-            encoding=c.Cli.ENCODING_DEFAULT,
-        )
+        (smells_project / c.PYPROJECT_FILENAME).unlink()
 
         execution = FlextInfraSmellsGate(tmp_path).check(
             smells_project,
             self._ctx(tmp_path),
         )
 
-        tm.that(execution.result.passed, eq=False)
-        census_tags = {
-            tag
-            for issue in execution.issues
-            for tag in c.ENFORCEMENT_SMELL_TAGS
-            if issue.message.endswith(f"[{tag}]")
-        }
-        tm.that("smell_function_parameters" in census_tags, eq=True)
+        tm.that(execution.result.passed, eq=True)
+        tm.that(execution.issues, length=0)

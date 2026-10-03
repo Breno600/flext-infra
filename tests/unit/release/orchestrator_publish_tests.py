@@ -1,4 +1,8 @@
-"""Public release receipt validation using real builds and artifact bytes."""
+"""Public release receipt validation using real builds and artifact bytes.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -12,8 +16,14 @@ from tests import TestsFlextInfraUtilities as u, c, m, t
 class TestsFlextInfraReleasePublish:
     """Behavior contract for the public release publish phase."""
 
-    def _built_workspace(self, tmp_path: Path) -> t.Pair[Path, m.Infra.BuildReport]:
-        """Build one member and return the workspace with its verified receipt."""
+    @staticmethod
+    def _built_workspace(tmp_path: Path) -> t.Pair[Path, m.Infra.BuildReport]:
+        """Build one member and return the workspace with its verified receipt.
+
+        Returns:
+            The resulting ``t.Pair[Path, m.Infra.BuildReport]``.
+
+        """
         project_name = "flext-a"
         workspace = u.Tests.create_release_workspace(
             tmp_path,
@@ -66,7 +76,8 @@ class TestsFlextInfraReleasePublish:
             ne=0,
         )
 
-    def test_missing_receipt_is_refused(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_missing_receipt_is_refused(tmp_path: Path) -> None:
         """Publishing without a build receipt has nothing attested to upload."""
         workspace = u.Tests.create_release_workspace(tmp_path)
 

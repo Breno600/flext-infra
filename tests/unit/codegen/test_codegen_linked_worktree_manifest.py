@@ -1,4 +1,8 @@
-"""Repository-local topology ownership inside linked worktrees."""
+"""Repository-local topology ownership inside linked worktrees.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,8 +23,8 @@ from tests import u
 class TestsFlextInfraCodegenLinkedWorktreeManifest:
     """Keep topology inputs and writes owned by the repository being conformed."""
 
+    @staticmethod
     def test_linked_lane_reads_its_local_beads_identity_and_only_writes_lane(
-        self,
         tmp_path: Path,
     ) -> None:
         """Use dirty lane-local policy without reading or mutating the primary."""
@@ -68,7 +72,12 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
             ),
         )
 
-        (makefile_plan,) = plan.files
+        planned = {item.path: item for item in plan.files}
+        tm.that(
+            set(planned),
+            eq={lane / item for item in c.Infra.MAKEFILE_BOOTSTRAP_DESTINATIONS},
+        )
+        makefile_plan = planned[lane / c.Infra.MAKEFILE_FILENAME]
         tm.that(
             u.Tests.codegen_file_text(makefile_plan),
             has="MAKE_PROFILE := standalone",
@@ -90,6 +99,7 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
             eq=primary_snapshot,
         )
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("beads_content", "expected_error"),
         [
@@ -106,7 +116,6 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
         ],
     )
     def test_invalid_local_beads_identity_fails_before_any_write(
-        self,
         tmp_path: Path,
         beads_content: str | None,
         expected_error: str,
@@ -132,14 +141,14 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
                 root,
                 scope=c.Infra.CodegenConformScope.SELF,
                 mode=c.Infra.CodegenConformMode.APPLY,
-            )
+            ),
         )
 
         tm.fail(result, has=expected_error)
         tm.that(u.Tests.WorktreeFixture.repository_snapshot(root), eq=before)
 
+    @staticmethod
     def test_workspace_members_inherit_identity_and_topology_inputs_are_never_rewritten(
-        self,
         tmp_path: Path,
     ) -> None:
         """Members declare the workspace identity; conform never rewrites inputs."""
@@ -187,7 +196,7 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
                     root,
                     scope=c.Infra.CodegenConformScope.DECLARED,
                     mode=c.Infra.CodegenConformMode.APPLY,
-                )
+                ),
             ),
         )
 
@@ -210,8 +219,8 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
             tm.that(route.is_symlink(), eq=False)
             tm.that((route / "config.yaml").is_file(), eq=True)
 
+    @staticmethod
     def test_declared_subproject_cannot_escape_through_a_linked_path(
-        self,
         tmp_path: Path,
     ) -> None:
         """Reject a declared subproject whose path resolves outside its owner."""
@@ -241,7 +250,7 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
                 what=c.Infra.CodegenConformSurface.MAKEFILE,
                 scope=c.Infra.CodegenConformScope.DECLARED,
                 mode=c.Infra.CodegenConformMode.CHECK,
-            )
+            ),
         )
 
         tm.fail(result, has="escapes workspace root")

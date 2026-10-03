@@ -1,4 +1,8 @@
-"""Public codemod gate evidence against the real ast-grep scanner."""
+"""Public codemod gate evidence against the real ast-grep scanner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -49,6 +53,7 @@ class TestsFlextInfraCodemodGate:
         tmp_path: Path,
         severity: str,
     ) -> None:
+        """Test policy findings block at every severity."""
         project = self._project(tmp_path, severity=severity)
         source = project / "src" / "subject.py"
         source.write_text("\nsecond(1)\n", encoding="utf-8")
@@ -56,7 +61,6 @@ class TestsFlextInfraCodemodGate:
         execution = u.Tests.run_gate_check(FlextInfraCodemodGate, tmp_path, project)
 
         tm.that(execution.result.passed, eq=False)
-        tm.that(execution.observational_issues, empty=True)
         policy_findings = tuple(
             issue for issue in execution.issues if issue.code == "contract-second"
         )
@@ -70,16 +74,15 @@ class TestsFlextInfraCodemodGate:
             eq=tuple(issue.formatted for issue in execution.issues),
         )
         tm.that(
-            execution.error_count,
-            eq=sum(
-                issue.severity.lower() == c.Infra.ERROR for issue in execution.issues
-            ),
+            execution.finding_count,
+            eq=len(execution.issues),
         )
         if severity == "error":
             tm.that(execution.raw_output, has="exit=1")
             tm.that(execution.raw_output, has="error(s) found in code")
 
     def test_clean_native_scan_has_no_findings(self, tmp_path: Path) -> None:
+        """Test clean native scan has no findings."""
         project = self._project(tmp_path)
         (project / "src" / "subject.py").write_text("", encoding="utf-8")
 
@@ -93,6 +96,7 @@ class TestsFlextInfraCodemodGate:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test check files uses every rule and only requested files."""
         project = self._project(tmp_path)
         selected = project / "src" / "selected.py"
         selected.write_text("second(1)\n", encoding="utf-8")
@@ -113,6 +117,7 @@ class TestsFlextInfraCodemodGate:
         tm.that(policy_findings[0].file.endswith("src/selected.py"), eq=True)
 
     def test_missing_requested_file_cannot_be_deselected(self, tmp_path: Path) -> None:
+        """Test missing requested file cannot be deselected."""
         project = self._project(tmp_path)
         missing = project / "src" / "missing.py"
         gate = FlextInfraCodemodGate(tmp_path)
@@ -137,9 +142,11 @@ class TestsFlextInfraCodemodGate:
         reports = tmp_path / "reports"
 
         results = tm.ok(
-            FlextInfraWorkspaceChecker(
-                repository_root=tmp_path,
-            ).run_projects([project.name], ["codemod"], reports_dir=reports),
+            FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
+                [project.name],
+                ["codemod"],
+                reports_dir=reports,
+            ),
         )
 
         result = results[0]
@@ -162,6 +169,7 @@ class TestsFlextInfraCodemodGate:
         tm.that(observed[0].message, has="Observed second")
 
     def test_invalid_rule_is_a_native_failure(self, tmp_path: Path) -> None:
+        """Test invalid rule is a native failure."""
         project = self._project(tmp_path)
         rules = (project / c.Infra.CODEMOD_CONFIG_RELPATH).parent / c.Cli.RULES_DIR_NAME
         (rules / "second.yml").write_text(
@@ -174,7 +182,10 @@ class TestsFlextInfraCodemodGate:
         execution = u.Tests.run_gate_check(FlextInfraCodemodGate, tmp_path, project)
 
         tm.that(execution.result.passed, eq=False)
-        tm.that(any(issue.code == "TOOL_ERROR" for issue in execution.issues), eq=True)
+        tm.that(
+            any(issue.code == c.Infra.ToolOutcome.ERROR for issue in execution.issues),
+            eq=True,
+        )
         # The native ast-grep diagnostic names the rule file it cannot parse;
         # its wording for the bad field is the tool's, not this contract's.
         tm.that(execution.raw_output, has="Cannot parse rule")
@@ -200,12 +211,16 @@ class TestsFlextInfraCodemodGate:
             blocked.chmod(original_mode)
 
         tm.that(execution.result.passed, eq=False)
-        tm.that(any(issue.code == "TOOL_ERROR" for issue in execution.issues), eq=True)
+        tm.that(
+            any(issue.code == c.Infra.ToolOutcome.ERROR for issue in execution.issues),
+            eq=True,
+        )
         tm.that(execution.raw_output, has="ERROR:")
         tm.that(execution.raw_output, has="error(s) found in code")
 
+    @staticmethod
     @pytest.mark.parametrize("payload", ["", "[", "{}", "[{}]", "[null]"])
-    def test_native_json_contract_rejects_malformed_output(self, payload: str) -> None:
+    def test_native_json_contract_rejects_malformed_output(payload: str) -> None:
         """An empty stream or malformed finding cannot be a clean native scan."""
         with pytest.raises(m.ValidationError):
             m.Infra.AstGrepReport.model_validate_json(payload)

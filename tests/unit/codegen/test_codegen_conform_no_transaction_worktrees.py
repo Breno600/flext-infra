@@ -1,4 +1,8 @@
-"""Conform never leaks orphan ``-transaction-<hex>`` sibling worktrees (flext-f73ii)."""
+"""Conform never leaks orphan ``-transaction-<hex>`` sibling worktrees (flext-f73ii).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -23,19 +27,30 @@ class TestsFlextInfraCodegenConformNoTransactionWorktrees:
     unreachable from any branch (one ``git gc`` away from destruction).
     """
 
-    def _transaction_worktree_siblings(self, root: Path) -> t.VariadicTuple[str]:
-        """Name sibling directories that look like detached transaction worktrees."""
+    @staticmethod
+    def _transaction_worktree_siblings(root: Path) -> t.VariadicTuple[str]:
+        """Name sibling directories that look like detached transaction worktrees.
+
+        Returns:
+            The resulting ``t.VariadicTuple[str]``.
+
+        """
         return tuple(
             entry.name
             for entry in root.parent.iterdir()
             if entry.is_dir() and _TRANSACTION_MARKER in entry.name
         )
 
-    def _seed_committed_drift(self, tmp_path: Path) -> t.Pair[Path, Path]:
+    @staticmethod
+    def _seed_committed_drift(tmp_path: Path) -> t.Pair[Path, Path]:
         """Materialize the managed tree, then commit one drifted managed Makefile.
 
         Returns the conformed repository root and the drifted file: the shared
         builder owns where the repository lives below ``tmp_path``.
+
+        Returns:
+            The resulting ``t.Pair[Path, Path]``.
+
         """
         root = u.Tests.WorktreeFixture.conformed_root(tmp_path)
         drifted = root / c.Infra.MAKEFILE_FILENAME
@@ -60,7 +75,7 @@ class TestsFlextInfraCodegenConformNoTransactionWorktrees:
                 root,
                 scope=c.Infra.CodegenConformScope.SELF,
                 mode=c.Infra.CodegenConformMode.CHECK,
-            )
+            ),
         )
 
         tm.fail(result, has="codegen drift detected")
@@ -83,7 +98,7 @@ class TestsFlextInfraCodegenConformNoTransactionWorktrees:
                 root,
                 scope=c.Infra.CodegenConformScope.SELF,
                 mode=c.Infra.CodegenConformMode.APPLY,
-            )
+            ),
         )
         tm.that(drifted.read_text(encoding="utf-8"), lacks="# managed drift")
         converged_bytes = drifted.read_bytes()
@@ -92,7 +107,7 @@ class TestsFlextInfraCodegenConformNoTransactionWorktrees:
                 root,
                 scope=c.Infra.CodegenConformScope.SELF,
                 mode=c.Infra.CodegenConformMode.APPLY,
-            )
+            ),
         )
         tm.that(drifted.read_bytes(), eq=converged_bytes)
         tm.that(self._transaction_worktree_siblings(root), eq=before)

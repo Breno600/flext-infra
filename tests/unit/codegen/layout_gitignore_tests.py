@@ -1,4 +1,8 @@
-"""Tests for layout gitignore, tracked-file moves, and the canonical render."""
+"""Tests for layout gitignore, tracked-file moves, and the canonical render.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -22,7 +26,8 @@ from tests.unit.codegen.layout_fixture import (
 class TestsFlextInfraCodegenLayoutGitignore:
     """Test suite for layout gitignore, tracked-file moves, and canonical render."""
 
-    def test_apply_adds_gitignore_entries_exactly_once(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_apply_adds_gitignore_entries_exactly_once(tmp_path: Path) -> None:
         """Gitignore additions from the SSOT are appended once across applies."""
         project = build_loose_project(tmp_path, name="flext-cli")
         (project / "settings.json").write_text("{}\n", encoding="utf-8")
@@ -45,7 +50,8 @@ class TestsFlextInfraCodegenLayoutGitignore:
             eq=True,
         )
 
-    def test_apply_uses_git_mv_for_tracked_files(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_apply_uses_git_mv_for_tracked_files(tmp_path: Path) -> None:
         """Tracked sources move through git so history follows the rename."""
         project = build_loose_project(tmp_path)
         engine = layout_engine(tmp_path, apply_changes=True)
@@ -63,7 +69,8 @@ class TestsFlextInfraCodegenLayoutGitignore:
             eq=False,
         )
 
-    def test_managed_gitignore_render_includes_layout_additions(self) -> None:
+    @staticmethod
+    def test_managed_gitignore_render_includes_layout_additions() -> None:
         """The canonical gitignore render owns the layout SSOT additions."""
         rendered = FlextInfraCodegenConform.render_project_gitignore(
             config.Infra.codegen,
@@ -75,8 +82,8 @@ class TestsFlextInfraCodegenLayoutGitignore:
         tm.that(rendered.value, has="settings.json")
         tm.that(rendered.value, has=f"{archive_root()}/")
 
+    @staticmethod
     def test_rendered_gitignore_keeps_backup_named_python_sources(
-        self,
         tmp_path: Path,
     ) -> None:
         """A backup module is source code even when its name contains backup."""
@@ -97,10 +104,10 @@ class TestsFlextInfraCodegenLayoutGitignore:
         )
         tm.that(tracked.failure, eq=True)
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("directory_suffix", ["", "-lane"])
     def test_rendered_gitignore_satisfies_layout_additions(
-        self,
         tmp_path: Path,
         directory_suffix: str,
     ) -> None:
@@ -147,7 +154,7 @@ class TestsFlextInfraCodegenLayoutGitignore:
                     upstream=project.upstream,
                     year=project.year,
                     apply_changes=True,
-                )
+                ),
             ),
         )
         tm.that(
@@ -169,8 +176,8 @@ class TestsFlextInfraCodegenLayoutGitignore:
             eq=(),
         )
 
+    @staticmethod
     def test_layout_preserves_tracked_ignored_files_and_ignores_local_artifacts(
-        self,
         tmp_path: Path,
     ) -> None:
         """Local ignored files are not layout inputs; tracked files remain reviewable."""

@@ -1,4 +1,8 @@
-"""Deterministic plan collection through existing documentation file plans."""
+"""Deterministic plan collection through existing documentation file plans.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,9 +12,10 @@ from hashlib import sha256
 from pathlib import Path
 
 from flext_infra import m, t
-
-from .docs_collection_verify import FlextInfraUtilitiesDocsCollectionVerify
-from .docs_contract import FlextInfraUtilitiesDocsContract
+from flext_infra._utilities.docs_collection_verify import (
+    FlextInfraUtilitiesDocsCollectionVerify,
+)
+from flext_infra._utilities.docs_contract import FlextInfraUtilitiesDocsContract
 
 
 class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify):
@@ -22,7 +27,21 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
         repository_root: Path,
         configuration: m.Infra.PlanCollectionConfig,
     ) -> m.Infra.PlanCollectionBundle:
-        """Capture sources before any canonical or home projection writes."""
+        """Capture sources before any canonical or home projection writes.
+
+        Returns:
+            The resulting ``m.Infra.PlanCollectionBundle``.
+
+        Raises:
+            ValueError: If unsafe canonical collection directory; or if unsafe
+                collection projection association; or if collection source identities
+                must be unique; or if file source requires publication approval; or if
+                immutable canonical artifact changed or disappeared; or if undeclared
+                collection destination; or if collection target changed after source
+                read; or if private source cannot publish; or if collection source
+                changed during read.
+
+        """
         root = repository_root.absolute()
         relative = configuration.canonical_dir
         if relative.is_absolute() or not relative.parts or ".." in relative.parts:
@@ -301,6 +320,13 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
         ``artifacts`` starts with the plan itself, followed by its companion
         attachments; a previously recorded revision keeps its identity and its
         canonical destination, which must stay inside ``canonical``.
+
+        Returns:
+            The resulting ``m.Infra.PlanCollectionRevision``.
+
+        Raises:
+            ValueError: If plan content absent; or if absent collected artifact.
+
         """
         path = artifacts[0].path
         identity = (
@@ -362,7 +388,16 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
         *,
         states: t.MutableMappingKV[Path, m.Cli.AtomicFileState],
     ) -> m.Infra.PlanCollectionRevision:
-        """Keep curated canonical text intact while recording incoming revisions."""
+        """Keep curated canonical text intact while recording incoming revisions.
+
+        Returns:
+            The resulting ``m.Infra.PlanCollectionRevision``.
+
+        Raises:
+            ValueError: If plan content absent; or if attachment content absent; or if
+                incoming revision receipt identity changed.
+
+        """
         target = canonical / incoming_revision.canonical_path
         incoming = target.with_suffix("") / "incoming" / incoming_revision.digest
         plan = artifacts[0].content

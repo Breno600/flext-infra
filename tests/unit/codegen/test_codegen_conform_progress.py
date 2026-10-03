@@ -1,4 +1,8 @@
-"""Workspace conform progress feedback contract."""
+"""Workspace conform progress feedback contract.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -14,8 +18,8 @@ from tests import u
 class TestsFlextInfraCodegenConformProgress:
     """Prove conform emits stage and repository progress on stdout."""
 
+    @staticmethod
     def test_plan_emits_stage_and_repository_progress(
-        self,
         infra_git_repo: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -33,7 +37,7 @@ class TestsFlextInfraCodegenConformProgress:
         tm.ok(infra.codegen_conform(request, workspace))
         _ = capsys.readouterr()
         checked = infra.codegen_conform(
-            request.model_copy(update={"mode": c.Infra.CodegenConformMode.CHECK})
+            request.model_copy(update={"mode": c.Infra.CodegenConformMode.CHECK}),
         )
         tm.ok(checked)
         captured = capsys.readouterr().out

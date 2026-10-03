@@ -1,4 +1,8 @@
-"""Render context and repository reference models."""
+"""Render context and repository reference models.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,16 +12,16 @@ from typing import Annotated, ClassVar, Literal
 
 from flext_cli import m
 
-from ... import t
-from ..._constants import (
+from flext_infra import t
+from flext_infra._constants import (
     FlextInfraConstantsCodegenProject,
     FlextInfraConstantsWorkspace,
 )
-from ..deps_tool_config import FlextInfraModelsDepsToolConfig
-from .beads import FlextInfraConfigModelsBeads
-from .contract import FlextInfraConfigModelsContract
-from .make import FlextInfraConfigModelsMake
-from .scaffold import FlextInfraConfigModelsScaffold
+from flext_infra._models._config.beads import FlextInfraConfigModelsBeads
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
+from flext_infra._models._config.make import FlextInfraConfigModelsMake
+from flext_infra._models._config.scaffold import FlextInfraConfigModelsScaffold
+from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
 
 
 class FlextInfraConfigModelsContexts:
@@ -25,7 +29,15 @@ class FlextInfraConfigModelsContexts:
 
     @staticmethod
     def _validated_hatch_build_hook_path(value: Path | None) -> Path | None:
-        """Return one normalized project-relative Hatch hook declaration."""
+        """Return one normalized project-relative Hatch hook declaration.
+
+        Returns:
+            One normalized project-relative Hatch hook declaration.
+
+        Raises:
+            ValueError: If hatch_build_hook_path must be a safe project-relative path.
+
+        """
         if value is None:
             return None
         raw = str(value)
@@ -285,6 +297,22 @@ class FlextInfraConfigModelsContexts:
             Path | None,
             m.Field(description="Project-relative Hatch custom build hook module"),
         ] = None
+        packaged_data_excludes: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                default=(),
+                description=(
+                    "Repository-relative files omitted from declared data directories"
+                ),
+            ),
+        ] = ()
+        docs_audit: Annotated[
+            FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+            m.Field(
+                default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+                description="Repository-owned documentation audit declarations",
+            ),
+        ]
         namespace_scan_dirs: Annotated[
             t.StrSequence,
             m.Field(
@@ -313,9 +341,7 @@ class FlextInfraConfigModelsContexts:
             return f"{self.dist.upper().replace('-', '_')}_"
 
         @property
-        def _config_base(
-            self,
-        ) -> FlextInfraConfigModelsScaffold.ScaffoldConfigBaseSpec:
+        def _config_base(self) -> FlextInfraConfigModelsScaffold.ScaffoldConfigBaseSpec:
             """ENFORCE-042 config base selected from the declared profile.
 
             The fleet-converged ``_config.py`` composes ``FlextSettings`` FIRST
@@ -323,6 +349,11 @@ class FlextInfraConfigModelsContexts:
             declared dependency profile, never a per-project hand choice: the
             first entry of ``scaffold.project.config_bases`` whose distribution
             the profile depends on (its runtime requirements or its upstream).
+
+            Raises:
+                ValueError: If scaffold.project.config_bases declares no base for the
+                    dependency profile of.
+
             """
             profile = self.dependency_profile
             depended = {
@@ -403,6 +434,10 @@ class FlextInfraConfigModelsContexts:
             t.StrSequence,
             m.Field(description="Validated individually declared data files"),
         ]
+        packaged_data_excludes: Annotated[
+            t.StrSequence,
+            m.Field(description="Validated files excluded from packaged data roots"),
+        ]
         class_stem: Annotated[
             t.NonEmptyStr,
             m.Field(description="Public facade class stem"),
@@ -453,7 +488,9 @@ class FlextInfraConfigModelsContexts:
         repository_namespace_packages: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                description="Implicit namespace directories shipped from the repository root",
+                description=(
+                    "Implicit namespace directories shipped from the repository root"
+                ),
             ),
         ] = ()
         root_modules: Annotated[
@@ -625,7 +662,9 @@ class FlextInfraConfigModelsContexts:
         flext_source: Annotated[
             t.NonEmptyStr | None,
             m.Field(
-                description="Direct Git infrastructure requirement declared for scaffolding",
+                description=(
+                    "Direct Git infrastructure requirement declared for scaffolding"
+                ),
             ),
         ] = None
 
@@ -716,7 +755,9 @@ class FlextInfraConfigModelsContexts:
         repository_namespace_packages: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                description="Implicit namespace directories shipped from the repository root",
+                description=(
+                    "Implicit namespace directories shipped from the repository root"
+                ),
             ),
         ] = ()
         root_modules: Annotated[
@@ -734,14 +775,19 @@ class FlextInfraConfigModelsContexts:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 default=(),
-                description="Repository-relative data files and directories shipped with the package",
+                description=(
+                    "Repository-relative data files and directories"
+                    " shipped with the package"
+                ),
             ),
         ] = ()
         packaged_data_excludes: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 default=(),
-                description="Repository-relative files omitted from declared data directories",
+                description=(
+                    "Repository-relative files omitted from declared data directories"
+                ),
             ),
         ] = ()
         cli_module: Annotated[
@@ -928,32 +974,6 @@ class FlextInfraConfigModelsContexts:
                 ),
             ),
         ] = None
-
-    class SubprojectPolicy(FlextInfraConfigModelsContract.ConfigContract):
-        """Workspace policy one governed .gitmodules entry loads under."""
-
-        integration_branch: Annotated[
-            str | None,
-            m.Field(
-                default=None,
-                description="Detected integration line; None follows the superproject",
-            ),
-        ]
-        workspace_beads: Annotated[
-            FlextInfraConfigModelsBeads.BeadsProjectSpec | None,
-            m.Field(default=None, description="Inherited workspace beads spec"),
-        ]
-        declared_member: Annotated[
-            FlextInfraConfigModelsContexts.RepositoryRef | None,
-            m.Field(default=None, description="Catalog-declared member reference"),
-        ]
-        allow_unprovisioned_members: Annotated[
-            bool,
-            m.Field(
-                default=False,
-                description="Accept members without provisioned checkouts",
-            ),
-        ]
 
     class RepositoryConformTarget(FlextInfraConfigModelsContract.ConfigContract):
         """Runtime-derived conformance identity for one repository."""

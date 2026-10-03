@@ -1,4 +1,8 @@
-"""Compose inherited ast-grep rules from FLEXT distribution metadata."""
+"""Compose inherited ast-grep rules from FLEXT distribution metadata.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,7 +10,7 @@ import re
 import sys
 from collections.abc import Mapping, MutableMapping, Sequence
 from functools import lru_cache
-from importlib.metadata import Distribution, distributions
+from importlib.metadata import Distribution
 from importlib.util import find_spec
 from pathlib import Path
 
@@ -14,8 +18,8 @@ from flext_cli import u
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 
-from .. import c, m, p, r, t
-from .dependencies import FlextInfraUtilitiesDependencies
+from flext_infra import c, m, p, r, t
+from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
 
 
 class FlextInfraUtilitiesCodemodRules:
@@ -30,6 +34,10 @@ class FlextInfraUtilitiesCodemodRules:
         provider/rule catalog is invariant across the many ``scan()`` calls a
         single ``mod`` invocation issues while converging to a fixed point, and
         a fresh process (a new ``make mod`` run) always recomputes it from disk.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodemodRulePlan]``.
+
         """
         project = cls.codemod_project_requirements(root)
         if project.failure:
@@ -68,7 +76,15 @@ class FlextInfraUtilitiesCodemodRules:
 
     @staticmethod
     def codemod_rule_filter(rule_ids: t.StrSequence) -> str:
-        """Return one exact ast-grep rule-ID filter for an elected ruleset."""
+        """Return one exact ast-grep rule-ID filter for an elected ruleset.
+
+        Returns:
+            One exact ast-grep rule-ID filter for an elected ruleset.
+
+        Raises:
+            ValueError: If codemod rule filter requires at least one rule ID.
+
+        """
         if not rule_ids:
             msg = "codemod rule filter requires at least one rule ID"
             raise ValueError(msg)
@@ -94,6 +110,11 @@ class FlextInfraUtilitiesCodemodRules:
                 f"missing project.name: {pyproject}",
             )
         raw_dependencies = project.get(c.Infra.DEPENDENCIES)
+        if raw_dependencies is None:
+            # ``project.dependencies`` is spec-optional: a project with no
+            # declared runtime dependency has an empty runtime closure, not a
+            # malformed manifest.
+            raw_dependencies = ()
         if not isinstance(raw_dependencies, Sequence) or isinstance(
             raw_dependencies,
             str,
@@ -121,13 +142,18 @@ class FlextInfraUtilitiesCodemodRules:
         # Import search paths may repeat the same physical directory. Query each
         # directory once; distinct installations with the same name still fail.
         paths = list(dict.fromkeys(str(Path(path).resolve()) for path in sys.path))
-        for installed in distributions(path=paths):
+        for installed in u.installed_distributions(path=paths):
             raw_name = installed.metadata.get("Name")
             if not isinstance(raw_name, str) or not raw_name.strip():
                 continue
             name = canonicalize_name(raw_name)
-            if name in indexed:
-                msg = f"duplicate installed distribution metadata: {name}"
+            previous = indexed.get(name)
+            if previous is not None:
+                msg = (
+                    f"duplicate installed distribution metadata: {name} "
+                    f"({previous.version} at {previous.locate_file('')}; "
+                    f"{installed.version} at {installed.locate_file('')})"
+                )
                 raise ValueError(msg)
             indexed[name] = installed
         return indexed
@@ -276,6 +302,10 @@ class FlextInfraUtilitiesCodemodRules:
         ``metadata.consumers_of``: a plan elects it only when the facade is in
         the project's runtime closure, so the facade itself and the projects
         below it never do.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodemodRulePlan]``.
+
         """
         selected: MutableMapping[str, m.Infra.CodemodRule] = {}
         rulesets: list[m.Infra.CodemodRuleset] = []
@@ -470,6 +500,11 @@ class FlextInfraUtilitiesCodemodRules:
         (``is``) or fail (``not``), optionally evaluated against the module
         another capture names (``of``). Absence is the empty tuple; any other
         shape is a malformed rule document.
+
+        Returns:
+            The resulting
+                ``p.Result[t.VariadicTuple[m.Infra.CodemodContextCondition]]``.
+
         """
         conditions = r[t.VariadicTuple[m.Infra.CodemodContextCondition]]
         if raw is None:
@@ -520,7 +555,12 @@ class FlextInfraUtilitiesCodemodRules:
         condition: t.JsonMapping,
         verdicts: t.StrSequence | set[str],
     ) -> p.Result[str]:
-        """Return the one verdict key (``is``/``not``) of a context condition."""
+        """Return the one verdict key (``is``/``not``) of a context condition.
+
+        Returns:
+            The one verdict key (``is``/``not``) of a context condition.
+
+        """
         keys = set(condition)
         verdict = keys.intersection(verdicts)
         operands = {
@@ -549,6 +589,10 @@ class FlextInfraUtilitiesCodemodRules:
         ``metadata`` mapping it does accept. Absence is the empty tuple: a
         declared `expected: 0` is a real receipt ("this rule must never match
         again") and must not collapse into "no receipt declared".
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[int]]``.
+
         """
         metadata = document.get(c.Infra.CODEMOD_RULE_METADATA_KEY)
         if metadata is None:

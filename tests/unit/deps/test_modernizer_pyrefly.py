@@ -1,4 +1,8 @@
-"""Pyrefly phase tests for deps modernizer."""
+"""Pyrefly phase tests for deps modernizer.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -32,7 +36,13 @@ class TestsFlextInfraModernizerPyrefly:
         project_dir: Path | None = None,
         declared_python_dirs: t.StrSequence | None = None,
     ) -> t.Triple[t.MutableJsonMapping, t.JsonMapping, t.StrSequence]:
-        """Apply the Pyrefly phase once; return payload, pyrefly table, and changes."""
+        """Apply the Pyrefly phase once; return payload, pyrefly table, and changes.
+
+        Returns:
+            The resulting ``t.Triple[t.MutableJsonMapping, t.JsonMapping,
+                t.StrSequence]``.
+
+        """
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
             u.Tests.toml_payload(source),
         )
@@ -55,8 +65,8 @@ class TestsFlextInfraModernizerPyrefly:
         pyrefly = u.Tests.toml_mapping(u.Tests.toml_mapping(payload["tool"])["pyrefly"])
         return payload, pyrefly, changes
 
+    @staticmethod
     def test_modernizer_omits_checkout_specific_analyzer_virtualenvs(
-        self,
         tmp_path: Path,
     ) -> None:
         """Keep shared analyzer config invariant across checkout topologies."""
@@ -235,8 +245,8 @@ class TestsFlextInfraModernizerPyrefly:
 
         tm.that(list(u.Tests.strings(pyrefly[c.Infra.PROJECT_INCLUDES])), eq=[])
 
+    @staticmethod
     def test_render_context_includes_live_roots_the_scaffold_never_creates(
-        self,
         tmp_path: Path,
     ) -> None:
         """A real env dir reaches project-includes even if no template creates it."""
@@ -267,6 +277,14 @@ class TestsFlextInfraModernizerPyrefly:
                 project_name="flext-consumer",
                 package_name="flext_consumer",
                 path=project_dir / c.PYPROJECT_FILENAME,
+                scaffold_project=config.Infra.codegen.scaffold.project,
+                upstream=next(
+                    profile.upstream
+                    for profile in config.Infra.codegen.scaffold.project.dependency_profiles
+                    if profile.project is None
+                ),
+                runtime_dependency_overlay=(),
+                declared_project_dependencies=(),
                 topology=m.Infra.PyprojectDeclaredTopology(
                     declared_python_dirs=(source_dir,),
                     declared_python_dirs_are_complete=True,
@@ -298,8 +316,8 @@ class TestsFlextInfraModernizerPyrefly:
             eq=["src/**/*.py*"],
         )
 
+    @staticmethod
     def test_pyright_include_globs_derive_existing_python_roots(
-        self,
         tmp_path: Path,
     ) -> None:
         """Derive canonical recursive selectors from existing Python roots."""
@@ -325,8 +343,8 @@ class TestsFlextInfraModernizerPyrefly:
 
         tm.that(includes, eq=["scripts/**/*.py*", "src/**/*.py*", "tests/**/*.py*"])
 
+    @staticmethod
     def test_root_context_keeps_workspace_dependencies_out_of_search_path(
-        self,
         tmp_path: Path,
     ) -> None:
         """Root context keeps workspace dependencies out of search-path."""

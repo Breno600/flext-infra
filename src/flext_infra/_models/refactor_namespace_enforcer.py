@@ -1,4 +1,8 @@
-"""Domain models for the namespace enforcer's relocation reports."""
+"""Domain models for the namespace enforcer's relocation reports.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,8 +11,7 @@ from typing import Annotated
 from flext_cli import m
 
 from flext_infra import t
-
-from .mixins import FlextInfraModelsMixins as mm
+from flext_infra._models.mixins import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsNamespaceEnforcer:

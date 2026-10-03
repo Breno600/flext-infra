@@ -25,10 +25,11 @@ if TYPE_CHECKING:
 class TestsFlextInfraGateErrorReporting:
     """Verify real gate issue reporting through the public ``check()`` contract."""
 
+    @staticmethod
     def test_workspace_report_retains_all_executed_failures(
-        self,
         tmp_path: Path,
     ) -> None:
+        """Test workspace report retains all executed failures."""
         project_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
         (project_dir / "src" / "p1" / "value.py").write_text(
             "value=[1,2,3]\n",
@@ -43,9 +44,11 @@ class TestsFlextInfraGateErrorReporting:
         reports_dir = tmp_path / "reports"
 
         projects = tm.ok(
-            FlextInfraWorkspaceChecker(
-                repository_root=tmp_path,
-            ).run_projects(["p1"], gates, reports_dir=reports_dir),
+            FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
+                ["p1"],
+                gates,
+                reports_dir=reports_dir,
+            ),
         )
 
         project = projects[0]
@@ -61,10 +64,11 @@ class TestsFlextInfraGateErrorReporting:
         for gate in gates:
             tm.that(report, has=f"- {gate}: FAIL")
 
+    @staticmethod
     def test_ruff_format_reports_each_unformatted_file_once(
-        self,
         tmp_path: Path,
     ) -> None:
+        """Test ruff format reports each unformatted file once."""
         proj_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
         unformatted = "value=[1,2,3]\n\n\n\n\nother=(4,5)\n"
         for name in ("one.py", "two.py"):
@@ -81,9 +85,9 @@ class TestsFlextInfraGateErrorReporting:
             eq=[f"{c.Infra.DEFAULT_SRC_DIR}/{name}" for name in ("one.py", "two.py")],
         )
 
+    @staticmethod
     @pytest.mark.slow
     def test_workspace_checker_emits_ruff_stderr_without_findings(
-        self,
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -100,9 +104,11 @@ class TestsFlextInfraGateErrorReporting:
         )
         u.Tests.initialize_git_repo(project_dir)
 
-        result = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path,
-        ).run_projects(["p1"], [c.Infra.FORMAT], reports_dir=tmp_path / "reports")
+        result = FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
+            ["p1"],
+            [c.Infra.FORMAT],
+            reports_dir=tmp_path / "reports",
+        )
 
         tm.ok(result)
         project = result.value[0]
@@ -117,9 +123,9 @@ class TestsFlextInfraGateErrorReporting:
             has=["TOML parse error", "invalid-line-length"],
         )
 
+    @staticmethod
     @pytest.mark.slow
     def test_workspace_checker_emits_mypy_plugin_traceback(
-        self,
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -143,15 +149,20 @@ class TestsFlextInfraGateErrorReporting:
         )
         u.Tests.initialize_git_repo(project_dir)
 
-        result = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path,
-        ).run_projects(["p1"], [c.Infra.MYPY], reports_dir=tmp_path / "reports")
+        result = FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
+            ["p1"],
+            [c.Infra.MYPY],
+            reports_dir=tmp_path / "reports",
+        )
 
         tm.ok(result)
         project = result.value[0]
         tm.that(project.passed, eq=False)
         execution = project.gates[c.Infra.MYPY]
-        tm.that(any(issue.code == "TOOL_ERROR" for issue in execution.issues), eq=True)
+        tm.that(
+            any(issue.code == c.Infra.ToolOutcome.ERROR for issue in execution.issues),
+            eq=True,
+        )
         captured = capsys.readouterr()
         tm.that(
             f"{captured.out}\n{captured.err}",
@@ -162,6 +173,7 @@ class TestsFlextInfraGateErrorReporting:
             ],
         )
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("readme", "config_text", "expected"),
         [
@@ -170,13 +182,13 @@ class TestsFlextInfraGateErrorReporting:
         ],
     )
     def test_workspace_checker_emits_real_markdown_failure(
-        self,
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
         readme: str,
         config_text: str | None,
         expected: t.StrSequence,
     ) -> None:
+        """Test workspace checker emits real markdown failure."""
         project_dir = u.Tests.mk_project(tmp_path, "p1")
         (project_dir / "README.md").write_text(readme, encoding="utf-8")
         if config_text is not None:
@@ -186,9 +198,11 @@ class TestsFlextInfraGateErrorReporting:
             )
         u.Tests.initialize_git_repo(project_dir)
 
-        result = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path,
-        ).run_projects(["p1"], [c.Infra.MARKDOWN], reports_dir=tmp_path / "reports")
+        result = FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
+            ["p1"],
+            [c.Infra.MARKDOWN],
+            reports_dir=tmp_path / "reports",
+        )
 
         tm.ok(result)
         tm.that(result.value[0].passed, eq=False)

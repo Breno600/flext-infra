@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core.lazy import build_lazy_import_map, install_lazy_exports
+from flext_core import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_infra._utilities import (
@@ -258,11 +258,20 @@ if TYPE_CHECKING:
     from flext_infra._utilities._semantic_cutover.model_fields_bindings import (
         FlextInfraUtilitiesSemanticCutoverModelFieldsBindings,
     )
+    from flext_infra._utilities._semantic_cutover.module_layout import (
+        FlextInfraUtilitiesSemanticCutoverModuleLayout,
+    )
     from flext_infra._utilities._semantic_cutover.nesting import (
         FlextInfraUtilitiesSemanticCutoverNesting,
     )
     from flext_infra._utilities._semantic_cutover.nesting_cst import (
         FlextInfraUtilitiesSemanticCutoverNestingCst,
+    )
+    from flext_infra._utilities._semantic_cutover.nesting_module_aliases import (
+        FlextInfraUtilitiesSemanticCutoverNestingModuleAliases,
+    )
+    from flext_infra._utilities._semantic_cutover.nesting_owner import (
+        FlextInfraUtilitiesSemanticCutoverNestingOwner,
     )
     from flext_infra._utilities._semantic_cutover.nesting_references import (
         FlextInfraUtilitiesSemanticCutoverNestingReferences,
@@ -328,6 +337,7 @@ if TYPE_CHECKING:
     from flext_infra._utilities.iteration_workspace import (
         FlextInfraUtilitiesIterationWorkspace,
     )
+    from flext_infra._utilities.lint_recipes import FlextInfraUtilitiesLintRecipes
     from flext_infra._utilities.log_parser import FlextInfraUtilitiesLogParser
     from flext_infra._utilities.managed_conflicts import (
         FlextInfraUtilitiesManagedConflicts,
@@ -437,7 +447,6 @@ if TYPE_CHECKING:
         FlextInfraWorktreeProvisioning,
     )
 
-
 __all__: tuple[str, ...] = (
     "FlextInfraMypyDarwinSupervisor",
     "FlextInfraMypyProfiler",
@@ -518,6 +527,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesIterationDirectory",
     "FlextInfraUtilitiesIterationMatching",
     "FlextInfraUtilitiesIterationWorkspace",
+    "FlextInfraUtilitiesLintRecipes",
     "FlextInfraUtilitiesLogParser",
     "FlextInfraUtilitiesManagedConflicts",
     "FlextInfraUtilitiesNamespaceConfig",
@@ -596,8 +606,11 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesSemanticCutoverFacadeOwners",
     "FlextInfraUtilitiesSemanticCutoverModelFields",
     "FlextInfraUtilitiesSemanticCutoverModelFieldsBindings",
+    "FlextInfraUtilitiesSemanticCutoverModuleLayout",
     "FlextInfraUtilitiesSemanticCutoverNesting",
     "FlextInfraUtilitiesSemanticCutoverNestingCst",
+    "FlextInfraUtilitiesSemanticCutoverNestingModuleAliases",
+    "FlextInfraUtilitiesSemanticCutoverNestingOwner",
     "FlextInfraUtilitiesSemanticCutoverNestingReferences",
     "FlextInfraUtilitiesSemanticCutoverPrivateImportCst",
     "FlextInfraUtilitiesSemanticCutoverPrivateImports",
@@ -760,11 +773,20 @@ _LAZY_IMPORTS = MappingProxyType(
             "._semantic_cutover.model_fields_bindings": (
                 "FlextInfraUtilitiesSemanticCutoverModelFieldsBindings",
             ),
+            "._semantic_cutover.module_layout": (
+                "FlextInfraUtilitiesSemanticCutoverModuleLayout",
+            ),
             "._semantic_cutover.nesting": (
                 "FlextInfraUtilitiesSemanticCutoverNesting",
             ),
             "._semantic_cutover.nesting_cst": (
                 "FlextInfraUtilitiesSemanticCutoverNestingCst",
+            ),
+            "._semantic_cutover.nesting_module_aliases": (
+                "FlextInfraUtilitiesSemanticCutoverNestingModuleAliases",
+            ),
+            "._semantic_cutover.nesting_owner": (
+                "FlextInfraUtilitiesSemanticCutoverNestingOwner",
             ),
             "._semantic_cutover.nesting_references": (
                 "FlextInfraUtilitiesSemanticCutoverNestingReferences",
@@ -816,6 +838,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".iteration_directory": ("FlextInfraUtilitiesIterationDirectory",),
             ".iteration_matching": ("FlextInfraUtilitiesIterationMatching",),
             ".iteration_workspace": ("FlextInfraUtilitiesIterationWorkspace",),
+            ".lint_recipes": ("FlextInfraUtilitiesLintRecipes",),
             ".log_parser": ("FlextInfraUtilitiesLogParser",),
             ".managed_conflicts": ("FlextInfraUtilitiesManagedConflicts",),
             ".namespace": ("FlextInfraUtilitiesCodegenNamespace",),

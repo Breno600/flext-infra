@@ -28,7 +28,7 @@ and a test runtime that binds the canonical aliases.
 Import the aliases each test consumes from the public `flext_tests` package root.
 
 `flext_tests` reexports `d`, `e`, `h`, `r`, `x` from `flext_infra` and exposes domain
-helpers (`tk`, `td`, `tf`, `tv`, `tm`).
+helpers (`tk`, `td`, `tf`, `tm`).
 
 | Alias | Purpose                                          |
 | ----- | ------------------------------------------------ |

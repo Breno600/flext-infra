@@ -1,4 +1,8 @@
-"""Consumer requirement preservation for an explicit local binding."""
+"""Consumer requirement preservation for an explicit local binding.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,8 +11,7 @@ from typing import TYPE_CHECKING
 from flext_cli import r, u
 
 from flext_infra import c, m, t
-
-from ..dependencies import FlextInfraUtilitiesDependencies
+from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -25,7 +28,12 @@ class FlextInfraUtilitiesPyprojectSession:
         selected: t.StrSequence,
         environment: t.StrMapping,
     ) -> p.Result[m.Infra.BindingResolution]:
-        """Resolve only consumer declarations; never restore retired topology."""
+        """Resolve only consumer declarations; never restore retired topology.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.BindingResolution]``.
+
+        """
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
         if (
             tool is not None
@@ -37,7 +45,7 @@ class FlextInfraUtilitiesPyprojectSession:
         uv = u.Cli.toml_table_child(tool, c.Infra.UV) if tool is not None else None
         if uv is not None and u.Cli.toml_table_child(uv, "sources") is not None:
             return r[m.Infra.BindingResolution].fail(
-                "session binding requires declared dependency URLs, not tool.uv.sources",
+                "session binding requires dependency URLs, not tool.uv.sources",
             )
         active = tuple(
             parsed

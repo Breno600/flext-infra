@@ -1,4 +1,8 @@
-"""Fileno-backed Git stdin boundary."""
+"""Fileno-backed Git stdin boundary.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -14,7 +18,12 @@ class FlextInfraUtilitiesGitWorktreeIO:
     @staticmethod
     @contextmanager
     def git_stdin(data: bytes | None) -> Generator[BinaryIO | None]:
-        """Yield a seekable stream accepted by GitPython's ``istream`` boundary."""
+        """Yield a seekable stream accepted by GitPython's ``istream`` boundary.
+
+        Yields:
+            Each ``BinaryIO | None``.
+
+        """
         if data is None:
             yield None
             return

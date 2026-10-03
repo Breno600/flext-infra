@@ -1,4 +1,8 @@
-"""Unified census pipeline models — accessed via m.Infra.Census.*."""
+"""Unified census pipeline models — accessed via m.Infra.Census.*.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,8 +11,7 @@ from typing import Annotated, ClassVar
 
 from flext_core import m
 from flext_infra import c, t
-
-from .mixins import FlextInfraModelsMixins as mm
+from flext_infra._models.mixins import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsCensus:

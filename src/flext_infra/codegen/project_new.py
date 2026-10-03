@@ -10,17 +10,16 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
-
-from .. import c, m, u
-from ._execution import FlextInfraCodegenExecutionBase
-from .conform import FlextInfraCodegenConform
+from flext_infra import c, m, u
+from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
+from flext_infra.codegen.conform import FlextInfraCodegenConform
 
 # New file per operator live
 # order (ULW). ctx via u.derive_class_stem (no parallel detection, ADR-005 §9);
 # accessor typing/config+settings symmetry fixed in templates in the same lane.
 
 if TYPE_CHECKING:
-    from .. import p
+    from flext_infra import p
 
 
 class FlextInfraCodegenProjectNew(
@@ -32,7 +31,7 @@ class FlextInfraCodegenProjectNew(
         str,
         m.Field(
             min_length=1,
-            description="Distribution name in kebab-case (e.g. flext-demo / acme-demo).",
+            description="Distribution name in kebab-case (e.g. flext-demo).",
         ),
     ]
     kind: Annotated[
@@ -133,15 +132,20 @@ class FlextInfraCodegenProjectNew(
             default=None,
             exclude=True,
             description=(
-                "Docs and fresh-import ports bound by FlextInfra.codegen_new; the "
-                "scaffold conform fails before any effect without them"
+                "Docs port bound by FlextInfra.codegen_new; the scaffold "
+                "conform fails before any effect without it"
             ),
         ),
     ]
 
     @override
     def execute(self) -> p.Result[m.Infra.CodegenResult]:
-        """Build one typed manifest and delegate all output to conform."""
+        """Build one typed manifest and delegate all output to conform.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenResult]``.
+
+        """
         if self.effective_dry_run:
             return r[m.Infra.CodegenResult].fail("codegen new requires apply mode")
         # Every identity fact is an explicit caller declaration: for a

@@ -1,4 +1,8 @@
-"""Canonical Git responsibility mixin for ``u.Infra``."""
+"""Canonical Git responsibility mixin for ``u.Infra``.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,8 +13,7 @@ from git import BadName, GitCommandError
 
 from flext_core import r
 from flext_infra import c, m
-
-from .worktree import FlextInfraUtilitiesGitWorktreeMixin
+from flext_infra._utilities._git.worktree import FlextInfraUtilitiesGitWorktreeMixin
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -24,7 +27,12 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
         cls,
         request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitWorktreeListReport]:
-        """Read Git's canonical worktree registry, parsed once for every consumer."""
+        """Read Git's canonical worktree registry, parsed once for every consumer.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitWorktreeListReport]``.
+
+        """
         repo_root = request.repo_root.expanduser().resolve()
         try:
             repo = cls._repo(repo_root)
@@ -49,7 +57,12 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
         cls,
         request: m.Infra.GitBranchRequest,
     ) -> p.Result[m.Infra.GitBoolReport]:
-        """Validate a branch name with ``git check-ref-format --branch``."""
+        """Validate a branch name with ``git check-ref-format --branch``.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitBoolReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             repo.git.check_ref_format("--branch", request.branch)
@@ -74,7 +87,12 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
         cls,
         request: m.Infra.GitRefRequest,
     ) -> p.Result[m.Infra.GitBoolReport]:
-        """Return whether an exact Git ref exists (exit 0/1 only)."""
+        """Return whether an exact Git ref exists (exit 0/1 only).
+
+        Returns:
+            Whether an exact Git ref exists (exit 0/1 only).
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             repo.git.show_ref("--verify", "--quiet", request.reference)
@@ -99,7 +117,12 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
         cls,
         request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitTextReport]:
-        """Capture ``rev-parse --show-superproject-working-tree`` stdout."""
+        """Capture ``rev-parse --show-superproject-working-tree`` stdout.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitTextReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             text = repo.git.rev_parse("--show-superproject-working-tree")
@@ -117,7 +140,12 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
         cls,
         request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitRootReport]:
-        """Report the resolved top-level directory of the request's worktree."""
+        """Report the resolved top-level directory of the request's worktree.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitRootReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             root = (
@@ -141,7 +169,12 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
         cls,
         request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitTextReport]:
-        """Resolve the current non-detached branch name."""
+        """Resolve the current non-detached branch name.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitTextReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             branch = repo.active_branch.name
@@ -160,7 +193,12 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
         cls,
         request: m.Infra.GitCommitishRequest,
     ) -> p.Result[m.Infra.GitOidReport]:
-        """Resolve a commit-ish to its commit oid, failing on a non-commit name."""
+        """Resolve a commit-ish to its commit oid, failing on a non-commit name.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitOidReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             oid = repo.commit(request.commitish).hexsha
@@ -183,6 +221,10 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
         One owner proves ancestry for any pair. ``descendant`` defaults to
         ``HEAD``, so the HEAD-bound proof existing consumers relied on is a
         use of this verb, not a separate one.
+
+        Returns:
+            Whether ``ancestor`` is an ancestor of ``descendant``.
+
         """
         try:
             repo = cls._repo(request.repo_root)
@@ -204,7 +246,12 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
         cls,
         request: m.Infra.GitCommitishRequest,
     ) -> p.Result[m.Infra.GitOidReport]:
-        """Resolve an arbitrary rev-parse argument to stripped text oid."""
+        """Resolve an arbitrary rev-parse argument to stripped text oid.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitOidReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             oid = repo.git.rev_parse(request.commitish).strip()
