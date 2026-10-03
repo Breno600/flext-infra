@@ -138,8 +138,11 @@ class FlextInfraPytestRunnerBase(s[int]):
                 msg = f"{name} escapes the repository"
                 raise ValueError(msg)
         target_path = self.root / self.target
-        if not target_path.is_dir() or target_path.is_symlink():
-            msg = f"test target must be an existing directory: {self.target}"
+        if (
+            not (target_path.is_dir() or target_path.is_file())
+            or target_path.is_symlink()
+        ):
+            msg = f"test target must be an existing directory or file: {self.target}"
             raise ValueError(msg)
         if not self.testmon_db.is_absolute():
             msg = "testmon database path must be absolute"

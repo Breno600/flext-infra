@@ -182,7 +182,11 @@ else
 override TRACKED_MISE := $(PROJECT_ROOT)/bin/mise
 endif
 override SETUP_MISE := $(TRACKED_MISE)
-override export FLEXT_PYTEST_TARGET_RAW := {{ make.testmon_cache.target_directory }}
+# Caller-overridable test target (a directory or a single test file under
+# it): `make test FLEXT_PYTEST_TARGET_RAW=tests/unit/foo_test.py` runs one
+# file through the same bounded runner. The default stays the declared
+# target_directory; the runner validates the path's shape.
+export FLEXT_PYTEST_TARGET_RAW := {{ make.testmon_cache.target_directory }}
 # === SECTION: REPOSITORY_ROOT isolation (managed) ===
 # Source: physical checkout topology; caller variables cannot select a workspace.
 # Inside a workspace every make run, root
