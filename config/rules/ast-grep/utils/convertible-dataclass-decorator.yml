@@ -1,0 +1,42 @@
+# A `@dataclass(...)` decorator whose keywords keep the class a plain frozen
+# value: `frozen=True` is declared, `init` (when given) is True, and no
+# keyword that changes runtime semantics (order, unsafe_hash, match_args) is
+# present. A bare `@dataclass` is mutable and never convertible.
+id: convertible-dataclass-decorator
+language: python
+rule:
+  kind: decorator
+  has:
+    kind: call
+    all:
+      - has:
+          field: function
+          regex: "^dataclass$"
+      - has:
+          field: arguments
+          pattern: $_
+          all:
+            - has:
+                kind: keyword_argument
+                all:
+                  - has:
+                      field: name
+                      regex: "^frozen$"
+                  - has:
+                      field: value
+                      kind: "true"
+            - not:
+                has:
+                  kind: keyword_argument
+                  any:
+                    - has:
+                        field: name
+                        regex: "^(?:order|unsafe_hash|match_args)$"
+                    - all:
+                        - has:
+                            field: name
+                            regex: "^(?:frozen|init)$"
+                        - not:
+                            has:
+                              field: value
+                              kind: "true"

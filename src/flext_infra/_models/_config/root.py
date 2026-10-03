@@ -1,4 +1,8 @@
-"""Root configuration namespaces."""
+"""Root configuration namespaces.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,12 +11,11 @@ from typing import Annotated
 from flext_cli import m
 
 from flext_infra import t
-
-from ..deps import FlextInfraModelsDepsToolConfig
-from .artifact import FlextInfraConfigModelsArtifact
-from .contract import FlextInfraConfigModelsContract
-from .release import FlextInfraConfigModelsRelease
-from .static import FlextInfraConfigModelsStatic
+from flext_infra._models._config.artifact import FlextInfraConfigModelsArtifact
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
+from flext_infra._models._config.release import FlextInfraConfigModelsRelease
+from flext_infra._models._config.static import FlextInfraConfigModelsStatic
+from flext_infra._models.deps import FlextInfraModelsDepsToolConfig
 
 
 class FlextInfraConfigModelsRoot:
@@ -42,14 +45,10 @@ class FlextInfraConfigModelsRoot:
             FlextInfraConfigModelsRelease.ReleasePolicySpec,
             m.Field(description="Release protocol policy"),
         ]
-        enforcement: Annotated[
-            FlextInfraConfigModelsStatic.StaticEnforcementSpec,
-            m.Field(description="Rope-only static enforcement policy"),
-        ]
         refactor_csv_campaigns: Annotated[
             FlextInfraConfigModelsArtifact.RefactorCsvCampaignsSpec,
             m.Field(
-                description="Declared CSV-driven rename campaigns for the mod verb"
+                description="Declared CSV-driven rename campaigns for the mod verb",
             ),
         ]
 

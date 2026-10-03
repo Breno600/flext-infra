@@ -25,7 +25,8 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
     """
 
     all_projects: Annotated[
-        bool, m.Field(alias="all", description="Validate all projects")
+        bool,
+        m.Field(alias="all", description="Validate all projects"),
     ] = False
     _runner: p.Cli.CommandRunner | None = m.PrivateAttr(default=None)
 
@@ -64,8 +65,8 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
             "output_dir": output_dir,
             "selected_projects": selected_projects,
             "all_projects": all_projects,
-            # NOTE (multi-agent): flext-i6nq.12 — FlextMixins bootstrap inputs are now
-            # native Pydantic fields validated with the rest of model_data.
+            # FlextMixins bootstrap inputs are native Pydantic fields validated
+            # with the rest of model_data.
             "settings_type": settings_type,
             "runtime_settings": runtime_settings,
             "settings_overrides": settings_overrides,
@@ -89,7 +90,12 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
         return [self.repository_root / name for name in names]
 
     def _discover_typed_projects(self, repository_root: Path) -> t.SequenceOf[Path]:
-        """Discover projects that should participate in typed dependency checks."""
+        """Discover projects that should participate in typed dependency checks.
+
+        Returns:
+            The resulting ``t.SequenceOf[Path]``.
+
+        """
         _ = self
         return [
             project_root
@@ -98,7 +104,12 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
         ]
 
     def _is_internal(self, module_name: str, project_name: str) -> bool:
-        """Check if a module is an internal project module."""
+        """Check if a module is an internal project module.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         _ = self
         root_mod = module_name.split(".", 1)[0]
         project_root = project_name.replace("-", "_")
@@ -107,7 +118,12 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
         return root_mod == project_root
 
     def _module_resolved(self, module_name: str) -> bool:
-        """Check if an external module is installed in the active typed environment."""
+        """Check if an external module is installed in the active typed environment.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         _ = self
         root_module = module_name.split(".", maxsplit=1)[0]
         try:
@@ -118,7 +134,9 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
         return spec is not None
 
     def analyze(
-        self, project_dir: Path, repository_root: Path
+        self,
+        project_dir: Path,
+        repository_root: Path,
     ) -> p.Result[m.Infra.StubAnalysisReport]:
         """Analyze a project for missing typed dependencies.
 
@@ -142,7 +160,9 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
             )
 
     def build_report(
-        self, repository_root: Path, project_dirs: t.SequenceOf[Path] | None = None
+        self,
+        repository_root: Path,
+        project_dirs: t.SequenceOf[Path] | None = None,
     ) -> p.Result[m.Infra.ValidationReport]:
         """Validate typed dependency supply chain across projects.
 
@@ -158,13 +178,21 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
             return self._build_typed_dependency_report(repository_root, project_dirs)
         except c.EXC_OS_TYPE_VALUE as exc:
             return r[m.Infra.ValidationReport].fail_op(
-                "typed dependency validation", exc
+                "typed dependency validation",
+                exc,
             )
 
     def _classify_missing_imports(
-        self, missing_imports: t.StrSequence, project_name: str
+        self,
+        missing_imports: t.StrSequence,
+        project_name: str,
     ) -> t.Pair[t.StrSequence, t.StrSequence]:
-        """Split missing imports into internal and unresolved external groups."""
+        """Split missing imports into internal and unresolved external groups.
+
+        Returns:
+            The resulting ``t.Pair[t.StrSequence, t.StrSequence]``.
+
+        """
         internal = tuple(
             module_name
             for module_name in missing_imports
@@ -183,9 +211,16 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
         return internal, unresolved
 
     def _analyze_project(
-        self, project_dir: Path, repository_root: Path
+        self,
+        project_dir: Path,
+        repository_root: Path,
     ) -> p.Result[m.Infra.StubAnalysisReport]:
-        """Analyze one project after path resolution."""
+        """Analyze one project after path resolution.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.StubAnalysisReport]``.
+
+        """
         _ = repository_root
         proj = project_dir.resolve()
         mypy_result = self._run_mypy_hints(proj)
@@ -197,7 +232,8 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
             return r[m.Infra.StubAnalysisReport].from_failure(pyrefly_result)
         missing_imports = pyrefly_result.value
         internal, unresolved = self._classify_missing_imports(
-            missing_imports, proj.name
+            missing_imports,
+            proj.name,
         )
         return r[m.Infra.StubAnalysisReport].ok(
             m.Infra.StubAnalysisReport(
@@ -206,13 +242,20 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
                 internal_missing=internal,
                 unresolved_missing=unresolved,
                 total_missing=len(missing_imports),
-            )
+            ),
         )
 
     def _project_violations(
-        self, project_dir: Path, repository_root: Path
+        self,
+        project_dir: Path,
+        repository_root: Path,
     ) -> t.StrSequence:
-        """Return typed-dependency violations for one project."""
+        """Return typed-dependency violations for one project.
+
+        Returns:
+            Typed-dependency violations for one project.
+
+        """
         result = self.analyze(project_dir, repository_root)
         if result.failure:
             return (f"{project_dir.name}: {result.error}",)
@@ -220,35 +263,51 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
         violations: t.MutableSequenceOf[str] = []
         if data.mypy_hints:
             violations.append(
-                f"{project_dir.name}: {len(data.mypy_hints)} missing typing packages"
+                f"{project_dir.name}: {len(data.mypy_hints)} missing typing packages",
             )
         if data.internal_missing:
             violations.append(
-                f"{project_dir.name}: {len(data.internal_missing)} internal missing imports"
+                f"{project_dir.name}: {len(data.internal_missing)} "
+                f"internal missing imports",
             )
         if data.unresolved_missing:
             violations.append(
-                f"{project_dir.name}: {len(data.unresolved_missing)} unresolved imports"
+                f"{project_dir.name}: {len(data.unresolved_missing)} "
+                f"unresolved imports",
             )
         return tuple(violations)
 
     def _typed_dependency_violations(
-        self, projects: t.SequenceOf[Path], repository_root: Path
+        self,
+        projects: t.SequenceOf[Path],
+        repository_root: Path,
     ) -> t.StrSequence:
-        """Collect typed-dependency violations for all selected projects."""
+        """Collect typed-dependency violations for all selected projects.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         violations: t.MutableSequenceOf[str] = []
         for project_dir in projects:
             violations.extend(self._project_violations(project_dir, repository_root))
         return tuple(violations)
 
     def _build_typed_dependency_report(
-        self, repository_root: Path, project_dirs: t.SequenceOf[Path] | None
+        self,
+        repository_root: Path,
+        project_dirs: t.SequenceOf[Path] | None,
     ) -> p.Result[m.Infra.ValidationReport]:
-        """Build the workspace typed-dependency validation report."""
+        """Build the workspace typed-dependency validation report.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ValidationReport]``.
+
+        """
         root = repository_root.resolve()
         if not root.is_dir():
             return r[m.Infra.ValidationReport].fail(
-                f"typed dependency workspace does not exist: {root}"
+                f"typed dependency workspace does not exist: {root}",
             )
         projects = project_dirs or self._discover_typed_projects(root)
         violations = self._typed_dependency_violations(projects, root)
@@ -257,16 +316,23 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
                 passed=not violations,
                 violations=violations,
                 summary=(
-                    f"typed dependency chain: {len(projects)} projects, {len(violations)} issues"
+                    f"typed dependency chain: {len(projects)} projects, "
+                    f"{len(violations)} issues"
                 ),
-            )
+            ),
         )
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute the typed-dependency validation CLI flow."""
+        """Execute the typed-dependency validation CLI flow.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         report_result = self.build_report(
-            self.repository_root, project_dirs=self.project_dirs
+            self.repository_root,
+            project_dirs=self.project_dirs,
         )
         if report_result.failure:
             return r[bool].from_failure(report_result)
@@ -274,14 +340,19 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
         return r[bool].ok(True) if report.passed else r[bool].fail(report.summary)
 
     def _run_mypy_hints(self, project_dir: Path) -> p.Result[t.StrSequence]:
-        """Run mypy and extract install-package hints."""
+        """Run mypy and extract install-package hints.
+
+        Returns:
+            The resulting ``p.Result[t.StrSequence]``.
+
+        """
         runner = self.runner or u.Cli()
         result = runner.run_raw(
             u.Infra.mypy_limited_command(
                 m.Infra.MypyInvocation(
                     targets=(project_dir / c.Infra.DEFAULT_SRC_DIR,),
                     config_file=project_dir / c.PYPROJECT_FILENAME,
-                )
+                ),
             ),
             cwd=project_dir,
             timeout=u.Infra.mypy_runner_timeout(),
@@ -289,8 +360,8 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
         if result.failure:
             return r[t.StrSequence].fail(
                 u.Infra.mypy_launch_failure_diagnostic(
-                    result.error or "Mypy process launch failed"
-                )
+                    result.error or "Mypy process launch failed",
+                ),
             )
         cmd_output: p.Cli.CommandOutput = result.value
         if resource_diagnostic := u.Infra.mypy_failure_diagnostic(cmd_output):
@@ -300,11 +371,16 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
                 match.group(1).strip()
                 for match in c.Infra.MYPY_HINT_RE.finditer(cmd_output.stdout)
                 if match.group(1).strip()
-            })
+            }),
         )
 
     def _run_pyrefly_missing(self, project_dir: Path) -> p.Result[t.StrSequence]:
-        """Run pyrefly check and extract missing imports."""
+        """Run pyrefly check and extract missing imports.
+
+        Returns:
+            The resulting ``p.Result[t.StrSequence]``.
+
+        """
         runner = self.runner or u.Cli()
         result = runner.run(
             [

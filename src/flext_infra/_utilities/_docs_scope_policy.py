@@ -1,4 +1,8 @@
-"""Configuration-backed docs scope policy and classification helpers."""
+"""Configuration-backed docs scope policy and classification helpers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,9 +12,12 @@ from pathlib import Path
 from flext_cli import u
 
 from flext_infra import c, t
-
-from ._docs_scope_state import FlextInfraUtilitiesDocsScopeStateMixin
-from .workspace_manifest import FlextInfraUtilitiesWorkspaceManifest
+from flext_infra._utilities._docs_scope_state import (
+    FlextInfraUtilitiesDocsScopeStateMixin,
+)
+from flext_infra._utilities.workspace_manifest import (
+    FlextInfraUtilitiesWorkspaceManifest,
+)
 
 
 class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateMixin):
@@ -18,14 +25,28 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
 
     @staticmethod
     def config_path(repository_root: Path) -> Path:
-        """Return the minimal docs policy settings path."""
+        """Return the minimal docs policy settings path.
+
+        Returns:
+            The minimal docs policy settings path.
+
+        """
         dir_docs: str = c.Infra.DIR_DOCS
         docs_config: str = c.Infra.DOCS_CONFIG_FILENAME
         return repository_root / dir_docs / docs_config
 
     @staticmethod
     def load_config(repository_root: Path) -> t.JsonMapping:
-        """Load the minimal docs policy settings if present."""
+        """Load the minimal docs policy settings if present.
+
+        Returns:
+            The resulting ``t.JsonMapping``.
+
+        Raises:
+            TypeError: If docs config root must be a mapping.
+            ValueError: If ``state.failure``; or if ``parsed.failure``.
+
+        """
         path = FlextInfraUtilitiesDocsScopePolicyMixin.config_path(repository_root)
         # An absent optional config has no parent identity to authenticate. A
         # present parent is delegated to the atomic owner, which still rejects
@@ -65,9 +86,16 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
         extra exclusions" rather than break every docs and deps phase. The
         manifest's authoritative validation stays in its owner, which fails
         loud.
+
+        Returns:
+            Directory names excluded by the workspace topology manifest.
+
+        Raises:
+            ValueError: If ``loaded.failure``.
+
         """
         manifest_path = FlextInfraUtilitiesWorkspaceManifest.workspace_manifest_path(
-            repository_root
+            repository_root,
         )
         if not manifest_path.is_file():
             return set()
@@ -76,7 +104,7 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
             # A present-but-unreadable manifest must never read as "no
             # exclusions": that would silently widen the docs scope.
             raise ValueError(
-                loaded.error or f"cannot load workspace manifest: {manifest_path}"
+                loaded.error or f"cannot load workspace manifest: {manifest_path}",
             )
         data = loaded.value.data
         if not isinstance(data, dict):
@@ -105,6 +133,10 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
         Union of the docs-scope config and the workspace topology manifest, so
         one declaration works wherever an operator makes it. Two independent
         exclusion owners is what let a declared exclusion be silently ignored.
+
+        Returns:
+            Every explicitly excluded root directory.
+
         """
         owner = FlextInfraUtilitiesDocsScopePolicyMixin
         excluded_names = owner.manifest_excluded_roots(repository_root)
@@ -121,16 +153,26 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
 
     @staticmethod
     def project_docs_meta(project_root: Path) -> t.JsonMapping:
-        """Return optional ``tool.flext.docs`` metadata from a project pyproject."""
+        """Return optional ``tool.flext.docs`` metadata from a project pyproject.
+
+        Returns:
+            Optional ``tool.flext.docs`` metadata from a project pyproject.
+
+        """
         return FlextInfraUtilitiesDocsScopePolicyMixin.project_state(
-            project_root
+            project_root,
         ).docs_meta
 
     @staticmethod
     def docs_meta_list(project_root: Path, key: str) -> t.StrSequence:
-        """Return one normalized string-list value from ``tool.flext.docs``."""
+        """Return one normalized string-list value from ``tool.flext.docs``.
+
+        Returns:
+            One normalized string-list value from ``tool.flext.docs``.
+
+        """
         docs_meta = FlextInfraUtilitiesDocsScopePolicyMixin.project_docs_meta(
-            project_root
+            project_root,
         )
         raw = docs_meta.get(key)
         if not isinstance(raw, list):
@@ -139,10 +181,16 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
 
     @staticmethod
     def excluded_doc_path(project_root: Path, relative_path: Path) -> bool:
-        """Return whether a relative docs path is excluded by ``tool.flext.docs``."""
+        """Return whether a relative docs path is excluded by ``tool.flext.docs``.
+
+        Returns:
+            Whether a relative docs path is excluded by ``tool.flext.docs``.
+
+        """
         candidate = relative_path.as_posix()
         for pattern in FlextInfraUtilitiesDocsScopePolicyMixin.docs_meta_list(
-            project_root, "exclude_docs"
+            project_root,
+            "exclude_docs",
         ):
             if fnmatch(candidate, pattern):
                 return True
@@ -150,19 +198,24 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
 
     @staticmethod
     def governed_project(project_name: str, repository_root: Path) -> bool:
-        """Return whether a project belongs to the governed FLEXT docs scope."""
+        """Return whether a project belongs to the governed FLEXT docs scope.
+
+        Returns:
+            Whether a project belongs to the governed FLEXT docs scope.
+
+        """
         project_root = repository_root / project_name
         docs_meta = FlextInfraUtilitiesDocsScopePolicyMixin.project_docs_meta(
-            project_root
+            project_root,
         )
         is_enabled = FlextInfraUtilitiesDocsScopePolicyMixin.docs_scope_enabled(
-            docs_meta
+            docs_meta,
         )
         return (
             project_name.startswith(c.Infra.PKG_PREFIX_HYPHEN)
             and project_name
             not in FlextInfraUtilitiesDocsScopePolicyMixin.excluded_roots(
-                repository_root
+                repository_root,
             )
             and is_enabled
         )
@@ -174,6 +227,10 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
         Project-prefix heuristics derive from ``c.Infra.INTEGRATION_CLASS_PREFIXES``
         (SSOT for integration project family) so adding a new family member
         requires editing only the canonical class-prefix tuple.
+
+        Returns:
+            The resulting ``str``.
+
         """
         configured = docs_meta.get("project_class")
         if isinstance(configured, str) and configured.strip():
@@ -192,7 +249,12 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
 
     @staticmethod
     def required_project_files() -> t.StrSequence:
-        """Return the required standard docs contract for FLEXT projects."""
+        """Return the required standard docs contract for FLEXT projects.
+
+        Returns:
+            The required standard docs contract for FLEXT projects.
+
+        """
         return [
             "README.md",
             "docs/index.md",

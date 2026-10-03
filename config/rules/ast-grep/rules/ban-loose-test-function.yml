@@ -1,0 +1,27 @@
+# A test module holds one test class; a pytest function declared at module
+# level escapes it. Pytest's module/function convention is the scope: every
+# module under a tests tree, every `test_*` function whose parent is the module
+# (directly or through its decorators).
+#
+# Detection only: nesting the function moves its fixtures' binding and its
+# `self` parameter, a semantic edit owned by the rope class-nesting phase.
+id: ban-loose-test-function
+language: python
+severity: error
+files:
+  - "tests/**/*.py"
+  - "**/tests/**/*.py"
+rule:
+  kind: function_definition
+  has:
+    field: name
+    regex: "^test_"
+  any:
+    - inside:
+        kind: module
+    - inside:
+        kind: decorated_definition
+        inside:
+          kind: module
+message: >-
+  Module-level test function: nest it inside the module's single test class.

@@ -15,9 +15,8 @@ from typing import TYPE_CHECKING, Annotated, ClassVar, override
 
 from flext_core import r
 from flext_infra import c, m, u
-
-from ..base import s
-from ._pytest_diag_xml import FlextInfraPytestDiagXmlMixin
+from flext_infra.base import s
+from flext_infra.validate._pytest_diag_xml import FlextInfraPytestDiagXmlMixin
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -35,23 +34,27 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
 
     junit: Annotated[Path, m.Field(description="JUnit XML path")]
     log_path: Annotated[Path, m.Field(description="Pytest log path")] = m.Field(
-        alias="log"
+        alias="log",
     )
     report_log: Annotated[Path, m.Field(description="Pytest report-log JSONL path")]
     failed: Annotated[
-        Path | None, m.Field(description="Path to write failed cases")
+        Path | None,
+        m.Field(description="Path to write failed cases"),
     ] = None
     errors: Annotated[
-        Path | None, m.Field(description="Path to write error traces")
+        Path | None,
+        m.Field(description="Path to write error traces"),
     ] = None
     warnings: Annotated[Path | None, m.Field(description="Path to write warnings")] = (
         None
     )
     slowest: Annotated[
-        Path | None, m.Field(description="Path to write slowest entries")
+        Path | None,
+        m.Field(description="Path to write slowest entries"),
     ] = None
     skips: Annotated[
-        Path | None, m.Field(description="Path to write skipped cases")
+        Path | None,
+        m.Field(description="Path to write skipped cases"),
     ] = None
 
     @classmethod
@@ -60,6 +63,11 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
 
         Every reported node must show one setup and one teardown phase, plus a
         call phase whenever setup passed; a missing or repeated phase fails.
+
+        Raises:
+            ValueError: If pytest report log contains no events; or if incomplete pytest
+                lifecycle.
+
         """
         lines = report_log.read_text(encoding=c.Cli.ENCODING_DEFAULT).splitlines()
         if not lines:
@@ -92,7 +100,8 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
 
     @staticmethod
     def _record_case_event(
-        event: m.Infra.PytestReportEvent, diag: m.Infra.DiagResult
+        event: m.Infra.PytestReportEvent,
+        diag: m.Infra.DiagResult,
     ) -> None:
         if event.nodeid is None:
             return
@@ -133,7 +142,11 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
         diag.warning_lines.append(warning)
 
     def extract(
-        self, junit_path: Path, log_path: Path, *, report_log: Path
+        self,
+        junit_path: Path,
+        log_path: Path,
+        *,
+        report_log: Path,
     ) -> p.Result[m.Infra.PytestDiagnostics]:
         """Extract diagnostics from JUnit XML, pytest log and explicit report-log.
 
@@ -150,21 +163,37 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
 
     @classmethod
     def extract_report_log(
-        cls, report_log: Path
+        cls,
+        report_log: Path,
     ) -> p.Result[m.Infra.PytestDiagnostics]:
-        """Read collection-only evidence through the same runtime event boundary."""
+        """Read collection-only evidence through the same runtime event boundary.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.PytestDiagnostics]``.
+
+        """
         diag = m.Infra.DiagResult()
         cls._extract_report_events(report_log, diag)
         return r.ok(cls._diagnostics_model(diag))
 
     @staticmethod
     def _read_log_text(log_path: Path) -> str:
-        """Read the required pytest log without exception normalization."""
+        """Read the required pytest log without exception normalization.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return log_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
 
     @staticmethod
     def _diagnostics_model(diag: m.Infra.DiagResult) -> m.Infra.PytestDiagnostics:
-        """Convert mutable extraction state to the canonical diagnostics model."""
+        """Convert mutable extraction state to the canonical diagnostics model.
+
+        Returns:
+            The resulting ``m.Infra.PytestDiagnostics``.
+
+        """
         return m.Infra.PytestDiagnostics(
             failed_count=len(diag.failed_cases),
             error_count=len(diag.error_cases),
@@ -183,9 +212,18 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
         )
 
     def _extract_diagnostics(
-        self, junit_path: Path, log_path: Path, *, report_log: Path
+        self,
+        junit_path: Path,
+        log_path: Path,
+        *,
+        report_log: Path,
     ) -> p.Result[m.Infra.PytestDiagnostics]:
-        """Extract pytest diagnostics after input normalization."""
+        """Extract pytest diagnostics after input normalization.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.PytestDiagnostics]``.
+
+        """
         self._read_log_text(log_path)
         diag = m.Infra.DiagResult()
         self._parse_xml(junit_path, diag)
@@ -194,9 +232,16 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute the pytest diagnostics CLI flow."""
+        """Execute the pytest diagnostics CLI flow.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         diagnostics = self.extract(
-            self.junit, self.log_path, report_log=self.report_log
+            self.junit,
+            self.log_path,
+            report_log=self.report_log,
         ).unwrap()
         for output_path, attr_name, separator in [
             (self.failed, "failed_cases", "\n\n"),
@@ -209,13 +254,14 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
                 continue
             items = getattr(diagnostics, attr_name)
             u.Cli.atomic_write_text_file(
-                output_path, separator.join(items) + "\n"
+                output_path,
+                separator.join(items) + "\n",
             ).unwrap()
         sys.stdout.write(
             f"failed_count={diagnostics.failed_count}\n"
             f"error_count={diagnostics.error_count}\n"
             f"warning_count={diagnostics.warning_count}\n"
-            f"skipped_count={diagnostics.skipped_count}\n"
+            f"skipped_count={diagnostics.skipped_count}\n",
         )
         return r[bool].ok(True)
 

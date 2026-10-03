@@ -1,97 +1,64 @@
-"""Rope refactor and occurrence boundary methods."""
+"""Rope refactor and occurrence boundary methods.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
-import io
-import itertools
-import tokenize
 from typing import ClassVar
 
-from rope.base import codeanalyze, simplify
-
 from flext_infra import m, p, t
-
-from .rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
+from flext_infra._utilities.rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
 
 
 class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase):
     """Load Rope refactor helpers behind protocols."""
 
     _WORD_RANGE_SIZE: ClassVar[int] = 2
-    _DOCSTRING_LAYOUT_TOKENS: ClassVar[frozenset[int]] = frozenset({
-        tokenize.NEWLINE,
-        tokenize.NL,
-        tokenize.COMMENT,
-        tokenize.INDENT,
-        tokenize.DEDENT,
-        tokenize.ENDMARKER,
-    })
-    _DOCSTRING_PREFIXES: ClassVar[frozenset[str]] = frozenset({"", "r", "u"})
-
-    @classmethod
-    def _is_docstring_statement(cls, text: str) -> bool:
-        """Whether a statement is exactly one docstring-capable string literal.
-
-        A leading quote is not enough: ``"x".join(...)`` starts with one and is
-        live code, while an ``r``-prefixed triple-quoted literal starts with a
-        letter and is still a docstring. Only a lone STRING token with an
-        empty, ``r`` or ``u`` prefix (never ``b``/``f``) is the wrapper
-        docstring.
-        """
-        tokens = [
-            token
-            for token in tokenize.generate_tokens(io.StringIO(text).readline)
-            if token.type not in cls._DOCSTRING_LAYOUT_TOKENS
-        ]
-        if len(tokens) != 1 or tokens[0].type != tokenize.STRING:
-            return False
-        prefix = "".join(itertools.takewhile(str.isalpha, tokens[0].string))
-        return prefix.lower() in cls._DOCSTRING_PREFIXES
 
     @staticmethod
     def unwrap_class_rewrites(
         source: str,
-        *,
-        header: m.Infra.LogicalStatement,
-        body: t.SequenceOf[m.Infra.LogicalStatement],
-        body_end: int,
+        layout: m.Infra.ClassBlockLayout,
     ) -> t.VariadicTuple[m.Infra.SourceRewrite]:
         """Remove one Rope-resolved header without changing literal payloads.
 
         The body statements own the dedent width and the wrapper docstring, so
         both derive from the logical facts instead of being passed alongside.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.SourceRewrite]``.
+
+        Raises:
+            ValueError: If Rope wrapper body has inconsistent indentation.
+
         """
+        from rope.base import codeanalyze, simplify
+
         lines = codeanalyze.SourceLinesAdapter(source)
-        indentation = body[0].indent - header.indent
-        docstring_span = (
-            (body[0].line, body[0].end_line)
-            if FlextInfraUtilitiesRopeRuntimeRefactors._is_docstring_statement(
-                body[0].text
-            )
-            else None
-        )
         regions = tuple(simplify.ignored_regions(source))
-        start = lines.get_line_start(header.line)
-        end = min(lines.get_line_end(header.end_line) + 1, len(source))
+        start = lines.get_line_start(layout.header_start)
+        end = min(lines.get_line_end(layout.header_end) + 1, len(source))
         comments = "".join(
             source[begin:finish] + "\n"
             for begin, finish, _metadata in regions
             if start <= begin < end and source[begin:finish].startswith("#")
         )
-        prefix = lines.get_line(header.line)
+        prefix = lines.get_line(layout.header_start)
         prefix = prefix[: len(prefix) - len(prefix.lstrip())]
         edits = [
             m.Infra.SourceRewrite(
                 start=start,
                 end=end,
                 text="".join(prefix + line for line in comments.splitlines(True)),
-            )
+            ),
         ]
-        for number in range(header.end_line + 1, body_end + 1):
+        for number in range(layout.header_end + 1, layout.body_end + 1):
             offset = lines.get_line_start(number)
             line = lines.get_line(number)
-            if docstring_span is not None and (
-                docstring_span[0] <= number <= docstring_span[1]
+            if layout.docstring_span is not None and (
+                layout.docstring_span[0] <= number <= layout.docstring_span[1]
             ):
                 continue
             if not line.strip() or any(
@@ -100,19 +67,26 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
                 if not source[begin:finish].startswith("#")
             ):
                 continue
-            if len(line) - len(line.lstrip()) < indentation:
+            if len(line) - len(line.lstrip()) < layout.indentation:
                 msg = "Rope wrapper body has inconsistent indentation"
                 raise ValueError(msg)
             edits.append(
-                m.Infra.SourceRewrite(start=offset, end=offset + indentation, text="")
+                m.Infra.SourceRewrite(
+                    start=offset,
+                    end=offset + layout.indentation,
+                    text="",
+                ),
             )
-        if docstring_span is not None:
+        if layout.docstring_span is not None:
             edits.append(
                 m.Infra.SourceRewrite(
-                    start=lines.get_line_start(docstring_span[0]),
-                    end=min(lines.get_line_end(docstring_span[1]) + 1, len(source)),
+                    start=lines.get_line_start(layout.docstring_span[0]),
+                    end=min(
+                        lines.get_line_end(layout.docstring_span[1]) + 1,
+                        len(source),
+                    ),
                     text="",
-                )
+                ),
             )
         return tuple(edits)
 
@@ -123,9 +97,20 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
         source: str,
         rewrites: t.SequenceOf[m.Infra.SourceRewrite],
     ) -> p.Infra.RopeChangeContents:
-        """Preview checked, disjoint edits through Rope's change machinery."""
+        """Preview checked, disjoint edits through Rope's change machinery.
+
+        Returns:
+            The resulting ``p.Infra.RopeChangeContents``.
+
+        Raises:
+            TypeError: If Rope ChangeCollector has an invalid contract; or if Rope
+                ChangeCollector returned a non-source result; or if Rope ChangeContents
+                returned an invalid content plan.
+            ValueError: If Rope source edits overlap or escape their snapshot.
+
+        """
         collector = cls._runtime_callable("rope.base.codeanalyze", "ChangeCollector")(
-            source
+            source,
         )
         add = getattr(collector, "add_change", None)
         changed = getattr(collector, "get_changed", None)
@@ -135,7 +120,7 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
         end = 0
         for rewrite in sorted(rewrites, key=lambda item: (item.start, item.end)):
             if rewrite.start < end or not 0 <= rewrite.start <= rewrite.end <= len(
-                source
+                source,
             ):
                 msg = "Rope source edits overlap or escape their snapshot"
                 raise ValueError(msg)
@@ -148,7 +133,8 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
             msg = "Rope ChangeCollector returned a non-source result"
             raise TypeError(msg)
         change = cls._runtime_callable("rope.base.change", "ChangeContents")(
-            resource, updated
+            resource,
+            updated,
         )
         if not isinstance(change, p.Infra.RopeChangeContents):
             msg = "Rope ChangeContents returned an invalid content plan"
@@ -165,7 +151,16 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
         arguments: t.MappingKV[str, str],
         resources: t.SequenceOf[p.Infra.RopeResource],
     ) -> p.Infra.RopeChangeSet:
-        """Plan Rope 1.14 semantic changes without invoking Project.do."""
+        """Plan Rope 1.14 semantic changes without invoking Project.do.
+
+        Returns:
+            The resulting ``p.Infra.RopeChangeSet``.
+
+        Raises:
+            TypeError: If rope Restructure does not satisfy its public planning
+                contract.
+
+        """
         factory = cls._runtime_callable("rope.refactor.restructure", "Restructure")
         restructuring = factory(rope_project, pattern, goal, args=dict(arguments))
         if not isinstance(restructuring, p.Infra.RopeRestructure):
@@ -220,10 +215,15 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
         in_hierarchy: bool,
     ) -> t.Infra.RopeOccurrenceFinder:
         create_finder = cls._runtime_callable(
-            "rope.refactor.occurrences", "create_finder"
+            "rope.refactor.occurrences",
+            "create_finder",
         )
         finder = create_finder(
-            rope_project, name, pyname, imports=imports, in_hierarchy=in_hierarchy
+            rope_project,
+            name,
+            pyname,
+            imports=imports,
+            in_hierarchy=in_hierarchy,
         )
         if not isinstance(finder, p.Infra.RopeOccurrenceFinder):
             msg = "rope occurrence finder does not satisfy p.Infra.RopeOccurrenceFinder"
@@ -248,17 +248,18 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
         return value
 
     @classmethod
-    def word_primary_at(cls, source: str, offset: int) -> str:
-        word_finder = cls._word_finder(source)
-        primary_at = getattr(word_finder, "get_primary_at", None)
-        if not callable(primary_at):
-            msg = "rope Worder does not expose callable get_primary_at"
-            raise TypeError(msg)
-        return str(primary_at(offset))
-
-    @classmethod
     def word_is_function_call(cls, source: str, offset: int) -> bool:
-        """Return Rope's syntactic call fact for the primary at ``offset``."""
+        """Return Rope's syntactic call fact for the primary at ``offset``.
+
+        Returns:
+            Rope's syntactic call fact for the primary at ``offset``.
+
+        Raises:
+            TypeError: If rope Worder does not expose callable
+                is_a_function_being_called; or if rope Worder returned a non-boolean
+                function-call fact.
+
+        """
         word_finder = cls._word_finder(source)
         is_called = getattr(word_finder, "is_a_function_being_called", None)
         if not callable(is_called):

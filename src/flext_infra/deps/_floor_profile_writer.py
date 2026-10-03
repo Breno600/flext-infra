@@ -1,4 +1,8 @@
-"""Runtime-derived dependency floors written back to the codegen SSOT (flext-gzfd2)."""
+"""Runtime-derived dependency floors written back to the codegen SSOT.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,7 +10,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import c, config, m, u
-from flext_infra.workspace import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -17,9 +20,19 @@ class FlextInfraDepsFloorProfileWriter:
 
     @staticmethod
     def _source_paths(root: Path) -> t.SequenceOf[Path]:
-        """Elect the local owner from the caller's typed workspace declaration."""
+        """Elect the local owner from the caller's typed workspace declaration.
+
+        Returns:
+            The resulting ``t.SequenceOf[Path]``.
+
+        Raises:
+            ValueError: If ambiguous dependency floor owners in; or if dependency floor
+                configuration is outside workspace; or if dependency floor owner is not
+                writable in this workspace.
+
+        """
         root = root.resolve()
-        manifests = FlextInfraWorkspaceDetector.load_workspace_manifest(root).unwrap()
+        manifests = u.Infra.load_workspace_manifest(root).unwrap()
         relative = Path(c.Infra.CODEGEN_CONFIG_DIR) / c.Infra.CODEGEN_CONFIG_FILENAME
         local = root / relative
         owners = [root] if local.exists() or local.is_symlink() else []
@@ -29,7 +42,10 @@ class FlextInfraDepsFloorProfileWriter:
                     continue
                 owner = (root / member.path).resolve()
                 if not owner.is_relative_to(root) or member.read_only:
-                    message = f"dependency floor owner is not writable in this workspace: {owner}"
+                    message = (
+                        f"dependency floor owner is not writable "
+                        f"in this workspace: {owner}"
+                    )
                     raise ValueError(message)
                 owners.append(owner)
             if manifest.repository.distribution == config.Infra.name and not owners:
@@ -59,9 +75,21 @@ class FlextInfraDepsFloorProfileWriter:
         ``root`` is the modernizer's own declared ``--repository-root``.
         A workspace declares its infrastructure member through its typed
         manifest; a standalone owner carries its own configuration. Neither
-        route consults the installed package location (flext-eles2).
+        route consults the installed package location.
 
         Returns a list of change descriptions for the deps report.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            TypeError: If dependency profile must be a mapping in; or if ``not
+                isinstance(reqs, list)``; or if ``not isinstance(req, str)``.
+            ValueError: If ``loaded.failure``; or if Infra section missing in; or if
+                Infra.codegen section missing in; or if Infra.codegen.scaffold section
+                missing in; or if Infra.codegen.scaffold.project section missing in; or
+                if dependency_profiles missing or not a list in.
+
         """
         sources = cls._source_paths(root)
         if not sources:
@@ -103,7 +131,9 @@ class FlextInfraDepsFloorProfileWriter:
 
         # Rewrite each profile's runtime and codegen requirement lists
         for profile, contract in zip(
-            profiles, validated.scaffold.project.dependency_profiles, strict=True
+            profiles,
+            validated.scaffold.project.dependency_profiles,
+            strict=True,
         ):
             if not isinstance(profile, dict):
                 message = f"dependency profile must be a mapping in {ssot_path}"
@@ -133,7 +163,7 @@ class FlextInfraDepsFloorProfileWriter:
                         # Update in place preserves surrounding comments/keys
                         reqs[idx] = rewritten
                         changes.append(
-                            f"profile({upstream}).{key_name}: {req} -> {rewritten}"
+                            f"profile({upstream}).{key_name}: {req} -> {rewritten}",
                         )
 
         if not changes:

@@ -1,4 +1,8 @@
-"""Per-project artifact rendering for documentation generation."""
+"""Per-project artifact rendering for documentation generation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,39 +10,61 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import config, m, t
-
-from ._docs_generate_plan import FlextInfraUtilitiesDocsGeneratePlanMixin
-from ._docs_guides import FlextInfraUtilitiesDocsGuidesMixin
-from .docs_api import FlextInfraUtilitiesDocsApi
-from .docs_contract import FlextInfraUtilitiesDocsContract
-from .docs_render import FlextInfraUtilitiesDocsRender
+from flext_infra import c, m, t
+from flext_infra._utilities._docs_generate_plan import (
+    FlextInfraUtilitiesDocsGeneratePlanMixin,
+)
+from flext_infra._utilities._docs_guides import FlextInfraUtilitiesDocsGuidesMixin
+from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
+from flext_infra._utilities.docs_contract import FlextInfraUtilitiesDocsContract
+from flext_infra._utilities.docs_render import FlextInfraUtilitiesDocsRender
 
 if TYPE_CHECKING:
     from flext_infra import p
 
 
 class FlextInfraUtilitiesDocsGenerateProjectMixin(
-    FlextInfraUtilitiesDocsGeneratePlanMixin
+    FlextInfraUtilitiesDocsGeneratePlanMixin,
 ):
     """Render the complete desired artifact inventory for one project scope."""
 
     @staticmethod
     def _module_names(scope: m.Infra.DocScope) -> list[str]:
-        """Return config-owned public API module names for one distribution."""
-        declared = config.Infra.codegen.make.docs.api_modules.get(scope.name, ())
-        return [f"{scope.package_name}.{module}" for module in declared]
+        """Return the public top-level modules of the scope's package.
+
+        The public API is what the package itself declares public: every
+        top-level module whose name is not private. It is derived from the
+        package tree, never listed per distribution in configuration.
+
+        Returns:
+            The public top-level modules of the scope's package.
+
+        """
+        if not scope.package_name:
+            return []
+        package_dir = scope.path / c.Infra.DEFAULT_SRC_DIR / scope.package_name
+        return [
+            f"{scope.package_name}.{module.stem}"
+            for module in sorted(package_dir.glob(c.Infra.EXT_PYTHON_GLOB))
+            if not module.stem.startswith("_")
+        ]
 
     @staticmethod
     def docs_project_api_artifacts(scope: m.Infra.DocScope) -> list[t.Pair[Path, str]]:
-        """Render package API pages before their owning tree is pruned."""
+        """Render package API pages before their owning tree is pruned.
+
+        Returns:
+            The resulting ``list[t.Pair[Path, str]]``.
+
+        """
         module_names = FlextInfraUtilitiesDocsGenerateProjectMixin._module_names(scope)
         api_root = scope.path / "docs/api-reference/generated"
         rendered = [
             (
                 api_root / "public-api.md",
                 FlextInfraUtilitiesDocsRender.docs_directive_page(
-                    f"{scope.name} Public API", scope.package_name
+                    f"{scope.name} Public API",
+                    scope.package_name,
                 ),
             ),
             (
@@ -48,12 +74,14 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
         ]
         for module_name in module_names:
             relative = module_name.removeprefix(f"{scope.package_name}.").replace(
-                ".", "/"
+                ".",
+                "/",
             )
             rendered.append((
                 api_root / "modules" / f"{relative}.md",
                 FlextInfraUtilitiesDocsRender.docs_directive_page(
-                    module_name, module_name
+                    module_name,
+                    module_name,
                 ),
             ))
         return rendered
@@ -65,13 +93,21 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
         repository_root: Path,
         source_states: t.SequenceOf[m.Cli.AtomicFileState],
     ) -> p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]:
-        """Render the complete target inventory for one FLEXT project."""
+        """Render the complete target inventory for one FLEXT project.
+
+        Returns:
+            The resulting
+                ``p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]``.
+
+        """
         guides = FlextInfraUtilitiesDocsGuidesMixin.docs_project_guides_artifacts(
-            scope, repository_root=repository_root, source_states=source_states
+            scope,
+            repository_root=repository_root,
+            source_states=source_states,
         )
         if guides.failure:
             return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
-                guides
+                guides,
             )
         guide_paths = {
             state.path
@@ -86,10 +122,12 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
             else:
                 guide_paths.add(path)
         analyzed_contract = FlextInfraUtilitiesDocsApi.public_contract(
-            scope.path, scope.package_name
+            scope.path,
+            scope.package_name,
         )
         contract = FlextInfraUtilitiesDocsContract.docs_current_project_contract(
-            scope.path, analyzed_contract
+            scope.path,
+            analyzed_contract,
         )
         module_names = FlextInfraUtilitiesDocsGenerateProjectMixin._module_names(scope)
         rendered: list[t.Pair[Path, str]] = [
@@ -104,13 +142,16 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
             (
                 scope.path / "docs/guides/README.md",
                 FlextInfraUtilitiesDocsRender.docs_guides_index(
-                    scope, guide_paths=tuple(sorted(guide_paths))
+                    scope,
+                    guide_paths=tuple(sorted(guide_paths)),
                 ),
             ),
             (
                 scope.path / "docs/api-reference/README.md",
                 FlextInfraUtilitiesDocsRender.docs_api_readme(
-                    scope, contract, module_names
+                    scope,
+                    contract,
+                    module_names,
                 ),
             ),
             (
@@ -123,28 +164,34 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
                     FlextInfraUtilitiesDocsRender.docs_root_mkdocs(contract, ("src",))
                     if scope.path == repository_root
                     else FlextInfraUtilitiesDocsRender.docs_project_mkdocs(
-                        scope, contract, module_names
+                        scope,
+                        contract,
+                        module_names,
                     )
                 ),
             ),
             (
                 scope.path / "docs/api-reference/generated/overview.md",
                 FlextInfraUtilitiesDocsRender.docs_overview_page(
-                    scope, contract, module_names
+                    scope,
+                    contract,
+                    module_names,
                 ),
             ),
             *FlextInfraUtilitiesDocsGenerateProjectMixin.docs_project_api_artifacts(
-                scope
+                scope,
             ),
         ]
         pruned = (
             FlextInfraUtilitiesDocsGenerateProjectMixin._prune_generated_tree_artifacts(
-                scope.path, scope.path / "docs/api-reference/generated", rendered
+                scope.path,
+                scope.path / "docs/api-reference/generated",
+                rendered,
             )
         )
         if pruned.failure:
             return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
-                pruned
+                pruned,
             )
         return FlextInfraUtilitiesDocsGenerateProjectMixin.docs_normalize_artifacts((
             *((scope.path, path, content) for path, content in rendered),
