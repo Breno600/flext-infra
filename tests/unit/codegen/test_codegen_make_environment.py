@@ -24,6 +24,94 @@ pytestmark = pytest.mark.slow
 class TestsFlextInfraCodegenMakeEnvironment:
     """Prove generated operations ignore the caller shell environment."""
 
+    def test_make_authenticates_real_mise_without_external_token_setup(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A generated public verb supplies gh's credential to the real Mise child."""
+        project_root, _ = self._render_makefile(
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
+        )
+        tm.ok(
+            u.Cli.run_checked(
+                ["uv", "venv", "--python", sys.executable, str(project_root / ".venv")],
+                cwd=project_root,
+            ),
+        )
+        (project_root / "auth_probe.py").write_text(
+            "import os, subprocess\n"
+            "credential = subprocess.run(['gh', 'auth', 'token'], "
+            "check=True, capture_output=True, text=True).stdout.rstrip('\\n')\n"
+            "assert credential\n"
+            "assert all(os.environ[name] == credential for name in "
+            "('GITHUB_TOKEN', 'GH_TOKEN', 'MISE_GITHUB_TOKEN'))\n"
+            "print('mise-authenticated')\n",
+            encoding="utf-8",
+        )
+        (project_root / "custom.mk").write_text(
+            "_custom-status:\n"
+            '\t@"$(SETUP_MISE)" -C "$(PROJECT_ROOT)" exec -- '
+            '"$(RUNTIME_PYTHON)" "$(PROJECT_ROOT)/auth_probe.py"\n',
+            encoding="utf-8",
+        )
+        process = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "status"],
+                cwd=project_root,
+                env={"MISE_GITHUB_TOKEN": "stale-token-must-not-reach-mise"},
+            ),
+        )
+        tm.that(
+            u.Cli.process_succeeded(process.outcome),
+            eq=True,
+            msg=process.stdout + process.stderr,
+        )
+        tm.that(process.stdout, has="mise-authenticated")
+
+    @pytest.mark.parametrize("verb", ["setup", "status", "help"])
+    @pytest.mark.parametrize("credential", ["", "invalid-test-credential"])
+    def test_make_handles_missing_gh_auth_at_the_declared_boundary(
+        self,
+        tmp_path: Path,
+        verb: str,
+        credential: str,
+    ) -> None:
+        """Setup proceeds to its launcher preflight; other verbs require gh auth."""
+        project_root, _ = self._render_makefile(
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
+        )
+        empty_config = tmp_path / "empty-gh-config"
+        empty_config.mkdir()
+        (project_root / "bin" / "mise").unlink()
+        process = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", verb],
+                cwd=project_root,
+                env={
+                    "GH_CONFIG_DIR": str(empty_config),
+                    "GH_TOKEN": credential,
+                    "GITHUB_TOKEN": credential,
+                    "GH_ENTERPRISE_TOKEN": "",
+                    "GITHUB_ENTERPRISE_TOKEN": "",
+                    "GH_HOST": "github.com",
+                    "MISE_GITHUB_TOKEN": "must-not-be-a-fallback",
+                    "SETUP_BOOTSTRAP_ONLY": "Y",
+                },
+            ),
+        )
+        if verb == "setup":
+            tm.that(process.outcome.raw_return_code, ne=0)
+            tm.that(process.stderr, has="missing generated mise launcher")
+            tm.that(process.stderr, lacks="authentication is required")
+        elif verb == "help":
+            tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
+        else:
+            tm.that(process.outcome.raw_return_code, ne=0)
+            tm.that(process.stderr, has="authentication is required")
+        tm.that((project_root / ".venv").exists(), eq=False)
+
     @staticmethod
     @pytest.mark.remote
     def test_upg_replaces_newer_lock_revision_before_older_mise_reads_it(
@@ -499,9 +587,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         )
         tm.that(self._locks(ci_checkout), eq=resolved_locks)
 
-        # Only upg writes locks, and setup always runs. A new dependency
-        # declaration drifts uv.lock: setup warns, installs the committed lock
-        # frozen, and leaves every lock untouched.
+        # A new dependency declaration makes the committed lock stale: setup
+        # fails instead of re-resolving, and the lock stays untouched.
         checkout = u.Tests.resolved_make_checkout(template, tmp_path / "stale", profile)
         dependency_root = tmp_path / "external-runtime"
         u.Tests.WorktreeFixture.write_python_project(
@@ -528,34 +615,22 @@ class TestsFlextInfraCodegenMakeEnvironment:
                 },
             ),
         )
-        tm.that(
-            u.Cli.process_succeeded(stale.outcome),
-            eq=True,
-            msg=stale.stdout + stale.stderr,
-        )
-        tm.that(stale.stderr, has="uv.lock drifts from pyproject.toml")
+        tm.that(u.Cli.process_succeeded(stale.outcome), eq=False)
         tm.that(self._locks(checkout), eq=resolved_locks)
 
-        # A committed mise.lock missing a declared tool drifts from .mise.toml:
-        # setup warns, installs from the manifest with the lockfile disabled,
-        # and never rewrites mise.lock.
+        # A manifest the committed mise.lock does not satisfy stops setup with
+        # the upg hint; setup never relocks and leaves every lock untouched.
         drifted = u.Tests.resolved_make_checkout(
             template,
             tmp_path / "drifted",
             profile,
         )
-        mise_lock = drifted / c.Infra.MISE_LOCK_FILENAME
-        lock_text = mise_lock.read_text(encoding="utf-8")
-        first_tool = lock_text.index("[[tools.")
-        next_tool = lock_text.index("\n[", first_tool + 1)
-        mise_lock.write_text(
-            lock_text[:first_tool] + lock_text[next_tool + 1 :],
+        manifest = drifted / c.Infra.MISE_TOML_FILENAME
+        manifest.write_text(
+            manifest.read_text(encoding="utf-8")
+            + '[tools."github:example/absent-from-lock"]\nversion = "1.0.0"\n',
             encoding="utf-8",
         )
-        drifted_locks = {
-            **resolved_locks,
-            c.Infra.MISE_LOCK_FILENAME: mise_lock.read_bytes(),
-        }
         unsatisfied = tm.ok(
             u.Tests.run_isolated_make(
                 ["--no-print-directory", "setup"],
@@ -567,13 +642,10 @@ class TestsFlextInfraCodegenMakeEnvironment:
                 },
             ),
         )
-        tm.that(
-            u.Cli.process_succeeded(unsatisfied.outcome),
-            eq=True,
-            msg=unsatisfied.stdout + unsatisfied.stderr,
-        )
-        tm.that(unsatisfied.stderr, has="mise.lock drifts from .mise.toml")
-        tm.that(self._locks(drifted), eq=drifted_locks)
+        tm.that(u.Cli.process_succeeded(unsatisfied.outcome), eq=False)
+        tm.that(unsatisfied.stderr, has="does not satisfy .mise.toml")
+        tm.that(unsatisfied.stderr, has="run make upg")
+        tm.that(self._locks(drifted), eq=resolved_locks)
 
     @staticmethod
     def _locks(root: Path) -> t.MappingKV[str, bytes]:
@@ -932,9 +1004,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
 
         The generated Makefile confines every uv upgrade to the `upg`
         lifecycle and every `mise lock --bump` to the shared bootstrap gated by
-        a switch that only `upg` sets; `setup` never writes a lock and always
-        runs, installing exactly what the lock pins or, on drift, warning and
-        installing without touching it.
+        a switch that only `upg` sets; `setup` syncs `--locked`, and the
+        generated `.mise.toml` makes mise install exactly what the lock pins.
         """
         project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path,
@@ -956,21 +1027,17 @@ class TestsFlextInfraCodegenMakeEnvironment:
         toolchain = config.Infra.codegen.toolchain
         lock_invocations = re.findall(r"lock --bump([^;]*);", makefile)
         tm.that(tuple(arguments.strip() for arguments in lock_invocations), eq=("",))
-        # Only upg writes locks, and setup always runs: no reconcile or relock
-        # path survives; a drifted mise.lock is installed around with the
-        # lockfile disabled for that setup, never rewritten.
+        # Setup never locks (operator 2026-10-02): no reconcile or relock path
+        # survives, and a lock that no longer satisfies the manifest stops.
         tm.that(
             makefile,
             lacks=[
                 "setup reconcile",
-                '" reconcile "',
-                '" relock "',
-                "flext_infra/bootstrap.py",
+                ' reconcile "$$project_root"',
+                'relock "$(PROJECT_ROOT)"',
             ],
         )
-        tm.that(makefile, has="mise.lock drifts from .mise.toml")
-        tm.that(makefile, has='$${mise_lock_drift:+"MISE_LOCKED=false"}')
-        tm.that(makefile, has='$${mise_lock_drift:+"SETUP_MISE_LOCK_DRIFT=1"}')
+        tm.that(makefile, has="does not satisfy .mise.toml under Mise %s; run make upg")
         # Only a missing-tool install and the upg resolution reach the network;
         # every other Mise call runs through the declared offline wrapper.
         offline = " ".join(
@@ -1007,13 +1074,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, has="upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle")
         sync_flags = re.search(r"^UV_SYNC_FLAGS := (.*)$", makefile, re.MULTILINE)
         assert sync_flags is not None
-        tm.that(sync_flags.group(1), lacks=["--upgrade", "--locked", "--frozen"])
-        # A drifted uv.lock falls back to `--frozen`, which never writes it.
-        tm.that(
-            re.findall(r"\$\(UV\) sync [^;]*?(--locked|--frozen)", makefile),
-            eq=["--locked", "--frozen"],
-        )
-        tm.that(makefile, has="uv.lock drifts from pyproject.toml")
+        tm.that(sync_flags.group(1), has="--locked")
+        tm.that(sync_flags.group(1), lacks="--upgrade")
 
         mise_toml = u.Cli.toml_mapping_from_text(
             (project_root / c.Infra.MISE_TOML_FILENAME).read_text(encoding="utf-8"),
@@ -1072,7 +1134,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tmp_path: Path,
         profile: c.Infra.MakeProfile,
     ) -> None:
-        """Every profile selects the credential once, in the global preamble."""
+        """Bootstrap forwards the caller token without consulting a keyring."""
         project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path,
             profile,
@@ -1081,9 +1143,9 @@ class TestsFlextInfraCodegenMakeEnvironment:
         makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
             encoding="utf-8",
         )
-        tm.that(makefile, has="export GITHUB_TOKEN GH_TOKEN MISE_GITHUB_TOKEN")
-        for command in u.Infra.mise_bootstrap_environment().credential_commands:
-            tm.that(makefile.count(" ".join(command)), eq=1)
+        tm.that(makefile, has="export GITHUB_TOKEN")
+        tm.that(makefile, has="unexport GH_TOKEN MISE_GITHUB_TOKEN GITHUB_API_TOKEN")
+        tm.that(makefile, lacks=["gh auth token", "selected GitHub credential source"])
 
     @staticmethod
     def test_public_gate_fails_closed_before_managed_environment_exists(

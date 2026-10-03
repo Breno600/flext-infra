@@ -29,7 +29,7 @@ class TestsFlextInfraCodegenWorkspaceMemberGroup:
         """Real root conform declares every attached member and converges."""
         root = tmp_path / "workspace"
         _ = u.Tests.WorktreeFixture.governed_workspace_with_member(root)
-        root_pyproject = root / c.Infra.PYPROJECT_FILENAME
+        root_pyproject = root / c.PYPROJECT_FILENAME
         request = u.Tests.conform_request(
             root,
             what=c.Infra.CodegenConformSurface.PYPROJECT,

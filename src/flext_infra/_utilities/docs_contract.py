@@ -71,10 +71,7 @@ class FlextInfraUtilitiesDocsContract:
 
         """
         original = content
-        strip_toc = (
-            FlextInfraUtilitiesDocsContract
-            ._docs_contract_strip_invented_toc_before_frontmatter
-        )
+        strip_toc = FlextInfraUtilitiesDocsContract._docs_contract_strip_invented_toc_before_frontmatter
         content = strip_toc(
             content,
         )

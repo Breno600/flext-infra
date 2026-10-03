@@ -28,7 +28,9 @@ class FlextInfraRuntimeDevDependencyDetector(
     output: Annotated[str | None, m.Field(None, description="Optional output path")] = (
         None
     )
-    quiet: Annotated[bool, m.Field(default=False, description="Reduce command output")] = False
+    quiet: Annotated[
+        bool, m.Field(default=False, description="Reduce command output")
+    ] = False
     no_fail: Annotated[
         bool,
         m.Field(alias="no-fail", description="Exit successfully even with issues"),

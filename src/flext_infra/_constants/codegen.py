@@ -114,9 +114,9 @@ class FlextInfraConstantsCodegen(
     "Module binding the flext-core lazy engine writes and resolves exports from."
     MISE_RELEASE_COMPONENT_COUNT: ClassVar[int] = 3
     "Number of numeric components in a generated Mise release version."
-    MISE_BOOTSTRAP_CREDENTIAL_COMMANDS: ClassVar[t.VariadicTuple[t.VariadicTuple[str]]] = (
-        ("gh", "auth", "token"),
-    )
+    MISE_BOOTSTRAP_CREDENTIAL_COMMANDS: ClassVar[
+        t.VariadicTuple[t.VariadicTuple[str]]
+    ] = (("gh", "auth", "token"),)
     MISE_RELEASE_PATTERN: ClassVar[str] = (
         rf"[0-9]+(\.[0-9]+){{{MISE_RELEASE_COMPONENT_COUNT - 1}}}"
     )
