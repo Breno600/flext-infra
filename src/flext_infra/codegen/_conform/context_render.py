@@ -291,7 +291,6 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
             return r[m.Infra.ProjectRenderContext].fail(
                 f"unsupported scaffold upstream: {project.upstream}",
             )
-        dependency_profile, *additions = rows
         if additions:
             dependency_profile = m.Infra.ScaffoldDependencyProfileSpec.model_validate({
                 **dependency_profile.model_dump(),
