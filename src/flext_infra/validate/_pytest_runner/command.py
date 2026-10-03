@@ -238,6 +238,22 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             *(("-m", expression) if expression else ()),
         )
 
+    def _node_targets(self) -> t.StrTuple:
+        """Return the pytest node targets of this invocation.
+
+        A declared single-file target replaces the suite directory as the
+        only node target; the default remains the configured test root.
+
+        Returns:
+            The resulting ``t.StrTuple``.
+
+        """
+        return (
+            (str(self.target_file),)
+            if self.target_file is not None
+            else (str(self.target),)
+        )
+
     def build_selection_command(
         self,
         *,
@@ -277,7 +293,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             )
         )
         pytest_arguments = (
-            str(self.target),
+            *self._node_targets(),
             *testmon,
             "--collect-only",
             f"{c.Infra.PYTEST_COLLECTION_MANIFEST_OPTION}={manifest_path}",
@@ -347,7 +363,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             serial=serial,
             execution_mode=execution_mode,
             targets=(
-                (str(self.target),)
+                self._node_targets()
                 if (
                     selection_plan is None
                     or selection_plan.whole_target
@@ -397,7 +413,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             report_dir,
             serial=workers == "0",
             execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
-            targets=(str(self.target),),
+            targets=self._node_targets(),
             workers=workers,
             trailing=(
                 *self._plugin_policy_args(
@@ -427,7 +443,8 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         """
         pytest = config.Infra.tooling.tools.pytest
         suite_stop = self.suite_stop_monotonic(
-            serial=serial, execution_mode=execution_mode,
+            serial=serial,
+            execution_mode=execution_mode,
         )
         return (
             sys.executable,
