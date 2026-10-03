@@ -1,4 +1,8 @@
-"""The class-nesting cutover emits source the canonical gates accept."""
+"""The class-nesting cutover emits source the canonical gates accept.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -23,13 +27,18 @@ class TestsFlextInfraNestingCutoverOutput:
 
     @staticmethod
     def _planned_source(tmp_path: Path) -> str:
-        """Plan one class-nesting cutover through the public cutover owner."""
+        """Plan one class-nesting cutover through the public cutover owner.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
-        alias = sorted(c.Infra.FLEXT_FAMILIES)[0]
+        alias = sorted(u.Infra.facade_families())[0]
         module_name = u.Tests.family_public_module(alias)
         owner_name = (
             f"{u.derive_class_stem(repository_root.name)}"
-            f"{c.Infra.FAMILY_SUFFIXES[alias]}"
+            f"{u.Infra.facade_families()[alias].suffix}"
         )
         module_path = package_root / f"{module_name}.py"
         u.Tests.write_lazy_init_namespace_module(

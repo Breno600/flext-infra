@@ -26,7 +26,8 @@ class FlextInfraProtocolsBase(Protocol):
         """Apply or inspect one validated CSV rename campaign."""
 
         def run(
-            self, params: m.Infra.ApplyRenamesInput
+            self,
+            params: m.Infra.ApplyRenamesInput,
         ) -> p.Result[m.Infra.ApplyRenamesReport]: ...
 
     @runtime_checkable
@@ -113,7 +114,8 @@ class FlextInfraProtocolsBase(Protocol):
         """Conform plan boundary consumed by the candidate campaign."""
 
         def surface_contract(
-            self, surface: c.Infra.CodegenConformSurface
+            self,
+            surface: c.Infra.CodegenConformSurface,
         ) -> m.Infra.CodegenConformSurfaceContract:
             """Resolve the declared output set for a recovery surface."""
             ...
@@ -123,6 +125,73 @@ class FlextInfraProtocolsBase(Protocol):
             request: m.Infra.CodegenConformRequest,
         ) -> p.Result[m.Infra.CodegenPlan]:
             """Plan one declared target without publishing it."""
+            ...
+
+    @runtime_checkable
+    class DocsArtifactPlanner(Protocol):
+        """Docs render planner the complete conform transaction publishes."""
+
+        def prepare_bundle(self) -> p.Result[m.Infra.DocsGenerationBundle]:
+            """Freeze the configured render and its authenticated inputs."""
+            ...
+
+        def required_directories(
+            self,
+            bundle: m.Infra.DocsGenerationBundle,
+        ) -> p.Result[t.VariadicTuple[Path]]:
+            """Derive the parent directories the render needs."""
+            ...
+
+        def plan_files(
+            self,
+            bundle: m.Infra.DocsGenerationBundle,
+        ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]:
+            """Bind the render to exact live destination states."""
+            ...
+
+    @runtime_checkable
+    class DocsArtifactPlannerFactory(Protocol):
+        """Build the docs planner for one conform scope."""
+
+        def __call__(
+            self,
+            *,
+            repository_root: Path,
+            projects: t.StrSequence,
+            include_root: bool,
+        ) -> FlextInfraProtocolsBase.DocsArtifactPlanner:
+            """Bind the planner to the repositories conform publishes."""
+            ...
+
+    @runtime_checkable
+    class MarkdownFormatGate(Protocol):
+        """Markdown formatting gate the docs formatter delegates to."""
+
+        def check(
+            self,
+            project_dir: Path,
+            ctx: m.Infra.GateContext,
+        ) -> m.Infra.GateExecution:
+            """Report pending formatting without writing."""
+            ...
+
+        def fix(
+            self,
+            project_dir: Path,
+            ctx: m.Infra.GateContext,
+        ) -> m.Infra.GateExecution:
+            """Apply formatting."""
+            ...
+
+    @runtime_checkable
+    class MarkdownFormatGateFactory(Protocol):
+        """Build the markdown format gate for one docs scope."""
+
+        def __call__(
+            self,
+            repository_root: Path,
+        ) -> FlextInfraProtocolsBase.MarkdownFormatGate:
+            """Bind the gate to the scope root."""
             ...
 
     @runtime_checkable
@@ -819,46 +888,6 @@ class FlextInfraProtocolsBase(Protocol):
 
         def execute(self) -> p.Result[bool]:
             """Execute release orchestration."""
-            ...
-
-    @runtime_checkable
-    class SafeTransformer(Protocol):
-        """Contract for transformers that run with copy-on-write protection."""
-
-        def transform(self, files: t.SequenceOf[Path]) -> p.Result[t.SequenceOf[Path]]:
-            """Apply transformation to files, return paths of modified files."""
-            ...
-
-    @runtime_checkable
-    class RopeSourceTransformer(Protocol):
-        """Contract for one rope transformer applied to one resource."""
-
-        def transform(
-            self, rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
-        ) -> t.Infra.TransformResult:
-            """Rewrite the resource and return the updated source and changes."""
-            ...
-
-    @runtime_checkable
-    class ProjectAliasMigratorFactory(Protocol):
-        """Builds the transformer that moves owned aliases to the local facade."""
-
-        def __call__(
-            self, *, file_path: Path | None, current_project: str
-        ) -> FlextInfraProtocolsBase.RopeSourceTransformer:
-            """Build the migrator for one file owned by ``current_project``."""
-            ...
-
-    @runtime_checkable
-    class SafeValidator(Protocol):
-        """Contract for post-transform quality gate validators."""
-
-        def validate(
-            self,
-            files: t.SequenceOf[Path],
-            project_dir: Path,
-        ) -> p.Result[m.Infra.GateResult]:
-            """Validate files pass quality gates after transformation."""
             ...
 
     @runtime_checkable

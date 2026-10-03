@@ -4,6 +4,9 @@ pytest, mypy, pydantic-mypy, codespell, hatch metadata, tomlsort, yamlfix,
 deptry namespaces, vulture, and coverage share one behavior: each table is a
 direct projection of ``config.Infra.tooling``. One declarative phase set owns
 them so no per-tool class re-implements the same apply contract.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -22,23 +25,81 @@ class FlextInfraToolTablesPhase:
 
     @staticmethod
     def first_party_namespaces(
-        payload: t.MutableJsonMapping,
         *,
         path: Path,
+        planned_sources: t.SequenceOf[Path] = (),
     ) -> t.StrSequence:
-        """Prefer live package names over a distribution-derived fallback."""
-        discovered = u.Infra.discover_first_party_namespaces(path.parent)
-        own = discovered or [
-            u.Infra.project_name_from_payload(path, payload).replace("-", "_"),
-        ]
+        """Derive the project's first-party namespaces from one source each.
+
+        The config-owned base namespaces, the live packages under ``src/``
+        (never a name invented from the distribution), and, for a workspace
+        root, the packages of the subprojects it declares. ``planned_sources``
+        are files a scaffold publishes with the rendered pyproject: their
+        packages under ``src/`` are live in the tree being produced. Ruff's
+        projected known-first-party, deptry's and the lazy-init renderer all
+        read this owner.
+
+        Returns:
+            The sorted first-party namespaces.
+
+        """
+        src_dir = path / c.Infra.DEFAULT_SRC_DIR
+        planned_parts = (
+            source.relative_to(src_dir).parts
+            for source in planned_sources
+            if source.is_relative_to(src_dir)
+        )
+        planned_packages = {
+            parts[0]
+            for parts in planned_parts
+            if len(parts) > 1 and parts[0].isidentifier()
+        }
         return sorted({
             *config.Infra.tooling.tools.deptry.known_first_party,
-            *own,
-            *u.Infra.flext_dependency_namespaces_from_payload(payload),
+            *u.Infra.discover_first_party_namespaces(path),
+            *planned_packages,
+            *FlextInfraToolTablesPhase._workspace_project_namespaces(path),
+        })
+
+    @staticmethod
+    def _workspace_project_namespaces(project_dir: Path) -> t.StrSequence:
+        """Discover child project packages when generating repository root settings.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            ValueError: If ``discovered.failure``.
+
+        """
+        if not (project_dir / c.PYPROJECT_FILENAME).is_file():
+            return ()
+        discovered = u.Infra.discover_projects(project_dir)
+        if discovered.failure:
+            # A real discovery error (malformed pyproject, IO) must never
+            # silently generate root Ruff settings with an empty child-package
+            # list — that conformed artifact would drift from the workspace
+            # with no signal. Mirrors _workspace_exclusion_globs fail-loud.
+            raise ValueError(
+                discovered.error or "workspace project discovery is unavailable",
+            )
+        return sorted({
+            project.package_name
+            for project in discovered.value
+            if (
+                project.package_name
+                and project.package_name.isidentifier()
+                and project.declared_subproject
+            )
         })
 
     def _mypy_phase(self) -> m.Infra.DepsToml.PhaseConfig:
-        """Declare the mypy table from toolchain and config-owned policy."""
+        """Declare the mypy table from toolchain and config-owned policy.
+
+        Returns:
+            The resulting ``m.Infra.DepsToml.PhaseConfig``.
+
+        """
         mypy = self._tool_config.tools.mypy
         toml = m.Infra.DepsToml
         replace = c.Infra.TomlMergeMode.REPLACE
@@ -87,6 +148,10 @@ class FlextInfraToolTablesPhase:
         packages/per-file-ignores) filters on this declared set instead of
         probing the disk, which oscillates between the deps pass and the
         root-materializing gen pass. An invalid manifest fails loud.
+
+        Returns:
+            The resulting ``frozenset[str]``.
+
         """
         return frozenset(
             Path(path).parts[0]
@@ -99,7 +164,12 @@ class FlextInfraToolTablesPhase:
         first_party: t.StrSequence,
         path: Path,
     ) -> t.SequenceOf[m.Infra.DepsToml.PhaseConfig]:
-        """Build every policy table; coverage is measured, never floor-gated."""
+        """Build every policy table; coverage is measured, never floor-gated.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.DepsToml.PhaseConfig]``.
+
+        """
         tools = self._tool_config.tools
         toml = m.Infra.DepsToml
         merge, replace = c.Infra.TomlMergeMode.MERGE, c.Infra.TomlMergeMode.REPLACE
@@ -292,11 +362,16 @@ class FlextInfraToolTablesPhase:
         *,
         path: Path,
     ) -> t.StrSequence:
-        """Apply every policy table to one normalized payload."""
+        """Apply every policy table to one normalized payload.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         return u.Infra.apply_toml_phases(
             payload,
             *self._phases(
-                first_party=self.first_party_namespaces(payload, path=path),
+                first_party=self.first_party_namespaces(path=path.parent),
                 path=path.parent,
             ),
         )

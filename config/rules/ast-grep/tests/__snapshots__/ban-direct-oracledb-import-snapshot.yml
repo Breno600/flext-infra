@@ -1,0 +1,22 @@
+id: ban-direct-oracledb-import
+snapshots:
+  from oracledb import connect:
+    labels:
+    - source: from oracledb import connect
+      style: primary
+      start: 0
+      end: 28
+    - source: oracledb
+      style: secondary
+      start: 5
+      end: 13
+  import oracledb:
+    labels:
+    - source: import oracledb
+      style: primary
+      start: 0
+      end: 15
+    - source: oracledb
+      style: secondary
+      start: 7
+      end: 15

@@ -12,9 +12,8 @@ from typing import override
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
-
-from ..base import FlextInfraServiceBase
-from ._pyrefly_fix_steps import FlextInfraConfigFixerSteps
+from flext_infra.base import FlextInfraServiceBase
+from flext_infra.deps._pyrefly_fix_steps import FlextInfraConfigFixerSteps
 
 
 class FlextInfraConfigFixer(FlextInfraConfigFixerSteps, FlextInfraServiceBase[bool]):
@@ -30,12 +29,22 @@ class FlextInfraConfigFixer(FlextInfraConfigFixerSteps, FlextInfraServiceBase[bo
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute."""
+        """Execute.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         return r[bool].fail("Use execute_command() directly")
 
     @classmethod
     def execute_payload(cls, params: m.Infra.FixPyreflyConfigCommand) -> p.Result[bool]:
-        """Execute pyrefly config repair from the canonical check command payload."""
+        """Execute pyrefly config repair from the canonical check command payload.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         fixer = cls(repository_root=params.repository_root)
         fix_result = fixer.run(
             projects=params.project_names or [],
@@ -52,7 +61,12 @@ class FlextInfraConfigFixer(FlextInfraConfigFixerSteps, FlextInfraServiceBase[bo
         *,
         dry_run: bool = False,
     ) -> p.Result[t.StrSequence]:
-        """Process one pyproject.toml file and apply fixes."""
+        """Process one pyproject.toml file and apply fixes.
+
+        Returns:
+            The resulting ``p.Result[t.StrSequence]``.
+
+        """
         document_result = u.Cli.toml_read_document(path)
         if document_result.failure:
             return r[t.StrSequence].from_failure(document_result)
@@ -134,7 +148,12 @@ class FlextInfraConfigFixer(FlextInfraConfigFixerSteps, FlextInfraServiceBase[bo
         dry_run: bool = False,
         verbose: bool = False,
     ) -> p.Result[t.StrSequence]:
-        """Run pyrefly configuration fixes for selected projects."""
+        """Run pyrefly configuration fixes for selected projects.
+
+        Returns:
+            The resulting ``p.Result[t.StrSequence]``.
+
+        """
         project_paths = [
             (
                 project_path
@@ -162,10 +181,11 @@ class FlextInfraConfigFixer(FlextInfraConfigFixerSteps, FlextInfraServiceBase[bo
                 continue
             total_fixes += len(fixes)
             if verbose:
-                try:
-                    rel = path.relative_to(self._repository_root)
-                except ValueError:
-                    rel = path
+                rel = (
+                    path.relative_to(self._repository_root)
+                    if path.is_relative_to(self._repository_root)
+                    else path
+                )
                 for fix in fixes:
                     line = f"  {('(dry)' if dry_run else '✓')} {rel}: {fix}"
                     self.logger.info("pyrefly_config_fix", detail=line)

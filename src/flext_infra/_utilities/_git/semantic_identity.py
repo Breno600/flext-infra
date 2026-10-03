@@ -1,4 +1,8 @@
-"""Canonical Git responsibility mixin for ``u.Infra``."""
+"""Canonical Git responsibility mixin for ``u.Infra``.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -15,10 +19,11 @@ from git import (
 
 from flext_core import r
 from flext_infra import c, m
-
-from ..._utilities._git.remote import FlextInfraUtilitiesGitRemote
-from ..._utilities._git.repo import FlextInfraUtilitiesGitRepo
-from ..._utilities._git.semantic_lane import FlextInfraUtilitiesGitSemanticLaneMixin
+from flext_infra._utilities._git.remote import FlextInfraUtilitiesGitRemote
+from flext_infra._utilities._git.repo import FlextInfraUtilitiesGitRepo
+from flext_infra._utilities._git.semantic_lane import (
+    FlextInfraUtilitiesGitSemanticLaneMixin,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -38,12 +43,17 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
 
         One call replaces 6+ separate queries. Implemented over GitPython
         native OO API.
+
+        Returns:
+            Consolidated Git identity for one repository path.
+
         """
         try:
             repo = cls._repo(request.repo_root)
             if cls._git_head_is_unborn(repo):
                 return r[m.Infra.GitIdentityReport].fail(
-                    f"Git repository has no committed HEAD: {request.repo_root.resolve()}",
+                    f"Git repository has no committed HEAD: "
+                    f"{request.repo_root.resolve()}",
                     error_code=c.Infra.GIT_UNBORN_HEAD_ERROR_CODE,
                 )
             primary = cls._git_primary_worktree_root_path(request.repo_root)
@@ -65,7 +75,15 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
 
     @staticmethod
     def _git_head_is_unborn(repo: Repo) -> bool:
-        """Distinguish an absent symbolic branch from broken refs or objects."""
+        """Distinguish an absent symbolic branch from broken refs or objects.
+
+        Returns:
+            The resulting ``bool``.
+
+        Raises:
+            GitCommandError: If ``status``.
+
+        """
         if repo.head.is_valid():
             return False
         branch_ref = repo.git.symbolic_ref("--quiet", "HEAD")
@@ -100,6 +118,10 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
         a separate Git repository. An unregistered nested ``.git`` (a plain
         ``git init`` under an existing checkout) satisfies "requested == root"
         on its own but is never the exact worktree root callers intend.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitIdentityReport]``.
+
         """
         identity = cls.git_identity(m.Infra.GitRepoRequest(repo_root=requested))
         if identity.failure:
@@ -132,6 +154,10 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
         Three-way contract mirroring ``rev-parse --is-inside-work-tree``:
         ``ok(False)`` when no repository owns the path (the expected
         non-error case), ``fail`` only on genuine probe errors.
+
+        Returns:
+            Whether ``repo_root`` sits inside a Git work tree.
+
         """
         refreshed = FlextInfraUtilitiesGitRepo.refresh_binary()
         if refreshed.failure:
@@ -168,16 +194,18 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
         primary_root: Path,
         requested_path: Path | None = None,
     ) -> m.Infra.GitIdentityReport:
-        """Collect GitPython-native identity facts into one report."""
+        """Collect GitPython-native identity facts into one report.
+
+        Returns:
+            The resulting ``m.Infra.GitIdentityReport``.
+
+        """
         head_oid = repo.head.commit.hexsha
         working_tree = Path(repo.working_tree_dir or str(repo.working_dir)).resolve()
         git_dir = Path(repo.git_dir).resolve()
         common_dir = Path(repo.common_dir).resolve()
         porcelain = repo.git.status("--porcelain", "--untracked-files=all")
-        try:
-            branch: str | None = repo.active_branch.name
-        except TypeError:
-            branch = None
+        branch = None if repo.head.is_detached else repo.active_branch.name
         remotes = {remote.name: remote.url for remote in repo.remotes}
         origin = remotes.get("origin")
         upstream = remotes.get("upstream")
@@ -211,7 +239,7 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
         # real submodule superproject was never recognized as one.
         staged_entries = repo.git.ls_files("--stage")
         has_submodules = any(
-            line.startswith(f"{c.Infra.GIT_CACHEINFO_GITLINK} ")
+            line.startswith(f"{c.Infra.GIT_GITLINK_MODE_TEXT} ")
             for line in staged_entries.splitlines()
         )
         # Why: git rev-parse --show-superproject-

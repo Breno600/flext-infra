@@ -1,8 +1,12 @@
-"""Census per-module inventory + workspace-report assembly — extracted concern."""
+"""Census per-module inventory + workspace-report assembly — extracted concern.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
 from flext_infra import m
 
@@ -12,15 +16,6 @@ if TYPE_CHECKING:
 
 class FlextInfraRefactorCensusCollectMixin:
     """Inventory one module and assemble the WorkspaceReport."""
-
-    _rope_safe_exceptions: ClassVar[t.VariadicTuple[type[BaseException]]] = (
-        *u.Infra.rope_runtime_errors(),
-        *u.Infra.rope_error_types(),
-        RecursionError,
-        SyntaxError,
-        ValueError,
-        RuntimeError,
-    )
 
     if TYPE_CHECKING:
 
@@ -105,6 +100,10 @@ class FlextInfraRefactorCensusCollectMixin:
 
         In dry-run the removal candidates are previewed through the gates and
         only the ones that pass stay candidates.
+
+        Returns:
+            The resulting ``m.Infra.WorkspaceReport``.
+
         """
         duplicates = self._duplicate_groups(tuple(findings.project_objects.values()))
         duplicate_keys = frozenset(
@@ -120,7 +119,7 @@ class FlextInfraRefactorCensusCollectMixin:
                 scan_config=scan_config,
             )
             for project in sorted(
-                findings.report_projects | set(findings.project_objects)
+                findings.report_projects | set(findings.project_objects),
             )
         )
         if self.effective_dry_run:

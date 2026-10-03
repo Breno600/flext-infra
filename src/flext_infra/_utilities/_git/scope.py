@@ -10,9 +10,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import c, m
-
-from .semantic_identity import FlextInfraUtilitiesGitSemanticIdentityMixin
-from .semantic_index import FlextInfraUtilitiesGitSemanticIndexMixin
+from flext_infra._utilities._git.semantic_identity import (
+    FlextInfraUtilitiesGitSemanticIdentityMixin,
+)
+from flext_infra._utilities._git.semantic_index import (
+    FlextInfraUtilitiesGitSemanticIndexMixin,
+)
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -29,6 +32,14 @@ class FlextInfraUtilitiesGitScopeMixin(FlextInfraUtilitiesGitSemanticIndexMixin)
         outside Git; a genuine probe or open failure raises instead of being
         reported as absence. Git is a required dependency of this scope probe;
         unavailable executables must fail rather than hide tracked-file scope.
+
+        Returns:
+            The enclosing Git worktree root, or ``None`` outside any worktree.
+
+        Raises:
+            OSError: If ``probed.failure``; or if ``opened.failure``.
+            RuntimeError: If opened Git repository has no worktree.
+
         """
         resolved_scope = Path(scope_root).resolve()
         probe = FlextInfraUtilitiesGitSemanticIdentityMixin.git_is_inside_work_tree
@@ -54,6 +65,10 @@ class FlextInfraUtilitiesGitScopeMixin(FlextInfraUtilitiesGitSemanticIndexMixin)
         rename detection yields one path per record, including both sides of
         a rename as independent deletion/addition entries. Native Git errors
         escape instead of returning an incomplete inventory.
+
+        Returns:
+            Literal index and dirty paths, preserving every filename byte.
+
         """
         resolved_root = Path(repo_root).resolve()
         repo = cls._repo(resolved_root)
@@ -71,7 +86,7 @@ class FlextInfraUtilitiesGitScopeMixin(FlextInfraUtilitiesGitSemanticIndexMixin)
 
     @classmethod
     def _git_tracked_scope_relative_paths(cls, scope_root: str) -> t.StrSequence | None:
-        """Return current tracked paths relative to ``scope_root`` or ``None`` outside Git.
+        """Return tracked paths relative to ``scope_root``; ``None`` outside Git.
 
         The Git index and porcelain status identify paths relative to the
         repository root. Callers join the result onto ``scope_root``, so this
@@ -80,6 +95,10 @@ class FlextInfraUtilitiesGitScopeMixin(FlextInfraUtilitiesGitSemanticIndexMixin)
         tracked authority: a git-ignored scope
         directory may still carry force-staged tracked files, so check_ignore
         must never veto the result.
+
+        Returns:
+            Current tracked paths relative to ``scope_root`` or ``None`` outside Git.
+
         """
         resolved_root = Path(scope_root)
         repo_root_text = cls._git_repo_root(scope_root)
@@ -103,7 +122,12 @@ class FlextInfraUtilitiesGitScopeMixin(FlextInfraUtilitiesGitSemanticIndexMixin)
 
     @classmethod
     def git_tracked_scope_paths(cls, scope_root: Path) -> t.SequenceOf[Path] | None:
-        """Return tracked files under one scope as absolute paths when Git is active."""
+        """Return tracked files under one scope as absolute paths when Git is active.
+
+        Returns:
+            Tracked files under one scope as absolute paths when Git is active.
+
+        """
         resolved_root = scope_root.resolve()
         relative_paths = cls._git_tracked_scope_relative_paths(str(resolved_root))
         if relative_paths is None:
@@ -116,7 +140,12 @@ class FlextInfraUtilitiesGitScopeMixin(FlextInfraUtilitiesGitSemanticIndexMixin)
 
     @classmethod
     def git_tracked_top_level_dir_names(cls, scope_root: Path) -> frozenset[str] | None:
-        """Return tracked top-level directory names under one scope when Git is active."""
+        """Return tracked top-level directory names under one scope when Git is active.
+
+        Returns:
+            Tracked top-level directory names under one scope when Git is active.
+
+        """
         relative_paths = cls._git_tracked_scope_relative_paths(
             str(scope_root.resolve()),
         )
@@ -134,7 +163,12 @@ class FlextInfraUtilitiesGitScopeMixin(FlextInfraUtilitiesGitSemanticIndexMixin)
         repository_root: Path,
         project_root: Path,
     ) -> bool:
-        """Return whether one candidate project has a tracked descriptor file."""
+        """Return whether one candidate project has a tracked descriptor file.
+
+        Returns:
+            Whether one candidate project has a tracked descriptor file.
+
+        """
         relative_paths = cls._git_tracked_scope_relative_paths(
             str(repository_root.resolve()),
         )

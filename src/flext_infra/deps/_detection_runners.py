@@ -1,4 +1,8 @@
-"""Cohesive external-tool-runner mixin (deptry, mypy stubs, pip-check) for detection."""
+"""Cohesive external-tool-runner mixin (deptry, mypy stubs, pip-check) for detection.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -34,7 +38,12 @@ class FlextInfraDependencyDetectionRunnersMixin:
         json_output_path: Path | None = None,
         extend_exclude: t.StrSequence | None = None,
     ) -> p.Result[t.Pair[t.SequenceOf[t.JsonMapping], int]]:
-        """Run deptry analysis on a project and parse JSON output."""
+        """Run deptry analysis on a project and parse JSON output.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[t.SequenceOf[t.JsonMapping], int]]``.
+
+        """
         settings = config_path or project_path / c.PYPROJECT_FILENAME
         if not settings.exists():
             return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].ok(([], 0))
@@ -98,11 +107,16 @@ class FlextInfraDependencyDetectionRunnersMixin:
             cmd_result.outcome.raw_return_code,
         ))
 
+    @staticmethod
     def run_mypy_stub_hints(
-        self,
         project_path: Path,
     ) -> p.Result[t.Pair[t.StrSequence, t.StrSequence]]:
-        """Run mypy via the command runner to detect missing stubs and hint packages."""
+        """Run mypy via the command runner to detect missing stubs and hint packages.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[t.StrSequence, t.StrSequence]]``.
+
+        """
         # Why: current mypy emits ANSI color codes around quoted module/package
         # names even when stdout is a pipe, splicing escape sequences inside
         # the literal `for "name"` text that MYPY_STUB_RE/MYPY_HINT_RE match —
@@ -116,7 +130,9 @@ class FlextInfraDependencyDetectionRunnersMixin:
             ),
         )
         result = u.Cli.run_raw(
-            cmd, cwd=project_path, timeout=u.Infra.mypy_runner_timeout()
+            cmd,
+            cwd=project_path,
+            timeout=u.Infra.mypy_runner_timeout(),
         )
         if result.failure:
             return r[t.Pair[t.StrSequence, t.StrSequence]].fail(
@@ -143,12 +159,17 @@ class FlextInfraDependencyDetectionRunnersMixin:
             sorted(missing),
         ))
 
+    @staticmethod
     def run_pip_check(
-        self,
         repository_root: Path,
         venv_bin: Path,
     ) -> p.Result[t.Pair[t.StrSequence, int]]:
-        """Run pip check to detect dependency conflicts in workspace."""
+        """Run pip check to detect dependency conflicts in workspace.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[t.StrSequence, int]]``.
+
+        """
         pip = venv_bin / "pip"
         if not pip.exists():
             return r[t.Pair[t.StrSequence, int]].ok(([], 0))

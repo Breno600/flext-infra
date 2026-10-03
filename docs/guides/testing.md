@@ -43,19 +43,14 @@ database, whose location the flext-infra generated configuration owns. Its colle
 inventory uses the same marker scope as execution. The runner accounts for every
 selected and deselected test; it never infers selection from console output. Never clear
 or bypass the database, or invoke the underlying runner directly.
+Concurrent worktrees serialize on the database lease within the same declared suite
+deadline. If the lease cannot be acquired before that deadline's cleanup reserve,
+the invocation fails without reading or writing another run's database state.
 
-The supported Testmon environment combines installed toolchain provenance with current
-`config/*.yaml` content. Declare additional template and resource directories in the
-workspace manifest's `test_inputs.templates` and `test_inputs.resources`. Declare
-behavior-affecting environment variable names in `test_inputs.environment`; only their
-digests enter the environment identifier, never their values. Missing and empty values
-remain distinct. Directory creation, removal, and content changes invalidate the
-selection conservatively while preserving the same external database. Each downstream
-workspace owns its own declarations; the infrastructure template catalog does not stand
-in for downstream inputs. Declared directories use the existing authenticated physical
-inventory contract: symbolic links fail explicitly. This is
-not an unrestricted filesystem dependency scanner; declare physical source inputs and
-repair the inventory owner if a legitimate native consumer requires another shape.
+The supported Testmon environment combines installed toolchain provenance, the current
+`config/*.yaml` content, and the marker scope of the phase. A config edit selects a fresh
+environment while preserving the same external database, so tests that depend on the
+changed configuration execute again instead of reporting a cache hit.
 
 Run the complete suite through its declared verb:
 

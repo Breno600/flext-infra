@@ -1,0 +1,564 @@
+# FLEXT namespace structure and import laws that need project facts
+# (enforcement catalog ENFORCE-006, -012, -014 and the namespace validator's
+# import, structure and contract laws).
+#
+# Each document matches one file's syntax and asks the engine one project
+# verdict through metadata.context: the runtime import graph (import-cycle),
+# the facade's family composition (composes-family), the import-layer order
+# (later-layer, facade-module), the project's class stem (class-stem) and the
+# package's layers (package-layers, family-base). The engine builds those
+# facts from the project and its tooling configuration; no package, module
+# or alias name is listed here.
+
+# ENFORCE-006: a module-level runtime import closes a cycle of the project's
+# import graph. Imports under `if TYPE_CHECKING:` and function-local imports
+# do not run at load time and are not edges.
+id: ban-cyclic-import
+language: python
+severity: error
+files:
+  - "**/*.py"
+metadata:
+  context:
+    MODULE:
+      is: import-cycle
+      of: NAME
+rule:
+  any:
+    - kind: dotted_name
+      pattern: $NAME
+      not:
+        inside:
+          kind: import_from_statement
+          field: module_name
+      inside:
+        kind: import_from_statement
+        stopBy: end
+        has:
+          field: module_name
+          pattern: $MODULE
+        inside:
+          kind: module
+    - kind: dotted_name
+      pattern: $MODULE
+      inside:
+        kind: import_statement
+        stopBy: end
+        inside:
+          kind: module
+message: >-
+  Runtime import of `$MODULE` closes an import cycle: break the cycle at the
+  module that does not own the dependency (move the import under
+  TYPE_CHECKING when only annotations need it).
+---
+# ENFORCE-012: a facade's nested namespace composes, through its bases, every
+# class its family package (`_<stem>/` beside `<stem>.py`) declares in
+# __all__.
+id: require-facade-mro-completeness
+language: python
+severity: error
+files:
+  - "**/*.py"
+metadata:
+  context:
+    NAME:
+      - is: facade-module
+      - not: composes-family
+rule:
+  kind: class_definition
+  has:
+    field: name
+    pattern: $NAME
+  inside:
+    kind: block
+    inside:
+      kind: class_definition
+      inside:
+        kind: module
+message: >-
+  Facade namespace `$NAME` does not compose every class its family package
+  declares: add the missing mixins to its bases.
+---
+# ENFORCE-014: the package publishes every canonical layer. The layers a
+# package always provides are named here; the service layers are required
+# together (require-service-facade-layers).
+id: require-canonical-facade-family
+language: python
+severity: error
+files:
+  - "src/*/__init__.py"
+metadata:
+  context:
+    NAME:
+      - is: package-root-init
+      - not: package-layers
+        arg: settings config c t p m u cli
+rule:
+  kind: identifier
+  pattern: $NAME
+  regex: "^__all__$"
+  inside:
+    kind: assignment
+    field: left
+    inside:
+      kind: expression_statement
+      inside:
+        kind: module
+message: >-
+  The package does not provide every canonical layer (settings, config, the
+  c/t/p/m/u facades, cli): add the missing facade module.
+---
+# A package with a services layer also provides its base and api facades.
+id: require-service-facade-layers
+language: python
+severity: error
+files:
+  - "src/*/__init__.py"
+ignores:
+  # The rule owns the package ROOT facade only. Private-layer namespaces
+  # (src/<pkg>/_*/__init__.py) are internal nesting, not the facade, and the
+  # generated lazy-init __all__ there is the generator's, judged by gen.
+  - "src/*/_*/__init__.py"
+  - "src/*/_*/**/__init__.py"
+metadata:
+  context:
+    NAME:
+      - is: package-layers
+        arg: services
+      - not: package-layers
+        arg: base api
+rule:
+  kind: identifier
+  pattern: $NAME
+  regex: "^__all__$"
+  inside:
+    kind: assignment
+    field: left
+    inside:
+      kind: expression_statement
+      inside:
+        kind: module
+message: >-
+  A package with services provides its base and api facades.
+---
+# A private family package begins with base.py.
+id: require-family-base-module
+language: python
+severity: error
+files:
+  - "src/**/_*/*.py"
+metadata:
+  context:
+    NAME:
+      not: family-base
+rule:
+  kind: identifier
+  pattern: $NAME
+  regex: "^__all__$"
+  inside:
+    kind: assignment
+    field: left
+    inside:
+      kind: expression_statement
+      inside:
+        kind: module
+message: >-
+  The family package holding this module has no base.py: the family begins
+  with its base module.
+---
+# A runtime import reaches a later layer of the import-layer order than the
+# importing module: later layers are imported under TYPE_CHECKING only.
+# Facade letters imported from the own package root are layers; the other
+# runtime aliases it publishes (r, e, x, h, d, s) stand for the base layer.
+# Settings and config modules declare models and read constants: they are
+# governed by ban-reverse-runtime-import-settings.
+id: ban-reverse-runtime-import
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+ignores:
+  - "**/settings.py"
+  - "**/_settings.py"
+  - "**/config.py"
+  - "**/_config.py"
+  - "**/__init__.py"
+metadata:
+  context:
+    MODULE:
+      is: own-package
+    NAME:
+      - is: runtime-alias
+      - is: later-layer
+        as: base
+    TARGET:
+      is: later-layer
+rule:
+  not:
+    matches: inside-type-checking-guard
+  any:
+    - kind: dotted_name
+      pattern: $NAME
+      not:
+        inside:
+          kind: import_from_statement
+          field: module_name
+      inside:
+        kind: import_from_statement
+        stopBy: end
+        has:
+          field: module_name
+          kind: dotted_name
+          pattern: $MODULE
+          not:
+            regex: "\\."
+    - any:
+        - kind: dotted_name
+        - kind: relative_import
+      pattern: $TARGET
+      inside:
+        kind: import_from_statement
+        field: module_name
+    - kind: dotted_name
+      pattern: $TARGET
+      inside:
+        kind: import_statement
+        stopBy: end
+message: >-
+  Reverse runtime import: a later layer is imported at runtime; move the
+  import under TYPE_CHECKING.
+---
+# Settings and config modules may import the declaration facades through
+# `u` at runtime; later layers stay TYPE_CHECKING-only, and the protocols
+# facade is never a runtime import of a settings layer.
+id: ban-reverse-runtime-import-settings
+language: python
+severity: error
+files:
+  - "**/settings.py"
+  - "**/_settings.py"
+  - "**/config.py"
+  - "**/_config.py"
+metadata:
+  context:
+    MODULE:
+      is: own-package
+    NAME:
+      - is: runtime-alias
+      - is: later-layer
+        arg: u
+        as: base
+    TARGET:
+      is: later-layer
+      arg: u
+rule:
+  not:
+    matches: inside-type-checking-guard
+  any:
+    - kind: dotted_name
+      pattern: $NAME
+      not:
+        inside:
+          kind: import_from_statement
+          field: module_name
+      inside:
+        kind: import_from_statement
+        stopBy: end
+        has:
+          field: module_name
+          kind: dotted_name
+          pattern: $MODULE
+          not:
+            regex: "\\."
+    - any:
+        - kind: dotted_name
+        - kind: relative_import
+      pattern: $TARGET
+      inside:
+        kind: import_from_statement
+        field: module_name
+message: >-
+  Reverse runtime import in a settings layer: only the declaration facades
+  up to `u` are runtime imports here.
+---
+id: ban-runtime-protocols-in-settings
+language: python
+severity: error
+files:
+  - "**/settings.py"
+  - "**/_settings.py"
+  - "**/config.py"
+  - "**/_config.py"
+metadata:
+  context:
+    MODULE:
+      is: own-package
+rule:
+  kind: dotted_name
+  regex: "^p$"
+  not:
+    any:
+      - inside:
+          kind: import_from_statement
+          field: module_name
+      - matches: inside-type-checking-guard
+  inside:
+    kind: import_from_statement
+    stopBy: end
+    has:
+      field: module_name
+      kind: dotted_name
+      pattern: $MODULE
+message: >-
+  The protocols facade is TYPE_CHECKING-only in a settings layer.
+---
+# Imports of the own package keep their names: an alias renames a published
+# facade or module for one file. Under TYPE_CHECKING, binding one of the
+# project's runtime letters to its facade class is the canonical letter
+# binding (operator-ruling-2026-10-01-facade-rebind-mypy-scope): a facade that
+# rebinds its letter leaves mypy the upstream binding, so static analyzers
+# receive the class itself. The branch captures the letter as $LETTER and the
+# engine admits the finding only when it is not a runtime letter.
+id: ban-local-import-alias
+language: python
+severity: error
+files:
+  - "**/*.py"
+metadata:
+  context:
+    MODULE:
+      is: own-package
+    LETTER:
+      not: local-alias
+rule:
+  kind: aliased_import
+  any:
+    - not:
+        matches: inside-type-checking-guard
+      any:
+        - inside:
+            kind: import_from_statement
+            has:
+              field: module_name
+              pattern: $MODULE
+        - has:
+            field: name
+            pattern: $MODULE
+    - matches: inside-type-checking-guard
+      has:
+        field: alias
+        pattern: $LETTER
+      any:
+        - inside:
+            kind: import_from_statement
+            has:
+              field: module_name
+              pattern: $MODULE
+        - has:
+            field: name
+            pattern: $MODULE
+message: >-
+  Local import aliases are forbidden: import the own package's names as
+  published.
+---
+# The module's class carries the project class stem (Tests + stem in tests).
+id: require-project-class-stem
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/__init__.py"
+  - "**/__main__.py"
+  - "**/__version__.py"
+  - "**/conftest.py"
+metadata:
+  context:
+    NAME:
+      not: class-stem
+rule:
+  kind: class_definition
+  has:
+    field: name
+    pattern: $NAME
+  any:
+    - inside:
+        kind: module
+    - inside:
+        kind: decorated_definition
+        inside:
+          kind: module
+  not:
+    follows:
+      stopBy: end
+      any:
+        - kind: class_definition
+        - kind: decorated_definition
+message: >-
+  Module class `$NAME` does not carry the project class stem.
+---
+# A module declares its class: a module without a class, an export manifest
+# or an entry-point guard holds loose code.
+id: require-module-class
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/__init__.py"
+  - "**/__main__.py"
+  - "**/__version__.py"
+  - "**/conftest.py"
+rule:
+  kind: module
+  not:
+    any:
+      - has:
+          kind: class_definition
+      - has:
+          kind: decorated_definition
+      - has:
+          kind: if_statement
+      - has:
+          kind: raise_statement
+      - has:
+          kind: expression_statement
+          has:
+            kind: call
+            has:
+              field: function
+              regex: "(?:^|\\.)main$"
+      - has:
+          kind: expression_statement
+          has:
+            kind: assignment
+            has:
+              field: left
+              regex: "^__all__$"
+message: >-
+  Module declares no class: nest its code in the module's facade class.
+---
+# A facade class extends the owner it specializes.
+id: require-facade-base
+language: python
+severity: error
+files:
+  - "**/*.py"
+metadata:
+  context:
+    NAME:
+      is: facade-module
+rule:
+  kind: class_definition
+  has:
+    field: name
+    pattern: $NAME
+  not:
+    has:
+      field: superclasses
+      pattern: $_
+  inside:
+    kind: module
+message: >-
+  Facade class `$NAME` must extend its declared owner.
+---
+# A facade composes one local namespace.
+id: ban-facade-second-namespace
+language: python
+severity: error
+files:
+  - "**/*.py"
+metadata:
+  context:
+    NAME:
+      is: facade-module
+rule:
+  kind: class_definition
+  has:
+    field: name
+    pattern: $NAME
+  inside:
+    kind: block
+    inside:
+      kind: class_definition
+      inside:
+        kind: module
+  follows:
+    stopBy: end
+    kind: class_definition
+message: >-
+  Facade composes a second namespace `$NAME`: a facade composes one local
+  namespace.
+---
+# Service constructors receive protocols, never concrete FLEXT classes.
+id: ban-concrete-service-dependency
+language: python
+severity: error
+files:
+  - "src/*/services/**/*.py"
+rule:
+  kind: identifier
+  regex: "^Flext\\w+$"
+  not:
+    inside:
+      kind: attribute
+      field: attribute
+  inside:
+    kind: type
+    stopBy: end
+    inside:
+      any:
+        - kind: typed_parameter
+        - kind: typed_default_parameter
+      inside:
+        kind: parameters
+        inside:
+          kind: function_definition
+          has:
+            field: name
+            regex: "^__init__$"
+message: >-
+  Service dependency is a concrete class: inject it through a `p` protocol.
+---
+# Dependencies are injected, never looked up.
+id: ban-service-locator-call
+language: python
+severity: error
+files:
+  - "**/*.py"
+rule:
+  kind: call
+  has:
+    field: function
+    any:
+      - kind: identifier
+        regex: "^(?:container|get_service|locator|resolve_service|service_locator)$"
+      - kind: attribute
+        has:
+          field: attribute
+          regex: "^(?:container|get_service|locator|resolve_service|service_locator)$"
+message: >-
+  Service locator call: inject the dependency's `p` contract instead.
+---
+# Annotations use the typed vocabulary: no Any, Optional, object or bare dict.
+# Names inside a call (a field factory such as `default_factory=dict`) are
+# values, not annotations.
+id: ban-broad-annotation
+language: python
+severity: error
+files:
+  - "**/*.py"
+rule:
+  kind: identifier
+  regex: "^(?:Any|Optional|object|dict)$"
+  not:
+    inside:
+      kind: call
+      stopBy:
+        kind: type
+  inside:
+    kind: type
+    stopBy: end
+message: >-
+  Broad annotation: type through the `t` aliases and `p` protocols (no Any,
+  Optional, object or dict).

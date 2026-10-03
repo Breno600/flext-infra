@@ -1,4 +1,8 @@
-"""Conform never leaks orphan ``-transaction-<hex>`` sibling worktrees (flext-f73ii)."""
+"""Conform never leaks orphan ``-transaction-<hex>`` sibling worktrees (flext-f73ii).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,8 +11,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c
-from flext_infra.codegen import FlextInfraCodegenConform
+from flext_infra import c, infra
 from tests import t, u
 
 _TRANSACTION_MARKER = "-transaction-"
@@ -24,19 +27,30 @@ class TestsFlextInfraCodegenConformNoTransactionWorktrees:
     unreachable from any branch (one ``git gc`` away from destruction).
     """
 
-    def _transaction_worktree_siblings(self, root: Path) -> t.VariadicTuple[str]:
-        """Name sibling directories that look like detached transaction worktrees."""
+    @staticmethod
+    def _transaction_worktree_siblings(root: Path) -> t.VariadicTuple[str]:
+        """Name sibling directories that look like detached transaction worktrees.
+
+        Returns:
+            The resulting ``t.VariadicTuple[str]``.
+
+        """
         return tuple(
             entry.name
             for entry in root.parent.iterdir()
             if entry.is_dir() and _TRANSACTION_MARKER in entry.name
         )
 
-    def _seed_committed_drift(self, tmp_path: Path) -> t.Pair[Path, Path]:
+    @staticmethod
+    def _seed_committed_drift(tmp_path: Path) -> t.Pair[Path, Path]:
         """Materialize the managed tree, then commit one drifted managed Makefile.
 
         Returns the conformed repository root and the drifted file: the shared
         builder owns where the repository lives below ``tmp_path``.
+
+        Returns:
+            The resulting ``t.Pair[Path, Path]``.
+
         """
         root = u.Tests.WorktreeFixture.conformed_root(tmp_path)
         drifted = root / c.Infra.MAKEFILE_FILENAME
@@ -56,7 +70,7 @@ class TestsFlextInfraCodegenConformNoTransactionWorktrees:
         before = self._transaction_worktree_siblings(root)
         drifted_bytes = drifted.read_bytes()
 
-        result = FlextInfraCodegenConform.execute_request(
+        result = infra.codegen_conform(
             u.Tests.conform_request(
                 root,
                 scope=c.Infra.CodegenConformScope.SELF,
@@ -79,7 +93,7 @@ class TestsFlextInfraCodegenConformNoTransactionWorktrees:
         # Convergence is proven behaviorally: the drift marker is rewritten
         # away and a second apply reaches a byte-identical fixed point; the
         # execute return shape is not part of this invariant.
-        FlextInfraCodegenConform.execute_request(
+        infra.codegen_conform(
             u.Tests.conform_request(
                 root,
                 scope=c.Infra.CodegenConformScope.SELF,
@@ -88,7 +102,7 @@ class TestsFlextInfraCodegenConformNoTransactionWorktrees:
         )
         tm.that(drifted.read_text(encoding="utf-8"), lacks="# managed drift")
         converged_bytes = drifted.read_bytes()
-        FlextInfraCodegenConform.execute_request(
+        infra.codegen_conform(
             u.Tests.conform_request(
                 root,
                 scope=c.Infra.CodegenConformScope.SELF,

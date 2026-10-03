@@ -1,4 +1,8 @@
-"""Constants-consolidation steps for FlextInfraCodegenConsolidator."""
+"""Constants-consolidation steps for FlextInfraCodegenConsolidator.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -32,6 +36,10 @@ class FlextInfraCodegenConsolidatorStepsMixin:
 
         Missing file → empty map (nothing to consolidate); an existing-but-unreadable
         file is surfaced as a failure (never silently treated as empty).
+
+        Returns:
+            The resulting ``p.Result[t.StrMapping]``.
+
         """
         if not constants_file.is_file():
             return r[t.StrMapping].ok({})
@@ -62,7 +70,12 @@ class FlextInfraCodegenConsolidatorStepsMixin:
         python_file: Path,
         value_map: t.StrMapping,
     ) -> m.Infra.ConsolidatorScannedFile | None:
-        """Scan file."""
+        """Scan file.
+
+        Returns:
+            The resulting ``m.Infra.ConsolidatorScannedFile | None``.
+
+        """
         resource = u.Infra.resolve_resource_from_path(rope_project, python_file)
         if resource is None:
             return None
@@ -87,7 +100,12 @@ class FlextInfraCodegenConsolidatorStepsMixin:
         source_lines: t.StrSequence,
         value_to_ref: t.StrMapping,
     ) -> t.SequenceOf[t.Triple[m.Infra.SymbolInfo, str, str]]:
-        """Match assignments."""
+        """Match assignments.
+
+        Returns:
+            The resulting ``t.SequenceOf[t.Triple[m.Infra.SymbolInfo, str, str]]``.
+
+        """
         matches: t.MutableSequenceOf[t.Triple[m.Infra.SymbolInfo, str, str]] = []
         for symbol in symbols:
             # Widen the validated constrained int for indexing.
@@ -119,10 +137,15 @@ class FlextInfraCodegenConsolidatorStepsMixin:
         workspace: Path,
         pkg_name: str,
     ) -> t.Infra.EditResultWithDescs:
-        """Apply and validate."""
+        """Apply and validate.
+
+        Returns:
+            The resulting ``t.Infra.EditResultWithDescs``.
+
+        """
         resource = scanned.resource
-        backup = scanned.source
-        src_lines = backup.splitlines(keepends=True)
+        original_source = scanned.source
+        src_lines = original_source.splitlines(keepends=True)
         rel = py_file.relative_to(workspace)
         edits: t.MutableSequenceOf[t.Triple[int, int, str]] = []
         descs: t.MutableSequenceOf[str] = []
@@ -148,7 +171,7 @@ class FlextInfraCodegenConsolidatorStepsMixin:
             py_file,
             request=m.Infra.ProtectedFileEditRequest(
                 workspace=workspace,
-                before_source=backup,
+                before_source=original_source,
                 edit_fn=lambda: (
                     u.Infra.rewrite_source_at_offsets(
                         rope_project,
@@ -165,8 +188,7 @@ class FlextInfraCodegenConsolidatorStepsMixin:
                     ),
                     None,
                 )[-1],
-                restore_fn=lambda: resource.write(backup),
-                keep_backup=True,
+                restore_fn=lambda: resource.write(original_source),
                 gates=cls._ALL_LINT_GATES,
             ),
         )

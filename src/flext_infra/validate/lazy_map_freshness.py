@@ -7,11 +7,8 @@ closes the recurring failure mode where developers add ``models/x.py``
 (or similar) but skip ``make gen``, leaving the lazy map incomplete
 until first attribute access trips a cycle.
 
-Mandate: 100% ROPE-based per flext-infra detector mandate — the check
-delegates to the existing codegen pipeline which uses rope internally
-via the ``u.Infra`` boundary.
-
-Architecture: flext-infra validate layer — wraps flext-infra codegen.
+The check delegates to the codegen pipeline, which resolves imports
+through the ``u.Infra`` Rope boundary.
 
 Copyright (c) 2025 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -35,7 +32,8 @@ if TYPE_CHECKING:
 class FlextInfraValidateLazyMapFreshness(FlextInfraProjectSelectionServiceBase[bool]):
     """Flags ``__init__.py`` files whose lazy maps are out of sync with siblings."""
 
-    def build_report(self, repository_root: Path) -> p.Result[m.Infra.ValidationReport]:
+    @staticmethod
+    def build_report(repository_root: Path) -> p.Result[m.Infra.ValidationReport]:
         """Run the lazy-init generator in check-only mode, collect stale inits.
 
         Args:
@@ -74,7 +72,12 @@ class FlextInfraValidateLazyMapFreshness(FlextInfraProjectSelectionServiceBase[b
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute the freshness validation using the repository owner."""
+        """Execute the freshness validation using the repository owner.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         return self._report_execution(self.build_report(self.repository_root))
 
 

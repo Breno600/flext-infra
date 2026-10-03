@@ -22,11 +22,20 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def governed_project(tmp_path: Path) -> Path:
-    """Provide a valid project identity for package discovery."""
+    """Provide the project manifest every scanned package belongs to.
+
+    Lazy-init plans a package only inside a physical project, and the
+    generated notice names the manifest's first author.
+
+    Returns:
+        The resulting ``Path``.
+
+    """
     (tmp_path / "pyproject.toml").write_text(
-        '[project]\nname = "test-helpers"\nversion = "0.1.0"\n',
+        '[project]\nname = "test-helpers"\nversion = "0.1.0"\n'
+        'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n',
         encoding="utf-8",
     )
     return tmp_path
@@ -46,7 +55,8 @@ class TestsFlextInfraCodegenLazyInit:
         '__all__: list[str] = ["SomeFixture"]\n'
     )
 
-    def _create_init_file(self, directory: Path, content: str) -> Path:
+    @staticmethod
+    def _create_init_file(directory: Path, content: str) -> Path:
         directory.mkdir(parents=True, exist_ok=True)
         init_file = directory / "__init__.py"
         init_file.write_text(content, encoding="utf-8")
@@ -66,7 +76,8 @@ class TestsFlextInfraCodegenLazyInit:
             '__all__: list[str] = ["SomeFixture"]\n'
         )
 
-        def _create_init_file(self, directory: Path, content: str) -> Path:
+        @staticmethod
+        def _create_init_file(directory: Path, content: str) -> Path:
             directory.mkdir(parents=True, exist_ok=True)
             init_file = directory / "__init__.py"
             init_file.write_text(content, encoding="utf-8")
@@ -125,7 +136,8 @@ class TestsFlextInfraCodegenLazyInit:
             '__all__: list[str] = ["SomeFixture"]\n'
         )
 
-        def _create_init_file(self, directory: Path, content: str) -> Path:
+        @staticmethod
+        def _create_init_file(directory: Path, content: str) -> Path:
             directory.mkdir(parents=True, exist_ok=True)
             init_file = directory / "__init__.py"
             init_file.write_text(content, encoding="utf-8")
@@ -156,7 +168,8 @@ class TestsFlextInfraCodegenLazyInit:
             '__all__: list[str] = ["SomeFixture"]\n'
         )
 
-        def _create_init_file(self, directory: Path, content: str) -> Path:
+        @staticmethod
+        def _create_init_file(directory: Path, content: str) -> Path:
             directory.mkdir(parents=True, exist_ok=True)
             init_file = directory / "__init__.py"
             init_file.write_text(content, encoding="utf-8")
@@ -242,13 +255,15 @@ class TestsFlextInfraCodegenLazyInit:
             '__all__: list[str] = ["TestClass"]\n'
         )
 
-        def _create_init_file(self, directory: Path, content: str) -> Path:
+        @staticmethod
+        def _create_init_file(directory: Path, content: str) -> Path:
             directory.mkdir(parents=True, exist_ok=True)
             init_file = directory / "__init__.py"
             init_file.write_text(content, encoding="utf-8")
             return init_file
 
-        def test_empty_workspace_returns_zero(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_empty_workspace_returns_zero(tmp_path: Path) -> None:
             """Return zero changes for an empty workspace."""
             generator = FlextInfraCodegenLazyInit(repository_root=tmp_path)
             tm.that(generator.plan_files().success, eq=True)
@@ -294,6 +309,14 @@ class TestsFlextInfraCodegenLazyInit:
                 "from pkg.models import MyModel\n"
                 '__all__: list[str] = ["MyModel"]\n'
             )
+            # Each run plans one repository, so each owns the project manifest.
+            manifest = (tmp_path / "pyproject.toml").read_text(encoding="utf-8")
+            for repository in ("a", "b"):
+                (tmp_path / repository).mkdir()
+                (tmp_path / repository / "pyproject.toml").write_text(
+                    manifest,
+                    encoding="utf-8",
+                )
             src_dir_a = tmp_path / "a" / "src" / "pkg"
             self._create_init_file(src_dir_a, src_content)
             tm.that(u.Tests.run_lazy_init(tmp_path / "a"), eq=0)

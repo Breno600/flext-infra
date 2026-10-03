@@ -11,11 +11,10 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import config
+from flext_infra import config, infra
 from flext_infra.codegen import FlextInfraCodegenConform
 from tests import c, m, u
-
-from .conform_support import TestsFlextInfraConformSupport
+from tests.unit.codegen.conform_support import TestsFlextInfraConformSupport
 
 pytestmark = [pytest.mark.slow]
 
@@ -23,10 +22,11 @@ pytestmark = [pytest.mark.slow]
 class TestsFlextInfraCodegenMakeContracts:
     """Generated Make behavior and custom dispatch contracts."""
 
+    @staticmethod
     def test_invalid_public_custom_make_fails_without_side_effects(
-        self,
         infra_git_repo: Path,
     ) -> None:
+        """Test invalid public custom make fails without side effects."""
         root = infra_git_repo
         custom = root / "custom.mk"
         content = ".PHONY: public-handler\npublic-handler:\n\t@true\n"
@@ -49,12 +49,13 @@ class TestsFlextInfraCodegenMakeContracts:
         tm.that(rejection.exists(), eq=False)
         tm.that(custom.read_text(encoding="utf-8"), eq=content)
 
+    @staticmethod
     @pytest.mark.slow
     def test_valid_private_custom_make_has_no_rejection(
-        self,
         infra_git_repo: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
+        """Test valid private custom make has no rejection."""
         root = infra_git_repo
         workspace = TestsFlextInfraConformSupport.standalone_workspace(root)
         custom = root / "custom.mk"
@@ -70,7 +71,7 @@ class TestsFlextInfraCodegenMakeContracts:
                 ),
             ),
         )
-        result = FlextInfraCodegenConform.execute_request(
+        result = infra.codegen_conform(
             u.Tests.conform_request(
                 root,
                 what=c.Infra.CodegenConformSurface.MAKEFILE,
@@ -83,7 +84,8 @@ class TestsFlextInfraCodegenMakeContracts:
         tm.that("WARN:" in capsys.readouterr().out, eq=False)
         tm.that(Path(f"{custom}.rej").exists(), eq=False)
 
-    def test_custom_make_rejects_unterminated_phony_continuation(self) -> None:
+    @staticmethod
+    def test_custom_make_rejects_unterminated_phony_continuation() -> None:
         """Fail closed when a multiline private-handler declaration is truncated."""
         policy: m.Infra.CustomHandlerPolicy = (
             config.Infra.codegen.make.custom_handler_policies[
@@ -98,9 +100,9 @@ class TestsFlextInfraCodegenMakeContracts:
 
         tm.fail(result, has="unterminated .PHONY continuation")
 
+    @staticmethod
     @pytest.mark.slow
     def test_scaffold_make_help_documents_and_lists_custom_hooks(
-        self,
         infra_git_repo: Path,
     ) -> None:
         """Scaffold help lists the selector-free interface; hooks stay lifecycle-only."""
@@ -131,9 +133,9 @@ class TestsFlextInfraCodegenMakeContracts:
         tm.that(output.stdout, lacks="Custom hooks (custom.mk):")
         tm.that(output.stdout, lacks="WHAT")
 
+    @staticmethod
     @pytest.mark.slow
     def test_scaffold_make_runs_pre_and_post_verb_hooks_in_order(
-        self,
         infra_git_repo: Path,
     ) -> None:
         """Generated dispatch runs pre-<verb>, custom handler, post-<verb> in order."""
@@ -173,8 +175,8 @@ class TestsFlextInfraCodegenMakeContracts:
         tm.that(pre_at < body_at, eq=True)
         tm.that(body_at < post_at, eq=True)
 
+    @staticmethod
     def test_custom_make_accepts_pre_post_verb_hooks(
-        self,
         infra_git_repo: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -192,7 +194,7 @@ class TestsFlextInfraCodegenMakeContracts:
                 "post-test-all:\n\t@true\n",
             ),
         )
-        result = FlextInfraCodegenConform.execute_request(
+        result = infra.codegen_conform(
             u.Tests.conform_request(
                 root,
                 what=c.Infra.CodegenConformSurface.MAKEFILE,
@@ -205,8 +207,10 @@ class TestsFlextInfraCodegenMakeContracts:
         tm.that("WARN:" in capsys.readouterr().out, eq=False)
         tm.that(Path(f"{custom}.rej").exists(), eq=False)
 
+    @staticmethod
     @pytest.mark.slow
-    def test_non_regular_custom_make_remains_fatal(self, infra_git_repo: Path) -> None:
+    def test_non_regular_custom_make_remains_fatal(infra_git_repo: Path) -> None:
+        """Test non regular custom make remains fatal."""
         root = infra_git_repo
         workspace = TestsFlextInfraConformSupport.standalone_workspace(root)
         TestsFlextInfraConformSupport.apply_conform_surface(
@@ -216,7 +220,7 @@ class TestsFlextInfraCodegenMakeContracts:
         )
         tm.ok(u.Cli.files_delete(root / "custom.mk"))
         (root / "custom.mk").mkdir()
-        result = FlextInfraCodegenConform.execute_request(
+        result = infra.codegen_conform(
             u.Tests.conform_request(
                 root,
                 scope=c.Infra.CodegenConformScope.SELF,

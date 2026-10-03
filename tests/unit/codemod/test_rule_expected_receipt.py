@@ -1,4 +1,8 @@
-"""Declared finding-count receipts for ast-grep rules, through the public CLI."""
+"""Declared finding-count receipts for ast-grep rules, through the public CLI.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -26,8 +30,9 @@ class TestsFlextInfraModRuleExpectedReceipt:
         tm.ok(u.Cli.ensure_dir(rules_root))
         tm.ok(
             u.Cli.atomic_write_text_file(
-                config_path, f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\ntestConfigs: []\n"
-            )
+                config_path,
+                f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\ntestConfigs: []\n",
+            ),
         )
         tm.ok(
             u.Cli.atomic_write_text_file(

@@ -1,4 +1,8 @@
-"""Fixed-effect plan collection through the shared generation transaction."""
+"""Fixed-effect plan collection through the shared generation transaction.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,11 +23,17 @@ class FlextInfraDocCollector:
 
     @staticmethod
     def collect(request: m.Infra.DocsCollectRequest) -> p.Result[bool]:
-        """Authenticate configuration, collect sources, and commit one file phase."""
+        """Authenticate configuration, collect sources, and commit one file phase.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         root = request.repository_root
         if not root.is_absolute() or ".." in root.parts or root.resolve() != root:
             return r[bool].fail(
-                f"plan collection repository root is not a physical absolute path: {root}",
+                f"plan collection repository root is not a physical "
+                f"absolute path: {root}",
             )
         configuration_path = request.configuration
         if not configuration_path.is_absolute():
@@ -78,7 +88,8 @@ class FlextInfraDocCollector:
                     for item in incomplete
                 )
                 return r[bool].fail(
-                    f"plan source extraction is incomplete; private inventories are not extracted plans: {pending}",
+                    f"plan source extraction is incomplete; private "
+                    f"inventories are not extracted plans: {pending}",
                 )
             u.Infra.verify_plan_collection_sources(scope_root, configuration, bundle)
             inputs = (snapshot, *bundle.source_states)

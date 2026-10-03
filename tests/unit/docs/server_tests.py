@@ -4,6 +4,9 @@ Real workspace fixtures only (no mocks): the serve phase resolves governed
 scopes, keeps the ones carrying an ``mkdocs.yml``, and refuses ambiguous
 multi-scope previews — the blocking dev-server call itself is covered by the
 integration suite (tests/integration/docs_serve_e2e_tests.py).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -23,7 +26,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraDocServer:
     """FlextInfraDocServer public-behavior tests (unit under test: docs serve)."""
 
-    def _write_mkdocs_yml(self, scope_path: Path) -> None:
+    @staticmethod
+    def _write_mkdocs_yml(scope_path: Path) -> None:
         (scope_path / "mkdocs.yml").write_text(
             "site_name: Demo\ndocs_dir: docs\n",
             encoding="utf-8",
@@ -33,7 +37,8 @@ class TestsFlextInfraDocServer:
     # sibling classes into this outer class — a nested class does not inherit the
     # outer one, so calling _write_mkdocs_yml via a throwaway instance was external
     # private-member access (ruff SLF001).
-    def test_serve_without_mkdocs_yml_fails_with_guidance(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_serve_without_mkdocs_yml_fails_with_guidance(tmp_path: Path) -> None:
         """Scope resolution governs which site a blocking preview may serve."""
         workspace = tu.Tests.create_docs_workspace(tmp_path)
 
@@ -47,6 +52,7 @@ class TestsFlextInfraDocServer:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test serve with multiple servable scopes requires project."""
         workspace = tu.Tests.create_docs_workspace(
             tmp_path,
             project_names=("flext-a", "flext-b"),
@@ -60,26 +66,31 @@ class TestsFlextInfraDocServer:
         tm.that((result.error or ""), has="--project")
         tm.that((result.error or ""), has="flext-a")
 
-    def test_execute_propagates_selection_failure(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_execute_propagates_selection_failure(tmp_path: Path) -> None:
+        """Test execute propagates selection failure."""
         workspace = tu.Tests.create_docs_workspace(tmp_path)
 
         result = FlextInfraDocServer(repository_root=workspace).execute()
 
         tm.fail(result)
 
-    def test_default_bind_address_is_localhost(self) -> None:
+    @staticmethod
+    def test_default_bind_address_is_localhost() -> None:
         """The public request model ships production-safe serve defaults."""
         server = FlextInfraDocServer()
         tm.that(server.dev_addr, eq="127.0.0.1:8000")
         tm.that(server.livereload, eq=True)
         tm.that(server.strict, eq=True)
 
-    def test_output_dir_default_matches_docs_pipeline(self) -> None:
+    @staticmethod
+    def test_output_dir_default_matches_docs_pipeline() -> None:
+        """Test output dir default matches docs pipeline."""
         server = FlextInfraDocServer()
         tm.that(str(server.output_dir), eq=c.Infra.DEFAULT_DOCS_OUTPUT_DIR)
 
+    @staticmethod
     def test_serve_scope_without_mkdocs_yml_returns_failure(
-        self,
         tmp_path: Path,
     ) -> None:
         """u.Infra.docs_serve_mkdocs fails loud without mkdocs.yml."""

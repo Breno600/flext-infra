@@ -1,4 +1,8 @@
-"""Typed pytest-testmon cache state owned by the model namespace."""
+"""Typed pytest-testmon cache state owned by the model namespace.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -76,7 +80,17 @@ class FlextInfraModelsTestmon:
 
         @u.model_validator(mode="after")
         def require_execution_or_verified_deselection(self) -> Self:
-            """Zero execution requires positive accounting against a valid cache."""
+            """Zero execution requires positive accounting against a valid cache.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If deselections cannot exceed the complete collection
+                    inventory; or if zero execution requires a restored cache and
+                    complete deselection accounting.
+
+            """
             if (
                 self.inventory_count is not None
                 and self.deselected_count > self.inventory_count
@@ -91,7 +105,10 @@ class FlextInfraModelsTestmon:
                     and self.deselected_count == self.inventory_count
                 )
             ):
-                msg = "zero execution requires a restored cache and complete deselection accounting"
+                msg = (
+                    "zero execution requires a restored cache "
+                    "and complete deselection accounting"
+                )
                 raise ValueError(msg)
             return self
 

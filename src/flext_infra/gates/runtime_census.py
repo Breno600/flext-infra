@@ -2,6 +2,9 @@
 
 Imports every ``flext_*`` module in the selected project and runs
 ``FlextUtilitiesEnforcement.check()`` against every locally-defined class.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -10,9 +13,8 @@ import time
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, m
+from flext_infra.gates.base_gate import FlextInfraGate
 from flext_infra.validate.runtime_census import FlextInfraRuntimeCensusValidator
-
-from .base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -32,39 +34,29 @@ class FlextInfraRuntimeCensusGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
-        """Run the runtime census scoped to ``project_dir``."""
+        """Run the runtime census scoped to ``project_dir``.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
+        """
         _ = ctx
         started = time.monotonic()
-        # The filter is the declared project name, never the checkout directory
-        # name: a worktree or renamed checkout keeps its manifest identity, and
-        # the census discovery keys projects by exactly that pyproject name.
-        metadata = u.Infra.read_project_metadata_result(project_dir)
-        if metadata.failure:
+        validator = FlextInfraRuntimeCensusValidator.for_project(
+            project_dir,
+        )
+        if validator.failure:
             return self._build_project_error_gate_result(
                 project_dir,
                 passed=False,
-                errors=[str(metadata.error)],
+                errors=[validator.error or "runtime census scoping failed"],
                 started=started,
             )
-        validator = FlextInfraRuntimeCensusValidator(
-            repository_root=project_dir,
-            project_filter=metadata.value.project.name,
-        )
         # ``build_report`` (not ``execute``) keeps violations structured so the
         # gate can grade a broken invocation separately from found violations.
-        report_result = validator.build_report()
-        if report_result.failure:
-            return self._build_project_error_gate_result(
-                project_dir,
-                passed=False,
-                errors=[report_result.error or "runtime census failed"],
-                started=started,
-            )
-        report = report_result.value
-        return self._build_project_error_gate_result(
+        return self._build_validation_report_result(
             project_dir,
-            passed=report.passed,
-            errors=list(report.violations),
+            validator.value.build_report(),
             started=started,
         )
 
