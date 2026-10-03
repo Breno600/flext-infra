@@ -504,6 +504,36 @@ class FlextInfraConfigModelsMake:
             ),
         ]
 
+    class MakeGateSuspensionSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """One gate temporarily suspended by a declaring authority.
+
+        The suspension is DATA so the active gate default set stays declared
+        and auditable: suspended gates leave the active default set without
+        leaving the vocabulary, and every suspension records the authority
+        that declared it.
+        """
+
+        gate: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                min_length=1,
+                description=(
+                    "Gate identifier temporarily suspended (the rule name the "
+                    "vocabulary knows)"
+                ),
+            ),
+        ]
+        authority: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                min_length=1,
+                description=(
+                    "Declaring authority for the suspension (operator ruling "
+                    "reference)"
+                ),
+            ),
+        ]
+
     class MakeRuffSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Ruff CLI contract for generated Make verbs and quality gates.
 
