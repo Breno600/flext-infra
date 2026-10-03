@@ -22,6 +22,42 @@ from flext_infra._constants import (
 )
 from flext_infra._models._config.contract import FlextInfraConfigModelsContract
 
+class ExternalCacheDirectorySpec(FlextInfraConfigModelsContract.ConfigContract):
+    """External-cache path pair every tool cache spec owns identically."""
+
+    home_cache_directory: Annotated[
+        Path,
+        m.Field(description="Standard cache directory below the user home"),
+    ]
+    external_storage_directory: Annotated[
+        Path,
+        m.Field(description="FLEXT-owned directory below the cache home"),
+    ]
+
+    @u.model_validator(mode="after")
+    def require_relative_cache_directories(self) -> Self:
+        """Keep both cache directories normalized and repository-relative.
+
+        Returns:
+            The resulting ``Self``.
+
+        Raises:
+            ValueError: If cache.
+
+        """
+        for name, path in (
+            ("home_cache_directory", self.home_cache_directory),
+            ("external_storage_directory", self.external_storage_directory),
+        ):
+            if path.is_absolute() or any(
+                part in {"", ".", ".."} for part in path.parts
+            ):
+                msg = f"cache {name} must be normalized and relative"
+                raise ValueError(msg)
+        return self
+
+
+
 
 def _shared_mypy_cache_spec() -> FlextInfraConfigModelsMake.MypyCacheSpec:
     """Build the declared default shared Mypy analysis cache policy.
@@ -609,40 +645,6 @@ class FlextInfraConfigModelsMake:
                         " warning < maintenance < block <= 100"
                     )
                     raise ValueError(msg)
-                return self
-
-        class ExternalCacheDirectorySpec(FlextInfraConfigModelsContract.ConfigContract):
-            """External-cache path pair every tool cache spec owns identically."""
-
-            home_cache_directory: Annotated[
-                Path,
-                m.Field(description="Standard cache directory below the user home"),
-            ]
-            external_storage_directory: Annotated[
-                Path,
-                m.Field(description="FLEXT-owned directory below the cache home"),
-            ]
-
-            @u.model_validator(mode="after")
-            def require_relative_cache_directories(self) -> Self:
-                """Keep both cache directories normalized and repository-relative.
-
-                Returns:
-                    The resulting ``Self``.
-
-                Raises:
-                    ValueError: If cache.
-
-                """
-                for name, path in (
-                    ("home_cache_directory", self.home_cache_directory),
-                    ("external_storage_directory", self.external_storage_directory),
-                ):
-                    if path.is_absolute() or any(
-                        part in {"", ".", ".."} for part in path.parts
-                    ):
-                        msg = f"cache {name} must be normalized and relative"
-                        raise ValueError(msg)
                 return self
 
         class TestmonCacheSpec(
