@@ -97,7 +97,8 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             m.Field(None, description="Optional output report path"),
         ] = None
         quiet: Annotated[
-            bool, m.Field(default=False, description="Reduce command output"),
+            bool,
+            m.Field(default=False, description="Reduce command output"),
         ] = False
         no_fail: Annotated[
             bool,

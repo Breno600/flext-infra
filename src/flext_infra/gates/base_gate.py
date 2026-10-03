@@ -230,8 +230,7 @@ class FlextInfraGate:
             column=column,
             code=c.Infra.ToolOutcome.ERROR.value,
             message=(
-                f"{tool} exited with code {result.outcome.raw_return_code}: "
-                f"{detail}"
+                f"{tool} exited with code {result.outcome.raw_return_code}: {detail}"
             ),
             severity="ERROR",
         )

@@ -830,7 +830,9 @@ class FlextInfraUtilitiesDependencies:
             The resulting ``m.Infra.ScaffoldDependencyProfileSpec | None``.
         """
         rows = cls.dependency_profile_rows(
-            profiles, upstream=upstream, distribution=distribution,
+            profiles,
+            upstream=upstream,
+            distribution=distribution,
         )
         if not rows:
             return None

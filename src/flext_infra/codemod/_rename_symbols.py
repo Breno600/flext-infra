@@ -223,9 +223,7 @@ class FlextInfraRenameSymbols:
                             raise TypeError(msg)
                         path = Path(change.resource.real_path)
                         if path not in sources:
-                            msg = (
-                                f"CSV Rope campaign escaped known inventory: {path}"
-                            )
+                            msg = f"CSV Rope campaign escaped known inventory: {path}"
                             raise ValueError(msg)
                         original = sources[path]
                         matcher = SequenceMatcher(

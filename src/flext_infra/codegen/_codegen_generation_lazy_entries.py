@@ -44,8 +44,7 @@ class FlextInfraCodegenGenerationLazyEntriesMixin(
                 continue
             mod, attr = lazy_filtered[exp]
             is_export = (
-                FlextInfraCodegenGenerationLazyEntriesMixin
-                ._is_module_or_package_export
+                FlextInfraCodegenGenerationLazyEntriesMixin._is_module_or_package_export
             )
             module_or_package_export = is_export(
                 attr,

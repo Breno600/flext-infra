@@ -52,6 +52,20 @@ mkdir -p "$$(dirname "$$database")"; \
 {{ make.testmon_cache.database_environment_variable }}="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry{% if operation %} {{ operation }}{% endif %}{% if not loop.last %}; \{% endif %}
 {%- endfor %}
 {%- endmacro -%}
+{#- The single-file verb validates its FILE input and exports the target in
+    the same shell as the guarded runners; the declared file then runs through
+    the budgeted and slow phases like any suite. The exported variable name
+    mirrors c.Infra.PYTEST_ENV_TARGET_FILE in flext-infra/_constants/make.py;
+    the entry fails loudly on a mismatch. -#}
+{%- macro pytest_test_file_runner() -%}
+if [ -z "$(strip $(FILE))" ]; then printf 'ERROR: test-file requires FILE=<repository-relative test file path>\n' >&2; exit 2; fi; \
+case "$(FILE)" in /*|*..*) printf 'ERROR: FILE must stay a repository-relative path: %s\n' "$(FILE)" >&2; exit 2 ;; esac; \
+if [ ! -f "$(PROJECT_ROOT)/$(FILE)" ]; then printf 'ERROR: FILE is not an existing repository file: %s\n' "$(FILE)" >&2; exit 2; fi; \
+{{ pytest_testmon_guard() }}
+{%- for operation in ("file", "file-slow") %}
+export FLEXT_PYTEST_TARGET_FILE="$(FILE)"; {{ make.testmon_cache.database_environment_variable }}="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry {{ operation }}{% if not loop.last %}; \{% endif %}
+{%- endfor %}
+{%- endmacro -%}
 # @flext-generated: continuous
 # @flext-owner: flext-infra/config/codegen.yaml + flext-infra/src/flext_infra/templates/project/base/Makefile.j2
 # @flext-adjust: edit the owner configuration or template; never this projection
@@ -733,6 +747,11 @@ _builtin_test_full_all: _builtin_require_environment
     runner=pytest_test_runner(("full", "full-slow")),
 ) }}
 
+_builtin_test_file_all: _builtin_require_environment
+{{ test_report_recipe(
+    runner=pytest_test_file_runner(),
+) }}
+
 _builtin_tests_all: _builtin_require_environment
 	+@$(SELF_MAKE) test
 {{ test_report_recipe(
@@ -953,6 +972,7 @@ _builtin-examples: _builtin_require_environment
 _builtin-check: _builtin_check_all
 _builtin-test: _builtin_test_all
 _builtin-test-full: _builtin_test_full_all
+_builtin-test-file: _builtin_test_file_all
 _builtin-fmt: _builtin_fmt_all
 _builtin-fix: _builtin_fix_all
 _builtin-fix-namespace: _builtin_fix_namespace

@@ -91,8 +91,7 @@ class FlextInfraUtilitiesCodegenFilePlan:
                         raise
                     if time.monotonic() >= deadline:
                         timeout_error = (
-                            FlextInfraUtilitiesCodegenFilePlan
-                            .JournalLeaseTimeoutError
+                            FlextInfraUtilitiesCodegenFilePlan.JournalLeaseTimeoutError
                         )
                         raise timeout_error(
                             lock_path,
