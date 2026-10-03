@@ -1,0 +1,83 @@
+id: ban-recursive-model
+snapshots:
+  ? |
+    class Node(m.ContractModel):
+        children: list[Node]
+  : labels:
+    - source: Node
+      style: primary
+      start: 48
+      end: 52
+    - source: 'children: list[Node]'
+      style: secondary
+      start: 33
+      end: 53
+    - source: list[Node]
+      style: secondary
+      start: 43
+      end: 53
+    - source: Node
+      style: secondary
+      start: 6
+      end: 10
+    - source: |-
+        class Node(m.ContractModel):
+            children: list[Node]
+      style: secondary
+      start: 0
+      end: 53
+  ? |
+    class Node(m.ContractModel):
+        parent: Node | None = None
+  : labels:
+    - source: Node
+      style: primary
+      start: 41
+      end: 45
+    - source: 'parent: Node | None = None'
+      style: secondary
+      start: 33
+      end: 59
+    - source: Node | None
+      style: secondary
+      start: 41
+      end: 52
+    - source: Node
+      style: secondary
+      start: 6
+      end: 10
+    - source: |-
+        class Node(m.ContractModel):
+            parent: Node | None = None
+      style: secondary
+      start: 0
+      end: 59
+  ? |
+    class Outer:
+        class Node(m.ContractModel):
+            if True:
+                peer: Node | None = None
+  : labels:
+    - source: Node
+      style: primary
+      start: 81
+      end: 85
+    - source: 'peer: Node | None = None'
+      style: secondary
+      start: 75
+      end: 99
+    - source: Node | None
+      style: secondary
+      start: 81
+      end: 92
+    - source: Node
+      style: secondary
+      start: 23
+      end: 27
+    - source: |-
+        class Node(m.ContractModel):
+                if True:
+                    peer: Node | None = None
+      style: secondary
+      start: 17
+      end: 99

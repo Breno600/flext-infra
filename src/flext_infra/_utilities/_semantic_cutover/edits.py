@@ -1,4 +1,8 @@
-"""Shared edit plumbing for every semantic ``make mod`` cutover planner."""
+"""Shared edit plumbing for every semantic ``make mod`` cutover planner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -23,18 +27,28 @@ class FlextInfraUtilitiesSemanticCutoverEdits:
     def _editable_sources(
         sources: t.MappingKV[Path, str],
     ) -> t.VariadicTuple[t.Pair[Path, str]]:
-        """Return resolved hand-written sources in stable path order."""
+        """Return resolved hand-written sources in stable path order.
+
+        Returns:
+            Resolved hand-written sources in stable path order.
+
+        """
         return tuple(
             sorted(
                 (path.resolve(), source)
                 for path, source in sources.items()
                 if not source.startswith(c.Infra.AUTOGEN_HEADERS)
-            )
+            ),
         )
 
     @staticmethod
     def _finding_statement(finding: m.Infra.ModScanFinding) -> ast.stmt | None:
-        """Parse the single statement an ast-grep finding reports."""
+        """Parse the single statement an ast-grep finding reports.
+
+        Returns:
+            The resulting ``ast.stmt | None``.
+
+        """
         body = ast.parse(finding.text).body
         return body[0] if len(body) == 1 else None
 
@@ -47,12 +61,16 @@ class FlextInfraUtilitiesSemanticCutoverEdits:
 
         A module that cannot be planned yields a failure naming that module;
         the remaining modules are still planned so one run reports them all.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
+
         """
         edits: list[m.Infra.SemanticMigrationEdit] = []
         failures: list[str] = []
         for path, source in items:
             planned = r[t.Infra.TransformResult].create_from_callable(
-                partial(rewrite, path, source)
+                partial(rewrite, path, source),
             )
             if planned.failure:
                 failures.append(f"{path}: {planned.error}")
@@ -65,7 +83,7 @@ class FlextInfraUtilitiesSemanticCutoverEdits:
                         original_source=source,
                         updated_source=updated,
                         changes=tuple(changes),
-                    )
+                    ),
                 )
         result = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
         return result.fail("; ".join(failures)) if failures else result.ok(tuple(edits))

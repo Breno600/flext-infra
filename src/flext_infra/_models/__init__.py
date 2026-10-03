@@ -1,88 +1,109 @@
 # AUTO-GENERATED FILE — Regenerate with: make gen
-"""Flext Infra. Models package."""
+"""Flext Infra. Models package.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core.lazy import build_lazy_import_map, install_lazy_exports
+from flext_core import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from . import _codegen, _config, _git
-    from ._codegen.base import FlextInfraCodegen
-    from ._codegen.fix import FlextInfraModelsCodegenFixModels
-    from ._codegen.journal import FlextInfraModelsCodegenJournalModels
-    from ._codegen.lazy_init import FlextInfraModelsCodegenLazyInitModels
-    from ._codegen.pipeline import FlextInfraModelsCodegenPipelineModels
-    from ._codegen.scaffold import FlextInfraModelsCodegenScaffoldModels
-    from ._codegen.transaction import FlextInfraModelsCodegenTransactionModels
-    from ._config.artifact import FlextInfraConfigModelsArtifact
-    from ._config.base import FlextInfraConfigModels
-    from ._config.beads import FlextInfraConfigModelsBeads
-    from ._config.contexts import FlextInfraConfigModelsContexts
-    from ._config.contract import FlextInfraConfigModelsContract
-    from ._config.make import FlextInfraConfigModelsMake
-    from ._config.provider import FlextInfraConfigModelsProvider
-    from ._config.release import FlextInfraConfigModelsRelease
-    from ._config.render import FlextInfraConfigModelsRender
-    from ._config.root import FlextInfraConfigModelsRoot
-    from ._config.scaffold import FlextInfraConfigModelsScaffold
-    from ._config.static import FlextInfraConfigModelsStatic
-    from ._config.templates import FlextInfraConfigModelsTemplates
-    from ._config.workspace import FlextInfraConfigModelsWorkspace
-    from ._git.identity import FlextInfraModelsGitIdentity
-    from ._git.worktree_facts import FlextInfraModelsGitWorktreeFacts
-    from .base import FlextInfraModelsBase
-    from .census import FlextInfraModelsCensus
-    from .check import FlextInfraModelsCheck
-    from .codegen_render import FlextInfraModelsCodegenRender
-    from .codegen_toolchain import FlextInfraModelsCodegenToolchain
-    from .codemod import FlextInfraModelsCodemod
-    from .deps import FlextInfraModelsDeps
-    from .deps_toml import FlextInfraModelsDepsToml
-    from .deps_tool_config import FlextInfraModelsDepsToolConfig
-    from .deps_tool_config_linters import FlextInfraModelsDepsToolConfigLinters
-    from .deps_tool_config_project import FlextInfraModelsDepsToolConfigProject
-    from .deps_tool_config_project_artifacts import (
+    from flext_infra._models import _codegen, _config, _git
+    from flext_infra._models._codegen.base import FlextInfraCodegen
+    from flext_infra._models._codegen.fix import FlextInfraModelsCodegenFixModels
+    from flext_infra._models._codegen.journal import (
+        FlextInfraModelsCodegenJournalModels,
+    )
+    from flext_infra._models._codegen.lazy_init import (
+        FlextInfraModelsCodegenLazyInitModels,
+    )
+    from flext_infra._models._codegen.pipeline import (
+        FlextInfraModelsCodegenPipelineModels,
+    )
+    from flext_infra._models._codegen.scaffold import (
+        FlextInfraModelsCodegenScaffoldModels,
+    )
+    from flext_infra._models._codegen.transaction import (
+        FlextInfraModelsCodegenTransactionModels,
+    )
+    from flext_infra._models._config.artifact import FlextInfraConfigModelsArtifact
+    from flext_infra._models._config.base import FlextInfraConfigModels
+    from flext_infra._models._config.beads import FlextInfraConfigModelsBeads
+    from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
+    from flext_infra._models._config.contract import FlextInfraConfigModelsContract
+    from flext_infra._models._config.make import FlextInfraConfigModelsMake
+    from flext_infra._models._config.provider import FlextInfraConfigModelsProvider
+    from flext_infra._models._config.release import FlextInfraConfigModelsRelease
+    from flext_infra._models._config.render import FlextInfraConfigModelsRender
+    from flext_infra._models._config.root import FlextInfraConfigModelsRoot
+    from flext_infra._models._config.scaffold import FlextInfraConfigModelsScaffold
+    from flext_infra._models._config.static import FlextInfraConfigModelsStatic
+    from flext_infra._models._config.templates import FlextInfraConfigModelsTemplates
+    from flext_infra._models._config.workspace import FlextInfraConfigModelsWorkspace
+    from flext_infra._models._git.identity import FlextInfraModelsGitIdentity
+    from flext_infra._models._git.worktree_facts import FlextInfraModelsGitWorktreeFacts
+    from flext_infra._models._git.worktree_state import FlextInfraModelsGitWorktreeState
+    from flext_infra._models.base import FlextInfraModelsBase
+    from flext_infra._models.census import FlextInfraModelsCensus
+    from flext_infra._models.check import FlextInfraModelsCheck
+    from flext_infra._models.codegen_render import FlextInfraModelsCodegenRender
+    from flext_infra._models.codegen_toolchain import FlextInfraModelsCodegenToolchain
+    from flext_infra._models.codemod import FlextInfraModelsCodemod
+    from flext_infra._models.deps import FlextInfraModelsDeps
+    from flext_infra._models.deps_toml import FlextInfraModelsDepsToml
+    from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
+    from flext_infra._models.deps_tool_config_linters import (
+        FlextInfraModelsDepsToolConfigLinters,
+    )
+    from flext_infra._models.deps_tool_config_project import (
+        FlextInfraModelsDepsToolConfigProject,
+    )
+    from flext_infra._models.deps_tool_config_project_artifacts import (
         FlextInfraModelsDepsToolConfigProjectArtifacts,
     )
-    from .deps_tool_config_project_gitignore import (
+    from flext_infra._models.deps_tool_config_project_gitignore import (
         FlextInfraModelsDepsToolConfigProjectGitignore,
     )
-    from .deps_tool_config_project_mise import FlextInfraModelsDepsToolConfigProjectMise
-    from .deps_tool_config_project_ruff import FlextInfraModelsDepsToolConfigProjectRuff
-    from .deps_tool_config_type_checkers import (
+    from flext_infra._models.deps_tool_config_project_mise import (
+        FlextInfraModelsDepsToolConfigProjectMise,
+    )
+    from flext_infra._models.deps_tool_config_type_checkers import (
         FlextInfraModelsDepsToolConfigTypeCheckers,
     )
-    from .docs import FlextInfraModelsDocs
-    from .docs_collection import FlextInfraModelsDocsCollection
-    from .docs_generation import FlextInfraModelsDocsGeneration
-    from .duplication import FlextInfraModelsDuplication
-    from .enforcement import FlextInfraModelsEnforcement
-    from .gates import FlextInfraModelsGates
-    from .git import FlextInfraModelsGit
-    from .layout import FlextInfraModelsLayout
-    from .mise_toolchain import FlextInfraModelsMiseToolchain
-    from .mise_toolchain_base import FlextInfraModelsMiseToolchainBase
-    from .mixins import FlextInfraModelsMixins
-    from .promoted import FlextInfraModelsPromoted
-    from .refactor import FlextInfraModelsRefactor
-    from .refactor_ast_grep import FlextInfraModelsRefactorGrep
-    from .refactor_namespace_enforcer import FlextInfraModelsNamespaceEnforcer
-    from .release import FlextInfraModelsRelease
-    from .rope import FlextInfraModelsRope
-    from .rope_move import FlextInfraModelsRopeMove
-    from .rope_rules import FlextInfraModelsRopeRules
-    from .scan import FlextInfraModelsScan
-    from .settings import FlextInfraSettingsModels
-    from .sonarcloud import FlextInfraModelsSonarcloud
-    from .testmon import FlextInfraModelsTestmon
-    from .transformers import FlextInfraModelsTransformers
-    from .validate import FlextInfraModelsCore
-    from .workspace import FlextInfraModelsWorkspace
-    from .worktree import FlextInfraModelsWorktree
-
+    from flext_infra._models.docs import FlextInfraModelsDocs
+    from flext_infra._models.docs_collection import FlextInfraModelsDocsCollection
+    from flext_infra._models.docs_generation import FlextInfraModelsDocsGeneration
+    from flext_infra._models.duplication import FlextInfraModelsDuplication
+    from flext_infra._models.gates import FlextInfraModelsGates
+    from flext_infra._models.git import FlextInfraModelsGit
+    from flext_infra._models.layout import FlextInfraModelsLayout
+    from flext_infra._models.mise_toolchain import FlextInfraModelsMiseToolchain
+    from flext_infra._models.mise_toolchain_base import (
+        FlextInfraModelsMiseToolchainBase,
+    )
+    from flext_infra._models.mixins import FlextInfraModelsMixins
+    from flext_infra._models.promoted import FlextInfraModelsPromoted
+    from flext_infra._models.refactor import FlextInfraModelsRefactor
+    from flext_infra._models.refactor_ast_grep import FlextInfraModelsRefactorGrep
+    from flext_infra._models.refactor_namespace_enforcer import (
+        FlextInfraModelsNamespaceEnforcer,
+    )
+    from flext_infra._models.release import FlextInfraModelsRelease
+    from flext_infra._models.rope import FlextInfraModelsRope
+    from flext_infra._models.rope_move import FlextInfraModelsRopeMove
+    from flext_infra._models.scan import FlextInfraModelsScan
+    from flext_infra._models.settings import FlextInfraSettingsModels
+    from flext_infra._models.sonarcloud import FlextInfraModelsSonarcloud
+    from flext_infra._models.testmon import FlextInfraModelsTestmon
+    from flext_infra._models.transformers import FlextInfraModelsTransformers
+    from flext_infra._models.validate import FlextInfraModelsCore
+    from flext_infra._models.workspace import FlextInfraModelsWorkspace
+    from flext_infra._models.worktree import FlextInfraModelsWorktree
 
 __all__: tuple[str, ...] = (
     "FlextInfraCodegen",
@@ -121,17 +142,16 @@ __all__: tuple[str, ...] = (
     "FlextInfraModelsDepsToolConfigProjectArtifacts",
     "FlextInfraModelsDepsToolConfigProjectGitignore",
     "FlextInfraModelsDepsToolConfigProjectMise",
-    "FlextInfraModelsDepsToolConfigProjectRuff",
     "FlextInfraModelsDepsToolConfigTypeCheckers",
     "FlextInfraModelsDocs",
     "FlextInfraModelsDocsCollection",
     "FlextInfraModelsDocsGeneration",
     "FlextInfraModelsDuplication",
-    "FlextInfraModelsEnforcement",
     "FlextInfraModelsGates",
     "FlextInfraModelsGit",
     "FlextInfraModelsGitIdentity",
     "FlextInfraModelsGitWorktreeFacts",
+    "FlextInfraModelsGitWorktreeState",
     "FlextInfraModelsLayout",
     "FlextInfraModelsMiseToolchain",
     "FlextInfraModelsMiseToolchainBase",
@@ -143,7 +163,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraModelsRelease",
     "FlextInfraModelsRope",
     "FlextInfraModelsRopeMove",
-    "FlextInfraModelsRopeRules",
     "FlextInfraModelsScan",
     "FlextInfraModelsSonarcloud",
     "FlextInfraModelsTestmon",
@@ -185,6 +204,7 @@ _LAZY_IMPORTS = MappingProxyType(
             "._git": ("_git",),
             "._git.identity": ("FlextInfraModelsGitIdentity",),
             "._git.worktree_facts": ("FlextInfraModelsGitWorktreeFacts",),
+            "._git.worktree_state": ("FlextInfraModelsGitWorktreeState",),
             ".base": ("FlextInfraModelsBase",),
             ".census": ("FlextInfraModelsCensus",),
             ".check": ("FlextInfraModelsCheck",),
@@ -205,9 +225,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".deps_tool_config_project_mise": (
                 "FlextInfraModelsDepsToolConfigProjectMise",
             ),
-            ".deps_tool_config_project_ruff": (
-                "FlextInfraModelsDepsToolConfigProjectRuff",
-            ),
             ".deps_tool_config_type_checkers": (
                 "FlextInfraModelsDepsToolConfigTypeCheckers",
             ),
@@ -215,7 +232,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".docs_collection": ("FlextInfraModelsDocsCollection",),
             ".docs_generation": ("FlextInfraModelsDocsGeneration",),
             ".duplication": ("FlextInfraModelsDuplication",),
-            ".enforcement": ("FlextInfraModelsEnforcement",),
             ".gates": ("FlextInfraModelsGates",),
             ".git": ("FlextInfraModelsGit",),
             ".layout": ("FlextInfraModelsLayout",),
@@ -229,7 +245,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".release": ("FlextInfraModelsRelease",),
             ".rope": ("FlextInfraModelsRope",),
             ".rope_move": ("FlextInfraModelsRopeMove",),
-            ".rope_rules": ("FlextInfraModelsRopeRules",),
             ".scan": ("FlextInfraModelsScan",),
             ".settings": ("FlextInfraSettingsModels",),
             ".sonarcloud": ("FlextInfraModelsSonarcloud",),
@@ -241,7 +256,7 @@ _LAZY_IMPORTS = MappingProxyType(
         }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,
-    )
+    ),
 )
 
 install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

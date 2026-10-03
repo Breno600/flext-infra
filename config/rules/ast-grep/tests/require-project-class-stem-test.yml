@@ -1,0 +1,16 @@
+# Shape only: the engine admits the finding when the class lacks the stem.
+id: require-project-class-stem
+valid:
+  - |
+    def build():
+        class Local:
+            pass
+invalid:
+  - |
+    class Helper:
+        pass
+  - |
+    class FlextFooConstants:
+        pass
+    class Second:
+        pass

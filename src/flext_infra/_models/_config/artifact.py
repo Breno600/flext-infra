@@ -1,32 +1,37 @@
-"""Codegen artifact, conform, and plan result models."""
+"""Codegen artifact, conform, and plan result models.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from collections.abc import Mapping
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
+from types import MappingProxyType
 from typing import Annotated, Literal, Self
 
 from flext_cli import m, u
 
-from ... import t
-from ..._constants import (
+from flext_infra import t
+from flext_infra._constants import (
     FlextInfraConstantsCodegenProject,
     FlextInfraConstantsSharedInfra,
 )
-from .. import FlextInfraModelsLayout
-from ..deps_tool_config import FlextInfraModelsDepsToolConfig
-from ..deps_tool_config_project_artifacts import (
+from flext_infra._models import FlextInfraModelsLayout
+from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
+from flext_infra._models._config.make import FlextInfraConfigModelsMake
+from flext_infra._models._config.provider import FlextInfraConfigModelsProvider
+from flext_infra._models._config.release import FlextInfraConfigModelsRelease
+from flext_infra._models._config.render import FlextInfraConfigModelsRender
+from flext_infra._models._config.scaffold import FlextInfraConfigModelsScaffold
+from flext_infra._models._config.templates import FlextInfraConfigModelsTemplates
+from flext_infra._models._config.workspace import FlextInfraConfigModelsWorkspace
+from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
+from flext_infra._models.deps_tool_config_project_artifacts import (
     FlextInfraModelsDepsToolConfigProjectArtifacts,
 )
-from .contexts import FlextInfraConfigModelsContexts
-from .contract import FlextInfraConfigModelsContract
-from .make import FlextInfraConfigModelsMake
-from .provider import FlextInfraConfigModelsProvider
-from .release import FlextInfraConfigModelsRelease
-from .render import FlextInfraConfigModelsRender
-from .scaffold import FlextInfraConfigModelsScaffold
-from .templates import FlextInfraConfigModelsTemplates
-from .workspace import FlextInfraConfigModelsWorkspace
 
 
 class FlextInfraConfigModelsArtifact:
@@ -40,20 +45,25 @@ class FlextInfraConfigModelsArtifact:
             True
         )
         vscode_exclude: Annotated[
-            bool, m.Field(description="Feed VS Code files.exclude + search.exclude")
+            bool,
+            m.Field(description="Feed VS Code files.exclude + search.exclude"),
         ] = True
         watch_exclude: Annotated[
-            bool, m.Field(description="Feed VS Code files.watcherExclude")
+            bool,
+            m.Field(description="Feed VS Code files.watcherExclude"),
         ] = True
         gitignore: Annotated[
-            bool, m.Field(description="Feed the Python/tool section of .gitignore")
+            bool,
+            m.Field(description="Feed the Python/tool section of .gitignore"),
         ] = True
         source_scan_ignore: Annotated[
-            bool, m.Field(description="Feed source_scan.ignored_resources")
+            bool,
+            m.Field(description="Feed source_scan.ignored_resources"),
         ] = False
 
     class CodegenVscodeSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Fully modeled content of the ``vscode`` section of ``config/codegen.yaml``."""
+        """Fully modeled content of the ``vscode`` section
+        of ``config/codegen.yaml``."""
 
         scalar_settings: Annotated[
             Mapping[str, str | bool | int],
@@ -84,14 +94,8 @@ class FlextInfraConfigModelsArtifact:
 
         max_lines: Annotated[
             int,
-            m.Field(
-                ge=1,
-                description=(
-                    "Per-module code-LOC ceiling. Operator instruction "
-                    "2026-09-07: the former 1000-LOC allowance stands."
-                ),
-            ),
-        ] = 1000
+            m.Field(ge=1, description="Per-module code-LOC ceiling"),
+        ]
 
     class CodegenConfigSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Fully modeled content of ``config/codegen.yaml``."""
@@ -103,13 +107,13 @@ class FlextInfraConfigModelsArtifact:
                 description=(
                     "Repository-relative generated projections that no template "
                     "renders any more; generation removes them from consumers"
-                )
+                ),
             ),
-        ] = ()
+        ]
         fresh_import_workers: Annotated[
             int,
             m.Field(ge=1, le=16, description="Concurrent fresh-import subprocesses"),
-        ] = 1
+        ]
         loc_cap: Annotated[
             FlextInfraConfigModelsArtifact.CodegenLocCapSpec,
             m.Field(description="Per-module code-LOC ceiling policy"),
@@ -125,7 +129,6 @@ class FlextInfraConfigModelsArtifact:
         checkout_submodules: Annotated[
             t.NonEmptyStr,
             m.Field(
-                default="false",
                 pattern=r"^(true|false|recursive)$",
                 description=(
                     "Default actions/checkout submodules mode for every "
@@ -142,19 +145,7 @@ class FlextInfraConfigModelsArtifact:
                 description=(
                     "Per-distribution override of checkout_submodules, for "
                     "projects that really do exercise their subprojects in CI"
-                )
-            ),
-        ]
-        dependabot_cooldown_days: Annotated[
-            Mapping[str, int],
-            m.Field(
-                description=(
-                    "Per-distribution dependabot cooldown (default-days, >= 0) "
-                    "opted in for generated dependabot.yml. The fleet default "
-                    "is no cooldown: every ecosystem selects the newest "
-                    "available release immediately. A distribution that must "
-                    "stagger updates declares its own days here."
-                )
+                ),
             ),
         ]
         ci_private_submodules: Annotated[
@@ -163,7 +154,7 @@ class FlextInfraConfigModelsArtifact:
                 description=(
                     "Per-distribution private submodule deploy-key contracts "
                     "rendered into generated CI before make setup"
-                )
+                ),
             ),
         ]
         ci_private_dependency_auth: Annotated[
@@ -172,7 +163,7 @@ class FlextInfraConfigModelsArtifact:
                 description=(
                     "Per-distribution GitHub App identity minting installation "
                     "tokens for private git dependencies in generated CI"
-                )
+                ),
             ),
         ]
         ci_system_packages: Annotated[
@@ -181,7 +172,7 @@ class FlextInfraConfigModelsArtifact:
                 description=(
                     "Per-distribution runner packages (Ubuntu apt names) the "
                     "generated CI installs before the gates run"
-                )
+                ),
             ),
         ]
         ci_package_registry_read: Annotated[
@@ -192,7 +183,7 @@ class FlextInfraConfigModelsArtifact:
                     "Packages (for example private GHCR OCI dependencies); only "
                     "these grant the ci job packages: read, every other job "
                     "and distribution stays contents-only"
-                )
+                ),
             ),
         ]
         uv_exclude_dependencies: Annotated[
@@ -241,7 +232,7 @@ class FlextInfraConfigModelsArtifact:
                 description=(
                     "Declarative project-layout conformance contract consumed "
                     "by the layout engine and the layout quality gate"
-                )
+                ),
             ),
         ]
 
@@ -350,14 +341,14 @@ class FlextInfraConfigModelsArtifact:
                     FlextInfraConfigModelsScaffold.ScaffoldGitignoreSectionSpec(
                         name=FlextInfraConstantsSharedInfra.GITIGNORE_DERIVED_SECTION_NAME,
                         patterns=tuple(derived),
-                    )
+                    ),
                 )
             if managed_allowed:
                 sections.append(
                     FlextInfraConfigModelsScaffold.ScaffoldGitignoreSectionSpec(
                         name=FlextInfraConstantsSharedInfra.GITIGNORE_MANAGED_SECTION_NAME,
                         patterns=tuple(managed_allowed),
-                    )
+                    ),
                 )
             return tuple(sections)
 
@@ -383,13 +374,23 @@ class FlextInfraConfigModelsArtifact:
             FlextInfraConfigModelsTemplates.TemplatesSpec,
             m.Field(description="New-project-only scaffold template manifest"),
         ]
-        # Operator law: flext-infra owns generic conform policy only. The set
+        # flext-infra owns generic conform policy only. The set
         # of projects it serves is NOT its knowledge — each repository's own
         # .gitmodules is the read-only topology authority.
 
         @u.model_validator(mode="after")
         def _validate_github_artifact_ownership(self) -> Self:
-            """Require one full-managed conform owner for every GitHub template."""
+            """Require one full-managed conform owner for every GitHub template.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If GitHub artifacts must have exactly one template and
+                    managed owner; or if GitHub template/managed ownership mismatch; or
+                    if GitHub artifacts must be full-managed.
+
+            """
             github_templates = tuple(
                 Path(entry.destination)
                 for entry in self.templates.entries
@@ -436,28 +437,35 @@ class FlextInfraConfigModelsArtifact:
     class CodegenConformSurfaceContract(m.Value):
         """Typed ownership contract for one requested conformance surface."""
 
-        # Why: leaf conform planning contract lives on m.Infra only (not nested in services).
+        # Why: leaf conform planning contract lives on
+        # m.Infra only (not nested in services).
         destinations: Annotated[
             frozenset[str] | None,
             m.Field(description="Output paths selected for conformance planning"),
         ] = None
         complete_governed: Annotated[
-            bool, m.Field(description="Whether every governed output is represented")
+            bool,
+            m.Field(description="Whether every governed output is represented"),
         ] = False
         dependencies_only: Annotated[
-            bool, m.Field(description="Whether planning is dependency-only")
+            bool,
+            m.Field(description="Whether planning is dependency-only"),
         ] = False
         delegates: Annotated[
-            bool, m.Field(description="Whether delegated templates are planned")
+            bool,
+            m.Field(description="Whether delegated templates are planned"),
         ] = True
         pyproject: Annotated[
-            bool, m.Field(description="Whether project metadata is planned")
+            bool,
+            m.Field(description="Whether project metadata is planned"),
         ] = True
         templates: Annotated[
-            bool, m.Field(description="Whether managed templates are planned")
+            bool,
+            m.Field(description="Whether managed templates are planned"),
         ] = True
         custom: Annotated[
-            bool, m.Field(description="Whether custom Make policy is planned")
+            bool,
+            m.Field(description="Whether custom Make policy is planned"),
         ] = True
 
     class CodegenConformRequest(FlextInfraConfigModelsContract.ConfigContract):
@@ -481,7 +489,8 @@ class FlextInfraConfigModelsArtifact:
         """Rendered artifact plus the exact source states used to compose it."""
 
         rendered: Annotated[
-            str, m.Field(description="Fully composed managed-file content")
+            str,
+            m.Field(description="Fully composed managed-file content"),
         ]
         source_states: Annotated[
             t.VariadicTuple[m.Cli.AtomicFileState],
@@ -524,9 +533,21 @@ class FlextInfraConfigModelsArtifact:
                     "once per plan for the project context and every workflow; "
                     "None when Git publishes none, so a render that needs it "
                     "fails with the resolver's own cause"
-                )
+                ),
             ),
         ]
+        planned_direct_sources: Annotated[
+            t.VariadicTuple[str] | None,
+            m.Field(
+                description=(
+                    "Requirement names the pyproject composed in this plan "
+                    "takes by direct reference (forks and local projects). "
+                    "Planners compose the pyproject first and record them; "
+                    "None means this plan composes no pyproject, so the "
+                    "committed one is the source"
+                ),
+            ),
+        ] = None
 
     class CodegenFilePlan(FlextInfraConfigModelsContract.ConfigContract):
         """Exact before state and desired state for one managed file."""
@@ -539,7 +560,7 @@ class FlextInfraConfigModelsArtifact:
                 description=(
                     "Descriptor-authenticated file state, or the exact absent "
                     "parent chain captured by read-only planning"
-                )
+                ),
             ),
         ]
         desired_content: Annotated[
@@ -576,7 +597,19 @@ class FlextInfraConfigModelsArtifact:
 
         @u.model_validator(mode="after")
         def _validate_publication_identity(self) -> Self:
-            """Bind one complete desired state to its exact project and target."""
+            """Bind one complete desired state to its exact project and target.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If codegen project and path must be absolute; or if codegen
+                    desired bytes and mode must be present or absent together; or if
+                    codegen before state belongs to another path; or if codegen absent
+                    parent plan is inconsistent with its destination; or if codegen path
+                    escapes owning project.
+
+            """
             if not self.project.is_absolute() or not self.path.is_absolute():
                 msg = "codegen project and path must be absolute"
                 raise ValueError(msg)
@@ -650,6 +683,101 @@ class FlextInfraConfigModelsArtifact:
             m.Field(description="Fail-closed validation or write errors"),
         ] = ()
 
+    class RenameCampaignSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """One declared CSV-driven rename campaign applied by the mod verb."""
+
+        csv: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Config-directory-relative path to the old,new rename-list "
+                    "CSV; the list ships with the declaring config"
+                ),
+            ),
+        ]
+        roots: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                default=(),
+                description=(
+                    "Repository-root-relative scan directories; empty selects "
+                    "the whole repository root"
+                ),
+            ),
+        ] = ()
+        bindings: Annotated[
+            t.MappingKV[str, t.StrSequence],
+            m.Field(
+                default_factory=lambda: MappingProxyType[str, t.StrSequence]({}),
+                description=(
+                    "CSV expression prefixes mapped "
+                    "to current public Rope owner identities"
+                ),
+            ),
+        ]
+        text_globs: Annotated[
+            t.StrSequence,
+            m.Field(
+                default=(),
+                description=(
+                    "Explicit root-relative non-Python "
+                    "documentation and configuration text surfaces"
+                ),
+            ),
+        ]
+        python_documentation: Annotated[
+            bool,
+            m.Field(
+                default=False,
+                description=(
+                    "Rename comments and actual Python docstrings "
+                    "without changing executable strings"
+                ),
+            ),
+        ]
+        exclude_globs: Annotated[
+            t.StrSequence,
+            m.Field(
+                default=(),
+                description="Generated projections excluded from campaign targets",
+            ),
+        ]
+
+        @u.model_validator(mode="after")
+        def _validate_source_paths(self) -> Self:
+            """Keep campaign drivers and scan roots inside their declared owners.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If CSV campaign path must be relative and non-escaping.
+
+            """
+            for value in (self.csv, *self.roots):
+                path = Path(value)
+                if (
+                    path.is_absolute()
+                    or PureWindowsPath(value).root
+                    or not path.parts
+                    or ".." in path.parts
+                    or "\\" in value
+                    or PureWindowsPath(value).drive
+                ):
+                    msg = (
+                        f"CSV campaign path must be relative and non-escaping: {value}"
+                    )
+                    raise ValueError(msg)
+            return self
+
+    class RefactorCsvCampaignsSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """Declared CSV-driven rename campaigns for the mod verb's rename phase."""
+
+        campaigns: Annotated[
+            t.VariadicTuple[FlextInfraConfigModelsArtifact.RenameCampaignSpec],
+            m.Field(default=(), description="Ordered rename campaigns"),
+        ] = ()
+
     class SedPatternSpec(FlextInfraConfigModelsContract.ConfigContract):
         """One declared literal regex substitution applied across the mod scope."""
 
@@ -677,35 +805,4 @@ class FlextInfraConfigModelsArtifact:
         patterns: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsArtifact.SedPatternSpec],
             m.Field(default=(), description="Ordered substitution patterns"),
-        ] = ()
-
-    class RenameCampaignSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """One declared CSV-driven rename campaign applied by the mod verb."""
-
-        csv: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description=(
-                    "Config-directory-relative path to the old,new rename-list "
-                    "CSV; the list ships with the declaring config"
-                )
-            ),
-        ]
-        roots: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                default=(),
-                description=(
-                    "Repository-root-relative scan directories; empty selects "
-                    "the whole repository root"
-                ),
-            ),
-        ] = ()
-
-    class RefactorCsvCampaignsSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Declared CSV-driven rename campaigns for the mod verb's rename phase."""
-
-        campaigns: Annotated[
-            t.VariadicTuple[FlextInfraConfigModelsArtifact.RenameCampaignSpec],
-            m.Field(default=(), description="Ordered rename campaigns"),
         ] = ()

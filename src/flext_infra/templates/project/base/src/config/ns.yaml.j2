@@ -1,4 +1,4 @@
-# NOTE (codex, flext-j47u): every generated runtime value has one validated config owner.
+# NOTE:every generated runtime value has one validated config owner.
 {{ ns }}:
   name: {{ const_name | tojson }}
   description: {{ description | tojson }}
@@ -8,6 +8,3 @@
   ping_success_message: {{ scaffold.ping_example.success_message | tojson }}
   ping_reply: {{ scaffold.ping_example.reply | tojson }}
   disabled_reply: {{ scaffold.ping_example.disabled_reply | tojson }}
-ManagedArtifacts:
-  Ruff:
-    per_file_ignores: {}

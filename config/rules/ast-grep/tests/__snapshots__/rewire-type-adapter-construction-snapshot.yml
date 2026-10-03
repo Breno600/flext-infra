@@ -1,0 +1,112 @@
+id: rewire-type-adapter-construction
+snapshots:
+  ? |
+    from flext_cli import t
+    from flext_core import u
+
+    ADAPTER = t.TypeAdapter(t.StrMapping)
+  : fixed: |
+      from flext_cli import t
+      from flext_core import u
+
+      ADAPTER = u.type_adapter(t.StrMapping)
+    labels:
+    - source: t.TypeAdapter(t.StrMapping)
+      style: primary
+      start: 60
+      end: 87
+    - source: t
+      style: secondary
+      start: 60
+      end: 61
+    - source: t
+      style: secondary
+      start: 60
+      end: 61
+    - source: from flext_core import u
+      style: secondary
+      start: 24
+      end: 48
+    - source: |
+        from flext_cli import t
+        from flext_core import u
+
+        ADAPTER = t.TypeAdapter(t.StrMapping)
+      style: secondary
+      start: 0
+      end: 88
+  ? |
+    from flext_core import m, u
+
+    ADAPTER = m.TypeAdapter(int)
+  : fixed: |
+      from flext_core import m, u
+
+      ADAPTER = u.type_adapter(int)
+    labels:
+    - source: m.TypeAdapter(int)
+      style: primary
+      start: 39
+      end: 57
+    - source: m
+      style: secondary
+      start: 39
+      end: 40
+    - source: m
+      style: secondary
+      start: 39
+      end: 40
+    - source: from flext_core import m, u
+      style: secondary
+      start: 0
+      end: 27
+    - source: |
+        from flext_core import m, u
+
+        ADAPTER = m.TypeAdapter(int)
+      style: secondary
+      start: 0
+      end: 58
+  ? |
+    from pydantic import TypeAdapter
+
+    from flext_core import u
+
+    ADAPTER = TypeAdapter(int)
+  : fixed: |
+      from pydantic import TypeAdapter
+
+      from flext_core import u
+
+      ADAPTER = u.type_adapter(int)
+    labels:
+    - source: TypeAdapter(int)
+      style: primary
+      start: 70
+      end: 86
+    - source: from pydantic import TypeAdapter
+      style: secondary
+      start: 0
+      end: 32
+    - source: |
+        from pydantic import TypeAdapter
+
+        from flext_core import u
+
+        ADAPTER = TypeAdapter(int)
+      style: secondary
+      start: 0
+      end: 87
+    - source: from flext_core import u
+      style: secondary
+      start: 34
+      end: 58
+    - source: |
+        from pydantic import TypeAdapter
+
+        from flext_core import u
+
+        ADAPTER = TypeAdapter(int)
+      style: secondary
+      start: 0
+      end: 87

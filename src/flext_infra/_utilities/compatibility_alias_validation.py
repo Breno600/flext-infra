@@ -1,4 +1,8 @@
-"""Strict validation for semantic compatibility-alias cutovers."""
+"""Strict validation for semantic compatibility-alias cutovers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,7 +10,7 @@ import ast
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from .qualified_names import FlextInfraUtilitiesQualifiedNames
+from flext_infra._utilities.qualified_names import FlextInfraUtilitiesQualifiedNames
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -20,6 +24,10 @@ class FlextInfraUtilitiesCompatibilityAliasValidation:
         """Return the value one module-level statement assigns to ``__all__``.
 
         ``None`` when the statement does not declare the export list at all.
+
+        Returns:
+            The value one module-level statement assigns to ``__all__``.
+
         """
         if (
             isinstance(node, ast.Assign)
@@ -37,14 +45,21 @@ class FlextInfraUtilitiesCompatibilityAliasValidation:
 
     @staticmethod
     def require_static_compatibility_alias_exports(
-        tree: ast.Module, file_path: Path, aliases: frozenset[str]
+        tree: ast.Module,
+        file_path: Path,
+        aliases: frozenset[str],
     ) -> None:
-        """Reject dynamic export ownership before changing an alias owner."""
+        """Reject dynamic export ownership before changing an alias owner.
+
+        Raises:
+            ValueError: If dynamic __all__ blocks alias cutover in.
+
+        """
         if not aliases:
             return
         for node in tree.body:
             value = FlextInfraUtilitiesCompatibilityAliasValidation._dunder_all_value(
-                node
+                node,
             )
             if value is not None and not (
                 isinstance(value, ast.List | ast.Tuple)
@@ -64,11 +79,16 @@ class FlextInfraUtilitiesCompatibilityAliasValidation:
         qualified_aliases: t.StrMapping,
         exported_aliases: frozenset[str],
     ) -> None:
-        """Require removed identities and their literal exports to disappear."""
+        """Require removed identities and their literal exports to disappear.
+
+        Raises:
+            ValueError: If qualified alias residue; or if alias export residue in.
+
+        """
         tree = ast.parse(source, filename=str(file_path))
         for node in tree.body:
             value = FlextInfraUtilitiesCompatibilityAliasValidation._dunder_all_value(
-                node
+                node,
             )
             if isinstance(value, ast.List | ast.Tuple) and any(
                 isinstance(element, ast.Constant) and element.value in exported_aliases
@@ -78,8 +98,9 @@ class FlextInfraUtilitiesCompatibilityAliasValidation:
                 raise ValueError(msg)
         residue = sorted(
             FlextInfraUtilitiesQualifiedNames.qualified_name_residue(
-                source, qualified_aliases
-            )
+                source,
+                qualified_aliases,
+            ),
         )
         if residue:
             msg = f"qualified alias residue {residue[0]} in {file_path}"

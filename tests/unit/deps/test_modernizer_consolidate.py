@@ -1,4 +1,8 @@
-"""Consolidation phase tests for deps modernizer."""
+"""Consolidation phase tests for deps modernizer.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -13,11 +17,17 @@ class TestsFlextInfraDepsModernizerConsolidate:
 
     @staticmethod
     def _consolidated(
-        source: str, canonical_dev: t.StrSequence = ()
+        source: str,
+        canonical_dev: t.StrSequence = (),
     ) -> t.Pair[t.JsonMapping, t.StrSequence]:
-        """Consolidate one payload twice; return the payload and first changes."""
+        """Consolidate one payload twice; return the payload and first changes.
+
+        Returns:
+            The resulting ``t.Pair[t.JsonMapping, t.StrSequence]``.
+
+        """
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
-            u.Tests.toml_payload(source)
+            u.Tests.toml_payload(source),
         )
         phase = FlextInfraConsolidateGroupsPhase()
         changes = phase.apply_payload(payload, canonical_dev)
@@ -43,7 +53,7 @@ class TestsFlextInfraDepsModernizerConsolidate:
             canonical_dev=("pytest",),
         )
         optional = u.Tests.toml_mapping(
-            u.Tests.toml_mapping(payload["project"])["optional-dependencies"]
+            u.Tests.toml_mapping(payload["project"])["optional-dependencies"],
         )
         tm.that(set(optional), eq={str(c.Infra.DEV)})
         tm.that(
@@ -58,17 +68,17 @@ class TestsFlextInfraDepsModernizerConsolidate:
         legacy_group = c.Infra.LEGACY_DEV_DEPENDENCY_GROUPS[0]
         payload, changes = self._consolidated(
             f"[tool.poetry.group.{legacy_group}.dependencies]\n"
-            'legacy-requirement = "^1.0"\n'
+            'legacy-requirement = "^1.0"\n',
         )
         groups = u.Tests.toml_mapping(
             u.Tests.toml_mapping(u.Tests.toml_mapping(payload["tool"])["poetry"])[
                 "group"
-            ]
+            ],
         )
         tm.that(groups, lacks=str(legacy_group))
         tm.that(
             u.Tests.toml_mapping(
-                u.Tests.toml_mapping(groups[str(c.Infra.DEV)])["dependencies"]
+                u.Tests.toml_mapping(groups[str(c.Infra.DEV)])["dependencies"],
             ),
             eq={"legacy-requirement": "^1.0"},
         )

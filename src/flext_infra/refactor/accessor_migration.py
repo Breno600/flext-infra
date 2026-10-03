@@ -1,4 +1,8 @@
-"""Accessor migration orchestration for get_/set_/is_ modernization."""
+"""Accessor migration orchestration for get_/set_/is_ modernization.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -10,9 +14,10 @@ from flext_cli import cli
 from flext_core import r
 from flext_infra import m, p, t, u
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
-
-from ._accessor_report import FlextInfraAccessorMigrationReportMixin
-from ._accessor_rewrite import FlextInfraAccessorMigrationRewriteMixin
+from flext_infra.refactor._accessor_report import FlextInfraAccessorMigrationReportMixin
+from flext_infra.refactor._accessor_rewrite import (
+    FlextInfraAccessorMigrationRewriteMixin,
+)
 
 
 class FlextInfraAccessorMigrationOrchestrator(
@@ -32,7 +37,7 @@ class FlextInfraAccessorMigrationOrchestrator(
             description=(
                 "Comma-separated lint gates for preview/apply validation; empty"
                 " selects the SSOT snapshot gates (make.check_gates_ci)."
-            )
+            ),
         ),
     ] = ""
 
@@ -50,7 +55,12 @@ class FlextInfraAccessorMigrationOrchestrator(
 
     @override
     def execute(self) -> p.Result[m.Infra.AccessorMigrationReport]:
-        """Execute."""
+        """Execute.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.AccessorMigrationReport]``.
+
+        """
         selected_projects: t.StrSequence = (
             self.project_names if self.project_names is not None else ()
         )
@@ -59,8 +69,8 @@ class FlextInfraAccessorMigrationOrchestrator(
             return r[m.Infra.AccessorMigrationReport].from_failure(resolved)
         iter_result = u.Infra.iter_python_files(
             m.Infra.SourceScanRequest(
-                project_roots=tuple(project.path for project in resolved.value)
-            )
+                project_roots=tuple(project.path for project in resolved.value),
+            ),
         )
         if iter_result.failure:
             return r[m.Infra.AccessorMigrationReport].from_failure(iter_result)
@@ -87,15 +97,17 @@ class FlextInfraAccessorMigrationOrchestrator(
                 if file_report.automated_changes:
                     files_with_changes += 1
                 if (file_report.automated_changes or file_report.warnings) and len(
-                    previews
+                    previews,
                 ) < self.preview_limit:
                     previews.append(file_report)
                 self._accumulate_lint_totals(
-                    lint_before_totals, file_report.lint_before
+                    lint_before_totals,
+                    file_report.lint_before,
                 )
                 self._accumulate_lint_totals(lint_after_totals, file_report.lint_after)
                 self._accumulate_lint_totals(
-                    new_lint_error_totals, file_report.new_lint_errors
+                    new_lint_error_totals,
+                    file_report.new_lint_errors,
                 )
         return r[m.Infra.AccessorMigrationReport].ok(
             m.Infra.AccessorMigrationReport(
@@ -110,14 +122,20 @@ class FlextInfraAccessorMigrationOrchestrator(
                 lint_after_totals=lint_after_totals,
                 new_lint_error_totals=new_lint_error_totals,
                 files=tuple(previews),
-            )
+            ),
         )
 
     @classmethod
     def execute_payload(
-        cls, params: m.Infra.AccessorMigrationInput
+        cls,
+        params: m.Infra.AccessorMigrationInput,
     ) -> p.Result[m.Infra.AccessorMigrationReport]:
-        """Execute accessor migration from the validated command service."""
+        """Execute accessor migration from the validated command service.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.AccessorMigrationReport]``.
+
+        """
         result = cls(
             repository_root=params.repository_root,
             selected_projects=params.projects,

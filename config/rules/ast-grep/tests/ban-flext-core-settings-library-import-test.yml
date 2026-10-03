@@ -1,0 +1,10 @@
+id: ban-flext-core-settings-library-import
+valid:
+  - from flext_core import FlextSettings
+  - import pydantic
+  - |
+    if TYPE_CHECKING:
+        from pydantic_settings import BaseSettings
+invalid:
+  - import pydantic_settings
+  - from pydantic_settings import BaseSettings

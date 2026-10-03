@@ -1,4 +1,8 @@
-"""Resolve ast-grep fixture owners and detect snapshot residue."""
+"""Resolve ast-grep fixture owners and detect snapshot residue.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,7 +10,7 @@ import stat
 from collections.abc import Mapping, MutableMapping, Sequence
 from pathlib import Path
 
-from .. import c, m, t, u
+from flext_infra import c, m, t, u
 
 
 class FlextInfraCodemodSnapshotReconciler:
@@ -14,7 +18,15 @@ class FlextInfraCodemodSnapshotReconciler:
 
     @staticmethod
     def config_root(rule: Path) -> Path:
-        """Resolve the nearest ast-grep configuration that owns a rule."""
+        """Resolve the nearest ast-grep configuration that owns a rule.
+
+        Returns:
+            The resulting ``Path``.
+
+        Raises:
+            ValueError: If ast-grep rule has no owning sgconfig.yml.
+
+        """
         for ancestor in rule.resolve().parents:
             if (ancestor / c.Infra.CODEMOD_CONFIG_FILENAME).is_file():
                 return ancestor
@@ -23,7 +35,19 @@ class FlextInfraCodemodSnapshotReconciler:
 
     @staticmethod
     def fixture_directories(config_root: Path) -> m.Infra.ModFixtureDirectories:
-        """Resolve only declared fixture directories without crossing symlinks."""
+        """Resolve only declared fixture directories without crossing symlinks.
+
+        Returns:
+            The resulting ``m.Infra.ModFixtureDirectories``.
+
+        Raises:
+            TypeError: If invalid ast-grep testConfigs contract; or if invalid ast-grep;
+                or if ast-grep testConfig must be a mapping.
+            ValueError: If ast-grep config must be a regular file; or if invalid
+                ast-grep; or if ast-grep; or if ast-grep fixture path must not be a
+                symlink.
+
+        """
         config_path = config_root / c.Infra.CODEMOD_CONFIG_FILENAME
         if not stat.S_ISREG(config_path.lstat().st_mode):
             msg = f"ast-grep config must be a regular file: {config_path}"
@@ -32,7 +56,8 @@ class FlextInfraCodemodSnapshotReconciler:
         declared: MutableMapping[str, Sequence[t.JsonValue]] = {}
         for key in (c.Infra.CODEMOD_RULE_DIRS_KEY, c.Infra.CODEMOD_UTIL_DIRS_KEY):
             raw_value = payload.get(
-                key, () if key == c.Infra.CODEMOD_UTIL_DIRS_KEY else None
+                key,
+                () if key == c.Infra.CODEMOD_UTIL_DIRS_KEY else None,
             )
             if not isinstance(raw_value, Sequence) or isinstance(raw_value, str):
                 msg = f"invalid ast-grep {key} contract: {config_path}"
@@ -40,7 +65,8 @@ class FlextInfraCodemodSnapshotReconciler:
             declared[key] = raw_value
         raw_test_configs = payload.get(c.Infra.CODEMOD_TEST_CONFIGS_KEY)
         if not isinstance(raw_test_configs, Sequence) or isinstance(
-            raw_test_configs, str
+            raw_test_configs,
+            str,
         ):
             msg = f"invalid ast-grep testConfigs contract: {config_path}"
             raise TypeError(msg)
@@ -87,7 +113,9 @@ class FlextInfraCodemodSnapshotReconciler:
 
     @classmethod
     def stale_snapshots(
-        cls, config_root: Path, active_rule_ids: frozenset[str]
+        cls,
+        config_root: Path,
+        active_rule_ids: frozenset[str],
     ) -> t.StrSequence:
         """Describe every committed snapshot projection no current test produces.
 
@@ -96,6 +124,10 @@ class FlextInfraCodemodSnapshotReconciler:
         Both are residue of an unreviewed change, so they are reported, never
         deleted in place: ``make mod-snapshots`` regenerates the owner's
         projections for a reviewed commit.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
         """
         stale: list[str] = []
         for test_dir in cls.fixture_directories(config_root).test_dirs:
@@ -104,7 +136,7 @@ class FlextInfraCodemodSnapshotReconciler:
                 continue
             invalid_cases = cls._invalid_cases(test_dir)
             for snapshot in sorted(
-                snapshot_dir.glob(f"*{c.Infra.CODEMOD_SNAPSHOT_SUFFIX}")
+                snapshot_dir.glob(f"*{c.Infra.CODEMOD_SNAPSHOT_SUFFIX}"),
             ):
                 rule_id = snapshot.name.removesuffix(c.Infra.CODEMOD_SNAPSHOT_SUFFIX)
                 if rule_id not in active_rule_ids:
@@ -120,8 +152,16 @@ class FlextInfraCodemodSnapshotReconciler:
 
     @staticmethod
     def _invalid_cases(test_dir: Path) -> t.MappingKV[str, frozenset[str]]:
-        """Map every rule test in one test directory to its invalid cases."""
-        cases: dict[str, frozenset[str]] = {}
+        """Map every rule test in one test directory to its invalid cases.
+
+        Returns:
+            The resulting ``t.MappingKV[str, frozenset[str]]``.
+
+        Raises:
+            TypeError: If invalid ast-grep rule-test contract.
+
+        """
+        cases: MutableMapping[str, frozenset[str]] = {}
         for test_file in sorted(test_dir.glob(f"*{c.Infra.CODEMOD_RULE_SUFFIX}")):
             payload = u.Cli.yaml_safe_load(test_file).unwrap()
             rule_id = payload.get(c.Infra.CODEMOD_RULE_TEST_ID_KEY)
@@ -139,7 +179,15 @@ class FlextInfraCodemodSnapshotReconciler:
 
     @staticmethod
     def _snapshot_cases(snapshot: Path) -> t.StrSequence:
-        """Return the test cases one committed snapshot file projects."""
+        """Return the test cases one committed snapshot file projects.
+
+        Returns:
+            The test cases one committed snapshot file projects.
+
+        Raises:
+            TypeError: If invalid ast-grep snapshot contract.
+
+        """
         payload = u.Cli.yaml_safe_load(snapshot).unwrap()
         projections = payload.get(c.Infra.CODEMOD_SNAPSHOTS_KEY, {})
         if not isinstance(projections, Mapping):

@@ -1,4 +1,8 @@
-"""Behavior: git_copy_worktree_state preserves the staged/unstaged split."""
+"""Behavior: git_copy_worktree_state preserves the staged/unstaged split.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -15,7 +19,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraGitCopyWorktreeState:
     """The copy keeps the source's index/worktree distinction, never collapsing."""
 
-    def test_copy_preserves_staged_and_unstaged_state(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_copy_preserves_staged_and_unstaged_state(tmp_path: Path) -> None:
         source = git_ui.git_repository(tmp_path, "source")
         (source / "staged.txt").write_text("base\n", encoding="utf-8")
         (source / "unstaged.txt").write_text("base\n", encoding="utf-8")
@@ -28,9 +33,7 @@ class TestsFlextInfraGitCopyWorktreeState:
         # The real use case copies into a linked worktree of the same
         # repository, so the target shares the source baseline (HEAD).
         target = tmp_path / "target"
-        git_ui.git_bootstrap(
-            source, ("worktree", "add", "-b", "target", str(target))
-        )
+        git_ui.git_bootstrap(source, ("worktree", "add", "-b", "target", str(target)))
         tm.ok(u.Infra.git_copy_worktree_state(source, target))
 
         source_status = git_ui.git_capture(source, "status", "--porcelain")

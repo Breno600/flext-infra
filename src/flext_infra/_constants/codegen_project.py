@@ -19,6 +19,8 @@ from __future__ import annotations
 from enum import StrEnum, unique
 from typing import TYPE_CHECKING, ClassVar, Literal
 
+from flext_infra._constants.validate import FlextInfraConstantsSharedInfra
+
 if TYPE_CHECKING:
     from flext_infra import t
 
@@ -56,7 +58,9 @@ class FlextInfraConstantsCodegenProject:
 
         ALL = "all"
         DEPENDENCIES = "dependencies"
+        DOCS_CONFIG = "docs-config"
         MAKEFILE = "makefile"
+        MISE_TRIPLE = "mise-triple"
         PYPROJECT = "pyproject"
 
     @unique
@@ -168,6 +172,12 @@ class FlextInfraConstantsCodegenProject:
         ".env",
         ".exclusive-lock",
         ".sync.lock",
+        # The bd client serializes every gate transaction through this marker
+        # beside the ledger (measured: a members' gen failed composition on a
+        # hours-stale zero-byte `dolt.gate.lock` whose holder had died). Same
+        # class as `.exclusive-lock`/`.sync.lock`: a projection of ledger
+        # operation, never composed output.
+        "dolt.gate.lock",
     })
     "bd-owned Dolt/daemon runtime entries the composed-project verify tolerates."
     BEADS_CONFIG_VERSION: ClassVar[Literal[1]] = 1
@@ -209,6 +219,13 @@ class FlextInfraConstantsCodegenProject:
     WORKSPACE_MANIFEST_VERSION: ClassVar[int] = 3
     UV_LOCK_FILENAME: ClassVar[str] = "uv.lock"
     MISE_LOCK_FILENAME: ClassVar[str] = "mise.lock"
+    MISE_LOCK_TRANSACTION_SCRIPT: ClassVar[str] = "bin/mise-lock-transaction.py"
+    "Generated publisher the Makefile bootstrap runs to commit a staged mise.lock."
+    MAKEFILE_BOOTSTRAP_DESTINATIONS: ClassVar[frozenset[str]] = frozenset({
+        FlextInfraConstantsSharedInfra.MAKEFILE_FILENAME,
+        MISE_LOCK_TRANSACTION_SCRIPT,
+    })
+    "The Makefile surface: the Makefile and the lock publisher its bootstrap runs."
     MISE_LOCK_ANNOTATION: ClassVar[str] = "~"
     "Lockfile cache-key fragment (``<version>~<hash>``); never a selector."
     MISE_MOVING_SELECTOR: ClassVar[str] = "latest"

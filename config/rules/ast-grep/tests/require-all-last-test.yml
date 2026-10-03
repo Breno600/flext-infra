@@ -1,0 +1,29 @@
+id: require-all-last
+valid:
+  - |
+    value = 1
+
+    __all__: list[str] = ["value"]
+  - |
+    __all__ = ("value",)
+    install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)
+  - |
+    __all__ = ["first"]
+    __all__ += ["second"]
+  - |
+    __all__ = ["value"]
+    # trailing comment
+  - |
+    def run():
+        __all__ = ["local"]
+        return __all__
+invalid:
+  - |
+    __all__ = ["value"]
+    value = 1
+  - |
+    __all__: list[str] = ["Example"]
+
+
+    class Example:
+        """Example."""
