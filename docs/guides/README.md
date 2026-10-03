@@ -12,6 +12,7 @@ Curated operational guides live here. Keep API behavior in generated reference p
 sourced from code and docstrings.
 
 - [Configuration](configuration.md)
+- [Csv campaigns](csv-campaigns.md)
 - [Development](development.md)
 - [Execution context](execution-context.md)
 - [Getting started](getting-started.md)
@@ -19,6 +20,7 @@ sourced from code and docstrings.
 - [Local config overrides](local-config-overrides.md)
 - [Make commands](make-commands.md)
 - [Migration to v0.13.0](migration-to-v0.13.0.md)
+- [Model fields migration](model-fields-migration.md)
 - [Onboarding](onboarding.md)
 - [Plan collection](plan-collection.md)
 - [Security](security.md)

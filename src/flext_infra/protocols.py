@@ -12,13 +12,13 @@ from __future__ import annotations
 
 from flext_cli import FlextCliProtocols
 
-from ._protocols.base import FlextInfraProtocolsBase
-from ._protocols.check import FlextInfraProtocolsCheck
-from ._protocols.deps import FlextInfraProtocolsDeps
-from ._protocols.docs import FlextInfraProtocolsDocs
-from ._protocols.promoted import FlextInfraProtocolsPromoted
-from ._protocols.rope import FlextInfraProtocolsRope
-from ._protocols.rope_runtime import FlextInfraProtocolsRopeRuntime
+from flext_infra._protocols.base import FlextInfraProtocolsBase
+from flext_infra._protocols.check import FlextInfraProtocolsCheck
+from flext_infra._protocols.deps import FlextInfraProtocolsDeps
+from flext_infra._protocols.docs import FlextInfraProtocolsDocs
+from flext_infra._protocols.promoted import FlextInfraProtocolsPromoted
+from flext_infra._protocols.rope import FlextInfraProtocolsRope
+from flext_infra._protocols.rope_runtime import FlextInfraProtocolsRopeRuntime
 
 
 class FlextInfraProtocols(FlextCliProtocols):

@@ -8,6 +8,9 @@ The binding is a SESSION override, not a declaration: the consumer's
 ``pyproject.toml`` keeps its pins untouched, so nothing local is ever committed
 and canonical setup restores the pinned resolution. Which distributions get
 rebound is derived from the worktree's own manifest, never a hardcoded list.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -28,7 +31,12 @@ class TestsFlextInfraWorktreeBinding:
 
     @staticmethod
     def _consumer(tmp_path: Path) -> Path:
-        """Return an external consumer declaring flext packages by pinned git URL."""
+        """Return an external consumer declaring flext packages by pinned git URL.
+
+        Returns:
+            An external consumer declaring flext packages by pinned git URL.
+
+        """
         provider = u.Tests.provider()
         consumer = tmp_path / "consumer"
         consumer.mkdir()
@@ -52,7 +60,12 @@ class TestsFlextInfraWorktreeBinding:
 
     @staticmethod
     def _python(consumer: Path) -> Path:
-        """Use the fixture consumer's physical environment."""
+        """Use the fixture consumer's physical environment.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         environment = u.Infra.runtime_environment_dir(consumer)
         return (
             Path(
@@ -60,7 +73,7 @@ class TestsFlextInfraWorktreeBinding:
                     "scripts",
                     scheme="venv",
                     vars={"base": str(environment), "platbase": str(environment)},
-                )
+                ),
             )
             / c.Infra.PromotedSelector.VENV_PYTHON
         )
@@ -74,6 +87,10 @@ class TestsFlextInfraWorktreeBinding:
         declares with what the worktree PROVIDES, and only a fixture that owns
         both sides can prove the intersection rather than inherit it from one
         machine's disk.
+
+        Returns:
+            A self-contained flext workspace supplying flext-core and flext-cli.
+
         """
         flext_root = tmp_path / "flext"
         u.Tests.WorktreeFixture.initialize_governed_project(
@@ -100,12 +117,14 @@ class TestsFlextInfraWorktreeBinding:
                 issue_prefix="flext",
             )
         u.Tests.WorktreeFixture.write_gitmodules(
-            flext_root, ("flext-core", "flext-cli")
+            flext_root,
+            ("flext-core", "flext-cli"),
         )
         return flext_root
 
     def test_binding_targets_only_the_flext_packages_the_consumer_declares(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Only declared flext deps present in the worktree are rebound."""
         consumer = self._consumer(tmp_path)
@@ -122,7 +141,8 @@ class TestsFlextInfraWorktreeBinding:
         tm.that(sorted(names), eq=["flext-cli", "flext-core"])
 
     def test_standalone_supplier_satisfies_a_development_dependency(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A root-only supplier checkout serves a consumer's declared dev group."""
         distribution = config.Infra.codegen.infra_repository.distribution
@@ -141,14 +161,17 @@ class TestsFlextInfraWorktreeBinding:
         before = declaration.read_bytes()
 
         planned = FlextInfraFlextBindingService.plan_targets(
-            consumer_root=consumer, flext_root=supplier, python=self._python(consumer)
+            consumer_root=consumer,
+            flext_root=supplier,
+            python=self._python(consumer),
         )
 
         tm.that(tm.ok(planned), eq=(distribution,))
         tm.that(declaration.read_bytes(), eq=before)
 
     def test_binding_rejects_a_path_that_is_not_a_flext_workspace(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A non-workspace path fails closed instead of silently binding nothing."""
         consumer = self._consumer(tmp_path)
@@ -156,14 +179,17 @@ class TestsFlextInfraWorktreeBinding:
         not_flext.mkdir()
 
         planned = FlextInfraFlextBindingService.plan_targets(
-            consumer_root=consumer, flext_root=not_flext, python=self._python(consumer)
+            consumer_root=consumer,
+            flext_root=not_flext,
+            python=self._python(consumer),
         )
 
         tm.that(planned.failure, eq=True)
         tm.that(planned.error or "", has="workspace")
 
     def test_a_consumer_without_flext_dependencies_rejects_empty_binding(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """An explicit request cannot succeed without selecting a supplier."""
         consumer = tmp_path / "plain"
@@ -189,35 +215,41 @@ class TestsFlextInfraWorktreeBinding:
         """A valid supplier cannot redirect installation to the running agent."""
         consumer = self._consumer(tmp_path)
         result = FlextInfraFlextBindingService.consumer_marker_environment(
-            consumer_root=consumer, python=Path(sys.executable)
+            consumer_root=consumer,
+            python=Path(sys.executable),
         )
         tm.that(result.failure, eq=True)
         tm.that(result.error or "", has="must belong to the consumer")
 
     def test_consumer_markers_match_the_actual_interpreter(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Marker selection uses full consumer interpreter facts."""
         consumer = self._consumer(tmp_path)
         facts = tm.ok(
             FlextInfraFlextBindingService.consumer_marker_environment(
-                consumer_root=consumer, python=self._python(consumer)
-            )
+                consumer_root=consumer,
+                python=self._python(consumer),
+            ),
         )
         for key in ("python_full_version", "implementation_version", "sys_platform"):
             requirement = f"binding-candidate; {key} == '{facts[key]}'"
             tm.that(
-                u.Infra.active_requirement(requirement, environment=facts), none=False
+                u.Infra.active_requirement(requirement, environment=facts),
+                none=False,
             )
         tm.that(
             u.Infra.active_requirement(
-                "binding-candidate; python_version < '0'", environment=facts
+                "binding-candidate; python_version < '0'",
+                environment=facts,
             ),
             none=True,
         )
 
+    @staticmethod
     def test_ci_binding_rejects_before_consumer_or_supplier_access(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """The real public CLI rejects CI before any environment mutation."""
         ci = config.Infra.codegen.make.ci
@@ -237,7 +269,7 @@ class TestsFlextInfraWorktreeBinding:
                     str(tmp_path / "python"),
                 ),
                 env={ci.variable: ci.value},
-            )
+            ),
         )
         tm.that(result.outcome.raw_return_code != 0, eq=True)
         tm.that(

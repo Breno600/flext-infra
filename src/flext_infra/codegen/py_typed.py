@@ -14,14 +14,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 from flext_core import r
-
-from .. import c, u
-from ._execution import FlextInfraCodegenExecutionBase
+from flext_infra import c, u
+from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from .. import p, t
+    from flext_infra import p, t
 
 
 class FlextInfraCodegenPyTyped(FlextInfraCodegenExecutionBase[bool]):
@@ -31,11 +30,16 @@ class FlextInfraCodegenPyTyped(FlextInfraCodegenExecutionBase[bool]):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute ``py.typed`` synchronization from the validated CLI model."""
+        """Execute ``py.typed`` synchronization from the validated CLI model.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         changes = self.run(check_only=self.check_only)
         if self.check_only and changes:
             return r[bool].fail(
-                f"py.typed drift detected in {changes} package directorie(s)"
+                f"py.typed drift detected in {changes} package directorie(s)",
             )
         return r[bool].ok(True)
 
@@ -46,6 +50,9 @@ class FlextInfraCodegenPyTyped(FlextInfraCodegenExecutionBase[bool]):
             check_only: If True, only report changes without writing.
 
         Returns the number of marker files created or removed.
+
+        Returns:
+            The resulting ``int``.
 
         """
         dirs_to_scan: t.SequenceOf[Path] = [

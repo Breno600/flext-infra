@@ -1,0 +1,8 @@
+# Shape only: the engine admits the finding when the module is the own package.
+id: ban-local-import-alias
+valid:
+  - from pkg import m
+  - import pkg.models
+invalid:
+  - from pkg import m as models
+  - import pkg.models as models

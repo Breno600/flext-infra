@@ -4,6 +4,9 @@
 sync stopped writing it when the toolchain transaction landed), so the
 composition rule is proven through the immutable project snapshot and the
 public composer that turns that source view into the managed file.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -25,7 +28,8 @@ class TestsFlextInfraMiseDistributionPolicy:
         return root
 
     def test_managed_artifacts_fleet_wins_over_divergent_pin(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A project pin diverging from a tool the fleet now owns is residue.
 
@@ -47,7 +51,8 @@ class TestsFlextInfraMiseDistributionPolicy:
 
         snapshot = tm.ok(u.Infra.snapshot_project_managed_artifacts(root))
         result = u.Infra.compose_mise_toml_from_snapshot(
-            snapshot.sources, f'[tools]\n"{selector}" = "{version}"\n'
+            snapshot.sources,
+            f'[tools]\n"{selector}" = "{version}"\n',
         )
 
         tm.ok(result)

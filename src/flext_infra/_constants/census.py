@@ -1,57 +1,21 @@
-"""Constants for the unified census pipeline — accessed via c.Infra.*."""
+"""Constants for the unified census pipeline — accessed via c.Infra.*.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
-import re
-from typing import TYPE_CHECKING, ClassVar
-
-if TYPE_CHECKING:
-    from flext_infra import t
+from typing import ClassVar
 
 
 class FlextInfraConstantsCensus:
     """Census pipeline constants for object detection and classification."""
 
-    """Regex patterns for violation census detection."""
-
-    CAST_RE: ClassVar[t.RegexPattern] = re.compile(r"\bcast\s*\(")
-    "Detect ``cast(...)`` calls."
-    LITERAL_RE: ClassVar[t.RegexPattern] = re.compile(r"\bLiteral\s*\[")
-    "Detect ``Literal[...]`` annotations."
-    DICT_INVARIANCE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"\bdict\s*\[\s*str\s*,\s*(?:t\.Container|t\.JsonValue|object)"
+    CENSUS_UNSUPPORTED_SIMPLE_REMOVAL_CODE: ClassVar[str] = (
+        "CENSUS_UNSUPPORTED_SIMPLE_REMOVAL"
     )
-    "Detect invariant MutableMapping[str, ...] patterns."
-    DIRECT_SUBMODULE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^from\s+flext_core\.\S+\s+import\s+", re.MULTILINE
-    )
-    "Detect direct flext_core submodule imports."
-    LEGACY_MAPPING_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^from\s+typing\s+import\s+.*\bMapping\b", re.MULTILINE
-    )
-    "Detect legacy ``from typing import ClassVar, Mapping``."
-    FLEXT_CORE_IMPORT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^from\s+flext_core\s+import\s+(.+?)$", re.MULTILINE
-    )
-    "Detect ``from flext_core import ...``."
-    STRENUM_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"class\s+(\w+)\s*\([^)]*\bStrEnum\b"
-    )
-    "Detect StrEnum class definitions."
-    COMPAT_ALIAS_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^([A-Z]\w+)\s*=\s*([A-Z]\w+)\s*$", re.MULTILINE
-    )
-    "Detect compatibility alias assignments (X = Y)."
-    CONSTANT_DICT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^([A-Z_]+)\s*=\s*\{", re.MULTILINE
-    )
-    "Detect constant dict assignments."
-    TYPE_ALIAS_OLD_RE: ClassVar[t.RegexPattern] = re.compile(r":\s*TypeAlias\s*=")
-    "Detect old-style TypeAlias annotations."
-    TYPE_ALIAS_PEP695_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^type\s+(\w+)\s*=", re.MULTILINE
-    )
-    "Detect PEP 695 type alias statements."
+    "Error code marking a candidate outside the simple-removal contract."
 
 
 __all__: list[str] = ["FlextInfraConstantsCensus"]

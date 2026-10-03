@@ -1,4 +1,8 @@
-"""Real Git state boundaries for nested repositories and path-kind changes."""
+"""Real Git state boundaries for nested repositories and path-kind changes.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -14,8 +18,9 @@ from tests import u as test_u
 class TestsFlextInfraGitStateBoundaries:
     """Keep unsupported flags explicit and retain independently owned gitlinks."""
 
+    @staticmethod
     def test_cleanup_rejects_unsupported_baseline_symlink_before_effects(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         source = test_u.Tests.git_repository(tmp_path)
         original = source / "shape"
@@ -29,12 +34,16 @@ class TestsFlextInfraGitStateBoundaries:
         snapshot = tm.ok(
             u.Infra.git_snapshot_worktree_state(
                 m.Infra.GitWorktreeStateRequest(
-                    repo_root=source, paths=(Path("shape"),)
-                )
-            )
+                    repo_root=source,
+                    paths=(Path("shape"),),
+                ),
+            ),
         )
         checkpoint = tm.ok(
-            u.Infra.git_checkpoint_worktree_state(snapshot, "refs/captures/raw-symlink")
+            u.Infra.git_checkpoint_worktree_state(
+                snapshot,
+                "refs/captures/raw-symlink",
+            ),
         )
         candidate = lane / "shape"
         candidate.unlink()
@@ -46,11 +55,14 @@ class TestsFlextInfraGitStateBoundaries:
         test_u.Tests.git_run(source, "init", "--bare", str(remote))
         test_u.Tests.git_run(source, "remote", "add", "retained", str(remote))
         publication = tm.ok(
-            u.Infra.git_publish_worktree_checkpoint(checkpoint, "retained")
+            u.Infra.git_publish_worktree_checkpoint(checkpoint, "retained"),
         )
 
         result = u.Infra.git_cleanup_worktree_state(
-            checkpoint, lane, saved, publication=publication
+            checkpoint,
+            lane,
+            saved,
+            publication=publication,
         )
 
         tm.that(result.failure, eq=True)
@@ -59,14 +71,16 @@ class TestsFlextInfraGitStateBoundaries:
             tm.ok(
                 u.Infra.git_snapshot_worktree_state(
                     m.Infra.GitWorktreeStateRequest(
-                        repo_root=source, paths=snapshot.paths
-                    )
-                )
+                        repo_root=source,
+                        paths=snapshot.paths,
+                    ),
+                ),
             ),
             eq=snapshot,
         )
 
-    def test_scope_rejects_unowned_symlink_ancestor(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_scope_rejects_unowned_symlink_ancestor(tmp_path: Path) -> None:
         source = test_u.Tests.git_repository(tmp_path)
         directory = source / "shape"
         directory.mkdir()
@@ -83,25 +97,29 @@ class TestsFlextInfraGitStateBoundaries:
         snapshot = tm.ok(
             u.Infra.git_snapshot_worktree_state(
                 m.Infra.GitWorktreeStateRequest(
-                    repo_root=source, paths=(Path("shape"),)
-                )
-            )
+                    repo_root=source,
+                    paths=(Path("shape"),),
+                ),
+            ),
         )
         tm.that(tuple(file.path for file in snapshot.files), eq=(Path("shape"),))
         tm.that(snapshot.files[0].mode, eq="120000")
         tm.ok(
             u.Infra.git_checkpoint_worktree_state(
-                snapshot, "refs/captures/symlink-shape"
-            )
+                snapshot,
+                "refs/captures/symlink-shape",
+            ),
         )
 
-    def test_index_flags_fail_without_clearing_them(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_index_flags_fail_without_clearing_them(tmp_path: Path) -> None:
         source = test_u.Tests.git_repository(tmp_path)
         (source / "README.md").write_text("tracked baseline\n", encoding="utf-8")
         test_u.Tests.git_run(source, "add", "README.md")
         test_u.Tests.git_run(source, "commit", "-m", "track index flag fixture")
         request = m.Infra.GitWorktreeStateRequest(
-            repo_root=source, paths=(Path("README.md"),)
+            repo_root=source,
+            paths=(Path("README.md"),),
         )
         for flag in ("assume-unchanged", "skip-worktree"):
             test_u.Tests.git_run(source, "update-index", f"--{flag}", "README.md")
@@ -110,8 +128,9 @@ class TestsFlextInfraGitStateBoundaries:
             tm.that(test_u.Tests.git_capture(source, "ls-files", "-v"), eq=before)
             test_u.Tests.git_run(source, "update-index", f"--no-{flag}", "README.md")
 
+    @staticmethod
     def test_file_directory_roundtrip_preserves_partial_index(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         source = test_u.Tests.git_repository(tmp_path)
         path = source / "shape"
@@ -126,12 +145,13 @@ class TestsFlextInfraGitStateBoundaries:
         snapshot = tm.ok(
             u.Infra.git_snapshot_worktree_state(
                 m.Infra.GitWorktreeStateRequest(
-                    repo_root=source, paths=(Path("shape"),)
-                )
-            )
+                    repo_root=source,
+                    paths=(Path("shape"),),
+                ),
+            ),
         )
         checkpoint = tm.ok(
-            u.Infra.git_checkpoint_worktree_state(snapshot, "refs/captures/shape")
+            u.Infra.git_checkpoint_worktree_state(snapshot, "refs/captures/shape"),
         )
 
         tm.ok(u.Infra.git_apply_worktree_checkpoint(checkpoint, lane))
@@ -149,24 +169,31 @@ class TestsFlextInfraGitStateBoundaries:
         test_u.Tests.git_run(source, "init", "--bare", str(remote))
         test_u.Tests.git_run(source, "remote", "add", "retained", str(remote))
         publication = tm.ok(
-            u.Infra.git_publish_worktree_checkpoint(checkpoint, "retained")
+            u.Infra.git_publish_worktree_checkpoint(checkpoint, "retained"),
         )
         tm.ok(
             u.Infra.git_cleanup_worktree_state(
-                checkpoint, lane, saved, publication=publication
-            )
+                checkpoint,
+                lane,
+                saved,
+                publication=publication,
+            ),
         )
         tm.that(path.read_bytes(), eq=b"original file\n")
         tm.ok(
             u.Infra.git_cleanup_worktree_state(
-                checkpoint, lane, saved, publication=publication
-            )
+                checkpoint,
+                lane,
+                saved,
+                publication=publication,
+            ),
         )
         tm.that(path.read_bytes(), eq=b"original file\n")
         tm.that(test_u.Tests.git_capture(source, "status", "--porcelain=v1"), eq="")
 
+    @staticmethod
     def test_gitlink_staging_is_retained_and_unreconciled_child_refuses_apply(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         source = test_u.Tests.git_repository(tmp_path)
         child = test_u.Tests.git_repository(tmp_path, "child-origin")
@@ -195,19 +222,21 @@ class TestsFlextInfraGitStateBoundaries:
         snapshot = tm.ok(
             u.Infra.git_snapshot_worktree_state(
                 m.Infra.GitWorktreeStateRequest(
-                    repo_root=source, paths=(Path("member"),)
-                )
-            )
+                    repo_root=source,
+                    paths=(Path("member"),),
+                ),
+            ),
         )
         checkpoint = tm.ok(
-            u.Infra.git_checkpoint_worktree_state(snapshot, "refs/captures/parent")
+            u.Infra.git_checkpoint_worktree_state(snapshot, "refs/captures/parent"),
         )
 
         tm.that(snapshot.index_entries[0].oid, eq=indexed)
         tm.that(snapshot.files[0].oid, eq=working)
         tm.that(snapshot.files[0].mode, eq="160000")
         tm.that(
-            u.Infra.git_apply_worktree_checkpoint(checkpoint, lane).failure, eq=True
+            u.Infra.git_apply_worktree_checkpoint(checkpoint, lane).failure,
+            eq=True,
         )
         tm.that(test_u.Tests.git_capture(lane, "status", "--porcelain=v1"), eq="")
         child_snapshot = tm.ok(
@@ -216,30 +245,40 @@ class TestsFlextInfraGitStateBoundaries:
                     repo_root=nested,
                     paths=(),
                     retained_commits=(snapshot.head_entries[0].oid, indexed),
-                )
-            )
+                ),
+            ),
         )
         child_checkpoint = tm.ok(
-            u.Infra.git_checkpoint_worktree_state(child_snapshot, "refs/captures/child")
+            u.Infra.git_checkpoint_worktree_state(
+                child_snapshot,
+                "refs/captures/child",
+            ),
         )
         reachable = test_u.Tests.git_capture(
-            nested, "rev-list", child_checkpoint.checkpoint_ref
+            nested,
+            "rev-list",
+            child_checkpoint.checkpoint_ref,
         ).splitlines()
         tm.that(indexed in reachable, eq=True)
         tm.that(snapshot.head_entries[0].oid in reachable, eq=True)
 
-    def test_remote_drift_refuses_source_cleanup(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_remote_drift_refuses_source_cleanup(tmp_path: Path) -> None:
         source = test_u.Tests.git_repository(tmp_path)
+        (source / "README.md").write_text("baseline\n", encoding="utf-8")
+        test_u.Tests.git_run(source, "add", "README.md")
+        test_u.Tests.git_run(source, "commit", "-m", "baseline")
         (source / "README.md").write_text("owned change\n", encoding="utf-8")
         snapshot = tm.ok(
             u.Infra.git_snapshot_worktree_state(
                 m.Infra.GitWorktreeStateRequest(
-                    repo_root=source, paths=(Path("README.md"),)
-                )
-            )
+                    repo_root=source,
+                    paths=(Path("README.md"),),
+                ),
+            ),
         )
         checkpoint = tm.ok(
-            u.Infra.git_checkpoint_worktree_state(snapshot, "refs/captures/drift")
+            u.Infra.git_checkpoint_worktree_state(snapshot, "refs/captures/drift"),
         )
         lane = tmp_path / "lane"
         test_u.Tests.git_run(source, "worktree", "add", "--detach", str(lane))
@@ -250,12 +289,15 @@ class TestsFlextInfraGitStateBoundaries:
         test_u.Tests.git_run(source, "init", "--bare", str(remote))
         test_u.Tests.git_run(source, "remote", "add", "retained", str(remote))
         publication = tm.ok(
-            u.Infra.git_publish_worktree_checkpoint(checkpoint, "retained")
+            u.Infra.git_publish_worktree_checkpoint(checkpoint, "retained"),
         )
         test_u.Tests.git_run(remote, "update-ref", "-d", checkpoint.checkpoint_ref)
 
         result = u.Infra.git_cleanup_worktree_state(
-            checkpoint, lane, saved, publication=publication
+            checkpoint,
+            lane,
+            saved,
+            publication=publication,
         )
 
         tm.that(result.failure, eq=True)
@@ -265,7 +307,8 @@ class TestsFlextInfraGitStateBoundaries:
         test_u.Tests.git_run(source, "remote", "set-url", "retained", str(other))
         tm.that(
             u.Infra.git_verify_worktree_checkpoint_publication(
-                checkpoint, publication
+                checkpoint,
+                publication,
             ).failure,
             eq=True,
         )

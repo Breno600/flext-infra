@@ -1,0 +1,68 @@
+id: ban-deferred-self-reference
+snapshots:
+  ? |
+    class Node(m.ContractModel):
+        child: object = m.Field(default_factory=lambda: Node())
+  : labels:
+    - source: Node
+      style: primary
+      start: 81
+      end: 85
+    - source: default_factory
+      style: secondary
+      start: 57
+      end: 72
+    - source: 'default_factory=lambda: Node()'
+      style: secondary
+      start: 57
+      end: 87
+    - source: 'lambda: Node()'
+      style: secondary
+      start: 73
+      end: 87
+    - source: Node
+      style: secondary
+      start: 6
+      end: 10
+    - source: |-
+        class Node(m.ContractModel):
+            child: object = m.Field(default_factory=lambda: Node())
+      style: secondary
+      start: 0
+      end: 88
+  ? |
+    class Outer:
+        class Sibling(m.ContractModel):
+            pass
+        class Item(m.ContractModel):
+            sibling: object = m.Field(default_factory=lambda: Outer.Sibling())
+  : labels:
+    - source: Outer
+      style: primary
+      start: 153
+      end: 158
+    - source: default_factory
+      style: secondary
+      start: 129
+      end: 144
+    - source: 'default_factory=lambda: Outer.Sibling()'
+      style: secondary
+      start: 129
+      end: 168
+    - source: 'lambda: Outer.Sibling()'
+      style: secondary
+      start: 145
+      end: 168
+    - source: Outer
+      style: secondary
+      start: 6
+      end: 11
+    - source: |-
+        class Outer:
+            class Sibling(m.ContractModel):
+                pass
+            class Item(m.ContractModel):
+                sibling: object = m.Field(default_factory=lambda: Outer.Sibling())
+      style: secondary
+      start: 0
+      end: 169

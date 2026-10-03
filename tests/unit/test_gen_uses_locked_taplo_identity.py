@@ -25,8 +25,14 @@ class TestsFlextInfraGenUsesLockedTaploIdentity:
 
     _SOURCE = "a = 1\n\n[tool]\nb = 2\n"
 
-    def _toolchain_root(self, tmp_path: Path, lock_body: str | None) -> Path:
-        """Build a toolchain root holding the declared config and *lock_body*."""
+    @staticmethod
+    def _toolchain_root(tmp_path: Path, lock_body: str | None) -> Path:
+        """Build a toolchain root holding the declared config and *lock_body*.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         root = tmp_path / "toolchain"
         root.mkdir()
         (root / c.Infra.TAPLO_CONFIG_FILENAME).write_text("", encoding="utf-8")
@@ -35,7 +41,12 @@ class TestsFlextInfraGenUsesLockedTaploIdentity:
         return root
 
     def _format(self, root: Path, declared: str) -> p.Result[str]:
-        """Format through the public utility facade for the given selector."""
+        """Format through the public utility facade for the given selector.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         return u.Infra.format_toml_source(
             self._SOURCE,
             path=root / c.PYPROJECT_FILENAME,
@@ -66,7 +77,7 @@ class TestsFlextInfraGenUsesLockedTaploIdentity:
         root = Path(flext_infra.__file__).resolve().parents[2]
 
         formatted = tm.ok(
-            self._format(root, config.Infra.codegen.toolchain.taplo_version)
+            self._format(root, config.Infra.codegen.toolchain.taplo_version),
         )
         payload = u.Cli.toml_mapping_from_text(formatted)
 

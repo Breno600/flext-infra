@@ -1,14 +1,16 @@
-"""Owner-declared managed document conflict recovery utilities."""
+"""Owner-declared managed document conflict recovery utilities.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, m, t
-
-from .._config import FlextInfraConfig
-from .base import FlextInfraUtilitiesBase
+from flext_infra import c, config, m, t
+from flext_infra._utilities.base import FlextInfraUtilitiesBase
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -19,22 +21,37 @@ class FlextInfraUtilitiesManagedConflicts:
 
     @staticmethod
     def toml_section_is_owned(section: str, owned: t.StrSequence) -> bool:
-        """True when ``section`` is an owned table or a child of one."""
+        """True when ``section`` is an owned table or a child of one.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         return any(section == item or section.startswith(f"{item}.") for item in owned)
 
     @staticmethod
     def pyproject_managed_file() -> p.Result[m.Infra.ManagedFileSpec]:
-        """Return the pyproject ManagedFileSpec. Missing declaration is a bug."""
-        for item in FlextInfraConfig.fetch_global().Infra.codegen.managed_files:
+        """Return the pyproject ManagedFileSpec. Missing declaration is a bug.
+
+        Returns:
+            The pyproject ManagedFileSpec. Missing declaration is a bug.
+
+        """
+        for item in config.Infra.codegen.managed_files:
             if item.path.as_posix() == c.PYPROJECT_FILENAME:
                 return r[m.Infra.ManagedFileSpec].ok(item)
         return r[m.Infra.ManagedFileSpec].fail(
-            f"codegen.yaml templates.managed_files must declare {c.PYPROJECT_FILENAME}"
+            f"codegen.yaml templates.managed_files must declare {c.PYPROJECT_FILENAME}",
         )
 
     @classmethod
     def pyproject_section_markers(cls, section_header: str) -> p.Result[t.StrSequence]:
-        """Render CUSTOM/MANAGED comments from the pyproject ManagedFileSpec."""
+        """Render CUSTOM/MANAGED comments from the pyproject ManagedFileSpec.
+
+        Returns:
+            The resulting ``p.Result[t.StrSequence]``.
+
+        """
         spec_result = cls.pyproject_managed_file()
         if spec_result.failure:
             return r[t.StrSequence].from_failure(spec_result)
@@ -61,7 +78,8 @@ class FlextInfraUtilitiesManagedConflicts:
         if owned is not None:
             return r[t.StrSequence].ok((f"# [MANAGED] {owned}",))
         if inner.startswith("tool.") and not cls.toml_section_is_owned(
-            inner, spec.conflict_sections
+            inner,
+            spec.conflict_sections,
         ):
             tool_table = ".".join(inner.split(".")[:2])
             return r[t.StrSequence].ok((f"# [CUSTOM] {tool_table}",))
@@ -69,9 +87,16 @@ class FlextInfraUtilitiesManagedConflicts:
 
     @staticmethod
     def recover_managed_toml(
-        content: str, *, conflict_sections: t.StrSequence
+        content: str,
+        *,
+        conflict_sections: t.StrSequence,
     ) -> p.Result[str]:
-        """Choose current TOML bytes only inside explicitly owned sections."""
+        """Choose current TOML bytes only inside explicitly owned sections.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         if FlextInfraUtilitiesBase.first_merge_conflict_marker(content) is None:
             return r[str].ok(content)
         lines = content.splitlines(keepends=True)
@@ -83,7 +108,7 @@ class FlextInfraUtilitiesManagedConflicts:
             control = FlextInfraUtilitiesBase.merge_conflict_control(line)
             if control is None:
                 section_match = c.Infra.TOML_SECTION_HEADER_RE.fullmatch(
-                    line.rstrip("\r\n")
+                    line.rstrip("\r\n"),
                 )
                 if section_match is not None:
                     section = section_match.group(1)
@@ -93,11 +118,12 @@ class FlextInfraUtilitiesManagedConflicts:
             if control != "current":
                 return r[str].fail("orphan TOML merge-control marker")
             if not FlextInfraUtilitiesManagedConflicts.toml_section_is_owned(
-                section, conflict_sections
+                section,
+                conflict_sections,
             ):
                 return r[str].fail(
                     "merge conflict is outside owner-declared TOML sections: "
-                    f"{section or '<document-root>'}"
+                    f"{section or '<document-root>'}",
                 )
             index += 1
             current: list[str] = []
@@ -115,7 +141,7 @@ class FlextInfraUtilitiesManagedConflicts:
                 index += 1
                 while index < len(lines):
                     control = FlextInfraUtilitiesBase.merge_conflict_control(
-                        lines[index]
+                        lines[index],
                     )
                     if control == "separator":
                         break
@@ -136,7 +162,7 @@ class FlextInfraUtilitiesManagedConflicts:
                 return r[str].fail("TOML merge conflict has no closing marker")
             for current_line in current:
                 section_match = c.Infra.TOML_SECTION_HEADER_RE.fullmatch(
-                    current_line.rstrip("\r\n")
+                    current_line.rstrip("\r\n"),
                 )
                 if section_match is not None:
                     section = section_match.group(1)
