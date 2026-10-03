@@ -99,7 +99,8 @@ class FlextInfraModReplacements:
                     Mapping,
                 ):
                     return r[bool].fail(
-                        f"ast-grep finding lacks byte coordinates: {path}:{finding.rule_id}",
+                        f"ast-grep finding lacks byte coordinates: "
+                        f"{path}:{finding.rule_id}",
                     )
                 offsets = m.Infra.ModReplacementOffsets.model_validate(raw_offsets)
                 matched = m.Infra.ModReplacementOffsets.model_validate(raw_match)

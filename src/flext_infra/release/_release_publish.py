@@ -21,7 +21,7 @@ class FlextInfraReleasePublishMixin(FlextInfraReleaseBuildMixin):
     """
 
     def phase_publish(self, ctx: m.Infra.ReleasePhaseDispatchConfig) -> p.Result[bool]:
-        """Publish the receipt's artifacts as a GitHub release and, on request, to the index.
+        """Publish receipt artifacts as a GitHub release and, if asked, the index.
 
         Returns:
             The resulting ``p.Result[bool]``.

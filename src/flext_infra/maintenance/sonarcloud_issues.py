@@ -83,7 +83,8 @@ class FlextInfraSonarcloudIssues(FlextInfraSonarcloudClient[bool]):
             response = parsed.value
             if response.paging.page_index != page:
                 return r[bool].fail(
-                    f"SonarCloud returned page {response.paging.page_index}; requested {page}",
+                    f"SonarCloud returned page {response.paging.page_index}; "
+                    f"requested {page}",
                 )
             if total is not None and response.paging.total != total:
                 return r[bool].fail(

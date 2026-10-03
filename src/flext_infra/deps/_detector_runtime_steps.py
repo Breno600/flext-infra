@@ -1,4 +1,4 @@
-"""Cohesive environment-setup + per-project execution mixin for the dependency detector runtime.
+"""Environment-setup + per-project execution mixin for the dependency detector.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -25,7 +25,7 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         root: Path,
         venv_bin: Path,
     ) -> p.Result[t.Pair[t.SequenceOf[Path], Path]]:
-        """Discover projects and verify deptry binary; return ``(projects, limits_path)``.
+        """Discover projects and verify deptry; return ``(projects, limits_path)``.
 
         Returns:
             The resulting ``p.Result[t.Pair[t.SequenceOf[Path], Path]]``.

@@ -167,7 +167,10 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
             }
             for item in body
         ):
-            msg = f"namespace wrapper contains executable statements: {path}:{wrapper_name}"
+            msg = (
+                f"namespace wrapper contains executable statements: "
+                f"{path}:{wrapper_name}"
+            )
             raise ValueError(msg)
         owner_header = next(
             item for item in facts if item.line == owner_scope.get_start()

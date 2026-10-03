@@ -43,7 +43,10 @@ class FlextInfraRenameSources:
                 if re.search(pattern, new) or (
                     old != other and re.search(pattern, old)
                 ):
-                    msg = f"rename CSV contains overlapping or cascading mappings: {old}, {other}"
+                    msg = (
+                        f"rename CSV contains overlapping or cascading mappings: "
+                        f"{old}, {other}"
+                    )
                     raise ValueError(msg)
         return tuple(sorted(pairs.items()))
 

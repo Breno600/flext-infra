@@ -249,7 +249,8 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         )
         if len(entries) != 1 or entries[0].source is None or len(managed) != 1:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
-                f"docs config requires one declared render template and owner: {destination}",
+                f"docs config requires one declared render template "
+                f"and owner: {destination}",
             )
         template = u.Infra.codegen_templates_root(codegen) / entries[0].source
         source = u.Cli.atomic_read_binary_file_state(template, required=True)
@@ -328,7 +329,8 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 continue
             if len(entries) != 1:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
-                    f"managed file requires exactly one render template: {managed.path}",
+                    f"managed file requires exactly one render template: "
+                    f"{managed.path}",
                 )
             entry = entries[0]
             if entry.source is None:

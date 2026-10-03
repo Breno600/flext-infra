@@ -274,8 +274,7 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             t.StrTuple,
             m.Field(
                 description=(
-                    "Repository-relative files omitted"
-                    " from declared data directories"
+                    "Repository-relative files omitted from declared data directories"
                 ),
             ),
         ] = ()

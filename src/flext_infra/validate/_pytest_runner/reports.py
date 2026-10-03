@@ -129,7 +129,10 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
                 )
             )
             if not set(selected.node_ids).issubset(inventory.node_ids):
-                msg = "testmon selected node IDs outside the complete collection inventory"
+                msg = (
+                    "testmon selected node IDs outside the complete "
+                    "collection inventory"
+                )
                 raise RuntimeError(msg)
             inventory_count = len(inventory.node_ids)
             deselected = inventory_count - len(selected.node_ids)

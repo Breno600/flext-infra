@@ -142,7 +142,10 @@ class FlextInfraMypyGate(FlextInfraGate):
         if profile_output is not None:
             destination = Path(profile_output)
             if not destination.is_absolute() or not destination.parent.is_dir():
-                msg = "Mypy profile output requires an absolute path in an existing directory"
+                msg = (
+                    "Mypy profile output requires an absolute path "
+                    "in an existing directory"
+                )
                 raise ValueError(msg)
         return u.Infra.mypy_limited_command(
             m.Infra.MypyInvocation(
@@ -285,7 +288,8 @@ class FlextInfraMypyGate(FlextInfraGate):
             if validated.failure:
                 return False, (
                     self._malformed_report_issue(
-                        f"{validated.error}\nstdout: {raw_line}\nstderr: {result.stderr}",
+                        f"{validated.error}\nstdout: {raw_line}\n"
+                        f"stderr: {result.stderr}",
                         tool=c.Infra.MYPY,
                         file=str(project_dir),
                     ),
@@ -309,7 +313,10 @@ class FlextInfraMypyGate(FlextInfraGate):
         if (not issues) and not u.Cli.process_succeeded(result.outcome):
             message = (result.stderr or result.stdout).strip()
             if not message:
-                message = f"mypy exited with code {result.outcome.raw_return_code} without JSON diagnostics"
+                message = (
+                    f"mypy exited with code {result.outcome.raw_return_code} "
+                    f"without JSON diagnostics"
+                )
             issues.append(
                 m.Infra.Issue(
                     file=c.PYPROJECT_FILENAME,

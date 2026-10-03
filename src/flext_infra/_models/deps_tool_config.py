@@ -169,8 +169,7 @@ class FlextInfraModelsDepsToolConfig(
                 alias="run-timeout-seconds",
                 gt=0,
                 description=(
-                    "Fleet-default wall-clock maximum for one testmon runner"
-                    " operation."
+                    "Fleet-default wall-clock maximum for one testmon runner operation."
                 ),
             ),
         ]

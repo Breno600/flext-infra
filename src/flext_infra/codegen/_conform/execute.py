@@ -491,7 +491,8 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 existing = inputs.get(state.path)
                 if existing is not None and existing != state:
                     return r[m.Infra.CodegenPhaseAnalysis].fail(
-                        f"lazy-init input changed across repository plans: {state.path}",
+                        f"lazy-init input changed across repository plans: "
+                        f"{state.path}",
                     )
                 inputs[state.path] = state
         return r[m.Infra.CodegenPhaseAnalysis].ok(
