@@ -149,7 +149,6 @@ class FlextInfraMypyGate(FlextInfraGate):
                 targets=tuple(project_dir / target for target in check_dirs),
                 config_file=cfg,
                 report_json=True,
-                verbose=True,
                 profile_output=destination,
             ),
         )
