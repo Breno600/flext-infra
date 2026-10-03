@@ -240,12 +240,9 @@ class FlextInfraCodemodGate(FlextInfraGate):
         if any(finding.rule_id not in ruleset.rule_ids for finding in report.root):
             msg = f"{ruleset.provider}: ast-grep reported an unelected rule"
             raise ValueError(msg)
-        expected_stderr = (
-            f"Error: {error_count} error(s) found in code.\n"
-            "Help: Scan succeeded; error-level diagnostics found in the codebase.\n\n"
-            if error_count
-            else ""
-        )
+        receipt = c.Infra.AST_GREP_ERROR_FINDING_RECEIPT.format(count=error_count)
+        help_line = c.Infra.AST_GREP_ERROR_FINDING_HELP
+        expected_stderr = f"{receipt}\n{help_line}\n\n" if error_count else ""
         return report, expected_stderr
 
     @staticmethod
