@@ -3,6 +3,9 @@
 Detection is rule data (``ban-deferred-self-reference`` and
 ``ban-recursive-model``, with their ast-grep fixtures); this module covers the
 semantic repair the mod phase applies.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -16,9 +19,10 @@ from flext_infra import u
 class TestsFlextInfraDeferredSelfReferenceNormalizer:
     """Behavior contract for the deferred-self-reference normalizer."""
 
-    def test_public_normalizer_qualifies_sibling_annotations_without_reordering(
-        self,
-    ) -> None:
+    @staticmethod
+    def test_public_normalizer_qualifies_sibling_annotations_without_reordering() -> (
+        None
+    ):
         """Sibling annotations use the owner while declaration order stays stable."""
         source = (
             "from __future__ import annotations\n\n"
@@ -38,7 +42,8 @@ class TestsFlextInfraDeferredSelfReferenceNormalizer:
         tm.that(normalized, has="dependency: Models.Dependency")
         tm.that(normalized, has="return Models.Dependency()")
 
-    def test_public_normalizer_ignores_a_nested_models_own_return_type(self) -> None:
+    @staticmethod
+    def test_public_normalizer_ignores_a_nested_models_own_return_type() -> None:
         """A method returning its enclosing nested model is not a graph edge."""
         source = (
             "class Models:\n"
@@ -51,7 +56,8 @@ class TestsFlextInfraDeferredSelfReferenceNormalizer:
         )
         tm.that(u.Infra.normalize_deferred_self_references(source), eq=source)
 
-    def test_public_normalizer_restores_executable_nested_class_bases(self) -> None:
+    @staticmethod
+    def test_public_normalizer_restores_executable_nested_class_bases() -> None:
         """A nested base resolves from the active owner namespace at definition time."""
         source = (
             "class Models:\n"
@@ -64,7 +70,8 @@ class TestsFlextInfraDeferredSelfReferenceNormalizer:
         tm.that(normalized, has="class Child(Base):")
         tm.that("class Child(Models.Base):" not in normalized, eq=True)
 
-    def test_public_normalizer_rejects_ambiguous_owners_and_model_rebuild(self) -> None:
+    @staticmethod
+    def test_public_normalizer_rejects_ambiguous_owners_and_model_rebuild() -> None:
         """Unknown owner members and runtime schema repair fail loud."""
         ambiguous = (
             "class Models:\n"
@@ -79,7 +86,8 @@ class TestsFlextInfraDeferredSelfReferenceNormalizer:
         with pytest.raises(ValueError, match="model_rebuild is prohibited"):
             u.Infra.normalize_deferred_self_references(rebuild)
 
-    def test_public_normalizer_preserves_inherited_owner_annotations(self) -> None:
+    @staticmethod
+    def test_public_normalizer_preserves_inherited_owner_annotations() -> None:
         """An inherited public type need not be redeclared in the local facade."""
         source = (
             "from __future__ import annotations\n\n"
@@ -92,6 +100,7 @@ class TestsFlextInfraDeferredSelfReferenceNormalizer:
         )
         tm.that(u.Infra.normalize_deferred_self_references(source), eq=source)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "declaration",
         [
@@ -101,7 +110,6 @@ class TestsFlextInfraDeferredSelfReferenceNormalizer:
         ],
     )
     def test_public_normalizer_accepts_declared_owner_aliases(
-        self,
         declaration: str,
     ) -> None:
         """An existing qualified alias must not block unrelated sibling repairs."""
@@ -127,7 +135,8 @@ class TestsFlextInfraDeferredSelfReferenceNormalizer:
         )
         tm.that(u.Infra.normalize_deferred_self_references(normalized), eq=normalized)
 
-    def test_public_normalizer_does_not_qualify_bare_assignment_bindings(self) -> None:
+    @staticmethod
+    def test_public_normalizer_does_not_qualify_bare_assignment_bindings() -> None:
         """Recognizing a member does not turn every class attribute into a type."""
         source = (
             "from __future__ import annotations\n\n"
@@ -139,12 +148,12 @@ class TestsFlextInfraDeferredSelfReferenceNormalizer:
 
         tm.that(u.Infra.normalize_deferred_self_references(source), eq=source)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "declaration",
         ["_Kind: object", "class Other:\n        _Kind = str"],
     )
     def test_public_normalizer_rejects_unbound_or_foreign_owner_members(
-        self,
         declaration: str,
     ) -> None:
         """An annotation-only slot or another class's member is not an owner binding."""

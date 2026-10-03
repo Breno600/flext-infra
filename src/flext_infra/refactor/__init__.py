@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core.lazy import build_lazy_import_map, install_lazy_exports
+from flext_core import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_infra.refactor._accessor_report import (
@@ -57,21 +57,16 @@ if TYPE_CHECKING:
         FlextInfraAccessorMigrationOrchestrator,
     )
     from flext_infra.refactor.census import FlextInfraRefactorCensus
-    from flext_infra.refactor.modernize_orchestrator import (
-        FlextInfraModernizeOrchestrator,
-    )
     from flext_infra.refactor.namespace_enforcer import FlextInfraNamespaceEnforcer
     from flext_infra.refactor.project_classifier import FlextInfraProjectClassifier
     from flext_infra.refactor.wrapper_root_namespace import (
         FlextInfraWrapperRootNamespaceRefactor,
     )
 
-
 __all__: tuple[str, ...] = (
     "FlextInfraAccessorMigrationOrchestrator",
     "FlextInfraAccessorMigrationReportMixin",
     "FlextInfraAccessorMigrationRewriteMixin",
-    "FlextInfraModernizeOrchestrator",
     "FlextInfraNamespaceEnforcer",
     "FlextInfraNamespaceEnforcerProjectMixin",
     "FlextInfraProjectClassifier",
@@ -115,7 +110,6 @@ _LAZY_IMPORTS = MappingProxyType(
             "._wrapper_rewrite": ("FlextInfraWrapperRootNamespaceRewriteMixin",),
             ".accessor_migration": ("FlextInfraAccessorMigrationOrchestrator",),
             ".census": ("FlextInfraRefactorCensus",),
-            ".modernize_orchestrator": ("FlextInfraModernizeOrchestrator",),
             ".namespace_enforcer": ("FlextInfraNamespaceEnforcer",),
             ".project_classifier": ("FlextInfraProjectClassifier",),
             ".wrapper_root_namespace": ("FlextInfraWrapperRootNamespaceRefactor",),

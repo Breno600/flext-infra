@@ -1,4 +1,8 @@
-"""Public contract for governed repository-root artifact ownership."""
+"""Public contract for governed repository-root artifact ownership.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -15,7 +19,8 @@ from tests import c, m, u
 class TestsFlextInfraRootArtifactOwnership:
     """Prove codegen config is the sole root-artifact ownership catalog."""
 
-    def test_envrc_template_covers_every_repository_profile(self) -> None:
+    @staticmethod
+    def test_envrc_template_covers_every_repository_profile() -> None:
         """Every generated repository owns the same direnv activation contract."""
         entry = next(
             item
@@ -25,7 +30,8 @@ class TestsFlextInfraRootArtifactOwnership:
 
         tm.that(set(entry.profiles), eq=set(c.Infra.MakeProfile))
 
-    def test_release_workflow_requires_explicit_repository_opt_in(self) -> None:
+    @staticmethod
+    def test_release_workflow_requires_explicit_repository_opt_in() -> None:
         """Package membership alone must never activate release automation."""
         entry = next(
             item
@@ -35,7 +41,9 @@ class TestsFlextInfraRootArtifactOwnership:
 
         tm.that(entry.requires_release_protocol, eq=True)
 
-    def test_governed_artifacts_have_one_explicit_policy(self) -> None:
+    @staticmethod
+    def test_governed_artifacts_have_one_explicit_policy() -> None:
+        """Test governed artifacts have one explicit policy."""
         configured = config.Infra.codegen.managed_files
         paths = tuple(item.path.as_posix() for item in configured)
 
@@ -55,7 +63,8 @@ class TestsFlextInfraRootArtifactOwnership:
         for owned in github_managed.values():
             tm.that(owned.policy, eq="full")
 
-    def test_every_packaged_github_template_is_declared(self) -> None:
+    @staticmethod
+    def test_every_packaged_github_template_is_declared() -> None:
         """Keep the packaged GitHub tree and typed render manifest bijective."""
         template_root = (
             Path(__file__).parents[3]
@@ -78,7 +87,8 @@ class TestsFlextInfraRootArtifactOwnership:
 
         tm.that(physical, eq=declared)
 
-    def test_github_template_without_managed_owner_is_rejected(self) -> None:
+    @staticmethod
+    def test_github_template_without_managed_owner_is_rejected() -> None:
         """Reject any config where a GitHub projection escapes full ownership."""
         spec = config.Infra.codegen
         github_managed = tuple(
@@ -96,7 +106,8 @@ class TestsFlextInfraRootArtifactOwnership:
         with pytest.raises(ValueError, match="ownership mismatch"):
             type(spec).model_validate(mutated)
 
-    def test_github_managed_owner_must_be_full(self) -> None:
+    @staticmethod
+    def test_github_managed_owner_must_be_full() -> None:
         """Reject weaker policies for every config-declared GitHub artifact."""
         spec = config.Infra.codegen
         target = next(
@@ -116,8 +127,11 @@ class TestsFlextInfraRootArtifactOwnership:
         with pytest.raises(ValueError, match="must be full-managed"):
             type(spec).model_validate(mutated)
 
-    def test_conform_uses_one_fixed_point_plan(self, infra_git_repo: Path) -> None:
+    @staticmethod
+    def test_conform_uses_one_fixed_point_plan(infra_git_repo: Path) -> None:
+        """Test conform uses one fixed point plan."""
         root = infra_git_repo
+        project = u.Tests.project_spec("flext-demo")
         u.Tests.write_project_beads_config(root, "flext-demo")
         package_root = root / "src" / "flext_demo"
         tm.ok(u.Cli.ensure_dir(package_root))
@@ -129,8 +143,9 @@ class TestsFlextInfraRootArtifactOwnership:
                     "[project]\n"
                     'name = "flext-demo"\n'
                     'version = "0.1.0"\n'
+                    f'authors = [{{name = "{project.author_name}", email = "{project.author_email}"}}]\n'
                     f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
-                    "dependencies = []\n"
+                    f'dependencies = ["{u.Tests.flext_source(project.upstream)}"]\n'
                     "[project.urls]\n"
                     'Repository = "https://github.com/flext-sh/flext-demo"\n'
                 ),
@@ -144,11 +159,11 @@ class TestsFlextInfraRootArtifactOwnership:
         tm.ok(infra.codegen_conform(request))
         manual = {"custom.mk": b"# manual project extension\n"}
         (root / "custom.mk").write_bytes(manual["custom.mk"])
-        configured_policy = next(
-            item.policy
+        configured_policies = {
+            root / item.path: item.policy
             for item in config.Infra.codegen.managed_files
-            if item.path == Path(c.Infra.MAKEFILE_FILENAME)
-        )
+            if item.path.as_posix() in c.Infra.MAKEFILE_BOOTSTRAP_DESTINATIONS
+        }
         before = tuple(
             sorted(
                 (path.relative_to(root).as_posix(), path.read_bytes())
@@ -160,8 +175,10 @@ class TestsFlextInfraRootArtifactOwnership:
         first = infra.codegen_conform(request)
         result = tm.ok(first)
         governed = tuple(file for file in result.plan.files if file.policy is not None)
-        tm.that(tuple(file.path for file in governed), eq=(root / "Makefile",))
-        tm.that(governed[0].policy, eq=configured_policy)
+        tm.that(
+            {file.path: file.policy for file in governed},
+            eq=configured_policies,
+        )
         tm.that(result.written_files, eq=())
         after = tuple(
             sorted(
@@ -177,8 +194,9 @@ class TestsFlextInfraRootArtifactOwnership:
     class TestsConformPlanNetworkBoundary:
         """The conform plan is a repository-local, offline inventory."""
 
+        @staticmethod
         @pytest.mark.slow
-        def test_plan_never_fetches_origin(self, infra_git_repo: Path) -> None:
+        def test_plan_never_fetches_origin(infra_git_repo: Path) -> None:
             """Planning consumes the existing origin ref without network access."""
             root = infra_git_repo
             dist = u.Tests.repository_ref(config.Infra.name).distribution

@@ -1,4 +1,8 @@
-"""Release plan phase: the next version, derived only from Git and its titles."""
+"""Release plan phase: the next version, derived only from Git and its titles.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,8 +10,7 @@ from pathlib import Path
 
 from flext_core import r
 from flext_infra import c, config, m, p, t, u
-
-from ._release_publish import FlextInfraReleasePublishMixin
+from flext_infra.release._release_publish import FlextInfraReleasePublishMixin
 
 
 class FlextInfraReleasePlanMixin(FlextInfraReleasePublishMixin):
@@ -17,7 +20,12 @@ class FlextInfraReleasePlanMixin(FlextInfraReleasePublishMixin):
         self,
         ctx: m.Infra.ReleasePhaseDispatchConfig,
     ) -> p.Result[m.Infra.ReleasePlan]:
-        """Derive the next version and record it as the plan receipt."""
+        """Derive the next version and record it as the plan receipt.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ReleasePlan]``.
+
+        """
         root = ctx.repository_root
         if ctx.pr_title and not c.Infra.CONVENTIONAL_SUBJECT_RE.match(ctx.pr_title):
             return r[m.Infra.ReleasePlan].fail(
@@ -48,7 +56,12 @@ class FlextInfraReleasePlanMixin(FlextInfraReleasePublishMixin):
 
     @classmethod
     def _derive_plan(cls, root: Path, current: str) -> p.Result[m.Infra.ReleasePlan]:
-        """Apply the protocol's decision rules to the repository state."""
+        """Apply the protocol's decision rules to the repository state.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ReleasePlan]``.
+
+        """
         tags = u.Cli.capture(
             [
                 c.Infra.GIT,
@@ -131,6 +144,10 @@ class FlextInfraReleasePlanMixin(FlextInfraReleasePublishMixin):
         The only legitimate diff is the protocol's release commit, looked up in
         the whole base..HEAD range: CI checks out a synthetic merge commit and
         an open release lane may carry integration merges above it.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         branch = cls._integration_branch(root)
         if branch.failure:
@@ -174,7 +191,12 @@ class FlextInfraReleasePlanMixin(FlextInfraReleasePublishMixin):
 
     @staticmethod
     def _integration_branch(root: Path) -> p.Result[str]:
-        """Resolve the published integration branch this repository releases from."""
+        """Resolve the published integration branch this repository releases from.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         return u.Infra.repository_baseline_branch(
             root,
             preference=tuple(
@@ -192,6 +214,10 @@ class FlextInfraReleasePlanMixin(FlextInfraReleasePublishMixin):
         """Return commit subjects reachable from HEAD since ``since``.
 
         Merge commits carry the pull-request titles the bump derives from.
+
+        Returns:
+            Commit subjects reachable from HEAD since ``since``.
+
         """
         log = u.Cli.capture(
             [

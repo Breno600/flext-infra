@@ -1,4 +1,8 @@
-"""Generated public verbs enforce the committed Mise runtime pin."""
+"""Generated public verbs enforce the committed Mise runtime pin.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -18,10 +22,11 @@ pytestmark = pytest.mark.slow
 class TestsFlextInfraCodegenMakeLockContract:
     """A frozen operation fails before activation or any launcher execution."""
 
+    @staticmethod
     def test_conform_publication_preserves_committed_lock_graph(
-        self,
         tmp_path: Path,
     ) -> None:
+        """Test conform publication preserves committed lock graph."""
         root, _ = u.Tests.render_make_environment(
             tmp_path,
             c.Infra.MakeProfile.STANDALONE,
@@ -61,8 +66,8 @@ class TestsFlextInfraCodegenMakeLockContract:
             eq=config.Infra.codegen.toolchain.mise_lockfile,
         )
 
+    @staticmethod
     def test_direnv_isolates_nested_checkout_from_parent_mise_config(
-        self,
         tmp_path: Path,
     ) -> None:
         """The real Mise reader cannot observe an unrelated ancestor config."""
@@ -104,8 +109,8 @@ class TestsFlextInfraCodegenMakeLockContract:
         tm.that(process.stderr, lacks="mise WARN")
         tm.that(process.stderr, lacks="invalid-parent")
 
+    @staticmethod
     def test_direnv_runs_real_make_from_pinned_tool_paths_without_lock_changes(
-        self,
         tmp_path: Path,
     ) -> None:
         """An outer direnv entry never delegates Make to an older shared shim."""
@@ -171,8 +176,8 @@ class TestsFlextInfraCodegenMakeLockContract:
             eq={path for path in paths if path.is_relative_to(sidecars)},
         )
 
+    @staticmethod
     def test_direnv_rejects_unprovisioned_runtime_without_installing(
-        self,
         tmp_path: Path,
     ) -> None:
         """Activation names setup instead of downloading a missing pinned runtime."""
@@ -207,9 +212,9 @@ class TestsFlextInfraCodegenMakeLockContract:
         tm.that(process.stderr, has="run make setup")
         tm.that(pinned_runtime.exists(), eq=False)
 
+    @staticmethod
     @pytest.mark.parametrize("pin_content", [None, "latest\n", " \n", "1.2.3\n4.5.6\n"])
     def test_direnv_rejects_unresolved_runtime_pin(
-        self,
         tmp_path: Path,
         pin_content: str | None,
     ) -> None:
@@ -236,6 +241,7 @@ class TestsFlextInfraCodegenMakeLockContract:
         tm.that(process.stderr, has=str(pin))
         tm.that(process.stdout, lacks=f"[{c.Infra.MakeProfile.STANDALONE}]")
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("verb", "pin_content"),
         [
@@ -253,11 +259,11 @@ class TestsFlextInfraCodegenMakeLockContract:
         ],
     )
     def test_frozen_verbs_reject_an_unresolved_pin_before_effects(
-        self,
         tmp_path: Path,
         verb: str,
         pin_content: str | None,
     ) -> None:
+        """Test frozen verbs reject an unresolved pin before effects."""
         project_root, _ = u.Tests.render_make_environment(
             tmp_path,
             c.Infra.MakeProfile.STANDALONE,
@@ -284,12 +290,13 @@ class TestsFlextInfraCodegenMakeLockContract:
         tm.that(activation.exists(), eq=False)
         tm.that(u.Infra.runtime_environment_dir(project_root).exists(), eq=False)
 
+    @staticmethod
     @pytest.mark.parametrize("verb", ["help", "clean", "upg"])
     def test_bootstrap_and_shell_verbs_do_not_require_the_pin(
-        self,
         tmp_path: Path,
         verb: str,
     ) -> None:
+        """Test bootstrap and shell verbs do not require the pin."""
         project_root, _ = u.Tests.render_make_environment(
             tmp_path,
             c.Infra.MakeProfile.STANDALONE,
@@ -304,15 +311,18 @@ class TestsFlextInfraCodegenMakeLockContract:
 
         tm.that(process.stderr, lacks=str(pin))
         if verb == "upg":
+            # Without its generated launcher upg still stops before resolving:
+            # the cold-start repair of a deleted launcher is owned by the upg
+            # self-heal slice (flext-gz7oj), which turns this into a success.
             tm.that(process.outcome.raw_return_code, ne=0)
             tm.that(process.stderr, has="missing generated mise launcher")
         else:
             tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
         tm.that(pin.exists(), eq=False)
 
+    @staticmethod
     @pytest.mark.parametrize("attached", [False, True])
     def test_setup_bootstraps_from_the_runtime_root_pin(
-        self,
         tmp_path: Path,
         *,
         attached: bool,
@@ -352,7 +362,7 @@ class TestsFlextInfraCodegenMakeLockContract:
                 cwd=project_root,
                 env={
                     **os.environ,
-                    "GH_TOKEN": "invalid-test-credential",
+                    "GITHUB_TOKEN": "invalid-test-credential",
                     storage_variable: "relative-storage",
                 },
             ),

@@ -1,4 +1,8 @@
-"""Persistent coordination-state lifecycle for Mise transactions."""
+"""Persistent coordination-state lifecycle for Mise transactions.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -10,9 +14,12 @@ from typing import TYPE_CHECKING, Literal
 
 from flext_core import r
 from flext_infra import c, m, u
-
-from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles as files
-from ._mise_artifacts_verification import FlextInfraMiseArtifactsVerification as verify
+from flext_infra.codegen._mise_artifacts_files import (
+    FlextInfraMiseArtifactsFiles as files,
+)
+from flext_infra.codegen._mise_artifacts_verification import (
+    FlextInfraMiseArtifactsVerification as verify,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -33,6 +40,13 @@ class FlextInfraMiseArtifactsState:
         `FileNotFoundError`, failing generation for every new project. What will
         host it is its nearest existing ancestor, which is what the rename
         actually has to satisfy.
+
+        Returns:
+            The filesystem device that will host ``path``.
+
+        Raises:
+            FileNotFoundError: If no existing ancestor hosts the destination.
+
         """
         for candidate in (path, *path.parents):
             if candidate.exists():
@@ -45,7 +59,12 @@ class FlextInfraMiseArtifactsState:
         cls,
         item: m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant,
     ) -> int:
-        """Order the narrowest project owner before its ancestors."""
+        """Order the narrowest project owner before its ancestors.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         return -len(item.root.parts)
 
     @classmethod
@@ -53,7 +72,12 @@ class FlextInfraMiseArtifactsState:
         cls,
         item: m.Infra.CodegenJournalDirectory,
     ) -> t.Pair[int, str]:
-        """Order journaled directory cleanup from descendants to ancestors."""
+        """Order journaled directory cleanup from descendants to ancestors.
+
+        Returns:
+            The resulting ``t.Pair[int, str]``.
+
+        """
         return cls._relative_order(item.path)
 
     @classmethod
@@ -63,7 +87,13 @@ class FlextInfraMiseArtifactsState:
         *,
         destinations: t.VariadicTuple[Path] = (),
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenJournalDirectory]]:
-        """Prove every transaction path absent before journal publication."""
+        """Prove every transaction path absent before journal publication.
+
+        Returns:
+            The resulting
+                ``p.Result[t.VariadicTuple[m.Infra.CodegenJournalDirectory]]``.
+
+        """
         roots: list[Path] = []
         for project in layout.projects:
             transaction_root = project.transaction_root
@@ -146,7 +176,12 @@ class FlextInfraMiseArtifactsState:
         directories: t.VariadicTuple[m.Infra.CodegenJournalDirectory],
         publications: t.VariadicTuple[m.Infra.CodegenStagedFile],
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenStagedFile]]:
-        """Bind absent destinations only to parents created by this journal."""
+        """Bind absent destinations only to parents created by this journal.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.CodegenStagedFile]]``.
+
+        """
         result_type = r[tuple[m.Infra.CodegenStagedFile, ...]]
         bound: list[m.Infra.CodegenStagedFile] = []
         for publication in publications:
@@ -167,7 +202,10 @@ class FlextInfraMiseArtifactsState:
                     before.parent_inode,
                 ) != (parent.device, parent.inode):
                     return result_type.fail(
-                        f"generation destination parent differs from journal: {before.path}",
+                        (
+                            f"generation destination parent differs "
+                            f"from journal: {before.path}"
+                        ),
                     )
                 bound.append(publication)
                 continue
@@ -178,7 +216,10 @@ class FlextInfraMiseArtifactsState:
                 or parent.inode is None
             ):
                 return result_type.fail(
-                    f"generation destination has no created parent authority: {before.path}",
+                    (
+                        f"generation destination has no created "
+                        f"parent authority: {before.path}"
+                    ),
                 )
             expected = m.Cli.AtomicFileState.model_validate({
                 **before.model_dump(),
@@ -190,7 +231,10 @@ class FlextInfraMiseArtifactsState:
                 return result_type.from_failure(observed)
             if observed.value != expected:
                 return result_type.fail(
-                    f"generation destination changed after parent creation: {before.path}",
+                    (
+                        f"generation destination changed "
+                        f"after parent creation: {before.path}"
+                    ),
                 )
             bound.append(
                 m.Infra.CodegenStagedFile.model_validate({
@@ -209,7 +253,12 @@ class FlextInfraMiseArtifactsState:
         requested: t.VariadicTuple[Path],
         disposition: Literal["temporary", "generated"],
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenJournalDirectory]]:
-        """Return unique missing paths after descriptor-authenticated preflight."""
+        """Return unique missing paths after descriptor-authenticated preflight.
+
+        Returns:
+            Unique missing paths after descriptor-authenticated preflight.
+
+        """
         result_type = r[tuple[m.Infra.CodegenJournalDirectory, ...]]
         if len(set(requested)) != len(requested):
             return result_type.fail(f"duplicate {phase} directory request")
@@ -255,7 +304,10 @@ class FlextInfraMiseArtifactsState:
                         observed.value.parent_inode,
                     ) != (chain.value.anchor_device, chain.value.anchor_inode):
                         return result_type.fail(
-                            f"{phase} directory anchor changed during planning: {directory}",
+                            (
+                                f"{phase} directory anchor changed "
+                                f"during planning: {directory}"
+                            ),
                         )
                     before = observed.value
                 entry = m.Infra.CodegenJournalDirectory(
@@ -286,7 +338,12 @@ class FlextInfraMiseArtifactsState:
         directories: t.VariadicTuple[m.Infra.CodegenJournalDirectory],
         entry: m.Infra.CodegenJournalDirectory,
     ) -> p.Result[m.Infra.CodegenJournalDirectory]:
-        """Create one durable intent and return its exact physical identity."""
+        """Create one durable intent and return its exact physical identity.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenJournalDirectory]``.
+
+        """
         result_type = r[m.Infra.CodegenJournalDirectory]
         if entry.created is not None or entry not in directories:
             return result_type.fail(f"invalid directory creation cursor: {entry.path}")
@@ -375,7 +432,12 @@ class FlextInfraMiseArtifactsState:
         cls,
         entry: m.Infra.CodegenJournalDirectory,
     ) -> p.Result[bool]:
-        """Remove only the exact empty directory returned by this invocation."""
+        """Remove only the exact empty directory returned by this invocation.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         if entry.created is None:
             return r[bool].fail(f"directory has no created identity: {entry.path}")
         return u.Cli.atomic_delete_empty_directory_guarded(entry.created)
@@ -385,7 +447,12 @@ class FlextInfraMiseArtifactsState:
         cls,
         layout: m.Infra.MiseToolchainWorkspaceLayout,
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
-        """Read the typed Git-owned journal without creating filesystem state."""
+        """Read the typed Git-owned journal without creating filesystem state.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]``.
+
+        """
         result_type = r[tuple[m.Cli.AtomicFileState, ...]]
         snapshot = files.read_state(layout.journal_path, required=False)
         if snapshot.failure:
@@ -397,7 +464,12 @@ class FlextInfraMiseArtifactsState:
         cls,
         states: t.VariadicTuple[m.Cli.AtomicFileState],
     ) -> m.Cli.AtomicFileState | None:
-        """Return the optional journal snapshot from its non-null result payload."""
+        """Return the optional journal snapshot from its non-null result payload.
+
+        Returns:
+            The optional journal snapshot from its non-null result payload.
+
+        """
         return states[0] if states else None
 
     @classmethod
@@ -409,6 +481,10 @@ class FlextInfraMiseArtifactsState:
 
         An unreadable state root is a read failure, never classified as
         residue; the read error escapes.
+
+        Returns:
+            Every transaction-prefixed child or unsafe state-root alias.
+
         """
         residue: list[Path] = []
         for project in files.transaction_participants(layout):
@@ -438,7 +514,12 @@ class FlextInfraMiseArtifactsState:
         *,
         include_generated: bool,
     ) -> p.Result[bool]:
-        """Remove authenticated temporary trees and authorized empty directories."""
+        """Remove authenticated temporary trees and authorized empty directories.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         topology = verify.journal_topology(layout, journal)
         if topology.failure:
             return topology
@@ -461,7 +542,10 @@ class FlextInfraMiseArtifactsState:
             )
             if entry is None or entry.created is None:
                 return r[bool].fail(
-                    f"transaction root has no durable physical identity: {relative.value}",
+                    (
+                        f"transaction root has no durable "
+                        f"physical identity: {relative.value}"
+                    ),
                 )
             if entry.manifest is None:
                 # A created directory receipt owns only that empty directory,
@@ -498,7 +582,10 @@ class FlextInfraMiseArtifactsState:
                 continue
             if entry.created is None:
                 return r[bool].fail(
-                    f"journaled directory exists without durable identity: {entry.path}",
+                    (
+                        f"journaled directory exists "
+                        f"without durable identity: {entry.path}"
+                    ),
                 )
             if cls._hosts_lease_lock(layout, target.value):
                 # The journal lease lock file persists by identity across
@@ -556,7 +643,12 @@ class FlextInfraMiseArtifactsState:
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         directory: Path,
     ) -> bool:
-        """Keep journal and participant lease identities across transactions."""
+        """Keep journal and participant lease identities across transactions.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         lease_paths = (
             layout.journal_path,
             *(
@@ -577,7 +669,12 @@ class FlextInfraMiseArtifactsState:
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         journal: m.Infra.CodegenTransactionJournal,
     ) -> p.Result[bool]:
-        """Authenticate the sole journal-derived staging root in every project."""
+        """Authenticate the sole journal-derived staging root in every project.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         expected = {
             project.transaction_root
             for project in files.transaction_participants(layout)
@@ -611,7 +708,10 @@ class FlextInfraMiseArtifactsState:
                 != transaction.value
             ):
                 return r[bool].fail(
-                    f"Mise transaction root identity is not journaled: {relative.value}",
+                    (
+                        f"Mise transaction root identity "
+                        f"is not journaled: {relative.value}"
+                    ),
                 )
             if recorded.manifest is None:
                 empty = u.Cli.atomic_read_empty_directory_state(
@@ -622,7 +722,10 @@ class FlextInfraMiseArtifactsState:
                     return r[bool].from_failure(empty)
                 if empty.value != recorded.created:
                     return r[bool].fail(
-                        f"unmanifested transaction root identity changed: {relative.value}",
+                        (
+                            f"unmanifested transaction root "
+                            f"identity changed: {relative.value}"
+                        ),
                     )
             else:
                 authorized = verify.authorized_cleanup_manifest(

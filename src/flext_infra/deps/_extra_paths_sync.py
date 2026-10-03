@@ -1,4 +1,8 @@
-"""Cohesive doc-sync + transitive-dependency mixin for FlextInfraExtraPathsManager."""
+"""Cohesive doc-sync + transitive-dependency mixin for FlextInfraExtraPathsManager.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -32,7 +36,12 @@ class FlextInfraExtraPathsSyncMixin:
         self,
         direct_names: t.StrSequence,
     ) -> t.StrSequence:
-        """Return the transitive workspace path-dependency closure of direct_names."""
+        """Return the transitive workspace path-dependency closure of direct_names.
+
+        Returns:
+            The transitive workspace path-dependency closure of direct_names.
+
+        """
 
         def dependencies(name: str) -> t.StrSequence:
             dep_pyproject = self.root / name / c.PYPROJECT_FILENAME
@@ -53,7 +62,12 @@ class FlextInfraExtraPathsSyncMixin:
         project_dir: Path,
         is_root: bool,
     ) -> t.StrSequence:
-        """Apply computed extra paths to an in-memory TOMLDocument."""
+        """Apply computed extra paths to an in-memory TOMLDocument.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         # Path producers and toml_as_string_list both yield immutable
         # sequences, so equal content compares equal (no list/tuple churn).
         expected = self.pyright_extra_paths(project_dir=project_dir, is_root=is_root)
@@ -104,7 +118,12 @@ class FlextInfraExtraPathsSyncMixin:
         project_dir: Path,
         is_root: bool,
     ) -> t.StrSequence:
-        """Apply computed extra paths to one normalized TOML payload."""
+        """Apply computed extra paths to one normalized TOML payload.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         expected = self.pyright_extra_paths(project_dir=project_dir, is_root=is_root)
         tool_table = u.Cli.toml_mapping_path(payload, (c.Infra.TOOL,))
         if tool_table is None:
@@ -142,7 +161,12 @@ class FlextInfraExtraPathsSyncMixin:
         dry_run: bool = False,
         is_root: bool = False,
     ) -> p.Result[bool]:
-        """Synchronize pyright and mypy paths for one pyproject.toml."""
+        """Synchronize pyright and mypy paths for one pyproject.toml.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         if not pyproject_path.exists():
             return r[bool].fail(f"pyproject not found: {pyproject_path}")
         doc_result = u.Cli.toml_read_document(pyproject_path)
@@ -165,7 +189,12 @@ class FlextInfraExtraPathsSyncMixin:
         dry_run: bool = False,
         project_dirs: t.SequenceOf[Path] | None = None,
     ) -> p.Result[int]:
-        """Synchronize extraPaths and mypy_path across projects."""
+        """Synchronize extraPaths and mypy_path across projects.
+
+        Returns:
+            The resulting ``p.Result[int]``.
+
+        """
         if project_dirs:
             updated_selected = 0
             for project_dir in project_dirs:

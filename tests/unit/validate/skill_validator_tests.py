@@ -23,7 +23,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraSkillValidator:
     """Skill validator, YAML/list helpers, ast-grep rules, and baseline templating."""
 
-    def test_valid_yaml(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_valid_yaml(tmp_path: Path) -> None:
         """Valid YAML file loads correctly."""
         f = tmp_path / "test.yml"
         f.write_text("key: value\nlist:\n  - item1\n  - item2")
@@ -33,40 +34,47 @@ class TestsFlextInfraSkillValidator:
         tm.that(list_value, is_=list)
         tm.that(list_value, eq=["item1", "item2"])
 
-    def test_empty_and_null(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_empty_and_null(tmp_path: Path) -> None:
         """Empty/null YAML returns empty dict."""
         (tmp_path / "empty.yml").write_text("")
         tm.that(dict(u.Cli.yaml_load_mapping(tmp_path / "empty.yml")), eq={})
         (tmp_path / "null.yml").write_text("null")
         tm.that(dict(u.Cli.yaml_load_mapping(tmp_path / "null.yml")), eq={})
 
-    def test_non_dict_returns_empty_mapping(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_non_dict_returns_empty_mapping(tmp_path: Path) -> None:
         """Non-mapping YAML normalizes to an empty mapping."""
         (tmp_path / "list.yml").write_text("- item1\n- item2")
         tm.that(dict(u.Cli.yaml_load_mapping(tmp_path / "list.yml")), eq={})
         (tmp_path / "str.yml").write_text("just a string")
         tm.that(dict(u.Cli.yaml_load_mapping(tmp_path / "str.yml")), eq={})
 
-    def test_none_returns_empty(self) -> None:
+    @staticmethod
+    def test_none_returns_empty() -> None:
         """None returns empty list."""
         tm.that(u.Infra.string_list(None), empty=True)
 
-    def test_valid_list(self) -> None:
+    @staticmethod
+    def test_valid_list() -> None:
         """Valid string list passes through."""
         tm.that(u.Infra.string_list(["a", "b", "c"]), eq=["a", "b", "c"])
 
-    def test_string_wraps_to_list(self) -> None:
+    @staticmethod
+    def test_string_wraps_to_list() -> None:
         """Bare string is wrapped into a single-element list."""
         tm.that(u.Infra.string_list("not a list"), eq=["not a list"])
 
-    def test_invalid_input_raises(self) -> None:
+    @staticmethod
+    def test_invalid_input_raises() -> None:
         """Non-string items and non-list values raise."""
         with pytest.raises(TypeError):
             u.Infra.string_list(["a", 123, "c"])
         with pytest.raises(TypeError, match="expected list"):
             u.Infra.string_list({"key": "value"})
 
-    def test_validate_missing_rules_yml(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_validate_missing_rules_yml(tmp_path: Path) -> None:
         """Missing rules.yml returns not-passed report."""
         validator = FlextInfraSkillValidator(skill="test-skill")
         skills = tmp_path / c.Infra.SKILLS_DIR / "test-skill"
@@ -77,7 +85,8 @@ class TestsFlextInfraSkillValidator:
         tm.that(not report.passed, eq=True)
         tm.that(report.summary, contains="no rules.yml")
 
-    def test_validate_invalid_scan_targets(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_validate_invalid_scan_targets(tmp_path: Path) -> None:
         """Non-dict scan_targets returns failure."""
         validator = FlextInfraSkillValidator(skill="test-skill")
         skill = tmp_path / c.Infra.SKILLS_DIR / "test-skill"
@@ -85,7 +94,8 @@ class TestsFlextInfraSkillValidator:
         (skill / "rules.yml").write_text("scan_targets: [item1, item2]")
         tm.fail(validator.build_report(tmp_path, "test-skill"), has="scan_targets")
 
-    def test_validate_invalid_rules_not_list(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_validate_invalid_rules_not_list(tmp_path: Path) -> None:
         """Non-list rules returns failure."""
         validator = FlextInfraSkillValidator(skill="test-skill")
         skill = tmp_path / c.Infra.SKILLS_DIR / "test-skill"
@@ -96,7 +106,8 @@ class TestsFlextInfraSkillValidator:
             has="rules must be a list",
         )
 
-    def test_validate_non_dict_rule_skipped(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_validate_non_dict_rule_skipped(tmp_path: Path) -> None:
         """Non-dict rule objects are skipped."""
         validator = FlextInfraSkillValidator(skill="test-skill")
         skill = tmp_path / c.Infra.SKILLS_DIR / "test-skill"
@@ -107,8 +118,8 @@ class TestsFlextInfraSkillValidator:
         )
         tm.that(report.passed, eq=True)
 
+    @staticmethod
     def test_validate_scalar_rules_yml_yields_empty_success(
-        self,
         tmp_path: Path,
     ) -> None:
         """Scalar rules.yml content yields an empty successful report."""
@@ -122,7 +133,8 @@ class TestsFlextInfraSkillValidator:
         tm.that(report.passed, eq=True)
         tm.that(report.violations, empty=True)
 
-    def _write_skill(self, root: Path, rules_yml: str) -> None:
+    @staticmethod
+    def _write_skill(root: Path, rules_yml: str) -> None:
         skill = root / c.Infra.SKILLS_DIR / "test-skill"
         skill.mkdir(parents=True)
         (skill / "rule.yaml").write_text(
@@ -131,7 +143,8 @@ class TestsFlextInfraSkillValidator:
         )
         (skill / "rules.yml").write_text(rules_yml, encoding="utf-8")
 
-    def _write_target(self, root: Path, source: str) -> None:
+    @staticmethod
+    def _write_target(root: Path, source: str) -> None:
         package_root = root / "demo" / "src" / "demo"
         package_root.mkdir(parents=True)
         (package_root / "m.py").write_text(source, encoding="utf-8")
@@ -199,8 +212,8 @@ class TestsFlextInfraSkillValidator:
             has="does not exist",
         )
 
+    @staticmethod
     def test_relative_baseline_path_resolves_with_skill_name(
-        self,
         tmp_path: Path,
     ) -> None:
         """A relative baseline file template is resolved under the workspace."""

@@ -161,6 +161,20 @@ jobs:
       # mise.lock and the dependencies frozen from the committed uv.lock,
       # publishes that environment through GITHUB_PATH, and prepares the
       # project runtime. CI never runs `make upg`: it never re-resolves.
+      # Why: make test always selects through the persistent testmon database
+      # (make.testmon_cache), which lives outside the checkout under the
+      # declared project name. A runner without it starts from an empty history
+      # and selects the whole suite. Restore the newest database of any earlier
+      # run: testmon revalidates every recorded file by checksum, so a restored
+      # database never hides a changed dependency of a selected test.
+      - name: Restore testmon database
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.cache/flext/infra/testmon
+          key: ${{ runner.os }}-3.13-flext-testmon-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ${{ runner.os }}-3.13-flext-testmon-
+
       - name: setup (blocking)
         # Why: explicit CI=Y on every make invocation (job env is not enough for matrix/docker parity).
         run: CI=Y make setup
@@ -188,7 +202,11 @@ jobs:
         # Fast partition only, derived from the gate registry kind:
         # lint security markdown duplication.
         # Type checkers and flext-infra validators block locally and at
-        # pre-push (CI=N runs pyrefly mypy pyright loc-cap runtime-census index-declarations codemod layout direnv).
+        # pre-push (CI=N runs pyrefly mypy pyright loc-cap runtime-census fresh-import index-declarations codemod layout direnv).
+
+      - name: test (blocking)
+        # Why: explicit CI=Y on every make invocation (job env is not enough for matrix/docker parity).
+        run: CI=Y make test
 
       # Mutating gates and tests must validate the committed candidate.
       # Repairs left in the runner checkout require a new commit and CI run.
@@ -198,6 +216,52 @@ jobs:
           git status --short
           candidate_status="$(git status --porcelain --untracked-files=all --ignore-submodules=none)"
           test -z "$candidate_status"
+
+      - name: Dump reports on failure
+        if: ${{ failure() }}
+        run: |
+          set -eu
+          # Structured reports only — same allowlist as Upload reports (no raw
+          # pytest/tool logs: those may carry connection strings / env secrets).
+          for report_root in .reports apps; do
+            if [ -d "$report_root" ]; then
+              find "$report_root" \
+                \( -path '*/junit.xml' -o -path '*/coverage.xml' -o -path '*/coverage.json' \) \
+                -type f -exec sh -eu -c '
+                  for report_file do
+                    printf "::group::%s\n" "$report_file"
+                    tail -n 200 "$report_file"
+                    printf "::endgroup::\n"
+                  done
+                ' sh {} +
+            fi
+          done
+      - name: Upload reports on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: flext-ci-reports-${{ github.run_id }}
+          # Structured reports only — omit raw pytest/tool logs that may carry
+          # connection strings or env-derived secrets from integration fixtures.
+          path: |
+            .reports/**/junit.xml
+            .reports/**/coverage.xml
+            .reports/**/coverage.json
+            apps/*/.reports/**/junit.xml
+            apps/*/.reports/**/coverage.xml
+            apps/*/.reports/**/coverage.json
+          if-no-files-found: ignore
+          retention-days: 7
+      # Why: save on every outcome, a failing or budget-stopped make test
+      # included, under a key unique to this run, so every run hands the
+      # results it recorded to the next selection.
+      - name: Save testmon database
+        if: ${{ always() }}
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.cache/flext/infra/testmon
+          key: ${{ runner.os }}-3.13-flext-testmon-${{ github.run_id }}-${{ github.run_attempt }}
+
 
       # Why: save on every outcome — including a failing gate — so
       # the next run starts warm. Only written when the restore missed.

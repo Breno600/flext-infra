@@ -1,4 +1,8 @@
-"""Domain models for quality gate execution."""
+"""Domain models for quality gate execution.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -11,10 +15,10 @@ from flext_cli import t, u
 
 from flext_core import m
 from flext_infra import c
+from flext_infra._models.duplication import FlextInfraModelsDuplication
 
 # Gate models use base type primitives; importing the composing project facade
 # here creates unresolved aliases while Pydantic analyzes nested root models.
-from .duplication import FlextInfraModelsDuplication
 
 
 class FlextInfraModelsGates(FlextInfraModelsDuplication):

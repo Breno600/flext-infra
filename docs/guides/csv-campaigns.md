@@ -12,6 +12,10 @@ checks Python syntax before publication, applies the authenticated text batch,
 and verifies that no findings remain. It does not enter the Rope or ast-grep
 phases of `make mod`. Repair a malformed rule in its authored YAML catalogue,
 then replay through this verb; do not edit a generated projection.
+Python files in governed source trees are scanned by default. A rule may also
+declare a relative `include` glob ending in a file suffix to elect authored
+Markdown or configuration text. The same authenticated inventory and atomic
+publisher cover these files; a generated-file header rejects a direct rewrite.
 When a candidate's Python package cannot import, the healthy Infra provider
 can run `make mod-text-candidate` after its workspace manifest declares exactly
 one `candidate_bootstrap_targets` entry. The same target declaration also
@@ -20,12 +24,27 @@ For regexes that may match several identifiers, declare a named group and
 `capture_equals: {keyword: expected_name}` in the rule. The engine validates
 that the group exists and rejects a different captured value before publishing
 any rewrite in the batch.
+Sed rules may declare `distributions: [flext-infra]` to select consumers by
+their validated `[project].name`. An omitted or empty selector applies to every
+consumer. The packaged catalogue scopes both Infra and Cosmos Docgen rules to
+their owning distributions, so external projects can compose their own rules
+without inheriting another project's file requirements. A selected Markdown
+include still fails if its source is absent; a missing project identity is an
+error rather than an implicit match.
+The project identity is parsed from one authenticated `pyproject.toml` snapshot,
+using the same managed-conflict recovery and typed TOML validation as project
+metadata. That snapshot remains a transaction input through publication, so a
+concurrent identity change rejects the complete text batch.
 
 The public `make mod` circuit reads `Infra.refactor_csv_campaigns` from the packaged
 configuration. Each campaign keeps one `old,new` CSV as its rename source. Consumer
 repositories, including repositories outside the FLEXT superproject, consume that same
 declared campaign through their own root verb. There is no per-campaign executable and
 no direct ast-grep write pass.
+The CSV path is relative to the declaring config directory; any declared scan roots
+are relative to the consumer repository. Absolute and parent-traversing declarations
+fail during typed config validation; resolved paths that leave either owner through a
+symbolic link fail during public composition before source publication.
 
 `make mod-text` replays only the declared Sed text rules through the same authenticated
 publisher used by `make mod`. It exists for recovery when a text rule has left an

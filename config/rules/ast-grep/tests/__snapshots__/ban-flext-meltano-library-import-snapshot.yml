@@ -1,0 +1,22 @@
+id: ban-flext-meltano-library-import
+snapshots:
+  from singer_sdk.streams import Stream:
+    labels:
+    - source: from singer_sdk.streams import Stream
+      style: primary
+      start: 0
+      end: 37
+    - source: singer_sdk.streams
+      style: secondary
+      start: 5
+      end: 23
+  import singer_sdk:
+    labels:
+    - source: import singer_sdk
+      style: primary
+      start: 0
+      end: 17
+    - source: singer_sdk
+      style: secondary
+      start: 7
+      end: 17
