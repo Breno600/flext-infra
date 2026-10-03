@@ -299,7 +299,7 @@ class TestsFlextInfraCodegenGeneration:
         tm.that(
             init_content,
             contains=(
-                f"from {c.Infra.LAZY_BOOTSTRAP_MODULE} import "
+                f"from {c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE} import "
                 f"{', '.join(c.Infra.LAZY_BOOTSTRAP_HELPERS)}"
             ),
         )
@@ -422,7 +422,7 @@ class TestsFlextInfraCodegenGeneration:
         tm.that(init_content, contains='".utilities": ("TestsDemoUtilities", "u"),')
         import_block = init_content.split(
             (
-                f"from {c.Infra.LAZY_BOOTSTRAP_MODULE} import "
+                f"from {c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE} import "
                 f"{', '.join(c.Infra.LAZY_BOOTSTRAP_HELPERS)}\n"
             ),
             maxsplit=1,

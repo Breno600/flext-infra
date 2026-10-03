@@ -112,7 +112,7 @@ class FlextInfraConstantsCodegenLazy:
     # initializers. Every OTHER distribution imports the helpers from the
     # `flext_core` root, which publishes them, never from its submodule.
     LAZY_BOOTSTRAP_ROOT_PACKAGE: ClassVar[str] = "flext_core"
-    LAZY_BOOTSTRAP_MODULE: ClassVar[str] = "flext_core"
+    LAZY_BOOTSTRAP_MODULE: ClassVar[str] = "flext_core.lazy"
     "Module defining the lazy helpers; only the bootstrap owner imports it directly."
 
     BARE_IMPORT_FROM_RE: ClassVar[t.RegexPattern] = re.compile(
