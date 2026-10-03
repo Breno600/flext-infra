@@ -1679,10 +1679,13 @@ Infra:
             - ".gc/"
             - "/worktrees/"
       # A project-scoped Cursor MCP document carries a socket path resolved on
-      # the machine that generated it: runtime state, never source.
-        - name: "Machine-local MCP projection (runtime state, never source)"
+      # the machine that generated it, and the hooks runtime keeps mutable
+      # scheduling state under .cursor/hooks/state: both are runtime state,
+      # never source; hook and skill definitions stay versioned above.
+        - name: "Machine-local MCP projection and hooks runtime state (never source)"
           patterns:
             - "/.cursor/mcp.json"
+            - "/.cursor/hooks/state/"
       # None of these are root source. config/build-constraints.txt is
       # rendered by the release policy phase from
       # config.Infra.release.build_constraints; repositories never carry it.
